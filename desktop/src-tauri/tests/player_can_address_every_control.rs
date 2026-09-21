@@ -27,9 +27,7 @@ fn repo_root() -> PathBuf {
 }
 
 fn bridge_source(name: &str) -> Option<String> {
-    let path: PathBuf = repo_root()
-        .join("vendor/retroarch/menu/drivers")
-        .join(name);
+    let path: PathBuf = repo_root().join("vendor/retroarch/menu/drivers").join(name);
     std::fs::read_to_string(path).ok()
 }
 

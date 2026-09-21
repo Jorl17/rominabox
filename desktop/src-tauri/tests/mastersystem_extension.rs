@@ -20,13 +20,8 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 
 /// The consoles whose preferred core is the one Genesis Plus GX definition,
 /// in registry order, which is the order of `available_systems`.
-const GENESIS_PLUS_GX_CONSOLES: [&str; 5] = [
-    "megadrive",
-    "segacd",
-    "mastersystem",
-    "gamegear",
-    "sg1000",
-];
+const GENESIS_PLUS_GX_CONSOLES: [&str; 5] =
+    ["megadrive", "segacd", "mastersystem", "gamegear", "sg1000"];
 
 fn scratch() -> PathBuf {
     let path = std::env::temp_dir().join(format!(
@@ -74,7 +69,11 @@ fn mastersystem_resolves_by_id_and_every_declared_alias() {
     assert_eq!(system.name, "Master System");
     assert_eq!(
         system.aliases,
-        ["master system".to_string(), "sms".to_string(), "mark iii".to_string()]
+        [
+            "master system".to_string(),
+            "sms".to_string(),
+            "mark iii".to_string()
+        ]
     );
     assert_eq!(system.extensions, ["sms".to_string()]);
     assert_eq!(system.category, "cartridge");
@@ -126,7 +125,12 @@ fn mastersystem_selects_the_same_genesis_plus_gx_component_as_the_other_sega_con
     let kit = root.join("runtime-kit");
     fs::create_dir_all(kit.join("cores")).unwrap();
     fs::create_dir_all(kit.join("licenses")).unwrap();
-    fs::write(kit.join("cores").join(shared.artifact().expect("an artifact for this target")), b"core").unwrap();
+    fs::write(
+        kit.join("cores")
+            .join(shared.artifact().expect("an artifact for this target")),
+        b"core",
+    )
+    .unwrap();
     fs::write(kit.join("licenses").join(&shared.license_file), b"license").unwrap();
 
     assert_eq!(
@@ -148,8 +152,8 @@ fn the_default_pad_is_illustrated_and_every_control_is_anchored() {
     assert_eq!(profile.image, "controller-mastersystem.png");
 
     let image = controller_assets().join(&profile.image);
-    let bytes = fs::read(&image)
-        .unwrap_or_else(|error| panic!("read {}: {error}", image.display()));
+    let bytes =
+        fs::read(&image).unwrap_or_else(|error| panic!("read {}: {error}", image.display()));
     assert!(
         bytes.starts_with(b"\x89PNG\r\n\x1a\n"),
         "the declared illustration must be the PNG on disk"

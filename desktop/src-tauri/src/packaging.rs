@@ -132,7 +132,10 @@ pub fn system_availability_for(runtime_kit: &Path, target: &str) -> Vec<SystemAv
                 let Some(filename) = core.artifact_for(target) else {
                     // The component exists but has no declaration for this target,
                     // which is a different problem from a missing file.
-                    tried.push(format!("{} (no {target} artifact declared)", core.component));
+                    tried.push(format!(
+                        "{} (no {target} artifact declared)",
+                        core.component
+                    ));
                     continue;
                 };
                 let artifact = runtime_kit.join("cores").join(filename);
@@ -973,9 +976,11 @@ fn stable_identity(rom: &Path, system: &str) -> Result<String, ExportError> {
 /// every meta bind in an export to replace those defaults.
 ///
 /// The binds we keep are for the keyboard only. Button, axis and mouse
-/// variants stay `nul`, so that controller gameplay bindings and joypad
-/// autoconfig cannot trigger a hotkey. The `input_player1_*` gameplay keys are
-/// not declared here, because they are in the controls appendconfig.
+/// variants stay `nul`, which is `NO_BTN`, a user bind with no button. When
+/// the user joykey is `NO_BTN`, the autoconfig bind applies in the joypad
+/// poll, so a profile with `input_menu_toggle_btn` would bind that button.
+/// We ship no profile. The `input_player1_*` gameplay keys are not declared
+/// here, because they are in the controls appendconfig.
 ///
 /// `advanced_key` is a second keyboard tier. We write it only when the author
 /// set `advancedEmulatorAccess`, and it never replaces the button, axis or
@@ -1099,9 +1104,8 @@ pub const HOTKEY_BINDS: &[HotkeyBind] = &[
     HotkeyBind {
         name: "hold_fast_forward",
         keyboard: HotkeyKeyboard::Neutral,
-        // The desktop default is `l`, which is already the DualShock right stick
-        // (r_x_plus) in controls.json. Leave it unbound.
-        advanced_key: None,
+        // `l` is the desktop default and the DualShock right-stick-right key.
+        advanced_key: Some("l"),
     },
     HotkeyBind {
         name: "toggle_slowmotion",
@@ -2338,11 +2342,7 @@ mod tests {
         assert_eq!(
             advanced_tier,
             vec![
-                (
-                    "toggle_fast_forward",
-                    "space",
-                    HotkeyKeyboard::Neutral
-                ),
+                ("toggle_fast_forward", "space", HotkeyKeyboard::Neutral),
                 ("hold_fast_forward", "l", HotkeyKeyboard::Neutral),
             ],
             "the advanced tier adds fast-forward keys; it does not retier any other bind"
@@ -2699,7 +2699,11 @@ mod tests {
             let first = stable_identity(&rom, "megadrive").unwrap();
             let second = stable_identity(&rom, "megadrive").unwrap();
             assert_eq!(first, second);
-            assert_eq!(first.len(), 24, "save directory names must stay 24 hex chars");
+            assert_eq!(
+                first.len(),
+                24,
+                "save directory names must stay 24 hex chars"
+            );
             assert!(first.chars().all(|c| c.is_ascii_hexdigit()));
         }
 
@@ -2842,7 +2846,12 @@ mod tests {
                     .first()
                     .expect("declared core");
                 if *artifact {
-                    fs::write(root.join("cores").join(core.artifact().expect("an artifact for this target")), []).unwrap();
+                    fs::write(
+                        root.join("cores")
+                            .join(core.artifact().expect("an artifact for this target")),
+                        [],
+                    )
+                    .unwrap();
                 }
                 if *licence {
                     fs::write(root.join("licenses").join(&core.license_file), []).unwrap();
@@ -2897,7 +2906,6 @@ mod tests {
                 other => panic!("expected a missing licence, got {other:?}"),
             }
         }
-
 
         /// We may generate the registry on one machine and use it on another,
         /// because we ship on more than one platform. These tests check that

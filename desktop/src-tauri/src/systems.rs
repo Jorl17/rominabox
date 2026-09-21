@@ -176,7 +176,12 @@ mod tests {
             .collect();
         assert_eq!(cue, ["segacd", "ps1", "pcecd"]);
         assert_eq!(
-            find("nes").unwrap().preferred_core().unwrap().artifact().unwrap(),
+            find("nes")
+                .unwrap()
+                .preferred_core()
+                .unwrap()
+                .artifact()
+                .unwrap(),
             "nestopia_libretro.dylib"
         );
         assert_eq!(find("sg1000").unwrap().controller_profile, "mastersystem");

@@ -44,7 +44,12 @@ fn kit_with_stub_core(root: &Path) -> PathBuf {
     fs::create_dir_all(kit.join("cores")).unwrap();
     fs::create_dir_all(kit.join("licenses")).unwrap();
     let core = ps1().cores.first().expect("a declared core");
-    fs::write(kit.join("cores").join(core.artifact().expect("an artifact for this target")), []).unwrap();
+    fs::write(
+        kit.join("cores")
+            .join(core.artifact().expect("an artifact for this target")),
+        [],
+    )
+    .unwrap();
     fs::write(kit.join("licenses").join(&core.license_file), []).unwrap();
     kit
 }
@@ -200,7 +205,10 @@ fn the_analogue_profile_still_declares_only_the_stick_clicks() {
         .map(|c| c["id"].as_str().unwrap())
         .collect();
     for click in ["l3", "r3"] {
-        assert!(ids.contains(&click), "the stick clicks are declared: {ids:?}");
+        assert!(
+            ids.contains(&click),
+            "the stick clicks are declared: {ids:?}"
+        );
     }
     for stick in ["l_x_plus", "l_x_minus", "r_x_plus", "r_x_minus"] {
         assert!(
@@ -310,10 +318,19 @@ fn the_playstation_pad_declares_both_sticks_and_the_dualshock_device() {
     );
     let ids: Vec<&str> = pad.controls.iter().map(|c| c.id.as_str()).collect();
     for direction in [
-        "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
-        "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus",
+        "l_x_plus",
+        "l_x_minus",
+        "l_y_plus",
+        "l_y_minus",
+        "r_x_plus",
+        "r_x_minus",
+        "r_y_plus",
+        "r_y_minus",
     ] {
-        assert!(ids.contains(&direction), "{direction} must be bindable: {ids:?}");
+        assert!(
+            ids.contains(&direction),
+            "{direction} must be bindable: {ids:?}"
+        );
     }
 
     // Each stick is one object on the illustration, so its directions and its
@@ -326,7 +343,11 @@ fn the_playstation_pad_declares_both_sticks_and_the_dualshock_device() {
             .filter(|c| c.group.as_deref() == Some(group))
             .map(|c| c.id.as_str())
             .collect();
-        assert_eq!(members.len(), 5, "{group} is four directions plus its click: {members:?}");
+        assert_eq!(
+            members.len(),
+            5,
+            "{group} is four directions plus its click: {members:?}"
+        );
         assert!(members.contains(&click), "{click} belongs to {group}");
     }
 }

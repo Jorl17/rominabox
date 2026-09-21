@@ -744,11 +744,9 @@ game (
             bytes[0x134..0x134 + 6].copy_from_slice(b"TETRIS");
             // We also verify the header checksum at 0x14D, which every
             // genuine cartridge has, so the fixture has one too.
-            bytes[0x14D] = bytes[0x134..=0x14C]
-                .iter()
-                .fold(0_u8, |checksum, byte| {
-                    checksum.wrapping_sub(*byte).wrapping_sub(1)
-                });
+            bytes[0x14D] = bytes[0x134..=0x14C].iter().fold(0_u8, |checksum, byte| {
+                checksum.wrapping_sub(*byte).wrapping_sub(1)
+            });
             let rom = root.join("game.gb");
             fs::write(&rom, bytes).unwrap();
             let inspection = inspect_game(&rom, &root.join("cache"), false).unwrap();

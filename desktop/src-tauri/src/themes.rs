@@ -371,10 +371,8 @@ mod tests {
 
     #[test]
     fn unknown_sound_packs_are_rejected_before_staging() {
-        let temporary = std::env::temp_dir().join(format!(
-            "rominabox-sound-pack-{}",
-            std::process::id()
-        ));
+        let temporary =
+            std::env::temp_dir().join(format!("rominabox-sound-pack-{}", std::process::id()));
         let error = prepare_sound_assets(&sound_source(), &temporary, "pulse")
             .expect_err("retired pack must not stage");
         assert!(error.contains("available menu sound pack"), "{error}");
