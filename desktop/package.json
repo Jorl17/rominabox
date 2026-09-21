@@ -4,13 +4,15 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev": "npm run catalog && vite",
+    "build": "npm run catalog && tsc --noEmit && vite build",
     "check": "tsc --noEmit && vitest run && prettier --check .",
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "catalog": "cargo run --quiet --manifest-path crates/rominabox-catalog/Cargo.toml --bin rominabox-catalog -- generate",
+    "catalog:validate": "cargo run --quiet --manifest-path crates/rominabox-catalog/Cargo.toml --bin rominabox-catalog -- validate"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

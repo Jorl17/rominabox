@@ -275,3 +275,28 @@ fn an_alias_resolves_to_the_same_console_it_always_did() {
         }
     }
 }
+
+/// The checked-in registries must match what we generate from the catalog.
+///
+/// We generate `systems.json` and `controls.json`, so do not edit them by
+/// hand. After a failure here, either generate them again with
+///
+///     cargo run --bin rominabox-catalog -- generate
+///
+/// or make the change in the package where it belongs.
+#[test]
+fn the_checked_in_registries_are_what_the_catalog_generates() {
+    let catalog = catalog();
+    let generated =
+        rominabox_catalog::compatibility_registries(&catalog).expect("registries render");
+
+    for (name, expected) in generated {
+        let path = repo_root().join("desktop").join(name);
+        let actual = std::fs::read_to_string(&path).expect("registry is readable");
+        assert_eq!(
+            actual,
+            expected,
+            "{name} has drifted from the packages; regenerate it instead of editing it by hand"
+        );
+    }
+}
