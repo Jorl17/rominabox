@@ -21,6 +21,17 @@ pub struct System {
     pub firmware: Vec<FirmwareRequirement>,
     pub controller_profile: String,
     pub category: String,
+    /// The position of the ASCII title in the cartridge header of this console,
+    /// when it has one. We declare it in the console package, not in code here.
+    #[serde(default)]
+    pub header_title: Option<HeaderTitle>,
+}
+
+/// A bounded ASCII field inside a cartridge header.
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+pub struct HeaderTitle {
+    pub offset: u64,
+    pub length: u64,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

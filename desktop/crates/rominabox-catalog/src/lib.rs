@@ -629,6 +629,14 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
             json!(console.controllers.default),
         );
         system.insert("category".into(), json!(console.content.category));
+        // We treat a bounded offset and length as data. Anything with a branch
+        // is a named handler in Rust, named in the package.
+        if let Some(header) = &console.recognition.header_title {
+            system.insert(
+                "headerTitle".into(),
+                json!({ "offset": header.offset, "length": header.length }),
+            );
+        }
         systems.push(Value::Object(system));
     }
 

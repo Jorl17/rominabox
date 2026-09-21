@@ -115,28 +115,14 @@ pub fn inspect_game_with_system(
     let mut title = filename_title(&filename);
     let mut source = MetadataSource::Filename;
 
-    if system.is_some_and(|value| value.id == "megadrive") {
-        if let Some(header_title) = ascii_title(&header, 0x150, 0x180) {
-            title = header_title;
-            source = MetadataSource::Header;
-        }
-    } else if system.is_some_and(|value| matches!(value.id.as_str(), "gb" | "gbc")) {
-        if let Some(header_title) = ascii_title(&header, 0x134, 0x143) {
-            title = header_title;
-            source = MetadataSource::Header;
-        }
-    } else if system.is_some_and(|value| value.id == "gba") {
-        if let Some(header_title) = ascii_title(&header, 0xA0, 0xAC) {
-            title = header_title;
-            source = MetadataSource::Header;
-        }
-    } else if system.is_some_and(|value| value.id == "n64") {
-        if let Some(header_title) = ascii_title(&header, 0x20, 0x34) {
-            title = header_title;
-            source = MetadataSource::Header;
-        }
-    } else if system.is_some_and(|value| value.id == "atari7800") {
-        if let Some(header_title) = ascii_title(&header, 17, 49) {
+    // The position of the ASCII title in the header is declared in the console
+    // package, so a new console requires a package field and no new branch here.
+    if let Some(window) = system.and_then(|value| value.header_title) {
+        if let Some(header_title) = ascii_title(
+            &header,
+            window.offset as usize,
+            (window.offset + window.length) as usize,
+        ) {
             title = header_title;
             source = MetadataSource::Header;
         }
@@ -496,13 +482,16 @@ fn identify_system(extension: &str, header: &[u8]) -> (Option<&'static System>, 
     }
 }
 
+/// The boot logo at 0x104 in every genuine Game Boy cartridge. A Game Boy
+/// does not start without it, so we use it to tell a genuine .gb image from
+/// a file that only has the extension.
+const NINTENDO_LOGO: &[u8] = &[
+    0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
+    0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
+    0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E,
+];
+
 fn has_valid_game_boy_header(header: &[u8]) -> bool {
-    const NINTENDO_LOGO: &[u8] = &[
-        0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00,
-        0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD,
-        0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB,
-        0xB9, 0x33, 0x3E,
-    ];
     if header.get(0x104..0x134) != Some(NINTENDO_LOGO) {
         return false;
     }
@@ -714,5 +703,92 @@ game (
         let inspection = inspect_game(&fake_game_boy, &root.join("cache"), false).unwrap();
         assert_eq!(inspection.system, "");
         assert!(inspection.warnings[0].contains("checksum is invalid"));
+    }
+
+    /// We declare in package data, for each console, where the title is in a
+    /// cartridge header (the title window), and do not branch here. These
+    /// fixtures fix the title we read from that window in a dropped ROM.
+    mod declared_header_titles {
+        use super::*;
+
+        /// A ROM whose header contains `title` at `offset`, padded to `size`.
+        fn cartridge(root: &Path, name: &str, offset: usize, title: &str, size: usize) -> PathBuf {
+            let mut bytes = vec![0u8; size];
+            bytes[offset..offset + title.len()].copy_from_slice(title.as_bytes());
+            let rom = root.join(name);
+            fs::write(&rom, bytes).unwrap();
+            rom
+        }
+
+        #[test]
+        fn a_mega_drive_title_is_read_from_its_declared_window() {
+            let root = fixture_directory("header-md");
+            // The domestic title is at 0x150 in the Mega Drive header.
+            let rom = cartridge(&root, "game.md", 0x150, "SONIC THE HEDGEHOG", 0x400);
+            let inspection = inspect_game(&rom, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "megadrive");
+            assert!(
+                matches!(inspection.source, MetadataSource::Header),
+                "the title should come from the header, not the filename"
+            );
+            assert_eq!(inspection.title, "SONIC THE HEDGEHOG");
+        }
+
+        #[test]
+        fn a_game_boy_title_is_read_from_its_declared_window() {
+            let root = fixture_directory("header-gb");
+            // A .gb file can be for Game Boy or Game Boy Color, so we check for
+            // the boot logo at 0x104 before we use the header.
+            let mut bytes = vec![0u8; 0x200];
+            bytes[0x104..0x134].copy_from_slice(NINTENDO_LOGO);
+            bytes[0x134..0x134 + 6].copy_from_slice(b"TETRIS");
+            // We also verify the header checksum at 0x14D, which every
+            // genuine cartridge has, so the fixture has one too.
+            bytes[0x14D] = bytes[0x134..=0x14C]
+                .iter()
+                .fold(0_u8, |checksum, byte| {
+                    checksum.wrapping_sub(*byte).wrapping_sub(1)
+                });
+            let rom = root.join("game.gb");
+            fs::write(&rom, bytes).unwrap();
+            let inspection = inspect_game(&rom, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "gb");
+            assert!(matches!(inspection.source, MetadataSource::Header));
+            assert_eq!(inspection.title, "TETRIS");
+        }
+
+        #[test]
+        fn a_console_declaring_no_header_window_falls_back_to_the_filename() {
+            let root = fixture_directory("header-none");
+            // The Master System header has no title field, so we declare none
+            // in its package and use the filename.
+            let rom = cartridge(&root, "Wonder Boy.sms", 0x10, "NOTATITLE", 0x200);
+            let inspection = inspect_game(&rom, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "mastersystem");
+            assert!(
+                matches!(inspection.source, MetadataSource::Filename),
+                "nothing should be read out of a console that declares no window"
+            );
+            assert_eq!(inspection.title, "Wonder Boy");
+        }
+
+        /// We declare the title window of every console in package data.
+        #[test]
+        fn the_consoles_that_had_hardcoded_windows_still_declare_them() {
+            for (id, offset, length) in [
+                ("megadrive", 0x150, 0x180 - 0x150),
+                ("gb", 0x134, 0x143 - 0x134),
+                ("gbc", 0x134, 0x143 - 0x134),
+                ("gba", 0xA0, 0xAC - 0xA0),
+                ("n64", 0x20, 0x34 - 0x20),
+                ("atari7800", 17, 49 - 17),
+            ] {
+                let window = crate::systems::find(id)
+                    .expect("known console")
+                    .header_title
+                    .unwrap_or_else(|| panic!("{id} lost its declared header window"));
+                assert_eq!((window.offset, window.length), (offset, length), "{id}");
+            }
+        }
     }
 }

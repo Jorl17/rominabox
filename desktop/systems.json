@@ -27,7 +27,11 @@
         }
       ],
       "controllerProfile": "megadrive",
-      "category": "cartridge"
+      "category": "cartridge",
+      "headerTitle": {
+        "offset": 336,
+        "length": 48
+      }
     },
     {
       "id": "segacd",
@@ -169,7 +173,11 @@
         }
       ],
       "controllerProfile": "gameboy",
-      "category": "cartridge"
+      "category": "cartridge",
+      "headerTitle": {
+        "offset": 308,
+        "length": 15
+      }
     },
     {
       "id": "gbc",
@@ -191,7 +199,11 @@
         }
       ],
       "controllerProfile": "gameboy",
-      "category": "cartridge"
+      "category": "cartridge",
+      "headerTitle": {
+        "offset": 308,
+        "length": 15
+      }
     },
     {
       "id": "gba",
@@ -213,7 +225,11 @@
         }
       ],
       "controllerProfile": "gba",
-      "category": "cartridge"
+      "category": "cartridge",
+      "headerTitle": {
+        "offset": 160,
+        "length": 12
+      }
     },
     {
       "id": "nes",
@@ -286,7 +302,11 @@
         }
       ],
       "controllerProfile": "n64",
-      "category": "cartridge"
+      "category": "cartridge",
+      "headerTitle": {
+        "offset": 32,
+        "length": 20
+      }
     },
     {
       "id": "ps1",
@@ -449,7 +469,11 @@
         }
       ],
       "controllerProfile": "retropad",
-      "category": "cartridge"
+      "category": "cartridge",
+      "headerTitle": {
+        "offset": 17,
+        "length": 32
+      }
     },
     {
       "id": "lynx",
