@@ -1093,12 +1093,15 @@ pub const HOTKEY_BINDS: &[HotkeyBind] = &[
     HotkeyBind {
         name: "toggle_fast_forward",
         keyboard: HotkeyKeyboard::Neutral,
+        // This is the desktop default, and we declare no gameplay key on Space.
         advanced_key: Some("space"),
     },
     HotkeyBind {
         name: "hold_fast_forward",
         keyboard: HotkeyKeyboard::Neutral,
-        advanced_key: Some("l"),
+        // The desktop default is `l`, which is already the DualShock right stick
+        // (r_x_plus) in controls.json. Leave it unbound.
+        advanced_key: None,
     },
     HotkeyBind {
         name: "toggle_slowmotion",
@@ -1459,6 +1462,7 @@ video_shader_dir = "$data_dir/shaders"
 runtime_log_directory = "$data_dir/runtime-logs"
 recording_output_directory = "$data_dir/recordings"
 recording_config_directory = "$data_dir/recording-config"
+# Created empty. This export does not ship joypad profiles.
 joypad_autoconfig_dir = "$data_dir/autoconfig"
 assets_directory = "{assets}"
 core_assets_directory = "$data_dir/downloads"
