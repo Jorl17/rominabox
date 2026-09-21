@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ROM-in-a-Box",
+  "version": "0.1.0",
+  "identifier": "com.rominabox.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "ROM-in-a-Box",
+        "width": 1000,
+        "height": 740,
+        "minWidth": 720,
+        "minHeight": 560,
+        "resizable": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost",
+      "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:1420 ws://127.0.0.1:1420"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "icon": ["icons/icon.icns", "icons/icon.ico"],
+    "targets": ["app"],
+    "resources": {
+      "resources/runtime/": "runtime/",
+      "resources/preview/": "preview/",
+      "resources/bin/": "bin/",
+      "resources/skills/": "skills/"
+    },
+    "macOS": {
+      "minimumSystemVersion": "26.0"
+    }
+  }
+}

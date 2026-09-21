@@ -1,0 +1,3 @@
+[submodule "vendor/retroarch"]
+	path = vendor/retroarch
+	url = git@github.com:Jorl17/rominabox-retroarch.git

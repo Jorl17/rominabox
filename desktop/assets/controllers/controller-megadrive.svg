@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="380" viewBox="0 0 960 380">
+  <path d="M478 0v45q0 22 10 32v17" fill="none" stroke="#02091b" stroke-width="14"/>
+  <path d="M475 0v44q0 22 10 32v17" fill="none" stroke="#657394" stroke-width="4"/>
+  <path d="M317 91h330l35 20 25 43 14 96-12 43-28 20-31-3-58-42-100-10-98 12-59 42-34 1-29-23-12-43 13-90 26-44z" fill="#010819"/>
+  <path d="M315 82h330l35 20 25 43 14 96-12 43-28 20-31-3-58-42-100-10-98 12-59 42-34 1-29-23-12-43 13-90 26-44z" fill="#a5b1cb"/>
+  <path d="M317 89h325l33 19 22 39 14 92-11 38-24 19-26-3-58-42-104-10-102 12-57 43-29 0-25-20-10-38 14-85 23-39z" fill="#303d5c"/>
+  <path d="M317 89h325l33 19-15 9H306l-10-3z" fill="#d5def0"/>
+  <path d="M303 122h360l21 30 9 76-14 31-40-7-56-35H395l-53 37-47 2-14-25 8-76z" fill="#15243e"/>
+  <path d="M302 127h359l12 17H293z" fill="#091529"/>
+  <path d="M423 111h98v7h-98z" fill="#e5544d"/>
+  <path d="M426 122h92v3h-92z" fill="#798bae"/>
+  <circle cx="333" cy="187" r="57" fill="#080f22" stroke="#536888" stroke-width="3"/>
+  <path d="M317 138h32v30h30v32h-30v30h-32v-30h-30v-32h30z" fill="#6d7c99"/>
+  <path d="M321 143h24v30h30v24h-30v30h-24v-30h-30v-24h30z" fill="#17233b"/>
+  <path d="m328 157 5-6 5 6zm-27 22-6 5 6 5zm64 0 6 5-6 5zm-37 32 5 6 5-6z" fill="#a3b3d2"/>
+  <circle cx="333" cy="184" r="10" fill="#253650" stroke="#091024" stroke-width="2"/>
+  <g fill="#03091b" stroke="#8292b0" stroke-width="2"><circle cx="535" cy="218" r="24"/><circle cx="588" cy="202" r="24"/><circle cx="641" cy="181" r="24"/></g>
+  <g fill="#ce3a4c" stroke="#f9a0a0" stroke-width="2"><circle cx="535" cy="212" r="21"/><circle cx="588" cy="196" r="21"/><circle cx="641" cy="175" r="21"/></g>
+  <g fill="#fff1d9" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle"><text x="535" y="219">A</text><text x="588" y="203">B</text><text x="641" y="182">C</text></g>
+  <path d="M455 145h47v21h-47z" fill="#030b1e" stroke="#6d7d9b" stroke-width="2"/>
+  <path d="M458 146h41v11h-41z" fill="#ccd5e8"/>
+  <text x="479" y="136" text-anchor="middle" fill="#cbd5eb" font-family="sans-serif" font-size="10" letter-spacing="2">START</text>
+  <path d="M403 222h77m-77 7h77m-77 7h77" stroke="#334761" stroke-width="3"/>
+</svg>

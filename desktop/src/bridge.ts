@@ -1,0 +1,194 @@
+import { invoke, isTauri } from "@tauri-apps/api/core";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import type { Controls } from "./controls";
+
+export const native = isTauri();
+export type GameInfo = {
+  title: string;
+  system: string;
+  filename: string;
+  size: number;
+  source: string;
+  matched: boolean;
+  catalogName?: string;
+  description?: string;
+  iconPath?: string;
+  warnings: string[];
+};
+export type Picture = { path: string; url: string };
+export type ExportRequest = {
+  rom: string;
+  title: string;
+  system: string;
+  description: string;
+  icon: string | null;
+  background: string | null;
+  showMenu: boolean;
+  startAtMenu: boolean;
+  splash: boolean;
+  advancedEmulatorAccess: boolean;
+  firmware: string[];
+  theme: string;
+  palette: string;
+  menuSounds: string;
+  controls: Controls;
+  outputDir: string;
+  target: string;
+};
+export type ExportProgress = {
+  stage: string;
+  fraction: number;
+  message: string;
+};
+export type ExportResult = {
+  appPath: string;
+  archivePath: string;
+  installedBytes: number;
+  archiveBytes: number;
+  runtimeBytes: number;
+  contentBytes: number;
+};
+export async function pickFile(kind: "game" | "image"): Promise<string | null> {
+  const path = await open({
+    multiple: false,
+    directory: false,
+    title: kind === "game" ? "Choose a game" : "Choose an image",
+    ...(kind === "image"
+      ? {
+          filters: [
+            {
+              name: "Images",
+              extensions: [
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "gif",
+                "bmp",
+                "tif",
+                "tiff",
+                "ico",
+              ],
+            },
+          ],
+        }
+      : {}),
+  });
+  return typeof path === "string" ? path : null;
+}
+export async function pickFolder(): Promise<string | null> {
+  const path = await open({
+    directory: true,
+    multiple: false,
+    title: "Save your game app",
+  });
+  return typeof path === "string" ? path : null;
+}
+export function inspectGame(
+  path: string,
+  online: boolean,
+  systemOverride?: string,
+): Promise<GameInfo> {
+  return invoke("inspect_game", { path, online, systemOverride });
+}
+export async function pickFirmware(): Promise<string[]> {
+  const files = await open({
+    multiple: true,
+    directory: false,
+    title: "Choose BIOS files",
+  });
+  return Array.isArray(files) ? files : files ? [files] : [];
+}
+export async function readImage(path: string): Promise<Picture> {
+  const bytes = await invoke<number[]>("image_preview", { path });
+  return {
+    path,
+    url: URL.createObjectURL(
+      new Blob([new Uint8Array(bytes)], { type: "image/png" }),
+    ),
+  };
+}
+export async function menuPreview(
+  background: string | null,
+  palette: string,
+): Promise<string> {
+  const bytes = await invoke<number[]>("menu_preview", { background, palette });
+  return URL.createObjectURL(
+    new Blob([new Uint8Array(bytes)], { type: "image/png" }),
+  );
+}
+export function exportGame(request: ExportRequest): Promise<ExportResult> {
+  return invoke("export_game", { request });
+}
+export function cancelExport(): Promise<void> {
+  return invoke("cancel_export");
+}
+export function availableSystems(): Promise<string[]> {
+  return invoke("available_systems");
+}
+export function defaultDestination(): Promise<string> {
+  return invoke("default_destination");
+}
+export function reveal(path: string): Promise<void> {
+  return revealItemInDir(path);
+}
+export function onExportProgress(callback: (value: ExportProgress) => void) {
+  return listen<ExportProgress>("export-progress", (e) => callback(e.payload));
+}
+export function onNativeDrop(
+  callback: (paths: string[], position: { x: number; y: number }) => void,
+  hover: (value: boolean) => void,
+) {
+  return getCurrentWindow().onDragDropEvent(async (e) => {
+    if (e.payload.type === "drop") {
+      hover(false);
+      const scale = await getCurrentWindow().scaleFactor();
+      callback(e.payload.paths, {
+        x: e.payload.position.x / scale,
+        y: e.payload.position.y / scale,
+      });
+    } else hover(e.payload.type === "over" || e.payload.type === "enter");
+  });
+}
+
+export type ProjectArchiveResult = {
+  archivePath: string;
+  archiveBytes: number;
+};
+export type OpenProject = {
+  settings: Omit<ExportRequest, "outputDir">;
+  extractionDir: string;
+};
+export async function pickProjectSave(title: string): Promise<string | null> {
+  return save({
+    title: "Save project — includes game and artwork",
+    defaultPath: `${title.replace(/[\\/:*?"<>|]/g, "-")}.rominabox`,
+    filters: [
+      {
+        name: "ROM-in-a-Box project (includes ROM)",
+        extensions: ["rominabox"],
+      },
+    ],
+  });
+}
+export async function pickProjectOpen(): Promise<string | null> {
+  const path = await open({
+    title: "Open project",
+    multiple: false,
+    directory: false,
+    filters: [{ name: "ROM-in-a-Box project", extensions: ["rominabox"] }],
+  });
+  return typeof path === "string" ? path : null;
+}
+export function saveProject(
+  archivePath: string,
+  settings: ExportRequest,
+): Promise<ProjectArchiveResult> {
+  return invoke("save_project", { request: { archivePath, settings } });
+}
+export function openProject(archivePath: string): Promise<OpenProject> {
+  return invoke("open_project", { archivePath });
+}

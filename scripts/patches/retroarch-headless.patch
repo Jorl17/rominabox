@@ -1,0 +1,52 @@
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -1374,7 +1374,7 @@
+    OBJ += gfx/drivers_context/opendingux_fbdev_ctx.o
+ endif
+ 
+-ifneq ($(findstring Darwin,$(OS)),)
++ifeq ($(HAVE_COCOA),1)
+    OBJ += gfx/display_servers/dispserv_apple.o
+ endif
+ 
+--- a/gfx/video_driver.c
++++ b/gfx/video_driver.c
+@@ -1299,14 +1299,14 @@
+ #endif
+          break;
+       case RARCH_DISPLAY_OSX:
+-#if defined(__APPLE__)
++#if defined(__APPLE__) && defined(HAVE_COCOA)
+          current_display_server = &dispserv_apple;
+ #endif
+          break;
+       default:
+ #if defined(ANDROID)
+          current_display_server = &dispserv_android;
+-#elif defined(__APPLE__)
++#elif defined(__APPLE__) && defined(HAVE_COCOA)
+          current_display_server = &dispserv_apple;
+ #else
+          current_display_server = &dispserv_null;
+--- a/configuration.c
++++ b/configuration.c
+@@ -3146,7 +3146,7 @@
+ #endif
+ #endif
+ 
+-#if __APPLE__
++#if defined(HAVE_COCOA) || defined(HAVE_COCOATOUCH)
+    configuration_set_bool(settings,
+          settings->bools.accessibility_enable, RAIsVoiceOverRunning());
+ #endif
+--- a/ui/ui_companion_driver.c
++++ b/ui/ui_companion_driver.c
+@@ -50,7 +50,7 @@
+ #if defined(_WIN32) && !defined(_XBOX) && !defined(__WINRT__)
+    &ui_companion_win32,
+ #endif
+-#if defined(OSX)
++#if defined(OSX) && defined(HAVE_COCOA)
+    &ui_companion_cocoa,
+ #endif
+ #if defined(IOS)

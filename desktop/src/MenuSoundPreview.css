@@ -1,0 +1,17 @@
+.menu-sound-preview {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  flex: 0 0 auto;
+}
+.menu-sound-preview-status {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ab301d;
+  white-space: nowrap;
+  pointer-events: none;
+}

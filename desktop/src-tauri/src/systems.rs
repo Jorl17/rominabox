@@ -1,0 +1,124 @@
+use std::sync::OnceLock;
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Deserialize)]
+struct Catalog {
+    version: u32,
+    systems: Vec<System>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct System {
+    pub id: String,
+    pub name: String,
+    pub aliases: Vec<String>,
+    pub extensions: Vec<String>,
+    pub catalog: Option<String>,
+    pub cores: Vec<Core>,
+    #[serde(default)]
+    pub firmware: Vec<FirmwareRequirement>,
+    pub controller_profile: String,
+    pub category: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Core {
+    pub filename: String,
+    pub component: String,
+    pub license: String,
+    pub license_file: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FirmwareRequirement {
+    pub id: String,
+    pub accepted_names: Vec<String>,
+    pub minimum: usize,
+    pub help: String,
+}
+
+impl System {
+    pub fn preferred_core(&self) -> Option<&Core> {
+        self.cores.first()
+    }
+}
+
+/// Returns the declared system metadata. A core entry lists a core we may
+/// package and its licence. It does not mean that a runtime kit contains the
+/// core or that we have tested gameplay on a target platform.
+pub fn registry() -> &'static [System] {
+    static CATALOG: OnceLock<Catalog> = OnceLock::new();
+    let catalog = CATALOG.get_or_init(|| {
+        let parsed: Catalog = serde_json::from_str(include_str!("../../systems.json"))
+            .expect("desktop/systems.json must be valid");
+        assert_eq!(parsed.version, 1, "unsupported systems catalog version");
+        parsed
+    });
+    &catalog.systems
+}
+
+pub fn find(value: &str) -> Option<&'static System> {
+    let value = value.trim();
+    registry().iter().find(|system| {
+        system.id.eq_ignore_ascii_case(value)
+            || system
+                .aliases
+                .iter()
+                .any(|alias| alias.eq_ignore_ascii_case(value))
+    })
+}
+
+pub fn candidates_for_extension(extension: &str) -> Vec<&'static System> {
+    let extension = extension.trim_start_matches('.');
+    registry()
+        .iter()
+        .filter(|system| {
+            system
+                .extensions
+                .iter()
+                .any(|candidate| candidate.eq_ignore_ascii_case(extension))
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn aliases_and_shared_extensions_come_from_one_registry() {
+        assert_eq!(
+            find("Genesis").map(|system| system.id.as_str()),
+            Some("megadrive")
+        );
+        assert_eq!(find("Mega Drive").unwrap().controller_profile, "megadrive");
+        assert_eq!(
+            find("Game Boy Color").unwrap().controller_profile,
+            "gameboy"
+        );
+        let cue: Vec<_> = candidates_for_extension(".cue")
+            .into_iter()
+            .map(|system| system.id.as_str())
+            .collect();
+        assert_eq!(cue, ["segacd", "ps1", "pcecd"]);
+        assert_eq!(
+            find("nes").unwrap().preferred_core().unwrap().filename,
+            "nestopia_libretro.dylib"
+        );
+        assert_eq!(find("sg1000").unwrap().controller_profile, "mastersystem");
+        let sega_cd = find("Sega CD").unwrap();
+        assert_eq!(sega_cd.firmware[0].minimum, 1);
+        assert!(sega_cd.firmware[0]
+            .accepted_names
+            .iter()
+            .any(|name| name == "bios_CD_U.bin"));
+        assert_eq!(
+            find("pcecd").unwrap().firmware[0].accepted_names,
+            ["syscard3.pce"]
+        );
+    }
+}

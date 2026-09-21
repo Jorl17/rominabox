@@ -1,0 +1,440 @@
+{
+  "version": 1,
+  "systems": [
+    {
+      "id": "megadrive",
+      "name": "Mega Drive / Genesis",
+      "aliases": ["mega drive", "genesis"],
+      "extensions": ["md", "gen", "smd"],
+      "catalog": "Sega - Mega Drive - Genesis",
+      "cores": [
+        {
+          "filename": "genesis_plus_gx_libretro.dylib",
+          "component": "genesis_plus_gx",
+          "license": "Non-commercial",
+          "licenseFile": "genesis_plus_gx.txt"
+        }
+      ],
+      "controllerProfile": "megadrive",
+      "category": "cartridge"
+    },
+    {
+      "id": "segacd",
+      "name": "Sega CD / Mega-CD",
+      "aliases": ["sega cd", "mega-cd", "megacd"],
+      "extensions": ["cue", "chd", "iso", "m3u"],
+      "cores": [
+        {
+          "filename": "genesis_plus_gx_libretro.dylib",
+          "component": "genesis_plus_gx",
+          "license": "Non-commercial",
+          "licenseFile": "genesis_plus_gx.txt"
+        }
+      ],
+      "firmware": [
+        {
+          "id": "segacd-bios",
+          "acceptedNames": ["bios_CD_E.bin", "bios_CD_U.bin", "bios_CD_J.bin"],
+          "minimum": 1,
+          "help": "Select at least one Sega CD region BIOS that you are entitled to use. ROM-in-a-Box does not search another emulator's files."
+        }
+      ],
+      "controllerProfile": "megadrive",
+      "category": "disc"
+    },
+    {
+      "id": "mastersystem",
+      "name": "Master System",
+      "aliases": ["master system", "sms", "mark iii"],
+      "extensions": ["sms"],
+      "catalog": "Sega - Master System - Mark III",
+      "cores": [
+        {
+          "filename": "genesis_plus_gx_libretro.dylib",
+          "component": "genesis_plus_gx",
+          "license": "Non-commercial",
+          "licenseFile": "genesis_plus_gx.txt"
+        }
+      ],
+      "controllerProfile": "mastersystem",
+      "category": "cartridge"
+    },
+    {
+      "id": "gamegear",
+      "name": "Game Gear",
+      "aliases": ["game gear", "gg"],
+      "extensions": ["gg"],
+      "catalog": "Sega - Game Gear",
+      "cores": [
+        {
+          "filename": "genesis_plus_gx_libretro.dylib",
+          "component": "genesis_plus_gx",
+          "license": "Non-commercial",
+          "licenseFile": "genesis_plus_gx.txt"
+        }
+      ],
+      "controllerProfile": "gamegear",
+      "category": "cartridge"
+    },
+    {
+      "id": "sg1000",
+      "name": "SG-1000",
+      "aliases": ["sg-1000", "sg1000"],
+      "extensions": ["sg"],
+      "catalog": "Sega - SG-1000",
+      "cores": [
+        {
+          "filename": "genesis_plus_gx_libretro.dylib",
+          "component": "genesis_plus_gx",
+          "license": "Non-commercial",
+          "licenseFile": "genesis_plus_gx.txt"
+        }
+      ],
+      "controllerProfile": "mastersystem",
+      "category": "cartridge"
+    },
+    {
+      "id": "gb",
+      "name": "Game Boy",
+      "aliases": ["game boy"],
+      "extensions": ["gb"],
+      "catalog": "Nintendo - Game Boy",
+      "cores": [
+        {
+          "filename": "gambatte_libretro.dylib",
+          "component": "gambatte",
+          "license": "GPL-2.0",
+          "licenseFile": "gambatte.txt"
+        }
+      ],
+      "controllerProfile": "gameboy",
+      "category": "cartridge"
+    },
+    {
+      "id": "gbc",
+      "name": "Game Boy Color",
+      "aliases": ["game boy color"],
+      "extensions": ["gbc"],
+      "catalog": "Nintendo - Game Boy Color",
+      "cores": [
+        {
+          "filename": "gambatte_libretro.dylib",
+          "component": "gambatte",
+          "license": "GPL-2.0",
+          "licenseFile": "gambatte.txt"
+        }
+      ],
+      "controllerProfile": "gameboy",
+      "category": "cartridge"
+    },
+    {
+      "id": "gba",
+      "name": "Game Boy Advance",
+      "aliases": ["game boy advance"],
+      "extensions": ["gba"],
+      "catalog": "Nintendo - Game Boy Advance",
+      "cores": [
+        {
+          "filename": "mgba_libretro.dylib",
+          "component": "mgba",
+          "license": "MPL-2.0",
+          "licenseFile": "mgba.txt"
+        }
+      ],
+      "controllerProfile": "gba",
+      "category": "cartridge"
+    },
+    {
+      "id": "nes",
+      "name": "Nintendo Entertainment System",
+      "aliases": ["nes", "famicom"],
+      "extensions": ["nes"],
+      "catalog": "Nintendo - Nintendo Entertainment System",
+      "cores": [
+        {
+          "filename": "nestopia_libretro.dylib",
+          "component": "nestopia",
+          "license": "GPL-2.0",
+          "licenseFile": "nestopia.txt"
+        }
+      ],
+      "controllerProfile": "nes",
+      "category": "cartridge"
+    },
+    {
+      "id": "snes",
+      "name": "Super Nintendo Entertainment System",
+      "aliases": ["snes", "super nintendo", "super famicom"],
+      "extensions": ["sfc", "smc"],
+      "catalog": "Nintendo - Super Nintendo Entertainment System",
+      "cores": [
+        {
+          "filename": "snes9x_libretro.dylib",
+          "component": "snes9x",
+          "license": "Non-commercial",
+          "licenseFile": "snes9x.txt"
+        }
+      ],
+      "controllerProfile": "snes",
+      "category": "cartridge"
+    },
+    {
+      "id": "n64",
+      "name": "Nintendo 64",
+      "aliases": ["n64", "nintendo 64"],
+      "extensions": ["z64", "n64", "v64"],
+      "catalog": "Nintendo - Nintendo 64",
+      "cores": [
+        {
+          "filename": "mupen64plus_next_libretro.dylib",
+          "component": "mupen64plus_next",
+          "license": "GPL-3.0",
+          "licenseFile": "mupen64plus_next.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "cartridge"
+    },
+    {
+      "id": "ps1",
+      "name": "PlayStation",
+      "aliases": ["playstation", "psx", "ps1"],
+      "extensions": ["cue", "chd", "pbp", "m3u"],
+      "cores": [
+        {
+          "filename": "pcsx_rearmed_libretro.dylib",
+          "component": "pcsx_rearmed",
+          "license": "GPL-2.0",
+          "licenseFile": "pcsx_rearmed.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "disc"
+    },
+    {
+      "id": "dreamcast",
+      "name": "Dreamcast",
+      "aliases": ["dreamcast"],
+      "extensions": ["gdi", "cdi", "chd", "m3u"],
+      "cores": [
+        {
+          "filename": "flycast_libretro.dylib",
+          "component": "flycast",
+          "license": "GPL-2.0",
+          "licenseFile": "flycast.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "disc"
+    },
+    {
+      "id": "gamecube",
+      "name": "GameCube",
+      "aliases": ["gamecube"],
+      "extensions": ["gcm", "rvz", "iso"],
+      "cores": [
+        {
+          "filename": "dolphin_libretro.dylib",
+          "component": "dolphin",
+          "license": "GPL-2.0",
+          "licenseFile": "dolphin.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "disc"
+    },
+    {
+      "id": "ps2",
+      "name": "PlayStation 2",
+      "aliases": ["playstation 2", "ps2"],
+      "extensions": ["iso", "chd"],
+      "cores": [
+        {
+          "filename": "pcsx2_libretro.dylib",
+          "component": "pcsx2",
+          "license": "GPL-3.0",
+          "licenseFile": "pcsx2.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "disc"
+    },
+    {
+      "id": "atari2600",
+      "name": "Atari 2600",
+      "aliases": ["atari 2600", "vcs"],
+      "extensions": ["a26"],
+      "catalog": "Atari - 2600",
+      "cores": [
+        {
+          "filename": "stella_libretro.dylib",
+          "component": "stella",
+          "license": "GPL-2.0",
+          "licenseFile": "stella.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "cartridge"
+    },
+    {
+      "id": "atari5200",
+      "name": "Atari 5200",
+      "aliases": ["atari 5200"],
+      "extensions": ["a52"],
+      "catalog": "Atari - 5200",
+      "cores": [
+        {
+          "filename": "a5200_libretro.dylib",
+          "component": "a5200",
+          "license": "GPL-2.0",
+          "licenseFile": "a5200.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "cartridge"
+    },
+    {
+      "id": "atari7800",
+      "name": "Atari 7800",
+      "aliases": ["atari 7800"],
+      "extensions": ["a78"],
+      "catalog": "Atari - 7800",
+      "cores": [
+        {
+          "filename": "prosystem_libretro.dylib",
+          "component": "prosystem",
+          "license": "GPL-2.0",
+          "licenseFile": "prosystem.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "cartridge"
+    },
+    {
+      "id": "lynx",
+      "name": "Atari Lynx",
+      "aliases": ["atari lynx", "lynx"],
+      "extensions": ["lnx"],
+      "catalog": "Atari - Lynx",
+      "cores": [
+        {
+          "filename": "handy_libretro.dylib",
+          "component": "handy",
+          "license": "Zlib",
+          "licenseFile": "handy.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "cartridge"
+    },
+    {
+      "id": "pce",
+      "name": "PC Engine / TurboGrafx-16",
+      "aliases": ["pc engine", "turbografx-16", "tg16"],
+      "extensions": ["pce"],
+      "catalog": "NEC - PC Engine - TurboGrafx 16",
+      "cores": [
+        {
+          "filename": "mednafen_pce_fast_libretro.dylib",
+          "component": "beetle_pce_fast",
+          "license": "GPL-2.0",
+          "licenseFile": "beetle_pce_fast.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "cartridge"
+    },
+    {
+      "id": "pcecd",
+      "name": "PC Engine CD / TurboGrafx-CD",
+      "aliases": ["pc engine cd", "turbografx-cd", "tg-cd"],
+      "extensions": ["cue", "chd", "m3u"],
+      "cores": [
+        {
+          "filename": "mednafen_pce_fast_libretro.dylib",
+          "component": "beetle_pce_fast",
+          "license": "GPL-2.0",
+          "licenseFile": "beetle_pce_fast.txt"
+        }
+      ],
+      "firmware": [
+        {
+          "id": "pcecd-system-card",
+          "acceptedNames": ["syscard3.pce"],
+          "minimum": 1,
+          "help": "Select a Super CD-ROM2 System Card 3 BIOS that you are entitled to use."
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "disc"
+    },
+    {
+      "id": "neogeopocket",
+      "name": "Neo Geo Pocket",
+      "aliases": ["neo geo pocket", "ngp"],
+      "extensions": ["ngp"],
+      "catalog": "SNK - Neo Geo Pocket",
+      "cores": [
+        {
+          "filename": "mednafen_ngp_libretro.dylib",
+          "component": "beetle_neopop",
+          "license": "GPL-2.0",
+          "licenseFile": "beetle_neopop.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "cartridge"
+    },
+    {
+      "id": "neogeopocketcolor",
+      "name": "Neo Geo Pocket Color",
+      "aliases": ["neo geo pocket color", "ngpc"],
+      "extensions": ["ngc"],
+      "catalog": "SNK - Neo Geo Pocket Color",
+      "cores": [
+        {
+          "filename": "mednafen_ngp_libretro.dylib",
+          "component": "beetle_neopop",
+          "license": "GPL-2.0",
+          "licenseFile": "beetle_neopop.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "cartridge"
+    },
+    {
+      "id": "wonderswan",
+      "name": "WonderSwan",
+      "aliases": ["wonderswan"],
+      "extensions": ["ws"],
+      "catalog": "Bandai - WonderSwan",
+      "cores": [
+        {
+          "filename": "mednafen_wswan_libretro.dylib",
+          "component": "beetle_cygne",
+          "license": "GPL-2.0",
+          "licenseFile": "beetle_cygne.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "cartridge"
+    },
+    {
+      "id": "wonderswancolor",
+      "name": "WonderSwan Color",
+      "aliases": ["wonderswan color"],
+      "extensions": ["wsc"],
+      "catalog": "Bandai - WonderSwan Color",
+      "cores": [
+        {
+          "filename": "mednafen_wswan_libretro.dylib",
+          "component": "beetle_cygne",
+          "license": "GPL-2.0",
+          "licenseFile": "beetle_cygne.txt"
+        }
+      ],
+      "controllerProfile": "retropad",
+      "category": "cartridge"
+    }
+  ]
+}

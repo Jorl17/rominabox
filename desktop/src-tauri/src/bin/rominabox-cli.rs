@@ -1,0 +1,167 @@
+//! Headless JSON-lines interface to the engine behind the desktop app.
+
+use rominabox_desktop::{controls, metadata, packaging, projects, systems, themes};
+use serde::Deserialize;
+use serde_json::json;
+use std::io::{self, Read};
+use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct InspectRequest {
+    rom: PathBuf,
+    cache: PathBuf,
+    #[serde(default = "online_default")]
+    online: bool,
+    #[serde(default)]
+    system: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FreezeRequest {
+    source: PathBuf,
+    destination: PathBuf,
+}
+
+#[derive(Deserialize)]
+struct ControlsRequest {
+    system: String,
+    #[serde(default)]
+    profile: Option<String>,
+}
+
+fn online_default() -> bool {
+    true
+}
+
+fn main() {
+    if let Err(error) = run() {
+        println!("{}", json!({ "type": "error", "message": error }));
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), String> {
+    let command = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "--help".to_string());
+    if command == "--help" || command == "-h" {
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|preview|export|project-save|project-open|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        return Ok(());
+    }
+    if command == "schemas" {
+        println!(
+            "{}",
+            json!({
+                "inspect": { "request": ["rom", "cache", "online?", "system?"], "result": "Inspection" },
+                "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
+                "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
+                "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
+                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "events": ["progress", "result", "error"] },
+                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "target"], "result": "ProjectArchiveResult" },
+                "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" }
+            })
+        );
+        return Ok(());
+    }
+    let mut input = String::new();
+    io::stdin()
+        .read_to_string(&mut input)
+        .map_err(|error| format!("could not read stdin: {error}"))?;
+    match command.as_str() {
+        "systems" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                runtime_kit: Option<PathBuf>,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|e| format!("invalid systems request: {e}"))?;
+            let available = request
+                .runtime_kit
+                .as_deref()
+                .map(packaging::available_systems);
+            println!(
+                "{}",
+                json!({"type":"result", "result":{"systems":systems::registry(), "available":available}})
+            );
+            Ok(())
+        }
+        "controls" => {
+            let request: ControlsRequest = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid controls request: {error}"))?;
+            let profile = controls::validate_for_system(
+                &request.system,
+                &controls::Controls {
+                    profile: request.profile,
+                    ..Default::default()
+                },
+            )?;
+            println!("{}", json!({"type":"result", "result":profile}));
+            Ok(())
+        }
+        "inspect" => {
+            let request: InspectRequest = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid inspect request: {error}"))?;
+            let result = metadata::inspect_game_with_system(
+                &request.rom,
+                &request.cache,
+                request.online,
+                request.system.as_deref(),
+            )
+            .map_err(|error| error.to_string())?;
+            println!("{}", json!({ "type": "result", "result": result }));
+            Ok(())
+        }
+        "export" => {
+            let request: packaging::ExportRequest = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid export request: {error}"))?;
+            let cancelled = AtomicBool::new(false);
+            let result = packaging::export_game(&request, &cancelled, |event| {
+                println!("{}", json!({ "type": "progress", "progress": event }));
+            })
+            .map_err(|error| error.to_string())?;
+            println!("{}", json!({ "type": "result", "result": result }));
+            Ok(())
+        }
+        "project-save" => {
+            let request: projects::ProjectSaveRequest = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid project save request: {error}"))?;
+            let result = projects::save_project(&request)?;
+            println!("{}", json!({ "type": "result", "result": result }));
+            Ok(())
+        }
+        "project-open" => {
+            let request: projects::ProjectOpenRequest = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid project open request: {error}"))?;
+            let result = projects::open_project(&request)?;
+            println!("{}", json!({ "type": "result", "result": result }));
+            Ok(())
+        }
+        "preview" => {
+            let request: themes::PreviewRequest = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid preview request: {error}"))?;
+            let image_path = themes::render_preview(&request)?;
+            println!(
+                "{}",
+                json!({ "type": "result", "result": { "imagePath": image_path } })
+            );
+            Ok(())
+        }
+        "freeze-macos-executable" => {
+            let request: FreezeRequest = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid freeze request: {error}"))?;
+            let installed_bytes =
+                packaging::freeze_macos_executable(&request.source, &request.destination)
+                    .map_err(|error| error.to_string())?;
+            println!(
+                "{}",
+                json!({ "type": "result", "result": { "path": request.destination, "installedBytes": installed_bytes } })
+            );
+            Ok(())
+        }
+        _ => Err(format!("unknown command: {command}")),
+    }
+}

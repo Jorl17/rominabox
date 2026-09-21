@@ -1,0 +1,61 @@
+{
+  "designs": [
+    {
+      "id": "native",
+      "name": "Default menu",
+      "slots": 6
+    }
+  ],
+  "palettes": [
+    {
+      "id": "blue",
+      "name": "Blue",
+      "screen": "#1049c3",
+      "background": "#041738",
+      "surface": "#061a48",
+      "picture": "#0865bf",
+      "edge": "#75b2e4",
+      "highlight": "#fff13d",
+      "muted": "#b4e6ff",
+      "focus": "#193e88"
+    },
+    {
+      "id": "green",
+      "name": "Green",
+      "screen": "#00896e",
+      "background": "#071b2a",
+      "surface": "#103748",
+      "picture": "#235770",
+      "edge": "#8cf3bf",
+      "highlight": "#fff13d",
+      "muted": "#d9ffe7",
+      "focus": "#174760"
+    },
+    {
+      "id": "amber",
+      "name": "Amber",
+      "screen": "#bd490b",
+      "background": "#261608",
+      "surface": "#381b10",
+      "picture": "#a24816",
+      "edge": "#ffd198",
+      "highlight": "#fff13d",
+      "muted": "#ffe3b4",
+      "focus": "#7c310d"
+    }
+  ],
+  "soundPacks": [
+    {
+      "id": "off",
+      "name": "Off"
+    },
+    {
+      "id": "pulse",
+      "name": "Pulse"
+    },
+    {
+      "id": "grain",
+      "name": "Grain"
+    }
+  ]
+}

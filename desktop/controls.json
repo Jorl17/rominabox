@@ -1,0 +1,872 @@
+{
+  "profiles": [
+    {
+      "id": "megadrive",
+      "name": "Mega Drive · 3 buttons",
+      "systems": ["megadrive", "segacd"],
+      "image": "controller-megadrive.png",
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 333,
+          "y": 160,
+          "calloutX": 16,
+          "calloutY": 16
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 309,
+          "y": 184,
+          "calloutX": 16,
+          "calloutY": 108
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 357,
+          "y": 184,
+          "calloutX": 16,
+          "calloutY": 200
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 333,
+          "y": 208,
+          "calloutX": 16,
+          "calloutY": 292
+        },
+        {
+          "id": "y",
+          "label": "A",
+          "key": "z",
+          "x": 535,
+          "y": 214,
+          "calloutX": 744,
+          "calloutY": 292
+        },
+        {
+          "id": "b",
+          "label": "B",
+          "key": "x",
+          "x": 588,
+          "y": 198,
+          "calloutX": 744,
+          "calloutY": 200
+        },
+        {
+          "id": "a",
+          "label": "C",
+          "key": "c",
+          "x": 641,
+          "y": 177,
+          "calloutX": 744,
+          "calloutY": 108
+        },
+        {
+          "id": "start",
+          "label": "Start",
+          "key": "enter",
+          "x": 479,
+          "y": 153,
+          "calloutX": 744,
+          "calloutY": 16
+        }
+      ],
+      "coreDevice": 257
+    },
+    {
+      "id": "gameboy",
+      "name": "Game Boy",
+      "systems": ["gb", "gbc"],
+      "image": "controller-gameboy.png",
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 424,
+          "y": 215,
+          "calloutX": 16,
+          "calloutY": 16
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 403,
+          "y": 236,
+          "calloutX": 16,
+          "calloutY": 108
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 445,
+          "y": 236,
+          "calloutX": 16,
+          "calloutY": 200
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 424,
+          "y": 257,
+          "calloutX": 16,
+          "calloutY": 292
+        },
+        {
+          "id": "a",
+          "label": "A",
+          "key": "x",
+          "x": 569,
+          "y": 215,
+          "calloutX": 744,
+          "calloutY": 16
+        },
+        {
+          "id": "b",
+          "label": "B",
+          "key": "z",
+          "x": 526,
+          "y": 237,
+          "calloutX": 744,
+          "calloutY": 108
+        },
+        {
+          "id": "select",
+          "label": "Select",
+          "key": "rshift",
+          "x": 458,
+          "y": 306,
+          "calloutX": 744,
+          "calloutY": 200
+        },
+        {
+          "id": "start",
+          "label": "Start",
+          "key": "enter",
+          "x": 513,
+          "y": 306,
+          "calloutX": 744,
+          "calloutY": 292
+        }
+      ]
+    },
+    {
+      "id": "megadrive6",
+      "name": "Mega Drive · 6 buttons",
+      "systems": ["megadrive", "segacd"],
+      "image": "",
+      "coreDevice": 513,
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 20
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 20
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 20
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 20
+        },
+        {
+          "id": "y",
+          "label": "A",
+          "key": "z",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 104
+        },
+        {
+          "id": "b",
+          "label": "B",
+          "key": "x",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 104
+        },
+        {
+          "id": "a",
+          "label": "C",
+          "key": "c",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 104
+        },
+        {
+          "id": "start",
+          "label": "Start",
+          "key": "enter",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 104
+        },
+        {
+          "id": "l",
+          "label": "X",
+          "key": "a",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 188
+        },
+        {
+          "id": "x",
+          "label": "Y",
+          "key": "s",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 188
+        },
+        {
+          "id": "r",
+          "label": "Z",
+          "key": "d",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 188
+        },
+        {
+          "id": "select",
+          "label": "Mode",
+          "key": "rshift",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 188
+        }
+      ]
+    },
+    {
+      "id": "nes",
+      "name": "NES",
+      "systems": ["nes"],
+      "image": "",
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 20
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 20
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 20
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 20
+        },
+        {
+          "id": "b",
+          "label": "B",
+          "key": "z",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 104
+        },
+        {
+          "id": "a",
+          "label": "A",
+          "key": "x",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 104
+        },
+        {
+          "id": "select",
+          "label": "Select",
+          "key": "rshift",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 104
+        },
+        {
+          "id": "start",
+          "label": "Start",
+          "key": "enter",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 104
+        }
+      ]
+    },
+    {
+      "id": "snes",
+      "name": "Super Nintendo",
+      "systems": ["snes"],
+      "image": "",
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 20
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 20
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 20
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 20
+        },
+        {
+          "id": "b",
+          "label": "B",
+          "key": "z",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 104
+        },
+        {
+          "id": "a",
+          "label": "A",
+          "key": "x",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 104
+        },
+        {
+          "id": "y",
+          "label": "Y",
+          "key": "a",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 104
+        },
+        {
+          "id": "x",
+          "label": "X",
+          "key": "s",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 104
+        },
+        {
+          "id": "l",
+          "label": "L",
+          "key": "d",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 188
+        },
+        {
+          "id": "r",
+          "label": "R",
+          "key": "c",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 188
+        },
+        {
+          "id": "select",
+          "label": "Select",
+          "key": "rshift",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 188
+        },
+        {
+          "id": "start",
+          "label": "Start",
+          "key": "enter",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 188
+        }
+      ]
+    },
+    {
+      "id": "gba",
+      "name": "Game Boy Advance",
+      "systems": ["gba"],
+      "image": "",
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 20
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 20
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 20
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 20
+        },
+        {
+          "id": "b",
+          "label": "B",
+          "key": "z",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 104
+        },
+        {
+          "id": "a",
+          "label": "A",
+          "key": "x",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 104
+        },
+        {
+          "id": "l",
+          "label": "L",
+          "key": "d",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 104
+        },
+        {
+          "id": "r",
+          "label": "R",
+          "key": "c",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 104
+        },
+        {
+          "id": "select",
+          "label": "Select",
+          "key": "rshift",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 188
+        },
+        {
+          "id": "start",
+          "label": "Start",
+          "key": "enter",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 188
+        }
+      ]
+    },
+    {
+      "id": "mastersystem",
+      "name": "Master System",
+      "systems": ["mastersystem", "sg1000"],
+      "image": "",
+      "coreDevice": 769,
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 20
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 20
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 20
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 20
+        },
+        {
+          "id": "b",
+          "label": "1",
+          "key": "z",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 104
+        },
+        {
+          "id": "a",
+          "label": "2",
+          "key": "x",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 104
+        },
+        {
+          "id": "start",
+          "label": "Pause",
+          "key": "enter",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 104
+        }
+      ]
+    },
+    {
+      "id": "gamegear",
+      "name": "Game Gear",
+      "systems": ["gamegear"],
+      "image": "",
+      "coreDevice": 769,
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 20
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 20
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 20
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 20
+        },
+        {
+          "id": "b",
+          "label": "1",
+          "key": "z",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 104
+        },
+        {
+          "id": "a",
+          "label": "2",
+          "key": "x",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 104
+        },
+        {
+          "id": "start",
+          "label": "Start",
+          "key": "enter",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 104
+        }
+      ]
+    },
+    {
+      "id": "retropad",
+      "name": "RetroPad",
+      "systems": [],
+      "image": "",
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 20
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 20
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 20
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 20
+        },
+        {
+          "id": "b",
+          "label": "B",
+          "key": "z",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 104
+        },
+        {
+          "id": "a",
+          "label": "A",
+          "key": "x",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 104
+        },
+        {
+          "id": "y",
+          "label": "Y",
+          "key": "a",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 104
+        },
+        {
+          "id": "x",
+          "label": "X",
+          "key": "s",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 104
+        },
+        {
+          "id": "l",
+          "label": "L",
+          "key": "d",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 188
+        },
+        {
+          "id": "r",
+          "label": "R",
+          "key": "c",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 188
+        },
+        {
+          "id": "l2",
+          "label": "L2",
+          "key": "w",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 188
+        },
+        {
+          "id": "r2",
+          "label": "R2",
+          "key": "e",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 188
+        },
+        {
+          "id": "select",
+          "label": "Select",
+          "key": "rshift",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 272
+        },
+        {
+          "id": "start",
+          "label": "Start",
+          "key": "enter",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 272
+        },
+        {
+          "id": "l3",
+          "label": "L3",
+          "key": "1",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 272
+        },
+        {
+          "id": "r3",
+          "label": "R3",
+          "key": "2",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 272
+        }
+      ]
+    }
+  ]
+}

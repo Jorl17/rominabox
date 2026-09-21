@@ -1,0 +1,4 @@
+HAVE_RMLUI = 1
+NEED_CXX_LINKER = 1
+CXXFLAGS += -std=c++17
+LDFLAGS += -framework QuartzCore

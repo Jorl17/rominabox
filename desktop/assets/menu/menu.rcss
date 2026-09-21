@@ -1,0 +1,70 @@
+div { display: block; }
+body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size: 18dp; color: #ffffff; background-color: #041738; }
+#screen { position: absolute; left: 50%; top: 50%; margin-left: -480dp; margin-top: -300dp; width: 952dp; height: 592dp; border: 4dp #5296ef; background-color: #1049c3; }
+#splash { display: none; position: absolute; left: -4dp; top: -4dp; width: 960dp; height: 600dp; z-index: 100; background-color: #041738; opacity: 1; }
+#splash-logo { position: absolute; left: 320dp; top: 140dp; width: 320dp; height: 320dp; }
+#heading { position: absolute; top: 16dp; left: 0; width: 100%; text-align: center; font-size: 36dp; color: #fff13d; }
+#slots { position: absolute; left: 56dp; top: 76dp; width: 840dp; height: 404dp; }
+.slot { position: absolute; width: 252dp; height: 194dp; padding: 0; background-color: #061a48; color: #ffffff; border: 3dp #75b2e4; font-family: Silkscreen; text-align: center; }
+#slot-1, #slot-4 { left: 0; }
+#slot-2, #slot-5 { left: 291dp; }
+#slot-3, #slot-6 { left: 582dp; }
+#slot-1, #slot-2, #slot-3 { top: 0; }
+#slot-4, #slot-5, #slot-6 { top: 208dp; }
+.slot.focused, .slot:hover { border-color: #ffffff; }
+.slot.selected, .slot.selected:hover, .slot.selected.focused { border-color: #fff13d; }
+.slot:active, .slot.selected:active { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
+.slot.selected .slot-label { color: #fff13d; }
+.slot-label { height: 24dp; font-size: 17dp; padding-top: 2dp; background-color: #081433; color: #ffffff; }
+.slot-picture { width: 184dp; height: 138dp; margin: 0 auto; background-color: #0865bf; border-top: 2dp #020b27; border-left: 2dp #020b27; border-right: 2dp #9edaff; border-bottom: 2dp #9edaff; text-align: center; }
+.slot-image { width: 100%; height: 100%; }
+.slot.empty .slot-image { display: none; }
+.slot-state { height: 20dp; font-size: 14dp; color: #b4e6ff; padding-top: 2dp; }
+#actions { position: absolute; left: 56dp; top: 494dp; width: 840dp; height: 48dp; }
+#actions button { text-align: center; line-height: 42dp; position: absolute; height: 42dp; top: 0; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; }
+#resume { left: 0; width: 260dp; }
+#save { left: 284dp; width: 168dp; }
+#load { left: 476dp; width: 168dp; }
+#quit { left: 668dp; width: 168dp; }
+#status { position: absolute; top: 547dp; width: 100%; text-align: center; font-size: 16dp; color: #fff13d; }
+#footer { position: absolute; left: 24dp; bottom: 10dp; width: 904dp; font-size: 16dp; color: #ffffff; }
+#version { position: absolute; right: 0; top: 0; }
+
+#resume { width: 216dp; }
+#save { left: 240dp; width: 124dp; }
+#load { left: 388dp; width: 124dp; }
+#controls { left: 536dp; width: 164dp; }
+#quit { left: 724dp; width: 112dp; }
+#controller-scene { position: absolute; left: -4dp; top: 80dp; width: 960dp; height: 380dp; }
+#controller-image { position: absolute; left: 0; top: 0; width: 960dp; height: 380dp; }
+.control-leader { position: absolute; background-color: #b4e6ff; }
+.control-leader.horizontal { height: 1dp; }
+.control-leader.vertical { width: 1dp; }
+.control-hit { position: absolute; width: 42dp; height: 42dp; background-color: transparent; border: 2dp transparent; }
+.control-hit:hover { border-color: #ffffff; }
+.control-hit.focused { border-color: #fff13d; }
+.control-callout { position: absolute; width: 196dp; height: 54dp; padding: 0; border: 2dp #75b2e4; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
+.control-callout:hover { border-color: #ffffff; }
+.control-callout.focused { border-color: #fff13d; }
+.control-label { margin-left: 10dp; margin-top: 5dp; height: 24dp; font-size: 18dp; overflow: hidden; white-space: nowrap; }
+.control-assignment { margin-left: 10dp; font-size: 14dp; color: #b4e6ff; white-space: nowrap; overflow: hidden; }
+.control-original { margin-right: 10dp; color: #fff13d; }
+#controls-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
+#controls-actions button { font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
+#controls-back { position: absolute; left: 0; width: 160dp; }
+#controls-reset { position: absolute; left: 216dp; width: 292dp; }
+#controls-cancel { position: absolute; right: 0; width: 180dp; }
+#controls-status { position: absolute; top: 537dp; width: 100%; font-size: 16dp; color: #fff13d; text-align: center; }
+
+#controls-back { width: 124dp; }
+#controls-reset { left: 148dp; width: 256dp; }
+#controls-cancel { width: 160dp; }
+.slot:active .slot-label { color: #fff13d; }
+
+.menu-action { color: #ffffff; background-color: #061a48; border-color: #75b2e4; }
+.menu-action:hover, .menu-action.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
+.menu-action:active { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
+.menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
+
+@keyframes capture-pulse { from { border-color: #fff13d; } to { border-color: transparent; } }
+.control-callout.capturing, .control-hit.capturing { animation: 0.55s capture-pulse infinite alternate; }

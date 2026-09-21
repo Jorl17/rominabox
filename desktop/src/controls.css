@@ -1,0 +1,162 @@
+.controls-editor {
+  margin-top: 20px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+}
+.controls-toolbar {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 2px solid var(--ink);
+}
+.controls-toolbar select {
+  height: 32px;
+  padding: 0 32px 0 8px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+.controls-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--ink);
+  background: var(--paper);
+}
+.controls-table th,
+.controls-table td {
+  text-align: left;
+  vertical-align: middle;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--ink);
+}
+.controls-table thead th {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--ink);
+}
+.controls-table tbody tr {
+  height: 40px;
+}
+.controls-table tbody th,
+.controls-table tbody td {
+  min-height: 40px;
+}
+.controls-table tbody tr.capturing {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.controls-table .action-input,
+.controls-table .binding-button {
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+.controls-table .action-input {
+  width: 100%;
+  min-width: 8em;
+}
+.control-key-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.binding-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 7.5em;
+}
+.binding-button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.binding-edit {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.binding-conflict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.control-message {
+  display: block;
+  padding: 8px 16px;
+  font-size: 14px;
+  min-height: 20px;
+}
+.device-bindings {
+  width: auto;
+}
+.device-bindings summary {
+  cursor: pointer;
+  font-size: 14px;
+}
+.device-binding-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 8px;
+}
+.device-binding-fields label {
+  display: grid;
+  gap: 6px;
+  min-width: 140px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.device-binding-fields input,
+.device-binding-fields select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.controls-table .binding-button {
+  padding: 0 8px;
+}
+.controls-table .action-input {
+  padding: 0 10px;
+}
+.controls-table tr.capturing .binding-button:disabled {
+  opacity: 1;
+  border-color: var(--accent);
+}
+.controls-table tr.capturing .binding-button:disabled {
+  animation: capture-cue 1s steps(2, end) infinite;
+}
+@keyframes capture-cue {
+  50% {
+    box-shadow: inset 0 -3px var(--accent);
+  }
+}
+.device-bindings summary {
+  display: list-item;
+}
+.device-bindings[open] {
+  min-width: 160px;
+}
+@media (max-width: 650px) {
+  .controls-editor {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .controls-table {
+    min-width: 540px;
+  }
+}

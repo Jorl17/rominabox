@@ -1,0 +1,10 @@
+Original controller illustrations created for ROM-in-a-Box, 2026.
+
+The SVG sources and generated PNGs were drawn for this project. They do not
+contain artwork copied from emulator applications, manufacturer photographs,
+or manufacturer logos. Console names identify the compatible controls.
+
+No third-party artwork license is required for these original project assets.
+
+Regenerate each runtime PNG from its SVG with librsvg at 1920 x 760 pixels.
+This is a developer asset operation; exported applications do not require it.
