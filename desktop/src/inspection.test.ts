@@ -171,4 +171,19 @@ describe("inspection declarations", () => {
     expect(formatBytes(1024)).toBe("1 KB");
     expect(formatBytes(1.5 * 1024 ** 2)).toBe("1.50 MB");
   });
+
+  // N64 declares a header window too, and this covers it in the browser
+  // preview.
+  it("reads a Nintendo 64 header title from its declared window", async () => {
+    const bytes = new Uint8Array(0x100);
+    bytes.set([0x80, 0x37, 0x12, 0x40], 0);
+    const title = "SUPER MARIO 64";
+    for (let index = 0; index < title.length; index += 1)
+      bytes[0x20 + index] = title.charCodeAt(index);
+
+    const inspection = await inspectRom(romFile("cart.z64", bytes));
+    expect(inspection.system).toBe("n64");
+    expect(inspection.source).toBe("header");
+    expect(inspection.title).toBe("SUPER MARIO 64");
+  });
 });

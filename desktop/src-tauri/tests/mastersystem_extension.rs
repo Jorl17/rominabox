@@ -148,7 +148,8 @@ fn the_default_pad_is_illustrated_and_every_control_is_anchored() {
     assert_eq!(profile.image, "controller-mastersystem.png");
 
     let image = controller_assets().join(&profile.image);
-    let bytes = fs::read(&image).unwrap_or_else(|error| panic!("read {}: {error}", image.display()));
+    let bytes = fs::read(&image)
+        .unwrap_or_else(|error| panic!("read {}: {error}", image.display()));
     assert!(
         bytes.starts_with(b"\x89PNG\r\n\x1a\n"),
         "the declared illustration must be the PNG on disk"
@@ -176,8 +177,10 @@ fn an_author_can_pick_the_generic_retropad_and_get_an_asset_free_grid() {
     // That author must still get a working grid, without the illustration
     // that this console has.
     let root = scratch();
-    let options: Controls =
-        serde_json::from_value(serde_json::json!({"profile": "retropad"})).unwrap();
+    let options = Controls {
+        profile: Some("retropad".to_string()),
+        ..Controls::default()
+    };
     themes::prepare_controls_assets(&menu_assets(), &root, "mastersystem", &options)
         .expect("RetroPad is offered for every console");
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
@@ -226,6 +229,11 @@ fn default_controls_config_carries_the_emulated_device_and_bindings() {
             "{id} binding missing from {text}"
         );
     }
+    assert_eq!(
+        text.matches("input_player1_").count(),
+        7,
+        "Master System declares seven bindings"
+    );
 }
 
 #[test]
@@ -295,10 +303,14 @@ fn an_override_for_a_control_the_pad_does_not_have_is_rejected() {
     // The Master System pad has a d-pad, 1, 2 and pause, and Select is only in
     // other profiles. If we accepted it, we would store a binding that we never
     // show for this pad, and an override for the wrong console would go unnoticed.
-    let options: Controls = serde_json::from_value(
-        serde_json::json!({"bindings": {"select": {"key": "space"}}}),
-    )
-    .unwrap();
+    let mut options = Controls::default();
+    options.bindings.insert(
+        "select".to_string(),
+        controls::ControlOverride {
+            key: Some("space".to_string()),
+            ..controls::ControlOverride::default()
+        },
+    );
     let error = controls::validate_for_system("mastersystem", &options)
         .expect_err("select is not on the Master System pad");
     assert!(

@@ -1,5 +1,19 @@
 import catalog from "../systems.json";
 
+/**
+ * The header window a console declares, from the generated registry.
+ *
+ * The browser preview still has separate signature detection, but we declare
+ * the title offsets once, in the console packages, because a second copy
+ * here would drift apart from them.
+ */
+function declaredTitle(header: Uint8Array, systemId: string): string {
+  const system = catalog.systems.find((entry) => entry.id === systemId);
+  const window = system?.headerTitle;
+  if (!window) return "";
+  return asciiTitle(header, window.offset, window.offset + window.length) ?? "";
+}
+
 export type SystemDeclaration = (typeof catalog.systems)[number];
 export const SYSTEM_CATALOG = catalog.systems;
 // Keep the UI-facing extension format stable while loading declarations from
@@ -124,7 +138,7 @@ export async function inspectRom(
 
   if (!overridden && matches(header, 0x100, "SEGA")) {
     system = "megadrive";
-    const headerTitle = asciiTitle(header, 0x150, 0x180);
+    const headerTitle = declaredTitle(header, "megadrive");
     if (headerTitle) {
       title = headerTitle;
       source = "header";
@@ -141,7 +155,7 @@ export async function inspectRom(
     ].some((magic) => magic.every((byte, index) => header[index] === byte))
   ) {
     system = "n64";
-    const headerTitle = asciiTitle(header, 0x20, 0x34);
+    const headerTitle = declaredTitle(header, "n64");
     if (headerTitle) {
       title = headerTitle;
       source = "header";
@@ -150,7 +164,7 @@ export async function inspectRom(
     system = "lynx";
   } else if (!overridden && matches(header, 1, "ATARI7800")) {
     system = "atari7800";
-    const headerTitle = asciiTitle(header, 17, 49);
+    const headerTitle = declaredTitle(header, "atari7800");
     if (headerTitle) {
       title = headerTitle;
       source = "header";
@@ -164,7 +178,7 @@ export async function inspectRom(
     header[0xb2] === 0x96
   ) {
     system = "gba";
-    const headerTitle = asciiTitle(header, 0xa0, 0xac);
+    const headerTitle = declaredTitle(header, "gba");
     if (headerTitle) {
       title = headerTitle;
       source = "header";
@@ -172,7 +186,7 @@ export async function inspectRom(
   } else if (!overridden && hasValidGameBoyHeader(header)) {
     const colorFlag = header[0x143];
     system = colorFlag === 0x80 || colorFlag === 0xc0 ? "gbc" : "gb";
-    const headerTitle = asciiTitle(header, 0x134, 0x143);
+    const headerTitle = declaredTitle(header, system);
     if (headerTitle) {
       title = headerTitle;
       source = "header";
