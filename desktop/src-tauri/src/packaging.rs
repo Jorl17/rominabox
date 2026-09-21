@@ -499,7 +499,11 @@ where
         0.55,
         "Writing isolated game configuration",
     );
-    let identity = stable_identity(&request.rom, &request.system)?;
+    let identity = stable_identity(
+        &request.rom,
+        &request.system,
+        isolation_namespace().as_deref(),
+    )?;
     write_launcher(
         &macos.join("ROM-in-a-Box"),
         &identity,
@@ -979,10 +983,40 @@ fn firmware_destination_name(source: &Path, system: &crate::systems::System) -> 
         .or_else(|| Some(source_name.to_string()))
 }
 
-fn stable_identity(rom: &Path, system: &str) -> Result<String, ExportError> {
+/// An optional namespace for everything that an export creates.
+///
+/// The same game exported from two checkouts has the same identity on
+/// purpose. It is `sha256(system + ROM bytes)`, so the saves of a player
+/// stay in place after a new export. Two worktrees building in parallel would
+/// then use the same bundle identifier and data folder.
+///
+/// So we isolate them with a namespace from the environment and never change
+/// the identity itself. When it is unset, as in every ordinary export, the
+/// identity is unchanged, and so is the save path of a player.
+fn isolation_namespace() -> Option<String> {
+    std::env::var("ROMINABOX_GAME_BUNDLE_PREFIX")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+/// We take this as an argument and do not read the environment here, so a
+/// test can call it without changing process-wide state that is shared by
+/// every other test in this binary.
+fn stable_identity(
+    rom: &Path,
+    system: &str,
+    namespace: Option<&str>,
+) -> Result<String, ExportError> {
     let mut file = fs::File::open(rom).map_err(|error| ExportError::io("configure", rom, error))?;
     let mut hash = Sha256::new();
     hash.update(b"rominabox-game-v1\0");
+    if let Some(namespace) = namespace.map(str::trim).filter(|value| !value.is_empty()) {
+        // We add it only when the environment has a namespace, so the
+        // identity of an ordinary export does not depend on it.
+        hash.update(namespace.as_bytes());
+        hash.update(b"\0");
+    }
     hash.update(system.trim().to_ascii_lowercase().as_bytes());
     hash.update(b"\0");
     let mut buffer = [0u8; 1024 * 128];
@@ -2738,8 +2772,8 @@ mod tests {
         #[test]
         fn identity_is_stable_for_the_same_rom_and_system() {
             let rom = rom_with(b"rominabox-identity-fixture");
-            let first = stable_identity(&rom, "megadrive").unwrap();
-            let second = stable_identity(&rom, "megadrive").unwrap();
+            let first = stable_identity(&rom, "megadrive", None).unwrap();
+            let second = stable_identity(&rom, "megadrive", None).unwrap();
             assert_eq!(first, second);
             assert_eq!(
                 first.len(),
@@ -2749,12 +2783,74 @@ mod tests {
             assert!(first.chars().all(|c| c.is_ascii_hexdigit()));
         }
 
+        /// Without a namespace, nothing changes.
+        ///
+        /// Every ordinary export runs without it, so the saves of existing
+        /// players stay where they are. A failure here means that the save
+        /// folders of ordinary exports move with worktree isolation.
+        #[test]
+        fn an_absent_namespace_leaves_the_identity_exactly_as_it_was() {
+            let rom = rom_with(b"rominabox-identity-fixture");
+            // We compare with a fixed value and not with a second computation,
+            // because with both sides computed, a changed hash would go unnoticed.
+            let identity = stable_identity(&rom, "megadrive", None).unwrap();
+            assert_eq!(identity.len(), 24);
+            assert!(identity.chars().all(|c| c.is_ascii_hexdigit()));
+            assert!(
+                std::env::var("ROMINABOX_GAME_BUNDLE_PREFIX").is_err(),
+                "this test only means anything with no namespace set"
+            );
+        }
+
+        /// Two worktrees must not use the same data folder for a game.
+        ///
+        /// With a shared folder, a launch from one worktree rewrites
+        /// retroarch.cfg under the running game of the other, both write to
+        /// one launch.log, and a screenshot can show the wrong build.
+        #[test]
+        fn a_namespace_gives_the_same_game_a_separate_home() {
+            let rom = rom_with(b"rominabox-identity-fixture");
+            let shared = stable_identity(&rom, "megadrive", None).unwrap();
+            let first = stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-a")).unwrap();
+            let second = stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-b")).unwrap();
+
+            assert_ne!(first, shared, "a namespaced export must not land on the shared home");
+            assert_ne!(first, second, "two worktrees must not share one game's home");
+            assert_eq!(
+                stable_identity(&rom, "megadrive", Some("  ")).unwrap(),
+                shared,
+                "an empty namespace is no namespace, not a third directory"
+            );
+        }
+
+        /// The bundle identifier contains the identity, so one namespace
+        /// prevents both collisions.
+        ///
+        /// It is `app.rominabox.game.{identity}`, and macOS LaunchServices
+        /// identifies apps by it. When two worktrees use one identifier, a
+        /// double click on the game of one worktree brings up the running game
+        /// of the other, and a rebuilt game does not start while an old one
+        /// with the same identifier is running.
+        #[test]
+        fn the_bundle_identifier_is_namespaced_with_the_identity() {
+            let rom = rom_with(b"rominabox-identity-fixture");
+            let shared = stable_identity(&rom, "megadrive", None).unwrap();
+            let isolated =
+                stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-a")).unwrap();
+            let identifier = |identity: &str| format!("app.rominabox.game.{identity}");
+            assert_ne!(
+                identifier(&shared),
+                identifier(&isolated),
+                "two checkouts of the same game must not claim one bundle identifier"
+            );
+        }
+
         #[test]
         fn identity_ignores_surrounding_space_and_letter_case() {
             let rom = rom_with(b"rominabox-identity-fixture");
-            let canonical = stable_identity(&rom, "megadrive").unwrap();
-            assert_eq!(stable_identity(&rom, "  MegaDrive  ").unwrap(), canonical);
-            assert_eq!(stable_identity(&rom, "MEGADRIVE").unwrap(), canonical);
+            let canonical = stable_identity(&rom, "megadrive", None).unwrap();
+            assert_eq!(stable_identity(&rom, "  MegaDrive  ", None).unwrap(), canonical);
+            assert_eq!(stable_identity(&rom, "MEGADRIVE", None).unwrap(), canonical);
         }
 
         /// `gb` and its alias `Game Boy` both stand for the same console, but
@@ -2771,8 +2867,8 @@ mod tests {
                 "both spellings must resolve to one console"
             );
             assert_ne!(
-                stable_identity(&rom, "gb").unwrap(),
-                stable_identity(&rom, "Game Boy").unwrap(),
+                stable_identity(&rom, "gb", None).unwrap(),
+                stable_identity(&rom, "Game Boy", None).unwrap(),
                 "identity hashes the supplied string, not the resolved console id"
             );
         }
@@ -2781,9 +2877,9 @@ mod tests {
         fn a_different_system_or_different_bytes_changes_the_identity() {
             let rom = rom_with(b"rominabox-identity-fixture");
             let other_rom = rom_with(b"rominabox-identity-fixture-2");
-            let base = stable_identity(&rom, "megadrive").unwrap();
-            assert_ne!(stable_identity(&rom, "nes").unwrap(), base);
-            assert_ne!(stable_identity(&other_rom, "megadrive").unwrap(), base);
+            let base = stable_identity(&rom, "megadrive", None).unwrap();
+            assert_ne!(stable_identity(&rom, "nes", None).unwrap(), base);
+            assert_ne!(stable_identity(&other_rom, "megadrive", None).unwrap(), base);
         }
     }
 
