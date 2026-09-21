@@ -3,6 +3,7 @@
 //!   rominabox-catalog validate [ROOT]   report every problem, exit non-zero if any
 //!   rominabox-catalog list     [ROOT]   what is declared, and what each build claims
 //!   rominabox-catalog assets   [ROOT]   controller illustrations that must be staged
+//!   rominabox-catalog components [ROOT] core artifacts, licences and provenance as JSON
 //!   rominabox-catalog generate [ROOT]   write the compatibility registries
 //!
 //! With `generate` we write `desktop/systems.json` and `desktop/controls.json`
@@ -83,6 +84,31 @@ fn main() -> ExitCode {
             }
             ExitCode::SUCCESS
         }
+        // We prepare a runtime with the core provenance from the catalog.
+        "components" => {
+            let entries: Vec<serde_json::Value> = catalog
+                .components()
+                .map(|(id, component)| {
+                    serde_json::json!({
+                        "id": id,
+                        "artifacts": component.artifacts,
+                        "license": { "spdx": component.license.spdx, "file": component.license.file },
+                        "capabilities": component.capabilities,
+                        "provenance": component.provenance,
+                    })
+                })
+                .collect();
+            match serde_json::to_string_pretty(&entries) {
+                Ok(text) => {
+                    println!("{text}");
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("could not render components: {error}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
         "generate" => match rominabox_catalog::compatibility_registries(&catalog) {
             Ok(rendered) => {
                 let desktop = repository_root().join("desktop");
@@ -102,7 +128,7 @@ fn main() -> ExitCode {
             }
         },
         other => {
-            eprintln!("unknown command '{other}'; expected validate, list, assets or generate");
+            eprintln!("unknown command '{other}'; expected validate, list, assets, components or generate");
             ExitCode::FAILURE
         }
     }

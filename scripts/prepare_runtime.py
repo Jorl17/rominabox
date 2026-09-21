@@ -10,53 +10,54 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-CORES = {
-    "gambatte": ("libretro/gambatte-libretro", "d9d6cd06382d1ced30de34d56d3609452323dab1", "COPYING"),
-    "genesis_plus_gx": ("ekeeke/Genesis-Plus-GX", "27426f00aa68f9f358c86919e8a40985326fa05b", "LICENSE.txt"),
-}
+# The provenance of each core is declared in the console package that
+# contains its component. We read it from the catalog here instead of keeping
+# a second table that could differ from it.
+#
+# We use `correspondsToArtifact` to tell the two kinds of core apart. With a
+# core we build ourselves, we include the exact source we built it from. With
+# a buildbot download, we keep a source snapshot only for its licence text,
+# and that snapshot is not the corresponding source of the GPL binary.
+CATALOG_MANIFEST = Path(__file__).resolve().parent.parent / "desktop/crates/rominabox-catalog/Cargo.toml"
 
-# The other Apple Silicon cores are downloads from the official libretro
-# macOS arm64 buildbot. We keep each downloaded archive and record its hash in
-# the kit, together with a pinned source snapshot for provenance and the full
-# licence notice. That snapshot is not the source revision of the nightly
-# binary.
-PREBUILT_CORES = {
-    "mgba": {
-        "binary": "mgba_libretro.dylib",
-        "repo": "mgba-emu/mgba",
-        "revision": "3a5bc24629867576b0fb576a5d5a21d3b3d6b576",
-        "licenses": ("LICENSE",),
-        "license": "MPL-2.0",
-    },
-    "nestopia": {
-        "binary": "nestopia_libretro.dylib",
-        "repo": "libretro/nestopia",
-        "revision": "92578fdc9445f61dd376138329a938e01d8ba50e",
-        "licenses": ("COPYING", "LICENSE"),
-        "license": "GPL-2.0",
-    },
-    "snes9x": {
-        "binary": "snes9x_libretro.dylib",
-        "repo": "snes9xgit/snes9x",
-        "revision": "4998efce010c95c1d83859a0530cdf43d2d27cb9",
-        "licenses": ("LICENSE", "docs/snes9x-license.txt"),
-        "license": "Snes9x non-commercial",
-    },
-    "beetle_pce_fast": {
-        "binary": "mednafen_pce_fast_libretro.dylib",
-        "repo": "libretro/beetle-pce-fast-libretro",
-        "revision": "076a24e1b10f76f3a7a8e849d25fab89f81ce1e9",
-        "licenses": ("COPYING", "LICENSE"),
-        "license": "GPL-2.0",
-    },
-    "stella": {
-        "binary": "stella_libretro.dylib",
-        "repo": "libretro/stella2014-libretro",
-        "revision": "7d1361e407e63f29e52892655069e5fb4096e691",
-        "licenses": ("stella/license.txt", "License.txt", "LICENSE", "COPYING"),
-        "license": "GPL-2.0",
-    },
-}
+
+def catalog_components() -> dict[str, dict]:
+    """Ask the catalog for every declared core component."""
+    result = subprocess.run(
+        [
+            "cargo", "run", "--quiet",
+            "--manifest-path", str(CATALOG_MANIFEST),
+            "--bin", "rominabox-catalog", "--", "components",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return {entry["id"]: entry for entry in json.loads(result.stdout)}
+
+
+def partitioned_components() -> tuple[dict, dict]:
+    """Split declared components into ones we build and ones we download."""
+    built, prebuilt = {}, {}
+    for cid, entry in catalog_components().items():
+        provenance = entry.get("provenance")
+        if not provenance:
+            continue
+        binary = entry["artifacts"].get("macos-arm64")
+        record = {
+            "binary": binary,
+            "repo": provenance["repository"],
+            "revision": provenance["revision"],
+            "licenses": tuple(provenance["licenseCandidates"]),
+            "license": entry["license"]["spdx"],
+            "corresponds_to_artifact": provenance["correspondsToArtifact"],
+        }
+        if provenance["origin"] == "built":
+            built[cid] = record
+        else:
+            prebuilt[cid] = record
+    return built, prebuilt
+
 
 BUILDBOT_BASE = "https://buildbot.libretro.com/nightly/apple/osx/arm64/latest"
 
@@ -170,8 +171,9 @@ def main() -> None:
     for name in ("cores", "sources", "licenses", "catalogs", "info"):
         (root / name).mkdir(parents=True, exist_ok=True)
     entries = []
+    built_cores, prebuilt_cores = partitioned_components()
     if args.official_arm64_cores_only:
-        for component, spec in PREBUILT_CORES.items():
+        for component, spec in prebuilt_cores.items():
             print(f"Preparing {component} from official arm64 buildbot", flush=True)
             entries.append(prepare_prebuilt_core(root, component, spec))
         (root / "components.json").write_text(
@@ -187,7 +189,9 @@ def main() -> None:
         )
         print(f"Additional core staging ready: {root}", flush=True)
         return
-    for name, (repo, revision, license_file) in CORES.items():
+    for name, spec in built_cores.items():
+        repo, revision = spec["repo"], spec["revision"]
+        license_file = spec["licenses"][0]
         archive = root / "sources" / f"{name}-{revision}.tar.gz"
         url = f"https://codeload.github.com/{repo}/tar.gz/{revision}"
         print(f"Preparing {name}", flush=True)
@@ -231,7 +235,7 @@ def main() -> None:
             }
         )
     if args.include_official_arm64_cores:
-        for component, spec in PREBUILT_CORES.items():
+        for component, spec in prebuilt_cores.items():
             print(f"Preparing {component} from official arm64 buildbot", flush=True)
             entries.append(prepare_prebuilt_core(root, component, spec))
     if not (root / "RetroArch.app").exists():

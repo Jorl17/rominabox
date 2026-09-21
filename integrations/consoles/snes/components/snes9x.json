@@ -9,5 +9,15 @@
     "spdx": "Non-commercial",
     "file": "snes9x.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "snes9xgit/snes9x",
+    "revision": "4998efce010c95c1d83859a0530cdf43d2d27cb9",
+    "licenseCandidates": [
+      "LICENSE",
+      "docs/snes9x-license.txt"
+    ],
+    "correspondsToArtifact": false
+  }
 }

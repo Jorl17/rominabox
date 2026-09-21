@@ -9,5 +9,14 @@
     "spdx": "MPL-2.0",
     "file": "mgba.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "mgba-emu/mgba",
+    "revision": "3a5bc24629867576b0fb576a5d5a21d3b3d6b576",
+    "licenseCandidates": [
+      "LICENSE"
+    ],
+    "correspondsToArtifact": false
+  }
 }

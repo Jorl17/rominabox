@@ -13,5 +13,15 @@
     "cue",
     "iso",
     "chd"
-  ]
+  ],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "libretro/beetle-pce-fast-libretro",
+    "revision": "076a24e1b10f76f3a7a8e849d25fab89f81ce1e9",
+    "licenseCandidates": [
+      "COPYING",
+      "LICENSE"
+    ],
+    "correspondsToArtifact": false
+  }
 }

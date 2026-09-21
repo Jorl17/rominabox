@@ -127,6 +127,31 @@ pub struct CoreComponent {
     /// check the selected artifact, never the console name.
     #[serde(default)]
     pub capabilities: Vec<String>,
+    /// Where the shipped artifact came from and what source we retain for it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provenance: Option<ComponentProvenance>,
+}
+
+/// How we obtained a core artifact, and what source we include with it.
+///
+/// These are two different facts, and mixing them up is a licensing hazard.
+/// With a core we build ourselves, we include the exact source we built it
+/// from. With a core we download from a nightly buildbot, we include a source
+/// snapshot kept for its licence text, and we do NOT know which revision the
+/// binary came from. `corresponds_to_artifact` states which case this is, so
+/// we never present the second case as the first by mistake.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ComponentProvenance {
+    /// `built` when we compile it, `libretro-buildbot` when we download it.
+    pub origin: String,
+    pub repository: String,
+    pub revision: String,
+    /// Paths to try, in order, when extracting the licence from that snapshot.
+    #[serde(rename = "licenseCandidates")]
+    pub license_candidates: Vec<String>,
+    #[serde(rename = "correspondsToArtifact")]
+    pub corresponds_to_artifact: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

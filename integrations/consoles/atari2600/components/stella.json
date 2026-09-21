@@ -9,5 +9,17 @@
     "spdx": "GPL-2.0",
     "file": "stella.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "libretro/stella2014-libretro",
+    "revision": "7d1361e407e63f29e52892655069e5fb4096e691",
+    "licenseCandidates": [
+      "stella/license.txt",
+      "License.txt",
+      "LICENSE",
+      "COPYING"
+    ],
+    "correspondsToArtifact": false
+  }
 }

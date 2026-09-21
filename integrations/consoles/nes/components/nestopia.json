@@ -9,5 +9,15 @@
     "spdx": "GPL-2.0",
     "file": "nestopia.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "libretro/nestopia",
+    "revision": "92578fdc9445f61dd376138329a938e01d8ba50e",
+    "licenseCandidates": [
+      "COPYING",
+      "LICENSE"
+    ],
+    "correspondsToArtifact": false
+  }
 }

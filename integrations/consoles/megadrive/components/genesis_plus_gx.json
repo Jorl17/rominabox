@@ -12,5 +12,14 @@
   "capabilities": [
     "cue",
     "iso"
-  ]
+  ],
+  "provenance": {
+    "origin": "built",
+    "repository": "ekeeke/Genesis-Plus-GX",
+    "revision": "27426f00aa68f9f358c86919e8a40985326fa05b",
+    "licenseCandidates": [
+      "LICENSE.txt"
+    ],
+    "correspondsToArtifact": true
+  }
 }
