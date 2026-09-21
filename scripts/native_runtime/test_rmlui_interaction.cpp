@@ -21,6 +21,20 @@ static const char *stub_control_ids[] = {
 static const int stub_control_count =
    (int)(sizeof(stub_control_ids) / sizeof(stub_control_ids[0]));
 
+/* Two controllers, so there is a choice in the picker, as on the Mega Drive. */
+static const char *stub_device_ids[] = {"megadrive", "megadrive6"};
+static const char *stub_device_names[] = {"Mega Drive", "Mega Drive six-button"};
+
+extern "C" int rib_rmlui_device_count(void) { return 2; }
+extern "C" const char *rib_rmlui_device_id(int index)
+{
+   return (index >= 0 && index < 2) ? stub_device_ids[index] : nullptr;
+}
+extern "C" const char *rib_rmlui_device_name(int index)
+{
+   return (index >= 0 && index < 2) ? stub_device_names[index] : nullptr;
+}
+
 extern "C" int rib_rmlui_control_capacity(void) { return stub_control_count; }
 extern "C" const char *rib_rmlui_control_id(int index)
 {

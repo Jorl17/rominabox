@@ -47,6 +47,14 @@ const MENU_PANELS: &[Panel] = &[
         ids: &["pause-panel", "load"],
     },
     Panel {
+        // Optional, because we generate it only when there is more than one
+        // controller for a console. A design without it stays valid, and this
+        // panel tests that case.
+        name: "controller-picker",
+        required: false,
+        ids: &["controls-device", "controls-device-current", "controls-device-list"],
+    },
+    Panel {
         name: "controls",
         required: true,
         ids: &["controls-panel", "controls-back", "controls-reset", "controls-cancel"],
@@ -76,6 +84,7 @@ const GENERATED_PREFIXES: &[&str] = &[
     "slot-image-",
     "slot-label-",
     "slot-state-",
+    "controls-device-option-",
 ];
 
 fn repo_root() -> PathBuf {
