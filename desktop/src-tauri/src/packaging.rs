@@ -80,19 +80,81 @@ fn default_palette() -> String {
 /// Return the canonical systems that this runtime kit can export. We read the
 /// capability from the declared core and legal files, and for this check we
 /// search no global RetroArch path and load no core.
-pub fn available_systems(runtime_kit: &Path) -> Vec<String> {
+/// Why we cannot offer a declared console in this build.
+///
+/// We keep a reason that a developer can act on for every console that we
+/// leave out, even when the list for the user stays short.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", tag = "reason")]
+pub enum Unavailable {
+    /// We declare no core at all, so the game cannot run.
+    NoCoreDeclared,
+    /// Every declared core is missing its artifact or its licence text.
+    NoPreparedCore { tried: Vec<String> },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemAvailability {
+    pub id: String,
+    /// The component that we will use, when we find one.
+    pub component: Option<String>,
+    pub unavailable: Option<Unavailable>,
+}
+
+/// Resolve every declared console against a prepared kit, with reasons.
+///
+/// We try every core in the declared order of preference, not only the
+/// first, so we do not report a console as missing when its preferred core
+/// is absent and another core works.
+pub fn system_availability(runtime_kit: &Path) -> Vec<SystemAvailability> {
     crate::systems::registry()
         .iter()
-        .filter(|system| {
-            system.preferred_core().is_some_and(|core| {
-                runtime_kit.join("cores").join(&core.filename).is_file()
-                    && runtime_kit
-                        .join("licenses")
-                        .join(&core.license_file)
-                        .is_file()
-            })
+        .map(|system| {
+            if system.cores.is_empty() {
+                return SystemAvailability {
+                    id: system.id.clone(),
+                    component: None,
+                    unavailable: Some(Unavailable::NoCoreDeclared),
+                };
+            }
+            let mut tried = Vec::new();
+            for core in &system.cores {
+                let artifact = runtime_kit.join("cores").join(&core.filename);
+                let licence = runtime_kit.join("licenses").join(&core.license_file);
+                if artifact.is_file() && licence.is_file() {
+                    return SystemAvailability {
+                        id: system.id.clone(),
+                        component: Some(core.component.clone()),
+                        unavailable: None,
+                    };
+                }
+                // We report what was missing, so the reader can tell "this
+                // console is gone" from "this core was never prepared".
+                tried.push(format!(
+                    "{} ({})",
+                    core.component,
+                    if artifact.is_file() {
+                        format!("licence {} missing", core.license_file)
+                    } else {
+                        format!("artifact {} missing", core.filename)
+                    }
+                ));
+            }
+            SystemAvailability {
+                id: system.id.clone(),
+                component: None,
+                unavailable: Some(Unavailable::NoPreparedCore { tried }),
+            }
         })
-        .map(|system| system.id.clone())
+        .collect()
+}
+
+pub fn available_systems(runtime_kit: &Path) -> Vec<String> {
+    system_availability(runtime_kit)
+        .into_iter()
+        .filter(|entry| entry.unavailable.is_none())
+        .map(|entry| entry.id)
         .collect()
 }
 
@@ -2414,6 +2476,107 @@ mod tests {
         fn a_cartridge_core_is_never_constrained_by_this_check() {
             for (system, rom) in [("megadrive", "game.md"), ("nes", "game.nes")] {
                 assert_eq!(refusal(system, rom), None, "{system} must be unaffected");
+            }
+        }
+    }
+
+    /// We keep the reason for every console that we cannot offer.
+    ///
+    /// We leave out a declared system whose core was never prepared, and the
+    /// reason contains that fact.
+    mod availability {
+        use super::*;
+
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+        /// A kit containing exactly the named cores and licence texts.
+        fn kit(cores: &[(&str, bool, bool)]) -> PathBuf {
+            let root = std::env::temp_dir().join(format!(
+                "rominabox-availability-{}-{}",
+                std::process::id(),
+                NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            ));
+            fs::create_dir_all(root.join("cores")).unwrap();
+            fs::create_dir_all(root.join("licenses")).unwrap();
+            for (system, artifact, licence) in cores {
+                let core = crate::systems::find(system)
+                    .expect("known system")
+                    .cores
+                    .first()
+                    .expect("declared core");
+                if *artifact {
+                    fs::write(root.join("cores").join(&core.filename), []).unwrap();
+                }
+                if *licence {
+                    fs::write(root.join("licenses").join(&core.license_file), []).unwrap();
+                }
+            }
+            root
+        }
+
+        fn entry(root: &Path, id: &str) -> SystemAvailability {
+            system_availability(root)
+                .into_iter()
+                .find(|entry| entry.id == id)
+                .expect("every declared console is reported")
+        }
+
+        #[test]
+        fn a_prepared_console_names_the_component_that_will_run_it() {
+            let root = kit(&[("megadrive", true, true)]);
+            let megadrive = entry(&root, "megadrive");
+            assert_eq!(megadrive.unavailable, None);
+            assert_eq!(megadrive.component.as_deref(), Some("genesis_plus_gx"));
+            assert!(available_systems(&root).contains(&"megadrive".to_string()));
+        }
+
+        #[test]
+        fn a_missing_artifact_is_reported_as_a_missing_artifact() {
+            let root = kit(&[("megadrive", false, true)]);
+            let megadrive = entry(&root, "megadrive");
+            match megadrive.unavailable {
+                Some(Unavailable::NoPreparedCore { ref tried }) => {
+                    assert_eq!(tried.len(), 1);
+                    assert!(
+                        tried[0].contains("genesis_plus_gx") && tried[0].contains("artifact"),
+                        "{tried:?}"
+                    );
+                }
+                other => panic!("expected a missing artifact, got {other:?}"),
+            }
+            assert!(!available_systems(&root).contains(&"megadrive".to_string()));
+        }
+
+        /// We must not ship a core whose binary is present without its licence
+        /// text, because we are obliged to distribute the licence with it.
+        #[test]
+        fn an_artifact_without_its_licence_is_still_unavailable() {
+            let root = kit(&[("megadrive", true, false)]);
+            match entry(&root, "megadrive").unavailable {
+                Some(Unavailable::NoPreparedCore { ref tried }) => assert!(
+                    tried[0].contains("licence"),
+                    "the reason should name the missing licence: {tried:?}"
+                ),
+                other => panic!("expected a missing licence, got {other:?}"),
+            }
+        }
+
+        #[test]
+        fn every_declared_console_is_accounted_for_either_way() {
+            let root = kit(&[("megadrive", true, true)]);
+            let reported = system_availability(&root);
+            assert_eq!(
+                reported.len(),
+                crate::systems::registry().len(),
+                "a console must never simply vanish from the report"
+            );
+            for entry in reported {
+                assert_eq!(
+                    entry.component.is_some(),
+                    entry.unavailable.is_none(),
+                    "{} must either resolve a component or give a reason",
+                    entry.id
+                );
             }
         }
     }
