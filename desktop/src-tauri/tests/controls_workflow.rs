@@ -201,3 +201,29 @@ fn the_controller_picker_is_offered_only_when_there_is_a_choice() {
         "PlayStation offers one pad; a list of one is noise, not a choice"
     );
 }
+
+/// We must be able to apply a picked controller, and not only name it.
+///
+/// A variant's id and display name are enough to draw a list and record a
+/// choice, but to apply it we need the emulated device, which is what we
+/// pass to the core.
+#[test]
+fn each_offered_controller_carries_the_device_it_means() {
+    let root = workspace();
+    let options = Controls::default();
+    controls::write_defaults_config("megadrive", &options, &root.join("controls.cfg")).unwrap();
+    let text = fs::read_to_string(root.join("controls.cfg")).unwrap();
+
+    assert!(
+        text.contains("controls_variants = \"megadrive megadrive6\""),
+        "the player needs the list before it can offer one: {text}"
+    );
+    // The two Mega Drive pads are 3-button and 6-button, which are different
+    // emulated devices, and the picker exists to choose between them.
+    assert!(text.contains("controls_variant_device_megadrive = \"257\""));
+    assert!(text.contains("controls_variant_device_megadrive6 = \"513\""));
+    assert!(
+        text.contains("controls_variant_name_megadrive6 = "),
+        "a picker shows names, not ids"
+    );
+}

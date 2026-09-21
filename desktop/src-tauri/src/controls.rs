@@ -159,6 +159,15 @@ pub fn write_defaults_config(
             entry.id,
             escape_config_value(&entry.name)
         ));
+        // The emulated device for each variant, so that when the player picks
+        // a pad we change the device too. We leave it out where the pad is the
+        // core's default, which is most of them.
+        if let Some(device) = entry.core_device {
+            config.push_str(&format!(
+                "controls_variant_device_{} = \"{device}\"\n",
+                entry.id
+            ));
+        }
     }
     // We do not write the emulated device here, because
     // `input_libretro_device_p1` takes effect only in a remap file, never in
