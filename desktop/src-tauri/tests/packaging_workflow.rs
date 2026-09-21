@@ -124,7 +124,7 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
     let launcher = result.app_path.join("Contents/MacOS/ROM-in-a-Box");
     let script = fs::read_to_string(&launcher).unwrap();
     let config = embedded_runtime_config(&script);
-    let policy = isolated_hotkey_config(false);
+    let policy = isolated_hotkey_config(false, false);
 
     assert!(
         config.contains(&policy),

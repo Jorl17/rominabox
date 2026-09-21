@@ -976,10 +976,17 @@ fn stable_identity(rom: &Path, system: &str) -> Result<String, ExportError> {
 /// variants stay `nul`, so that controller gameplay bindings and joypad
 /// autoconfig cannot trigger a hotkey. The `input_player1_*` gameplay keys are
 /// not declared here, because they are in the controls appendconfig.
+///
+/// `advanced_key` is a second keyboard tier. We write it only when the author
+/// set `advancedEmulatorAccess`, and it never replaces the button, axis or
+/// mouse `nul`. A normal export contains the `keyboard` value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HotkeyBind {
     pub name: &'static str,
     pub keyboard: HotkeyKeyboard,
+    /// The keyboard key we use only when advanced emulator access is on.
+    /// `None` means that this bind has no advanced key.
+    pub advanced_key: Option<&'static str>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1061,243 +1068,307 @@ pub const HOTKEY_BINDS: &[HotkeyBind] = &[
     HotkeyBind {
         name: "enable_hotkey",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "menu_toggle",
         keyboard: HotkeyKeyboard::MenuToggle,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "exit_emulator",
         keyboard: HotkeyKeyboard::Exit,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "close_content",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "reset",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "toggle_fast_forward",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: Some("space"),
     },
     HotkeyBind {
         name: "hold_fast_forward",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: Some("l"),
     },
     HotkeyBind {
         name: "toggle_slowmotion",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "hold_slowmotion",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "rewind",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "pause_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "frame_advance",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "audio_mute",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "volume_up",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "volume_down",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "load_state",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "save_state",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "state_slot_increase",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "state_slot_decrease",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "play_replay",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "record_replay",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "halt_replay",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "save_replay_checkpoint",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "prev_replay_checkpoint",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "next_replay_checkpoint",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "replay_slot_increase",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "replay_slot_decrease",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "disk_eject_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "disk_next",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "disk_prev",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "shader_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "shader_hold",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "shader_next",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "shader_prev",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "cheat_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "cheat_index_plus",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "cheat_index_minus",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "screenshot",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "recording_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "streaming_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "turbo_fire_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "grab_mouse_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "game_focus_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "toggle_fullscreen",
         keyboard: HotkeyKeyboard::Fullscreen,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "desktop_menu_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "toggle_vrr_runloop",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "runahead_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "preempt_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "video_filter_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "fps_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "toggle_statistics",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "ai_service",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "netplay_ping_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "netplay_host_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "netplay_game_watch",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "netplay_player_chat",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "netplay_fade_chat_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "overlay_next",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
     HotkeyBind {
         name: "osk_toggle",
         keyboard: HotkeyKeyboard::Neutral,
+        advanced_key: None,
     },
 ];
 
 impl HotkeyBind {
-    pub fn keyboard_value(self, show_menu: bool) -> &'static str {
+    pub fn keyboard_value(self, show_menu: bool, advanced: bool) -> &'static str {
+        if advanced {
+            if let Some(key) = self.advanced_key {
+                return key;
+            }
+        }
         match self.keyboard {
             HotkeyKeyboard::Neutral => "nul",
             HotkeyKeyboard::MenuToggle if show_menu => "escape",
@@ -1309,10 +1380,14 @@ impl HotkeyBind {
 }
 
 /// Render the exported hotkey policy. Callers must not keep a second list.
-pub fn isolated_hotkey_config(show_menu: bool) -> String {
+///
+/// With `advanced` set, we write `advanced_key` for the binds that have one
+/// and leave button, axis and mouse unchanged. Without it, we write the plain
+/// keyboard policy.
+pub fn isolated_hotkey_config(show_menu: bool, advanced: bool) -> String {
     let mut config = String::new();
     for bind in HOTKEY_BINDS {
-        let key = bind.keyboard_value(show_menu);
+        let key = bind.keyboard_value(show_menu, advanced);
         config.push_str(&format!("input_{} = \"{key}\"\n", bind.name));
         config.push_str(&format!("input_{}_btn = \"nul\"\n", bind.name));
         config.push_str(&format!("input_{}_axis = \"nul\"\n", bind.name));
@@ -1415,7 +1490,7 @@ notification_show_remap_load = "false"
 notification_show_config_override_load = "false"
 savestate_thumbnail_enable = "true"
 "#,
-        isolated_hotkey_config(request.show_menu)
+        isolated_hotkey_config(request.show_menu, request.advanced_emulator_access)
     )
 }
 
@@ -2247,6 +2322,79 @@ mod tests {
             }),
             "no RetroArch hotkey may keep the default Space binding:\n{config}"
         );
+    }
+
+    #[test]
+    fn advanced_emulator_access_reaches_fast_forward_without_dropping_a_bind() {
+        let advanced_tier: Vec<_> = HOTKEY_BINDS
+            .iter()
+            .filter(|bind| bind.advanced_key.is_some())
+            .map(|bind| (bind.name, bind.advanced_key.unwrap(), bind.keyboard))
+            .collect();
+        assert_eq!(
+            advanced_tier,
+            vec![
+                (
+                    "toggle_fast_forward",
+                    "space",
+                    HotkeyKeyboard::Neutral
+                ),
+                ("hold_fast_forward", "l", HotkeyKeyboard::Neutral),
+            ],
+            "the advanced tier adds fast-forward keys; it does not retier any other bind"
+        );
+
+        let mut ordinary = request(false);
+        ordinary.show_menu = true;
+        let ordinary_config = embedded_runtime_config(&write_test_launcher(ordinary));
+        assert_eq!(
+            config_value(&ordinary_config, "input_toggle_fast_forward"),
+            Some("nul")
+        );
+        assert_eq!(
+            config_value(&ordinary_config, "input_hold_fast_forward"),
+            Some("nul")
+        );
+        assert!(
+            !ordinary_config.contains(" = \"space\""),
+            "a normal export must not write the advanced Space binding"
+        );
+
+        let mut advanced = request(false);
+        advanced.show_menu = true;
+        advanced.advanced_emulator_access = true;
+        let config = embedded_runtime_config(&write_test_launcher(advanced));
+        assert_eq!(
+            config_value(&config, "input_toggle_fast_forward"),
+            Some("space")
+        );
+        assert_eq!(config_value(&config, "input_hold_fast_forward"), Some("l"));
+        for name in [
+            "toggle_fast_forward",
+            "hold_fast_forward",
+            "menu_toggle",
+            "exit_emulator",
+            "toggle_fullscreen",
+            "rewind",
+        ] {
+            for suffix in ["_btn", "_axis", "_mbtn"] {
+                assert_eq!(
+                    config_value(&config, &format!("input_{name}{suffix}")),
+                    Some("nul"),
+                    "{name}{suffix} stays nul when advanced access is on"
+                );
+            }
+        }
+        assert_eq!(config_value(&config, "input_menu_toggle"), Some("escape"));
+        assert_eq!(config_value(&config, "input_exit_emulator"), Some("q"));
+        assert_eq!(config_value(&config, "input_toggle_fullscreen"), Some("f"));
+        assert_eq!(config_value(&config, "input_rewind"), Some("nul"));
+        assert_eq!(
+            config_value(&config, "input_menu_toggle_gamepad_combo"),
+            Some("2")
+        );
+        assert_eq!(config_value(&config, "input_quit_gamepad_combo"), Some("0"));
+        assert!(config.contains(&isolated_hotkey_config(true, true)));
     }
 
     #[test]
