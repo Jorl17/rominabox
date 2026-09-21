@@ -477,6 +477,21 @@ export function App() {
   );
   const systemName = systemDefinition?.name || "Choose a console";
   const requirements = systemDefinition?.firmware || [];
+  // Some consoles cannot start without a BIOS from the author, and others run
+  // without one and only work better with it. If we showed both the same way,
+  // we would either ask for a file nobody needs or make an export that cannot
+  // work look ready. `minimum` is the number of files required in that group.
+  const mandatoryFirmware = requirements.filter((group) => group.minimum > 0);
+  const missingMandatory = mandatoryFirmware.filter(
+    (group) =>
+      firmware.filter((path) =>
+        group.acceptedNames.some(
+          (name) =>
+            name.toLowerCase() ===
+            (path.split(/[\\/]/).pop() || "").toLowerCase(),
+        ),
+      ).length < group.minimum,
+  );
   const requiresFirmware = requirements.length > 0;
   const firmwarePicker = (
     <div className="firmware-picker">
@@ -493,7 +508,7 @@ export function App() {
           }
         }}
       >
-        {requiresFirmware && firmware.length === 0
+        {mandatoryFirmware.length > 0 && firmware.length === 0
           ? "Choose BIOS files"
           : "Add BIOS files"}
       </button>
@@ -751,7 +766,24 @@ export function App() {
                       </div>
                     </div>
                   </div>
-                  {requiresFirmware && firmwarePicker}
+                  {requiresFirmware && (
+                    <div
+                      className={
+                        missingMandatory.length > 0
+                          ? "firmware-required"
+                          : "firmware-optional"
+                      }
+                    >
+                      <p className="firmware-status">
+                        {missingMandatory.length > 0
+                          ? missingMandatory[0].help
+                          : mandatoryFirmware.length > 0
+                            ? "BIOS files added."
+                            : requirements[0].help}
+                      </p>
+                      {firmwarePicker}
+                    </div>
+                  )}
                   <details className="advanced">
                     <summary>
                       <ChevronRight size={16} />

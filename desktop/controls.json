@@ -757,7 +757,7 @@
         {
           "id": "l2",
           "label": "L2",
-          "key": "q",
+          "key": "w",
           "x": 345,
           "y": 46,
           "calloutX": 16,
@@ -820,7 +820,7 @@
         {
           "id": "r2",
           "label": "R2",
-          "key": "w",
+          "key": "e",
           "x": 608,
           "y": 46,
           "calloutX": 744,
@@ -938,7 +938,7 @@
         {
           "id": "l2",
           "label": "Z",
-          "key": "q",
+          "key": "w",
           "x": 478,
           "y": 328,
           "calloutX": 16,
@@ -1083,7 +1083,7 @@
         {
           "id": "l2",
           "label": "Z",
-          "key": "q",
+          "key": "w",
           "x": 676,
           "y": 52,
           "calloutX": 744,
@@ -1233,6 +1233,160 @@
           "y": 188,
           "calloutX": 744,
           "calloutY": 252
+        }
+      ]
+    },
+    {
+      "id": "ps1-analog",
+      "name": "PlayStation · analogue",
+      "systems": [
+        "ps1"
+      ],
+      "image": "",
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 20
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 20
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 20
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 20
+        },
+        {
+          "id": "b",
+          "label": "Cross",
+          "key": "z",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 104
+        },
+        {
+          "id": "a",
+          "label": "Circle",
+          "key": "x",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 104
+        },
+        {
+          "id": "y",
+          "label": "Square",
+          "key": "a",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 104
+        },
+        {
+          "id": "x",
+          "label": "Triangle",
+          "key": "s",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 104
+        },
+        {
+          "id": "l",
+          "label": "L1",
+          "key": "d",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 188
+        },
+        {
+          "id": "r",
+          "label": "R1",
+          "key": "c",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 188
+        },
+        {
+          "id": "l2",
+          "label": "L2",
+          "key": "w",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 188
+        },
+        {
+          "id": "r2",
+          "label": "R2",
+          "key": "e",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 188
+        },
+        {
+          "id": "l3",
+          "label": "L3",
+          "key": "1",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 272
+        },
+        {
+          "id": "r3",
+          "label": "R3",
+          "key": "2",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 272
+        },
+        {
+          "id": "select",
+          "label": "Select",
+          "key": "rshift",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 272
+        },
+        {
+          "id": "start",
+          "label": "Start",
+          "key": "enter",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 272
         }
       ]
     },

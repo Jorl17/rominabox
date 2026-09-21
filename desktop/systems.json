@@ -325,6 +325,9 @@
         "pbp",
         "m3u"
       ],
+      "supportFiles": [
+        "sbi"
+      ],
       "recognizeOnly": [
         "m3u"
       ],
@@ -335,6 +338,21 @@
           "license": "GPL-2.0",
           "licenseFile": "pcsx_rearmed.txt",
           "capabilities": []
+        }
+      ],
+      "firmware": [
+        {
+          "id": "ps1-bios",
+          "acceptedNames": [
+            "scph5500.bin",
+            "scph5501.bin",
+            "scph5502.bin",
+            "scph1001.bin",
+            "scph7001.bin",
+            "scph101.bin"
+          ],
+          "minimum": 0,
+          "help": "Optional. PlayStation games run without a BIOS using the built-in high-level one. Adding a real BIOS for the game's region, such as scph5501.bin, improves compatibility. Use only a file you are entitled to."
         }
       ],
       "controllerProfile": "ps1",

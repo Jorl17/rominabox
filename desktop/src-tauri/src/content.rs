@@ -67,6 +67,32 @@ pub fn collect(entrypoint: &Path) -> Result<ContentSet, String> {
         staged_bytes: None,
     }];
 
+    // Some protection data is outside the disc image, and nothing inside the
+    // image refers to it. A LibCrypt PlayStation game has its subchannel data
+    // in a sibling .sbi. Without it the game boots and fails later, which is
+    // far worse than refusing to export. The extensions that go with the
+    // content are declared per console, not listed here.
+    let stem = entrypoint.file_stem().unwrap_or_default();
+    let mut support: Vec<String> = crate::systems::registry()
+        .iter()
+        .flat_map(|system| system.support_files.iter().cloned())
+        .collect();
+    support.sort_unstable();
+    support.dedup();
+    for extension in support {
+        let sibling = root.join(stem).with_extension(&extension);
+        if sibling.is_file() && sibling != entrypoint {
+            let sibling_name = sibling
+                .file_name()
+                .ok_or_else(|| format!("support file has no name: {}", sibling.display()))?;
+            files.push(ContentFile {
+                source: sibling.clone(),
+                relative: PathBuf::from(sibling_name),
+                staged_bytes: None,
+            });
+        }
+    }
+
     if extension.eq_ignore_ascii_case("cue") {
         let cue = fs::read_to_string(&entrypoint)
             .map_err(|error| format!("read CUE sheet {}: {error}", entrypoint.display()))?;

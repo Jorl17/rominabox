@@ -1106,3 +1106,24 @@ select {
     min-height: min(360px, calc(100svh - 330px));
   }
 }
+
+/* A console that cannot start without a BIOS must look different from one
+   that only works better with it. Otherwise the author either ignores a
+   blocker or looks for a file nobody needs. */
+.firmware-required,
+.firmware-optional {
+  border-left: 3px solid var(--line, #d8d5c8);
+  padding-left: 12px;
+  margin: 12px 0;
+}
+.firmware-required {
+  border-left-color: #c2241c;
+}
+.firmware-status {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.firmware-required .firmware-status {
+  color: #c2241c;
+}

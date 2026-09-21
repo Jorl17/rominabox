@@ -15,6 +15,9 @@ pub struct System {
     pub name: String,
     pub aliases: Vec<String>,
     pub extensions: Vec<String>,
+    /// Sibling files that must be collected with the content, by extension.
+    #[serde(default)]
+    pub support_files: Vec<String>,
     /// Extensions by which we recognise this console but cannot export it yet.
     /// We declare them per console and not in the exporter code.
     #[serde(default)]

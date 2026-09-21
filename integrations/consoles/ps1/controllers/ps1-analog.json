@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "id": "ps1-analog",
+  "name": "PlayStation \u00b7 analogue",
+  "presentation": {
+    "kind": "generic"
+  },
+  "presentationOrder": 14,
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up"
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down"
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left"
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right"
+    },
+    {
+      "id": "b",
+      "label": "Cross",
+      "key": "z"
+    },
+    {
+      "id": "a",
+      "label": "Circle",
+      "key": "x"
+    },
+    {
+      "id": "y",
+      "label": "Square",
+      "key": "a"
+    },
+    {
+      "id": "x",
+      "label": "Triangle",
+      "key": "s"
+    },
+    {
+      "id": "l",
+      "label": "L1",
+      "key": "d"
+    },
+    {
+      "id": "r",
+      "label": "R1",
+      "key": "c"
+    },
+    {
+      "id": "l2",
+      "label": "L2",
+      "key": "w"
+    },
+    {
+      "id": "r2",
+      "label": "R2",
+      "key": "e"
+    },
+    {
+      "id": "l3",
+      "label": "L3",
+      "key": "1"
+    },
+    {
+      "id": "r3",
+      "label": "R3",
+      "key": "2"
+    },
+    {
+      "id": "select",
+      "label": "Select",
+      "key": "rshift"
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter"
+    }
+  ]
+}

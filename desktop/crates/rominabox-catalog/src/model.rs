@@ -237,6 +237,15 @@ pub struct Content {
     /// no safe way to collect the files they point at in an export.
     #[serde(default, rename = "recognizeOnly", skip_serializing_if = "Vec::is_empty")]
     pub recognize_only: Vec<String>,
+    /// Extensions of sibling files that we must export with the content.
+    ///
+    /// In some protection schemes the data is outside the disc image. A
+    /// LibCrypt PlayStation game does not run without the subchannel data in
+    /// its `.sbi`, which no CUE lists, so if we collected only the files the
+    /// image lists, we would leave it out. The game would then start and fail
+    /// later, which is much worse than a failed export.
+    #[serde(default, rename = "supportFiles", skip_serializing_if = "Vec::is_empty")]
+    pub support_files: Vec<String>,
     /// `cartridge` or `disc`.
     pub category: String,
 }
