@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "wonderswancolor",
+  "name": "WonderSwan Color",
+  "aliases": [
+    "wonderswan color"
+  ],
+  "content": {
+    "extensions": [
+      "wsc"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {},
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Bandai - WonderSwan Color"
+    }
+  },
+  "cores": [
+    {
+      "component": "beetle_cygne"
+    }
+  ],
+  "controllers": {
+    "default": "retropad",
+    "variants": [
+      "retropad"
+    ]
+  },
+  "support": {
+    "macos-arm64": "planned"
+  },
+  "presentationOrder": 24
+}

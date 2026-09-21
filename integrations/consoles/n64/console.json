@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "n64",
+  "name": "Nintendo 64",
+  "aliases": [
+    "n64",
+    "nintendo 64"
+  ],
+  "content": {
+    "extensions": [
+      "z64",
+      "n64",
+      "v64"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {
+    "headerTitle": {
+      "offset": 32,
+      "length": 20
+    }
+  },
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Nintendo - Nintendo 64"
+    }
+  },
+  "cores": [
+    {
+      "component": "mupen64plus_next"
+    }
+  ],
+  "controllers": {
+    "default": "n64",
+    "variants": [
+      "n64"
+    ]
+  },
+  "support": {
+    "macos-arm64": "planned"
+  },
+  "presentationOrder": 10
+}

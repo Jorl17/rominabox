@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "mgba",
+  "name": "mgba",
+  "artifacts": {
+    "macos-arm64": "mgba_libretro.dylib"
+  },
+  "license": {
+    "spdx": "MPL-2.0",
+    "file": "mgba.txt"
+  },
+  "capabilities": []
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "beetle_pce_fast",
+  "name": "beetle pce fast",
+  "artifacts": {
+    "macos-arm64": "mednafen_pce_fast_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-2.0",
+    "file": "beetle_pce_fast.txt"
+  },
+  "capabilities": []
+}

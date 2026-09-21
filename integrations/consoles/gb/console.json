@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "gb",
+  "name": "Game Boy",
+  "aliases": [
+    "game boy"
+  ],
+  "content": {
+    "extensions": [
+      "gb"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {
+    "headerTitle": {
+      "offset": 308,
+      "length": 15
+    }
+  },
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Nintendo - Game Boy"
+    }
+  },
+  "cores": [
+    {
+      "component": "gambatte"
+    }
+  ],
+  "controllers": {
+    "default": "gameboy",
+    "variants": [
+      "gameboy"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 5
+}

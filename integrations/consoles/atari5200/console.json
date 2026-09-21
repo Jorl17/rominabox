@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "atari5200",
+  "name": "Atari 5200",
+  "aliases": [
+    "atari 5200"
+  ],
+  "content": {
+    "extensions": [
+      "a52"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {},
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Atari - 5200"
+    }
+  },
+  "cores": [
+    {
+      "component": "a5200"
+    }
+  ],
+  "controllers": {
+    "default": "retropad",
+    "variants": [
+      "retropad"
+    ]
+  },
+  "support": {
+    "macos-arm64": "planned"
+  },
+  "presentationOrder": 16
+}

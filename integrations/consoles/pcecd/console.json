@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "pcecd",
+  "name": "PC Engine CD / TurboGrafx-CD",
+  "aliases": [
+    "pc engine cd",
+    "turbografx-cd",
+    "tg-cd"
+  ],
+  "content": {
+    "extensions": [
+      "cue",
+      "chd",
+      "m3u"
+    ],
+    "category": "disc"
+  },
+  "recognition": {},
+  "metadata": {},
+  "cores": [
+    {
+      "component": "beetle_pce_fast"
+    }
+  ],
+  "controllers": {
+    "default": "retropad",
+    "variants": [
+      "retropad"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 20,
+  "firmware": [
+    {
+      "id": "pcecd-system-card",
+      "acceptedNames": [
+        "syscard3.pce"
+      ],
+      "minimum": 1,
+      "help": "Select a Super CD-ROM2 System Card 3 BIOS that you are entitled to use."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "pcsx_rearmed",
+  "name": "pcsx rearmed",
+  "artifacts": {
+    "macos-arm64": "pcsx_rearmed_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-2.0",
+    "file": "pcsx_rearmed.txt"
+  },
+  "capabilities": []
+}

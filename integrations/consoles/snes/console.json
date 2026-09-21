@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "snes",
+  "name": "Super Nintendo Entertainment System",
+  "aliases": [
+    "snes",
+    "super nintendo",
+    "super famicom"
+  ],
+  "content": {
+    "extensions": [
+      "sfc",
+      "smc"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {},
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Nintendo - Super Nintendo Entertainment System"
+    }
+  },
+  "cores": [
+    {
+      "component": "snes9x"
+    }
+  ],
+  "controllers": {
+    "default": "snes",
+    "variants": [
+      "snes"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 9
+}

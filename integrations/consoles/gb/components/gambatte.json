@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "gambatte",
+  "name": "gambatte",
+  "artifacts": {
+    "macos-arm64": "gambatte_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-2.0",
+    "file": "gambatte.txt"
+  },
+  "capabilities": []
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "flycast",
+  "name": "flycast",
+  "artifacts": {
+    "macos-arm64": "flycast_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-2.0",
+    "file": "flycast.txt"
+  },
+  "capabilities": []
+}

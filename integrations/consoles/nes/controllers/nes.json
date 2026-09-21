@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "nes",
+  "name": "NES",
+  "presentation": {
+    "kind": "illustrated",
+    "image": "controller-nes.png"
+  },
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up",
+      "x": 329,
+      "y": 181,
+      "calloutX": 16,
+      "calloutY": 20
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 329,
+      "y": 246,
+      "calloutX": 16,
+      "calloutY": 194
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left",
+      "x": 296,
+      "y": 214,
+      "calloutX": 16,
+      "calloutY": 78
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right",
+      "x": 361,
+      "y": 214,
+      "calloutX": 16,
+      "calloutY": 136
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "key": "z",
+      "x": 577,
+      "y": 237,
+      "calloutX": 744,
+      "calloutY": 150
+    },
+    {
+      "id": "a",
+      "label": "A",
+      "key": "x",
+      "x": 638,
+      "y": 237,
+      "calloutX": 744,
+      "calloutY": 240
+    },
+    {
+      "id": "select",
+      "label": "Select",
+      "key": "rshift",
+      "x": 433,
+      "y": 237,
+      "calloutX": 16,
+      "calloutY": 252
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter",
+      "x": 495,
+      "y": 237,
+      "calloutX": 16,
+      "calloutY": 310
+    }
+  ],
+  "presentationOrder": 3
+}

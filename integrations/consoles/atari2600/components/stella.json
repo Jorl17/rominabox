@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "stella",
+  "name": "stella",
+  "artifacts": {
+    "macos-arm64": "stella_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-2.0",
+    "file": "stella.txt"
+  },
+  "capabilities": []
+}

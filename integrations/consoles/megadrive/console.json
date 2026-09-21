@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "megadrive",
+  "name": "Mega Drive / Genesis",
+  "aliases": [
+    "mega drive",
+    "genesis"
+  ],
+  "content": {
+    "extensions": [
+      "md",
+      "gen",
+      "smd"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {
+    "headerTitle": {
+      "offset": 336,
+      "length": 48
+    }
+  },
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Sega - Mega Drive - Genesis"
+    }
+  },
+  "cores": [
+    {
+      "component": "genesis_plus_gx"
+    }
+  ],
+  "controllers": {
+    "default": "megadrive",
+    "variants": [
+      "megadrive",
+      "megadrive6"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 0
+}

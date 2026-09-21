@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "a5200",
+  "name": "a5200",
+  "artifacts": {
+    "macos-arm64": "a5200_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-2.0",
+    "file": "a5200.txt"
+  },
+  "capabilities": []
+}

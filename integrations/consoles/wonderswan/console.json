@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "wonderswan",
+  "name": "WonderSwan",
+  "aliases": [
+    "wonderswan"
+  ],
+  "content": {
+    "extensions": [
+      "ws"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {},
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Bandai - WonderSwan"
+    }
+  },
+  "cores": [
+    {
+      "component": "beetle_cygne"
+    }
+  ],
+  "controllers": {
+    "default": "retropad",
+    "variants": [
+      "retropad"
+    ]
+  },
+  "support": {
+    "macos-arm64": "planned"
+  },
+  "presentationOrder": 23
+}

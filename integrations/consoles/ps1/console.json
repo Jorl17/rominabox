@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "ps1",
+  "name": "PlayStation",
+  "aliases": [
+    "playstation",
+    "psx",
+    "ps1"
+  ],
+  "content": {
+    "extensions": [
+      "cue",
+      "chd",
+      "pbp",
+      "m3u"
+    ],
+    "category": "disc"
+  },
+  "recognition": {},
+  "metadata": {},
+  "cores": [
+    {
+      "component": "pcsx_rearmed"
+    }
+  ],
+  "controllers": {
+    "default": "ps1",
+    "variants": [
+      "ps1"
+    ]
+  },
+  "support": {
+    "macos-arm64": "planned"
+  },
+  "presentationOrder": 11
+}

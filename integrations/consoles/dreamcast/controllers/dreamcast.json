@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "id": "dreamcast",
+  "name": "Dreamcast",
+  "presentation": {
+    "kind": "illustrated",
+    "image": "controller-dreamcast.png"
+  },
+  "controls": [
+    {
+      "id": "l",
+      "label": "L",
+      "key": "d",
+      "x": 343,
+      "y": 68,
+      "calloutX": 16,
+      "calloutY": 0
+    },
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up",
+      "x": 371,
+      "y": 189,
+      "calloutX": 16,
+      "calloutY": 63
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left",
+      "x": 352,
+      "y": 207,
+      "calloutX": 16,
+      "calloutY": 126
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right",
+      "x": 389,
+      "y": 207,
+      "calloutX": 16,
+      "calloutY": 189
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 371,
+      "y": 225,
+      "calloutX": 16,
+      "calloutY": 252
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter",
+      "x": 479,
+      "y": 272,
+      "calloutX": 16,
+      "calloutY": 315
+    },
+    {
+      "id": "r",
+      "label": "R",
+      "key": "c",
+      "x": 613,
+      "y": 68,
+      "calloutX": 744,
+      "calloutY": 0
+    },
+    {
+      "id": "y",
+      "label": "Y",
+      "key": "a",
+      "x": 598,
+      "y": 128,
+      "calloutX": 744,
+      "calloutY": 63
+    },
+    {
+      "id": "x",
+      "label": "X",
+      "key": "s",
+      "x": 567,
+      "y": 158,
+      "calloutX": 744,
+      "calloutY": 126
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "key": "z",
+      "x": 628,
+      "y": 158,
+      "calloutX": 744,
+      "calloutY": 189
+    },
+    {
+      "id": "a",
+      "label": "A",
+      "key": "x",
+      "x": 598,
+      "y": 188,
+      "calloutX": 744,
+      "calloutY": 252
+    }
+  ],
+  "presentationOrder": 11
+}

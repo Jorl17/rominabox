@@ -2,7 +2,7 @@
   "profiles": [
     {
       "id": "megadrive",
-      "name": "Mega Drive \u00b7 3 buttons",
+      "name": "Mega Drive · 3 buttons",
       "systems": [
         "megadrive",
         "segacd"
@@ -169,13 +169,12 @@
     },
     {
       "id": "megadrive6",
-      "name": "Mega Drive \u00b7 6 buttons",
+      "name": "Mega Drive · 6 buttons",
       "systems": [
         "megadrive",
         "segacd"
       ],
       "image": "controller-megadrive6.png",
-      "coreDevice": 513,
       "controls": [
         {
           "id": "up",
@@ -285,7 +284,8 @@
           "calloutX": 16,
           "calloutY": 8
         }
-      ]
+      ],
+      "coreDevice": 513
     },
     {
       "id": "nes",
@@ -595,7 +595,6 @@
         "sg1000"
       ],
       "image": "controller-mastersystem.png",
-      "coreDevice": 769,
       "controls": [
         {
           "id": "up",
@@ -660,7 +659,8 @@
           "calloutX": 744,
           "calloutY": 16
         }
-      ]
+      ],
+      "coreDevice": 769
     },
     {
       "id": "gamegear",
@@ -669,7 +669,6 @@
         "gamegear"
       ],
       "image": "",
-      "coreDevice": 769,
       "controls": [
         {
           "id": "up",
@@ -734,7 +733,8 @@
           "calloutX": 496,
           "calloutY": 104
         }
-      ]
+      ],
+      "coreDevice": 769
     },
     {
       "id": "ps1",

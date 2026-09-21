@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "gamecube",
+  "name": "GameCube",
+  "aliases": [
+    "gamecube"
+  ],
+  "content": {
+    "extensions": [
+      "gcm",
+      "rvz",
+      "iso"
+    ],
+    "category": "disc"
+  },
+  "recognition": {},
+  "metadata": {},
+  "cores": [
+    {
+      "component": "dolphin"
+    }
+  ],
+  "controllers": {
+    "default": "gamecube",
+    "variants": [
+      "gamecube"
+    ]
+  },
+  "support": {
+    "macos-arm64": "planned"
+  },
+  "presentationOrder": 13
+}

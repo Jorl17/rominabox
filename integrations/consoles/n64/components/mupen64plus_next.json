@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "mupen64plus_next",
+  "name": "mupen64plus next",
+  "artifacts": {
+    "macos-arm64": "mupen64plus_next_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-3.0",
+    "file": "mupen64plus_next.txt"
+  },
+  "capabilities": []
+}

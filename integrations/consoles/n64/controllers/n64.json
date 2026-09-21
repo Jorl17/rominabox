@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "id": "n64",
+  "name": "Nintendo 64",
+  "presentation": {
+    "kind": "illustrated",
+    "image": "controller-n64.png"
+  },
+  "controls": [
+    {
+      "id": "l",
+      "label": "L",
+      "key": "d",
+      "x": 356,
+      "y": 43,
+      "calloutX": 16,
+      "calloutY": 0
+    },
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up",
+      "x": 355,
+      "y": 98,
+      "calloutX": 16,
+      "calloutY": 54
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left",
+      "x": 336,
+      "y": 116,
+      "calloutX": 16,
+      "calloutY": 108
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 355,
+      "y": 135,
+      "calloutX": 16,
+      "calloutY": 162
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right",
+      "x": 373,
+      "y": 116,
+      "calloutX": 16,
+      "calloutY": 216
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter",
+      "x": 478,
+      "y": 123,
+      "calloutX": 16,
+      "calloutY": 270
+    },
+    {
+      "id": "l2",
+      "label": "Z",
+      "key": "q",
+      "x": 478,
+      "y": 328,
+      "calloutX": 16,
+      "calloutY": 324
+    },
+    {
+      "id": "r",
+      "label": "R",
+      "key": "c",
+      "x": 598,
+      "y": 43,
+      "calloutX": 744,
+      "calloutY": 0
+    },
+    {
+      "id": "x",
+      "label": "C-Up",
+      "key": "s",
+      "x": 604,
+      "y": 76,
+      "calloutX": 744,
+      "calloutY": 54
+    },
+    {
+      "id": "r3",
+      "label": "C-Right",
+      "key": "2",
+      "x": 625,
+      "y": 97,
+      "calloutX": 744,
+      "calloutY": 108
+    },
+    {
+      "id": "l3",
+      "label": "C-Down",
+      "key": "1",
+      "x": 604,
+      "y": 118,
+      "calloutX": 744,
+      "calloutY": 162
+    },
+    {
+      "id": "y",
+      "label": "C-Left",
+      "key": "a",
+      "x": 583,
+      "y": 97,
+      "calloutX": 744,
+      "calloutY": 216
+    },
+    {
+      "id": "a",
+      "label": "A",
+      "key": "x",
+      "x": 574,
+      "y": 148,
+      "calloutX": 744,
+      "calloutY": 270
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "key": "z",
+      "x": 546,
+      "y": 120,
+      "calloutX": 744,
+      "calloutY": 324
+    }
+  ],
+  "presentationOrder": 9
+}

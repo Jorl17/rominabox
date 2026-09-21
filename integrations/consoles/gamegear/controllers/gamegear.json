@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "gamegear",
+  "name": "Game Gear",
+  "presentation": {
+    "kind": "generic"
+  },
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up"
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down"
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left"
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right"
+    },
+    {
+      "id": "b",
+      "label": "1",
+      "key": "z"
+    },
+    {
+      "id": "a",
+      "label": "2",
+      "key": "x"
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter"
+    }
+  ],
+  "presentationOrder": 7,
+  "coreDevice": 769
+}

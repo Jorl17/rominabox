@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "neogeopocket",
+  "name": "Neo Geo Pocket",
+  "aliases": [
+    "neo geo pocket",
+    "ngp"
+  ],
+  "content": {
+    "extensions": [
+      "ngp"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {},
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "SNK - Neo Geo Pocket"
+    }
+  },
+  "cores": [
+    {
+      "component": "beetle_neopop"
+    }
+  ],
+  "controllers": {
+    "default": "retropad",
+    "variants": [
+      "retropad"
+    ]
+  },
+  "support": {
+    "macos-arm64": "planned"
+  },
+  "presentationOrder": 21
+}

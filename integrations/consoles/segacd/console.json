@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "segacd",
+  "name": "Sega CD / Mega-CD",
+  "aliases": [
+    "sega cd",
+    "mega-cd",
+    "megacd"
+  ],
+  "content": {
+    "extensions": [
+      "cue",
+      "chd",
+      "iso",
+      "m3u"
+    ],
+    "category": "disc"
+  },
+  "recognition": {},
+  "metadata": {},
+  "cores": [
+    {
+      "component": "genesis_plus_gx"
+    }
+  ],
+  "controllers": {
+    "default": "megadrive",
+    "variants": [
+      "megadrive",
+      "megadrive6"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 1,
+  "firmware": [
+    {
+      "id": "segacd-bios",
+      "acceptedNames": [
+        "bios_CD_E.bin",
+        "bios_CD_U.bin",
+        "bios_CD_J.bin"
+      ],
+      "minimum": 1,
+      "help": "Select at least one Sega CD region BIOS that you are entitled to use. ROM-in-a-Box does not search another emulator's files."
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "dreamcast",
+  "name": "Dreamcast",
+  "aliases": [
+    "dreamcast"
+  ],
+  "content": {
+    "extensions": [
+      "gdi",
+      "cdi",
+      "chd",
+      "m3u"
+    ],
+    "category": "disc"
+  },
+  "recognition": {},
+  "metadata": {},
+  "cores": [
+    {
+      "component": "flycast"
+    }
+  ],
+  "controllers": {
+    "default": "dreamcast",
+    "variants": [
+      "dreamcast"
+    ]
+  },
+  "support": {
+    "macos-arm64": "planned"
+  },
+  "presentationOrder": 12
+}

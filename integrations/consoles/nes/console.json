@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "nes",
+  "name": "Nintendo Entertainment System",
+  "aliases": [
+    "nes",
+    "famicom"
+  ],
+  "content": {
+    "extensions": [
+      "nes"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {
+    "handlers": [
+      "ines_header"
+    ]
+  },
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Nintendo - Nintendo Entertainment System"
+    }
+  },
+  "cores": [
+    {
+      "component": "nestopia"
+    }
+  ],
+  "controllers": {
+    "default": "nes",
+    "variants": [
+      "nes"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 8
+}

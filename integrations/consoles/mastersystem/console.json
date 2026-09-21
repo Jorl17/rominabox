@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "mastersystem",
+  "name": "Master System",
+  "aliases": [
+    "master system",
+    "sms",
+    "mark iii"
+  ],
+  "content": {
+    "extensions": [
+      "sms"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {},
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Sega - Master System - Mark III"
+    }
+  },
+  "cores": [
+    {
+      "component": "genesis_plus_gx"
+    }
+  ],
+  "controllers": {
+    "default": "mastersystem",
+    "variants": [
+      "mastersystem"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 2
+}

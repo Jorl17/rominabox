@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "beetle_cygne",
+  "name": "beetle cygne",
+  "artifacts": {
+    "macos-arm64": "mednafen_wswan_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-2.0",
+    "file": "beetle_cygne.txt"
+  },
+  "capabilities": []
+}

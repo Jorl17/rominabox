@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "id": "gamecube",
+  "name": "GameCube",
+  "presentation": {
+    "kind": "illustrated",
+    "image": "controller-gamecube.png"
+  },
+  "controls": [
+    {
+      "id": "l",
+      "label": "L",
+      "key": "d",
+      "x": 322,
+      "y": 32,
+      "calloutX": 16,
+      "calloutY": 0
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter",
+      "x": 480,
+      "y": 128,
+      "calloutX": 16,
+      "calloutY": 63
+    },
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up",
+      "x": 398,
+      "y": 203,
+      "calloutX": 16,
+      "calloutY": 126
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left",
+      "x": 376,
+      "y": 225,
+      "calloutX": 16,
+      "calloutY": 189
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 398,
+      "y": 246,
+      "calloutX": 16,
+      "calloutY": 252
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right",
+      "x": 421,
+      "y": 225,
+      "calloutX": 16,
+      "calloutY": 315
+    },
+    {
+      "id": "r",
+      "label": "R",
+      "key": "c",
+      "x": 640,
+      "y": 30,
+      "calloutX": 744,
+      "calloutY": 0
+    },
+    {
+      "id": "l2",
+      "label": "Z",
+      "key": "q",
+      "x": 676,
+      "y": 52,
+      "calloutX": 744,
+      "calloutY": 63
+    },
+    {
+      "id": "x",
+      "label": "X",
+      "key": "s",
+      "x": 677,
+      "y": 108,
+      "calloutX": 744,
+      "calloutY": 126
+    },
+    {
+      "id": "a",
+      "label": "A",
+      "key": "x",
+      "x": 625,
+      "y": 120,
+      "calloutX": 744,
+      "calloutY": 189
+    },
+    {
+      "id": "y",
+      "label": "Y",
+      "key": "a",
+      "x": 611,
+      "y": 67,
+      "calloutX": 744,
+      "calloutY": 252
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "key": "z",
+      "x": 570,
+      "y": 146,
+      "calloutX": 744,
+      "calloutY": 315
+    }
+  ],
+  "presentationOrder": 10
+}

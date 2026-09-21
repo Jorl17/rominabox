@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "gba",
+  "name": "Game Boy Advance",
+  "aliases": [
+    "game boy advance"
+  ],
+  "content": {
+    "extensions": [
+      "gba"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {
+    "headerTitle": {
+      "offset": 160,
+      "length": 12
+    }
+  },
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Nintendo - Game Boy Advance"
+    }
+  },
+  "cores": [
+    {
+      "component": "mgba"
+    }
+  ],
+  "controllers": {
+    "default": "gba",
+    "variants": [
+      "gba"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 7
+}

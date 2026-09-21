@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "id": "megadrive",
+  "name": "Mega Drive \u00b7 3 buttons",
+  "presentation": {
+    "kind": "illustrated",
+    "image": "controller-megadrive.png"
+  },
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up",
+      "x": 333,
+      "y": 160,
+      "calloutX": 16,
+      "calloutY": 16
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left",
+      "x": 312,
+      "y": 181,
+      "calloutX": 16,
+      "calloutY": 100
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right",
+      "x": 354,
+      "y": 181,
+      "calloutX": 16,
+      "calloutY": 268
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 333,
+      "y": 203,
+      "calloutX": 16,
+      "calloutY": 184
+    },
+    {
+      "id": "y",
+      "label": "A",
+      "key": "z",
+      "x": 569,
+      "y": 213,
+      "calloutX": 744,
+      "calloutY": 268
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "key": "x",
+      "x": 623,
+      "y": 186,
+      "calloutX": 744,
+      "calloutY": 184
+    },
+    {
+      "id": "a",
+      "label": "C",
+      "key": "c",
+      "x": 678,
+      "y": 164,
+      "calloutX": 744,
+      "calloutY": 100
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter",
+      "x": 587,
+      "y": 111,
+      "calloutX": 744,
+      "calloutY": 16
+    }
+  ],
+  "presentationOrder": 0,
+  "coreDevice": 257
+}

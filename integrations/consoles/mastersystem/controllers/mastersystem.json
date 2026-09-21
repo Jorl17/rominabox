@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "id": "mastersystem",
+  "name": "Master System",
+  "presentation": {
+    "kind": "illustrated",
+    "image": "controller-mastersystem.png"
+  },
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up",
+      "x": 373,
+      "y": 172,
+      "calloutX": 16,
+      "calloutY": 16
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 373,
+      "y": 232,
+      "calloutX": 16,
+      "calloutY": 268
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left",
+      "x": 343,
+      "y": 202,
+      "calloutX": 16,
+      "calloutY": 100
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right",
+      "x": 403,
+      "y": 202,
+      "calloutX": 16,
+      "calloutY": 184
+    },
+    {
+      "id": "b",
+      "label": "1",
+      "key": "z",
+      "x": 567,
+      "y": 230,
+      "calloutX": 744,
+      "calloutY": 100
+    },
+    {
+      "id": "a",
+      "label": "2",
+      "key": "x",
+      "x": 640,
+      "y": 230,
+      "calloutX": 744,
+      "calloutY": 184
+    },
+    {
+      "id": "start",
+      "label": "Pause",
+      "key": "enter",
+      "x": 500,
+      "y": 138,
+      "calloutX": 744,
+      "calloutY": 16
+    }
+  ],
+  "presentationOrder": 6,
+  "coreDevice": 769
+}

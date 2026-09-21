@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "genesis_plus_gx",
+  "name": "genesis plus gx",
+  "artifacts": {
+    "macos-arm64": "genesis_plus_gx_libretro.dylib"
+  },
+  "license": {
+    "spdx": "Non-commercial",
+    "file": "genesis_plus_gx.txt"
+  },
+  "capabilities": []
+}

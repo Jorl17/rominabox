@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "sg1000",
+  "name": "SG-1000",
+  "aliases": [
+    "sg-1000",
+    "sg1000"
+  ],
+  "content": {
+    "extensions": [
+      "sg"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {},
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Sega - SG-1000"
+    }
+  },
+  "cores": [
+    {
+      "component": "genesis_plus_gx"
+    }
+  ],
+  "controllers": {
+    "default": "mastersystem",
+    "variants": [
+      "mastersystem"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 4
+}

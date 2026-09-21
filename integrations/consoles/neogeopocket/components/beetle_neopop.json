@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "beetle_neopop",
+  "name": "beetle neopop",
+  "artifacts": {
+    "macos-arm64": "mednafen_ngp_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-2.0",
+    "file": "beetle_neopop.txt"
+  },
+  "capabilities": []
+}

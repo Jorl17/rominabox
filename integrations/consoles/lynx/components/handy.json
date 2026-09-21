@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "handy",
+  "name": "handy",
+  "artifacts": {
+    "macos-arm64": "handy_libretro.dylib"
+  },
+  "license": {
+    "spdx": "Zlib",
+    "file": "handy.txt"
+  },
+  "capabilities": []
+}

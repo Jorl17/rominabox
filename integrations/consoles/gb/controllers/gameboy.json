@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "gameboy",
+  "name": "Game Boy",
+  "presentation": {
+    "kind": "illustrated",
+    "image": "controller-gameboy.png"
+  },
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up",
+      "x": 424,
+      "y": 215,
+      "calloutX": 16,
+      "calloutY": 16
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left",
+      "x": 403,
+      "y": 236,
+      "calloutX": 16,
+      "calloutY": 108
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right",
+      "x": 445,
+      "y": 236,
+      "calloutX": 16,
+      "calloutY": 200
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 424,
+      "y": 257,
+      "calloutX": 16,
+      "calloutY": 292
+    },
+    {
+      "id": "a",
+      "label": "A",
+      "key": "x",
+      "x": 569,
+      "y": 215,
+      "calloutX": 744,
+      "calloutY": 16
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "key": "z",
+      "x": 526,
+      "y": 237,
+      "calloutX": 744,
+      "calloutY": 108
+    },
+    {
+      "id": "select",
+      "label": "Select",
+      "key": "rshift",
+      "x": 458,
+      "y": 306,
+      "calloutX": 744,
+      "calloutY": 200
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter",
+      "x": 513,
+      "y": 306,
+      "calloutX": 744,
+      "calloutY": 292
+    }
+  ],
+  "presentationOrder": 1
+}

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "pce",
+  "name": "PC Engine / TurboGrafx-16",
+  "aliases": [
+    "pc engine",
+    "turbografx-16",
+    "tg16"
+  ],
+  "content": {
+    "extensions": [
+      "pce"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {},
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "NEC - PC Engine - TurboGrafx 16"
+    }
+  },
+  "cores": [
+    {
+      "component": "beetle_pce_fast"
+    }
+  ],
+  "controllers": {
+    "default": "retropad",
+    "variants": [
+      "retropad"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 19
+}

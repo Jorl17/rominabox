@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "id": "gba",
+  "name": "Game Boy Advance",
+  "presentation": {
+    "kind": "generic"
+  },
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up"
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down"
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left"
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right"
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "key": "z"
+    },
+    {
+      "id": "a",
+      "label": "A",
+      "key": "x"
+    },
+    {
+      "id": "l",
+      "label": "L",
+      "key": "d"
+    },
+    {
+      "id": "r",
+      "label": "R",
+      "key": "c"
+    },
+    {
+      "id": "select",
+      "label": "Select",
+      "key": "rshift"
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter"
+    }
+  ],
+  "presentationOrder": 5
+}

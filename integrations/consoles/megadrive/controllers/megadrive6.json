@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "id": "megadrive6",
+  "name": "Mega Drive \u00b7 6 buttons",
+  "presentation": {
+    "kind": "illustrated",
+    "image": "controller-megadrive6.png"
+  },
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up",
+      "x": 338,
+      "y": 160,
+      "calloutX": 16,
+      "calloutY": 68
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 338,
+      "y": 210,
+      "calloutX": 16,
+      "calloutY": 188
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left",
+      "x": 313,
+      "y": 185,
+      "calloutX": 16,
+      "calloutY": 128
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right",
+      "x": 363,
+      "y": 185,
+      "calloutX": 16,
+      "calloutY": 248
+    },
+    {
+      "id": "y",
+      "label": "A",
+      "key": "z",
+      "x": 571,
+      "y": 235,
+      "calloutX": 744,
+      "calloutY": 308
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "key": "x",
+      "x": 617,
+      "y": 208,
+      "calloutX": 744,
+      "calloutY": 248
+    },
+    {
+      "id": "a",
+      "label": "C",
+      "key": "c",
+      "x": 666,
+      "y": 190,
+      "calloutX": 744,
+      "calloutY": 188
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter",
+      "x": 471,
+      "y": 175,
+      "calloutX": 16,
+      "calloutY": 308
+    },
+    {
+      "id": "l",
+      "label": "X",
+      "key": "a",
+      "x": 553,
+      "y": 176,
+      "calloutX": 744,
+      "calloutY": 128
+    },
+    {
+      "id": "x",
+      "label": "Y",
+      "key": "s",
+      "x": 595,
+      "y": 154,
+      "calloutX": 744,
+      "calloutY": 68
+    },
+    {
+      "id": "r",
+      "label": "Z",
+      "key": "d",
+      "x": 639,
+      "y": 142,
+      "calloutX": 744,
+      "calloutY": 8
+    },
+    {
+      "id": "select",
+      "label": "Mode",
+      "key": "rshift",
+      "x": 471,
+      "y": 108,
+      "calloutX": 16,
+      "calloutY": 8
+    }
+  ],
+  "presentationOrder": 2,
+  "coreDevice": 513
+}

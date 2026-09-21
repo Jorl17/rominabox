@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "atari7800",
+  "name": "Atari 7800",
+  "aliases": [
+    "atari 7800"
+  ],
+  "content": {
+    "extensions": [
+      "a78"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {
+    "headerTitle": {
+      "offset": 17,
+      "length": 32
+    }
+  },
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Atari - 7800"
+    }
+  },
+  "cores": [
+    {
+      "component": "prosystem"
+    }
+  ],
+  "controllers": {
+    "default": "retropad",
+    "variants": [
+      "retropad"
+    ]
+  },
+  "support": {
+    "macos-arm64": "planned"
+  },
+  "presentationOrder": 17
+}

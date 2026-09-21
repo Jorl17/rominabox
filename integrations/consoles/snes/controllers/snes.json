@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "id": "snes",
+  "name": "Super Nintendo",
+  "presentation": {
+    "kind": "illustrated",
+    "image": "controller-snes.png"
+  },
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up",
+      "x": 328,
+      "y": 162,
+      "calloutX": 16,
+      "calloutY": 64
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 328,
+      "y": 222,
+      "calloutX": 16,
+      "calloutY": 226
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left",
+      "x": 298,
+      "y": 192,
+      "calloutX": 16,
+      "calloutY": 118
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right",
+      "x": 358,
+      "y": 192,
+      "calloutX": 16,
+      "calloutY": 172
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "key": "z",
+      "x": 630,
+      "y": 230,
+      "calloutX": 744,
+      "calloutY": 226
+    },
+    {
+      "id": "a",
+      "label": "A",
+      "key": "x",
+      "x": 679,
+      "y": 192,
+      "calloutX": 744,
+      "calloutY": 172
+    },
+    {
+      "id": "y",
+      "label": "Y",
+      "key": "a",
+      "x": 579,
+      "y": 193,
+      "calloutX": 744,
+      "calloutY": 64
+    },
+    {
+      "id": "x",
+      "label": "X",
+      "key": "s",
+      "x": 628,
+      "y": 154,
+      "calloutX": 744,
+      "calloutY": 118
+    },
+    {
+      "id": "l",
+      "label": "L",
+      "key": "d",
+      "x": 330,
+      "y": 79,
+      "calloutX": 16,
+      "calloutY": 10
+    },
+    {
+      "id": "r",
+      "label": "R",
+      "key": "c",
+      "x": 625,
+      "y": 79,
+      "calloutX": 744,
+      "calloutY": 10
+    },
+    {
+      "id": "select",
+      "label": "Select",
+      "key": "rshift",
+      "x": 430,
+      "y": 208,
+      "calloutX": 16,
+      "calloutY": 280
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "key": "enter",
+      "x": 486,
+      "y": 208,
+      "calloutX": 744,
+      "calloutY": 280
+    }
+  ],
+  "presentationOrder": 4
+}

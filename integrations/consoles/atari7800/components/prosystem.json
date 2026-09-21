@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "prosystem",
+  "name": "prosystem",
+  "artifacts": {
+    "macos-arm64": "prosystem_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-2.0",
+    "file": "prosystem.txt"
+  },
+  "capabilities": []
+}

@@ -1,0 +1,12 @@
+[package]
+name = "rominabox-catalog"
+version = "0.1.0"
+edition = "2021"
+description = "Loads, validates and resolves ROM-in-a-Box console packages"
+
+# We declare it standalone so that it does not join a parent workspace.
+[workspace]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }

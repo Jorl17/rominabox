@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "ps2",
+  "name": "PlayStation 2",
+  "aliases": [
+    "playstation 2",
+    "ps2"
+  ],
+  "content": {
+    "extensions": [
+      "iso",
+      "chd"
+    ],
+    "category": "disc"
+  },
+  "recognition": {},
+  "metadata": {},
+  "cores": [
+    {
+      "component": "pcsx2"
+    }
+  ],
+  "controllers": {
+    "default": "ps1",
+    "variants": [
+      "ps1"
+    ]
+  },
+  "support": {
+    "macos-arm64": "planned"
+  },
+  "presentationOrder": 14
+}

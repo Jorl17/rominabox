@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "gamegear",
+  "name": "Game Gear",
+  "aliases": [
+    "game gear",
+    "gg"
+  ],
+  "content": {
+    "extensions": [
+      "gg"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {},
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Sega - Game Gear"
+    }
+  },
+  "cores": [
+    {
+      "component": "genesis_plus_gx"
+    }
+  ],
+  "controllers": {
+    "default": "gamegear",
+    "variants": [
+      "gamegear"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 3
+}

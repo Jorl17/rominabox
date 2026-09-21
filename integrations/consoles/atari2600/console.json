@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "atari2600",
+  "name": "Atari 2600",
+  "aliases": [
+    "atari 2600",
+    "vcs"
+  ],
+  "content": {
+    "extensions": [
+      "a26"
+    ],
+    "category": "cartridge"
+  },
+  "recognition": {},
+  "metadata": {
+    "catalog": {
+      "provider": "no-intro",
+      "name": "Atari - 2600"
+    }
+  },
+  "cores": [
+    {
+      "component": "stella"
+    }
+  ],
+  "controllers": {
+    "default": "retropad",
+    "variants": [
+      "retropad"
+    ]
+  },
+  "support": {
+    "macos-arm64": "enabled"
+  },
+  "presentationOrder": 15
+}

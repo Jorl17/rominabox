@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "pcsx2",
+  "name": "pcsx2",
+  "artifacts": {
+    "macos-arm64": "pcsx2_libretro.dylib"
+  },
+  "license": {
+    "spdx": "GPL-3.0",
+    "file": "pcsx2.txt"
+  },
+  "capabilities": []
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "snes9x",
+  "name": "snes9x",
+  "artifacts": {
+    "macos-arm64": "snes9x_libretro.dylib"
+  },
+  "license": {
+    "spdx": "Non-commercial",
+    "file": "snes9x.txt"
+  },
+  "capabilities": []
+}
