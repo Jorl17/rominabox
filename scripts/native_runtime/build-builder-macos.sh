@@ -11,7 +11,7 @@ esac
 [ -f "$root/desktop/src-tauri/resources/runtime/bin/retroarch" ] || { echo 'Prepare the native runtime kit first.' >&2; exit 1; }
 [ -f "$root/desktop/src-tauri/resources/preview/rml-preview" ] || { echo 'Prepare the offscreen preview helper first.' >&2; exit 1; }
 menu_assets="$root/desktop/src-tauri/resources/runtime/menu-assets"
-menu_source="$root/desktop/assets/menu"
+menu_source="$root/integrations/designs/native"
 controller_source="$root/desktop/assets/controllers"
 branding_source="$root/desktop/assets/branding"
 for asset in menu.rml splash.rml menu.rcss Silkscreen-Regular.ttf Silkscreen-OFL.txt; do
@@ -38,10 +38,10 @@ for asset in $controller_pngs; do
 done
 cp -p "$controller_source/CONTROLLERS.txt" "$menu_assets/CONTROLLERS.txt"
 # At export we copy the selected menu sound pack from the runtime kit, so the
-# kit contains exactly the packs in desktop/assets/menu-sounds. A pack is one
-# complete set of up/down/ok/cancel. We remove packs that are no longer in use
-# from the staging folder, so nobody can select or bundle them.
-sound_source="$root/desktop/assets/menu-sounds"
+# kit contains exactly the packs in integrations/designs/native-sounds. A pack
+# is one complete set of up/down/ok/cancel. We remove packs that are no longer
+# in use from the staging folder, so nobody can select or bundle them.
+sound_source="$root/integrations/designs/native-sounds"
 sound_staging="$root/desktop/src-tauri/resources/runtime/sound-packs"
 [ -f "$sound_source/PROVENANCE.txt" ] || { echo 'Missing menu sounds; run node scripts/native_runtime/generate-menu-sounds.mjs' >&2; exit 1; }
 mkdir -p "$sound_staging"

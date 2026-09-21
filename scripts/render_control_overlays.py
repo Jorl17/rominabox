@@ -6,7 +6,7 @@ moves a button anchor, a callout or an illustration changes the image.
 
 We copied this geometry from the shipped code.
   - the scene is 960x380 dp and the illustration fills it
-    (desktop/assets/menu/menu.rcss #controller-scene / #controller-image)
+    (integrations/designs/native/menu.rcss #controller-scene / #controller-image)
   - a control's (x, y) is the button centre, and the hit marker is a 42 dp
     circle (.control-hit is border-radius 21dp)
   - a callout is 196x54 dp at (calloutX, calloutY)
@@ -32,7 +32,7 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = Path(__file__).resolve().parent.parent
 CONTROLS = ROOT / "desktop/controls.json"
 ARTWORK = ROOT / "desktop/assets/controllers"
-FONT = ROOT / "desktop/assets/menu/Silkscreen-Regular.ttf"
+FONT = ROOT / "integrations/designs/native/Silkscreen-Regular.ttf"
 
 SCENE = (960, 380)
 SCALE = 2

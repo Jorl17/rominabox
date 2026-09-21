@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "native",
+  "name": "Native",
+  "description": "The cartridge-era pixel look the player ships with.",
+  "slots": 6,
+  "documents": {
+    "menu": "menu.rml",
+    "splash": "splash.rml",
+    "style": "menu.rcss"
+  },
+  "fonts": [
+    {
+      "file": "Silkscreen-Regular.ttf",
+      "license": "Silkscreen-OFL.txt",
+      "family": "Silkscreen"
+    }
+  ]
+}

@@ -154,7 +154,7 @@ fn every_id_the_bridge_reaches_for_is_classified() {
 
 #[test]
 fn the_shipped_design_provides_every_menu_id() {
-    let Some(document) = read("desktop/assets/menu/menu.rml") else {
+    let Some(document) = read("integrations/designs/native/menu.rml") else {
         panic!("the shipped design has no menu.rml");
     };
     let present = ids_in(&document);
@@ -172,7 +172,7 @@ fn the_shipped_design_provides_every_menu_id() {
 
 #[test]
 fn the_shipped_design_provides_every_splash_id() {
-    let Some(document) = read("desktop/assets/menu/splash.rml") else {
+    let Some(document) = read("integrations/designs/native/splash.rml") else {
         panic!("the shipped design has no splash.rml");
     };
     let present = ids_in(&document);
@@ -189,7 +189,7 @@ fn the_shipped_design_provides_every_splash_id() {
 /// is no controller in the menu of a design.
 #[test]
 fn the_menu_document_has_somewhere_to_put_the_controls() {
-    let Some(document) = read("desktop/assets/menu/menu.rml") else {
+    let Some(document) = read("integrations/designs/native/menu.rml") else {
         panic!("the shipped design has no menu.rml");
     };
     assert!(
@@ -197,4 +197,45 @@ fn the_menu_document_has_somewhere_to_put_the_controls() {
         "menu.rml has no <!--CONTROLS--> placeholder; the generated controller \
          scene has nowhere to go"
     );
+}
+
+/// A design is a directory, and we reject an unknown one when we resolve it.
+///
+/// We choose the directory to stage by the design id, so a second design is
+/// reachable.
+#[test]
+fn a_design_resolves_to_its_own_directory() {
+    let native = rominabox_desktop::themes::design_root("native")
+        .expect("the shipped design resolves");
+    assert!(
+        native.ends_with("integrations/designs/native"),
+        "a design lives in its own package directory, got {native:?}"
+    );
+    let refusal = rominabox_desktop::themes::design_root("no-such-design")
+        .expect_err("an undeclared design must be refused");
+    assert!(
+        refusal.contains("no-such-design"),
+        "the refusal should name what was asked for: {refusal}"
+    );
+}
+
+/// Every document and font the design declares is actually there.
+#[test]
+fn the_shipped_design_package_is_complete() {
+    let root = repo_root().join("integrations/designs/native");
+    let declared: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(root.join("design.json")).expect("design.json"))
+            .expect("valid JSON");
+    for key in ["menu", "splash", "style"] {
+        let name = declared["documents"][key].as_str().expect("a declared document");
+        assert!(root.join(name).exists(), "{key} document '{name}' is missing");
+    }
+    for font in declared["fonts"].as_array().expect("fonts") {
+        for key in ["file", "license"] {
+            let name = font[key].as_str().expect("a declared font file");
+            // The licence goes with the font, because we redistribute the font
+            // in every exported game.
+            assert!(root.join(name).exists(), "font {key} '{name}' is missing");
+        }
+    }
 }

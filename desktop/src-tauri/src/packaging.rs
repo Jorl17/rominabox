@@ -603,7 +603,11 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
     if request.title.trim().is_empty() {
         return Err(ExportError::new("validate", "title is required"));
     }
-    if request.theme != "native" {
+    // A design is a directory, so we catch an unknown one when we resolve it.
+    if let Err(message) = crate::themes::design_root(&request.theme) {
+        return Err(ExportError::new("validate", message));
+    }
+    if false {
         return Err(ExportError::new(
             "validate",
             format!("unsupported theme: {}", request.theme),

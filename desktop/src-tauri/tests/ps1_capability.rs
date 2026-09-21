@@ -381,7 +381,7 @@ fn adding_sticks_did_not_disturb_the_button_callouts() {
 #[test]
 fn the_playstation_scene_draws_each_stick_once() {
     let root = scratch();
-    let assets = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets/menu");
+    let assets = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native");
     // A staged asset directory in the layout used in prepare_controls_assets:
     // the menu template and the artwork that we copy by name. The image is an
     // empty stand-in, because we test the markup, not the picture.

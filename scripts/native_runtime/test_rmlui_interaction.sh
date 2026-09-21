@@ -8,7 +8,7 @@ bridge_dir=$repo_root/vendor/retroarch/menu/drivers
 # Uses a prebuilt RmlUi from the work tree.
 rmlui_lib=$repo_root/work/experiments/rml-retroarch/build-rmlui/librmlui.a
 rmlui_inc=$repo_root/work/experiments/rml-retroarch/vendor/RmlUi/Include
-assets=$repo_root/desktop/assets/menu
+assets=$repo_root/integrations/designs/native
 build_dir=$repo_root/work/experiments/rml-retroarch/build-interaction-test
 out=$build_dir/test_rmlui_interaction
 

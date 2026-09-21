@@ -1,6 +1,6 @@
 //! Menu design and palette declarations shared by previews and exports.
 use serde::{Deserialize, Serialize};
-use std::{fs, path::Path};
+use std::{fs, path::{Path, PathBuf}};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Design {
@@ -43,6 +43,28 @@ pub struct Registry {
 pub fn registry() -> Result<Registry, String> {
     serde_json::from_str(include_str!("../../designs.json")).map_err(|e| e.to_string())
 }
+
+/// The directory that contains a design's documents and fonts.
+///
+/// A design defines its screens as well as its colours, and another design may
+/// lay out the menu in a different way (three save slots instead of six), so
+/// each design is a directory and not only a name.
+pub fn design_root(design: &str) -> Result<PathBuf, String> {
+    let declared = registry()?
+        .designs
+        .into_iter()
+        .find(|entry| entry.id == design)
+        .ok_or_else(|| format!("Unknown menu design: {design}"))?;
+    Ok(PathBuf::from("integrations/designs").join(declared.id))
+}
+
+/// The files in every design, under the names declared in it.
+pub const DESIGN_DOCUMENTS: [&str; 4] = [
+    "menu.rml",
+    "menu.rcss",
+    "Silkscreen-Regular.ttf",
+    "Silkscreen-OFL.txt",
+];
 
 /// Stage only the selected design's assets and apply the same palette/background
 /// for both an offscreen preview and an exported player.

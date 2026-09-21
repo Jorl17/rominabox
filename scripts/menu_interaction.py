@@ -33,7 +33,7 @@ PROBE_SOURCE = ROOT / "scripts/native_runtime/rml_probe.cpp"
 RMLUI_INCLUDE = ROOT / "work/experiments/rml-retroarch/vendor/RmlUi/Include"
 RMLUI_LIB_DIR = ROOT / "work/experiments/rml-preview/build"
 RMLUI_LIB = RMLUI_LIB_DIR / "librmlui.dylib"
-DOCUMENT = ROOT / "desktop/assets/menu/menu.rml"
+DOCUMENT = ROOT / "integrations/designs/native/menu.rml"
 BASELINE = ROOT / "scripts/fixtures/menu-interaction.jsonl"
 
 # One scenario with every interaction in the menu. Keep the watched elements

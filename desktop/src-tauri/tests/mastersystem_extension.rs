@@ -34,7 +34,7 @@ fn scratch() -> PathBuf {
 }
 
 fn menu_assets() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets/menu")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native")
 }
 
 fn controller_assets() -> PathBuf {

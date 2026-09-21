@@ -18,7 +18,7 @@ fn workspace() -> PathBuf {
     p
 }
 fn assets() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets/menu")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native")
 }
 /// A source directory with artwork for every profile that declares it. We
 /// take the filenames from controls.json, so adding an illustrated profile
