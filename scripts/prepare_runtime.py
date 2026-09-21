@@ -36,14 +36,20 @@ def catalog_components() -> dict[str, dict]:
     return {entry["id"]: entry for entry in json.loads(result.stdout)}
 
 
-def partitioned_components() -> tuple[dict, dict]:
-    """Split declared components into ones we build and ones we download."""
+def partitioned_components(target: str) -> tuple[dict, dict]:
+    """Split declared components into ones we build and ones we download.
+
+    We skip a component with no artifact declared for this target, because
+    we cannot know what its file would be called.
+    """
     built, prebuilt = {}, {}
     for cid, entry in catalog_components().items():
         provenance = entry.get("provenance")
         if not provenance:
             continue
-        binary = entry["artifacts"].get("macos-arm64")
+        if not entry["artifacts"].get(target):
+            continue
+        binary = entry["artifacts"].get(target)
         record = {
             "binary": binary,
             "repo": provenance["repository"],
@@ -59,7 +65,38 @@ def partitioned_components() -> tuple[dict, dict]:
     return built, prebuilt
 
 
-BUILDBOT_BASE = "https://buildbot.libretro.com/nightly/apple/osx/arm64/latest"
+# The address of the official nightly build for each target. We prepare a kit
+# for a target given as an argument, not for the machine we run on, so we make
+# a Windows kit with the same script and a different argument.
+BUILDBOT_PATHS = {
+    "macos-arm64": "apple/osx/arm64",
+    "macos-x86_64": "apple/osx/x86_64",
+    "windows-x86_64": "windows/x86_64",
+    "windows-arm64": "windows/arm64",
+    "linux-x86_64": "linux/x86_64",
+}
+
+
+def buildbot_base(target: str) -> str:
+    try:
+        return f"https://buildbot.libretro.com/nightly/{BUILDBOT_PATHS[target]}/latest"
+    except KeyError:
+        raise SystemExit(
+            f"No official nightly path is known for {target}; "
+            f"known targets: {', '.join(sorted(BUILDBOT_PATHS))}"
+        ) from None
+
+
+def host_target() -> str:
+    """The default target for builds on this machine."""
+    machine = platform.machine()
+    system = platform.system()
+    architecture = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "x86_64", "AMD64": "x86_64"}
+    if system == "Darwin":
+        return f"macos-{architecture.get(machine, machine)}"
+    if system == "Windows":
+        return f"windows-{architecture.get(machine, machine)}"
+    return f"linux-{architecture.get(machine, machine)}"
 
 
 def download(url: str, path: Path) -> None:
@@ -97,11 +134,11 @@ def copy_license_from_source(archive: Path, candidates: tuple[str, ...], destina
     raise RuntimeError(f"No declared license {candidates!r} in {archive}")
 
 
-def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object]) -> dict[str, object]:
-    """Stage one official arm64 buildbot core without executing it."""
+def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object], target: str) -> dict[str, object]:
+    """Stage one official buildbot core for a target, without executing it."""
     binary_name = str(spec["binary"])
     binary_archive = root / "sources" / f"buildbot-{binary_name}.zip"
-    binary_url = f"{BUILDBOT_BASE}/{binary_name}.zip"
+    binary_url = f"{buildbot_base(target)}/{binary_name}.zip"
     download(binary_url, binary_archive)
     with zipfile.ZipFile(binary_archive) as package:
         members = [name for name in package.namelist() if not name.endswith("/")]
@@ -111,14 +148,25 @@ def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object]) -
         with package.open(binary_name) as source, binary.open("wb") as output:
             shutil.copyfileobj(source, output)
 
-    architecture = subprocess.run(
-        ["/usr/bin/lipo", "-archs", str(binary)],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.split()
-    if "arm64" not in architecture:
-        raise RuntimeError(f"Buildbot core is not arm64: {binary}: {architecture}")
+    # lipo exists only on macOS. Other targets require their own check, and we
+    # must not accept them without one.
+    if target.startswith("macos"):
+        architecture = subprocess.run(
+            ["/usr/bin/lipo", "-archs", str(binary)],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.split()
+    else:
+        raise SystemExit(
+            f"Preparing {target} needs an architecture check for that platform; "
+            "refusing to stage a core whose architecture was never verified."
+        )
+    expected = target.rsplit("-", 1)[1]
+    if expected not in architecture:
+        raise RuntimeError(
+            f"Buildbot core for {target} is not {expected}: {binary}: {architecture}"
+        )
 
     repo = str(spec["repo"])
     revision = str(spec["revision"])
@@ -133,7 +181,7 @@ def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object]) -
     return {
         "name": component,
         "binary": binary_name,
-        "binary_origin": "Official Libretro macOS arm64 nightly buildbot",
+        "binary_origin": f"Official Libretro {target} nightly buildbot",
         "binary_url": binary_url,
         "binary_archive": binary_archive.name,
         "binary_archive_sha256": digest(binary_archive),
@@ -151,6 +199,10 @@ def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object]) -
 def main() -> None:
     """Build native macOS cores from pinned sources and prepare the local prototype kit."""
     parser = argparse.ArgumentParser(description=main.__doc__)
+    parser.add_argument(
+        "--target",
+        help="Target to prepare, e.g. macos-arm64 or windows-x86_64. Defaults to this machine.",
+    )
     parser.add_argument("--retroarch", type=Path, default=Path("/Applications/RetroArch.app"))
     parser.add_argument("--output", type=Path, default=Path("work/runtime-kit"))
     parser.add_argument(
@@ -171,11 +223,12 @@ def main() -> None:
     for name in ("cores", "sources", "licenses", "catalogs", "info"):
         (root / name).mkdir(parents=True, exist_ok=True)
     entries = []
-    built_cores, prebuilt_cores = partitioned_components()
+    target = args.target or host_target()
+    built_cores, prebuilt_cores = partitioned_components(target)
     if args.official_arm64_cores_only:
         for component, spec in prebuilt_cores.items():
             print(f"Preparing {component} from official arm64 buildbot", flush=True)
-            entries.append(prepare_prebuilt_core(root, component, spec))
+            entries.append(prepare_prebuilt_core(root, component, spec, target))
         (root / "components.json").write_text(
             json.dumps(
                 {
@@ -237,7 +290,7 @@ def main() -> None:
     if args.include_official_arm64_cores:
         for component, spec in prebuilt_cores.items():
             print(f"Preparing {component} from official arm64 buildbot", flush=True)
-            entries.append(prepare_prebuilt_core(root, component, spec))
+            entries.append(prepare_prebuilt_core(root, component, spec, target))
     if not (root / "RetroArch.app").exists():
         shutil.copytree(args.retroarch, root / "RetroArch.app", symlinks=True)
     ra_repo = "https://raw.githubusercontent.com/libretro/RetroArch/e33bb934/"

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "pcsx_rearmed",
-  "name": "pcsx rearmed",
+  "name": "PCSX ReARMed",
   "artifacts": {
     "macos-arm64": "pcsx_rearmed_libretro.dylib"
   },
@@ -9,5 +9,15 @@
     "spdx": "GPL-2.0",
     "file": "pcsx_rearmed.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "libretro/pcsx_rearmed",
+    "revision": "8625c395a24411f8c77e69802b516df9c613a712",
+    "licenseCandidates": [
+      "COPYING",
+      "LICENSE"
+    ],
+    "correspondsToArtifact": false
+  }
 }

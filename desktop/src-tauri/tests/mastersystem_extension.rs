@@ -116,7 +116,7 @@ fn mastersystem_selects_the_same_genesis_plus_gx_component_as_the_other_sega_con
         assert_eq!(system.cores.len(), 1, "{id} must not carry a second core");
         let core = system.preferred_core().expect("{id} declares a core");
         assert_eq!(core.component, shared.component, "{id} component");
-        assert_eq!(core.filename, shared.filename, "{id} artifact");
+        assert_eq!(core.artifacts, shared.artifacts, "{id} artifact");
         assert_eq!(core.license, shared.license, "{id} licence");
         assert_eq!(core.license_file, shared.license_file, "{id} licence file");
         assert_eq!(core.capabilities, shared.capabilities, "{id} capabilities");
@@ -126,7 +126,7 @@ fn mastersystem_selects_the_same_genesis_plus_gx_component_as_the_other_sega_con
     let kit = root.join("runtime-kit");
     fs::create_dir_all(kit.join("cores")).unwrap();
     fs::create_dir_all(kit.join("licenses")).unwrap();
-    fs::write(kit.join("cores").join(&shared.filename), b"core").unwrap();
+    fs::write(kit.join("cores").join(shared.artifact().expect("an artifact for this target")), b"core").unwrap();
     fs::write(kit.join("licenses").join(&shared.license_file), b"license").unwrap();
 
     assert_eq!(

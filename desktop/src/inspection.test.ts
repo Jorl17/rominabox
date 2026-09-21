@@ -162,7 +162,11 @@ describe("inspection declarations", () => {
       controllerProfile: "megadrive",
       cores: [
         expect.objectContaining({
-          filename: "genesis_plus_gx_libretro.dylib",
+          // A core is not one file. The registry has an artifact per target,
+          // so a Windows build is a declaration and not a second code path.
+          artifacts: expect.objectContaining({
+            "macos-arm64": "genesis_plus_gx_libretro.dylib",
+          }),
           license: "Non-commercial",
         }),
       ],

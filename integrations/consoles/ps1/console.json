@@ -37,7 +37,7 @@
     ]
   },
   "support": {
-    "macos-arm64": "planned"
+    "macos-arm64": "enabled"
   },
   "presentationOrder": 11,
   "firmware": [

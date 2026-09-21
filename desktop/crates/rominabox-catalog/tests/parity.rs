@@ -113,27 +113,29 @@ fn every_core_declared_by_a_console_is_owned_by_exactly_one_package() {
     let catalog = catalog();
     let systems = legacy("systems.json");
 
-    let mut legacy_components: BTreeMap<String, (String, String)> = BTreeMap::new();
+    let mut legacy_components: BTreeMap<String, (Value, String)> = BTreeMap::new();
     for system in systems["systems"].as_array().unwrap() {
         for core in system["cores"].as_array().map(Vec::as_slice).unwrap_or(&[]) {
             legacy_components.insert(
                 core["component"].as_str().unwrap().to_string(),
                 (
-                    core["filename"].as_str().unwrap().to_string(),
+                    // The registry has every declared target, so we compare the
+                    // whole map and not the filename for one platform.
+                    core["artifacts"].clone(),
                     core["license"].as_str().unwrap().to_string(),
                 ),
             );
         }
     }
 
-    for (id, (filename, license)) in &legacy_components {
+    for (id, (artifacts, license)) in &legacy_components {
         let component = catalog
             .component(id)
             .unwrap_or_else(|| panic!("component '{id}' should be declared by some package"));
         assert_eq!(
-            component.artifacts.get("macos-arm64"),
-            Some(filename),
-            "{id} artifact filename"
+            &serde_json::to_value(&component.artifacts).unwrap(),
+            artifacts,
+            "{id} artifacts, for every declared target"
         );
         // Several cores are non-commercial, which limits what people may build
         // from them, so the packages must keep that term.

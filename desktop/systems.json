@@ -16,7 +16,9 @@
       "catalog": "Sega - Mega Drive - Genesis",
       "cores": [
         {
-          "filename": "genesis_plus_gx_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "genesis_plus_gx_libretro.dylib"
+          },
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
           "licenseFile": "genesis_plus_gx.txt",
@@ -52,7 +54,9 @@
       ],
       "cores": [
         {
-          "filename": "genesis_plus_gx_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "genesis_plus_gx_libretro.dylib"
+          },
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
           "licenseFile": "genesis_plus_gx.txt",
@@ -91,7 +95,9 @@
       "catalog": "Sega - Master System - Mark III",
       "cores": [
         {
-          "filename": "genesis_plus_gx_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "genesis_plus_gx_libretro.dylib"
+          },
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
           "licenseFile": "genesis_plus_gx.txt",
@@ -117,7 +123,9 @@
       "catalog": "Sega - Game Gear",
       "cores": [
         {
-          "filename": "genesis_plus_gx_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "genesis_plus_gx_libretro.dylib"
+          },
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
           "licenseFile": "genesis_plus_gx.txt",
@@ -143,7 +151,9 @@
       "catalog": "Sega - SG-1000",
       "cores": [
         {
-          "filename": "genesis_plus_gx_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "genesis_plus_gx_libretro.dylib"
+          },
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
           "licenseFile": "genesis_plus_gx.txt",
@@ -168,7 +178,9 @@
       "catalog": "Nintendo - Game Boy",
       "cores": [
         {
-          "filename": "gambatte_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "gambatte_libretro.dylib"
+          },
           "component": "gambatte",
           "license": "GPL-2.0",
           "licenseFile": "gambatte.txt",
@@ -194,7 +206,9 @@
       "catalog": "Nintendo - Game Boy Color",
       "cores": [
         {
-          "filename": "gambatte_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "gambatte_libretro.dylib"
+          },
           "component": "gambatte",
           "license": "GPL-2.0",
           "licenseFile": "gambatte.txt",
@@ -220,7 +234,9 @@
       "catalog": "Nintendo - Game Boy Advance",
       "cores": [
         {
-          "filename": "mgba_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "mgba_libretro.dylib"
+          },
           "component": "mgba",
           "license": "MPL-2.0",
           "licenseFile": "mgba.txt",
@@ -247,7 +263,9 @@
       "catalog": "Nintendo - Nintendo Entertainment System",
       "cores": [
         {
-          "filename": "nestopia_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "nestopia_libretro.dylib"
+          },
           "component": "nestopia",
           "license": "GPL-2.0",
           "licenseFile": "nestopia.txt",
@@ -272,7 +290,9 @@
       "catalog": "Nintendo - Super Nintendo Entertainment System",
       "cores": [
         {
-          "filename": "snes9x_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "snes9x_libretro.dylib"
+          },
           "component": "snes9x",
           "license": "Non-commercial",
           "licenseFile": "snes9x.txt",
@@ -297,7 +317,9 @@
       "catalog": "Nintendo - Nintendo 64",
       "cores": [
         {
-          "filename": "mupen64plus_next_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "mupen64plus_next_libretro.dylib"
+          },
           "component": "mupen64plus_next",
           "license": "GPL-3.0",
           "licenseFile": "mupen64plus_next.txt",
@@ -333,7 +355,9 @@
       ],
       "cores": [
         {
-          "filename": "pcsx_rearmed_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "pcsx_rearmed_libretro.dylib"
+          },
           "component": "pcsx_rearmed",
           "license": "GPL-2.0",
           "licenseFile": "pcsx_rearmed.txt",
@@ -376,7 +400,9 @@
       ],
       "cores": [
         {
-          "filename": "flycast_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "flycast_libretro.dylib"
+          },
           "component": "flycast",
           "license": "GPL-2.0",
           "licenseFile": "flycast.txt",
@@ -399,7 +425,9 @@
       ],
       "cores": [
         {
-          "filename": "dolphin_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "dolphin_libretro.dylib"
+          },
           "component": "dolphin",
           "license": "GPL-2.0",
           "licenseFile": "dolphin.txt",
@@ -422,7 +450,9 @@
       ],
       "cores": [
         {
-          "filename": "pcsx2_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "pcsx2_libretro.dylib"
+          },
           "component": "pcsx2",
           "license": "GPL-3.0",
           "licenseFile": "pcsx2.txt",
@@ -445,7 +475,9 @@
       "catalog": "Atari - 2600",
       "cores": [
         {
-          "filename": "stella_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "stella_libretro.dylib"
+          },
           "component": "stella",
           "license": "GPL-2.0",
           "licenseFile": "stella.txt",
@@ -467,7 +499,9 @@
       "catalog": "Atari - 5200",
       "cores": [
         {
-          "filename": "a5200_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "a5200_libretro.dylib"
+          },
           "component": "a5200",
           "license": "GPL-2.0",
           "licenseFile": "a5200.txt",
@@ -489,7 +523,9 @@
       "catalog": "Atari - 7800",
       "cores": [
         {
-          "filename": "prosystem_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "prosystem_libretro.dylib"
+          },
           "component": "prosystem",
           "license": "GPL-2.0",
           "licenseFile": "prosystem.txt",
@@ -516,7 +552,9 @@
       "catalog": "Atari - Lynx",
       "cores": [
         {
-          "filename": "handy_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "handy_libretro.dylib"
+          },
           "component": "handy",
           "license": "Zlib",
           "licenseFile": "handy.txt",
@@ -540,7 +578,9 @@
       "catalog": "NEC - PC Engine - TurboGrafx 16",
       "cores": [
         {
-          "filename": "mednafen_pce_fast_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "mednafen_pce_fast_libretro.dylib"
+          },
           "component": "beetle_pce_fast",
           "license": "GPL-2.0",
           "licenseFile": "beetle_pce_fast.txt",
@@ -572,7 +612,9 @@
       ],
       "cores": [
         {
-          "filename": "mednafen_pce_fast_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "mednafen_pce_fast_libretro.dylib"
+          },
           "component": "beetle_pce_fast",
           "license": "GPL-2.0",
           "licenseFile": "beetle_pce_fast.txt",
@@ -609,7 +651,9 @@
       "catalog": "SNK - Neo Geo Pocket",
       "cores": [
         {
-          "filename": "mednafen_ngp_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "mednafen_ngp_libretro.dylib"
+          },
           "component": "beetle_neopop",
           "license": "GPL-2.0",
           "licenseFile": "beetle_neopop.txt",
@@ -632,7 +676,9 @@
       "catalog": "SNK - Neo Geo Pocket Color",
       "cores": [
         {
-          "filename": "mednafen_ngp_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "mednafen_ngp_libretro.dylib"
+          },
           "component": "beetle_neopop",
           "license": "GPL-2.0",
           "licenseFile": "beetle_neopop.txt",
@@ -654,7 +700,9 @@
       "catalog": "Bandai - WonderSwan",
       "cores": [
         {
-          "filename": "mednafen_wswan_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "mednafen_wswan_libretro.dylib"
+          },
           "component": "beetle_cygne",
           "license": "GPL-2.0",
           "licenseFile": "beetle_cygne.txt",
@@ -676,7 +724,9 @@
       "catalog": "Bandai - WonderSwan Color",
       "cores": [
         {
-          "filename": "mednafen_wswan_libretro.dylib",
+          "artifacts": {
+            "macos-arm64": "mednafen_wswan_libretro.dylib"
+          },
           "component": "beetle_cygne",
           "license": "GPL-2.0",
           "licenseFile": "beetle_cygne.txt",

@@ -108,6 +108,15 @@ pub struct SystemAvailability {
 /// first, so we do not report a console as missing when its preferred core
 /// is absent and another core works.
 pub fn system_availability(runtime_kit: &Path) -> Vec<SystemAvailability> {
+    system_availability_for(runtime_kit, crate::systems::current_target())
+}
+
+/// Resolve availability for a named target.
+///
+/// We take the target as an argument instead of using the running one, so on
+/// macOS we can answer "would this console work on Windows?", and we can
+/// test that question at all.
+pub fn system_availability_for(runtime_kit: &Path, target: &str) -> Vec<SystemAvailability> {
     crate::systems::registry()
         .iter()
         .map(|system| {
@@ -120,7 +129,13 @@ pub fn system_availability(runtime_kit: &Path) -> Vec<SystemAvailability> {
             }
             let mut tried = Vec::new();
             for core in &system.cores {
-                let artifact = runtime_kit.join("cores").join(&core.filename);
+                let Some(filename) = core.artifact_for(target) else {
+                    // The component exists but has no declaration for this target,
+                    // which is a different problem from a missing file.
+                    tried.push(format!("{} (no {target} artifact declared)", core.component));
+                    continue;
+                };
+                let artifact = runtime_kit.join("cores").join(filename);
                 let licence = runtime_kit.join("licenses").join(&core.license_file);
                 if artifact.is_file() && licence.is_file() {
                     return SystemAvailability {
@@ -137,7 +152,7 @@ pub fn system_availability(runtime_kit: &Path) -> Vec<SystemAvailability> {
                     if artifact.is_file() {
                         format!("licence {} missing", core.license_file)
                     } else {
-                        format!("artifact {} missing", core.filename)
+                        format!("artifact {filename} missing")
                     }
                 ));
             }
@@ -389,7 +404,7 @@ where
         request
             .runtime_kit
             .join("cores")
-            .join(&selected_core.filename)
+            .join(selected_core.artifact().unwrap_or_default())
     });
     let core_name = OsStr::new("game-core.dylib");
     let core = resources.join(core_name);
@@ -504,7 +519,7 @@ where
         "startAtMenu": request.start_at_menu,
         "runtime": "RetroArch",
         "core": "game-core.dylib",
-        "coreSource": selected_core.filename,
+        "coreSource": selected_core.artifact().unwrap_or_default(),
         "content": collected_content.files.iter().map(|file| file.relative.to_string_lossy()).collect::<Vec<_>>(),
         "rom": rom_relative.to_string_lossy(),
         "firmware": request.firmware.iter().filter_map(|path| firmware_destination_name(path, system)).collect::<Vec<_>>(),
@@ -623,7 +638,7 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
         request
             .runtime_kit
             .join("cores")
-            .join(&selected_core.filename)
+            .join(selected_core.artifact().unwrap_or_default())
     });
     if !core.is_file() {
         return Err(ExportError::new(
@@ -2505,7 +2520,7 @@ mod tests {
                     .first()
                     .expect("declared core");
                 if *artifact {
-                    fs::write(root.join("cores").join(&core.filename), []).unwrap();
+                    fs::write(root.join("cores").join(core.artifact().expect("an artifact for this target")), []).unwrap();
                 }
                 if *licence {
                     fs::write(root.join("licenses").join(&core.license_file), []).unwrap();
@@ -2558,6 +2573,54 @@ mod tests {
                     "the reason should name the missing licence: {tried:?}"
                 ),
                 other => panic!("expected a missing licence, got {other:?}"),
+            }
+        }
+
+
+        /// We may generate the registry on one machine and use it on another,
+        /// because we ship on more than one platform. These tests check that
+        /// the target is a parameter and not a constant.
+        #[test]
+        fn a_console_with_no_artifact_for_a_target_says_exactly_that() {
+            let root = kit(&[("megadrive", true, true)]);
+            // This is a macOS kit. Check the result for Windows with it.
+            let windows = system_availability_for(&root, "windows-x86_64")
+                .into_iter()
+                .find(|entry| entry.id == "megadrive")
+                .expect("every console is reported for every target");
+            match windows.unavailable {
+                Some(Unavailable::NoPreparedCore { ref tried }) => assert!(
+                    tried[0].contains("no windows-x86_64 artifact declared"),
+                    "a target with nothing declared is a different problem from a missing file: {tried:?}"
+                ),
+                other => panic!("expected an undeclared target, got {other:?}"),
+            }
+        }
+
+        #[test]
+        fn the_same_kit_resolves_for_the_target_it_was_built_for() {
+            let root = kit(&[("megadrive", true, true)]);
+            let macos = system_availability_for(&root, "macos-arm64")
+                .into_iter()
+                .find(|entry| entry.id == "megadrive")
+                .expect("reported");
+            assert_eq!(macos.component.as_deref(), Some("genesis_plus_gx"));
+            assert_eq!(macos.unavailable, None);
+        }
+
+        #[test]
+        fn every_shipped_component_declares_an_artifact_for_the_target_it_claims() {
+            // A console enabled for a target without an artifact name for it
+            // would be a declaration that we could never resolve.
+            for system in crate::systems::registry() {
+                for core in &system.cores {
+                    assert!(
+                        !core.artifacts.is_empty(),
+                        "{} declares component {} with no artifact for any target",
+                        system.id,
+                        core.component
+                    );
+                }
             }
         }
 

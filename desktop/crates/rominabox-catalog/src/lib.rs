@@ -609,7 +609,10 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
             .filter_map(|binding| {
                 let component = catalog.component(&binding.component)?;
                 Some(json!({
-                    "filename": component.artifacts.get("macos-arm64")?,
+                    // We write every declared target, so the registry does not
+                    // depend on the machine where we generated it. We pick the
+                    // target to run or build for when we read the registry.
+                    "artifacts": component.artifacts,
                     "component": component.id,
                     "license": component.license.spdx,
                     "licenseFile": component.license.file,

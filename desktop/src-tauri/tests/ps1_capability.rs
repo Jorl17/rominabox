@@ -44,7 +44,7 @@ fn kit_with_stub_core(root: &Path) -> PathBuf {
     fs::create_dir_all(kit.join("cores")).unwrap();
     fs::create_dir_all(kit.join("licenses")).unwrap();
     let core = ps1().cores.first().expect("a declared core");
-    fs::write(kit.join("cores").join(&core.filename), []).unwrap();
+    fs::write(kit.join("cores").join(core.artifact().expect("an artifact for this target")), []).unwrap();
     fs::write(kit.join("licenses").join(&core.license_file), []).unwrap();
     kit
 }

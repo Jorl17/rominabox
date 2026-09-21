@@ -41,10 +41,29 @@ pub struct HeaderTitle {
     pub length: u64,
 }
 
+/// The target of this build, in the triple format of the packages.
+///
+/// Callers pass a target and do not assume one, so to support a platform we
+/// prepare its kit and declare its binaries.
+pub fn current_target() -> &'static str {
+    match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("macos", "aarch64") => "macos-arm64",
+        ("macos", "x86_64") => "macos-x86_64",
+        ("windows", "x86_64") => "windows-x86_64",
+        ("windows", "aarch64") => "windows-arm64",
+        ("linux", "x86_64") => "linux-x86_64",
+        ("linux", "aarch64") => "linux-arm64",
+        _ => "unsupported",
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Core {
-    pub filename: String,
+    /// Target triple -> artifact filename. A core is not one file. The same
+    /// component is a .dylib on macOS and a .dll on Windows, and the kit for
+    /// each target has a separate one.
+    pub artifacts: std::collections::BTreeMap<String, String>,
     pub component: String,
     pub license: String,
     pub license_file: String,
@@ -55,6 +74,16 @@ pub struct Core {
 }
 
 impl Core {
+    /// The artifact filename for a target, if this component declares one.
+    pub fn artifact_for(&self, target: &str) -> Option<&str> {
+        self.artifacts.get(target).map(String::as_str)
+    }
+
+    /// The artifact for the target we are running on.
+    pub fn artifact(&self) -> Option<&str> {
+        self.artifact_for(current_target())
+    }
+
     pub fn supports(&self, capability: &str) -> bool {
         self.capabilities.iter().any(|value| value == capability)
     }
@@ -141,7 +170,7 @@ mod tests {
             .collect();
         assert_eq!(cue, ["segacd", "ps1", "pcecd"]);
         assert_eq!(
-            find("nes").unwrap().preferred_core().unwrap().filename,
+            find("nes").unwrap().preferred_core().unwrap().artifact().unwrap(),
             "nestopia_libretro.dylib"
         );
         assert_eq!(find("sg1000").unwrap().controller_profile, "mastersystem");
