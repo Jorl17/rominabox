@@ -255,20 +255,88 @@ def is_meta_bind_key(key: str, names: set[str]) -> bool:
     return False
 
 
+# The keys a joypad profile may contain. They describe the device and how its
+# buttons and axes map to the sixteen gameplay binds. We drop every other key.
+DEVICE_KEYS = {
+    "input_device",
+    "input_device_display_name",
+    "input_driver",
+    "input_vendor_id",
+    "input_product_id",
+}
+GAMEPLAY_BINDS = {
+    "up", "down", "left", "right", "a", "b", "x", "y",
+    "l", "r", "l2", "r2", "l3", "r3", "start", "select",
+    "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
+    "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus",
+}
+# We match the compound forms first. `input_b_btn_label` is a gameplay label,
+# and removing only `_label` would leave `b_btn`, which is not a bind name.
+BIND_SUFFIXES = (
+    "_btn_label",
+    "_axis_label",
+    "_mbtn_label",
+    "_btn",
+    "_axis",
+    "_mbtn",
+    "_label",
+)
+
+
+def is_allowed_key(key: str) -> bool:
+    """Return whether a profile may contain this assignment."""
+    if key in DEVICE_KEYS:
+        return True
+    if not key.startswith("input_"):
+        return False
+    rest = key[len("input_"):]
+    for suffix in BIND_SUFFIXES:
+        if rest.endswith(suffix):
+            rest = rest[: -len(suffix)]
+            break
+    return rest in GAMEPLAY_BINDS
+
+
 def strip_meta_bind_lines(text: str, names: set[str]) -> tuple[str, int]:
-    """Drop assignment lines that bind a meta action. Comments and gameplay binds stay."""
+    """Keep only the lines a joypad profile may contain, and drop the rest.
+
+    In RetroArch, a profile can set any bind in the bind table
+    (`input_config_set_autoconfig_binds`, `configuration.c:7529-7540`), and
+    that table is wider than the DECLARE_META_BIND names, because `turbo` and
+    `hold` are in it without being meta binds. With a list of meta binds to
+    remove, a profile that binds `input_turbo_btn` would keep that line, and
+    the pad would have turbo fire, so we keep a list of allowed keys instead.
+
+    We also drop `#` lines. In RetroArch, `#include` includes a file
+    (`config_file.c:159-175`), and we never see the lines of an included file
+    in this function, so a line that looks like a comment could bring back
+    the hotkey we remove here.
+
+    `names` is unused, and we keep it so that the callers stay the same.
+    """
+    del names
     kept: list[str] = []
     removed = 0
     for line in text.splitlines(keepends=True):
         body = line.strip()
-        if not body or body.startswith("#") or "=" not in line:
+        if not body:
             kept.append(line)
             continue
-        key = line.split("=", 1)[0].strip()
-        if is_meta_bind_key(key, names):
+        if body.startswith("#"):
+            # A plain comment is harmless and an include is not. We do not try
+            # to tell them apart, and drop both.
+            if body.lower().startswith("#include"):
+                removed += 1
+                continue
+            kept.append(line)
+            continue
+        if "=" not in line:
             removed += 1
             continue
-        kept.append(line)
+        if is_allowed_key(line.split("=", 1)[0].strip()):
+            kept.append(line)
+            continue
+        removed += 1
     return "".join(kept), removed
 
 

@@ -782,3 +782,87 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         .expect("export provenance keeps the joypad component");
     assert_eq!(exported_joypad["revision"], pinned_autoconfig_revision());
 }
+
+/// We strip at least every bind that RetroArch loads from a profile.
+///
+/// `input_config_set_autoconfig_binds` goes through the whole bind table
+/// (`configuration.c:7529-7540`), and `turbo` and `hold` are in it without
+/// being meta binds. When the user bind is NO_BTN, as ours are, the autoconfig
+/// button applies, so a line such as `input_turbo_btn` left in a staged
+/// profile would make the pad turbo-fire. So we use an allow-list, and this
+/// test covers binds that are not meta binds.
+#[test]
+fn no_shipped_profile_can_bind_anything_but_gameplay() {
+    let staged = staged_autoconfig_root();
+    let Some(profiles) = read_profiles(&staged) else {
+        eprintln!("no staged autoconfig profiles here; nothing was verified");
+        return;
+    };
+    assert!(!profiles.is_empty(), "the kit should stage joypad profiles");
+
+    // Names that RetroArch would load and that are not gameplay binds.
+    let forbidden = [
+        "menu_toggle", "exit_emulator", "turbo", "hold", "toggle_fast_forward",
+        "hold_fast_forward", "screenshot", "rewind", "pause_toggle",
+    ];
+    for (name, body) in &profiles {
+        for line in body.lines() {
+            let line = line.trim();
+            assert!(
+                !line.to_ascii_lowercase().starts_with("#include"),
+                "{name} carries an #include; RetroArch would follow it to a file \
+                 that never passes through staging"
+            );
+            let Some((key, _)) = line.split_once('=') else { continue };
+            let key = key.trim();
+            for bind in forbidden {
+                assert!(
+                    !key.starts_with(&format!("input_{bind}")),
+                    "{name} binds '{key}', which RetroArch's autoconfig loader \
+                     would apply over our own hotkey allow-list"
+                );
+            }
+        }
+    }
+}
+
+/// We keep gameplay labels such as `input_b_btn_label` with the allow-list.
+///
+/// Stripping only one suffix from `input_b_btn_label` leaves `b_btn`, which is
+/// not a bind name. These labels name the physical buttons, and a profile
+/// exists to give them.
+#[test]
+fn gameplay_button_labels_are_kept() {
+    let staged = staged_autoconfig_root();
+    let Some(profiles) = read_profiles(&staged) else {
+        eprintln!("no staged autoconfig profiles here; nothing was verified");
+        return;
+    };
+    let labelled = profiles
+        .iter()
+        .filter(|(_, body)| body.contains("_btn_label"))
+        .count();
+    assert!(
+        labelled > 0,
+        "no staged profile kept a button label; the allow-list is stripping \
+         legitimate gameplay metadata"
+    );
+}
+
+fn staged_autoconfig_root() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/runtime/autoconfig/hid")
+}
+
+fn read_profiles(root: &std::path::Path) -> Option<Vec<(String, String)>> {
+    let entries = std::fs::read_dir(root).ok()?;
+    Some(
+        entries
+            .filter_map(Result::ok)
+            .filter(|entry| entry.path().extension().is_some_and(|e| e == "cfg"))
+            .filter_map(|entry| {
+                let body = std::fs::read_to_string(entry.path()).ok()?;
+                Some((entry.file_name().to_string_lossy().into_owned(), body))
+            })
+            .collect(),
+    )
+}
