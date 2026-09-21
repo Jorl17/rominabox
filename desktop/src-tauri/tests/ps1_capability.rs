@@ -370,3 +370,66 @@ fn adding_sticks_did_not_disturb_the_button_callouts() {
         "the fourteen button callouts are unchanged; sticks are drawn in-scene"
     );
 }
+
+/// We draw each stick once, not eight times at the origin.
+///
+/// We declare the eight analogue directions with a group and no callout
+/// position, and group them in `themes.rs` as in the offscreen renderer. With
+/// a hit marker and a callout for every control, eight of them would pile up
+/// in the top-left corner of the scene in an export, and we never open the
+/// Controls panel in the interaction baseline, so nothing would show it.
+#[test]
+fn the_playstation_scene_draws_each_stick_once() {
+    let root = scratch();
+    let assets = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets/menu");
+    // A staged asset directory in the layout used in prepare_controls_assets:
+    // the menu template and the artwork that we copy by name. The image is an
+    // empty stand-in, because we test the markup, not the picture.
+    let source = root.join("staged");
+    let destination = root.join("menu-assets");
+    fs::create_dir_all(&source).unwrap();
+    fs::create_dir_all(&destination).unwrap();
+    fs::copy(assets.join("menu.rml"), source.join("menu.rml")).unwrap();
+    let profile = controls::profile_for_system("ps1").expect("a default pad");
+    fs::write(source.join(&profile.image), []).unwrap();
+    fs::write(source.join("CONTROLLERS.txt"), []).unwrap();
+
+    let options = Controls::default();
+    crate_themes_prepare(&source, &destination, "ps1", &options);
+
+    let markup = fs::read_to_string(destination.join("menu.rml")).expect("scene markup");
+    let stick_callouts = markup.matches("control-callout").count();
+    let stick_groups = markup.matches("class=\"control-group\"").count();
+
+    assert_eq!(
+        stick_groups, 2,
+        "each stick is one element: left and right, drawn beneath the pad"
+    );
+    // Fourteen buttons, and not one callout per analogue direction.
+    assert_eq!(
+        stick_callouts, 14,
+        "only the buttons take gutter callouts; {stick_groups} groups are drawn separately"
+    );
+    for direction in ["l_x_plus", "r_y_minus"] {
+        assert!(
+            !markup.contains(&format!("control-hit-{direction}")),
+            "{direction} must not get its own marker; its stick carries one"
+        );
+    }
+    for click in ["l3", "r3"] {
+        assert!(
+            markup.contains(&format!("control-hit-{click}")),
+            "the stick's own anchor is the marker that is drawn"
+        );
+    }
+}
+
+fn crate_themes_prepare(
+    source: &Path,
+    destination: &Path,
+    system: &str,
+    options: &Controls,
+) {
+    rominabox_desktop::themes::prepare_controls_assets(source, destination, system, options)
+        .expect("the scene markup is generated");
+}

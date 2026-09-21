@@ -46,6 +46,12 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
 .control-callout { position: absolute; width: 196dp; height: 54dp; padding: 0; border: 2dp #75b2e4; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
 .control-callout:hover { border-color: #ffffff; }
 .control-callout.focused { border-color: #fff13d; }
+/* A stick is one object on the pad but several binds, so we draw it once,
+ * under the illustration and not in a gutter. Each gutter is full with seven
+ * 54dp callouts, and four directions per stick would cover other buttons. */
+.control-group { position: absolute; width: 236dp; height: 62dp; padding: 0; border: 2dp #75b2e4; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
+.control-group:hover { border-color: #ffffff; }
+.control-group.focused { border-color: #fff13d; }
 .control-label { margin-left: 10dp; margin-top: 5dp; height: 24dp; font-size: 18dp; overflow: hidden; white-space: nowrap; }
 .control-assignment { margin-left: 10dp; font-size: 14dp; color: #b4e6ff; white-space: nowrap; overflow: hidden; }
 .control-original { margin-right: 10dp; color: #fff13d; }

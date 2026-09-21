@@ -85,9 +85,9 @@ body {{ background-color: {background}; }}
 #screen .menu-action:hover, #screen .menu-action.focused {{ background-color: {highlight}; color: {surface}; border-color: #ffffff; }}
 #screen .menu-action:active {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
 #screen .menu-action.disabled, #screen .menu-action:disabled {{ background-color: {background}; color: {edge}; border-color: {surface}; }}
-.control-callout {{ background-color: {surface}; border-color: {edge}; }}
-.control-callout:hover, .control-hit:hover {{ border-color: #ffffff; }}
-.control-callout.focused {{ background-color: {focus}; border-color: {highlight}; }}
+.control-callout, .control-group {{ background-color: {surface}; border-color: {edge}; }}
+.control-callout:hover, .control-group:hover, .control-hit:hover {{ border-color: #ffffff; }}
+.control-callout.focused, .control-group.focused {{ background-color: {focus}; border-color: {highlight}; }}
 .control-hit.focused {{ border-color: {highlight}; }}
 .control-original, #controls-status {{ color: {highlight}; }}
 .control-assignment {{ color: {muted}; }}
@@ -197,7 +197,25 @@ pub fn prepare_controls_assets(
     } else {
         String::new()
     };
-    for item in profile.controls {
+    // We draw a group once, as one object on the pad, not one callout per
+    // bind. Otherwise each of the eight analogue directions of the PlayStation
+    // DualShock would need a callout, and both gutters are already full with
+    // seven 54 dp callouts.
+    let grouped: Vec<&crate::controls::ControlDefinition> = profile
+        .controls
+        .iter()
+        .filter(|item| item.group.is_some())
+        .collect();
+    let mut group_names: Vec<&str> = grouped
+        .iter()
+        .filter_map(|item| item.group.as_deref())
+        .collect();
+    group_names.sort_unstable();
+    group_names.dedup();
+    markup.push_str(&control_group_markup(&group_names, &grouped, controls, illustrated));
+
+    for item in profile.controls.iter().filter(|item| item.group.is_none()) {
+        let item = item.clone();
         let custom = controls.bindings.get(&item.id);
         let author_label = custom
             .and_then(|value| value.label.as_deref())
@@ -238,6 +256,92 @@ pub fn prepare_controls_assets(
         template.replace("<!--CONTROLS-->", &markup),
     )
     .map_err(|e| e.to_string())
+}
+
+/// Draw each group once, below the illustration.
+///
+/// We put the strip at the bottom of the scene because the side margins are
+/// full, with seven 54 dp callouts filling 378 of 380 dp. Its geometry matches
+/// `scripts/render_control_overlays.py`, the reference renderer for the
+/// controller scene.
+fn control_group_markup(
+    names: &[&str],
+    grouped: &[&crate::controls::ControlDefinition],
+    controls: &crate::controls::Controls,
+    illustrated: bool,
+) -> String {
+    const WIDTH: i32 = 236;
+    const HEIGHT: i32 = 62;
+    const GAP: i32 = 16;
+    const SCENE_WIDTH: i32 = 960;
+    const SCENE_HEIGHT: i32 = 380;
+
+    if names.is_empty() {
+        return String::new();
+    }
+    let count = names.len() as i32;
+    let total = count * WIDTH + (count - 1) * GAP;
+    let left_edge = (SCENE_WIDTH - total) / 2;
+    let top = SCENE_HEIGHT - HEIGHT - 12;
+
+    let mut markup = String::new();
+    for (index, name) in names.iter().enumerate() {
+        let members: Vec<&&crate::controls::ControlDefinition> = grouped
+            .iter()
+            .filter(|item| item.group.as_deref() == Some(*name))
+            .collect();
+        let box_x = left_edge + index as i32 * (WIDTH + GAP);
+
+        // One member has the anchor for the whole group. We reject a group in
+        // the catalog without exactly one, so a missing anchor here would be a
+        // defect in the generated data, which we must not hide.
+        if illustrated {
+            if let Some(anchor) = members.iter().find(|item| item.x != 0 || item.y != 0) {
+                let centre = box_x + WIDTH / 2;
+                markup.push_str(&format!(
+                    r#"
+<div class="control-leader vertical" style="left:{}dp;top:{}dp;height:{}dp;"/>
+<div class="control-leader horizontal" style="left:{}dp;top:{top}dp;width:{}dp;"/>
+<button id="control-hit-{}" class="control-hit" style="left:{}dp;top:{}dp;"/>
+"#,
+                    anchor.x,
+                    anchor.y.min(top),
+                    (top - anchor.y).abs(),
+                    centre.min(anchor.x),
+                    (centre - anchor.x).abs(),
+                    anchor.id,
+                    anchor.x - 22,
+                    anchor.y - 22,
+                ));
+            }
+        }
+
+        // The directions are written on one line.
+        let keys: Vec<String> = members
+            .iter()
+            .filter(|item| item.id.ends_with("_plus") || item.id.ends_with("_minus"))
+            .map(|item| {
+                controls
+                    .bindings
+                    .get(&item.id)
+                    .and_then(|value| value.key.clone())
+                    .unwrap_or_else(|| item.key.clone())
+                    .to_uppercase()
+            })
+            .collect();
+        let title = name.replace('_', " ").to_uppercase();
+        markup.push_str(&format!(
+            r#"
+<button id="control-group-{name}" class="control-group" style="left:{box_x}dp;top:{top}dp;">
+<div class="control-label">{}</div>
+<div class="control-assignment">{}</div>
+</button>
+"#,
+            rml_text(&title),
+            rml_text(&keys.join(" ")),
+        ));
+    }
+    markup
 }
 
 fn control_callout_markup(
