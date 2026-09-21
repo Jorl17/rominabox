@@ -2265,4 +2265,78 @@ mod tests {
         assert!(script.contains("export ROMINABOX_ADVANCED_ACCESS=1"));
         assert!(!script.contains("export ROMINABOX_ADVANCED_ACCESS=0"));
     }
+
+    /// We store the saves of every exported game under
+    /// `Games/{stable_identity(rom, system)}`. The identity is a hash of the
+    /// system string as the caller supplied it, trimmed and lowercased but not
+    /// turned into a console id, so that string is part of the save path of a
+    /// player for good. These cases check that behaviour.
+    ///
+    /// Do not resolve aliases first. Aliases are valid in `systems::find`, so
+    /// resolving them here would move the saves of every existing player to a
+    /// new folder and leave the old folder behind without a warning.
+    mod save_identity {
+        use super::*;
+
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+        fn rom_with(bytes: &[u8]) -> PathBuf {
+            let dir = std::env::temp_dir().join(format!(
+                "rominabox-identity-{}-{}",
+                std::process::id(),
+                NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            ));
+            fs::create_dir_all(&dir).unwrap();
+            let rom = dir.join("game.bin");
+            fs::write(&rom, bytes).unwrap();
+            rom
+        }
+
+        #[test]
+        fn identity_is_stable_for_the_same_rom_and_system() {
+            let rom = rom_with(b"rominabox-identity-fixture");
+            let first = stable_identity(&rom, "megadrive").unwrap();
+            let second = stable_identity(&rom, "megadrive").unwrap();
+            assert_eq!(first, second);
+            assert_eq!(first.len(), 24, "save directory names must stay 24 hex chars");
+            assert!(first.chars().all(|c| c.is_ascii_hexdigit()));
+        }
+
+        #[test]
+        fn identity_ignores_surrounding_space_and_letter_case() {
+            let rom = rom_with(b"rominabox-identity-fixture");
+            let canonical = stable_identity(&rom, "megadrive").unwrap();
+            assert_eq!(stable_identity(&rom, "  MegaDrive  ").unwrap(), canonical);
+            assert_eq!(stable_identity(&rom, "MEGADRIVE").unwrap(), canonical);
+        }
+
+        /// `gb` and its alias `Game Boy` both stand for the same console, but
+        /// with the same ROM bytes they lead to different save folders, so
+        /// callers must pass the canonical id. Change this behaviour only
+        /// together with a move of the saves that players already have.
+        #[test]
+        fn an_alias_does_not_share_a_save_directory_with_its_canonical_id() {
+            let rom = rom_with(b"rominabox-identity-fixture");
+            let canonical = crate::systems::find("gb").expect("gb is a known system");
+            let via_alias = crate::systems::find("Game Boy").expect("alias resolves");
+            assert_eq!(
+                canonical.id, via_alias.id,
+                "both spellings must resolve to one console"
+            );
+            assert_ne!(
+                stable_identity(&rom, "gb").unwrap(),
+                stable_identity(&rom, "Game Boy").unwrap(),
+                "identity hashes the supplied string, not the resolved console id"
+            );
+        }
+
+        #[test]
+        fn a_different_system_or_different_bytes_changes_the_identity() {
+            let rom = rom_with(b"rominabox-identity-fixture");
+            let other_rom = rom_with(b"rominabox-identity-fixture-2");
+            let base = stable_identity(&rom, "megadrive").unwrap();
+            assert_ne!(stable_identity(&rom, "nes").unwrap(), base);
+            assert_ne!(stable_identity(&other_rom, "megadrive").unwrap(), base);
+        }
+    }
 }
