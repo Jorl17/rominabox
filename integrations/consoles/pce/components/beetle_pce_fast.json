@@ -9,5 +9,9 @@
     "spdx": "GPL-2.0",
     "file": "beetle_pce_fast.txt"
   },
-  "capabilities": []
+  "capabilities": [
+    "cue",
+    "iso",
+    "chd"
+  ]
 }

@@ -604,6 +604,7 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
                     "component": component.id,
                     "license": component.license.spdx,
                     "licenseFile": component.license.file,
+                    "capabilities": component.capabilities,
                 }))
             })
             .collect();

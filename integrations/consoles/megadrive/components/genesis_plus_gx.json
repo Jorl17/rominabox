@@ -9,5 +9,8 @@
     "spdx": "Non-commercial",
     "file": "genesis_plus_gx.txt"
   },
-  "capabilities": []
+  "capabilities": [
+    "cue",
+    "iso"
+  ]
 }

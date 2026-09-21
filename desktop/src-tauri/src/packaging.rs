@@ -23,6 +23,9 @@ use crate::icons;
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
+/// Disc image containers whose support depends on how a core was built.
+const CONTAINER_FORMATS: &[&str] = &["chd", "cue", "iso", "gdi", "cdi", "pbp", "rvz", "m3u"];
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ExportTarget {
@@ -575,17 +578,30 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
         }
     }
     content::collect(&request.rom).map_err(|message| ExportError::new("validate", message))?;
-    if system.id == "segacd"
-        && request
-            .rom
-            .extension()
-            .and_then(OsStr::to_str)
-            .is_some_and(|extension| extension.eq_ignore_ascii_case("chd"))
-    {
-        return Err(ExportError::new(
-            "validate",
-            "Sega CD CHD export is unavailable because the prepared Genesis Plus GX core was built without CHD support. Use a CUE/BIN or ISO image for this runtime kit.",
-        ));
+    // We reject a container format by the core that would have to read it,
+    // not by the console name, because CHD support in an upstream project
+    // does not show that the prepared artifact was compiled with it. We do
+    // not restrict cores for which we declare no capabilities.
+    if let (Some(core), Some(extension)) = (
+        system.cores.first(),
+        request.rom.extension().and_then(OsStr::to_str),
+    ) {
+        let extension = extension.to_ascii_lowercase();
+        if !core.capabilities.is_empty()
+            && CONTAINER_FORMATS.contains(&extension.as_str())
+            && !core.supports(&extension)
+        {
+            return Err(ExportError::new(
+                "validate",
+                format!(
+                    "{} export from a .{extension} image is unavailable because the prepared {} core was built without {} support. Use one of these instead: {}.",
+                    system.name,
+                    core.component,
+                    extension.to_uppercase(),
+                    core.capabilities.join(", ")
+                ),
+            ));
+        }
     }
     validate_firmware(request, system)?;
     if request.splash {
@@ -2337,6 +2353,68 @@ mod tests {
             let base = stable_identity(&rom, "megadrive").unwrap();
             assert_ne!(stable_identity(&rom, "nes").unwrap(), base);
             assert_ne!(stable_identity(&other_rom, "megadrive").unwrap(), base);
+        }
+    }
+
+    /// We reject a disc container that the core cannot read.
+    ///
+    /// Support for CHD depends on the core binary, not on the console. We
+    /// cannot export a CHD disc with a core built without CHD support, and
+    /// this check does not apply to cartridge cores.
+    mod core_capabilities {
+        use super::*;
+
+        fn request_for(system: &str, rom: &str) -> ExportRequest {
+            let mut value = request(false);
+            value.system = system.to_string();
+            value.rom = PathBuf::from(rom);
+            value
+        }
+
+        fn refusal(system: &str, rom: &str) -> Option<String> {
+            let value = request_for(system, rom);
+            let definition = crate::systems::find(system).expect("known system");
+            let core = definition.cores.first()?;
+            let extension = value
+                .rom
+                .extension()
+                .and_then(OsStr::to_str)?
+                .to_ascii_lowercase();
+            (!core.capabilities.is_empty()
+                && CONTAINER_FORMATS.contains(&extension.as_str())
+                && !core.supports(&extension))
+            .then(|| core.component.clone())
+        }
+
+        #[test]
+        fn sega_cd_chd_is_refused_because_its_core_lacks_chd() {
+            assert_eq!(
+                refusal("segacd", "game.chd").as_deref(),
+                Some("genesis_plus_gx"),
+                "the prepared Genesis Plus GX build has no CHD support"
+            );
+        }
+
+        #[test]
+        fn sega_cd_accepts_the_formats_its_core_declares() {
+            assert_eq!(refusal("segacd", "game.cue"), None);
+            assert_eq!(refusal("segacd", "game.iso"), None);
+        }
+
+        #[test]
+        fn a_core_that_declares_chd_is_not_refused() {
+            assert_eq!(
+                refusal("pcecd", "game.chd"),
+                None,
+                "PC Engine CD's core declares CHD, so the same extension is fine"
+            );
+        }
+
+        #[test]
+        fn a_cartridge_core_is_never_constrained_by_this_check() {
+            for (system, rom) in [("megadrive", "game.md"), ("nes", "game.nes")] {
+                assert_eq!(refusal(system, rom), None, "{system} must be unaffected");
+            }
         }
     }
 }

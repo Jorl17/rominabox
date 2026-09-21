@@ -30,6 +30,16 @@ pub struct Core {
     pub component: String,
     pub license: String,
     pub license_file: String,
+    /// What this BUILD of the core can do. When an upstream project supports a
+    /// format, that does not mean the artifact we download includes it.
+    #[serde(default)]
+    pub capabilities: Vec<String>,
+}
+
+impl Core {
+    pub fn supports(&self, capability: &str) -> bool {
+        self.capabilities.iter().any(|value| value == capability)
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

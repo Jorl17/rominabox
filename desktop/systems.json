@@ -19,7 +19,11 @@
           "filename": "genesis_plus_gx_libretro.dylib",
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
-          "licenseFile": "genesis_plus_gx.txt"
+          "licenseFile": "genesis_plus_gx.txt",
+          "capabilities": [
+            "cue",
+            "iso"
+          ]
         }
       ],
       "controllerProfile": "megadrive",
@@ -44,7 +48,11 @@
           "filename": "genesis_plus_gx_libretro.dylib",
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
-          "licenseFile": "genesis_plus_gx.txt"
+          "licenseFile": "genesis_plus_gx.txt",
+          "capabilities": [
+            "cue",
+            "iso"
+          ]
         }
       ],
       "firmware": [
@@ -79,7 +87,11 @@
           "filename": "genesis_plus_gx_libretro.dylib",
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
-          "licenseFile": "genesis_plus_gx.txt"
+          "licenseFile": "genesis_plus_gx.txt",
+          "capabilities": [
+            "cue",
+            "iso"
+          ]
         }
       ],
       "controllerProfile": "mastersystem",
@@ -101,7 +113,11 @@
           "filename": "genesis_plus_gx_libretro.dylib",
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
-          "licenseFile": "genesis_plus_gx.txt"
+          "licenseFile": "genesis_plus_gx.txt",
+          "capabilities": [
+            "cue",
+            "iso"
+          ]
         }
       ],
       "controllerProfile": "gamegear",
@@ -123,7 +139,11 @@
           "filename": "genesis_plus_gx_libretro.dylib",
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
-          "licenseFile": "genesis_plus_gx.txt"
+          "licenseFile": "genesis_plus_gx.txt",
+          "capabilities": [
+            "cue",
+            "iso"
+          ]
         }
       ],
       "controllerProfile": "mastersystem",
@@ -144,7 +164,8 @@
           "filename": "gambatte_libretro.dylib",
           "component": "gambatte",
           "license": "GPL-2.0",
-          "licenseFile": "gambatte.txt"
+          "licenseFile": "gambatte.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "gameboy",
@@ -165,7 +186,8 @@
           "filename": "gambatte_libretro.dylib",
           "component": "gambatte",
           "license": "GPL-2.0",
-          "licenseFile": "gambatte.txt"
+          "licenseFile": "gambatte.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "gameboy",
@@ -186,7 +208,8 @@
           "filename": "mgba_libretro.dylib",
           "component": "mgba",
           "license": "MPL-2.0",
-          "licenseFile": "mgba.txt"
+          "licenseFile": "mgba.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "gba",
@@ -208,7 +231,8 @@
           "filename": "nestopia_libretro.dylib",
           "component": "nestopia",
           "license": "GPL-2.0",
-          "licenseFile": "nestopia.txt"
+          "licenseFile": "nestopia.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "nes",
@@ -232,7 +256,8 @@
           "filename": "snes9x_libretro.dylib",
           "component": "snes9x",
           "license": "Non-commercial",
-          "licenseFile": "snes9x.txt"
+          "licenseFile": "snes9x.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "snes",
@@ -256,7 +281,8 @@
           "filename": "mupen64plus_next_libretro.dylib",
           "component": "mupen64plus_next",
           "license": "GPL-3.0",
-          "licenseFile": "mupen64plus_next.txt"
+          "licenseFile": "mupen64plus_next.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "n64",
@@ -281,7 +307,8 @@
           "filename": "pcsx_rearmed_libretro.dylib",
           "component": "pcsx_rearmed",
           "license": "GPL-2.0",
-          "licenseFile": "pcsx_rearmed.txt"
+          "licenseFile": "pcsx_rearmed.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "ps1",
@@ -304,7 +331,8 @@
           "filename": "flycast_libretro.dylib",
           "component": "flycast",
           "license": "GPL-2.0",
-          "licenseFile": "flycast.txt"
+          "licenseFile": "flycast.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "dreamcast",
@@ -326,7 +354,8 @@
           "filename": "dolphin_libretro.dylib",
           "component": "dolphin",
           "license": "GPL-2.0",
-          "licenseFile": "dolphin.txt"
+          "licenseFile": "dolphin.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "gamecube",
@@ -348,7 +377,8 @@
           "filename": "pcsx2_libretro.dylib",
           "component": "pcsx2",
           "license": "GPL-3.0",
-          "licenseFile": "pcsx2.txt"
+          "licenseFile": "pcsx2.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "ps1",
@@ -370,7 +400,8 @@
           "filename": "stella_libretro.dylib",
           "component": "stella",
           "license": "GPL-2.0",
-          "licenseFile": "stella.txt"
+          "licenseFile": "stella.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "retropad",
@@ -391,7 +422,8 @@
           "filename": "a5200_libretro.dylib",
           "component": "a5200",
           "license": "GPL-2.0",
-          "licenseFile": "a5200.txt"
+          "licenseFile": "a5200.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "retropad",
@@ -412,7 +444,8 @@
           "filename": "prosystem_libretro.dylib",
           "component": "prosystem",
           "license": "GPL-2.0",
-          "licenseFile": "prosystem.txt"
+          "licenseFile": "prosystem.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "retropad",
@@ -434,7 +467,8 @@
           "filename": "handy_libretro.dylib",
           "component": "handy",
           "license": "Zlib",
-          "licenseFile": "handy.txt"
+          "licenseFile": "handy.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "retropad",
@@ -457,7 +491,12 @@
           "filename": "mednafen_pce_fast_libretro.dylib",
           "component": "beetle_pce_fast",
           "license": "GPL-2.0",
-          "licenseFile": "beetle_pce_fast.txt"
+          "licenseFile": "beetle_pce_fast.txt",
+          "capabilities": [
+            "cue",
+            "iso",
+            "chd"
+          ]
         }
       ],
       "controllerProfile": "retropad",
@@ -481,7 +520,12 @@
           "filename": "mednafen_pce_fast_libretro.dylib",
           "component": "beetle_pce_fast",
           "license": "GPL-2.0",
-          "licenseFile": "beetle_pce_fast.txt"
+          "licenseFile": "beetle_pce_fast.txt",
+          "capabilities": [
+            "cue",
+            "iso",
+            "chd"
+          ]
         }
       ],
       "firmware": [
@@ -513,7 +557,8 @@
           "filename": "mednafen_ngp_libretro.dylib",
           "component": "beetle_neopop",
           "license": "GPL-2.0",
-          "licenseFile": "beetle_neopop.txt"
+          "licenseFile": "beetle_neopop.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "retropad",
@@ -535,7 +580,8 @@
           "filename": "mednafen_ngp_libretro.dylib",
           "component": "beetle_neopop",
           "license": "GPL-2.0",
-          "licenseFile": "beetle_neopop.txt"
+          "licenseFile": "beetle_neopop.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "retropad",
@@ -556,7 +602,8 @@
           "filename": "mednafen_wswan_libretro.dylib",
           "component": "beetle_cygne",
           "license": "GPL-2.0",
-          "licenseFile": "beetle_cygne.txt"
+          "licenseFile": "beetle_cygne.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "retropad",
@@ -577,7 +624,8 @@
           "filename": "mednafen_wswan_libretro.dylib",
           "component": "beetle_cygne",
           "license": "GPL-2.0",
-          "licenseFile": "beetle_cygne.txt"
+          "licenseFile": "beetle_cygne.txt",
+          "capabilities": []
         }
       ],
       "controllerProfile": "retropad",
