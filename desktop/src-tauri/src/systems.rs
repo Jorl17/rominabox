@@ -15,6 +15,10 @@ pub struct System {
     pub name: String,
     pub aliases: Vec<String>,
     pub extensions: Vec<String>,
+    /// Extensions by which we recognise this console but cannot export it yet.
+    /// We declare them per console and not in the exporter code.
+    #[serde(default)]
+    pub recognize_only: Vec<String>,
     pub catalog: Option<String>,
     pub cores: Vec<Core>,
     #[serde(default)]
@@ -63,6 +67,13 @@ pub struct FirmwareRequirement {
 }
 
 impl System {
+    /// Whether we can recognise a dropped file but not export it.
+    pub fn is_recognize_only(&self, extension: &str) -> bool {
+        self.recognize_only
+            .iter()
+            .any(|value| value.eq_ignore_ascii_case(extension))
+    }
+
     pub fn preferred_core(&self) -> Option<&Core> {
         self.cores.first()
     }

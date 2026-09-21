@@ -48,9 +48,16 @@ pub fn collect(entrypoint: &Path) -> Result<ContentSet, String> {
         .extension()
         .and_then(|extension| extension.to_str())
         .unwrap_or_default();
-    if extension.eq_ignore_ascii_case("m3u") || extension.eq_ignore_ascii_case("gdi") {
+    // We may recognise a file that we cannot export. The formats of that kind
+    // are declared in the console packages, not listed here. We collect
+    // without a system, so we refuse any extension that some console
+    // declares recognise-only.
+    if crate::systems::registry()
+        .iter()
+        .any(|system| system.is_recognize_only(extension))
+    {
         return Err(format!(
-            "{} manifests are not yet supported safely. Export the primary CUE sheet or a single-file CHD/ISO image instead.",
+            "{} manifests can be recognised but not exported yet: they point at other files, and collecting those safely is not implemented. Export the primary CUE sheet or a single-file CHD/ISO image instead.",
             extension.to_ascii_uppercase()
         ));
     }
@@ -245,5 +252,43 @@ mod tests {
         let error = collect(&cue).unwrap_err();
         assert!(error.contains("missing track file"), "{error}");
         assert!(error.contains("missing.bin"), "{error}");
+    }
+
+    /// The formats that we recognise but cannot export are declared in the
+    /// console packages, so the drop step and the export step always agree.
+    #[test]
+    fn a_recognise_only_format_is_refused_with_a_reason() {
+        let root = fixture("recognise-only");
+        let playlist = root.join("game.m3u");
+        fs::write(&playlist, b"disc1.cue\n").unwrap();
+
+        let refusal = collect(&playlist).expect_err("m3u cannot be collected");
+        assert!(refusal.contains("M3U"), "{refusal}");
+        assert!(
+            refusal.contains("recognised but not exported"),
+            "the message should explain the gap, not just refuse: {refusal}"
+        );
+    }
+
+    /// The declaration is the source of this rule, not a list in this file.
+    #[test]
+    fn the_refused_formats_come_from_the_console_packages() {
+        let declared: Vec<&str> = crate::systems::registry()
+            .iter()
+            .flat_map(|system| system.recognize_only.iter().map(String::as_str))
+            .collect();
+        assert!(
+            declared.contains(&"m3u") && declared.contains(&"gdi"),
+            "expected the disc consoles to declare their manifest formats, got {declared:?}"
+        );
+        for system in crate::systems::registry() {
+            for extension in &system.recognize_only {
+                assert!(
+                    system.extensions.contains(extension),
+                    "{} declares {extension} recognise-only but does not recognise it at all",
+                    system.id
+                );
+            }
+        }
     }
 }

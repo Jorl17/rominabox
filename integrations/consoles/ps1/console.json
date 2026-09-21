@@ -14,7 +14,10 @@
       "pbp",
       "m3u"
     ],
-    "category": "disc"
+    "category": "disc",
+    "recognizeOnly": [
+      "m3u"
+    ]
   },
   "recognition": {},
   "metadata": {},

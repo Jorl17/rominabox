@@ -47,6 +47,9 @@
         "iso",
         "m3u"
       ],
+      "recognizeOnly": [
+        "m3u"
+      ],
       "cores": [
         {
           "filename": "genesis_plus_gx_libretro.dylib",
@@ -322,6 +325,9 @@
         "pbp",
         "m3u"
       ],
+      "recognizeOnly": [
+        "m3u"
+      ],
       "cores": [
         {
           "filename": "pcsx_rearmed_libretro.dylib",
@@ -344,6 +350,10 @@
         "gdi",
         "cdi",
         "chd",
+        "m3u"
+      ],
+      "recognizeOnly": [
+        "gdi",
         "m3u"
       ],
       "cores": [
@@ -537,6 +547,9 @@
       "extensions": [
         "cue",
         "chd",
+        "m3u"
+      ],
+      "recognizeOnly": [
         "m3u"
       ],
       "cores": [

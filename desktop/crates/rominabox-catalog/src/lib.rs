@@ -590,6 +590,12 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
         system.insert("name".into(), json!(console.name));
         system.insert("aliases".into(), json!(console.aliases));
         system.insert("extensions".into(), json!(console.content.extensions));
+        if !console.content.recognize_only.is_empty() {
+            system.insert(
+                "recognizeOnly".into(),
+                json!(console.content.recognize_only),
+            );
+        }
         // For a console with no checksum catalogue we write no field at all.
         if let Some(reference) = &console.metadata.catalog {
             system.insert("catalog".into(), json!(reference.name));

@@ -229,6 +229,14 @@ pub struct Content {
     /// not the same as exportable, and we report that difference when we
     /// resolve the console, and do not hide it.
     pub extensions: Vec<String>,
+    /// Extensions we can RECOGNISE a game from, but cannot yet export.
+    ///
+    /// Recognisable and exportable are different facts. If we merged them, we
+    /// would accept a file at the drop step and refuse it at the export step.
+    /// This applies to multi-disc and multi-track manifests, because we have
+    /// no safe way to collect the files they point at in an export.
+    #[serde(default, rename = "recognizeOnly", skip_serializing_if = "Vec::is_empty")]
+    pub recognize_only: Vec<String>,
     /// `cartridge` or `disc`.
     pub category: String,
 }

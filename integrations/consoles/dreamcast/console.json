@@ -12,7 +12,11 @@
       "chd",
       "m3u"
     ],
-    "category": "disc"
+    "category": "disc",
+    "recognizeOnly": [
+      "gdi",
+      "m3u"
+    ]
   },
   "recognition": {},
   "metadata": {},
