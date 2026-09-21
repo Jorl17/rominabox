@@ -5,6 +5,12 @@ PNG, because RmlUi in our fork is compiled without SVG support, and in the
 builder we prefer the SVG. So the drawing exists twice, and the two copies can
 differ.
 
+Each PNG is a uniform scale of its own SVG, placed on the scene. Nine of the
+ten SVGs are 256x256 ES-DE icons and the scene is 960x380, so a render
+straight into the canvas would stretch them. We scale each pad proportionally,
+by its own factor between 1.31 and 1.73, and position it. `placement.json`
+contains that placement, derived from the shipped artwork.
+
     python3 scripts/render_controllers.py            # regenerate every PNG
     python3 scripts/render_controllers.py --check    # fail if any has drifted
 
@@ -52,12 +58,70 @@ def renderer() -> str:
     return found
 
 
+PLACEMENT = ARTWORK / "placement.json"
+
+
 def render(svg: Path, destination: Path, width: int, height: int) -> None:
+    """Render proportionally and place the drawing on the scene canvas.
+
+    A render straight into the canvas would stretch nine of the ten pads,
+    because their SVGs are 256x256 ES-DE icons and the scene is 960x380. Only
+    the Game Boy is drawn in the aspect of the scene. We scale each pad by
+    its own factor, between 1.31 and 1.73, and centre it.
+
+    `placement.json` contains that placement, derived from the shipped
+    artwork, so a regenerated PNG is exactly where the button anchors are.
+    """
+    from PIL import Image  # only needed to compose, and only by this tool
+
+    placement = json.loads(PLACEMENT.read_text())[svg.stem]
+    natural = destination.with_name(f".{svg.stem}.natural.png")
     subprocess.run(
-        [renderer(), "-w", str(width), "-h", str(height), str(svg), "-o", str(destination)],
+        [renderer(), "-h", str(placement["renderHeight"]), str(svg), "-o", str(natural)],
         check=True,
     )
+    drawing = Image.open(natural).convert("RGBA")
+    box = drawing.split()[-1].getbbox()
+    canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    canvas.paste(
+        drawing,
+        (placement["contentLeft"] - box[0], placement["contentTop"] - box[1]),
+        drawing,
+    )
+    canvas.save(destination)
+    natural.unlink(missing_ok=True)
 
+
+# We compare where the drawing is and whether it is the same drawing, and not
+# the bytes. rsvg and the tool that made the originals differ in compression
+# and in antialiasing at the edges, so with a byte comparison all ten would
+# differ although every one of them is correct.
+BOX_TOLERANCE = 2      # pixels; rounding a scale factor moves an edge by one
+PIXEL_TOLERANCE = 3.0  # percent; antialiasing along a long outline
+
+
+def compare(shipped: Path, rendered: Path) -> str:
+    """Return why the rendered artwork does not match, or nothing when it does."""
+    from PIL import Image
+
+    a = Image.open(shipped).convert("RGBA")
+    b = Image.open(rendered).convert("RGBA")
+    if a.size != b.size:
+        return f"size {b.size} against {a.size}"
+
+    # The button anchors depend on the bounding box. When the drawing moves,
+    # every callout points at the wrong place.
+    box_a, box_b = a.split()[-1].getbbox(), b.split()[-1].getbbox()
+    if box_a and box_b:
+        drift = max(abs(x - y) for x, y in zip(box_a, box_b))
+        if drift > BOX_TOLERANCE:
+            return f"drawing moved by {drift}px, so the button anchors no longer fit"
+
+    differing = sum(1 for p, q in zip(a.getdata(), b.getdata()) if p != q)
+    percent = 100 * differing / (a.size[0] * a.size[1])
+    if percent > PIXEL_TOLERANCE:
+        return f"{percent:.1f}% of pixels differ, which is more than antialiasing"
+    return ""
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
@@ -93,8 +157,9 @@ def main() -> int:
                 print(f"  MISSING {png.name}", file=sys.stderr)
                 drifted.append(svg.stem)
                 continue
-            if digest(png) != digests[svg.stem]:
-                print(f"  DRIFTED {png.name}", file=sys.stderr)
+            verdict = compare(png, target)
+            if verdict:
+                print(f"  DRIFTED {png.name}: {verdict}", file=sys.stderr)
                 drifted.append(svg.stem)
             else:
                 print(f"  ok      {png.name}")

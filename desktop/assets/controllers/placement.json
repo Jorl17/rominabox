@@ -1,0 +1,52 @@
+{
+  "controller-dreamcast": {
+    "contentLeft": 609,
+    "contentTop": 16,
+    "renderHeight": 997
+  },
+  "controller-gameboy": {
+    "contentLeft": 714,
+    "contentTop": 18,
+    "renderHeight": 760
+  },
+  "controller-gamecube": {
+    "contentLeft": 474,
+    "contentTop": 9,
+    "renderHeight": 1233
+  },
+  "controller-mastersystem": {
+    "contentLeft": 526,
+    "contentTop": 220,
+    "renderHeight": 1095
+  },
+  "controller-megadrive": {
+    "contentLeft": 430,
+    "contentTop": 71,
+    "renderHeight": 1232
+  },
+  "controller-megadrive6": {
+    "contentLeft": 430,
+    "contentTop": 104,
+    "renderHeight": 1197
+  },
+  "controller-n64": {
+    "contentLeft": 567,
+    "contentTop": 4,
+    "renderHeight": 1046
+  },
+  "controller-nes": {
+    "contentLeft": 485,
+    "contentTop": 181,
+    "renderHeight": 1216
+  },
+  "controller-ps1": {
+    "contentLeft": 428,
+    "contentTop": 49,
+    "renderHeight": 1318
+  },
+  "controller-snes": {
+    "contentLeft": 431,
+    "contentTop": 153,
+    "renderHeight": 1258
+  }
+}

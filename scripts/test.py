@@ -83,6 +83,13 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "artwork",
+        "that every controller PNG still matches a fresh render of its SVG source",
+        "that the artwork is correct — only that the PNG has not diverged from the drawing",
+        ["python3", str(ROOT / "scripts/render_controllers.py"), "--check"],
+        slow=True,
+    ),
+    Scope(
         "overlays",
         "that no controller callout or button anchor moved, across every illustrated profile",
         "that the positions are correct — only that they are unchanged since a human looked",

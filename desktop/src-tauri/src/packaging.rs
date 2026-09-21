@@ -615,12 +615,6 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
     if let Err(message) = crate::themes::design_root(&request.theme) {
         return Err(ExportError::new("validate", message));
     }
-    if false {
-        return Err(ExportError::new(
-            "validate",
-            format!("unsupported theme: {}", request.theme),
-        ));
-    }
     if request.start_at_menu && !request.show_menu {
         return Err(ExportError::new(
             "validate",

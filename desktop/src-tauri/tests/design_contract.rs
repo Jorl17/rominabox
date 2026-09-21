@@ -44,7 +44,12 @@ const MENU_PANELS: &[Panel] = &[
     Panel {
         name: "pause",
         required: true,
-        ids: &["pause-panel", "load"],
+        // The player can click every one of these, and we read the table that
+        // connects them in the scanner.
+        ids: &[
+            "pause-panel", "load", "resume", "save", "controls", "quit",
+            "slot-1", "slot-2", "slot-3", "slot-4", "slot-5", "slot-6",
+        ],
     },
     Panel {
         // Optional, because we generate it only when there is more than one
@@ -57,7 +62,10 @@ const MENU_PANELS: &[Panel] = &[
     Panel {
         name: "controls",
         required: true,
-        ids: &["controls-panel", "controls-back", "controls-reset", "controls-cancel"],
+        ids: &[
+            "controls-panel", "controls-back", "controls-reset",
+            "controls-cancel", "controls-status",
+        ],
     },
 ];
 
@@ -121,6 +129,35 @@ fn ids_the_bridge_looks_up(source: &str) -> BTreeSet<String> {
             rest = &rest[end..];
         }
     }
+    // In the scan above we miss ids looked up through a variable, and those are
+    // the ids that a player clicks. We call `GetElementById(binding.id)` for
+    // each entry in a table of {"resume", ACTION}, {"save", ACTION} and the rest.
+    // If we scanned only literal call sites, a design without Continue, Save,
+    // Controls and Quit would count as valid.
+    found.extend(ids_in_binding_table(source));
+    found
+}
+
+/// The `{"id", RIB_RMLUI_ACTION_...}` pairs in the table of the bridge.
+fn ids_in_binding_table(source: &str) -> BTreeSet<String> {
+    let mut found = BTreeSet::new();
+    let mut rest = source;
+    while let Some(at) = rest.find("{\"") {
+        rest = &rest[at + 2..];
+        let Some(end) = rest.find('"') else { break };
+        let id = &rest[..end];
+        let after = &rest[end..];
+        // Only a pair whose second element is an action; other braced literals
+        // in this file are not element ids.
+        if after
+            .split(',')
+            .nth(1)
+            .is_some_and(|value| value.trim_start().starts_with("RIB_RMLUI_ACTION_"))
+        {
+            found.insert(id.to_string());
+        }
+        rest = after;
+    }
     found
 }
 
@@ -132,8 +169,12 @@ fn ids_the_bridge_looks_up(source: &str) -> BTreeSet<String> {
 #[test]
 fn every_id_the_bridge_reaches_for_is_classified() {
     let Some(bridge) = read("vendor/retroarch/menu/drivers/rmlui_bridge.cpp") else {
-        eprintln!("vendor/retroarch is not checked out; nothing was verified");
-        return;
+        // This must fail. A contract check that checks nothing without a
+        // warning when the submodule is missing is worse than no check at all.
+        panic!(
+            "vendor/retroarch is not checked out, so the contract cannot be \
+             checked. Run `git submodule update --init` before trusting this."
+        );
     };
     let classified: BTreeSet<&str> = menu_ids(false)
         .into_iter()
@@ -219,6 +260,14 @@ fn a_design_resolves_to_its_own_directory() {
     assert!(
         native.ends_with("integrations/designs/native"),
         "a design lives in its own package directory, got {native:?}"
+    );
+    // We can resolve a design only when its directory exists, so we fail here
+    // for a declared design with no package, and not later at staging.
+    assert!(native.is_dir(), "resolving must confirm the package exists: {native:?}");
+    assert!(
+        native.is_absolute(),
+        "the builder does not run from the repository root, so a relative \
+         answer is one nobody can act on: {native:?}"
     );
     let refusal = rominabox_desktop::themes::design_root("no-such-design")
         .expect_err("an undeclared design must be refused");

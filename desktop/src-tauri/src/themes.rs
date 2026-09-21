@@ -55,7 +55,19 @@ pub fn design_root(design: &str) -> Result<PathBuf, String> {
         .into_iter()
         .find(|entry| entry.id == design)
         .ok_or_else(|| format!("Unknown menu design: {design}"))?;
-    Ok(PathBuf::from("integrations/designs").join(declared.id))
+    // We resolve the path against this crate and not the working directory,
+    // because the builder does not run from the repository root. We check the
+    // path on disk, so we fail here for a design with no directory.
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../integrations/designs")
+        .join(&declared.id);
+    if !root.is_dir() {
+        return Err(format!(
+            "Menu design '{design}' is declared but its package is missing at {}",
+            root.display()
+        ));
+    }
+    Ok(root)
 }
 
 /// The files in every design, under the names declared in it.
