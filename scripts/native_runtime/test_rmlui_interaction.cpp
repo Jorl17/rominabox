@@ -8,6 +8,27 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+/* rmlui.c is not linked here because it depends on the whole of RetroArch,
+ * so we stub the control list that it normally supplies. With the stub a test
+ * can declare more than sixteen controls, and the bridge must address all of
+ * them. A PlayStation DualShock declares twenty-four. */
+static const char *stub_control_ids[] = {
+   "up", "down", "left", "right", "a", "b", "x", "y",
+   "l", "r", "l2", "r2", "l3", "r3", "start", "select",
+   "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
+   "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus"
+};
+static const int stub_control_count =
+   (int)(sizeof(stub_control_ids) / sizeof(stub_control_ids[0]));
+
+extern "C" int rib_rmlui_control_capacity(void) { return stub_control_count; }
+extern "C" const char *rib_rmlui_control_id(int index)
+{
+   if (index < 0 || index >= stub_control_count)
+      return nullptr;
+   return stub_control_ids[index];
+}
+
 extern "C" unsigned rib_rmlui_test_texture_loads();
 extern "C" const char *rib_rmlui_test_property(const char *, const char *);
 

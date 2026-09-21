@@ -16,11 +16,11 @@ changes: the port is 1420, the identifiers have no suffix, and
 `stable_identity` is the same. This is important, because a regression test
 checks it so that a player's saves survive a re-export of the same game.
 
-We do NOT isolate the cargo target directory and the submodule's object
-store. An isolated 6 GB target would cost 6 GB per worktree to avoid a lock
-that only serialises compilation, and isolated submodule objects would mean
-a new clone of 289 MB that git can share at no cost. We share large
-artifacts that depend only on their content.
+We do NOT isolate the prepared runtime kit, the cargo target directory and
+the submodule's object store. An isolated 6 GB target would cost 6 GB per
+worktree to avoid a lock that only serialises compilation, and isolated
+submodule objects would mean a new clone of 289 MB that git can share at
+no cost. We share large artifacts that depend only on their content.
 """
 
 from __future__ import annotations
@@ -216,6 +216,35 @@ def write_local(path: Path, suffix: str, offset: int) -> dict:
     return local
 
 
+# The prepared runtime kit (the frozen RetroArch player, the cores, the menu
+# assets) is build output and is not in git. Without it we cannot export or
+# launch anything in a worktree, and a RetroArch build per worktree is too slow.
+# It is the same in every worktree unless the fork changes, so we share it
+# with a symlink, and use a separate copy in a worktree that changes the fork.
+SHARED_ARTIFACTS = [
+    Path("desktop/src-tauri/resources/runtime"),
+    Path("desktop/src-tauri/resources/preview"),
+]
+
+
+def link_build_artifacts(path: Path, own_copy: bool) -> None:
+    for relative in SHARED_ARTIFACTS:
+        source = ROOT / relative
+        if not source.exists():
+            print(f"  {relative} is not prepared here; skipping")
+            continue
+        target = path / relative
+        if target.exists() or target.is_symlink():
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if own_copy:
+            started = time.monotonic()
+            shutil.copytree(source, target, symlinks=True)
+            print(f"  copied {relative} ({time.monotonic() - started:.0f}s)")
+        else:
+            target.symlink_to(source)
+            print(f"  linked {relative} -> the canonical checkout")
+
 def describe(local: dict) -> str:
     return (
         f"  port        {local['vitePort']}\n"
@@ -225,7 +254,7 @@ def describe(local: dict) -> str:
     )
 
 
-def create(suffix: str, branch: str | None) -> int:
+def create(suffix: str, branch: str | None, own_runtime: bool) -> int:
     path = ROOT.parent / f"{ROOT.name}-{suffix}"
     if path.exists():
         raise SystemExit(f"{path} already exists; use adopt, or pick another suffix")
@@ -246,6 +275,8 @@ def create(suffix: str, branch: str | None) -> int:
         check=True,
     )
     print(f"  took {time.monotonic() - started:.0f}s")
+
+    link_build_artifacts(path, own_runtime)
 
     with Lock(common_dir() / LOCK_NAME):
         offset = allocate_offset(None)
@@ -311,9 +342,15 @@ def remove(suffix: str, keep_data: bool) -> int:
         if data_root.exists() and data_root != CANONICAL_DATA:
             shutil.rmtree(data_root)
             print(f"removed {data_root}")
+    # A shared kit is a symlink into the canonical checkout. When we remove the
+    # worktree we must unlink it and never follow it.
+    for relative in SHARED_ARTIFACTS:
+        link = path / relative
+        if link.is_symlink():
+            link.unlink()
     git("worktree", "remove", "--force", str(path))
     print(f"removed {path}")
-    print("shared cargo target and submodule objects were left alone")
+    print("shared runtime kit, cargo target and submodule objects were left alone")
     return 0
 
 
@@ -323,6 +360,11 @@ def main() -> int:
     made = commands.add_parser("create", help="make an isolated worktree")
     made.add_argument("suffix")
     made.add_argument("--branch", help="branch to create; default is git's own naming")
+    made.add_argument(
+        "--own-runtime",
+        action="store_true",
+        help="copy the 164 MB runtime kit instead of sharing it; needed only when changing the RetroArch fork",
+    )
     commands.add_parser("adopt", help="set up a worktree that already exists")
     commands.add_parser("env", help="print the exports this worktree needs")
     commands.add_parser("list", help="every checkout and the resources it owns")
@@ -332,7 +374,7 @@ def main() -> int:
     arguments = parser.parse_args()
 
     if arguments.command == "create":
-        return create(arguments.suffix, arguments.branch)
+        return create(arguments.suffix, arguments.branch, arguments.own_runtime)
     if arguments.command == "adopt":
         return adopt()
     if arguments.command == "env":

@@ -2,6 +2,7 @@ import argparse
 import hashlib
 import json
 import platform
+import re
 import shutil
 import subprocess
 import tarfile
@@ -197,6 +198,207 @@ def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object], t
     }
 
 
+# Pinned joypad profiles. We set input_joypad_driver = "hid" in every
+# export. In RetroArch, profiles come only from joypad_autoconfig_dir and
+# joypad_autoconfig_dir/<driver>, one level deep, so we stage only hid/.
+# SDL3 gamecontrollerdb.cfg has its own notice and is not a hid profile.
+JOYPAD_AUTOCONFIG_REPO = "libretro/retroarch-joypad-autoconfig"
+JOYPAD_AUTOCONFIG_REVISION = "1c6d74cef79b56a3a5dc283b1b0b2e4af73376ff"
+JOYPAD_AUTOCONFIG_LICENSE_FILE = "retroarch-joypad-autoconfig.txt"
+JOYPAD_AUTOCONFIG_COMPONENT = "retroarch-joypad-autoconfig"
+
+_PLAYER_PREFIX = re.compile(r"^player\d+_")
+_ALT_SUFFIX = re.compile(r"_alt\d+$")
+_META_BIND_SUFFIXES = ("_btn_label", "_axis_label", "_btn", "_axis", "_mbtn")
+
+
+def meta_bind_names(configuration_c: Path | None = None) -> list[str]:
+    """Names declared by `DECLARE_META_BIND` in the pinned RetroArch sources.
+
+    We read the list from the source tree instead of copying it, so we strip
+    a new meta action the next time we stage the profiles.
+    """
+    path = configuration_c or (
+        Path(__file__).resolve().parent.parent / "vendor/retroarch/configuration.c"
+    )
+    names: list[str] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("DECLARE_META_BIND("):
+            continue
+        name = stripped.split(",")[1].strip()
+        if name not in names:
+            names.append(name)
+    if not names:
+        raise RuntimeError(f"No DECLARE_META_BIND names in {path}")
+    return names
+
+
+def is_meta_bind_key(key: str, names: set[str]) -> bool:
+    """Return True when an autoconfig key assigns a meta/hotkey action.
+
+    In RetroArch, `input_<name>_btn`, `input_<name>_axis` and their `_label`
+    keys all apply to the autoconfig bind. Player prefixes and `_altN`
+    alternatives refer to the same bind. We also remove a keyboard
+    `input_<name>` or `_mbtn` line, so that a line we left behind cannot
+    become a hotkey in a later version of the parser.
+    """
+    if not key.startswith("input_"):
+        return False
+    rest = _ALT_SUFFIX.sub("", _PLAYER_PREFIX.sub("", key[len("input_") :], count=1))
+    for name in names:
+        if rest == name:
+            return True
+        for suffix in _META_BIND_SUFFIXES:
+            if rest == f"{name}{suffix}":
+                return True
+    return False
+
+
+def strip_meta_bind_lines(text: str, names: set[str]) -> tuple[str, int]:
+    """Drop assignment lines that bind a meta action. Comments and gameplay binds stay."""
+    kept: list[str] = []
+    removed = 0
+    for line in text.splitlines(keepends=True):
+        body = line.strip()
+        if not body or body.startswith("#") or "=" not in line:
+            kept.append(line)
+            continue
+        key = line.split("=", 1)[0].strip()
+        if is_meta_bind_key(key, names):
+            removed += 1
+            continue
+        kept.append(line)
+    return "".join(kept), removed
+
+
+def _hid_profile_filename(member_name: str) -> str | None:
+    """Return the cfg basename when the member is exactly `<root>/hid/<file>.cfg`."""
+    parts = Path(member_name).parts
+    if len(parts) != 3 or parts[1] != "hid":
+        return None
+    filename = parts[2]
+    if not filename.endswith(".cfg") or filename.startswith("."):
+        return None
+    return filename
+
+
+def _record_joypad_component(root: Path, record: dict[str, object]) -> None:
+    """Add or update the component in an existing kit manifest, as we do for cores."""
+    manifest_path = root / "manifest.json"
+    if not manifest_path.is_file():
+        return
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    components = manifest.get("components")
+    if not isinstance(components, list):
+        raise RuntimeError(f"{manifest_path} has no components array")
+    components = [item for item in components if item.get("name") != JOYPAD_AUTOCONFIG_COMPONENT]
+    components.append(record)
+    manifest["components"] = components
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
+def stage_joypad_autoconfig(root: Path) -> dict[str, object]:
+    """Download the pinned autoconfig repository and stage its hid profiles.
+
+    Keep the whole repository as a source archive. Stage only `hid/*.cfg` for
+    export, without the meta/hotkey assignment lines, and store `COPYING`
+    beside the other component licences.
+    """
+    revision = JOYPAD_AUTOCONFIG_REVISION
+    names = set(meta_bind_names())
+    archive = root / "sources" / f"{JOYPAD_AUTOCONFIG_COMPONENT}-{revision}.tar.gz"
+    source_url = f"https://codeload.github.com/{JOYPAD_AUTOCONFIG_REPO}/tar.gz/{revision}"
+    download(source_url, archive)
+    licence_member = None
+    profiles: list[tuple[str, bytes]] = []
+    with tarfile.open(archive) as package:
+        for member in package.getmembers():
+            if not member.isfile():
+                continue
+            filename = _hid_profile_filename(member.name)
+            if filename is None:
+                if Path(member.name).name == "COPYING" and len(Path(member.name).parts) == 2:
+                    source = package.extractfile(member)
+                    if source is None:
+                        continue
+                    licence_member = member.name
+                    licence_bytes = source.read()
+                    destination = root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(licence_bytes)
+                continue
+            source = package.extractfile(member)
+            if source is None:
+                continue
+            profiles.append((filename, source.read()))
+    if licence_member is None:
+        raise RuntimeError(f"No COPYING member in {archive}")
+    licence_text = (root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE).read_text(encoding="utf-8")
+    if "Copyright (c) 2019 The RetroArch team" not in licence_text:
+        raise RuntimeError("Joypad autoconfig COPYING is missing the RetroArch MIT copyright")
+    if "Permission is hereby granted" not in licence_text:
+        raise RuntimeError("Joypad autoconfig COPYING is missing the MIT grant")
+    if not profiles:
+        raise RuntimeError(f"No hid profiles in {archive}")
+
+    destination_dir = root / "autoconfig" / "hid"
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    expected = {filename for filename, _raw in profiles}
+    for child in destination_dir.iterdir():
+        if child.is_file() and child.name not in expected:
+            child.unlink()
+
+    removed_lines = 0
+    upstream_bytes = 0
+    staged_bytes = 0
+    dualsense_files = []
+    for filename, raw in profiles:
+        upstream_bytes += len(raw)
+        text = raw.decode("utf-8")
+        stripped, removed = strip_meta_bind_lines(text, names)
+        removed_lines += removed
+        if any(
+            is_meta_bind_key(line.split("=", 1)[0].strip(), names)
+            for line in stripped.splitlines()
+            if "=" in line and not line.strip().startswith("#")
+        ):
+            raise RuntimeError(f"meta bind survived staging in {filename}")
+        payload = stripped.encode("utf-8")
+        (destination_dir / filename).write_bytes(payload)
+        staged_bytes += len(payload)
+        if 'input_vendor_id = "1356"' in stripped and 'input_product_id = "3302"' in stripped:
+            dualsense_files.append(filename)
+    if dualsense_files != ["DualSense Wireless Controller (PS5).cfg"]:
+        raise RuntimeError(
+            f"expected one DualSense 1356/3302 profile, found {dualsense_files}"
+        )
+
+    record: dict[str, object] = {
+        "name": JOYPAD_AUTOCONFIG_COMPONENT,
+        "revision": revision,
+        "source_url": f"https://github.com/{JOYPAD_AUTOCONFIG_REPO}/tree/{revision}",
+        "source_archive": archive.name,
+        "source_sha256": digest(archive),
+        "license": "MIT",
+        "license_file": JOYPAD_AUTOCONFIG_LICENSE_FILE,
+        "license_source_member": licence_member,
+        "origin": (
+            "Pinned hid profiles from libretro/retroarch-joypad-autoconfig. "
+            "Only hid/*.cfg is staged, because exports set input_joypad_driver to hid. "
+            "Meta-bind lines are removed at staging. SDL3 gamecontrollerdb.cfg is not shipped."
+        ),
+    }
+    _record_joypad_component(root, record)
+    print(
+        f"Joypad autoconfig {revision}: {len(profiles)} hid profiles, "
+        f"{removed_lines} meta lines removed, {staged_bytes} staged bytes "
+        f"(upstream hid {upstream_bytes} bytes, archive {archive.stat().st_size} bytes)",
+        flush=True,
+    )
+    return record
+
+
 def main() -> None:
     """Build native macOS cores from pinned sources and prepare the local prototype kit."""
     parser = argparse.ArgumentParser(description=main.__doc__)
@@ -217,7 +419,19 @@ def main() -> None:
         action="store_true",
         help="prepare only the additional official arm64 cores, licenses, sources, and components.json in a staging directory",
     )
+    parser.add_argument(
+        "--joypad-autoconfig-only",
+        action="store_true",
+        help="stage the pinned hid joypad profiles, their COPYING, and the manifest record into --output",
+    )
     args = parser.parse_args()
+    if args.joypad_autoconfig_only:
+        root = args.output.resolve()
+        (root / "sources").mkdir(parents=True, exist_ok=True)
+        (root / "licenses").mkdir(parents=True, exist_ok=True)
+        stage_joypad_autoconfig(root)
+        print(f"Joypad autoconfig staged: {root}", flush=True)
+        return
     if platform.system() != "Darwin":
         parser.error("This preparation recipe currently builds the macOS prototype kit.")
     root = args.output.resolve()
@@ -327,6 +541,7 @@ def main() -> None:
             download(url, root / "catalogs" / f"{catalog}.dat")
         except OSError as exc:
             print(f"Optional catalog unavailable: {catalog}: {exc}", flush=True)
+    entries.append(stage_joypad_autoconfig(root))
     (root / "components.json").write_text(
         json.dumps(
             {

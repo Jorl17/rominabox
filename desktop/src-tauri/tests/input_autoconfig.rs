@@ -1,9 +1,9 @@
-//! We leave joypad autoconfig out on purpose. Fast-forward is an advanced key.
+//! Joypad autoconfig for exported games, and fast-forward as an advanced key.
 //!
-//! These tests check the two facts that decide whether a plugged-in pad can
-//! play an exported game, and the hotkey tier beside them. We read generated
-//! config and the pinned RetroArch sources. We do not launch a player, open a
-//! window, or communicate with a gamepad, so this does not prove that a
+//! We check the hotkey tier, and the hid profiles we ship at export so that we
+//! can match a plugged-in pad. In these tests we read the generated config,
+//! the staged kit and the pinned RetroArch sources. We do not launch a player,
+//! open a window or talk to a gamepad, so these tests do not prove that a
 //! DualSense moves a character.
 
 use rominabox_desktop::{
@@ -16,6 +16,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
+    process::Command,
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
@@ -95,6 +96,174 @@ fn pinned_meta_bind_names() -> Vec<String> {
         }
     }
     names
+}
+
+fn repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+fn runtime_resources() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/runtime")
+}
+
+fn pinned_autoconfig_revision() -> String {
+    let path = repo_root().join("scripts/prepare_runtime.py");
+    let text = fs::read_to_string(&path).unwrap_or_else(|_| {
+        panic!(
+            "prepare_runtime.py is required to read the autoconfig pin: {}",
+            path.display()
+        )
+    });
+    for line in text.lines() {
+        let Some(rest) = line.trim().strip_prefix("JOYPAD_AUTOCONFIG_REVISION = \"") else {
+            continue;
+        };
+        let revision = rest.trim_end_matches('"').to_string();
+        assert_eq!(
+            revision.len(),
+            40,
+            "autoconfig pin must be a full commit sha"
+        );
+        return revision;
+    }
+    panic!("JOYPAD_AUTOCONFIG_REVISION is missing from prepare_runtime.py");
+}
+
+fn strip_player_prefix(rest: &str) -> &str {
+    let Some(after_player) = rest.strip_prefix("player") else {
+        return rest;
+    };
+    let Some(underscore) = after_player.find('_') else {
+        return rest;
+    };
+    let digits = &after_player[..underscore];
+    if !digits.is_empty() && digits.chars().all(|character| character.is_ascii_digit()) {
+        &after_player[underscore + 1..]
+    } else {
+        rest
+    }
+}
+
+fn strip_alt_suffix(rest: &str) -> &str {
+    let Some(index) = rest.rfind("_alt") else {
+        return rest;
+    };
+    let digits = &rest[index + 4..];
+    if !digits.is_empty() && digits.chars().all(|character| character.is_ascii_digit()) {
+        &rest[..index]
+    } else {
+        rest
+    }
+}
+
+/// Whether a config assignment binds a meta action: its key is `input_<name>`
+/// or that name plus one of the button, axis, mouse or label suffixes in
+/// RetroArch. Player prefixes and `_altN` alternatives count as the same
+/// bind. Comments are not assignments.
+fn is_meta_bind_assignment(line: &str, names: &[String]) -> bool {
+    let body = line.trim();
+    if body.is_empty() || body.starts_with('#') || !line.contains('=') {
+        return false;
+    }
+    let key = line.split_once('=').unwrap().0.trim();
+    let Some(rest) = key.strip_prefix("input_") else {
+        return false;
+    };
+    let rest = strip_alt_suffix(strip_player_prefix(rest));
+    names.iter().any(|name| {
+        rest == name
+            || rest == format!("{name}_btn")
+            || rest == format!("{name}_axis")
+            || rest == format!("{name}_mbtn")
+            || rest == format!("{name}_btn_label")
+            || rest == format!("{name}_axis_label")
+    })
+}
+
+fn autoconfig_profiles(root: &Path) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    walk_files(&root.join("autoconfig"), &mut found);
+    found.retain(|path| path.extension().and_then(|ext| ext.to_str()) == Some("cfg"));
+    found.sort();
+    found
+}
+
+fn profile_value<'a>(text: &'a str, key: &str) -> Option<&'a str> {
+    text.lines().find_map(|line| {
+        let (name, value) = line.split_once(" = ")?;
+        (name.trim() == key).then(|| value.trim().trim_matches('"'))
+    })
+}
+
+fn copy_tree(source: &Path, destination: &Path) {
+    fs::create_dir_all(destination).unwrap();
+    for entry in fs::read_dir(source).unwrap().filter_map(Result::ok) {
+        let target = destination.join(entry.file_name());
+        if entry.path().is_dir() {
+            copy_tree(&entry.path(), &target);
+        } else {
+            fs::copy(entry.path(), target).unwrap();
+        }
+    }
+}
+
+fn strip_planted_profile(source: &str) -> String {
+    let script = r#"
+import importlib.util
+import sys
+path, planted = sys.argv[1], sys.argv[2]
+spec = importlib.util.spec_from_file_location("prepare_runtime", path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+stripped, removed = module.strip_meta_bind_lines(planted, set(module.meta_bind_names()))
+if removed < 1:
+    raise SystemExit("stripper removed nothing")
+sys.stdout.write(stripped)
+"#;
+    let output = Command::new("python3")
+        .arg("-c")
+        .arg(script)
+        .arg(repo_root().join("scripts/prepare_runtime.py"))
+        .arg(source)
+        .output()
+        .expect("python3 can import the staging stripper");
+    assert!(
+        output.status.success(),
+        "stripper failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout).expect("stripped profile is utf-8")
+}
+
+fn archive_member(archive: &Path, suffix: &str) -> String {
+    let listing = Command::new("tar")
+        .args(["-tzf"])
+        .arg(archive)
+        .output()
+        .expect("tar can list the pinned autoconfig archive");
+    assert!(
+        listing.status.success(),
+        "tar listing failed: {}",
+        String::from_utf8_lossy(&listing.stderr)
+    );
+    let listing = String::from_utf8(listing.stdout).expect("tar listing is utf-8");
+    let member = listing
+        .lines()
+        .find(|line| line.ends_with(suffix))
+        .unwrap_or_else(|| panic!("archive has no member ending in {suffix}"))
+        .to_string();
+    let extracted = Command::new("tar")
+        .args(["-xOf"])
+        .arg(archive)
+        .arg(&member)
+        .output()
+        .expect("tar can read one autoconfig member");
+    assert!(
+        extracted.status.success(),
+        "tar extract failed: {}",
+        String::from_utf8_lossy(&extracted.stderr)
+    );
+    String::from_utf8(extracted.stdout).expect("upstream profile is utf-8")
 }
 
 fn walk_files(root: &Path, found: &mut Vec<PathBuf>) {
@@ -247,34 +416,209 @@ fn default_gameplay_binds_are_keyboard_only() {
     assert!(authored_text.contains("input_player1_a = \"c\""));
 }
 
-/// The runtime kit and an exported app contain no joypad profile. In the
-/// launcher we set `joypad_autoconfig_dir` to a managed directory that we
-/// only create, and with advanced access we still ship no profiles.
+/// The staged hid directory contains the DualSense vendor and product ids.
 ///
-/// This does not prove that the directory is empty after a player has run,
-/// and it does not look for compiled-in profiles in the RetroArch executable.
+/// `1356/3302` is the decimal Sony vendor id and DualSense product id, as in
+/// the RetroArch log line `[Autoconf] ... not configured`. In the export we
+/// set the hid driver, with its profiles in `autoconfig/hid/`. We look for
+/// the one staged profile with that pair. This does not prove that a pad is
+/// attached, that IOHID reports those ids, or that the button numbers match.
 #[test]
 #[cfg(target_os = "macos")]
-fn export_points_at_an_empty_autoconfig_directory_and_ships_no_profile() {
-    let resources = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/runtime");
+fn staged_hid_profile_matches_the_logged_dualsense_ids() {
+    let resources = runtime_resources();
     assert!(
-        resources.is_dir(),
-        "runtime resources are part of the kit this test checks"
+        resources.join("autoconfig/hid").is_dir(),
+        "stage joypad autoconfig into the runtime kit before this test"
     );
-    let mut shipped = Vec::new();
-    walk_files(&resources, &mut shipped);
-    let profile = shipped.iter().find(|path| {
-        path.components()
-            .any(|component| component.as_os_str() == "autoconfig")
-            || fs::read_to_string(path)
-                .ok()
-                .is_some_and(|text| text.contains("input_vendor_id"))
-    });
+    let mut matches = Vec::new();
+    for path in autoconfig_profiles(&resources) {
+        let text = fs::read_to_string(&path).unwrap();
+        if profile_value(&text, "input_vendor_id") == Some("1356")
+            && profile_value(&text, "input_product_id") == Some("3302")
+        {
+            matches.push(path);
+        }
+    }
+    assert_eq!(
+        matches.len(),
+        1,
+        "one hid profile must own 1356/3302; scan order would otherwise pick a tie: {matches:?}"
+    );
+    let text = fs::read_to_string(&matches[0]).unwrap();
+    assert_eq!(profile_value(&text, "input_driver"), Some("hid"));
+    assert_eq!(profile_value(&text, "input_b_btn"), Some("1"));
     assert!(
-        profile.is_none(),
-        "runtime kit must not carry a joypad profile: {profile:?}"
+        matches[0]
+            .components()
+            .any(|component| component.as_os_str() == "hid"),
+        "the profile has to sit in the hid driver directory RetroArch scans"
+    );
+}
+
+/// We remove meta and hotkey lines in staging instead of trusting upstream.
+///
+/// The public DualSense profile binds `input_menu_toggle_btn`, and a `nul`
+/// user joykey still falls back to that autoconfig bind. We add binds that
+/// the current hid set does not contain (exit, mouse, player prefix, alt),
+/// check that we strip them, check every staged profile, and show that the
+/// pinned archive still has the DualSense menu line that we removed. This
+/// does not prove that the PS button does nothing on hardware. A comment
+/// that mentions a meta key is not an assignment.
+#[test]
+#[cfg(target_os = "macos")]
+fn shipped_profiles_strip_meta_binds_including_ones_upstream_hid_lacks() {
+    let names = pinned_meta_bind_names();
+    let planted = "\
+input_driver = \"hid\"
+input_b_btn = \"1\"
+input_b = \"c\"
+input_r_btn = \"5\"
+input_a_btn_label = \"Circle\"
+input_l_x_plus_axis = \"+0\"
+# input_menu_toggle_btn = \"99\"
+input_menu_toggle_btn = \"12\"
+input_menu_toggle_btn_label = \"PS\"
+input_menu_toggle_axis = \"-2\"
+input_menu_toggle_mbtn = \"1\"
+input_menu_toggle = \"f1\"
+input_exit_emulator_btn = \"9\"
+input_hold_fast_forward_axis = \"+1\"
+input_toggle_fast_forward_btn_label = \"Unused\"
+input_player1_menu_toggle_btn = \"4\"
+input_menu_toggle_btn_alt1 = \"5\"
+input_reset_btn = \"3\"
+";
+    let stripped = strip_planted_profile(planted);
+    assert!(
+        stripped.contains("# input_menu_toggle_btn = \"99\""),
+        "a comment is not a bind and must survive: {stripped}"
+    );
+    for kept in [
+        "input_b_btn = \"1\"",
+        "input_b = \"c\"",
+        "input_r_btn = \"5\"",
+        "input_a_btn_label = \"Circle\"",
+        "input_l_x_plus_axis = \"+0\"",
+    ] {
+        assert!(
+            stripped.contains(kept),
+            "gameplay line was stripped with the meta binds: {kept}\n{stripped}"
+        );
+    }
+    let surviving: Vec<_> = stripped
+        .lines()
+        .filter(|line| is_meta_bind_assignment(line, &names))
+        .collect();
+    assert!(
+        surviving.is_empty(),
+        "planted meta binds still assigned after staging: {surviving:?}"
     );
 
+    let resources = runtime_resources();
+    let profiles = autoconfig_profiles(&resources);
+    assert!(!profiles.is_empty(), "staged hid profiles are required");
+    for path in &profiles {
+        let text = fs::read_to_string(path).unwrap();
+        let hits: Vec<_> = text
+            .lines()
+            .filter(|line| is_meta_bind_assignment(line, &names))
+            .collect();
+        assert!(
+            hits.is_empty(),
+            "{} still binds a meta action: {hits:?}",
+            path.display()
+        );
+    }
+
+    let revision = pinned_autoconfig_revision();
+    let archive = resources.join(format!(
+        "sources/retroarch-joypad-autoconfig-{revision}.tar.gz"
+    ));
+    let upstream = archive_member(&archive, "hid/DualSense Wireless Controller (PS5).cfg");
+    assert!(
+        is_meta_bind_assignment(
+            upstream
+                .lines()
+                .find(|line| line.contains("input_menu_toggle_btn ="))
+                .expect("upstream DualSense binds menu toggle"),
+            &names
+        ),
+        "the pin no longer contains the menu bind this test uses as proof"
+    );
+    let staged = fs::read_to_string(
+        resources.join("autoconfig/hid/DualSense Wireless Controller (PS5).cfg"),
+    )
+    .unwrap();
+    assert!(
+        !staged
+            .lines()
+            .any(|line| is_meta_bind_assignment(line, &names)),
+        "staged DualSense still has a meta bind:\n{staged}"
+    );
+    assert_eq!(profile_value(&staged, "input_b_btn"), Some("1"));
+    assert!(upstream.contains("input_b_btn = \"1\""));
+}
+
+/// We ship the profiles with the upstream MIT notice and the pinned revision.
+///
+/// `docs/dependencies-and-licensing.md` requires the revision, the licence
+/// text and the source before we ship a component. We read the staged
+/// COPYING and the kit manifest. We do not choose a licence for the project
+/// here, and we do not check that the source archive went into a binary,
+/// because the profiles are data files.
+#[test]
+#[cfg(target_os = "macos")]
+fn joypad_autoconfig_licence_and_provenance_match_the_pin() {
+    let revision = pinned_autoconfig_revision();
+    let resources = runtime_resources();
+    let licence = fs::read_to_string(resources.join("licenses/retroarch-joypad-autoconfig.txt"))
+        .expect("staged COPYING");
+    assert!(licence.contains("Copyright (c) 2019 The RetroArch team"));
+    assert!(licence.contains("Permission is hereby granted"));
+    assert!(licence.starts_with("MIT License"));
+
+    let manifest: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(resources.join("manifest.json")).unwrap())
+            .unwrap();
+    let component = manifest["components"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["name"] == "retroarch-joypad-autoconfig")
+        .expect("manifest records retroarch-joypad-autoconfig");
+    assert_eq!(component["revision"], revision);
+    assert_eq!(component["license"], "MIT");
+    assert_eq!(component["license_file"], "retroarch-joypad-autoconfig.txt");
+    assert_eq!(
+        component["source_archive"],
+        format!("retroarch-joypad-autoconfig-{revision}.tar.gz")
+    );
+    let source_url = component["source_url"].as_str().unwrap();
+    assert!(source_url.contains(&revision));
+    assert!(resources
+        .join("sources")
+        .join(format!("retroarch-joypad-autoconfig-{revision}.tar.gz"))
+        .is_file());
+    let licensing =
+        fs::read_to_string(repo_root().join("docs/dependencies-and-licensing.md")).unwrap();
+    assert!(
+        licensing.contains(&revision),
+        "the licensing record must name the pinned autoconfig commit"
+    );
+}
+
+/// An export contains the staged profiles, which we copy once at launch.
+///
+/// `joypad_autoconfig_dir` is the per-game data directory. Creating it is not
+/// enough: a profile counts only after we copy it there, and we copy it only
+/// when the destination is absent, as for firmware and remaps. This does not
+/// run the launcher, so it does not prove that a later launch leaves an
+/// edited profile alone, or that a pad matches.
+#[test]
+#[cfg(target_os = "macos")]
+fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
+    let resources = runtime_resources();
     let root = scratch();
     let kit = root.join("runtime-kit");
     fs::create_dir_all(kit.join("bin")).unwrap();
@@ -298,9 +642,34 @@ fn export_points_at_an_empty_autoconfig_directory_and_ships_no_profile() {
         r#"{"formatVersion":1,"files":[]}"#,
     )
     .unwrap();
+    copy_tree(&resources.join("autoconfig"), &kit.join("autoconfig"));
+    fs::copy(
+        resources.join("licenses/retroarch-joypad-autoconfig.txt"),
+        kit.join("licenses/retroarch-joypad-autoconfig.txt"),
+    )
+    .unwrap();
+    let real_manifest: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(resources.join("manifest.json")).unwrap())
+            .unwrap();
+    let joypad = real_manifest["components"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["name"] == "retroarch-joypad-autoconfig")
+        .expect("staged kit records joypad autoconfig")
+        .clone();
     fs::write(
         kit.join("manifest.json"),
-        r#"{"schema_version":1,"components":[{"name":"RetroArch"},{"name":"RmlUi"},{"name":"genesis_plus_gx"}]}"#,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": 1,
+            "components": [
+                {"name": "RetroArch"},
+                {"name": "RmlUi"},
+                {"name": "genesis_plus_gx"},
+                joypad,
+            ]
+        }))
+        .unwrap(),
     )
     .unwrap();
     let rom = root.join("sonic.bin");
@@ -345,12 +714,10 @@ fn export_points_at_an_empty_autoconfig_directory_and_ships_no_profile() {
         "for name in {}; do",
         MANAGED_DATA_DIRECTORIES.join(" ")
     )));
-    assert!(
-        !script
-            .lines()
-            .any(|line| line.contains("cp ") && line.contains("autoconfig")),
-        "the launcher must not copy a profile into the autoconfig directory"
-    );
+    assert!(script.contains("for autoconfig_dir in \"$bundle_dir\"/Resources/autoconfig/*; do"));
+    assert!(script.contains(
+        "[ -f \"$data_dir/autoconfig/$name/$base\" ] || /bin/cp \"$profile\" \"$data_dir/autoconfig/$name/$base\""
+    ));
     assert_eq!(
         config_value(config, "input_toggle_fast_forward"),
         Some("space"),
@@ -366,17 +733,52 @@ fn export_points_at_an_empty_autoconfig_directory_and_ships_no_profile() {
         Some("nul")
     );
 
-    let mut bundled = Vec::new();
-    walk_files(&result.app_path, &mut bundled);
-    let shipped_profile = bundled.iter().find(|path| {
-        path.components()
-            .any(|component| component.as_os_str() == "autoconfig")
-            || fs::read_to_string(path)
-                .ok()
-                .is_some_and(|text| text.contains("input_vendor_id"))
-    });
-    assert!(
-        shipped_profile.is_none(),
-        "exported app must not contain a joypad profile: {shipped_profile:?}"
+    let bundled_profiles = autoconfig_profiles(&result.app_path.join("Contents/Resources"));
+    let staged_profiles = autoconfig_profiles(&resources);
+    assert_eq!(bundled_profiles.len(), staged_profiles.len());
+    assert!(bundled_profiles.len() > 1);
+    let bundled_dualsense = bundled_profiles
+        .iter()
+        .find(|path| path.ends_with("hid/DualSense Wireless Controller (PS5).cfg"))
+        .expect("export contains the DualSense profile");
+    assert_eq!(
+        fs::read(bundled_dualsense).unwrap(),
+        fs::read(resources.join("autoconfig/hid/DualSense Wireless Controller (PS5).cfg")).unwrap()
     );
+    let names = pinned_meta_bind_names();
+    for path in &bundled_profiles {
+        let text = fs::read_to_string(path).unwrap();
+        assert!(
+            text.lines()
+                .all(|line| !is_meta_bind_assignment(line, &names)),
+            "{} shipped a meta bind",
+            path.display()
+        );
+    }
+    let exported_licence = fs::read(
+        result
+            .app_path
+            .join("Contents/Resources/Legal/Licenses/retroarch-joypad-autoconfig.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        exported_licence,
+        fs::read(resources.join("licenses/retroarch-joypad-autoconfig.txt")).unwrap()
+    );
+    let exported_manifest: serde_json::Value = serde_json::from_slice(
+        &fs::read(
+            result
+                .app_path
+                .join("Contents/Resources/Legal/components.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let exported_joypad = exported_manifest["components"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["name"] == "retroarch-joypad-autoconfig")
+        .expect("export provenance keeps the joypad component");
+    assert_eq!(exported_joypad["revision"], pinned_autoconfig_revision());
 }

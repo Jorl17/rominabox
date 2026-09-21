@@ -44,15 +44,6 @@
       "calloutY": 292
     },
     {
-      "id": "a",
-      "label": "A",
-      "key": "x",
-      "x": 569,
-      "y": 215,
-      "calloutX": 744,
-      "calloutY": 16
-    },
-    {
       "id": "b",
       "label": "B",
       "key": "z",
@@ -60,6 +51,15 @@
       "y": 237,
       "calloutX": 744,
       "calloutY": 108
+    },
+    {
+      "id": "a",
+      "label": "A",
+      "key": "x",
+      "x": 569,
+      "y": 215,
+      "calloutX": 744,
+      "calloutY": 16
     },
     {
       "id": "select",

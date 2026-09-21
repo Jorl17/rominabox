@@ -66,7 +66,7 @@ pub struct ExportRequest {
     pub output_dir: PathBuf,
     pub target: ExportTarget,
     /// A frozen, redistributable kit. It contains `bin/retroarch`, `cores/`,
-    /// `menu-assets/`, `licenses/`, `sources/`, and `manifest.json`.
+    /// `menu-assets/`, `autoconfig/`, `licenses/`, `sources/`, and `manifest.json`.
     #[serde(default)]
     pub runtime_kit: PathBuf,
     /// Optional explicit core path for development and future custom kits.
@@ -460,6 +460,7 @@ where
         .map_err(|message| ExportError::new("stage", message))?;
     }
     stage_firmware(request, &resources.join("firmware"))?;
+    stage_bundled_autoconfig(&request.runtime_kit, &resources.join("autoconfig"))?;
     if request.splash {
         copy_file(
             &request.runtime_kit.join("branding/logo.png"),
@@ -575,7 +576,8 @@ where
     let runtime_bytes = tree_size(&runtime)?
         + tree_size(&core)?
         + tree_size(&frameworks)?
-        + tree_size(&resources.join("menu-assets"))?;
+        + tree_size(&resources.join("menu-assets"))?
+        + tree_size(&resources.join("autoconfig"))?;
     let content_bytes = tree_size(&content_directory)?
         + tree_size(&resources.join("firmware"))?
         + request
@@ -729,9 +731,16 @@ fn stage_legal_materials(
         &runtime_kit.join("licenses").join(&core.license_file),
         &licenses.join(&core.license_file),
     )?;
+    let joypad_licence = runtime_kit.join("licenses/retroarch-joypad-autoconfig.txt");
+    if joypad_licence.is_file() {
+        copy_file(
+            &joypad_licence,
+            &licenses.join("retroarch-joypad-autoconfig.txt"),
+        )?;
+    }
     fs::write(
         licenses.join("README.txt"),
-        "Private ROM-in-a-Box solution-discovery export. Runtime, selected core, RmlUi, and native dependency notices are included here. Component revisions and source provenance are recorded in ../components.json. The native RetroArch fork revision and build inputs are recorded in ../Source-Provenance/native-rmlui. Historical patches are retained there only as prior-checkpoint records. Public distribution requires a separate license and source-completeness review.\n",
+        "Private ROM-in-a-Box solution-discovery export. Runtime, selected core, RmlUi, joypad autoconfig profiles, and native dependency notices are included here. Component revisions and source provenance are recorded in ../components.json. The native RetroArch fork revision and build inputs are recorded in ../Source-Provenance/native-rmlui. Historical patches are retained there only as prior-checkpoint records. Public distribution requires a separate license and source-completeness review.\n",
     ).map_err(|error| ExportError::io("stage", &licenses.join("README.txt"), error))?;
 
     let manifest_path = runtime_kit.join("manifest.json");
@@ -754,7 +763,10 @@ fn stage_legal_materials(
             .get("name")
             .and_then(serde_json::Value::as_str)
             .is_some_and(|name| {
-                name == "RetroArch" || name == "RmlUi" || name == core.component.as_str()
+                name == "RetroArch"
+                    || name == "RmlUi"
+                    || name == "retroarch-joypad-autoconfig"
+                    || name == core.component.as_str()
             })
     });
     fs::write(
@@ -919,6 +931,17 @@ fn validate_firmware(
     Ok(())
 }
 
+/// Copy staged hid profiles into the app. At launch we copy them into
+/// `$data_dir/autoconfig/<driver>/`, the only folder in which we let RetroArch
+/// search. A kit that was not staged adds nothing.
+fn stage_bundled_autoconfig(runtime_kit: &Path, destination: &Path) -> Result<(), ExportError> {
+    let source = runtime_kit.join("autoconfig");
+    if !source.exists() {
+        return Ok(());
+    }
+    copy_optional_tree(&source, destination)
+}
+
 fn stage_firmware(request: &ExportRequest, destination: &Path) -> Result<(), ExportError> {
     fs::create_dir_all(destination)
         .map_err(|error| ExportError::io("stage", destination, error))?;
@@ -979,8 +1002,9 @@ fn stable_identity(rom: &Path, system: &str) -> Result<String, ExportError> {
 /// variants stay `nul`, which is `NO_BTN`, a user bind with no button. When
 /// the user joykey is `NO_BTN`, the autoconfig bind applies in the joypad
 /// poll, so a profile with `input_menu_toggle_btn` would bind that button.
-/// We ship no profile. The `input_player1_*` gameplay keys are not declared
-/// here, because they are in the controls appendconfig.
+/// We remove those meta lines from the profiles we ship when we stage them.
+/// The `input_player1_*` gameplay keys are not declared here, because they
+/// are in the controls appendconfig.
 ///
 /// `advanced_key` is a second keyboard tier. We write it only when the author
 /// set `advancedEmulatorAccess`, and it never replaces the button, axis or
@@ -1466,7 +1490,7 @@ video_shader_dir = "$data_dir/shaders"
 runtime_log_directory = "$data_dir/runtime-logs"
 recording_output_directory = "$data_dir/recordings"
 recording_config_directory = "$data_dir/recording-config"
-# Created empty. This export does not ship joypad profiles.
+# Seeded from Resources/autoconfig on launch, the same way remaps are seeded.
 joypad_autoconfig_dir = "$data_dir/autoconfig"
 assets_directory = "{assets}"
 core_assets_directory = "$data_dir/downloads"
@@ -1561,6 +1585,16 @@ EOF
     [ -f "$remap" ] || continue
     base=${{remap##*/}}
     [ -f "$data_dir/remaps/$name/$base" ] || /bin/cp "$remap" "$data_dir/remaps/$name/$base"
+  done
+done
+for autoconfig_dir in "$bundle_dir"/Resources/autoconfig/*; do
+  [ -d "$autoconfig_dir" ] || continue
+  name=${{autoconfig_dir##*/}}
+  /bin/mkdir -p "$data_dir/autoconfig/$name"
+  for profile in "$autoconfig_dir"/*; do
+    [ -f "$profile" ] || continue
+    base=${{profile##*/}}
+    [ -f "$data_dir/autoconfig/$name/$base" ] || /bin/cp "$profile" "$data_dir/autoconfig/$name/$base"
   done
 done
 for firmware in "$bundle_dir"/Resources/firmware/*; do
