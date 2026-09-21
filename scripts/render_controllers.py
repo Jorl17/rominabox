@@ -74,20 +74,15 @@ def render(svg: Path, destination: Path, width: int, height: int) -> None:
     """
     from PIL import Image  # only needed to compose, and only by this tool
 
-    placement = json.loads(PLACEMENT.read_text())[svg.stem]
+    spot = json.loads(PLACEMENT.read_text())[svg.stem]
     natural = destination.with_name(f".{svg.stem}.natural.png")
     subprocess.run(
-        [renderer(), "-h", str(placement["renderHeight"]), str(svg), "-o", str(natural)],
+        [renderer(), "-h", str(spot["imageHeight"]), str(svg), "-o", str(natural)],
         check=True,
     )
     drawing = Image.open(natural).convert("RGBA")
-    box = drawing.split()[-1].getbbox()
     canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    canvas.paste(
-        drawing,
-        (placement["contentLeft"] - box[0], placement["contentTop"] - box[1]),
-        drawing,
-    )
+    canvas.paste(drawing, (spot["imageX"], spot["imageY"]), drawing)
     canvas.save(destination)
     natural.unlink(missing_ok=True)
 
@@ -130,6 +125,11 @@ def digest(path: Path) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--stage-frontend",
+        action="store_true",
+        help="copy the SVG sources where the builder UI can load them",
+    )
+    parser.add_argument(
         "--check",
         action="store_true",
         help="compare the shipped PNGs against a fresh render and fail on drift",
@@ -140,6 +140,19 @@ def main() -> int:
     sources = sorted(ARTWORK.glob("controller-*.svg"))
     if not sources:
         raise SystemExit(f"no controller SVGs in {ARTWORK}")
+
+    if arguments.stage_frontend:
+        # In the builder, which is a browser, we draw the SVG directly. We need
+        # a PNG only in the player, because RmlUi there has no SVG support. We
+        # stage the SVG instead of committing a copy, so there is still one
+        # copy of each drawing under version control.
+        destination = ROOT / "desktop/public/controllers"
+        destination.mkdir(parents=True, exist_ok=True)
+        for svg in sources:
+            shutil.copyfile(svg, destination / svg.name)
+        shutil.copyfile(PLACEMENT, destination / PLACEMENT.name)
+        print(f"staged {len(sources)} SVGs and their placement -> {destination}")
+        return 0
 
     scratch = ROOT / "work/controller-render"
     scratch.mkdir(parents=True, exist_ok=True)

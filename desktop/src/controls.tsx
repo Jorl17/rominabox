@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import registry from "../controls.json";
+import { ControllerScene } from "./ControllerScene";
 import systemRegistry from "../systems.json";
 import "./controls.css";
 
@@ -244,6 +245,12 @@ export function ControlsEditor({
           Reset to defaults
         </button>
       </div>
+      <ControllerScene
+        profile={profile as never}
+        bindings={value.bindings}
+        selected={selected}
+        onSelect={setSelected}
+      />
       <table className="controls-table" aria-label={`${profile.name} controls`}>
         <thead>
           <tr>

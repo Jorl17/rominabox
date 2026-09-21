@@ -1,52 +1,62 @@
 {
   "controller-dreamcast": {
-    "contentLeft": 609,
-    "contentTop": 16,
-    "renderHeight": 997
+    "imageHeight": 997,
+    "imageWidth": 997,
+    "imageX": 458,
+    "imageY": -118
   },
   "controller-gameboy": {
-    "contentLeft": 714,
-    "contentTop": 18,
-    "renderHeight": 760
+    "imageHeight": 760,
+    "imageWidth": 1920,
+    "imageX": 0,
+    "imageY": 0
   },
   "controller-gamecube": {
-    "contentLeft": 474,
-    "contentTop": 9,
-    "renderHeight": 1233
+    "imageHeight": 1233,
+    "imageWidth": 1233,
+    "imageX": 344,
+    "imageY": -236
   },
   "controller-mastersystem": {
-    "contentLeft": 526,
-    "contentTop": 220,
-    "renderHeight": 1095
+    "imageHeight": 1095,
+    "imageWidth": 1095,
+    "imageX": 411,
+    "imageY": -148
   },
   "controller-megadrive": {
-    "contentLeft": 430,
-    "contentTop": 71,
-    "renderHeight": 1232
+    "imageHeight": 1232,
+    "imageWidth": 1232,
+    "imageX": 340,
+    "imageY": -234
   },
   "controller-megadrive6": {
-    "contentLeft": 430,
-    "contentTop": 104,
-    "renderHeight": 1197
+    "imageHeight": 1197,
+    "imageWidth": 1197,
+    "imageX": 358,
+    "imageY": -216
   },
   "controller-n64": {
-    "contentLeft": 567,
-    "contentTop": 4,
-    "renderHeight": 1046
+    "imageHeight": 1046,
+    "imageWidth": 1046,
+    "imageX": 433,
+    "imageY": -143
   },
   "controller-nes": {
-    "contentLeft": 485,
-    "contentTop": 181,
-    "renderHeight": 1216
+    "imageHeight": 1216,
+    "imageWidth": 1216,
+    "imageX": 352,
+    "imageY": -217
   },
   "controller-ps1": {
-    "contentLeft": 428,
-    "contentTop": 49,
-    "renderHeight": 1318
+    "imageHeight": 1318,
+    "imageWidth": 1318,
+    "imageX": 297,
+    "imageY": -279
   },
   "controller-snes": {
-    "contentLeft": 431,
-    "contentTop": 153,
-    "renderHeight": 1258
+    "imageHeight": 1258,
+    "imageWidth": 1258,
+    "imageX": 327,
+    "imageY": -247
   }
 }

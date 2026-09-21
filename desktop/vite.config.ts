@@ -1,3 +1,7 @@
+// Declared here instead of adding @types/node for one lookup. This file runs
+// in Node, but the app does not, and we typecheck this config in the build.
+declare const process: { env: Record<string, string | undefined> };
+
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 

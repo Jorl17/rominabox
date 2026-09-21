@@ -53,9 +53,11 @@ SCOPES = [
     ),
     Scope(
         "frontend",
-        "the React builder UI: controls editor, sound preview, app flow",
+        "the React builder UI: controls editor, sound preview, app flow, and that it typechecks",
         "anything about the exported player, which is a different codebase",
-        ["npm", "--prefix", str(ROOT / "desktop"), "test"],
+        # With `npm test` we run vitest, without a type check, so we include the
+        # type check in this scope instead of leaving it to a full build.
+        ["npm", "--prefix", str(ROOT / "desktop"), "run", "check"],
     ),
     Scope(
         "menu",

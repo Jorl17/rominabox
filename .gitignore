@@ -24,3 +24,6 @@ __pycache__/
 
 # Per-worktree resource assignments; environment-local, never committed.
 worktree.local.json
+
+# Controller artwork staged for the builder UI; generated from the SVG sources.
+/desktop/public/controllers/

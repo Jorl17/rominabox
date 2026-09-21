@@ -160,3 +160,53 @@
     min-width: 540px;
   }
 }
+
+/* The controller, drawn from the same SVG as the artwork of the player and
+ * with the anchors we write in the exporter. Selecting a marker selects the
+ * same control as the table row, so the picture and the list are one editor
+ * and not two views that can disagree. */
+.controller-scene {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto 16px;
+  aspect-ratio: 960 / 380;
+  background: #0b1020;
+  border-radius: 6px;
+}
+.controller-leader {
+  stroke: #75b2e4;
+  stroke-width: 1.5;
+}
+.controller-ring {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+.controller-callout {
+  fill: #061a48;
+  stroke: #75b2e4;
+  stroke-width: 2;
+}
+.controller-callout-label {
+  fill: #ffffff;
+  font-size: 17px;
+  font-weight: 600;
+}
+.controller-callout-key {
+  fill: #b4e6ff;
+  font-size: 13px;
+}
+.controller-marker {
+  cursor: pointer;
+}
+.controller-marker:hover .controller-callout,
+.controller-marker:focus-visible .controller-callout {
+  stroke: #ffffff;
+}
+.controller-marker.selected .controller-callout {
+  stroke: #fff13d;
+}
+.controller-marker.selected .controller-ring {
+  stroke: #fff13d;
+}
