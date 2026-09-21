@@ -40,6 +40,7 @@ MARKER = (255, 255, 255, 255)
 STAGE = (32, 36, 44, 255)
 
 DESIGNS = ROOT / "desktop/designs.json"
+BASELINE = ROOT / "scripts/fixtures/overlay-digests.json"
 
 
 def _rgba(value: str) -> tuple[int, int, int, int]:
@@ -179,6 +180,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
     parser.add_argument(
+        "--record",
+        action="store_true",
+        help="rewrite the committed digests after a deliberate layout change",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="compare against the committed digests and fail on any difference",
+    )
+    parser.add_argument(
         "--palette",
         help="which declared palette to render; default is the first in designs.json",
     )
@@ -193,7 +204,42 @@ def main() -> int:
         digests[profile["id"]] = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
         print(f"{profile['id']:<14}{len(profile['controls']):>3} controls  {digests[profile['id']]}")
 
-    (arguments.output / "digests.json").write_text(json.dumps(digests, indent=2, sort_keys=True) + "\n")
+    rendered = json.dumps(digests, indent=2, sort_keys=True) + "\n"
+    (arguments.output / "digests.json").write_text(rendered)
+
+    # Without a comparison we only render pictures to inspect by eye. With
+    # the committed digests we can test that nothing moved.
+    if arguments.record:
+        BASELINE.parent.mkdir(parents=True, exist_ok=True)
+        BASELINE.write_text(rendered)
+        print(f"\nrecorded {len(digests)} digests -> {BASELINE}")
+        return 0
+    if arguments.check:
+        if arguments.palette:
+            raise SystemExit("--check compares the default palette; drop --palette")
+        if not BASELINE.exists():
+            raise SystemExit(f"no committed digests at {BASELINE}")
+        expected = json.loads(BASELINE.read_text())
+        moved = {
+            name: (expected.get(name), digest)
+            for name, digest in digests.items()
+            if expected.get(name) != digest
+        }
+        missing = sorted(set(expected) - set(digests))
+        if moved or missing:
+            for name, (was, now) in sorted(moved.items()):
+                print(f"CHANGED {name}: {was} -> {now}", file=sys.stderr)
+            for name in missing:
+                print(f"MISSING {name}: no longer rendered", file=sys.stderr)
+            print(
+                "\nA callout or anchor moved. If that was intended, look at the "
+                "renders first, then re-record with --record.",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"\n{len(illustrated)} profiles unchanged against {BASELINE.name}")
+        return 0
+
     print(f"\n{len(illustrated)} illustrated profiles -> {arguments.output}")
     return 0
 

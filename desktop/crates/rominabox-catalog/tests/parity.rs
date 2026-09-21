@@ -196,7 +196,14 @@ fn every_controller_profile_survives_with_its_exact_layout() {
             );
             // Anchors mean something only for an illustrated pad. We never draw
             // them in the generic grid, and the registry has 0,0 there.
-            if !image.is_empty() {
+            //
+            // A grouped control has no anchor of its own either. A stick's four
+            // directions and its click share the anchor of the group, because
+            // we draw one marker per stick in the scene, not five. We write
+            // that absence as 0 in the registry, so a comparison here would
+            // check the placeholder and not the declaration.
+            let grouped = ported_control.group.is_some();
+            if !image.is_empty() && !grouped {
                 assert_eq!(
                     (ported_control.x, ported_control.y),
                     (
