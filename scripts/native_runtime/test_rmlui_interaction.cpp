@@ -247,6 +247,30 @@ int main(int argc, char **argv)
             "overwriting a thumbnail reloads the same file without reopening the menu");
    }
 
+   /* We write the controls scene into menu.rml in the builder. This template
+    * still has the placeholder, and nothing in the bridge replaces it. We
+    * write the remap in rmlui.c, which is not linked here, so this does not
+    * prove that a choice is saved or applied. */
+   rib_rmlui_show_controls(true);
+   {
+      int image_x = 0;
+      int image_y = 0;
+      const std::string scene(rib_rmlui_test_text("controller-scene"));
+      CHECK(scene.find("control-") == std::string::npos,
+            "the player template has no generated control callouts");
+      CHECK(!rib_rmlui_element_center("controller-image", &image_x, &image_y),
+            "the player template has no controller illustration");
+      rib_rmlui_wire_device_picker();
+      rib_rmlui_set_device_picker(true, "megadrive6");
+      CHECK(std::string(rib_rmlui_test_text("controller-scene")) == scene,
+            "naming another pad does not redraw the controls scene");
+      CHECK(!rib_rmlui_element_center("controller-image", &image_x, &image_y),
+            "naming another pad does not add an illustration");
+      CHECK(!rib_rmlui_element_center(
+            "controls-device-option-megadrive6", &image_x, &image_y),
+            "picker options are export markup, not created by the bridge");
+   }
+
    rib_rmlui_shutdown();
    if (failures)
    {

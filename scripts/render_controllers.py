@@ -58,7 +58,21 @@ def renderer() -> str:
     return found
 
 
-PLACEMENT = ARTWORK / "placement.json"
+def placement_of(svg: Path) -> dict:
+    """Read each pad's placement from the file beside its drawing.
+
+    With one file for every controller, adding a pad would change a file that
+    every other pad depends on, which can cause merge conflicts and
+    accidental deletions.
+    """
+    beside = svg.with_suffix(".json")
+    if not beside.exists():
+        raise SystemExit(
+            f"{svg.name} has no placement at {beside.name}. Derive it from the "
+            "shipped PNG before rendering, or the drawing will land in the "
+            "wrong place and every button anchor will miss."
+        )
+    return json.loads(beside.read_text())
 
 
 def render(svg: Path, destination: Path, width: int, height: int) -> None:
@@ -74,7 +88,7 @@ def render(svg: Path, destination: Path, width: int, height: int) -> None:
     """
     from PIL import Image  # only needed to compose, and only by this tool
 
-    spot = json.loads(PLACEMENT.read_text())[svg.stem]
+    spot = placement_of(svg)
     natural = destination.with_name(f".{svg.stem}.natural.png")
     subprocess.run(
         [renderer(), "-h", str(spot["imageHeight"]), str(svg), "-o", str(natural)],
@@ -150,7 +164,7 @@ def main() -> int:
         destination.mkdir(parents=True, exist_ok=True)
         for svg in sources:
             shutil.copyfile(svg, destination / svg.name)
-        shutil.copyfile(PLACEMENT, destination / PLACEMENT.name)
+            shutil.copyfile(svg.with_suffix(".json"), destination / f"{svg.stem}.json")
         print(f"staged {len(sources)} SVGs and their placement -> {destination}")
         return 0
 

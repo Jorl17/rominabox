@@ -33,10 +33,12 @@ export type ControlProfile = {
  * console package moves here too.
  */
 
-type Placement = Record<
-  string,
-  { imageWidth: number; imageHeight: number; imageX: number; imageY: number }
->;
+type Spot = {
+  imageWidth: number;
+  imageHeight: number;
+  imageX: number;
+  imageY: number;
+};
 
 /** The player scene. These values come from the design, copied here to draw it. */
 const SCENE = { width: 960, height: 380 };
@@ -55,11 +57,13 @@ export function ControllerScene({
   selected: string | null;
   onSelect: (id: string) => void;
 }) {
-  const [placement, setPlacement] = useState<Placement | null>(null);
+  const stem = profile.image.replace(/\.png$/, "");
+  const [placement, setPlacement] = useState<Spot | null>(null);
 
   useEffect(() => {
+    if (!stem) return;
     let live = true;
-    fetch("/controllers/placement.json")
+    fetch(`/controllers/${stem}.json`)
       .then((response) => (response.ok ? response.json() : null))
       .then((value) => live && setPlacement(value))
       // A missing placement is not a serious error, because we may not have run
@@ -68,11 +72,10 @@ export function ControllerScene({
     return () => {
       live = false;
     };
-  }, []);
+  }, [stem]);
 
   if (!profile.image) return null;
-  const stem = profile.image.replace(/\.png$/, "");
-  const spot = placement?.[stem];
+  const spot = placement;
 
   // We authored the anchors against the artwork placed exactly as in the
   // player, so we apply the same placement here. We record it in the 1920x760
