@@ -2463,27 +2463,41 @@ mod tests {
             .then(|| core.component.clone())
         }
 
+        /// We check the capability for each binary. We build Genesis Plus GX
+        /// with its CHD flag set, so CHD support is in that core and we can
+        /// export Sega CD CHD discs. Another core, or a different build for
+        /// another target, can still lack a format, so the check follows the
+        /// binary and not the console.
         #[test]
-        fn sega_cd_chd_is_refused_because_its_core_lacks_chd() {
+        fn sega_cd_chd_works_now_that_the_core_is_built_with_chd() {
             assert_eq!(
-                refusal("segacd", "game.chd").as_deref(),
-                Some("genesis_plus_gx"),
-                "the prepared Genesis Plus GX build has no CHD support"
+                refusal("segacd", "game.chd"),
+                None,
+                "HAVE_CHD=1 is declared by the component, so this must not be refused"
             );
         }
 
         #[test]
-        fn sega_cd_accepts_the_formats_its_core_declares() {
-            assert_eq!(refusal("segacd", "game.cue"), None);
-            assert_eq!(refusal("segacd", "game.iso"), None);
+        fn every_disc_console_accepts_what_its_core_can_actually_decode() {
+            for (system, rom) in [
+                ("segacd", "game.cue"),
+                ("segacd", "game.chd"),
+                ("segacd", "game.iso"),
+                ("pcecd", "game.chd"),
+                ("ps1", "game.chd"),
+                ("ps1", "game.pbp"),
+            ] {
+                assert_eq!(refusal(system, rom), None, "{system} should accept {rom}");
+            }
         }
 
+        /// We still reject the case that the rule was written for.
         #[test]
-        fn a_core_that_declares_chd_is_not_refused() {
+        fn a_format_the_selected_core_cannot_decode_is_still_refused() {
             assert_eq!(
-                refusal("pcecd", "game.chd"),
-                None,
-                "PC Engine CD's core declares CHD, so the same extension is fine"
+                refusal("segacd", "game.rvz").as_deref(),
+                Some("genesis_plus_gx"),
+                "a format outside the core's decoded set must still be refused"
             );
         }
 

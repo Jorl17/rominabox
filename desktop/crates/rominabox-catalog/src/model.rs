@@ -152,6 +152,22 @@ pub struct ComponentProvenance {
     pub license_candidates: Vec<String>,
     #[serde(rename = "correspondsToArtifact")]
     pub corresponds_to_artifact: bool,
+    /// How we build it, for components we compile ourselves.
+    ///
+    /// What the artifact supports depends on these flags, so we keep them with
+    /// the component and not in a build script. For example, with
+    /// `HAVE_CHD=0` there is no CHD support for any Sega console.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub build: Option<BuildRecipe>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BuildRecipe {
+    pub makefile: String,
+    pub platform: String,
+    #[serde(default)]
+    pub flags: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

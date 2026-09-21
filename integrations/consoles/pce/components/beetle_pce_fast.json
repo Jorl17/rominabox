@@ -10,9 +10,9 @@
     "file": "beetle_pce_fast.txt"
   },
   "capabilities": [
+    "chd",
     "cue",
-    "iso",
-    "chd"
+    "m3u"
   ],
   "provenance": {
     "origin": "libretro-buildbot",

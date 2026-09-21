@@ -9,7 +9,13 @@
     "spdx": "GPL-2.0",
     "file": "pcsx_rearmed.txt"
   },
-  "capabilities": [],
+  "capabilities": [
+    "chd",
+    "cue",
+    "iso",
+    "m3u",
+    "pbp"
+  ],
   "provenance": {
     "origin": "libretro-buildbot",
     "repository": "libretro/pcsx_rearmed",

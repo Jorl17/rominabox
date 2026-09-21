@@ -57,6 +57,7 @@ def partitioned_components(target: str) -> tuple[dict, dict]:
             "licenses": tuple(provenance["licenseCandidates"]),
             "license": entry["license"]["spdx"],
             "corresponds_to_artifact": provenance["correspondsToArtifact"],
+            "build": provenance.get("build") or {},
         }
         if provenance["origin"] == "built":
             built[cid] = record
@@ -255,14 +256,18 @@ def main() -> None:
             with tarfile.open(archive) as package:
                 package.extractall(build_parent, filter="data")
         source = next(build_parent.iterdir())
+        # We take the recipe from the component. What the core can do depends on
+        # its build flags, so a component that requires CHD declares that flag
+        # itself, and we keep no constant for it in this file.
+        build = spec.get("build") or {}
         recipe = [
             "make",
             "-f",
-            "Makefile.libretro",
+            build.get("makefile", "Makefile.libretro"),
             "-j4",
-            "platform=osx",
+            f"platform={build.get('platform', 'osx')}",
             f"ARCHFLAGS=-arch {platform.machine()}",
-            "HAVE_CHD=0",
+            *build.get("flags", []),
             f"GIT_VERSION= {revision[:8]}",
         ]
         with (root.parent / f"build-{name}.log").open("w") as log:

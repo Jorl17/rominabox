@@ -17,6 +17,11 @@
     "licenseCandidates": [
       "COPYING"
     ],
-    "correspondsToArtifact": true
+    "correspondsToArtifact": true,
+    "build": {
+      "makefile": "Makefile.libretro",
+      "platform": "osx",
+      "flags": []
+    }
   }
 }

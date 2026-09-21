@@ -23,8 +23,10 @@
           "license": "Non-commercial",
           "licenseFile": "genesis_plus_gx.txt",
           "capabilities": [
+            "chd",
             "cue",
-            "iso"
+            "iso",
+            "m3u"
           ]
         }
       ],
@@ -61,8 +63,10 @@
           "license": "Non-commercial",
           "licenseFile": "genesis_plus_gx.txt",
           "capabilities": [
+            "chd",
             "cue",
-            "iso"
+            "iso",
+            "m3u"
           ]
         }
       ],
@@ -102,8 +106,10 @@
           "license": "Non-commercial",
           "licenseFile": "genesis_plus_gx.txt",
           "capabilities": [
+            "chd",
             "cue",
-            "iso"
+            "iso",
+            "m3u"
           ]
         }
       ],
@@ -130,8 +136,10 @@
           "license": "Non-commercial",
           "licenseFile": "genesis_plus_gx.txt",
           "capabilities": [
+            "chd",
             "cue",
-            "iso"
+            "iso",
+            "m3u"
           ]
         }
       ],
@@ -158,8 +166,10 @@
           "license": "Non-commercial",
           "licenseFile": "genesis_plus_gx.txt",
           "capabilities": [
+            "chd",
             "cue",
-            "iso"
+            "iso",
+            "m3u"
           ]
         }
       ],
@@ -361,7 +371,13 @@
           "component": "pcsx_rearmed",
           "license": "GPL-2.0",
           "licenseFile": "pcsx_rearmed.txt",
-          "capabilities": []
+          "capabilities": [
+            "chd",
+            "cue",
+            "iso",
+            "m3u",
+            "pbp"
+          ]
         }
       ],
       "firmware": [
@@ -585,9 +601,9 @@
           "license": "GPL-2.0",
           "licenseFile": "beetle_pce_fast.txt",
           "capabilities": [
+            "chd",
             "cue",
-            "iso",
-            "chd"
+            "m3u"
           ]
         }
       ],
@@ -619,9 +635,9 @@
           "license": "GPL-2.0",
           "licenseFile": "beetle_pce_fast.txt",
           "capabilities": [
+            "chd",
             "cue",
-            "iso",
-            "chd"
+            "m3u"
           ]
         }
       ],
