@@ -68,6 +68,14 @@ pub const DESIGN_DOCUMENTS: [&str; 4] = [
 
 /// Stage only the selected design's assets and apply the same palette/background
 /// for both an offscreen preview and an exported player.
+/// The folder of the staged files of a design in a prepared kit.
+///
+/// Each design has a separate folder in the kit, so we stage the set of files
+/// for the design id.
+pub fn staged_design(kit: &Path, design: &str) -> PathBuf {
+    kit.join("designs").join(design)
+}
+
 pub fn prepare_theme_assets(
     source: &Path,
     destination: &Path,

@@ -66,7 +66,9 @@ pub struct ExportRequest {
     pub output_dir: PathBuf,
     pub target: ExportTarget,
     /// A frozen, redistributable kit. It contains `bin/retroarch`, `cores/`,
-    /// `menu-assets/`, `autoconfig/`, `licenses/`, `sources/`, and `manifest.json`.
+    /// `designs/<id>/`, `menu-assets/`, `autoconfig/`, `licenses/`, `sources/`
+    /// and `manifest.json`. We put the documents of each design under its id
+    /// and share the controller artwork, because all designs show the same pads.
     #[serde(default)]
     pub runtime_kit: PathBuf,
     /// Optional explicit core path for development and future custom kits.
@@ -421,13 +423,15 @@ where
     let rom_relative = Path::new("content").join(&collected_content.entrypoint);
     if request.show_menu {
         crate::themes::prepare_theme_assets(
-            &request.runtime_kit.join("menu-assets"),
+            &crate::themes::staged_design(&request.runtime_kit, &request.theme),
             &resources.join("menu-assets"),
             &request.palette,
             request.background.as_deref(),
         )
         .map_err(|message| ExportError::new("stage", message))?;
         crate::themes::prepare_controls_assets(
+            // The controller artwork is the same for every design, because all
+            // designs show the same pads, so we keep it in the shared menu-assets.
             &request.runtime_kit.join("menu-assets"),
             &resources.join("menu-assets"),
             &request.system,
@@ -436,7 +440,7 @@ where
         .map_err(|message| ExportError::new("stage", message))?;
     } else if request.splash {
         crate::themes::prepare_splash_assets(
-            &request.runtime_kit.join("menu-assets"),
+            &crate::themes::staged_design(&request.runtime_kit, &request.theme),
             &resources.join("menu-assets"),
         )
         .map_err(|message| ExportError::new("stage", message))?;

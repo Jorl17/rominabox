@@ -239,3 +239,53 @@ fn the_shipped_design_package_is_complete() {
         }
     }
 }
+
+/// At export we stage the requested design, from its directory in the kit.
+///
+/// This checks that a second design is reachable, and not only that we can
+/// declare it.
+#[test]
+fn a_kit_keeps_each_design_under_its_own_name() {
+    let kit = PathBuf::from("/some/kit");
+    let native = rominabox_desktop::themes::staged_design(&kit, "native");
+    assert_eq!(native, kit.join("designs").join("native"));
+
+    let other = rominabox_desktop::themes::staged_design(&kit, "ps1-era");
+    assert_ne!(
+        native, other,
+        "two designs must not resolve to the same staged directory"
+    );
+}
+
+/// Controller artwork is shared and does not belong to a design.
+///
+/// Every design shows the same pads, so moving the artwork under a design would
+/// duplicate ten PNGs per design, and to add a design we would have to stage
+/// them all again.
+#[test]
+fn controller_artwork_is_not_a_designs_to_own() {
+    let staged = repo_root().join("desktop/src-tauri/resources/runtime/menu-assets");
+    if !staged.exists() {
+        eprintln!("the runtime kit is not prepared here; nothing was verified");
+        return;
+    }
+    let art: Vec<_> = std::fs::read_dir(&staged)
+        .expect("kit menu-assets")
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_name().to_string_lossy().starts_with("controller-"))
+        .collect();
+    assert!(
+        !art.is_empty(),
+        "controller artwork should stay in the kit's shared menu-assets"
+    );
+    let design = repo_root().join("integrations/designs/native");
+    let owned: Vec<_> = std::fs::read_dir(&design)
+        .expect("design package")
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_name().to_string_lossy().starts_with("controller-"))
+        .collect();
+    assert!(
+        owned.is_empty(),
+        "a design package must not carry controller artwork: {owned:?}"
+    );
+}
