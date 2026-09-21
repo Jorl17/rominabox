@@ -59,6 +59,9 @@ pub struct ControlDefinition {
     pub id: String,
     pub label: String,
     pub key: String,
+    /// We draw grouped controls as one marker (the catalog's Control::group).
+    #[serde(default)]
+    pub group: Option<String>,
     pub x: i32,
     pub y: i32,
     pub callout_x: i32,
@@ -199,9 +202,6 @@ fn validate_for_profile(profile: &ControlProfile, controls: &Controls) -> Result
                 profile.id
             ));
         }
-        if !is_stable_control_id(id) {
-            return Err(format!("invalid control id: {id}"));
-        }
         if let Some(label) = &value.label {
             validate_label(id, label)?;
         }
@@ -222,10 +222,11 @@ fn validate_for_profile(profile: &ControlProfile, controls: &Controls) -> Result
             }
         }
     }
+    // We do not check control ids again here. In the catalog we refuse to
+    // generate a registry with an unknown id, and a second copy of the list
+    // in this crate could only drift from the first. We still check labels
+    // and keys, because they are values and not identities.
     for control in &profile.controls {
-        if !is_stable_control_id(&control.id) {
-            return Err(format!("invalid controller declaration id: {}", control.id));
-        }
         validate_label(&control.id, &control.label)?;
         validate_key(&control.id, &control.key)?;
     }
@@ -241,27 +242,6 @@ fn normalize_system(value: &str) -> String {
     crate::systems::find(value)
         .map(|system| system.id.clone())
         .unwrap_or_else(|| value.trim().to_ascii_lowercase())
-}
-
-fn is_stable_control_id(value: &str) -> bool {
-    matches!(
-        value,
-        "up" | "down"
-            | "left"
-            | "right"
-            | "a"
-            | "b"
-            | "x"
-            | "y"
-            | "l"
-            | "r"
-            | "l2"
-            | "r2"
-            | "l3"
-            | "r3"
-            | "start"
-            | "select"
-    )
 }
 
 fn validate_label(id: &str, value: &str) -> Result<(), String> {

@@ -156,10 +156,9 @@ fn a_console_that_cannot_start_without_a_bios_demands_one() {
 /// declared. This test fails if we offer the analogue pad without them.
 #[test]
 fn the_analogue_pad_is_not_offered_while_it_declares_no_sticks() {
-    let digital = controls::profile_for_system("ps1").expect("a default pad");
-    assert_eq!(digital.id, "ps1");
-    assert_eq!(digital.image, "controller-ps1.png");
-    assert_eq!(digital.controls.len(), 14);
+    let pad = controls::profile_for_system("ps1").expect("a default pad");
+    assert_eq!(pad.id, "ps1");
+    assert_eq!(pad.image, "controller-ps1.png");
 
     let pick = |id: &str| -> Controls {
         let mut options = Controls::default();
@@ -290,5 +289,63 @@ fn an_image_with_no_subchannel_file_is_unaffected() {
         collected.files.len(),
         1,
         "nothing should be invented when there is no sibling to collect"
+    );
+}
+
+/// The PlayStation pad we ship is a complete DualShock.
+///
+/// We declare the device and all of its sticks, so the core gets stick values
+/// from the DualShock that we report as connected. The eight direction ids
+/// are spelled exactly as in RetroArch `configuration.c:333-340`, because
+/// `input_player1_<id>_axis` comes from the id, and a rename would unbind the
+/// stick with no error.
+#[test]
+fn the_playstation_pad_declares_both_sticks_and_the_dualshock_device() {
+    let pad = controls::profile_for_system("ps1").expect("a default pad");
+    assert_eq!(
+        pad.core_device,
+        Some(517),
+        "517 is what this core's own controller table calls \"dualshock\"; \
+         261 is \"analog\", a different peripheral"
+    );
+    let ids: Vec<&str> = pad.controls.iter().map(|c| c.id.as_str()).collect();
+    for direction in [
+        "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
+        "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus",
+    ] {
+        assert!(ids.contains(&direction), "{direction} must be bindable: {ids:?}");
+    }
+
+    // Each stick is one object on the illustration, so its directions and its
+    // click are in one group. Otherwise the scene would need twenty-four
+    // callouts, and both gutters are already full with seven 54 dp callouts.
+    for (click, group) in [("l3", "l_stick"), ("r3", "r_stick")] {
+        let members: Vec<&str> = pad
+            .controls
+            .iter()
+            .filter(|c| c.group.as_deref() == Some(group))
+            .map(|c| c.id.as_str())
+            .collect();
+        assert_eq!(members.len(), 5, "{group} is four directions plus its click: {members:?}");
+        assert!(members.contains(&click), "{click} belongs to {group}");
+    }
+}
+
+/// The existing callouts keep their positions.
+///
+/// The sticks have no callout position, so adding them leaves every button at
+/// its anchor. If this count changes, someone has laid out the gutters again,
+/// and we must check the artwork of every console again.
+#[test]
+fn adding_sticks_did_not_disturb_the_button_callouts() {
+    let pad = controls::profile_for_system("ps1").expect("a default pad");
+    let with_callouts = pad
+        .controls
+        .iter()
+        .filter(|c| (c.callout_x, c.callout_y) != (0, 0))
+        .count();
+    assert_eq!(
+        with_callouts, 14,
+        "the fourteen button callouts are unchanged; sticks are drawn in-scene"
     );
 }

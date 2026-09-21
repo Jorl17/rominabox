@@ -36,12 +36,31 @@ FONT = ROOT / "desktop/assets/menu/Silkscreen-Regular.ttf"
 
 SCENE = (960, 380)
 SCALE = 2
-LEADER = (180, 230, 255, 255)
 MARKER = (255, 255, 255, 255)
-CALLOUT_FILL = (6, 26, 72, 255)
-CALLOUT_EDGE = (117, 178, 228, 255)
-ASSIGNMENT = (180, 230, 255, 255)
 STAGE = (32, 36, 44, 255)
+
+DESIGNS = ROOT / "desktop/designs.json"
+
+
+def _rgba(value: str) -> tuple[int, int, int, int]:
+    value = value.lstrip("#")
+    return (int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16), 255)
+
+
+def palette(name: str | None) -> dict:
+    """Return the declared colours, so that a render matches an export.
+
+    We read the colours from `designs.json`, so a render has the palette the
+    author chose, and a change to the palette appears in the picture.
+    """
+    declared = json.loads(DESIGNS.read_text())["palettes"]
+    if name is None:
+        return declared[0]
+    for entry in declared:
+        if entry["id"] == name:
+            return entry
+    available = ", ".join(entry["id"] for entry in declared)
+    raise SystemExit(f"unknown palette '{name}'; declared: {available}")
 
 
 def _font(size: int) -> ImageFont.ImageFont:
@@ -53,11 +72,16 @@ def _font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def render(profile: dict, destination: Path) -> Path:
+def render(profile: dict, destination: Path, colours: dict) -> Path:
     """Draw one profile's overlay over its illustration."""
     image = ARTWORK / profile["image"]
     if not image.exists():
         raise FileNotFoundError(f"{profile['id']} declares {profile['image']}, which is missing")
+
+    leader = _rgba(colours["muted"])
+    callout_fill = _rgba(colours["surface"])
+    callout_edge = _rgba(colours["edge"])
+    assignment = _rgba(colours["muted"])
 
     canvas = Image.new("RGBA", (SCENE[0] * SCALE, SCENE[1] * SCALE), STAGE)
     canvas.alpha_composite(Image.open(image).convert("RGBA"))
@@ -66,7 +90,18 @@ def render(profile: dict, destination: Path) -> Path:
     def s(value: float) -> int:
         return round(value * SCALE)
 
+    # A group is one object on the pad. We draw one marker for its members,
+    # at the anchored member, and list them together in a strip under the
+    # illustration instead of giving each a place in a gutter. Seven 54 dp
+    # callouts fill each gutter, so four directions per stick would cover
+    # the callouts of other buttons.
+    groups: dict[str, list[dict]] = {}
     for control in profile["controls"]:
+        if control.get("group"):
+            groups.setdefault(control["group"], []).append(control)
+    ungrouped = [c for c in profile["controls"] if not c.get("group")]
+
+    for control in ungrouped:
         x, y = control["x"], control["y"]
         callout_x, callout_y = control["calloutX"], control["calloutY"]
         # The callout's inner edge is its right side in the left gutter and its
@@ -74,24 +109,66 @@ def render(profile: dict, destination: Path) -> Path:
         edge = callout_x + 200 if callout_x < 400 else callout_x
         draw.rectangle(
             [s(min(edge, x)), s(callout_y + 28) - 1, s(max(edge, x)), s(callout_y + 28) + 1],
-            fill=LEADER,
+            fill=leader,
         )
         draw.rectangle(
             [s(x) - 1, s(min(callout_y + 28, y)), s(x) + 1, s(max(callout_y + 28, y))],
-            fill=LEADER,
+            fill=leader,
         )
         draw.ellipse([s(x - 21), s(y - 21), s(x + 21), s(y + 21)], outline=MARKER, width=3)
 
-    for control in profile["controls"]:
+    for control in ungrouped:
         callout_x, callout_y = control["calloutX"], control["calloutY"]
         draw.rectangle(
             [s(callout_x), s(callout_y), s(callout_x + 196), s(callout_y + 54)],
-            fill=CALLOUT_FILL,
-            outline=CALLOUT_EDGE,
+            fill=callout_fill,
+            outline=callout_edge,
             width=3,
         )
         draw.text((s(callout_x + 10), s(callout_y + 5)), control["label"], font=_font(s(18)), fill=MARKER)
-        draw.text((s(callout_x + 10), s(callout_y + 30)), control["key"], font=_font(s(14)), fill=ASSIGNMENT)
+        draw.text((s(callout_x + 10), s(callout_y + 30)), control["key"], font=_font(s(14)), fill=assignment)
+
+    # One ring on the drawn stick, and one entry in the strip with its directions.
+    if groups:
+        strip_w, strip_h, gap = 236, 62, 16
+        total = len(groups) * strip_w + (len(groups) - 1) * gap
+        left = (SCENE[0] - total) // 2
+        top = SCENE[1] - strip_h - 12
+        for index, (name, members) in enumerate(sorted(groups.items())):
+            anchor = next((m for m in members if m["x"] or m["y"]), None)
+            box_x = left + index * (strip_w + gap)
+            if anchor:
+                ax, ay = anchor["x"], anchor["y"]
+                draw.ellipse(
+                    [s(ax - 21), s(ay - 21), s(ax + 21), s(ay + 21)],
+                    outline=MARKER,
+                    width=3,
+                )
+                draw.rectangle(
+                    [s(ax) - 1, s(ay), s(ax) + 1, s(top)],
+                    fill=leader,
+                )
+                draw.rectangle(
+                    [s(min(ax, box_x + strip_w // 2)), s(top) - 1,
+                     s(max(ax, box_x + strip_w // 2)), s(top) + 1],
+                    fill=leader,
+                )
+            draw.rectangle(
+                [s(box_x), s(top), s(box_x + strip_w), s(top + strip_h)],
+                fill=callout_fill,
+                outline=callout_edge,
+                width=3,
+            )
+            # The stick's name, then its four directions on one line. On focus
+            # and hover we open a fuller list, with one binding per line.
+            title = name.replace("_", " ").upper()
+            directions = " ".join(
+                m["key"].upper()
+                for m in members
+                if m["id"].endswith(("_plus", "_minus"))
+            )
+            draw.text((s(box_x + 12), s(top + 8)), title, font=_font(s(18)), fill=MARKER)
+            draw.text((s(box_x + 12), s(top + 34)), directions, font=_font(s(14)), fill=assignment)
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     canvas.convert("RGB").save(destination)
@@ -101,13 +178,18 @@ def render(profile: dict, destination: Path) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
+    parser.add_argument(
+        "--palette",
+        help="which declared palette to render; default is the first in designs.json",
+    )
     arguments = parser.parse_args()
 
+    colours = palette(arguments.palette)
     registry = json.loads(CONTROLS.read_text())
     illustrated = [p for p in registry["profiles"] if p.get("image")]
     digests = {}
     for profile in illustrated:
-        path = render(profile, arguments.output / f"{profile['id']}.png")
+        path = render(profile, arguments.output / f"{profile['id']}.png", colours)
         digests[profile["id"]] = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
         print(f"{profile['id']:<14}{len(profile['controls']):>3} controls  {digests[profile['id']]}")
 

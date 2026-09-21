@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "ps1",
-  "name": "PlayStation",
+  "name": "PlayStation \u00b7 DualShock",
   "coreDevice": 517,
   "presentation": {
     "kind": "illustrated",
@@ -133,6 +133,70 @@
       "y": 156,
       "calloutX": 744,
       "calloutY": 324
+    },
+    {
+      "id": "l_y_minus",
+      "label": "Left stick up",
+      "key": "t",
+      "group": "l_stick"
+    },
+    {
+      "id": "l_y_plus",
+      "label": "Left stick down",
+      "key": "g",
+      "group": "l_stick"
+    },
+    {
+      "id": "l_x_minus",
+      "label": "Left stick left",
+      "key": "f",
+      "group": "l_stick"
+    },
+    {
+      "id": "l_x_plus",
+      "label": "Left stick right",
+      "key": "h",
+      "group": "l_stick"
+    },
+    {
+      "id": "l3",
+      "label": "Left stick press",
+      "key": "1",
+      "group": "l_stick",
+      "x": 405,
+      "y": 226
+    },
+    {
+      "id": "r_y_minus",
+      "label": "Right stick up",
+      "key": "i",
+      "group": "r_stick"
+    },
+    {
+      "id": "r_y_plus",
+      "label": "Right stick down",
+      "key": "k",
+      "group": "r_stick"
+    },
+    {
+      "id": "r_x_minus",
+      "label": "Right stick left",
+      "key": "j",
+      "group": "r_stick"
+    },
+    {
+      "id": "r_x_plus",
+      "label": "Right stick right",
+      "key": "l",
+      "group": "r_stick"
+    },
+    {
+      "id": "r3",
+      "label": "Right stick press",
+      "key": "2",
+      "group": "r_stick",
+      "x": 547,
+      "y": 226
     }
   ],
   "presentationOrder": 8

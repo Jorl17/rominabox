@@ -16,9 +16,17 @@ pub const SCHEMA_VERSION: u32 = 1;
 /// The logical controls we can bind a runtime input to. This is the fixed
 /// RetroPad vocabulary. A profile may use any subset, in any order, but may
 /// not invent an id, because we map these to emulator inputs in an export.
+///
+/// It must match `controls::is_stable_control_id` in the desktop crate, which
+/// we validate against in the player. We check that the two lists are the
+/// same in `the_two_control_vocabularies_agree`.
 pub const CONTROL_IDS: &[&str] = &[
     "up", "down", "left", "right", "b", "a", "y", "x", "l", "r", "l2", "r2", "select", "start",
     "l3", "r3",
+    // The analogue directions, spelled as in the RetroArch declarations in
+    // configuration.c:333-340. We bind each one as `input_player1_<id>_axis`.
+    "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
+    "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus",
 ];
 
 /// Whether we expect a build to include this console.
@@ -80,6 +88,13 @@ pub struct Control {
     pub id: String,
     pub label: String,
     pub key: String,
+    /// We present the controls in one group as one thing.
+    ///
+    /// A stick is four binds (`l_x_plus` and the others) but one object on the
+    /// pad. Without groups the scene would need twenty-four callouts, and eight
+    /// per gutter do not fit a 380 dp frame.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub x: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

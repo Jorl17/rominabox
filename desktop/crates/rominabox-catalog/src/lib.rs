@@ -233,6 +233,7 @@ impl Catalog {
                     id: (*id).to_string(),
                     label: (*label).to_string(),
                     key: (*key).to_string(),
+                    group: None,
                     x: None,
                     y: None,
                     callout_x: None,
@@ -404,15 +405,38 @@ impl Catalog {
                     // Without anchors we would draw an illustrated pad's rings
                     // at the origin, which looks like a rendering bug and not
                     // like an error in the declaration.
+                    // A group is one object on the pad, so it has one anchor
+                    // for all its members. A stick's four directions and its
+                    // click all point at the same drawn stick.
+                    let mut anchored_groups: BTreeSet<&str> = BTreeSet::new();
                     for control in &profile.controls {
-                        if control.x.is_none() || control.y.is_none() {
+                        if control.x.is_some() && control.y.is_some() {
+                            if let Some(group) = &control.group {
+                                anchored_groups.insert(group.as_str());
+                            }
+                            continue;
+                        }
+                        if control.group.is_none() {
                             problems.push(Diagnostic::new(
                                 "controller.anchor_missing",
                                 &package,
                                 format!("{id}.controls.{}", control.id),
-                                "an illustrated profile needs x and y for every control",
+                                "an illustrated profile needs x and y for every ungrouped control",
                             ));
                         }
+                    }
+                    let declared_groups: BTreeSet<&str> = profile
+                        .controls
+                        .iter()
+                        .filter_map(|control| control.group.as_deref())
+                        .collect();
+                    for group in declared_groups.difference(&anchored_groups) {
+                        problems.push(Diagnostic::new(
+                            "controller.group_unanchored",
+                            &package,
+                            format!("{id}.controls[group={group}]"),
+                            "a group on an illustrated profile needs exactly one member carrying x and y",
+                        ));
                     }
                 }
                 Presentation::Generic => {}
@@ -706,7 +730,7 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
                 } else {
                     (control.callout_x.unwrap_or(0), control.callout_y.unwrap_or(0))
                 };
-                json!({
+                let mut rendered = json!({
                     "id": control.id,
                     "label": control.label,
                     "key": control.key,
@@ -714,7 +738,13 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
                     "y": control.y.unwrap_or(0),
                     "calloutX": callout_x,
                     "calloutY": callout_y,
-                })
+                });
+                // We leave the field out when it is absent, so the registry
+                // entry of a profile without groups has no group field.
+                if let Some(group) = &control.group {
+                    rendered["group"] = json!(group);
+                }
+                rendered
             })
             .collect();
         entry.insert("controls".into(), Value::Array(controls));
