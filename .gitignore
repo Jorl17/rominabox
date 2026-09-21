@@ -21,3 +21,6 @@ __pycache__/
 /desktop/src-tauri/resources/preview/
 /desktop/src-tauri/resources/bin/
 /desktop/src-tauri/resources/skills/
+
+# Per-worktree resource assignments; environment-local, never committed.
+worktree.local.json

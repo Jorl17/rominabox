@@ -64,6 +64,19 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/menu_interaction.py"), "--check"],
     ),
     Scope(
+        "worktree",
+        "isolation between parallel checkouts: the shared git dir, the lock, refusing the canonical tree",
+        "that a real worktree builds or runs; it creates nothing outside a temporary directory",
+        ["python3", str(ROOT / "scripts/test_worktree.py")],
+    ),
+    Scope(
+        "bridge",
+        "the RmlUi bridge itself, compiled with a dummy renderer: actions, hover, focus, capture",
+        "anything in rmlui.c, which is not linked here, so control binding and keyboard order are untested",
+        ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
+        slow=True,
+    ),
+    Scope(
         "overlays",
         "that no controller callout or button anchor moved, across every illustrated profile",
         "that the positions are correct — only that they are unchanged since a human looked",
