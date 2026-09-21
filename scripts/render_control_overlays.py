@@ -34,7 +34,23 @@ CONTROLS = ROOT / "desktop/controls.json"
 ARTWORK = ROOT / "desktop/assets/controllers"
 FONT = ROOT / "integrations/designs/native/Silkscreen-Regular.ttf"
 
-SCENE = (960, 380)
+DESIGN = ROOT / "integrations/designs/native/design.json"
+
+
+def metrics() -> dict:
+    """Return the scene's geometry from its design.
+
+    We read these values from the design's stylesheet, so a change to the
+    frame appears in the render that a person reviews.
+    """
+    return json.loads(DESIGN.read_text())["metrics"]
+
+
+_METRICS = metrics()
+SCENE = (_METRICS["scene"]["width"], _METRICS["scene"]["height"])
+MARKER_RADIUS = _METRICS["marker"]["diameter"] // 2
+CALLOUT = (_METRICS["callout"]["width"], _METRICS["callout"]["height"])
+GROUP = _METRICS["group"]
 SCALE = 2
 MARKER = (255, 255, 255, 255)
 STAGE = (32, 36, 44, 255)
@@ -116,12 +132,16 @@ def render(profile: dict, destination: Path, colours: dict) -> Path:
             [s(x) - 1, s(min(callout_y + 28, y)), s(x) + 1, s(max(callout_y + 28, y))],
             fill=leader,
         )
-        draw.ellipse([s(x - 21), s(y - 21), s(x + 21), s(y + 21)], outline=MARKER, width=3)
+        draw.ellipse(
+            [s(x - MARKER_RADIUS), s(y - MARKER_RADIUS),
+             s(x + MARKER_RADIUS), s(y + MARKER_RADIUS)],
+            outline=MARKER, width=3)
 
     for control in ungrouped:
         callout_x, callout_y = control["calloutX"], control["calloutY"]
         draw.rectangle(
-            [s(callout_x), s(callout_y), s(callout_x + 196), s(callout_y + 54)],
+            [s(callout_x), s(callout_y),
+             s(callout_x + CALLOUT[0]), s(callout_y + CALLOUT[1])],
             fill=callout_fill,
             outline=callout_edge,
             width=3,
@@ -131,17 +151,18 @@ def render(profile: dict, destination: Path, colours: dict) -> Path:
 
     # One ring on the drawn stick, and one entry in the strip with its directions.
     if groups:
-        strip_w, strip_h, gap = 236, 62, 16
+        strip_w, strip_h, gap = GROUP["width"], GROUP["height"], GROUP["gap"]
         total = len(groups) * strip_w + (len(groups) - 1) * gap
         left = (SCENE[0] - total) // 2
-        top = SCENE[1] - strip_h - 12
+        top = SCENE[1] - strip_h - GROUP["bottomMargin"]
         for index, (name, members) in enumerate(sorted(groups.items())):
             anchor = next((m for m in members if m["x"] or m["y"]), None)
             box_x = left + index * (strip_w + gap)
             if anchor:
                 ax, ay = anchor["x"], anchor["y"]
                 draw.ellipse(
-                    [s(ax - 21), s(ay - 21), s(ax + 21), s(ay + 21)],
+                    [s(ax - MARKER_RADIUS), s(ay - MARKER_RADIUS),
+                     s(ax + MARKER_RADIUS), s(ay + MARKER_RADIUS)],
                     outline=MARKER,
                     width=3,
                 )

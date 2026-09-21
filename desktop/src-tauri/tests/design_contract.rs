@@ -289,3 +289,44 @@ fn controller_artwork_is_not_a_designs_to_own() {
         "a design package must not carry controller artwork: {owned:?}"
     );
 }
+
+/// The scene geometry comes from one place.
+///
+/// We declare the scene size, marker diameter and callout size once, and read
+/// them in the design's stylesheet and in scripts/render_control_overlays.py,
+/// the renderer we use for review before a build, so the frame is the same.
+#[test]
+fn the_scene_geometry_is_declared_once_and_read_by_both_consumers() {
+    let design = repo_root().join("integrations/designs/native/design.json");
+    let declared: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&design).expect("design.json"))
+            .expect("valid JSON");
+    let metrics = &declared["metrics"];
+    for (group, key) in [
+        ("scene", "width"),
+        ("scene", "height"),
+        ("marker", "diameter"),
+        ("callout", "width"),
+        ("callout", "height"),
+        ("group", "width"),
+        ("group", "height"),
+    ] {
+        assert!(
+            metrics[group][key].as_i64().is_some(),
+            "the design must declare metrics.{group}.{key}"
+        );
+    }
+
+    // We must read them in the renderer and not repeat them there. A literal
+    // scene size in the renderer could silently drift from the design.
+    let renderer = std::fs::read_to_string(repo_root().join("scripts/render_control_overlays.py"))
+        .expect("the overlay renderer");
+    assert!(
+        renderer.contains("design.json"),
+        "the overlay renderer must read the design's declared metrics"
+    );
+    assert!(
+        !renderer.contains("SCENE = (960, 380)"),
+        "the overlay renderer has a hardcoded scene size again"
+    );
+}

@@ -15,5 +15,24 @@
       "license": "Silkscreen-OFL.txt",
       "family": "Silkscreen"
     }
-  ]
+  ],
+  "metrics": {
+    "scene": {
+      "width": 960,
+      "height": 380
+    },
+    "marker": {
+      "diameter": 42
+    },
+    "callout": {
+      "width": 196,
+      "height": 54
+    },
+    "group": {
+      "width": 236,
+      "height": 62,
+      "gap": 16,
+      "bottomMargin": 12
+    }
+  }
 }

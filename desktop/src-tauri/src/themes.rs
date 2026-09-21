@@ -66,6 +66,47 @@ pub const DESIGN_DOCUMENTS: [&str; 4] = [
     "Silkscreen-OFL.txt",
 ];
 
+/// The geometry of the scene, written from the declaration in the design.
+///
+/// We append the scene size, marker diameter, callout size and stick strip
+/// here from the declaration, like the palette block, so the frame is the same
+/// in the stylesheet and in `scripts/render_control_overlays.py`.
+fn scene_metrics_rules(design: &Path) -> Result<String, String> {
+    let declaration = design.join("design.json");
+    let Ok(text) = fs::read_to_string(&declaration) else {
+        // A staged kit contains the documents but may lack the declaration,
+        // and then we keep the values in the stylesheet.
+        return Ok(String::new());
+    };
+    let declared: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("{}: {e}", declaration.display()))?;
+    let Some(metrics) = declared.get("metrics") else {
+        return Ok(String::new());
+    };
+    let at = |group: &str, key: &str| -> Result<i64, String> {
+        metrics[group][key]
+            .as_i64()
+            .ok_or_else(|| format!("design metrics are missing {group}.{key}"))
+    };
+    let scene_width = at("scene", "width")?;
+    let scene_height = at("scene", "height")?;
+    let marker = at("marker", "diameter")?;
+    Ok(format!(
+        r#"
+#controller-scene {{ width: {scene_width}dp; height: {scene_height}dp; }}
+#controller-image {{ width: {scene_width}dp; height: {scene_height}dp; }}
+.control-hit {{ width: {marker}dp; height: {marker}dp; border-radius: {}dp; }}
+.control-callout {{ width: {}dp; height: {}dp; }}
+.control-group {{ width: {}dp; height: {}dp; }}
+"#,
+        marker / 2,
+        at("callout", "width")?,
+        at("callout", "height")?,
+        at("group", "width")?,
+        at("group", "height")?,
+    ))
+}
+
 /// Stage only the selected design's assets and apply the same palette/background
 /// for both an offscreen preview and an exported player.
 /// The folder of the staged files of a design in a prepared kit.
@@ -98,6 +139,7 @@ pub fn prepare_theme_assets(
             .map_err(|e| format!("Could not prepare menu asset {name}: {e}"))?;
     }
     let mut css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
+    css.push_str(&scene_metrics_rules(source)?);
     css.push_str(&format!(r#"
 body {{ background-color: {background}; }}
 #screen {{ background-color: {screen}; border-color: {edge}; }}
