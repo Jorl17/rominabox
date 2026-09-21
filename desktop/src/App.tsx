@@ -422,6 +422,9 @@ export function App() {
   useEffect(() => {
     setSavedProject("");
   }, [draft, icon, background, palette, menuSounds, controls, firmware]);
+  const soundCharacter =
+    designs.soundPacks.find((pack) => pack.id === menuSounds)?.description ??
+    "";
   useEffect(
     () => () => {
       imageURLs.current.forEach((url) => URL.revokeObjectURL(url));
@@ -891,16 +894,23 @@ export function App() {
                           onChange={(e) => setMenuSounds(e.target.value)}
                         >
                           {designs.soundPacks.map((pack) => (
-                            <option value={pack.id} key={pack.id}>
+                            <option
+                              value={pack.id}
+                              key={pack.id}
+                              title={pack.description}
+                            >
                               {pack.name}
                             </option>
                           ))}
                         </select>
                         <MenuSoundPreview pack={menuSounds} />
                         <Help>
-                          Short cues for navigation, confirm and back. Only the
-                          selected pack is bundled.
+                          Each pack is one complete set of navigation, confirm
+                          and back cues. Only the selected pack is bundled.
                         </Help>
+                        <span className="sound-character">
+                          {soundCharacter}
+                        </span>
                       </div>
 
                       <div className="customize-row">

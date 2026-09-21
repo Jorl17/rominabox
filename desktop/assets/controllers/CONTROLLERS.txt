@@ -1,10 +1,44 @@
-Original controller illustrations created for ROM-in-a-Box, 2026.
+Controller illustrations.
 
-The SVG sources and generated PNGs were drawn for this project. They do not
-contain artwork copied from emulator applications, manufacturer photographs,
-or manufacturer logos. Console names identify the compatible controls.
+controller-megadrive.png / .svg      (Mega Drive 3-button, also Sega CD)
+controller-megadrive6.png / .svg     (Mega Drive 6-button)
+controller-nes.png / .svg            (Nintendo Entertainment System)
+controller-snes.png / .svg           (Super Nintendo)
+controller-mastersystem.png / .svg   (Master System, also SG-1000)
 
-No third-party artwork license is required for these original project assets.
+These five are adapted from ES-DE (EmulationStation Desktop Edition),
+resources/graphics/controllers/, which is distributed under the MIT License:
 
-Regenerate each runtime PNG from its SVG with librsvg at 1920 x 760 pixels.
+  Copyright (c) 2024-2026 Northwestern Software AB
+  Copyright (c) 2020-2024 Leon Styhre
+  Copyright (c) 2014 Alec Lofquist
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+Adaptation: manufacturer wordmarks (SEGA, Nintendo, Super Nintendo, and the
+"Mega Drive Control Pad" caption) were removed. Console names identify only the
+compatible controls; functional button labels (A/B/C, 1/2, etc.) are retained.
+
+controller-gameboy.png / .svg
+Original illustration created for ROM-in-a-Box. No third-party artwork.
+
+Runtime PNGs are 1920x760 (2x of the 960x380 menu scene), rasterised from the
+SVG with librsvg. Regenerate with:
+  rsvg-convert -w 1920 -h 760 -o controller-<name>.png controller-<name>.svg
 This is a developer asset operation; exported applications do not require it.

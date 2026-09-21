@@ -47,15 +47,48 @@
   "soundPacks": [
     {
       "id": "off",
-      "name": "Off"
+      "name": "Off",
+      "description": "No menu audio is bundled or enabled."
     },
     {
-      "id": "pulse",
-      "name": "Pulse"
+      "id": "blip",
+      "name": "Blip",
+      "description": "Plain 4-bit handheld pulse. The unadorned menu tick."
     },
     {
-      "id": "grain",
-      "name": "Grain"
+      "id": "arpeggio",
+      "name": "Arpeggio",
+      "description": "Quick note runs on confirm. The busiest, most chiptune set."
+    },
+    {
+      "id": "square",
+      "name": "Square",
+      "description": "Thin, bright square-wave chip. Arcade cabinet, not FM."
+    },
+    {
+      "id": "arcade",
+      "name": "Arcade",
+      "description": "Rising coin-op confirm with quick sweeps on move."
+    },
+    {
+      "id": "bell",
+      "name": "Bell",
+      "description": "Bright, musical FM bell. Clean and tuneful."
+    },
+    {
+      "id": "clang",
+      "name": "Clang",
+      "description": "Metallic, inharmonic FM. Sharp and aggressive."
+    },
+    {
+      "id": "thud",
+      "name": "Thud",
+      "description": "Low FM body under a bright tick. Chunky and bass-forward."
+    },
+    {
+      "id": "warm",
+      "name": "Warm",
+      "description": "Mellow FM at a low index. Rounded, with no hard edge."
     }
   ]
 }

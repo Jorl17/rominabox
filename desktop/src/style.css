@@ -902,6 +902,7 @@ main {
 .sound-choice {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 18px;
   font-size: 14px;
@@ -911,6 +912,17 @@ main {
   padding: 8px 28px 8px 10px;
   border: 1px solid var(--ink);
   background: white;
+}
+/* The description of the selected pack, on a separate line under the picker. */
+.sound-character {
+  flex-basis: 100%;
+  margin-top: -4px;
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+.sound-character:empty {
+  display: none;
 }
 
 .splash-choice {

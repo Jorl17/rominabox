@@ -21,11 +21,18 @@ pub struct Palette {
     pub muted: String,
     pub focus: String,
 }
+/// One pack is one complete set of the four menu cues, `up`, `down`, `ok` and
+/// `cancel`. Packs have no variants or layers. `off` is the one entry with no
+/// assets, and we write it as `audio_enable_menu=false` at export.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SoundPack {
     pub id: String,
     pub name: String,
+    pub description: String,
 }
+
+/// The basenames of menu sounds in RetroArch. A pack must have all of them.
+pub const SOUND_CUES: [&str; 4] = ["up.wav", "down.wav", "ok.wav", "cancel.wav"];
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Registry {
@@ -153,7 +160,7 @@ pub fn prepare_sound_assets(source: &Path, destination: &Path, pack: &str) -> Re
         return Ok(());
     }
     fs::create_dir_all(destination).map_err(|e| e.to_string())?;
-    for name in ["ok.wav", "cancel.wav", "up.wav", "down.wav"] {
+    for name in SOUND_CUES {
         fs::copy(source.join(pack).join(name), destination.join(name))
             .map_err(|e| e.to_string())?;
     }
@@ -277,4 +284,100 @@ pub fn prepare_splash_assets(source: &Path, destination: &Path) -> Result<(), St
             .map_err(|e| format!("Could not prepare splash asset {from}: {e}"))?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    fn sound_source() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../assets/menu-sounds")
+    }
+
+    /// A pack is one complete set that we can play. We declare no partial
+    /// pack, and ship no assets that the author cannot pick.
+    #[test]
+    fn every_declared_sound_pack_is_one_complete_cue_set() {
+        let declared: BTreeSet<String> = registry()
+            .unwrap()
+            .sound_packs
+            .into_iter()
+            .map(|pack| pack.id)
+            .filter(|id| id != "off")
+            .collect();
+        assert!(!declared.is_empty(), "no menu sound packs are declared");
+
+        let source = sound_source();
+        let mut present = BTreeSet::new();
+        for entry in fs::read_dir(&source).expect("menu sound assets") {
+            let entry = entry.expect("menu sound entry");
+            if entry.file_type().expect("file type").is_dir() {
+                present.insert(entry.file_name().to_string_lossy().into_owned());
+            }
+        }
+        assert_eq!(
+            declared, present,
+            "declared packs and shipped pack directories must match exactly"
+        );
+
+        for id in &declared {
+            for cue in SOUND_CUES {
+                let path = source.join(id).join(cue);
+                let bytes = fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+                assert!(bytes.len() > 44, "{} is not a usable WAV", path.display());
+                assert_eq!(&bytes[0..4], b"RIFF", "{} is not RIFF", path.display());
+                assert_eq!(&bytes[8..12], b"WAVE", "{} is not WAVE", path.display());
+                // 44100 Hz, 16-bit, mono, the format we give the RetroArch mixer.
+                assert_eq!(
+                    u16::from_le_bytes([bytes[22], bytes[23]]),
+                    1,
+                    "{} is not mono",
+                    path.display()
+                );
+                assert_eq!(
+                    u32::from_le_bytes([bytes[24], bytes[25], bytes[26], bytes[27]]),
+                    44_100,
+                    "{} is not 44100 Hz",
+                    path.display()
+                );
+                assert_eq!(
+                    u16::from_le_bytes([bytes[34], bytes[35]]),
+                    16,
+                    "{} is not 16-bit",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    /// In the picker we show a name and a description for every pack, `off` included.
+    #[test]
+    fn every_sound_pack_is_described_for_the_picker() {
+        for pack in registry().unwrap().sound_packs {
+            assert!(!pack.name.trim().is_empty(), "{} has no name", pack.id);
+            assert!(
+                !pack.description.trim().is_empty(),
+                "{} has no description",
+                pack.id
+            );
+            assert!(
+                !pack.id.contains("--"),
+                "{} keeps an authoring variant separator",
+                pack.id
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_sound_packs_are_rejected_before_staging() {
+        let temporary = std::env::temp_dir().join(format!(
+            "rominabox-sound-pack-{}",
+            std::process::id()
+        ));
+        let error = prepare_sound_assets(&sound_source(), &temporary, "pulse")
+            .expect_err("retired pack must not stage");
+        assert!(error.contains("available menu sound pack"), "{error}");
+        assert!(!temporary.exists(), "rejection must not create output");
+    }
 }

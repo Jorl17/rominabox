@@ -1,40 +1,49 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, Square } from "lucide-react";
 
-import grainCancel from "../assets/menu-sounds/grain/cancel.wav";
-import grainDown from "../assets/menu-sounds/grain/down.wav";
-import grainOk from "../assets/menu-sounds/grain/ok.wav";
-import grainUp from "../assets/menu-sounds/grain/up.wav";
-import pulseCancel from "../assets/menu-sounds/pulse/cancel.wav";
-import pulseDown from "../assets/menu-sounds/pulse/down.wav";
-import pulseOk from "../assets/menu-sounds/pulse/ok.wav";
-import pulseUp from "../assets/menu-sounds/pulse/up.wav";
 import "./MenuSoundPreview.css";
 
-const CUES = ["up", "down", "ok", "cancel"] as const;
+export const CUES = ["up", "down", "ok", "cancel"] as const;
 type Cue = (typeof CUES)[number];
 
 /** One short navigation / confirm / cancel demonstration. */
 const PREVIEW_SEQUENCE: readonly Cue[] = ["up", "down", "ok", "cancel"];
 
-const SOUND_URLS = {
-  pulse: {
-    up: pulseUp,
-    down: pulseDown,
-    ok: pulseOk,
-    cancel: pulseCancel,
-  },
-  grain: {
-    up: grainUp,
-    down: grainDown,
-    ok: grainOk,
-    cancel: grainCancel,
-  },
-} as const satisfies Record<string, Record<Cue, string>>;
+/**
+ * A pack is one complete set of the four cues we play in the runtime, and the
+ * packs are the shipped asset directories. We find them on disk, so the
+ * preview, the picker and the export always agree, and to add or retire a
+ * pack we run the generator and never edit this file.
+ */
+const CUE_FILES = import.meta.glob<string>("../assets/menu-sounds/*/*.wav", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+
+const SOUND_URLS: Record<string, Partial<Record<Cue, string>>> = {};
+for (const [file, url] of Object.entries(CUE_FILES)) {
+  const found = /\/menu-sounds\/([^/]+)\/([^/]+)\.wav$/.exec(file);
+  if (!found) continue;
+  const [, pack, cue] = found;
+  if (!(CUES as readonly string[]).includes(cue)) continue;
+  (SOUND_URLS[pack] ??= {})[cue as Cue] = url;
+}
+
+function complete(
+  urls: Partial<Record<Cue, string>> | undefined,
+): urls is Record<Cue, string> {
+  return urls !== undefined && CUES.every((cue) => Boolean(urls[cue]));
+}
+
+/** Packs with every cue present. We do not offer a partial directory as a pack. */
+export const PREVIEWABLE_PACKS: readonly string[] = Object.keys(SOUND_URLS)
+  .filter((pack) => complete(SOUND_URLS[pack]))
+  .sort();
 
 function previewUrls(pack: string): Record<Cue, string> | undefined {
-  if (!(pack in SOUND_URLS)) return undefined;
-  return SOUND_URLS[pack as keyof typeof SOUND_URLS];
+  const urls = SOUND_URLS[pack];
+  return complete(urls) ? urls : undefined;
 }
 
 function isAbort(error: unknown): boolean {

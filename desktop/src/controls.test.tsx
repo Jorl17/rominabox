@@ -7,7 +7,9 @@ import registry from "../controls.json";
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
-function renderEditor(system = "ps1") {
+// A console that uses the 16-control retropad fallback. ps1 has a separate
+// illustrated profile.
+function renderEditor(system = "atari2600") {
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);

@@ -17,7 +17,8 @@ branding_source="$root/desktop/assets/branding"
 for asset in menu.rml splash.rml menu.rcss Silkscreen-Regular.ttf Silkscreen-OFL.txt; do
   [ -f "$menu_source/$asset" ] || { echo "Missing current menu source: $asset" >&2; exit 1; }
 done
-for asset in controller-megadrive.png controller-gameboy.png CONTROLLERS.txt; do
+controller_pngs="controller-megadrive.png controller-megadrive6.png controller-nes.png controller-snes.png controller-mastersystem.png controller-ps1.png controller-n64.png controller-gamecube.png controller-dreamcast.png controller-gameboy.png"
+for asset in $controller_pngs CONTROLLERS.txt; do
   [ -f "$controller_source/$asset" ] || { echo "Missing controller source: $asset" >&2; exit 1; }
 done
 # We give Tauri this directory as the runtime resource. Refresh the authored
@@ -25,9 +26,33 @@ done
 for asset in menu.rml splash.rml menu.rcss Silkscreen-Regular.ttf Silkscreen-OFL.txt; do
   cp "$menu_source/$asset" "$menu_assets/$asset"
 done
-cp -p "$controller_source/controller-megadrive.png" "$menu_assets/controller-megadrive.png"
-cp -p "$controller_source/controller-gameboy.png" "$menu_assets/controller-gameboy.png"
+for asset in $controller_pngs; do
+  cp -p "$controller_source/$asset" "$menu_assets/$asset"
+done
 cp -p "$controller_source/CONTROLLERS.txt" "$menu_assets/CONTROLLERS.txt"
+# At export we copy the selected menu sound pack from the runtime kit, so the
+# kit contains exactly the packs in desktop/assets/menu-sounds. A pack is one
+# complete set of up/down/ok/cancel. We remove packs that are no longer in use
+# from the staging folder, so nobody can select or bundle them.
+sound_source="$root/desktop/assets/menu-sounds"
+sound_staging="$root/desktop/src-tauri/resources/runtime/sound-packs"
+[ -f "$sound_source/PROVENANCE.txt" ] || { echo 'Missing menu sounds; run node scripts/native_runtime/generate-menu-sounds.mjs' >&2; exit 1; }
+mkdir -p "$sound_staging"
+for staged in "$sound_staging"/*/; do
+  [ -d "$staged" ] || continue
+  name=$(basename "$staged")
+  [ -d "$sound_source/$name" ] || rm -rf -- "$sound_staging/$name"
+done
+for pack in "$sound_source"/*/; do
+  [ -d "$pack" ] || continue
+  name=$(basename "$pack")
+  mkdir -p "$sound_staging/$name"
+  for cue in up down ok cancel; do
+    [ -f "$pack$cue.wav" ] || { echo "Menu sound pack $name is missing $cue.wav" >&2; exit 1; }
+    cp -p "$pack$cue.wav" "$sound_staging/$name/$cue.wav"
+  done
+done
+cp -p "$sound_source/PROVENANCE.txt" "$sound_staging/PROVENANCE.txt"
 mkdir -p "$root/desktop/src-tauri/resources/runtime/branding"
 cp "$branding_source/logo.png" "$root/desktop/src-tauri/resources/runtime/branding/logo.png"
 cp "$branding_source/PROVENANCE.txt" "$root/desktop/src-tauri/resources/runtime/branding/PROVENANCE.txt"

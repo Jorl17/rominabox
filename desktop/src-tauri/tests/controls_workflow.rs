@@ -20,10 +20,23 @@ fn workspace() -> PathBuf {
 fn assets() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets/menu")
 }
+/// A source directory with artwork for every profile that declares it. We
+/// take the filenames from controls.json, so adding an illustrated profile
+/// cannot silently break these tests.
 fn illustrated_assets() -> PathBuf {
     let root = workspace();
     fs::copy(assets().join("menu.rml"), root.join("menu.rml")).unwrap();
-    fs::write(root.join("controller-megadrive.png"), []).unwrap();
+    let registry: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../controls.json"))
+            .unwrap(),
+    )
+    .unwrap();
+    for profile in registry["profiles"].as_array().unwrap() {
+        match profile["image"].as_str() {
+            Some(image) if !image.is_empty() => fs::write(root.join(image), []).unwrap(),
+            _ => {}
+        }
+    }
     fs::write(root.join("CONTROLLERS.txt"), []).unwrap();
     root
 }
@@ -47,12 +60,12 @@ fn six_button_authoring_configures_the_emulated_device_and_labels() {
 fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
     let root = workspace();
     let options = Controls::default();
-    themes::prepare_controls_assets(&assets(), &root, "ps1", &options).unwrap();
+    themes::prepare_controls_assets(&assets(), &root, "atari2600", &options).unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("id=\"control-r3\""));
     assert!(!markup.contains("id=\"controller-image\""));
     assert_eq!(fs::read_dir(&root).unwrap().count(), 1);
-    controls::write_defaults_config("ps1", &options, &root.join("controls.cfg")).unwrap();
+    controls::write_defaults_config("atari2600", &options, &root.join("controls.cfg")).unwrap();
     assert!(fs::read_to_string(root.join("controls.cfg"))
         .unwrap()
         .contains("input_player1_l2"));
@@ -63,7 +76,7 @@ fn custom_labels_are_escaped_without_changing_control_identity() {
     let options: Controls =
         serde_json::from_value(serde_json::json!({"bindings":{"a":{"label":"Jump <go> & fly"}}}))
             .unwrap();
-    themes::prepare_controls_assets(&assets(), &root, "nes", &options).unwrap();
+    themes::prepare_controls_assets(&illustrated_assets(), &root, "nes", &options).unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("Jump &lt;go&gt; &amp; fly"));
     assert!(markup.contains("id=\"control-a\""));
@@ -80,7 +93,7 @@ fn default_callout_labels_occur_once_and_custom_labels_keep_console_identity() {
     .unwrap();
     for (system, source, console_identity) in [
         ("megadrive", illustrated_assets(), "C"),
-        ("nes", assets(), "A"),
+        ("nes", illustrated_assets(), "A"),
     ] {
         let root = workspace();
         themes::prepare_controls_assets(&source, &root, system, &options).unwrap();

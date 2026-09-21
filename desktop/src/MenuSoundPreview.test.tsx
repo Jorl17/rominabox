@@ -3,14 +3,15 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { build, type Rollup } from "vite";
 
-import grainUp from "../assets/menu-sounds/grain/up.wav";
-import pulseCancel from "../assets/menu-sounds/pulse/cancel.wav";
-import pulseDown from "../assets/menu-sounds/pulse/down.wav";
-import pulseOk from "../assets/menu-sounds/pulse/ok.wav";
-import pulseUp from "../assets/menu-sounds/pulse/up.wav";
+import bellUp from "../assets/menu-sounds/bell/up.wav";
+import blipCancel from "../assets/menu-sounds/blip/cancel.wav";
+import blipDown from "../assets/menu-sounds/blip/down.wav";
+import blipOk from "../assets/menu-sounds/blip/ok.wav";
+import blipUp from "../assets/menu-sounds/blip/up.wav";
+import designs from "../designs.json";
 import tauriConf from "../src-tauri/tauri.conf.json";
 import viteConfig from "../vite.config";
-import { MenuSoundPreview } from "./MenuSoundPreview";
+import { CUES, MenuSoundPreview, PREVIEWABLE_PACKS } from "./MenuSoundPreview";
 
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
@@ -144,7 +145,7 @@ describe("menu sound preview", () => {
   });
 
   it("plays a bundled sequence from a user gesture and stops on click, pack change, and unmount", async () => {
-    renderPreview("pulse");
+    renderPreview("blip");
     const idle = previewButton();
     expect(idle.disabled).toBe(false);
     expect(idle.getAttribute("aria-label")).toBe("Preview menu sounds");
@@ -159,7 +160,7 @@ describe("menu sound preview", () => {
     expect(stop.getBoundingClientRect().width).toBe(idleBox.width);
     expect(stop.getBoundingClientRect().height).toBe(idleBox.height);
     expect(created).toHaveLength(1);
-    expect(created[0].src).toBe(pulseUp);
+    expect(created[0].src).toBe(blipUp);
     expect(created[0].play).toHaveBeenCalledTimes(1);
 
     clickPreview();
@@ -175,13 +176,13 @@ describe("menu sound preview", () => {
     clickPreview();
     await flush();
     expect(created).toHaveLength(2);
-    expect(created[1].src).toBe(pulseUp);
+    expect(created[1].src).toBe(blipUp);
     finish(created[1]);
     await flush();
     expect(created).toHaveLength(3);
-    expect(created[2].src).toBe(pulseDown);
+    expect(created[2].src).toBe(blipDown);
 
-    act(() => root.render(<MenuSoundPreview pack="grain" />));
+    act(() => root.render(<MenuSoundPreview pack="bell" />));
     expect(previewButton().getAttribute("aria-label")).toBe(
       "Preview menu sounds",
     );
@@ -193,7 +194,7 @@ describe("menu sound preview", () => {
 
     clickPreview();
     await flush();
-    expect(created[afterChange].src).toBe(grainUp);
+    expect(created[afterChange].src).toBe(bellUp);
 
     act(() => root.unmount());
     expect(created[afterChange].pause).toHaveBeenCalled();
@@ -204,7 +205,7 @@ describe("menu sound preview", () => {
 
   it("reports a brief status when playback fails and does not leak a rejection", async () => {
     await withUnhandled(async (leaked) => {
-      renderPreview("pulse");
+      renderPreview("blip");
       playImpl = () =>
         Promise.reject(new DOMException("failed", "NotSupportedError"));
       clickPreview();
@@ -220,9 +221,9 @@ describe("menu sound preview", () => {
   });
 
   it("fetches packaged Tauri cues and plays them from a blob URL", async () => {
-    const objectUrl = "blob:tauri://localhost/pulse-up";
+    const objectUrl = "blob:tauri://localhost/blip-up";
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
-      expect(String(input)).toBe(pulseUp);
+      expect(String(input)).toBe(blipUp);
       return new Response(
         Uint8Array.from([
           0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45,
@@ -242,10 +243,10 @@ describe("menu sound preview", () => {
       .spyOn(URL, "revokeObjectURL")
       .mockImplementation(() => undefined);
 
-    renderPreview("pulse");
+    renderPreview("blip");
     clickPreview();
     await flush();
-    expect(fetchImpl).toHaveBeenCalledWith(pulseUp);
+    expect(fetchImpl).toHaveBeenCalledWith(blipUp);
     expect(created).toHaveLength(1);
     expect(created[0].src).toBe(objectUrl);
     expect(created[0].play).toHaveBeenCalledTimes(1);
@@ -260,8 +261,8 @@ describe("menu sound preview", () => {
   });
 
   it("plays the bundled up, down, ok, cancel clips in order", async () => {
-    const expected = [pulseUp, pulseDown, pulseOk, pulseCancel];
-    renderPreview("pulse");
+    const expected = [blipUp, blipDown, blipOk, blipCancel];
+    renderPreview("blip");
     clickPreview();
     await flush();
     for (const [index, src] of expected.entries()) {
@@ -287,7 +288,7 @@ describe("menu sound preview", () => {
       return <MenuSoundPreview pack={pack} />;
     }
 
-    act(() => root.render(<Probe pack="pulse" />));
+    act(() => root.render(<Probe pack="blip" />));
     clickPreview();
     await flush();
     const audio = created[0];
@@ -304,7 +305,7 @@ describe("menu sound preview", () => {
       if (name === "src") audio.src = "";
     });
 
-    act(() => root.render(<Probe pack="grain" />));
+    act(() => root.render(<Probe pack="bell" />));
     expect(renderMutations).toEqual([]);
     expect(audio.pause).toHaveBeenCalled();
     expect(audio.src).toBe("");
@@ -319,7 +320,7 @@ describe("menu sound preview", () => {
         queueMicrotask(() => audio.onerror?.());
         return new Promise(() => undefined);
       };
-      renderPreview("pulse");
+      renderPreview("blip");
       clickPreview();
       await waitForUnhandled();
       expect(container.querySelector('[role="status"]')?.textContent).toBe(
@@ -340,7 +341,7 @@ describe("menu sound preview", () => {
           releasePlay = () => resolve();
         });
 
-      renderPreview("pulse");
+      renderPreview("blip");
       clickPreview();
       await flush();
       const first = created[0];
@@ -366,8 +367,12 @@ describe("menu sound preview", () => {
   });
 });
 
-const CUE_NAMES = ["up", "down", "ok", "cancel"] as const;
-const PACKS = ["pulse", "grain"] as const;
+const CUE_NAMES = CUES;
+/** `off` is the one entry with no assets, and every other pack has a full set. */
+const DECLARED_PACKS = designs.soundPacks
+  .map((pack) => pack.id)
+  .filter((id) => id !== "off");
+const PACKS = PREVIEWABLE_PACKS;
 
 function cspDirective(csp: string, name: string): string[] {
   const body = csp
@@ -414,6 +419,21 @@ function assetBytes(source: string | Uint8Array): Uint8Array {
 }
 
 describe("packaged menu sound delivery", () => {
+  it("offers exactly the declared packs, each a complete cue set", () => {
+    expect([...PACKS]).toEqual([...DECLARED_PACKS].sort());
+    expect(PACKS.length).toBeGreaterThan(0);
+    for (const pack of PACKS) {
+      expect(
+        pack,
+        "authoring variant separator leaked into a pack id",
+      ).not.toContain("--");
+    }
+    // A picker the author can scan, not a list of near-identical entries.
+    expect(designs.soundPacks.length).toBeLessThanOrEqual(12);
+    const names = designs.soundPacks.map((pack) => pack.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
   it("allows Tauri protocol audio without depending on data: media", () => {
     const policies = [
       tauriConf.app.security.csp,
@@ -431,11 +451,11 @@ describe("packaged menu sound delivery", () => {
     expect(
       (
         inline as (filePath: string, content: Uint8Array) => boolean | undefined
-      )("assets/menu-sounds/pulse/up.wav", new Uint8Array(100)),
+      )("assets/menu-sounds/blip/up.wav", new Uint8Array(100)),
     ).toBe(false);
   });
 
-  it("emits Pulse and Grain WAVs as hashed protocol assets, not data URLs", async () => {
+  it("emits every pack's WAVs as hashed protocol assets, not data URLs", async () => {
     const result = await build({
       ...viteConfig,
       configFile: false,
