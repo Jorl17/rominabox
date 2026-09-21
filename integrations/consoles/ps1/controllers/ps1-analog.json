@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "ps1-analog",
   "name": "PlayStation \u00b7 analogue",
+  "coreDevice": 261,
   "presentation": {
     "kind": "generic"
   },

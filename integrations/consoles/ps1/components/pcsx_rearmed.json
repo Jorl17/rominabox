@@ -5,6 +5,7 @@
   "artifacts": {
     "macos-arm64": "pcsx_rearmed_libretro.dylib"
   },
+  "libraryName": "PCSX-ReARMed",
   "license": {
     "spdx": "GPL-2.0",
     "file": "pcsx_rearmed.txt"

@@ -144,40 +144,71 @@ fn a_console_that_cannot_start_without_a_bios_demands_one() {
     );
 }
 
+/// We do NOT offer the analogue pad, because it is not analogue.
+///
+/// `ps1-analog` declares sixteen controls: the fourteen digital buttons plus
+/// L3 and R3, which are the stick *clicks*. It declares no axes at all, no
+/// left stick and no right stick. There is nothing to bind, so the in-game
+/// controls menu would show nothing, and an author who chose it would get a
+/// pad that looks analogue and behaves digitally.
+///
+/// For PlayStation we offer only the digital pad until the sticks are
+/// declared. This test fails if we offer the analogue pad without them.
 #[test]
-fn both_controller_modes_are_offered_and_only_one_can_be_illustrated() {
+fn the_analogue_pad_is_not_offered_while_it_declares_no_sticks() {
     let digital = controls::profile_for_system("ps1").expect("a default pad");
     assert_eq!(digital.id, "ps1");
     assert_eq!(digital.image, "controller-ps1.png");
     assert_eq!(digital.controls.len(), 14);
 
-    // An author picks the analogue pad by its name. The console declares it as
-    // a variant, so we accept it for PS1 without its name in other code.
     let pick = |id: &str| -> Controls {
         let mut options = Controls::default();
         options.profile = Some(id.to_string());
         options
     };
-    let analog = controls::validate_for_system("ps1", &pick("ps1-analog"))
-        .expect("the analogue pad is offered for PlayStation");
+    assert!(
+        controls::validate_for_system("ps1", &pick("ps1-analog")).is_err(),
+        "the analogue pad must not be selectable while it declares no axes"
+    );
     assert!(
         controls::validate_for_system("nes", &pick("ps1-analog")).is_err(),
         "a PlayStation pad must not be selectable for another console"
     );
-    assert_eq!(analog.controls.len(), 16);
-    for stick in ["l3", "r3"] {
+}
+
+/// What it must declare before we can offer it.
+///
+/// In RetroArch, analogue directions are separate bind entries, `l_x_plus`,
+/// `l_x_minus`, `l_y_plus`, `l_y_minus` and the `r_` equivalents, and in
+/// `controls.rs` we write `input_player1_<id>_axis` from the id of a control.
+/// So we can express the sticks, and only their declaration is missing.
+#[test]
+fn the_analogue_profile_still_declares_only_the_stick_clicks() {
+    // We cannot reach the profile through the console, so we read its
+    // declaration from the generated registry, which the player reads too.
+    let registry: serde_json::Value =
+        serde_json::from_str(include_str!("../../controls.json")).expect("controls registry");
+    let profile = registry["profiles"]
+        .as_array()
+        .expect("profiles")
+        .iter()
+        .find(|p| p["id"] == "ps1-analog")
+        .expect("the profile still exists");
+    let ids: Vec<&str> = profile["controls"]
+        .as_array()
+        .expect("controls")
+        .iter()
+        .map(|c| c["id"].as_str().unwrap())
+        .collect();
+    for click in ["l3", "r3"] {
+        assert!(ids.contains(&click), "the stick clicks are declared: {ids:?}");
+    }
+    for stick in ["l_x_plus", "l_x_minus", "r_x_plus", "r_x_minus"] {
         assert!(
-            analog.controls.iter().any(|control| control.id == stick),
-            "the analogue pad adds the stick clicks the digital pad has not got"
+            !ids.contains(&stick),
+            "{stick} is now declared — offer the pad again and delete this test"
         );
     }
-    // Sixteen callouts would be eight per gutter, and eight 54 dp callouts do
-    // not fit in a 380 dp frame. That is why the analogue pad is generic, not
-    // because of missing artwork.
-    assert!(
-        analog.image.is_empty(),
-        "the analogue pad is deliberately presented as the asset-free grid"
-    );
 }
 
 #[test]

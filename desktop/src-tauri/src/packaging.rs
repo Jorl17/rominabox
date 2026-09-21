@@ -447,6 +447,7 @@ where
         &controls_assets.join("controls-defaults.cfg"),
     )
     .map_err(|message| ExportError::new("stage", message))?;
+    stage_controller_remap(&controls_profile, selected_core, &resources.join("remaps"))?;
     if request.show_menu {
         crate::themes::prepare_sound_assets(
             &request.runtime_kit.join("sound-packs"),
@@ -989,6 +990,44 @@ pub enum HotkeyKeyboard {
     Fullscreen,
 }
 
+/// Write the emulated controller where RetroArch reads it.
+///
+/// `input_libretro_device_p1` looks like an ordinary setting, but its value is
+/// read only from a remap file, in `input_remapping_load_file` in
+/// `configuration.c`. In `retroarch.cfg` it has no effect, and the core uses
+/// its default device instead of a six-button Mega Drive pad or a PlayStation
+/// DualShock.
+///
+/// So we write the file to the path read in `config_load_remap`,
+/// `<remap dir>/<library name>/<library name>.rmp`, with the libretro library
+/// name of the core binary.
+fn stage_controller_remap(
+    profile: &controls::ControlProfile,
+    core: &crate::systems::Core,
+    remaps: &Path,
+) -> Result<(), ExportError> {
+    let Some(device) = profile.core_device else {
+        // Most pads are the default device of the core, so they require no remap.
+        return Ok(());
+    };
+    let Some(library) = core.library_name.as_deref() else {
+        return Err(ExportError::new(
+            "stage",
+            format!(
+                "{} needs the emulated device {device}, but component '{}' does not declare its \
+                 libraryName, so there is nowhere to write the remap RetroArch reads",
+                profile.id, core.component
+            ),
+        ));
+    };
+    let directory = remaps.join(library);
+    fs::create_dir_all(&directory).map_err(|error| ExportError::io("stage", &directory, error))?;
+    let path = directory.join(format!("{library}.rmp"));
+    let contents = format!("input_libretro_device_p1 = \"{device}\"\n");
+    fs::write(&path, contents).map_err(|error| ExportError::io("stage", &path, error))?;
+    Ok(())
+}
+
 /// The writable directories we create and manage under each game's data root.
 pub const MANAGED_DATA_DIRECTORIES: &[&str] = &[
     "saves",
@@ -1333,6 +1372,8 @@ libretro_info_path = "$data_dir/info"
 playlist_directory = "$data_dir/playlists"
 screenshot_directory = "$data_dir/screenshots"
 core_options_path = "$data_dir/core-options.cfg"
+auto_remaps_enable = "true"
+input_remap_sort_by_controller_enable = "false"
 content_history_path = "$data_dir/playlists/content_history.lpl"
 content_music_history_path = "$data_dir/playlists/content_music_history.lpl"
 content_image_history_path = "$data_dir/playlists/content_image_history.lpl"
@@ -1429,7 +1470,17 @@ EOF
     )
     .replace("@@RUNTIME_CONFIG@@", &runtime_config);
     let script = format!(
-        r##"{script}for firmware in "$bundle_dir"/Resources/firmware/*; do
+        r##"{script}for remap_dir in "$bundle_dir"/Resources/remaps/*; do
+  [ -d "$remap_dir" ] || continue
+  name=${{remap_dir##*/}}
+  /bin/mkdir -p "$data_dir/remaps/$name"
+  for remap in "$remap_dir"/*; do
+    [ -f "$remap" ] || continue
+    base=${{remap##*/}}
+    [ -f "$data_dir/remaps/$name/$base" ] || /bin/cp "$remap" "$data_dir/remaps/$name/$base"
+  done
+done
+for firmware in "$bundle_dir"/Resources/firmware/*; do
   [ -f "$firmware" ] || continue
   name=${{firmware##*/}}
   [ -f "$data_dir/system/$name" ] || /bin/cp "$firmware" "$data_dir/system/$name"
@@ -2277,6 +2328,111 @@ mod tests {
         assert!(commented_defaults.contains("input_toggle_fast_forward = space"));
         assert!(commented_defaults.contains("input_exit_emulator = escape"));
         assert!(commented_defaults.contains("input_menu_toggle = f1"));
+    }
+
+    /// A unique empty directory, following the pattern of the other tests.
+    fn scratch_dir() -> PathBuf {
+        let directory = std::env::temp_dir().join(format!(
+            "rominabox-remap-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&directory).unwrap();
+        directory
+    }
+
+    /// We write the emulated controller where RetroArch reads it.
+    ///
+    /// The device is not read from the controls config, so a device written
+    /// there would leave every console that declares a `coreDevice` on the
+    /// default pad of the core.
+    #[test]
+    fn the_emulated_device_is_written_as_a_remap_not_a_config_line() {
+        let root = scratch_dir();
+        let profile = controls::ControlProfile {
+            id: "ps1".into(),
+            name: "PlayStation".into(),
+            systems: vec!["ps1".into()],
+            image: String::new(),
+            core_device: Some(517),
+            controls: Vec::new(),
+        };
+        let core = crate::systems::Core {
+            artifacts: Default::default(),
+            component: "pcsx_rearmed".into(),
+            license: "GPL-2.0".into(),
+            license_file: "pcsx_rearmed.txt".into(),
+            capabilities: Vec::new(),
+            library_name: Some("PCSX-ReARMed".into()),
+        };
+        let remaps = root.join("remaps");
+        stage_controller_remap(&profile, &core, &remaps).expect("a remap is written");
+
+        // The folder name is the library name of the core, not its component
+        // id, because the path in config_load_remap is made from that name.
+        let written = remaps.join("PCSX-ReARMed/PCSX-ReARMed.rmp");
+        let text = fs::read_to_string(&written).expect("remap exists at the path RetroArch reads");
+        assert!(
+            text.contains("input_libretro_device_p1 = \"517\""),
+            "the remap must name the declared device: {text}"
+        );
+    }
+
+    /// A pad that is the default device of the core requires no remap.
+    #[test]
+    fn a_profile_with_no_declared_device_writes_nothing() {
+        let root = scratch_dir();
+        let profile = controls::ControlProfile {
+            id: "nes".into(),
+            name: "NES".into(),
+            systems: vec!["nes".into()],
+            image: String::new(),
+            core_device: None,
+            controls: Vec::new(),
+        };
+        let core = crate::systems::Core {
+            artifacts: Default::default(),
+            component: "nestopia".into(),
+            license: "GPL-2.0".into(),
+            license_file: "nestopia.txt".into(),
+            capabilities: Vec::new(),
+            library_name: None,
+        };
+        let remaps = root.join("remaps");
+        stage_controller_remap(&profile, &core, &remaps).expect("nothing to do is not an error");
+        assert!(!remaps.exists(), "no remap directory should be created");
+    }
+
+    /// When a device is required and there is no place to write it, export fails.
+    #[test]
+    fn a_declared_device_with_no_library_name_is_refused() {
+        let root = scratch_dir();
+        let profile = controls::ControlProfile {
+            id: "megadrive6".into(),
+            name: "Mega Drive six-button".into(),
+            systems: vec!["megadrive".into()],
+            image: String::new(),
+            core_device: Some(513),
+            controls: Vec::new(),
+        };
+        let core = crate::systems::Core {
+            artifacts: Default::default(),
+            component: "genesis_plus_gx".into(),
+            license: "MAME".into(),
+            license_file: "genesis_plus_gx.txt".into(),
+            capabilities: Vec::new(),
+            library_name: None,
+        };
+        let error = stage_controller_remap(&profile, &core, &root.join("remaps"))
+            .expect_err("silently shipping the wrong pad is the defect being prevented");
+        let message = error.to_string();
+        assert!(
+            message.contains("libraryName"),
+            "the refusal must say what is missing: {message}"
+        );
     }
 
     #[test]

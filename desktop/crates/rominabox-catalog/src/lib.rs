@@ -617,6 +617,10 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
                     "license": component.license.spdx,
                     "licenseFile": component.license.file,
                     "capabilities": component.capabilities,
+                    // The emulated-controller remap directory in RetroArch has
+                    // this exact string as its name, so we need it in the
+                    // player and not only in the build tools.
+                    "libraryName": component.library_name,
                 }))
             })
             .collect();

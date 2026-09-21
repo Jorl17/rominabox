@@ -127,6 +127,15 @@ pub struct CoreComponent {
     /// check the selected artifact, never the console name.
     #[serde(default)]
     pub capabilities: Vec<String>,
+    /// The name in `retro_get_system_info().library_name` for this build.
+    ///
+    /// In RetroArch the paths of per-core state contain this name, so it is
+    /// more than a label. We apply the emulated controller only from a remap
+    /// file at `<remap dir>/<library name>/<library name>.rmp`, and the
+    /// directory name must match the string in the artifact. Read it from the
+    /// artifact with `frame_harness --frames 1`, never from the id.
+    #[serde(default, rename = "libraryName", skip_serializing_if = "Option::is_none")]
+    pub library_name: Option<String>,
     /// Where the shipped artifact came from and what source we retain for it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provenance: Option<ComponentProvenance>,

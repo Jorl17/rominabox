@@ -111,9 +111,9 @@ pub fn write_defaults_config(
     let profile = validate_for_system(system, controls)?;
     let values = effective_controls(&profile, controls);
     let mut config = format!("controls_profile = \"{}\"\n", profile.id);
-    if let Some(device) = profile.core_device {
-        config.push_str(&format!("input_libretro_device_p1 = \"{device}\"\n"));
-    }
+    // We do not write the emulated device here, because
+    // `input_libretro_device_p1` takes effect only in a remap file, never in
+    // a config file. We write it in `packaging::stage_controller_remap`.
     for control in &profile.controls {
         let value = values
             .get(&control.id)

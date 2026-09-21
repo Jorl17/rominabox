@@ -210,7 +210,9 @@ fn default_controls_config_carries_the_emulated_device_and_bindings() {
 
     let text = fs::read_to_string(root.join("controls.cfg")).unwrap();
     assert!(text.contains("controls_profile = \"mastersystem\""));
-    assert!(text.contains("input_libretro_device_p1 = \"769\""));
+    // We write this key to a remap file, not to the config, because the key
+    // works only in a remap file. See stage_controller_remap.
+    assert!(!text.contains("input_libretro_device_p1"));
     for (id, label, key) in [
         ("up", "Up", "up"),
         ("down", "Down", "down"),

@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "ps1",
   "name": "PlayStation",
+  "coreDevice": 517,
   "presentation": {
     "kind": "illustrated",
     "image": "controller-ps1.png"

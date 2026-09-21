@@ -48,7 +48,18 @@ fn six_button_authoring_configures_the_emulated_device_and_labels() {
         controls::write_defaults_config("megadrive", &options, &root.join("controls.cfg")).unwrap();
     assert_eq!(profile.controls.len(), 12);
     let text = fs::read_to_string(root.join("controls.cfg")).unwrap();
-    assert!(text.contains("input_libretro_device_p1 = \"513\""));
+    // The emulated device must NOT be here. `input_libretro_device_p1` has an
+    // effect only in a remap file (in `configuration.c` the key appears only in
+    // the remap loader and saver), so in a config file it has no effect.
+    assert!(
+        !text.contains("input_libretro_device_p1"),
+        "the emulated device belongs in a remap file, not the controls config"
+    );
+    assert_eq!(
+        profile.core_device,
+        Some(513),
+        "the profile still declares the six-button device for the remap to use"
+    );
     assert!(text.contains("rib_label_r = \"Special\""));
     assert!(text.contains("rib_label_select = \"Mode\""));
     assert!(text.contains("input_player1_r = \"space\""));

@@ -71,6 +71,12 @@ pub struct Core {
     /// format, that does not mean the artifact we download includes it.
     #[serde(default)]
     pub capabilities: Vec<String>,
+    /// The libretro library name of this build.
+    ///
+    /// We apply the emulated controller with a remap file in a folder named
+    /// after this string, so without it there is no place to write one.
+    #[serde(default, rename = "libraryName")]
+    pub library_name: Option<String>,
 }
 
 impl Core {

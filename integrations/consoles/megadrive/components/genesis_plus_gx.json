@@ -5,6 +5,7 @@
   "artifacts": {
     "macos-arm64": "genesis_plus_gx_libretro.dylib"
   },
+  "libraryName": "Genesis Plus GX",
   "license": {
     "spdx": "Non-commercial",
     "file": "genesis_plus_gx.txt"
