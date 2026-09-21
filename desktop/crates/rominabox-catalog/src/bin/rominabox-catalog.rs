@@ -2,6 +2,7 @@
 //!
 //!   rominabox-catalog validate [ROOT]   report every problem, exit non-zero if any
 //!   rominabox-catalog list     [ROOT]   what is declared, and what each build claims
+//!   rominabox-catalog assets   [ROOT]   controller illustrations that must be staged
 //!   rominabox-catalog generate [ROOT]   write the compatibility registries
 //!
 //! With `generate` we write `desktop/systems.json` and `desktop/controls.json`
@@ -64,6 +65,24 @@ fn main() -> ExitCode {
             }
             ExitCode::SUCCESS
         }
+        // In the build scripts we read the files to stage from the catalog.
+        "assets" => {
+            let mut names: Vec<&str> = catalog
+                .profiles()
+                .filter_map(|(_, profile)| match &profile.presentation {
+                    rominabox_catalog::model::Presentation::Illustrated { image } => {
+                        Some(image.as_str())
+                    }
+                    rominabox_catalog::model::Presentation::Generic => None,
+                })
+                .collect();
+            names.sort_unstable();
+            names.dedup();
+            for name in names {
+                println!("{name}");
+            }
+            ExitCode::SUCCESS
+        }
         "generate" => match rominabox_catalog::compatibility_registries(&catalog) {
             Ok(rendered) => {
                 let desktop = repository_root().join("desktop");
@@ -83,7 +102,7 @@ fn main() -> ExitCode {
             }
         },
         other => {
-            eprintln!("unknown command '{other}'; expected validate, list or generate");
+            eprintln!("unknown command '{other}'; expected validate, list, assets or generate");
             ExitCode::FAILURE
         }
     }

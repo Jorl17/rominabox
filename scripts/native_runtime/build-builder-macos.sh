@@ -17,7 +17,14 @@ branding_source="$root/desktop/assets/branding"
 for asset in menu.rml splash.rml menu.rcss Silkscreen-Regular.ttf Silkscreen-OFL.txt; do
   [ -f "$menu_source/$asset" ] || { echo "Missing current menu source: $asset" >&2; exit 1; }
 done
-controller_pngs="controller-megadrive.png controller-megadrive6.png controller-nes.png controller-snes.png controller-mastersystem.png controller-ps1.png controller-n64.png controller-gamecube.png controller-dreamcast.png controller-gameboy.png"
+# We take the declared illustrations from the catalog, so adding a console
+# does not require extending a list here.
+controller_pngs=$(cargo run --quiet \
+  --manifest-path "$root/desktop/crates/rominabox-catalog/Cargo.toml" \
+  --bin rominabox-catalog -- assets) || {
+  echo 'Could not ask the catalog which controller assets to stage' >&2
+  exit 1
+}
 for asset in $controller_pngs CONTROLLERS.txt; do
   [ -f "$controller_source/$asset" ] || { echo "Missing controller source: $asset" >&2; exit 1; }
 done

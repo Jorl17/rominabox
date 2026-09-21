@@ -142,9 +142,10 @@ fn assert_sole(root: &Path, code: &str, package: &str, field: &str) {
 }
 
 fn assert_has(problems: &[Diagnostic], code: &str, package: &str, field: &str) {
-    let diagnostic = problems.iter().find(|diagnostic| diagnostic.code == code).unwrap_or_else(|| {
-        panic!("no {code} in:\n{}", render(problems));
-    });
+    let diagnostic = problems
+        .iter()
+        .find(|diagnostic| diagnostic.code == code)
+        .unwrap_or_else(|| panic!("no {code} in:\n{}", render(problems)));
     assert_eq!(diagnostic.package, package, "{code} package");
     assert_eq!(diagnostic.field, field, "{code} field");
 }
