@@ -105,6 +105,34 @@ pub fn validate_for_system(system: &str, controls: &Controls) -> Result<ControlP
     Ok(profile)
 }
 
+/// Every controller we offer for a console, in the order we show them.
+///
+/// We write them into the exported configuration, so that the controller
+/// picker in the game can list them.
+pub fn variants_for_system(system: &str) -> Result<Vec<ControlProfile>, String> {
+    let normalized = normalize_system(system);
+    let mut offered: Vec<ControlProfile> = registry()?
+        .profiles
+        .into_iter()
+        .filter(|profile| {
+            profile
+                .systems
+                .iter()
+                .any(|candidate| normalize_system(candidate) == normalized)
+        })
+        .collect();
+    // For a console with no dedicated pad we chose the generic profile on
+    // purpose, so it is not a missing entry.
+    if offered.is_empty() {
+        offered = registry()?
+            .profiles
+            .into_iter()
+            .filter(|profile| profile.id == "retropad")
+            .collect();
+    }
+    Ok(offered)
+}
+
 /// Write the defaults for the Controls screen of the player.
 pub fn write_defaults_config(
     system: &str,
@@ -114,6 +142,24 @@ pub fn write_defaults_config(
     let profile = validate_for_system(system, controls)?;
     let values = effective_controls(&profile, controls);
     let mut config = format!("controls_profile = \"{}\"\n", profile.id);
+    // The controllers that we offer in the picker in the game. We separate
+    // the ids with spaces, because a controller id never contains one.
+    let offered = variants_for_system(system)?;
+    config.push_str(&format!(
+        "controls_variants = \"{}\"\n",
+        offered
+            .iter()
+            .map(|entry| entry.id.as_str())
+            .collect::<Vec<_>>()
+            .join(" ")
+    ));
+    for entry in &offered {
+        config.push_str(&format!(
+            "controls_variant_name_{} = \"{}\"\n",
+            entry.id,
+            escape_config_value(&entry.name)
+        ));
+    }
     // We do not write the emulated device here, because
     // `input_libretro_device_p1` takes effect only in a remap file, never in
     // a config file. We write it in `packaging::stage_controller_remap`.

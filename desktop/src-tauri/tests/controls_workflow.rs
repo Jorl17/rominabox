@@ -154,3 +154,50 @@ fn splash_only_document_has_no_pause_controls_and_can_make_its_background_transp
     assert!(!markup.contains("controller-image"));
     assert_eq!(fs::read_dir(root).unwrap().count(), 4);
 }
+
+/// We show a picker only where there is a choice.
+///
+/// The Mega Drive has a three-button and a six-button pad, because some games
+/// misbehave with six buttons, and the original pad had a Mode button for it.
+/// For PlayStation we offer one pad, and a dropdown of one option is noise.
+#[test]
+fn the_controller_picker_is_offered_only_when_there_is_a_choice() {
+    let root = workspace();
+    let staged = |system: &str, profile_image: &str| -> String {
+        let source = root.join(format!("source-{system}"));
+        let destination = root.join(format!("staged-{system}"));
+        fs::create_dir_all(&source).unwrap();
+        fs::create_dir_all(&destination).unwrap();
+        fs::copy(assets().join("menu.rml"), source.join("menu.rml")).unwrap();
+        fs::write(source.join(profile_image), []).unwrap();
+        fs::write(source.join("CONTROLLERS.txt"), []).unwrap();
+        rominabox_desktop::themes::prepare_controls_assets(
+            &source,
+            &destination,
+            system,
+            &Controls::default(),
+        )
+        .expect("the scene markup is generated");
+        fs::read_to_string(destination.join("menu.rml")).unwrap()
+    };
+
+    let megadrive = staged("megadrive", "controller-megadrive.png");
+    assert!(
+        megadrive.contains("controls-device-option-megadrive6"),
+        "Mega Drive offers a six-button pad, so the picker must list it"
+    );
+    assert!(
+        megadrive.contains(r#"id="controls-device-list""#),
+        "the picker's list element must exist for the bridge to open"
+    );
+    assert!(
+        megadrive.contains("display:none"),
+        "the list starts closed"
+    );
+
+    let playstation = staged("ps1", "controller-ps1.png");
+    assert!(
+        !playstation.contains("controls-device"),
+        "PlayStation offers one pad; a list of one is noise, not a choice"
+    );
+}

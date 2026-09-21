@@ -46,6 +46,19 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
 .control-callout { position: absolute; width: 196dp; height: 54dp; padding: 0; border: 2dp #75b2e4; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
 .control-callout:hover { border-color: #ffffff; }
 .control-callout.focused { border-color: #fff13d; }
+/* The controller picker is above the scene and never inside it, because both
+ * gutters are full and the callout arrows are part of the design. Closed it
+ * is one line, and open it lists the pads the author included. A console
+ * with one pad has no picker, because a list of one is useless. */
+.control-picker { position: absolute; left: 600dp; top: 26dp; width: 320dp; height: 40dp; }
+.control-picker-label { position: absolute; left: 0; top: 10dp; font-size: 14dp; color: #b4e6ff; }
+.control-picker-current { position: absolute; left: 110dp; top: 0; width: 210dp; height: 36dp; font-family: Silkscreen; font-size: 16dp; line-height: 36dp; text-align: left; padding-left: 10dp; border: 2dp #75b2e4; background-color: #061a48; color: #ffffff; }
+.control-picker-current:hover, .control-picker-current.focused { border-color: #ffffff; }
+.control-picker-list { position: absolute; left: 110dp; top: 36dp; width: 210dp; border: 2dp #fff13d; background-color: #061a48; z-index: 50; }
+.control-picker-option { display: block; width: 100%; height: 34dp; font-family: Silkscreen; font-size: 15dp; line-height: 34dp; text-align: left; padding-left: 10dp; border: 0; background-color: #061a48; color: #b4e6ff; }
+.control-picker-option:hover, .control-picker-option.focused { background-color: #193e88; color: #ffffff; }
+.control-picker-option.selected { color: #fff13d; }
+
 /* A stick is one object on the pad but several binds, so we draw it once,
  * under the illustration and not in a gutter. Each gutter is full with seven
  * 54dp callouts, and four directions per stick would cover other buttons. */

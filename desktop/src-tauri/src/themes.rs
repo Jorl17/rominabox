@@ -158,6 +158,12 @@ body {{ background-color: {background}; }}
 #screen .menu-action:active {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
 #screen .menu-action.disabled, #screen .menu-action:disabled {{ background-color: {background}; color: {edge}; border-color: {surface}; }}
 .control-callout, .control-group {{ background-color: {surface}; border-color: {edge}; }}
+.control-picker-current {{ background-color: {surface}; border-color: {edge}; }}
+.control-picker-list {{ background-color: {surface}; border-color: {highlight}; }}
+.control-picker-option {{ background-color: {surface}; color: {muted}; }}
+.control-picker-option:hover, .control-picker-option.focused {{ background-color: {focus}; color: #ffffff; }}
+.control-picker-option.selected {{ color: {highlight}; }}
+.control-picker-label {{ color: {muted}; }}
 .control-callout:hover, .control-group:hover, .control-hit:hover {{ border-color: #ffffff; }}
 .control-callout.focused, .control-group.focused {{ background-color: {focus}; border-color: {highlight}; }}
 .control-hit.focused {{ border-color: {highlight}; }}
@@ -285,6 +291,8 @@ pub fn prepare_controls_assets(
     group_names.sort_unstable();
     group_names.dedup();
     markup.push_str(&control_group_markup(&group_names, &grouped, controls, illustrated));
+    let offered = crate::controls::variants_for_system(system)?;
+    markup.push_str(&controller_picker_markup(&offered, &profile.id));
 
     for item in profile.controls.iter().filter(|item| item.group.is_none()) {
         let item = item.clone();
@@ -336,6 +344,42 @@ pub fn prepare_controls_assets(
 /// full, with seven 54 dp callouts filling 378 of 380 dp. Its geometry matches
 /// `scripts/render_control_overlays.py`, the reference renderer for the
 /// controller scene.
+/// The in-game controller picker, drawn above the scene.
+///
+/// We put it in the band above the illustration and not inside it, because
+/// both side margins are full and the callout arrows are central to the
+/// design. Moving them for a control that most players use once would be a
+/// poor trade.
+///
+/// We add it only when there is a choice. A dropdown with one option is
+/// useless, and most consoles have exactly one pad.
+fn controller_picker_markup(offered: &[crate::controls::ControlProfile], chosen: &str) -> String {
+    if offered.len() < 2 {
+        return String::new();
+    }
+    let mut markup = String::from(
+        r#"
+<div id="controls-device" class="control-picker">
+<div id="controls-device-label" class="control-picker-label">CONTROLLER</div>
+<button id="controls-device-current" class="control-picker-current"></button>
+<div id="controls-device-list" class="control-picker-list" style="display:none;">
+"#,
+    );
+    for entry in offered {
+        let selected = if entry.id == chosen { " selected" } else { "" };
+        markup.push_str(&format!(
+            r#"<button id="controls-device-option-{}" class="control-picker-option{selected}">{}</button>
+"#,
+            entry.id,
+            rml_text(&entry.name.to_uppercase()),
+        ));
+    }
+    markup.push_str("</div>
+</div>
+");
+    markup
+}
+
 fn control_group_markup(
     names: &[&str],
     grouped: &[&crate::controls::ControlDefinition],
