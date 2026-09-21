@@ -64,6 +64,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/menu_interaction.py"), "--check"],
     ),
     Scope(
+        "staging",
+        "that the runtime-kit staging script names paths that exist, after any rename",
+        "that the script runs or produces a correct kit; it builds a whole application",
+        ["python3", str(ROOT / "scripts/test_staging.py")],
+    ),
+    Scope(
         "worktree",
         "isolation between parallel checkouts: the shared git dir, the lock, refusing the canonical tree",
         "that a real worktree builds or runs; it creates nothing outside a temporary directory",
