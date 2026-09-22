@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canExport, whyNot } from "./consoles";
+import { canExport, downloadNotice, whyNot, willDownload } from "./consoles";
 
 describe("whether a console can make a game", () => {
   const answered = new Set(["megadrive", "gb"]);
@@ -9,9 +9,21 @@ describe("whether a console can make a game", () => {
     expect(whyNot(answered, "megadrive")).toBe("");
   });
 
-  it("says no, briefly, for one it did not", () => {
-    expect(canExport(answered, "dreamcast")).toBe(false);
-    expect(whyNot(answered, "dreamcast")).toBe("no core yet");
+  it("still offers a console whose core is not on disk", () => {
+    // The option is only the console's name, with no note about a missing
+    // core. We report the download later, on the export step.
+    expect(whyNot(answered, "dreamcast")).toBe("");
+    expect(canExport(answered, "dreamcast")).toBe(true);
+    expect(willDownload(answered, "dreamcast", true)).toBe(true);
+    expect(downloadNotice("Dreamcast", true)).toBe(
+      "The Dreamcast core will be downloaded.",
+    );
+    expect(downloadNotice("Dreamcast", false)).toBe("");
+  });
+
+  it("does not promise a download for a console that declares no core", () => {
+    expect(willDownload(answered, "dreamcast", false)).toBe(false);
+    expect(downloadNotice("Dreamcast", false)).toBe("");
   });
 
   it("says yes to everything while it has not been told anything", () => {

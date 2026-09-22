@@ -85,9 +85,10 @@ pub struct ExportRequest {
     pub runtime_kit: PathBuf,
     /// Optional explicit core path for development and future custom kits.
     pub core: Option<PathBuf>,
-    /// Cores downloaded on first start, in the layout of a kit, `cores/` and
-    /// `licenses/`. At export we copy the core of the game from here, so
-    /// there is no download when the game opens.
+    /// Cores downloaded when we create an app, in the layout of a kit, `cores/`
+    /// and `licenses/`. At export we copy the core of the game from here, so
+    /// there is no download when the game opens. A later export for the same
+    /// console uses the file here and does not download it again.
     #[serde(default)]
     pub core_cache: Option<PathBuf>,
 }
@@ -139,11 +140,11 @@ pub fn system_availability_for(runtime_kit: &Path, target: &str) -> Vec<SystemAv
     system_availability_in(runtime_kit, None, target)
 }
 
-/// Resolve availability, also looking in the cache filled on first start.
+/// Resolve availability, also looking in the cache of downloaded cores.
 ///
 /// We search the bundled kit first. The cache contains the cores downloaded
-/// on first start, in the same `cores/` and `licenses/` layout, and it is not
-/// a global RetroArch folder.
+/// when we create an app, in the same `cores/` and `licenses/` layout, and it
+/// is not a global RetroArch folder.
 pub fn system_availability_in(
     runtime_kit: &Path,
     cache: Option<&Path>,
@@ -355,14 +356,64 @@ fn remove_owned_staging(path: &Path) -> Result<(), ExportError> {
     result.map_err(|error| ExportError::io("cleanup", path, error))
 }
 
+/// Put one missing core into the cache. In production we download the
+/// recorded file, and in a test we count the calls and write the bytes.
+pub trait CoreFetch {
+    fn fetch_component(&self, cache: &Path, component: &str, target: &str) -> Result<(), String>;
+}
+
 pub fn export_game<F>(
     request: &ExportRequest,
     cancelled: &AtomicBool,
-    mut progress: F,
+    progress: F,
 ) -> Result<ExportResult, ExportError>
 where
     F: FnMut(ExportProgress),
 {
+    export_game_fetching(request, cancelled, progress, &LiveFetch)
+}
+
+/// Download the recorded core. We discard the error text in the caller, so
+/// that no URL from a transport failure reaches the builder.
+pub struct LiveFetch;
+
+impl CoreFetch for LiveFetch {
+    fn fetch_component(&self, cache: &Path, component: &str, target: &str) -> Result<(), String> {
+        match crate::cores::install_component(
+            cache,
+            target,
+            component,
+            &crate::cores::UreqTransport,
+        ) {
+            Some(install)
+                if matches!(
+                    install.core,
+                    crate::cores::InstallOutcome::Present | crate::cores::InstallOutcome::Installed
+                ) && matches!(
+                    install.license,
+                    crate::cores::InstallOutcome::Present | crate::cores::InstallOutcome::Installed
+                ) =>
+            {
+                Ok(())
+            }
+            _ => Err(String::new()),
+        }
+    }
+}
+
+pub fn export_game_fetching<F>(
+    request: &ExportRequest,
+    cancelled: &AtomicBool,
+    mut progress: F,
+    fetch: &dyn CoreFetch,
+) -> Result<ExportResult, ExportError>
+where
+    F: FnMut(ExportProgress),
+{
+    // This comes before we validate the file. Here we download into the cache
+    // a core that is declared but not in the kit, and we build the game with
+    // that file in it. A second export uses that file and downloads nothing.
+    fetch_missing_core(request, &mut progress, fetch)?;
     emit(
         &mut progress,
         ExportStage::Validate,
@@ -471,9 +522,8 @@ where
         // lists in this game. An achievements entry in a game with no
         // achievements would be a button that opens an empty screen.
         let mut lists: Vec<crate::lists::List> = Vec::new();
-        let staged_shaders =
-            crate::shaders::stage(&design, &menu_assets, &request.shaders)
-                .map_err(|message| ExportError::new("stage", message))?;
+        let staged_shaders = crate::shaders::stage(&design, &menu_assets, &request.shaders)
+            .map_err(|message| ExportError::new("stage", message))?;
         lists.extend(staged_shaders.list);
         let catalog = crate::achievements::resolve(&request.achievements)
             .map_err(|message| ExportError::new("stage", message))?;
@@ -634,7 +684,11 @@ where
     // A freshly built player still refers to the libraries it was linked
     // against, and the frozen kit was already rewritten. In both cases we must
     // point the game at the copies that we just staged next to it.
-    relocate_dependencies(&mach_objects, "@executable_path/../Frameworks", Some(cancelled))?;
+    relocate_dependencies(
+        &mach_objects,
+        "@executable_path/../Frameworks",
+        Some(cancelled),
+    )?;
 
     emit(progress, ExportStage::Sign, 0.70, "Signing the local app");
     for object in mach_objects.iter().rev() {
@@ -806,6 +860,51 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
         }
     }
     Ok(())
+}
+
+fn fetch_missing_core<F>(
+    request: &ExportRequest,
+    progress: &mut F,
+    fetch: &dyn CoreFetch,
+) -> Result<(), ExportError>
+where
+    F: FnMut(ExportProgress),
+{
+    let Some(system) = crate::systems::find(&request.system) else {
+        return Ok(());
+    };
+    let Some(core) = system.preferred_core() else {
+        return Ok(());
+    };
+    let Some(cache) = request.core_cache.as_deref() else {
+        return Ok(());
+    };
+    let Some(filename) = core.artifact() else {
+        return Ok(());
+    };
+    let artifact = resolve_cached(
+        &request.runtime_kit,
+        Some(cache),
+        &Path::new("cores").join(filename),
+    );
+    let licence = resolve_cached(
+        &request.runtime_kit,
+        Some(cache),
+        &Path::new("licenses").join(&core.license_file),
+    );
+    if artifact.is_file() && licence.is_file() {
+        return Ok(());
+    }
+    let message = format!("Downloading the {} core.", system.name);
+    emit(progress, ExportStage::Validate, 0.04, &message);
+    fetch
+        .fetch_component(cache, &core.component, crate::systems::current_target())
+        .map_err(|_| {
+            ExportError::new(
+                "validate",
+                format!("The {} core could not be downloaded.", system.name),
+            )
+        })
 }
 
 fn resolve_cached(kit: &Path, cache: Option<&Path>, relative: &Path) -> PathBuf {
@@ -1826,7 +1925,10 @@ fn compile_c(source: &Path, destination: &Path, extra: &[&str]) -> Result<(), Ex
         .arg(source)
         .status()
         .map_err(|error| {
-            ExportError::new("configure", format!("could not compile the launcher: {error}"))
+            ExportError::new(
+                "configure",
+                format!("could not compile the launcher: {error}"),
+            )
         })?;
     if !status.success() {
         return Err(ExportError::new(
@@ -1948,7 +2050,6 @@ fn write_launch_plan(
     );
     fs::write(path, plan).map_err(|error| ExportError::io("configure", path, error))
 }
-
 
 fn write_plist(
     path: &Path,

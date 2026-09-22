@@ -127,6 +127,28 @@ async function shot(page, file) {
   console.log(`shot ${path.relative(ROOT, file)}`);
 }
 
+async function downloadNotice(page, out) {
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  await page.locator(".fields select").selectOption("dreamcast");
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await page.getByRole("heading", { name: "Export your game" }).waitFor();
+  const text = (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  console.log(`DOWNLOAD ${JSON.stringify(text)}`);
+  if (out) await shot(page, path.join(out, "15-dreamcast-core.png"));
+  if (
+    text.includes("no core yet") ||
+    text.includes("does not include") ||
+    !text.includes("The Dreamcast core will be downloaded.")
+  ) {
+    console.error(
+      "the export step does not say the Dreamcast core will be downloaded",
+    );
+    return false;
+  }
+  return true;
+}
+
 async function clickNext(page) {
   const next = page.getByRole("button", { name: "Next", exact: true });
   await next.waitFor();
@@ -268,6 +290,17 @@ async function main() {
       viewport: { width: 1440, height: 900 },
     });
     page.setDefaultTimeout(20000);
+    // This answer has no Dreamcast core, as in the desktop app before we
+    // have downloaded flycast.
+    const systems = JSON.parse(
+      fs.readFileSync(path.join(ROOT, "desktop/systems.json"), "utf8"),
+    ).systems;
+    const prepared = systems
+      .map((system) => system.id)
+      .filter((id) => id !== "dreamcast");
+    await page.addInitScript((ids) => {
+      window.__ROMINABOX_PREPARED__ = ids;
+    }, prepared);
     await page.goto(`http://127.0.0.1:${address.port}/`, {
       waitUntil: "networkidle",
     });
@@ -296,6 +329,36 @@ async function main() {
     console.log(
       `IDENTIFIED title=${JSON.stringify(identified)} system=${system}`,
     );
+    const consoleOptions = await page.locator(".fields select").evaluate((select) =>
+      [...select.options]
+        .filter((option) => option.value)
+        .map((option) => ({
+          value: option.value,
+          text: option.textContent.trim(),
+          disabled: option.disabled,
+        })),
+    );
+    const marked = consoleOptions.filter(
+      (option) => option.text.includes("no core yet") || option.disabled,
+    );
+    const dreamcast = consoleOptions.find((option) => option.value === "dreamcast");
+    console.log(
+      `CONSOLES dreamcast=${JSON.stringify(dreamcast)} marked=${marked.length}`,
+    );
+    if (
+      !dreamcast ||
+      dreamcast.text !== "Dreamcast" ||
+      dreamcast.disabled ||
+      marked.length
+    ) {
+      console.error(
+        "a console whose core is not on disk is not offered as itself",
+      );
+      console.error(JSON.stringify(dreamcast));
+      console.error(JSON.stringify(marked.slice(0, 5)));
+      code = 1;
+      return;
+    }
     if (!checking) {
       await shot(page, path.join(out, "04-details.png"));
       await page
@@ -516,6 +579,10 @@ async function main() {
         code = 1;
         return;
       }
+      if (!(await downloadNotice(page, null))) {
+        code = 1;
+        return;
+      }
       console.log("builder check ok");
       return;
     }
@@ -527,6 +594,10 @@ async function main() {
     await page.getByRole("heading", { name: "Export your game" }).waitFor();
     await shot(page, path.join(out, "13-export.png"));
     await quoteHelp(page);
+    if (!(await downloadNotice(page, out))) {
+      code = 1;
+      return;
+    }
 
     await page.getByRole("button", { name: "Details", exact: true }).click();
     await page.getByRole("heading", { name: "Game details" }).waitFor();

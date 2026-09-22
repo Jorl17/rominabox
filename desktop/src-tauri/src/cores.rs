@@ -199,53 +199,70 @@ fn install_pins(
     pins: &PinSet,
     transport: &dyn Transport,
 ) -> Vec<CoreInstall> {
-    let Some(folder) = pins.targets.get(target) else {
-        return Vec::new();
-    };
-    let mut report = Vec::new();
-    for core in &pins.cores {
-        let Some(artifact) = core.artifacts.get(target) else {
-            continue;
-        };
-        let mirrors = pins
-            .core_mirrors
-            .iter()
-            .map(|base| format!("{base}/{folder}/latest/{}.zip", artifact.filename))
-            .collect();
-        let core_state = ensure_core(
-            &directory.join("cores"),
-            &CoreDownload {
-                filename: artifact.filename.clone(),
-                mirrors,
-                archive_sha256: artifact.archive_sha256.clone(),
-                binary_sha256: artifact.binary_sha256.clone(),
-            },
-            transport,
-        );
-        let license_mirrors = pins
-            .license_mirrors
-            .iter()
-            .map(|pattern| {
-                pattern
-                    .replace("{repository}", &core.repository)
-                    .replace("{revision}", &core.revision)
-                    .replace("{path}", &core.license_path)
-            })
-            .collect::<Vec<_>>();
-        let license_state = ensure_file(
-            &directory.join("licenses"),
-            &core.license_file,
-            &license_mirrors,
-            &core.license_sha256,
-            transport,
-        );
-        report.push(CoreInstall {
-            component: core.component.clone(),
-            core: core_state.into(),
-            license: license_state.into(),
-        });
-    }
-    report
+    pins.cores
+        .iter()
+        .filter_map(|core| install_one(directory, target, pins, core, transport))
+        .collect()
+}
+
+/// Fetch one recorded component into `directory`, or `None` when it is not pinned.
+pub fn install_component(
+    directory: &Path,
+    target: &str,
+    component: &str,
+    transport: &dyn Transport,
+) -> Option<CoreInstall> {
+    let pins = pins();
+    let core = pins.cores.iter().find(|core| core.component == component)?;
+    install_one(directory, target, &pins, core, transport)
+}
+
+fn install_one(
+    directory: &Path,
+    target: &str,
+    pins: &PinSet,
+    core: &PinnedCore,
+    transport: &dyn Transport,
+) -> Option<CoreInstall> {
+    let folder = pins.targets.get(target)?;
+    let artifact = core.artifacts.get(target)?;
+    let mirrors = pins
+        .core_mirrors
+        .iter()
+        .map(|base| format!("{base}/{folder}/latest/{}.zip", artifact.filename))
+        .collect();
+    let core_state = ensure_core(
+        &directory.join("cores"),
+        &CoreDownload {
+            filename: artifact.filename.clone(),
+            mirrors,
+            archive_sha256: artifact.archive_sha256.clone(),
+            binary_sha256: artifact.binary_sha256.clone(),
+        },
+        transport,
+    );
+    let license_mirrors = pins
+        .license_mirrors
+        .iter()
+        .map(|pattern| {
+            pattern
+                .replace("{repository}", &core.repository)
+                .replace("{revision}", &core.revision)
+                .replace("{path}", &core.license_path)
+        })
+        .collect::<Vec<_>>();
+    let license_state = ensure_file(
+        &directory.join("licenses"),
+        &core.license_file,
+        &license_mirrors,
+        &core.license_sha256,
+        transport,
+    );
+    Some(CoreInstall {
+        component: core.component.clone(),
+        core: core_state.into(),
+        license: license_state.into(),
+    })
 }
 
 fn fetch_recorded(
