@@ -206,6 +206,10 @@ async function downloadNotice(page, out) {
   await page.getByRole("heading", { name: "Export your game" }).waitFor();
   const text = (await page.locator("main").innerText()).replace(/\s+/g, " ");
   console.log(`DOWNLOAD ${JSON.stringify(text)}`);
+  if (/zip/i.test(text)) {
+    console.error("the export step still talks about a zip");
+    return false;
+  }
   if (out) await shot(page, path.join(out, "15-dreamcast-core.png"));
   if (
     text.includes("no core yet") ||
@@ -1535,6 +1539,17 @@ async function main() {
       if (code !== 0) return;
       await clickNext(page);
       await page.getByRole("heading", { name: "Export your game" }).waitFor();
+      const exportText = (await page.locator("main").innerText()).replace(
+        /\s+/g,
+        " ",
+      );
+      if (/zip/i.test(exportText)) {
+        console.error(
+          `the export step still talks about a zip: ${JSON.stringify(exportText)}`,
+        );
+        code = 1;
+        return;
+      }
       const note = await page.locator(".note").innerText();
       const create = page.getByRole("button", {
         name: "Create app",

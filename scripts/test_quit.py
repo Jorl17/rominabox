@@ -24,7 +24,6 @@ import menu_shots  # noqa: E402
 
 EXPORT_DIR = ROOT / "work/quit-export"
 APP = EXPORT_DIR / "Quit Subject.app"
-ARCHIVE = EXPORT_DIR / "Quit Subject-macOS.zip"
 STUB_DIR = ROOT / "work/quit-stub"
 DISC = Path("/Users/mariowilde/Downloads/roms/Sonic Adventure 2 (Europe)")
 GDI = "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es).gdi"
@@ -76,10 +75,10 @@ def use_checkout_player(app: Path, workspace: Path) -> None:
 
 
 def export_stub() -> None:
-    """Export a tiny sheet, so that the archive is not a second copy of the disc.
+    """Export a tiny sheet, and clone the disc into the app afterwards.
 
-    A copy in Rust is a clone on APFS, but a zip contains every byte. We clone
-    the disc into the app afterwards and remove the zip.
+    A copy in Rust is a clone on APFS, so the disc does not have to be in the
+    export that we build first.
     """
     require_disk(20.3)
     STUB_DIR.mkdir(parents=True, exist_ok=True)
@@ -121,8 +120,6 @@ def export_stub() -> None:
     )
     if result.returncode != 0:
         raise SystemExit(f"export failed:\n{result.stdout[-900:]}\n{result.stderr[-400:]}")
-    if ARCHIVE.is_file():
-        ARCHIVE.unlink()
     if not APP.is_dir():
         raise SystemExit(f"export wrote no app at {APP}")
 
@@ -326,10 +323,9 @@ def judge(name: str, debugger: str, log: str, apple_event: bool) -> str | None:
 
 
 def export_rom(rom: Path, title: str, system: str, workspace: Path) -> Path:
-    """Export a single-file game, remove the zip and keep the app to launch."""
+    """Export a single-file game and return the app to launch."""
     require_disk(20.3)
     app = workspace / f"{title}.app"
-    archive = workspace / f"{title}-macOS.zip"
     if app.is_dir():
         return app
     if workspace.exists():
@@ -363,8 +359,6 @@ def export_rom(rom: Path, title: str, system: str, workspace: Path) -> Path:
         timeout=180,
         env={**os.environ, "ROMINABOX_GAME_BUNDLE_PREFIX": PREFIX},
     )
-    if archive.is_file():
-        archive.unlink()
     if result.returncode != 0:
         raise SystemExit(f"export of {title} failed:\n{result.stdout[-900:]}")
     if not app.is_dir():
