@@ -20,7 +20,12 @@
     ]
   },
   "recognition": {},
-  "metadata": {},
+  "metadata": {
+    "catalog": {
+      "provider": "redump",
+      "name": "Sega - Mega-CD - Sega CD"
+    }
+  },
   "cores": [
     {
       "component": "genesis_plus_gx"

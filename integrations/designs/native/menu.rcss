@@ -1,33 +1,33 @@
 div { display: block; }
-body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size: 18dp; color: #ffffff; background-color: #041738; }
-#screen { position: absolute; left: 50%; top: 50%; margin-left: -480dp; margin-top: -300dp; width: 952dp; height: 592dp; border: 4dp #5296ef; background-color: #1049c3; }
-#splash { display: none; position: absolute; left: -4dp; top: -4dp; width: 960dp; height: 600dp; z-index: 100; background-color: #041738; opacity: 1; }
+body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size: 18dp; color: design(ink); background-color: design(background); }
+#screen { position: absolute; left: 50%; top: 50%; margin-left: -480dp; margin-top: -300dp; width: 952dp; height: 592dp; border: 4dp design(frame); background-color: design(screen); }
+#splash { display: none; position: absolute; left: -4dp; top: -4dp; width: 960dp; height: 600dp; z-index: 100; background-color: design(background); opacity: 1; }
 #splash-logo { position: absolute; left: 320dp; top: 140dp; width: 320dp; height: 320dp; }
-#heading { position: absolute; top: 16dp; left: 0; width: 100%; text-align: center; font-size: 36dp; color: #fff13d; }
+#heading { position: absolute; top: 16dp; left: 0; width: 100%; text-align: center; font-size: 36dp; color: design(highlight); }
 #slots { position: absolute; left: 56dp; top: 76dp; width: 840dp; height: 404dp; }
-.slot { position: absolute; width: 252dp; height: 194dp; padding: 0; background-color: #061a48; color: #ffffff; border: 3dp #75b2e4; font-family: Silkscreen; text-align: center; }
+.slot { position: absolute; width: 252dp; height: 194dp; padding: 0; background-color: design(surface); color: design(ink); border: 3dp design(edge); font-family: Silkscreen; text-align: center; }
 #slot-1, #slot-4 { left: 0; }
 #slot-2, #slot-5 { left: 291dp; }
 #slot-3, #slot-6 { left: 582dp; }
 #slot-1, #slot-2, #slot-3 { top: 0; }
 #slot-4, #slot-5, #slot-6 { top: 208dp; }
-.slot.focused, .slot:hover { border-color: #ffffff; }
-.slot.selected, .slot.selected:hover, .slot.selected.focused { border-color: #fff13d; }
-.slot:active, .slot.selected:active { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
-.slot.selected .slot-label { color: #fff13d; }
-.slot-label { height: 24dp; font-size: 17dp; padding-top: 2dp; background-color: #081433; color: #ffffff; }
-.slot-picture { width: 184dp; height: 138dp; margin: 0 auto; background-color: #0865bf; border-top: 2dp #020b27; border-left: 2dp #020b27; border-right: 2dp #9edaff; border-bottom: 2dp #9edaff; text-align: center; }
+.slot.focused, .slot:hover { border-color: design(ink); }
+.slot.selected, .slot.selected:hover, .slot.selected.focused { border-color: design(highlight); }
+.slot:active, .slot.selected:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
+.slot.selected .slot-label { color: design(highlight); }
+.slot-label { height: 24dp; font-size: 17dp; padding-top: 2dp; background-color: design(slot-label); color: design(ink); }
+.slot-picture { width: 184dp; height: 138dp; margin: 0 auto; background-color: design(picture); border-top: 2dp design(bevel-dark); border-left: 2dp design(bevel-dark); border-right: 2dp design(bevel-light); border-bottom: 2dp design(bevel-light); text-align: center; }
 .slot-image { width: 100%; height: 100%; }
 .slot.empty .slot-image { display: none; }
-.slot-state { height: 20dp; font-size: 14dp; color: #b4e6ff; padding-top: 2dp; }
+.slot-state { height: 20dp; font-size: 14dp; color: design(muted); padding-top: 2dp; }
 #actions { position: absolute; left: 56dp; top: 494dp; width: 840dp; height: 48dp; }
 #actions button { text-align: center; line-height: 42dp; position: absolute; height: 42dp; top: 0; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; }
 #resume { left: 0; width: 260dp; }
 #save { left: 284dp; width: 168dp; }
 #load { left: 476dp; width: 168dp; }
 #quit { left: 668dp; width: 168dp; }
-#status { position: absolute; top: 547dp; width: 100%; text-align: center; font-size: 16dp; color: #fff13d; }
-#footer { position: absolute; left: 24dp; bottom: 10dp; width: 904dp; font-size: 16dp; color: #ffffff; }
+#status { position: absolute; top: 547dp; width: 100%; text-align: center; font-size: 16dp; color: design(highlight); }
+#footer { position: absolute; left: 24dp; bottom: 10dp; width: 904dp; font-size: 16dp; color: design(ink); }
 #version { position: absolute; right: 0; top: 0; }
 
 #resume { width: 216dp; }
@@ -35,17 +35,17 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
 #load { left: 388dp; width: 124dp; }
 #actions #controls, #actions #options { left: 536dp; width: 164dp; }
 #quit { left: 724dp; width: 112dp; }
-#controller-scene { position: absolute; left: -4dp; top: 80dp; width: 960dp; height: 380dp; }
-#controller-image { position: absolute; left: 0; top: 0; width: 960dp; height: 380dp; }
-.control-leader { position: absolute; background-color: #b4e6ff; }
+#controller-scene { position: absolute; left: -4dp; top: 80dp; width: design(scene-width)dp; height: design(scene-height)dp; }
+#controller-image { position: absolute; left: 0; top: 0; width: design(scene-width)dp; height: design(scene-height)dp; }
+.control-leader { position: absolute; background-color: design(muted); }
 .control-leader.horizontal { height: 1dp; }
 .control-leader.vertical { width: 1dp; }
-.control-hit { position: absolute; width: 42dp; height: 42dp; background-color: transparent; border: 2dp transparent; border-radius: 21dp; }
-.control-hit:hover { border-color: #ffffff; }
-.control-hit.focused { border-color: #fff13d; }
-.control-callout { position: absolute; width: 196dp; height: 54dp; padding: 0; border: 2dp #75b2e4; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
-.control-callout:hover { border-color: #ffffff; }
-.control-callout.focused { border-color: #fff13d; }
+.control-hit { position: absolute; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 2dp transparent; border-radius: design(marker-radius)dp; }
+.control-hit:hover { border-color: design(ink); }
+.control-hit.focused { border-color: design(highlight); }
+.control-callout { position: absolute; width: design(callout-width)dp; height: design(callout-height)dp; padding: 0; border: 2dp design(edge); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
+.control-callout:hover { border-color: design(ink); }
+.control-callout.focused { border-color: design(highlight); }
 
 /* When closed, the picker is on the action row between RESET DEFAULTS and
  * CANCEL, because the heading is at the top centre and both gutters are full.
@@ -59,59 +59,88 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
  * The options have no width, because a fixed width plus the focus border and
  * padding would be wider than the content box of the list. */
 .control-picker { position: absolute; left: 484dp; top: 480dp; width: 228dp; height: 42dp; z-index: 50; }
-.control-picker-label { position: absolute; left: 0; top: -16dp; font-size: 12dp; color: #b4e6ff; }
+.control-picker-label { position: absolute; left: 0; top: -16dp; font-size: 12dp; color: design(muted); }
 /* nowrap, because the widest controller name sets this width, and a name
  * that wrapped would draw its second line outside the border. */
-.control-picker-current { position: absolute; left: 0; right: 0; top: 0; height: 38dp; font-family: Silkscreen; font-size: 13dp; line-height: 38dp; white-space: nowrap; text-align: left; padding-left: 8dp; border: 2dp #75b2e4; background-color: #061a48; color: #ffffff; }
-.control-picker-current:hover { border-color: #ffffff; }
-.control-picker-current.focused { border-color: #fff13d; }
-.control-picker-current:active { background-color: #193e88; border-color: #ffffff; }
+.control-picker-current { position: absolute; left: 0; right: 0; top: 0; height: 38dp; font-family: Silkscreen; font-size: 13dp; line-height: 38dp; white-space: nowrap; text-align: left; padding-left: 8dp; border: 2dp design(edge); background-color: design(surface); color: design(ink); }
+.control-picker-current:hover { border-color: design(ink); }
+.control-picker-current.focused { border-color: design(highlight); }
+.control-picker-current:active { background-color: design(focus); border-color: design(ink); }
 /* We lay out the options through the list, because block elements inside
  * an absolutely positioned parent would draw on top of one another. */
-.control-picker-list { position: absolute; left: 0; right: 0; bottom: 100%; border: 2dp #fff13d; background-color: #061a48; z-index: 50; display: block; }
-.control-picker-option { display: block; position: relative; height: 22dp; font-family: Silkscreen; font-size: 13dp; line-height: 22dp; white-space: nowrap; text-align: left; padding-left: 12dp; border-left: 4dp #061a48; background-color: #061a48; color: #b4e6ff; }
+.control-picker-list { position: absolute; left: 0; right: 0; bottom: 100%; border: 2dp design(highlight); background-color: design(surface); z-index: 50; display: block; }
+.control-picker-option { display: block; position: relative; height: 22dp; font-family: Silkscreen; font-size: 13dp; line-height: 22dp; white-space: nowrap; text-align: left; padding-left: 12dp; border-left: 4dp design(surface); background-color: design(surface); color: design(muted); }
 /* A hairline between rows. With the adjacent-sibling selector the last row
  * has no hairline, so the yellow list border is the bottom edge. */
-.control-picker-option + .control-picker-option { border-top: 1dp #476eab; }
+.control-picker-option + .control-picker-option { border-top: 1dp design(rule); }
 /* The pointer, keyboard focus and a held press are three states, and we draw
  * each differently, so a player using the arrow keys can see which option a
  * press would choose. */
-.control-picker-option:hover { background-color: #193e88; color: #ffffff; }
-.control-picker-option.focused { background-color: #193e88; color: #ffffff; border-left-color: #fff13d; }
-.control-picker-option:active { background-color: #fff13d; color: #061a48; border-left-color: #ffffff; }
-.control-picker-option.selected { color: #fff13d; }
+.control-picker-option:hover { background-color: design(focus); color: design(ink); }
+.control-picker-option.focused { background-color: design(focus); color: design(ink); border-left-color: design(highlight); }
+.control-picker-option:active { background-color: design(highlight); color: design(surface); border-left-color: design(ink); }
+.control-picker-option.selected { color: design(highlight); }
 /* The controller in use keeps yellow text under the pointer and under the
  * arrow keys, so it still looks in use. During a press the row itself turns
  * yellow and yellow text on it would disappear, so the text is not yellow
  * then. */
-.control-picker-option.selected:hover, .control-picker-option.selected.focused { color: #fff13d; }
-.control-picker-option.selected:active { color: #061a48; }
+.control-picker-option.selected:hover, .control-picker-option.selected.focused { color: design(highlight); }
+.control-picker-option.selected:active { color: design(surface); }
 
 /* A stick is one object on the pad but several binds, so we draw it once,
  * under the illustration and not in a gutter. Each gutter is full with seven
  * 54dp callouts, and four directions per stick would cover other buttons. */
-.control-group { position: absolute; width: 236dp; height: 62dp; padding: 0; border: 2dp #75b2e4; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
-.control-group:hover { border-color: #ffffff; }
-.control-group.focused { border-color: #fff13d; }
+.control-group { position: absolute; width: design(group-width)dp; height: design(group-height)dp; padding: 0; border: 2dp design(edge); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
+.control-group:hover { border-color: design(ink); }
+.control-group.focused { border-color: design(highlight); }
 .control-label { margin-left: 10dp; margin-top: 5dp; height: 24dp; font-size: 18dp; overflow: hidden; white-space: nowrap; }
-.control-assignment { margin-left: 10dp; font-size: 14dp; color: #b4e6ff; white-space: nowrap; overflow: hidden; }
-.control-original { margin-right: 10dp; color: #fff13d; }
+.control-assignment { margin-left: 10dp; font-size: 14dp; color: design(muted); white-space: nowrap; overflow: hidden; }
+.control-original { margin-right: 10dp; color: design(highlight); }
 #controls-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
 #controls-actions button { font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
 #controls-back { position: absolute; left: 0; width: 160dp; }
 #controls-reset { position: absolute; left: 216dp; width: 292dp; }
 #controls-cancel { position: absolute; right: 0; width: 180dp; }
-#controls-status { position: absolute; top: 537dp; width: 100%; font-size: 16dp; color: #fff13d; text-align: center; }
+#controls-status { position: absolute; top: 537dp; width: 100%; font-size: 16dp; color: design(highlight); text-align: center; }
 
 #controls-back { width: 124dp; }
 #controls-reset { left: 148dp; width: 256dp; }
 #controls-cancel { width: 160dp; }
-.slot:active .slot-label { color: #fff13d; }
+.slot:active .slot-label { color: design(highlight); }
 
-.menu-action { color: #ffffff; background-color: #061a48; border-color: #75b2e4; }
-.menu-action:hover, .menu-action.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
-.menu-action:active { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
-.menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
+.menu-action { color: design(ink); background-color: design(surface); border-color: design(edge); }
+.menu-action:hover, .menu-action.focused { background-color: design(highlight); color: design(surface); border-color: design(ink); }
+.menu-action:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
+.menu-action.disabled, .menu-action:disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
 
-@keyframes capture-pulse { from { border-color: #fff13d; } to { border-color: transparent; } }
+@keyframes capture-pulse { from { border-color: design(highlight); } to { border-color: transparent; } }
 .control-callout.capturing, .control-hit.capturing { animation: 0.55s capture-pulse infinite alternate; }
+
+/* The rules for every list screen. The achievement list, the shader list and
+ * any later list in Options have the same parts: rows we write when we
+ * bundle the game, a pager, and a state on the right. They use these rules,
+ * so for a new list we add a new screen and no new stylesheet.
+ *
+ * These rules are in the design and not in the exporter, so a design can
+ * override them for a different list. A design that declares none of them
+ * has an unstyled list, and we reject it in the design contract test.
+ */
+.screen-link { position: absolute; top: 18dp; right: 24dp; width: 148dp; height: 36dp; z-index: 2; font-family: Silkscreen; font-size: 13dp; line-height: 30dp; text-align: center; }
+.list { position: absolute; left: 56dp; top: 76dp; width: 840dp; }
+.list-row { display: block; position: relative; width: 100%; height: 64dp; margin: 0 0 8dp 0; padding: 0; background-color: design(surface); color: design(ink); border-width: 3dp; border-color: design(edge); font-family: Silkscreen; text-align: left; }
+.list-row:hover, .list-row.focused { border-color: design(ink); }
+.list-row.selected, .list-row.selected:hover, .list-row.selected.focused { border-color: design(highlight); }
+.list-row:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
+.list-row-icon { position: absolute; left: 8dp; top: 8dp; width: 48dp; height: 48dp; }
+.list-row-title { position: absolute; left: 68dp; top: 8dp; font-size: 18dp; color: design(ink); }
+.list-row-detail { position: absolute; left: 68dp; top: 32dp; font-size: 14dp; color: design(muted); }
+.list-row-state { position: absolute; right: 16dp; top: 20dp; font-size: 14dp; color: design(highlight); }
+.list-pager { position: absolute; left: 0; top: 304dp; width: 100%; height: 36dp; }
+.list-pager-prev, .list-pager-next, .list-pager-count { position: absolute; top: 0; height: 36dp; line-height: 30dp; background-color: design(surface); color: design(ink); border-width: 3dp; border-color: design(edge); font-family: Silkscreen; font-size: 14dp; text-align: center; }
+.list-pager-prev { left: 0; width: 72dp; }
+.list-pager-count { left: 84dp; width: 120dp; }
+.list-pager-next { left: 216dp; width: 72dp; }
+.list-pager-prev:hover, .list-pager-next:hover, .list-pager-prev.focused, .list-pager-next.focused { background-color: design(highlight); color: design(surface); border-color: design(ink); }
+.list-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
+.list-actions .menu-action { position: absolute; left: 0; width: 160dp; height: 38dp; font-family: Silkscreen; font-size: 18dp; line-height: 32dp; text-align: center; }
+.list-status { position: absolute; left: 56dp; top: 440dp; color: design(highlight); font-size: 14dp; }

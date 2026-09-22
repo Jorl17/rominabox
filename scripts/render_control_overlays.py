@@ -51,11 +51,6 @@ SCENE = (_METRICS["scene"]["width"], _METRICS["scene"]["height"])
 MARKER_RADIUS = _METRICS["marker"]["diameter"] // 2
 CALLOUT = (_METRICS["callout"]["width"], _METRICS["callout"]["height"])
 GROUP = _METRICS["group"]
-
-# How far above the strips we draw a rail. Across every illustrated profile,
-# with 0, 4 and 6 we reroute the same two controls, and with 8 others too, so
-# 4 is inside a stable range.
-RAIL_CLEARANCE = 4
 SCALE = 2
 MARKER = (255, 255, 255, 255)
 STAGE = (32, 36, 44, 255)
@@ -94,7 +89,45 @@ def _font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def render(profile: dict, destination: Path, colours: dict, route: str = "current") -> Path:
+CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+
+
+def scene_geometry(profile_id: str) -> dict:
+    """Ask the exporter where everything on the scene goes.
+
+    We do not compute it here. A person reviews these renders before a
+    release, so they must match the exported game, and we can be sure of
+    that only when we take the positions from the exporter.
+    """
+    import subprocess
+
+    if not CLI.exists():
+        raise SystemExit(
+            f"{CLI.name} is not built, and it owns the scene's geometry:\n"
+            "  cargo build --release --manifest-path "
+            "desktop/src-tauri/Cargo.toml --bin rominabox-cli"
+        )
+    system = next(
+        (s for p in json.loads(CONTROLS.read_text())["profiles"]
+         if p["id"] == profile_id for s in p.get("systems", [])),
+        None,
+    )
+    if system is None:
+        raise SystemExit(f"no console offers the {profile_id} pad, so it has no scene")
+    asked = subprocess.run(
+        [str(CLI), "scene-geometry"],
+        input=json.dumps(
+            {"system": system, "profile": profile_id, "design": str(DESIGN.parent)}
+        ),
+        capture_output=True,
+        text=True,
+    )
+    if asked.returncode != 0:
+        raise SystemExit(f"could not ask for {profile_id}'s geometry: {asked.stderr}")
+    return json.loads(asked.stdout)["result"]
+
+
+def render(profile: dict, destination: Path, colours: dict) -> Path:
     """Draw one profile's overlay over its illustration."""
     image = ARTWORK / profile["image"]
     if not image.exists():
@@ -129,42 +162,19 @@ def render(profile: dict, destination: Path, colours: dict, route: str = "curren
     def vertical(at_x: float, y0: float, y1: float) -> None:
         draw.rectangle([s(at_x) - 1, s(min(y0, y1)), s(at_x) + 1, s(max(y0, y1))], fill=leader)
 
-    # The area for a rail, above the strips and below the lowest callout midline.
-    strip_top = SCENE[1] - GROUP["height"] - GROUP["bottomMargin"]
-    rail_y = strip_top - RAIL_CLEARANCE
-
-    for control in ungrouped:
-        x, y = control["x"], control["y"]
-        callout_x, callout_y = control["calloutX"], control["calloutY"]
-        # The callout's inner edge is its right side in the left gutter and its
-        # left side in the right gutter.
-        edge = callout_x + 200 if callout_x < 400 else callout_x
-        midline = callout_y + 28
-
-        if route == "rail" and midline > rail_y:
-            # Draw three segments instead of two, out of the callout, along a
-            # rail clear of the strips, then up to the button. With two
-            # segments, the horizontal line of this row would cross a stick
-            # strip, because the midline of the lowest callout is inside one.
-            # We draw the rail just inside the gutter column, so that it does
-            # not run along the border of the next callout.
-            rail_x = edge if callout_x < 400 else edge - 1
-            vertical(rail_x, midline, rail_y)
-            horizontal(rail_y, rail_x, x)
-            vertical(x, rail_y, y)
-        elif route == "mirrored" and midline > rail_y:
-            # Go straight up the button's column first, then across at the
-            # button's height. This is clear to read, but the horizontal line
-            # then crosses the face of the pad.
-            horizontal(y, edge, x)
-            vertical(edge, midline, y)
-        else:
-            horizontal(midline, edge, x)
-            vertical(x, midline, y)
-
+    # We take every position from the exporter, which we use to make the
+    # shipped game, so the renders, the builder and the exported game show
+    # the same positions.
+    for placement in scene_geometry(profile["id"])["controls"]:
+        for run in placement["leader"]:
+            if run["height"] == 0:
+                horizontal(run["y"], run["x"], run["x"] + run["width"])
+            else:
+                vertical(run["x"], run["y"], run["y"] + run["height"])
+        ring = placement["marker"]
         draw.ellipse(
-            [s(x - MARKER_RADIUS), s(y - MARKER_RADIUS),
-             s(x + MARKER_RADIUS), s(y + MARKER_RADIUS)],
+            [s(ring["x"]), s(ring["y"]),
+             s(ring["x"] + ring["width"]), s(ring["y"] + ring["height"])],
             outline=MARKER, width=3)
 
     for control in ungrouped:
@@ -231,12 +241,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
     parser.add_argument(
-        "--route",
-        default="current",
-        choices=["current", "rail", "mirrored"],
-        help="which leader routing to draw, for comparing them before choosing one",
-    )
-    parser.add_argument(
         "--record",
         action="store_true",
         help="rewrite the committed digests after a deliberate layout change",
@@ -257,7 +261,7 @@ def main() -> int:
     illustrated = [p for p in registry["profiles"] if p.get("image")]
     digests = {}
     for profile in illustrated:
-        path = render(profile, arguments.output / f"{profile['id']}.png", colours, arguments.route)
+        path = render(profile, arguments.output / f"{profile['id']}.png", colours)
         digests[profile["id"]] = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
         print(f"{profile['id']:<14}{len(profile['controls']):>3} controls  {digests[profile['id']]}")
 

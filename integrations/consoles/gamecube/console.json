@@ -14,7 +14,12 @@
     "category": "disc"
   },
   "recognition": {},
-  "metadata": {},
+  "metadata": {
+    "catalog": {
+      "provider": "redump",
+      "name": "Nintendo - GameCube"
+    }
+  },
   "cores": [
     {
       "component": "dolphin"

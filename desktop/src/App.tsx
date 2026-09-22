@@ -17,6 +17,7 @@ import designs from "../designs.json";
 import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
+import shaderCatalog from "../../integrations/shaders/catalog.json";
 import "./style.css";
 
 const steps = ["Game", "Details", "Menu", "Export"];
@@ -71,6 +72,13 @@ export function App() {
   const [palette, setPalette] = useState("blue");
   const [menuSounds, setMenuSounds] = useState("off");
   const [firmware, setFirmware] = useState<string[]>([]);
+  const [bundledShaders, setBundledShaders] = useState<string[]>([]);
+  const [customShaders, setCustomShaders] = useState<
+    { name: string; path: string }[]
+  >([]);
+  const [shaderInitial, setShaderInitial] = useState<string | null>(null);
+  const [firmwareAssessment, setFirmwareAssessment] =
+    useState<bridge.FirmwareAssessment | null>(null);
   const [controls, setControls] = useState<Controls>(emptyControls);
   const [destination, setDestination] = useState("");
   const [busy, setBusy] = useState<"inspect" | "export" | "project" | null>(
@@ -85,6 +93,7 @@ export function App() {
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const gameInput = useRef<HTMLInputElement>(null);
+  const firmwareInput = useRef<HTMLInputElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const imageTarget = useRef<"icon" | "background">("icon");
   const heading = useRef<HTMLHeadingElement>(null);
@@ -271,6 +280,11 @@ export function App() {
       showMenu: draft.showMenu,
       splash: draft.splash,
       advancedEmulatorAccess: draft.advancedEmulatorAccess,
+      shaders: {
+        bundled: bundledShaders,
+        custom: customShaders,
+        initial: shaderInitial,
+      },
       startAtMenu: draft.showMenu && draft.startAtMenu,
       theme: "native",
       palette,
@@ -334,6 +348,9 @@ export function App() {
       setMenuSounds(settings.menuSounds || "off");
       setControls(settings.controls || emptyControls());
       setFirmware(settings.firmware || []);
+      setBundledShaders(settings.shaders?.bundled ?? []);
+      setCustomShaders(settings.shaders?.custom ?? []);
+      setShaderInitial(settings.shaders?.initial ?? null);
       setInfo({
         title: settings.title,
         system: settings.system,
@@ -477,29 +494,47 @@ export function App() {
   );
   const systemName = systemDefinition?.name || "Choose a console";
   const requirements = systemDefinition?.firmware || [];
-  // Some consoles cannot start without a BIOS from the author, and others run
-  // without one and only work better with it. If we showed both the same way,
-  // we would either ask for a file nobody needs or make an export that cannot
-  // work look ready. `minimum` is the number of files required in that group.
-  const mandatoryFirmware = requirements.filter((group) => group.minimum > 0);
-  const missingMandatory = mandatoryFirmware.filter(
-    (group) =>
-      firmware.filter((path) =>
-        group.acceptedNames.some(
-          (name) =>
-            name.toLowerCase() ===
-            (path.split(/[\\/]/).pop() || "").toLowerCase(),
-        ),
-      ).length < group.minimum,
+  const asksFirmware = requirements.length > 0;
+  const firmwareBlocked =
+    asksFirmware && firmwareAssessment?.canContinue !== true;
+  const firmwareNotices = (firmwareAssessment?.notices ?? []).filter(
+    (notice) => notice.kind !== bridge.FirmwareNoticeKind.Unmatched,
   );
-  const requiresFirmware = requirements.length > 0;
+  const firmwareStops = (firmwareAssessment?.notices ?? []).some(
+    (notice) =>
+      notice.kind === bridge.FirmwareNoticeKind.Required ||
+      notice.kind === bridge.FirmwareNoticeKind.Duplicate,
+  );
+  useEffect(() => {
+    if (!systemDefinition || requirements.length === 0) {
+      setFirmwareAssessment(null);
+      return;
+    }
+    let cancelled = false;
+    const systemId = systemDefinition.id;
+    setFirmwareAssessment(null);
+    bridge
+      .assessFirmware(systemId, firmware)
+      .then((assessment) => {
+        if (!cancelled) setFirmwareAssessment(assessment);
+      })
+      .catch((reason: unknown) => {
+        if (!cancelled && bridge.native) fail(reason);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [systemDefinition, firmware]);
   const firmwarePicker = (
     <div className="firmware-picker">
       <button
         type="button"
         className="secondary"
-        disabled={!bridge.native}
         onClick={async () => {
+          if (!bridge.native) {
+            firmwareInput.current?.click();
+            return;
+          }
           try {
             const paths = await bridge.pickFirmware();
             setFirmware((current) => [...new Set([...current, ...paths])]);
@@ -508,35 +543,63 @@ export function App() {
           }
         }}
       >
-        {mandatoryFirmware.length > 0 && firmware.length === 0
+        {firmwareBlocked && firmware.length === 0
           ? "Choose BIOS files"
           : "Add BIOS files"}
       </button>
+      <input
+        ref={firmwareInput}
+        type="file"
+        hidden
+        multiple
+        data-firmware
+        onChange={(e) => {
+          const names = [...(e.target.files ?? [])].map((file) => file.name);
+          setFirmware((current) => [...new Set([...current, ...names])]);
+          e.target.value = "";
+        }}
+      />
       <Help>
         Choose the BIOS files for this console. Only these files are bundled.
       </Help>
-      {firmware.map((path) => (
-        <div className="firmware-file" key={path}>
-          <span>{path.split(/[\\/]/).pop()}</span>
-          <button
-            type="button"
-            className="text-button"
-            aria-label={"Remove " + path.split(/[\\/]/).pop()}
-            onClick={() =>
-              setFirmware((current) => current.filter((file) => file !== path))
-            }
-          >
-            Remove
-          </button>
-        </div>
-      ))}
+      {firmware.map((path) => {
+        const name = path.split(/[\\/]/).pop() || path;
+        const reported = firmwareAssessment?.files.find(
+          (file) => file.name === name,
+        );
+        return (
+          <div className="firmware-file" key={path}>
+            <span>{name}</span>
+            <button
+              type="button"
+              className="text-button"
+              aria-label={"Remove " + name}
+              onClick={() =>
+                setFirmware((current) =>
+                  current.filter((file) => file !== path),
+                )
+              }
+            >
+              Remove
+            </button>
+            {reported?.reason && (
+              <p className="firmware-reason">{reported.reason}</p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
   const validDetails = !!draft.title.trim() && !!draft.system;
   const stepAvailable = (index: number) =>
-    index === 0 || (index === 1 ? !!selection : !!info && validDetails);
+    index === 0 ||
+    (index === 1 ? !!selection : !!info && validDetails && !firmwareBlocked);
   const canNext =
-    step === 0 ? !!selection : step === 1 ? !!info && validDetails : true;
+    step === 0
+      ? !!selection
+      : step === 1
+        ? !!info && validDetails && !firmwareBlocked
+        : !firmwareBlocked;
   const progressPercent = Math.round(
     Math.max(0, Math.min(1, progress?.fraction || 0)) * 100,
   );
@@ -623,7 +686,7 @@ export function App() {
                       setOnline(value);
                       setInfo(null);
                     }}
-                    help="Use established game catalogs and artwork. Artwork requests send the matched title to GitHub. The ROM stays on your computer."
+                    help="Use established game catalogs and artwork. Only the matched title is sent to look up the cover. The ROM stays on your computer."
                   />
                 </details>
                 {bridge.native && (
@@ -766,21 +829,27 @@ export function App() {
                       </div>
                     </div>
                   </div>
-                  {requiresFirmware && (
+                  {asksFirmware && (
                     <div
                       className={
-                        missingMandatory.length > 0
+                        firmwareStops
                           ? "firmware-required"
                           : "firmware-optional"
                       }
                     >
-                      <p className="firmware-status">
-                        {missingMandatory.length > 0
-                          ? missingMandatory[0].help
-                          : mandatoryFirmware.length > 0
-                            ? "BIOS files added."
-                            : requirements[0].help}
-                      </p>
+                      {firmwareNotices.map((notice) => (
+                        <p
+                          className="firmware-status"
+                          key={notice.kind + notice.text}
+                          role={
+                            notice.kind === bridge.FirmwareNoticeKind.Required
+                              ? "alert"
+                              : "status"
+                          }
+                        >
+                          {notice.text}
+                        </p>
+                      ))}
                       {firmwarePicker}
                     </div>
                   )}
@@ -1016,6 +1085,95 @@ export function App() {
                   onChange={(value) => update("advancedEmulatorAccess", value)}
                   help="Restore RetroArch's native menus. Ordinary exports keep About, Hide, Quit and standard window actions."
                 />
+                <div className="shader-choices">
+                  {shaderCatalog.presets.map((preset) => (
+                    <Checkbox
+                      key={preset.id}
+                      label={preset.name}
+                      checked={bundledShaders.includes(preset.id)}
+                      onChange={(value) => {
+                        setBundledShaders((current) =>
+                          value
+                            ? [...current, preset.id]
+                            : current.filter((id) => id !== preset.id),
+                        );
+                        if (!value) {
+                          setShaderInitial((current) =>
+                            current === preset.id ? null : current,
+                          );
+                        }
+                      }}
+                      help={preset.detail}
+                    />
+                  ))}
+                  {customShaders.map((shader) => (
+                    <div key={shader.path} className="custom-shader">
+                      <span>{shader.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomShaders((current) =>
+                            current.filter((item) => item.path !== shader.path),
+                          );
+                          setShaderInitial((current) =>
+                            current === shader.name ? null : current,
+                          );
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void bridge.pickShader().then((path) => {
+                        if (!path) return;
+                        const name =
+                          path
+                            .split(/[\\/]/)
+                            .pop()
+                            ?.replace(/\.(glslp|glsl)$/i, "") || "Shader";
+                        setCustomShaders((current) => {
+                          if (current.some((item) => item.path === path)) {
+                            return current;
+                          }
+                          return [...current, { name, path }];
+                        });
+                      });
+                    }}
+                  >
+                    Add shader
+                  </button>
+                  {bundledShaders.length + customShaders.length > 0 && (
+                    <label>
+                      Starts on
+                      <select
+                        aria-label="Starts on"
+                        value={shaderInitial ?? ""}
+                        onChange={(event) =>
+                          setShaderInitial(event.target.value || null)
+                        }
+                      >
+                        <option value="">Unfiltered</option>
+                        {shaderCatalog.presets
+                          .filter((preset) =>
+                            bundledShaders.includes(preset.id),
+                          )
+                          .map((preset) => (
+                            <option key={preset.id} value={preset.id}>
+                              {preset.name}
+                            </option>
+                          ))}
+                        {customShaders.map((shader) => (
+                          <option key={shader.path} value={shader.name}>
+                            {shader.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
               </details>
             </>
           ) : (
@@ -1198,7 +1356,8 @@ export function App() {
                 !!busy ||
                 !bridge.native ||
                 !supported.has(systemDefinition?.id || draft.system) ||
-                !destination
+                !destination ||
+                firmwareBlocked
               }
               onClick={packageGame}
             >

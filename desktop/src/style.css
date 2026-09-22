@@ -935,8 +935,16 @@ main {
 .firmware-file {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
   margin-top: 8px;
+}
+.firmware-reason {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
 }
 
 /* Authoring controls share one compact field treatment. */

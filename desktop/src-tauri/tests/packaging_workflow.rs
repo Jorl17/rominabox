@@ -73,6 +73,7 @@ fn export_request(root: &Path) -> ExportRequest {
         splash: false,
         advanced_emulator_access: false,
         menu_entries: None,
+        shaders: rominabox_desktop::shaders::ShaderSelection::default(),
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: fixture_kit(root),

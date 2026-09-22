@@ -20,6 +20,9 @@
       "controls",
       "controls-device-current",
       "controls-device-option-megadrive6"
-    ]
+    ],
+    "shaders": ["shaders"],
+    "shaders-phosphor": ["shaders", "phosphor"],
+    "shaders-scanlines": ["shaders", "scanlines"]
   }
 }

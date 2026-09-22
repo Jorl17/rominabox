@@ -632,20 +632,29 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
             .iter()
             .filter_map(|binding| {
                 let component = catalog.component(&binding.component)?;
-                Some(json!({
-                    // We write every declared target, so the registry does not
-                    // depend on the machine where we generated it. We pick the
-                    // target to run or build for when we read the registry.
-                    "artifacts": component.artifacts,
-                    "component": component.id,
-                    "license": component.license.spdx,
-                    "licenseFile": component.license.file,
-                    "capabilities": component.capabilities,
-                    // The emulated-controller remap directory in RetroArch has
-                    // this exact string as its name, so we need it in the
-                    // player and not only in the build tools.
-                    "libraryName": component.library_name,
-                }))
+                Some({
+                    let mut core = json!({
+                        // We write every declared target, so the registry does not
+                        // depend on the machine where we generated it. We pick the
+                        // target to run or build for when we read the registry.
+                        "artifacts": component.artifacts,
+                        "component": component.id,
+                        "license": component.license.spdx,
+                        "licenseFile": component.license.file,
+                        "capabilities": component.capabilities,
+                        // The paths of per-core files in RetroArch contain this
+                        // exact string: the controller remap, and the options for
+                        // an unfiltered picture. So we need it in the player too.
+                        "libraryName": component.library_name,
+                    });
+                    // We leave this out when the core's defaults already keep
+                    // the pixels intact, so a console with nothing to override
+                    // has no empty list.
+                    if !component.pixels.is_empty() {
+                        core["pixels"] = json!(component.pixels);
+                    }
+                    core
+                })
             })
             .collect();
         system.insert("cores".into(), Value::Array(cores));
