@@ -5,6 +5,8 @@
     "They are element ids in the exported menu.rml, clicked through the bridge's",
     "own listeners — the same path a player's pointer takes. An id that is not",
     "in the document stops the run rather than screenshotting the wrong screen.",
+    "A slider has no click, so id@fraction sets it: volume-level@0.15 is the",
+    "slider fifteen percent of the way across.",
     "",
     "These are the same states scripts/fixtures/menu-states.json declares, but",
     "reached rather than posed: menu-states sets the classes itself, and cannot",
@@ -18,6 +20,9 @@
       "controls",
       "controls-device-current",
       "controls-device-option-megadrive6"
-    ]
+    ],
+    "volume": ["volume"],
+    "volume-low": ["volume", "volume-level@0.15"],
+    "volume-muted": ["volume", "volume-mute"]
   }
 }

@@ -154,6 +154,13 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
         MANAGED_DATA_DIRECTORIES.join(" ")
     )));
     assert!(script.contains("export ROMINABOX_DATA_DIR=\"$data_dir\""));
+    assert!(
+        script.contains(&format!(
+            "volume_override=\"$data_dir/{}\"",
+            rominabox_desktop::volume::file_name()
+        )),
+        "the launcher has to append the per-game volume file, by the name the player writes"
+    );
     assert!(!script.contains("export HOME="));
     assert_eq!(
         HOTKEY_BINDS

@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -45,7 +46,17 @@ DESIGN = ROOT / "integrations/designs/native"
 ARTWORK = ROOT / "desktop/assets/controllers"
 STATES = ROOT / "scripts/fixtures/menu-states.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-state-digests.json"
-CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+def cli_binary() -> Path:
+    """The exporter. In a worktree we build into the shared cargo target."""
+    shared = os.environ.get("CARGO_TARGET_DIR")
+    if shared:
+        candidate = Path(shared) / "release" / "rominabox-cli"
+        if candidate.is_file():
+            return candidate
+    return ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+
+
+CLI = cli_binary()
 
 # The window size of an exported game, because at any other size a rendered
 # state is not what a player sees.
@@ -87,7 +98,7 @@ def stage(system: str, workspace: Path, variant: str | None = None) -> Path:
     # We generate it with the exporter, through its CLI, so that these pictures
     # show the markup we ship in an exported game and not an imitation of it.
     generated = subprocess.run(
-        [str(CLI), "stage-controls"],
+        [str(cli_binary()), "stage-controls"],
         input=json.dumps(
             {
                 "system": system,

@@ -277,6 +277,59 @@ int main(int argc, char **argv)
             "picker options are export markup, not created by the bridge");
    }
 
+   CHECK(rib_volume_db_from_fraction(0.0f) == -80.0f,
+         "the left end of the slider is the quietest RetroArch allows");
+   CHECK(rib_volume_db_from_fraction(1.0f) == 12.0f,
+         "the right end of the slider is the loudest RetroArch allows");
+   CHECK(rib_volume_db_from_fraction(rib_volume_fraction_from_db(0.0f)) == 0.0f,
+         "unity gain, the default, round-trips through the slider");
+   CHECK(rib_volume_db_from_fraction(-1.0f) == -80.0f,
+         "a drag past the left end stops at the end");
+   CHECK(rib_volume_db_from_fraction(2.0f) == 12.0f,
+         "a drag past the right end stops at the end");
+   CHECK(rib_volume_quantize_db(-6.4f) == -6.0f,
+         "volume moves in the same one-decibel steps as RetroArch's setting");
+
+   rib_rmlui_show_screen("volume");
+   {
+      int slider_x = 0;
+      int slider_y = 0;
+      CHECK(rib_rmlui_element_center("volume-level", &slider_x, &slider_y),
+            "the volume screen has the design's slider");
+      rib_rmlui_clear_intents();
+      rib_rmlui_pointer_move(slider_x, slider_y);
+      rib_rmlui_pointer_button(true);
+      rib_rmlui_pointer_move(0, 0);
+      rib_rmlui_pointer_button(false);
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SLIDER,
+            "dragging off a slider still sets the level");
+      CHECK(std::string(rib_rmlui_changed_part()) == "volume-level",
+            "the slider reports which part moved");
+      CHECK(rib_rmlui_changed_fraction() == 0.0f,
+            "a drag off the left end is the bottom of the range");
+
+      rib_rmlui_clear_intents();
+      click_id("volume-mute");
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_TOGGLE,
+            "mute is the toggle, not a second control");
+      CHECK(rib_rmlui_changed_on(), "the first press mutes");
+      rib_rmlui_clear_intents();
+      click_id("volume-mute");
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_TOGGLE, "mute toggles back");
+      CHECK(!rib_rmlui_changed_on(), "the second press unmutes");
+
+      rib_rmlui_set_slider("volume-level", 0.5f, nullptr);
+      rib_rmlui_clear_intents();
+      CHECK(!rib_rmlui_nudge_slider("volume-level", 1),
+            "a slider with no step does not move, so a key cannot invent one");
+      rib_rmlui_set_slider_step("volume-level", 0.1f);
+      CHECK(rib_rmlui_nudge_slider("volume-level", 1), "a key nudges the focused slider");
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SLIDER,
+            "the nudge is the same change a drag commits");
+      CHECK(rib_rmlui_changed_fraction() > 0.59f && rib_rmlui_changed_fraction() < 0.61f,
+            "the nudge adds the slider's own step, not a volume-shaped one");
+   }
+
    // Every intent that we can queue in the menu plays a sound, unless we chose
    // silence for it on purpose, so an action added later cannot be silent
    // without a test failure. Changing screen, for example, must still play

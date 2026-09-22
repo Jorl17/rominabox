@@ -217,6 +217,88 @@
           "class": "focused"
         }
       }
+    },
+    "volume": {
+      "describes": "the volume screen, slider at rest and mute off",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "none" },
+        "volume-panel": { "display": "block" },
+        "heading": { "text": "VOLUME" },
+        "footer-hint": { "text": "ESC  BACK" },
+        "volume-level-readout": { "text": "0.0 dB" },
+        "volume-level-fill": { "width": "626px" },
+        "volume-level-thumb": { "left": "597px" }
+      }
+    },
+    "volume-low": {
+      "describes": "the slider part way down, which is what a drag draws",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "none" },
+        "volume-panel": { "display": "block" },
+        "heading": { "text": "VOLUME" },
+        "footer-hint": { "text": "ESC  BACK" },
+        "volume-level-fill": { "width": "180px" },
+        "volume-level-thumb": { "left": "160px" },
+        "volume-level-readout": { "text": "-40.0 dB" }
+      }
+    },
+    "volume-focused": {
+      "describes": "the slider reached by the arrow keys",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "none" },
+        "volume-panel": { "display": "block" },
+        "heading": { "text": "VOLUME" },
+        "footer-hint": { "text": "ESC  BACK" },
+        "volume-level-readout": { "text": "0.0 dB" },
+        "volume-level-fill": { "width": "626px" },
+        "volume-level-thumb": { "left": "597px" },
+        "volume-level": { "class": "focused" }
+      }
+    },
+    "volume-dragging": {
+      "describes": "the slider held, which is not the same as focused",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "none" },
+        "volume-panel": { "display": "block" },
+        "heading": { "text": "VOLUME" },
+        "footer-hint": { "text": "ESC  BACK" },
+        "volume-level-readout": { "text": "0.0 dB" },
+        "volume-level-fill": { "width": "626px" },
+        "volume-level-thumb": { "left": "597px" },
+        "volume-level": { "class": "dragging" }
+      }
+    },
+    "volume-hover": {
+      "describes": "the pointer on the slider, which is not the keyboard",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "none" },
+        "volume-panel": { "display": "block" },
+        "heading": { "text": "VOLUME" },
+        "footer-hint": { "text": "ESC  BACK" },
+        "volume-level-readout": { "text": "0.0 dB" },
+        "volume-level-fill": { "width": "626px" },
+        "volume-level-thumb": { "left": "597px" },
+        "volume-level": { "pseudo": "hover" }
+      }
+    },
+    "volume-muted": {
+      "describes": "mute on, the toggle in its other position",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "none" },
+        "volume-panel": { "display": "block" },
+        "heading": { "text": "VOLUME" },
+        "footer-hint": { "text": "ESC  BACK" },
+        "volume-level-readout": { "text": "0.0 dB" },
+        "volume-level-fill": { "width": "626px" },
+        "volume-level-thumb": { "left": "597px" },
+        "volume-mute": { "class": "on" }
+      }
     }
   }
 }

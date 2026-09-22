@@ -38,6 +38,17 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+def volume_file() -> str:
+    """The per-game file for the player. We take its name from the header,
+    so a new name there applies here as well."""
+    header = (ROOT / "vendor/retroarch/audio/volume_range.h").read_text()
+    for line in header.splitlines():
+        line = line.strip()
+        if line.startswith("#define RIB_VOLUME_FILE "):
+            return line.split('"')[1]
+    raise SystemExit("RIB_VOLUME_FILE is not a string in volume_range.h")
+
+
 SHOTS = ROOT / "scripts/fixtures/menu-shots.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-shot-digests.json"
 
@@ -92,6 +103,7 @@ def take(app: Path, name: str, script: list[str], output: Path) -> str:
     data = data_dir_of(app)
     if data:
         (data / "controls.cfg").unlink(missing_ok=True)
+        (data / volume_file()).unlink(missing_ok=True)
         for remap in (data / "remaps").rglob("*.rmp"):
             remap.unlink()
 

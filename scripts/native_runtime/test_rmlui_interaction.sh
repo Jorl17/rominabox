@@ -33,4 +33,30 @@ c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
   "$rmlui_lib" \
   $freetype_libs
 
-"$out" "$assets" "$build_dir/thumbnail-test.png"
+# The template has a placeholder where the volume control goes, which we fill
+# at export. The test must use that document, or it clicks a comment.
+staged=$build_dir/menu-assets
+rm -rf "$staged"
+cp -R "$assets" "$staged"
+eval "$(python3 "$repo_root/scripts/worktree.py" env)"
+cli=${CARGO_TARGET_DIR:-$repo_root/desktop/src-tauri/target}/release/rominabox-cli
+if [ ! -x "$cli" ]; then
+  cargo build --release --manifest-path "$repo_root/desktop/src-tauri/Cargo.toml" --bin rominabox-cli
+fi
+python3 - "$cli" "$staged" <<'PY'
+import json, pathlib, subprocess, sys
+cli, staged = sys.argv[1:]
+result = subprocess.run(
+    [cli, "volume-markup"],
+    input=json.dumps({"design": staged}),
+    text=True, capture_output=True, check=True)
+markup = json.loads(result.stdout)["result"]["markup"]
+document = pathlib.Path(staged) / "menu.rml"
+text = document.read_text()
+slot = "<!--VOLUME-->"
+if slot not in text:
+    raise SystemExit("menu.rml has no volume slot to fill")
+document.write_text(text.replace(slot, markup, 1))
+PY
+
+"$out" "$staged" "$build_dir/thumbnail-test.png"
