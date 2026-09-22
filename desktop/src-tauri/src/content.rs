@@ -357,12 +357,13 @@ const SHEET_MATCH_LIMIT: usize = 100;
 /// near a megabyte, so a larger candidate cannot be a sheet for the drop.
 const SHEET_BYTE_LIMIT: u64 = 1024 * 1024;
 
-/// The game file for a dropped path.
+/// The game file that a drop refers to.
 ///
-/// For a dropped folder we use the GD-ROM inside it. For one dropped track of
-/// a disc we use the `.gdi` beside it, the file that lists the track. For a
-/// companion declared in the console package, such as the `.sbi` beside a
-/// CHD, we use its disc in the same way.
+/// For a dropped folder, or a dropped track of a GD-ROM, we use the `.gdi`
+/// that lists the track. We do the same for a companion that the console
+/// package declares, such as the `.sbi` beside a CHD. When a playlist in
+/// that folder lists the sheet, we use the playlist, so that a player who
+/// starts from one disc of a set can change to the next.
 pub fn resolve_dropped(path: &Path) -> Result<PathBuf, String> {
     if path.is_dir() {
         return sole_game_in(path);
@@ -379,6 +380,12 @@ pub fn resolve_dropped(path: &Path) -> Result<PathBuf, String> {
     else {
         return Ok(path.to_path_buf());
     };
+    let resolved = claimed_file(directory, path)?;
+    playlist_over_sheet(directory, &resolved)
+}
+
+/// The one sheet or companion that names `path`, or `path` when nothing does.
+fn claimed_file(directory: &Path, path: &Path) -> Result<PathBuf, String> {
     let mut claimers = sheets_naming(directory, path)?;
     for host in companion_hosts(path) {
         if !claimers.iter().any(|existing| same_file(existing, &host)) {
@@ -392,14 +399,54 @@ pub fn resolve_dropped(path: &Path) -> Result<PathBuf, String> {
     }
 }
 
+/// When `resolved` is a disc sheet, return the playlist in the same folder
+/// that lists it. A playlist is itself a sheet, but we do not apply this a
+/// second time, so we leave a playlist of playlists as it was dropped.
+fn playlist_over_sheet(directory: &Path, resolved: &Path) -> Result<PathBuf, String> {
+    if !disc_sheet(resolved) {
+        return Ok(resolved.to_path_buf());
+    }
+    let mut playlists = playlists_naming(directory, resolved)?;
+    match playlists.len() {
+        0 => Ok(resolved.to_path_buf()),
+        1 => Ok(playlists.remove(0)),
+        _ => Err(ambiguous_drop(resolved, &playlists)),
+    }
+}
+
+fn disc_sheet(path: &Path) -> bool {
+    matches!(
+        declared_sheet_parser(&extension_of(path)),
+        Some(parser) if parser != SheetParser::Playlist
+    )
+}
+
 /// Sheets in this folder whose text lists `dropped`, closest names first.
 ///
 /// The name of a track contains `(Track 3)` and the name of the layout does
 /// not. If we read in directory order, we could reach the cap on unrelated
 /// sheets and never open the one that lists the file.
 fn sheets_naming(directory: &Path, dropped: &Path) -> Result<Vec<PathBuf>, String> {
+    candidates_naming(directory, dropped, |_| true)
+}
+
+/// Playlists in this folder whose text lists `sheet`. We read them as in
+/// [`sheets_naming`], with the same folder, parsers, size limit, symlink
+/// check, order of likeness and cap. We count only playlists against the
+/// cap, so unrelated cues in the folder cannot keep us from the playlist.
+fn playlists_naming(directory: &Path, sheet: &Path) -> Result<Vec<PathBuf>, String> {
+    candidates_naming(directory, sheet, |candidate| {
+        is_playlist(&extension_of(candidate))
+    })
+}
+
+fn candidates_naming(
+    directory: &Path,
+    dropped: &Path,
+    accept: impl Fn(&Path) -> bool,
+) -> Result<Vec<PathBuf>, String> {
     let mut sheets = sheet_files(directory)?;
-    sheets.retain(|sheet| !same_file(sheet, dropped));
+    sheets.retain(|sheet| accept(sheet) && !same_file(sheet, dropped));
     sheets.sort_by(|left, right| {
         sheet_likeness(dropped, right)
             .cmp(&sheet_likeness(dropped, left))
@@ -1145,18 +1192,260 @@ mod tests {
         );
     }
 
-    /// The playlist lists the layout, and the layout lists the track. For a
-    /// dropped track we use the layout, one step up, not the playlist.
+    /// The playlist lists the layout, and the layout lists the track. We use
+    /// the playlist for a dropped track, so the player can change discs.
     #[test]
-    fn a_track_is_the_sheet_that_names_it_not_the_playlist_around_that_sheet() {
-        let root = fixture("track-not-playlist");
+    fn a_track_is_the_playlist_that_names_the_sheet_that_names_it() {
+        let root = fixture("track-playlist");
         let track = root.join("track.bin");
         fs::write(&track, b"data").unwrap();
         let gdi = root.join("game.gdi");
         fs::write(&gdi, "1\n1 0 4 2352 \"track.bin\" 0\n").unwrap();
-        fs::write(root.join("game.m3u"), "game.gdi\n").unwrap();
+        let playlist = root.join("game.m3u");
+        fs::write(&playlist, "game.gdi\n").unwrap();
 
-        assert_eq!(resolve_dropped(&track).unwrap(), gdi);
+        assert_eq!(
+            resolve_dropped(&track).unwrap(),
+            playlist,
+            "dropping the track is not dropping the playlist"
+        );
+    }
+
+    /// A multi-disc game of three cue/bin pairs and a playlist that lists the
+    /// three cues. Dropping the playlist, a cue or a track of another disc
+    /// gives the same entry and the same files.
+    #[test]
+    fn dropping_any_file_of_a_multi_disc_game_is_the_playlist() {
+        let root = fixture("final-fantasy-vii");
+        let playlist = root.join("Final Fantasy VII.m3u");
+        let mut lines = Vec::new();
+        for disc in 1..=3 {
+            let cue_name = format!("Final Fantasy VII (Disc {disc}).cue");
+            let bin_name = format!("Final Fantasy VII (Disc {disc}).bin");
+            fs::write(root.join(&bin_name), b"data").unwrap();
+            fs::write(
+                root.join(&cue_name),
+                format!("FILE \"{bin_name}\" BINARY\n  TRACK 01 MODE1/2352\n"),
+            )
+            .unwrap();
+            lines.push(cue_name);
+        }
+        fs::write(&playlist, lines.join("\n") + "\n").unwrap();
+
+        let drops = [
+            playlist.clone(),
+            root.join("Final Fantasy VII (Disc 2).cue"),
+            root.join("Final Fantasy VII (Disc 3).bin"),
+        ];
+        let receipts: Vec<_> = drops
+            .iter()
+            .map(|dropped| {
+                let resolved = resolve_dropped(dropped).unwrap();
+                let set = collect(&resolved).unwrap();
+                let files = relative_names(&set);
+                (resolved, set.entrypoint, files)
+            })
+            .collect();
+        assert_eq!(receipts[0].0, playlist, "dropping the playlist");
+        assert_eq!(receipts[1].0, receipts[0].0, "dropping disc 2's cue");
+        assert_eq!(receipts[2].0, receipts[0].0, "dropping disc 3's track");
+        assert_eq!(
+            receipts[1].1, receipts[0].1,
+            "disc 2's cue is a different entry"
+        );
+        assert_eq!(
+            receipts[2].1, receipts[0].1,
+            "disc 3's track is a different entry"
+        );
+        assert_eq!(
+            receipts[1].2, receipts[0].2,
+            "disc 2's cue collects different files"
+        );
+        assert_eq!(
+            receipts[2].2, receipts[0].2,
+            "disc 3's track collects different files"
+        );
+        for name in [
+            "Final Fantasy VII.m3u",
+            "Final Fantasy VII (Disc 1).cue",
+            "Final Fantasy VII (Disc 1).bin",
+            "Final Fantasy VII (Disc 2).cue",
+            "Final Fantasy VII (Disc 2).bin",
+            "Final Fantasy VII (Disc 3).cue",
+            "Final Fantasy VII (Disc 3).bin",
+        ] {
+            assert!(
+                receipts[0].2.iter().any(|file| file == name),
+                "{name} is not in the game: {:?}",
+                receipts[0].2
+            );
+        }
+    }
+
+    /// Two playlists name the sheet. Whether someone drops the track or the
+    /// sheet, we ask them to choose one playlist, in the same words.
+    #[test]
+    fn two_playlists_that_name_one_sheet_ask_for_one() {
+        let root = fixture("two-playlists");
+        let track = root.join("track.bin");
+        fs::write(&track, b"data").unwrap();
+        let cue = root.join("game.cue");
+        fs::write(&cue, "FILE \"track.bin\" BINARY\n  TRACK 01 MODE1/2352\n").unwrap();
+        fs::write(root.join("Alpha.m3u"), "game.cue\n").unwrap();
+        fs::write(root.join("Beta.m3u"), "game.cue\n").unwrap();
+
+        let from_track = resolve_dropped(&track);
+        let Err(from_track) = from_track else {
+            panic!(
+                "two playlists name the sheet but the track resolved to {}",
+                from_track.unwrap().display()
+            );
+        };
+        let from_sheet = resolve_dropped(&cue).expect_err("two playlists name the sheet");
+        assert_eq!(from_track, from_sheet);
+        assert!(from_track.contains("Alpha.m3u"), "{from_track}");
+        assert!(from_track.contains("Beta.m3u"), "{from_track}");
+        assert!(from_track.contains("game.cue"), "{from_track}");
+        assert!(
+            from_track.to_ascii_lowercase().contains("drop"),
+            "the error does not ask for one of them: {from_track}"
+        );
+    }
+
+    /// We do not read a playlist past the sheet size limit, so we use the
+    /// sheet that lists the track.
+    #[test]
+    fn a_playlist_larger_than_the_limit_does_not_take_the_sheet() {
+        let root = fixture("huge-playlist");
+        let track = root.join("track03.bin");
+        fs::write(&track, b"track").unwrap();
+        let cue = root.join("game.cue");
+        fs::write(&cue, "FILE \"track03.bin\" BINARY\n  TRACK 03 AUDIO\n").unwrap();
+        fs::write(
+            root.join("game.m3u"),
+            text_of_length("game.cue\n", sheet_bytes(SHEET_BYTE_LIMIT) + 1),
+        )
+        .unwrap();
+
+        assert_eq!(
+            resolve_dropped(&track).unwrap(),
+            cue,
+            "a playlist past the size limit was read"
+        );
+    }
+
+    /// We still read a playlist whose size is exactly the limit, and use it.
+    #[test]
+    fn a_playlist_at_the_size_limit_takes_the_sheet() {
+        let root = fixture("playlist-at-limit");
+        let track = root.join("track03.bin");
+        fs::write(&track, b"track").unwrap();
+        fs::write(
+            root.join("game.cue"),
+            "FILE \"track03.bin\" BINARY\n  TRACK 03 AUDIO\n",
+        )
+        .unwrap();
+        let playlist = root.join("game.m3u");
+        fs::write(
+            &playlist,
+            text_of_length("game.cue\n", sheet_bytes(SHEET_BYTE_LIMIT)),
+        )
+        .unwrap();
+
+        assert_eq!(resolve_dropped(&track).unwrap(), playlist);
+    }
+
+    /// The playlist is a link to a file in the same folder. We treat a link
+    /// that resolves inside the folder as a sheet, as when collecting.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_playlist_inside_the_folder_takes_the_sheet() {
+        let root = fixture("playlist-symlink-inside");
+        let track = root.join("track.bin");
+        fs::write(&track, b"data").unwrap();
+        fs::write(
+            root.join("game.cue"),
+            "FILE \"track.bin\" BINARY\n  TRACK 01 MODE1/2352\n",
+        )
+        .unwrap();
+        let body = root.join("body");
+        fs::write(&body, "game.cue\n").unwrap();
+        let playlist = root.join("game.m3u");
+        std::os::unix::fs::symlink(&body, &playlist).unwrap();
+
+        assert_eq!(
+            resolve_dropped(&track).unwrap(),
+            playlist,
+            "a playlist linked inside the folder was not read"
+        );
+    }
+
+    /// A link to a file in another folder is not a playlist in this folder.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_playlist_outside_the_folder_is_not_read() {
+        let root = fixture("playlist-symlink-outside");
+        let elsewhere = fixture("playlist-symlink-elsewhere");
+        let track = root.join("track.bin");
+        fs::write(&track, b"data").unwrap();
+        let cue = root.join("game.cue");
+        fs::write(&cue, "FILE \"track.bin\" BINARY\n  TRACK 01 MODE1/2352\n").unwrap();
+        let body = elsewhere.join("body");
+        fs::write(&body, "game.cue\n").unwrap();
+        std::os::unix::fs::symlink(&body, root.join("game.m3u")).unwrap();
+
+        assert_eq!(
+            resolve_dropped(&track).unwrap(),
+            cue,
+            "a playlist linked outside the folder was read"
+        );
+    }
+
+    /// A playlist in the parent folder can have the sheet's filename and
+    /// still be another game. We read only the folder of the dropped file.
+    #[test]
+    fn a_playlist_outside_the_dropped_files_folder_does_not_take_the_sheet() {
+        let parent = fixture("playlist-parent");
+        let root = parent.join("disc");
+        fs::create_dir(&root).unwrap();
+        let track = root.join("track.bin");
+        fs::write(&track, b"data").unwrap();
+        let cue = root.join("game.cue");
+        fs::write(&cue, "FILE \"track.bin\" BINARY\n  TRACK 01 MODE1/2352\n").unwrap();
+        fs::write(parent.join("game.m3u"), "game.cue\n").unwrap();
+
+        assert_eq!(
+            resolve_dropped(&track).unwrap(),
+            cue,
+            "a playlist outside the folder took the drop"
+        );
+    }
+
+    /// A folder with more playlists than the cap. The playlists that sort
+    /// first do not name the sheet, and the one that does has its name. In
+    /// directory order we would reach the cap before it.
+    #[test]
+    fn the_playlist_that_names_a_sheet_is_found_among_more_decoys_than_the_cap() {
+        let root = fixture("playlist-cap");
+        let track = root.join("Sonic (Track 3).bin");
+        fs::write(&track, b"track").unwrap();
+        fs::write(
+            root.join("Sonic.cue"),
+            "FILE \"Sonic (Track 3).bin\" BINARY\n  TRACK 03 AUDIO\n",
+        )
+        .unwrap();
+        let playlist = root.join("Sonic.m3u");
+        fs::write(&playlist, "Sonic.cue\n").unwrap();
+        for index in 0..SHEET_MATCH_LIMIT {
+            let decoy = format!("Sonic (Track 3) extra {index:03}.m3u");
+            fs::write(root.join(decoy), "nobody.cue\n").unwrap();
+        }
+
+        assert_eq!(
+            resolve_dropped(&track).unwrap(),
+            playlist,
+            "the playlist that names the sheet was not chosen"
+        );
     }
 
     /// A folder with more sheets than the cap. The sheets that sort first do
@@ -1290,12 +1579,18 @@ mod tests {
     }
 
     fn cue_of_length(track: &str, bytes: usize) -> String {
-        let head = format!("FILE \"{track}\" BINARY\n  TRACK 01 MODE1/2352\n");
+        text_of_length(
+            &format!("FILE \"{track}\" BINARY\n  TRACK 01 MODE1/2352\n"),
+            bytes,
+        )
+    }
+
+    fn text_of_length(head: &str, bytes: usize) -> String {
         assert!(
             head.len() <= bytes,
-            "cue text is longer than the size under test"
+            "sheet text is longer than the size under test"
         );
-        let mut text = head;
+        let mut text = head.to_owned();
         text.extend(std::iter::repeat('\n').take(bytes - text.len()));
         text
     }
