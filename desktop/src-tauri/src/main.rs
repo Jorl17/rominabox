@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use rominabox_desktop::{icons, metadata, packaging, projects, themes};
+use rominabox_desktop::{icons, metadata, packaging, projects, systems, themes};
 use std::{
     fs,
     io::Cursor,
@@ -180,6 +180,15 @@ async fn export_game(
 }
 
 #[tauri::command]
+fn assess_firmware(
+    system: String,
+    files: Vec<PathBuf>,
+) -> Result<systems::FirmwareAssessment, String> {
+    let system = systems::find(&system).ok_or_else(|| format!("no console is named {system}"))?;
+    Ok(systems::assess_firmware(system, &files))
+}
+
+#[tauri::command]
 fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     Ok(packaging::available_systems(&resource(&app, "runtime")?))
 }
@@ -195,6 +204,7 @@ fn main() {
             menu_preview,
             default_destination,
             available_systems,
+            assess_firmware,
             export_game,
             cancel_export,
             save_project,

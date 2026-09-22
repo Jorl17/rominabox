@@ -65,6 +65,10 @@ const MENU_PANELS: &[Panel] = &[
         ids: &[
             "controls-panel", "controls-back", "controls-reset",
             "controls-cancel", "controls-status",
+            // The block in which we draw the controller. We list it here because
+            // we replace its content in the player when someone picks another
+            // pad, and without it that change would fail without a warning.
+            "controller-scene",
         ],
     },
     Panel {

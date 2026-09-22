@@ -8,8 +8,12 @@ bridge_dir=$repo_root/vendor/retroarch/menu/drivers
 # Uses a prebuilt RmlUi from the work tree.
 rmlui_lib=$repo_root/work/experiments/rml-retroarch/build-rmlui/librmlui.a
 rmlui_inc=$repo_root/work/experiments/rml-retroarch/vendor/RmlUi/Include
-assets=$repo_root/integrations/designs/native
+design=$repo_root/integrations/designs/native
 build_dir=$repo_root/work/experiments/rml-retroarch/build-interaction-test
+# The stylesheet that we write in an export, not the file of the design. A
+# design has design(surface) where a colour goes, and we fill it in at export,
+# so the file of the design alone gives RmlUi tokens that it cannot parse.
+assets=$build_dir/assets
 out=$build_dir/test_rmlui_interaction
 
 if [ ! -f "$bridge_dir/rmlui_bridge.cpp" ]; then
@@ -33,30 +37,20 @@ c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
   "$rmlui_lib" \
   $freetype_libs
 
-# The template has a placeholder where the volume control goes, which we fill
-# at export. The test must use that document, or it clicks a comment.
-staged=$build_dir/menu-assets
-rm -rf "$staged"
-cp -R "$assets" "$staged"
-eval "$(python3 "$repo_root/scripts/worktree.py" env)"
+mkdir -p "$assets"
+for document in "$design"/*; do
+  [ -f "$document" ] && cp "$document" "$assets/"
+done
+
 cli=${CARGO_TARGET_DIR:-$repo_root/desktop/src-tauri/target}/release/rominabox-cli
 if [ ! -x "$cli" ]; then
   cargo build --release --manifest-path "$repo_root/desktop/src-tauri/Cargo.toml" --bin rominabox-cli
 fi
-python3 - "$cli" "$staged" <<'PY'
-import json, pathlib, subprocess, sys
-cli, staged = sys.argv[1:]
-result = subprocess.run(
-    [cli, "volume-markup"],
-    input=json.dumps({"design": staged}),
-    text=True, capture_output=True, check=True)
-markup = json.loads(result.stdout)["result"]["markup"]
-document = pathlib.Path(staged) / "menu.rml"
-text = document.read_text()
-slot = "<!--VOLUME-->"
-if slot not in text:
-    raise SystemExit("menu.rml has no volume slot to fill")
-document.write_text(text.replace(slot, markup, 1))
-PY
 
-"$out" "$staged" "$build_dir/thumbnail-test.png"
+# The stylesheet that we write in an export, not the file of the design. A
+# design has design(surface) where a colour goes, and RmlUi cannot parse that.
+printf '{"source":"%s","destination":"%s","palette":"blue"}' "$design" "$assets" \
+  | "$cli" stage-theme >/dev/null || {
+    echo "could not stage the design's stylesheet" >&2; exit 1; }
+
+"$out" "$assets" "$build_dir/thumbnail-test.png"

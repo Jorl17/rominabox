@@ -125,6 +125,18 @@ pub struct ControllerProfile {
     pub controls: Vec<Control>,
 }
 
+/// One core option that we set so the picture shows the core's own pixels.
+///
+/// `key` and `value` are tokens from the core. They are data, like a binding
+/// name. In an export we write them into the options file and compare them
+/// to nothing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PixelOption {
+    pub key: String,
+    pub value: String,
+}
+
 /// A built emulator core, which we identify by the artifact itself and not by
 /// the features the upstream project advertises. A project that supports CHD
 /// does not mean that we compiled this artifact with CHD support.
@@ -146,11 +158,21 @@ pub struct CoreComponent {
     ///
     /// In RetroArch the paths of per-core state contain this name, so it is
     /// more than a label. We apply the emulated controller only from a remap
-    /// file at `<remap dir>/<library name>/<library name>.rmp`, and the
-    /// directory name must match the string in the artifact. Read it from the
-    /// artifact with `frame_harness --frames 1`, never from the id.
+    /// file at `<remap dir>/<library name>/<library name>.rmp`, and the core's
+    /// picture options are at `<config dir>/<library name>/<library name>.opt`.
+    /// The directory name must match the string in the artifact. Read it from
+    /// the artifact with `frame_harness --frames 1`, never from the id.
     #[serde(default, rename = "libraryName", skip_serializing_if = "Option::is_none")]
     pub library_name: Option<String>,
+    /// Core options we set so that this build does not replace its pixel
+    /// buffer with a blended reconstruction.
+    ///
+    /// In an export we set every other option to the default from the core.
+    /// These options replace that default. Their keys and values come from
+    /// the core, and we never branch on them. An empty list means the
+    /// declared defaults already leave the pixels intact.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pixels: Vec<PixelOption>,
     /// Where the shipped artifact came from and what source we retain for it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provenance: Option<ComponentProvenance>,

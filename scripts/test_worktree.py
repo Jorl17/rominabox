@@ -152,7 +152,29 @@ def removal_never_touches_the_canonical_data() -> None:
         )
 
 
+# From inside a worktree, every check here is the wrong check. The common git
+# directory is always the canonical checkout's, and we do not test a worktree
+# of a worktree. Without this, a run of the full suite inside a worktree would
+# fail here.
+def inside_a_worktree() -> bool:
+    import subprocess
+
+    common = subprocess.run(
+        ["git", "rev-parse", "--git-common-dir"], capture_output=True, text=True
+    ).stdout.strip()
+    here = subprocess.run(
+        ["git", "rev-parse", "--git-dir"], capture_output=True, text=True
+    ).stdout.strip()
+    return bool(common) and bool(here) and Path(common).resolve() != Path(here).resolve()
+
+
 def main() -> int:
+    if inside_a_worktree():
+        print(
+            "  skipped: this checks how worktrees are created, from the "
+            "checkout they are created from. Run it there."
+        )
+        return 0
     for test in [
         the_common_dir_is_shared_not_per_worktree,
         two_worktrees_never_share_a_port,

@@ -77,6 +77,26 @@ static void move_to_id(const char *id)
    rib_rmlui_pointer_move(x, y);
 }
 
+// Press on one element and release somewhere else. People do this: they put
+// the button down, change their mind, slide off and let go. Nothing should
+// happen.
+static void press_then_release_at(const char *id, int x, int y)
+{
+   int from_x = 0;
+   int from_y = 0;
+   CHECK(rib_rmlui_element_center(id, &from_x, &from_y), "element has a hit centre");
+   rib_rmlui_pointer_move(from_x, from_y);
+   rib_rmlui_pointer_button(true);
+   rib_rmlui_pointer_move(x, y);
+   rib_rmlui_pointer_button(false);
+}
+
+static void drain_actions(void)
+{
+   while (rib_rmlui_take_action() != RIB_RMLUI_ACTION_NONE)
+      ;
+}
+
 int main(int argc, char **argv)
 {
    const char *assets = argc > 1 ? argv[1] : nullptr;
@@ -328,6 +348,44 @@ int main(int argc, char **argv)
             "the nudge is the same change a drag commits");
       CHECK(rib_rmlui_changed_fraction() > 0.59f && rib_rmlui_changed_fraction() < 0.61f,
             "the nudge adds the slider's own step, not a volume-shaped one");
+   }
+
+   // Letting go somewhere else must not press the button.
+   //
+   // In the recorded interaction scenario we press and release at the same
+   // point, which is the easy half. This test covers the other half.
+   {
+      // Earlier checks can leave the controls screen up, where SAVE is hidden
+      // and nothing can be clicked, so we set the screen explicitly.
+      rib_rmlui_show_screen("pause");
+      drain_actions();
+      press_then_release_at("save", 4, 4);
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+            "pressing a button and releasing off it does nothing");
+
+      // The other half, to show that this does not pass because clicks have
+      // stopped working: a press and release on the same button still acts.
+      drain_actions();
+      click_id("save");
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SAVE,
+            "pressing and releasing on a button still presses it");
+
+      // Sliding off and back on is a press, because the release happens on the
+      // element where the press began.
+      drain_actions();
+      {
+         int x = 0;
+         int y = 0;
+         CHECK(rib_rmlui_element_center("save", &x, &y), "element has a hit centre");
+         rib_rmlui_pointer_move(x, y);
+         rib_rmlui_pointer_button(true);
+         rib_rmlui_pointer_move(4, 4);
+         rib_rmlui_pointer_move(x, y);
+         rib_rmlui_pointer_button(false);
+      }
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SAVE,
+            "sliding off a button and back on still presses it");
+      drain_actions();
    }
 
    // Every intent that we can queue in the menu plays a sound, unless we chose

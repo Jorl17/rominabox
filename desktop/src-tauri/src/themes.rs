@@ -88,6 +88,10 @@ pub struct SceneMetrics {
     pub scene_height: i32,
     pub callout_width: i32,
     pub callout_height: i32,
+    /// The part of a callout drawn outside its declared size. The leader ends at
+    /// the drawn edge, not the content edge, and we use this value in both the
+    /// exporter and the builder.
+    pub callout_border: i32,
     pub marker: i32,
     pub group_width: i32,
     pub group_height: i32,
@@ -104,6 +108,7 @@ impl Default for SceneMetrics {
             scene_height: 380,
             callout_width: 196,
             callout_height: 54,
+            callout_border: 2,
             marker: 42,
             group_width: 236,
             group_height: 62,
@@ -243,6 +248,95 @@ fn screen_declarations(design: &Path) -> Result<String, String> {
     Ok(text)
 }
 
+/// Everything declared in a design by name, its colours and its geometry.
+///
+/// A design contains `design(surface)` where a colour goes, and
+/// `design(scene-width)dp` where a size goes. We take the value
+/// from the chosen palette, or from the `tokens` of the design when the
+/// palette does not have it, so a design may have extra colours whose names
+/// are not in this code.
+///
+/// We substitute the values into the rules of the design. Nothing goes after
+/// the stylesheet of the design, because appended rules with equal
+/// specificity would override the selectors of the design, such as the
+/// separate hover, keyboard focus and pressed styles of the picker.
+fn design_tokens(
+    design: &Path,
+    palette: &Palette,
+) -> Result<std::collections::BTreeMap<String, String>, String> {
+    let mut tokens = std::collections::BTreeMap::new();
+    // The values of the design first, so a palette may override any of them.
+    if let Ok(text) = fs::read_to_string(design.join("design.json")) {
+        let declared: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| e.to_string())?;
+        if let Some(own) = declared.get("tokens").and_then(|v| v.as_object()) {
+            for (name, value) in own {
+                if let Some(value) = value.as_str() {
+                    tokens.insert(name.clone(), value.to_string());
+                }
+            }
+        }
+    }
+    let m = scene_metrics(design)?;
+    for (name, value) in [
+        ("scene-width", m.scene_width),
+        ("scene-height", m.scene_height),
+        ("marker-diameter", m.marker),
+        ("marker-radius", m.marker / 2),
+        ("callout-width", m.callout_width),
+        ("callout-height", m.callout_height),
+        ("group-width", m.group_width),
+        ("group-height", m.group_height),
+    ] {
+        tokens.insert(name.to_string(), value.to_string());
+    }
+    for (name, value) in [
+        ("screen", &palette.screen),
+        ("background", &palette.background),
+        ("surface", &palette.surface),
+        ("picture", &palette.picture),
+        ("edge", &palette.edge),
+        ("highlight", &palette.highlight),
+        ("muted", &palette.muted),
+        ("focus", &palette.focus),
+    ] {
+        tokens.insert(name.to_string(), value.clone());
+    }
+    Ok(tokens)
+}
+
+/// Put the colours into the rules of the design.
+///
+/// The result is the stylesheet of the design with other characters in its
+/// values, with the same rules and selectors in the same order. We append
+/// nothing, so nothing can override the rules of the design.
+fn substitute_tokens(
+    css: &str,
+    tokens: &std::collections::BTreeMap<String, String>,
+) -> Result<String, String> {
+    let mut out = String::with_capacity(css.len());
+    let mut rest = css;
+    while let Some(at) = rest.find("design(") {
+        out.push_str(&rest[..at]);
+        let after = &rest[at + "design(".len()..];
+        let close = after
+            .find(')')
+            .ok_or_else(|| "a design( token is never closed".to_string())?;
+        let name = after[..close].trim();
+        let value = tokens.get(name).ok_or_else(|| {
+            format!(
+                "the stylesheet asks for design({name}), which the design does \
+                 not declare and no palette names. Declared: {}",
+                tokens.keys().cloned().collect::<Vec<_>>().join(", ")
+            )
+        })?;
+        out.push_str(value);
+        rest = &after[close + 1..];
+    }
+    out.push_str(rest);
+    Ok(out)
+}
+
 pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
     let declaration = design.join("design.json");
     let Ok(text) = fs::read_to_string(&declaration) else {
@@ -262,6 +356,7 @@ pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
         scene_height: at("scene", "height", fallback.scene_height),
         callout_width: at("callout", "width", fallback.callout_width),
         callout_height: at("callout", "height", fallback.callout_height),
+        callout_border: at("callout", "border", fallback.callout_border),
         marker: at("marker", "diameter", fallback.marker),
         group_width: at("group", "width", fallback.group_width),
         group_height: at("group", "height", fallback.group_height),
@@ -460,53 +555,12 @@ pub fn prepare_theme_assets(
     )
     .map_err(|e| format!("Could not write the design's declarations: {e}"))?;
     let mut css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
-    css.push_str(&scene_metrics_rules(source)?);
     css.push_str(builtin_part_rules(&css));
-    css.push_str(&format!(r#"
-body {{ background-color: {background}; }}
-#screen {{ background-color: {screen}; border-color: {edge}; }}
-#heading, #status {{ color: {highlight}; }}
-.slot {{ background-color: {surface}; border-color: {edge}; }}
-.slot.focused, .slot:hover {{ border-color: #ffffff; }}
-.slot.selected, .slot.selected:hover, .slot.selected.focused {{ border-color: {highlight}; }}
-.slot:active, .slot.selected:active {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
-.slot.selected .slot-label {{ color: {highlight}; }}
-.slot-label {{ background-color: {surface}; }}
-.slot-picture {{ background-color: {picture}; border-top-color: {background}; border-left-color: {background}; border-right-color: {edge}; border-bottom-color: {edge}; }}
-.slot-state {{ color: {muted}; }}
-#footer {{ color: #ffffff; }}
-#screen .menu-action {{ background-color: {surface}; color: #ffffff; border-color: {edge}; }}
-#screen .menu-action:hover, #screen .menu-action.focused {{ background-color: {highlight}; color: {surface}; border-color: #ffffff; }}
-#screen .menu-action:active {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
-#screen .menu-action.disabled, #screen .menu-action:disabled {{ background-color: {background}; color: {edge}; border-color: {surface}; }}
-.slider-readout {{ color: {highlight}; }}
-.slider-track {{ background-color: {background}; border-top-color: {background}; border-left-color: {background}; border-right-color: {edge}; border-bottom-color: {edge}; }}
-.slider-fill {{ background-color: {highlight}; }}
-.slider-thumb {{ background-color: {surface}; border-top-color: #ffffff; border-left-color: #ffffff; border-right-color: {background}; border-bottom-color: {background}; }}
-.slider:hover .slider-thumb {{ border-color: #ffffff; }}
-.slider.focused .slider-thumb, .slider.focused:hover .slider-thumb {{ background-color: {focus}; border-color: {highlight}; }}
-.slider.dragging .slider-thumb, .slider:active .slider-thumb {{ background-color: {highlight}; border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
-.toggle {{ background-color: {surface}; color: #ffffff; border-color: {edge}; }}
-.toggle-knob {{ background-color: {edge}; border-top-color: #ffffff; border-left-color: #ffffff; border-right-color: {background}; border-bottom-color: {background}; }}
-.toggle:hover {{ border-color: #ffffff; }}
-.toggle.focused, .toggle.focused:hover {{ border-color: {highlight}; }}
-.toggle.on {{ background-color: {highlight}; color: {surface}; }}
-.toggle.on .toggle-knob {{ background-color: {surface}; }}
-.toggle:active .toggle-knob {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
-.control-callout, .control-group {{ background-color: {surface}; border-color: {edge}; }}
-.control-picker-current {{ background-color: {surface}; border-color: {edge}; }}
-.control-picker-list {{ background-color: {surface}; border-color: {highlight}; }}
-.control-picker-option {{ background-color: {surface}; color: {muted}; }}
-.control-picker-option:hover, .control-picker-option.focused {{ background-color: {focus}; color: #ffffff; }}
-.control-picker-option.selected {{ color: {highlight}; }}
-.control-picker-label {{ color: {muted}; }}
-.control-callout:hover, .control-group:hover, .control-hit:hover {{ border-color: #ffffff; }}
-.control-callout.focused, .control-group.focused {{ background-color: {focus}; border-color: {highlight}; }}
-.control-hit.focused {{ border-color: {highlight}; }}
-.control-original, #controls-status {{ color: {highlight}; }}
-.control-assignment {{ color: {muted}; }}
-@keyframes capture-pulse {{ from {{ border-color: {highlight}; }} to {{ border-color: transparent; }} }}
-"#,background=palette.background,screen=palette.screen,edge=palette.edge,highlight=palette.highlight,surface=palette.surface,focus=palette.focus,picture=palette.picture,muted=palette.muted));
+    // The colours of the design, in the rules of the design. We append nothing,
+    // because a palette contains values and no styles. Appended rules would
+    // declare selectors of the design again and, coming later with equal
+    // specificity, override them.
+    css = substitute_tokens(&css, &design_tokens(source, &palette)?)?;
     if let Some(image_path) = background {
         let image = crate::icons::read_image(image_path).map_err(|e| e.to_string())?;
         image
@@ -749,6 +803,8 @@ fn scene_markup(
     group_names.sort_unstable();
     group_names.dedup();
     markup.push_str(&control_group_markup(&group_names, &grouped, controls, illustrated, metrics));
+    let placed_scene = crate::scene_layout::layout(&profile.controls, metrics);
+    let placements = &placed_scene.controls;
     for item in profile.controls.iter().filter(|item| item.group.is_none()) {
         let item = item.clone();
         let custom = controls.bindings.get(&item.id);
@@ -763,24 +819,31 @@ fn scene_markup(
             .filter(|value| value.trim() != item.label.trim())
             .map(|_| item.label.as_str());
         let id = item.id.as_str();
-        let x = item.x - 22;
-        let y = item.y - 22;
         let cx = item.callout_x;
         let cy = item.callout_y;
-        let edge = if cx < 400 { cx + 200 } else { cx };
-        let horizontal_left = edge.min(item.x);
-        let horizontal_width = (edge - item.x).abs();
-        let vertical_top = (cy + 28).min(item.y);
-        let vertical_height = (cy + 28 - item.y).abs();
         if illustrated {
+            // We take the placement from the shared scene layout, so these
+            // are in the same place in the exporter, the builder and the
+            // overlay renderer.
+            let placed = placements
+                .iter()
+                .find(|placement| placement.id == item.id)
+                .expect("every drawn control is placed");
+            for run in &placed.leader {
+                let orientation = if run.height == 0 { "horizontal" } else { "vertical" };
+                let extent = if run.height == 0 {
+                    format!("width:{}dp;", run.width)
+                } else {
+                    format!("height:{}dp;", run.height)
+                };
+                markup.push_str(&format!(
+                    "\n<div class=\"control-leader {orientation}\" style=\"left:{}dp;top:{}dp;{extent}\"/>",
+                    run.x, run.y
+                ));
+            }
             markup.push_str(&format!(
-                r#"
-<div class="control-leader horizontal" style="left:{horizontal_left}dp;top:{}dp;width:{horizontal_width}dp;"/>
-<div class="control-leader vertical" style="left:{}dp;top:{vertical_top}dp;height:{vertical_height}dp;"/>
-<button id="control-hit-{id}" class="control-hit" style="left:{x}dp;top:{y}dp;"/>
-"#,
-                cy + 28,
-                item.x
+                "\n<button id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;\"/>\n",
+                placed.marker.x, placed.marker.y
             ));
         }
         markup.push_str(&control_callout_markup(id, label, original, key, cx, cy));

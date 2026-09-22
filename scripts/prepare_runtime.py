@@ -257,12 +257,19 @@ def is_meta_bind_key(key: str, names: set[str]) -> bool:
 
 # The keys a joypad profile may contain. They describe the device and how its
 # buttons and axes map to the sixteen gameplay binds. We drop every other key.
+#
+# The `_altN` forms describe the device too. In RetroArch
+# (`task_autodetect.c`), `input_device_alt1` and `input_vendor_id_alt1` count
+# in the same pass as the main entry, and `input_phys` counts only after a
+# name or id match. Without any of these keys, a pad the profile was written
+# for scores zero, and the log shows "not configured".
 DEVICE_KEYS = {
     "input_device",
     "input_device_display_name",
     "input_driver",
     "input_vendor_id",
     "input_product_id",
+    "input_phys",
 }
 GAMEPLAY_BINDS = {
     "up", "down", "left", "right", "a", "b", "x", "y",
@@ -285,7 +292,7 @@ BIND_SUFFIXES = (
 
 def is_allowed_key(key: str) -> bool:
     """Return whether a profile may contain this assignment."""
-    if key in DEVICE_KEYS:
+    if _ALT_SUFFIX.sub("", key) in DEVICE_KEYS:
         return True
     if not key.startswith("input_"):
         return False

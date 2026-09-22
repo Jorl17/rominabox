@@ -200,14 +200,47 @@ pub fn write_defaults_config_with_advanced_access(
                 entry.id
             ));
         }
+        // Which controls belong to this pad. In the game we find the controls
+        // by going through every declared label. Without this list, the player
+        // could focus the extra buttons of a six-button pad on a three-button
+        // pad, whose scene has no element for them.
+        config.push_str(&format!(
+            "controls_variant_controls_{} = \"{}\"\n",
+            entry.id,
+            entry
+                .controls
+                .iter()
+                .map(|control| control.id.as_str())
+                .collect::<Vec<_>>()
+                .join(" ")
+        ));
     }
-    // We do not write the emulated device here, because
-    // `input_libretro_device_p1` takes effect only in a remap file, never in
-    // a config file. We write it in `packaging::stage_controller_remap`.
-    for control in &profile.controls {
-        let value = values
-            .get(&control.id)
-            .expect("profile controls are always present in effective controls");
+    // We do not write the emulated device here.
+    // `input_libretro_device_p1` works only in a remap file, never in a config
+    // file, so we write it to the remap file in
+    // `packaging::stage_controller_remap`.
+    // We write every pad that the player can choose, not only the chosen one,
+    // so that a player who switches pad has the new pad's labels and keys in
+    // the exported game. We write the chosen pad first, so that the author's
+    // own labels take precedence where two pads have the same control
+    // id.
+    let mut declared: Vec<crate::controls::ControlDefinition> = profile.controls.clone();
+    for entry in &offered {
+        for control in &entry.controls {
+            if !declared.iter().any(|seen| seen.id == control.id) {
+                declared.push(control.clone());
+            }
+        }
+    }
+    for control in &declared {
+        let fallback = EffectiveControl {
+            label: control.label.clone(),
+            key: control.key.clone(),
+            button: None,
+            axis: None,
+            mouse: None,
+        };
+        let value = values.get(&control.id).unwrap_or(&fallback);
         config.push_str(&format!(
             "rib_label_{} = \"{}\"\ninput_player1_{} = \"{}\"\n",
             control.id,

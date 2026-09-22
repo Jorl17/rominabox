@@ -10,6 +10,13 @@
     "file": "nestopia.txt"
   },
   "capabilities": [],
+  "libraryName": "Nestopia",
+  "pixels": [
+    {
+      "key": "nestopia_blargg_ntsc_filter",
+      "value": "disabled"
+    }
+  ],
   "provenance": {
     "origin": "libretro-buildbot",
     "repository": "libretro/nestopia",
