@@ -46,8 +46,11 @@ def main() -> int:
         print("  ok   git carries no symbolic links")
         return 0
     for path in found:
+        # We read the index, not HEAD, because a link that is staged and not
+        # yet committed is the one that we most want to catch, and HEAD has
+        # no target for it.
         target = subprocess.run(
-            ["git", "cat-file", "-p", f"HEAD:{path}"],
+            ["git", "cat-file", "-p", f":{path}"],
             cwd=ROOT, capture_output=True, text=True,
         ).stdout.strip()
         print(f"  FAIL {path} is a symbolic link to {target}", file=sys.stderr)

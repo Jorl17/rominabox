@@ -272,6 +272,71 @@ fn signed_export_keeps_the_sandbox_entitlement() {
     assert!(bytes < 80_000, "the launcher is {bytes} bytes");
 }
 
+/// Every library that the exported game loads is where the game can find it.
+///
+/// The launch library is beside the executable, signed separately, with an
+/// install name of `@executable_path/`. In the export we rewrite every
+/// dependency to `@executable_path/../Frameworks`, so a game contains only
+/// the libraries it loads. When a load command points at a missing file, the
+/// player exits in dyld before `main`, with a message about a search path.
+///
+/// We resolve each load command here instead of waiting for dyld, so that we
+/// can report a path that leads nowhere by name.
+#[test]
+#[ignore = "signs an exported app; the isolation scope runs it"]
+fn every_library_the_game_loads_is_inside_the_bundle() {
+    let root = scratch();
+    let app = export(&request(
+        &root,
+        b"rominabox-isolation-loadpath-v1",
+        "Load Path Probe",
+        fixture_kit(&root),
+        "megadrive",
+    ));
+    let macos = app.join("Contents/MacOS");
+    let mut checked = 0;
+    let mut missing: Vec<String> = Vec::new();
+    for entry in fs::read_dir(&macos).expect("the bundle has a MacOS directory") {
+        let object = entry.expect("a readable entry").path();
+        if !object.is_file() {
+            continue;
+        }
+        let listed = Command::new("/usr/bin/otool")
+            .args(["-L"])
+            .arg(&object)
+            .output()
+            .expect("otool runs");
+        for line in String::from_utf8_lossy(&listed.stdout).lines().skip(1) {
+            let Some(path) = line.split_whitespace().next() else {
+                continue;
+            };
+            let Some(rest) = path.strip_prefix("@executable_path/") else {
+                continue;
+            };
+            checked += 1;
+            // @executable_path is Contents/MacOS, and we resolve both
+            // `../Frameworks/x` and `x` from there.
+            let mut resolved = macos.clone();
+            for part in rest.split('/') {
+                if part == ".." {
+                    resolved.pop();
+                } else if !part.is_empty() && part != "." {
+                    resolved.push(part);
+                }
+            }
+            if !resolved.is_file() {
+                missing.push(format!(
+                    "{} loads {path}, which resolves to {} and is not there",
+                    object.file_name().unwrap().to_string_lossy(),
+                    resolved.display()
+                ));
+            }
+        }
+    }
+    assert!(checked > 0, "no bundle-relative load command was found to check");
+    assert!(missing.is_empty(), "{}", missing.join("\n"));
+}
+
 #[test]
 #[ignore = "launches a signed probe that exits; the isolation scope runs it"]
 fn sandboxed_export_cannot_reach_the_host_or_another_game() {

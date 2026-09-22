@@ -345,6 +345,37 @@ def case_size():
         restore(path, raw)
     return expect("size", code, output, ("exceeds",))
 
+def case_symlinks():
+    """Break this scope on purpose.
+
+    With a machine-local link into the canonical checkout, many scopes fail
+    at once, so a check that cannot fail here is useless.
+
+    We create nothing on disk. We read the index with `git ls-files -s`, so
+    the break is an index entry of mode 120000 for a path that does not
+    exist. There is never a link on the filesystem to follow, and we put it
+    back with one index command.
+    """
+    path = ".rominabox-symlink-proof"
+    blob = subprocess.run(
+        ["git", "hash-object", "-w", "--stdin"],
+        cwd=ROOT, input="desktop/node_modules\n", capture_output=True, text=True,
+        check=True,
+    ).stdout.strip()
+    subprocess.run(
+        ["git", "update-index", "--add", "--cacheinfo", f"120000,{blob},{path}"],
+        cwd=ROOT, check=True, capture_output=True,
+    )
+    try:
+        code, output = run_scope("symlinks")
+    finally:
+        subprocess.run(
+            ["git", "update-index", "--force-remove", path],
+            cwd=ROOT, check=True, capture_output=True,
+        )
+    return expect("symlinks", code, output, ("is a symbolic link",))
+
+
 def case_isolation():
     path = ROOT / "desktop/src-tauri/src/packaging.rs"
     raw = replace(
@@ -393,6 +424,7 @@ CASES = {
     "shaderpreview": case_shaderpreview,
     "size": case_size,
 
+    "symlinks": case_symlinks,
     "isolation": case_isolation,
     "overlays": case_overlays,
 }

@@ -2050,6 +2050,10 @@ fn bundle_dependencies(
     Ok(())
 }
 
+/// The library that we build and sign next to the player at export. Its
+/// install name is `@executable_path/` on purpose.
+const LAUNCH_LIBRARY: &str = "librominabox-launch.dylib";
+
 fn relocate_dependencies(
     objects: &[PathBuf],
     framework_prefix: &str,
@@ -2065,6 +2069,13 @@ fn relocate_dependencies(
             }
             if is_system_dependency(&dependency)
                 || dependency.starts_with(&format!("{framework_prefix}/"))
+                // The launch library is next to the executable, not in
+                // Frameworks, because we sign it separately, without the
+                // entitlements of the bundle, and its install name is
+                // @executable_path. We do not rewrite its path to ../Frameworks,
+                // because the file is not there and dyld would fail before main.
+                || Path::new(&dependency).file_name()
+                    == Some(OsStr::new(LAUNCH_LIBRARY))
             {
                 continue;
             }
