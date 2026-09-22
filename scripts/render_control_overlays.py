@@ -227,14 +227,10 @@ def render(profile: dict, destination: Path, colours: dict) -> Path:
                 outline=callout_edge,
                 width=3,
             )
-            # The stick's name, then its four directions on one line. On focus
-            # and hover we open a fuller list, with one binding per line.
+            # The stick's name, then every binding on one line, in the same
+            # words as the callout. On hover we open the vertical list.
             title = name.replace("_", " ").upper()
-            directions = " ".join(
-                m["key"].upper()
-                for m in members
-                if m["id"].endswith(("_plus", "_minus"))
-            )
+            directions = ", ".join(m["key"] for m in members)
             draw.text((s(box_x + 12), s(top + 8)), title, font=_font(s(18)), fill=MARKER)
             draw.text((s(box_x + 12), s(top + 34)), directions, font=_font(s(14)), fill=assignment)
 

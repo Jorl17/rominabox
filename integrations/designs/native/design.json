@@ -39,6 +39,10 @@
   "list": {
     "pageSize": 5
   },
+  "binds": {
+    "afterMs": 400,
+    "width": 320
+  },
   "overlays": [
     {
       "id": "splash",

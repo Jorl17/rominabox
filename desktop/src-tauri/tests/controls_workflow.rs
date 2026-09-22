@@ -352,3 +352,91 @@ fn each_offered_controller_carries_the_device_it_means() {
         "a picker shows names, not ids"
     );
 }
+
+/// Every input on a control is a row of the shared list, which we write when
+/// we bundle the game.
+///
+/// A callout can show one assignment, but a control can have a key, a pad
+/// button, an axis and a mouse button, and a stick is several of those. At
+/// export we write a row for each input the bundled pads can have, plus one
+/// page more than fits, so we can show that there is a next page. In the
+/// player we fill those rows, and we cannot add rows there.
+#[test]
+fn every_bind_is_a_row_of_the_shared_list() {
+    let root = workspace();
+    let options = Controls::default();
+    themes::prepare_controls_assets(&illustrated_assets(), &assets(), &root, "ps1", &options, None)
+        .unwrap();
+    let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
+    let declared = fs::read_to_string(root.join("design.cfg")).unwrap();
+    controls::write_defaults_config("ps1", &options, &root.join("controls.cfg")).unwrap();
+    let defaults = fs::read_to_string(root.join("controls.cfg")).unwrap();
+
+    assert!(
+        markup.contains("id=\"control-binds\" class=\"list\" style=\"display:none;\""),
+        "the controls screen has no shared list for the binds"
+    );
+    let rows = markup.matches("class=\"list-row ").count();
+    assert!(
+        rows > 4,
+        "a PlayStation stick is five directions and a page holds four, but the list has {rows} rows"
+    );
+    assert!(
+        markup.contains("id=\"binds-pager\""),
+        "more rows than fit, and no pager"
+    );
+    assert!(
+        !markup.contains("bind-row"),
+        "the binds grew their own row"
+    );
+    assert!(
+        declared.contains("binds_after = \""),
+        "when the list appears is not declared: {declared}"
+    );
+    assert!(
+        defaults.contains("rib_group_l_y_minus = \"l_stick\""),
+        "a stick's directions are not one control: {defaults}"
+    );
+}
+
+/// The callout is the list on one line. One binding stays that binding, and
+/// three bindings are the three names, never a count instead of them.
+#[test]
+fn a_callout_names_every_binding_on_the_control() {
+    let root = workspace();
+    let mut options = Controls::default();
+    options.bindings.insert(
+        "up".into(),
+        controls::ControlOverride {
+            button: Some("0".into()),
+            axis: Some("+0".into()),
+            ..Default::default()
+        },
+    );
+    themes::prepare_controls_assets(
+        &illustrated_assets(),
+        &assets(),
+        &root,
+        "megadrive",
+        &options,
+        None,
+    )
+    .unwrap();
+    let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
+    let binding = markup
+        .split("id=\"control-binding-up\">")
+        .nth(1)
+        .and_then(|rest| rest.split('<').next())
+        .unwrap_or("");
+    assert_eq!(binding, "up, Button 0, Axis +0");
+    assert!(
+        !binding.contains("bind"),
+        "a count is not a binding: {binding}"
+    );
+    let alone = markup
+        .split("id=\"control-binding-a\">")
+        .nth(1)
+        .and_then(|rest| rest.split('<').next())
+        .unwrap_or("");
+    assert_eq!(alone, "c", "one binding is that binding, not a count: {alone}");
+}

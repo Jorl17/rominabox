@@ -52,8 +52,12 @@
         "footer-hint": {
           "text": "ESC  BACK"
         },
-        "volume-level-fill": { "width": "456px" },
-        "volume-level-thumb": { "left": "422px" }
+        "volume-level-fill": {
+          "width": "456px"
+        },
+        "volume-level-thumb": {
+          "left": "422px"
+        }
       }
     },
     "controls": {
@@ -254,92 +258,590 @@
     "volume-low": {
       "describes": "volume at the quiet end, which is as far down as it goes",
       "set": {
-        "pause-panel": { "display": "none" },
-        "options-panel": { "display": "block" },
-        "controls-panel": { "display": "none" },
-        "heading": { "text": "OPTIONS" },
-        "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "0px" },
-        "volume-level-thumb": { "left": "0px" }
+        "pause-panel": {
+          "display": "none"
+        },
+        "options-panel": {
+          "display": "block"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "heading": {
+          "text": "OPTIONS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "volume-level-fill": {
+          "width": "0px"
+        },
+        "volume-level-thumb": {
+          "left": "0px"
+        }
       }
     },
     "volume-step": {
       "describes": "one position down from normal, which is one arrow press",
       "set": {
-        "pause-panel": { "display": "none" },
-        "options-panel": { "display": "block" },
-        "controls-panel": { "display": "none" },
-        "heading": { "text": "OPTIONS" },
-        "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "405px" },
-        "volume-level-thumb": { "left": "375px" }
+        "pause-panel": {
+          "display": "none"
+        },
+        "options-panel": {
+          "display": "block"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "heading": {
+          "text": "OPTIONS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "volume-level-fill": {
+          "width": "405px"
+        },
+        "volume-level-thumb": {
+          "left": "375px"
+        }
       }
     },
     "volume-focused": {
       "describes": "the slider reached by the arrow keys, still at normal",
       "set": {
-        "pause-panel": { "display": "none" },
-        "options-panel": { "display": "block" },
-        "controls-panel": { "display": "none" },
-        "heading": { "text": "OPTIONS" },
-        "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "456px" },
-        "volume-level-thumb": { "left": "422px" },
-        "volume-level": { "class": "focused" }
+        "pause-panel": {
+          "display": "none"
+        },
+        "options-panel": {
+          "display": "block"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "heading": {
+          "text": "OPTIONS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "volume-level-fill": {
+          "width": "456px"
+        },
+        "volume-level-thumb": {
+          "left": "422px"
+        },
+        "volume-level": {
+          "class": "focused"
+        }
       }
     },
     "volume-dragging": {
       "describes": "the slider held, which is not the same as focused",
       "set": {
-        "pause-panel": { "display": "none" },
-        "options-panel": { "display": "block" },
-        "controls-panel": { "display": "none" },
-        "heading": { "text": "OPTIONS" },
-        "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "456px" },
-        "volume-level-thumb": { "left": "422px" },
-        "volume-level": { "class": "dragging" }
+        "pause-panel": {
+          "display": "none"
+        },
+        "options-panel": {
+          "display": "block"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "heading": {
+          "text": "OPTIONS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "volume-level-fill": {
+          "width": "456px"
+        },
+        "volume-level-thumb": {
+          "left": "422px"
+        },
+        "volume-level": {
+          "class": "dragging"
+        }
       }
     },
     "volume-hover": {
       "describes": "the pointer on the slider, which is not the keyboard",
       "set": {
-        "pause-panel": { "display": "none" },
-        "options-panel": { "display": "block" },
-        "controls-panel": { "display": "none" },
-        "heading": { "text": "OPTIONS" },
-        "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "456px" },
-        "volume-level-thumb": { "left": "422px" },
-        "volume-level": { "pseudo": "hover" }
+        "pause-panel": {
+          "display": "none"
+        },
+        "options-panel": {
+          "display": "block"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "heading": {
+          "text": "OPTIONS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "volume-level-fill": {
+          "width": "456px"
+        },
+        "volume-level-thumb": {
+          "left": "422px"
+        },
+        "volume-level": {
+          "pseudo": "hover"
+        }
       }
     },
     "volume-arrow": {
       "describes": "the pointer on the arrow that lowers the volume",
       "set": {
-        "pause-panel": { "display": "none" },
-        "options-panel": { "display": "block" },
-        "controls-panel": { "display": "none" },
-        "heading": { "text": "OPTIONS" },
-        "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "456px" },
-        "volume-level-thumb": { "left": "422px" },
-        "volume-down": { "pseudo": "hover" }
+        "pause-panel": {
+          "display": "none"
+        },
+        "options-panel": {
+          "display": "block"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "heading": {
+          "text": "OPTIONS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "volume-level-fill": {
+          "width": "456px"
+        },
+        "volume-level-thumb": {
+          "left": "422px"
+        },
+        "volume-down": {
+          "pseudo": "hover"
+        }
       }
     },
     "volume-long": {
       "describes": "labels longer than LOW, HIGH and CONTROLS, and then longer still",
       "set": {
-        "pause-panel": { "display": "none" },
-        "options-panel": { "display": "block" },
-        "controls-panel": { "display": "none" },
-        "heading": { "text": "OPTIONS" },
-        "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "456px" },
-        "volume-level-thumb": { "left": "422px" },
-        "volume-low": { "text": "QUIETEST THE GAME CAN BE", "font-size": "22dp" },
-        "volume-high": { "text": "NORMAL LOUDNESS AND THEN SOMETHING LONGER STILL", "font-size": "22dp" },
-        "controls": { "text": "CONTROLLER SETUP FOR THIS CONSOLE AND THEN SOME", "font-size": "22dp" }
+        "pause-panel": {
+          "display": "none"
+        },
+        "options-panel": {
+          "display": "block"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "heading": {
+          "text": "OPTIONS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "volume-level-fill": {
+          "width": "456px"
+        },
+        "volume-level-thumb": {
+          "left": "422px"
+        },
+        "volume-low": {
+          "text": "QUIETEST THE GAME CAN BE",
+          "font-size": "22dp"
+        },
+        "volume-high": {
+          "text": "NORMAL LOUDNESS AND THEN SOMETHING LONGER STILL",
+          "font-size": "22dp"
+        },
+        "controls": {
+          "text": "CONTROLLER SETUP FOR THIS CONSOLE AND THEN SOME",
+          "font-size": "22dp"
+        }
+      }
+    },
+    "binds-closed": {
+      "describes": "the pointer is on a control and the list has not opened yet",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "control-up": {
+          "pseudo": "hover"
+        },
+        "control-binds": {
+          "display": "none"
+        },
+        "control-binding-up": {
+          "text": "up, Button 0"
+        },
+        "control-group-binding-l_stick?": {
+          "text": "t, Button 0, g, Button 1, v, Axis +0, b, Axis -0, 1"
+        }
+      }
+    },
+    "binds-pointer": {
+      "describes": "the list open because the pointer is on the control",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "control-up": {
+          "pseudo": "hover"
+        },
+        "control-binds": {
+          "display": "block",
+          "left": "220dp",
+          "top": "120dp",
+          "width": "280dp"
+        },
+        "control-binding-up": {
+          "text": "up, Button 0"
+        },
+        "bind-1-title": {
+          "text": "Up"
+        },
+        "bind-1-detail": {
+          "text": "Up"
+        },
+        "bind-1-state": {
+          "text": "KEY"
+        },
+        "bind-2-title": {
+          "text": "Up"
+        },
+        "bind-2-detail": {
+          "text": "Button 0"
+        },
+        "bind-2-state": {
+          "text": "PAD"
+        },
+        "bind-3": {
+          "display": "none"
+        },
+        "bind-4": {
+          "display": "none"
+        },
+        "bind-5": {
+          "display": "none"
+        },
+        "binds-pager": {
+          "display": "none"
+        }
+      }
+    },
+    "binds-keyboard": {
+      "describes": "the same list, opened because the control was reached with the arrow keys",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "control-up": {
+          "class": "focused"
+        },
+        "control-hit-up?": {
+          "class": "focused"
+        },
+        "control-binds": {
+          "display": "block",
+          "left": "220dp",
+          "top": "120dp",
+          "width": "280dp"
+        },
+        "control-binding-up": {
+          "text": "up, Button 0"
+        },
+        "bind-1-title": {
+          "text": "Up"
+        },
+        "bind-1-detail": {
+          "text": "Up"
+        },
+        "bind-1-state": {
+          "text": "KEY"
+        },
+        "bind-2-title": {
+          "text": "Up"
+        },
+        "bind-2-detail": {
+          "text": "Button 0"
+        },
+        "bind-2-state": {
+          "text": "PAD"
+        },
+        "bind-3": {
+          "display": "none"
+        },
+        "bind-4": {
+          "display": "none"
+        },
+        "bind-5": {
+          "display": "none"
+        },
+        "binds-pager": {
+          "display": "none"
+        }
+      }
+    },
+    "binds-line-hover": {
+      "describes": "the pointer on one line of the open list",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "control-up": {
+          "pseudo": "hover"
+        },
+        "control-binds": {
+          "display": "block",
+          "left": "220dp",
+          "top": "120dp",
+          "width": "280dp"
+        },
+        "bind-1": {
+          "pseudo": "hover"
+        },
+        "control-binding-up": {
+          "text": "up, Button 0"
+        },
+        "bind-1-title": {
+          "text": "Up"
+        },
+        "bind-1-detail": {
+          "text": "Up"
+        },
+        "bind-1-state": {
+          "text": "KEY"
+        },
+        "bind-2-title": {
+          "text": "Up"
+        },
+        "bind-2-detail": {
+          "text": "Button 0"
+        },
+        "bind-2-state": {
+          "text": "PAD"
+        },
+        "bind-3": {
+          "display": "none"
+        },
+        "bind-4": {
+          "display": "none"
+        },
+        "bind-5": {
+          "display": "none"
+        },
+        "binds-pager": {
+          "display": "none"
+        }
+      }
+    },
+    "binds-line-pressed": {
+      "describes": "a line held down, before it is released",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "control-up": {
+          "pseudo": "hover"
+        },
+        "control-binds": {
+          "display": "block",
+          "left": "220dp",
+          "top": "120dp",
+          "width": "280dp"
+        },
+        "bind-1": {
+          "pseudo": "active"
+        },
+        "control-binding-up": {
+          "text": "up, Button 0"
+        },
+        "bind-1-title": {
+          "text": "Up"
+        },
+        "bind-1-detail": {
+          "text": "Up"
+        },
+        "bind-1-state": {
+          "text": "KEY"
+        },
+        "bind-2-title": {
+          "text": "Up"
+        },
+        "bind-2-detail": {
+          "text": "Button 0"
+        },
+        "bind-2-state": {
+          "text": "PAD"
+        },
+        "bind-3": {
+          "display": "none"
+        },
+        "bind-4": {
+          "display": "none"
+        },
+        "bind-5": {
+          "display": "none"
+        },
+        "binds-pager": {
+          "display": "none"
+        }
+      }
+    },
+    "binds-line-dragged": {
+      "describes": "a line held down and the pointer dragged off it before release",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "control-binds": {
+          "display": "block",
+          "left": "220dp",
+          "top": "120dp",
+          "width": "280dp"
+        },
+        "bind-1": {
+          "pseudo": "active"
+        },
+        "control-binding-up": {
+          "text": "up, Button 0"
+        },
+        "bind-1-title": {
+          "text": "Up"
+        },
+        "bind-1-detail": {
+          "text": "Up"
+        },
+        "bind-1-state": {
+          "text": "KEY"
+        },
+        "bind-2-title": {
+          "text": "Up"
+        },
+        "bind-2-detail": {
+          "text": "Button 0"
+        },
+        "bind-2-state": {
+          "text": "PAD"
+        },
+        "bind-3": {
+          "display": "none"
+        },
+        "bind-4": {
+          "display": "none"
+        },
+        "bind-5": {
+          "display": "none"
+        },
+        "binds-pager": {
+          "display": "none"
+        },
+        "control-a": {
+          "pseudo": "hover"
+        }
+      }
+    },
+    "binds-overflow": {
+      "describes": "more bindings than fit on one page, so the rest are on the next",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "control-up": {
+          "pseudo": "hover"
+        },
+        "control-binds": {
+          "display": "block",
+          "left": "300dp",
+          "top": "168dp",
+          "width": "280dp"
+        },
+        "control-binding-up": {
+          "text": "up, Button 0"
+        },
+        "control-group-binding-l_stick?": {
+          "text": "t, Button 0, g, Button 1, v, Axis +0, b, Axis -0, 1"
+        },
+        "bind-1-title": {
+          "text": "Left stick up"
+        },
+        "bind-1-detail": {
+          "text": "t"
+        },
+        "bind-1-state": {
+          "text": "KEY"
+        },
+        "bind-2-title": {
+          "text": "Left stick up"
+        },
+        "bind-2-detail": {
+          "text": "Button 0"
+        },
+        "bind-2-state": {
+          "text": "PAD"
+        },
+        "bind-3-title": {
+          "text": "Left stick down"
+        },
+        "bind-3-detail": {
+          "text": "g"
+        },
+        "bind-3-state": {
+          "text": "KEY"
+        },
+        "bind-4-title": {
+          "text": "Left stick down"
+        },
+        "bind-4-detail": {
+          "text": "Button 1"
+        },
+        "bind-4-state": {
+          "text": "PAD"
+        },
+        "bind-5-title": {
+          "text": "Left stick left"
+        },
+        "bind-5-detail": {
+          "text": "v"
+        },
+        "bind-5-state": {
+          "text": "KEY"
+        },
+        "bind-6-title": {
+          "text": "Left stick left"
+        },
+        "bind-6-detail": {
+          "text": "Axis +0"
+        },
+        "bind-6-state": {
+          "text": "AXIS"
+        },
+        "binds-page-count": {
+          "text": "1/2"
+        }
       }
     }
   }

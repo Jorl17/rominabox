@@ -30,8 +30,8 @@ pub const LINKS_SLOT: &str = "<!--SCREEN-LINKS-->";
 const BUILT_IN_ROW: &str = concat!(
     "<button id=\"ROW-ID\" class=\"list-row SELECTED\">",
     "<img class=\"list-row-icon\" src=\"ICON\"/>",
-    "<div class=\"list-row-title\">TITLE</div>",
-    "<div class=\"list-row-detail\">DETAIL</div>",
+    "<div id=\"ROW-ID-title\" class=\"list-row-title\">TITLE</div>",
+    "<div id=\"ROW-ID-detail\" class=\"list-row-detail\">DETAIL</div>",
     "<div id=\"ROW-ID-state\" class=\"list-row-state\">STATE</div>",
     "</button>\n",
 );
@@ -147,6 +147,11 @@ pub fn render_row(template: &str, item: &ListItem) -> String {
         out.push_str(&template[at..next]);
         at = next;
     }
+    if item.icon.is_empty() {
+        // A row with no picture. We remove the img, because loading a missing
+        // texture in RmlUi makes the render fail.
+        out = out.replace("<img class=\"list-row-icon\" src=\"\"/>", "");
+    }
     out
 }
 
@@ -177,7 +182,7 @@ pub fn render_list(screen: &str, template: &str, items: &[ListItem], page_size: 
     }
     if page_count > 1 {
         html.push_str(&format!(
-            "<div class=\"list-pager\"><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">1/{page_count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">&gt;</button></div>"
+            "<div id=\"{screen}-pager\" class=\"list-pager\"><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">1/{page_count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">&gt;</button></div>"
         ));
     }
     html.push_str("</div>");

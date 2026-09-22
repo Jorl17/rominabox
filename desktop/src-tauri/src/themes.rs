@@ -799,6 +799,36 @@ fn overlay_declarations(design: &Path, markup: &str) -> Result<String, String> {
     Ok(text)
 }
 
+/// When the bind list appears and how wide it is, written next to the
+/// overlay clocks that the player reads.
+///
+/// `afterMs` is a declaration like that of an overlay. The time comes from
+/// the design, and we wait for it in the player. Without a `binds` block in
+/// the design, there is no list and the callout contains one assignment.
+fn binds_declarations(design: &Path) -> Result<String, String> {
+    let path = design.join("design.json");
+    let Ok(text) = fs::read_to_string(&path) else {
+        return Ok(String::new());
+    };
+    let declared: serde_json::Value =
+        serde_json::from_str(&text).map_err(|error| format!("{}: {error}", path.display()))?;
+    let Some(binds) = declared.get("binds") else {
+        return Ok(String::new());
+    };
+    let after = binds
+        .get("afterMs")
+        .and_then(|value| value.as_u64())
+        .ok_or_else(|| "binds.afterMs must be a number of milliseconds".to_string())?;
+    let width = binds
+        .get("width")
+        .and_then(|value| value.as_u64())
+        .filter(|value| *value > 0)
+        .ok_or_else(|| "binds.width must be a width in dp".to_string())?;
+    Ok(format!(
+        "binds_after = \"{after}\"\nbinds_width = \"{width}\"\nbinds_list = \"control-binds\"\n"
+    ))
+}
+
 /// Seconds, as we write them in a stylesheet: `design(overlay-leave-notice)s`.
 fn seconds(milliseconds: u32) -> String {
     let text = format!("{:.3}", milliseconds as f32 / 1000.0);
@@ -1083,9 +1113,10 @@ fn write_declarations(
     markup: &str,
 ) -> Result<(), String> {
     let text = format!(
-        "{}{}",
+        "{}{}{}",
         screen_declarations(screens, markup),
-        overlay_declarations(design, markup)?
+        overlay_declarations(design, markup)?,
+        binds_declarations(design)?
     );
     fs::write(destination.join("design.cfg"), text)
         .map_err(|e| format!("Could not write the design's declarations: {e}"))
@@ -1321,9 +1352,17 @@ pub fn prepare_controls_assets(
             system
         ));
     }
+    let binds = bind_list_markup(design, &offered)?;
+    if !template.contains(BINDS_SLOT) {
+        return Err(format!(
+            "this design has no {BINDS_SLOT} for the binds on a control. \
+             Add the slot to menu.rml, outside #controller-scene."
+        ));
+    }
     let menu = template
         .replace("<!--CONTROLS-->", &markup)
-        .replace(PICKER_SLOT, &picker);
+        .replace(PICKER_SLOT, &picker)
+        .replace(BINDS_SLOT, &binds);
     let (menu, screens) = apply_options(design, &menu, entries)?;
     // Volume is part of the Options screen that we just built. It is not
     // another screen, and we leave the Options entries where they are.
@@ -1349,6 +1388,56 @@ pub fn default_entries(design: &Path) -> Result<Vec<String>, String> {
         .filter(|screen| screen.option_label.is_some() && screen.option_default)
         .map(|screen| screen.id)
         .collect())
+}
+
+/// Where the bind list goes, as a sibling of the scene like the picker, so
+/// it stays when we replace the scene after someone swaps pads.
+const BINDS_SLOT: &str = "<!--BINDS-->";
+
+/// One row for each input that the bundled pads can bind to a single control.
+///
+/// A `retro_keybind` contains a key, a button, an axis and a mouse button. A
+/// stick is several controls drawn as one object, so its list has the inputs
+/// of every direction. We write the rows now because we cannot create
+/// elements in the player while the game runs. There we fill these rows and
+/// hide the rest. There is always one row more than a page, so we can say
+/// that the rest did not fit, even on a pad whose busiest control would fill
+/// exactly one page.
+fn bind_list_markup(
+    design: &Path,
+    profiles: &[crate::controls::ControlProfile],
+) -> Result<String, String> {
+    let template = crate::lists::row_template(design)?;
+    let page_size = crate::lists::page_size(design)?;
+    let mut slots = 4usize;
+    for profile in profiles {
+        let mut groups: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+        for control in &profile.controls {
+            if let Some(name) = control.group.as_deref() {
+                *groups.entry(name).or_default() += 1;
+            }
+        }
+        for size in groups.values() {
+            slots = slots.max(size * 4);
+        }
+    }
+    slots = slots.max(page_size.saturating_add(1));
+    let items: Vec<crate::lists::ListItem> = (1..=slots)
+        .map(|index| crate::lists::ListItem {
+            id: format!("bind-{index}"),
+            icon: String::new(),
+            title: String::new(),
+            detail: String::new(),
+            state: String::new(),
+            selected: false,
+            accent: false,
+        })
+        .collect();
+    Ok(crate::lists::render_list("binds", &template, &items, page_size).replacen(
+        "<div class=\"list\">",
+        "<div id=\"control-binds\" class=\"list\" style=\"display:none;\">",
+        1,
+    ))
 }
 
 /// The pads in an export: every pad in the picker.
@@ -1419,9 +1508,12 @@ fn scene_markup(
             .and_then(|value| value.label.as_deref())
             .filter(|label| !label.trim().is_empty());
         let label = author_label.unwrap_or(&item.label);
-        let key = custom
-            .and_then(|value| value.key.as_deref())
-            .unwrap_or(&item.key);
+        let key = callout_line(&binding_words(
+            custom.and_then(|value| value.key.as_deref()).unwrap_or(&item.key),
+            custom.and_then(|value| value.button.as_deref()),
+            custom.and_then(|value| value.axis.as_deref()),
+            custom.and_then(|value| value.mouse),
+        ));
         let original = author_label
             .filter(|value| value.trim() != item.label.trim())
             .map(|_| item.label.as_str());
@@ -1453,7 +1545,7 @@ fn scene_markup(
                 placed.marker.x, placed.marker.y
             ));
         }
-        markup.push_str(&control_callout_markup(id, label, original, key, cx, cy));
+        markup.push_str(&control_callout_markup(id, label, original, &key, cx, cy));
     }
     markup
 }
@@ -1563,32 +1655,71 @@ fn control_group_markup(
             }
         }
 
-        // The directions are written on one line.
-        let keys: Vec<String> = members
-            .iter()
-            .filter(|item| item.id.ends_with("_plus") || item.id.ends_with("_minus"))
-            .map(|item| {
-                controls
-                    .bindings
-                    .get(&item.id)
-                    .and_then(|value| value.key.clone())
-                    .unwrap_or_else(|| item.key.clone())
-                    .to_uppercase()
-            })
-            .collect();
+        let mut words = Vec::new();
+        for item in &members {
+            let custom = controls.bindings.get(&item.id);
+            words.extend(binding_words(
+                custom
+                    .and_then(|value| value.key.as_deref())
+                    .unwrap_or(&item.key),
+                custom.and_then(|value| value.button.as_deref()),
+                custom.and_then(|value| value.axis.as_deref()),
+                custom.and_then(|value| value.mouse),
+            ));
+        }
         let title = name.replace('_', " ").to_uppercase();
         markup.push_str(&format!(
             r#"
 <button id="control-group-{name}" class="control-group" style="left:{box_x}dp;top:{top}dp;">
 <div class="control-label">{}</div>
-<div class="control-assignment">{}</div>
+<div id="control-group-binding-{name}" class="control-assignment">{}</div>
 </button>
 "#,
             rml_text(&title),
-            rml_text(&keys.join(" ")),
+            rml_text(&callout_line(&words)),
         ));
     }
     markup
+}
+
+/// The words that a callout can contain about one control, in list order.
+fn binding_words(
+    key: &str,
+    button: Option<&str>,
+    axis: Option<&str>,
+    mouse: Option<u32>,
+) -> Vec<String> {
+    let mut words = Vec::new();
+    if !key.is_empty() && key != "nul" {
+        words.push(key.to_string());
+    }
+    if let Some(button) = button.filter(|value| !value.is_empty()) {
+        words.push(format!("Button {button}"));
+    }
+    if let Some(axis) = axis.filter(|value| !value.is_empty()) {
+        words.push(format!("Axis {axis}"));
+    }
+    if let Some(mouse) = mouse {
+        words.push(match mouse {
+            2 => "Left".to_string(),
+            3 => "Right".to_string(),
+            4 => "Wheel up".to_string(),
+            5 => "Wheel down".to_string(),
+            6 => "Middle".to_string(),
+            other => format!("Mouse {other}"),
+        });
+    }
+    words
+}
+
+/// Every binding, separated by commas. One binding stays that binding, and
+/// none is a dash. We show no count such as "3 binds", which the player cannot see.
+fn callout_line(words: &[String]) -> String {
+    match words {
+        [] => "---".to_string(),
+        [only] => only.clone(),
+        many => many.join(", "),
+    }
 }
 
 fn control_callout_markup(
@@ -1662,6 +1793,20 @@ mod tests {
 
     fn sound_source() -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../assets/menu-sounds")
+    }
+
+    /// A callout with one binding of a control that has three is false, and a
+    /// count with no bindings refers to something the player cannot see.
+    #[test]
+    fn a_callout_names_every_binding_and_never_a_count() {
+        let three = binding_words("up", Some("0"), Some("+0"), None);
+        let line = callout_line(&three);
+        assert_eq!(line, "up, Button 0, Axis +0");
+        assert!(line.starts_with("up"), "the first binding is visible");
+        assert!(line.contains("Button 0") && line.contains("Axis +0"));
+        assert!(!line.contains("bind"), "a count is not a binding: {line}");
+        assert_eq!(callout_line(&binding_words("c", None, None, None)), "c");
+        assert_eq!(callout_line(&[]), "---");
     }
 
     /// The stylesheet uses seconds, the declaration uses milliseconds, and
