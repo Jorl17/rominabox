@@ -3,11 +3,51 @@
   "id": "mupen64plus_next",
   "name": "mupen64plus next",
   "artifacts": {
-    "macos-arm64": "mupen64plus_next_libretro.dylib"
+    "linux-x86_64": "mupen64plus_next_libretro.so",
+    "macos-arm64": "mupen64plus_next_libretro.dylib",
+    "macos-x86_64": "mupen64plus_next_libretro.dylib",
+    "windows-x86_64": "mupen64plus_next_libretro.dll"
   },
   "license": {
-    "spdx": "GPL-3.0",
+    "spdx": "GPL-2.0",
     "file": "mupen64plus_next.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "libretro/mupen64plus-libretro-nx",
+    "revision": "6752836de8b224febfd5708444755b77712ac939",
+    "licenseCandidates": [
+      "LICENSE",
+      "COPYING"
+    ],
+    "correspondsToArtifact": false,
+    "licenseSha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+    "downloads": {
+      "linux-x86_64": {
+        "archiveSha256": "20762945947448dc598320627528d17719909714ba50d93f5b5995b388a234db",
+        "binarySha256": "09b0a59f8aaee6e49e7007ac826efe96984dceeaec8b6747c9c986c0a593fa0c",
+        "archiveBytes": 2710749,
+        "binaryBytes": 7546152
+      },
+      "macos-arm64": {
+        "archiveSha256": "d11e852c0e833f54e927eb4742f193e40d41c9f704341bfb45667f06fb3b1fac",
+        "binarySha256": "3171ea0503933686277f9e52d11efe0940720528de1f02e5739e487fc804ab53",
+        "archiveBytes": 2309080,
+        "binaryBytes": 7077072
+      },
+      "macos-x86_64": {
+        "archiveSha256": "750cf18d6f48a424e222acc56ae7e1e8a7493e1b84bd144fe224d0d4bd7de652",
+        "binarySha256": "e72a67722a56a125601b9ca13f2d74c9b2aaf1752c5ceefd9d7534dac25341a6",
+        "archiveBytes": 2374422,
+        "binaryBytes": 7465600
+      },
+      "windows-x86_64": {
+        "archiveSha256": "7d6dfce3e036e1ce69d10f43a8073db97acbb7a942352233cf40a49292d2a631",
+        "binarySha256": "775aa9c8087bee938e1a0dbf860a37c6e32df10899857b4e107ec768cbd13dad",
+        "archiveBytes": 2892984,
+        "binaryBytes": 8032509
+      }
+    }
+  }
 }

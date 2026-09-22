@@ -3,11 +3,52 @@
   "id": "prosystem",
   "name": "prosystem",
   "artifacts": {
-    "macos-arm64": "prosystem_libretro.dylib"
+    "linux-x86_64": "prosystem_libretro.so",
+    "macos-arm64": "prosystem_libretro.dylib",
+    "macos-x86_64": "prosystem_libretro.dylib",
+    "windows-x86_64": "prosystem_libretro.dll"
   },
   "license": {
     "spdx": "GPL-2.0",
     "file": "prosystem.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "libretro/prosystem-libretro",
+    "revision": "8a88014287c7a01cd568067e5a557d0a2b2a051f",
+    "licenseCandidates": [
+      "License.txt",
+      "LICENSE",
+      "COPYING"
+    ],
+    "correspondsToArtifact": false,
+    "licenseSha256": "9fae8c2ae211ea4b3515621484bb0a558a0ca62d05c9534265c7e223bdf981b0",
+    "downloads": {
+      "linux-x86_64": {
+        "archiveSha256": "12904d31a9d72593b20d2ba5d40213fe5c5444ed845e5ce1e2cee6acd5b42cc1",
+        "binarySha256": "5e11828417eaeafef64e842d6a1e2ddb8cd0b210b3daf7cba82d7a74b8efbe23",
+        "archiveBytes": 54586,
+        "binaryBytes": 189072
+      },
+      "macos-arm64": {
+        "archiveSha256": "e2e7e686dc183c8c8f5b6a800da35a69c19b43ad269a236524807e336390b36c",
+        "binarySha256": "607e42e27c4b69bee4478473c498360ad31bb43edd33a96cd5f226881457e082",
+        "archiveBytes": 61183,
+        "binaryBytes": 227912
+      },
+      "macos-x86_64": {
+        "archiveSha256": "9632be0b45258fdda0e654cd59da72f073ccff6298fa371477e5dfbfe69745d6",
+        "binarySha256": "526a524d5c49c4d7fb590acbaacdc8d67d45757482b603b7818e0fedcc2147b5",
+        "archiveBytes": 64219,
+        "binaryBytes": 225216
+      },
+      "windows-x86_64": {
+        "archiveSha256": "7e5baa0c1bc0ea4244d3bf934b809d4b822902892ce7f2d0b5153c9fc5d226bd",
+        "binarySha256": "f463dc2e6d22da38ca75f1b7d400a342083cc9ef92f080c61afa49d1caaf8536",
+        "archiveBytes": 94185,
+        "binaryBytes": 264694
+      }
+    }
+  }
 }

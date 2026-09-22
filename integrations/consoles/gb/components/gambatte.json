@@ -3,7 +3,10 @@
   "id": "gambatte",
   "name": "gambatte",
   "artifacts": {
-    "macos-arm64": "gambatte_libretro.dylib"
+    "linux-x86_64": "gambatte_libretro.so",
+    "macos-arm64": "gambatte_libretro.dylib",
+    "macos-x86_64": "gambatte_libretro.dylib",
+    "windows-x86_64": "gambatte_libretro.dll"
   },
   "license": {
     "spdx": "GPL-2.0",
@@ -18,6 +21,33 @@
       "COPYING"
     ],
     "correspondsToArtifact": true,
+    "licenseSha256": "ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6",
+    "downloads": {
+      "linux-x86_64": {
+        "archiveSha256": "fdcee741f43479f20cd5407a9e2470b8735df9daca288e1b5f777e78d5bf3d01",
+        "binarySha256": "b8fba61ecbb840723a7c64d771196b37931c50ba4d98874cccedfd69a8aa27a6",
+        "archiveBytes": 528013,
+        "binaryBytes": 4802872
+      },
+      "macos-arm64": {
+        "archiveSha256": "d661266fe587b15b539be1a186d4573698480274277a3277ad8775049a8dd770",
+        "binarySha256": "19f088f910a89ffef80a26766f682dd01aa5ae81c95adca6926a3d9c10733a50",
+        "archiveBytes": 388209,
+        "binaryBytes": 3916168
+      },
+      "macos-x86_64": {
+        "archiveSha256": "00b2a585aba383dde1b60d36f63172e82b7393ec44307b00dc72a83dbb55e6d0",
+        "binarySha256": "9aa07b68b7bedd4a80754cd235835bb598370458c8eb29cd9b139ec871f543de",
+        "archiveBytes": 363731,
+        "binaryBytes": 3918664
+      },
+      "windows-x86_64": {
+        "archiveSha256": "07c87b1130ee569164797ab99b982561008b36ae5543dba38e41a777e1e8b62a",
+        "binarySha256": "f98c69deea4b933fe83761b7c6e8220b5be77a845b77f4035c1b48d280390859",
+        "archiveBytes": 467936,
+        "binaryBytes": 4137001
+      }
+    },
     "build": {
       "makefile": "Makefile.libretro",
       "platform": "osx",

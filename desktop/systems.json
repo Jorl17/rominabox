@@ -17,7 +17,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "genesis_plus_gx_libretro.dylib"
+            "linux-x86_64": "genesis_plus_gx_libretro.so",
+            "macos-arm64": "genesis_plus_gx_libretro.dylib",
+            "macos-x86_64": "genesis_plus_gx_libretro.dylib",
+            "windows-x86_64": "genesis_plus_gx_libretro.dll"
           },
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
@@ -59,7 +62,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "genesis_plus_gx_libretro.dylib"
+            "linux-x86_64": "genesis_plus_gx_libretro.so",
+            "macos-arm64": "genesis_plus_gx_libretro.dylib",
+            "macos-x86_64": "genesis_plus_gx_libretro.dylib",
+            "windows-x86_64": "genesis_plus_gx_libretro.dll"
           },
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
@@ -103,7 +109,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "genesis_plus_gx_libretro.dylib"
+            "linux-x86_64": "genesis_plus_gx_libretro.so",
+            "macos-arm64": "genesis_plus_gx_libretro.dylib",
+            "macos-x86_64": "genesis_plus_gx_libretro.dylib",
+            "windows-x86_64": "genesis_plus_gx_libretro.dll"
           },
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
@@ -134,7 +143,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "genesis_plus_gx_libretro.dylib"
+            "linux-x86_64": "genesis_plus_gx_libretro.so",
+            "macos-arm64": "genesis_plus_gx_libretro.dylib",
+            "macos-x86_64": "genesis_plus_gx_libretro.dylib",
+            "windows-x86_64": "genesis_plus_gx_libretro.dll"
           },
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
@@ -165,7 +177,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "genesis_plus_gx_libretro.dylib"
+            "linux-x86_64": "genesis_plus_gx_libretro.so",
+            "macos-arm64": "genesis_plus_gx_libretro.dylib",
+            "macos-x86_64": "genesis_plus_gx_libretro.dylib",
+            "windows-x86_64": "genesis_plus_gx_libretro.dll"
           },
           "component": "genesis_plus_gx",
           "license": "Non-commercial",
@@ -195,7 +210,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "gambatte_libretro.dylib"
+            "linux-x86_64": "gambatte_libretro.so",
+            "macos-arm64": "gambatte_libretro.dylib",
+            "macos-x86_64": "gambatte_libretro.dylib",
+            "windows-x86_64": "gambatte_libretro.dll"
           },
           "component": "gambatte",
           "license": "GPL-2.0",
@@ -224,7 +242,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "gambatte_libretro.dylib"
+            "linux-x86_64": "gambatte_libretro.so",
+            "macos-arm64": "gambatte_libretro.dylib",
+            "macos-x86_64": "gambatte_libretro.dylib",
+            "windows-x86_64": "gambatte_libretro.dll"
           },
           "component": "gambatte",
           "license": "GPL-2.0",
@@ -253,7 +274,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "mgba_libretro.dylib"
+            "linux-x86_64": "mgba_libretro.so",
+            "macos-arm64": "mgba_libretro.dylib",
+            "macos-x86_64": "mgba_libretro.dylib",
+            "windows-x86_64": "mgba_libretro.dll"
           },
           "component": "mgba",
           "license": "MPL-2.0",
@@ -283,7 +307,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "nestopia_libretro.dylib"
+            "linux-x86_64": "nestopia_libretro.so",
+            "macos-arm64": "nestopia_libretro.dylib",
+            "macos-x86_64": "nestopia_libretro.dylib",
+            "windows-x86_64": "nestopia_libretro.dll"
           },
           "component": "nestopia",
           "license": "GPL-2.0",
@@ -317,7 +344,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "snes9x_libretro.dylib"
+            "linux-x86_64": "snes9x_libretro.so",
+            "macos-arm64": "snes9x_libretro.dylib",
+            "macos-x86_64": "snes9x_libretro.dylib",
+            "windows-x86_64": "snes9x_libretro.dll"
           },
           "component": "snes9x",
           "license": "Non-commercial",
@@ -345,10 +375,13 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "mupen64plus_next_libretro.dylib"
+            "linux-x86_64": "mupen64plus_next_libretro.so",
+            "macos-arm64": "mupen64plus_next_libretro.dylib",
+            "macos-x86_64": "mupen64plus_next_libretro.dylib",
+            "windows-x86_64": "mupen64plus_next_libretro.dll"
           },
           "component": "mupen64plus_next",
-          "license": "GPL-3.0",
+          "license": "GPL-2.0",
           "licenseFile": "mupen64plus_next.txt",
           "capabilities": [],
           "libraryName": null
@@ -385,7 +418,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "pcsx_rearmed_libretro.dylib"
+            "linux-x86_64": "pcsx_rearmed_libretro.so",
+            "macos-arm64": "pcsx_rearmed_libretro.dylib",
+            "macos-x86_64": "pcsx_rearmed_libretro.dylib",
+            "windows-x86_64": "pcsx_rearmed_libretro.dll"
           },
           "component": "pcsx_rearmed",
           "license": "GPL-2.0",
@@ -438,7 +474,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "flycast_libretro.dylib"
+            "linux-x86_64": "flycast_libretro.so",
+            "macos-arm64": "flycast_libretro.dylib",
+            "macos-x86_64": "flycast_libretro.dylib",
+            "windows-x86_64": "flycast_libretro.dll"
           },
           "component": "flycast",
           "license": "GPL-2.0",
@@ -465,10 +504,13 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "dolphin_libretro.dylib"
+            "linux-x86_64": "dolphin_libretro.so",
+            "macos-arm64": "dolphin_libretro.dylib",
+            "macos-x86_64": "dolphin_libretro.dylib",
+            "windows-x86_64": "dolphin_libretro.dll"
           },
           "component": "dolphin",
-          "license": "GPL-2.0",
+          "license": "GPL-2.0-or-later",
           "licenseFile": "dolphin.txt",
           "capabilities": [],
           "libraryName": null
@@ -492,7 +534,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "pcsx2_libretro.dylib"
+            "linux-x86_64": "pcsx2_libretro.so",
+            "macos-arm64": "pcsx2_libretro.dylib",
+            "macos-x86_64": "pcsx2_libretro.dylib",
+            "windows-x86_64": "pcsx2_libretro.dll"
           },
           "component": "pcsx2",
           "license": "GPL-3.0",
@@ -518,7 +563,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "stella_libretro.dylib"
+            "linux-x86_64": "stella_libretro.so",
+            "macos-arm64": "stella_libretro.dylib",
+            "macos-x86_64": "stella_libretro.dylib",
+            "windows-x86_64": "stella_libretro.dll"
           },
           "component": "stella",
           "license": "GPL-2.0",
@@ -543,7 +591,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "a5200_libretro.dylib"
+            "linux-x86_64": "a5200_libretro.so",
+            "macos-arm64": "a5200_libretro.dylib",
+            "macos-x86_64": "a5200_libretro.dylib",
+            "windows-x86_64": "a5200_libretro.dll"
           },
           "component": "a5200",
           "license": "GPL-2.0",
@@ -568,7 +619,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "prosystem_libretro.dylib"
+            "linux-x86_64": "prosystem_libretro.so",
+            "macos-arm64": "prosystem_libretro.dylib",
+            "macos-x86_64": "prosystem_libretro.dylib",
+            "windows-x86_64": "prosystem_libretro.dll"
           },
           "component": "prosystem",
           "license": "GPL-2.0",
@@ -598,7 +652,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "handy_libretro.dylib"
+            "linux-x86_64": "handy_libretro.so",
+            "macos-arm64": "handy_libretro.dylib",
+            "macos-x86_64": "handy_libretro.dylib",
+            "windows-x86_64": "handy_libretro.dll"
           },
           "component": "handy",
           "license": "Zlib",
@@ -625,7 +682,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "mednafen_pce_fast_libretro.dylib"
+            "linux-x86_64": "mednafen_pce_fast_libretro.so",
+            "macos-arm64": "mednafen_pce_fast_libretro.dylib",
+            "macos-x86_64": "mednafen_pce_fast_libretro.dylib",
+            "windows-x86_64": "mednafen_pce_fast_libretro.dll"
           },
           "component": "beetle_pce_fast",
           "license": "GPL-2.0",
@@ -661,7 +721,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "mednafen_pce_fast_libretro.dylib"
+            "linux-x86_64": "mednafen_pce_fast_libretro.so",
+            "macos-arm64": "mednafen_pce_fast_libretro.dylib",
+            "macos-x86_64": "mednafen_pce_fast_libretro.dylib",
+            "windows-x86_64": "mednafen_pce_fast_libretro.dll"
           },
           "component": "beetle_pce_fast",
           "license": "GPL-2.0",
@@ -701,7 +764,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "mednafen_ngp_libretro.dylib"
+            "linux-x86_64": "mednafen_ngp_libretro.so",
+            "macos-arm64": "mednafen_ngp_libretro.dylib",
+            "macos-x86_64": "mednafen_ngp_libretro.dylib",
+            "windows-x86_64": "mednafen_ngp_libretro.dll"
           },
           "component": "beetle_neopop",
           "license": "GPL-2.0",
@@ -727,7 +793,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "mednafen_ngp_libretro.dylib"
+            "linux-x86_64": "mednafen_ngp_libretro.so",
+            "macos-arm64": "mednafen_ngp_libretro.dylib",
+            "macos-x86_64": "mednafen_ngp_libretro.dylib",
+            "windows-x86_64": "mednafen_ngp_libretro.dll"
           },
           "component": "beetle_neopop",
           "license": "GPL-2.0",
@@ -752,7 +821,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "mednafen_wswan_libretro.dylib"
+            "linux-x86_64": "mednafen_wswan_libretro.so",
+            "macos-arm64": "mednafen_wswan_libretro.dylib",
+            "macos-x86_64": "mednafen_wswan_libretro.dylib",
+            "windows-x86_64": "mednafen_wswan_libretro.dll"
           },
           "component": "beetle_cygne",
           "license": "GPL-2.0",
@@ -777,7 +849,10 @@
       "cores": [
         {
           "artifacts": {
-            "macos-arm64": "mednafen_wswan_libretro.dylib"
+            "linux-x86_64": "mednafen_wswan_libretro.so",
+            "macos-arm64": "mednafen_wswan_libretro.dylib",
+            "macos-x86_64": "mednafen_wswan_libretro.dylib",
+            "windows-x86_64": "mednafen_wswan_libretro.dll"
           },
           "component": "beetle_cygne",
           "license": "GPL-2.0",

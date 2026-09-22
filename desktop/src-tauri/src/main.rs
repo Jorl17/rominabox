@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use rominabox_desktop::{icons, metadata, packaging, projects, systems, themes};
+use rominabox_desktop::{cores, icons, metadata, packaging, projects, systems, themes};
 use std::{
     fs,
     io::Cursor,
@@ -159,6 +159,7 @@ async fn export_game(
 ) -> Result<packaging::ExportResult, String> {
     request.runtime_kit = resource(&app, "runtime")?;
     request.core = None;
+    request.core_cache = core_cache(&app).ok();
     let cancelled = Arc::new(AtomicBool::new(false));
     {
         let mut active = state.0.lock().map_err(|e| e.to_string())?;
@@ -188,9 +189,37 @@ fn assess_firmware(
     Ok(systems::assess_firmware(system, &files))
 }
 
+fn core_cache(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?
+        .join("core-cache")
+        .join(systems::current_target()))
+}
+
+#[tauri::command]
+async fn ensure_cores(app: tauri::AppHandle) -> Result<Vec<cores::CoreInstall>, String> {
+    let cache = core_cache(&app)?;
+    let target = systems::current_target().to_string();
+    tauri::async_runtime::spawn_blocking(move || {
+        cores::install_target(&cache, &target, &cores::UreqTransport)
+    })
+    .await
+    .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
-    Ok(packaging::available_systems(&resource(&app, "runtime")?))
+    let kit = resource(&app, "runtime")?;
+    let cache = core_cache(&app).ok();
+    Ok(
+        packaging::system_availability_in(&kit, cache.as_deref(), systems::current_target())
+            .into_iter()
+            .filter(|entry| entry.unavailable.is_none())
+            .map(|entry| entry.id)
+            .collect(),
+    )
 }
 
 fn main() {
@@ -204,6 +233,7 @@ fn main() {
             menu_preview,
             default_destination,
             available_systems,
+            ensure_cores,
             assess_firmware,
             export_game,
             cancel_export,

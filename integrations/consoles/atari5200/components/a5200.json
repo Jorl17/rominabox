@@ -3,11 +3,52 @@
   "id": "a5200",
   "name": "a5200",
   "artifacts": {
-    "macos-arm64": "a5200_libretro.dylib"
+    "linux-x86_64": "a5200_libretro.so",
+    "macos-arm64": "a5200_libretro.dylib",
+    "macos-x86_64": "a5200_libretro.dylib",
+    "windows-x86_64": "a5200_libretro.dll"
   },
   "license": {
     "spdx": "GPL-2.0",
     "file": "a5200.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "libretro/a5200",
+    "revision": "40c6f2f1ad4a3145b328d5baaf010fae6c7e752b",
+    "licenseCandidates": [
+      "License.txt",
+      "LICENSE",
+      "COPYING"
+    ],
+    "correspondsToArtifact": false,
+    "licenseSha256": "63755afa640d0ae54e295a7290ebc28aaa3bacb8b3a87ccc15e19d17a5beb896",
+    "downloads": {
+      "linux-x86_64": {
+        "archiveSha256": "4baa80dc5c381fe0c09e9fd8e27e8dabb6a0a8bf31f632d42c2e629c128bea34",
+        "binarySha256": "c4db0b8a6b8f7731d4944bda9c8125d7c074d0494c5201aa78abad1ec003675e",
+        "archiveBytes": 114316,
+        "binaryBytes": 287360
+      },
+      "macos-arm64": {
+        "archiveSha256": "6ca5e6d28b6b30c5b35316f6c9776371f8930c25b16522e23b22dd99bbe6c376",
+        "binarySha256": "b828e80be308d0c9e126b38d4402b2607a351db18bfee03b9b75222f7d6fff4b",
+        "archiveBytes": 109708,
+        "binaryBytes": 274184
+      },
+      "macos-x86_64": {
+        "archiveSha256": "28723240f7f16a7fe3df707eb60d07828a42a86106f80dda1185f47c0df7b084",
+        "binarySha256": "c6960bd8c2a64197b5e84ce9fb95e8ebf07bc9f5edc62c274270784fcea71d8d",
+        "archiveBytes": 120797,
+        "binaryBytes": 304896
+      },
+      "windows-x86_64": {
+        "archiveSha256": "dcf2fdf2d69fe0ddc574f060bfb1f1c6aba9b1f4409f14be7fcccad0bd0129e0",
+        "binarySha256": "2eabb76c10c76b3000dbd7cf8476a0c9a7236c3ffc22d1b47d9b0ebce9effc11",
+        "archiveBytes": 137250,
+        "binaryBytes": 305448
+      }
+    }
+  }
 }

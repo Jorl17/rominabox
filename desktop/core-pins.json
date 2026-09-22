@@ -1,0 +1,666 @@
+{
+  "schemaVersion": 1,
+  "measured": "2026-09-22",
+  "coreMirrors": [
+    "https://buildbot.libretro.com/nightly",
+    "https://bot.libretro.com/nightly"
+  ],
+  "targets": {
+    "linux-x86_64": "linux/x86_64",
+    "macos-arm64": "apple/osx/arm64",
+    "macos-x86_64": "apple/osx/x86_64",
+    "windows-x86_64": "windows/x86_64"
+  },
+  "licenseMirrors": [
+    "https://raw.githubusercontent.com/{repository}/{revision}/{path}",
+    "https://cdn.jsdelivr.net/gh/{repository}@{revision}/{path}"
+  ],
+  "cores": [
+    {
+      "component": "a5200",
+      "repository": "libretro/a5200",
+      "revision": "40c6f2f1ad4a3145b328d5baaf010fae6c7e752b",
+      "licenseFile": "a5200.txt",
+      "licensePath": "License.txt",
+      "licenseSha256": "63755afa640d0ae54e295a7290ebc28aaa3bacb8b3a87ccc15e19d17a5beb896",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "a5200_libretro.so",
+          "archiveSha256": "4baa80dc5c381fe0c09e9fd8e27e8dabb6a0a8bf31f632d42c2e629c128bea34",
+          "binarySha256": "c4db0b8a6b8f7731d4944bda9c8125d7c074d0494c5201aa78abad1ec003675e",
+          "archiveBytes": 114316,
+          "binaryBytes": 287360
+        },
+        "macos-arm64": {
+          "filename": "a5200_libretro.dylib",
+          "archiveSha256": "6ca5e6d28b6b30c5b35316f6c9776371f8930c25b16522e23b22dd99bbe6c376",
+          "binarySha256": "b828e80be308d0c9e126b38d4402b2607a351db18bfee03b9b75222f7d6fff4b",
+          "archiveBytes": 109708,
+          "binaryBytes": 274184
+        },
+        "macos-x86_64": {
+          "filename": "a5200_libretro.dylib",
+          "archiveSha256": "28723240f7f16a7fe3df707eb60d07828a42a86106f80dda1185f47c0df7b084",
+          "binarySha256": "c6960bd8c2a64197b5e84ce9fb95e8ebf07bc9f5edc62c274270784fcea71d8d",
+          "archiveBytes": 120797,
+          "binaryBytes": 304896
+        },
+        "windows-x86_64": {
+          "filename": "a5200_libretro.dll",
+          "archiveSha256": "dcf2fdf2d69fe0ddc574f060bfb1f1c6aba9b1f4409f14be7fcccad0bd0129e0",
+          "binarySha256": "2eabb76c10c76b3000dbd7cf8476a0c9a7236c3ffc22d1b47d9b0ebce9effc11",
+          "archiveBytes": 137250,
+          "binaryBytes": 305448
+        }
+      }
+    },
+    {
+      "component": "beetle_cygne",
+      "repository": "libretro/beetle-wswan-libretro",
+      "revision": "4b01295838ea89e3f1355bbe4cb5cf98aa6108cd",
+      "licenseFile": "beetle_cygne.txt",
+      "licensePath": "COPYING",
+      "licenseSha256": "a6996dcf0c334281f734560926e079b2dbbd5b78e81c0ca00a413ec01e1cd2fb",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "mednafen_wswan_libretro.so",
+          "archiveSha256": "ebebf6c2cf877bc904b5fed16cdde6c38a506fd4b9ddbb05c408a8aa4ea74fac",
+          "binarySha256": "e181289190fee462ad6d8f2cf6b0df2ab7f094710257995c50f95d2bf2baa174",
+          "archiveBytes": 130140,
+          "binaryBytes": 1165224
+        },
+        "macos-arm64": {
+          "filename": "mednafen_wswan_libretro.dylib",
+          "archiveSha256": "ce5cc93744e5dc3c61ac2b9e2dc4ac6ae619f65f8e0e502b9bf8fc3ef9c847f8",
+          "binarySha256": "258f7380e39c5d7f6845be986561430691c9365f6331919e878f253b812bf304",
+          "archiveBytes": 89550,
+          "binaryBytes": 1065792
+        },
+        "macos-x86_64": {
+          "filename": "mednafen_wswan_libretro.dylib",
+          "archiveSha256": "32bcc1b02e92395ff95eb7ba4e8c4f5b81a5840dd21be2033d76dd14e3edbcaf",
+          "binarySha256": "8ae0cfe61f42b4ecfc02cea223c29e30c621b89320db2acc5af34638b319e6c3",
+          "archiveBytes": 93359,
+          "binaryBytes": 1056904
+        },
+        "windows-x86_64": {
+          "filename": "mednafen_wswan_libretro.dll",
+          "archiveSha256": "d710b8fd21b80ca0b4f596a1c05cbf9e8ee1d2e2f3116ca26b7e8d0e348f2eff",
+          "binarySha256": "5d750e1f6d05ac92ccd3ab06452c7a4b8a643ee019fbcb7b5b257ba1dff4bf71",
+          "archiveBytes": 121646,
+          "binaryBytes": 1073507
+        }
+      }
+    },
+    {
+      "component": "beetle_neopop",
+      "repository": "libretro/beetle-ngp-libretro",
+      "revision": "a50d5ac288a81f2104ddf43195a4efdd15c72227",
+      "licenseFile": "beetle_neopop.txt",
+      "licensePath": "COPYING",
+      "licenseSha256": "a6996dcf0c334281f734560926e079b2dbbd5b78e81c0ca00a413ec01e1cd2fb",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "mednafen_ngp_libretro.so",
+          "archiveSha256": "80d2cb9fda29e17888969eb2e71a9a7136993d930600aa4ea9588c5d802806ee",
+          "binarySha256": "76c214571948388493807f25966056058fda65450db666f10d58d2d084bab124",
+          "archiveBytes": 104482,
+          "binaryBytes": 338624
+        },
+        "macos-arm64": {
+          "filename": "mednafen_ngp_libretro.dylib",
+          "archiveSha256": "ac31c50f7ccddf3e0b162d46735fe0e63114629608f814a16ba402f72f449ccf",
+          "binarySha256": "86a7ebeb0f53e9372ec78a2fc7902d6e900f38b13fb4914e00fd15aa32ce3d57",
+          "archiveBytes": 86809,
+          "binaryBytes": 272200
+        },
+        "macos-x86_64": {
+          "filename": "mednafen_ngp_libretro.dylib",
+          "archiveSha256": "d096025e4eaeb526f6eb1991d8b8dbfd2bf843d22d8d43f6dad4626e1e5dbde2",
+          "binarySha256": "c6d2eed730f5eaef4373e363e12f41dcbfae110e6cdc2a212b16c171104a0793",
+          "archiveBytes": 94398,
+          "binaryBytes": 269888
+        },
+        "windows-x86_64": {
+          "filename": "mednafen_ngp_libretro.dll",
+          "archiveSha256": "2352b934104b910f9f53f63ca4abc2241c5170485e13d05529897da88dee85df",
+          "binarySha256": "31aa72d5bf283ec3bab3bf0b55085309ebbda5a13364e3b58e5321103f81de73",
+          "archiveBytes": 200646,
+          "binaryBytes": 502638
+        }
+      }
+    },
+    {
+      "component": "beetle_pce_fast",
+      "repository": "libretro/beetle-pce-fast-libretro",
+      "revision": "076a24e1b10f76f3a7a8e849d25fab89f81ce1e9",
+      "licenseFile": "beetle_pce_fast.txt",
+      "licensePath": "COPYING",
+      "licenseSha256": "a6996dcf0c334281f734560926e079b2dbbd5b78e81c0ca00a413ec01e1cd2fb",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "mednafen_pce_fast_libretro.so",
+          "archiveSha256": "057993fe477c7ff41da64b66f021716e609e48d12eab975903b1099d61747465",
+          "binarySha256": "ce352ee22f5dbba5f60bdae2119e3f16d550c7ab97c85deef867bcd1ed135b02",
+          "archiveBytes": 602520,
+          "binaryBytes": 4556424
+        },
+        "macos-arm64": {
+          "filename": "mednafen_pce_fast_libretro.dylib",
+          "archiveSha256": "f717445cdce1dbeaff83454d1cbc75cfc8efb9c2979b1a5c5723afacb7646452",
+          "binarySha256": "507d612ab54b2ef7e3bae2e9f66cef237ae898f948c743b4d051bbfa335ae609",
+          "archiveBytes": 412693,
+          "binaryBytes": 3853472
+        },
+        "macos-x86_64": {
+          "filename": "mednafen_pce_fast_libretro.dylib",
+          "archiveSha256": "ceea9a0f4d6e1851cbb7e93a0d238274601c53ea34f799ee0062afdb1fca4843",
+          "binarySha256": "1ed76a819869a322cd9640c6a9828836262ca73aca1327bdabf427be076027eb",
+          "archiveBytes": 437701,
+          "binaryBytes": 3972664
+        },
+        "windows-x86_64": {
+          "filename": "mednafen_pce_fast_libretro.dll",
+          "archiveSha256": "e77ce3e3d5b9cbc5da9e0e4b28b08a6aded937ccd7ca064f2b38987f93c231f1",
+          "binarySha256": "3c9320a16d3cc3af7eb9be9393740f10011612867ce455a9cd49f37a3ac3bb1a",
+          "archiveBytes": 564489,
+          "binaryBytes": 4161240
+        }
+      }
+    },
+    {
+      "component": "dolphin",
+      "repository": "libretro/dolphin",
+      "revision": "1a0f97270b703c71625c87dee178d778348e540b",
+      "licenseFile": "dolphin.txt",
+      "licensePath": "LICENSES/GPL-2.0-or-later.txt",
+      "licenseSha256": "aaf135472f81c5b4a0dca9367e5bb5e9750032b5bebe5442b36e4c0a47430df3",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "dolphin_libretro.so",
+          "archiveSha256": "7aebbfb425e3e2f52d3691891acc8231a74cecacaf4e318bfe4a9381c1eff08e",
+          "binarySha256": "ea4125b680709826f7ff2de515c122ecc792420f8f79f4c80939bb4926eb2bf1",
+          "archiveBytes": 6502428,
+          "binaryBytes": 16557648
+        },
+        "macos-arm64": {
+          "filename": "dolphin_libretro.dylib",
+          "archiveSha256": "694c40744608c7f974be4783b69ff15ce46e622cad7fe55e614b12eae6d2c063",
+          "binarySha256": "c41313b756112c41cd60b73cca75fb80a935a6860e4c2834f7ecb0e7e8369f12",
+          "archiveBytes": 5917476,
+          "binaryBytes": 15592472
+        },
+        "macos-x86_64": {
+          "filename": "dolphin_libretro.dylib",
+          "archiveSha256": "5468bea574cb688617287d91c035bdd7aed99535979096fc8cedce04a74c1178",
+          "binarySha256": "01ceba5a6428f209c1697905d59ac93ccf049319dbb6002c31535da318e9b002",
+          "archiveBytes": 7590243,
+          "binaryBytes": 22256144
+        },
+        "windows-x86_64": {
+          "filename": "dolphin_libretro.dll",
+          "archiveSha256": "c97592c2e67ba2b1693498463d421a68dfd45590e8010f95ddbadd08716777a7",
+          "binarySha256": "249ae38bb20d4953d1612d087d8ef9596c72fa8e63373c986594db50fcb90c2e",
+          "archiveBytes": 7575263,
+          "binaryBytes": 18890172
+        }
+      }
+    },
+    {
+      "component": "flycast",
+      "repository": "flyinghead/flycast",
+      "revision": "628bd3dbb160ea2750230fc6b00c0bb8173cb1f6",
+      "licenseFile": "flycast.txt",
+      "licensePath": "LICENSE",
+      "licenseSha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "flycast_libretro.so",
+          "archiveSha256": "9262a27481c8aa4b12e378a5f1155db185ef4d05fc0b9d9c0cd9d65a483738b7",
+          "binarySha256": "4721f45c12a46a46ee5c251f49426552300bbb765f108f7e4a476cd2a8090e30",
+          "archiveBytes": 6280418,
+          "binaryBytes": 38812480
+        },
+        "macos-arm64": {
+          "filename": "flycast_libretro.dylib",
+          "archiveSha256": "700a29959d4ad293a20b9a24f0816ba062f64dbb01e8130c093be97d5fdee2ba",
+          "binarySha256": "bdf91ca016e9c8211eddb06e32bf0510e2933f31c0859562e81b6ec1738a9a9b",
+          "archiveBytes": 4737798,
+          "binaryBytes": 18318840
+        },
+        "macos-x86_64": {
+          "filename": "flycast_libretro.dylib",
+          "archiveSha256": "5dcf7ca7375583530fddc45e889e4bcf3ce4e378053f9a11e1b08fafa8297ee4",
+          "binarySha256": "a0901b3c1b729a325c7af6d04d7300a89750a45ab2f3ad6e7cc454dfab3f199c",
+          "archiveBytes": 4830999,
+          "binaryBytes": 18324928
+        },
+        "windows-x86_64": {
+          "filename": "flycast_libretro.dll",
+          "archiveSha256": "bf845fc7ffea3d870806dcd42846d9e2b46dc49163dceaab9618c1d1fcaceac8",
+          "binarySha256": "3cba632733ec4f4be2baf07a7a63dfee89d1d92bbac7a7e22a7dec46def548f8",
+          "archiveBytes": 6474655,
+          "binaryBytes": 22595072
+        }
+      }
+    },
+    {
+      "component": "gambatte",
+      "repository": "libretro/gambatte-libretro",
+      "revision": "d9d6cd06382d1ced30de34d56d3609452323dab1",
+      "licenseFile": "gambatte.txt",
+      "licensePath": "COPYING",
+      "licenseSha256": "ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "gambatte_libretro.so",
+          "archiveSha256": "fdcee741f43479f20cd5407a9e2470b8735df9daca288e1b5f777e78d5bf3d01",
+          "binarySha256": "b8fba61ecbb840723a7c64d771196b37931c50ba4d98874cccedfd69a8aa27a6",
+          "archiveBytes": 528013,
+          "binaryBytes": 4802872
+        },
+        "macos-arm64": {
+          "filename": "gambatte_libretro.dylib",
+          "archiveSha256": "d661266fe587b15b539be1a186d4573698480274277a3277ad8775049a8dd770",
+          "binarySha256": "19f088f910a89ffef80a26766f682dd01aa5ae81c95adca6926a3d9c10733a50",
+          "archiveBytes": 388209,
+          "binaryBytes": 3916168
+        },
+        "macos-x86_64": {
+          "filename": "gambatte_libretro.dylib",
+          "archiveSha256": "00b2a585aba383dde1b60d36f63172e82b7393ec44307b00dc72a83dbb55e6d0",
+          "binarySha256": "9aa07b68b7bedd4a80754cd235835bb598370458c8eb29cd9b139ec871f543de",
+          "archiveBytes": 363731,
+          "binaryBytes": 3918664
+        },
+        "windows-x86_64": {
+          "filename": "gambatte_libretro.dll",
+          "archiveSha256": "07c87b1130ee569164797ab99b982561008b36ae5543dba38e41a777e1e8b62a",
+          "binarySha256": "f98c69deea4b933fe83761b7c6e8220b5be77a845b77f4035c1b48d280390859",
+          "archiveBytes": 467936,
+          "binaryBytes": 4137001
+        }
+      }
+    },
+    {
+      "component": "genesis_plus_gx",
+      "repository": "ekeeke/Genesis-Plus-GX",
+      "revision": "27426f00aa68f9f358c86919e8a40985326fa05b",
+      "licenseFile": "genesis_plus_gx.txt",
+      "licensePath": "LICENSE.txt",
+      "licenseSha256": "642c163624269243d1f6b29d759d4e3a2d161bdc272c90d82ecbeec82ae26755",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "genesis_plus_gx_libretro.so",
+          "archiveSha256": "a0d5c69bdec1285382cc420f54ed7c7ed0965a134cd43d6bc5a421bcf5d7ecc2",
+          "binarySha256": "30abab06a9e1cfc26766a864fab83ee986cec1d6156c48dec13f9d03b46b2a6c",
+          "archiveBytes": 1307835,
+          "binaryBytes": 12832952
+        },
+        "macos-arm64": {
+          "filename": "genesis_plus_gx_libretro.dylib",
+          "archiveSha256": "1d666bc4a2f7e96030c19d5cfdf867ea65648686e6217690bc3d7cf58973fe6b",
+          "binarySha256": "4936447a9d1b85f45ef2b5d5e2b63e7a5e8f65c18ca5b42839cfc53645e55543",
+          "archiveBytes": 868642,
+          "binaryBytes": 9040096
+        },
+        "macos-x86_64": {
+          "filename": "genesis_plus_gx_libretro.dylib",
+          "archiveSha256": "92e56d02a0499dcc3a9b51db7952530387e16129572c1284f81d3ca4d03a1ef3",
+          "binarySha256": "09ee46286575f5b3e5718e0895410573f3bf84c4c62920d6aa7cd12e356b222f",
+          "archiveBytes": 937025,
+          "binaryBytes": 9395216
+        },
+        "windows-x86_64": {
+          "filename": "genesis_plus_gx_libretro.dll",
+          "archiveSha256": "0fee62ef16a835973f943e7e3278e24533b18d14f839771f9ad96edd600b7676",
+          "binarySha256": "52acac35e71e2e95497f46d807c3caf721c97616fcecfe8f35cd0624f63c98a4",
+          "archiveBytes": 944182,
+          "binaryBytes": 8940475
+        }
+      }
+    },
+    {
+      "component": "handy",
+      "repository": "libretro/libretro-handy",
+      "revision": "bc55d462f0b2d6b073ea93dc552ebd73cec60fd1",
+      "licenseFile": "handy.txt",
+      "licensePath": "lynx/license.txt",
+      "licenseSha256": "c75a7fed8afe9d6a5a70a48c0b52bf37207e8dee49dfa664b0b73819248db671",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "handy_libretro.so",
+          "archiveSha256": "1443dbf6c623cb22b2a3192bb7fd04defd28399e4975d172743788cbc1340ab6",
+          "binarySha256": "8732475e7398129afd77a55f70a33a98808f6967caeb7363e495d9a4923e43cf",
+          "archiveBytes": 100912,
+          "binaryBytes": 892352
+        },
+        "macos-arm64": {
+          "filename": "handy_libretro.dylib",
+          "archiveSha256": "53cea9e00f7ec272cb8dce2fd4869e339a440d03c01989970244b093348d1cba",
+          "binarySha256": "d5a25d317094e6a724c50c4899c367470067df9e3fbca502d86145feb61fd3d0",
+          "archiveBytes": 94099,
+          "binaryBytes": 766936
+        },
+        "macos-x86_64": {
+          "filename": "handy_libretro.dylib",
+          "archiveSha256": "0e940a806f6df90a505e938fef5f70bafcb05960ff094855f0e6f1403ef7f229",
+          "binarySha256": "13c4457b4cf72c76a70df5156db7f034b588c9bb4f98031110e46ee11bdf9c68",
+          "archiveBytes": 91265,
+          "binaryBytes": 744840
+        },
+        "windows-x86_64": {
+          "filename": "handy_libretro.dll",
+          "archiveSha256": "211c84ceff5a7478af5f69a7c5e2c1721c3b6beca276274cb34f6dba2ef1ae19",
+          "binarySha256": "c44cdd02f0c04ab51873bbb573ef2484dd38b38f0c392003a8a15cab6dff71fb",
+          "archiveBytes": 173107,
+          "binaryBytes": 1011420
+        }
+      }
+    },
+    {
+      "component": "mgba",
+      "repository": "mgba-emu/mgba",
+      "revision": "3a5bc24629867576b0fb576a5d5a21d3b3d6b576",
+      "licenseFile": "mgba.txt",
+      "licensePath": "LICENSE",
+      "licenseSha256": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "mgba_libretro.so",
+          "archiveSha256": "45dde77c8d758d9324b2ff31190ee19527b31f46d9e5151e5cbf062947b7805a",
+          "binarySha256": "c840f305825d07c9bec7a6ec18841073c4b539fd234f73623474f97c507f1cdc",
+          "archiveBytes": 524108,
+          "binaryBytes": 3314664
+        },
+        "macos-arm64": {
+          "filename": "mgba_libretro.dylib",
+          "archiveSha256": "df80dfc617be1eafac6a6e464e0e39522f956bae62e9ab01f9cf8b55795c72dc",
+          "binarySha256": "54ae92e80b012013f6d777fb3158b9f925be22c97896049b8549614d7514f505",
+          "archiveBytes": 453573,
+          "binaryBytes": 2829600
+        },
+        "macos-x86_64": {
+          "filename": "mgba_libretro.dylib",
+          "archiveSha256": "751adc0bc6b7a991f86d5dcd4fb752cebf293d1c70cc122c94b2fd7d628fbf32",
+          "binarySha256": "65b73779c9772146f5a0106775c7c8c92defb1034a14590cef71078b7c832d6b",
+          "archiveBytes": 488500,
+          "binaryBytes": 3072504
+        },
+        "windows-x86_64": {
+          "filename": "mgba_libretro.dll",
+          "archiveSha256": "938624edb0d6beeba42077d665df63bfadcd3d450a78a05f7c9d5ccbb1c6ca3b",
+          "binarySha256": "5590a4868a587b43ad874bdc20f6830ef2bddecdbba84021baa45f879b55814e",
+          "archiveBytes": 569965,
+          "binaryBytes": 3045973
+        }
+      }
+    },
+    {
+      "component": "mupen64plus_next",
+      "repository": "libretro/mupen64plus-libretro-nx",
+      "revision": "6752836de8b224febfd5708444755b77712ac939",
+      "licenseFile": "mupen64plus_next.txt",
+      "licensePath": "LICENSE",
+      "licenseSha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "mupen64plus_next_libretro.so",
+          "archiveSha256": "20762945947448dc598320627528d17719909714ba50d93f5b5995b388a234db",
+          "binarySha256": "09b0a59f8aaee6e49e7007ac826efe96984dceeaec8b6747c9c986c0a593fa0c",
+          "archiveBytes": 2710749,
+          "binaryBytes": 7546152
+        },
+        "macos-arm64": {
+          "filename": "mupen64plus_next_libretro.dylib",
+          "archiveSha256": "d11e852c0e833f54e927eb4742f193e40d41c9f704341bfb45667f06fb3b1fac",
+          "binarySha256": "3171ea0503933686277f9e52d11efe0940720528de1f02e5739e487fc804ab53",
+          "archiveBytes": 2309080,
+          "binaryBytes": 7077072
+        },
+        "macos-x86_64": {
+          "filename": "mupen64plus_next_libretro.dylib",
+          "archiveSha256": "750cf18d6f48a424e222acc56ae7e1e8a7493e1b84bd144fe224d0d4bd7de652",
+          "binarySha256": "e72a67722a56a125601b9ca13f2d74c9b2aaf1752c5ceefd9d7534dac25341a6",
+          "archiveBytes": 2374422,
+          "binaryBytes": 7465600
+        },
+        "windows-x86_64": {
+          "filename": "mupen64plus_next_libretro.dll",
+          "archiveSha256": "7d6dfce3e036e1ce69d10f43a8073db97acbb7a942352233cf40a49292d2a631",
+          "binarySha256": "775aa9c8087bee938e1a0dbf860a37c6e32df10899857b4e107ec768cbd13dad",
+          "archiveBytes": 2892984,
+          "binaryBytes": 8032509
+        }
+      }
+    },
+    {
+      "component": "nestopia",
+      "repository": "libretro/nestopia",
+      "revision": "92578fdc9445f61dd376138329a938e01d8ba50e",
+      "licenseFile": "nestopia.txt",
+      "licensePath": "COPYING",
+      "licenseSha256": "df84246204e3c54cd24aebbc23714235f5fc41d754d53b65444a2afbf070130f",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "nestopia_libretro.so",
+          "archiveSha256": "d0b92f55658e524dfbdfd5fbbf1658e59acbaa42e76f3d733998174f06b59a1e",
+          "binarySha256": "eb8b99b208e33a9e8d1e026c07b10cecc35e3f93a9f53f6d06a2da7fc8b926fd",
+          "archiveBytes": 802741,
+          "binaryBytes": 6278200
+        },
+        "macos-arm64": {
+          "filename": "nestopia_libretro.dylib",
+          "archiveSha256": "d792eb1e39de1c68ee5a2cc79d02c354ec0c8b0361b9264b2150c08410d3dd12",
+          "binarySha256": "511d50ab0907cd21494d2be97c3fece2b761c82eb45fc96e264d770b366f5f82",
+          "archiveBytes": 786513,
+          "binaryBytes": 6056232
+        },
+        "macos-x86_64": {
+          "filename": "nestopia_libretro.dylib",
+          "archiveSha256": "8e255b5f64a28929d8ed08a459f7a3703b78e09530bf2afa51b9ae0d0a540689",
+          "binarySha256": "fc54d974a9660e6ed79911d7b3983bb178e14e39f32ab70cecd050a7a25420a6",
+          "archiveBytes": 747418,
+          "binaryBytes": 5996632
+        },
+        "windows-x86_64": {
+          "filename": "nestopia_libretro.dll",
+          "archiveSha256": "82338d1f2e5db4b8d489d4711beefffec167be7865d89357cc4ce27a8f83a8a1",
+          "binarySha256": "b6d5debe37aa3c2301312458a4f915bafba6ba97869a61482705d25f3976af15",
+          "archiveBytes": 1051030,
+          "binaryBytes": 6747704
+        }
+      }
+    },
+    {
+      "component": "pcsx2",
+      "repository": "libretro/ps2",
+      "revision": "3e9ecb5ba61c9c6b970663070ea7ffd8c2a4878a",
+      "licenseFile": "pcsx2.txt",
+      "licensePath": "COPYING.GPLv3",
+      "licenseSha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "pcsx2_libretro.so",
+          "archiveSha256": "130ad58a1e895a911e670e7a0ba7c1d498813caf4fb747b29f17093a2d7c7a0c",
+          "binarySha256": "7859881c4903174c1e7aea52e639266c65ffc907226f220d4e9cbb499a42a63b",
+          "archiveBytes": 4442866,
+          "binaryBytes": 13158568
+        },
+        "macos-arm64": {
+          "filename": "pcsx2_libretro.dylib",
+          "archiveSha256": "2ec97b40ace92e5aba841fa24d7624d9e462f2b28b561251339277398967c7dd",
+          "binarySha256": "3753ad4d5aeb70ced7409fed099f067b449ac590c471ef7df99921db62ebc5cb",
+          "archiveBytes": 2842799,
+          "binaryBytes": 9498984
+        },
+        "macos-x86_64": {
+          "filename": "pcsx2_libretro.dylib",
+          "archiveSha256": "803576ab4257bc6361b57db0eee67384e88a1b402ee0d6bc65de5ceaf71d80f8",
+          "binarySha256": "8a1d0bfb86c1be673ccdbcbec4bd39dd44c3dcd4fb38ffb35af740e8013eb3e9",
+          "archiveBytes": 3496734,
+          "binaryBytes": 11463040
+        },
+        "windows-x86_64": {
+          "filename": "pcsx2_libretro.dll",
+          "archiveSha256": "100f29e167dddda151d3ff492c72585417021f1dbc13051eaa5cbf6f1486dbf7",
+          "binarySha256": "a9f581b9378444ce87ab6a0afd46f00c846e5a51e00aa69d729c3a57263407d3",
+          "archiveBytes": 3583903,
+          "binaryBytes": 10689024
+        }
+      }
+    },
+    {
+      "component": "pcsx_rearmed",
+      "repository": "libretro/pcsx_rearmed",
+      "revision": "8625c395a24411f8c77e69802b516df9c613a712",
+      "licenseFile": "pcsx_rearmed.txt",
+      "licensePath": "COPYING",
+      "licenseSha256": "0efb4db8000c609bd2f06e61fcbc59af05519d122f5b3597b7c493224946c61d",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "pcsx_rearmed_libretro.so",
+          "archiveSha256": "28435b07f374eaf765a0df8b50b71bfc9c8910c1fd8b8756d525300987dc66c9",
+          "binarySha256": "1f265f3c41a366f21a93571331e9fee4d254593717fcfc14a82a396a5c2ec127",
+          "archiveBytes": 723574,
+          "binaryBytes": 2168040
+        },
+        "macos-arm64": {
+          "filename": "pcsx_rearmed_libretro.dylib",
+          "archiveSha256": "af029def077932152bbe13c72d09f8a2f8d8f17c98f31b390f90bf353c4c1c69",
+          "binarySha256": "61509e4c1296e3ec0bf988b1dc09f6bb5f2b49df32ef3653fdd2cb5dd8fee1fb",
+          "archiveBytes": 486621,
+          "binaryBytes": 1393240
+        },
+        "macos-x86_64": {
+          "filename": "pcsx_rearmed_libretro.dylib",
+          "archiveSha256": "bcce5e83c32b72995b7e931f8415579e2b220b793a62d6978b9ea204e1bc83cf",
+          "binarySha256": "1b1bcf5c6ff9195cc19e6c6f1723b7f63a3933bac920edef6f70372dc1605b87",
+          "archiveBytes": 575678,
+          "binaryBytes": 1697424
+        },
+        "windows-x86_64": {
+          "filename": "pcsx_rearmed_libretro.dll",
+          "archiveSha256": "44eb855ed88379dd5a6e393f03c768040580144db94f814dd28784c64e3976ba",
+          "binarySha256": "72b97ff416998c602748054fe745609e76bab434f5f3352b01d92ccd7edfc8da",
+          "archiveBytes": 820182,
+          "binaryBytes": 7003648
+        }
+      }
+    },
+    {
+      "component": "prosystem",
+      "repository": "libretro/prosystem-libretro",
+      "revision": "8a88014287c7a01cd568067e5a557d0a2b2a051f",
+      "licenseFile": "prosystem.txt",
+      "licensePath": "License.txt",
+      "licenseSha256": "9fae8c2ae211ea4b3515621484bb0a558a0ca62d05c9534265c7e223bdf981b0",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "prosystem_libretro.so",
+          "archiveSha256": "12904d31a9d72593b20d2ba5d40213fe5c5444ed845e5ce1e2cee6acd5b42cc1",
+          "binarySha256": "5e11828417eaeafef64e842d6a1e2ddb8cd0b210b3daf7cba82d7a74b8efbe23",
+          "archiveBytes": 54586,
+          "binaryBytes": 189072
+        },
+        "macos-arm64": {
+          "filename": "prosystem_libretro.dylib",
+          "archiveSha256": "e2e7e686dc183c8c8f5b6a800da35a69c19b43ad269a236524807e336390b36c",
+          "binarySha256": "607e42e27c4b69bee4478473c498360ad31bb43edd33a96cd5f226881457e082",
+          "archiveBytes": 61183,
+          "binaryBytes": 227912
+        },
+        "macos-x86_64": {
+          "filename": "prosystem_libretro.dylib",
+          "archiveSha256": "9632be0b45258fdda0e654cd59da72f073ccff6298fa371477e5dfbfe69745d6",
+          "binarySha256": "526a524d5c49c4d7fb590acbaacdc8d67d45757482b603b7818e0fedcc2147b5",
+          "archiveBytes": 64219,
+          "binaryBytes": 225216
+        },
+        "windows-x86_64": {
+          "filename": "prosystem_libretro.dll",
+          "archiveSha256": "7e5baa0c1bc0ea4244d3bf934b809d4b822902892ce7f2d0b5153c9fc5d226bd",
+          "binarySha256": "f463dc2e6d22da38ca75f1b7d400a342083cc9ef92f080c61afa49d1caaf8536",
+          "archiveBytes": 94185,
+          "binaryBytes": 264694
+        }
+      }
+    },
+    {
+      "component": "snes9x",
+      "repository": "snes9xgit/snes9x",
+      "revision": "4998efce010c95c1d83859a0530cdf43d2d27cb9",
+      "licenseFile": "snes9x.txt",
+      "licensePath": "LICENSE",
+      "licenseSha256": "70efeee282d82a6e9d26aeed5466d08c632369858371dc6a4644c8dcedc2be78",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "snes9x_libretro.so",
+          "archiveSha256": "9e7d38f4d65c6e9305302353066c103e1400307f6e5117efdbfbb0a35bb8f3c5",
+          "binarySha256": "9b2b6ea9d88f96c156590443ddd05ee56aaf4e495329a889c979921942717a31",
+          "archiveBytes": 917066,
+          "binaryBytes": 2841720
+        },
+        "macos-arm64": {
+          "filename": "snes9x_libretro.dylib",
+          "archiveSha256": "f51ee4b18e2123cca3b358fb1baa0e42e7d56d9789f1784f752c7c4b7aaa6d07",
+          "binarySha256": "8ed333ac04544cc6ab67ceb445d095f7600bb17586d4887d99117fbd1ef776f6",
+          "archiveBytes": 796467,
+          "binaryBytes": 2915160
+        },
+        "macos-x86_64": {
+          "filename": "snes9x_libretro.dylib",
+          "archiveSha256": "0f2fefc8a2a3b38e47217a11a8540def8bd1c1c511d4fb8d79455aff0ee5947b",
+          "binarySha256": "120e5f4c32e00c686a40bdd37e107682b0dd3c1eadf19dcd4ec91d39de1ffa8d",
+          "archiveBytes": 932434,
+          "binaryBytes": 2950936
+        },
+        "windows-x86_64": {
+          "filename": "snes9x_libretro.dll",
+          "archiveSha256": "c249d118b2277e7ae2c36304daa02b95ad8fac5b249e5f0aa96b868c07d06df2",
+          "binarySha256": "731a8e9de9ed1c98146cbea2f7885d2c356b834c8b8ed18a772be34afd379cc9",
+          "archiveBytes": 1316252,
+          "binaryBytes": 3840000
+        }
+      }
+    },
+    {
+      "component": "stella",
+      "repository": "libretro/stella2014-libretro",
+      "revision": "7d1361e407e63f29e52892655069e5fb4096e691",
+      "licenseFile": "stella.txt",
+      "licensePath": "stella/license.txt",
+      "licenseSha256": "310782e1abd43c4de6217c513e328bddf999d39302d67c6e05b10a59959827af",
+      "artifacts": {
+        "linux-x86_64": {
+          "filename": "stella_libretro.so",
+          "archiveSha256": "0017d57ee79982a5f5dab0b0cc5f41665fca998e6cff8998c9c5c6f7aece4ef2",
+          "binarySha256": "ba83fcc744049e7c75e74b3407075ae7ac3815250a333d177bf9e99d9680adff",
+          "archiveBytes": 1892567,
+          "binaryBytes": 7410880
+        },
+        "macos-arm64": {
+          "filename": "stella_libretro.dylib",
+          "archiveSha256": "ace19180d179330a5b0861117edd6ff340bb4163ce7f6042046c950cee56467d",
+          "binarySha256": "8ba747d971903b297e8071d891746a6ec8886005d7d5817de440ddc420c80923",
+          "archiveBytes": 923539,
+          "binaryBytes": 3200872
+        },
+        "macos-x86_64": {
+          "filename": "stella_libretro.dylib",
+          "archiveSha256": "67f1702517dfdd9a41807bf4e1ef53eb1260b586e31673d66f46d1c2afa6c5b5",
+          "binarySha256": "8492acfe2807deb7f36d6a485fa596f45362facf9b70850647cb89663789a202",
+          "archiveBytes": 973456,
+          "binaryBytes": 3271528
+        },
+        "windows-x86_64": {
+          "filename": "stella_libretro.dll",
+          "archiveSha256": "075e1d0368761a4b20f49dd249bd499148659cf0c2fb1cbeb1593d4a86cdc113",
+          "binarySha256": "a99ff000ea11771f8e2573be22725acd7c59b7976be2befcc1b5da8084c10bab",
+          "archiveBytes": 1819730,
+          "binaryBytes": 5745664
+        }
+      }
+    }
+  ]
+}
