@@ -3,7 +3,7 @@
     "Each shot names the elements clicked to reach it, in order, one per frame.",
     "",
     "They are element ids in the exported menu.rml, clicked through the bridge's",
-    "own listeners — the same path a player's pointer takes. An id that is not",
+    "own listeners \u2014 the same path a player's pointer takes. An id that is not",
     "in the document stops the run rather than screenshotting the wrong screen.",
     "A step written \"wait:120\" waits that many frames instead, which is how",
     "anything on a clock is photographed at a chosen moment.",
@@ -16,13 +16,24 @@
     "",
     "These are the same states scripts/fixtures/menu-states.json declares, but",
     "reached rather than posed: menu-states sets the classes itself, and cannot",
-    "show that pressing CONTROLS gets you to the controls screen."
+    "show that pressing CONTROLS gets you to the controls screen.",
+    "",
+    "The achievement shots need --achievements <dir>: the list and its badges come from the service and are not in this repository."
   ],
   "shots": {
     "pause-menu": [],
-    "options": ["options"],
-    "controls": ["options", "controls"],
-    "picker-open": ["options", "controls", "controls-device-current"],
+    "options": [
+      "options"
+    ],
+    "controls": [
+      "options",
+      "controls"
+    ],
+    "picker-open": [
+      "options",
+      "controls",
+      "controls-device-current"
+    ],
     "picker-chosen": [
       "options",
       "controls",
@@ -81,6 +92,24 @@
       "showMenu": false,
       "splash": true,
       "config": { "pause_nonactive": "false" }
+    },
+    "achievements": {
+      "script": ["options", "achievements"]
+    },
+    "achievements-next": {
+      "script": ["options", "achievements", "achievements-next"]
+    },
+    "achievement-mode": {
+      "script": ["options", "achievements", "achievement-mode"]
+    },
+    "achievement-mode-pause": {
+      "script": [
+        "options",
+        "achievements",
+        "achievement-mode",
+        "achievements-back",
+        "options-back"
+      ]
     }
   }
 }

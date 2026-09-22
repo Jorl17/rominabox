@@ -1,6 +1,8 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
-use rominabox_desktop::{controls, cores, metadata, packaging, projects, shaders, systems, themes};
+use rominabox_desktop::{
+    achievements, controls, cores, metadata, packaging, projects, shaders, systems, themes,
+};
 use serde::Deserialize;
 use serde_json::json;
 use std::io::{self, Read};
@@ -315,6 +317,58 @@ fn run() -> Result<(), String> {
                 })
                 .collect();
             println!("{}", json!({ "type": "result", "result": { "shaders": presets } }));
+            Ok(())
+        }
+        // Identify a ROM and fetch its list once, so that the person can repeat
+        // an export without the network and without the credentials.
+        "achievements" => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Ask {
+                rom: Option<std::path::PathBuf>,
+                game_id: Option<u32>,
+                /// Where to write the list and its badges. Without it, we print
+                /// the list and download nothing.
+                into: Option<std::path::PathBuf>,
+            }
+            let ask: Ask = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid achievements request: {error}"))?;
+            let game_id = match (ask.game_id, &ask.rom) {
+                (Some(id), _) => Some(id),
+                // Identifying works without an account, and fetching the list does not.
+                (None, Some(rom)) => achievements::identify(&achievements::rom_hash_of(rom)?)?,
+                (None, None) => return Err("give a rom or a gameId".into()),
+            };
+            let Some(game_id) = game_id else {
+                println!(
+                    "{}",
+                    json!({"type": "result", "result": {"gameId": null, "achievements": 0}})
+                );
+                return Ok(());
+            };
+            let account = achievements::Account::from_environment().ok_or_else(|| {
+                "fetching a list needs RA_USERNAME and RA_API_KEY in the environment".to_string()
+            })?;
+            let catalog = achievements::fetch_catalog(&account, game_id)?;
+            let mut badges = 0;
+            if let Some(into) = &ask.into {
+                std::fs::create_dir_all(into).map_err(|error| error.to_string())?;
+                std::fs::write(
+                    into.join("achievements.json"),
+                    serde_json::to_string_pretty(&catalog).map_err(|e| e.to_string())?,
+                )
+                .map_err(|error| error.to_string())?;
+                badges = achievements::download_badges(&catalog, &into.join("badges"))?;
+            }
+            println!(
+                "{}",
+                json!({"type": "result", "result": {
+                    "gameId": catalog.game_id,
+                    "title": catalog.title,
+                    "achievements": catalog.achievements.len(),
+                    "badges": badges,
+                }})
+            );
             Ok(())
         }
         "freeze-macos-executable" => {

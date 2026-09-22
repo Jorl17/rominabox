@@ -412,6 +412,42 @@ int main(int argc, char **argv)
             "the menu comes back when it is what is on screen");
    }
 
+   // The controls of a list screen come after its rows, so moving down with
+   // the keyboard past the last row reaches the switch and then BACK, and the
+   // player can flip the switch without a pointer.
+   {
+      // We find the screen button on the pause row instead of naming it. With
+      // Options in a game it is not the controls button, so with a fixed name
+      // a pad would open Controls instead of Options.
+      CHECK(std::string(rib_rmlui_pause_screen_button()) == "controls",
+            "the pause row's screen button is the one the document has");
+      rib_rmlui_declare_screen("fixture", "fixture-panel", "LIST", "ESC  BACK", "");
+      CHECK(rib_rmlui_show_screen("fixture"), "a declared list screen shows");
+      rib_rmlui_wire_lists();
+      rib_rmlui_wire_toggles();
+      drain_actions();
+      CHECK(rib_rmlui_visible_row_count() == 2,
+            "the generated list reports its rows");
+      CHECK(rib_rmlui_list_control_count() == 2,
+            "the list screen reports its switch and its back button");
+      CHECK(std::string(rib_rmlui_list_control_id(0)) == "fixture-mode",
+            "the switch comes first, as it is drawn");
+      CHECK(std::string(rib_rmlui_list_control_id(1)) == "fixture-back",
+            "back comes after it");
+      CHECK(std::string(rib_rmlui_list_control_id(2)).empty(),
+            "asking past the end names nothing");
+      rib_rmlui_focus_list_control(1);
+      click_id("fixture-mode");
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_TOGGLE,
+            "pressing a switch is the general toggle intent");
+      CHECK(std::string(rib_rmlui_chosen_item()) == "fixture-mode",
+            "which switch travels beside the action");
+      rib_rmlui_set_toggle("fixture-mode", "ON", true);
+      CHECK(std::string(rib_rmlui_test_text("fixture-mode-state")) == "ON",
+            "the switch shows the word the design gave it");
+      drain_actions();
+   }
+
    rib_rmlui_shutdown();
    if (failures)
    {

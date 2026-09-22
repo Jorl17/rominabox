@@ -128,7 +128,7 @@ SCOPES = [
     ),
     Scope(
         "states",
-        "that every declared menu state still renders, with its artwork, and looks the same",
+        "that every declared menu state still renders in every palette from desktop/designs.json, with its artwork, and looks the same",
         "that the bridge sets those classes at the right moment; the bridge scope covers that",
         ["python3", str(ROOT / "scripts/menu_states.py"), "--check"],
         slow=True,
