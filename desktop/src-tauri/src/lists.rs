@@ -331,13 +331,11 @@ pub fn install(
             ));
         }
         let host = host_of(staged_screens, &list.screen).map(|screen| screen.id.clone());
+        let back_button = format!("{}-back", list.screen.id);
         design_cfg = declare_screen(
             &design_cfg,
             &list.screen,
-            host.as_deref()
-                .map(|host| (host, format!("{}-back", list.screen.id)))
-                .as_ref()
-                .map(|(host, back)| (*host, back.as_str())),
+            host.as_deref().map(|host| (host, back_button.as_str())),
         )?;
     }
 
