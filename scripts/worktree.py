@@ -258,6 +258,18 @@ SHARED_ARTIFACTS = [
     # Both are build output, the same in every worktree, and not in git.
     Path("desktop/node_modules"),
     Path("work/experiments"),
+    # These are bundled resources in the tauri build, so without them we cannot
+    # compile the desktop crate. The error, "resource path `resources/skills`
+    # doesn't exist", looks like a missing file and not a missing link, and
+    # most test scopes then fail.
+    Path("desktop/src-tauri/resources/bin"),
+    Path("desktop/src-tauri/resources/skills"),
+    # The catalogues and picture lists for the identification measurement. We
+    # fetch them on purpose and never during a test, so without them we cannot
+    # run those tests in a worktree. The error message suggests a fetch, and in
+    # every checkout that would mean many requests to another party's API for
+    # the same files.
+    Path("work/identification-cache"),
 ]
 
 
