@@ -65,10 +65,10 @@ pub struct ExportRequest {
     /// Restore stock RetroArch native menus in the exported app.
     #[serde(default)]
     pub advanced_emulator_access: bool,
-    /// Keep emulating when the window does not have the focus. The RetroArch
-    /// setting `pause_nonactive` is the opposite, and we do not write it into
-    /// the frozen config, so a player file can still replace it. That is how
-    /// the console keeps running in an unfocused window.
+    /// Keep emulating when the window does not have the focus. RetroArch's
+    /// `pause_nonactive` is the opposite of this. We write it into the frozen
+    /// config, as we do quit-autosave, because the player has no control for
+    /// it and a per-game `controls.cfg` would otherwise replace it.
     #[serde(default)]
     pub keep_playing_in_background: bool,
     /// Save on quit and load that save the next time the player opens the
@@ -594,7 +594,6 @@ where
         request.advanced_emulator_access,
     )
     .map_err(|message| ExportError::new("stage", message))?;
-    append_author_play_settings(request, &controls_defaults)?;
     stage_controller_remap(&controls_profile, selected_core, &resources.join("remaps"))?;
     stage_pixel_options(selected_core, &resources.join("core-options"))?;
     if request.show_menu {
@@ -1807,37 +1806,6 @@ pub fn isolated_hotkey_config(show_menu: bool, advanced: bool) -> String {
     config
 }
 
-/// The background play choice of the author, added to the player defaults.
-///
-/// We do not put it in the frozen config, because at launch we ignore a player
-/// key that the frozen file already sets. For an unfocused run we write
-/// `pause_nonactive = "false"` into `controls.cfg`, so the console keeps running.
-fn append_author_play_settings(
-    request: &ExportRequest,
-    defaults: &Path,
-) -> Result<(), ExportError> {
-    // On means the game keeps running, so RetroArch must not pause.
-    let value = if request.keep_playing_in_background {
-        "false"
-    } else {
-        "true"
-    };
-    let text =
-        fs::read_to_string(defaults).map_err(|error| ExportError::io("stage", defaults, error))?;
-    let mut lines: Vec<String> = text
-        .lines()
-        .filter(|line| {
-            let trimmed = line.trim_start();
-            !trimmed.starts_with("pause_nonactive ") && !trimmed.starts_with("pause_nonactive=")
-        })
-        .map(str::to_string)
-        .collect();
-    lines.push(format!("pause_nonactive = \"{value}\""));
-    fs::write(defaults, lines.join("\n") + "\n")
-        .map_err(|error| ExportError::io("stage", defaults, error))?;
-    Ok(())
-}
-
 fn isolated_runtime_config(request: &ExportRequest) -> String {
     let menu_driver = if request.show_menu || request.splash {
         "rmlui"
@@ -1851,6 +1819,13 @@ fn isolated_runtime_config(request: &ExportRequest) -> String {
         "true"
     } else {
         "false"
+    };
+    // On means the game keeps running, so RetroArch must not pause. We put it
+    // in the frozen config, so a later player controls.cfg cannot replace it.
+    let pause_nonactive = if request.keep_playing_in_background {
+        "false"
+    } else {
+        "true"
     };
     let assets = if menu_audio {
         "$bundle_dir/Resources/assets"
@@ -1886,6 +1861,7 @@ savefile_directory = "$data_dir/saves"
 savestate_directory = "$data_dir/states"
 savestate_auto_save = "{autosave}"
 savestate_auto_load = "{autosave}"
+pause_nonactive = "{pause_nonactive}"
 system_directory = "$data_dir/system"
 cache_directory = "$data_dir/cache"
 log_dir = "$data_dir/logs"
@@ -2849,27 +2825,8 @@ mod tests {
         assert_eq!(config_value(&off, "savestate_auto_load"), Some("false"));
         assert_eq!(
             config_value(&off, "pause_nonactive"),
-            None,
-            "pause_nonactive in the frozen config cannot be overridden"
-        );
-
-        let defaults = std::env::temp_dir().join(format!(
-            "rominabox-play-settings-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&defaults).unwrap();
-        let path = defaults.join("controls-defaults.cfg");
-        controls::write_defaults_config("megadrive", &settings.controls, &path).unwrap();
-        append_author_play_settings(&settings, &path).unwrap();
-        let quiet = fs::read_to_string(&path).unwrap();
-        assert_eq!(
-            config_value(&quiet, "pause_nonactive"),
             Some("true"),
-            "keeping the window in the background off still has to say so"
+            "keeping the window in the background off still has to say so, where a player file cannot replace it"
         );
 
         settings.keep_playing_in_background = true;
@@ -2877,11 +2834,11 @@ mod tests {
         let on = embedded_runtime_config(&write_test_launcher(settings.clone()));
         assert_eq!(config_value(&on, "savestate_auto_save"), Some("true"));
         assert_eq!(config_value(&on, "savestate_auto_load"), Some("true"));
-        assert_eq!(config_value(&on, "pause_nonactive"), None);
-        append_author_play_settings(&settings, &path).unwrap();
-        let playing = fs::read_to_string(&path).unwrap();
-        assert_eq!(config_value(&playing, "pause_nonactive"), Some("false"));
-        fs::remove_dir_all(&defaults).unwrap();
+        assert_eq!(
+            config_value(&on, "pause_nonactive"),
+            Some("false"),
+            "keeping the window in the background on is the same frozen key, not a player default"
+        );
     }
 
     #[test]

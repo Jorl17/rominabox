@@ -206,6 +206,10 @@ export function App() {
   const imageTarget = useRef<"icon" | "background">("icon");
   const heading = useRef<HTMLHeadingElement>(null);
   const generation = useRef(0);
+  // Changing step clears the error, and we set a refusal found on entering
+  // the details step in that same turn. Here we put the message back once
+  // after the clear, so it stays and does not follow to a later step.
+  const errorAfterStep = useRef<string | null>(null);
   const imageGeneration = useRef({ icon: 0, background: 0 });
   const nativeDropHandler = useRef<
     (paths: string[], pos: { x: number; y: number }) => void
@@ -221,46 +225,57 @@ export function App() {
     setDraft((current) => ({ ...current, [key]: value }));
   }
   async function chooseSystem(system: string) {
-    update("system", system);
-    if (!selection?.path || system === draft.system) return;
+    if (!selection || system === draft.system) return;
     const request = ++generation.current;
+    // We inspect before we change the console. When we reject a console in
+    // inspection, we keep the valid one and its Also importing line, so the
+    // page and the export agree. A browser file has no path, but we still
+    // check its extension.
+    try {
+      if (bridge.native && selection.path) {
+        setBusy("inspect");
+        await bridge.inspectGame(selection.path, online, system);
+      } else if (selection.browserFile) {
+        await inspectRom(selection.browserFile, undefined, system);
+      }
+    } catch (e) {
+      if (request === generation.current) {
+        setBusy(null);
+        fail(e);
+      }
+      return;
+    }
+    if (request !== generation.current) return;
+    update("system", system);
+    setError("");
+    if (!selection.path) {
+      if (request === generation.current) setBusy(null);
+      return;
+    }
     // The same disc can have different companions on another console, so we
-    // request the receipt again with the console now chosen.
-    if (!bridge.native) {
+    // request the Also importing line again with the console now chosen.
+    try {
       const traveled = await filesThatTravel(
         selection.path,
         selection.name,
         system,
       );
-      if (request === generation.current) setTraveling(traveled.files);
-      return;
-    }
-    setBusy("inspect");
-    try {
-      const data = await bridge.inspectGame(selection.path, online, system);
-      if (request !== generation.current) return;
-      const traveled = await filesThatTravel(
-        selection.path,
-        selection.name,
-        data.system,
-      );
       if (request !== generation.current) return;
       setTraveling(traveled.files);
-      const oldTitle = info?.title;
-      setInfo(data);
-      setDraft((current) => ({
-        ...current,
-        title: current.title === oldTitle ? data.title : current.title,
-      }));
-      if (!icon && data.iconPath) await loadPicture("icon", data.iconPath);
     } catch (e) {
-      if (request === generation.current) fail(e);
+      if (request !== generation.current) return;
+      // We rejected the set in the exporter. A one-file line would describe a
+      // different game from the one we copy in the export.
+      setTraveling([]);
+      fail(e);
     } finally {
       if (request === generation.current) setBusy(null);
     }
   }
   function fail(reason: unknown) {
-    setError(reason instanceof Error ? reason.message : String(reason));
+    const message = reason instanceof Error ? reason.message : String(reason);
+    errorAfterStep.current = message;
+    setError(message);
   }
   function choose(value: Selection) {
     if (busy === "export") return;
@@ -302,14 +317,9 @@ export function App() {
   ) {
     if (!filePath)
       return { files: fallbackName ? [fallbackName] : [], entry: "" };
-    try {
-      const listed = await bridge.travelingFiles(filePath, system);
-      if (listed.files.length > 0)
-        return { files: listed.files, entry: listed.entry || filePath };
-    } catch {
-      // We rejected this drop in collect. Show the name of the file the
-      // person gave and do not invent companions that we did not copy.
-    }
+    const listed = await bridge.travelingFiles(filePath, system);
+    if (listed.files.length > 0)
+      return { files: listed.files, entry: listed.entry || filePath };
     return { files: fallbackName ? [fallbackName] : [], entry: filePath };
   }
   async function chooseGame() {
@@ -393,20 +403,31 @@ export function App() {
             source: "filename",
           };
       if (request !== generation.current) return;
-      const traveled = await filesThatTravel(
-        selection.path,
-        selection.name,
-        data.system,
-      );
-      if (request !== generation.current) return;
-      setTraveling(traveled.files);
-      const entryName = traveled.entry.split(/[\\/]/).pop();
-      if (traveled.entry && entryName && entryName !== selection.name) {
-        setSelection((current) =>
-          current && current.path === selection.path
-            ? { ...current, path: traveled.entry, name: entryName }
-            : current,
+      let traveled: Awaited<ReturnType<typeof filesThatTravel>> | null = null;
+      try {
+        traveled = await filesThatTravel(
+          selection.path,
+          selection.name,
+          data.system,
         );
+      } catch (e) {
+        if (request !== generation.current) return;
+        // We rejected the set in the exporter, so there is no one-file game.
+        setTraveling([]);
+        fail(e);
+      }
+      if (request !== generation.current) return;
+      if (traveled) {
+        setTraveling(traveled.files);
+        const entryName = traveled.entry.split(/[\\/]/).pop();
+        if (traveled.entry && entryName && entryName !== selection.name) {
+          const entry = traveled.entry;
+          setSelection((current) =>
+            current && current.path === selection.path
+              ? { ...current, path: entry, name: entryName }
+              : current,
+          );
+        }
       }
       setInfo(data);
       setDraft({
@@ -532,12 +553,17 @@ export function App() {
       setCustomShaders(settings.shaders?.custom ?? []);
       setShaderInitial(settings.shaders?.initial ?? null);
       const filename = settings.rom.split(/[\\/]/).pop() || settings.title;
-      const traveled = await filesThatTravel(
-        settings.rom,
-        filename,
-        settings.system,
-      );
-      setTraveling(traveled.files);
+      try {
+        const traveled = await filesThatTravel(
+          settings.rom,
+          filename,
+          settings.system,
+        );
+        setTraveling(traveled.files);
+      } catch (e) {
+        setTraveling([]);
+        fail(e);
+      }
       setInfo({
         title: settings.title,
         system: settings.system,
@@ -701,6 +727,12 @@ export function App() {
     heading.current?.focus();
     setError("");
   }, [step]);
+  useEffect(() => {
+    if (!errorAfterStep.current) return;
+    const message = errorAfterStep.current;
+    errorAfterStep.current = null;
+    setError(message);
+  });
   // A disclosure on the Menu step opens below the fold, because the preview
   // above it is 445 points tall and the content area of the step scrolls.
   // When someone opens one, we scroll it into view.
@@ -1308,11 +1340,7 @@ export function App() {
                     {previewError && <p className="error">{previewError}</p>}
                   </div>
                   <div className="menu-settings">
-                    <StartupOptions
-                      draft={draft}
-                      update={update}
-                      startAtMenu
-                    />
+                    <StartupOptions draft={draft} update={update} startAtMenu />
                     <details className="advanced">
                       <summary>
                         <ChevronRight size={16} />

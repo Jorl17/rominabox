@@ -18,8 +18,8 @@ import designs from "../designs.json";
 import { App } from "./App";
 import { type FirmwareAssessment } from "./bridge";
 
-const { firmwareHandlers, inspectHandlers, travelingHandlers } = vi.hoisted(
-  () => ({
+const { firmwareHandlers, inspectHandlers, travelingHandlers, nativeBridge } =
+  vi.hoisted(() => ({
     firmwareHandlers: {
       assess: null as
         | ((system: string, files: string[]) => Promise<FirmwareAssessment>)
@@ -38,19 +38,39 @@ const { firmwareHandlers, inspectHandlers, travelingHandlers } = vi.hoisted(
     },
     travelingHandlers: {
       list: null as
-        | ((path: string, system: string) => Promise<{
+        | ((
+            path: string,
+            system: string,
+          ) => Promise<{
             entry: string;
             files: string[];
           }>)
         | null,
     },
-  }),
-);
+    nativeBridge: {
+      on: false,
+      inspectGame: null as
+        | ((
+            path: string,
+            online: boolean,
+            system?: string,
+          ) => Promise<import("./bridge").GameInfo>)
+        | null,
+    },
+  }));
 
 vi.mock("./bridge", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./bridge")>();
   return {
     ...actual,
+    get native() {
+      return nativeBridge.on;
+    },
+    inspectGame: (path: string, online: boolean, systemOverride?: string) => {
+      if (nativeBridge.inspectGame)
+        return nativeBridge.inspectGame(path, online, systemOverride);
+      return actual.inspectGame(path, online, systemOverride);
+    },
     assessFirmware: (system: string, files: string[]) => {
       const assess = firmwareHandlers.assess;
       if (!assess) return actual.assessFirmware(system, files);
@@ -73,6 +93,8 @@ vi.mock("./inspection", async (importOriginal) => {
       onProgress?: (label: string) => void,
       systemOverride?: string,
     ) => {
+      if (systemOverride)
+        return actual.inspectRom(file, onProgress, systemOverride);
       const inspect = inspectHandlers.inspect;
       if (inspect) return inspect(file);
       return actual.inspectRom(file, onProgress, systemOverride);
@@ -176,20 +198,33 @@ async function waitForText(text: string): Promise<void> {
   throw new Error(`Timed out waiting for: ${text}`);
 }
 
-function chooseConsole(id: string): void {
+async function chooseConsole(id: string): Promise<void> {
   const select = container.querySelector(".fields select") as HTMLSelectElement;
   const setter = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
     "value",
   )?.set;
   setter?.call(select, id);
-  select.dispatchEvent(new Event("change", { bubbles: true }));
+  await act(async () => {
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const current = container.querySelector(
+      ".fields select",
+    ) as HTMLSelectElement | null;
+    if (current?.value === id || container.querySelector(".error")) return;
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 15));
+    });
+  }
 }
 
 beforeEach(() => {
   firmwareHandlers.assess = assessWithCli;
   inspectHandlers.inspect = null;
   travelingHandlers.list = null;
+  nativeBridge.on = false;
+  nativeBridge.inspectGame = null;
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -243,7 +278,7 @@ function enterText(input: HTMLInputElement, value: string): void {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-async function openDetails(): Promise<void> {
+async function openDetails(name = "upload.gen"): Promise<void> {
   const bytes = new Uint8Array(512);
   [..."SEGA"].forEach((character, index) => {
     bytes[0x100 + index] = character.charCodeAt(0);
@@ -251,7 +286,7 @@ async function openDetails(): Promise<void> {
   [..."TEST QUEST"].forEach((character, index) => {
     bytes[0x150 + index] = character.charCodeAt(0);
   });
-  const file = new File([bytes.buffer], "upload.gen");
+  const file = new File([bytes.buffer], name);
   const input = container.querySelector(
     'input[type="file"]',
   ) as HTMLInputElement;
@@ -270,7 +305,7 @@ async function openDetails(): Promise<void> {
       container.querySelector("h1")?.textContent === "Game details" &&
       !looking
     ) {
-      expect(container.textContent).toContain("upload.gen");
+      expect(container.textContent).toContain(name);
       return;
     }
     await act(async () => {
@@ -394,10 +429,8 @@ describe("App workflow", () => {
   });
 
   it("stops at the BIOS step while a required file is missing", async () => {
-    await openDetails();
-    await act(async () => {
-      chooseConsole("pcecd");
-    });
+    await openDetails("disc.cue");
+    await chooseConsole("pcecd");
     expect(button("Next").disabled).toBe(true);
     const assessment = await assessWithCli("pcecd", []);
     const required = assessment.notices.find(
@@ -413,10 +446,8 @@ describe("App workflow", () => {
   });
 
   it("never says Ready to go beside a Next it has disabled", async () => {
-    await openDetails();
-    await act(async () => {
-      chooseConsole("pcecd");
-    });
+    await openDetails("disc.cue");
+    await chooseConsole("pcecd");
     const assessment = await assessWithCli("pcecd", []);
     const required = assessment.notices.find(
       (notice) => notice.kind === "required",
@@ -429,9 +460,7 @@ describe("App workflow", () => {
 
     // And the other way, so this is not simply "never say it": a console whose
     // BIOS is optional is ready, and we must not say that it requires one.
-    await act(async () => {
-      chooseConsole("ps1");
-    });
+    await chooseConsole("ps1");
     const optional = assessment.notices.length
       ? await assessWithCli("ps1", [])
       : null;
@@ -444,10 +473,8 @@ describe("App workflow", () => {
   });
 
   it("does not stop for a console whose BIOS is optional", async () => {
-    await openDetails();
-    await act(async () => {
-      chooseConsole("ps1");
-    });
+    await openDetails("disc.cue");
+    await chooseConsole("ps1");
     const assessment = await assessWithCli("ps1", []);
     const optional = assessment.notices.find(
       (notice) => notice.kind === "optional",
@@ -463,10 +490,8 @@ describe("App workflow", () => {
   });
 
   it("explains a BIOS file that does not match this console", async () => {
-    await openDetails();
-    await act(async () => {
-      chooseConsole("pcecd");
-    });
+    await openDetails("disc.cue");
+    await chooseConsole("pcecd");
     const input = container.querySelector(
       "input[data-firmware]",
     ) as HTMLInputElement;
@@ -486,10 +511,8 @@ describe("App workflow", () => {
   });
 
   it("continues once the required BIOS file is provided", async () => {
-    await openDetails();
-    await act(async () => {
-      chooseConsole("pcecd");
-    });
+    await openDetails("disc.cue");
+    await chooseConsole("pcecd");
     const input = container.querySelector(
       "input[data-firmware]",
     ) as HTMLInputElement;
@@ -723,7 +746,9 @@ describe("App workflow", () => {
         await new Promise((resolve) => setTimeout(resolve, 20));
       });
     }
-    throw new Error("the receipt did not name the files that travel");
+    throw new Error(
+      "the Also importing line did not name the files that travel",
+    );
   }
 
   it("names a disc's tracks on one short line, without repeating the game", async () => {
@@ -781,5 +806,134 @@ describe("App workflow", () => {
     expect(checkbox("Keep playing in the background").checked).toBe(true);
     expect(checkbox("Autosave on quit").checked).toBe(true);
     expect(checkbox("Startup logo").closest(".play-options")).not.toBeNull();
+  });
+
+  async function dropNamed(name: string) {
+    const path = `/games/${name}`;
+    const file = new File([new Uint8Array(32)], name) as File & {
+      path?: string;
+    };
+    file.path = path;
+    const input = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await act(async () => {
+      Object.defineProperty(input, "files", {
+        configurable: true,
+        value: [file],
+      });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await waitForText("Game details");
+    return path;
+  }
+
+  it("puts the console back when inspection rejects it, and keeps the message", async () => {
+    const stem = "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es)";
+    travelingHandlers.list = async () => ({
+      entry: `/games/${stem}.gdi`,
+      files: [
+        `${stem}.gdi`,
+        `${stem} (Track 1).bin`,
+        `${stem} (Track 2).bin`,
+        `${stem} (Track 3).bin`,
+      ],
+    });
+    inspectHandlers.inspect = async () => ({
+      title: "Sonic Adventure 2",
+      system: "dreamcast",
+      source: "filename",
+      filename: `${stem}.gdi`,
+      size: 32,
+    });
+    await dropNamed(`${stem}.gdi`);
+    const also = container.querySelector(".traveling-also")?.textContent;
+    nativeBridge.on = true;
+    nativeBridge.inspectGame = async (_path, _online, system) => {
+      if (system === "ps1")
+        throw new Error("PlayStation does not support .gdi files.");
+      return {
+        title: "Sonic Adventure 2",
+        system: "dreamcast",
+        filename: `${stem}.gdi`,
+        size: 32,
+        source: "filename",
+        matched: false,
+        warnings: [],
+      };
+    };
+    await chooseConsole("ps1");
+    await waitForText("PlayStation does not support .gdi files.");
+    const select = container.querySelector(
+      ".fields select",
+    ) as HTMLSelectElement;
+    expect(
+      select.value,
+      "a console inspection rejects has to stay the one that was valid, or export copies a different set than the line",
+    ).toBe("dreamcast");
+    expect(container.querySelector(".error")?.textContent).toBe(
+      "PlayStation does not support .gdi files.",
+    );
+    expect(container.querySelector(".traveling-also")?.textContent).toBe(also);
+  });
+
+  it("puts the console back in the browser walk when inspection rejects it", async () => {
+    const stem = "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es)";
+    travelingHandlers.list = async () => ({
+      entry: `/games/${stem}.gdi`,
+      files: [`${stem}.gdi`, `${stem} (Track 1).bin`],
+    });
+    inspectHandlers.inspect = async () => ({
+      title: "Sonic Adventure 2",
+      system: "dreamcast",
+      source: "filename",
+      filename: `${stem}.gdi`,
+      size: 32,
+    });
+    await dropNamed(`${stem}.gdi`);
+    await chooseConsole("ps1");
+    await waitForText("PlayStation does not support .gdi files.");
+    const select = container.querySelector(
+      ".fields select",
+    ) as HTMLSelectElement;
+    expect(select.value).toBe("dreamcast");
+    expect(container.querySelector(".traveling-also")?.textContent).toBe(
+      "Also importing: (Track 1).bin",
+    );
+  });
+
+  it("shows the exporter's refusal instead of a one-file line", async () => {
+    const refusal = "missing sub file game.sub (from /games/game.ccd)";
+    travelingHandlers.list = async () => {
+      throw new Error(refusal);
+    };
+    inspectHandlers.inspect = async () => ({
+      title: "Game",
+      system: "pcecd",
+      source: "filename",
+      filename: "game.ccd",
+      size: 32,
+    });
+    const file = new File([new Uint8Array(32)], "game.ccd") as File & {
+      path?: string;
+    };
+    file.path = "/games/game.ccd";
+    const input = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await act(async () => {
+      Object.defineProperty(input, "files", {
+        configurable: true,
+        value: [file],
+      });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    await waitForText(refusal);
+    expect(container.querySelector(".error")?.textContent).toBe(refusal);
+    expect(
+      container.querySelector("[data-traveling]"),
+      "a refused disc is not a one-file game",
+    ).toBeNull();
   });
 });

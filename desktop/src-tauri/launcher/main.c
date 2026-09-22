@@ -211,8 +211,8 @@ static int allowed_player_key(const char *key) {
         return 1;
     if (strcmp(key, "audio_mute_enable") == 0)
         return 1;
-    if (strcmp(key, "pause_nonactive") == 0)
-        return 1;
+    /* pause_nonactive is the author's frozen choice, and a player file does
+     * not replace it. In a screenshot run we set it after we apply the files. */
     return 0;
 }
 
@@ -369,6 +369,20 @@ static void append_setting(ConfigLine **lines, size_t *count, size_t *capacity, 
     if (!copy)
         die("out of memory");
     add_line(lines, count, capacity, config_key(copy), copy, 0);
+}
+
+static void force_line(ConfigLine **lines, size_t *count, size_t *capacity, const char *key, const char *text) {
+    size_t index;
+    for (index = 0; index < *count; index++) {
+        if (!(*lines)[index].key || strcmp((*lines)[index].key, key) != 0)
+            continue;
+        free((*lines)[index].line);
+        (*lines)[index].line = strdup(text);
+        if (!(*lines)[index].line)
+            die("out of memory");
+        return;
+    }
+    append_setting(lines, count, capacity, text);
 }
 
 static const char *field(const char *plan, const char *name, char *out, size_t out_cap) {
@@ -628,6 +642,21 @@ static void prepare(void) {
     apply_player_file(&lines, &line_count, &line_capacity, controls_defaults);
     apply_player_file(&lines, &line_count, &line_capacity, controls_override);
     apply_player_file(&lines, &line_count, &line_capacity, volume_path);
+    /* We take a screenshot with the window unfocused, where the console would
+     * pause and the picture would show a stopped game. The author's
+     * pause_nonactive is frozen, so we replace it here for this run instead of
+     * writing the player's controls.cfg. */
+    {
+        const char *shot = getenv("ROMINABOX_MENU_SHOT");
+        if (shot && shot[0])
+            force_line(
+                &lines,
+                &line_count,
+                &line_capacity,
+                "pause_nonactive",
+                "pause_nonactive = \"false\""
+            );
+    }
 
     shader_preset[0] = '\0';
     join_path(shader_choice, sizeof shader_choice, data_dir, "shader-choice");

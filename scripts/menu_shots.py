@@ -211,12 +211,15 @@ def take(app: Path, name: str, script: list[str], output: Path,
         for switch in data.glob("toggle-*"):
             switch.unlink()
 
-    # Settings required for this shot, which we add to the per-game override
-    # that is already part of the exported launch. The important one is
-    # `pause_nonactive`. By default the emulated console stops whenever its
-    # window does not have the focus, and we never focus a window here, so
-    # otherwise a picture of anything drawn over a running game would show a
-    # black game.
+    # In a shot we can set other run settings, but not `pause_nonactive`. We
+    # set ROMINABOX_MENU_SHOT in every run, and with it the console keeps
+    # running in the launcher. Writing the key into controls.cfg would
+    # override the setting the author chose the next time someone opens the game.
+    config = {
+        key: value
+        for key, value in (config or {}).items()
+        if key != "pause_nonactive"
+    }
     if data and config:
         data.mkdir(parents=True, exist_ok=True)
         (data / "controls.cfg").write_text(

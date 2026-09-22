@@ -185,10 +185,24 @@ async function shot(page, file) {
 }
 
 async function downloadNotice(page, out) {
-  await page.getByRole("button", { name: "Details", exact: true }).click();
+  // A Mega Drive ROM is not a Dreamcast game. When someone chooses Dreamcast
+  // for it, we refuse and keep the console, so we read the sentence for a
+  // file valid for Dreamcast. Then we put the Mega Drive game back.
+  const directory = path.join(ROOT, "work/test-output/builder-shots");
+  fs.mkdirSync(directory, { recursive: true });
+  const cdi = path.join(directory, "game.cdi");
+  fs.writeFileSync(cdi, Buffer.from("not a real disc"));
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, cdi);
   await page.getByRole("heading", { name: "Game details" }).waitFor();
-  await page.locator(".fields select").selectOption("dreamcast");
-  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const chosen = await page.locator(".fields select").inputValue();
+  if (chosen !== "dreamcast") {
+    console.error(`a .cdi was not opened as Dreamcast (${chosen})`);
+    return false;
+  }
+  await clickNext(page);
+  await clickNext(page);
   await page.getByRole("heading", { name: "Export your game" }).waitFor();
   const text = (await page.locator("main").innerText()).replace(/\s+/g, " ");
   console.log(`DOWNLOAD ${JSON.stringify(text)}`);
@@ -203,6 +217,13 @@ async function downloadNotice(page, out) {
     );
     return false;
   }
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, writeRom());
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  await clickNext(page);
+  await clickNext(page);
+  await page.getByRole("heading", { name: "Export your game" }).waitFor();
   return true;
 }
 
@@ -224,9 +245,9 @@ async function dropRom(page, rom) {
   await page.locator("[data-drop='game']").evaluate(
     (zone, payload) => {
       const file = new File([new Uint8Array(payload.bytes)], payload.name);
-      // A file dropped in the browser has no path. For the receipt we ask the
-      // exporter which files go with this one, and for that we require the
-      // path we wrote the file to.
+      // A file dropped in the browser has no path. For the Also importing line
+      // we ask the exporter which files go with this one, and for that we
+      // require the path we wrote the file to.
       if (payload.path) {
         Object.defineProperty(file, "path", { value: payload.path });
       }
@@ -273,19 +294,19 @@ async function checkWhatTravels(page, out) {
 
   await dropRom(page, chd);
   await page.getByRole("heading", { name: "Game details" }).waitFor();
-  const receipt = page.locator("[data-traveling]");
-  const appeared = await receipt
+  const alsoImporting = page.locator("[data-traveling]");
+  const appeared = await alsoImporting
     .waitFor({ timeout: 20000 })
     .then(() => true)
     .catch(() => false);
   const text = appeared
-    ? (await receipt.innerText()).replace(/\s+/g, " ")
+    ? (await alsoImporting.innerText()).replace(/\s+/g, " ")
     : "";
-  console.log(`TRAVELING ${JSON.stringify(text || "(no receipt)")}`);
+  console.log(`TRAVELING ${JSON.stringify(text || "(no Also importing line)")}`);
   const namesDisc = text.includes("Ape Escape.chd");
   const alsoLine = appeared
     ? (
-        (await receipt.locator(".traveling-also").innerText().catch(() => "")) ||
+        (await alsoImporting.locator(".traveling-also").innerText().catch(() => "")) ||
         ""
       ).replace(/\s+/g, " ")
     : "";
@@ -303,13 +324,14 @@ async function checkWhatTravels(page, out) {
     return false;
   }
   if ((await page.locator("[data-drop='game']").count()) !== 0) {
-    console.error("the receipt is being shown on the drop target");
+    console.error("the Also importing line is being shown on the drop target");
     return false;
   }
   if (out) await shot(page, path.join(out, "h3-sibling.png"));
 
-  // A sheet lists its tracks inside the file. The receipt must show every
-  // name that collect returns, however many there are, not only a sibling.
+  // A sheet lists its tracks inside the file. The Also importing line must
+  // show every name that collect returns, however many there are, not only a
+  // sibling.
   const sheetDir = path.join(
     ROOT,
     "work/test-output/builder-shots/sheet-tracks",
@@ -338,7 +360,7 @@ async function checkWhatTravels(page, out) {
   const sheetText = sheetShown
     ? (await sheet.innerText()).replace(/\s+/g, " ")
     : "";
-  console.log(`SHEET ${JSON.stringify(sheetText || "(no receipt)")}`);
+  console.log(`SHEET ${JSON.stringify(sheetText || "(no Also importing line)")}`);
   const missing = ["Sonic Adventure 2.cue", ...tracks].filter(
     (name) => !sheetText.includes(name),
   );
@@ -346,13 +368,13 @@ async function checkWhatTravels(page, out) {
     console.error(
       "the details step does not name every track that travels with the sheet",
     );
-    console.error(missing.join(", ") || "(receipt missing)");
+    console.error(missing.join(", ") || "(Also importing line missing)");
     return false;
   }
   if (out) await shot(page, path.join(out, "h3-tracks.png"));
 
   // Track file names as they appear in dumps. Each contains the game's name,
-  // which is already on the line above, so the receipt must not repeat it.
+  // which is already on the line above, so the Also importing line must not repeat it.
   const longDir = path.join(
     ROOT,
     "work/test-output/builder-shots/long-tracks",
@@ -387,8 +409,8 @@ async function checkWhatTravels(page, out) {
   const longText = longShown
     ? (await long.innerText()).replace(/\s+/g, " ")
     : "";
-  console.log(`LONG ${JSON.stringify(longText || "(no receipt)")}`);
-  if (out) await shot(page, path.join(out, "i4-receipt.png"));
+  console.log(`LONG ${JSON.stringify(longText || "(no Also importing line)")}`);
+  if (out) await shot(page, path.join(out, "i4-also-importing.png"));
   const also = longShown
     ? ((await long.locator(".traveling-also").innerText()) || "").replace(
         /\s+/g,
@@ -400,7 +422,7 @@ async function checkWhatTravels(page, out) {
     "Also importing: (Track 1).bin, (Track 2).bin, (Track 3).bin";
   if (!longShown || !short || also.includes(stem)) {
     console.error(
-      "the receipt repeats the game's name instead of one short line",
+      "the Also importing line repeats the game's name instead of one short line",
     );
     console.error(also || "(no also line)");
     return false;
@@ -413,14 +435,14 @@ async function checkWhatTravels(page, out) {
       lineHeight: element.getBoundingClientRect().height,
     };
   });
-  console.log(`RECEIPT ${JSON.stringify(alsoBox)}`);
+  console.log(`ALSO ${JSON.stringify(alsoBox)}`);
   if (alsoBox.fontSize !== "12px" || alsoBox.whiteSpace !== "nowrap") {
-    console.error("the receipt's second line is not the small one-line text");
+    console.error("the Also importing line is not the small one-line text");
     console.error(JSON.stringify(alsoBox));
     return false;
   }
   if (alsoBox.lineHeight > 20) {
-    console.error("the receipt's second line is taller than one line of text");
+    console.error("the Also importing line is taller than one line of text");
     return false;
   }
 
@@ -451,10 +473,87 @@ async function checkWhatTravels(page, out) {
   console.log(`COUNT ${JSON.stringify(countedText)}`);
   if (countedText !== "Also importing 6 files") {
     console.error(
-      "past a handful of files the receipt still lists every name",
+      "past a handful of files the Also importing line still lists every name",
     );
     return false;
   }
+
+  // We reject PlayStation for a GD-ROM in inspection. The console must go
+  // back to Dreamcast, or the line and the export list different files.
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, gdi);
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  const kept = page.locator(".traveling-also");
+  await kept.waitFor({ timeout: 20000 });
+  const keptLine = (await kept.innerText()).replace(/\s+/g, " ");
+  await page.locator(".fields select").selectOption("ps1");
+  const rejected = page.locator(".error");
+  const rejectedShown = await rejected
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  const rejectedText = rejectedShown
+    ? (await rejected.innerText()).replace(/\s+/g, " ")
+    : "";
+  const chosen = await page.locator(".fields select").inputValue();
+  const lineAfter = rejectedShown
+    ? ((await kept.innerText().catch(() => "")) || "").replace(/\s+/g, " ")
+    : "";
+  console.log(
+    `REJECTED ${JSON.stringify({ rejectedText, chosen, lineAfter })}`,
+  );
+  if (
+    !rejectedShown ||
+    !rejectedText.includes("does not support .gdi") ||
+    chosen !== "dreamcast" ||
+    lineAfter !== keptLine
+  ) {
+    console.error(
+      "a console inspection rejected stayed selected, or the Also importing line changed",
+    );
+    return false;
+  }
+  if (out) await shot(page, path.join(out, "i4-console-stays.png"));
+
+  // We refuse a CloneCD sheet without a .sub for PC Engine CD. We must show
+  // that on the page, and must not present the sheet as a one-file game.
+  const ccdDir = path.join(ROOT, "work/test-output/builder-shots/pce-ccd");
+  fs.mkdirSync(ccdDir, { recursive: true });
+  fs.writeFileSync(path.join(ccdDir, "game.ccd"), "[CloneCD]\n");
+  fs.writeFileSync(path.join(ccdDir, "game.img"), "data");
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, path.join(ccdDir, "game.ccd"));
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  await page.locator(".fields select").selectOption("pcecd");
+  const refusal = page.locator(".error");
+  const refusalShown = await refusal
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  const refusalText = refusalShown
+    ? (await refusal.innerText()).replace(/\s+/g, " ")
+    : "";
+  const consoleNow = await page.locator(".fields select").inputValue();
+  const refusedLine = (
+    (await page.locator("[data-traveling]").innerText().catch(() => "")) || ""
+  ).replace(/\s+/g, " ");
+  console.log(
+    `REFUSED ${JSON.stringify({ refusalText, consoleNow, refusedLine })}`,
+  );
+  if (
+    !refusalShown ||
+    !refusalText.includes("game.sub") ||
+    consoleNow !== "pcecd" ||
+    refusedLine.trim() === "game.ccd"
+  ) {
+    console.error(
+      "the exporter's refusal was not shown, or the sheet was presented as one file",
+    );
+    return false;
+  }
+  if (out) await shot(page, path.join(out, "i4-refused-disc.png"));
   return true;
 }
 
@@ -994,8 +1093,8 @@ async function main() {
     const cartridgeText = (await cartridge.count())
       ? (await cartridge.innerText()).replace(/\s+/g, " ")
       : "";
-    console.log(`CARTRIDGE ${JSON.stringify(cartridgeText || "(no receipt)")}`);
-    // The receipt shows the file name, not the game's. The title comes from
+    console.log(`CARTRIDGE ${JSON.stringify(cartridgeText || "(no Also importing line)")}`);
+    // The line shows the file name, not the game's. The title comes from
     // the header, and the file that goes with the game keeps its name on disk.
     if (
       !cartridgeText.includes(path.basename(rom)) ||
@@ -1439,13 +1538,19 @@ async function main() {
       if (!profile.system || seen.has(profile.id)) continue;
       await page.getByRole("button", { name: "Details", exact: true }).click();
       await page.getByRole("heading", { name: "Game details" }).waitFor();
-      await page.locator(".fields select").selectOption(profile.system);
+      const select = page.locator(".fields select");
+      await select.selectOption(profile.system);
       await page.waitForTimeout(200);
+      // When this console does not accept the extension, we keep the previous
+      // console and Next stays available, and the pad on screen is not this profile's.
+      const kept = await select.inputValue();
       const blocked = await page
         .getByRole("button", { name: "Next", exact: true })
         .isDisabled();
-      if (blocked) {
-        console.log(`UNREACHABLE ${profile.id} via ${profile.system}`);
+      if (blocked || kept !== profile.system) {
+        console.log(
+          `UNREACHABLE ${profile.id} via ${profile.system} (console is ${kept})`,
+        );
         continue;
       }
       await clickNext(page);

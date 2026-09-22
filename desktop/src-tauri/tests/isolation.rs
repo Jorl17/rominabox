@@ -486,7 +486,11 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     );
     assert_eq!(config_value(&config, "network_cmd_enable"), Some("false"));
     assert_eq!(config_value(&config, "audio_volume"), Some("0.25"));
-    assert_eq!(config_value(&config, "pause_nonactive"), Some("false"));
+    assert_eq!(
+        config_value(&config, "pause_nonactive"),
+        Some("true"),
+        "an older controls.cfg must not turn background play on when the author left it off"
+    );
     assert_eq!(config_value(&config, "input_player1_a"), Some("x"));
     assert_eq!(config_value(&config, "audio_mute_enable"), Some("true"));
     assert_eq!(
@@ -502,6 +506,64 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
         b"migrated-from-host\n"
     );
     assert_eq!(fs::read(&previous).unwrap(), b"migrated-from-host\n");
+}
+
+/// The author left background play off, and an earlier export of the same game
+/// left `pause_nonactive = "false"` in its controls.cfg. For a screenshot run
+/// the console must keep running, and we must set that at launch, not by
+/// writing to the file of the player.
+#[test]
+#[ignore = "launches a signed stub that exits; the isolation scope runs it"]
+fn author_background_play_survives_an_old_controls_file() {
+    let root = scratch();
+    let app = export(&request(
+        &root,
+        b"rominabox-background-play-author-v1",
+        "Background Play",
+        fixture_kit(&root),
+        "megadrive",
+    ));
+    let identity = identity_of(&app);
+    let _container = RemoveDir(container_for(&identity));
+    let data = data_dir_for(&identity);
+    fs::create_dir_all(&data).unwrap();
+    let controls = data.join("controls.cfg");
+    let leftover = "pause_nonactive = \"false\"\n";
+    fs::write(&controls, leftover).unwrap();
+
+    let mut quiet = Command::new(app.join("Contents/MacOS/retroarch"));
+    quiet.env_remove("ROMINABOX_MENU_SHOT");
+    let status = run_until(&mut quiet, Duration::from_secs(20));
+    assert!(status.success(), "the stub did not exit");
+    let config = fs::read_to_string(data.join("retroarch.cfg")).unwrap();
+    assert_eq!(
+        config_value(&config, "pause_nonactive"),
+        Some("true"),
+        "an older controls.cfg turned background play on"
+    );
+    assert_eq!(
+        fs::read_to_string(&controls).unwrap(),
+        leftover,
+        "the launch rewrote the player's controls.cfg"
+    );
+
+    let pad = "input_player1_a = \"x\"\n";
+    fs::write(&controls, pad).unwrap();
+    let mut shot = Command::new(app.join("Contents/MacOS/retroarch"));
+    shot.env("ROMINABOX_MENU_SHOT", "/tmp/rominabox-menu-shot-proof.png");
+    let status = run_until(&mut shot, Duration::from_secs(20));
+    assert!(status.success(), "the screenshot stub did not exit");
+    let shooting = fs::read_to_string(data.join("retroarch.cfg")).unwrap();
+    assert_eq!(
+        config_value(&shooting, "pause_nonactive"),
+        Some("false"),
+        "a screenshot run still pauses when its window is not focused"
+    );
+    assert_eq!(
+        fs::read_to_string(&controls).unwrap(),
+        pad,
+        "the screenshot run wrote pause_nonactive into the player's controls.cfg"
+    );
 }
 
 #[test]
@@ -528,12 +590,16 @@ fn exported_game_loads_a_core_opens_audio_and_sees_a_gamepad() {
 
     let leak = home().join("Documents/RetroArch/playlists/builtin/content_history.lpl");
     let leak_before = fs::read(&leak).unwrap_or_default();
-    let data = data_dir_for(&identity);
-    fs::create_dir_all(&data).unwrap();
-    fs::write(data.join("controls.cfg"), "pause_nonactive = \"false\"\n").unwrap();
     let mut command = Command::new(app.join("Contents/MacOS/retroarch"));
     command.env("ROMINABOX_VERBOSE", "1");
     command.env("ROMINABOX_MAX_FRAMES", "30");
+    // The window is not focused, and the author chose to pause then, so the
+    // console would stop before we log these lines. We set the screenshot
+    // variable to keep it running without writing the player's controls.cfg.
+    command.env(
+        "ROMINABOX_MENU_SHOT",
+        "/tmp/rominabox-menu-shot-proof.png",
+    );
     let status = run_until(&mut command, Duration::from_secs(60));
     let log = fs::read_to_string(data_dir_for(&identity).join("logs/launch.log")).unwrap_or_default();
     let tail = log.lines().rev().take(40).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n");

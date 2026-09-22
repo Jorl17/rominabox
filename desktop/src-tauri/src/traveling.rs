@@ -1,10 +1,10 @@
-//! The files that an export will copy for a dropped file.
+//! Which files we will copy at export for a drop.
 //!
-//! At export we copy what `content::collect_for` returns for the game file and
-//! its console, so we call it the same way for the receipt. Without the
-//! console the result can differ, because a companion file required for one
-//! console, such as the `.sub` for a PC Engine CD sheet, is optional for
-//! another, and the receipt would list files that the export does not copy.
+//! At export we copy whatever `content::collect_for` returns for the game file
+//! and its console, so for the Also importing line we ask exactly that. Without
+//! the console, the answer can differ, because a companion file that one
+//! console requires, for example the `.sub` of a PC Engine CD sheet, can be
+//! optional for another, and the line would then name files we do not copy.
 
 use std::path::{Path, PathBuf};
 
@@ -15,10 +15,10 @@ use crate::content;
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Traveling {
-    /// The game file that we passed to `collect_for`. A dropped folder or a
-    /// `.sbi` next to it is not that file. We must pass this path to the
-    /// export, or we reject the folder in `collect_for` and the receipt lists
-    /// a file that we do not copy.
+    /// The game file we passed to `collect_for`. A dropped folder or a sibling
+    /// `.sbi` is not that file. We must export with this path, because we
+    /// refuse a folder in `collect_for`, and the Also importing line would
+    /// then name something we do not copy.
     pub entry: PathBuf,
     pub files: Vec<String>,
 }
@@ -71,7 +71,7 @@ mod tests {
     // For every console, the details step lists the files we copy at export.
     // We ask in the same way for both, so the list cannot differ by one file.
     #[test]
-    fn the_receipt_names_what_this_consoles_export_copies() {
+    fn the_also_importing_line_names_what_this_consoles_export_copies() {
         let root = fixture("ccd");
         fs::write(root.join("game.ccd"), b"[CloneCD]\n").unwrap();
         fs::write(root.join("game.img"), b"data").unwrap();
@@ -79,9 +79,9 @@ mod tests {
         let ccd = root.join("game.ccd");
 
         for system in ["ps1", "pcecd"] {
-            let receipt = files_for(&ccd, Some(system)).unwrap().files;
+            let named = files_for(&ccd, Some(system)).unwrap().files;
             assert_eq!(
-                receipt,
+                named,
                 export_copies(&ccd, system),
                 "for {system} the details step names different files than export copies"
             );
@@ -89,12 +89,13 @@ mod tests {
         fs::remove_dir_all(&root).unwrap();
     }
 
-    // Both consoles use a CloneCD `.sub` when there is one, but only Beetle PCE
-    // Fast cannot open the disc without it. Without a console, we require a
-    // companion file only when every console requires it, so a receipt made
-    // without a console can show a disc that fails in the PC Engine CD export.
+    // Both consoles use a CloneCD `.sub` when it is there, but only Beetle
+    // PCE Fast cannot open the disc without it. When we ask without a console,
+    // a companion file is required only when every console requires it, so
+    // without the console we would accept a disc that we then refuse at
+    // PC Engine CD export.
     #[test]
-    fn the_receipt_refuses_what_this_consoles_export_refuses() {
+    fn the_also_importing_line_refuses_what_this_consoles_export_refuses() {
         let root = fixture("ccd-no-sub");
         fs::write(root.join("game.ccd"), b"[CloneCD]\n").unwrap();
         fs::write(root.join("game.img"), b"data").unwrap();
