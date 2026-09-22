@@ -52,8 +52,12 @@ def the_common_dir_is_shared_not_per_worktree() -> None:
         os.chdir(original)
     check(from_root == from_elsewhere, "common dir is the same from any working directory")
     check(from_root.is_absolute(), "common dir is absolute")
+    # The script's directory is the canonical checkout only when .git is a
+    # directory. In a worktree .git is a file, and we must use the main
+    # checkout's shared git dir, or each worktree would take a separate lock.
+    script_is_canonical = (worktree.ROOT / ".git").is_dir()
     check(
-        from_root.parent == worktree.ROOT,
+        (from_root.parent == worktree.ROOT) == script_is_canonical,
         f"common dir belongs to the canonical checkout, not a worktree: {from_root}",
     )
 
@@ -106,9 +110,10 @@ def a_dead_holders_lock_is_reclaimed() -> None:
 
 def the_canonical_checkout_is_never_suffixed() -> None:
     """Adopting the canonical checkout must fail, or we would rename its app and data."""
+    canonical = worktree.canonical_checkout()
     original = os.getcwd()
     try:
-        os.chdir(worktree.ROOT)
+        os.chdir(canonical)
         try:
             worktree.adopt()
             check(False, "adopt refused to run in the canonical checkout")
@@ -117,7 +122,7 @@ def the_canonical_checkout_is_never_suffixed() -> None:
     finally:
         os.chdir(original)
     check(
-        not (worktree.ROOT / worktree.LOCAL_CONFIG).exists(),
+        not (canonical / worktree.LOCAL_CONFIG).exists(),
         "no local config was written into the canonical checkout",
     )
 

@@ -286,13 +286,19 @@ def create(suffix: str, branch: str | None, own_runtime: bool) -> int:
     return 0
 
 
+def canonical_checkout() -> Path:
+    """Return the main checkout. A worktree's copy of this script is elsewhere,
+    so the script's directory is not the main checkout."""
+    return common_dir().parent
+
+
 def adopt() -> int:
     """Set up a worktree created by something else, such as a bare git command."""
     here = Path.cwd().resolve()
     known = {entry["path"].resolve(): entry for entry in worktrees()}
     if here not in known:
         raise SystemExit(f"{here} is not a git worktree of this repository")
-    if here == ROOT:
+    if here == canonical_checkout():
         raise SystemExit("this is the canonical checkout; it is never suffixed")
     suffix = here.name.removeprefix(f"{ROOT.name}-") or here.name
     existing = known[here].get("local") or {}
@@ -322,7 +328,7 @@ def environment() -> int:
 def show() -> int:
     for entry in worktrees():
         local = entry.get("local")
-        marker = "canonical" if entry["path"].resolve() == ROOT else "worktree"
+        marker = "canonical" if entry["path"].resolve() == canonical_checkout() else "worktree"
         print(f"{entry['path']}  [{entry.get('branch', '?')}]  {marker}")
         print(describe(local) if local else "  (not set up — run adopt inside it)")
     return 0
