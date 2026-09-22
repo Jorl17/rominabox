@@ -235,22 +235,30 @@ fn both_playstation_pads_are_offered_and_both_declare_their_sticks() {
 
 
 #[test]
-fn a_disc_format_we_cannot_collect_is_refused_with_a_reason() {
+fn a_playlist_collects_each_disc_and_names_one_that_is_missing() {
     let root = scratch();
     let playlist = root.join("game.m3u");
     fs::write(&playlist, b"disc1.cue\n").unwrap();
-    let refusal = content::collect(&playlist).expect_err("an m3u points at other files");
+    let refusal = content::collect(&playlist).expect_err("the cue is not beside the playlist");
     assert!(
-        refusal.contains("recognised but not exported"),
-        "the gap should be explained, not merely refused: {refusal}"
+        refusal.contains("disc1.cue"),
+        "the missing disc should be named: {refusal}"
     );
 
-    // We support a cue sheet, so that rule must not reject it.
     let cue = root.join("game.cue");
     let track = root.join("game.bin");
     fs::write(&track, b"data").unwrap();
     fs::write(&cue, b"FILE \"game.bin\" BINARY\n  TRACK 01 MODE1/2352\n").unwrap();
-    content::collect(&cue).expect("a cue sheet and its tracks can be collected");
+    fs::write(&playlist, b"game.cue\n").unwrap();
+    let collected = content::collect(&playlist).expect("a playlist and its cue can be collected");
+    let names: Vec<String> = collected
+        .files
+        .iter()
+        .map(|file| file.relative.to_string_lossy().into_owned())
+        .collect();
+    for name in ["game.m3u", "game.cue", "game.bin"] {
+        assert!(names.iter().any(|found| found == name), "{names:?}");
+    }
 }
 
 #[test]

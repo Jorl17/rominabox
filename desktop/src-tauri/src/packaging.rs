@@ -24,7 +24,9 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
 /// Disc image containers whose support depends on how a core was built.
-const CONTAINER_FORMATS: &[&str] = &["chd", "cue", "iso", "gdi", "cdi", "pbp", "rvz", "m3u"];
+const CONTAINER_FORMATS: &[&str] = &[
+    "ccd", "cdi", "chd", "cue", "gdi", "iso", "m3u", "pbp", "rvz", "toc",
+];
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -501,8 +503,8 @@ where
     let core_name = OsStr::new("game-core.dylib");
     let core = resources.join(core_name);
     copy_file(&core_source, &core)?;
-    let collected_content =
-        content::collect(&request.rom).map_err(|message| ExportError::new("validate", message))?;
+    let collected_content = content::collect_for(&request.rom, Some(&system.id))
+        .map_err(|message| ExportError::new("validate", message))?;
     let content_directory = resources.join("content");
     for file in &collected_content.files {
         copy_content_file(file, &content_directory)?;
@@ -823,7 +825,8 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
             ));
         }
     }
-    content::collect(&request.rom).map_err(|message| ExportError::new("validate", message))?;
+    content::collect_for(&request.rom, Some(&system.id))
+        .map_err(|message| ExportError::new("validate", message))?;
     // We reject a container format by the core that would have to read it,
     // not by the console name, because CHD support in an upstream project
     // does not show that the prepared artifact was compiled with it. We do

@@ -10,12 +10,23 @@
       "gdi",
       "cdi",
       "chd",
-      "m3u"
+      "m3u",
+      "cue"
     ],
     "category": "disc",
-    "recognizeOnly": [
-      "gdi",
-      "m3u"
+    "sheets": [
+      {
+        "extension": "gdi",
+        "parser": "gdi"
+      },
+      {
+        "extension": "m3u",
+        "parser": "playlist"
+      },
+      {
+        "extension": "cue",
+        "parser": "cue"
+      }
     ]
   },
   "recognition": {},

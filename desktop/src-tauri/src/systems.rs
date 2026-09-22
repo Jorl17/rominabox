@@ -88,11 +88,15 @@ pub struct System {
     pub name: String,
     pub aliases: Vec<String>,
     pub extensions: Vec<String>,
-    /// Sibling files that must be collected with the content, by extension.
+    /// Sheets whose text lists other files. We parse them with the closed
+    /// set in `discs::sheet_references`.
     #[serde(default)]
-    pub support_files: Vec<String>,
-    /// Extensions by which we recognise this console but cannot export it yet.
-    /// We declare them per console and not in the exporter code.
+    pub sheets: Vec<Sheet>,
+    /// Siblings a sheet does not name. Optional unless `required`.
+    #[serde(default)]
+    pub companions: Vec<Companion>,
+    /// Extensions from which we recognise this console but cannot export it
+    /// yet. A declared sheet is not one of these.
     #[serde(default)]
     pub recognize_only: Vec<String>,
     pub catalog: Option<String>,
@@ -105,6 +109,45 @@ pub struct System {
     /// when it has one. We declare it in the console package, not in code here.
     #[serde(default)]
     pub header_title: Option<HeaderTitle>,
+}
+
+/// How a sheet lists the files that go with it. The catalog schema has
+/// the same set, and we must be able to read here every name it accepts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SheetParser {
+    Cue,
+    Gdi,
+    Playlist,
+    Toc,
+}
+
+impl SheetParser {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Cue => "cue",
+            Self::Gdi => "gdi",
+            Self::Playlist => "playlist",
+            Self::Toc => "toc",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Sheet {
+    pub extension: String,
+    pub parser: SheetParser,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Companion {
+    #[serde(default)]
+    pub when: Option<String>,
+    pub extension: String,
+    #[serde(default)]
+    pub required: bool,
 }
 
 /// A bounded ASCII field inside a cartridge header.
@@ -439,7 +482,7 @@ mod tests {
             .into_iter()
             .map(|system| system.id.as_str())
             .collect();
-        assert_eq!(cue, ["segacd", "ps1", "pcecd"]);
+        assert_eq!(cue, ["segacd", "ps1", "dreamcast", "ps2", "pcecd"]);
         assert_eq!(
             find("nes")
                 .unwrap()
@@ -570,7 +613,8 @@ mod tests {
             name: "Example Console".into(),
             aliases: Vec::new(),
             extensions: Vec::new(),
-            support_files: Vec::new(),
+            sheets: Vec::new(),
+            companions: Vec::new(),
             recognize_only: Vec::new(),
             catalog: None,
             cores: Vec::new(),

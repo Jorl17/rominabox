@@ -55,8 +55,15 @@
         "iso",
         "m3u"
       ],
-      "recognizeOnly": [
-        "m3u"
+      "sheets": [
+        {
+          "extension": "cue",
+          "parser": "cue"
+        },
+        {
+          "extension": "m3u",
+          "parser": "playlist"
+        }
       ],
       "catalog": "Sega - Mega-CD - Sega CD",
       "cores": [
@@ -406,13 +413,37 @@
         "cue",
         "chd",
         "pbp",
-        "m3u"
+        "m3u",
+        "ccd",
+        "toc"
       ],
-      "supportFiles": [
-        "sbi"
+      "sheets": [
+        {
+          "extension": "cue",
+          "parser": "cue"
+        },
+        {
+          "extension": "m3u",
+          "parser": "playlist"
+        },
+        {
+          "extension": "toc",
+          "parser": "toc"
+        }
       ],
-      "recognizeOnly": [
-        "m3u"
+      "companions": [
+        {
+          "extension": "sbi"
+        },
+        {
+          "when": "ccd",
+          "extension": "img",
+          "required": true
+        },
+        {
+          "when": "ccd",
+          "extension": "sub"
+        }
       ],
       "catalog": "Sony - PlayStation",
       "cores": [
@@ -427,11 +458,13 @@
           "license": "GPL-2.0",
           "licenseFile": "pcsx_rearmed.txt",
           "capabilities": [
+            "ccd",
             "chd",
             "cue",
             "iso",
             "m3u",
-            "pbp"
+            "pbp",
+            "toc"
           ],
           "libraryName": "PCSX-ReARMed"
         }
@@ -464,11 +497,22 @@
         "gdi",
         "cdi",
         "chd",
-        "m3u"
+        "m3u",
+        "cue"
       ],
-      "recognizeOnly": [
-        "gdi",
-        "m3u"
+      "sheets": [
+        {
+          "extension": "gdi",
+          "parser": "gdi"
+        },
+        {
+          "extension": "m3u",
+          "parser": "playlist"
+        },
+        {
+          "extension": "cue",
+          "parser": "cue"
+        }
       ],
       "catalog": "Sega - Dreamcast",
       "cores": [
@@ -498,7 +542,14 @@
       "extensions": [
         "gcm",
         "rvz",
-        "iso"
+        "iso",
+        "m3u"
+      ],
+      "sheets": [
+        {
+          "extension": "m3u",
+          "parser": "playlist"
+        }
       ],
       "catalog": "Nintendo - GameCube",
       "cores": [
@@ -528,7 +579,19 @@
       ],
       "extensions": [
         "iso",
-        "chd"
+        "chd",
+        "cue",
+        "m3u"
+      ],
+      "sheets": [
+        {
+          "extension": "cue",
+          "parser": "cue"
+        },
+        {
+          "extension": "m3u",
+          "parser": "playlist"
+        }
       ],
       "catalog": "Sony - PlayStation 2",
       "cores": [
@@ -691,9 +754,11 @@
           "license": "GPL-2.0",
           "licenseFile": "beetle_pce_fast.txt",
           "capabilities": [
+            "ccd",
             "chd",
             "cue",
-            "m3u"
+            "m3u",
+            "toc"
           ],
           "libraryName": null
         }
@@ -712,10 +777,38 @@
       "extensions": [
         "cue",
         "chd",
-        "m3u"
+        "m3u",
+        "ccd",
+        "toc"
       ],
-      "recognizeOnly": [
-        "m3u"
+      "sheets": [
+        {
+          "extension": "cue",
+          "parser": "cue"
+        },
+        {
+          "extension": "m3u",
+          "parser": "playlist"
+        },
+        {
+          "extension": "toc",
+          "parser": "toc"
+        }
+      ],
+      "companions": [
+        {
+          "extension": "sbi"
+        },
+        {
+          "when": "ccd",
+          "extension": "img",
+          "required": true
+        },
+        {
+          "when": "ccd",
+          "extension": "sub",
+          "required": true
+        }
       ],
       "catalog": "NEC - PC Engine CD - TurboGrafx-CD",
       "cores": [
@@ -730,9 +823,11 @@
           "license": "GPL-2.0",
           "licenseFile": "beetle_pce_fast.txt",
           "capabilities": [
+            "ccd",
             "chd",
             "cue",
-            "m3u"
+            "m3u",
+            "toc"
           ],
           "libraryName": null
         }

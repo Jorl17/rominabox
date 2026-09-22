@@ -14,11 +14,13 @@
     "file": "pcsx_rearmed.txt"
   },
   "capabilities": [
+    "ccd",
     "chd",
     "cue",
     "iso",
     "m3u",
-    "pbp"
+    "pbp",
+    "toc"
   ],
   "provenance": {
     "origin": "libretro-buildbot",

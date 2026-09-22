@@ -313,6 +313,61 @@ pub struct Controllers {
     pub variants: Vec<String>,
 }
 
+/// How a text file lists the other files that we must export with it.
+///
+/// The set is closed. To add a format, add a variant here and a reader in
+/// `discs::sheet_references`. To add a console that uses an existing
+/// format, add only its package.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SheetParser {
+    Cue,
+    Gdi,
+    Playlist,
+    Toc,
+}
+
+impl SheetParser {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Cue => "cue",
+            Self::Gdi => "gdi",
+            Self::Playlist => "playlist",
+            Self::Toc => "toc",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Sheet {
+    pub extension: String,
+    pub parser: SheetParser,
+}
+
+/// A sibling file that the sheet does not name.
+///
+/// With LibCrypt the subchannel data is in an `.sbi` beside the disc. With
+/// CloneCD the image and the subchannel are beside the `.ccd`, and the sheet
+/// does not open in Beetle PCE Fast when either is missing. `required` marks
+/// that case. We take an optional sibling when it is there and go on without
+/// it when it is not, because most PlayStation discs have no `.sbi`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Companion {
+    /// Only beside a file of this extension. When absent, beside any file we
+    /// collected, which is how we find an `.sbi` beside a cue or a chd.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub when: Option<String>,
+    pub extension: String,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub required: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Content {
@@ -320,23 +375,18 @@ pub struct Content {
     /// not the same as exportable, and we report that difference when we
     /// resolve the console, and do not hide it.
     pub extensions: Vec<String>,
-    /// Extensions we can RECOGNISE a game from, but cannot yet export.
+    /// Extensions we can recognise a game from, but cannot yet export.
     ///
-    /// Recognisable and exportable are different facts. If we merged them, we
-    /// would accept a file at the drop step and refuse it at the export step.
-    /// This applies to multi-disc and multi-track manifests, because we have
-    /// no safe way to collect the files they point at in an export.
+    /// A sheet whose files we collect does not belong here. This list is for
+    /// the rest, formats that point at other files and have no parser yet.
     #[serde(default, rename = "recognizeOnly", skip_serializing_if = "Vec::is_empty")]
     pub recognize_only: Vec<String>,
-    /// Extensions of sibling files that we must export with the content.
-    ///
-    /// In some protection schemes the data is outside the disc image. A
-    /// LibCrypt PlayStation game does not run without the subchannel data in
-    /// its `.sbi`, which no CUE lists, so if we collected only the files the
-    /// image lists, we would leave it out. The game would then start and fail
-    /// later, which is much worse than a failed export.
-    #[serde(default, rename = "supportFiles", skip_serializing_if = "Vec::is_empty")]
-    pub support_files: Vec<String>,
+    /// Sheets whose text lists other files, read with the `parser` reader.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sheets: Vec<Sheet>,
+    /// Siblings the sheet does not name.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub companions: Vec<Companion>,
     /// `cartridge` or `disc`.
     pub category: String,
 }

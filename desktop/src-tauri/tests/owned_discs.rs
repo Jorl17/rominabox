@@ -150,3 +150,36 @@ fn his_sonic_adventure_2_folder_is_named_and_given_a_cover() {
         inspection.warnings
     );
 }
+
+/// A Dreamcast game as a GD-ROM layout and three track files. In the export
+/// we read the layout and build the game.
+#[test]
+fn his_sonic_adventure_2_brings_the_layout_and_every_track() {
+    let folder = owned("Sonic Adventure 2 (Europe)");
+    assert!(folder.is_dir(), "missing {}", folder.display());
+    let gdi = content::resolve_dropped(&folder).expect("the folder has one game");
+    assert_eq!(
+        gdi.extension().and_then(|extension| extension.to_str()),
+        Some("gdi"),
+        "dropping the folder must select the layout, got {}",
+        gdi.display()
+    );
+
+    let collected = content::collect(&gdi).expect("the GD-ROM can be collected");
+    let names: Vec<String> = collected
+        .files
+        .iter()
+        .map(|file| file.relative.to_string_lossy().into_owned())
+        .collect();
+    assert!(
+        names.iter().any(|name| name.ends_with(".gdi")),
+        "the layout itself has to travel: {names:?}"
+    );
+    for track in 1..=3 {
+        let needle = format!("(Track {track}).bin");
+        assert!(
+            names.iter().any(|name| name.contains(&needle)),
+            "track {track} was not collected: {names:?}"
+        );
+    }
+}
