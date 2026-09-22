@@ -23,7 +23,12 @@
     ]
   },
   "recognition": {},
-  "metadata": {},
+  "metadata": {
+    "catalog": {
+      "provider": "redump",
+      "name": "Sony - PlayStation"
+    }
+  },
   "cores": [
     {
       "component": "pcsx_rearmed"

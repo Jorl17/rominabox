@@ -127,6 +127,23 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "identification",
+        "how many catalogue names get the correct cover, against every published picture list",
+        "that every cover downloads, or that a real ROM was hashed; it matches names to the published filenames and checks one pointer file",
+        [
+            "cargo",
+            "test",
+            "--manifest-path",
+            str(ROOT / "desktop/src-tauri/Cargo.toml"),
+            "--lib",
+            "measure::",
+            "--",
+            "--ignored",
+            "--nocapture",
+        ],
+        slow=True,
+    ),
+    Scope(
         "automation",
         "that something other than a person still runs this suite",
         "that the hook is installed in a fresh clone; core.hooksPath is local configuration",
