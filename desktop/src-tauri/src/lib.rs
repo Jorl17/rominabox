@@ -7,3 +7,4 @@ pub mod projects;
 pub mod systems;
 
 pub mod themes;
+pub mod volume;
