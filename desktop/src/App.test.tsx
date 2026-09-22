@@ -323,7 +323,9 @@ describe("App workflow", () => {
     await act(async () => {
       chooseConsole("ps1");
     });
-    const optional = assessment.notices.length ? await assessWithCli("ps1", []) : null;
+    const optional = assessment.notices.length
+      ? await assessWithCli("ps1", [])
+      : null;
     if (!optional?.notices.some((notice) => notice.kind === "optional")) {
       throw new Error("the engine did not explain the optional BIOS");
     }

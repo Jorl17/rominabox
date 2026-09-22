@@ -198,6 +198,13 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "shaderpreview",
+        "that every shader's preview is still what that shader does to a picture, rendered from its own GLSL",
+        "that the filter is a good one — only that the picture of it is made by running it",
+        ["python3", str(ROOT / "scripts/render_shader_previews.py"), "--check"],
+        slow=True,
+    ),
+    Scope(
         "size",
         "that an exported game, installed and as a zip, stays under the size ceiling, and does not carry the video encoders",
         "a cartridge's own size, or that the player was rebuilt; it measures the kit already on disk",

@@ -101,6 +101,42 @@ fn catalog_file() -> Result<CatalogFile, String> {
     serde_json::from_str(text).map_err(|error| format!("shader catalog is not readable: {error}"))
 }
 
+/// Every catalog preset with the GLSL of an exported game.
+///
+/// We make the preview of a filter by running the filter, so a preset we add
+/// to the catalog has a preview, and editing a fragment changes both the game
+/// and its picture.
+pub fn sources() -> Result<Vec<(CatalogEntry, String)>, String> {
+    // Unfiltered is not a preset and has no file, but it is a row in the
+    // list and must have a picture, of which the other pictures are filtered
+    // versions. We draw it in the same way as the others, with no special
+    // case, because that is exactly what "no filter" does to a picture.
+    let unfiltered = unfiltered();
+    let mut listed = vec![(
+        CatalogEntry {
+            id: unfiltered.id.clone(),
+            name: unfiltered.name.clone(),
+            detail: unfiltered.detail.clone(),
+        },
+        glsl_source("FragColor = COMPAT_TEXTURE(Texture, TEX0.xy);"),
+    )];
+    listed.extend(catalog_file()?
+        .presets
+        .into_iter()
+        .map(|preset| {
+            let glsl = glsl_source(&preset.fragment);
+            (
+                CatalogEntry {
+                    id: preset.id,
+                    name: preset.name,
+                    detail: preset.detail,
+                },
+                glsl,
+            )
+        }));
+    Ok(listed)
+}
+
 pub fn catalog() -> Result<Vec<CatalogEntry>, String> {
     Ok(catalog_file()?
         .presets
@@ -450,35 +486,48 @@ fn starting<'a>(
         })
 }
 
+/// The picture next to a shader in the list, which is the test card with that
+/// shader applied.
+///
+/// We render the previews from the GLSL of each shader with
+/// `scripts/render_shader_previews.py` and check them in the `shaderpreview`
+/// scope, so we notice a fragment that changes without its picture before we
+/// ship it.
+const PREVIEWS: &[(&str, &[u8])] = &[
+    (
+        UNFILTERED_ID,
+        include_bytes!("../../../integrations/shaders/previews/none.png"),
+    ),
+    (
+        "scanlines",
+        include_bytes!("../../../integrations/shaders/previews/scanlines.png"),
+    ),
+    (
+        "phosphor",
+        include_bytes!("../../../integrations/shaders/previews/phosphor.png"),
+    ),
+];
+
 fn icon_png(id: &str) -> Result<Vec<u8>, String> {
+    if let Some((_, bytes)) = PREVIEWS.iter().find(|(name, _)| *name == id) {
+        return Ok(bytes.to_vec());
+    }
+    // A shader from the author. We do not compile its GLSL here, so we cannot
+    // make a true picture of it. We show an empty card, which means "this is
+    // your shader" and does not claim to show its effect.
     use image::{ImageBuffer, Rgba};
+    let (width, height) = (256u32, 192u32);
     let mut image: ImageBuffer<Rgba<u8>, Vec<u8>> =
-        ImageBuffer::from_pixel(56, 56, Rgba([6, 26, 72, 255]));
-    // A light frame, so the unfiltered row still has a picture on the dark
-    // background. The pictures of the named presets cover it.
-    for x in 0..56 {
-        for y in [0, 1, 2, 53, 54, 55] {
-            image.put_pixel(x, y, Rgba([180, 230, 255, 255]));
-            image.put_pixel(y, x, Rgba([180, 230, 255, 255]));
+        ImageBuffer::from_pixel(width, height, Rgba([14, 14, 18, 255]));
+    for x in 0..width {
+        for y in [0, 1, height - 2, height - 1] {
+            image.put_pixel(x, y, Rgba([120, 128, 150, 255]));
         }
     }
-    match id {
-        "scanlines" => {
-            for y in (0..56).step_by(4) {
-                for x in 0..56 {
-                    image.put_pixel(x, y, Rgba([180, 230, 255, 255]));
-                    if y + 1 < 56 {
-                        image.put_pixel(x, y + 1, Rgba([180, 230, 255, 255]));
-                    }
-                }
-            }
+    for y in 0..height {
+        for x in [0, 1, width - 2, width - 1] {
+            image.put_pixel(x, y, Rgba([120, 128, 150, 255]));
         }
-        "phosphor" => {
-            for pixel in image.pixels_mut() {
-                *pixel = Rgba([30, 160, 55, 255]);
-            }
-        }
-        _ => {}
     }
     let mut bytes = std::io::Cursor::new(Vec::new());
     image

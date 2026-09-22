@@ -345,6 +345,23 @@ fn run() -> Result<(), String> {
             );
             Ok(())
         }
+        // We render a preview from the same GLSL as in the exported game, and
+        // not from a description of it.
+        "shader-sources" => {
+            let listed: Vec<_> = shaders::sources()?
+                .into_iter()
+                .map(|(entry, glsl)| {
+                    json!({
+                        "id": entry.id,
+                        "name": entry.name,
+                        "detail": entry.detail,
+                        "glsl": glsl,
+                    })
+                })
+                .collect();
+            println!("{}", json!({ "type": "result", "result": { "shaders": listed } }));
+            Ok(())
+        }
         "shaders-check" => {
             let selection: shaders::ShaderSelection = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid shader selection: {error}"))?;

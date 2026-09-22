@@ -316,6 +316,23 @@ def case_artwork():
     return expect("artwork", code, output, ("DRIFTED", "drawing moved"))
 
 
+def case_shaderpreview():
+    # Change the shader, so the picture of it must stop matching. An edit to
+    # the recorded PNG would only show that we run the comparison. This shows
+    # that we make the preview by running the shader.
+    path = ROOT / "integrations/shaders/catalog.json"
+    raw = replace(
+        path,
+        "colour *= mix(1.0, 0.45, line);",
+        "colour *= mix(1.0, 0.05, line);",
+    )
+    try:
+        code, output = run_scope("shaderpreview")
+    finally:
+        restore(path, raw)
+    return expect("shaderpreview", code, output, ("DRIFTED", "pixels differ"))
+
+
 def case_size():
     path = ROOT / "scripts/fixtures/size-budgets.json"
     raw = path.read_bytes()
@@ -361,6 +378,7 @@ CASES = {
     "identification": case_identification,
     "automation": case_automation,
     "artwork": case_artwork,
+    "shaderpreview": case_shaderpreview,
     "size": case_size,
     "overlays": case_overlays,
 }
