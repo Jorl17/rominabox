@@ -339,6 +339,23 @@ def case_artwork():
     return expect("artwork", code, output, ("EDITED",))
 
 
+def case_padbinds():
+    # Read only the binds from the configuration. We then show nothing for a
+    # pad bound by an autoconfig profile, although its buttons work.
+    path = ROOT / "vendor/retroarch/menu/drivers/rmlui.c"
+    raw = replace(
+        path,
+        "   const struct retro_keybind *automatic = &input_autoconf_binds[0][index];",
+        "   const struct retro_keybind *automatic = &input_autoconf_binds[0][index];\n"
+        "   automatic = bind;",
+    )
+    try:
+        code, output = run_scope("padbinds")
+    finally:
+        restore(path, raw)
+    return expect("padbinds", code, output, ("autoconfig bound is listed",))
+
+
 def case_menupreview():
     # Remove the element for the multi-bind list from the design, as in a
     # copy of the menu staged before that element existed.
@@ -464,6 +481,7 @@ CASES = {
     "identification": case_identification,
     "automation": case_automation,
     "artwork": case_artwork,
+    "padbinds": case_padbinds,
     "menupreview": case_menupreview,
     "shaderpreview": case_shaderpreview,
     "size": case_size,

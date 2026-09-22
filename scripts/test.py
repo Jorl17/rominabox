@@ -116,6 +116,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/test_staging.py")],
     ),
     Scope(
+        "padbinds",
+        "that a control lists every input a press can come from, including the pad an autoconfig profile bound",
+        "that a physical pad is detected; it compiles the real function and hands it binds it makes up",
+        ["node", str(ROOT / "scripts/native_runtime/test_pad_bindings.mjs")],
+    ),
+    Scope(
         "joypad",
         "that every hid profile the pin declares is staged, and that RetroArch's match rules would accept it",
         "that a physical pad's buttons match those numbers; nothing here opens a device",
