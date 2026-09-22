@@ -3,58 +3,99 @@
   "id": "gba",
   "name": "Game Boy Advance",
   "presentation": {
-    "kind": "generic"
+    "kind": "illustrated",
+    "image": "controller-gba.png"
   },
   "controls": [
     {
       "id": "up",
       "label": "Up",
-      "key": "up"
+      "key": "up",
+      "x": 304,
+      "y": 193,
+      "calloutX": 16,
+      "calloutY": 66
     },
     {
       "id": "down",
       "label": "Down",
-      "key": "down"
+      "key": "down",
+      "x": 304,
+      "y": 236,
+      "calloutX": 16,
+      "calloutY": 248
     },
     {
       "id": "left",
       "label": "Left",
-      "key": "left"
+      "key": "left",
+      "x": 283,
+      "y": 214,
+      "calloutX": 16,
+      "calloutY": 124
     },
     {
       "id": "right",
       "label": "Right",
-      "key": "right"
+      "key": "right",
+      "x": 326,
+      "y": 214,
+      "calloutX": 16,
+      "calloutY": 182
     },
     {
       "id": "b",
       "label": "B",
-      "key": "z"
+      "key": "z",
+      "x": 614,
+      "y": 232,
+      "calloutX": 744,
+      "calloutY": 124
     },
     {
       "id": "a",
       "label": "A",
-      "key": "x"
+      "key": "x",
+      "x": 662,
+      "y": 196,
+      "calloutX": 744,
+      "calloutY": 66
     },
     {
       "id": "l",
       "label": "L",
-      "key": "d"
+      "key": "d",
+      "x": 308,
+      "y": 49,
+      "calloutX": 16,
+      "calloutY": 8
     },
     {
       "id": "r",
       "label": "R",
-      "key": "c"
+      "key": "c",
+      "x": 652,
+      "y": 49,
+      "calloutX": 744,
+      "calloutY": 8
     },
     {
       "id": "select",
       "label": "Select",
-      "key": "rshift"
+      "key": "rshift",
+      "x": 448,
+      "y": 277,
+      "calloutX": 744,
+      "calloutY": 234
     },
     {
       "id": "start",
       "label": "Start",
-      "key": "enter"
+      "key": "enter",
+      "x": 516,
+      "y": 277,
+      "calloutX": 744,
+      "calloutY": 292
     }
   ],
   "presentationOrder": 5
