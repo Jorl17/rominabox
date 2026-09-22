@@ -62,7 +62,8 @@ def declared_states() -> dict[str, dict]:
     return json.loads(STATES.read_text())["states"]
 
 
-def stage(system: str, workspace: Path, variant: str | None = None) -> Path:
+def stage(system: str, workspace: Path, variant: str | None = None,
+          palette: str = "blue") -> Path:
     """Stage the design and the generated scene for a console, as in an export.
 
     Source and destination are separate directories because in the exporter we
@@ -80,6 +81,21 @@ def stage(system: str, workspace: Path, variant: str | None = None) -> Path:
         if document.is_file():
             shutil.copyfile(document, source / document.name)
             shutil.copyfile(document, staged / document.name)
+
+    # We take the stylesheet from the exporter, not from the file of the design.
+    # In a design we write design(surface) where a colour goes and fill it in
+    # in the exporter, so a copy of the design file would render tokens and not
+    # colours, and the result would differ from the shipped game.
+    themed = subprocess.run(
+        [str(CLI), "stage-theme"],
+        input=json.dumps(
+            {"source": str(source), "destination": str(staged), "palette": palette}
+        ),
+        capture_output=True,
+        text=True,
+    )
+    if themed.returncode != 0:
+        raise SystemExit(f"could not stage the {palette} palette: {themed.stderr}")
     for art in ARTWORK.glob("controller-*.png"):
         shutil.copyfile(art, source / art.name)
     shutil.copyfile(ARTWORK / "CONTROLLERS.txt", source / "CONTROLLERS.txt")
