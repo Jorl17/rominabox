@@ -12,9 +12,11 @@
   ],
   "shots": {
     "pause-menu": [],
-    "controls": ["controls"],
-    "picker-open": ["controls", "controls-device-current"],
+    "options": ["options"],
+    "controls": ["options", "controls"],
+    "picker-open": ["options", "controls", "controls-device-current"],
     "picker-chosen": [
+      "options",
       "controls",
       "controls-device-current",
       "controls-device-option-megadrive6"

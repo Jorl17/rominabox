@@ -44,11 +44,22 @@
       "button": "controls-back"
     },
     {
+      "id": "options",
+      "panel": "options-panel",
+      "heading": "OPTIONS",
+      "footer": "ESC  BACK",
+      "button": "options",
+      "label": "OPTIONS",
+      "back": "BACK",
+      "place": "options"
+    },
+    {
       "id": "controls",
       "panel": "controls-panel",
       "heading": "CONTROLS",
       "footer": "ESC  BACK",
-      "button": "controls"
+      "button": "controls",
+      "option": { "label": "CONTROLS", "default": true }
     }
   ]
 }

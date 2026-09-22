@@ -72,6 +72,7 @@ fn export_request(root: &Path) -> ExportRequest {
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: false,
+        menu_entries: None,
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: fixture_kit(root),

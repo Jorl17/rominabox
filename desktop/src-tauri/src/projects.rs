@@ -57,6 +57,10 @@ pub struct ProjectSettings {
     /// Restore stock RetroArch native menus in the exported app.
     #[serde(default)]
     pub advanced_emulator_access: bool,
+    /// The Options entries we offer in this game. When absent, we use the
+    /// design's defaults. With an empty list, we show no Options button.
+    #[serde(default)]
+    pub menu_entries: Option<Vec<String>>,
     pub target: ExportTarget,
 }
 
@@ -118,6 +122,8 @@ struct StoredSettings {
     splash: bool,
     #[serde(default)]
     advanced_emulator_access: bool,
+    #[serde(default)]
+    menu_entries: Option<Vec<String>>,
     target: ExportTarget,
 }
 
@@ -151,6 +157,7 @@ impl From<&ExportRequest> for ProjectSettings {
             firmware: request.firmware.clone(),
             splash: request.splash,
             advanced_emulator_access: request.advanced_emulator_access,
+            menu_entries: request.menu_entries.clone(),
             target: request.target.clone(),
         }
     }
@@ -180,6 +187,7 @@ impl ProjectSettings {
             firmware: self.firmware,
             splash: self.splash,
             advanced_emulator_access: self.advanced_emulator_access,
+            menu_entries: self.menu_entries,
             output_dir,
             target: self.target,
             runtime_kit,
@@ -243,6 +251,7 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             controls: request.settings.controls.clone(),
             splash: request.settings.splash,
             advanced_emulator_access: request.settings.advanced_emulator_access,
+            menu_entries: request.settings.menu_entries.clone(),
             target: request.settings.target.clone(),
         },
         assets: assets.clone(),
@@ -364,6 +373,7 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
         firmware,
         splash: manifest.settings.splash,
         advanced_emulator_access: manifest.settings.advanced_emulator_access,
+        menu_entries: manifest.settings.menu_entries,
         target: manifest.settings.target,
     };
     Ok(OpenProject {
@@ -495,6 +505,7 @@ fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
         controls: settings.controls.clone(),
         splash: settings.splash,
         advanced_emulator_access: settings.advanced_emulator_access,
+        menu_entries: settings.menu_entries.clone(),
         target: settings.target.clone(),
     })?;
     for (label, path) in [
@@ -867,6 +878,7 @@ mod tests {
                 firmware: Vec::new(),
                 splash: false,
                 advanced_emulator_access: false,
+                menu_entries: None,
                 target: ExportTarget::Macos,
             },
         })
@@ -905,6 +917,7 @@ mod tests {
             firmware: Vec::new(),
             splash: false,
             advanced_emulator_access,
+            menu_entries: None,
             target: ExportTarget::Macos,
         }
     }
