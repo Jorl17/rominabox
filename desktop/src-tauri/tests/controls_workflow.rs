@@ -155,13 +155,54 @@ fn a_three_button_profile_rejects_six_button_only_overrides() {
 #[test]
 fn splash_only_document_has_no_pause_controls_and_can_make_its_background_transparent() {
     let root = workspace();
-    themes::prepare_splash_assets(&assets(), &root).unwrap();
+    themes::prepare_splash_assets(&assets(), &root, "blue").unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("id=\"body\""));
     assert!(markup.contains("id=\"splash-logo\""));
     assert!(!markup.contains("pause-panel"));
     assert!(!markup.contains("controller-image"));
-    assert_eq!(fs::read_dir(root).unwrap().count(), 4);
+    assert_eq!(fs::read_dir(root).unwrap().count(), 5);
+}
+
+/// We give a game with a logo and no menu a stylesheet that RmlUi can read.
+///
+/// A stylesheet copied verbatim from the design would still contain
+/// `design(background)`. Such a declaration has no effect in RmlUi and gives
+/// no error, and the logo would appear over whatever was left.
+#[test]
+fn a_logo_only_export_gets_the_palette_in_its_stylesheet() {
+    let root = workspace();
+    themes::prepare_splash_assets(&assets(), &root, "blue").unwrap();
+    let css = fs::read_to_string(root.join("menu.rcss")).unwrap();
+    assert!(
+        !css.contains("design("),
+        "the staged stylesheet still asks for tokens nothing resolved"
+    );
+}
+
+/// We declare what is in the document, and not the design's whole catalogue.
+///
+/// A logo-only export has one element. If we declared every screen and every
+/// overlay of the design, in the player we would wait for the notice's timer
+/// to show an element that is not in that document, and answer a request for a
+/// screen with a panel that does not exist.
+#[test]
+fn a_document_is_only_told_about_what_it_draws() {
+    let full = workspace();
+    themes::prepare_theme_assets(&assets(), &full, "blue", None).unwrap();
+    let declared = fs::read_to_string(full.join("design.cfg")).unwrap();
+    assert!(declared.contains("overlays = \"splash notice\""), "{declared}");
+    assert!(declared.contains("screens = \"pause controls\""), "{declared}");
+    assert!(
+        declared.contains("overlay_needs_splash = \"splash-logo.png\""),
+        "{declared}"
+    );
+
+    let logo_only = workspace();
+    themes::prepare_splash_assets(&assets(), &logo_only, "blue").unwrap();
+    let declared = fs::read_to_string(logo_only.join("design.cfg")).unwrap();
+    assert!(declared.contains("overlays = \"splash\""), "{declared}");
+    assert!(declared.contains("screens = \"\""), "{declared}");
 }
 
 /// We show a picker only where there is a choice.

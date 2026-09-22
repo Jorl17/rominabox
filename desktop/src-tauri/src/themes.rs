@@ -195,8 +195,11 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
 /// We use the same format as for the controller list, a space-separated list
 /// of ids and one key per field, read with `config_get_array`. The player
 /// code contains the name of no particular screen.
-fn screen_declarations(design: &Path) -> Result<String, String> {
-    let screens = declared_screens(design)?;
+fn screen_declarations(design: &Path, markup: &str) -> Result<String, String> {
+    let screens: Vec<Screen> = declared_screens(design)?
+        .into_iter()
+        .filter(|screen| markup.contains(&format!("id=\"{}\"", screen.panel)))
+        .collect();
     let ids: Vec<&str> = screens.iter().map(|s| s.id.as_str()).collect();
     let mut text = format!("screens = \"{}\"\n", ids.join(" "));
     for screen in &screens {
@@ -210,6 +213,96 @@ fn screen_declarations(design: &Path) -> Result<String, String> {
         ));
     }
     Ok(text)
+}
+
+/// Something from the design that we draw over the running game for a moment.
+///
+/// An overlay is not a screen. Nobody opens it by name, it has no input, it
+/// hides nothing, and it is over the game and not inside the menu. So it has
+/// no heading, footer or button, and we add no bridge action for it.
+///
+/// In the player we show it, mark it as leaving and hide it on this clock.
+/// The stylesheet of the design styles its arrival and its exit, with the same
+/// exit time as `design(overlay-leave-<id>)`.
+pub struct Overlay {
+    /// The element in the design's markup, which is also the overlay's name.
+    pub id: String,
+    /// How long after the game starts before it appears.
+    pub after_ms: u32,
+    /// How long it stays once it has arrived.
+    pub hold_ms: u32,
+    /// How long the overlay takes to leave. The animation in the stylesheet
+    /// lasts exactly this long, from the same declaration.
+    pub leave_ms: u32,
+    /// A staged file required for the overlay, which we check in the player
+    /// against the files shipped in the export. Empty means none.
+    pub needs: String,
+}
+
+pub fn declared_overlays(design: &Path) -> Result<Vec<Overlay>, String> {
+    let declaration = design.join("design.json");
+    let Ok(text) = fs::read_to_string(&declaration) else {
+        return Ok(Vec::new());
+    };
+    let declared: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("{}: {e}", declaration.display()))?;
+    let Some(listed) = declared.get("overlays").and_then(|v| v.as_array()) else {
+        return Ok(Vec::new());
+    };
+    let mut overlays = Vec::new();
+    for (index, entry) in listed.iter().enumerate() {
+        let id = entry["id"].as_str().ok_or_else(|| {
+            format!("overlay {index} in {} declares no id", declaration.display())
+        })?;
+        let ms = |key: &str| -> Result<u32, String> {
+            entry[key]
+                .as_u64()
+                .map(|v| v as u32)
+                .ok_or_else(|| format!("overlay '{id}' declares no {key}"))
+        };
+        overlays.push(Overlay {
+            id: id.to_string(),
+            after_ms: ms("afterMs")?,
+            hold_ms: ms("holdMs")?,
+            leave_ms: ms("leaveMs")?,
+            needs: entry["needs"].as_str().unwrap_or_default().to_string(),
+        });
+    }
+    Ok(overlays)
+}
+
+/// The overlays, written to the file that the player reads, and only those in
+/// this document.
+///
+/// For a splash-only export we stage a document with a logo and nothing else.
+/// Without this check it would still list every overlay in the design, and in
+/// the first seconds of the game we would wait in the player to show an element
+/// that is not there. We go by the markup, as we go by the number of pads for
+/// the controller picker.
+fn overlay_declarations(design: &Path, markup: &str) -> Result<String, String> {
+    let drawn: Vec<Overlay> = declared_overlays(design)?
+        .into_iter()
+        .filter(|overlay| markup.contains(&format!("id=\"{}\"", overlay.id)))
+        .collect();
+    let ids: Vec<&str> = drawn.iter().map(|o| o.id.as_str()).collect();
+    let mut text = format!("overlays = \"{}\"\n", ids.join(" "));
+    for overlay in &drawn {
+        text.push_str(&format!(
+            "overlay_after_{id} = \"{}\"\noverlay_hold_{id} = \"{}\"\noverlay_leave_{id} = \"{}\"\noverlay_needs_{id} = \"{}\"\n",
+            overlay.after_ms,
+            overlay.hold_ms,
+            overlay.leave_ms,
+            overlay.needs,
+            id = overlay.id,
+        ));
+    }
+    Ok(text)
+}
+
+/// Seconds, as we write them in a stylesheet: `design(overlay-leave-notice)s`.
+fn seconds(milliseconds: u32) -> String {
+    let text = format!("{:.3}", milliseconds as f32 / 1000.0);
+    text.trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
 /// Everything declared in a design by name, its colours and its geometry.
@@ -253,6 +346,15 @@ fn design_tokens(
         ("group-height", m.group_height),
     ] {
         tokens.insert(name.to_string(), value.to_string());
+    }
+    // The exit time of an overlay, in seconds, the unit of a stylesheet. In
+    // the player we hide the element after this time, and the animation in the
+    // design lasts exactly as long, from this one declaration.
+    for overlay in declared_overlays(design)? {
+        tokens.insert(
+            format!("overlay-leave-{}", overlay.id),
+            seconds(overlay.leave_ms),
+        );
     }
     for (name, value) in [
         ("screen", &palette.screen),
@@ -339,6 +441,22 @@ pub fn staged_design(kit: &Path, design: &str) -> PathBuf {
     kit.join("designs").join(design)
 }
 
+/// The declarations of the design, written next to the document they describe.
+///
+/// We limit both to what the staged document contains, so we use the same
+/// code for the full menu and the logo-only document without checking which
+/// one it is.
+fn write_declarations(source: &Path, destination: &Path) -> Result<(), String> {
+    let markup = fs::read_to_string(destination.join("menu.rml")).map_err(|e| e.to_string())?;
+    let text = format!(
+        "{}{}",
+        screen_declarations(source, &markup)?,
+        overlay_declarations(source, &markup)?
+    );
+    fs::write(destination.join("design.cfg"), text)
+        .map_err(|e| format!("Could not write the design's declarations: {e}"))
+}
+
 pub fn prepare_theme_assets(
     source: &Path,
     destination: &Path,
@@ -363,11 +481,7 @@ pub fn prepare_theme_assets(
     // The declarations of the design, in the file that the player reads. We
     // write them next to the stylesheet because both belong to the design. A
     // design lists its screens, and we show them by name in the player.
-    fs::write(
-        destination.join("design.cfg"),
-        screen_declarations(source)?,
-    )
-    .map_err(|e| format!("Could not write the design's declarations: {e}"))?;
+    write_declarations(source, destination)?;
     let mut css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
     // The colours of the design, in the rules of the design. We append nothing,
     // because a palette contains values and no styles. Appended rules would
@@ -831,7 +945,20 @@ fn rml_text(value: &str) -> String {
 }
 
 /// Stage the logo-only document without pause controls, controller art or backgrounds.
-pub fn prepare_splash_assets(source: &Path, destination: &Path) -> Result<(), String> {
+///
+/// We still apply the palette here. A stylesheet copied unchanged would
+/// contain values such as `design(background)`, which RmlUi cannot parse, so
+/// every rule that uses one would be lost.
+pub fn prepare_splash_assets(
+    source: &Path,
+    destination: &Path,
+    palette: &str,
+) -> Result<(), String> {
+    let palette = registry()?
+        .palettes
+        .into_iter()
+        .find(|p| p.id == palette)
+        .ok_or_else(|| "Choose an available colour palette.".to_string())?;
     fs::create_dir_all(destination).map_err(|e| e.to_string())?;
     for (from, to) in [
         ("splash.rml", "menu.rml"),
@@ -842,7 +969,10 @@ pub fn prepare_splash_assets(source: &Path, destination: &Path) -> Result<(), St
         fs::copy(source.join(from), destination.join(to))
             .map_err(|e| format!("Could not prepare splash asset {from}: {e}"))?;
     }
-    Ok(())
+    write_declarations(source, destination)?;
+    let css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
+    let css = substitute_tokens(&css, &design_tokens(source, &palette)?)?;
+    fs::write(destination.join("menu.rcss"), css).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -852,6 +982,18 @@ mod tests {
 
     fn sound_source() -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../assets/menu-sounds")
+    }
+
+    /// The stylesheet uses seconds, the declaration uses milliseconds, and
+    /// RmlUi parses either number without an error. `500s` would be a fade
+    /// that never seems to end, and only the game would look wrong.
+    #[test]
+    fn a_leaving_time_reaches_the_stylesheet_in_seconds() {
+        assert_eq!(seconds(500), "0.5");
+        assert_eq!(seconds(250), "0.25");
+        assert_eq!(seconds(1000), "1");
+        assert_eq!(seconds(0), "0");
+        assert_eq!(seconds(120), "0.12");
     }
 
     /// A pack is one complete set that we can play. We declare no partial

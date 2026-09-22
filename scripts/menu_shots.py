@@ -28,6 +28,7 @@ a person has to check. Here we test only what is on screen in the game.
 from __future__ import annotations
 
 import argparse
+import functools
 import hashlib
 import json
 import os
@@ -48,9 +49,19 @@ TIMEOUT_SECONDS = 120
 DATA_DIR = re.compile(r'^data_dir="([^"]+)"', re.MULTILINE)
 
 
-def declared_shots() -> dict[str, list[str]]:
-    """Each named shot and the elements clicked to reach it."""
-    return json.loads(SHOTS.read_text())["shots"]
+def declared_shots() -> dict[str, dict]:
+    """Each named shot, with what to click and the game to take it in.
+
+    A shot is a list of steps, or an object with `script` and the export
+    settings required for that shot. We can reach most states in the menu of
+    a game that opens at the menu. In that export there is nothing drawn over
+    a running game.
+    """
+    declared = json.loads(SHOTS.read_text())["shots"]
+    return {
+        name: ({"script": entry} if isinstance(entry, list) else entry)
+        for name, entry in declared.items()
+    }
 
 
 def launcher_of(app: Path) -> Path:
@@ -78,7 +89,8 @@ def data_dir_of(app: Path) -> Path | None:
     return Path(found.group(1).replace("$HOME", str(Path.home())))
 
 
-def take(app: Path, name: str, script: list[str], output: Path) -> str:
+def take(app: Path, name: str, script: list[str], output: Path,
+         config: dict | None = None) -> str:
     """Run the game to a state and screenshot it. Empty string on success."""
     target = output / f"{name}.png"
     target.unlink(missing_ok=True)
@@ -94,6 +106,18 @@ def take(app: Path, name: str, script: list[str], output: Path) -> str:
         (data / "controls.cfg").unlink(missing_ok=True)
         for remap in (data / "remaps").rglob("*.rmp"):
             remap.unlink()
+
+    # Settings required for this shot, which we add to the per-game override
+    # that is already part of the exported launch. The important one is
+    # `pause_nonactive`. By default the emulated console stops whenever its
+    # window does not have the focus, and we never focus a window here, so
+    # otherwise a picture of anything drawn over a running game would show a
+    # black game.
+    if data and config:
+        data.mkdir(parents=True, exist_ok=True)
+        (data / "controls.cfg").write_text(
+            "".join(f'{key} = "{value}"\n' for key, value in config.items())
+        )
 
     result = subprocess.run(
         [str(launcher_of(app))],
@@ -119,15 +143,58 @@ def take(app: Path, name: str, script: list[str], output: Path) -> str:
     return ""
 
 
-# Where we put a freshly built player, so that a shot shows the fork as it
-# is now and not as it was when we froze the kit.
-BUILT_PLAYER = ROOT / "work/fork-build-20260920/retroarch/retroarch"
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 DESIGN = ROOT / "integrations/designs/native"
-CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
 
 
-def build_a_game(rom: Path, workspace: Path, system: str = "megadrive") -> Path:
+def built_player() -> Path | None:
+    """The most recent player built in this checkout, if there is one.
+
+    A shot must show the fork as it is now, not as it was when we froze the
+    kit, and after a change to the player we build it in this checkout. Each
+    checkout has a separate build directory, so in a worktree where we built
+    the player, the shots show that player.
+    """
+    builds = sorted(
+        (ROOT / "work").glob("fork-build-*/retroarch/retroarch"),
+        key=lambda entry: entry.stat().st_mtime,
+    )
+    return builds[-1] if builds else None
+
+
+@functools.cache
+def command_line_tool() -> Path:
+    """Build the exporter from this checkout, and keep a copy of it.
+
+    Worktrees share one cargo target directory so that the dependencies are
+    not duplicated, but that also means they share the built binary, which
+    comes from the last build in any checkout. An export could then use the
+    exporter of another checkout with the design of this tree and give a
+    plausible but wrong shot. Builds through cargo happen one at a time, so
+    we copy the result here to keep the exporter of this checkout.
+    """
+    target = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "desktop/src-tauri/target"))
+    subprocess.run(
+        [
+            "cargo", "build", "--release",
+            "--manifest-path", str(ROOT / "desktop/src-tauri/Cargo.toml"),
+            "--bin", "rominabox-cli",
+        ],
+        check=True,
+    )
+    ours = ROOT / "work/rominabox-cli"
+    ours.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(target / "release/rominabox-cli", ours)
+    ours.chmod(0o755)
+    return ours
+
+
+def build_a_game(
+    rom: Path,
+    workspace: Path,
+    system: str = "megadrive",
+    settings: dict | None = None,
+) -> Path:
     """Export a game from the tree as it is now, and return the app.
 
     To take a picture of a change by hand, someone has to assemble a kit,
@@ -138,6 +205,7 @@ def build_a_game(rom: Path, workspace: Path, system: str = "megadrive") -> Path:
     The exported game has a separate isolation prefix, so two checkouts
     taking pictures at the same time never share saves or a build.
     """
+    settings = settings or {}
     kit = workspace / "kit"
     shutil.rmtree(kit, ignore_errors=True)
     shutil.copytree(KIT, kit, symlinks=True)
@@ -147,8 +215,9 @@ def build_a_game(rom: Path, workspace: Path, system: str = "megadrive") -> Path:
         if document.is_file():
             shutil.copyfile(document, kit / "designs/native" / document.name)
             shutil.copyfile(document, kit / "menu-assets" / document.name)
-    if BUILT_PLAYER.exists():
-        shutil.copyfile(BUILT_PLAYER, kit / "bin/retroarch")
+    player = built_player()
+    if player:
+        shutil.copyfile(player, kit / "bin/retroarch")
         (kit / "bin/retroarch").chmod(0o755)
 
     out = workspace / "exported"
@@ -169,8 +238,9 @@ def build_a_game(rom: Path, workspace: Path, system: str = "megadrive") -> Path:
         "target": "macos",
         "runtimeKit": str(kit),
     }
+    request.update(settings)
     result = subprocess.run(
-        [str(CLI), "export"],
+        [str(command_line_tool()), "export"],
         input=json.dumps(request),
         capture_output=True,
         text=True,
@@ -183,8 +253,8 @@ def build_a_game(rom: Path, workspace: Path, system: str = "megadrive") -> Path:
         raise SystemExit(f"the export wrote no .app into {out}")
     # The player next to the launcher comes from the kit. Replace it with the
     # freshly built one so that the shot shows this tree.
-    if BUILT_PLAYER.exists():
-        shutil.copyfile(BUILT_PLAYER, app / "Contents/MacOS/retroarch")
+    if player:
+        shutil.copyfile(player, app / "Contents/MacOS/retroarch")
         (app / "Contents/MacOS/retroarch").chmod(0o755)
     return app
 
@@ -203,22 +273,46 @@ def main() -> int:
     parser.add_argument("--check", action="store_true", help="fail if a shot changed")
     arguments = parser.parse_args()
 
-    if arguments.rom:
-        workspace = ROOT / "work/menu-shots-build"
-        workspace.mkdir(parents=True, exist_ok=True)
-        arguments.app = build_a_game(arguments.rom, workspace, arguments.system)
-        print(f"  built    {arguments.app.name}")
+    shots = declared_shots()
     if not arguments.app:
-        raise SystemExit("give --app an exported game, or --rom to export one first")
-    if not arguments.app.exists():
+        if not arguments.rom:
+            raise SystemExit("give --app an exported game, or --rom to export one first")
+    elif not arguments.app.exists():
         raise SystemExit(f"no exported game at {arguments.app}")
     shutil.rmtree(arguments.output, ignore_errors=True)
     arguments.output.mkdir(parents=True, exist_ok=True)
 
+    # We make one export for each set of export settings, not one per shot,
+    # because the build is slow and most shots use the same game.
+    exported: dict[str, Path] = {}
+
+    def game_for(settings: dict) -> Path:
+        if not arguments.rom:
+            return arguments.app
+        key = json.dumps(settings, sort_keys=True)
+        if key not in exported:
+            # A separate directory for each export, because we delete the first
+            # game when we build a second one in the same directory, and a
+            # separate name, so that two exports have separate saves and bundle ids.
+            workspace = ROOT / "work" / f"menu-shots-build-{len(exported)}"
+            workspace.mkdir(parents=True, exist_ok=True)
+            exported[key] = build_a_game(
+                arguments.rom, workspace, arguments.system, settings
+            )
+            print(f"  built    {exported[key].name} {key if settings else ''}")
+        return exported[key]
+
     failures: list[str] = []
     digests: dict[str, str] = {}
-    for name, script in declared_shots().items():
-        problem = take(arguments.app, name, script, arguments.output)
+    for name, shot in shots.items():
+        script = shot["script"]
+        config = shot.get("config")
+        settings = {
+            key: value
+            for key, value in shot.items()
+            if key not in ("script", "config")
+        }
+        problem = take(game_for(settings), name, script, arguments.output, config)
         if problem:
             print(f"  FAILED  {name}: {problem}", file=sys.stderr)
             failures.append(name)
