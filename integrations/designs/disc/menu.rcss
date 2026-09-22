@@ -146,6 +146,28 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .option-entry:active { background-color: design(highlight); color: design(slot-label); }
 .options-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
 
+/* We insert volume at the start of Options, in the band under the index,
+ * with a rule and no frame, so the list still looks like a list. The track is
+ * 456dp wide because the shared states set the fill and the thumb in pixels
+ * for that length. Focus, a thumb being dragged and the pointer look
+ * different, because otherwise a player cannot tell them apart. */
+#volume-control { position: absolute; left: 24dp; top: 480dp; width: 720dp; height: 32dp; }
+.volume-name { position: absolute; left: 0; top: 0; width: 80dp; height: 32dp; line-height: 32dp; font-family: Silkscreen; font-size: 12dp; color: design(muted); }
+.volume-end { position: absolute; top: 0; height: 32dp; line-height: 32dp; font-family: Silkscreen; font-size: 12dp; color: design(ink); white-space: nowrap; overflow: hidden; }
+#volume-low { left: 80dp; width: 44dp; }
+#volume-high { left: 668dp; width: 52dp; }
+.volume-arrow { position: absolute; top: 2dp; width: 28dp; height: 28dp; line-height: 24dp; font-family: Silkscreen; font-size: 13dp; text-align: center; border-width: 1dp; padding: 0; }
+#volume-down { left: 128dp; }
+#volume-up { left: 632dp; }
+#volume-level { position: absolute; left: 164dp; top: 0; width: 456dp; height: 28dp; }
+#volume-level-readout { display: none; }
+#volume-level > div:last-child { margin-top: 12dp; height: 4dp; background-color: design(bevel-dark); border-width: 0 0 1dp 0; border-color: design(rule); }
+#volume-level-fill { background-color: design(highlight); }
+#volume-level-thumb { top: -6dp; width: 8dp; height: 16dp; background-color: design(ink); border-width: 1dp; border-color: design(edge); }
+#volume-level:hover #volume-level-thumb { background-color: design(edge); border-color: design(highlight); }
+#volume-level.focused #volume-level-thumb { background-color: design(focus); border-color: design(highlight); border-left-width: 3dp; }
+#volume-level.dragging #volume-level-thumb { background-color: design(highlight); border-color: design(ink); }
+
 #disc-face { position: absolute; left: 250dp; top: 100dp; width: 280dp; height: 280dp; border-radius: 140dp; background-color: design(edge); border: 14dp design(highlight); }
 #disc-hole { position: absolute; left: 116dp; top: 116dp; width: 48dp; height: 48dp; border-radius: 24dp; background-color: design(background); }
 #disc-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }

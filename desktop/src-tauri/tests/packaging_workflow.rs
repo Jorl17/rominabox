@@ -74,6 +74,7 @@ fn export_request(root: &Path) -> ExportRequest {
         advanced_emulator_access: false,
         menu_entries: None,
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
+        achievements: Default::default(),
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: fixture_kit(root),
@@ -157,6 +158,13 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
         MANAGED_DATA_DIRECTORIES.join(" ")
     )));
     assert!(script.contains("export ROMINABOX_DATA_DIR=\"$data_dir\""));
+    assert!(
+        script.contains(&format!(
+            "volume_override=\"$data_dir/{}\"",
+            rominabox_desktop::volume::file_name()
+        )),
+        "the launcher has to append the per-game volume file, by the name the player writes"
+    );
     assert!(!script.contains("export HOME="));
     assert_eq!(
         HOTKEY_BINDS

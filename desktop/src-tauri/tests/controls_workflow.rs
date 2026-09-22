@@ -18,7 +18,7 @@ fn workspace() -> PathBuf {
     p
 }
 fn assets() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native")
+    rominabox_desktop::repo::at("integrations/designs/native")
 }
 /// A source directory with artwork for every profile that declares it. We
 /// take the filenames from controls.json, so adding an illustrated profile
@@ -27,7 +27,7 @@ fn illustrated_assets() -> PathBuf {
     let root = workspace();
     fs::copy(assets().join("menu.rml"), root.join("menu.rml")).unwrap();
     let registry: serde_json::Value = serde_json::from_str(
-        &fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../controls.json"))
+        &fs::read_to_string(rominabox_desktop::repo::at("desktop/controls.json"))
             .unwrap(),
     )
     .unwrap();
@@ -73,8 +73,33 @@ fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
     let options = Controls::default();
     themes::prepare_controls_assets(&assets(), &assets(), &root, "atari2600", &options, None).unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
-    assert!(markup.contains("id=\"control-r3\""));
     assert!(!markup.contains("id=\"controller-image\""));
+
+    // Every control, and not a sample of one. A console with no drawing has
+    // the same controls as one with a drawing. For a core with no controller
+    // drawing, we still show its controls, drawn as squares or rectangles.
+    let declared = controls::profile_for_system("atari2600").expect("a profile");
+    let missing: Vec<&str> = declared
+        .controls
+        .iter()
+        .map(|control| control.id.as_str())
+        // Either form is valid. In the player we listen on `control-<id>` and on
+        // `control-hit-<id>`, whichever the document contains. An illustrated
+        // pad has an invisible hit circle over the drawn button, and in the
+        // grid the box itself is the target. If we required both, we would
+        // reject the grid, which is valid.
+        .filter(|id| {
+            !markup.contains(&format!("id=\"control-{id}\""))
+                && !markup.contains(&format!("id=\"control-hit-{id}\""))
+        })
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "the asset-free grid is missing {} of {} controls, so they cannot be \
+         clicked, hovered or rebound: {missing:?}",
+        missing.len(),
+        declared.controls.len()
+    );
     // Only the document and the scene that the player can switch to. For a
     // console with no illustration, no artwork may go into the export.
     let written: Vec<String> = fs::read_dir(&root)
@@ -192,7 +217,7 @@ fn a_document_is_only_told_about_what_it_draws() {
     themes::prepare_theme_assets(&assets(), &full, "blue", None).unwrap();
     let declared = fs::read_to_string(full.join("design.cfg")).unwrap();
     assert!(declared.contains("overlays = \"splash notice\""), "{declared}");
-    assert!(declared.contains("screens = \"pause controls\""), "{declared}");
+    assert!(declared.contains("screens = \"pause options controls\""), "{declared}");
     assert!(
         declared.contains("overlay_needs_splash = \"splash-logo.png\""),
         "{declared}"

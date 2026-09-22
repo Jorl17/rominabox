@@ -43,7 +43,12 @@ def worktrees() -> list[Path]:
 
 
 def agents_running() -> str:
-    """Return the running processes, so that we can show a stopped worktree as stopped."""
+    """Return the running cursor-agent processes, to show a stopped worktree as stopped.
+
+    We see only cursor-agent processes. A process on another machine does not
+    appear, so we show a worktree used that way as idle. Its staged but
+    uncommitted files show that it is in use.
+    """
     listed = subprocess.run(
         ["pgrep", "-fl", "cursor-agent"], capture_output=True, text=True
     ).stdout
@@ -76,7 +81,10 @@ def look(path: Path, merged: set[str], busy: str) -> dict:
     ]
 
     trouble = []
-    if branch in merged:
+    # A branch with no commits beyond its base is "merged" by definition, as
+    # in every freshly created worktree. We do not report such a checkout as
+    # removable, because work may be in progress in it.
+    if branch in merged and not working:
         trouble.append("merged into main — its checkout can go")
     elif not working and quiet is not None and quiet > QUIET_MINUTES:
         trouble.append(f"nothing running and no commit for {quiet:.0f} minutes")

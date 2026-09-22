@@ -26,9 +26,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -209,28 +211,36 @@ def main() -> int:
 
     scratch = ROOT / "work/controller-render"
     scratch.mkdir(parents=True, exist_ok=True)
-    drifted: list[str] = []
-    digests: dict[str, str] = {}
 
-    for svg in sources:
+    def draw(svg: Path):
         png = svg.with_suffix(".png")
         target = (scratch / png.name) if arguments.check else png
         render(svg, target, width * SCALE, height * SCALE)
-        digests[svg.stem] = digest(target)
-
+        verdict = ""
         if arguments.check:
-            if not png.exists():
-                print(f"  MISSING {png.name}", file=sys.stderr)
-                drifted.append(svg.stem)
-                continue
-            verdict = compare(png, target)
-            if verdict:
-                print(f"  DRIFTED {png.name}: {verdict}", file=sys.stderr)
-                drifted.append(svg.stem)
-            else:
-                print(f"  ok      {png.name}")
-        else:
+            verdict = "missing" if not png.exists() else compare(png, target)
+        return svg, target, verdict
+
+    workers = min(4, len(sources), os.cpu_count() or 4)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        drawn = list(pool.map(draw, sources))
+
+    drifted: list[str] = []
+    digests: dict[str, str] = {}
+    for svg, target, verdict in drawn:
+        png = svg.with_suffix(".png")
+        digests[svg.stem] = digest(target)
+        if not arguments.check:
             print(f"  wrote   {png.name}")
+            continue
+        if verdict == "missing":
+            print(f"  MISSING {png.name}", file=sys.stderr)
+            drifted.append(svg.stem)
+        elif verdict:
+            print(f"  DRIFTED {png.name}: {verdict}", file=sys.stderr)
+            drifted.append(svg.stem)
+        else:
+            print(f"  ok      {png.name}")
 
     if arguments.check:
         if drifted:

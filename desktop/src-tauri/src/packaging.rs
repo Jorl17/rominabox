@@ -71,6 +71,10 @@ pub struct ExportRequest {
     /// and then the game has no shader screen and no preset.
     #[serde(default)]
     pub shaders: crate::shaders::ShaderSelection,
+    /// The achievements in this game. Usually this is empty, and then there
+    /// is no achievements screen and we make no network request.
+    #[serde(default)]
+    pub achievements: crate::achievements::AchievementSelection,
     pub output_dir: PathBuf,
     pub target: ExportTarget,
     /// A frozen, redistributable kit. It contains `bin/retroarch`, `cores/`,
@@ -461,26 +465,54 @@ where
             request.background.as_deref(),
         )
         .map_err(|message| ExportError::new("stage", message))?;
-        crate::themes::prepare_controls_assets(
+        let design = crate::themes::staged_design(&request.runtime_kit, &request.theme);
+        let menu_assets = resources.join("menu-assets");
+        // We make the rows first, because the entries in Options depend on the
+        // lists in this game. An achievements entry in a game with no
+        // achievements would be a button that opens an empty screen.
+        let mut lists: Vec<crate::lists::List> = Vec::new();
+        let staged_shaders =
+            crate::shaders::stage(&design, &menu_assets, &request.shaders)
+                .map_err(|message| ExportError::new("stage", message))?;
+        lists.extend(staged_shaders.list);
+        let catalog = crate::achievements::resolve(&request.achievements)
+            .map_err(|message| ExportError::new("stage", message))?;
+        lists.extend(
+            crate::achievements::stage(
+                &design,
+                &menu_assets,
+                catalog.as_ref(),
+                request.achievements.badges.as_deref(),
+            )
+            .map_err(|message| ExportError::new("stage", message))?
+            .list,
+        );
+        let mut entries = match request.menu_entries.clone() {
+            Some(named) => named,
+            None => crate::themes::default_entries(&design)
+                .map_err(|message| ExportError::new("stage", message))?,
+        };
+        for list in &lists {
+            if list.screen.option_label.is_some() && !entries.contains(&list.screen.id) {
+                entries.push(list.screen.id.clone());
+            }
+        }
+        let screens = crate::themes::prepare_controls_assets(
             // The controller artwork is the same for every design, because all
             // designs show the same pads, so we keep it in the shared menu-assets.
             &request.runtime_kit.join("menu-assets"),
             // The frame in which we draw the pads comes from the design, and
             // the generated coordinates must match the stylesheet of that
             // design.
-            &crate::themes::staged_design(&request.runtime_kit, &request.theme),
-            &resources.join("menu-assets"),
+            &design,
+            &menu_assets,
             &request.system,
             &request.controls,
-            request.menu_entries.as_deref(),
+            Some(&entries),
         )
         .map_err(|message| ExportError::new("stage", message))?;
-        crate::shaders::install(
-            &crate::themes::staged_design(&request.runtime_kit, &request.theme),
-            &resources.join("menu-assets"),
-            &request.shaders,
-        )
-        .map_err(|message| ExportError::new("stage", message))?;
+        crate::lists::install(&design, &menu_assets, &screens, &lists)
+            .map_err(|message| ExportError::new("stage", message))?;
     } else if request.splash {
         crate::themes::prepare_splash_assets(
             &crate::themes::staged_design(&request.runtime_kit, &request.theme),
@@ -1698,6 +1730,7 @@ fn write_launcher(
     let content_relative = shell_quote(&rom.to_string_lossy());
     let game_title = shell_quote(&request.title);
     let managed_directories = MANAGED_DATA_DIRECTORIES.join(" ");
+    let volume_file = crate::volume::file_name();
     let runtime_config = isolated_runtime_config(request);
     let script = format!(
         r##"#!/bin/sh
@@ -1776,6 +1809,13 @@ if [ -f "$controls_override" ]; then
     *'|'*) echo "ROM-in-a-Box cannot load controls from a path containing |." >&2; exit 1 ;;
   esac
   append_config="$append_config|$controls_override"
+fi
+volume_override="$data_dir/{volume_file}"
+if [ -f "$volume_override" ]; then
+  case "$volume_override" in
+    *'|'*) echo "ROM-in-a-Box cannot load volume from a path containing |." >&2; exit 1 ;;
+  esac
+  append_config="$append_config|$volume_override"
 fi
 {shader_shell}
 set -- --config "$cfg" --appendconfig "$append_config" --libretro "$bundle_dir/Resources/game-core.dylib" "$bundle_dir/Resources/$content_relative"
@@ -2423,6 +2463,7 @@ mod tests {
             advanced_emulator_access: false,
             menu_entries: None,
             shaders: crate::shaders::ShaderSelection::default(),
+            achievements: Default::default(),
             output_dir: PathBuf::from("output"),
             target: ExportTarget::Macos,
             runtime_kit: PathBuf::from("runtime"),

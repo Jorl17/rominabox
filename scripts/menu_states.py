@@ -9,9 +9,10 @@ without this script we would have to launch a game to see one.
     python3 scripts/menu_states.py --check      # every state still renders
 
 The states are in `scripts/fixtures/menu-states.json`, where we declare them
-once. We draw every design in `desktop/designs.json` in every palette, and
-the digest key is `<design>/<palette>/<state>`. A state that is the same in
-two designs is an error. A state is a small stylesheet that we append to the
+once. We draw every design in `desktop/designs.json` for the console we
+staged, in every palette, and the digest key is
+`<design>/<system>/<palette>/<state>`. A state that is the same in two
+designs is an error. A state is a small stylesheet that we append to the
 stylesheet of the design, never an edit to the markup. If we matched markup
 strings, we would have to change the generator and this tool together
 whenever an element changed, and we use console packages to avoid that.
@@ -31,10 +32,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -84,6 +87,27 @@ def design_dir(design: str) -> Path:
     return ROOT / "integrations/designs" / design
 
 
+def concerns(key: str, system: str) -> bool:
+    """Whether a digest key belongs to this console.
+
+    The key is design/system/palette/state. We stage one console in a run, so
+    in the record and the check we must tell the rows of that console from
+    the others without dropping a design in the same file.
+    """
+    parts = key.split("/")
+    return len(parts) == 4 and parts[1] == system
+
+
+def mapped(items, function):
+    """Run independent renders together. Each one is a separate process, and
+    the pictures do not share a document or an output file."""
+    if len(items) <= 1:
+        return [function(item) for item in items]
+    workers = min(4, len(items), os.cpu_count() or 4)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return list(pool.map(function, items))
+
+
 def stage(system: str, workspace: Path, variant: str | None = None,
           palette: str = "blue", design: str | None = None) -> Path:
     """Stage the design and the generated scene for a console, as in an export.
@@ -91,6 +115,10 @@ def stage(system: str, workspace: Path, variant: str | None = None,
     Source and destination are separate directories because in the exporter we
     copy artwork from one to the other, and with both in one directory we
     would copy each file onto itself, which truncates it.
+
+    For the placement check and the variant sweep we pass no design and use the
+    first one in the registry, because those checks are about the console and
+    their recorded figures do not include a design.
     """
     design = design or declared_designs()[0]
     package = design_dir(design)
@@ -121,7 +149,8 @@ def stage(system: str, workspace: Path, variant: str | None = None,
         text=True,
     )
     if themed.returncode != 0:
-        raise SystemExit(f"could not stage the {palette} palette: {themed.stderr}")
+        detail = themed.stderr.strip() or themed.stdout.strip()
+        raise SystemExit(f"could not stage the {palette} palette: {detail}")
     for art in ARTWORK.glob("controller-*.png"):
         shutil.copyfile(art, source / art.name)
     shutil.copyfile(ARTWORK / "CONTROLLERS.txt", source / "CONTROLLERS.txt")
@@ -145,7 +174,10 @@ def stage(system: str, workspace: Path, variant: str | None = None,
         text=True,
     )
     if generated.returncode != 0:
-        raise SystemExit(f"could not stage controls for {system}: {generated.stderr}")
+        # A failure from the CLI is a JSON line on stdout. stderr is often empty,
+        # and with an empty message we would not know why the tests failed.
+        detail = generated.stderr.strip() or generated.stdout.strip()
+        raise SystemExit(f"could not stage controls for {system}: {detail}")
     return staged
 
 
@@ -267,12 +299,7 @@ def fixed_place(output: Path, record: bool = False) -> int:
         )
 
     output.mkdir(parents=True, exist_ok=True)
-    closed_boxes: dict[str, tuple] = {}
-    open_boxes: dict[str, tuple] = {}
-    covers: dict[str, int] = {}
-    failures: list[str] = []
-
-    for console in consoles:
+    def measure(console: str):
         workspace = ROOT / f"work/menu-states-fixed/{console}"
         shutil.rmtree(workspace, ignore_errors=True)
         staging = stage(console, workspace)
@@ -298,19 +325,26 @@ def fixed_place(output: Path, record: bool = False) -> int:
         if closed is None:
             # When nothing is drawn, the consoles do not agree. Three missing boxes
             # are not a match, so we report a picker moved over another control.
-            failures.append(f"{console}: hiding the picker changed nothing, so it drew nothing")
-            continue
+            return console, f"{console}: hiding the picker changed nothing, so it drew nothing", None, None, None
         if opened_box is None:
-            failures.append(f"{console}: opening the list changed nothing")
+            return console, f"{console}: opening the list changed nothing", None, None, None
+        # We check both rectangles against the screen without the picker. The
+        # closed control must be in a free band, and so must its list.
+        cover = max(covered_ink(without, closed), covered_ink(without, opened_box))
+        return console, None, closed, opened_box, cover
+
+    closed_boxes: dict[str, tuple] = {}
+    open_boxes: dict[str, tuple] = {}
+    covers: dict[str, int] = {}
+    failures: list[str] = []
+    for console, failure, closed, opened_box, cover in mapped(consoles, measure):
+        if failure:
+            failures.append(failure)
             continue
         closed_boxes[console] = closed
         open_boxes[console] = opened_box
-        # We check both rectangles against the screen without the picker. The
-        # closed control must be in a free band, and so must its list.
-        covers[console] = max(
-            covered_ink(without, closed), covered_ink(without, opened_box)
-        )
-        print(f"  {console:<12}closed {closed}  open {opened_box}  covers {covers[console]} drawn px")
+        covers[console] = cover
+        print(f"  {console:<12}closed {closed}  open {opened_box}  covers {cover} drawn px")
 
     if failures:
         for failure in failures:
@@ -381,50 +415,58 @@ def every_variant(output: Path) -> int:
 
     The change of picture in the player is tested in the bridge tests.
     """
+    registry = json.loads((ROOT / "desktop/controls.json").read_text())
+    jobs = [
+        (console, entry["id"])
+        for console in consoles_offering_a_picker()
+        for entry in registry["profiles"]
+        if console in entry.get("systems", [])
+    ]
+
+    def draw(job: tuple[str, str]):
+        console, variant = job
+        problems: list[str] = []
+        workspace = ROOT / f"work/menu-variants/{console}-{variant}"
+        shutil.rmtree(workspace, ignore_errors=True)
+        staging = stage(console, workspace, variant)
+        document = (staging / "menu.rml").read_text()
+        state = declared_states()["controls"]
+        overrides: list[str] = []
+        for element, properties in state["set"].items():
+            target = resolve(document, element)
+            if target is None:
+                problems.append(f"{console}/{variant}: {element} is absent")
+                continue
+            for prop, value in properties.items():
+                overrides += ["--set", f"{target}:{prop}={value}"]
+        output.mkdir(parents=True, exist_ok=True)
+        target_png = output / f"{console}-{variant}.png"
+        result = subprocess.run(
+            [str(PREVIEW), str(staging / "menu.rml"), str(target_png),
+             str(SIZE[0]), str(SIZE[1]), *overrides],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            problems.append(f"{console}/{variant}: {result.stderr.strip()[:120]}")
+            return problems, ""
+        if "Could not load texture" in result.stderr:
+            problems.append(f"{console}/{variant}: its artwork is not staged")
+            return problems, ""
+        # A scene file for each pad, because we cannot generate markup in the
+        # player and read a scene file when someone changes the controller.
+        beside = staging / f"scene-{variant}.rml"
+        if not beside.exists():
+            problems.append(f"{console}/{variant}: no {beside.name} to swap to")
+            return problems, ""
+        return problems, f"  {console:<12}{variant:<14}{beside.name}\n"
+
     failures: list[str] = []
     rendered = 0
-    for console in consoles_offering_a_picker():
-        registry = json.loads((ROOT / "desktop/controls.json").read_text())
-        variants = [
-            entry["id"]
-            for entry in registry["profiles"]
-            if console in entry.get("systems", [])
-        ]
-        for variant in variants:
-            workspace = ROOT / f"work/menu-variants/{console}-{variant}"
-            shutil.rmtree(workspace, ignore_errors=True)
-            staging = stage(console, workspace, variant)
-            document = (staging / "menu.rml").read_text()
-            state = declared_states()["controls"]
-            overrides: list[str] = []
-            for element, properties in state["set"].items():
-                target = resolve(document, element)
-                if target is None:
-                    failures.append(f"{console}/{variant}: {element} is absent")
-                    continue
-                for prop, value in properties.items():
-                    overrides += ["--set", f"{target}:{prop}={value}"]
-            output.mkdir(parents=True, exist_ok=True)
-            target_png = output / f"{console}-{variant}.png"
-            result = subprocess.run(
-                [str(PREVIEW), str(staging / "menu.rml"), str(target_png),
-                 str(SIZE[0]), str(SIZE[1]), *overrides],
-                capture_output=True, text=True,
-            )
-            if result.returncode != 0:
-                failures.append(f"{console}/{variant}: {result.stderr.strip()[:120]}")
-                continue
-            if "Could not load texture" in result.stderr:
-                failures.append(f"{console}/{variant}: its artwork is not staged")
-                continue
-            # A scene file for each pad, because we cannot generate markup in the
-            # player and read a scene file when someone changes the controller.
-            beside = staging / f"scene-{variant}.rml"
-            if not beside.exists():
-                failures.append(f"{console}/{variant}: no {beside.name} to swap to")
-                continue
+    for problems, line in mapped(jobs, draw):
+        failures.extend(problems)
+        if line:
+            print(line, end="")
             rendered += 1
-            print(f"  {console:<12}{variant:<14}{beside.name}")
 
     if failures:
         for failure in failures:
@@ -442,7 +484,11 @@ def every_variant(output: Path) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("output", type=Path, nargs="?", default=ROOT / "work/menu-states")
+    # There is no default, because it depends on the console we draw, and two
+    # consoles in one directory collide. We run the test scopes in parallel,
+    # and if one of them emptied the directory, we would delete pictures still
+    # in use by another.
+    parser.add_argument("output", type=Path, nargs="?", default=None)
     parser.add_argument("--system", default="megadrive", help="which console to stage")
     parser.add_argument(
         "--variant",
@@ -473,6 +519,9 @@ def main() -> int:
     if not PREVIEW.exists():
         raise SystemExit(f"the offscreen preview helper is not built at {PREVIEW}")
 
+    if arguments.output is None:
+        arguments.output = ROOT / f"work/menu-states/{arguments.system}"
+
     if arguments.every_variant:
         return every_variant(arguments.output)
 
@@ -488,12 +537,19 @@ def main() -> int:
     missing: list[str] = []
     digests: dict[str, str] = {}
     rendered = 0
-    # We draw every state of every design in every palette. The key contains all
-    # three, so we record a second design next to the first, not in its place.
+    # We draw every state of every design in every palette. The key contains the
+    # design and the console, so we record a second design next to the first,
+    # and two consoles never share a directory.
     for design in declared_designs():
         print(f"\n{design}")
         for palette in palettes():
-            workspace = ROOT / "work" / "menu-states-staging" / design / palette
+            # Design and console are both part of the path. We run the test
+            # scopes in parallel, and with two consoles or two designs staged
+            # in one directory, the files of one run would replace those of
+            # the other, and we would see a state that changed.
+            workspace = (
+                ROOT / "work" / "menu-states-staging" / design / arguments.system / palette
+            )
             shutil.rmtree(workspace, ignore_errors=True)
             staging = stage(
                 arguments.system, workspace, arguments.variant, palette, design
@@ -501,7 +557,8 @@ def main() -> int:
             document = (staging / "menu.rml").read_text()
             print(f"  {palette}")
             rendered += render_palette(
-                design, palette, staging, document, arguments, digests, missing
+                design, arguments.system, palette, staging, document,
+                arguments, digests, missing,
             )
 
     return finish(arguments, digests, missing, rendered)
@@ -522,78 +579,115 @@ def palettes() -> list[str]:
     return [entry["id"] for entry in declared["palettes"]]
 
 
-def render_palette(design, palette, staging, document, arguments, digests, missing) -> int:
-    """Draw every declared state in one design and one colour scheme."""
-    rendered = 0
+def draw_state(design: str, system: str, palette: str, name: str, state: dict, staging: Path, document: str, output: Path):
+    """One picture. Returns (key, digest or None, line for stdout, line for stderr)."""
+    key = f"{design}/{system}/{palette}/{name}"
+    # In a state we can list what the console must offer for the state to make
+    # sense. The picker states require a picker, and a console with one
+    # controller has none, so refusing them there would mark every such console
+    # as failed for a screen it rightly lacks. A renamed element still gives an
+    # error, because the other elements of the state are listed and missing.
+    needs = state.get("needs")
+    if needs and resolve(document, needs) is None:
+        return key, None, f"  {name:<26}not offered by this console\n", ""
+
+    # An id ending in "?" is optional in the state. On an illustrated pad we put
+    # an invisible hit circle over each drawn button. A console without a
+    # drawing has a grid instead, where the box is the target and there is no
+    # circle. Both are correct, so for a state with a lit control we light the
+    # one that is there and do not refuse a console with only one of them.
+    wanted = {i.rstrip("?"): (v, i.endswith("?")) for i, v in state["set"].items()}
+    resolved = {i: resolve(document, i) for i in wanted}
+    absent = [i for i, found in resolved.items() if found is None and not wanted[i][1]]
+    if absent:
+        # We do not skip it, because when the element of a state is gone,
+        # someone has renamed or removed that element.
+        return key, None, "", f"  REFUSED {key}: {', '.join(absent)} not in the document\n"
+
+    overrides: list[str] = []
+    for element_id, (properties, _) in wanted.items():
+        if resolved[element_id] is None:
+            continue
+        for prop, value in properties.items():
+            overrides += ["--set", f"{resolved[element_id]}:{prop}={value}"]
+
+    target = output / f"{name}.png"
+    result = subprocess.run(
+        [
+            str(PREVIEW),
+            str(staging / "menu.rml"),
+            str(target),
+            str(SIZE[0]),
+            str(SIZE[1]),
+            *overrides,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return key, None, "", f"  FAILED  {key}: {result.stderr.strip()[:160]}\n"
+    # We report a texture that does not load instead of raising, because the
+    # scene is then rendered without its controller and only looks empty, for
+    # example when a PNG is truncated.
+    if "Could not load texture" in result.stderr:
+        return key, None, "", f"  FAILED  {key}: artwork did not load\n"
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()[:16]
+    return key, digest, f"  {name:<26}{state['describes']}\n", ""
+
+
+def render_palette(design, system, palette, staging, document, arguments, digests, missing) -> int:
+    """Draw every declared state in one design, one console and one colour scheme."""
+    # The output root is already per console, so two test scopes never empty the
+    # same directory. Design and palette still have separate directories under
+    # it, because two designs with pause-menu.png in one folder also collide.
     output = arguments.output / design / palette
     output.mkdir(parents=True, exist_ok=True)
-    for name, state in declared_states().items():
-        key = f"{design}/{palette}/{name}"
-        resolved = {i: resolve(document, i) for i in state["set"]}
-        absent = [i for i, found in resolved.items() if found is None]
-        if absent:
-            # We do not skip it, because when the element of a state is gone,
-            # someone has renamed or removed that element.
-            print(f"  REFUSED {key}: {', '.join(absent)} not in the document", file=sys.stderr)
+    states = list(declared_states().items())
+    drawn = mapped(
+        states,
+        lambda item: draw_state(
+            design, system, palette, item[0], item[1], staging, document, output
+        ),
+    )
+    rendered = 0
+    for key, digest, line, error in drawn:
+        if line:
+            print(line, end="")
+        if error:
+            print(error, end="", file=sys.stderr)
             missing.append(key)
             continue
-
-        overrides: list[str] = []
-        for element_id, properties in state["set"].items():
-            for prop, value in properties.items():
-                overrides += ["--set", f"{resolved[element_id]}:{prop}={value}"]
-
-        target = output / f"{name}.png"
-        result = subprocess.run(
-            [
-                str(PREVIEW),
-                str(staging / "menu.rml"),
-                str(target),
-                str(SIZE[0]),
-                str(SIZE[1]),
-                *overrides,
-            ],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            print(f"  FAILED  {key}: {result.stderr.strip()[:160]}", file=sys.stderr)
-            missing.append(key)
+        # For a state that this console does not offer we drew nothing, so there is
+        # nothing to pin. If we recorded it, every skipped state would look the
+        # same as every other, and the twin check would report them.
+        if digest is None:
             continue
-        # We report a texture that does not load instead of raising, because the
-        # scene is then rendered without its controller and only looks empty,
-        # for example when a PNG is truncated.
-        if "Could not load texture" in result.stderr:
-            print(f"  FAILED  {key}: artwork did not load", file=sys.stderr)
-            missing.append(key)
-            continue
-        digests[key] = hashlib.sha256(target.read_bytes()).hexdigest()[:16]
+        digests[key] = digest
         rendered += 1
-        print(f"    {name:<26}{state['describes']}")
     return rendered
 
 
 def same_picture(digests: dict[str, str]) -> tuple[list[list[str]], list[str]]:
     """Pictures that should differ and do not.
 
-    We ask two separate questions, because the causes differ. When two
-    states in one design give the same picture, the player cannot tell hover
-    from keyboard focus or a held button. When two designs give the same
-    picture for one state, the second design is not a design.
+    We ask two separate questions, because the causes differ. When two states
+    in one design, console and palette give the same picture, the player
+    cannot tell hover from keyboard focus or a held button. When two designs
+    give the same picture for one state, the second design is not a design.
     """
-    within: dict[tuple[str, str, str], list[str]] = {}
-    across: dict[tuple[str, str, str], list[str]] = {}
+    within: dict[tuple[str, str, str, str], list[str]] = {}
+    across: dict[tuple[str, str, str, str], list[str]] = {}
     for key, digest in digests.items():
-        design, palette, state = key.split("/", 2)
-        within.setdefault((design, palette, digest), []).append(key)
-        across.setdefault((palette, state, digest), []).append(design)
+        design, system, palette, state = key.split("/", 3)
+        within.setdefault((design, system, palette, digest), []).append(key)
+        across.setdefault((system, palette, state, digest), []).append(design)
     twins = [names for names in within.values() if len(names) > 1]
     collided = []
-    for (palette, state, _digest), designs in sorted(across.items()):
+    for (system, palette, state, _digest), designs in sorted(across.items()):
         unique = sorted(set(designs))
         if len(unique) > 1:
             collided.append(
-                f"{palette}/{state}: {', '.join(unique)} draw the same picture"
+                f"{system}/{palette}/{state}: {', '.join(unique)} draw the same picture"
             )
     return twins, collided
 
@@ -648,7 +742,12 @@ def finish(arguments, digests, missing, rendered) -> int:
         return 1
 
     if arguments.record:
-        DIGESTS.write_text(json.dumps(digests, indent=2, sort_keys=True) + "\n")
+        # We merge instead of replacing, because in this run we staged one console,
+        # and without the rows of the other console its next check would fail.
+        kept = json.loads(DIGESTS.read_text()) if DIGESTS.exists() else {}
+        kept = {k: v for k, v in kept.items() if not concerns(k, arguments.system)}
+        kept.update(digests)
+        DIGESTS.write_text(json.dumps(kept, indent=2, sort_keys=True) + "\n")
         print(f"\nrecorded {len(digests)} state digests -> {DIGESTS.name}")
         return 0
 
@@ -656,8 +755,12 @@ def finish(arguments, digests, missing, rendered) -> int:
         if not DIGESTS.exists():
             raise SystemExit(f"no recorded states at {DIGESTS}; run --record first")
         expected = json.loads(DIGESTS.read_text())
-        changed = [n for n, d in digests.items() if expected.get(n) != d]
-        gone = sorted(set(expected) - set(digests))
+        # Only the entries of this console. A run with one staged console has no
+        # results for another, and if we called the others missing, every run
+        # with one console would fail.
+        mine = {k: v for k, v in expected.items() if concerns(k, arguments.system)}
+        changed = [n for n, d in digests.items() if mine.get(n) != d]
+        gone = sorted(set(mine) - set(digests))
         if changed or gone:
             for name in changed:
                 print(f"  CHANGED {name}", file=sys.stderr)
