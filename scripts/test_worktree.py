@@ -330,6 +330,55 @@ def the_built_cli_follows_the_redirected_cargo_target() -> None:
             os.environ["CARGO_TARGET_DIR"] = before
 
 
+def a_file_compiled_into_the_tool_counts_as_its_source() -> None:
+    """Check that a change to controls.json makes the built tool stale in both.
+
+    `desktop/controls.json` is not Rust. If we checked freshness on `.rs`
+    files only, we would take the binary as current after regenerating the
+    registry, and render the anchors of the previous registry in every script.
+    The result would be a wrong drawing and no error.
+
+    We check freshness in two scripts, and in both we read the pattern from
+    one place. We check that here, because a second copy of the pattern would
+    pass a separate test and still differ from the other.
+    """
+    import built  # noqa: PLC0415
+    import cargo_replay  # noqa: PLC0415
+
+    check(
+        cargo_replay.compiled_in is built.compiled_in,
+        "one reader of include_str!, used by both scripts",
+    )
+
+    with tempfile.TemporaryDirectory() as temporary:
+        area = Path(temporary)
+        (area / "src").mkdir()
+        source = area / "src/controls.rs"
+        source.write_text(
+            'static REGISTRY: &str = include_str!("../controls.json");\n'
+            'static ICON: &[u8] = include_bytes! ("../icon.png");\n'
+        )
+        (area / "controls.json").write_text("{}\n")
+        (area / "icon.png").write_bytes(b"\x89PNG")
+        found = {path.name for path in built.compiled_in(source)}
+        check(
+            found == {"controls.json", "icon.png"},
+            f"both baked-in files are found, whatever the spacing ({sorted(found)})",
+        )
+
+    # And in the checked-out tree.
+    registry = built.ROOT / "desktop/controls.json"
+    baked = {
+        path
+        for rust in built._rust_files()
+        for path in built.compiled_in(rust)
+    }
+    check(
+        registry.resolve() in baked,
+        "desktop/controls.json is seen as something the tool is built from",
+    )
+
+
 # From inside a worktree, these checks are the wrong checks. The common git
 # directory is always the canonical checkout's, and we do not test a worktree
 # of a worktree. Without this, a run of the full suite inside a worktree would
@@ -347,7 +396,10 @@ FROM_THE_CANONICAL_CHECKOUT = [
 ]
 
 # These checks give the same result anywhere, and are most useful in a worktree.
-ANYWHERE = [the_built_cli_follows_the_redirected_cargo_target]
+ANYWHERE = [
+    the_built_cli_follows_the_redirected_cargo_target,
+    a_file_compiled_into_the_tool_counts_as_its_source,
+]
 
 
 def inside_a_worktree() -> bool:

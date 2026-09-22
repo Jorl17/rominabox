@@ -23,12 +23,18 @@ import json
 import os
 import re
 import subprocess
+import sys
 import threading
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+# The one pattern for include_str!/include_bytes!, which we use in both scripts
+# that list the non-Rust files compiled into a binary, so their patterns
+# cannot differ. It matches with or without a space after the `!`.
+from built import compiled_in  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 STAMPS = ROOT / "work/cargo-stamps"
-INCLUDE = re.compile(r'include_(?:str|bytes)!\(\s*"([^"]+)"\s*\)')
 RUNNING = re.compile(r"^ *Running (.+?) \((.+)\)\s*$", re.M)
 SKIP_DIRS = {"target", "resources", "node_modules", "gen"}
 # We take the shared target lock only for an actual cargo run, not to run
@@ -97,11 +103,8 @@ def source_digest(manifest: Path) -> str:
                 files.append(path)
     embedded: list[Path] = []
     for path in files:
-        if path.suffix != ".rs":
-            continue
-        text = path.read_text(errors="replace")
-        for match in INCLUDE.finditer(text):
-            embedded.append((path.parent / match.group(1)).resolve())
+        if path.suffix == ".rs":
+            embedded.extend(compiled_in(path))
     digest = hashlib.sha256()
     digest.update(_rustc().encode())
     for path in sorted(set(files + embedded), key=lambda item: str(item)):
