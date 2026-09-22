@@ -29,6 +29,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cargo_replay import cargo_test  # noqa: E402
+from player_support import additions as support_additions  # noqa: E402
+from player_support import snapshot as support_snapshot  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRATCH = ROOT / "work/test-output"
@@ -141,9 +143,15 @@ SCOPES = [
     ),
     Scope(
         "worktree",
-        "isolation between parallel checkouts: the shared git dir, the lock, refusing the canonical tree",
+        "isolation between parallel checkouts: the shared git dir, the lock, refusing the canonical tree, and that create will not check out an existing branch",
         "that a real worktree builds or runs; it creates nothing outside a temporary directory",
         ["python3", str(ROOT / "scripts/test_worktree.py")],
+    ),
+    Scope(
+        "shotsign",
+        "that replacing the shot player keeps the sandbox the export signed, and that every shot shares one bundle namespace",
+        "that a picture was taken; that is menu_shots, and this does not launch a game",
+        ["python3", str(ROOT / "scripts/test_shot_sign.py")],
     ),
     Scope(
         "bridge",
@@ -346,6 +354,7 @@ def main() -> int:
         selected = [scope for scope in SCOPES if not scope.slow]
 
     SCRATCH.mkdir(parents=True, exist_ok=True)
+    support_before = support_snapshot()
     recorded: dict[str, tuple[bool, float]] = {}
     wall_started = time.monotonic()
 
@@ -387,9 +396,19 @@ def main() -> int:
     print(f"\nwall {wall:0.1f}s{wall_ratio}")
     if wall_budget and limits is not None and over_budget(wall, wall_budget, limits):
         slow.append("wall")
+    created = support_additions(support_before, support_snapshot())
+    if created:
+        print(
+            "\nA test run created paths under ~/Library/Application Support/ROM-in-a-Box:"
+        )
+        for path in created[:20]:
+            print(f"  {path}")
+        if len(created) > 20:
+            print(f"  … and {len(created) - 20} more")
     failed = [scope.name for scope in selected if not recorded[scope.name][0]]
     if failed:
         print(f"\n{len(failed)} scope(s) failed: {', '.join(failed)}")
+    if created or failed:
         return 1
     if slow:
         print(

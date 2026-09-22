@@ -180,6 +180,20 @@ def case_joypad():
     return expect("joypad", code, output, ("missing",))
 
 
+def case_shotsign():
+    path = ROOT / "scripts/menu_shots.py"
+    raw = replace(
+        path,
+        '"--entitlements", str(entitlements),',
+        '"--preserve-metadata=entitlements",',
+    )
+    try:
+        code, output = run_scope("shotsign")
+    finally:
+        restore(path, raw)
+    return expect("shotsign", code, output, ("app-sandbox",))
+
+
 def case_worktree():
     # In a worktree we skip the checks that apply only to the canonical
     # checkout. The check of where we look up the CLI still runs, and it is
@@ -525,6 +539,7 @@ CASES = {
     "staging": case_staging,
     "joypad": case_joypad,
     "worktree": case_worktree,
+    "shotsign": case_shotsign,
     "bridge": case_bridge,
     "edges": case_edges,
     "states": case_states,
