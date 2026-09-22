@@ -148,8 +148,13 @@ fn gather(
             .file_name()
             .ok_or_else(|| format!("support file has no name: {}", sibling.display()))?;
         let sibling_relative = relative.with_file_name(sibling_name);
-        let resolved = fs::canonicalize(&sibling)
-            .map_err(|error| format!("resolve {} {}: {error}", companion.extension, sibling.display()))?;
+        let resolved = fs::canonicalize(&sibling).map_err(|error| {
+            format!(
+                "resolve {} {}: {error}",
+                companion.extension,
+                sibling.display()
+            )
+        })?;
         if !resolved.starts_with(root) {
             return Err(format!(
                 "{} file escapes the game content folder: {}",
@@ -162,10 +167,7 @@ fn gather(
     let mut followed = false;
     for reference in references {
         validate_relative_content_path(&reference)?;
-        let candidate = absolute
-            .parent()
-            .unwrap_or(root)
-            .join(&reference);
+        let candidate = absolute.parent().unwrap_or(root).join(&reference);
         if !candidate.is_file() {
             return Err(missing_reference(parser, &reference, absolute));
         }
@@ -187,14 +189,7 @@ fn gather(
             _ => reference.clone(),
         };
         let before = files.len();
-        gather(
-            &resolved,
-            &child_relative,
-            root,
-            systems,
-            files,
-            seen,
-        )?;
+        gather(&resolved, &child_relative, root, systems, files, seen)?;
         if files.len() > before {
             followed = true;
         }
@@ -266,10 +261,11 @@ fn companions_for(host: &str, systems: &[&System]) -> Vec<Companion> {
             if !companion_applies(companion, host) {
                 continue;
             }
-            if found
-                .iter()
-                .any(|existing| existing.extension.eq_ignore_ascii_case(&companion.extension))
-            {
+            if found.iter().any(|existing| {
+                existing
+                    .extension
+                    .eq_ignore_ascii_case(&companion.extension)
+            }) {
                 continue;
             }
             found.push(companion.clone());
@@ -295,7 +291,9 @@ fn companions_for(host: &str, systems: &[&System]) -> Vec<Companion> {
             && hosts.iter().all(|system| {
                 system.companions.iter().any(|candidate| {
                     candidate.required
-                        && candidate.extension.eq_ignore_ascii_case(&companion.extension)
+                        && candidate
+                            .extension
+                            .eq_ignore_ascii_case(&companion.extension)
                         && companion_applies(candidate, host)
                 })
             });
@@ -310,11 +308,21 @@ fn companion_applies(companion: &Companion, host: &str) -> bool {
     }
 }
 
+/// How many sheets in the dropped file's folder we open to see whether one
+/// lists the file.
+///
+/// We identify a dropped track, such as a GD-ROM `.bin`, by the `.gdi` beside
+/// it. When someone drops a cartridge in a folder full of unrelated sheets,
+/// we must not open them all, so we read up to 100, closest names first, and
+/// skip the rest.
+const SHEET_MATCH_LIMIT: usize = 100;
+
 /// The game file for a dropped path.
 ///
-/// A folder is not a game file, so when someone drops a folder, for example
-/// one with a Dreamcast game, we use the GD-ROM inside it. A sibling `.sbi` is
-/// subchannel data, not a game, so for that file we use the disc next to it.
+/// For a dropped folder we use the GD-ROM inside it. For one dropped track of
+/// a disc we use the `.gdi` beside it, the file that lists the track. For a
+/// companion declared in the console package, such as the `.sbi` beside a
+/// CHD, we use its disc in the same way.
 pub fn resolve_dropped(path: &Path) -> Result<PathBuf, String> {
     if path.is_dir() {
         return sole_game_in(path);
@@ -325,13 +333,241 @@ pub fn resolve_dropped(path: &Path) -> Result<PathBuf, String> {
             path.display()
         ));
     }
-    let extension = extension_of(path);
-    if is_support_extension(&extension) {
-        if let Some(game) = sibling_game(path) {
-            return Ok(game);
+    let Some(directory) = path
+        .parent()
+        .filter(|directory| !directory.as_os_str().is_empty())
+    else {
+        return Ok(path.to_path_buf());
+    };
+    let mut claimers = sheets_naming(directory, path)?;
+    for host in companion_hosts(path) {
+        if !claimers.iter().any(|existing| same_file(existing, &host)) {
+            claimers.push(host);
         }
     }
-    Ok(path.to_path_buf())
+    match claimers.len() {
+        0 => Ok(path.to_path_buf()),
+        1 => Ok(claimers.remove(0)),
+        _ => Err(ambiguous_drop(path, &claimers)),
+    }
+}
+
+/// Sheets in this folder whose text lists `dropped`, closest names first.
+///
+/// The name of a track contains `(Track 3)` and the name of the layout does
+/// not. If we read in directory order, we could reach the cap on unrelated
+/// sheets and never open the one that lists the file.
+fn sheets_naming(directory: &Path, dropped: &Path) -> Result<Vec<PathBuf>, String> {
+    let mut sheets = sheet_files(directory)?;
+    sheets.retain(|sheet| !same_file(sheet, dropped));
+    sheets.sort_by(|left, right| {
+        sheet_likeness(dropped, right)
+            .cmp(&sheet_likeness(dropped, left))
+            .then_with(|| left.file_name().cmp(&right.file_name()))
+    });
+    let mut named = Vec::new();
+    for sheet in sheets.into_iter().take(SHEET_MATCH_LIMIT) {
+        let Some(parser) = declared_sheet_parser(&extension_of(&sheet)) else {
+            continue;
+        };
+        // A file with a sheet extension that is not text must not stop the
+        // drop, and we cannot tell that it lists anything.
+        let Ok(text) = fs::read_to_string(&sheet) else {
+            continue;
+        };
+        let Ok(references) = crate::discs::sheet_references(parser, &text) else {
+            continue;
+        };
+        if references
+            .iter()
+            .any(|reference| reference_names(reference, dropped))
+        {
+            named.push(sheet);
+        }
+    }
+    Ok(named)
+}
+
+fn sheet_files(directory: &Path) -> Result<Vec<PathBuf>, String> {
+    let entries = fs::read_dir(directory)
+        .map_err(|error| format!("read game folder {}: {error}", directory.display()))?;
+    let mut sheets = Vec::new();
+    for entry in entries {
+        let entry =
+            entry.map_err(|error| format!("read game folder {}: {error}", directory.display()))?;
+        if !entry
+            .file_type()
+            .map(|kind| kind.is_file())
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        let path = entry.path();
+        if declared_sheet_parser(&extension_of(&path)).is_some() {
+            sheets.push(path);
+        }
+    }
+    Ok(sheets)
+}
+
+fn declared_sheet_parser(extension: &str) -> Option<SheetParser> {
+    let systems = systems::registry().iter().collect::<Vec<_>>();
+    sheet_parser(extension, &systems)
+}
+
+/// Disc files of the same name, for which a package lists `dropped` as a
+/// companion. A CHD does not name its `.sbi`, so we keep that subchannel
+/// file with the disc because the package lists a companion with the same
+/// stem and that extension.
+fn companion_hosts(dropped: &Path) -> Vec<PathBuf> {
+    let extension = extension_of(dropped);
+    let Some(stem) = dropped.file_stem() else {
+        return Vec::new();
+    };
+    let Some(directory) = dropped.parent() else {
+        return Vec::new();
+    };
+    let mut hosts: Vec<PathBuf> = Vec::new();
+    for system in systems::registry() {
+        for host_extension in &system.extensions {
+            let applies = system.companions.iter().any(|companion| {
+                companion.extension.eq_ignore_ascii_case(&extension)
+                    && companion_applies(companion, host_extension)
+            });
+            if !applies {
+                continue;
+            }
+            let candidate = directory.join(stem).with_extension(host_extension);
+            if candidate.is_file()
+                && !same_file(&candidate, dropped)
+                && !hosts.iter().any(|existing| same_file(existing, &candidate))
+            {
+                hosts.push(candidate);
+            }
+        }
+    }
+    hosts
+}
+
+fn reference_names(reference: &Path, dropped: &Path) -> bool {
+    // A sheet may name a file in a subfolder. We look for the dropped file
+    // only in its own folder, so a file named deeper down is another file.
+    let components: Vec<_> = reference.components().collect();
+    let [Component::Normal(name)] = components.as_slice() else {
+        return false;
+    };
+    let Some(dropped_name) = dropped.file_name() else {
+        return false;
+    };
+    if *name == dropped_name {
+        return true;
+    }
+    // The name in the sheet may differ in case. It is the same file on
+    // Windows and macOS, but not on a case-sensitive volume.
+    if !name.eq_ignore_ascii_case(dropped_name) {
+        return false;
+    }
+    let Some(directory) = dropped.parent() else {
+        return false;
+    };
+    same_file(&directory.join(name), dropped)
+}
+
+fn same_file(left: &Path, right: &Path) -> bool {
+    if left == right {
+        return true;
+    }
+    match (fs::canonicalize(left), fs::canonicalize(right)) {
+        (Ok(left), Ok(right)) => left == right,
+        _ => false,
+    }
+}
+
+fn sheet_likeness(dropped: &Path, sheet: &Path) -> usize {
+    let dropped_name = normalize_name(&without_track_markers(&stem_text(dropped)));
+    let sheet_name = normalize_name(&stem_text(sheet));
+    if !dropped_name.is_empty() && dropped_name == sheet_name {
+        return usize::MAX;
+    }
+    dropped_name
+        .chars()
+        .zip(sheet_name.chars())
+        .take_while(|(left, right)| left == right)
+        .count()
+}
+
+fn stem_text(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or("")
+        .to_owned()
+}
+
+fn normalize_name(value: &str) -> String {
+    value
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_ascii_lowercase()
+}
+
+/// Remove a label such as `(Track 3)`, which dumping tools add and which is
+/// not part of the disc's name. The layout's name does not contain it, so
+/// with the label left on, many unrelated names could rank above the layout.
+fn without_track_markers(stem: &str) -> String {
+    let mut kept = String::with_capacity(stem.len());
+    let mut rest = stem;
+    loop {
+        let Some(open) = rest.find('(') else {
+            kept.push_str(rest);
+            break;
+        };
+        let after_open = &rest[open + 1..];
+        let Some(close) = after_open.find(')') else {
+            kept.push_str(rest);
+            break;
+        };
+        kept.push_str(&rest[..open]);
+        let inner = &after_open[..close];
+        if !is_track_marker(inner) {
+            kept.push('(');
+            kept.push_str(inner);
+            kept.push(')');
+        }
+        rest = &after_open[close + 1..];
+    }
+    kept.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn is_track_marker(inner: &str) -> bool {
+    let mut words = inner.split_whitespace();
+    let (Some(label), Some(number)) = (words.next(), words.next()) else {
+        return false;
+    };
+    words.next().is_none()
+        && label.eq_ignore_ascii_case("track")
+        && !number.is_empty()
+        && number.bytes().all(|byte| byte.is_ascii_digit())
+}
+
+fn ambiguous_drop(dropped: &Path, claimers: &[PathBuf]) -> String {
+    let mut names: Vec<String> = claimers
+        .iter()
+        .map(|path| {
+            path.file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| path.display().to_string())
+        })
+        .collect();
+    names.sort();
+    let dropped_name = dropped
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| dropped.display().to_string());
+    format!(
+        "More than one file in this folder names {dropped_name}. Drop one of them: {}",
+        names.join(", ")
+    )
 }
 
 fn sole_game_in(directory: &Path) -> Result<PathBuf, String> {
@@ -391,26 +627,6 @@ fn sole_game_in(directory: &Path) -> Result<PathBuf, String> {
     ))
 }
 
-fn sibling_game(support: &Path) -> Option<PathBuf> {
-    let stem = support.file_stem()?;
-    let directory = support.parent()?;
-    let mut found = Vec::new();
-    for system in crate::systems::registry() {
-        for extension in &system.extensions {
-            let candidate = directory.join(stem).with_extension(extension);
-            if candidate.is_file() && !found.contains(&candidate) {
-                found.push(candidate);
-            }
-        }
-    }
-    if found.len() == 1 {
-        return found.pop();
-    }
-    found
-        .into_iter()
-        .find(|candidate| is_sheet(&extension_of(candidate)))
-}
-
 fn extension_of(path: &Path) -> String {
     path.extension()
         .and_then(|extension| extension.to_str())
@@ -440,8 +656,7 @@ fn is_sheet(extension: &str) -> bool {
 fn is_playlist(extension: &str) -> bool {
     systems::registry().iter().any(|system| {
         system.sheets.iter().any(|sheet| {
-            sheet.extension.eq_ignore_ascii_case(extension)
-                && sheet.parser == SheetParser::Playlist
+            sheet.extension.eq_ignore_ascii_case(extension) && sheet.parser == SheetParser::Playlist
         })
     })
 }
@@ -657,7 +872,11 @@ mod tests {
             "wonderswan",
             "wonderswancolor",
         ] {
-            assert!(sheets(id).is_empty(), "{id} is a cartridge: {}", sheets(id).join(","));
+            assert!(
+                sheets(id).is_empty(),
+                "{id} is a cartridge: {}",
+                sheets(id).join(",")
+            );
             assert!(required(id).is_empty() && optional(id).is_empty(), "{id}");
         }
         let declared: Vec<&str> = systems::registry()
@@ -668,7 +887,10 @@ mod tests {
             declared.is_empty(),
             "a sheet that is followed is not recognise-only: {declared:?}"
         );
-        let mut ids: Vec<&str> = systems::registry().iter().map(|system| system.id.as_str()).collect();
+        let mut ids: Vec<&str> = systems::registry()
+            .iter()
+            .map(|system| system.id.as_str())
+            .collect();
         ids.sort_unstable();
         assert_eq!(
             ids,
@@ -775,6 +997,141 @@ mod tests {
         }
     }
 
+    /// A track file need not have the sheet's name. We use a cue with another
+    /// name for a dropped `track03.bin` when the text of the cue lists it.
+    #[test]
+    fn a_dropped_track_is_the_sheet_that_names_it() {
+        let root = fixture("track03");
+        let track = root.join("track03.bin");
+        fs::write(&track, b"track").unwrap();
+        let sheet = root.join("anything.cue");
+        fs::write(&sheet, "FILE \"track03.bin\" BINARY\n  TRACK 03 AUDIO\n").unwrap();
+
+        let resolved = resolve_dropped(&track).unwrap();
+        assert_eq!(resolved, sheet, "the track was not the disc");
+        assert_eq!(
+            relative_names(&collect(&resolved).unwrap()),
+            relative_names(&collect(&sheet).unwrap()),
+            "dropping the track collected a different set than dropping the sheet"
+        );
+    }
+
+    /// The common case of a cue and the bin it lists.
+    #[test]
+    fn a_dropped_bin_beside_its_cue_is_that_cue() {
+        let root = fixture("cue-bin");
+        let track = root.join("disc.bin");
+        fs::write(&track, b"data").unwrap();
+        let cue = root.join("game.cue");
+        fs::write(&cue, "FILE \"disc.bin\" BINARY\n  TRACK 01 MODE1/2352\n").unwrap();
+
+        assert_eq!(resolve_dropped(&track).unwrap(), cue);
+    }
+
+    /// A CHD does not contain the subchannel file of a game such as Ape
+    /// Escape. In the PlayStation package we declare that a `.sbi` goes with
+    /// the disc of the same name, as if a sheet named it as a track.
+    #[test]
+    fn a_subchannel_file_beside_its_disc_is_that_disc() {
+        let root = fixture("sbi");
+        let disc = root.join("Ape Escape.chd");
+        let subchannel = root.join("Ape Escape.sbi");
+        fs::write(&disc, b"not a real disc").unwrap();
+        fs::write(&subchannel, b"subchannel").unwrap();
+
+        assert_eq!(resolve_dropped(&subchannel).unwrap(), disc);
+    }
+
+    /// We use the `.ccd` as the CloneCD image. The `.img` is a companion listed
+    /// in the package, and we do not treat it as a cartridge in the folder.
+    #[test]
+    fn a_clonecd_image_beside_its_sheet_is_that_sheet() {
+        let root = fixture("ccd-img");
+        let sheet = root.join("game.ccd");
+        let image = root.join("game.img");
+        fs::write(&sheet, b"[CloneCD]\n").unwrap();
+        fs::write(&image, b"data").unwrap();
+
+        assert_eq!(resolve_dropped(&image).unwrap(), sheet);
+    }
+
+    /// Mega Drive dumps and disc tracks both often end in `.bin`. When no sheet in the
+    /// folder lists a dropped `.bin`, we use that file itself.
+    #[test]
+    fn a_bin_beside_an_unrelated_sheet_stays_that_file() {
+        let root = fixture("loose-bin");
+        let cartridge = root.join("Sonic.bin");
+        fs::write(&cartridge, b"SEGA").unwrap();
+        fs::write(root.join("notes.gdi"), "1\n1 0 4 2352 \"other.bin\" 0\n").unwrap();
+
+        assert_eq!(resolve_dropped(&cartridge).unwrap(), cartridge);
+    }
+
+    /// When two sheets name one track, we report both and the author chooses
+    /// between them.
+    #[test]
+    fn two_sheets_that_name_one_file_ask_for_one() {
+        let root = fixture("two-sheets");
+        let track = root.join("track.bin");
+        fs::write(&track, b"data").unwrap();
+        fs::write(
+            root.join("Alpha.cue"),
+            "FILE \"track.bin\" BINARY\n  TRACK 01 MODE1/2352\n",
+        )
+        .unwrap();
+        fs::write(root.join("Beta.gdi"), "1\n1 0 4 2352 \"track.bin\" 0\n").unwrap();
+
+        let resolved = resolve_dropped(&track);
+        let Err(error) = resolved else {
+            panic!(
+                "two sheets name the track but it resolved to {}",
+                resolved.unwrap().display()
+            );
+        };
+        assert!(error.contains("Alpha.cue"), "{error}");
+        assert!(error.contains("Beta.gdi"), "{error}");
+        assert!(
+            error.to_ascii_lowercase().contains("drop"),
+            "the error does not ask for one of them: {error}"
+        );
+    }
+
+    /// The playlist lists the layout, and the layout lists the track. For a
+    /// dropped track we use the layout, one step up, not the playlist.
+    #[test]
+    fn a_track_is_the_sheet_that_names_it_not_the_playlist_around_that_sheet() {
+        let root = fixture("track-not-playlist");
+        let track = root.join("track.bin");
+        fs::write(&track, b"data").unwrap();
+        let gdi = root.join("game.gdi");
+        fs::write(&gdi, "1\n1 0 4 2352 \"track.bin\" 0\n").unwrap();
+        fs::write(root.join("game.m3u"), "game.gdi\n").unwrap();
+
+        assert_eq!(resolve_dropped(&track).unwrap(), gdi);
+    }
+
+    /// A folder with more sheets than the cap. The sheets that sort first do
+    /// not name the track. The one that does has the track's name without
+    /// `(Track 3)`. In directory order we would reach the cap before it.
+    #[test]
+    fn the_sheet_that_names_a_track_is_found_among_more_decoys_than_the_cap() {
+        let root = fixture("sheet-cap");
+        let track = root.join("Sonic (Track 3).bin");
+        fs::write(&track, b"track").unwrap();
+        let sheet = root.join("Sonic.gdi");
+        fs::write(&sheet, "1\n1 0 4 2352 \"Sonic (Track 3).bin\" 0\n").unwrap();
+        for index in 0..SHEET_MATCH_LIMIT {
+            let decoy = format!("Sonic (Track 3) extra {index:03}.gdi");
+            fs::write(root.join(decoy), "1\n1 0 4 2352 \"nobody.bin\" 0\n").unwrap();
+        }
+
+        assert_eq!(
+            resolve_dropped(&track).unwrap(),
+            sheet,
+            "the sheet that names the track was not chosen"
+        );
+    }
+
     #[test]
     fn a_clonecd_sheet_refuses_the_sibling_its_core_requires() {
         let root = fixture("pce-ccd");
@@ -796,7 +1153,10 @@ mod tests {
         fs::write(ps1.join("game.img"), b"data").unwrap();
         let names = relative_names(&collect_for(&ps1.join("game.ccd"), Some("ps1")).unwrap());
         assert!(names.iter().any(|name| name == "game.img"), "{names:?}");
-        assert!(!names.iter().any(|name| name.ends_with(".sub")), "{names:?}");
+        assert!(
+            !names.iter().any(|name| name.ends_with(".sub")),
+            "{names:?}"
+        );
     }
 
     fn sheet_text(parser: SheetParser, name: &str) -> String {

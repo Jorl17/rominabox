@@ -342,6 +342,54 @@ async function checkWhatTravels(page, out) {
     return false;
   }
   if (out) await shot(page, path.join(out, "h3-tracks.png"));
+
+  // Here someone drops track 3 of a disc, the .bin. The layout in the same
+  // folder lists that .bin, so the receipt must be the layout's.
+  const trackDir = path.join(
+    ROOT,
+    "work/test-output/builder-shots/dropped-track",
+  );
+  fs.mkdirSync(trackDir, { recursive: true });
+  // In the browser preview we reject a bare .bin before asking what goes
+  // with it ("Choose a supported game file."). In the built app we resolve
+  // the drop in inspect first. We accept an .iso track in the preview, and
+  // the layout lists it the same way as track 3.
+  const trackName = "Sonic (Track 3).iso";
+  const layoutName = "Sonic.gdi";
+  fs.writeFileSync(path.join(trackDir, trackName), Buffer.from("track"));
+  fs.writeFileSync(
+    path.join(trackDir, layoutName),
+    `1\n1 0 4 2352 "${trackName}" 0\n`,
+  );
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, path.join(trackDir, trackName));
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  const trackReceipt = page.locator("[data-traveling]");
+  const trackShown = await trackReceipt
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  const trackText = trackShown
+    ? (await trackReceipt.innerText()).replace(/\s+/g, " ")
+    : "";
+  console.log(`TRACK ${JSON.stringify(trackText || "(no receipt)")}`);
+  const trackMissing = [layoutName, trackName].filter(
+    (name) => !trackText.includes(name),
+  );
+  const firstLine = trackShown
+    ? (await trackReceipt.locator("p").first().innerText()).trim()
+    : "";
+  if (!trackShown || trackMissing.length || firstLine !== layoutName) {
+    console.error(
+      "dropping a track did not present the sheet that names it",
+    );
+    console.error(
+      trackMissing.join(", ") || `first=${firstLine || "(receipt missing)"}`,
+    );
+    return false;
+  }
+  if (out) await shot(page, path.join(out, "i3-track.png"));
   return true;
 }
 

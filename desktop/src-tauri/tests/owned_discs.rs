@@ -187,3 +187,61 @@ fn his_sonic_adventure_2_brings_the_layout_and_every_track() {
         );
     }
 }
+
+/// Dropping track 3 instead of the layout gives the same result as dropping
+/// the layout. The name of the track does not match the `.gdi`, and the layout
+/// lists the track inside the file. The entry, console and files are the same.
+#[test]
+fn his_sonic_adventure_2_track_is_the_same_disc_as_the_layout() {
+    let folder = owned("Sonic Adventure 2 (Europe)");
+    let layout = folder.join("Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es).gdi");
+    let track = folder.join("Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es) (Track 3).bin");
+    assert!(
+        layout.is_file() && track.is_file(),
+        "missing {}",
+        folder.display()
+    );
+
+    let from_layout = content::resolve_dropped(&layout).expect("the layout");
+    let from_track = content::resolve_dropped(&track).expect("the track");
+    assert_eq!(
+        from_track, from_layout,
+        "dropping the track is not dropping the layout"
+    );
+    assert_eq!(
+        from_track,
+        content::resolve_dropped(&folder).expect("the folder"),
+        "dropping the track is not dropping the folder"
+    );
+
+    let files = |path: &Path| -> Vec<String> {
+        content::collect(path)
+            .expect("collect")
+            .files
+            .iter()
+            .map(|file| file.relative.to_string_lossy().into_owned())
+            .collect()
+    };
+    assert_eq!(files(&from_track), files(&layout));
+
+    let receipt = |path: &Path| {
+        rominabox_desktop::traveling::files_for(path, Some("dreamcast")).expect("receipt")
+    };
+    let track_receipt = receipt(&track);
+    let layout_receipt = receipt(&layout);
+    assert_eq!(track_receipt.entry, layout_receipt.entry);
+    assert_eq!(track_receipt.files, layout_receipt.files);
+
+    let cache = scratch();
+    stage(
+        &cache,
+        "dreamcast",
+        "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es)",
+    );
+    let from_track = metadata::inspect_game(&track, &cache, false).expect("inspect track");
+    let from_layout = metadata::inspect_game(&layout, &cache, false).expect("inspect layout");
+    assert_eq!(from_track.system, from_layout.system);
+    assert_eq!(from_track.system, "dreamcast");
+    assert_eq!(from_track.title, from_layout.title);
+    assert_eq!(from_track.catalog_name, from_layout.catalog_name);
+}
