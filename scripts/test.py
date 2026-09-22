@@ -147,10 +147,16 @@ SCOPES = [
     ),
     Scope(
         "bridge",
-        "the RmlUi bridge itself, compiled with a dummy renderer: actions, hover, focus, capture",
-        "anything in rmlui.c, which is not linked here, so control binding and keyboard order are untested",
+        "the RmlUi bridge itself, compiled with a dummy renderer: actions, hover, focus, capture, and that a pointer resting on a control writes the same focus the keyboard reads",
+        "the rest of rmlui.c (capture and sounds); the focus writer is extracted and compiled on its own, and control binding stays in the padbinds scope",
         ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
         slow=True,
+    ),
+    Scope(
+        "edges",
+        "that a photographed open list and a photographed focused control have all four outline edges painted",
+        "where the list was placed, or that the boxes in the bridge agree; it only reads the picture",
+        ["python3", str(ROOT / "scripts/check_menu_edges.py")],
     ),
     Scope(
         "states",

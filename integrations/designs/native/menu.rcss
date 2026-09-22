@@ -64,11 +64,14 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .control-leader.horizontal { height: 1dp; }
 .control-leader.vertical { width: 1dp; }
 .control-hit { position: absolute; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 2dp transparent; border-radius: design(marker-radius)dp; }
-.control-hit:hover { border-color: design(ink); }
-.control-hit.focused { border-color: design(highlight); }
+.control-hit:hover { border-color: design(ink); z-index: 2; }
+.control-hit.focused { border-color: design(highlight); z-index: 2; }
 .control-callout { position: absolute; width: design(callout-width)dp; height: design(callout-height)dp; padding: 0; border: 2dp design(edge); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
-.control-callout:hover { border-color: design(ink); }
-.control-callout.focused { border-color: design(highlight); }
+.control-callout:hover { border-color: design(ink); z-index: 2; }
+/* Later controls are later siblings, so the box of a control covers the
+ * bottom edge of the one before it. The focused control and the one under the
+ * pointer are above their neighbours. The open list is at 60. */
+.control-callout.focused { border-color: design(highlight); z-index: 2; }
 
 /* When closed, the picker is on the action row between RESET DEFAULTS and
  * CANCEL, because the heading is at the top centre and both gutters are full.
@@ -114,8 +117,8 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
  * under the illustration and not in a gutter. Each gutter is full with seven
  * 54dp callouts, and four directions per stick would cover other buttons. */
 .control-group { position: absolute; width: design(group-width)dp; height: design(group-height)dp; padding: 0; border: 2dp design(edge); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
-.control-group:hover { border-color: design(ink); }
-.control-group.focused { border-color: design(highlight); }
+.control-group:hover { border-color: design(ink); z-index: 2; }
+.control-group.focused { border-color: design(highlight); z-index: 2; }
 .control-label { margin-left: 10dp; margin-top: 5dp; height: 24dp; font-size: 18dp; overflow: hidden; white-space: nowrap; }
 .control-assignment { margin-left: 10dp; margin-right: 8dp; font-size: 14dp; color: design(muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .control-original { margin-right: 10dp; color: design(highlight); }
@@ -143,9 +146,9 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
  * entry.
  *
  * The label is the name of the level, and LOW and HIGH mark its direction.
- * The track meets both arrows. At rest the fill is the whole content box,
- * which is the top, and it stays in that box so the light edge of the bevel
- * runs the full width of the track. */
+ * The track is inset so the thumb at 0 and at 100 clears both arrows. At
+ * rest the fill is the whole content box, which is the top, and it stays in
+ * that box so the light edge of the bevel runs the full width of the track. */
 #volume-control { position: absolute; left: 56dp; top: 104dp; width: 840dp; height: 64dp; background-color: design(surface); border-width: 3dp; border-color: design(edge); }
 .volume-name { position: absolute; left: 16dp; top: 0; width: 112dp; height: 64dp; line-height: 64dp; font-family: Silkscreen; font-size: 18dp; color: design(ink); }
 .volume-end { position: absolute; top: 0; height: 64dp; line-height: 64dp; font-family: Silkscreen; font-size: 16dp; color: design(ink); text-align: center; white-space: nowrap; overflow: hidden; }
@@ -161,7 +164,7 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .option-entry { position: absolute; left: 0; width: 840dp; height: 64dp; line-height: 58dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; white-space: nowrap; overflow: hidden; }
 .options-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
 
-#volume-control .slider { position: absolute; left: 240dp; top: 14dp; width: 456dp; height: 36dp; }
+#volume-control .slider { position: absolute; left: 252dp; top: 14dp; width: 432dp; height: 36dp; }
 #volume-control .slider-readout { display: none; }
 #volume-control .slider-track { margin-top: 0; height: 28dp; background-color: design(bevel-dark); border-top: 4dp design(bevel-dark); border-left: 4dp design(bevel-dark); border-right: 4dp design(bevel-light); border-bottom: 4dp design(bevel-light); }
 #volume-control .slider-fill { top: 0; height: 100%; width: 100%; }
@@ -255,7 +258,10 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
  * of the dropdown of the controller picker. Elsewhere the row stays 68dp
  * high, and this applies only while the row describes a control. */
 #control-binds { z-index: 60; border: 2dp design(highlight); background-color: design(surface); width: 280dp; }
-#control-binds .list-row { height: 22dp; margin: 0; border-width: 0 0 0 4dp; border-color: design(surface); font-size: 13dp; line-height: 22dp; }
+/* Without this, width 100% is the content box and the 4dp accent is drawn
+ * outside it. With border-box the accent is inside the 100%, so the row is as
+ * wide as the list. */
+#control-binds .list-row { box-sizing: border-box; height: 22dp; margin: 0; border-width: 0 0 0 4dp; border-color: design(surface); font-size: 13dp; line-height: 22dp; }
 #control-binds .list-row + .list-row { border-top: 1dp design(rule); }
 #control-binds .list-row-icon { display: none; }
 #control-binds .list-row-title { left: 8dp; right: 120dp; top: 0; height: 22dp; line-height: 22dp; font-size: 13dp; color: design(ink); }
@@ -268,8 +274,8 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #control-binds .list-row:hover .list-row-state, #control-binds .list-row.focused .list-row-state { color: design(ink); }
 #control-binds .list-row:active .list-row-title, #control-binds .list-row:active .list-row-detail,
 #control-binds .list-row:active .list-row-state { color: design(surface); }
-#control-binds .list-pager { position: relative; left: 0; top: 0; width: 100%; height: 22dp; }
-#control-binds .list-pager-prev, #control-binds .list-pager-next, #control-binds .list-pager-count { height: 20dp; line-height: 18dp; font-size: 13dp; top: 0; }
+#control-binds .list-pager { box-sizing: border-box; position: relative; left: 0; top: 0; width: 100%; height: 22dp; }
+#control-binds .list-pager-prev, #control-binds .list-pager-next, #control-binds .list-pager-count { box-sizing: border-box; height: 20dp; line-height: 18dp; font-size: 13dp; top: 0; }
 #control-binds .list-pager-prev { left: 4dp; width: 56dp; }
 #control-binds .list-pager-count { left: 64dp; width: 72dp; }
 #control-binds .list-pager-next { left: 140dp; width: 56dp; }

@@ -68,11 +68,14 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .control-leader.horizontal { height: 1dp; }
 .control-leader.vertical { width: 1dp; }
 .control-hit { position: absolute; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 1dp transparent; border-radius: design(marker-radius)dp; }
-.control-hit:hover { border-color: design(edge); border-width: 2dp; }
-.control-hit.focused { border-color: design(highlight); border-width: 2dp; }
+.control-hit:hover { border-color: design(edge); border-width: 2dp; z-index: 2; }
+.control-hit.focused { border-color: design(highlight); border-width: 2dp; z-index: 2; }
 .control-callout { position: absolute; width: design(callout-width)dp; height: design(callout-height)dp; padding: 0; border-width: 1dp; border-color: design(rule); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
-.control-callout:hover { border-color: design(edge); }
-.control-callout.focused { border-left-width: 4dp; border-left-color: design(highlight); }
+.control-callout:hover { border-color: design(edge); z-index: 2; }
+/* Later controls are later siblings and would cover the focused edge of
+ * the control before them, so we draw focus and the pointer above the
+ * neighbours. The open list is at 60. */
+.control-callout.focused { border-color: design(highlight); border-left-width: 4dp; border-left-color: design(highlight); z-index: 2; }
 
 /* Below the scene, in the band without callouts. The list opens upward from
  * here and ends before the d-pad, so when a drag ends off the list, the
@@ -94,8 +97,8 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .control-picker-option.selected:active { color: design(slot-label); }
 
 .control-group { position: absolute; width: design(group-width)dp; height: design(group-height)dp; padding: 0; border-width: 1dp; border-color: design(rule); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
-.control-group:hover { border-color: design(edge); }
-.control-group.focused { border-left-width: 4dp; border-left-color: design(highlight); }
+.control-group:hover { border-color: design(edge); z-index: 2; }
+.control-group.focused { border-color: design(highlight); border-left-width: 4dp; border-left-color: design(highlight); z-index: 2; }
 .control-label { margin-left: 8dp; margin-top: 2dp; height: 18dp; font-size: 13dp; overflow: hidden; white-space: nowrap; }
 .control-assignment { margin-left: 8dp; font-size: 12dp; color: design(muted); white-space: nowrap; overflow: hidden; }
 .control-original { margin-right: 8dp; color: design(highlight); }
@@ -175,8 +178,10 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 /* The bind list, drawn over its control. The rows in Disc are the
    full-width blocks used in the rest of this design, not the thin strips of
    Native, with the same contract in the style of this design. */
-#control-binds { z-index: 60; width: 360dp; background-color: design(surface); border-width: 0 0 0 4dp; border-color: design(highlight); }
-#control-binds .list-row { height: 30dp; margin: 0; padding: 0; border-width: 0 0 1dp 0; border-color: design(rule); font-size: 13dp; }
+#control-binds { z-index: 60; width: 360dp; background-color: design(surface); border-width: 1dp 1dp 1dp 4dp; border-color: design(highlight); }
+/* As in Native, with border-box the accent of a focused row stays inside
+ * the list. The separator is the bottom border of the row. */
+#control-binds .list-row { box-sizing: border-box; height: 30dp; margin: 0; padding: 0; border-width: 0 0 1dp 0; border-color: design(rule); font-size: 13dp; }
 #control-binds .list-row-icon { display: none; }
 #control-binds .list-row-title { left: 12dp; right: 150dp; top: 0; height: 30dp; line-height: 30dp; font-size: 13dp; color: design(ink); }
 #control-binds .list-row-detail { left: auto; right: 52dp; top: 0; width: 96dp; height: 30dp; line-height: 30dp; font-size: 12dp; text-align: right; color: design(muted); }
@@ -186,8 +191,8 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #control-binds .list-row:active { background-color: design(highlight); color: design(slot-label); }
 #control-binds .list-row:active .list-row-title, #control-binds .list-row:active .list-row-detail,
 #control-binds .list-row:active .list-row-state { color: design(slot-label); }
-#control-binds .list-pager { position: relative; left: 0; top: 0; width: 100%; height: 28dp; }
-#control-binds .list-pager-prev, #control-binds .list-pager-next, #control-binds .list-pager-count { height: 28dp; line-height: 26dp; font-size: 12dp; top: 0; }
+#control-binds .list-pager { box-sizing: border-box; position: relative; left: 0; top: 0; width: 100%; height: 28dp; }
+#control-binds .list-pager-prev, #control-binds .list-pager-next, #control-binds .list-pager-count { box-sizing: border-box; height: 28dp; line-height: 26dp; font-size: 12dp; top: 0; }
 #control-binds .list-pager-prev { left: 0; width: 72dp; }
 #control-binds .list-pager-count { left: 80dp; width: 110dp; }
 #control-binds .list-pager-next { left: 198dp; width: 72dp; }

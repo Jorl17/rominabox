@@ -25,6 +25,9 @@ if [ ! -f "$rmlui_lib" ]; then
   exit 1
 fi
 
+focus_status=0
+node "$script_dir/test_control_focus.mjs" || focus_status=$?
+
 mkdir -p "$build_dir"
 freetype_cflags=$(pkg-config --cflags freetype2)
 freetype_libs=$(pkg-config --libs freetype2)
@@ -83,3 +86,94 @@ p.write_text(document.replace("<!--SCREENS-->", panel))
 FIXTURE
 
 "$out" "$assets" "$build_dir/thumbnail-test.png"
+
+# Bind lists and the volume thumb, for every controller declared in the
+# repository and both designs. We request the scenes from the exporter and
+# measure the boxes that the bridge lays out.
+python3 - "$repo_root" "$build_dir" "$out" <<'PY'
+import json, subprocess, sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+build = Path(sys.argv[2])
+binary = sys.argv[3]
+designs = [entry["id"] for entry in json.loads((root / "desktop/designs.json").read_text())["designs"]]
+profiles = json.loads((root / "desktop/controls.json").read_text())["profiles"]
+controllers = root / "desktop/assets/controllers"
+cli = subprocess.check_output(["python3", str(root / "scripts/built.py")], text=True).strip()
+failed = False
+
+for design in designs:
+    declared = json.loads((root / "integrations/designs" / design / "design.json").read_text())
+    after = declared["binds"]["afterMs"]
+    width = declared["binds"]["width"]
+    if after != 1200:
+        print(f"FAIL {design} binds.afterMs is {after}; the list should wait 1200 ms", file=sys.stderr)
+        failed = True
+    design_dir = root / "integrations/designs" / design
+    assets = build / f"placement-{design}"
+    scenes = assets / "scenes"
+    scenes.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [cli, "stage-theme"],
+        input=json.dumps({"source": str(design_dir), "destination": str(assets), "palette": "blue"}),
+        text=True, check=True, stdout=subprocess.DEVNULL,
+    )
+    for profile in profiles:
+        system = profile["systems"][0] if profile["systems"] else "megadrive"
+        dest = assets / "stage" / profile["id"]
+        dest.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [cli, "stage-controls"],
+            input=json.dumps({
+                "system": system,
+                "source": str(controllers),
+                "design": str(design_dir),
+                "destination": str(dest),
+                "controls": {"profile": profile["id"]},
+            }),
+            text=True, check=True, stdout=subprocess.DEVNULL,
+        )
+        scene = dest / f"scene-{profile['id']}.rml"
+        if not scene.is_file():
+            print(f"FAIL {design}/{profile['id']}: exporter wrote no scene", file=sys.stderr)
+            failed = True
+            continue
+        (scenes / f"{profile['id']}.rml").write_text(scene.read_text())
+        lines = []
+        for control in profile["controls"]:
+            group = control.get("group") or ""
+            anchor = f"control-group-{group}" if group else f"control-{control['id']}"
+            title = control["label"]
+            lines.append(f"{anchor}\t{title}\t{control['key']}\tKEY")
+            control_id = control["id"]
+            if control_id in ("up", "down", "left", "right"):
+                detail, kind = f"Hat #0 {title}", "PAD"
+            elif group.endswith("stick") and not control_id.endswith("3"):
+                detail, kind = "Axis -0", "AXIS"
+            else:
+                detail, kind = "Button 0", "PAD"
+            lines.append(f"{anchor}\t{title}\t{detail}\t{kind}")
+        (scenes / f"{profile['id']}.lines").write_text("\n".join(lines) + "\n")
+    # We measure the list in the document of one export, which has the
+    # bind rows and the volume control, and swap in the scenes above.
+    shell = assets / "stage" / profiles[0]["id"]
+    menu = shell / "menu.rml"
+    if not menu.is_file():
+        print(f"FAIL {design}: exporter wrote no menu", file=sys.stderr)
+        failed = True
+        continue
+    (assets / "menu.rml").write_bytes(menu.read_bytes())
+    completed = subprocess.run(
+        [binary, str(assets), "placement", str(scenes), design, str(width)],
+    )
+    if completed.returncode != 0:
+        failed = True
+
+if failed:
+    sys.exit(1)
+PY
+
+if [ "$focus_status" -ne 0 ]; then
+  exit "$focus_status"
+fi

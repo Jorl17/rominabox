@@ -42,7 +42,7 @@
     "rowGap": 4
   },
   "binds": {
-    "afterMs": 400,
+    "afterMs": 1200,
     "width": 360
   },
   "overlays": [
