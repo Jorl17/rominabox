@@ -39,8 +39,14 @@ CHANNEL_TOLERANCE = 6  # how far one of those pixels may be off, per channel
 
 def sources() -> list[dict]:
     """Return every shader that can have a preview, with the source we make it from."""
+    # We send `shader-sources` no request, and we close stdin, so that a pipe
+    # left open in the test run cannot make us wait or fail with EAGAIN.
     asked = subprocess.run(
-        [str(_cli()), "shader-sources"], capture_output=True, text=True, timeout=120
+        [str(_cli()), "shader-sources"],
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     if asked.returncode != 0:
         detail = asked.stderr.strip() or asked.stdout.strip()

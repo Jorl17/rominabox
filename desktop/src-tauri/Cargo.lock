@@ -3159,6 +3159,7 @@ dependencies = [
  "datary",
  "icns",
  "image",
+ "libc",
  "md-5",
  "percent-encoding",
  "serde",
