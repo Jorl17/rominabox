@@ -495,13 +495,17 @@ def main() -> int:
     digests: dict[str, str] = {}
     rendered = 0
     for palette in palettes():
-        workspace = ROOT / f"work/menu-states-staging/{palette}"
+        # The console is part of the path. We run test scopes in parallel, and
+        # when two runs stage different consoles in one directory, the second
+        # staging would replace the design of the first, and we would see a
+        # changed state instead of a collision.
+        workspace = ROOT / f"work/menu-states-staging/{arguments.system}/{palette}"
         shutil.rmtree(workspace, ignore_errors=True)
         staging = stage(arguments.system, workspace, arguments.variant, palette)
         document = (staging / "menu.rml").read_text()
         print(f"\n{palette}")
         rendered += render_palette(
-            palette, staging, document, arguments, digests, missing
+            arguments.system, palette, staging, document, arguments, digests, missing
         )
 
     return finish(arguments, digests, missing, rendered)
@@ -522,18 +526,35 @@ def palettes() -> list[str]:
     return [entry["id"] for entry in declared["palettes"]]
 
 
-def draw_state(palette: str, name: str, state: dict, staging: Path, document: str, output: Path):
+def draw_state(system: str, palette: str, name: str, state: dict, staging: Path, document: str, output: Path):
     """One picture. Returns (key, digest or None, line for stdout, line for stderr)."""
-    key = f"{palette}/{name}"
-    resolved = {i: resolve(document, i) for i in state["set"]}
-    absent = [i for i, found in resolved.items() if found is None]
+    key = f"{system}/{palette}/{name}"
+    # In a state we can list what the console must offer for the state to make
+    # sense. The picker states require a picker, and a console with one
+    # controller has none, so refusing them there would mark every such console
+    # as failed for a screen it rightly lacks. A renamed element still gives an
+    # error, because the other elements of the state are listed and missing.
+    needs = state.get("needs")
+    if needs and resolve(document, needs) is None:
+        return key, None, f"  {name:<26}not offered by this console\n", ""
+
+    # An id ending in "?" is optional in the state. On an illustrated pad we put
+    # an invisible hit circle over each drawn button. A console without a
+    # drawing has a grid instead, where the box is the target and there is no
+    # circle. Both are correct, so for a state with a lit control we light the
+    # one that is there and do not refuse a console with only one of them.
+    wanted = {i.rstrip("?"): (v, i.endswith("?")) for i, v in state["set"].items()}
+    resolved = {i: resolve(document, i) for i in wanted}
+    absent = [i for i, found in resolved.items() if found is None and not wanted[i][1]]
     if absent:
         # We do not skip it, because when the element of a state is gone,
         # someone has renamed or removed that element.
         return key, None, "", f"  REFUSED {key}: {', '.join(absent)} not in the document\n"
 
     overrides: list[str] = []
-    for element_id, properties in state["set"].items():
+    for element_id, (properties, _) in wanted.items():
+        if resolved[element_id] is None:
+            continue
         for prop, value in properties.items():
             overrides += ["--set", f"{resolved[element_id]}:{prop}={value}"]
 
@@ -561,14 +582,14 @@ def draw_state(palette: str, name: str, state: dict, staging: Path, document: st
     return key, digest, f"  {name:<26}{state['describes']}\n", ""
 
 
-def render_palette(palette, staging, document, arguments, digests, missing) -> int:
+def render_palette(system, palette, staging, document, arguments, digests, missing) -> int:
     """Draw every declared state in one colour scheme."""
     output = arguments.output / palette
     output.mkdir(parents=True, exist_ok=True)
     states = list(declared_states().items())
     drawn = mapped(
         states,
-        lambda item: draw_state(palette, item[0], item[1], staging, document, output),
+        lambda item: draw_state(system, palette, item[0], item[1], staging, document, output),
     )
     rendered = 0
     for key, digest, line, error in drawn:
@@ -577,6 +598,11 @@ def render_palette(palette, staging, document, arguments, digests, missing) -> i
         if error:
             print(error, end="", file=sys.stderr)
             missing.append(key)
+            continue
+        # For a state that this console does not offer we drew nothing, so there is
+        # nothing to pin. If we recorded it, every skipped state would look the
+        # same as every other, and the twin check would report them.
+        if digest is None:
             continue
         digests[key] = digest
         rendered += 1
@@ -591,8 +617,8 @@ def finish(arguments, digests, missing, rendered) -> int:
     # arrow keys can see which option they would choose with a press.
     same: dict[tuple[str, str], list[str]] = {}
     for key, value in digests.items():
-        palette, name = key.split("/", 1)
-        same.setdefault((palette, value), []).append(key)
+        system, palette, name = key.split("/", 2)
+        same.setdefault((system, palette, value), []).append(key)
     twins = [names for names in same.values() if len(names) > 1]
     for names in twins:
         print(
@@ -620,7 +646,11 @@ def finish(arguments, digests, missing, rendered) -> int:
         return 1
 
     if arguments.record:
-        DIGESTS.write_text(json.dumps(digests, indent=2, sort_keys=True) + "\n")
+        # We merge instead of replacing, for the same reason.
+        kept = json.loads(DIGESTS.read_text()) if DIGESTS.exists() else {}
+        kept = {k: v for k, v in kept.items() if not k.startswith(f"{arguments.system}/")}
+        kept.update(digests)
+        DIGESTS.write_text(json.dumps(kept, indent=2, sort_keys=True) + "\n")
         print(f"\nrecorded {len(digests)} state digests -> {DIGESTS.name}")
         return 0
 
@@ -628,8 +658,12 @@ def finish(arguments, digests, missing, rendered) -> int:
         if not DIGESTS.exists():
             raise SystemExit(f"no recorded states at {DIGESTS}; run --record first")
         expected = json.loads(DIGESTS.read_text())
-        changed = [n for n, d in digests.items() if expected.get(n) != d]
-        gone = sorted(set(expected) - set(digests))
+        # Only the entries of this console. A run with one staged console has no
+        # results for another, and if we called the others missing, every run
+        # with one console would fail.
+        mine = {k: v for k, v in expected.items() if k.startswith(f"{arguments.system}/")}
+        changed = [n for n, d in digests.items() if mine.get(n) != d]
+        gone = sorted(set(mine) - set(digests))
         if changed or gone:
             for name in changed:
                 print(f"  CHANGED {name}", file=sys.stderr)
