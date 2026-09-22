@@ -140,7 +140,8 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
  * two lines here instead of running under the state text. */
 .list-row-title { position: absolute; left: 76dp; right: 164dp; top: 6dp; font-size: 16dp; color: design(ink); white-space: nowrap; overflow: hidden; }
 .list-row-detail { position: absolute; left: 76dp; right: 164dp; top: 33dp; height: 30dp; overflow: hidden; font-size: 12dp; color: design(muted); }
-/* The full height of the row, so the word is vertically centred. */
+/* The full height of the row, so the word is centred in the line box. The
+ * row is 68 units high inside. */
 .list-row-state { position: absolute; right: 12dp; top: 0; width: 140dp; height: 68dp; line-height: 68dp; font-size: 12dp; text-align: right; white-space: nowrap; color: design(muted); }
 /* We highlight the row that is in effect, such as the shader that is on. A
  * row that is only listed has no highlight. */
@@ -172,6 +173,14 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
 .slot.disabled, .slot.disabled:hover { border-color: design(rule); }
 .slot.disabled .slot-label { background-color: design(well-edge); color: design(disabled); }
 .slot.disabled .slot-state { color: design(disabled); }
+
+/* Where Options lists what we bundled with a game. In the exporter we append
+ * these rules to a design that declares none, so a design without an
+ * Options screen still works.
+ */
+#options-entries { position: absolute; left: 276dp; top: 148dp; width: 400dp; height: 320dp; }
+.option-entry { position: absolute; left: 0; width: 400dp; height: 48dp; line-height: 42dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; }
+.options-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
 
 /* The unlock notice. The box is as wide as its contents: it is centred in
  * the row, it is as wide as its words, and a long description wraps.

@@ -241,10 +241,16 @@ pub fn identify(hash: &str) -> Result<Option<u32>, String> {
 
 /// A game's whole list, in the order shown on the service.
 pub fn fetch_catalog(account: &Account, game_id: u32) -> Result<Catalog, String> {
+    // Encoded, so that an & or a space in a secret cannot end its value. We
+    // stop the redaction at those characters, and the rest would remain in a
+    // message.
+    let encode = |value: &str| {
+        percent_encoding::utf8_percent_encode(value, percent_encoding::NON_ALPHANUMERIC).to_string()
+    };
     let body = fetch(&format!(
         "{API_BASE}/API_GetGameExtended.php?i={game_id}&y={key}&z={user}",
-        key = account.key,
-        user = account.user,
+        key = encode(&account.key),
+        user = encode(&account.user),
     ))?;
     parse_catalog(&body)
 }
@@ -345,17 +351,12 @@ pub fn download_badges(catalog: &Catalog, into: &Path) -> Result<usize, String> 
 /// The picture for a row when its badge was never downloaded.
 ///
 /// An `img` without a picture is a white rectangle, which is worse than no
-/// picture at all. This is the empty well of the save slots, at badge size.
+/// picture at all. This one is empty, so the row's own colours show through
+/// its frame. A colour chosen here would be the blue one on a green screen.
 fn placeholder_png() -> Result<Vec<u8>, String> {
     use image::{ImageBuffer, Rgba};
-    let mut image: ImageBuffer<Rgba<u8>, Vec<u8>> =
-        ImageBuffer::from_pixel(56, 56, Rgba([6, 26, 72, 255]));
-    for x in 0..56u32 {
-        for y in [0u32, 55] {
-            image.put_pixel(x, y, Rgba([71, 110, 171, 255]));
-            image.put_pixel(y, x, Rgba([71, 110, 171, 255]));
-        }
-    }
+    let image: ImageBuffer<Rgba<u8>, Vec<u8>> =
+        ImageBuffer::from_pixel(56, 56, Rgba([0, 0, 0, 0]));
     let mut bytes = std::io::Cursor::new(Vec::new());
     image
         .write_to(&mut bytes, image::ImageFormat::Png)
@@ -438,6 +439,10 @@ pub fn rows(
 ) -> Result<Vec<crate::lists::ListItem>, String> {
     let mut items = Vec::new();
     for achievement in &catalog.achievements {
+        // The person who bundled the game is not the person who plays it. Their
+        // earned dates came with the list, and if we shipped them, rows the
+        // player never earned would show UNLOCKED, with the bright badge.
+        let achievement = &Achievement { earned: false, ..achievement.clone() };
         items.push(crate::lists::ListItem {
             id: format!("achievement-{}", achievement.id),
             icon: stage_badge(menu_assets, achievement, downloaded)?,
@@ -455,11 +460,10 @@ pub fn rows(
 ///
 /// We read all of a design's screens with one parser, so a field added to
 /// Screen applies to this screen as well.
-pub fn screen(design: &Path) -> Option<crate::themes::Screen> {
-    crate::themes::declared_screens(design)
-        .ok()?
+pub fn screen(design: &Path) -> Result<Option<crate::themes::Screen>, String> {
+    Ok(crate::themes::declared_screens(design)?
         .into_iter()
-        .find(|screen| screen.id == "achievements")
+        .find(|screen| screen.id == "achievements"))
 }
 
 pub struct Staged {
@@ -483,7 +487,7 @@ pub fn stage(
     let Some(catalog) = catalog else {
         return Ok(Staged { list: None });
     };
-    let Some(screen) = screen(design) else {
+    let Some(screen) = screen(design)? else {
         return Err(
             "this design declares no achievements screen, so the list has nowhere to go".into(),
         );
@@ -516,8 +520,10 @@ mod tests {
 
     #[test]
     fn a_mega_drive_file_is_hashed_whole() {
-        let rom = b"SEGA MEGA DRIVE and then the game".to_vec();
-        assert_eq!(rom_hash(&rom), rom_hash(&rom.clone()));
+        let rom = b"SEGA MEGA DRIVE and then the rest of the cartridge".to_vec();
+        // The first sixteen bytes are cartridge, not a dumper's header, so they
+        // are part of the hash.
+        assert_ne!(rom_hash(&rom), rom_hash(&rom[16..]));
         assert_eq!(rom_hash(&rom).len(), 32);
     }
 

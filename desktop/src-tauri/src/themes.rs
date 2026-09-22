@@ -623,7 +623,7 @@ fn apply_options(
         } else {
             let back = options.back_label.clone().unwrap_or_else(|| "BACK".into());
             let shell = format!(
-                "<div id=\"options-panel\" style=\"display:none;\"><div id=\"options-entries\">{entries}</div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
+                "<div id=\"options-panel\" class=\"screen-panel\" style=\"display:none;\"><div id=\"options-entries\">{entries}</div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
                 entries = entries,
                 back = rml_text(&back),
             );

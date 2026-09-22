@@ -424,7 +424,6 @@ mod tests {
         let out = declare_screen(cfg, &screen, Some(("pause", "achievements-back")))
             .expect("declared");
         assert_eq!(out.matches("screen_panel_achievements = ").count(), 1);
-        assert_eq!(out.matches("achievements").filter(|_| true).count() > 0, true);
         assert!(out.contains("screen_button_pause = \"options-back achievements-back\""));
     }
 }
