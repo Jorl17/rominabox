@@ -19,7 +19,6 @@ import argparse
 import json
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -27,6 +26,7 @@ PREVIEWS = ROOT / "integrations/shaders/previews"
 DRIVER = Path(__file__).resolve().parent / "shader_previews.mjs"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import scratch  # noqa: E402
 from built import cli as _cli  # noqa: E402
 
 # The same tolerances as for the controller artwork, for the same reason. We
@@ -55,7 +55,7 @@ def sources() -> list[dict]:
 
 
 def draw(shaders: list[dict], destination: Path) -> None:
-    with tempfile.TemporaryDirectory() as temporary:
+    with scratch.scratch() as temporary:
         listing = Path(temporary) / "shaders.json"
         listing.write_text(json.dumps(shaders))
         drawn = subprocess.run(
@@ -115,9 +115,9 @@ def main() -> int:
         print(f"\nrendered {len(shaders)} shader previews -> {PREVIEWS}")
         return 0
 
-    with tempfile.TemporaryDirectory() as temporary:
-        scratch = Path(temporary)
-        draw(shaders, scratch)
+    with scratch.scratch() as temporary:
+        fresh = Path(temporary)
+        draw(shaders, fresh)
         drifted: list[str] = []
         for shader in shaders:
             name = f"{shader['id']}.png"
@@ -126,7 +126,7 @@ def main() -> int:
                 print(f"  MISSING {name}", file=sys.stderr)
                 drifted.append(shader["id"])
                 continue
-            verdict = compare(recorded, scratch / name)
+            verdict = compare(recorded, fresh / name)
             if verdict:
                 print(f"  DRIFTED {name}: {verdict}", file=sys.stderr)
                 drifted.append(shader["id"])

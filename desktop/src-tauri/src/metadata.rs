@@ -1110,17 +1110,9 @@ fn clean_title(value: &str) -> String {
 mod tests {
     use super::*;
     use std::io::Write;
-    use std::sync::atomic::{AtomicU64, Ordering};
 
-    fn fixture_directory(label: &str) -> PathBuf {
-        static SEQUENCE: AtomicU64 = AtomicU64::new(0);
-        let path = std::env::temp_dir().join(format!(
-            "rominabox-metadata-{label}-{}-{}",
-            std::process::id(),
-            SEQUENCE.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).unwrap();
-        path
+    fn fixture_directory(label: &str) -> rominabox_scratch::Scratch {
+        rominabox_scratch::Scratch::dir(&format!("rominabox-metadata-{label}"))
     }
 
     #[test]

@@ -209,15 +209,13 @@ mod tests {
 
     #[test]
     fn a_missing_file_is_unity_gain() {
-        let dir = std::env::temp_dir().join("rominabox-volume-missing");
-        let _ = fs::remove_dir_all(&dir);
+        let dir = rominabox_scratch::Scratch::reserve("rominabox-volume-missing");
         assert_eq!(read(&dir), Level::default());
     }
 
     #[test]
     fn a_level_roundtrips_and_a_value_past_the_ends_is_pulled_back() {
-        let dir = std::env::temp_dir().join("rominabox-volume-roundtrip");
-        let _ = fs::remove_dir_all(&dir);
+        let dir = rominabox_scratch::Scratch::dir("rominabox-volume-roundtrip");
         write(&dir, Level { decibels: -40.0 }).unwrap();
         assert_eq!(read(&dir), Level { decibels: -40.0 });
         let written = fs::read_to_string(path_in(&dir)).unwrap();
@@ -233,9 +231,7 @@ mod tests {
 
     #[test]
     fn an_old_mute_is_the_quiet_end() {
-        let dir = std::env::temp_dir().join("rominabox-volume-old-mute");
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
+        let dir = rominabox_scratch::Scratch::dir("rominabox-volume-old-mute");
         fs::write(
             path_in(&dir),
             format!(

@@ -3162,6 +3162,7 @@ dependencies = [
  "libc",
  "md-5",
  "percent-encoding",
+ "rominabox-scratch",
  "serde",
  "serde_json",
  "sha1",
@@ -3173,6 +3174,10 @@ dependencies = [
  "ureq",
  "zip",
 ]
+
+[[package]]
+name = "rominabox-scratch"
+version = "0.1.0"
 
 [[package]]
 name = "rustc-hash"

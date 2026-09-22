@@ -10,18 +10,9 @@ use rominabox_catalog::{Catalog, Diagnostic};
 use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
-static NEXT: AtomicU64 = AtomicU64::new(0);
-
-fn scratch() -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "rominabox-catalog-invalid-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).unwrap();
-    path
+fn scratch() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-catalog-invalid")
 }
 
 fn write(path: &Path, body: &str) {
@@ -41,7 +32,7 @@ fn package_dir(root: &Path, name: &str) -> PathBuf {
     dir
 }
 
-fn one(name: &str) -> (PathBuf, PathBuf) {
+fn one(name: &str) -> (rominabox_scratch::Scratch, PathBuf) {
     let root = scratch();
     let package = package_dir(&root, name);
     (root, package)
@@ -320,8 +311,8 @@ fn a_console_declaring_no_content_extensions_is_rejected() {
 
 #[test]
 fn an_asset_path_cannot_escape_its_package() {
-    let absolute = std::env::temp_dir().join("rominabox-catalog-outside.png");
-    let absolute = absolute.to_str().expect("temp dir is utf-8");
+    let outside = rominabox_scratch::Scratch::reserve("rominabox-catalog-outside");
+    let absolute = outside.to_str().expect("temp dir is utf-8");
     for image in ["../outside.png", absolute] {
         let (root, package) = one("art");
         write_console(&package, &offering("art", "art"));

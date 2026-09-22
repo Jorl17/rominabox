@@ -2008,8 +2008,7 @@ mod tests {
 
     #[test]
     fn unknown_sound_packs_are_rejected_before_staging() {
-        let temporary =
-            std::env::temp_dir().join(format!("rominabox-sound-pack-{}", std::process::id()));
+        let temporary = rominabox_scratch::Scratch::reserve("rominabox-sound-pack");
         let error = prepare_sound_assets(&sound_source(), &temporary, "pulse")
             .expect_err("retired pack must not stage");
         assert!(error.contains("available menu sound pack"), "{error}");
@@ -2083,14 +2082,7 @@ mod tests {
         );
         assert!(!menu.contains("PROTOTYPE"));
 
-        let root = std::env::temp_dir().join(format!(
-            "rominabox-version-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
+        let root = rominabox_scratch::Scratch::dir("rominabox-version");
         prepare_theme_assets(&design, &root, "blue", None).expect("staged");
         let staged = fs::read_to_string(root.join("menu.rml")).expect("the staged menu");
         assert!(
@@ -2164,15 +2156,7 @@ mod tests {
     /// author turns it on, and we reject an unknown id and do not drop it.
     #[test]
     fn an_entry_appears_only_when_that_game_enables_it() {
-        let root = std::env::temp_dir().join(format!(
-            "rominabox-options-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&root).unwrap();
+        let root = rominabox_scratch::Scratch::dir("rominabox-options");
         fs::write(
             root.join("menu.rml"),
             "<rml><body><div id=\"screen\"><div id=\"actions\"><button class=\"menu-action\" id=\"resume\">CONTINUE</button><button class=\"menu-action\" id=\"quit\">QUIT</button></div><div id=\"footer\"></div></div></body></rml>",

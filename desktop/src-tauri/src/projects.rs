@@ -895,17 +895,8 @@ fn default_palette() -> String {
 mod tests {
     use super::*;
 
-    fn fixture(name: &str) -> PathBuf {
-        let nonce = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let path = std::env::temp_dir().join(format!(
-            "rominabox-project-{name}-{}-{nonce}",
-            std::process::id()
-        ));
-        fs::create_dir_all(&path).unwrap();
-        path
+    fn fixture(name: &str) -> rominabox_scratch::Scratch {
+        rominabox_scratch::Scratch::dir(&format!("rominabox-project-{name}"))
     }
 
     #[test]

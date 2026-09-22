@@ -16,7 +16,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
-    sync::atomic::{AtomicBool, AtomicU64, Ordering},
+    sync::atomic::AtomicBool,
 };
 
 fn write_runtime_stub(path: &Path) {
@@ -35,16 +35,8 @@ fn write_runtime_stub(path: &Path) {
     assert!(status.success(), "could not compile the runtime stub");
 }
 
-static NEXT: AtomicU64 = AtomicU64::new(0);
-
-fn workspace() -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "rominabox-recovery-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).unwrap();
-    path
+fn workspace() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-recovery")
 }
 
 fn copy_tree(source: &Path, destination: &Path) {

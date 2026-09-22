@@ -11,9 +11,6 @@ use serde_json::{json, Value};
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
-
-static NEXT: AtomicU64 = AtomicU64::new(0);
 
 /// A complete 1×1 PNG (signature, IHDR, IDAT, IEND). An empty file would still
 /// satisfy `is_file`, and would not be the asset an illustrated profile declares.
@@ -68,14 +65,8 @@ const TESTBOX_PAD: &[AnchoredControl] = &[
     },
 ];
 
-fn scratch() -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "rominabox-catalog-extension-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).expect("scratch catalog root");
-    path
+fn scratch() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-catalog-extension")
 }
 
 fn write_console(root: &Path, directory: &str, console: ConsoleDecl<'_>) -> PathBuf {
