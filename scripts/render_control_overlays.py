@@ -29,8 +29,6 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-from built import binary
-
 ROOT = Path(__file__).resolve().parent.parent
 CONTROLS = ROOT / "desktop/controls.json"
 ARTWORK = ROOT / "desktop/assets/controllers"
@@ -91,7 +89,13 @@ def _font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-CLI = binary("rominabox-cli")
+# We build it here and check that it comes from this checkout, because every
+# worktree shares one cargo target, so the binary next to the manifest may be
+# out of date or from another checkout. See scripts/built.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from built import cli as _cli  # noqa: E402
+
+CLI = _cli()
 
 
 def scene_geometry(profile_id: str) -> dict:

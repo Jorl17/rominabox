@@ -63,6 +63,10 @@ pub struct ExportRequest {
     /// Restore stock RetroArch native menus in the exported app.
     #[serde(default)]
     pub advanced_emulator_access: bool,
+    /// The Options entries we offer in this game. When absent, we use the
+    /// design's defaults. With an empty list, we show no Options button.
+    #[serde(default)]
+    pub menu_entries: Option<Vec<String>>,
     /// The shader presets we bundle into the game. Usually there are none,
     /// and then the game has no shader screen and no preset.
     #[serde(default)]
@@ -444,6 +448,7 @@ where
             &resources.join("menu-assets"),
             &request.system,
             &request.controls,
+            request.menu_entries.as_deref(),
         )
         .map_err(|message| ExportError::new("stage", message))?;
         crate::shaders::install(
@@ -554,6 +559,7 @@ where
         "firmware": request.firmware.iter().filter_map(|path| firmware_destination_name(path, system)).collect::<Vec<_>>(),
         "splash": request.splash,
         "advancedEmulatorAccess": request.advanced_emulator_access,
+        "menuEntries": request.menu_entries,
     });
     fs::write(
         resources.join("game.json"),
@@ -2375,6 +2381,7 @@ mod tests {
             firmware: Vec::new(),
             splash,
             advanced_emulator_access: false,
+            menu_entries: None,
             shaders: crate::shaders::ShaderSelection::default(),
             output_dir: PathBuf::from("output"),
             target: ExportTarget::Macos,

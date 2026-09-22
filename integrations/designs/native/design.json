@@ -48,21 +48,28 @@
       "button": "controls-back"
     },
     {
+      "id": "options",
+      "panel": "options-panel",
+      "heading": "OPTIONS",
+      "footer": "ESC  BACK",
+      "button": "options",
+      "label": "OPTIONS",
+      "back": "BACK",
+      "place": "options"
+    },
+    {
       "id": "controls",
       "panel": "controls-panel",
       "heading": "CONTROLS",
       "footer": "ESC  BACK",
-      "button": "controls"
+      "button": "controls",
+      "option": {
+        "label": "CONTROLS",
+        "default": true
+      }
     }
   ],
   "tokens": {
-    "ink": "#ffffff",
-    "bevel-light": "#9edaff",
-    "bevel-dark": "#020b27",
-    "rule": "#476eab",
-    "disabled": "#647cad",
-    "frame": "#5296ef",
-    "slot-label": "#081433",
-    "well-edge": "#092754"
+    "ink": "#ffffff"
   }
 }

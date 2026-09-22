@@ -26,8 +26,31 @@
         "pause-panel": {
           "display": "block"
         },
+        "options-panel": {
+          "display": "none"
+        },
         "controls-panel": {
           "display": "none"
+        }
+      }
+    },
+    "options": {
+      "describes": "the options screen, listing what this game bundled",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "options-panel": {
+          "display": "block"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "heading": {
+          "text": "OPTIONS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
         }
       }
     },

@@ -57,6 +57,10 @@ pub struct ProjectSettings {
     /// Restore stock RetroArch native menus in the exported app.
     #[serde(default)]
     pub advanced_emulator_access: bool,
+    /// The Options entries we offer in this game. When absent, we use the
+    /// design's defaults. With an empty list, we show no Options button.
+    #[serde(default)]
+    pub menu_entries: Option<Vec<String>>,
     /// Presets bundled into the game. Usually this is empty.
     #[serde(default)]
     pub shaders: crate::shaders::ShaderSelection,
@@ -122,6 +126,8 @@ struct StoredSettings {
     #[serde(default)]
     advanced_emulator_access: bool,
     #[serde(default)]
+    menu_entries: Option<Vec<String>>,
+    #[serde(default)]
     shaders: crate::shaders::ShaderSelection,
     target: ExportTarget,
 }
@@ -159,6 +165,7 @@ impl From<&ExportRequest> for ProjectSettings {
             firmware: request.firmware.clone(),
             splash: request.splash,
             advanced_emulator_access: request.advanced_emulator_access,
+            menu_entries: request.menu_entries.clone(),
             shaders: request.shaders.clone(),
             target: request.target.clone(),
         }
@@ -189,6 +196,7 @@ impl ProjectSettings {
             firmware: self.firmware,
             splash: self.splash,
             advanced_emulator_access: self.advanced_emulator_access,
+            menu_entries: self.menu_entries,
             shaders: self.shaders,
             output_dir,
             target: self.target,
@@ -257,6 +265,7 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             controls: request.settings.controls.clone(),
             splash: request.settings.splash,
             advanced_emulator_access: request.settings.advanced_emulator_access,
+            menu_entries: request.settings.menu_entries.clone(),
             shaders: stored_shaders,
             target: request.settings.target.clone(),
         },
@@ -385,6 +394,7 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
         firmware,
         splash: manifest.settings.splash,
         advanced_emulator_access: manifest.settings.advanced_emulator_access,
+        menu_entries: manifest.settings.menu_entries,
         shaders: crate::shaders::unpack_selection(
             manifest.settings.shaders,
             &request.extraction_dir,
@@ -524,6 +534,7 @@ fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
         controls: settings.controls.clone(),
         splash: settings.splash,
         advanced_emulator_access: settings.advanced_emulator_access,
+        menu_entries: settings.menu_entries.clone(),
         shaders: settings.shaders.clone(),
         target: settings.target.clone(),
     })?;
@@ -897,6 +908,7 @@ mod tests {
                 firmware: Vec::new(),
                 splash: false,
                 advanced_emulator_access: false,
+                menu_entries: None,
                 shaders: crate::shaders::ShaderSelection::default(),
                 target: ExportTarget::Macos,
             },
@@ -936,6 +948,7 @@ mod tests {
             firmware: Vec::new(),
             splash: false,
             advanced_emulator_access,
+            menu_entries: None,
             shaders: crate::shaders::ShaderSelection::default(),
             target: ExportTarget::Macos,
         }

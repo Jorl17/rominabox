@@ -393,22 +393,35 @@ fn the_scene_geometry_is_declared_once_and_read_by_both_consumers() {
     );
 }
 
-/// A design styles the shared list, never one particular list.
+/// A design may style the shared list, but never the rows of one list.
 ///
-/// The shader list, the achievement list and every other Options list have
-/// the same layout and the `.list-row` rules. A rule for one list, such as
-/// `.shader-row`, would require the same rule in every other design.
+/// The shader list, the achievement list and any list we add to Options have
+/// the same parts, which are rows we write when we bundle the game, a pager,
+/// and a state on the right. They share `.list-row` and the rules beside it.
+/// If a design styled `.shader-row`, every other design would have to do the
+/// same, and to add a screen we would have to edit every design.
 ///
-/// We remove comments first, so a comment with the names of the lists that
-/// use the shared rules does not make the check fail.
+/// A design MAY name the place of a composed screen. `#options` is the button
+/// on the pause row and `#options-panel` is the panel it opens, in the same
+/// way as `#controls`. So we accept `#actions #options`, because it places a
+/// button and does not restyle a list.
 ///
-/// This does not check that the shared rules look right, or that a design
-/// contains them at all.
+/// We strip comments first, so a comment that explains the shared list by
+/// naming the lists that use it is not a violation.
+///
+/// This test does NOT prove that the shared rules look right, that a design
+/// has them at all, or that we give the rows of a composed screen the shared
+/// class at export. For that last one we test the staged markup, and not on
+/// the stylesheet.
 #[test]
 fn no_design_styles_one_list_by_name() {
     // Screens that we add at composition. The design defines pause and
     // controls, and must not define these. To add a screen, add a word here.
     const COMPOSED: [&str; 3] = ["shader", "achievement", "options"];
+    // The parts of the shared list. It is a defect when one of these is
+    // named after a particular screen in a design, and it is not one when
+    // it is named after the screen's button or panel.
+    const PARTS: [&str; 4] = ["row", "list", "pager", "entry"];
     let designs = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs");
     let mut read = 0;
     for entry in std::fs::read_dir(&designs).expect("designs directory") {
@@ -421,9 +434,12 @@ fn no_design_styles_one_list_by_name() {
         for selector in selectors(&text) {
             for identifier in named(&selector) {
                 for name in COMPOSED {
+                    let Some(rest) = identifier.strip_prefix(name) else {
+                        continue;
+                    };
                     assert!(
-                        !identifier.starts_with(name),
-                        "{} styles the {name} list by name: {}\n\
+                        !PARTS.iter().any(|part| rest.contains(part)),
+                        "{} styles the {name} list's own rows: {}\n\
                          Those rows are `.list-row`; a design that needs a \
                          different list changes the shared rules.",
                         sheet.display(),
