@@ -255,7 +255,7 @@ export function ControlsEditor({
         <thead>
           <tr>
             <th scope="col">Button</th>
-            <th scope="col">Action</th>
+            <th scope="col">Action label</th>
             <th scope="col">Keyboard</th>
             <th scope="col">Devices</th>
           </tr>
@@ -278,7 +278,7 @@ export function ControlsEditor({
                     disabled={capturing}
                     value={override?.label ?? ""}
                     placeholder={item.label}
-                    aria-label={`${item.label} action`}
+                    aria-label={`${item.label} action label`}
                     onChange={(e) => patch(item.id, { label: e.target.value })}
                   />
                 </td>

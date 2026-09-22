@@ -86,8 +86,9 @@ const PACKS = [
   },
 ];
 
-/** `off` is not an asset directory. It means audio_enable_menu=false at export. */
-const OFF = { id: 'off', name: 'Off', description: 'No menu audio is bundled or enabled.' };
+/** Not an asset directory. At export we write audio_enable_menu=false.
+ * The word Off is already in the dropdown, so we show no line under it. */
+const OFF = { id: 'off', name: 'Off', description: '' };
 
 const SOUNDS = fileURLToPath(new URL('../../desktop/assets/menu-sounds/', import.meta.url));
 const REGISTRY = fileURLToPath(new URL('../../desktop/designs.json', import.meta.url));

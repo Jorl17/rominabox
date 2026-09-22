@@ -9,3 +9,8 @@ clang -Wall -Werror -I vendor/retroarch \
   vendor/retroarch/input/held_key_policy.c \
   scripts/native_runtime/test_held_key.c
 work/test-output/test_held_key
+clang -Wall -Werror -I vendor/retroarch \
+  -o work/test-output/test_alt_enter \
+  vendor/retroarch/input/alt_enter_fullscreen.c \
+  scripts/native_runtime/test_alt_enter.c
+work/test-output/test_alt_enter

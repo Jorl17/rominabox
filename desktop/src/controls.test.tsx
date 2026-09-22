@@ -70,6 +70,18 @@ function enterText(input: HTMLInputElement, value: string) {
 }
 
 describe("controller authoring", () => {
+  it("calls the author-facing column action label", () => {
+    const { container, cleanup } = renderEditor();
+    try {
+      const headers = [...container.querySelectorAll("thead th")].map((cell) =>
+        cell.textContent?.trim(),
+      );
+      expect(headers).toContain("Action label");
+    } finally {
+      cleanup();
+    }
+  });
+
   it("keeps shared keyboard defaults consistent across Mega Drive variants", () => {
     const three = registry.profiles.find((p) => p.id === "megadrive")!;
     const six = registry.profiles.find((p) => p.id === "megadrive6")!;
