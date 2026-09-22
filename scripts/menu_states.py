@@ -122,7 +122,7 @@ def stage(system: str, workspace: Path, variant: str | None = None,
     # We generate it with the exporter, through its CLI, so that these pictures
     # show the markup we ship in an exported game and not an imitation of it.
     generated = subprocess.run(
-        [str(cli_binary()), "stage-controls"],
+        [str(CLI), "stage-controls"],
         input=json.dumps(
             {
                 "system": system,

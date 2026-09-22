@@ -192,7 +192,7 @@ fn a_document_is_only_told_about_what_it_draws() {
     themes::prepare_theme_assets(&assets(), &full, "blue", None).unwrap();
     let declared = fs::read_to_string(full.join("design.cfg")).unwrap();
     assert!(declared.contains("overlays = \"splash notice\""), "{declared}");
-    assert!(declared.contains("screens = \"pause controls\""), "{declared}");
+    assert!(declared.contains("screens = \"pause options controls\""), "{declared}");
     assert!(
         declared.contains("overlay_needs_splash = \"splash-logo.png\""),
         "{declared}"

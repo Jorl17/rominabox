@@ -52,8 +52,8 @@
         "footer-hint": {
           "text": "ESC  BACK"
         },
-        "volume-level-fill": { "width": "256px" },
-        "volume-level-thumb": { "left": "222px" }
+        "volume-level-fill": { "width": "456px" },
+        "volume-level-thumb": { "left": "422px" }
       }
     },
     "controls": {
@@ -263,8 +263,8 @@
         "controls-panel": { "display": "none" },
         "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "192px" },
-        "volume-level-thumb": { "left": "167px" }
+        "volume-level-fill": { "width": "405px" },
+        "volume-level-thumb": { "left": "375px" }
       }
     },
     "volume-focused": {
@@ -275,8 +275,8 @@
         "controls-panel": { "display": "none" },
         "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "256px" },
-        "volume-level-thumb": { "left": "222px" },
+        "volume-level-fill": { "width": "456px" },
+        "volume-level-thumb": { "left": "422px" },
         "volume-level": { "class": "focused" }
       }
     },
@@ -288,8 +288,8 @@
         "controls-panel": { "display": "none" },
         "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "256px" },
-        "volume-level-thumb": { "left": "222px" },
+        "volume-level-fill": { "width": "456px" },
+        "volume-level-thumb": { "left": "422px" },
         "volume-level": { "class": "dragging" }
       }
     },
@@ -301,8 +301,8 @@
         "controls-panel": { "display": "none" },
         "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "256px" },
-        "volume-level-thumb": { "left": "222px" },
+        "volume-level-fill": { "width": "456px" },
+        "volume-level-thumb": { "left": "422px" },
         "volume-level": { "pseudo": "hover" }
       }
     },
@@ -314,8 +314,8 @@
         "controls-panel": { "display": "none" },
         "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "256px" },
-        "volume-level-thumb": { "left": "222px" },
+        "volume-level-fill": { "width": "456px" },
+        "volume-level-thumb": { "left": "422px" },
         "volume-down": { "pseudo": "hover" }
       }
     },
@@ -327,8 +327,8 @@
         "controls-panel": { "display": "none" },
         "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "256px" },
-        "volume-level-thumb": { "left": "222px" },
+        "volume-level-fill": { "width": "456px" },
+        "volume-level-thumb": { "left": "422px" },
         "volume-low": { "text": "QUIETEST THE GAME CAN BE", "font-size": "22dp" },
         "volume-high": { "text": "NORMAL LOUDNESS AND THEN SOMETHING LONGER STILL", "font-size": "22dp" },
         "controls": { "text": "CONTROLLER SETUP FOR THIS CONSOLE AND THEN SOME", "font-size": "22dp" }

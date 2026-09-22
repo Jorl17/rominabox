@@ -314,8 +314,8 @@ int main(int argc, char **argv)
             "picker options are export markup, not created by the bridge");
    }
 
-   CHECK(RIB_VOLUME_POSITIONS > 1 && RIB_VOLUME_POSITIONS < 10,
-         "volume has a handful of positions, fewer than ten");
+   CHECK(RIB_VOLUME_POSITIONS == 10,
+         "ten positions, the top one normal");
    CHECK(AUDIO_VOLUME_MAX_DB == 0.0f,
          "the right end is normal, and the control cannot boost past it");
    CHECK(AUDIO_VOLUME_DEFAULT_DB == AUDIO_VOLUME_MAX_DB,
@@ -333,7 +333,7 @@ int main(int argc, char **argv)
          "a drag past the left end stops at the end");
    CHECK(rib_volume_db_from_fraction(2.0f) == AUDIO_VOLUME_MAX_DB,
          "a drag past the right end stops at normal");
-   CHECK(rib_volume_quantize_db(-6.4f) == 0.0f,
+   CHECK(rib_volume_quantize_db(-4.0f) == 0.0f,
          "a level near the top snaps to a position, not to the nearest decibel");
 
    /* We do not read design.cfg in the interaction harness. We declare Options
@@ -386,7 +386,7 @@ int main(int argc, char **argv)
       click_id("volume-down");
       CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SLIDER,
             "the left arrow is the slider moving down one position");
-      CHECK(rib_rmlui_changed_fraction() > 0.74f && rib_rmlui_changed_fraction() < 0.76f,
+      CHECK(rib_rmlui_changed_fraction() > 0.88f && rib_rmlui_changed_fraction() < 0.90f,
             "one arrow is one position, not a decibel");
    }
 
@@ -500,7 +500,7 @@ int main(int argc, char **argv)
       // We find the screen button on the pause row instead of naming it. With
       // Options in a game it is not the controls button, so with a fixed name
       // a pad would open Controls instead of Options.
-      CHECK(std::string(rib_rmlui_pause_screen_button()) == "controls",
+      CHECK(std::string(rib_rmlui_pause_screen_button()) == "options",
             "the pause row's screen button is the one the document has");
       rib_rmlui_declare_screen("fixture", "fixture-panel", "LIST", "ESC  BACK", "");
       CHECK(rib_rmlui_show_screen("fixture"), "a declared list screen shows");

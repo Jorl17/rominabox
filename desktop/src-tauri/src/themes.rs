@@ -517,8 +517,8 @@ fn screens_for_export(screens: &[Screen], chosen: Option<&[String]>) -> Result<V
 const OPTION_ENTRY_STEP: usize = 60;
 
 const OPTIONS_LAYOUT_CSS: &str = r#"
-#options-entries { position: absolute; left: 276dp; top: 148dp; width: 400dp; height: 320dp; }
-.option-entry { position: absolute; left: 0; width: 400dp; height: 48dp; line-height: 42dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; white-space: nowrap; overflow: hidden; }
+#options-entries { position: absolute; left: 56dp; top: 272dp; width: 840dp; height: 200dp; }
+.option-entry { position: absolute; left: 0; width: 840dp; height: 64dp; line-height: 58dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; white-space: nowrap; overflow: hidden; }
 .options-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
 "#;
 
@@ -983,12 +983,13 @@ fn fill_part(template: &str, id: &str, label: &str) -> String {
     template.replace("PART-ID", id).replace("LABEL", label)
 }
 
-/// The volume control: the low end, an arrow, the slider, an arrow, the high end.
+/// The volume control, made of its name, the low end, an arrow, the slider
+/// from the design, an arrow and the high end.
 ///
 /// The slider comes first in the document, so the keyboard focus goes to it
-/// and the left and right keys move it. The design places the rest, so the
-/// document order is not the order on screen. There is no number and no mute
-/// button, because the quiet end is the quietest the volume goes.
+/// first and the left and right keys move it. The design places the rest, so
+/// the order in the document is not the order on screen. There is no number
+/// and no mute button, because the quiet end is the quietest the volume goes.
 pub fn volume_control_markup(design: &Path) -> Result<String, String> {
     let slider = part_template(design, "slider", BUILTIN_SLIDER)?;
     require_classes(
@@ -997,7 +998,7 @@ pub fn volume_control_markup(design: &Path) -> Result<String, String> {
         &["slider", "slider-track", "slider-fill", "slider-thumb", "slider-readout"],
     )?;
     Ok(format!(
-        "<div id=\"volume-control\">{slider}<button id=\"{down}\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{up}\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{low}\" class=\"volume-end\">LOW</div><div id=\"{high}\" class=\"volume-end\">HIGH</div></div>",
+        "<div id=\"volume-control\">{slider}<button id=\"{down}\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{up}\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{low}\" class=\"volume-end\">LOW</div><div id=\"{high}\" class=\"volume-end\">HIGH</div><div class=\"volume-name\">VOLUME</div></div>",
         slider = fill_part(&slider, crate::volume::slider_id(), ""),
         down = crate::volume::down_id(),
         up = crate::volume::up_id(),

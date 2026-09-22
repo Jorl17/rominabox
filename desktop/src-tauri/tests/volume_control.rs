@@ -105,6 +105,27 @@ fn the_shipped_design_styles_the_slider_rather_than_volume() {
         "the design has to say what the arrows look like"
     );
     assert!(
+        css.contains(".volume-name"),
+        "the bar has to be named in the design"
+    );
+    let rule = |selector: &str| {
+        let at = css
+            .find(selector)
+            .unwrap_or_else(|| panic!("{selector} is not in the design"));
+        let rest = &css[at + selector.len()..];
+        let end = rest.find('}').unwrap_or(rest.len());
+        rest[..end].to_string()
+    };
+    let volume = rule("#volume-control {");
+    let entries = rule("#options-entries {");
+    assert!(
+        volume.contains("left: 56dp;")
+            && volume.contains("width: 840dp;")
+            && entries.contains("left: 56dp;")
+            && entries.contains("width: 840dp;"),
+        "volume and the entry under it have to share a column.\nvolume: {volume}\nentries: {entries}"
+    );
+    assert!(
         !css.contains("#volume-level"),
         "volume-specific styling is the slider failing to be a part"
     );
@@ -141,7 +162,10 @@ fn volume_drops_into_options_and_does_not_open_a_screen() {
     assert!(installed.contains("id=\"controls\""), "the links stay, got {installed}");
     assert!(!installed.contains("id=\"volume-panel\""));
     assert!(!installed.contains("id=\"volume-mute\""));
-    assert!(!installed.contains(">VOLUME<"));
+    assert!(
+        installed.contains(">VOLUME<"),
+        "the control has to say what it is, got {installed}"
+    );
 }
 
 #[test]

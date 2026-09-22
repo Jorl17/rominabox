@@ -187,11 +187,18 @@ mod tests {
         assert_eq!(max_db(), 0.0);
         assert_eq!(default_db(), max_db());
         assert!(position_count() > 1);
-        assert!(position_count() < 10, "ten positions is already too many");
+        assert_eq!(position_count(), 10, "ten positions, the top one normal");
         assert_eq!(db_for_position(0), min_db());
         assert_eq!(db_for_position(position_count() - 1), max_db());
         assert_eq!(position_for_db(max_db()), position_count() - 1);
-        assert_eq!(db_for_position(position_for_db(-40.0)), -40.0);
+        for position in 0..position_count() {
+            let db = db_for_position(position);
+            assert_eq!(
+                position_for_db(db),
+                position,
+                "position {position} ({db} dB) has to land back on itself"
+            );
+        }
         let step = defined_float("AUDIO_VOLUME_STEP_DB");
         assert_eq!(
             step * (position_count() - 1) as f32,
