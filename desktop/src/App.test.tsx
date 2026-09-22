@@ -18,23 +18,34 @@ import designs from "../designs.json";
 import { App } from "./App";
 import { type FirmwareAssessment } from "./bridge";
 
-const { firmwareHandlers, inspectHandlers } = vi.hoisted(() => ({
-  firmwareHandlers: {
-    assess: null as
-      ((system: string, files: string[]) => Promise<FirmwareAssessment>) | null,
-  },
-  inspectHandlers: {
-    inspect: null as
-      | ((file: File) => Promise<{
-          title: string;
-          system: string;
-          source: "header" | "filename";
-          filename: string;
-          size: number;
-        }>)
-      | null,
-  },
-}));
+const { firmwareHandlers, inspectHandlers, travelingHandlers } = vi.hoisted(
+  () => ({
+    firmwareHandlers: {
+      assess: null as
+        | ((system: string, files: string[]) => Promise<FirmwareAssessment>)
+        | null,
+    },
+    inspectHandlers: {
+      inspect: null as
+        | ((file: File) => Promise<{
+            title: string;
+            system: string;
+            source: "header" | "filename";
+            filename: string;
+            size: number;
+          }>)
+        | null,
+    },
+    travelingHandlers: {
+      list: null as
+        | ((path: string, system: string) => Promise<{
+            entry: string;
+            files: string[];
+          }>)
+        | null,
+    },
+  }),
+);
 
 vi.mock("./bridge", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./bridge")>();
@@ -44,6 +55,11 @@ vi.mock("./bridge", async (importOriginal) => {
       const assess = firmwareHandlers.assess;
       if (!assess) return actual.assessFirmware(system, files);
       return assess(system, files);
+    },
+    travelingFiles: (path: string, system: string) => {
+      const list = travelingHandlers.list;
+      if (!list) return actual.travelingFiles(path, system);
+      return list(path, system);
     },
   };
 });
@@ -173,6 +189,7 @@ function chooseConsole(id: string): void {
 beforeEach(() => {
   firmwareHandlers.assess = assessWithCli;
   inspectHandlers.inspect = null;
+  travelingHandlers.list = null;
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -183,6 +200,16 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
 });
+
+function checkbox(label: string): HTMLInputElement {
+  const match = [...container.querySelectorAll("label")].find((item) =>
+    item.textContent?.includes(label),
+  );
+  const input = match?.querySelector("input");
+  if (!(input instanceof HTMLInputElement))
+    throw new Error(`Missing checkbox: ${label}`);
+  return input;
+}
 
 function button(
   label: string,
@@ -658,5 +685,101 @@ describe("App workflow", () => {
       picker.value,
       "choosing a design has to stick, or the export gets the old one",
     ).toBe(other.id);
+  });
+
+  async function dropWithCompanions(name: string, files: string[]) {
+    const path = `/games/${name}`;
+    travelingHandlers.list = async () => ({ entry: path, files });
+    inspectHandlers.inspect = async () => ({
+      title: "Sonic Adventure 2",
+      system: "dreamcast",
+      source: "filename",
+      filename: name,
+      size: 32,
+    });
+    const file = new File([new Uint8Array(32)], name) as File & {
+      path?: string;
+    };
+    file.path = path;
+    const input = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await act(async () => {
+      Object.defineProperty(input, "files", {
+        configurable: true,
+        value: [file],
+      });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const also = container.querySelector(".traveling-also");
+      if (
+        container.querySelector("h1")?.textContent === "Game details" &&
+        also
+      ) {
+        return also;
+      }
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+    }
+    throw new Error("the receipt did not name the files that travel");
+  }
+
+  it("names a disc's tracks on one short line, without repeating the game", async () => {
+    const stem = "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es)";
+    const also = await dropWithCompanions(`${stem}.gdi`, [
+      `${stem}.gdi`,
+      `${stem} (Track 1).bin`,
+      `${stem} (Track 2).bin`,
+      `${stem} (Track 3).bin`,
+    ]);
+    expect(also.textContent).toBe(
+      "Also importing: (Track 1).bin, (Track 2).bin, (Track 3).bin",
+    );
+    expect(also.textContent).not.toContain(stem);
+  });
+
+  it("counts companions once there are more than a handful", async () => {
+    const also = await dropWithCompanions("Long Disc.cue", [
+      "Long Disc.cue",
+      ...Array.from({ length: 6 }, (_, index) => `track${index + 1}.bin`),
+    ]);
+    expect(also.textContent).toBe("Also importing 6 files");
+  });
+
+  it("puts background play and autosave next to the startup logo", async () => {
+    await openMenu();
+    const logo = checkbox("Startup logo");
+    const playing = checkbox("Keep playing in the background");
+    const saving = checkbox("Autosave on quit");
+    expect(playing.checked).toBe(false);
+    expect(saving.checked).toBe(false);
+    expect(playing.closest("details")).toBeNull();
+    expect(saving.closest("details")).toBeNull();
+    expect(logo.closest(".menu-settings")).toBe(
+      playing.closest(".menu-settings"),
+    );
+    expect(
+      container.querySelector(
+        '[aria-label="About keep playing in the background"]',
+      ),
+    ).toBeNull();
+    expect(
+      container.querySelector('[aria-label="About autosave on quit"]'),
+    ).toBeNull();
+
+    act(() => click(playing));
+    act(() => click(saving));
+    act(() => click(button("Next")));
+    act(() => click(button("Back")));
+    expect(checkbox("Keep playing in the background").checked).toBe(true);
+    expect(checkbox("Autosave on quit").checked).toBe(true);
+
+    act(() => click(checkbox("Include game menu")));
+    expect(container.textContent).toContain("No in-game menu");
+    expect(checkbox("Keep playing in the background").checked).toBe(true);
+    expect(checkbox("Autosave on quit").checked).toBe(true);
+    expect(checkbox("Startup logo").closest(".play-options")).not.toBeNull();
   });
 });

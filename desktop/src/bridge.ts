@@ -29,6 +29,8 @@ export type ExportRequest = {
   showMenu: boolean;
   startAtMenu: boolean;
   splash: boolean;
+  keepPlayingInBackground: boolean;
+  autosaveOnQuit: boolean;
   advancedEmulatorAccess: boolean;
   shaders?: {
     bundled: string[];

@@ -283,7 +283,15 @@ async function checkWhatTravels(page, out) {
     : "";
   console.log(`TRAVELING ${JSON.stringify(text || "(no receipt)")}`);
   const namesDisc = text.includes("Ape Escape.chd");
-  const namesSibling = text.includes("Ape Escape.sbi");
+  const alsoLine = appeared
+    ? (
+        (await receipt.locator(".traveling-also").innerText().catch(() => "")) ||
+        ""
+      ).replace(/\s+/g, " ")
+    : "";
+  // The line above has the game's name, so we show the rest of the sibling's name.
+  const namesSibling =
+    alsoLine.includes(".sbi") && !alsoLine.includes("Ape Escape");
   const saysAlso = text.includes("Also importing");
   if (!namesDisc || !namesSibling || !saysAlso) {
     console.error(
@@ -342,6 +350,111 @@ async function checkWhatTravels(page, out) {
     return false;
   }
   if (out) await shot(page, path.join(out, "h3-tracks.png"));
+
+  // Track file names as they appear in dumps. Each contains the game's name,
+  // which is already on the line above, so the receipt must not repeat it.
+  const longDir = path.join(
+    ROOT,
+    "work/test-output/builder-shots/long-tracks",
+  );
+  fs.mkdirSync(longDir, { recursive: true });
+  const stem = "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es)";
+  const longTracks = [1, 2, 3].map(
+    (index) => `${stem} (Track ${index}).bin`,
+  );
+  for (const name of longTracks) {
+    fs.writeFileSync(path.join(longDir, name), Buffer.from("track"));
+  }
+  const gdi = path.join(longDir, `${stem}.gdi`);
+  fs.writeFileSync(
+    gdi,
+    `${longTracks.length}\n` +
+      longTracks
+        .map(
+          (name, index) => `${index + 1} 0 4 2352 "${name}" 0\n`,
+        )
+        .join(""),
+  );
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, gdi);
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  const long = page.locator("[data-traveling]");
+  const longShown = await long
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  const longText = longShown
+    ? (await long.innerText()).replace(/\s+/g, " ")
+    : "";
+  console.log(`LONG ${JSON.stringify(longText || "(no receipt)")}`);
+  if (out) await shot(page, path.join(out, "i4-receipt.png"));
+  const also = longShown
+    ? ((await long.locator(".traveling-also").innerText()) || "").replace(
+        /\s+/g,
+        " ",
+      )
+    : "";
+  const short =
+    also ===
+    "Also importing: (Track 1).bin, (Track 2).bin, (Track 3).bin";
+  if (!longShown || !short || also.includes(stem)) {
+    console.error(
+      "the receipt repeats the game's name instead of one short line",
+    );
+    console.error(also || "(no also line)");
+    return false;
+  }
+  const alsoBox = await long.locator(".traveling-also").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      fontSize: style.fontSize,
+      whiteSpace: style.whiteSpace,
+      lineHeight: element.getBoundingClientRect().height,
+    };
+  });
+  console.log(`RECEIPT ${JSON.stringify(alsoBox)}`);
+  if (alsoBox.fontSize !== "12px" || alsoBox.whiteSpace !== "nowrap") {
+    console.error("the receipt's second line is not the small one-line text");
+    console.error(JSON.stringify(alsoBox));
+    return false;
+  }
+  if (alsoBox.lineHeight > 20) {
+    console.error("the receipt's second line is taller than one line of text");
+    return false;
+  }
+
+  const manyDir = path.join(ROOT, "work/test-output/builder-shots/many-tracks");
+  fs.mkdirSync(manyDir, { recursive: true });
+  const many = Array.from({ length: 6 }, (_, index) => `track${index + 1}.bin`);
+  for (const name of many) {
+    fs.writeFileSync(path.join(manyDir, name), Buffer.from("track"));
+  }
+  const manyCue = path.join(manyDir, "Long Disc.cue");
+  fs.writeFileSync(
+    manyCue,
+    many
+      .map(
+        (name, index) =>
+          `FILE "${name}" BINARY\n  TRACK ${String(index + 1).padStart(2, "0")} MODE1/2352\n`,
+      )
+      .join(""),
+  );
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, manyCue);
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  const counted = page.locator(".traveling-also");
+  const countedText = (
+    (await counted.innerText().catch(() => "")) || ""
+  ).replace(/\s+/g, " ");
+  console.log(`COUNT ${JSON.stringify(countedText)}`);
+  if (countedText !== "Also importing 6 files") {
+    console.error(
+      "past a handful of files the receipt still lists every name",
+    );
+    return false;
+  }
   return true;
 }
 
@@ -940,6 +1053,53 @@ async function main() {
       );
       code = 1;
       return;
+    }
+
+    const playOptions = await page.evaluate(() => {
+      const wanted = [
+        "Keep playing in the background",
+        "Autosave on quit",
+      ];
+      const settings = document.querySelector(".menu-settings");
+      return wanted.map((label) => {
+        const box = [...document.querySelectorAll("label")].find((item) =>
+          (item.textContent || "").includes(label),
+        );
+        const input = box?.querySelector("input");
+        return {
+          label,
+          present: !!box,
+          checked: !!input?.checked,
+          inSettings: !!(settings && box && settings.contains(box)),
+          inDisclosure: !!box?.closest("details"),
+          help: !!document.querySelector(
+            `[aria-label="About ${label.toLowerCase()}"]`,
+          ),
+        };
+      });
+    });
+    console.log(`PLAY ${JSON.stringify(playOptions)}`);
+    if (
+      playOptions.some(
+        (option) =>
+          !option.present ||
+          option.checked ||
+          !option.inSettings ||
+          option.inDisclosure ||
+          option.help,
+      )
+    ) {
+      console.error(
+        "background play and autosave are not plain options beside the startup logo",
+      );
+      code = 1;
+      return;
+    }
+    if (out) {
+      await page.locator(".menu-settings").screenshot({
+        path: path.join(out, "i4-options.png"),
+      });
+      console.log("shot i4-options.png");
     }
 
     if (!checking) {

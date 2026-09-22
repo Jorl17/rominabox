@@ -69,6 +69,8 @@ type Draft = {
   showMenu: boolean;
   startAtMenu: boolean;
   splash: boolean;
+  keepPlayingInBackground: boolean;
+  autosaveOnQuit: boolean;
   advancedEmulatorAccess: boolean;
 };
 const defaults: Draft = {
@@ -78,8 +80,75 @@ const defaults: Draft = {
   showMenu: true,
   startAtMenu: false,
   splash: true,
+  keepPlayingInBackground: false,
+  autosaveOnQuit: false,
   advancedEmulatorAccess: false,
 };
+
+// We name three tracks. Six is more than a handful, so we show a count.
+const NAMED_COMPANIONS = 5;
+
+function alsoImporting(files: string[]): string | null {
+  if (files.length < 2) return null;
+  const extras = files.slice(1);
+  if (extras.length > NAMED_COMPANIONS) {
+    return `Also importing ${extras.length} files`;
+  }
+  const dot = files[0].lastIndexOf(".");
+  const stem = dot > 0 ? files[0].slice(0, dot) : files[0];
+  const named = extras.map((name) => {
+    if (!stem || !name.startsWith(stem)) return name;
+    const rest = name.slice(stem.length).trim();
+    return rest || name;
+  });
+  return `Also importing: ${named.join(", ")}`;
+}
+
+function AlsoImporting({ files }: { files: string[] }) {
+  const also = alsoImporting(files);
+  if (!also) return null;
+  return <p className="traveling-also">{also}</p>;
+}
+
+function StartupOptions({
+  draft,
+  update,
+  startAtMenu,
+}: {
+  draft: Draft;
+  update: <K extends keyof Draft>(key: K, value: Draft[K]) => void;
+  startAtMenu: boolean;
+}) {
+  return (
+    <>
+      <Checkbox
+        className="splash-choice"
+        label="Startup logo"
+        checked={draft.splash}
+        onChange={(value) => update("splash", value)}
+        help="Show a brief ROM-in-a-Box logo in the game window at startup."
+      />
+      <Checkbox
+        label="Keep playing in the background"
+        checked={draft.keepPlayingInBackground}
+        onChange={(value) => update("keepPlayingInBackground", value)}
+      />
+      <Checkbox
+        label="Autosave on quit"
+        checked={draft.autosaveOnQuit}
+        onChange={(value) => update("autosaveOnQuit", value)}
+      />
+      {startAtMenu && (
+        <Checkbox
+          label="Show menu at startup"
+          checked={draft.startAtMenu}
+          onChange={(value) => update("startAtMenu", value)}
+          help="Start at the menu before playing. The menu is also available during play."
+        />
+      )}
+    </>
+  );
+}
 function Cartridge() {
   return (
     <svg className="cartridge" viewBox="0 0 120 136" aria-hidden="true">
@@ -382,6 +451,8 @@ export function App() {
       background: background?.path || null,
       showMenu: draft.showMenu,
       splash: draft.splash,
+      keepPlayingInBackground: draft.keepPlayingInBackground,
+      autosaveOnQuit: draft.autosaveOnQuit,
       advancedEmulatorAccess: draft.advancedEmulatorAccess,
       shaders: {
         bundled: bundledShaders,
@@ -444,6 +515,8 @@ export function App() {
         description: settings.description || "",
         showMenu: settings.showMenu,
         splash: settings.splash ?? false,
+        keepPlayingInBackground: settings.keepPlayingInBackground ?? false,
+        autosaveOnQuit: settings.autosaveOnQuit ?? false,
         advancedEmulatorAccess: settings.advancedEmulatorAccess ?? false,
         startAtMenu: settings.startAtMenu,
       });
@@ -1040,11 +1113,7 @@ export function App() {
                       {traveling.length > 0 && (
                         <div className="traveling" data-traveling>
                           <p>{traveling[0]}</p>
-                          {traveling.length > 1 && (
-                            <p className="traveling-also">
-                              Also importing: {traveling.slice(1).join(", ")}
-                            </p>
-                          )}
+                          <AlsoImporting files={traveling} />
                         </div>
                       )}
                       <label>
@@ -1239,19 +1308,10 @@ export function App() {
                     {previewError && <p className="error">{previewError}</p>}
                   </div>
                   <div className="menu-settings">
-                    {" "}
-                    <Checkbox
-                      className="splash-choice"
-                      label="Startup logo"
-                      checked={draft.splash}
-                      onChange={(value) => update("splash", value)}
-                      help="Show a brief ROM-in-a-Box logo in the game window at startup."
-                    />{" "}
-                    <Checkbox
-                      label="Show menu at startup"
-                      checked={draft.startAtMenu}
-                      onChange={(value) => update("startAtMenu", value)}
-                      help="Start at the menu before playing. The menu is also available during play."
+                    <StartupOptions
+                      draft={draft}
+                      update={update}
+                      startAtMenu
                     />
                     <details className="advanced">
                       <summary>
@@ -1329,13 +1389,13 @@ export function App() {
                 </div>
               )}
               {!draft.showMenu && (
-                <Checkbox
-                  className="splash-choice"
-                  label="Startup logo"
-                  checked={draft.splash}
-                  onChange={(value) => update("splash", value)}
-                  help="Show a brief ROM-in-a-Box logo in the game window at startup."
-                />
+                <div className="play-options">
+                  <StartupOptions
+                    draft={draft}
+                    update={update}
+                    startAtMenu={false}
+                  />
+                </div>
               )}
 
               <details className="advanced author-controls">

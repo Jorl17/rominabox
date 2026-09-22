@@ -150,6 +150,8 @@ fn request(root: &Path, rom_bytes: &[u8], title: &str, kit: PathBuf, system: &st
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: false,
+        keep_playing_in_background: false,
+        autosave_on_quit: false,
         menu_entries: None,
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
         achievements: Default::default(),
