@@ -49,6 +49,7 @@ extern "C" const char *rib_rmlui_test_property(const char *, const char *);
 
 extern "C" void rib_rmlui_test_advance(double);
 extern "C" const char *rib_rmlui_test_text(const char *);
+extern "C" bool rib_rmlui_test_has_class(const char *, const char *);
 extern "C" float rib_rmlui_test_picture_aspect();
 static int failures = 0;
 
@@ -347,6 +348,43 @@ int main(int argc, char **argv)
          "ESC  BACK", "options");
    rib_rmlui_declare_screen("controls", "controls-panel", "CONTROLS",
          "ESC  BACK", "controls");
+
+   /* Every button on the pause row can take focus, and only one at a time.
+    *
+    * We read the row from the document, not from a fixed table of element
+    * ids. With Options enabled the fourth button is `options`, and moving
+    * right from SAVE, reaching Options by keyboard or pad, and pressing down
+    * from slot 6 must each focus an element. A button added in a design or an
+    * export is reachable without any change here. */
+   rib_rmlui_show_screen("pause");
+   {
+      char row[16][64];
+      const int count = rib_rmlui_focusables("pause-panel", row, 16);
+      bool options_on_the_row = false;
+      int index;
+
+      CHECK(count >= 4, "the pause row has the buttons the design drew");
+      for (index = 0; index < count; ++index)
+         if (std::string(row[index]) == "options")
+            options_on_the_row = true;
+      CHECK(options_on_the_row,
+            "Options is one of the buttons on the pause row");
+
+      for (index = 0; index < count; ++index)
+      {
+         int other;
+         rib_rmlui_focus_element(row[index]);
+         CHECK(rib_rmlui_test_has_class(row[index], "focused"),
+               "every button on the pause row can be focused");
+         for (other = 0; other < count; ++other)
+            if (other != index)
+               CHECK(!rib_rmlui_test_has_class(row[other], "focused"),
+                     "and only one of them at a time");
+      }
+      CHECK(std::string(rib_rmlui_focused_element()) == row[count - 1],
+            "the row remembers which button has it");
+   }
+
    rib_rmlui_show_screen("options");
    {
       int slider_x = 0;
