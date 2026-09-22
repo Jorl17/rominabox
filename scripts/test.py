@@ -30,12 +30,24 @@ CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog
 
 
 class Scope:
-    def __init__(self, name: str, covers: str, not_covered: str, command: list[str], slow: bool = False):
+    def __init__(
+        self,
+        name: str,
+        covers: str,
+        not_covered: str,
+        command: list[str],
+        slow: bool = False,
+        prepare: list[list[str]] | None = None,
+    ):
         self.name = name
         self.covers = covers
         self.not_covered = not_covered
         self.command = command
         self.slow = slow
+        # What we must stage before the scope runs. We declare it here because
+        # without the declaration, a scope with generated input would work only
+        # in a checkout where someone had generated it, and fail everywhere else.
+        self.prepare = prepare or []
 
 
 SCOPES = [
@@ -64,6 +76,9 @@ SCOPES = [
         # With `npm test` we run vitest, without a type check, so we include the
         # type check in this scope instead of leaving it to a full build.
         ["npm", "--prefix", str(ROOT / "desktop"), "run", "check"],
+        # In the builder we draw the geometry from the exporter, staged beside
+        # the artwork. In its tests we read the same staged files as in the app.
+        prepare=[["python3", str(ROOT / "scripts/render_controllers.py"), "--stage-frontend"]],
     ),
     Scope(
         "menu",
@@ -76,6 +91,12 @@ SCOPES = [
         "that the runtime-kit staging script names paths that exist, after any rename",
         "that the script runs or produces a correct kit; it builds a whole application",
         ["python3", str(ROOT / "scripts/test_staging.py")],
+    ),
+    Scope(
+        "joypad",
+        "that every hid profile the pin declares is staged, and that RetroArch's match rules would accept it",
+        "that a physical pad's buttons match those numbers; nothing here opens a device",
+        ["python3", str(ROOT / "scripts/test_joypad_autoconfig.py")],
     ),
     Scope(
         "worktree",
@@ -112,6 +133,23 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "identification",
+        "how many catalogue names get the correct cover, against every published picture list",
+        "that every cover downloads, or that a real ROM was hashed; it matches names to the published filenames and checks one pointer file",
+        [
+            "cargo",
+            "test",
+            "--manifest-path",
+            str(ROOT / "desktop/src-tauri/Cargo.toml"),
+            "--lib",
+            "measure::",
+            "--",
+            "--ignored",
+            "--nocapture",
+        ],
+        slow=True,
+    ),
+    Scope(
         "automation",
         "that something other than a person still runs this suite",
         "that the hook is installed in a fresh clone; core.hooksPath is local configuration",
@@ -138,6 +176,13 @@ BY_NAME = {scope.name: scope for scope in SCOPES}
 
 def run(scope: Scope) -> tuple[bool, float]:
     started = time.monotonic()
+    for step in scope.prepare:
+        staged = subprocess.run(step, cwd=ROOT, capture_output=True, text=True)
+        if staged.returncode != 0:
+            print(
+                f"  could not stage what {scope.name} needs:\n{staged.stderr.strip()[-600:]}"
+            )
+            return False, time.monotonic() - started
     result = subprocess.run(scope.command, cwd=ROOT)
     return result.returncode == 0, time.monotonic() - started
 

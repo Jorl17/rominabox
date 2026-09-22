@@ -55,6 +55,7 @@
       "recognizeOnly": [
         "m3u"
       ],
+      "catalog": "Sega - Mega-CD - Sega CD",
       "cores": [
         {
           "artifacts": {
@@ -380,6 +381,7 @@
       "recognizeOnly": [
         "m3u"
       ],
+      "catalog": "Sony - PlayStation",
       "cores": [
         {
           "artifacts": {
@@ -432,6 +434,7 @@
         "gdi",
         "m3u"
       ],
+      "catalog": "Sega - Dreamcast",
       "cores": [
         {
           "artifacts": {
@@ -458,6 +461,7 @@
         "rvz",
         "iso"
       ],
+      "catalog": "Nintendo - GameCube",
       "cores": [
         {
           "artifacts": {
@@ -484,6 +488,7 @@
         "iso",
         "chd"
       ],
+      "catalog": "Sony - PlayStation 2",
       "cores": [
         {
           "artifacts": {
@@ -652,6 +657,7 @@
       "recognizeOnly": [
         "m3u"
       ],
+      "catalog": "NEC - PC Engine CD - TurboGrafx-CD",
       "cores": [
         {
           "artifacts": {

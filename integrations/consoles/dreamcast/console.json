@@ -19,7 +19,12 @@
     ]
   },
   "recognition": {},
-  "metadata": {},
+  "metadata": {
+    "catalog": {
+      "provider": "redump",
+      "name": "Sega - Dreamcast"
+    }
+  },
   "cores": [
     {
       "component": "flycast"
