@@ -92,7 +92,12 @@
         }
       ],
       "controllerProfile": "megadrive",
-      "category": "disc"
+      "category": "disc",
+      "headerTitle": {
+        "offset": 336,
+        "length": 48,
+        "anchor": "SEGADISCSYSTEM"
+      }
     },
     {
       "id": "mastersystem",
@@ -357,7 +362,20 @@
         }
       ],
       "controllerProfile": "snes",
-      "category": "cartridge"
+      "category": "cartridge",
+      "copierHeader": 512,
+      "headerTitle": [
+        {
+          "offset": 32704,
+          "length": 21,
+          "complementAt": 28
+        },
+        {
+          "offset": 65472,
+          "length": 21,
+          "complementAt": 28
+        }
+      ]
     },
     {
       "id": "n64",
@@ -487,7 +505,12 @@
         }
       ],
       "controllerProfile": "dreamcast",
-      "category": "disc"
+      "category": "disc",
+      "headerTitle": {
+        "offset": 128,
+        "length": 96,
+        "anchor": "SEGA SEGAKATANA"
+      }
     },
     {
       "id": "gamecube",
@@ -517,7 +540,15 @@
         }
       ],
       "controllerProfile": "gamecube",
-      "category": "disc"
+      "category": "disc",
+      "headerTitle": {
+        "offset": 32,
+        "length": 96,
+        "magic": {
+          "offset": 28,
+          "hex": "C2339F3D"
+        }
+      }
     },
     {
       "id": "ps2",
@@ -665,7 +696,15 @@
         }
       ],
       "controllerProfile": "retropad",
-      "category": "cartridge"
+      "category": "cartridge",
+      "headerTitle": {
+        "offset": 10,
+        "length": 32,
+        "magic": {
+          "offset": 0,
+          "text": "LYNX"
+        }
+      }
     },
     {
       "id": "pce",

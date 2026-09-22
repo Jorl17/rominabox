@@ -84,7 +84,9 @@ function serve(root) {
 function writeRom() {
   const directory = path.join(ROOT, "work/test-output/builder-shots");
   fs.mkdirSync(directory, { recursive: true });
-  const file = path.join(directory, "SONIC THE HEDGEHOG.md");
+  // The file name is not the game's name. The title on the details step must
+  // come from the header at 0x150, or we would show "game" for this drop.
+  const file = path.join(directory, "game.md");
   const data = Buffer.alloc(512);
   data.write("SEGA", 0x100, "ascii");
   data.write("SONIC THE HEDGEHOG", 336, "ascii");

@@ -13,7 +13,16 @@
     ],
     "category": "disc"
   },
-  "recognition": {},
+  "recognition": {
+    "headerTitle": {
+      "offset": 32,
+      "length": 96,
+      "magic": {
+        "offset": 28,
+        "hex": "C2339F3D"
+      }
+    }
+  },
   "metadata": {
     "catalog": {
       "provider": "redump",

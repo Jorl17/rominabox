@@ -19,7 +19,13 @@
       "m3u"
     ]
   },
-  "recognition": {},
+  "recognition": {
+    "headerTitle": {
+      "anchor": "SEGADISCSYSTEM",
+      "offset": 336,
+      "length": 48
+    }
+  },
   "metadata": {
     "catalog": {
       "provider": "redump",

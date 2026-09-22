@@ -139,6 +139,51 @@ pub fn identification_header(path: &Path) -> io::Result<Vec<u8>> {
     Ok(trim_header(probe))
 }
 
+/// How many leading bytes are a copier header and not the cartridge.
+///
+/// We declare the size on the console. A dump has a header when the file is
+/// that many bytes past a kilobyte boundary, as with Super Nintendo copiers,
+/// where the cartridge is a whole number of kilobytes and the header adds
+/// 512.
+pub fn copier_prefix(extension: &str, length: u64) -> u64 {
+    let candidates = crate::systems::candidates_for_extension(extension);
+    if candidates.len() != 1 {
+        return 0;
+    }
+    let Some(size) = candidates[0].copier_header else {
+        return 0;
+    };
+    if size > 0 && length > size && length % 1024 == size {
+        size
+    } else {
+        0
+    }
+}
+
+/// Cartridge bytes long enough for a declared title, with a copier chunk
+/// removed and a shuffled dump restored.
+///
+/// `identification_header` ends at 512 because the signatures are before
+/// that. A Super Nintendo title is at 32 KiB or 64 KiB.
+pub fn image_prefix(path: &Path, extension: &str, bytes_needed: usize) -> io::Result<Vec<u8>> {
+    let length = std::fs::metadata(path)?.len();
+    let skip = copier_prefix(extension, length);
+    let mut file = File::open(path)?;
+    if skip > 0 {
+        let mut discarded = vec![0u8; skip as usize];
+        file.read_exact(&mut discarded)?;
+    }
+    let mut probe = Vec::new();
+    file.take(bytes_needed as u64).read_to_end(&mut probe)?;
+    if let Some(restored) = deinterleaved_prefix(&probe) {
+        return Ok(restored);
+    }
+    if let Some(restored) = normalized_n64_prefix(&probe) {
+        return Ok(restored);
+    }
+    Ok(probe)
+}
+
 fn trim_header(bytes: Vec<u8>) -> Vec<u8> {
     let end = bytes.len().min(512);
     bytes[..end].to_vec()
@@ -156,8 +201,9 @@ pub fn fingerprints(
     let length = std::fs::metadata(path)?.len();
     // A Super Nintendo copier header is 512 bytes, and the cartridge itself is
     // a whole number of kilobytes, so the file is 512 bytes past a boundary.
-    if matches!(extension, "sfc" | "smc") && length > 512 && length % 1024 == 512 {
-        found.push(hash_file(path, 512, N64Order::Big)?);
+    let skip = copier_prefix(extension, length);
+    if skip > 0 {
+        found.push(hash_file(path, skip, N64Order::Big)?);
     }
     if let Some((skip, order)) = n64_variant(path)? {
         found.push(hash_file(path, skip, order)?);
