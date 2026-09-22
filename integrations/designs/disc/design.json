@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "id": "disc",
+  "name": "Disc",
+  "description": "The memory-card browser of a late-90s disc console.",
+  "slots": 6,
+  "documents": {
+    "menu": "menu.rml",
+    "splash": "splash.rml",
+    "style": "menu.rcss"
+  },
+  "fonts": [
+    {
+      "file": "Silkscreen-Regular.ttf",
+      "license": "Silkscreen-OFL.txt",
+      "family": "Silkscreen"
+    }
+  ],
+  "metrics": {
+    "scene": {
+      "width": 960,
+      "height": 380
+    },
+    "marker": {
+      "diameter": 30
+    },
+    "callout": {
+      "width": 188,
+      "height": 36,
+      "border": 1
+    },
+    "group": {
+      "width": 210,
+      "height": 44,
+      "gap": 12,
+      "bottomMargin": 8
+    }
+  },
+  "list": {
+    "pageSize": 5
+  },
+  "binds": {
+    "afterMs": 400,
+    "width": 360
+  },
+  "overlays": [
+    {
+      "id": "splash",
+      "afterMs": 0,
+      "holdMs": 400,
+      "leaveMs": 180,
+      "needs": "splash-logo.png"
+    },
+    {
+      "id": "notice",
+      "follows": "splash",
+      "afterMs": 400,
+      "holdMs": 2800,
+      "leaveMs": 280
+    }
+  ],
+  "screens": [
+    {
+      "id": "pause",
+      "panel": "pause-panel",
+      "heading": "MEMORY CARD",
+      "footer": "ESC  CONTINUE",
+      "button": "controls-back"
+    },
+    {
+      "id": "disc",
+      "panel": "disc-panel",
+      "heading": "DISC",
+      "footer": "ESC  BACK",
+      "button": "disc"
+    },
+    {
+      "id": "options",
+      "panel": "options-panel",
+      "heading": "INDEX",
+      "footer": "ESC  BACK",
+      "button": "options",
+      "label": "INDEX",
+      "back": "BACK",
+      "place": "options"
+    },
+    {
+      "id": "controls",
+      "panel": "controls-panel",
+      "heading": "PAD",
+      "footer": "ESC  BACK",
+      "button": "controls",
+      "option": {
+        "label": "PAD",
+        "default": true
+      }
+    }
+  ],
+  "tokens": {
+    "ink": "#ffffff"
+  }
+}

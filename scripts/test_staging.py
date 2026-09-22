@@ -28,7 +28,7 @@ SCRIPT = ROOT / "scripts/native_runtime/build-builder-macos.sh"
 ASSIGNMENT = re.compile(r'^\s*(\w+)="\$(\w+)/([^"$]+)"\s*$', re.MULTILINE)
 
 # We create the destinations in the build, so only sources must already exist.
-DESTINATIONS = {"menu_assets", "sound_staging", "app"}
+DESTINATIONS = {"shared_assets", "sound_staging", "app"}
 
 
 def main() -> int:

@@ -9,10 +9,13 @@ without this script we would have to launch a game to see one.
     python3 scripts/menu_states.py --check      # every state still renders
 
 The states are in `scripts/fixtures/menu-states.json`, where we declare them
-once. A state is a small stylesheet that we append to the stylesheet of the
-design, never an edit to the markup. If we matched markup strings, we would
-have to change the generator and this tool together whenever an element
-changed, and we use console packages to avoid that kind of duplication.
+once. We draw every design in `desktop/designs.json` for the console we
+staged, in every palette, and the digest key is
+`<design>/<system>/<palette>/<state>`. A state that is the same in two
+designs is an error. A state is a small stylesheet that we append to the
+stylesheet of the design, never an edit to the markup. If we matched markup
+strings, we would have to change the generator and this tool together
+whenever an element changed, and we use console packages to avoid that.
 
 Each state lists the selectors it depends on, and we refuse to render a
 state when any of its selectors are missing from the document. So after
@@ -43,7 +46,6 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILT_PREVIEW = ROOT / "work/experiments/rml-preview/build/rml-preview"
 STAGED_PREVIEW = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
 PREVIEW = BUILT_PREVIEW if BUILT_PREVIEW.exists() else STAGED_PREVIEW
-DESIGN = ROOT / "integrations/designs/native"
 ARTWORK = ROOT / "desktop/assets/controllers"
 STATES = ROOT / "scripts/fixtures/menu-states.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-state-digests.json"
@@ -70,6 +72,32 @@ def declared_states() -> dict[str, dict]:
     return json.loads(STATES.read_text())["states"]
 
 
+def declared_designs() -> list[str]:
+    """Every design we can export a game with, in registry order.
+
+    The designs come from the same file as the palettes, so we render a new
+    design there with no change here. That is the reason for more than one
+    design, because we write the check once for all of them.
+    """
+    declared = json.loads((ROOT / "desktop/designs.json").read_text())
+    return [entry["id"] for entry in declared["designs"]]
+
+
+def design_dir(design: str) -> Path:
+    return ROOT / "integrations/designs" / design
+
+
+def concerns(key: str, system: str) -> bool:
+    """Whether a digest key belongs to this console.
+
+    The key is design/system/palette/state. We stage one console in a run, so
+    in the record and the check we must tell the rows of that console from
+    the others without dropping a design in the same file.
+    """
+    parts = key.split("/")
+    return len(parts) == 4 and parts[1] == system
+
+
 def mapped(items, function):
     """Run independent renders together. Each one is a separate process, and
     the pictures do not share a document or an output file."""
@@ -81,13 +109,21 @@ def mapped(items, function):
 
 
 def stage(system: str, workspace: Path, variant: str | None = None,
-          palette: str = "blue") -> Path:
+          palette: str = "blue", design: str | None = None) -> Path:
     """Stage the design and the generated scene for a console, as in an export.
 
     Source and destination are separate directories because in the exporter we
     copy artwork from one to the other, and with both in one directory we
     would copy each file onto itself, which truncates it.
+
+    For the placement check and the variant sweep we pass no design and use the
+    first one in the registry, because those checks are about the console and
+    their recorded figures do not include a design.
     """
+    design = design or declared_designs()[0]
+    package = design_dir(design)
+    if not package.is_dir():
+        raise SystemExit(f"design '{design}' is declared but {package} is not a directory")
     source = workspace / "source"
     staged = workspace / "staged"
     for directory in (source, staged):
@@ -95,7 +131,7 @@ def stage(system: str, workspace: Path, variant: str | None = None,
     # The whole design package, because that is what a design is. With a
     # separate list of its documents here, we could stage something else than
     # the kit and render the tests in a different frame from the one in the kit.
-    for document in DESIGN.iterdir():
+    for document in package.iterdir():
         if document.is_file():
             shutil.copyfile(document, source / document.name)
             shutil.copyfile(document, staged / document.name)
@@ -501,19 +537,29 @@ def main() -> int:
     missing: list[str] = []
     digests: dict[str, str] = {}
     rendered = 0
-    for palette in palettes():
-        # The console is part of the path. We run test scopes in parallel, and
-        # when two runs stage different consoles in one directory, the second
-        # staging would replace the design of the first, and we would see a
-        # changed state instead of a collision.
-        workspace = ROOT / f"work/menu-states-staging/{arguments.system}/{palette}"
-        shutil.rmtree(workspace, ignore_errors=True)
-        staging = stage(arguments.system, workspace, arguments.variant, palette)
-        document = (staging / "menu.rml").read_text()
-        print(f"\n{palette}")
-        rendered += render_palette(
-            arguments.system, palette, staging, document, arguments, digests, missing
-        )
+    # We draw every state of every design in every palette. The key contains the
+    # design and the console, so we record a second design next to the first,
+    # and two consoles never share a directory.
+    for design in declared_designs():
+        print(f"\n{design}")
+        for palette in palettes():
+            # Design and console are both part of the path. We run the test
+            # scopes in parallel, and with two consoles or two designs staged
+            # in one directory, the files of one run would replace those of
+            # the other, and we would see a state that changed.
+            workspace = (
+                ROOT / "work" / "menu-states-staging" / design / arguments.system / palette
+            )
+            shutil.rmtree(workspace, ignore_errors=True)
+            staging = stage(
+                arguments.system, workspace, arguments.variant, palette, design
+            )
+            document = (staging / "menu.rml").read_text()
+            print(f"  {palette}")
+            rendered += render_palette(
+                design, arguments.system, palette, staging, document,
+                arguments, digests, missing,
+            )
 
     return finish(arguments, digests, missing, rendered)
 
@@ -533,9 +579,9 @@ def palettes() -> list[str]:
     return [entry["id"] for entry in declared["palettes"]]
 
 
-def draw_state(system: str, palette: str, name: str, state: dict, staging: Path, document: str, output: Path):
+def draw_state(design: str, system: str, palette: str, name: str, state: dict, staging: Path, document: str, output: Path):
     """One picture. Returns (key, digest or None, line for stdout, line for stderr)."""
-    key = f"{system}/{palette}/{name}"
+    key = f"{design}/{system}/{palette}/{name}"
     # In a state we can list what the console must offer for the state to make
     # sense. The picker states require a picker, and a console with one
     # controller has none, so refusing them there would mark every such console
@@ -589,14 +635,19 @@ def draw_state(system: str, palette: str, name: str, state: dict, staging: Path,
     return key, digest, f"  {name:<26}{state['describes']}\n", ""
 
 
-def render_palette(system, palette, staging, document, arguments, digests, missing) -> int:
-    """Draw every declared state in one colour scheme."""
-    output = arguments.output / palette
+def render_palette(design, system, palette, staging, document, arguments, digests, missing) -> int:
+    """Draw every declared state in one design, one console and one colour scheme."""
+    # The output root is already per console, so two test scopes never empty the
+    # same directory. Design and palette still have separate directories under
+    # it, because two designs with pause-menu.png in one folder also collide.
+    output = arguments.output / design / palette
     output.mkdir(parents=True, exist_ok=True)
     states = list(declared_states().items())
     drawn = mapped(
         states,
-        lambda item: draw_state(system, palette, item[0], item[1], staging, document, output),
+        lambda item: draw_state(
+            design, system, palette, item[0], item[1], staging, document, output
+        ),
     )
     rendered = 0
     for key, digest, line, error in drawn:
@@ -616,22 +667,42 @@ def render_palette(system, palette, staging, document, arguments, digests, missi
     return rendered
 
 
-def finish(arguments, digests, missing, rendered) -> int:
-    """Report twins, refusals and digest drift across every palette drawn."""
+def same_picture(digests: dict[str, str]) -> tuple[list[list[str]], list[str]]:
+    """Pictures that should differ and do not.
 
-    # Two states with the same picture are one state with two names. Hover,
-    # keyboard focus and held-down must differ, so that a player using the
-    # arrow keys can see which option they would choose with a press.
-    same: dict[tuple[str, str], list[str]] = {}
-    for key, value in digests.items():
-        system, palette, name = key.split("/", 2)
-        same.setdefault((system, palette, value), []).append(key)
-    twins = [names for names in same.values() if len(names) > 1]
+    We ask two separate questions, because the causes differ. When two states
+    in one design, console and palette give the same picture, the player
+    cannot tell hover from keyboard focus or a held button. When two designs
+    give the same picture for one state, the second design is not a design.
+    """
+    within: dict[tuple[str, str, str, str], list[str]] = {}
+    across: dict[tuple[str, str, str, str], list[str]] = {}
+    for key, digest in digests.items():
+        design, system, palette, state = key.split("/", 3)
+        within.setdefault((design, system, palette, digest), []).append(key)
+        across.setdefault((system, palette, state, digest), []).append(design)
+    twins = [names for names in within.values() if len(names) > 1]
+    collided = []
+    for (system, palette, state, _digest), designs in sorted(across.items()):
+        unique = sorted(set(designs))
+        if len(unique) > 1:
+            collided.append(
+                f"{system}/{palette}/{state}: {', '.join(unique)} draw the same picture"
+            )
+    return twins, collided
+
+
+def finish(arguments, digests, missing, rendered) -> int:
+    """Report twins, refusals and digest drift across every design drawn."""
+
+    twins, collided = same_picture(digests)
     for names in twins:
         print(
             f"  IDENTICAL {', '.join(sorted(names))}: the same picture",
             file=sys.stderr,
         )
+    for line in collided:
+        print(f"  SAME DESIGN {line}", file=sys.stderr)
 
     if missing:
         print(
@@ -652,10 +723,29 @@ def finish(arguments, digests, missing, rendered) -> int:
         )
         return 1
 
+    if len(declared_designs()) < 2:
+        print(
+            "\nonly one design is declared, so nothing compared two designs. "
+            "A state that renders once proves nothing about the second one.",
+            file=sys.stderr,
+        )
+        return 1
+
+    if collided:
+        print(
+            f"\n{len(collided)} state(s) render identically across designs. "
+            "The same palette and the same state must not come out the same "
+            "picture: a second design that draws the first one has not changed "
+            "what a menu is.",
+            file=sys.stderr,
+        )
+        return 1
+
     if arguments.record:
-        # We merge instead of replacing, for the same reason.
+        # We merge instead of replacing, because in this run we staged one console,
+        # and without the rows of the other console its next check would fail.
         kept = json.loads(DIGESTS.read_text()) if DIGESTS.exists() else {}
-        kept = {k: v for k, v in kept.items() if not k.startswith(f"{arguments.system}/")}
+        kept = {k: v for k, v in kept.items() if not concerns(k, arguments.system)}
         kept.update(digests)
         DIGESTS.write_text(json.dumps(kept, indent=2, sort_keys=True) + "\n")
         print(f"\nrecorded {len(digests)} state digests -> {DIGESTS.name}")
@@ -668,7 +758,7 @@ def finish(arguments, digests, missing, rendered) -> int:
         # Only the entries of this console. A run with one staged console has no
         # results for another, and if we called the others missing, every run
         # with one console would fail.
-        mine = {k: v for k, v in expected.items() if k.startswith(f"{arguments.system}/")}
+        mine = {k: v for k, v in expected.items() if concerns(k, arguments.system)}
         changed = [n for n, d in digests.items() if mine.get(n) != d]
         gone = sorted(set(mine) - set(digests))
         if changed or gone:

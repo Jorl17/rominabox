@@ -417,6 +417,51 @@ pub fn toggle_declarations(screens: &[Screen]) -> String {
     text
 }
 
+/// Every element that opens this screen, which we read in the player as a
+/// space-separated list.
+///
+/// A design may draw a BACK button on a screen that only it has, such as
+/// `disc-back` on the disc screen. We read several ids here in the player,
+/// and the BACK of a generated list goes onto the declaration of the host
+/// screen in the same way. We add the back buttons of the design to that
+/// list too, so every BACK button in a design works.
+///
+/// A BACK leads to the screen that is not an Options entry and not reached
+/// from Options, the same host screen that every generated list returns to.
+fn shown_by(screen: &Screen, screens: &[&Screen], markup: &str) -> String {
+    let host = screens
+        .iter()
+        .find(|entry| entry.place == ScreenPlace::Plain && entry.option_label.is_none());
+    if host.map(|entry| entry.id.as_str()) != Some(screen.id.as_str()) {
+        return screen.button.clone();
+    }
+    let mut buttons: Vec<String> = screen
+        .button
+        .split_whitespace()
+        .map(str::to_string)
+        .collect();
+    for other in screens {
+        // Only a screen that is in the design alone, next to the host screen.
+        // BACK in an Options entry returns to Options, and BACK on the Options
+        // screen is already the button of the host screen. If we added either
+        // here, two elements would become one.
+        if other.id == screen.id
+            || other.place != ScreenPlace::Plain
+            || other.option_label.is_some()
+        {
+            continue;
+        }
+        let back = format!("{}-back", other.id);
+        // Only the buttons in the design. If we declared a button that is not
+        // in the document, we would wait in the player for an element that
+        // never appears.
+        if markup.contains(&format!("id=\"{back}\"")) && !buttons.contains(&back) {
+            buttons.push(back);
+        }
+    }
+    buttons.join(" ")
+}
+
 fn screen_declarations(screens: &[Screen], markup: &str) -> String {
     let screens: Vec<&Screen> = screens
         .iter()
@@ -430,7 +475,7 @@ fn screen_declarations(screens: &[Screen], markup: &str) -> String {
             screen.panel,
             screen.heading,
             screen.footer,
-            screen.button,
+            shown_by(screen, &screens, markup),
             id = screen.id,
         ));
     }
@@ -1910,6 +1955,54 @@ mod tests {
             .join("../../integrations/designs/native");
         let menu = fs::read_to_string(design.join("menu.rml")).expect("native menu");
         (design, menu)
+    }
+
+    fn design_menu(name: &str) -> (PathBuf, String) {
+        let design = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../integrations/designs")
+            .join(name);
+        let menu = fs::read_to_string(design.join("menu.rml")).expect("design menu");
+        (design, menu)
+    }
+
+    /// A design may draw an extra screen, and its BACK must lead somewhere.
+    ///
+    /// The disc design contains `disc-back`. Without a declaration we would not
+    /// listen for it in the player. The button would appear and could get the
+    /// focus but would do nothing, and leaving with Escape would hide the fault.
+    #[test]
+    fn a_designs_own_screen_has_a_back_that_goes_somewhere() {
+        let (design, menu) = design_menu("disc");
+        assert!(menu.contains("id=\"disc-back\""), "the disc design draws this button");
+        let (staged, screens) = apply_options(&design, &menu, None).expect("defaults");
+        let cfg = screen_declarations(&screens, &staged);
+
+        let pause = cfg
+            .lines()
+            .find(|line| line.starts_with("screen_button_pause = "))
+            .expect("the pause screen is declared");
+        assert!(
+            pause.contains("disc-back"),
+            "pressing the disc screen's BACK must show the screen behind it; \
+             the player is told {pause}"
+        );
+
+        // And only those of the design. BACK in an Options entry returns to
+        // Options, and declaring it here would make the two one element.
+        assert!(
+            !pause.contains("controls-back"),
+            "the controls screen is an Options entry and returns there: {pause}"
+        );
+
+        // The native design has no extra screen, so we add nothing.
+        let (native, native_menu) = design_menu("native");
+        let (native_staged, native_screens) =
+            apply_options(&native, &native_menu, None).expect("defaults");
+        let native_cfg = screen_declarations(&native_screens, &native_staged);
+        assert!(
+            native_cfg.contains("screen_button_pause = \"options-back\""),
+            "a design with no screen of its own is unchanged"
+        );
     }
 
     /// We move the Controls button from the pause row into Options. A game with

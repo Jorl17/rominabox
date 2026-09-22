@@ -13,7 +13,6 @@ esac
 # One directory per design, so that the kit contains the designs by name and
 # not one unnamed set of menu files. Each new design is a new directory here.
 designs_root="$root/integrations/designs"
-menu_assets="$root/desktop/src-tauri/resources/runtime/designs/native"
 # The controller artwork is common to every design, because the pads are the
 # same in each. At export we read it from the kit's shared directory, so we
 # copy it there. A copy only in the native design's directory would leave the
@@ -62,7 +61,17 @@ for asset in $controller_pngs CONTROLLERS.txt; do
 done
 # We give Tauri this directory as the runtime resource. Refresh the authored
 # menu and controller assets without freezing or rebuilding the runtime kit.
-cp -R "$menu_source/." "$menu_assets/"
+# We copy every design, because in the staleness check we go through
+# integrations/designs and reject any design that is not in the kit.
+for design in "$designs_root"/*; do
+  [ -d "$design" ] || continue
+  name=$(basename "$design")
+  dest="$root/desktop/src-tauri/resources/runtime/designs/$name"
+  mkdir -p "$dest"
+  cp -R "$design/." "$dest/"
+done
+# We put the pads in the kit's shared directory and not in one design, because
+# the pads are the same in every design and we read them from there at export.
 mkdir -p "$shared_assets"
 for asset in $controller_pngs; do
   cp -p "$controller_source/$asset" "$shared_assets/$asset"

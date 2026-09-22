@@ -4,6 +4,11 @@
       "id": "native",
       "name": "Default menu",
       "slots": 6
+    },
+    {
+      "id": "disc",
+      "name": "Disc",
+      "slots": 6
     }
   ],
   "palettes": [
@@ -68,6 +73,48 @@
         "frame": "#e8702a",
         "slot-label": "#1d0f06",
         "well-edge": "#2a1409"
+      }
+    },
+    {
+      "id": "carbon",
+      "name": "Carbon",
+      "screen": "#101218",
+      "background": "#07080c",
+      "surface": "#1a1e28",
+      "picture": "#12161e",
+      "edge": "#a8b0be",
+      "highlight": "#ff3b4e",
+      "muted": "#8e98a8",
+      "focus": "#2c3344",
+      "tokens": {
+        "bevel-light": "#d5dbe4",
+        "bevel-dark": "#04050a",
+        "rule": "#3e4656",
+        "disabled": "#6a7382",
+        "frame": "#ff3b4e",
+        "slot-label": "#0e1016",
+        "well-edge": "#141820"
+      }
+    },
+    {
+      "id": "violet",
+      "name": "Violet",
+      "screen": "#160a1c",
+      "background": "#0a0610",
+      "surface": "#2a1434",
+      "picture": "#1e0e26",
+      "edge": "#e2c4ee",
+      "highlight": "#ff5c9a",
+      "muted": "#c9a8d4",
+      "focus": "#4c205c",
+      "tokens": {
+        "bevel-light": "#f3dff8",
+        "bevel-dark": "#06040a",
+        "rule": "#6e3c7c",
+        "disabled": "#8d6a98",
+        "frame": "#ff5c9a",
+        "slot-label": "#120816",
+        "well-edge": "#1a0c20"
       }
     }
   ],
