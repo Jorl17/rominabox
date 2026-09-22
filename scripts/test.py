@@ -243,6 +243,13 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/render_control_overlays.py"), "--check", str(SCRATCH / "overlays")],
         slow=True,
     ),
+    Scope(
+        "shaderstate",
+        "that the shader row marked ON is the preset the running game is using, including after a restart",
+        "that the filter looks right — only which row says it is the one on",
+        ["python3", str(ROOT / "scripts/shader_state.py")],
+        slow=True,
+    ),
 ]
 
 BY_NAME = {scope.name: scope for scope in SCOPES}
