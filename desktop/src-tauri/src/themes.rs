@@ -113,6 +113,100 @@ impl Default for SceneMetrics {
     }
 }
 
+/// A screen in the in-game menu, as declared in the design.
+///
+/// In the player we read these declarations and no fixed panel ids or heading
+/// strings, so a new screen requires no change to the player and is not tied
+/// to one design.
+///
+/// The words of the heading and the footer hint come from the design, so
+/// that each design can word them differently, also in another language.
+pub struct Screen {
+    pub id: String,
+    pub panel: String,
+    pub heading: String,
+    pub footer: String,
+    /// The button that opens this screen. A back button is the button that
+    /// opens the screen behind, so we need no separate kind for it.
+    pub button: String,
+}
+
+/// The screens for a design that declares none, the two default screens with
+/// the default words of the player.
+fn built_in_screens() -> Vec<Screen> {
+    vec![
+        Screen {
+            id: "pause".into(),
+            panel: "pause-panel".into(),
+            heading: "GAME PAUSED".into(),
+            footer: "ESC  CONTINUE".into(),
+            button: "controls-back".into(),
+        },
+        Screen {
+            id: "controls".into(),
+            panel: "controls-panel".into(),
+            heading: "CONTROLS".into(),
+            footer: "ESC  BACK".into(),
+            button: "controls".into(),
+        },
+    ]
+}
+
+pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
+    let declaration = design.join("design.json");
+    let Ok(text) = fs::read_to_string(&declaration) else {
+        return Ok(built_in_screens());
+    };
+    let declared: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("{}: {e}", declaration.display()))?;
+    let Some(listed) = declared.get("screens").and_then(|v| v.as_array()) else {
+        return Ok(built_in_screens());
+    };
+    let mut screens = Vec::new();
+    for (index, entry) in listed.iter().enumerate() {
+        let at = |key: &str| -> Result<String, String> {
+            entry[key]
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| format!("screen {index} in {} declares no {key}", declaration.display()))
+        };
+        screens.push(Screen {
+            id: at("id")?,
+            panel: at("panel")?,
+            heading: at("heading")?,
+            footer: at("footer")?,
+            // Optional, because a screen we open only in code has no button.
+            button: entry["button"].as_str().unwrap_or_default().to_string(),
+        });
+    }
+    if screens.is_empty() {
+        return Ok(built_in_screens());
+    }
+    Ok(screens)
+}
+
+/// The screens, written to the file that the player reads.
+///
+/// We use the same format as for the controller list, a space-separated list
+/// of ids and one key per field, read with `config_get_array`. The player
+/// code contains the name of no particular screen.
+fn screen_declarations(design: &Path) -> Result<String, String> {
+    let screens = declared_screens(design)?;
+    let ids: Vec<&str> = screens.iter().map(|s| s.id.as_str()).collect();
+    let mut text = format!("screens = \"{}\"\n", ids.join(" "));
+    for screen in &screens {
+        text.push_str(&format!(
+            "screen_panel_{id} = \"{}\"\nscreen_heading_{id} = \"{}\"\nscreen_footer_{id} = \"{}\"\nscreen_button_{id} = \"{}\"\n",
+            screen.panel,
+            screen.heading,
+            screen.footer,
+            screen.button,
+            id = screen.id,
+        ));
+    }
+    Ok(text)
+}
+
 pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
     let declaration = design.join("design.json");
     let Ok(text) = fs::read_to_string(&declaration) else {
@@ -194,6 +288,14 @@ pub fn prepare_theme_assets(
         fs::copy(source.join(name), destination.join(name))
             .map_err(|e| format!("Could not prepare menu asset {name}: {e}"))?;
     }
+    // The declarations of the design, in the file that the player reads. We
+    // write them next to the stylesheet because both belong to the design. A
+    // design lists its screens, and we show them by name in the player.
+    fs::write(
+        destination.join("design.cfg"),
+        screen_declarations(source)?,
+    )
+    .map_err(|e| format!("Could not write the design's declarations: {e}"))?;
     let mut css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
     css.push_str(&scene_metrics_rules(source)?);
     css.push_str(&format!(r#"

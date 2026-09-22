@@ -34,5 +34,21 @@
       "gap": 16,
       "bottomMargin": 12
     }
-  }
+  },
+  "screens": [
+    {
+      "id": "pause",
+      "panel": "pause-panel",
+      "heading": "GAME PAUSED",
+      "footer": "ESC  CONTINUE",
+      "button": "controls-back"
+    },
+    {
+      "id": "controls",
+      "panel": "controls-panel",
+      "heading": "CONTROLS",
+      "footer": "ESC  BACK",
+      "button": "controls"
+    }
+  ]
 }

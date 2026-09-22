@@ -138,8 +138,14 @@ int main(int argc, char **argv)
    const int second = rib_rmlui_take_action();
    CHECK(first == RIB_RMLUI_ACTION_SAVE,
          "mailbox preserves the first click");
-   CHECK(second == RIB_RMLUI_ACTION_CONTROLS,
+   // Changing screen has no separate action. We pass the requested screen
+   // next to one shared action, so declaring a screen never adds to the
+   // enum. This test is mainly about the order, and it also checks that the
+   // id arrived.
+   CHECK(second == RIB_RMLUI_ACTION_SHOW_SCREEN,
          "mailbox preserves the following click");
+   CHECK(std::string(rib_rmlui_requested_screen()) == "controls",
+         "the screen asked for travels with the action");
    CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
          "mailbox is empty after both intents");
 
@@ -269,6 +275,35 @@ int main(int argc, char **argv)
       CHECK(!rib_rmlui_element_center(
             "controls-device-option-megadrive6", &image_x, &image_y),
             "picker options are export markup, not created by the bridge");
+   }
+
+   // Every intent that we can queue in the menu plays a sound, unless we chose
+   // silence for it on purpose, so an action added later cannot be silent
+   // without a test failure. Changing screen, for example, must still play
+   // the confirm cue of the menu.
+   {
+      const int silent[] = {
+         RIB_RMLUI_ACTION_NONE,
+         RIB_RMLUI_ACTION_SELECT_SLOT_1, RIB_RMLUI_ACTION_SELECT_SLOT_2,
+         RIB_RMLUI_ACTION_SELECT_SLOT_3, RIB_RMLUI_ACTION_SELECT_SLOT_4,
+         RIB_RMLUI_ACTION_SELECT_SLOT_5, RIB_RMLUI_ACTION_SELECT_SLOT_6,
+      };
+      for (int action = RIB_RMLUI_ACTION_NONE;
+            action <= RIB_RMLUI_ACTION_SHOW_SCREEN; ++action)
+      {
+         bool expected_silent = false;
+         for (int quiet : silent)
+            if (quiet == action)
+               expected_silent = true;
+         const bool is_silent =
+            rib_rmlui_action_sound(action) == RIB_MENU_SOUND_NONE;
+         CHECK(is_silent == expected_silent,
+               "every intent is audible unless silence was chosen for it");
+      }
+      CHECK(rib_rmlui_action_sound(RIB_RMLUI_ACTION_SHOW_SCREEN)
+            == RIB_MENU_SOUND_OK, "changing screen is confirmed, not silent");
+      CHECK(rib_rmlui_action_sound(RIB_RMLUI_ACTION_CONTROLS_BACK)
+            == RIB_MENU_SOUND_CANCEL, "leaving a screen cancels, not confirms");
    }
 
    rib_rmlui_shutdown();
