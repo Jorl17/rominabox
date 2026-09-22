@@ -907,6 +907,27 @@ main {
   font-size: 14px;
   font-weight: 650;
 }
+/* The help is on the same line as the picker in the 280px settings column.
+ * The line does not wrap, and the character sentence, when there is one, is
+ * on the next row. */
+.sound-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+.sound-line label,
+.sound-line .menu-sound-preview,
+.sound-line .help {
+  flex: 0 0 auto;
+}
+.sound-line select {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
 .sound-choice select {
   padding: 8px 28px 8px 10px;
   border: 1px solid var(--ink);

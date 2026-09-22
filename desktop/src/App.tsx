@@ -1177,30 +1177,34 @@ export function App() {
                         Customize
                       </summary>
                       <div className="sound-choice">
-                        <label htmlFor="menu-sounds">Menu sounds</label>
-                        <select
-                          id="menu-sounds"
-                          value={menuSounds}
-                          onChange={(e) => setMenuSounds(e.target.value)}
-                        >
-                          {designs.soundPacks.map((pack) => (
-                            <option
-                              value={pack.id}
-                              key={pack.id}
-                              title={pack.description}
-                            >
-                              {pack.name}
-                            </option>
-                          ))}
-                        </select>
-                        <MenuSoundPreview pack={menuSounds} />
-                        <Help>
-                          Each pack is one complete set of navigation, confirm
-                          and back cues. Only the selected pack is bundled.
-                        </Help>
-                        <span className="sound-character">
-                          {soundCharacter}
-                        </span>
+                        <div className="sound-line">
+                          <label htmlFor="menu-sounds">Menu sounds</label>
+                          <select
+                            id="menu-sounds"
+                            value={menuSounds}
+                            onChange={(e) => setMenuSounds(e.target.value)}
+                          >
+                            {designs.soundPacks.map((pack) => (
+                              <option
+                                value={pack.id}
+                                key={pack.id}
+                                title={pack.description || undefined}
+                              >
+                                {pack.name}
+                              </option>
+                            ))}
+                          </select>
+                          <MenuSoundPreview pack={menuSounds} />
+                          <Help>
+                            Each pack is one complete set of navigation, confirm
+                            and back cues. Only the selected pack is bundled.
+                          </Help>
+                        </div>
+                        {soundCharacter ? (
+                          <span className="sound-character">
+                            {soundCharacter}
+                          </span>
+                        ) : null}
                       </div>
 
                       <div className="customize-row">

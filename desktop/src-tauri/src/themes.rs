@@ -1968,11 +1968,31 @@ mod tests {
         }
     }
 
-    /// In the picker we show a name and a description for every pack, `off` included.
+    /// The Off choice is already labelled Off, so we add no sentence under it.
+    #[test]
+    fn off_pack_does_not_restate_that_audio_is_off() {
+        let off = registry()
+            .unwrap()
+            .sound_packs
+            .into_iter()
+            .find(|pack| pack.id == "off")
+            .expect("off pack");
+        assert!(
+            !off.description.to_ascii_lowercase().contains("no menu audio"),
+            "the Off option already says it is off, and this is still under it: {}",
+            off.description
+        );
+    }
+
+    /// A pack that the author can hear has a line that describes its
+    /// character. Off has none, because the control label is already Off.
     #[test]
     fn every_sound_pack_is_described_for_the_picker() {
         for pack in registry().unwrap().sound_packs {
             assert!(!pack.name.trim().is_empty(), "{} has no name", pack.id);
+            if pack.id == "off" {
+                continue;
+            }
             assert!(
                 !pack.description.trim().is_empty(),
                 "{} has no description",

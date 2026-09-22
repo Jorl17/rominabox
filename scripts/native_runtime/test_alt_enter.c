@@ -1,0 +1,111 @@
+/* Alt+Enter toggles fullscreen. Enter alone does not.
+ *
+ * We leave input_toggle_fullscreen nul in the exported config, because f is a
+ * gameplay key. These cases call the same functions as the runloop.
+ */
+#include "input/alt_enter_fullscreen.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
+static int failures = 0;
+
+static void expect_due(const char *name, int expect)
+{
+   int got = alt_enter_fullscreen_due();
+   if (got == expect)
+      return;
+   fprintf(stderr, "FAIL %s: fullscreen %s\n",
+         name, expect ? "did not fire" : "fired");
+   failures++;
+}
+
+static void expect_mask(const char *name, int expect)
+{
+   int got = alt_enter_masks_return();
+   if (got == expect)
+      return;
+   fprintf(stderr, "FAIL %s: Return %s the game\n",
+         name, expect ? "reached" : "was kept from");
+   failures++;
+}
+
+/* Hold Alt, press Enter. The window should go fullscreen. */
+static void alt_enter_toggles(void)
+{
+   alt_enter_reset();
+   alt_enter_note(ALT_ENTER_RETURN, 1, ALT_ENTER_ALT);
+   expect_due("alt+enter", 1);
+   expect_mask("alt+enter", 1);
+}
+
+/* Enter is Start. It must not also change the window. */
+static void enter_alone_does_not_toggle(void)
+{
+   alt_enter_reset();
+   alt_enter_note(ALT_ENTER_RETURN, 1, 0);
+   expect_due("enter alone", 0);
+   expect_mask("enter alone", 0);
+}
+
+/* Alt by itself is not the chord. The modifier arrives on Return. */
+static void alt_alone_does_not_toggle(void)
+{
+   alt_enter_reset();
+   alt_enter_note(308, 1, 0); /* RETROK_LALT */
+   expect_due("alt alone", 0);
+   expect_mask("alt alone", 0);
+}
+
+/* macOS repeats a held key. The second sample must not toggle back. */
+static void repeat_does_not_toggle_again(void)
+{
+   alt_enter_reset();
+   alt_enter_note(ALT_ENTER_RETURN, 1, ALT_ENTER_ALT);
+   expect_due("first alt+enter", 1);
+   alt_enter_note(ALT_ENTER_RETURN, 1, ALT_ENTER_ALT);
+   expect_due("repeated alt+enter", 0);
+   expect_mask("repeated alt+enter", 1);
+}
+
+/* Releasing Enter ends the chord. The next press toggles again. */
+static void release_arms_the_next_press(void)
+{
+   alt_enter_reset();
+   alt_enter_note(ALT_ENTER_RETURN, 1, ALT_ENTER_ALT);
+   expect_due("press", 1);
+   alt_enter_note(ALT_ENTER_RETURN, 0, ALT_ENTER_ALT);
+   expect_due("release", 0);
+   expect_mask("release", 0);
+   alt_enter_note(ALT_ENTER_RETURN, 1, ALT_ENTER_ALT);
+   expect_due("press again", 1);
+}
+
+/* Numpad Enter is the same chord. Shift+Enter is not. */
+static void keypad_enter_counts_and_shift_enter_does_not(void)
+{
+   alt_enter_reset();
+   alt_enter_note(ALT_ENTER_KP_RETURN, 1, ALT_ENTER_ALT);
+   expect_due("alt+keypad enter", 1);
+   alt_enter_reset();
+   alt_enter_note(ALT_ENTER_RETURN, 1, 0x01); /* RETROKMOD_SHIFT */
+   expect_due("shift+enter", 0);
+   expect_mask("shift+enter", 0);
+}
+
+int main(void)
+{
+   alt_enter_toggles();
+   enter_alone_does_not_toggle();
+   alt_alone_does_not_toggle();
+   repeat_does_not_toggle_again();
+   release_arms_the_next_press();
+   keypad_enter_counts_and_shift_enter_does_not();
+   if (failures)
+   {
+      fprintf(stderr, "%d alt+enter check(s) failed\n", failures);
+      return 1;
+   }
+   printf("alt+enter checks passed\n");
+   return 0;
+}

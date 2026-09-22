@@ -771,18 +771,62 @@ async function main() {
       await page.keyboard.press("Escape");
 
       await page.locator(".menu-settings details.advanced summary").click();
-      const character = (
-        (await page.locator(".sound-character").textContent()) || ""
-      )
-        .replace(/\s+/g, " ")
-        .trim();
+      const character = await page.evaluate(
+        () =>
+          (document.querySelector(".sound-character")?.textContent || "")
+            .replace(/\s+/g, " ")
+            .trim(),
+      );
       console.log(`VISIBLE sound: ${character}`);
       await shot(page, path.join(out, "08-menu-customize.png"));
+      await page.locator(".menu-settings .sound-choice").screenshot({
+        path: path.join(out, "08-menu-sounds.png"),
+        animations: "disabled",
+      });
+      console.log(`shot ${path.relative(ROOT, path.join(out, "08-menu-sounds.png"))}`);
       await quoteHelp(page);
     } else {
       await waitForMenuImage(page, "blue");
       const src = await page.locator(".menu-frame img").getAttribute("src");
       console.log(`PREVIEW blue ${src}`);
+    }
+
+    const customize = page.locator(".menu-settings details.advanced");
+    if (!(await customize.evaluate((element) => element.open))) {
+      await customize.locator("summary").click();
+    }
+    const sounds = await page.evaluate(() => {
+      const choice = document.querySelector(".menu-settings .sound-choice");
+      const help = choice?.querySelector(".help-button");
+      const select = choice?.querySelector("select");
+      if (!choice || !help || !select) return { found: false };
+      const helpBox = help.getBoundingClientRect();
+      const selectBox = select.getBoundingClientRect();
+      const text = (choice.textContent || "").replace(/\s+/g, " ");
+      return {
+        found: true,
+        sameLine:
+          helpBox.height > 0 &&
+          helpBox.top < selectBox.bottom - 1 &&
+          helpBox.bottom > selectBox.top + 1,
+        helpTop: Math.round(helpBox.top),
+        selectTop: Math.round(selectBox.top),
+        selectBottom: Math.round(selectBox.bottom),
+        restatesOff: text.includes("No menu audio"),
+      };
+    });
+    console.log(`MENU SOUNDS ${JSON.stringify(sounds)}`);
+    if (!sounds.found || !sounds.sameLine) {
+      console.error(
+        "the menu sounds help icon is on its own line, below the control",
+      );
+      code = 1;
+    }
+    if (sounds.found && sounds.restatesOff) {
+      console.error(
+        "No menu audio is bundled or enabled. is shown under a control that already says Off",
+      );
+      code = 1;
     }
 
     if (!checking) {
@@ -964,8 +1008,19 @@ async function main() {
       .locator("svg.controller-scene image")
       .getAttribute("href");
     console.log(`DRAWING default ${drawing}`);
+    const actionHeader = (
+      await page.locator(".controls-table thead th").allTextContents()
+    ).map((text) => text.trim());
+    console.log(`CONTROLS COLUMNS ${JSON.stringify(actionHeader)}`);
+    if (!actionHeader.includes("Action label")) {
+      console.error(
+        "the controller table's column says Action, not Action label",
+      );
+      code = 1;
+    }
 
     if (checking) {
+      if (code !== 0) return;
       await clickNext(page);
       await page.getByRole("heading", { name: "Export your game" }).waitFor();
       const note = await page.locator(".note").innerText();
@@ -987,6 +1042,13 @@ async function main() {
     }
 
     await shot(page, path.join(out, "12-controls.png"));
+    await page.locator(".controls-table").screenshot({
+      path: path.join(out, "12-controls-table.png"),
+      animations: "disabled",
+    });
+    console.log(
+      `shot ${path.relative(ROOT, path.join(out, "12-controls-table.png"))}`,
+    );
     await shootEditor(page, path.join(out, "controllers/megadrive.png"));
 
     await clickNext(page);

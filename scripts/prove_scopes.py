@@ -133,15 +133,24 @@ def case_menu():
 
 def case_heldkey():
     path = ROOT / "vendor/retroarch/input/held_key_policy.c"
+    chord = ROOT / "vendor/retroarch/input/alt_enter_fullscreen.c"
     raw = replace(
         path,
         "{\n   int edge_down = 0;",
         "{\n   return 0;\n   int edge_down = 0;",
     )
+    raw_chord = None
     try:
+        raw_chord = replace(
+            chord,
+            "if (!(return_down && alt_held) || latched)\n      return 0;",
+            "if (1)\n      return 0;",
+        )
         code, output = run_scope("heldkey")
     finally:
         restore(path, raw)
+        if raw_chord is not None:
+            restore(chord, raw_chord)
     return expect("heldkey", code, output, ("did not fire",))
 
 
