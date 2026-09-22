@@ -92,13 +92,6 @@
     }
   ],
   "tokens": {
-    "ink": "#ffffff",
-    "bevel-light": "#9edaff",
-    "bevel-dark": "#020b27",
-    "rule": "#476eab",
-    "disabled": "#647cad",
-    "frame": "#5296ef",
-    "slot-label": "#081433",
-    "well-edge": "#092754"
+    "ink": "#ffffff"
   }
 }

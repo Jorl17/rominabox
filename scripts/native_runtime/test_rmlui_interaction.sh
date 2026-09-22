@@ -41,9 +41,10 @@ mkdir -p "$assets"
 for document in "$design"/*; do
   [ -f "$document" ] && cp "$document" "$assets/"
 done
-# The copy of the build of this checkout. See worktree.py cli.
-cli=$repo_root/work/cli/rominabox-cli
-[ -x "$cli" ] || cli=$repo_root/desktop/src-tauri/target/release/rominabox-cli
+# We build it here and check that it comes from this checkout, because every
+# worktree shares one cargo target, so the binary next to the manifest may be
+# out of date or from another checkout. See scripts/built.py.
+cli=$(python3 "$repo_root/scripts/built.py")
 if [ -x "$cli" ]; then
   printf '{"source":"%s","destination":"%s","palette":"blue"}' "$design" "$assets" \
     | "$cli" stage-theme >/dev/null || {
@@ -75,7 +76,10 @@ panel = (
     '<button class="menu-action list-back" id="fixture-back">BACK</button>'
     '</div></div>'
 )
-p.write_text(p.read_text().replace("<!--SCREENS-->", panel))
+document = p.read_text()
+if "<!--SCREENS-->" not in document:
+    raise SystemExit("menu.rml has no <!--SCREENS--> slot for the list fixture")
+p.write_text(document.replace("<!--SCREENS-->", panel))
 FIXTURE
 
 "$out" "$assets" "$build_dir/thumbnail-test.png"

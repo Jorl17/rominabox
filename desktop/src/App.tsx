@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { SYSTEMS, formatBytes, inspectRom } from "./inspection";
 import * as bridge from "./bridge";
+import { canExport, whyNot } from "./consoles";
 import designs from "../designs.json";
 import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
@@ -452,6 +453,26 @@ export function App() {
     heading.current?.focus();
     setError("");
   }, [step]);
+  // We draw the controller scene and the menu frame in the colours of the
+  // palette the author picked, so the editor matches the exported game.
+  useEffect(() => {
+    const chosen = designs.palettes.find((entry) => entry.id === palette);
+    if (!chosen) return;
+    const root = document.documentElement;
+    const applied: string[] = [];
+    const set = (name: string, value: string) => {
+      root.style.setProperty(`--palette-${name}`, value);
+      applied.push(`--palette-${name}`);
+    };
+    for (const [name, value] of Object.entries(chosen)) {
+      if (typeof value === "string" && value.startsWith("#")) set(name, value);
+    }
+    for (const [name, value] of Object.entries(chosen.tokens ?? {})) {
+      if (typeof value === "string") set(name, value);
+    }
+    return () => applied.forEach((name) => root.style.removeProperty(name));
+  }, [palette]);
+
   useEffect(() => {
     if (step !== 2 || !draft.showMenu) return;
     if (!bridge.native) {
@@ -493,6 +514,7 @@ export function App() {
       ),
   );
   const systemName = systemDefinition?.name || "Choose a console";
+
   const requirements = systemDefinition?.firmware || [];
   const asksFirmware = requirements.length > 0;
   const firmwareBlocked =
@@ -802,8 +824,15 @@ export function App() {
                             Choose a console
                           </option>
                           {SYSTEMS.map((s) => (
-                            <option key={s.id} value={s.id}>
+                            <option
+                              key={s.id}
+                              value={s.id}
+                              disabled={!canExport(supported, s.id)}
+                            >
                               {s.name}
+                              {whyNot(supported, s.id)
+                                ? ` — ${whyNot(supported, s.id)}`
+                                : ""}
                             </option>
                           ))}
                         </select>
@@ -1262,12 +1291,14 @@ export function App() {
                       <span>Change</span>
                     </button>
                   </div>
-                  {bridge.native &&
-                    !supported.has(systemDefinition?.id || draft.system) && (
-                      <p className="error">
-                        This build does not include the {systemName} core yet.
-                      </p>
-                    )}
+                  {!canExport(
+                    supported,
+                    systemDefinition?.id || draft.system,
+                  ) && (
+                    <p className="error">
+                      This build does not include the {systemName} core yet.
+                    </p>
+                  )}
                   {!bridge.native && (
                     <p className="note">
                       Export is available in the desktop app.

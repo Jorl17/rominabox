@@ -175,7 +175,7 @@
   border-radius: 6px;
 }
 .controller-leader {
-  stroke: #75b2e4;
+  stroke: var(--palette-edge, #75b2e4);
   stroke-width: 1.5;
 }
 .controller-ring {
@@ -184,8 +184,8 @@
   stroke-width: 2.5;
 }
 .controller-callout {
-  fill: #061a48;
-  stroke: #75b2e4;
+  fill: var(--palette-surface, #061a48);
+  stroke: var(--palette-edge, #75b2e4);
   stroke-width: 2;
 }
 .controller-callout-label {
@@ -194,7 +194,7 @@
   font-weight: 600;
 }
 .controller-callout-key {
-  fill: #b4e6ff;
+  fill: var(--palette-muted, #b4e6ff);
   font-size: 13px;
 }
 .controller-marker {
@@ -205,8 +205,8 @@
   stroke: #ffffff;
 }
 .controller-marker.selected .controller-callout {
-  stroke: #fff13d;
+  stroke: var(--palette-highlight, #fff13d);
 }
 .controller-marker.selected .controller-ring {
-  stroke: #fff13d;
+  stroke: var(--palette-highlight, #fff13d);
 }

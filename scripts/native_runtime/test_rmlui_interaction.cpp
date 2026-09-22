@@ -368,6 +368,11 @@ int main(int argc, char **argv)
    // the keyboard past the last row reaches the switch and then BACK, and the
    // player can flip the switch without a pointer.
    {
+      // We find the screen button on the pause row instead of naming it. With
+      // Options in a game it is not the controls button, so with a fixed name
+      // a pad would open Controls instead of Options.
+      CHECK(std::string(rib_rmlui_pause_screen_button()) == "controls",
+            "the pause row's screen button is the one the document has");
       rib_rmlui_declare_screen("fixture", "fixture-panel", "LIST", "ESC  BACK", "");
       CHECK(rib_rmlui_show_screen("fixture"), "a declared list screen shows");
       rib_rmlui_wire_lists();
