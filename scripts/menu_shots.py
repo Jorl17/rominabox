@@ -119,14 +119,97 @@ def take(app: Path, name: str, script: list[str], output: Path) -> str:
     return ""
 
 
+# Where we put a freshly built player, so that a shot shows the fork as it
+# is now and not as it was when we froze the kit.
+BUILT_PLAYER = ROOT / "work/fork-build-20260920/retroarch/retroarch"
+KIT = ROOT / "desktop/src-tauri/resources/runtime"
+DESIGN = ROOT / "integrations/designs/native"
+CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+
+
+def build_a_game(rom: Path, workspace: Path, system: str = "megadrive") -> Path:
+    """Export a game from the tree as it is now, and return the app.
+
+    To take a picture of a change by hand, someone has to assemble a kit,
+    remember which pieces are out of date, export, and replace the player
+    binary, and each of these four steps can go wrong. The kit is a build
+    output, so we refresh it from the tree here instead of trusting it.
+
+    The exported game has a separate isolation prefix, so two checkouts
+    taking pictures at the same time never share saves or a build.
+    """
+    kit = workspace / "kit"
+    shutil.rmtree(kit, ignore_errors=True)
+    shutil.copytree(KIT, kit, symlinks=True)
+
+    # Copy the design as it is in this tree, not as when we froze the kit.
+    for document in DESIGN.iterdir():
+        if document.is_file():
+            shutil.copyfile(document, kit / "designs/native" / document.name)
+            shutil.copyfile(document, kit / "menu-assets" / document.name)
+    if BUILT_PLAYER.exists():
+        shutil.copyfile(BUILT_PLAYER, kit / "bin/retroarch")
+        (kit / "bin/retroarch").chmod(0o755)
+
+    out = workspace / "exported"
+    shutil.rmtree(out, ignore_errors=True)
+    out.mkdir(parents=True)
+    request = {
+        "rom": str(rom),
+        "title": "Shot Subject",
+        "system": system,
+        "showMenu": True,
+        "startAtMenu": True,
+        "theme": "native",
+        "palette": "blue",
+        "menuSounds": "off",
+        "splash": False,
+        "advancedEmulatorAccess": False,
+        "outputDir": str(out),
+        "target": "macos",
+        "runtimeKit": str(kit),
+    }
+    result = subprocess.run(
+        [str(CLI), "export"],
+        input=json.dumps(request),
+        capture_output=True,
+        text=True,
+        env=dict(os.environ, ROMINABOX_GAME_BUNDLE_PREFIX=workspace.name),
+    )
+    if result.returncode != 0:
+        raise SystemExit(f"could not export a game to shoot:\n{result.stdout[-900:]}")
+    app = next(out.glob("*.app"), None)
+    if app is None:
+        raise SystemExit(f"the export wrote no .app into {out}")
+    # The player next to the launcher comes from the kit. Replace it with the
+    # freshly built one so that the shot shows this tree.
+    if BUILT_PLAYER.exists():
+        shutil.copyfile(BUILT_PLAYER, app / "Contents/MacOS/retroarch")
+        (app / "Contents/MacOS/retroarch").chmod(0o755)
+    return app
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--app", type=Path, required=True, help="an exported .app")
+    parser.add_argument("--app", type=Path, help="an exported .app to shoot")
+    parser.add_argument(
+        "--rom",
+        type=Path,
+        help="export a game from this ROM first, using the tree as it is now",
+    )
+    parser.add_argument("--system", default="megadrive", help="the console --rom is for")
     parser.add_argument("output", type=Path, nargs="?", default=ROOT / "work/menu-shots")
     parser.add_argument("--record", action="store_true", help="record what each shot looks like")
     parser.add_argument("--check", action="store_true", help="fail if a shot changed")
     arguments = parser.parse_args()
 
+    if arguments.rom:
+        workspace = ROOT / "work/menu-shots-build"
+        workspace.mkdir(parents=True, exist_ok=True)
+        arguments.app = build_a_game(arguments.rom, workspace, arguments.system)
+        print(f"  built    {arguments.app.name}")
+    if not arguments.app:
+        raise SystemExit("give --app an exported game, or --rom to export one first")
     if not arguments.app.exists():
         raise SystemExit(f"no exported game at {arguments.app}")
     shutil.rmtree(arguments.output, ignore_errors=True)

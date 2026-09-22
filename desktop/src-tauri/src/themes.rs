@@ -1,6 +1,10 @@
 //! Menu design and palette declarations shared by previews and exports.
 use serde::{Deserialize, Serialize};
-use std::{fs, path::{Path, PathBuf}};
+use std::{
+    collections::BTreeSet,
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Design {
@@ -88,6 +92,10 @@ pub struct SceneMetrics {
     pub scene_height: i32,
     pub callout_width: i32,
     pub callout_height: i32,
+    /// The part of a callout drawn outside its declared size. The leader ends at
+    /// the drawn edge, not the content edge, and we use this value in both the
+    /// exporter and the builder.
+    pub callout_border: i32,
     pub marker: i32,
     pub group_width: i32,
     pub group_height: i32,
@@ -104,6 +112,7 @@ impl Default for SceneMetrics {
             scene_height: 380,
             callout_width: 196,
             callout_height: 54,
+            callout_border: 2,
             marker: 42,
             group_width: 236,
             group_height: 62,
@@ -121,6 +130,7 @@ impl Default for SceneMetrics {
 ///
 /// The words of the heading and the footer hint come from the design, so
 /// that each design can word them differently, also in another language.
+#[derive(Clone, Debug)]
 pub struct Screen {
     pub id: String,
     pub panel: String,
@@ -129,6 +139,27 @@ pub struct Screen {
     /// The button that opens this screen. A back button is the button that
     /// opens the screen behind, so we need no separate kind for it.
     pub button: String,
+    /// The pause-row label, when the player opens this screen from another one.
+    /// The heading is the title on the open screen. A button can be shorter.
+    pub label: Option<String>,
+    /// The words on the back button of this screen. We use them only on the
+    /// screen that contains the option entries.
+    pub back_label: Option<String>,
+    pub place: ScreenPlace,
+    /// Set when this screen is an entry inside Options. The words are the
+    /// design's, on the button that opens it.
+    pub option_label: Option<String>,
+    /// Whether we ship the entry in a game without a set of entries. Shaders
+    /// and the rest stay off until the author turns them on for a game.
+    pub option_default: bool,
+}
+
+/// The place of a declared screen. We parse it from the design so that we do
+/// not compare screen ids in the exporter.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ScreenPlace {
+    Plain,
+    Options,
 }
 
 /// The screens for a design that declares none, the two default screens with
@@ -141,6 +172,11 @@ fn built_in_screens() -> Vec<Screen> {
             heading: "GAME PAUSED".into(),
             footer: "ESC  CONTINUE".into(),
             button: "controls-back".into(),
+            label: None,
+            back_label: None,
+            place: ScreenPlace::Plain,
+            option_label: None,
+            option_default: false,
         },
         Screen {
             id: "controls".into(),
@@ -148,8 +184,59 @@ fn built_in_screens() -> Vec<Screen> {
             heading: "CONTROLS".into(),
             footer: "ESC  BACK".into(),
             button: "controls".into(),
+            label: None,
+            back_label: None,
+            place: ScreenPlace::Plain,
+            option_label: None,
+            option_default: false,
         },
     ]
+}
+
+fn screen_place(entry: &serde_json::Value, index: usize, declaration: &Path) -> Result<ScreenPlace, String> {
+    match entry.get("place").and_then(|value| value.as_str()) {
+        None => Ok(ScreenPlace::Plain),
+        Some("options") => Ok(ScreenPlace::Options),
+        Some(other) => Err(format!(
+            "screen {index} in {} has place '{other}', which is not a place a menu has",
+            declaration.display()
+        )),
+    }
+}
+
+fn screen_option(
+    entry: &serde_json::Value,
+    index: usize,
+    declaration: &Path,
+) -> Result<(Option<String>, bool), String> {
+    let Some(option) = entry.get("option") else {
+        return Ok((None, false));
+    };
+    if option.is_null() {
+        return Ok((None, false));
+    }
+    let Some(label) = option.get("label").and_then(|value| value.as_str()) else {
+        return Err(format!(
+            "screen {index} in {} has an option entry with no label",
+            declaration.display()
+        ));
+    };
+    if label.is_empty() {
+        return Err(format!(
+            "screen {index} in {} has an empty option label",
+            declaration.display()
+        ));
+    }
+    let default = match option.get("default") {
+        None => false,
+        Some(value) => value.as_bool().ok_or_else(|| {
+            format!(
+                "screen {index} in {} has an option default that is not true or false",
+                declaration.display()
+            )
+        })?,
+    };
+    Ok((Some(label.to_string()), default))
 }
 
 pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
@@ -170,6 +257,7 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
                 .map(str::to_string)
                 .ok_or_else(|| format!("screen {index} in {} declares no {key}", declaration.display()))
         };
+        let (option_label, option_default) = screen_option(entry, index, &declaration)?;
         screens.push(Screen {
             id: at("id")?,
             panel: at("panel")?,
@@ -177,6 +265,11 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
             footer: at("footer")?,
             // Optional, because a screen we open only in code has no button.
             button: entry["button"].as_str().unwrap_or_default().to_string(),
+            label: entry["label"].as_str().map(str::to_string),
+            back_label: entry["back"].as_str().map(str::to_string),
+            place: screen_place(entry, index, &declaration)?,
+            option_label,
+            option_default,
         });
     }
     if screens.is_empty() {
@@ -190,11 +283,10 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
 /// We use the same format as for the controller list, a space-separated list
 /// of ids and one key per field, read with `config_get_array`. The player
 /// code contains the name of no particular screen.
-fn screen_declarations(design: &Path) -> Result<String, String> {
-    let screens = declared_screens(design)?;
+fn screen_declarations(screens: &[Screen]) -> String {
     let ids: Vec<&str> = screens.iter().map(|s| s.id.as_str()).collect();
     let mut text = format!("screens = \"{}\"\n", ids.join(" "));
-    for screen in &screens {
+    for screen in screens {
         text.push_str(&format!(
             "screen_panel_{id} = \"{}\"\nscreen_heading_{id} = \"{}\"\nscreen_footer_{id} = \"{}\"\nscreen_button_{id} = \"{}\"\n",
             screen.panel,
@@ -204,7 +296,348 @@ fn screen_declarations(design: &Path) -> Result<String, String> {
             id = screen.id,
         ));
     }
-    Ok(text)
+    text
+}
+
+/// Which screens we put in a game.
+///
+/// `chosen` is the set for the export. Without it, each entry has its
+/// default. An empty set means a game with no Options button. We refuse an
+/// id that is not an entry in this design, instead of ignoring it.
+fn screens_for_export(screens: &[Screen], chosen: Option<&[String]>) -> Result<Vec<Screen>, String> {
+    let entries: Vec<&Screen> = screens.iter().filter(|screen| screen.option_label.is_some()).collect();
+    let included: BTreeSet<&str> = match chosen {
+        None => entries
+            .iter()
+            .filter(|screen| screen.option_default)
+            .map(|screen| screen.id.as_str())
+            .collect(),
+        Some(ids) => {
+            for id in ids {
+                if !entries.iter().any(|screen| screen.id == *id) {
+                    return Err(format!(
+                        "'{id}' is not an options entry this design declares"
+                    ));
+                }
+            }
+            ids.iter().map(String::as_str).collect()
+        }
+    };
+    let show_options = !included.is_empty();
+    let mut staged: Vec<Screen> = screens
+        .iter()
+        .filter(|screen| match screen.place {
+            ScreenPlace::Options => show_options,
+            ScreenPlace::Plain => {
+                screen.option_label.is_none() || included.contains(screen.id.as_str())
+            }
+        })
+        .cloned()
+        .collect();
+    if show_options && !staged.iter().any(|screen| screen.place == ScreenPlace::Options) {
+        // For a design with entries and no Options screen we still add one, with
+        // the built-in words. A design that declares the screen can choose the
+        // words.
+        staged.insert(
+            1.min(staged.len()),
+            Screen {
+                id: "options".into(),
+                panel: "options-panel".into(),
+                heading: "OPTIONS".into(),
+                footer: "ESC  BACK".into(),
+                button: "options".into(),
+                label: Some("OPTIONS".into()),
+                back_label: Some("BACK".into()),
+                place: ScreenPlace::Options,
+                option_label: None,
+                option_default: false,
+            },
+        );
+    }
+    // When the player leaves Options, the screen behind it appears, which is
+    // the first screen that is not an entry. The generated back button is the
+    // button of that screen, so it opens that screen, because in the player we
+    // only handle "the button that shows a screen". If a design listed the
+    // controls back button here, the two would become one element.
+    if show_options {
+        if let Some(behind) = staged
+            .iter_mut()
+            .find(|screen| screen.place == ScreenPlace::Plain && screen.option_label.is_none())
+        {
+            behind.button = "options-back".to_string();
+        }
+    }
+    Ok(staged)
+}
+
+/// The step between option entries. RmlUi does not stack children of an
+/// absolutely positioned parent, so we place each button.
+const OPTION_ENTRY_STEP: usize = 60;
+
+const OPTIONS_LAYOUT_CSS: &str = r#"
+#options-entries { position: absolute; left: 276dp; top: 148dp; width: 400dp; height: 320dp; }
+.option-entry { position: absolute; left: 0; width: 400dp; height: 48dp; line-height: 42dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; }
+.options-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
+"#;
+
+/// The four-button pause row, for a game without Options. We append it after
+/// the five-button rule of the stylesheet, so it overrides that rule.
+const COMPACT_PAUSE_CSS: &str = r#"
+#resume { width: 260dp; }
+#save { left: 284dp; width: 168dp; }
+#load { left: 476dp; width: 168dp; }
+#quit { left: 668dp; width: 168dp; }
+"#;
+
+fn button_bounds(document: &str, id: &str) -> Option<(usize, usize)> {
+    let marker = format!("id=\"{id}\"");
+    let mut from = 0;
+    while let Some(found) = document[from..].find(&marker) {
+        let at = from + found;
+        let start = document[..at].rfind('<')?;
+        let tag = &document[start..at];
+        if !tag.contains("button") {
+            from = at + marker.len();
+            continue;
+        }
+        let close = document[at..].find("</button>")? + at + "</button>".len();
+        return Some((start, close));
+    }
+    None
+}
+
+fn entry_button(design: &Path, screen: &Screen, index: usize) -> Result<String, String> {
+    let label = screen.option_label.clone().unwrap_or_default();
+    let top = (index * OPTION_ENTRY_STEP).to_string();
+    let template_path = design.join("option-entry.rml");
+    let template = if template_path.exists() {
+        fs::read_to_string(&template_path)
+            .map_err(|e| format!("Could not read {}: {e}", template_path.display()))?
+    } else {
+        "<button class=\"menu-action option-entry\" id=\"BUTTON\" style=\"top: TOPdp;\">LABEL</button>"
+            .to_string()
+    };
+    Ok(template
+        .replace("BUTTON", &screen.button)
+        .replace("TOP", &top)
+        .replace("LABEL", &rml_text(&label)))
+}
+
+/// Rewrite the menu so that Options has exactly the entries for this game.
+///
+/// We cannot create elements in the player while it runs, so the buttons
+/// must be in the document. When a design has an options panel, we add the
+/// entries to it. Otherwise we add the built-in panel, with the button class
+/// of the design.
+fn apply_options(
+    design: &Path,
+    document: &str,
+    chosen: Option<&[String]>,
+) -> Result<(String, Vec<Screen>), String> {
+    let declared = declared_screens(design)?;
+    let staged = screens_for_export(&declared, chosen)?;
+    let show = staged.iter().any(|screen| screen.place == ScreenPlace::Options);
+    let options = staged.iter().find(|screen| screen.place == ScreenPlace::Options);
+    let included: Vec<&Screen> = staged
+        .iter()
+        .filter(|screen| screen.option_label.is_some())
+        .collect();
+    // Every entry in the design, so that we take a disabled one off the pause
+    // row instead of leaving it there as a separate button.
+    let declared_entries: Vec<&Screen> = declared
+        .iter()
+        .filter(|screen| screen.option_label.is_some())
+        .collect();
+
+    let mut document = document.to_string();
+    if show {
+        let options = options.expect("show means an options screen is staged");
+        let opener_label = options.label.clone().unwrap_or_else(|| options.heading.clone());
+        let opener = format!(
+            "<button class=\"menu-action\" id=\"{}\">{}</button>",
+            options.button,
+            rml_text(&opener_label)
+        );
+        let mut placed_opener = document.contains(&format!("id=\"{}\"", options.button));
+        for entry in &declared_entries {
+            // A button already inside the options panel is the version of that
+            // entry from the design. We move a button on the pause row into the
+            // panel.
+            let Some((start, end)) = button_bounds(&document, &entry.button) else {
+                continue;
+            };
+            if document[..start].contains("id=\"options-panel\"") {
+                continue;
+            }
+            if !placed_opener && included.iter().any(|screen| screen.id == entry.id) {
+                document.replace_range(start..end, &opener);
+                placed_opener = true;
+            } else {
+                document.replace_range(start..end, "");
+            }
+        }
+        if !placed_opener {
+            if let Some(quit) = button_bounds(&document, "quit") {
+                document.insert_str(quit.0, &opener);
+            }
+        }
+
+        let mut entries = String::new();
+        for (index, entry) in included.iter().enumerate() {
+            if document.contains(&format!("id=\"{}\"", entry.button))
+                && document[..document
+                    .find(&format!("id=\"{}\"", entry.button))
+                    .unwrap_or(0)]
+                .contains("id=\"options-panel\"")
+            {
+                continue;
+            }
+            // We have removed the pause-row button at this point. Generate
+            // the entry into the panel even if an element with the same id was cut.
+            if document.contains(&format!("id=\"{}\"", entry.button)) {
+                continue;
+            }
+            entries.push_str(&entry_button(design, entry, index)?);
+        }
+
+        if document.contains("<!--OPTIONS-->") {
+            document = document.replace("<!--OPTIONS-->", &entries);
+        } else if document.contains("id=\"options-panel\"") {
+            document = document.replacen(
+                "id=\"options-entries\">",
+                &format!("id=\"options-entries\">{entries}"),
+                1,
+            );
+        } else {
+            let back = options.back_label.clone().unwrap_or_else(|| "BACK".into());
+            let shell = format!(
+                "<div id=\"options-panel\" style=\"display:none;\"><div id=\"options-entries\">{entries}</div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
+                entries = entries,
+                back = rml_text(&back),
+            );
+            let footer = "<div id=\"footer\">";
+            if let Some(at) = document.find(footer) {
+                document.insert_str(at, &shell);
+            } else {
+                return Err(
+                    "menu.rml has no footer, so the options screen has nowhere to go".into(),
+                );
+            }
+        }
+    } else {
+        for entry in &declared_entries {
+            if let Some((start, end)) = button_bounds(&document, &entry.button) {
+                if !document[..start].contains("id=\"options-panel\"") {
+                    document.replace_range(start..end, "");
+                }
+            }
+        }
+    }
+    Ok((document, staged))
+}
+
+fn write_options_css(destination: &Path, show_options: bool) -> Result<(), String> {
+    let css_path = destination.join("menu.rcss");
+    if !css_path.exists() {
+        return Ok(());
+    }
+    let mut css = fs::read_to_string(&css_path).map_err(|e| e.to_string())?;
+    if show_options && !css.contains(".option-entry") {
+        css.push_str(OPTIONS_LAYOUT_CSS);
+    }
+    if !show_options {
+        css.push_str(COMPACT_PAUSE_CSS);
+    }
+    fs::write(&css_path, css).map_err(|e| e.to_string())
+}
+
+/// Everything declared in a design by name, its colours and its geometry.
+///
+/// A design contains `design(surface)` where a colour goes, and
+/// `design(scene-width)dp` where a size goes. We take the value
+/// from the chosen palette, or from the `tokens` of the design when the
+/// palette does not have it, so a design may have extra colours whose names
+/// are not in this code.
+///
+/// We substitute the values into the rules of the design. Nothing goes after
+/// the stylesheet of the design, because appended rules with equal
+/// specificity would override the selectors of the design, such as the
+/// separate hover, keyboard focus and pressed styles of the picker.
+fn design_tokens(
+    design: &Path,
+    palette: &Palette,
+) -> Result<std::collections::BTreeMap<String, String>, String> {
+    let mut tokens = std::collections::BTreeMap::new();
+    // The values of the design first, so a palette may override any of them.
+    if let Ok(text) = fs::read_to_string(design.join("design.json")) {
+        let declared: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| e.to_string())?;
+        if let Some(own) = declared.get("tokens").and_then(|v| v.as_object()) {
+            for (name, value) in own {
+                if let Some(value) = value.as_str() {
+                    tokens.insert(name.clone(), value.to_string());
+                }
+            }
+        }
+    }
+    let m = scene_metrics(design)?;
+    for (name, value) in [
+        ("scene-width", m.scene_width),
+        ("scene-height", m.scene_height),
+        ("marker-diameter", m.marker),
+        ("marker-radius", m.marker / 2),
+        ("callout-width", m.callout_width),
+        ("callout-height", m.callout_height),
+        ("group-width", m.group_width),
+        ("group-height", m.group_height),
+    ] {
+        tokens.insert(name.to_string(), value.to_string());
+    }
+    for (name, value) in [
+        ("screen", &palette.screen),
+        ("background", &palette.background),
+        ("surface", &palette.surface),
+        ("picture", &palette.picture),
+        ("edge", &palette.edge),
+        ("highlight", &palette.highlight),
+        ("muted", &palette.muted),
+        ("focus", &palette.focus),
+    ] {
+        tokens.insert(name.to_string(), value.clone());
+    }
+    Ok(tokens)
+}
+
+/// Put the colours into the rules of the design.
+///
+/// The result is the stylesheet of the design with other characters in its
+/// values, with the same rules and selectors in the same order. We append
+/// nothing, so nothing can override the rules of the design.
+fn substitute_tokens(
+    css: &str,
+    tokens: &std::collections::BTreeMap<String, String>,
+) -> Result<String, String> {
+    let mut out = String::with_capacity(css.len());
+    let mut rest = css;
+    while let Some(at) = rest.find("design(") {
+        out.push_str(&rest[..at]);
+        let after = &rest[at + "design(".len()..];
+        let close = after
+            .find(')')
+            .ok_or_else(|| "a design( token is never closed".to_string())?;
+        let name = after[..close].trim();
+        let value = tokens.get(name).ok_or_else(|| {
+            format!(
+                "the stylesheet asks for design({name}), which the design does \
+                 not declare and no palette names. Declared: {}",
+                tokens.keys().cloned().collect::<Vec<_>>().join(", ")
+            )
+        })?;
+        out.push_str(value);
+        rest = &after[close + 1..];
+    }
+    out.push_str(rest);
+    Ok(out)
 }
 
 pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
@@ -226,35 +659,13 @@ pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
         scene_height: at("scene", "height", fallback.scene_height),
         callout_width: at("callout", "width", fallback.callout_width),
         callout_height: at("callout", "height", fallback.callout_height),
+        callout_border: at("callout", "border", fallback.callout_border),
         marker: at("marker", "diameter", fallback.marker),
         group_width: at("group", "width", fallback.group_width),
         group_height: at("group", "height", fallback.group_height),
         group_gap: at("group", "gap", fallback.group_gap),
         group_bottom_margin: at("group", "bottomMargin", fallback.group_bottom_margin),
     })
-}
-
-fn scene_metrics_rules(design: &Path) -> Result<String, String> {
-    // A staged kit contains the documents but may lack the declaration, and
-    // then we keep the values in the stylesheet.
-    if !design.join("design.json").exists() {
-        return Ok(String::new());
-    }
-    let m = scene_metrics(design)?;
-    Ok(format!(
-        r#"
-#controller-scene {{ width: {}dp; height: {}dp; }}
-#controller-image {{ width: {}dp; height: {}dp; }}
-.control-hit {{ width: {}dp; height: {}dp; border-radius: {}dp; }}
-.control-callout {{ width: {}dp; height: {}dp; }}
-.control-group {{ width: {}dp; height: {}dp; }}
-"#,
-        m.scene_width, m.scene_height,
-        m.scene_width, m.scene_height,
-        m.marker, m.marker, m.marker / 2,
-        m.callout_width, m.callout_height,
-        m.group_width, m.group_height,
-    ))
 }
 
 /// Stage only the selected design's assets and apply the same palette/background
@@ -291,44 +702,20 @@ pub fn prepare_theme_assets(
     // The declarations of the design, in the file that the player reads. We
     // write them next to the stylesheet because both belong to the design. A
     // design lists its screens, and we show them by name in the player.
+    // These are defaults until we apply the set of the game in the controls
+    // stage. For a game with a set we overwrite them with the same function.
+    let staged = screens_for_export(&declared_screens(source)?, None)?;
     fs::write(
         destination.join("design.cfg"),
-        screen_declarations(source)?,
+        screen_declarations(&staged),
     )
     .map_err(|e| format!("Could not write the design's declarations: {e}"))?;
     let mut css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
-    css.push_str(&scene_metrics_rules(source)?);
-    css.push_str(&format!(r#"
-body {{ background-color: {background}; }}
-#screen {{ background-color: {screen}; border-color: {edge}; }}
-#heading, #status {{ color: {highlight}; }}
-.slot {{ background-color: {surface}; border-color: {edge}; }}
-.slot.focused, .slot:hover {{ border-color: #ffffff; }}
-.slot.selected, .slot.selected:hover, .slot.selected.focused {{ border-color: {highlight}; }}
-.slot:active, .slot.selected:active {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
-.slot.selected .slot-label {{ color: {highlight}; }}
-.slot-label {{ background-color: {surface}; }}
-.slot-picture {{ background-color: {picture}; border-top-color: {background}; border-left-color: {background}; border-right-color: {edge}; border-bottom-color: {edge}; }}
-.slot-state {{ color: {muted}; }}
-#footer {{ color: #ffffff; }}
-#screen .menu-action {{ background-color: {surface}; color: #ffffff; border-color: {edge}; }}
-#screen .menu-action:hover, #screen .menu-action.focused {{ background-color: {highlight}; color: {surface}; border-color: #ffffff; }}
-#screen .menu-action:active {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
-#screen .menu-action.disabled, #screen .menu-action:disabled {{ background-color: {background}; color: {edge}; border-color: {surface}; }}
-.control-callout, .control-group {{ background-color: {surface}; border-color: {edge}; }}
-.control-picker-current {{ background-color: {surface}; border-color: {edge}; }}
-.control-picker-list {{ background-color: {surface}; border-color: {highlight}; }}
-.control-picker-option {{ background-color: {surface}; color: {muted}; }}
-.control-picker-option:hover, .control-picker-option.focused {{ background-color: {focus}; color: #ffffff; }}
-.control-picker-option.selected {{ color: {highlight}; }}
-.control-picker-label {{ color: {muted}; }}
-.control-callout:hover, .control-group:hover, .control-hit:hover {{ border-color: #ffffff; }}
-.control-callout.focused, .control-group.focused {{ background-color: {focus}; border-color: {highlight}; }}
-.control-hit.focused {{ border-color: {highlight}; }}
-.control-original, #controls-status {{ color: {highlight}; }}
-.control-assignment {{ color: {muted}; }}
-@keyframes capture-pulse {{ from {{ border-color: {highlight}; }} to {{ border-color: transparent; }} }}
-"#,background=palette.background,screen=palette.screen,edge=palette.edge,highlight=palette.highlight,surface=palette.surface,focus=palette.focus,picture=palette.picture,muted=palette.muted));
+    // The colours of the design, in the rules of the design. We append nothing,
+    // because a palette contains values and no styles. Appended rules would
+    // declare selectors of the design again and, coming later with equal
+    // specificity, override them.
+    css = substitute_tokens(&css, &design_tokens(source, &palette)?)?;
     if let Some(image_path) = background {
         let image = crate::icons::read_image(image_path).map_err(|e| e.to_string())?;
         image
@@ -372,6 +759,7 @@ pub fn render_preview(request: &PreviewRequest) -> Result<std::path::PathBuf, St
         &request.output_dir,
         "megadrive",
         &crate::controls::Controls::default(),
+        None,
     )?;
     let output = request.output_dir.join("preview.png");
     let run = std::process::Command::new(&request.renderer)
@@ -452,6 +840,7 @@ pub fn prepare_controls_assets(
     destination: &Path,
     system: &str,
     controls: &crate::controls::Controls,
+    entries: Option<&[String]>,
 ) -> Result<(), String> {
     // We take the frame from the design, so a change of the scene position in
     // design.json moves the box in the stylesheet and every generated
@@ -489,7 +878,9 @@ pub fn prepare_controls_assets(
     let markup = scene_markup(&profile, controls, metrics);
     let picker = controller_picker_markup(&offered, &profile.id);
 
-    let template = fs::read_to_string(source.join("menu.rml")).map_err(|e| e.to_string())?;
+    // The document is the menu.rml of the design. If we filled the controls
+    // from any other copy, we would lose changes made to the design.
+    let template = fs::read_to_string(design.join("menu.rml")).map_err(|e| e.to_string())?;
     // The picker is a sibling of the scene, not a child of it. Inside the
     // scene its coordinates would be scene coordinates, and the scene starts
     // 80 dp down the screen, so the picker would cover the first two
@@ -503,13 +894,18 @@ pub fn prepare_controls_assets(
             system
         ));
     }
-    fs::write(
-        destination.join("menu.rml"),
-        template
-            .replace("<!--CONTROLS-->", &markup)
-            .replace(PICKER_SLOT, &picker),
-    )
-    .map_err(|e| e.to_string())
+    let menu = template
+        .replace("<!--CONTROLS-->", &markup)
+        .replace(PICKER_SLOT, &picker);
+    let (menu, screens) = apply_options(design, &menu, entries)?;
+    fs::write(destination.join("menu.rml"), menu).map_err(|e| e.to_string())?;
+    // The same file as in prepare_theme_assets. This version replaces it,
+    // because here we know the entries chosen for the game and we just built
+    // the markup from them.
+    fs::write(destination.join("design.cfg"), screen_declarations(&screens))
+        .map_err(|e| format!("Could not write the design's declarations: {e}"))?;
+    let show_options = screens.iter().any(|screen| screen.place == ScreenPlace::Options);
+    write_options_css(destination, show_options)
 }
 
 /// The pads in an export: every pad in the picker.
@@ -571,6 +967,8 @@ fn scene_markup(
     group_names.sort_unstable();
     group_names.dedup();
     markup.push_str(&control_group_markup(&group_names, &grouped, controls, illustrated, metrics));
+    let placed_scene = crate::scene_layout::layout(&profile.controls, metrics);
+    let placements = &placed_scene.controls;
     for item in profile.controls.iter().filter(|item| item.group.is_none()) {
         let item = item.clone();
         let custom = controls.bindings.get(&item.id);
@@ -585,24 +983,31 @@ fn scene_markup(
             .filter(|value| value.trim() != item.label.trim())
             .map(|_| item.label.as_str());
         let id = item.id.as_str();
-        let x = item.x - 22;
-        let y = item.y - 22;
         let cx = item.callout_x;
         let cy = item.callout_y;
-        let edge = if cx < 400 { cx + 200 } else { cx };
-        let horizontal_left = edge.min(item.x);
-        let horizontal_width = (edge - item.x).abs();
-        let vertical_top = (cy + 28).min(item.y);
-        let vertical_height = (cy + 28 - item.y).abs();
         if illustrated {
+            // We take the placement from the shared scene layout, so these
+            // are in the same place in the exporter, the builder and the
+            // overlay renderer.
+            let placed = placements
+                .iter()
+                .find(|placement| placement.id == item.id)
+                .expect("every drawn control is placed");
+            for run in &placed.leader {
+                let orientation = if run.height == 0 { "horizontal" } else { "vertical" };
+                let extent = if run.height == 0 {
+                    format!("width:{}dp;", run.width)
+                } else {
+                    format!("height:{}dp;", run.height)
+                };
+                markup.push_str(&format!(
+                    "\n<div class=\"control-leader {orientation}\" style=\"left:{}dp;top:{}dp;{extent}\"/>",
+                    run.x, run.y
+                ));
+            }
             markup.push_str(&format!(
-                r#"
-<div class="control-leader horizontal" style="left:{horizontal_left}dp;top:{}dp;width:{horizontal_width}dp;"/>
-<div class="control-leader vertical" style="left:{}dp;top:{vertical_top}dp;height:{vertical_height}dp;"/>
-<button id="control-hit-{id}" class="control-hit" style="left:{x}dp;top:{y}dp;"/>
-"#,
-                cy + 28,
-                item.x
+                "\n<button id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;\"/>\n",
+                placed.marker.x, placed.marker.y
             ));
         }
         markup.push_str(&control_callout_markup(id, label, original, key, cx, cy));
@@ -880,5 +1285,154 @@ mod tests {
             .expect_err("retired pack must not stage");
         assert!(error.contains("available menu sound pack"), "{error}");
         assert!(!temporary.exists(), "rejection must not create output");
+    }
+
+    fn native_menu() -> (PathBuf, String) {
+        let design = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../integrations/designs/native");
+        let menu = fs::read_to_string(design.join("menu.rml")).expect("native menu");
+        (design, menu)
+    }
+
+    /// We move the Controls button from the pause row into Options. A game with
+    /// nothing enabled has no button that opens an empty screen.
+    #[test]
+    fn options_lists_only_the_entries_a_game_enables() {
+        let (design, menu) = native_menu();
+        let (staged, screens) = apply_options(&design, &menu, None).expect("defaults");
+        let panel = staged.find("id=\"options-panel\"").expect("options panel");
+        let controls = staged.find("id=\"controls\"").expect("controls entry");
+        let actions = staged.find("id=\"actions\"").expect("pause actions");
+        assert!(actions < panel && panel < controls, "controls sits inside options");
+        assert!(staged.contains("id=\"options\""));
+        assert!(staged.contains(">OPTIONS<"));
+        assert!(staged.contains(">CONTROLS<"));
+        assert!(staged.contains(">BACK<"));
+        assert_eq!(
+            screens.iter().find(|screen| screen.id == "pause").unwrap().button,
+            "options-back"
+        );
+        let cfg = screen_declarations(&screens);
+        assert!(cfg.contains("screens = \"pause options controls\"") || cfg.contains("options"));
+        assert!(cfg.contains("screen_button_pause = \"options-back\""));
+        assert!(cfg.contains("screen_button_options = \"options\""));
+        assert!(cfg.contains("screen_button_controls = \"controls\""));
+
+        let (empty, empty_screens) = apply_options(&design, &menu, Some(&[])).expect("nothing enabled");
+        assert!(!empty.contains("id=\"options\""), "no options button when nothing is enabled");
+        assert!(!empty.contains("id=\"options-panel\""));
+        assert!(button_bounds(&empty, "controls").is_none(), "controls is not left on the pause row");
+        assert!(!empty_screens.iter().any(|screen| screen.place == ScreenPlace::Options));
+    }
+
+    /// Shaders is an entry that a design can declare. It is absent until the
+    /// author turns it on, and we reject an unknown id and do not drop it.
+    #[test]
+    fn an_entry_appears_only_when_that_game_enables_it() {
+        let root = std::env::temp_dir().join(format!(
+            "rominabox-options-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        fs::write(
+            root.join("menu.rml"),
+            "<rml><body><div id=\"screen\"><div id=\"actions\"><button class=\"menu-action\" id=\"resume\">CONTINUE</button><button class=\"menu-action\" id=\"quit\">QUIT</button></div><div id=\"footer\"></div></div></body></rml>",
+        )
+        .unwrap();
+        fs::write(
+            root.join("design.json"),
+            r#"{
+                "screens": [
+                    {"id":"pause","panel":"pause-panel","heading":"PAUSED","footer":"ESC  CONTINUE","button":"controls-back"},
+                    {"id":"controls","panel":"controls-panel","heading":"CONTROLS","footer":"ESC  BACK","button":"controls","option":{"label":"CONTROLS","default":true}},
+                    {"id":"shaders","panel":"shaders-panel","heading":"SHADERS","footer":"ESC  BACK","button":"shaders","option":{"label":"SHADERS","default":false}}
+                ]
+            }"#,
+        )
+        .unwrap();
+        let menu = fs::read_to_string(root.join("menu.rml")).unwrap();
+        // The design declares no options screen. We still add one, and leave
+        // shaders out because it is not enabled for this game.
+        let (defaults, screens) = apply_options(&root, &menu, None).unwrap();
+        assert!(defaults.contains(">OPTIONS<"), "a design that declares no options screen still gets one");
+        assert!(defaults.contains(">CONTROLS<"));
+        assert!(!defaults.contains("SHADERS"));
+        assert!(screens.iter().any(|screen| screen.place == ScreenPlace::Options));
+
+        let (both, _) = apply_options(
+            &root,
+            &menu,
+            Some(&["controls".to_string(), "shaders".to_string()]),
+        )
+        .unwrap();
+        assert!(both.contains(">SHADERS<"));
+        assert!(both.contains(">CONTROLS<"));
+        let shaders_at = both.find("id=\"shaders\"").unwrap();
+        let controls_at = both.find("id=\"controls\"").unwrap();
+        assert!(controls_at < shaders_at, "entries follow the design's order");
+
+        let refused = apply_options(&root, &menu, Some(&["nope".to_string()])).unwrap_err();
+        assert!(refused.contains("nope"), "{refused}");
+
+        fs::write(
+            root.join("option-entry.rml"),
+            "<div id=\"BUTTON\" class=\"list-row\">LABEL</div>",
+        )
+        .unwrap();
+        let (templated, _) = apply_options(&root, &menu, Some(&["shaders".to_string()])).unwrap();
+        assert!(
+            templated.contains("<div id=\"shaders\" class=\"list-row\">SHADERS</div>"),
+            "a design's entry template is what gets filled, got {templated}"
+        );
+        assert!(!templated.contains(">CONTROLS<"), "controls was not in the set");
+    }
+
+    /// The person who bundles the game picks the BIOS. The player never does.
+    ///
+    /// We put no BIOS picker and no BIOS uploader in the exported game. A
+    /// player who wants a different BIOS goes through Advanced, which unlocks
+    /// the whole emulator.
+    ///
+    /// Everything about the BIOS is in the builder (`assess_firmware`, the
+    /// details step, the export refusal), and the player sees none of it. A
+    /// design may not contain a screen, a button or a declaration that offers a
+    /// BIOS choice. We still bundle a BIOS, with no way to change it in the menu.
+    #[test]
+    fn no_design_offers_the_player_a_bios() {
+        let designs = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs");
+        let mut looked = 0;
+        for entry in fs::read_dir(&designs).expect("designs directory") {
+            let design = entry.expect("design entry").path();
+            if !design.is_dir() {
+                continue;
+            }
+            for file in fs::read_dir(&design).expect("design files") {
+                let file = file.expect("design file").path();
+                let Some(name) = file.file_name().and_then(|n| n.to_str()) else {
+                    continue;
+                };
+                if !name.ends_with(".rml") && !name.ends_with(".rcss") && !name.ends_with(".json") {
+                    continue;
+                }
+                let body = fs::read_to_string(&file).unwrap_or_default();
+                looked += 1;
+                for (number, line) in body.lines().enumerate() {
+                    assert!(
+                        !line.to_ascii_lowercase().contains("bios"),
+                        "{}:{} offers the player a BIOS: {}\n\
+                         The BIOS is chosen by whoever bundles the game. A player \
+                         who wants another one uses Advanced.",
+                        file.display(),
+                        number + 1,
+                        line.trim()
+                    );
+                }
+            }
+        }
+        assert!(looked > 0, "no design files were read, so this proved nothing");
     }
 }

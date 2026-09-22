@@ -57,6 +57,13 @@ pub struct ProjectSettings {
     /// Restore stock RetroArch native menus in the exported app.
     #[serde(default)]
     pub advanced_emulator_access: bool,
+    /// The Options entries we offer in this game. When absent, we use the
+    /// design's defaults. With an empty list, we show no Options button.
+    #[serde(default)]
+    pub menu_entries: Option<Vec<String>>,
+    /// Presets bundled into the game. Usually this is empty.
+    #[serde(default)]
+    pub shaders: crate::shaders::ShaderSelection,
     pub target: ExportTarget,
 }
 
@@ -118,6 +125,10 @@ struct StoredSettings {
     splash: bool,
     #[serde(default)]
     advanced_emulator_access: bool,
+    #[serde(default)]
+    menu_entries: Option<Vec<String>>,
+    #[serde(default)]
+    shaders: crate::shaders::ShaderSelection,
     target: ExportTarget,
 }
 
@@ -131,6 +142,9 @@ struct ProjectAssets {
     firmware: Vec<String>,
     icon: Option<String>,
     background: Option<String>,
+    /// Custom shader files. Catalog presets come with the builder, so we do not store them.
+    #[serde(default)]
+    shaders: Vec<String>,
 }
 
 impl From<&ExportRequest> for ProjectSettings {
@@ -151,6 +165,8 @@ impl From<&ExportRequest> for ProjectSettings {
             firmware: request.firmware.clone(),
             splash: request.splash,
             advanced_emulator_access: request.advanced_emulator_access,
+            menu_entries: request.menu_entries.clone(),
+            shaders: request.shaders.clone(),
             target: request.target.clone(),
         }
     }
@@ -180,6 +196,8 @@ impl ProjectSettings {
             firmware: self.firmware,
             splash: self.splash,
             advanced_emulator_access: self.advanced_emulator_access,
+            menu_entries: self.menu_entries,
+            shaders: self.shaders,
             output_dir,
             target: self.target,
             runtime_kit,
@@ -212,6 +230,9 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
         .map(|path| archive_named_asset(FIRMWARE_PREFIX, path))
         .collect::<Result<Vec<_>, _>>()?;
     ensure_unique_names(&firmware_assets, "firmware")?;
+    let (stored_shaders, shader_files) = crate::shaders::pack_selection(&request.settings.shaders)?;
+    let shader_assets: Vec<String> = shader_files.iter().map(|(name, _)| name.clone()).collect();
+    ensure_unique_names(&shader_assets, "shader")?;
     let assets = ProjectAssets {
         rom,
         content: content_assets,
@@ -228,6 +249,7 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             .as_deref()
             .map(|path| archive_asset_name(BACKGROUND_PREFIX, path))
             .transpose()?,
+        shaders: shader_assets,
     };
     let manifest = ProjectManifest {
         format_version: FORMAT_VERSION,
@@ -243,6 +265,8 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             controls: request.settings.controls.clone(),
             splash: request.settings.splash,
             advanced_emulator_access: request.settings.advanced_emulator_access,
+            menu_entries: request.settings.menu_entries.clone(),
+            shaders: stored_shaders,
             target: request.settings.target.clone(),
         },
         assets: assets.clone(),
@@ -269,6 +293,9 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
         }
     }
     for (path, name) in request.settings.firmware.iter().zip(&assets.firmware) {
+        write_path(&mut writer, name, path, MAX_ASSET_BYTES, options)?;
+    }
+    for (name, path) in &shader_files {
         write_path(&mut writer, name, path, MAX_ASSET_BYTES, options)?;
     }
     if let (Some(name), Some(path)) = (&assets.icon, &request.settings.icon) {
@@ -336,6 +363,9 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
         .iter()
         .map(|name| extract_asset(&mut archive, name, &request.extraction_dir, MAX_ASSET_BYTES))
         .collect::<Result<Vec<_>, _>>()?;
+    for name in &manifest.assets.shaders {
+        extract_asset(&mut archive, name, &request.extraction_dir, MAX_ASSET_BYTES)?;
+    }
     let icon = manifest
         .assets
         .icon
@@ -364,6 +394,11 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
         firmware,
         splash: manifest.settings.splash,
         advanced_emulator_access: manifest.settings.advanced_emulator_access,
+        menu_entries: manifest.settings.menu_entries,
+        shaders: crate::shaders::unpack_selection(
+            manifest.settings.shaders,
+            &request.extraction_dir,
+        ),
         target: manifest.settings.target,
     };
     Ok(OpenProject {
@@ -441,6 +476,7 @@ fn validate_manifest(manifest: &ProjectManifest, names: &[String]) -> Result<(),
         expected.extend(manifest.assets.content.iter().cloned());
     }
     expected.extend(manifest.assets.firmware.iter().cloned());
+    expected.extend(manifest.assets.shaders.iter().cloned());
     if let Some(icon) = &manifest.assets.icon {
         expected.push(icon.clone());
     }
@@ -472,6 +508,9 @@ fn validate_manifest(manifest: &ProjectManifest, names: &[String]) -> Result<(),
     for name in &manifest.assets.firmware {
         validate_prefixed_path(name, FIRMWARE_PREFIX)?;
     }
+    for name in &manifest.assets.shaders {
+        validate_prefixed_path(name, "shaders/")?;
+    }
     ensure_unique_names(&expected, "project asset")?;
     if let Some(icon) = &manifest.assets.icon {
         validate_asset_name(icon, ICON_PREFIX)?;
@@ -495,6 +534,8 @@ fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
         controls: settings.controls.clone(),
         splash: settings.splash,
         advanced_emulator_access: settings.advanced_emulator_access,
+        menu_entries: settings.menu_entries.clone(),
+        shaders: settings.shaders.clone(),
         target: settings.target.clone(),
     })?;
     for (label, path) in [
@@ -867,6 +908,8 @@ mod tests {
                 firmware: Vec::new(),
                 splash: false,
                 advanced_emulator_access: false,
+                menu_entries: None,
+                shaders: crate::shaders::ShaderSelection::default(),
                 target: ExportTarget::Macos,
             },
         })
@@ -905,6 +948,8 @@ mod tests {
             firmware: Vec::new(),
             splash: false,
             advanced_emulator_access,
+            menu_entries: None,
+            shaders: crate::shaders::ShaderSelection::default(),
             target: ExportTarget::Macos,
         }
     }

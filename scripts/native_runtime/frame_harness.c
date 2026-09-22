@@ -16,8 +16,11 @@
  *     --frames N           how many frames to run (default 600)
  *     --shot N:FILE        write frame N as a PPM (repeatable)
  *     --press BUTTON:N:LEN hold BUTTON from frame N for LEN frames (repeatable)
- *     --option KEY=VALUE   set a core option, as we write it into
- *                          core-options.cfg for an exported game (repeatable)
+ *     --option KEY=VALUE   set a core option, as in the per-core options
+ *                          file of an exported game (repeatable). For any
+ *                          other option we answer with the default declared
+ *                          in the core, as RetroArch does, because a
+ *                          refusal gives a different result.
  *     --pad digital|dualshock  the controller in port 1. Some games, for
  *                          example Ape Escape, do not work with a digital
  *                          pad
@@ -55,12 +58,24 @@ static unsigned current_frame = 0;
  * work with any other controller. */
 static unsigned pad_device = RETRO_DEVICE_JOYPAD;
 
-/* Core options are the only way to configure a core. When we give no answer
- * to GET_VARIABLE, every option stays at its default with no warning, so
- * without options we could not reproduce an exported game here. */
+/* Core options are the only way to configure a core.
+ *
+ * For an option that is not set, we answer GET_VARIABLE with the default
+ * declared in the core, as RetroArch does. A refusal gives a different
+ * result. For example, the declared default in Nestopia is its composite
+ * filter, but without an answer the filter is off, and our picture would
+ * not match an exported game. Values given with --option come first, and
+ * every other option is at its declared default. */
 #define MAX_OPTIONS 16
+#define MAX_DEFAULTS 512
 static struct { const char *key; const char *value; } options[MAX_OPTIONS];
 static unsigned option_count = 0;
+static struct { const char *key; const char *value; } defaults[MAX_DEFAULTS];
+static unsigned default_count = 0;
+/* Read from the legacy "desc; default|other" strings, because there is no
+ * separate default pointer to borrow. */
+static char default_arena[65536];
+static size_t default_arena_used = 0;
 
 struct press {
     unsigned id;
@@ -105,6 +120,59 @@ static void log_printf(enum retro_log_level level, const char *format, ...)
     va_end(arguments);
 }
 
+static void remember_default(const char *key, const char *value)
+{
+    if (!key || !value || !*key) return;
+    for (unsigned i = 0; i < default_count; i++)
+        if (!strcmp(defaults[i].key, key)) return;
+    if (default_count >= MAX_DEFAULTS) {
+        fprintf(stderr, "core-option table full, dropped %s\n", key);
+        return;
+    }
+    defaults[default_count].key = key;
+    defaults[default_count].value = value;
+    default_count++;
+    fprintf(stderr, "core-option %s = \"%s\"\n", key, value);
+}
+
+static const char *arena_copy(const char *text, size_t length)
+{
+    if (default_arena_used + length + 1 > sizeof(default_arena)) return NULL;
+    char *slot = default_arena + default_arena_used;
+    memcpy(slot, text, length);
+    slot[length] = '\0';
+    default_arena_used += length + 1;
+    return slot;
+}
+
+/* In the legacy SET_VARIABLES, the default is the first '|'-separated value. */
+static void remember_legacy_variable(const struct retro_variable *variable)
+{
+    if (!variable->key || !variable->value) return;
+    const char *semi = strchr(variable->value, ';');
+    if (!semi || !semi[1]) return;
+    const char *start = semi + 1;
+    if (*start == ' ') start++;
+    const char *end = strchr(start, '|');
+    size_t length = end ? (size_t)(end - start) : strlen(start);
+    const char *copy = arena_copy(start, length);
+    if (copy) remember_default(variable->key, copy);
+}
+
+static void remember_v2(const struct retro_core_options_v2 *options)
+{
+    if (!options || !options->definitions) return;
+    for (const struct retro_core_option_v2_definition *def = options->definitions; def->key; def++)
+        if (def->default_value) remember_default(def->key, def->default_value);
+}
+
+static void remember_v1(const struct retro_core_option_definition *definitions)
+{
+    if (!definitions) return;
+    for (const struct retro_core_option_definition *def = definitions; def->key; def++)
+        if (def->default_value) remember_default(def->key, def->default_value);
+}
+
 static bool environment(unsigned command, void *data)
 {
     switch (command) {
@@ -131,7 +199,39 @@ static bool environment(unsigned command, void *data)
                 return true;
             }
         }
-        return false; /* unset means the core keeps its own default */
+        for (unsigned i = 0; i < default_count; i++) {
+            if (!strcmp(defaults[i].key, variable->key)) {
+                variable->value = defaults[i].value;
+                return true;
+            }
+        }
+        return false;
+    }
+    case RETRO_ENVIRONMENT_GET_LANGUAGE:
+        *(unsigned *)data = 0; /* RETRO_LANGUAGE_ENGLISH */
+        return true;
+    case RETRO_ENVIRONMENT_SET_VARIABLES: {
+        const struct retro_variable *variable = data;
+        if (variable)
+            for (; variable->key; variable++)
+                remember_legacy_variable(variable);
+        return true;
+    }
+    case RETRO_ENVIRONMENT_SET_CORE_OPTIONS:
+        remember_v1(data);
+        return true;
+    case RETRO_ENVIRONMENT_SET_CORE_OPTIONS_INTL: {
+        const struct retro_core_options_intl *intl = data;
+        if (intl) remember_v1(intl->us);
+        return true;
+    }
+    case RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2:
+        remember_v2(data);
+        return true;
+    case RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2_INTL: {
+        const struct retro_core_options_v2_intl *intl = data;
+        if (intl) remember_v2(intl->us);
+        return true;
     }
     case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
         *(bool *)data = false;

@@ -30,6 +30,11 @@ export type ExportRequest = {
   startAtMenu: boolean;
   splash: boolean;
   advancedEmulatorAccess: boolean;
+  shaders?: {
+    bundled: string[];
+    custom: { name: string; path: string }[];
+    initial?: string | null;
+  };
   firmware: string[];
   theme: string;
   palette: string;
@@ -79,6 +84,15 @@ export async function pickFile(kind: "game" | "image"): Promise<string | null> {
   });
   return typeof path === "string" ? path : null;
 }
+export async function pickShader(): Promise<string | null> {
+  const path = await open({
+    multiple: false,
+    directory: false,
+    title: "Add a shader",
+    filters: [{ name: "Shaders", extensions: ["glsl", "glslp"] }],
+  });
+  return typeof path === "string" ? path : null;
+}
 export async function pickFolder(): Promise<string | null> {
   const path = await open({
     directory: true,
@@ -93,6 +107,26 @@ export function inspectGame(
   systemOverride?: string,
 ): Promise<GameInfo> {
   return invoke("inspect_game", { path, online, systemOverride });
+}
+export const FirmwareNoticeKind = {
+  Required: "required",
+  Duplicate: "duplicate",
+  Unmatched: "unmatched",
+  Optional: "optional",
+  Ready: "ready",
+} as const;
+export type FirmwareNoticeKind =
+  (typeof FirmwareNoticeKind)[keyof typeof FirmwareNoticeKind];
+export type FirmwareAssessment = {
+  canContinue: boolean;
+  notices: { kind: FirmwareNoticeKind; text: string }[];
+  files: { name: string; counted: boolean; reason: string | null }[];
+};
+export function assessFirmware(
+  system: string,
+  files: string[],
+): Promise<FirmwareAssessment> {
+  return invoke("assess_firmware", { system, files });
 }
 export async function pickFirmware(): Promise<string[]> {
   const files = await open({

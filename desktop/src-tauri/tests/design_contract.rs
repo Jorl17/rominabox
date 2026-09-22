@@ -65,6 +65,10 @@ const MENU_PANELS: &[Panel] = &[
         ids: &[
             "controls-panel", "controls-back", "controls-reset",
             "controls-cancel", "controls-status",
+            // The block in which we draw the controller. We list it here because
+            // we replace its content in the player when someone picks another
+            // pad, and without it that change would fail without a warning.
+            "controller-scene",
         ],
     },
 ];
@@ -387,4 +391,106 @@ fn the_scene_geometry_is_declared_once_and_read_by_both_consumers() {
         !renderer.contains("SCENE = (960, 380)"),
         "the overlay renderer has a hardcoded scene size again"
     );
+}
+
+/// A design may style the shared list, but never the rows of one list.
+///
+/// The shader list, the achievement list and any list we add to Options have
+/// the same parts, which are rows we write when we bundle the game, a pager,
+/// and a state on the right. They share `.list-row` and the rules beside it.
+/// If a design styled `.shader-row`, every other design would have to do the
+/// same, and to add a screen we would have to edit every design.
+///
+/// A design MAY name the place of a composed screen. `#options` is the button
+/// on the pause row and `#options-panel` is the panel it opens, in the same
+/// way as `#controls`. So we accept `#actions #options`, because it places a
+/// button and does not restyle a list.
+///
+/// We strip comments first, so a comment that explains the shared list by
+/// naming the lists that use it is not a violation.
+///
+/// This test does NOT prove that the shared rules look right, that a design
+/// has them at all, or that we give the rows of a composed screen the shared
+/// class at export. For that last one we test the staged markup, and not on
+/// the stylesheet.
+#[test]
+fn no_design_styles_one_list_by_name() {
+    // Screens that we add at composition. The design defines pause and
+    // controls, and must not define these. To add a screen, add a word here.
+    const COMPOSED: [&str; 3] = ["shader", "achievement", "options"];
+    // The parts of the shared list. It is a defect when one of these is
+    // named after a particular screen in a design, and it is not one when
+    // it is named after the screen's button or panel.
+    const PARTS: [&str; 4] = ["row", "list", "pager", "entry"];
+    let designs = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs");
+    let mut read = 0;
+    for entry in std::fs::read_dir(&designs).expect("designs directory") {
+        let sheet = entry.expect("design entry").path().join("menu.rcss");
+        if !sheet.is_file() {
+            continue;
+        }
+        read += 1;
+        let text = std::fs::read_to_string(&sheet).expect("stylesheet");
+        for selector in selectors(&text) {
+            for identifier in named(&selector) {
+                for name in COMPOSED {
+                    let Some(rest) = identifier.strip_prefix(name) else {
+                        continue;
+                    };
+                    assert!(
+                        !PARTS.iter().any(|part| rest.contains(part)),
+                        "{} styles the {name} list's own rows: {}\n\
+                         Those rows are `.list-row`; a design that needs a \
+                         different list changes the shared rules.",
+                        sheet.display(),
+                        selector.trim()
+                    );
+                }
+            }
+        }
+    }
+    assert!(read > 0, "no stylesheet was read, so this proved nothing");
+}
+
+/// Every selector in a stylesheet: the text before each rule body, with
+/// comments removed first.
+fn selectors(stylesheet: &str) -> Vec<String> {
+    let mut plain = String::with_capacity(stylesheet.len());
+    let mut rest = stylesheet;
+    while let Some(open) = rest.find("/*") {
+        plain.push_str(&rest[..open]);
+        rest = match rest[open..].find("*/") {
+            Some(close) => &rest[open + close + 2..],
+            None => "",
+        };
+    }
+    plain.push_str(rest);
+    plain
+        .split('}')
+        .filter_map(|block| block.split('{').next())
+        .map(|selector| selector.trim().to_string())
+        .filter(|selector| !selector.is_empty())
+        .collect()
+}
+
+/// Every class and id named in a selector, lowercased.
+///
+/// Matching the whole selector text would catch too much. The design defines
+/// `.control-picker-option`, the controller picker, and it contains the word
+/// used for the options screen. A name matches when the identifier starts
+/// with it.
+fn named(selector: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut rest = selector;
+    while let Some(at) = rest.find(['.', '#']) {
+        let after = &rest[at + 1..];
+        let end = after
+            .find(|c: char| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
+            .unwrap_or(after.len());
+        if end > 0 {
+            found.push(after[..end].to_ascii_lowercase());
+        }
+        rest = &after[end..];
+    }
+    found
 }
