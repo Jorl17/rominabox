@@ -106,6 +106,21 @@ def case_frontend():
     return expect("frontend", code, output, ("not assignable to type 'number'",))
 
 
+def case_builder():
+    path = ROOT / "integrations/shaders/catalog.json"
+    raw = replace(path, '"name": "Scanlines"', '"name": "Not a shader"')
+    try:
+        code, output = run_scope("builder")
+    finally:
+        restore(path, raw)
+    return expect(
+        "builder",
+        code,
+        output,
+        ("shader packaging is not on the menu step",),
+    )
+
+
 def case_menu():
     path = ROOT / "integrations/designs/native/menu.rml"
     raw = replace(path, 'id="resume"', 'id="resume-moved"')
@@ -332,6 +347,7 @@ CASES = {
     "exporter": case_exporter,
     "picture": case_picture,
     "frontend": case_frontend,
+    "builder": case_builder,
     "menu": case_menu,
     "heldkey": case_heldkey,
     "staging": case_staging,
@@ -364,6 +380,15 @@ def main() -> int:
             failed.append(name)
         else:
             print("  proved")
+    # controls.json is compiled into rominabox-cli. In the overlays case we
+    # edit that file and run a scope in which we rebuild the binary, because
+    # an earlier case changed a Rust file and the binary looks out of date.
+    # After we restore the JSON, the binary is newer than the file but still
+    # has the edit. So rebuild from the current tree once every case has put
+    # its file back.
+    from built import cli
+    cli(build=True)
+
     print()
     if failed:
         print(f"{len(failed)} scope(s) did not fail for the right reason: {', '.join(failed)}")

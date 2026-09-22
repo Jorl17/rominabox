@@ -90,6 +90,13 @@ SCOPES = [
         ["npm", "--prefix", str(ROOT / "desktop"), "run", "check"],
     ),
     Scope(
+        "builder",
+        "that the browser build of the builder can be walked, and that shader packaging is on the menu step",
+        "the desktop shell: catalog artwork, a rendered menu preview, firmware wording, and creating the app",
+        ["python3", str(ROOT / "scripts/builder_shots.py"), "--check"],
+        slow=True,
+    ),
+    Scope(
         "menu",
         "what RmlUi does with the real menu.rml when clicked: hit testing, hover, focus, classes",
         "that the menu looks right, or anything about the C++ bridge, which is not loaded",
