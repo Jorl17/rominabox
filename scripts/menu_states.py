@@ -35,6 +35,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from built import binary
+
 ROOT = Path(__file__).resolve().parent.parent
 # The freshly built helper when there is one, because a staged copy is a
 # build output that can be older than a change to the helper.
@@ -45,7 +47,7 @@ DESIGN = ROOT / "integrations/designs/native"
 ARTWORK = ROOT / "desktop/assets/controllers"
 STATES = ROOT / "scripts/fixtures/menu-states.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-state-digests.json"
-CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+CLI = binary("rominabox-cli")
 
 # The window size of an exported game, because at any other size a rendered
 # state is not what a player sees.

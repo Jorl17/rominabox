@@ -29,6 +29,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+from built import binary
+
 ROOT = Path(__file__).resolve().parent.parent
 CONTROLS = ROOT / "desktop/controls.json"
 ARTWORK = ROOT / "desktop/assets/controllers"
@@ -89,7 +91,7 @@ def _font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+CLI = binary("rominabox-cli")
 
 
 def scene_geometry(profile_id: str) -> dict:

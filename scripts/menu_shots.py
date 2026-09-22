@@ -37,6 +37,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from built import binary
+
 ROOT = Path(__file__).resolve().parent.parent
 SHOTS = ROOT / "scripts/fixtures/menu-shots.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-shot-digests.json"
@@ -124,7 +126,7 @@ def take(app: Path, name: str, script: list[str], output: Path) -> str:
 BUILT_PLAYER = ROOT / "work/fork-build-20260920/retroarch/retroarch"
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 DESIGN = ROOT / "integrations/designs/native"
-CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+CLI = binary("rominabox-cli")
 
 
 def build_a_game(rom: Path, workspace: Path, system: str = "megadrive") -> Path:

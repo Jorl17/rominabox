@@ -31,12 +31,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+from built import binary
+
 ROOT = Path(__file__).resolve().parent.parent
 ARTWORK = ROOT / "desktop/assets/controllers"
 DESIGN = ROOT / "integrations/designs/native/design.json"
 DESIGN_DIR = DESIGN.parent
 CONTROLS = ROOT / "desktop/controls.json"
-CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+CLI = binary("rominabox-cli")
 BASELINE = ROOT / "scripts/fixtures/controller-digests.json"
 
 # We render at twice the scene size so the artwork stays crisp on a retina
