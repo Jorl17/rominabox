@@ -15,8 +15,25 @@ use rominabox_desktop::{
 use std::{
     fs,
     path::{Path, PathBuf},
+    process::Command,
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
+
+fn write_runtime_stub(path: &Path) {
+    let source = path.with_extension("c");
+    fs::write(
+        &source,
+        "int rarch_main(int c, char **v, void *d){(void)c;(void)v;(void)d;return 0;}\nint main(void){return rarch_main(0,0,0);}\n",
+    )
+    .unwrap();
+    let status = Command::new("cc")
+        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
+        .arg(path)
+        .arg(&source)
+        .status()
+        .unwrap();
+    assert!(status.success(), "could not compile the runtime stub");
+}
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
@@ -50,7 +67,7 @@ fn fixture_kit(root: &Path) -> PathBuf {
     fs::create_dir_all(kit.join("licenses")).unwrap();
     fs::create_dir_all(kit.join("licenses/native")).unwrap();
     fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
-    fs::write(kit.join("bin/retroarch"), b"#!/bin/sh\n").unwrap();
+    write_runtime_stub(&kit.join("bin/retroarch"));
     fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
     for name in [
         "RetroArch.txt",
@@ -119,14 +136,12 @@ fn export_request(root: &Path, advanced: bool) -> ExportRequest {
     }
 }
 
-fn embedded_runtime_config(script: &str) -> String {
-    let marker = "/bin/cat >\"$cfg\" <<EOF\n";
-    let start = script
+fn embedded_runtime_config(plan: &str) -> String {
+    let marker = "---config---\n";
+    let start = plan
         .find(marker)
-        .expect("exported launcher writes retroarch.cfg");
-    let body = &script[start + marker.len()..];
-    let end = body.find("\nEOF\n").expect("exported config heredoc ends");
-    body[..end].to_string()
+        .expect("exported launch plan contains the runtime config");
+    plan[start + marker.len()..].to_string()
 }
 
 fn config_value<'a>(config: &'a str, key: &str) -> Option<&'a str> {
@@ -141,8 +156,8 @@ fn exported_config(advanced: bool) -> String {
     let request = export_request(&root, advanced);
     let cancelled = AtomicBool::new(false);
     let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
-    let launcher = result.app_path.join("Contents/MacOS/ROM-in-a-Box");
-    embedded_runtime_config(&fs::read_to_string(&launcher).unwrap())
+    let plan = result.app_path.join("Contents/Resources/launch.plan");
+    embedded_runtime_config(&fs::read_to_string(&plan).unwrap())
 }
 
 fn binding(key: &str) -> Controls {

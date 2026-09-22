@@ -7,8 +7,25 @@ use rominabox_desktop::packaging::{
 use std::{
     fs,
     path::{Path, PathBuf},
+    process::Command,
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
+
+fn write_runtime_stub(path: &Path) {
+    let source = path.with_extension("c");
+    fs::write(
+        &source,
+        "int rarch_main(int c, char **v, void *d){(void)c;(void)v;(void)d;return 0;}\nint main(void){return rarch_main(0,0,0);}\n",
+    )
+    .unwrap();
+    let status = Command::new("cc")
+        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
+        .arg(path)
+        .arg(&source)
+        .status()
+        .unwrap();
+    assert!(status.success(), "could not compile the runtime stub");
+}
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
@@ -30,7 +47,7 @@ fn fixture_kit(root: &Path) -> PathBuf {
     fs::create_dir_all(kit.join("licenses")).unwrap();
     fs::create_dir_all(kit.join("licenses/native")).unwrap();
     fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
-    fs::write(kit.join("bin/retroarch"), b"#!/bin/sh\n").unwrap();
+    write_runtime_stub(&kit.join("bin/retroarch"));
     fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
     for name in [
         "RetroArch.txt",
@@ -83,14 +100,12 @@ fn export_request(root: &Path) -> ExportRequest {
     }
 }
 
-fn embedded_runtime_config(script: &str) -> String {
-    let marker = "/bin/cat >\"$cfg\" <<EOF\n";
-    let start = script
+fn embedded_runtime_config(plan: &str) -> String {
+    let marker = "---config---\n";
+    let start = plan
         .find(marker)
-        .expect("exported launcher writes retroarch.cfg");
-    let body = &script[start + marker.len()..];
-    let end = body.find("\nEOF\n").expect("exported config heredoc ends");
-    body[..end].to_string()
+        .expect("exported launch plan contains the runtime config");
+    plan[start + marker.len()..].to_string()
 }
 
 fn config_value<'a>(config: &'a str, key: &str) -> Option<&'a str> {
@@ -125,9 +140,9 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
     let cancelled = AtomicBool::new(false);
     let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
     assert_no_export_staging(&request.output_dir);
-    let launcher = result.app_path.join("Contents/MacOS/ROM-in-a-Box");
-    let script = fs::read_to_string(&launcher).unwrap();
-    let config = embedded_runtime_config(&script);
+    let plan_path = result.app_path.join("Contents/Resources/launch.plan");
+    let plan = fs::read_to_string(&plan_path).unwrap();
+    let config = embedded_runtime_config(&plan);
     let policy = isolated_hotkey_config(false, false);
 
     assert!(
@@ -153,19 +168,21 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
     // There is no exit key in a default export. Quit is in the menu, not on Q.
     assert_eq!(config_value(&config, "input_exit_emulator"), Some("nul"));
     assert!(!config.contains("input_player1_"));
-    assert!(script.contains(&format!(
-        "for name in {}; do",
-        MANAGED_DATA_DIRECTORIES.join(" ")
-    )));
-    assert!(script.contains("export ROMINABOX_DATA_DIR=\"$data_dir\""));
+    for directory in MANAGED_DATA_DIRECTORIES {
+        assert!(
+            plan.contains(&format!("managed\t{directory}\n")),
+            "the launch plan must name {directory}"
+        );
+    }
+    assert!(plan.contains("data_dir\t$HOME/Library/Application Support/ROM-in-a-Box/Games/"));
     assert!(
-        script.contains(&format!(
-            "volume_override=\"$data_dir/{}\"",
+        plan.contains(&format!(
+            "volume_file\t{}\n",
             rominabox_desktop::volume::file_name()
         )),
-        "the launcher has to append the per-game volume file, by the name the player writes"
+        "the launcher has to merge the per-game volume file, by the name the player writes"
     );
-    assert!(!script.contains("export HOME="));
+    assert!(!plan.contains("export HOME="));
     assert_eq!(
         HOTKEY_BINDS
             .iter()

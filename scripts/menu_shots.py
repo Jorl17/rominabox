@@ -58,7 +58,7 @@ DIGESTS = ROOT / "scripts/fixtures/menu-shot-digests.json"
 # use this limit only so that a stuck run cannot stop the tests forever.
 TIMEOUT_SECONDS = 120
 
-DATA_DIR = re.compile(r'^data_dir="([^"]+)"', re.MULTILINE)
+DATA_DIR = re.compile(r'^data_dir\t(.+)$', re.MULTILINE)
 
 
 def declared_palettes() -> list[str]:
@@ -121,28 +121,78 @@ def declared_shots() -> dict[str, dict]:
 
 
 def launcher_of(app: Path) -> Path:
-    """The launcher in the app, so the game starts as it does for a player."""
-    candidates = [entry for entry in (app / "Contents/MacOS").iterdir() if entry.is_file()]
-    for entry in candidates:
-        if entry.name != "retroarch" and os.access(entry, os.X_OK):
-            return entry
+    """The bundle's main executable, which is the sandboxed player."""
+    identifier = subprocess.run(
+        [
+            "/usr/bin/plutil",
+            "-extract",
+            "CFBundleExecutable",
+            "raw",
+            str(app / "Contents/Info.plist"),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    executable = app / "Contents/MacOS" / identifier
+    if executable.is_file() and os.access(executable, os.X_OK):
+        return executable
     raise SystemExit(f"no launcher inside {app}")
 
 
-def log_of(app: Path) -> Path | None:
-    """The file to which we send the player's output in the launcher."""
-    found = DATA_DIR.search(launcher_of(app).read_text())
-    if not found:
-        return None
-    return Path(os.path.expandvars(found.group(1).replace("$HOME", str(Path.home())))) / "logs/launch.log"
+def plan_text(app: Path) -> str:
+    path = app / "Contents/Resources/launch.plan"
+    if path.is_file():
+        return path.read_text()
+    return ""
+
+
+def sandboxed(app: Path) -> bool:
+    signed = subprocess.run(
+        ["/usr/bin/codesign", "-d", "--entitlements", "-", str(app)],
+        capture_output=True,
+        text=True,
+    )
+    return "com.apple.security.app-sandbox" in signed.stdout + signed.stderr
+
+
+def home_for(app: Path) -> str:
+    """The HOME directory in the environment of the exported game.
+
+    With App Sandbox, HOME points into the container. In the plan we still
+    write $HOME, because that is the path before the redirection.
+    """
+    if not sandboxed(app):
+        return str(Path.home())
+    identifier = subprocess.run(
+        [
+            "/usr/bin/plutil",
+            "-extract",
+            "CFBundleIdentifier",
+            "raw",
+            str(app / "Contents/Info.plist"),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    return str(Path.home() / "Library/Containers" / identifier / "Data")
 
 
 def data_dir_of(app: Path) -> Path | None:
     """The per-game storage, as we compute it in the launcher."""
-    found = DATA_DIR.search(launcher_of(app).read_text())
+    found = DATA_DIR.search(plan_text(app))
     if not found:
         return None
-    return Path(found.group(1).replace("$HOME", str(Path.home())))
+    return Path(found.group(1).replace("$HOME", home_for(app)))
+
+
+def log_of(app: Path) -> Path | None:
+    """The file to which we send the player's output in the launcher."""
+    data = data_dir_of(app)
+    if data is None:
+        return None
+    return data / "logs/launch.log"
 
 
 def take(app: Path, name: str, script: list[str], output: Path,
@@ -296,8 +346,25 @@ def build_a_game(
     # The player next to the launcher comes from the kit. Replace it with the
     # freshly built one so that the shot shows this tree.
     if player:
-        shutil.copyfile(player, app / "Contents/MacOS/retroarch")
-        (app / "Contents/MacOS/retroarch").chmod(0o755)
+        retroarch = app / "Contents/MacOS/retroarch"
+        shutil.copyfile(player, retroarch)
+        retroarch.chmod(0o755)
+        injector = workspace / "inject-dylib"
+        subprocess.run(
+            ["cc", "-Oz", "-o", str(injector), str(ROOT / "scripts/native_runtime/inject_dylib.c")],
+            check=True,
+        )
+        subprocess.run(
+            [str(injector), str(retroarch), "@executable_path/librominabox-launch.dylib"],
+            check=True,
+        )
+        library = app / "Contents/MacOS/librominabox-launch.dylib"
+        subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(library)], check=True)
+        subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(retroarch)], check=True)
+        subprocess.run(
+            ["/usr/bin/codesign", "--force", "--sign", "-", "--preserve-metadata=entitlements", str(app)],
+            check=True,
+        )
     return app
 
 

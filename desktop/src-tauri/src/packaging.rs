@@ -583,10 +583,11 @@ where
         &request.system,
         isolation_namespace().as_deref(),
     )?;
-    write_launcher(
-        &macos.join("ROM-in-a-Box"),
+    install_launch_library(&macos, &runtime)?;
+    mach_objects.push(macos.join("librominabox-launch.dylib"));
+    write_launch_plan(
+        &resources.join("launch.plan"),
         &identity,
-        core_name,
         rom_relative.as_os_str(),
         request,
     )?;
@@ -640,10 +641,14 @@ where
             cancelled,
         )?;
     }
+    let entitlements = staging.path().join("entitlements.plist");
+    fs::write(&entitlements, sandbox_entitlements(&identity))
+        .map_err(|error| ExportError::io("sign", &entitlements, error))?;
     run_command_cancellable(
         "sign",
         Command::new("/usr/bin/codesign")
-            .args(["--force", "--deep", "--sign", "-"])
+            .args(["--force", "--sign", "-", "--entitlements"])
+            .arg(&entitlements)
             .arg(&app),
         cancelled,
     )?;
@@ -1121,26 +1126,26 @@ fn stable_identity(
     Ok(format!("{:x}", hash.finalize())[..24].to_string())
 }
 
-/// The RetroArch meta bind policy for exported games.
+/// RetroArch meta-bind policy for exported games.
 ///
-/// This is the only bind list. It covers every `DECLARE_META_BIND` in the
-/// pinned RetroArch `configuration.c`. The desktop defaults in
+/// This is the only bind list, and it covers every `DECLARE_META_BIND` in
+/// the pinned RetroArch `configuration.c`. The desktop defaults in
 /// `config.def.keybinds.h` and `retroarch.cfg` bind Space to
-/// `toggle_fast_forward`, Escape to quit and F1 to the stock menu, so we write
-/// every meta bind in an export to replace those defaults.
+/// `toggle_fast_forward`, Escape to quit and F1 to the stock menu, so we
+/// write every meta bind in an export to keep those defaults out.
 ///
-/// The binds we keep are for the keyboard only. Button, axis and mouse
-/// variants stay `nul`, which is `NO_BTN`, a user bind with no button. When
-/// the user joykey is `NO_BTN`, the autoconfig bind applies in the joypad
-/// poll, so a profile with `input_menu_toggle_btn` would bind that button.
-/// We remove those meta lines from the profiles we ship when we stage them.
-/// The `input_player1_*` gameplay keys are not declared here, because they
-/// are in the controls appendconfig.
+/// The binds we keep are keyboard-only. Button, axis and mouse variants stay
+/// `nul`, which is `NO_BTN`, so the user bind lists no controller button.
+/// When the user joykey is `NO_BTN`, an autoconfig bind still applies in the
+/// joypad poll, so a profile that contains `input_menu_toggle_btn` would
+/// bind that physical button. We remove those meta lines from shipped
+/// profiles at staging. `input_player1_*` gameplay keys are not declared
+/// here. They come from the player's controls file, which we merge in the launcher.
 ///
-/// `advanced_key` is a second keyboard tier. We write it only when the author
-/// set `advancedEmulatorAccess`, and it never replaces the button, axis or
-/// mouse `nul`. A normal export contains `keyboard`, which is `nul` for every
-/// bind except the menu toggle.
+/// `advanced_key` is a second keyboard tier. We write it only when the
+/// author set `advancedEmulatorAccess`, and it never replaces the button,
+/// axis or mouse `nul`. In a normal export we write `keyboard`, which is
+/// `nul` for every bind except the menu toggle.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HotkeyBind {
     pub name: &'static str,
@@ -1663,6 +1668,7 @@ playlist_directory = "$data_dir/playlists"
 screenshot_directory = "$data_dir/screenshots"
 core_options_path = "$data_dir/core-options.cfg"
 auto_remaps_enable = "true"
+network_cmd_enable = "false"
 input_remap_sort_by_controller_enable = "false"
 content_history_path = "$data_dir/playlists/content_history.lpl"
 content_music_history_path = "$data_dir/playlists/content_music_history.lpl"
@@ -1689,7 +1695,6 @@ audio_filter_dir = "$data_dir/filters/audio"
 history_list_enable = "false"
 core_info_cache_enable = "false"
 auto_overrides_enable = "false"
-auto_remaps_enable = "false"
 remap_save_on_exit = "false"
 game_specific_options = "false"
 global_core_options = "false"
@@ -1710,128 +1715,170 @@ savestate_thumbnail_enable = "true"
     )
 }
 
-fn write_launcher(
+fn game_data_template(identity: &str) -> String {
+    format!("$HOME/Library/Application Support/ROM-in-a-Box/Games/{identity}")
+}
+
+fn sandbox_entitlements(identity: &str) -> String {
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>com.apple.security.app-sandbox</key><true/>
+<key>com.apple.security.device.usb</key><true/>
+<key>com.apple.security.device.bluetooth</key><true/>
+<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
+<array><string>/Library/Application Support/ROM-in-a-Box/Games/{identity}/</string></array>
+</dict></plist>
+"#
+    )
+}
+
+fn compile_c(source: &Path, destination: &Path, extra: &[&str]) -> Result<(), ExportError> {
+    if let Some(parent) = destination.parent() {
+        fs::create_dir_all(parent).map_err(|error| ExportError::io("configure", parent, error))?;
+    }
+    let current = match (fs::metadata(source), fs::metadata(destination)) {
+        (Ok(source_meta), Ok(binary_meta)) => {
+            binary_meta.modified().ok() >= source_meta.modified().ok()
+                && binary_meta.modified().ok().is_some()
+        }
+        _ => false,
+    };
+    if current {
+        return Ok(());
+    }
+    let temporary = destination.with_extension(format!("tmp-{}", std::process::id()));
+    let status = Command::new("cc")
+        .args(extra)
+        .arg("-o")
+        .arg(&temporary)
+        .arg(source)
+        .status()
+        .map_err(|error| {
+            ExportError::new("configure", format!("could not compile the launcher: {error}"))
+        })?;
+    if !status.success() {
+        return Err(ExportError::new(
+            "configure",
+            "the launcher failed to compile",
+        ));
+    }
+    fs::rename(&temporary, destination)
+        .map_err(|error| ExportError::io("configure", destination, error))?;
+    Ok(())
+}
+
+fn install_launch_library(macos: &Path, retroarch: &Path) -> Result<(), ExportError> {
+    let library_source = Path::new(env!("CARGO_MANIFEST_DIR")).join("launcher/main.c");
+    let injector_source =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/native_runtime/inject_dylib.c");
+    let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../work");
+    let library = work.join("librominabox-launch.dylib");
+    let injector = work.join("inject-dylib");
+    compile_c(
+        &library_source,
+        &library,
+        &[
+            "-Oz",
+            "-dynamiclib",
+            "-Wl,-dead_strip",
+            "-Wl,-install_name,@executable_path/librominabox-launch.dylib",
+        ],
+    )?;
+    compile_c(&injector_source, &injector, &["-Oz"])?;
+    let status = Command::new(&injector)
+        .arg(retroarch)
+        .arg("@executable_path/librominabox-launch.dylib")
+        .status()
+        .map_err(|error| {
+            ExportError::new(
+                "configure",
+                format!("could not attach the launcher: {error}"),
+            )
+        })?;
+    if !status.success() {
+        return Err(ExportError::new(
+            "configure",
+            "the runtime has no room for the launcher",
+        ));
+    }
+    copy_file(&library, &macos.join("librominabox-launch.dylib"))
+}
+
+fn write_launch_plan(
     path: &Path,
     identity: &str,
-    _core: &OsStr,
     rom: &OsStr,
     request: &ExportRequest,
 ) -> Result<(), ExportError> {
-    let start_at_menu_env = if request.start_at_menu {
-        "export ROMINABOX_START_AT_MENU=1"
-    } else {
-        ""
-    };
-    let advanced_access_env = if request.advanced_emulator_access {
-        "export ROMINABOX_ADVANCED_ACCESS=1"
-    } else {
-        "export ROMINABOX_ADVANCED_ACCESS=0"
-    };
-    let content_relative = shell_quote(&rom.to_string_lossy());
-    let game_title = shell_quote(&request.title);
-    let managed_directories = MANAGED_DATA_DIRECTORIES.join(" ");
-    let volume_file = crate::volume::file_name();
-    let runtime_config = isolated_runtime_config(request);
-    let script = format!(
-        r##"#!/bin/sh
-set -eu
-bundle_dir=$(CDPATH= cd -- "$(/usr/bin/dirname "$0")/.." && pwd)
-content_relative={content_relative}
-data_dir="$HOME/Library/Application Support/ROM-in-a-Box/Games/{identity}"
-for name in {managed_directories}; do
-  /bin/mkdir -p "$data_dir/$name"
-done
-unset ROMINABOX_START_AT_MENU
-{advanced_access_env}
-unset LIBRETRO_SYSTEM_DIRECTORY LIBRETRO_DIRECTORY LIBRETRO_ASSETS_DIRECTORY LIBRETRO_AUTOCONFIG_DIRECTORY LIBRETRO_CHEATS_DIRECTORY LIBRETRO_DATABASE_DIRECTORY LIBRETRO_VIDEO_FILTER_DIRECTORY LIBRETRO_VIDEO_SHADER_DIRECTORY
-export ROMINABOX_DATA_DIR="$data_dir"
-export ROMINABOX_TITLE={game_title}
-export ROMINABOX_RML_ASSETS="$bundle_dir/Resources/menu-assets"
-{start_at_menu_env}
-cfg="$data_dir/retroarch.cfg"
-/bin/cat >"$cfg" <<EOF
-@@RUNTIME_CONFIG@@
-EOF
-"##,
-    )
-    .replace("@@RUNTIME_CONFIG@@", &runtime_config);
+    if identity.contains(['\n', '\t', '/']) {
+        return Err(ExportError::new(
+            "configure",
+            "the game identity cannot be written into the launch plan",
+        ));
+    }
+    let content = rom.to_string_lossy();
+    if content.contains(['\n', '\t'])
+        || content.starts_with('/')
+        || content.split('/').any(|part| part == "..")
+    {
+        return Err(ExportError::new(
+            "configure",
+            "the game's content path cannot be launched",
+        ));
+    }
+    if request.title.contains(['\n', '\t']) {
+        return Err(ExportError::new(
+            "configure",
+            "the game title cannot be written into the launch plan",
+        ));
+    }
     let shader_initial = if request.show_menu {
         crate::shaders::launch_preset(&request.shaders)
             .map_err(|message| ExportError::new("configure", message))?
+            .unwrap_or_default()
     } else {
-        None
+        String::new()
     };
-    let shader_shell = crate::shaders::launcher_shader_shell(shader_initial.as_deref());
-    let script = format!(
-        r##"{script}for remap_dir in "$bundle_dir"/Resources/remaps/*; do
-  [ -d "$remap_dir" ] || continue
-  name=${{remap_dir##*/}}
-  /bin/mkdir -p "$data_dir/remaps/$name"
-  for remap in "$remap_dir"/*; do
-    [ -f "$remap" ] || continue
-    base=${{remap##*/}}
-    [ -f "$data_dir/remaps/$name/$base" ] || /bin/cp "$remap" "$data_dir/remaps/$name/$base"
-  done
-done
-for autoconfig_dir in "$bundle_dir"/Resources/autoconfig/*; do
-  [ -d "$autoconfig_dir" ] || continue
-  name=${{autoconfig_dir##*/}}
-  /bin/mkdir -p "$data_dir/autoconfig/$name"
-  for profile in "$autoconfig_dir"/*; do
-    [ -f "$profile" ] || continue
-    base=${{profile##*/}}
-    [ -f "$data_dir/autoconfig/$name/$base" ] || /bin/cp "$profile" "$data_dir/autoconfig/$name/$base"
-  done
-done
-for options_dir in "$bundle_dir"/Resources/core-options/*; do
-  [ -d "$options_dir" ] || continue
-  name=${{options_dir##*/}}
-  /bin/mkdir -p "$data_dir/config/$name"
-  for options in "$options_dir"/*; do
-    [ -f "$options" ] || continue
-    base=${{options##*/}}
-    [ -f "$data_dir/config/$name/$base" ] || /bin/cp "$options" "$data_dir/config/$name/$base"
-  done
-done
-for firmware in "$bundle_dir"/Resources/firmware/*; do
-  [ -f "$firmware" ] || continue
-  name=${{firmware##*/}}
-  [ -f "$data_dir/system/$name" ] || /bin/cp "$firmware" "$data_dir/system/$name"
-done
-controls_defaults="$bundle_dir/Resources/menu-assets/controls-defaults.cfg"
-controls_override="$data_dir/controls.cfg"
-case "$controls_defaults" in
-  *'|'*) echo "ROM-in-a-Box cannot load controls from a path containing |." >&2; exit 1 ;;
-esac
-append_config="$controls_defaults"
-if [ -f "$controls_override" ]; then
-  case "$controls_override" in
-    *'|'*) echo "ROM-in-a-Box cannot load controls from a path containing |." >&2; exit 1 ;;
-  esac
-  append_config="$append_config|$controls_override"
-fi
-volume_override="$data_dir/{volume_file}"
-if [ -f "$volume_override" ]; then
-  case "$volume_override" in
-    *'|'*) echo "ROM-in-a-Box cannot load volume from a path containing |." >&2; exit 1 ;;
-  esac
-  append_config="$append_config|$volume_override"
-fi
-{shader_shell}
-set -- --config "$cfg" --appendconfig "$append_config" --libretro "$bundle_dir/Resources/game-core.dylib" "$bundle_dir/Resources/$content_relative"
-if [ -n "$shader_preset" ]; then
-  set -- "$@" --set-shader "$shader_preset"
-fi
-exec "$bundle_dir/MacOS/retroarch" "$@" >>"$data_dir/logs/launch.log" 2>&1
-"##,
+    if shader_initial.contains(['\n', '\t']) {
+        return Err(ExportError::new(
+            "configure",
+            "the starting shader cannot be written into the launch plan",
+        ));
+    }
+    let managed = MANAGED_DATA_DIRECTORIES
+        .iter()
+        .map(|name| format!("managed\t{name}\n"))
+        .collect::<String>();
+    let runtime_config = isolated_runtime_config(request);
+    let plan = format!(
+        "rominabox-launch\t1\n\
+         identity\t{identity}\n\
+         content\t{content}\n\
+         title\t{title}\n\
+         start_at_menu\t{start}\n\
+         advanced\t{advanced}\n\
+         volume_file\t{volume}\n\
+         shader_initial\t{shader}\n\
+         data_dir\t{data_dir}\n\
+         {managed}\
+         ---config---\n\
+         {runtime_config}",
+        title = request.title,
+        start = if request.start_at_menu { "1" } else { "0" },
+        advanced = if request.advanced_emulator_access {
+            "1"
+        } else {
+            "0"
+        },
+        volume = crate::volume::file_name(),
+        shader = shader_initial,
+        data_dir = game_data_template(identity),
     );
-    fs::write(path, script).map_err(|error| ExportError::io("configure", path, error))?;
-    make_executable(path)
+    fs::write(path, plan).map_err(|error| ExportError::io("configure", path, error))
 }
 
-fn shell_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
-}
 
 fn write_plist(
     path: &Path,
@@ -1850,7 +1897,7 @@ fn write_plist(
 <plist version="1.0"><dict>
 <key>CFBundleDevelopmentRegion</key><string>en</string>
 <key>CFBundleDisplayName</key><string>{}</string>
-<key>CFBundleExecutable</key><string>ROM-in-a-Box</string>
+<key>CFBundleExecutable</key><string>retroarch</string>
 <key>CFBundleIdentifier</key><string>app.rominabox.game.{}</string>
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
 <key>CFBundleName</key><string>{}</string>
@@ -2506,22 +2553,12 @@ mod tests {
         let hostile = OsStr::new("content/weird'$(touch PWNED)`echo nope`.bin");
         let mut settings = request(false);
         settings.title = "Game's $(title) `literal`".into();
-        write_launcher(
-            &launcher,
-            "identity",
-            OsStr::new("core"),
-            hostile,
-            &settings,
-        )
-        .unwrap();
-        let script = fs::read_to_string(launcher).unwrap();
+        write_launch_plan(&launcher, "identity", hostile, &settings).unwrap();
+        let plan = fs::read_to_string(launcher).unwrap();
 
-        assert!(
-            script.contains("content_relative='content/weird'\\''$(touch PWNED)`echo nope`.bin'")
-        );
-        assert!(script.contains("\"$bundle_dir/Resources/$content_relative\""));
-        assert!(!script.contains("Resources/content/weird"));
-        assert!(script.contains("export ROMINABOX_TITLE='Game'\\''s $(title) `literal`'"));
+        assert!(plan.contains("content\tcontent/weird'$(touch PWNED)`echo nope`.bin\n"));
+        assert!(plan.contains("title\tGame's $(title) `literal`\n"));
+        assert!(!plan.contains("Resources/content/weird"));
     }
 
     fn write_test_launcher(settings: ExportRequest) -> String {
@@ -2535,10 +2572,9 @@ mod tests {
         ));
         fs::create_dir_all(&directory).unwrap();
         let launcher = directory.join("launcher");
-        write_launcher(
+        write_launch_plan(
             &launcher,
             "identity",
-            OsStr::new("core"),
             OsStr::new("content/game.bin"),
             &settings,
         )
@@ -2546,13 +2582,12 @@ mod tests {
         fs::read_to_string(launcher).unwrap()
     }
 
-    fn embedded_runtime_config(script: &str) -> String {
-        let start = script
-            .find("/bin/cat >\"$cfg\" <<EOF\n")
-            .expect("launcher writes retroarch.cfg");
-        let body = &script[start + "/bin/cat >\"$cfg\" <<EOF\n".len()..];
-        let end = body.find("\nEOF\n").expect("launcher config heredoc ends");
-        body[..end].to_string()
+    fn embedded_runtime_config(plan: &str) -> String {
+        let marker = "---config---\n";
+        let start = plan
+            .find(marker)
+            .expect("launch plan contains the runtime config");
+        plan[start + marker.len()..].to_string()
     }
 
     fn config_value<'a>(config: &'a str, key: &str) -> Option<&'a str> {
@@ -2904,12 +2939,9 @@ mod tests {
 
         let launcher = write_test_launcher(request(false));
         assert!(
-            launcher.contains("for options_dir in \"$bundle_dir\"/Resources/core-options/*; do"),
-            "the launcher has to copy the options into the game's config directory"
+            launcher.contains("managed\tconfig\n"),
+            "the launcher has to be told about the directory core options are copied into"
         );
-        assert!(launcher.contains(
-            "[ -f \"$data_dir/config/$name/$base\" ] || /bin/cp \"$options\" \"$data_dir/config/$name/$base\""
-        ));
     }
 
     /// When a device is required and there is no place to write it, export fails.
@@ -2964,6 +2996,9 @@ mod tests {
         );
         assert!(!config.contains("Application Support/RetroArch"));
         assert!(!config.contains("input_player1_"));
+        assert_eq!(config.matches("auto_remaps_enable").count(), 1);
+        assert_eq!(config_value(&config, "auto_remaps_enable"), Some("true"));
+        assert_eq!(config_value(&config, "network_cmd_enable"), Some("false"));
     }
 
     #[test]
@@ -2978,10 +3013,9 @@ mod tests {
         ));
         fs::create_dir_all(&directory).unwrap();
         let launcher = directory.join("launcher");
-        write_launcher(
+        write_launch_plan(
             &launcher,
             "identity",
-            OsStr::new("core"),
             OsStr::new("content/game.bin"),
             &request(true),
         )
@@ -3014,14 +3048,14 @@ mod tests {
     #[test]
     fn launcher_sets_advanced_emulator_access_explicitly() {
         let off = write_test_launcher(request(false));
-        assert!(off.contains("export ROMINABOX_ADVANCED_ACCESS=0"));
-        assert!(!off.contains("export ROMINABOX_ADVANCED_ACCESS=1"));
+        assert!(off.contains("advanced\t0\n"));
+        assert!(!off.contains("advanced\t1\n"));
 
         let mut on = request(false);
         on.advanced_emulator_access = true;
-        let script = write_test_launcher(on);
-        assert!(script.contains("export ROMINABOX_ADVANCED_ACCESS=1"));
-        assert!(!script.contains("export ROMINABOX_ADVANCED_ACCESS=0"));
+        let plan = write_test_launcher(on);
+        assert!(plan.contains("advanced\t1\n"));
+        assert!(!plan.contains("advanced\t0\n"));
     }
 
     /// We store the saves of every exported game under

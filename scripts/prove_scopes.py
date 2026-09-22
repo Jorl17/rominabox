@@ -301,6 +301,20 @@ def case_artwork():
     return expect("artwork", code, output, ("DRIFTED", "drawing moved"))
 
 
+def case_isolation():
+    path = ROOT / "desktop/src-tauri/src/packaging.rs"
+    raw = replace(
+        path,
+        "com.apple.security.app-sandbox",
+        "com.apple.security.sandbox-removed",
+    )
+    try:
+        code, output = run_scope("isolation")
+    finally:
+        restore(path, raw)
+    return expect("isolation", code, output, ("entitlements were dropped",))
+
+
 def case_overlays():
     path = ROOT / "desktop/controls.json"
     raw = path.read_bytes()
@@ -332,6 +346,7 @@ CASES = {
     "identification": case_identification,
     "automation": case_automation,
     "artwork": case_artwork,
+    "isolation": case_isolation,
     "overlays": case_overlays,
 }
 

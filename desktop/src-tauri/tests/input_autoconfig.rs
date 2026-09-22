@@ -22,6 +22,35 @@ use std::{
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
+fn write_runtime_stub(path: &Path) {
+    let source = path.with_extension("c");
+    fs::write(
+        &source,
+        "int rarch_main(int c, char **v, void *d){(void)c;(void)v;(void)d;return 0;}\nint main(void){return rarch_main(0,0,0);}\n",
+    )
+    .unwrap();
+    let status = Command::new("cc")
+        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
+        .arg(path)
+        .arg(&source)
+        .status()
+        .unwrap();
+    assert!(status.success(), "could not compile the runtime stub");
+}
+
+struct ContainerGuard(PathBuf);
+
+impl Drop for ContainerGuard {
+    fn drop(&mut self) {
+        let Some(name) = self.0.file_name().and_then(|name| name.to_str()) else {
+            return;
+        };
+        if name.starts_with("app.rominabox.game.") && self.0.is_dir() {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+}
+
 fn scratch() -> PathBuf {
     let path = std::env::temp_dir().join(format!(
         "rominabox-autoconfig-{}-{}",
@@ -650,7 +679,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
     fs::create_dir_all(kit.join("licenses")).unwrap();
     fs::create_dir_all(kit.join("licenses/native")).unwrap();
     fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
-    fs::write(kit.join("bin/retroarch"), b"#!/bin/sh\n").unwrap();
+    write_runtime_stub(&kit.join("bin/retroarch"));
     fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
     for name in [
         "RetroArch.txt",
@@ -724,12 +753,11 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
     };
     let cancelled = AtomicBool::new(false);
     let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
-    let launcher = result.app_path.join("Contents/MacOS/ROM-in-a-Box");
-    let script = fs::read_to_string(&launcher).unwrap();
-    let marker = "/bin/cat >\"$cfg\" <<EOF\n";
-    let start = script.find(marker).expect("launcher writes retroarch.cfg");
-    let body = &script[start + marker.len()..];
-    let config = &body[..body.find("\nEOF\n").expect("config heredoc ends")];
+    let launcher = result.app_path.join("Contents/MacOS/retroarch");
+    let plan = fs::read_to_string(result.app_path.join("Contents/Resources/launch.plan")).unwrap();
+    let marker = "---config---\n";
+    let start = plan.find(marker).expect("launch plan contains the runtime config");
+    let config = &plan[start + marker.len()..];
 
     assert_eq!(
         config_value(config, "joypad_autoconfig_dir"),
@@ -737,14 +765,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
     );
     assert_eq!(config_value(config, "input_joypad_driver"), Some("hid"));
     assert!(MANAGED_DATA_DIRECTORIES.contains(&"autoconfig"));
-    assert!(script.contains(&format!(
-        "for name in {}; do",
-        MANAGED_DATA_DIRECTORIES.join(" ")
-    )));
-    assert!(script.contains("for autoconfig_dir in \"$bundle_dir\"/Resources/autoconfig/*; do"));
-    assert!(script.contains(
-        "[ -f \"$data_dir/autoconfig/$name/$base\" ] || /bin/cp \"$profile\" \"$data_dir/autoconfig/$name/$base\""
-    ));
+    assert!(plan.contains("managed\tautoconfig\n"));
     assert_eq!(
         config_value(config, "input_toggle_fast_forward"),
         Some("space"),
@@ -809,14 +830,20 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         .expect("export provenance keeps the joypad component");
     assert_eq!(exported_joypad["revision"], pinned_autoconfig_revision());
 
-    // Run the exported launcher. retroarch in this fixture is `#!/bin/sh` with
-    // an empty body, so the process exits by itself and no window opens. We
-    // run the copy loop because only that puts profiles where RetroArch looks
-    // for them. A string in the script does not prove the copy.
-    let home = root.join("home");
-    fs::create_dir_all(&home).unwrap();
+    // Run the exported game. The fixture runtime returns at once, so no
+    // window opens. In the launcher we copy the profiles to the folder that
+    // RetroArch scans, and in the sandbox HOME points into the container.
+    let game: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(result.app_path.join("Contents/Resources/game.json")).unwrap(),
+    )
+    .unwrap();
+    let identity = game["identity"].as_str().unwrap();
+    let bundle_id = format!("app.rominabox.game.{identity}");
+    let container = PathBuf::from(std::env::var("HOME").unwrap())
+        .join("Library/Containers")
+        .join(&bundle_id);
+    let _container = ContainerGuard(container.clone());
     let launched = Command::new(&launcher)
-        .env("HOME", &home)
         .output()
         .expect("the launcher can be executed");
     assert!(
@@ -825,13 +852,8 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         String::from_utf8_lossy(&launched.stdout),
         String::from_utf8_lossy(&launched.stderr)
     );
-    let game: serde_json::Value = serde_json::from_str(
-        &fs::read_to_string(result.app_path.join("Contents/Resources/game.json")).unwrap(),
-    )
-    .unwrap();
-    let identity = game["identity"].as_str().unwrap();
-    let game_dir = home
-        .join("Library/Application Support/ROM-in-a-Box/Games")
+    let game_dir = container
+        .join("Data/Library/Application Support/ROM-in-a-Box/Games")
         .join(identity);
     let kit_hid = resources.join("autoconfig/hid");
     let seeded_hid = game_dir.join("autoconfig/hid");
