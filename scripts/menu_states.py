@@ -448,7 +448,11 @@ def every_variant(output: Path) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("output", type=Path, nargs="?", default=ROOT / "work/menu-states")
+    # There is no default, because it depends on the console we draw, and two
+    # consoles in one directory collide. We run the test scopes in parallel,
+    # and if one of them emptied the directory, we would delete pictures still
+    # in use by another.
+    parser.add_argument("output", type=Path, nargs="?", default=None)
     parser.add_argument("--system", default="megadrive", help="which console to stage")
     parser.add_argument(
         "--variant",
@@ -478,6 +482,9 @@ def main() -> int:
 
     if not PREVIEW.exists():
         raise SystemExit(f"the offscreen preview helper is not built at {PREVIEW}")
+
+    if arguments.output is None:
+        arguments.output = ROOT / f"work/menu-states/{arguments.system}"
 
     if arguments.every_variant:
         return every_variant(arguments.output)
