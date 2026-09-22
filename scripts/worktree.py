@@ -348,7 +348,6 @@ def adopt() -> int:
     print(f"{here}\n{describe(local)}")
     return 0
 
-
 def environment() -> int:
     """Print the shell exports for a worktree, for `eval`."""
     config = Path.cwd().resolve() / LOCAL_CONFIG

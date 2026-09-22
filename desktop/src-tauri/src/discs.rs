@@ -145,17 +145,48 @@ fn gdi_data_file(path: &Path) -> Result<PathBuf, String> {
     let text = std::fs::read_to_string(path)
         .map_err(|_| "The GD-ROM layout could not be read.".to_owned())?;
     for line in text.lines().skip(1) {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() < 6 || parts[2] == "0" {
+        let Some((name, track_type)) = gdi_track(line) else {
+            continue;
+        };
+        if track_type == "0" {
             continue;
         }
-        let name = parts[4..parts.len() - 1].join(" ");
         let resolved = path.parent().unwrap_or_else(|| Path::new(".")).join(name);
         if resolved.is_file() {
             return Ok(resolved);
         }
     }
     Err("The GD-ROM layout has no data track next to it.".into())
+}
+
+/// One track line: its filename, and the track type, which is data or audio.
+///
+/// The columns are number, start sector, type, sector size, filename, offset.
+/// A filename with a space is in quotes. Redump names every track after the
+/// game, so quoted names are the usual case.
+fn gdi_track(line: &str) -> Option<(String, &str)> {
+    let mut rest = line;
+    let mut track_type = "";
+    for column in 0..4 {
+        let (field, tail) = next_field(rest)?;
+        if column == 2 {
+            track_type = field;
+        }
+        rest = tail;
+    }
+    let name = quoted_or_token(rest);
+    (!name.is_empty()).then_some((name, track_type))
+}
+
+fn next_field(text: &str) -> Option<(&str, &str)> {
+    let text = text.trim_start();
+    if text.is_empty() {
+        return None;
+    }
+    Some(match text.find(char::is_whitespace) {
+        Some(end) => (&text[..end], &text[end..]),
+        None => (text, ""),
+    })
 }
 
 fn m3u_first(path: &Path) -> Result<PathBuf, String> {
@@ -414,6 +445,36 @@ mod tests {
         assert_eq!(system, Some("segacd"));
         assert_eq!(keys, vec!["T93175".to_owned()]);
         assert!(keys_for_catalog_serial("segacd", "T-93175").contains(&"T93175".into()));
+    }
+
+    /// Redump names every GD-ROM track after the game, so the names contain
+    /// spaces and are in quotes in the layout. The quotes are not part of the
+    /// filename.
+    #[test]
+    fn a_gd_rom_layout_points_at_a_quoted_data_track() {
+        let root = std::env::temp_dir().join(format!("rominabox-gdi-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let mut image = vec![0; 0x50];
+        image[..15].copy_from_slice(b"SEGA SEGAKATANA");
+        image[0x40..0x48].copy_from_slice(b"T-9708N ");
+        std::fs::write(root.join("Space Game (Europe) (Track 1).bin"), &image).unwrap();
+        std::fs::write(root.join("Space Game (Europe) (Track 2).bin"), b"audio").unwrap();
+        let layout = root.join("Space Game (Europe).gdi");
+        std::fs::write(
+            &layout,
+            "2\n\
+             1 0 4 2352 \"Space Game (Europe) (Track 1).bin\" 0\n\
+             2 5424 0 2352 \"Space Game (Europe) (Track 2).bin\" 0\n",
+        )
+        .unwrap();
+
+        match read_disc(&layout, "gdi") {
+            DiscRead::Found { keys, system_id } => {
+                assert_eq!(system_id, Some("dreamcast"));
+                assert_eq!(keys, vec!["T9708N".to_owned()]);
+            }
+            other => panic!("expected the disc's serial, got {other:?}"),
+        }
     }
 
     #[test]
