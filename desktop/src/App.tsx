@@ -71,6 +71,9 @@ export function App() {
   const [background, setBackground] = useState<bridge.Picture | null>(null);
   const [online, setOnline] = useState(true);
   const [palette, setPalette] = useState("blue");
+  // The design the author picked, set through the selector and used in the
+  // export.
+  const [design, setDesign] = useState(designs.designs[0]?.id ?? "native");
   const [menuSounds, setMenuSounds] = useState("off");
   const [firmware, setFirmware] = useState<string[]>([]);
   const [bundledShaders, setBundledShaders] = useState<string[]>([]);
@@ -287,7 +290,7 @@ export function App() {
         initial: shaderInitial,
       },
       startAtMenu: draft.showMenu && draft.startAtMenu,
-      theme: "native",
+      theme: design,
       palette,
       menuSounds,
       controls,
@@ -346,6 +349,10 @@ export function App() {
         startAtMenu: settings.startAtMenu,
       });
       setPalette(settings.palette);
+      // A project contains the design it was saved with, and in the check
+      // above we already reject one that this build does not have. We restore
+      // it on reopen to keep the choice of the author.
+      setDesign(settings.theme);
       setMenuSounds(settings.menuSounds || "off");
       setControls(settings.controls || emptyControls());
       setFirmware(settings.firmware || []);
@@ -950,8 +957,8 @@ export function App() {
                         Menu design{" "}
                         <select
                           aria-label="Menu design"
-                          value="native"
-                          onChange={() => {}}
+                          value={design}
+                          onChange={(e) => setDesign(e.target.value)}
                         >
                           {designs.designs.map((design) => (
                             <option value={design.id} key={design.id}>

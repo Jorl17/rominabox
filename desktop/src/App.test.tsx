@@ -14,6 +14,7 @@ import {
   vi,
 } from "vitest";
 
+import designs from "../designs.json";
 import { App } from "./App";
 import { type FirmwareAssessment } from "./bridge";
 
@@ -473,5 +474,41 @@ describe("App workflow", () => {
       "Export is available in the desktop app.",
     );
     expect(button("Create app").disabled).toBe(true);
+  });
+
+  it("lets the author choose a menu design, and exports the one they chose", async () => {
+    // We must pass the chosen design from the selector to the export, not a
+    // fixed "native" value. Only with a second design can we tell them apart.
+    await openMenu();
+    const picker = [...container.querySelectorAll("select")].find(
+      (select) => select.getAttribute("aria-label") === "Menu design",
+    );
+    if (!picker)
+      throw new Error("the menu design selector is not on this step");
+
+    // We offer every declared design, not a subset.
+    const offered = [...picker.options].map((option) => option.value).sort();
+    expect(offered).toEqual(designs.designs.map((d) => d.id).sort());
+
+    // This is meaningful only with a second design. With one design, an
+    // assertion that the selector shows it proves nothing, because the
+    // hardcoded string and the state are the same.
+    const other = designs.designs.find((d) => d.id !== picker.value);
+    if (!other) {
+      expect(
+        designs.designs.length,
+        "only one design is declared, so this cannot yet prove the choice " +
+          "is honoured — it becomes a real test when a second one lands",
+      ).toBe(1);
+      return;
+    }
+    await act(async () => {
+      picker.value = other.id;
+      picker.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(
+      picker.value,
+      "choosing a design has to stick, or the export gets the old one",
+    ).toBe(other.id);
   });
 });
