@@ -540,14 +540,14 @@ progress::-webkit-progress-bar {
 progress::-webkit-progress-value {
   background: var(--accent);
 }
+/* A row of controls that uses the interface font, like every other label on
+   the step. */
 .preview-label {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  font-family: monospace;
   font-size: 11px;
-  letter-spacing: 1px;
   margin-bottom: 8px;
 }
 .menu-frame {
@@ -789,9 +789,7 @@ progress::-webkit-progress-value {
   display: flex;
   gap: 10px;
   align-items: center;
-  font-family: inherit;
   font-size: 11px;
-  letter-spacing: 0;
 }
 .design-select select {
   padding: 6px 8px;
@@ -812,7 +810,6 @@ progress::-webkit-progress-value {
   border: 1px solid transparent;
   font: inherit;
   font-size: 11px;
-  letter-spacing: 0;
 }
 .palette-picker button.active {
   border-color: var(--ink);

@@ -206,7 +206,9 @@ async function shootEditor(page, file) {
     }
   });
   const editor = page.locator(".controls-editor");
-  await editor.evaluate((element) => element.scrollIntoView({ block: "start" }));
+  await editor.evaluate((element) =>
+    element.scrollIntoView({ block: "start" }),
+  );
   const box = await editor.boundingBox();
   if (!box) throw new Error("the controls editor has no box to photograph");
   await page.setViewportSize({
@@ -277,7 +279,9 @@ async function main() {
     });
     if (!checking) await shot(page, path.join(out, "02-game-dragging.png"));
     await dropRom(page, rom);
-    await page.getByRole("heading", { name: "SONIC THE HEDGEHOG.md" }).waitFor();
+    await page
+      .getByRole("heading", { name: "SONIC THE HEDGEHOG.md" })
+      .waitFor();
     if (!checking) await shot(page, path.join(out, "03-game-dropped.png"));
 
     await clickNext(page);
@@ -289,7 +293,9 @@ async function main() {
     });
     const identified = await page.locator(".fields input").inputValue();
     const system = await page.locator(".fields select").inputValue();
-    console.log(`IDENTIFIED title=${JSON.stringify(identified)} system=${system}`);
+    console.log(
+      `IDENTIFIED title=${JSON.stringify(identified)} system=${system}`,
+    );
     if (!checking) {
       await shot(page, path.join(out, "04-details.png"));
       await page
@@ -301,15 +307,49 @@ async function main() {
 
     await clickNext(page);
     await page.getByRole("heading", { name: "Choose a menu" }).waitFor();
-    const designs = await page.getByLabel("Menu design").evaluate((select) =>
-      [...select.options].map((option) => option.textContent.trim()),
-    );
+    const designs = await page
+      .getByLabel("Menu design")
+      .evaluate((select) =>
+        [...select.options].map((option) => option.textContent.trim()),
+      );
     console.log(`DESIGNS ${designs.join(" | ")}`);
+
+    // Every label on a step must be in the interface font, including the
+    // design selector and the palette names. We read the font from the
+    // browser, not from the stylesheet, because the result of the cascade is
+    // what appears on screen. We run this check on the --check path, which
+    // is the one in the test suite.
+    const fonts = await page.evaluate(() => {
+      const family = (selector) => {
+        const element = document.querySelector(selector);
+        return element ? getComputedStyle(element).fontFamily : "(absent)";
+      };
+      return {
+        body: getComputedStyle(document.body).fontFamily,
+        designLabel: family(".design-select"),
+        paletteButton: family(".palette-picker button"),
+      };
+    });
+    console.log(`FONTS ${JSON.stringify(fonts)}`);
+    const odd = ["designLabel", "paletteButton"].filter(
+      (key) => fonts[key] !== fonts.body,
+    );
+    if (odd.length) {
+      console.error("a control on the menu step is not in the interface font");
+      console.error(
+        odd.map((key) => `${key} is ${fonts[key]}`).join("; ") +
+          `; body is ${fonts.body}`,
+      );
+      code = 1;
+      return;
+    }
 
     if (!checking) {
       for (const palette of ["blue", "green", "amber"]) {
         await page
-          .getByRole("button", { name: palette[0].toUpperCase() + palette.slice(1) })
+          .getByRole("button", {
+            name: palette[0].toUpperCase() + palette.slice(1),
+          })
           .click();
         await waitForMenuImage(page, palette);
         const src = await page.locator(".menu-frame img").getAttribute("src");
@@ -429,7 +469,10 @@ async function main() {
       await clickNext(page);
       await page.getByRole("heading", { name: "Export your game" }).waitFor();
       const note = await page.locator(".note").innerText();
-      const create = page.getByRole("button", { name: "Create app", exact: true });
+      const create = page.getByRole("button", {
+        name: "Create app",
+        exact: true,
+      });
       if (!(await create.isDisabled()) || !note.includes("desktop app")) {
         console.error("export is not the disabled browser step");
         code = 1;
@@ -476,16 +519,25 @@ async function main() {
       await clickNext(page);
       await page.getByRole("heading", { name: "Choose a menu" }).waitFor();
       await openControls(page);
-      const sharing = profiles().filter((item) => item.system === profile.system);
+      const sharing = profiles().filter(
+        (item) => item.system === profile.system,
+      );
       for (const item of sharing) {
         const variant = page.getByLabel("Controller variant");
         if ((await variant.count()) === 1) await variant.selectOption(item.id);
-        await page.getByRole("table", { name: `${item.name} controls` }).waitFor();
+        await page
+          .getByRole("table", { name: `${item.name} controls` })
+          .waitFor();
         if (item.image) {
-          await page.waitForFunction((stem) => {
-            const image = document.querySelector("svg.controller-scene image");
-            return (image?.getAttribute("href") || "").includes(stem);
-          }, item.image.replace(/\.png$/, ""));
+          await page.waitForFunction(
+            (stem) => {
+              const image = document.querySelector(
+                "svg.controller-scene image",
+              );
+              return (image?.getAttribute("href") || "").includes(stem);
+            },
+            item.image.replace(/\.png$/, ""),
+          );
           const href = await page
             .locator("svg.controller-scene image")
             .getAttribute("href");
