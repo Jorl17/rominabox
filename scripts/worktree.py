@@ -330,15 +330,28 @@ def describe(local: dict) -> str:
     )
 
 
+def branch_exists(name: str) -> bool:
+    return subprocess.run(
+        ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{name}"],
+        cwd=ROOT,
+    ).returncode == 0
+
+
 def create(suffix: str, branch: str | None, own_runtime: bool) -> int:
     path = ROOT.parent / f"{ROOT.name}-{suffix}"
     if path.exists():
         raise SystemExit(f"{path} already exists; use adopt, or pick another suffix")
-    arguments = ["worktree", "add"]
-    if branch:
-        arguments += ["-b", branch]
-    arguments.append(str(path))
-    print(git(*arguments))
+    name = branch or path.name
+    # With `git worktree add <path>` and no -b, git checks out the branch named
+    # after the directory when one exists. The worktree can then be at an old
+    # commit that looks like a fresh checkout of HEAD.
+    if branch_exists(name):
+        raise SystemExit(
+            f"branch {name} already exists, so it was not checked out. "
+            "create always starts a new branch from this checkout's HEAD. "
+            "Pass a new --branch, or delete the old branch first."
+        )
+    print(git("worktree", "add", "-b", name, str(path), "HEAD"))
 
     # `git worktree add` does not populate submodules, and the worktree is
     # useless without the RetroArch fork. With --reference we share the object
@@ -492,7 +505,10 @@ def main() -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     made = commands.add_parser("create", help="make an isolated worktree")
     made.add_argument("suffix")
-    made.add_argument("--branch", help="branch to create; default is git's own naming")
+    made.add_argument(
+        "--branch",
+        help="new branch to create from this checkout's HEAD; default is the directory name",
+    )
     made.add_argument(
         "--own-runtime",
         action="store_true",

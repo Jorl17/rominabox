@@ -180,6 +180,20 @@ def case_joypad():
     return expect("joypad", code, output, ("missing",))
 
 
+def case_shotsign():
+    path = ROOT / "scripts/menu_shots.py"
+    raw = replace(
+        path,
+        '"--entitlements", str(entitlements),',
+        '"--preserve-metadata=entitlements",',
+    )
+    try:
+        code, output = run_scope("shotsign")
+    finally:
+        restore(path, raw)
+    return expect("shotsign", code, output, ("app-sandbox",))
+
+
 def case_worktree():
     # In a worktree we skip the checks that apply only to the canonical
     # checkout. The check of where we look up the CLI still runs, and it is
@@ -356,6 +370,19 @@ def case_artwork():
     finally:
         png.write_bytes(before)
     return expect("artwork", code, output, ("EDITED",))
+
+
+def case_glslcore():
+    # Give a 3.2 core context GLSL 130, a version that fails to compile on
+    # macOS. The check for a NULL path is the other half of the fix, and this
+    # break covers the version number.
+    path = ROOT / "vendor/retroarch/gfx/drivers_shader/shader_glsl.c"
+    raw = replace(path, "      return 150;", "      return 130;")
+    try:
+        code, output = run_scope("glslcore")
+    finally:
+        restore(path, raw)
+    return expect("glslcore", code, output, ("a 3.2 core context gets GLSL 150",))
 
 
 def case_padbinds():
@@ -547,6 +574,7 @@ CASES = {
     "staging": case_staging,
     "joypad": case_joypad,
     "worktree": case_worktree,
+    "shotsign": case_shotsign,
     "bridge": case_bridge,
     "edges": case_edges,
     "states": case_states,
@@ -557,6 +585,7 @@ CASES = {
     "automation": case_automation,
     "artwork": case_artwork,
     "padbinds": case_padbinds,
+    "glslcore": case_glslcore,
     "menupreview": case_menupreview,
     "shaderpreview": case_shaderpreview,
     "size": case_size,
