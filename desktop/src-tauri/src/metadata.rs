@@ -127,16 +127,21 @@ pub fn inspect_game_with_system(
     let mut title = filename_title(&filename);
     let mut source = MetadataSource::Filename;
 
-    // The position of the ASCII title in the header is declared in the console
-    // package, so a new console requires a package field and no new branch here.
-    if let Some(window) = system.and_then(|value| value.header_title) {
-        if let Some(header_title) = ascii_title(
-            &header,
-            window.offset as usize,
-            (window.offset + window.length) as usize,
-        ) {
-            title = header_title;
-            source = MetadataSource::Header;
+    // We declare the title window for every console with an ASCII title, and
+    // prefer a filename that already spells the game. For example, a Game Boy
+    // Advance title has 12 characters, so Sonic Advance is "SONIC ADVANC".
+    if let Some(selected) = system {
+        let cartridge =
+            cartridge_for_titles(&header, &prepared.path, &extension, &selected.header_title);
+        let prefix = match disc_read.as_ref() {
+            Some(discs::DiscRead::Found { prefix, .. }) => Some(prefix.as_slice()),
+            _ => None,
+        };
+        if let Some(header_title) = title_from_windows(&selected.header_title, &cartridge, prefix) {
+            if header_is_better(&title, &header_title) {
+                title = header_title;
+                source = MetadataSource::Header;
+            }
         }
     }
 
@@ -436,6 +441,7 @@ fn resolve_disc(
     let Some(discs::DiscRead::Found {
         system_id: Some(id),
         keys,
+        ..
     }) = read
     else {
         return (system, warnings);
@@ -826,6 +832,191 @@ fn has_valid_game_boy_header(header: &[u8]) -> bool {
     computed == *stored_checksum
 }
 
+fn cartridge_for_titles(
+    header: &[u8],
+    path: &Path,
+    extension: &str,
+    windows: &[systems::HeaderTitle],
+) -> Vec<u8> {
+    let needed = windows
+        .iter()
+        .filter(|window| window.anchor.is_none())
+        .map(|window| {
+            let end = window.offset + window.length;
+            let complement = window
+                .complement_at
+                .map(|at| window.offset + at + 4)
+                .unwrap_or(0);
+            end.max(complement) as usize
+        })
+        .max()
+        .unwrap_or(0);
+    if needed <= header.len() {
+        return header.to_vec();
+    }
+    dumps::image_prefix(path, extension, needed).unwrap_or_else(|_| header.to_vec())
+}
+
+fn title_from_windows(
+    windows: &[systems::HeaderTitle],
+    cartridge: &[u8],
+    disc_prefix: Option<&[u8]>,
+) -> Option<String> {
+    for window in windows {
+        let Some(bytes) = window_bytes(window, cartridge, disc_prefix) else {
+            continue;
+        };
+        let start = match &window.anchor {
+            Some(anchor) => {
+                let needle = anchor.as_bytes();
+                if needle.is_empty() {
+                    continue;
+                }
+                let Some(at) = bytes
+                    .windows(needle.len())
+                    .position(|found| found == needle)
+                else {
+                    continue;
+                };
+                at + window.offset as usize
+            }
+            None => window.offset as usize,
+        };
+        if let Some(magic) = &window.magic {
+            if !magic_matches(bytes, magic) {
+                continue;
+            }
+        }
+        if let Some(at) = window.complement_at {
+            if !complement_matches(bytes, start + at as usize) {
+                continue;
+            }
+        }
+        if let Some(title) = ascii_title(bytes, start, start + window.length as usize) {
+            return Some(title);
+        }
+    }
+    None
+}
+
+fn window_bytes<'a>(
+    window: &systems::HeaderTitle,
+    cartridge: &'a [u8],
+    disc_prefix: Option<&'a [u8]>,
+) -> Option<&'a [u8]> {
+    if window.anchor.is_some() {
+        disc_prefix
+    } else {
+        Some(cartridge)
+    }
+}
+
+fn magic_matches(bytes: &[u8], magic: &systems::HeaderMagic) -> bool {
+    let offset = magic.offset as usize;
+    if let Some(text) = &magic.text {
+        let needle = text.as_bytes();
+        if bytes.get(offset..offset + needle.len()) != Some(needle) {
+            return false;
+        }
+    }
+    if let Some(hex) = &magic.hex {
+        let Some(needle) = decode_hex(hex) else {
+            return false;
+        };
+        if bytes.get(offset..offset + needle.len()) != Some(needle.as_slice()) {
+            return false;
+        }
+    }
+    magic.text.is_some() || magic.hex.is_some()
+}
+
+fn decode_hex(text: &str) -> Option<Vec<u8>> {
+    if text.is_empty() || text.len() % 2 != 0 {
+        return None;
+    }
+    let mut out = Vec::with_capacity(text.len() / 2);
+    let raw = text.as_bytes();
+    let mut index = 0;
+    while index < raw.len() {
+        let hi = hex_value(raw[index])?;
+        let lo = hex_value(raw[index + 1])?;
+        out.push((hi << 4) | lo);
+        index += 2;
+    }
+    Some(out)
+}
+
+fn hex_value(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
+/// The two little-endian halves of a Super Nintendo header checksum.
+fn complement_matches(bytes: &[u8], at: usize) -> bool {
+    let Some(pair) = bytes.get(at..at + 4) else {
+        return false;
+    };
+    let checksum = u16::from_le_bytes([pair[0], pair[1]]);
+    let complement = u16::from_le_bytes([pair[2], pair[3]]);
+    checksum.wrapping_add(complement) == 0xFFFF
+}
+
+const WEAK_FILENAMES: &[&str] = &[
+    "GAME",
+    "ROM",
+    "CART",
+    "UPLOAD",
+    "UNTITLED",
+    "CARTRIDGE",
+    "FILE",
+    "IMAGE",
+    "DUMP",
+    "DISC",
+    "TRACK",
+];
+
+/// We use the header text instead of the filename only when the filename is
+/// not more complete. "SONIC ADVANC" must not replace "Sonic Advance (Europe)".
+fn header_is_better(filename_title: &str, header_title: &str) -> bool {
+    let file_key = alnum_upper(filename_title);
+    let head_key = alnum_upper(header_title);
+    if head_key
+        .chars()
+        .filter(|character| character.is_ascii_alphabetic())
+        .count()
+        < 3
+    {
+        return false;
+    }
+    if file_key.len() < 4 || WEAK_FILENAMES.contains(&file_key.as_str()) {
+        return true;
+    }
+    let common = file_key
+        .bytes()
+        .zip(head_key.bytes())
+        .take_while(|(left, right)| left == right)
+        .count();
+    if common >= 8 && file_key.len() > head_key.len() {
+        return false;
+    }
+    if head_key.starts_with(&file_key) && head_key.len() > file_key.len() {
+        return true;
+    }
+    common < 4 && head_key.len() > file_key.len()
+}
+
+fn alnum_upper(value: &str) -> String {
+    value
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .map(|character| character.to_ascii_uppercase())
+        .collect()
+}
+
 fn ascii_title(header: &[u8], start: usize, end: usize) -> Option<String> {
     let bytes = header.get(start..header.len().min(end))?;
     let title: String = bytes
@@ -1093,6 +1284,27 @@ game (
             assert_eq!(inspection.title, "Wonder Boy");
         }
 
+        /// "Sonic Advance" does not fit in a twelve-character GBA title, so
+        /// we keep that filename instead of the header title.
+        #[test]
+        fn a_good_filename_beats_a_truncated_header_title() {
+            let root = fixture_directory("gba-filename");
+            let mut bytes = vec![0u8; 0x100];
+            bytes[4..8].copy_from_slice(&[0x24, 0xff, 0xae, 0x51]);
+            bytes[0xB2] = 0x96;
+            bytes[0xA0..0xAC].copy_from_slice(b"SONIC ADVANC");
+            let rom = root.join("Sonic Advance (Europe).gba");
+            fs::write(&rom, &bytes).unwrap();
+            let inspection = inspect_game(&rom, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "gba");
+            assert_eq!(inspection.title, "Sonic Advance (Europe)");
+            assert!(
+                matches!(inspection.source, MetadataSource::Filename),
+                "a truncated header title replaced the filename: {}",
+                inspection.title
+            );
+        }
+
         /// We declare the title window of every console in package data.
         #[test]
         fn the_consoles_that_had_hardcoded_windows_still_declare_them() {
@@ -1104,12 +1316,202 @@ game (
                 ("n64", 0x20, 0x34 - 0x20),
                 ("atari7800", 17, 49 - 17),
             ] {
-                let window = crate::systems::find(id)
+                let windows = &crate::systems::find(id)
                     .expect("known console")
-                    .header_title
-                    .unwrap_or_else(|| panic!("{id} lost its declared header window"));
+                    .header_title;
+                assert_eq!(windows.len(), 1, "{id}");
+                let window = &windows[0];
+                assert!(window.anchor.is_none(), "{id}");
                 assert_eq!((window.offset, window.length), (offset, length), "{id}");
             }
+        }
+    }
+
+    /// Consoles with the name of the game in the cartridge or disc header. A
+    /// file called `game` gives no name, so the name must come from the header.
+    mod headers_the_filename_does_not_have {
+        use super::*;
+
+        fn write_snes_header(bytes: &mut [u8], offset: usize, title: &str, valid: bool) {
+            let end = offset + title.len();
+            bytes[offset..end].copy_from_slice(title.as_bytes());
+            // The checksum and its complement sum to 0xFFFF only in the genuine
+            // header. The same area in the other mapping often has ASCII too, so
+            // text that looks like a title is not enough.
+            let pair = if valid {
+                [0x00, 0x00, 0xFF, 0xFF]
+            } else {
+                [0x00, 0x00, 0x00, 0x00]
+            };
+            bytes[offset + 0x1C..offset + 0x20].copy_from_slice(&pair);
+        }
+
+        #[test]
+        fn a_lynx_header_names_a_file_that_does_not() {
+            let root = fixture_directory("lynx");
+            let mut bytes = vec![0u8; 64];
+            bytes[..4].copy_from_slice(b"LYNX");
+            bytes[10..26].copy_from_slice(b"CALIFORNIA GAMES");
+            let rom = root.join("game.lnx");
+            fs::write(&rom, bytes).unwrap();
+            let inspection = inspect_game(&rom, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "lynx");
+            assert_eq!(inspection.title, "CALIFORNIA GAMES");
+            assert!(matches!(inspection.source, MetadataSource::Header));
+        }
+
+        #[test]
+        fn a_super_nintendo_lorom_title_is_read_from_the_cartridge() {
+            let root = fixture_directory("snes-lo");
+            let mut bytes = vec![0u8; 0x10000];
+            write_snes_header(&mut bytes, 0x7FC0, "SUPER MARIOWORLD", true);
+            let rom = root.join("game.sfc");
+            fs::write(&rom, bytes).unwrap();
+            let inspection = inspect_game(&rom, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "snes");
+            assert_eq!(inspection.title, "SUPER MARIOWORLD");
+            assert!(matches!(inspection.source, MetadataSource::Header));
+        }
+
+        #[test]
+        fn a_super_nintendo_hirom_slot_is_not_mistaken_for_the_lorom_one() {
+            let root = fixture_directory("snes-hi");
+            let mut bytes = vec![0u8; 0x10000];
+            write_snes_header(&mut bytes, 0x7FC0, "NOT THE TITLE HERE", false);
+            write_snes_header(&mut bytes, 0xFFC0, "CHRONO TRIGGER", true);
+            let rom = root.join("game.sfc");
+            fs::write(&rom, bytes).unwrap();
+            let inspection = inspect_game(&rom, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "snes");
+            assert_eq!(inspection.title, "CHRONO TRIGGER");
+        }
+
+        #[test]
+        fn a_super_nintendo_copier_header_does_not_shift_the_title() {
+            let root = fixture_directory("snes-copier");
+            let mut cartridge = vec![0u8; 0x10000];
+            write_snes_header(&mut cartridge, 0x7FC0, "SUPER MARIOWORLD", true);
+            let mut file = vec![0xAA; 512];
+            file.extend(cartridge);
+            assert_eq!(file.len() % 1024, 512);
+            let rom = root.join("game.sfc");
+            fs::write(&rom, file).unwrap();
+            let inspection = inspect_game(&rom, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.title, "SUPER MARIOWORLD");
+        }
+
+        #[test]
+        fn a_gamecube_disc_header_names_the_game() {
+            let root = fixture_directory("gc");
+            let mut bytes = vec![0u8; 0x80];
+            bytes[0x1C..0x20].copy_from_slice(&[0xC2, 0x33, 0x9F, 0x3D]);
+            bytes[0x20..0x34].copy_from_slice(b"SUPER MARIO SUNSHINE");
+            let rom = root.join("game.gcm");
+            fs::write(&rom, bytes).unwrap();
+            let inspection = inspect_game(&rom, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "gamecube");
+            assert_eq!(inspection.title, "SUPER MARIO SUNSHINE");
+            assert!(matches!(inspection.source, MetadataSource::Header));
+        }
+
+        #[test]
+        fn a_dreamcast_ip_names_a_gd_rom_whose_filename_does_not() {
+            let root = fixture_directory("dc");
+            let mut image = vec![0u8; 0x100];
+            image[..15].copy_from_slice(b"SEGA SEGAKATANA");
+            image[0x40..0x4A].copy_from_slice(b"MK-5111750");
+            image[0x80..0x91].copy_from_slice(b"SONIC ADVENTURE 2");
+            fs::write(root.join("track.bin"), &image).unwrap();
+            let gdi = root.join("game.gdi");
+            fs::write(&gdi, "1\n1 0 4 2352 \"track.bin\" 0\n").unwrap();
+            let inspection = inspect_game(&gdi, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "dreamcast");
+            assert_eq!(inspection.title, "SONIC ADVENTURE 2");
+            assert!(matches!(inspection.source, MetadataSource::Header));
+        }
+
+        #[test]
+        fn a_dreamcast_filename_that_already_names_the_game_is_kept() {
+            let root = fixture_directory("dc-named");
+            let mut image = vec![0u8; 0x100];
+            image[..15].copy_from_slice(b"SEGA SEGAKATANA");
+            image[0x40..0x4A].copy_from_slice(b"MK-5111750");
+            image[0x80..0x91].copy_from_slice(b"SONIC ADVENTURE 2");
+            let track = "Sonic Adventure 2 (Europe) (Track 1).bin";
+            fs::write(root.join(track), &image).unwrap();
+            let gdi = root.join("Sonic Adventure 2 (Europe).gdi");
+            fs::write(&gdi, format!("1\n1 0 4 2352 \"{track}\" 0\n")).unwrap();
+            let inspection = inspect_game(&gdi, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "dreamcast");
+            assert_eq!(inspection.title, "Sonic Adventure 2 (Europe)");
+            assert!(matches!(inspection.source, MetadataSource::Filename));
+        }
+
+        /// These are files from a local test collection. The header is
+        /// shorter or less specific than the name on the file, so we keep the
+        /// filename. The collection is not in git, so we skip the assertions
+        /// on a machine without it.
+        #[test]
+        fn the_owners_named_files_are_not_replaced_by_a_shorter_header() {
+            let root = PathBuf::from("/Users/mariowilde/Downloads/roms");
+            if !root.is_dir() {
+                return;
+            }
+            let cache = fixture_directory("owned-headers");
+            let cases = [
+                (
+                    "Pokemon - Gold Version (USA, Europe) (SGB Enhanced) (GB Compatible).gbc",
+                    "gbc",
+                ),
+                (
+                    "Pokemon - Yellow Version - Special Pikachu Edition (USA, Europe) (CGB+SGB Enhanced).gb",
+                    "gbc",
+                ),
+                (
+                    "Sonic & Knuckles + Sonic The Hedgehog 3 (USA) (Lock-on Combination).md",
+                    "megadrive",
+                ),
+                (
+                    "Sonic Advance (Europe) (En,Ja,Fr,De,Es).gba",
+                    "gba",
+                ),
+                ("Super Mario Bros. 3 (USA).nes", "nes"),
+                ("Super Mario World (USA).sfc", "snes"),
+                (
+                    "Sonic Adventure 2 (Europe)/Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es).gdi",
+                    "dreamcast",
+                ),
+            ];
+            for (relative, system) in cases {
+                let path = root.join(relative);
+                assert!(path.is_file(), "missing {}", path.display());
+                let inspection = inspect_game(&path, &cache, false).unwrap();
+                let expected = filename_title(path.file_name().unwrap().to_str().unwrap());
+                assert_eq!(inspection.system, system, "{relative}");
+                assert_eq!(inspection.title, expected, "{relative}");
+                assert!(
+                    matches!(inspection.source, MetadataSource::Filename),
+                    "{relative} took {} from {:?}",
+                    inspection.title,
+                    inspection.source
+                );
+            }
+        }
+
+        #[test]
+        fn a_sega_cd_header_names_a_disc_whose_filename_does_not() {
+            let root = fixture_directory("mcd");
+            let mut image = vec![0u8; 0x200];
+            image[..14].copy_from_slice(b"SEGADISCSYSTEM");
+            image[0x150..0x158].copy_from_slice(b"SONIC CD");
+            image[0x180..0x187].copy_from_slice(b"T-93175");
+            fs::write(root.join("track.bin"), &image).unwrap();
+            let cue = root.join("game.cue");
+            fs::write(&cue, "FILE \"track.bin\" BINARY\n  TRACK 01 MODE1/2352\n").unwrap();
+            let inspection = inspect_game(&cue, &root.join("cache"), false).unwrap();
+            assert_eq!(inspection.system, "segacd");
+            assert_eq!(inspection.title, "SONIC CD");
+            assert!(matches!(inspection.source, MetadataSource::Header));
         }
     }
 

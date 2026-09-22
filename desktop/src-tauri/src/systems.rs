@@ -105,10 +105,19 @@ pub struct System {
     pub firmware: Vec<FirmwareRequirement>,
     pub controller_profile: String,
     pub category: String,
-    /// The position of the ASCII title in the cartridge header of this console,
-    /// when it has one. We declare it in the console package, not in code here.
-    #[serde(default)]
-    pub header_title: Option<HeaderTitle>,
+    /// Where the header of this console has an ASCII title, as one window, or
+    /// several when the format stores the title at more than one address. We
+    /// declare it in the console package, so we do not branch on it here.
+    #[serde(
+        default,
+        rename = "headerTitle",
+        deserialize_with = "one_or_many_header_titles"
+    )]
+    pub header_title: Vec<HeaderTitle>,
+    /// Copier bytes that are not part of the cartridge. Offsets in
+    /// `header_title` count from the start of the cartridge.
+    #[serde(default, rename = "copierHeader")]
+    pub copier_header: Option<u64>,
 }
 
 /// How a sheet lists the files that go with it. The catalog schema has
@@ -150,11 +159,45 @@ pub struct Companion {
     pub required: bool,
 }
 
-/// A bounded ASCII field inside a cartridge header.
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+/// Bytes that must match before we take a title window as a title.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct HeaderMagic {
+    pub offset: u64,
+    #[serde(default)]
+    pub text: Option<String>,
+    #[serde(default)]
+    pub hex: Option<String>,
+}
+
+/// A bounded ASCII field. With `anchor`, we measure `offset` from a signature
+/// and not from the start of the file. With `complement_at`, we reject a
+/// window whose checksum and complement do not sum to 0xFFFF.
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HeaderTitle {
     pub offset: u64,
     pub length: u64,
+    #[serde(default)]
+    pub anchor: Option<String>,
+    #[serde(default, rename = "complementAt")]
+    pub complement_at: Option<u64>,
+    #[serde(default)]
+    pub magic: Option<HeaderMagic>,
+}
+
+fn one_or_many_header_titles<'de, D>(deserializer: D) -> Result<Vec<HeaderTitle>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        One(HeaderTitle),
+        Many(Vec<HeaderTitle>),
+    }
+    match OneOrMany::deserialize(deserializer)? {
+        OneOrMany::One(window) => Ok(vec![window]),
+        OneOrMany::Many(windows) => Ok(windows),
+    }
 }
 
 /// The target of this build, in the triple format of the packages.
@@ -626,7 +669,8 @@ mod tests {
             }],
             controller_profile: "retropad".into(),
             category: "cartridge".into(),
-            header_title: None,
+            header_title: Vec::new(),
+            copier_header: None,
         };
         let one = assess_firmware(&system, &[PathBuf::from("a.bin")]);
         assert!(!one.can_continue);

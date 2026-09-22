@@ -29,7 +29,13 @@
       }
     ]
   },
-  "recognition": {},
+  "recognition": {
+    "headerTitle": {
+      "anchor": "SEGA SEGAKATANA",
+      "offset": 128,
+      "length": 96
+    }
+  },
   "metadata": {
     "catalog": {
       "provider": "redump",

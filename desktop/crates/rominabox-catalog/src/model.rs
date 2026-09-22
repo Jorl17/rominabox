@@ -22,12 +22,32 @@ pub const SCHEMA_VERSION: u32 = 1;
 /// we validate against in the player. We check that the two lists are the
 /// same in `the_two_control_vocabularies_agree`.
 pub const CONTROL_IDS: &[&str] = &[
-    "up", "down", "left", "right", "b", "a", "y", "x", "l", "r", "l2", "r2", "select", "start",
-    "l3", "r3",
+    "up",
+    "down",
+    "left",
+    "right",
+    "b",
+    "a",
+    "y",
+    "x",
+    "l",
+    "r",
+    "l2",
+    "r2",
+    "select",
+    "start",
+    "l3",
+    "r3",
     // The analogue directions, spelled as in the RetroArch declarations in
     // configuration.c:333-340. We bind each one as `input_player1_<id>_axis`.
-    "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
-    "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus",
+    "l_x_plus",
+    "l_x_minus",
+    "l_y_plus",
+    "l_y_minus",
+    "r_x_plus",
+    "r_x_minus",
+    "r_y_plus",
+    "r_y_minus",
 ];
 
 /// Whether we expect a build to include this console.
@@ -117,11 +137,19 @@ pub struct ControllerProfile {
     pub name: String,
     pub presentation: Presentation,
     /// Position in the author's profile list, as in Console::presentation_order.
-    #[serde(default, rename = "presentationOrder", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "presentationOrder",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub presentation_order: Option<u32>,
     /// The emulated device we report for this pad. An illustration with six
     /// buttons alone does not make us report a six-button pad.
-    #[serde(default, rename = "coreDevice", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "coreDevice",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub core_device: Option<u32>,
     pub controls: Vec<Control>,
 }
@@ -163,7 +191,11 @@ pub struct CoreComponent {
     /// picture options are at `<config dir>/<library name>/<library name>.opt`.
     /// The directory name must match the string in the artifact. Read it from
     /// the artifact with `frame_harness --frames 1`, never from the id.
-    #[serde(default, rename = "libraryName", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "libraryName",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub library_name: Option<String>,
     /// Core options we set so that this build does not replace its pixel
     /// buffer with a blended reconstruction.
@@ -203,7 +235,11 @@ pub struct ComponentProvenance {
     ///
     /// We check a download against this, not against its length. It is absent
     /// for a core we compile, whose licence we copy out of that source tree.
-    #[serde(default, rename = "licenseSha256", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "licenseSha256",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub license_sha256: Option<String>,
     /// The nightly bytes we accept, per target.
     ///
@@ -256,20 +292,83 @@ pub struct ComponentLicense {
     pub file: String,
 }
 
-/// A bounded read of an ASCII title from a cartridge header, which is data
-/// because it is an offset and a length. Every branch is a named handler.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Bytes that must be present before we trust a title window.
+///
+/// A Lynx name is at offset 10 of a 64-byte header. The same offsets in an
+/// image without a header are code, and if we read them we would get a title
+/// made of opcodes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HeaderMagic {
+    pub offset: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hex: Option<String>,
+}
+
+/// A bounded read of an ASCII title. One window is an offset and a length.
+/// For a disc title we measure the same window from an `anchor` signature,
+/// because a CHD does not start at the IP.BIN. We use two windows for Super
+/// Nintendo, where the title can be at two addresses.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct HeaderTitle {
     pub offset: u64,
     pub length: u64,
+    /// The ASCII signature we measure `offset` from. Without it, we measure
+    /// from the start of the cartridge image, after we remove a copier header.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anchor: Option<String>,
+    /// Little-endian checksum and its complement, relative to this window.
+    /// We reject the window when they do not sum to 0xFFFF. Super Nintendo
+    /// has two candidate addresses and only one of them is the header.
+    #[serde(
+        default,
+        rename = "complementAt",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub complement_at: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub magic: Option<HeaderMagic>,
+}
+
+fn one_or_many_header_titles<'de, D>(deserializer: D) -> Result<Vec<HeaderTitle>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        One(HeaderTitle),
+        Many(Vec<HeaderTitle>),
+    }
+    match OneOrMany::deserialize(deserializer)? {
+        OneOrMany::One(window) => Ok(vec![window]),
+        OneOrMany::Many(windows) => Ok(windows),
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Recognition {
-    #[serde(default, rename = "headerTitle", skip_serializing_if = "Option::is_none")]
-    pub header_title: Option<HeaderTitle>,
+    /// One object, or a list when the title is not at a single address.
+    #[serde(
+        default,
+        rename = "headerTitle",
+        skip_serializing_if = "Vec::is_empty",
+        deserialize_with = "one_or_many_header_titles"
+    )]
+    pub header_titles: Vec<HeaderTitle>,
+    /// A copier header of this many bytes is at the front of a dump whose
+    /// size is that far past a kilobyte boundary. For Super Nintendo it is
+    /// 512. The offsets below are into the cartridge, not the file.
+    #[serde(
+        default,
+        rename = "copierHeader",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub copier_header: Option<u64>,
     /// A named Rust routine for anything an offset cannot express, such as
     /// stripping an iNES header. A declaration contains the name of a handler,
     /// never the algorithm.
@@ -377,11 +476,16 @@ pub struct Content {
     pub extensions: Vec<String>,
     /// Extensions we can recognise a game from, but cannot yet export.
     ///
+    /// Recognisable and exportable are different facts. If we merged them, we
+    /// would accept a file at the drop step and refuse it at the export step.
     /// A sheet whose files we collect does not belong here. This list is for
     /// the rest, formats that point at other files and have no parser yet.
     #[serde(default, rename = "recognizeOnly", skip_serializing_if = "Vec::is_empty")]
     pub recognize_only: Vec<String>,
     /// Sheets whose text lists other files, read with the `parser` reader.
+    ///
+    /// We declare a file that no sheet lists, such as the `.sbi` of a LibCrypt
+    /// PlayStation game, separately as a `companion`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sheets: Vec<Sheet>,
     /// Siblings the sheet does not name.
@@ -419,7 +523,11 @@ pub struct Console {
     /// We keep it in the package so that a new console may leave it out. We
     /// then sort it by name after the ordered ones, so we add a console
     /// without a central list and without new numbers for the others.
-    #[serde(default, rename = "presentationOrder", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "presentationOrder",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub presentation_order: Option<u32>,
     /// Firmware the author must supply before we can export this console.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

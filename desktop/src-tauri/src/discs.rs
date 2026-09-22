@@ -19,6 +19,9 @@ pub enum DiscRead {
     Found {
         keys: Vec<String>,
         system_id: Option<&'static str>,
+        /// The bytes we took the serial from. We read a title declared relative
+        /// to the same signature from here, so we never decompress a CHD twice.
+        prefix: Vec<u8>,
     },
     /// The serial is inside a container that we do not open here. We must
     /// not then hash the image instead.
@@ -60,7 +63,11 @@ pub fn read_disc(path: &Path, extension: &str) -> DiscRead {
         Err(message) => return DiscRead::Unreadable(message),
     };
     let (system_id, keys) = keys_from_bytes(&bytes, extension);
-    DiscRead::Found { keys, system_id }
+    DiscRead::Found {
+        keys,
+        system_id,
+        prefix: bytes,
+    }
 }
 
 /// Every lookup key for a catalogue serial.
@@ -381,11 +388,19 @@ fn read_chd(path: &Path) -> DiscRead {
         collected.extend_from_slice(&output[..remaining.min(output.len())]);
         let (system_id, keys) = keys_from_bytes(&collected, "chd");
         if !keys.is_empty() {
-            return DiscRead::Found { keys, system_id };
+            return DiscRead::Found {
+                keys,
+                system_id,
+                prefix: collected,
+            };
         }
     }
     let (system_id, keys) = keys_from_bytes(&collected, "chd");
-    DiscRead::Found { keys, system_id }
+    DiscRead::Found {
+        keys,
+        system_id,
+        prefix: collected,
+    }
 }
 
 fn read_prefix(path: &Path) -> Result<Vec<u8>, String> {
@@ -652,7 +667,9 @@ mod tests {
         .unwrap();
 
         match read_disc(&layout, "gdi") {
-            DiscRead::Found { keys, system_id } => {
+            DiscRead::Found {
+                keys, system_id, ..
+            } => {
                 assert_eq!(system_id, Some("dreamcast"));
                 assert_eq!(keys, vec!["T9708N".to_owned()]);
             }
@@ -675,7 +692,9 @@ mod tests {
         )
         .unwrap();
         match read_disc(&cue, "cue") {
-            DiscRead::Found { keys, system_id } => {
+            DiscRead::Found {
+                keys, system_id, ..
+            } => {
                 assert_eq!(system_id, Some("ps1"));
                 assert_eq!(keys, vec!["SLUS01234".to_owned()]);
             }

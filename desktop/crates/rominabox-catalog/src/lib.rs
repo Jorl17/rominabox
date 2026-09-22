@@ -139,7 +139,9 @@ impl Catalog {
         if problems.is_empty() {
             Ok(catalog)
         } else {
-            problems.sort_by(|a, b| (a.package.as_str(), a.field.as_str()).cmp(&(&b.package, &b.field)));
+            problems.sort_by(|a, b| {
+                (a.package.as_str(), a.field.as_str()).cmp(&(&b.package, &b.field))
+            });
             Err(problems)
         }
     }
@@ -204,29 +206,75 @@ impl Catalog {
             )),
         }
 
-        self.load_owned(directory, &package, "controllers", problems, |catalog, value: ControllerProfile, path, package, problems| {
-            if value.schema_version != SCHEMA_VERSION {
-                problems.push(Diagnostic::new("schema.unsupported_version", package, "schemaVersion", format!("controller profile '{}' declares version {}", value.id, value.schema_version)));
-                return;
-            }
-            if let Some((_, existing)) = catalog.profiles.get(&value.id) {
-                problems.push(Diagnostic::new("id.duplicate", package, "controllers", format!("controller profile '{}' is already declared by {}", value.id, existing.display())));
-                return;
-            }
-            catalog.profiles.insert(value.id.clone(), (value, path));
-        });
+        self.load_owned(
+            directory,
+            &package,
+            "controllers",
+            problems,
+            |catalog, value: ControllerProfile, path, package, problems| {
+                if value.schema_version != SCHEMA_VERSION {
+                    problems.push(Diagnostic::new(
+                        "schema.unsupported_version",
+                        package,
+                        "schemaVersion",
+                        format!(
+                            "controller profile '{}' declares version {}",
+                            value.id, value.schema_version
+                        ),
+                    ));
+                    return;
+                }
+                if let Some((_, existing)) = catalog.profiles.get(&value.id) {
+                    problems.push(Diagnostic::new(
+                        "id.duplicate",
+                        package,
+                        "controllers",
+                        format!(
+                            "controller profile '{}' is already declared by {}",
+                            value.id,
+                            existing.display()
+                        ),
+                    ));
+                    return;
+                }
+                catalog.profiles.insert(value.id.clone(), (value, path));
+            },
+        );
 
-        self.load_owned(directory, &package, "components", problems, |catalog, value: CoreComponent, path, package, problems| {
-            if value.schema_version != SCHEMA_VERSION {
-                problems.push(Diagnostic::new("schema.unsupported_version", package, "schemaVersion", format!("component '{}' declares version {}", value.id, value.schema_version)));
-                return;
-            }
-            if let Some((_, existing)) = catalog.components.get(&value.id) {
-                problems.push(Diagnostic::new("id.duplicate", package, "components", format!("component '{}' is already declared by {}", value.id, existing.display())));
-                return;
-            }
-            catalog.components.insert(value.id.clone(), (value, path));
-        });
+        self.load_owned(
+            directory,
+            &package,
+            "components",
+            problems,
+            |catalog, value: CoreComponent, path, package, problems| {
+                if value.schema_version != SCHEMA_VERSION {
+                    problems.push(Diagnostic::new(
+                        "schema.unsupported_version",
+                        package,
+                        "schemaVersion",
+                        format!(
+                            "component '{}' declares version {}",
+                            value.id, value.schema_version
+                        ),
+                    ));
+                    return;
+                }
+                if let Some((_, existing)) = catalog.components.get(&value.id) {
+                    problems.push(Diagnostic::new(
+                        "id.duplicate",
+                        package,
+                        "components",
+                        format!(
+                            "component '{}' is already declared by {}",
+                            value.id,
+                            existing.display()
+                        ),
+                    ));
+                    return;
+                }
+                catalog.components.insert(value.id.clone(), (value, path));
+            },
+        );
     }
 
     /// The generic RetroPad, available to every console without a package
@@ -238,11 +286,22 @@ impl Catalog {
     /// any other.
     fn seed_builtin_profiles(&mut self) {
         let controls = [
-            ("up", "Up", "up"), ("down", "Down", "down"), ("left", "Left", "left"),
-            ("right", "Right", "right"), ("b", "B", "z"), ("a", "A", "x"),
-            ("y", "Y", "a"), ("x", "X", "s"), ("l", "L", "d"), ("r", "R", "c"),
-            ("l2", "L2", "w"), ("r2", "R2", "e"), ("select", "Select", "rshift"),
-            ("start", "Start", "enter"), ("l3", "L3", "1"), ("r3", "R3", "2"),
+            ("up", "Up", "up"),
+            ("down", "Down", "down"),
+            ("left", "Left", "left"),
+            ("right", "Right", "right"),
+            ("b", "B", "z"),
+            ("a", "A", "x"),
+            ("y", "Y", "a"),
+            ("x", "X", "s"),
+            ("l", "L", "d"),
+            ("r", "R", "c"),
+            ("l2", "L2", "w"),
+            ("r2", "R2", "e"),
+            ("select", "Select", "rshift"),
+            ("start", "Start", "enter"),
+            ("l3", "L3", "1"),
+            ("r3", "R3", "2"),
         ];
         let profile = ControllerProfile {
             schema_version: SCHEMA_VERSION,
@@ -298,7 +357,10 @@ impl Catalog {
                 Err(error) => problems.push(Diagnostic::new(
                     "parse.invalid_json",
                     package,
-                    format!("{subdirectory}/{}", file.file_name().unwrap_or_default().to_string_lossy()),
+                    format!(
+                        "{subdirectory}/{}",
+                        file.file_name().unwrap_or_default().to_string_lossy()
+                    ),
                     error,
                 )),
             }
@@ -428,8 +490,12 @@ impl Catalog {
             // We state this in one direction only. A console lists its
             // profiles, and a profile never lists the consoles that use it, so
             // a typo here cannot pass for deliberate generic support.
-            let mut variants: BTreeSet<&str> =
-                console.controllers.variants.iter().map(String::as_str).collect();
+            let mut variants: BTreeSet<&str> = console
+                .controllers
+                .variants
+                .iter()
+                .map(String::as_str)
+                .collect();
             variants.insert(console.controllers.default.as_str());
             for variant in &variants {
                 if !self.profiles.contains_key(*variant) {
@@ -439,6 +505,38 @@ impl Catalog {
                         "controllers",
                         format!("no package declares controller profile '{variant}'"),
                     ));
+                }
+            }
+            for (index, window) in console.recognition.header_titles.iter().enumerate() {
+                if window.length == 0 {
+                    problems.push(Diagnostic::new(
+                        "recognition.empty_title",
+                        package,
+                        format!("recognition.headerTitle[{index}].length"),
+                        "a title window has to cover at least one byte",
+                    ));
+                }
+                if let Some(anchor) = &window.anchor {
+                    if anchor.is_empty() {
+                        problems.push(Diagnostic::new(
+                            "recognition.empty_anchor",
+                            package,
+                            format!("recognition.headerTitle[{index}].anchor"),
+                            "an anchor is the signature the offset is measured from",
+                        ));
+                    }
+                }
+                if let Some(magic) = &window.magic {
+                    let text = magic.text.as_deref().filter(|value| !value.is_empty());
+                    let hex_ok = magic.hex.as_deref().is_some_and(hex_bytes_ok);
+                    if text.is_none() && !hex_ok {
+                        problems.push(Diagnostic::new(
+                            "recognition.magic",
+                            package,
+                            format!("recognition.headerTitle[{index}].magic"),
+                            "magic needs a text or an even-length hex string",
+                        ));
+                    }
                 }
             }
             if !console.controllers.variants.is_empty()
@@ -588,9 +686,7 @@ impl Catalog {
 
     /// The package directory of a profile, for resolving its declared assets.
     pub fn profile_directory(&self, id: &str) -> Option<&Path> {
-        self.profiles
-            .get(id)
-            .and_then(|(_, path)| path.parent())
+        self.profiles.get(id).and_then(|(_, path)| path.parent())
     }
 
     pub fn profiles(&self) -> impl Iterator<Item = (&String, &ControllerProfile)> {
@@ -672,7 +768,9 @@ pub fn resolve_asset(directory: &Path, declared: &str) -> Result<PathBuf, String
     for component in candidate.components() {
         match component {
             Component::ParentDir => {
-                return Err(format!("'{declared}' must not escape its package with '..'"))
+                return Err(format!(
+                    "'{declared}' must not escape its package with '..'"
+                ))
             }
             Component::Prefix(_) | Component::RootDir => {
                 return Err(format!("'{declared}' must be relative to its package"))
@@ -699,6 +797,32 @@ fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
 ///
 /// Keep the field order and formatting of the checked-in files exactly, so a
 /// diff after generating them again shows a change in content, not noise.
+fn hex_bytes_ok(text: &str) -> bool {
+    !text.is_empty() && text.len() % 2 == 0 && text.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn header_title_json(header: &model::HeaderTitle) -> serde_json::Value {
+    use serde_json::json;
+    let mut window = json!({ "offset": header.offset, "length": header.length });
+    if let Some(anchor) = &header.anchor {
+        window["anchor"] = json!(anchor);
+    }
+    if let Some(at) = header.complement_at {
+        window["complementAt"] = json!(at);
+    }
+    if let Some(magic) = &header.magic {
+        let mut rendered = json!({ "offset": magic.offset });
+        if let Some(text) = &magic.text {
+            rendered["text"] = json!(text);
+        }
+        if let Some(hex) = &magic.hex {
+            rendered["hex"] = json!(hex);
+        }
+        window["magic"] = rendered;
+    }
+    window
+}
+
 pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, String)>, String> {
     use serde_json::{json, Map, Value};
 
@@ -778,13 +902,24 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
             json!(console.controllers.default),
         );
         system.insert("category".into(), json!(console.content.category));
-        // We treat a bounded offset and length as data. Anything with a branch
-        // is a named handler in Rust, named in the package.
-        if let Some(header) = &console.recognition.header_title {
-            system.insert(
-                "headerTitle".into(),
-                json!({ "offset": header.offset, "length": header.length }),
-            );
+        // We treat a bounded offset and a length as data, and a list of them
+        // when the title is not at one address. A branch per console is code.
+        if let Some(size) = console.recognition.copier_header {
+            system.insert("copierHeader".into(), json!(size));
+        }
+        if !console.recognition.header_titles.is_empty() {
+            let windows: Vec<Value> = console
+                .recognition
+                .header_titles
+                .iter()
+                .map(header_title_json)
+                .collect();
+            let value = if windows.len() == 1 {
+                windows.into_iter().next().expect("one window")
+            } else {
+                Value::Array(windows)
+            };
+            system.insert("headerTitle".into(), value);
         }
         systems.push(Value::Object(system));
     }
@@ -837,7 +972,10 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
                 let (callout_x, callout_y) = if generic {
                     Catalog::generic_callout(index)
                 } else {
-                    (control.callout_x.unwrap_or(0), control.callout_y.unwrap_or(0))
+                    (
+                        control.callout_x.unwrap_or(0),
+                        control.callout_y.unwrap_or(0),
+                    )
                 };
                 let mut rendered = json!({
                     "id": control.id,

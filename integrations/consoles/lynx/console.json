@@ -12,7 +12,16 @@
     ],
     "category": "cartridge"
   },
-  "recognition": {},
+  "recognition": {
+    "headerTitle": {
+      "offset": 10,
+      "length": 32,
+      "magic": {
+        "offset": 0,
+        "text": "LYNX"
+      }
+    }
+  },
   "metadata": {
     "catalog": {
       "provider": "no-intro",

@@ -1,17 +1,146 @@
 import catalog from "../systems.json";
 
+type HeaderWindow = {
+  offset: number;
+  length: number;
+  anchor?: string;
+  complementAt?: number;
+  magic?: { offset: number; text?: string; hex?: string };
+};
+
 /**
- * The header window a console declares, from the generated registry.
+ * The header windows a console declares, from the generated registry.
  *
  * The browser preview still has separate signature detection, but we declare
  * the title offsets once, in the console packages, because a second copy
- * here would drift apart from them.
+ * here would drift apart from them. A console may declare one window or
+ * several, and Super Nintendo has the title at two addresses.
  */
-function declaredTitle(header: Uint8Array, systemId: string): string {
+function headerWindows(systemId: string): HeaderWindow[] {
   const system = catalog.systems.find((entry) => entry.id === systemId);
-  const window = system?.headerTitle;
-  if (!window) return "";
-  return asciiTitle(header, window.offset, window.offset + window.length) ?? "";
+  const raw = system?.headerTitle as HeaderWindow | HeaderWindow[] | undefined;
+  if (!raw) return [];
+  return Array.isArray(raw) ? raw : [raw];
+}
+
+const WEAK_FILENAMES = new Set([
+  "GAME",
+  "ROM",
+  "CART",
+  "UPLOAD",
+  "UNTITLED",
+  "CARTRIDGE",
+  "FILE",
+  "IMAGE",
+  "DUMP",
+  "DISC",
+  "TRACK",
+]);
+
+function alnumUpper(value: string): string {
+  return [...value]
+    .filter((character) => /[0-9a-z]/i.test(character))
+    .join("")
+    .toUpperCase();
+}
+
+/** Same rule as the native inspector: a complete filename beats a cut-off header. */
+function headerBeatsFilename(
+  filenameTitle: string,
+  headerTitle: string,
+): boolean {
+  const fileKey = alnumUpper(filenameTitle);
+  const headKey = alnumUpper(headerTitle);
+  const letters = [...headKey].filter(
+    (character) => character >= "A" && character <= "Z",
+  ).length;
+  if (letters < 3) return false;
+  if (fileKey.length < 4 || WEAK_FILENAMES.has(fileKey)) return true;
+  let common = 0;
+  while (
+    common < fileKey.length &&
+    common < headKey.length &&
+    fileKey[common] === headKey[common]
+  ) {
+    common += 1;
+  }
+  if (common >= 8 && fileKey.length > headKey.length) return false;
+  if (headKey.startsWith(fileKey) && headKey.length > fileKey.length)
+    return true;
+  return common < 4 && headKey.length > fileKey.length;
+}
+
+function magicMatches(
+  header: Uint8Array,
+  magic: NonNullable<HeaderWindow["magic"]>,
+): boolean {
+  if (magic.text) {
+    for (let index = 0; index < magic.text.length; index += 1) {
+      if (header[magic.offset + index] !== magic.text.charCodeAt(index))
+        return false;
+    }
+  }
+  if (magic.hex) {
+    if (magic.hex.length % 2 !== 0) return false;
+    for (let index = 0; index < magic.hex.length; index += 2) {
+      const byte = Number.parseInt(magic.hex.slice(index, index + 2), 16);
+      if (header[magic.offset + index / 2] !== byte) return false;
+    }
+  }
+  return Boolean(magic.text || magic.hex);
+}
+
+function complementMatches(header: Uint8Array, at: number): boolean {
+  if (at + 4 > header.length) return false;
+  const checksum = header[at] | (header[at + 1] << 8);
+  const complement = header[at + 2] | (header[at + 3] << 8);
+  return ((checksum + complement) & 0xffff) === 0xffff;
+}
+
+function declaredTitle(header: Uint8Array, systemId: string): string {
+  for (const window of headerWindows(systemId)) {
+    if (window.anchor) continue;
+    if (window.magic && !magicMatches(header, window.magic)) continue;
+    const start = window.offset;
+    if (
+      window.complementAt != null &&
+      !complementMatches(header, start + window.complementAt)
+    ) {
+      continue;
+    }
+    const title = asciiTitle(header, start, start + window.length);
+    if (title) return title;
+  }
+  return "";
+}
+
+function bytesToRead(
+  filename: string,
+  size: number,
+): { skip: number; length: number } {
+  const extension = extensionOf(filename);
+  const candidates = SYSTEMS.filter((system) =>
+    (system.extensions as readonly string[]).includes(extension),
+  );
+  if (candidates.length !== 1) return { skip: 0, length: HEADER_BYTES };
+  const system = candidates[0];
+  const declared = "copierHeader" in system ? Number(system.copierHeader) : 0;
+  const copier =
+    Number.isFinite(declared) &&
+    declared > 0 &&
+    size > declared &&
+    size % 1024 === declared
+      ? declared
+      : 0;
+  let length = HEADER_BYTES;
+  for (const window of headerWindows(system.id)) {
+    if (window.anchor) continue;
+    length = Math.max(length, window.offset + window.length);
+    if (window.complementAt != null) {
+      length = Math.max(length, window.offset + window.complementAt + 4);
+    }
+  }
+  return { skip: copier, length };
 }
 
 export type SystemDeclaration = (typeof catalog.systems)[number];
@@ -114,8 +243,9 @@ export async function inspectRom(
   );
 
   onProgress?.("Inspecting game file…");
+  const span = bytesToRead(file.name, file.size);
   const header = new Uint8Array(
-    await file.slice(0, HEADER_BYTES).arrayBuffer(),
+    await file.slice(span.skip, span.skip + span.length).arrayBuffer(),
   );
   const overridden = systemOverride
     ? SYSTEMS.find(
@@ -138,11 +268,6 @@ export async function inspectRom(
 
   if (!overridden && matches(header, 0x100, "SEGA")) {
     system = "megadrive";
-    const headerTitle = declaredTitle(header, "megadrive");
-    if (headerTitle) {
-      title = headerTitle;
-      source = "header";
-    }
   } else if (!overridden && matches(header, 0, "NES\u001a")) {
     system = "nes";
   } else if (
@@ -155,20 +280,10 @@ export async function inspectRom(
     ].some((magic) => magic.every((byte, index) => header[index] === byte))
   ) {
     system = "n64";
-    const headerTitle = declaredTitle(header, "n64");
-    if (headerTitle) {
-      title = headerTitle;
-      source = "header";
-    }
   } else if (!overridden && matches(header, 0, "LYNX")) {
     system = "lynx";
   } else if (!overridden && matches(header, 1, "ATARI7800")) {
     system = "atari7800";
-    const headerTitle = declaredTitle(header, "atari7800");
-    if (headerTitle) {
-      title = headerTitle;
-      source = "header";
-    }
   } else if (
     !overridden &&
     header[4] === 0x24 &&
@@ -178,21 +293,19 @@ export async function inspectRom(
     header[0xb2] === 0x96
   ) {
     system = "gba";
-    const headerTitle = declaredTitle(header, "gba");
-    if (headerTitle) {
-      title = headerTitle;
-      source = "header";
-    }
   } else if (!overridden && hasValidGameBoyHeader(header)) {
     const colorFlag = header[0x143];
     system = colorFlag === 0x80 || colorFlag === 0xc0 ? "gbc" : "gb";
-    const headerTitle = declaredTitle(header, system);
-    if (headerTitle) {
-      title = headerTitle;
-      source = "header";
-    }
   } else if (!overridden && (extension === ".gb" || extension === ".gbc")) {
     system = "";
+  }
+
+  if (system) {
+    const fromHeader = declaredTitle(header, system);
+    if (fromHeader && headerBeatsFilename(title, fromHeader)) {
+      title = fromHeader;
+      source = "header";
+    }
   }
 
   if (candidates.length === 0 && !system)

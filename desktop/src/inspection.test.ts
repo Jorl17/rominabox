@@ -89,6 +89,35 @@ describe("inspectRom", () => {
     });
   });
 
+  it("keeps a filename that already says more than a truncated header", async () => {
+    const bytes = new Uint8Array(0x100);
+    bytes.set([0x24, 0xff, 0xae, 0x51], 4);
+    writeAscii(bytes, 0xa0, "SONIC ADVANC");
+    bytes[0xb2] = 0x96;
+
+    await expect(
+      inspectRom(romFile("Sonic Advance (Europe).gba", bytes)),
+    ).resolves.toMatchObject({
+      title: "Sonic Advance (Europe)",
+      system: "gba",
+      source: "filename",
+    });
+  });
+
+  it("reads a Lynx title from the declared header when the file has no name", async () => {
+    const bytes = new Uint8Array(64);
+    writeAscii(bytes, 0, "LYNX");
+    writeAscii(bytes, 10, "CALIFORNIA GAMES");
+
+    await expect(inspectRom(romFile("game.lnx", bytes))).resolves.toMatchObject(
+      {
+        title: "CALIFORNIA GAMES",
+        system: "lynx",
+        source: "header",
+      },
+    );
+  });
+
   it("falls back to a cleaned filename", async () => {
     const result = await inspectRom(
       romFile("  My   Game  .gba", new Uint8Array(32)),
