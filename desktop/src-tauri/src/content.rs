@@ -90,6 +90,32 @@ pub fn collect_for(entrypoint: &Path, system_id: Option<&str>) -> Result<Content
     })
 }
 
+/// The path that `path` resolves to, after following any symbolic link.
+///
+/// When collecting, we refuse a file that resolves outside the game folder.
+/// We read a candidate sheet only when it resolves inside, by this check.
+enum FolderPath {
+    Inside(PathBuf),
+    Outside,
+    Unreadable(std::io::Error),
+}
+
+fn folder_path(root: &Path, path: &Path) -> FolderPath {
+    let root = match fs::canonicalize(root) {
+        Ok(root) => root,
+        Err(error) => return FolderPath::Unreadable(error),
+    };
+    let resolved = match fs::canonicalize(path) {
+        Ok(resolved) => resolved,
+        Err(error) => return FolderPath::Unreadable(error),
+    };
+    if resolved.starts_with(&root) {
+        FolderPath::Inside(resolved)
+    } else {
+        FolderPath::Outside
+    }
+}
+
 fn gather(
     absolute: &Path,
     relative: &Path,
@@ -148,20 +174,23 @@ fn gather(
             .file_name()
             .ok_or_else(|| format!("support file has no name: {}", sibling.display()))?;
         let sibling_relative = relative.with_file_name(sibling_name);
-        let resolved = fs::canonicalize(&sibling).map_err(|error| {
-            format!(
-                "resolve {} {}: {error}",
-                companion.extension,
-                sibling.display()
-            )
-        })?;
-        if !resolved.starts_with(root) {
-            return Err(format!(
-                "{} file escapes the game content folder: {}",
-                companion.extension,
-                sibling_relative.display()
-            ));
-        }
+        let resolved = match folder_path(root, &sibling) {
+            FolderPath::Inside(resolved) => resolved,
+            FolderPath::Unreadable(error) => {
+                return Err(format!(
+                    "resolve {} {}: {error}",
+                    companion.extension,
+                    sibling.display()
+                ));
+            }
+            FolderPath::Outside => {
+                return Err(format!(
+                    "{} file escapes the game content folder: {}",
+                    companion.extension,
+                    sibling_relative.display()
+                ));
+            }
+        };
         gather(&resolved, &sibling_relative, root, systems, files, seen)?;
     }
     let mut followed = false;
@@ -171,19 +200,22 @@ fn gather(
         if !candidate.is_file() {
             return Err(missing_reference(parser, &reference, absolute));
         }
-        let resolved = fs::canonicalize(&candidate).map_err(|error| {
-            format!(
-                "resolve {} reference {}: {error}",
-                extension,
-                candidate.display()
-            )
-        })?;
-        if !resolved.starts_with(root) {
-            return Err(format!(
-                "referenced file escapes the game content folder: {}",
-                reference.display()
-            ));
-        }
+        let resolved = match folder_path(root, &candidate) {
+            FolderPath::Inside(resolved) => resolved,
+            FolderPath::Unreadable(error) => {
+                return Err(format!(
+                    "resolve {} reference {}: {error}",
+                    extension,
+                    candidate.display()
+                ));
+            }
+            FolderPath::Outside => {
+                return Err(format!(
+                    "referenced file escapes the game content folder: {}",
+                    reference.display()
+                ));
+            }
+        };
         let child_relative = match relative.parent() {
             Some(parent) if !parent.as_os_str().is_empty() => parent.join(&reference),
             _ => reference.clone(),
@@ -317,6 +349,14 @@ fn companion_applies(companion: &Companion, host: &str) -> bool {
 /// skip the rest.
 const SHEET_MATCH_LIMIT: usize = 100;
 
+/// The size of the largest file we treat as a sheet.
+///
+/// A sheet is a few lines of text that name other files. A disc image with
+/// the extension `.cue` or `.gdi` is not a sheet, and if we read it, we would
+/// take the image into the drop. No layout that the packages describe comes
+/// near a megabyte, so a larger candidate cannot be a sheet for the drop.
+const SHEET_BYTE_LIMIT: u64 = 1024 * 1024;
+
 /// The game file for a dropped path.
 ///
 /// For a dropped folder we use the GD-ROM inside it. For one dropped track of
@@ -370,8 +410,15 @@ fn sheets_naming(directory: &Path, dropped: &Path) -> Result<Vec<PathBuf>, Strin
         let Some(parser) = declared_sheet_parser(&extension_of(&sheet)) else {
             continue;
         };
-        // A file with a sheet extension that is not text must not stop the
-        // drop, and we cannot tell that it lists anything.
+        // We must not refuse the drop for a file with a sheet extension that
+        // is not text. Such a file lists nothing. We do not read a file past
+        // SHEET_BYTE_LIMIT, because it cannot be a sheet that lists this file.
+        let Ok(metadata) = fs::metadata(&sheet) else {
+            continue;
+        };
+        if metadata.len() > SHEET_BYTE_LIMIT {
+            continue;
+        }
         let Ok(text) = fs::read_to_string(&sheet) else {
             continue;
         };
@@ -395,17 +442,19 @@ fn sheet_files(directory: &Path) -> Result<Vec<PathBuf>, String> {
     for entry in entries {
         let entry =
             entry.map_err(|error| format!("read game folder {}: {error}", directory.display()))?;
-        if !entry
-            .file_type()
-            .map(|kind| kind.is_file())
-            .unwrap_or(false)
-        {
+        let path = entry.path();
+        if declared_sheet_parser(&extension_of(&path)).is_none() {
             continue;
         }
-        let path = entry.path();
-        if declared_sheet_parser(&extension_of(&path)).is_some() {
-            sheets.push(path);
+        // With `is_file` a link to a file is a candidate and a directory named
+        // `.cue` is not. We check with `folder_path`, as when collecting.
+        if !path.is_file() {
+            continue;
         }
+        if !matches!(folder_path(directory, &path), FolderPath::Inside(_)) {
+            continue;
+        }
+        sheets.push(path);
     }
     Ok(sheets)
 }
@@ -1132,6 +1181,83 @@ mod tests {
         );
     }
 
+    /// A disc image renamed to `.cue` is not a sheet. We do not read a file past
+    /// the limit, so we never take such an image into the drop.
+    #[test]
+    fn a_sheet_larger_than_the_limit_does_not_name_the_track() {
+        let root = fixture("huge-sheet");
+        let track = root.join("track03.bin");
+        fs::write(&track, b"track").unwrap();
+        let sheet = root.join("game.cue");
+        fs::write(
+            &sheet,
+            cue_of_length("track03.bin", sheet_bytes(SHEET_BYTE_LIMIT) + 1),
+        )
+        .unwrap();
+
+        assert_eq!(
+            resolve_dropped(&track).unwrap(),
+            track,
+            "a sheet past the size limit was read"
+        );
+    }
+
+    /// We still read a sheet whose size is exactly the limit.
+    #[test]
+    fn a_sheet_at_the_size_limit_names_the_track() {
+        let root = fixture("sheet-at-limit");
+        let track = root.join("track03.bin");
+        fs::write(&track, b"track").unwrap();
+        let sheet = root.join("game.cue");
+        fs::write(
+            &sheet,
+            cue_of_length("track03.bin", sheet_bytes(SHEET_BYTE_LIMIT)),
+        )
+        .unwrap();
+
+        assert_eq!(resolve_dropped(&track).unwrap(), sheet);
+    }
+
+    /// The cue is a link to a file in the same folder. We follow such a link
+    /// when collecting, so we also read that sheet when someone drops a track.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_sheet_inside_the_folder_names_the_track() {
+        let root = fixture("symlink-inside");
+        let track = root.join("track03.bin");
+        fs::write(&track, b"track").unwrap();
+        let body = root.join("body");
+        fs::write(&body, "FILE \"track03.bin\" BINARY\n  TRACK 03 AUDIO\n").unwrap();
+        let sheet = root.join("game.cue");
+        std::os::unix::fs::symlink(&body, &sheet).unwrap();
+
+        assert_eq!(
+            resolve_dropped(&track).unwrap(),
+            sheet,
+            "a sheet linked inside the folder was not read"
+        );
+    }
+
+    /// A link to a file in another folder is not a sheet in this folder.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_sheet_outside_the_folder_is_not_read() {
+        let root = fixture("symlink-outside");
+        let elsewhere = fixture("symlink-elsewhere");
+        let track = root.join("track03.bin");
+        fs::write(&track, b"track").unwrap();
+        let body = elsewhere.join("body");
+        fs::write(&body, "FILE \"track03.bin\" BINARY\n  TRACK 03 AUDIO\n").unwrap();
+        let sheet = root.join("game.cue");
+        std::os::unix::fs::symlink(&body, &sheet).unwrap();
+
+        assert_eq!(
+            resolve_dropped(&track).unwrap(),
+            track,
+            "a sheet linked outside the folder was read"
+        );
+    }
+
     #[test]
     fn a_clonecd_sheet_refuses_the_sibling_its_core_requires() {
         let root = fixture("pce-ccd");
@@ -1157,6 +1283,21 @@ mod tests {
             !names.iter().any(|name| name.ends_with(".sub")),
             "{names:?}"
         );
+    }
+
+    fn sheet_bytes(limit: u64) -> usize {
+        usize::try_from(limit).expect("the sheet limit fits in a file length")
+    }
+
+    fn cue_of_length(track: &str, bytes: usize) -> String {
+        let head = format!("FILE \"{track}\" BINARY\n  TRACK 01 MODE1/2352\n");
+        assert!(
+            head.len() <= bytes,
+            "cue text is longer than the size under test"
+        );
+        let mut text = head;
+        text.extend(std::iter::repeat('\n').take(bytes - text.len()));
+        text
     }
 
     fn sheet_text(parser: SheetParser, name: &str) -> String {
