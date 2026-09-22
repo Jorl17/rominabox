@@ -15,8 +15,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 fn repository_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../..")
+    rominabox_catalog::repo_root()
         .canonicalize()
         .unwrap_or_else(|_| PathBuf::from("."))
 }

@@ -405,6 +405,22 @@ def case_size():
         restore(path, raw)
     return expect("size", code, output, ("exceeds",))
 
+def case_reporoot():
+    # Put a compiled-in path back in the crate, so that in the catalog scope we
+    # validate the packages of another checkout.
+    path = ROOT / "desktop/crates/rominabox-catalog/src/lib.rs"
+    raw = replace(
+        path,
+        'match std::env::var("ROMINABOX_REPO") {',
+        'match std::env::var("SOMETHING_ELSE") {',
+    )
+    try:
+        code, output = run_scope("reporoot")
+    finally:
+        restore(path, raw)
+    return expect("reporoot", code, output, ("compiled in", "FAIL"))
+
+
 def case_symlinks():
     """Break this scope on purpose.
 
@@ -503,6 +519,7 @@ CASES = {
     "shaderpreview": case_shaderpreview,
     "size": case_size,
 
+    "reporoot": case_reporoot,
     "symlinks": case_symlinks,
     "isolation": case_isolation,
     "overlays": case_overlays,

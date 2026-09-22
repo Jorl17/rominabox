@@ -128,6 +128,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/test_joypad_autoconfig.py")],
     ),
     Scope(
+        "reporoot",
+        "that nothing finds the repository by the path it was compiled in, which a shared cargo target makes another checkout's",
+        "that the rule is right, or that a binary really came from elsewhere; it reads how each place asks",
+        ["python3", str(ROOT / "scripts/test_repo_root.py")],
+    ),
+    Scope(
         "symlinks",
         "that git carries no symbolic link, which would point somewhere else on every other machine",
         "that a worktree has the links it needs, or that the ignore rules are right",

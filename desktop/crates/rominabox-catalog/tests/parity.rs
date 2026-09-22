@@ -11,9 +11,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 fn repo_root() -> PathBuf {
-    // desktop/crates/rominabox-catalog -> repository root
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../..")
+    // The rule is in the crate, so its binary and its tests cannot drift apart.
+    rominabox_catalog::repo_root()
         .canonicalize()
         .expect("repository root")
 }

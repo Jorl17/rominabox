@@ -70,9 +70,7 @@ pub fn design_root(design: &str) -> Result<PathBuf, String> {
     // We resolve the path against this crate and not the working directory,
     // because the builder does not run from the repository root. We check the
     // path on disk, so we fail here for a design with no directory.
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../integrations/designs")
-        .join(&declared.id);
+    let root = crate::repo::at("integrations/designs").join(&declared.id);
     if !root.is_dir() {
         return Err(format!(
             "Menu design '{design}' is declared but its package is missing at {}",
@@ -1885,7 +1883,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     fn sound_source() -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../assets/menu-sounds")
+        crate::repo::at("desktop/assets/menu-sounds")
     }
 
     /// A callout with one binding of a control that has three is false, and a
@@ -1999,16 +1997,13 @@ mod tests {
     }
 
     fn native_menu() -> (PathBuf, String) {
-        let design = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../integrations/designs/native");
+        let design = crate::repo::at("integrations/designs/native");
         let menu = fs::read_to_string(design.join("menu.rml")).expect("native menu");
         (design, menu)
     }
 
     fn design_menu(name: &str) -> (PathBuf, String) {
-        let design = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../integrations/designs")
-            .join(name);
+        let design = crate::repo::at("integrations/designs").join(name);
         let menu = fs::read_to_string(design.join("menu.rml")).expect("design menu");
         (design, menu)
     }
@@ -2223,7 +2218,7 @@ mod tests {
     /// BIOS choice. We still bundle a BIOS, with no way to change it in the menu.
     #[test]
     fn no_design_offers_the_player_a_bios() {
-        let designs = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs");
+        let designs = crate::repo::at("integrations/designs");
         let mut looked = 0;
         for entry in fs::read_dir(&designs).expect("designs directory") {
             let design = entry.expect("design entry").path();

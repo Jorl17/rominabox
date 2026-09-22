@@ -14,7 +14,7 @@ use crate::systems;
 #[test]
 #[ignore]
 fn cover_rates_against_the_published_picture_lists() {
-    let cache = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../work/identification-cache");
+    let cache = crate::repo::at("work/identification-cache");
     fs::create_dir_all(cache.join("dats")).unwrap();
     fs::create_dir_all(cache.join("trees")).unwrap();
 

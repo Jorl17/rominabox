@@ -85,6 +85,12 @@ fn write_runtime_stub(path: &Path) {
     assert!(status.success(), "could not compile the runtime stub");
 }
 
+/// A path in the checkout of this run, not in the checkout where the binary
+/// was built. Several checkouts can share one cargo target, so they can differ.
+fn repo_at(relative: &str) -> PathBuf {
+    rominabox_desktop::repo::at(relative)
+}
+
 fn scratch() -> PathBuf {
     let path = std::env::temp_dir().join(format!(
         "rominabox-isolation-{}-{}",
@@ -342,8 +348,7 @@ fn every_library_the_game_loads_is_inside_the_bundle() {
 fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     let root = scratch();
     let kit = fixture_kit(&root);
-    let probe_source = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../scripts/native_runtime/sandbox_probe.c");
+    let probe_source = repo_at("scripts/native_runtime/sandbox_probe.c");
     let status = Command::new("cc")
         .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
         .arg(kit.join("bin/retroarch"))
@@ -500,7 +505,7 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
 #[test]
 #[ignore = "runs an exported core for a few frames, then exits"]
 fn exported_game_loads_a_core_opens_audio_and_sees_a_gamepad() {
-    let rom = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../work/test-game.gbc");
+    let rom = repo_at("work/test-game.gbc");
     assert!(rom.is_file(), "work/test-game.gbc is not in this checkout");
     let kit = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/runtime");
     let root = scratch();

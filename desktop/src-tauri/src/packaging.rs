@@ -1942,10 +1942,9 @@ fn compile_c(source: &Path, destination: &Path, extra: &[&str]) -> Result<(), Ex
 }
 
 fn install_launch_library(macos: &Path, retroarch: &Path) -> Result<(), ExportError> {
-    let library_source = Path::new(env!("CARGO_MANIFEST_DIR")).join("launcher/main.c");
-    let injector_source =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/native_runtime/inject_dylib.c");
-    let work = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../work");
+    let library_source = crate::repo::at("desktop/src-tauri/launcher/main.c");
+    let injector_source = crate::repo::at("scripts/native_runtime/inject_dylib.c");
+    let work = crate::repo::at("work");
     let library = work.join("librominabox-launch.dylib");
     let injector = work.join("inject-dylib");
     compile_c(
@@ -2960,8 +2959,8 @@ mod tests {
 
     #[test]
     fn hotkey_policy_matches_pinned_retroarch_meta_binds() {
-        let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../work/experiments/rml-retroarch/retroarch/configuration.c");
+        let source = crate::repo::at(
+            "work/experiments/rml-retroarch/retroarch/configuration.c");
         if !source.is_file() {
             return;
         }

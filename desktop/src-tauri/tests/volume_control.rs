@@ -93,7 +93,7 @@ fn the_builtin_slider_style_is_only_for_a_design_that_has_none() {
 #[test]
 fn the_shipped_design_styles_the_slider_rather_than_volume() {
     let css = fs::read_to_string(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native/menu.rcss"),
+        rominabox_desktop::repo::at("integrations/designs/native/menu.rcss"),
     )
     .unwrap();
     assert!(

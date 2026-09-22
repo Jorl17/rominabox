@@ -740,7 +740,7 @@ mod tests {
                 .as_nanos()
         ));
         let design =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native");
+            crate::repo::at("integrations/designs/native");
         fs::create_dir_all(&root).unwrap();
         fs::copy(design.join("menu.rml"), root.join("menu.rml")).unwrap();
         // As in an export. Options must be here, because the shader screen is
@@ -758,7 +758,7 @@ mod tests {
 
     fn pause_and_controls() -> Vec<crate::themes::Screen> {
         crate::themes::declared_screens(
-            &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native"),
+            &crate::repo::at("integrations/designs/native"),
         )
         .unwrap()
         .into_iter()
