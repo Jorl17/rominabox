@@ -17,6 +17,7 @@
     "origin": "libretro-buildbot",
     "repository": "libretro/a5200",
     "revision": "40c6f2f1ad4a3145b328d5baaf010fae6c7e752b",
+    "branch": "master",
     "licenseCandidates": [
       "License.txt",
       "LICENSE",

@@ -17,6 +17,7 @@
     "origin": "libretro-buildbot",
     "repository": "libretro/beetle-wswan-libretro",
     "revision": "4b01295838ea89e3f1355bbe4cb5cf98aa6108cd",
+    "branch": "master",
     "licenseCandidates": [
       "COPYING",
       "LICENSE"

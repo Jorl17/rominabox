@@ -17,6 +17,7 @@
     "origin": "libretro-buildbot",
     "repository": "flyinghead/flycast",
     "revision": "628bd3dbb160ea2750230fc6b00c0bb8173cb1f6",
+    "branch": "master",
     "licenseCandidates": [
       "LICENSE",
       "COPYING"

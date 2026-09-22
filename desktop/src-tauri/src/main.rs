@@ -165,7 +165,7 @@ async fn export_game(
 ) -> Result<packaging::ExportResult, String> {
     request.runtime_kit = resource(&app, "runtime")?;
     request.core = None;
-    request.core_cache = core_cache(&app).ok();
+    request.core_cache = core_cache(&app, packaging::core_platform(&request.target)).ok();
     let cancelled = Arc::new(AtomicBool::new(false));
     {
         let mut active = state.0.lock().map_err(|e| e.to_string())?;
@@ -195,19 +195,19 @@ fn assess_firmware(
     Ok(systems::assess_firmware(system, &files))
 }
 
-fn core_cache(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+fn core_cache(app: &tauri::AppHandle, platform: &str) -> Result<PathBuf, String> {
     Ok(app
         .path()
         .app_data_dir()
         .map_err(|error| error.to_string())?
         .join("core-cache")
-        .join(systems::current_target()))
+        .join(platform))
 }
 
 #[tauri::command]
 async fn ensure_cores(app: tauri::AppHandle) -> Result<Vec<cores::CoreInstall>, String> {
-    let cache = core_cache(&app)?;
     let target = systems::current_target().to_string();
+    let cache = core_cache(&app, &target)?;
     tauri::async_runtime::spawn_blocking(move || {
         cores::install_target(&cache, &target, &cores::UreqTransport)
     })
@@ -223,7 +223,7 @@ fn traveling_files(path: PathBuf, system: Option<String>) -> Result<traveling::T
 #[tauri::command]
 fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let kit = resource(&app, "runtime")?;
-    let cache = core_cache(&app).ok();
+    let cache = core_cache(&app, systems::current_target()).ok();
     Ok(
         packaging::system_availability_in(&kit, cache.as_deref(), systems::current_target())
             .into_iter()

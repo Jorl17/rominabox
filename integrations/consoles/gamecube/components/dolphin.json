@@ -17,6 +17,7 @@
     "origin": "libretro-buildbot",
     "repository": "libretro/dolphin",
     "revision": "1a0f97270b703c71625c87dee178d778348e540b",
+    "branch": "master",
     "licenseCandidates": [
       "LICENSES/GPL-2.0-or-later.txt",
       "COPYING"

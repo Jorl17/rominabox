@@ -295,3 +295,41 @@ fn a_missing_core_is_fetched_before_the_game_is_built_and_not_again() {
         "the second export fetched a core that was already kept"
     );
 }
+
+/// A Windows package contains the Windows core even when we run on a Mac.
+struct RecordingFetch {
+    calls: Cell<usize>,
+    target: std::cell::RefCell<String>,
+}
+
+impl rominabox_desktop::packaging::CoreFetch for RecordingFetch {
+    fn fetch_component(&self, _cache: &Path, component: &str, target: &str) -> Result<(), String> {
+        assert_eq!(component, "flycast");
+        self.calls.set(self.calls.get() + 1);
+        *self.target.borrow_mut() = target.to_string();
+        Ok(())
+    }
+}
+
+#[test]
+fn a_windows_export_fetches_the_windows_core_not_this_machines() {
+    let root = workspace();
+    let mut request = dreamcast_request(&root);
+    request.target = ExportTarget::Windows;
+    let fetch = RecordingFetch {
+        calls: Cell::new(0),
+        target: std::cell::RefCell::new(String::new()),
+    };
+    let _ = rominabox_desktop::packaging::export_game_fetching(
+        &request,
+        &AtomicBool::new(false),
+        |_| {},
+        &fetch,
+    );
+    assert_eq!(fetch.calls.get(), 1, "the missing core was not fetched");
+    assert_eq!(
+        fetch.target.borrow().as_str(),
+        "windows-x86_64",
+        "the export asked for the host platform's core"
+    );
+}

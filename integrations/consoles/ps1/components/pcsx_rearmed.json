@@ -26,6 +26,7 @@
     "origin": "libretro-buildbot",
     "repository": "libretro/pcsx_rearmed",
     "revision": "8625c395a24411f8c77e69802b516df9c613a712",
+    "branch": "master",
     "licenseCandidates": [
       "COPYING",
       "LICENSE"

@@ -17,6 +17,7 @@
     "origin": "built",
     "repository": "libretro/gambatte-libretro",
     "revision": "d9d6cd06382d1ced30de34d56d3609452323dab1",
+    "branch": "master",
     "licenseCandidates": [
       "COPYING"
     ],

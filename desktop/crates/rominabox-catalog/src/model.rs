@@ -231,21 +231,29 @@ pub struct ComponentProvenance {
     pub license_candidates: Vec<String>,
     #[serde(rename = "correspondsToArtifact")]
     pub corresponds_to_artifact: bool,
+    /// The branch from whose tip we take the licence text for a downloaded core.
+    ///
+    /// `revision` is the commit of the source snapshot we archive in the
+    /// runtime kit. The nightly does not come from that commit, so in the
+    /// builder we read the licence from this branch instead.
+    #[serde(default, rename = "branch", skip_serializing_if = "Option::is_none")]
+    pub branch: Option<String>,
     /// SHA-256 of the licence text in the first candidate path that exists.
     ///
-    /// We check a download against this, not against its length. It is absent
-    /// for a core we compile, whose licence we copy out of that source tree.
+    /// We compare it in `scripts/prepare_runtime.py` when we stage a kit. We
+    /// leave it out of the builder's download list, because libretro replaces
+    /// the buildbot files in place and we would reject the new file.
     #[serde(
         default,
         rename = "licenseSha256",
         skip_serializing_if = "Option::is_none"
     )]
     pub license_sha256: Option<String>,
-    /// The nightly bytes we accept, per target.
+    /// Measurements we compare in `scripts/prepare_runtime.py` to stage a kit.
     ///
-    /// The buildbot directory is `latest`, which libretro replaces in place.
-    /// With a hash recorded here we never take a later nightly for the pinned
-    /// core, and we reject a file that does not match.
+    /// We do not read them in the builder. The buildbot directory is `latest`,
+    /// which libretro replaces in place, and with a hash recorded here we would
+    /// refuse the new file.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub downloads: BTreeMap<String, PinnedDownload>,
     /// How we build it, for components we compile ourselves.
@@ -257,8 +265,10 @@ pub struct ComponentProvenance {
     pub build: Option<BuildRecipe>,
 }
 
-/// One pinned buildbot artifact. The hashes are of the zip and of the core
-/// inside it.
+/// One measured buildbot artifact.
+///
+/// We compare these hashes in `scripts/prepare_runtime.py` when we stage a
+/// kit, and leave them out of the builder's download list.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PinnedDownload {

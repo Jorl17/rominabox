@@ -17,6 +17,7 @@
     "origin": "libretro-buildbot",
     "repository": "libretro/ps2",
     "revision": "3e9ecb5ba61c9c6b970663070ea7ffd8c2a4878a",
+    "branch": "master",
     "licenseCandidates": [
       "COPYING.GPLv3",
       "COPYING",

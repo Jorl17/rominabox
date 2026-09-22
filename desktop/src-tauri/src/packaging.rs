@@ -35,6 +35,22 @@ pub enum ExportTarget {
     Windows,
 }
 
+/// The platform in the download list that this export is for.
+///
+/// For a Windows package we download the Windows core, even on a Mac. For a
+/// Mac package we download the Mac entry that matches the runtime in it. We
+/// build that runtime for this machine and do not cross-compile it.
+pub fn core_platform(target: &ExportTarget) -> &'static str {
+    match target {
+        ExportTarget::Windows => "windows-x86_64",
+        ExportTarget::Macos => match std::env::consts::ARCH {
+            "aarch64" => "macos-arm64",
+            "x86_64" => "macos-x86_64",
+            _ => "unsupported",
+        },
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportRequest {
@@ -882,7 +898,8 @@ where
     let Some(cache) = request.core_cache.as_deref() else {
         return Ok(());
     };
-    let Some(filename) = core.artifact() else {
+    let platform = core_platform(&request.target);
+    let Some(filename) = core.artifact_for(platform) else {
         return Ok(());
     };
     let artifact = resolve_cached(
@@ -901,7 +918,7 @@ where
     let message = format!("Downloading the {} core.", system.name);
     emit(progress, ExportStage::Validate, 0.04, &message);
     fetch
-        .fetch_component(cache, &core.component, crate::systems::current_target())
+        .fetch_component(cache, &core.component, platform)
         .map_err(|_| {
             ExportError::new(
                 "validate",
