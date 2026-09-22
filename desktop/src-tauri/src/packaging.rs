@@ -908,7 +908,6 @@ fn validate_firmware(
     request: &ExportRequest,
     system: &crate::systems::System,
 ) -> Result<(), ExportError> {
-    let mut names = HashSet::new();
     for path in &request.firmware {
         if !path.is_file() {
             return Err(ExportError::new(
@@ -916,32 +915,16 @@ fn validate_firmware(
                 format!("firmware file does not exist: {}", path.display()),
             ));
         }
-        let name = path.file_name().and_then(OsStr::to_str).ok_or_else(|| {
-            ExportError::new(
-                "validate",
-                format!("firmware has no usable filename: {}", path.display()),
-            )
-        })?;
-        if !names.insert(name.to_ascii_lowercase()) {
+        if path.file_name().and_then(OsStr::to_str).is_none() {
             return Err(ExportError::new(
                 "validate",
-                format!("duplicate firmware filename: {name}"),
+                format!("firmware has no usable filename: {}", path.display()),
             ));
         }
     }
-    for requirement in &system.firmware {
-        let matches = names
-            .iter()
-            .filter(|name| {
-                requirement
-                    .accepted_names
-                    .iter()
-                    .any(|accepted| accepted.eq_ignore_ascii_case(name))
-            })
-            .count();
-        if matches < requirement.minimum {
-            return Err(ExportError::new("validate", requirement.help.clone()));
-        }
+    let assessment = crate::systems::assess_firmware(system, &request.firmware);
+    if !assessment.can_continue {
+        return Err(ExportError::new("validate", assessment.refusal()));
     }
     Ok(())
 }
@@ -2307,6 +2290,25 @@ mod tests {
             runtime_kit: PathBuf::from("runtime"),
             core: None,
         }
+    }
+
+    #[test]
+    fn export_refuses_a_missing_required_bios_with_the_builders_explanation() {
+        let system = crate::systems::find("pcecd").unwrap();
+        let mut settings = request(false);
+        settings.system = "pcecd".into();
+        let error = validate_firmware(&settings, system).unwrap_err();
+        let assessment = crate::systems::assess_firmware(system, &[]);
+        assert!(!assessment.can_continue);
+        assert_eq!(error.message, assessment.refusal());
+    }
+
+    #[test]
+    fn export_allows_a_console_whose_bios_is_optional() {
+        let system = crate::systems::find("ps1").unwrap();
+        let mut settings = request(false);
+        settings.system = "ps1".into();
+        assert!(validate_firmware(&settings, system).is_ok());
     }
 
     #[test]

@@ -48,7 +48,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|project-save|project-open|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     if command == "schemas" {
@@ -60,6 +60,7 @@ fn run() -> Result<(), String> {
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
                 "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "events": ["progress", "result", "error"] },
+                "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
                 "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "target"], "result": "ProjectArchiveResult" },
                 "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" }
             })
@@ -112,6 +113,22 @@ fn run() -> Result<(), String> {
                 request.system.as_deref(),
             )
             .map_err(|error| error.to_string())?;
+            println!("{}", json!({ "type": "result", "result": result }));
+            Ok(())
+        }
+        "firmware" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                system: String,
+                #[serde(default)]
+                files: Vec<PathBuf>,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid firmware request: {error}"))?;
+            let system = systems::find(&request.system)
+                .ok_or_else(|| format!("no console is named {}", request.system))?;
+            let result = systems::assess_firmware(system, &request.files);
             println!("{}", json!({ "type": "result", "result": result }));
             Ok(())
         }
