@@ -26,7 +26,8 @@
     },
     "callout": {
       "width": 196,
-      "height": 54
+      "height": 54,
+      "border": 2
     },
     "group": {
       "width": 236,

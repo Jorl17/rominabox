@@ -88,6 +88,10 @@ pub struct SceneMetrics {
     pub scene_height: i32,
     pub callout_width: i32,
     pub callout_height: i32,
+    /// The part of a callout drawn outside its declared size. The leader ends at
+    /// the drawn edge, not the content edge, and we use this value in both the
+    /// exporter and the builder.
+    pub callout_border: i32,
     pub marker: i32,
     pub group_width: i32,
     pub group_height: i32,
@@ -104,6 +108,7 @@ impl Default for SceneMetrics {
             scene_height: 380,
             callout_width: 196,
             callout_height: 54,
+            callout_border: 2,
             marker: 42,
             group_width: 236,
             group_height: 62,
@@ -315,6 +320,7 @@ pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
         scene_height: at("scene", "height", fallback.scene_height),
         callout_width: at("callout", "width", fallback.callout_width),
         callout_height: at("callout", "height", fallback.callout_height),
+        callout_border: at("callout", "border", fallback.callout_border),
         marker: at("marker", "diameter", fallback.marker),
         group_width: at("group", "width", fallback.group_width),
         group_height: at("group", "height", fallback.group_height),
@@ -633,6 +639,8 @@ fn scene_markup(
     group_names.sort_unstable();
     group_names.dedup();
     markup.push_str(&control_group_markup(&group_names, &grouped, controls, illustrated, metrics));
+    let placed_scene = crate::scene_layout::layout(&profile.controls, metrics);
+    let placements = &placed_scene.controls;
     for item in profile.controls.iter().filter(|item| item.group.is_none()) {
         let item = item.clone();
         let custom = controls.bindings.get(&item.id);
@@ -647,24 +655,31 @@ fn scene_markup(
             .filter(|value| value.trim() != item.label.trim())
             .map(|_| item.label.as_str());
         let id = item.id.as_str();
-        let x = item.x - 22;
-        let y = item.y - 22;
         let cx = item.callout_x;
         let cy = item.callout_y;
-        let edge = if cx < 400 { cx + 200 } else { cx };
-        let horizontal_left = edge.min(item.x);
-        let horizontal_width = (edge - item.x).abs();
-        let vertical_top = (cy + 28).min(item.y);
-        let vertical_height = (cy + 28 - item.y).abs();
         if illustrated {
+            // We take the placement from the shared scene layout, so these
+            // are in the same place in the exporter, the builder and the
+            // overlay renderer.
+            let placed = placements
+                .iter()
+                .find(|placement| placement.id == item.id)
+                .expect("every drawn control is placed");
+            for run in &placed.leader {
+                let orientation = if run.height == 0 { "horizontal" } else { "vertical" };
+                let extent = if run.height == 0 {
+                    format!("width:{}dp;", run.width)
+                } else {
+                    format!("height:{}dp;", run.height)
+                };
+                markup.push_str(&format!(
+                    "\n<div class=\"control-leader {orientation}\" style=\"left:{}dp;top:{}dp;{extent}\"/>",
+                    run.x, run.y
+                ));
+            }
             markup.push_str(&format!(
-                r#"
-<div class="control-leader horizontal" style="left:{horizontal_left}dp;top:{}dp;width:{horizontal_width}dp;"/>
-<div class="control-leader vertical" style="left:{}dp;top:{vertical_top}dp;height:{vertical_height}dp;"/>
-<button id="control-hit-{id}" class="control-hit" style="left:{x}dp;top:{y}dp;"/>
-"#,
-                cy + 28,
-                item.x
+                "\n<button id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;\"/>\n",
+                placed.marker.x, placed.marker.y
             ));
         }
         markup.push_str(&control_callout_markup(id, label, original, key, cx, cy));

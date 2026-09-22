@@ -140,6 +140,31 @@ fn run() -> Result<(), String> {
             println!("{}", json!({ "type": "result", "result": result }));
             Ok(())
         }
+        "scene-geometry" => {
+            // The position of everything in the controller scene, for every
+            // renderer, so that we place it the same way in all of them.
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                system: String,
+                #[serde(default)]
+                profile: Option<String>,
+                /// The design in whose frame we draw it.
+                design: PathBuf,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid scene-geometry request: {error}"))?;
+            let mut options = controls::Controls::default();
+            options.profile = request.profile.clone();
+            let profile = controls::validate_for_system(&request.system, &options)?;
+            let metrics = themes::scene_metrics(&request.design)?;
+            let layout = rominabox_desktop::scene_layout::layout(&profile.controls, metrics);
+            println!(
+                "{}",
+                json!({ "type": "result", "result": layout })
+            );
+            Ok(())
+        }
         "stage-theme" => {
             // The stylesheet that we write in an export, on demand. To see it,
             // for example in a screenshot harness or when checking a design,
