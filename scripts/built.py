@@ -43,8 +43,14 @@ def owner(binary: Path) -> str | None:
     if not binary.is_file():
         return None
     try:
+        # We send `where` no request. We close stdin, so a pipe left open by
+        # whoever launched this cannot make us wait for the answer.
         asked = subprocess.run(
-            [str(binary), "where"], capture_output=True, text=True, timeout=30
+            [str(binary), "where"],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
     except (subprocess.TimeoutExpired, OSError):
         return None

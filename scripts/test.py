@@ -69,7 +69,7 @@ SCOPES = [
     ),
     Scope(
         "exporter",
-        "the Rust exporter and player-facing declarations: staging, isolation, controls, capabilities",
+        "the Rust exporter and player-facing declarations: staging, isolation, controls, capabilities, and that a command with no request does not read stdin",
         "that an exported game runs; every fixture core is an empty file",
         ["cargo", "test", "--quiet", *CARGO_DESKTOP],
     ),

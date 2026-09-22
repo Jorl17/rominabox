@@ -45,12 +45,20 @@ fn main() {
     }
 }
 
+fn read_request() -> Result<String, String> {
+    let mut input = String::new();
+    io::stdin()
+        .read_to_string(&mut input)
+        .map_err(|error| format!("could not read stdin: {error}"))?;
+    Ok(input)
+}
+
 fn run() -> Result<(), String> {
     let command = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume|volume-markup|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume|volume-markup|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     // The checkout from which we built this binary.
@@ -95,12 +103,11 @@ fn run() -> Result<(), String> {
         );
         return Ok(());
     }
-    let mut input = String::new();
-    io::stdin()
-        .read_to_string(&mut input)
-        .map_err(|error| format!("could not read stdin: {error}"))?;
+    // For each command that takes a request, we read the request here, in
+    // its own arm. For a command with no request we never read stdin.
     match command.as_str() {
         "systems" => {
+            let input = read_request()?;
             #[derive(Deserialize)]
             #[serde(rename_all = "camelCase")]
             struct Request {
@@ -119,6 +126,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "controls" => {
+            let input = read_request()?;
             let request: ControlsRequest = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid controls request: {error}"))?;
             let profile = controls::validate_for_system(
@@ -132,6 +140,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "content" => {
+            let input = read_request()?;
             #[derive(Deserialize)]
             struct Request {
                 rom: PathBuf,
@@ -139,14 +148,13 @@ fn run() -> Result<(), String> {
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid content request: {error}"))?;
-            let result = rominabox_desktop::traveling::files_for(
-                &request.rom,
-                request.system.as_deref(),
-            )?;
+            let result =
+                rominabox_desktop::traveling::files_for(&request.rom, request.system.as_deref())?;
             println!("{}", json!({ "type": "result", "result": result }));
             Ok(())
         }
         "inspect" => {
+            let input = read_request()?;
             let request: InspectRequest = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid inspect request: {error}"))?;
             let result = metadata::inspect_game_with_system(
@@ -160,6 +168,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "cores" => {
+            let input = read_request()?;
             #[derive(Deserialize)]
             #[serde(rename_all = "camelCase")]
             struct Request {
@@ -174,6 +183,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "firmware" => {
+            let input = read_request()?;
             #[derive(Deserialize)]
             #[serde(rename_all = "camelCase")]
             struct Request {
@@ -190,6 +200,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "export" => {
+            let input = read_request()?;
             let request: packaging::ExportRequest = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid export request: {error}"))?;
             let cancelled = AtomicBool::new(false);
@@ -201,6 +212,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "project-save" => {
+            let input = read_request()?;
             let request: projects::ProjectSaveRequest = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid project save request: {error}"))?;
             let result = projects::save_project(&request)?;
@@ -208,6 +220,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "project-open" => {
+            let input = read_request()?;
             let request: projects::ProjectOpenRequest = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid project open request: {error}"))?;
             let result = projects::open_project(&request)?;
@@ -215,6 +228,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "scene-geometry" => {
+            let input = read_request()?;
             // The position of everything in the controller scene, for every
             // renderer, so that we place it the same way in all of them.
             #[derive(Deserialize)]
@@ -233,13 +247,11 @@ fn run() -> Result<(), String> {
             let profile = controls::validate_for_system(&request.system, &options)?;
             let metrics = themes::scene_metrics(&request.design)?;
             let layout = rominabox_desktop::scene_layout::layout(&profile.controls, metrics);
-            println!(
-                "{}",
-                json!({ "type": "result", "result": layout })
-            );
+            println!("{}", json!({ "type": "result", "result": layout }));
             Ok(())
         }
         "stage-theme" => {
+            let input = read_request()?;
             // The stylesheet that we write in an export, on demand. To see it,
             // for example in a screenshot harness or when checking a design,
             // get it from the exporter. The design's own file contains tokens
@@ -270,6 +282,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "stage-controls" => {
+            let input = read_request()?;
             // We generate the controls scene in the exporter from a console
             // package. To see that markup, for example in a screenshot harness or
             // when checking a design, get it from the exporter instead of
@@ -310,6 +323,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "preview" => {
+            let input = read_request()?;
             let request: themes::PreviewRequest = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid preview request: {error}"))?;
             let image_path = themes::render_preview(&request)?;
@@ -320,6 +334,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "volume" => {
+            let input = read_request()?;
             #[derive(Deserialize)]
             #[serde(rename_all = "camelCase")]
             struct Request {
@@ -348,6 +363,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "volume-markup" => {
+            let input = read_request()?;
             #[derive(Deserialize)]
             struct Request {
                 design: PathBuf,
@@ -375,10 +391,14 @@ fn run() -> Result<(), String> {
                     })
                 })
                 .collect();
-            println!("{}", json!({ "type": "result", "result": { "shaders": listed } }));
+            println!(
+                "{}",
+                json!({ "type": "result", "result": { "shaders": listed } })
+            );
             Ok(())
         }
         "shaders-check" => {
+            let input = read_request()?;
             let selection: shaders::ShaderSelection = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid shader selection: {error}"))?;
             let resolved = shaders::resolve(&selection)?;
@@ -393,12 +413,16 @@ fn run() -> Result<(), String> {
                     })
                 })
                 .collect();
-            println!("{}", json!({ "type": "result", "result": { "shaders": presets } }));
+            println!(
+                "{}",
+                json!({ "type": "result", "result": { "shaders": presets } })
+            );
             Ok(())
         }
         // Identify a ROM and fetch its list once, so that the person can repeat
         // an export without the network and without the credentials.
         "achievements" => {
+            let input = read_request()?;
             #[derive(serde::Deserialize)]
             #[serde(rename_all = "camelCase")]
             struct Ask {
@@ -449,6 +473,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "freeze-macos-executable" => {
+            let input = read_request()?;
             let request: FreezeRequest = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid freeze request: {error}"))?;
             let installed_bytes =
