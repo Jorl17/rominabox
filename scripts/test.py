@@ -72,6 +72,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/test_staging.py")],
     ),
     Scope(
+        "joypad",
+        "that every hid profile the pin declares is staged, and that RetroArch's match rules would accept it",
+        "that a physical pad's buttons match those numbers; nothing here opens a device",
+        ["python3", str(ROOT / "scripts/test_joypad_autoconfig.py")],
+    ),
+    Scope(
         "worktree",
         "isolation between parallel checkouts: the shared git dir, the lock, refusing the canonical tree",
         "that a real worktree builds or runs; it creates nothing outside a temporary directory",
