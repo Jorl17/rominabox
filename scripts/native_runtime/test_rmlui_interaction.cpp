@@ -44,6 +44,17 @@ extern "C" const char *rib_rmlui_control_id(int index)
 }
 extern "C" const char *rib_rmlui_control_group(int) { return nullptr; }
 
+/* The cue that we requested from the sound pack for a move. Empty until a
+ * step changes a level. The player has the production function, and this
+ * one only records the call. */
+static std::string move_sound_log;
+extern "C" void rib_rmlui_play_move_sound(int direction)
+{
+   if (!move_sound_log.empty())
+      move_sound_log.push_back(' ');
+   move_sound_log += direction > 0 ? "up" : "down";
+}
+
 extern "C" unsigned rib_rmlui_test_texture_loads();
 extern "C" const char *rib_rmlui_test_property(const char *, const char *);
 
@@ -389,6 +400,57 @@ int main(int argc, char **argv)
             "the left arrow is the slider moving down one position");
       CHECK(rib_rmlui_changed_fraction() > 0.88f && rib_rmlui_changed_fraction() < 0.90f,
             "one arrow is one position, not a decibel");
+
+      /* With Options open and the slider selected, Down skips the left and
+       * right arrows of the slider. Left and Right on the slider already step
+       * it, so those arrows are for the pointer and are not stops. Down moves
+       * to the next focusable element, as for the player. */
+      {
+         char ids[16][64];
+         const int count = rib_rmlui_focusables("options-panel", ids, 16);
+         int slider = -1;
+         for (int index = 0; index < count; ++index)
+            if (std::strcmp(ids[index], RIB_VOLUME_SLIDER_ID) == 0)
+               slider = index;
+         CHECK(slider >= 0, "the volume slider is a focus stop");
+         const char *landed = (slider >= 0 && slider + 1 < count)
+               ? ids[slider + 1] : "";
+         const char *again = (slider >= 0 && slider + 2 < count)
+               ? ids[slider + 2] : "";
+         char message[192];
+         std::snprintf(message, sizeof(message),
+               "pressing down from the slider lands on %s", landed);
+         CHECK(std::strcmp(landed, "controls") == 0, message);
+         std::snprintf(message, sizeof(message),
+               "pressing down again lands on %s", again);
+         CHECK(std::strcmp(again, RIB_VOLUME_UP_ID) != 0, message);
+         int arrow_x = 0;
+         int arrow_y = 0;
+         CHECK(rib_rmlui_element_center(RIB_VOLUME_DOWN_ID, &arrow_x, &arrow_y),
+               "the left arrow is still there for a pointer");
+         CHECK(rib_rmlui_element_center(RIB_VOLUME_UP_ID, &arrow_x, &arrow_y),
+               "the right arrow is still there for a pointer");
+      }
+
+      /* One move cue per step that changes the level, and none at an end
+       * where it does not move. The words come from the pack: up and down. */
+      rib_rmlui_set_slider(RIB_VOLUME_SLIDER_ID, 1.0f, nullptr);
+      rib_rmlui_set_slider_step(RIB_VOLUME_SLIDER_ID,
+            AUDIO_VOLUME_STEP_DB / (AUDIO_VOLUME_MAX_DB - AUDIO_VOLUME_MIN_DB));
+      move_sound_log.clear();
+      rib_rmlui_nudge_slider(RIB_VOLUME_SLIDER_ID, 1);
+      rib_rmlui_nudge_slider(RIB_VOLUME_SLIDER_ID, -1);
+      rib_rmlui_nudge_slider(RIB_VOLUME_SLIDER_ID, 1);
+      rib_rmlui_set_slider(RIB_VOLUME_SLIDER_ID, 0.0f, nullptr);
+      rib_rmlui_nudge_slider(RIB_VOLUME_SLIDER_ID, -1);
+      {
+         char message[256];
+         std::snprintf(message, sizeof(message),
+               "volume steps play the move sound once each and not at the ends: heard '%s'",
+               move_sound_log.c_str());
+         CHECK(move_sound_log == "down up", message);
+      }
+      drain_actions();
    }
 
    // Letting go somewhere else must not press the button.
@@ -436,6 +498,9 @@ int main(int argc, char **argv)
    {
       const int silent[] = {
          RIB_RMLUI_ACTION_NONE,
+         /* A step plays the move cue of the pack when the level changes, not
+          * the confirm cue, so the two never play together, even at an end. */
+         RIB_RMLUI_ACTION_SLIDER,
          RIB_RMLUI_ACTION_SELECT_SLOT_1, RIB_RMLUI_ACTION_SELECT_SLOT_2,
          RIB_RMLUI_ACTION_SELECT_SLOT_3, RIB_RMLUI_ACTION_SELECT_SLOT_4,
          RIB_RMLUI_ACTION_SELECT_SLOT_5, RIB_RMLUI_ACTION_SELECT_SLOT_6,
