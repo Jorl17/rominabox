@@ -671,6 +671,12 @@ describe("App workflow", () => {
     expect(container.textContent).toContain(
       "Export is available in the desktop app.",
     );
+    expect(container.textContent?.toLowerCase() ?? "").not.toContain("zip");
+    const saveHelp = container.querySelector(
+      ".destination .help-button",
+    ) as HTMLButtonElement;
+    act(() => click(saveHelp));
+    expect(document.body.textContent?.toLowerCase() ?? "").not.toContain("zip");
     expect(button("Create app").disabled).toBe(true);
   });
 

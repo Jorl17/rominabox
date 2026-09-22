@@ -128,6 +128,47 @@ fn assert_no_export_staging(output_dir: &Path) {
     );
 }
 
+/// An export is the app alone. A second file in the output directory, such as
+/// a zip beside the app, is a defect.
+#[test]
+fn an_export_writes_the_app_and_nothing_else() {
+    let root = workspace();
+    let request = export_request(&root);
+    let cancelled = AtomicBool::new(false);
+    let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
+
+    let mut names = fs::read_dir(&request.output_dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    names.sort();
+    assert_eq!(
+        names,
+        vec!["Hotkey Isolation.app".to_string()],
+        "the output directory must contain the app and nothing else"
+    );
+    assert!(result.app_path.is_dir());
+    assert_eq!(
+        result.app_path,
+        request.output_dir.join("Hotkey Isolation.app")
+    );
+
+    let again =
+        rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap_err();
+    assert!(
+        again
+            .message
+            .contains("refusing to overwrite existing export"),
+        "{again}"
+    );
+    let mut after = fs::read_dir(&request.output_dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    after.sort();
+    assert_eq!(after, names);
+}
+
 #[test]
 fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
     let root = workspace();

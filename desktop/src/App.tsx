@@ -43,6 +43,19 @@ import "./style.css";
 
 const steps = ["Game", "Details", "Menu", "Export"];
 
+// The only target of this builder. A Windows target would be the executable,
+// with a folder beside it if the runtime requires one.
+const EXPORT_TARGET = "macos";
+
+function exportProduct(target: string): string {
+  switch (target) {
+    case "windows":
+      return "WINDOWS APP";
+    default:
+      return "MACOS APP";
+  }
+}
+
 function shaderFileName(filePath: string): string {
   return (
     filePath
@@ -487,7 +500,7 @@ export function App() {
       controls,
       firmware,
       outputDir: destination,
-      target: "macos",
+      target: EXPORT_TARGET,
     };
   }
   async function saveProject() {
@@ -517,7 +530,7 @@ export function App() {
       if (
         !designs.designs.some((design) => design.id === settings.theme) ||
         !designs.palettes.some((value) => value.id === settings.palette) ||
-        settings.target !== "macos"
+        settings.target !== EXPORT_TARGET
       ) {
         throw new Error(
           "This project uses a menu design, palette or platform unavailable in this build.",
@@ -1574,7 +1587,9 @@ export function App() {
                 <div>
                   <h2>{draft.title}</h2>
                   <p>{systemName}</p>
-                  <span className="export-format">MACOS APP + ZIP</span>
+                  <span className="export-format">
+                    {exportProduct(EXPORT_TARGET)}
+                  </span>
                 </div>
                 {result && <Check className="complete-mark" size={38} />}
               </div>
@@ -1600,22 +1615,16 @@ export function App() {
                 <div className="result">
                   <dl>
                     <div>
-                      <dt>Download</dt>
-                      <dd>{formatBytes(result.archiveBytes)}</dd>
-                    </div>
-                    <div>
-                      <dt>Installed</dt>
+                      <dt>App</dt>
                       <dd>{formatBytes(result.installedBytes)}</dd>
                     </div>
                   </dl>
                   <button
                     className="secondary"
-                    onClick={() =>
-                      bridge.reveal(result.archivePath).catch(fail)
-                    }
+                    onClick={() => bridge.reveal(result.appPath).catch(fail)}
                   >
                     <FolderOpen size={18} />
-                    Show files
+                    Show app
                   </button>
                 </div>
               ) : (
@@ -1624,8 +1633,7 @@ export function App() {
                     <label>
                       Save to
                       <Help>
-                        The app and ZIP are saved together. An existing export
-                        will not be silently replaced.
+                        An existing app will not be silently replaced.
                       </Help>
                     </label>
                     <button
