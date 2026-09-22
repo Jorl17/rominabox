@@ -1,0 +1,14 @@
+{
+  "controller-dreamcast": "f56f7e287af99665",
+  "controller-gameboy": "b1bda79b709d3251",
+  "controller-gamecube": "5ee40b13f75414fa",
+  "controller-gamegear": "ac0c11a9100bd23f",
+  "controller-gba": "89a080606956fb4c",
+  "controller-mastersystem": "974a66eb0f1b6c97",
+  "controller-megadrive": "7d324f2dfb817ede",
+  "controller-megadrive6": "5753d855dbf17bec",
+  "controller-n64": "87773edf1f22e37c",
+  "controller-nes": "585b22b41a946456",
+  "controller-ps1": "ea5108b33b754bc1",
+  "controller-snes": "93968e8043b6e686"
+}

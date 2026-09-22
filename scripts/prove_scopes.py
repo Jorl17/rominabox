@@ -300,20 +300,43 @@ def case_automation():
 
 
 def case_artwork():
-    path = ROOT / "desktop/assets/controllers/controller-megadrive.svg"
+    """Break the PNG in each of the ways the scope checks, one at a time.
+
+    The first is a PNG that no longer matches its SVG. The second is a PNG
+    that someone edited by hand. Two encoders differ in antialiasing, so the
+    render comparison allows a few percent of different pixels, and a
+    repainted button is within that. We find the edit only in the bytes.
+    """
+    svg = ROOT / "desktop/assets/controllers/controller-megadrive.svg"
     # With rsvg, the drawing follows the viewBox and not the width attribute,
     # so we change the viewBox to move the picture that we measure the button
     # anchors against.
     raw = replace(
-        path,
+        svg,
         'viewBox="0 0 67.733333 67.733333"',
         'viewBox="0 0 40 67.733333"',
     )
     try:
         code, output = run_scope("artwork")
     finally:
-        restore(path, raw)
-    return expect("artwork", code, output, ("DRIFTED", "drawing moved"))
+        restore(svg, raw)
+    drift = expect("artwork", code, output, ("DRIFTED", "drawing moved"))
+    if drift:
+        return drift
+
+    # One pixel, far below every tolerance in the render comparison.
+    png = ROOT / "desktop/assets/controllers/controller-nes.png"
+    before = png.read_bytes()
+    try:
+        from PIL import Image
+
+        image = Image.open(png).convert("RGBA")
+        image.putpixel((900, 400), (255, 0, 0, 255))
+        image.save(png)
+        code, output = run_scope("artwork")
+    finally:
+        png.write_bytes(before)
+    return expect("artwork", code, output, ("EDITED",))
 
 
 def case_shaderpreview():

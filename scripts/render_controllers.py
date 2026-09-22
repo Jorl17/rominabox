@@ -45,6 +45,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from built import cli as _cli  # noqa: E402
 
 CLI = _cli()
+# The shipped PNGs as a person last reviewed them. In the render comparison
+# below we allow a few percent of different pixels, because rsvg and the tool
+# that drew the originals differ in antialiasing, so a repainted button would
+# be within that tolerance. These are the shipped bytes, and any edit at all
+# changes them. We use both checks, because each one finds a different fault.
 BASELINE = ROOT / "scripts/fixtures/controller-digests.json"
 
 # We render at twice the scene size so the artwork stays crisp on a retina
@@ -159,6 +164,11 @@ def main() -> int:
         action="store_true",
         help="compare the shipped PNGs against a fresh render and fail on drift",
     )
+    parser.add_argument(
+        "--record",
+        action="store_true",
+        help="record the shipped PNGs as they are, after looking at them",
+    )
     arguments = parser.parse_args()
 
     width, height = scene_size()
@@ -209,6 +219,17 @@ def main() -> int:
         )
         return 0
 
+    if arguments.record:
+        # Record the shipped PNGs, not a fresh render. They were not made with
+        # rsvg, and a new render would replace the artwork with a near copy of
+        # it as the baseline.
+        recorded = {svg.stem: digest(svg.with_suffix(".png")) for svg in sources
+                    if svg.with_suffix(".png").is_file()}
+        BASELINE.parent.mkdir(parents=True, exist_ok=True)
+        BASELINE.write_text(json.dumps(recorded, indent=2, sort_keys=True) + "\n")
+        print(f"recorded {len(recorded)} shipped PNGs -> {BASELINE.name}")
+        return 0
+
     scratch = ROOT / "work/controller-render"
     scratch.mkdir(parents=True, exist_ok=True)
 
@@ -243,20 +264,48 @@ def main() -> int:
             print(f"  ok      {png.name}")
 
     if arguments.check:
+        # Compare the shipped bytes with no tolerance, which we cannot do in
+        # the render comparison.
+        if BASELINE.is_file():
+            recorded = json.loads(BASELINE.read_text())
+            for svg in sources:
+                png = svg.with_suffix(".png")
+                was = recorded.get(svg.stem)
+                if was is None:
+                    print(f"  UNRECORDED {png.name}", file=sys.stderr)
+                    drifted.append(svg.stem)
+                elif png.is_file() and digest(png) != was:
+                    print(
+                        f"  EDITED  {png.name}: the shipped file is not the one "
+                        "that was recorded",
+                        file=sys.stderr,
+                    )
+                    drifted.append(svg.stem)
+            extra = sorted(set(recorded) - {svg.stem for svg in sources})
+            for name in extra:
+                print(f"  ORPHAN  {name}: recorded, but no SVG draws it", file=sys.stderr)
+                drifted.append(name)
         if drifted:
             print(
-                f"\n{len(drifted)} PNG(s) do not match their SVG: {', '.join(drifted)}.\n"
-                "The SVG is the source. Regenerate with:\n"
-                "  python3 scripts/render_controllers.py",
+                f"\n{len(drifted)} controller drawing(s) are not what they should "
+                f"be: {', '.join(sorted(set(drifted)))}.\n"
+                "DRIFTED or MISSING means the PNG no longer matches its SVG, and "
+                "the SVG is the source:\n"
+                "  python3 scripts/render_controllers.py\n"
+                "EDITED means the shipped file changed since a person last looked "
+                "at it. Look, then:\n"
+                "  python3 scripts/render_controllers.py --record",
                 file=sys.stderr,
             )
             return 1
         print(f"\nall {len(sources)} PNGs match their SVG")
         return 0
 
-    BASELINE.parent.mkdir(parents=True, exist_ok=True)
-    BASELINE.write_text(json.dumps(digests, indent=2, sort_keys=True) + "\n")
     print(f"\nrendered {len(sources)} controllers at {width * SCALE}x{height * SCALE}")
+    print(
+        "Look at them, then record what now ships:\n"
+        "  python3 scripts/render_controllers.py --record"
+    )
     return 0
 
 
