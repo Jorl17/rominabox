@@ -237,6 +237,103 @@ fn the_shipped_design_provides_every_splash_id() {
     assert!(missing.is_empty(), "splash.rml is missing {missing:?}");
 }
 
+/// An overlay is part of the design, so the design must contain its element.
+///
+/// In the player we show an overlay by the id it was declared under, and, as
+/// everywhere here, without failing. With a declaration but no element, the
+/// game waits in its first seconds to show nothing, and we report nothing.
+#[test]
+fn every_declared_overlay_has_an_element_in_the_design() {
+    for design in designs() {
+        let overlays = rominabox_desktop::themes::declared_overlays(&design)
+            .expect("a design's overlays");
+        assert!(
+            !overlays.is_empty(),
+            "{} declares no overlays, so a player who chose it is never told \
+             how to reach the pause menu",
+            design.display()
+        );
+        let drawn: String = ["menu.rml", "splash.rml"]
+            .iter()
+            .filter_map(|name| std::fs::read_to_string(design.join(name)).ok())
+            .collect();
+        for overlay in &overlays {
+            assert!(
+                drawn.contains(&format!("id=\"{}\"", overlay.id)),
+                "{} declares the overlay '{}' and no document draws it",
+                design.display(),
+                overlay.id
+            );
+        }
+    }
+}
+
+/// Every design package, so that a rule applies to the second as well as the
+/// first. If we checked a design only once we release it, it would be too late.
+fn designs() -> Vec<PathBuf> {
+    let root = repo_root().join("integrations/designs");
+    let found: Vec<PathBuf> = std::fs::read_dir(&root)
+        .expect("designs directory")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.join("design.json").is_file())
+        .collect();
+    assert!(!found.is_empty(), "no design was read, so this proved nothing");
+    found
+}
+
+/// An overlay is not a screen, and must not open as one.
+///
+/// We open a screen by name, give it the heading and the footer, hide every
+/// other panel, and the player reaches it from a button. None of that applies
+/// to something drawn over a running game, and if a design declared one as
+/// both, the player would get a button that blanks the menu.
+#[test]
+fn no_overlay_is_also_a_screen() {
+    for design in designs() {
+        let screens: Vec<String> = rominabox_desktop::themes::declared_screens(&design)
+            .expect("a design's screens")
+            .into_iter()
+            .map(|screen| screen.id)
+            .collect();
+        for overlay in
+            rominabox_desktop::themes::declared_overlays(&design).expect("a design's overlays")
+        {
+            assert!(
+                !screens.contains(&overlay.id),
+                "{} declares '{}' as both an overlay and a screen",
+                design.display(),
+                overlay.id
+            );
+        }
+    }
+}
+
+/// We declare in one place how long an overlay takes to leave.
+///
+/// In the player we hide the element when that time is up, and in the design
+/// the element fades out over the same time. If we wrote the time twice, the
+/// two could drift, and a notice would vanish mid-fade or stay a moment after
+/// it is invisible.
+#[test]
+fn an_overlays_leaving_time_is_declared_once_and_read_by_both_consumers() {
+    for design in designs() {
+        let sheet = std::fs::read_to_string(design.join("menu.rcss")).expect("a stylesheet");
+        for overlay in
+            rominabox_desktop::themes::declared_overlays(&design).expect("a design's overlays")
+        {
+            let token = format!("design(overlay-leave-{})", overlay.id);
+            assert!(
+                sheet.contains(&token),
+                "{} never reads {token}, so whatever it animates for '{}' is a \
+                 second copy of a number the design already declared",
+                design.join("menu.rcss").display(),
+                overlay.id
+            );
+        }
+    }
+}
+
 /// The controls placeholder is part of the contract too.
 ///
 /// It is not an id, so the checks above would miss it, and without it there

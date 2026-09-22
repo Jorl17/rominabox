@@ -16,11 +16,16 @@ changes: the port is 1420, the identifiers have no suffix, and
 `stable_identity` is the same. This is important, because a regression test
 checks it so that a player's saves survive a re-export of the same game.
 
-We do NOT isolate the prepared runtime kit, the cargo target directory and
-the submodule's object store. An isolated 6 GB target would cost 6 GB per
-worktree to avoid a lock that only serialises compilation, and isolated
-submodule objects would mean a new clone of 289 MB that git can share at
-no cost. We share large artifacts that depend only on their content.
+We do NOT isolate the cargo target and the submodule's object store. An
+isolated 6 GB target would cost 6 GB per worktree to avoid a lock that only
+serialises compilation, and isolated submodule objects would mean a new
+clone of 289 MB that git can share at no cost. We share large artifacts
+that depend only on their content.
+
+We copy the prepared runtime kit and do not share it. Through a symlink,
+staging a design in a worktree would write into the checkout it came from,
+and every worktree linked to it would then have a kit that does not match
+its design.
 """
 
 from __future__ import annotations
@@ -242,15 +247,19 @@ def write_local(path: Path, suffix: str, offset: int) -> dict:
 # The prepared runtime kit (the frozen RetroArch player, the cores, the menu
 # assets) is build output and is not in git. Without it we cannot export or
 # launch anything in a worktree, and a RetroArch build per worktree is too slow.
-# It is the same in every worktree unless the fork or a design changes, so we
-# share it with a symlink.
 #
-# Staging a design through that symlink would write into the canonical
-# checkout and give every other worktree a kit that does not match its
-# design. So in `build-builder-macos.sh` we refuse to stage through a shared
-# kit and suggest `--own-runtime`.
-SHARED_ARTIFACTS = [
+# We copy the kit and do not share it with a symlink. Staging a design writes
+# into the kit, and we stage designs in several scripts (for example, we build
+# a kit to photograph in menu_shots.py), so through a shared link one worktree
+# would overwrite the canonical kit and every other worktree would have a kit
+# that does not match its design.
+COPIED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/runtime"),
+]
+
+# We only ever read these, so we share them at no cost and save a lot of
+# space, because node_modules alone is larger than the kit.
+SHARED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/preview"),
     # Without these we cannot run the whole suite in a worktree, and the
     # failures look like a fault in the change. The `frontend` tests stop with
@@ -274,7 +283,8 @@ SHARED_ARTIFACTS = [
 
 
 def link_build_artifacts(path: Path, own_copy: bool) -> None:
-    for relative in SHARED_ARTIFACTS:
+    for relative in COPIED_ARTIFACTS + SHARED_ARTIFACTS:
+        copy = own_copy or relative in COPIED_ARTIFACTS
         source = ROOT / relative
         if not source.exists():
             print(f"  {relative} is not prepared here; skipping")
@@ -283,7 +293,7 @@ def link_build_artifacts(path: Path, own_copy: bool) -> None:
         if target.exists() or target.is_symlink():
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
-        if own_copy:
+        if copy:
             started = time.monotonic()
             shutil.copytree(source, target, symlinks=True)
             print(f"  copied {relative} ({time.monotonic() - started:.0f}s)")
@@ -347,7 +357,6 @@ def adopt() -> int:
         local = write_local(here, suffix, offset)
     print(f"{here}\n{describe(local)}")
     return 0
-
 
 def environment() -> int:
     """Print the shell exports for a worktree, for `eval`."""

@@ -485,6 +485,7 @@ where
         crate::themes::prepare_splash_assets(
             &crate::themes::staged_design(&request.runtime_kit, &request.theme),
             &resources.join("menu-assets"),
+            &request.palette,
         )
         .map_err(|message| ExportError::new("stage", message))?;
     }
@@ -1689,11 +1690,6 @@ fn write_launcher(
     } else {
         ""
     };
-    let splash_env = if request.splash {
-        "export ROMINABOX_SPLASH=1"
-    } else {
-        "unset ROMINABOX_SPLASH"
-    };
     let advanced_access_env = if request.advanced_emulator_access {
         "export ROMINABOX_ADVANCED_ACCESS=1"
     } else {
@@ -1713,7 +1709,6 @@ for name in {managed_directories}; do
   /bin/mkdir -p "$data_dir/$name"
 done
 unset ROMINABOX_START_AT_MENU
-{splash_env}
 {advanced_access_env}
 unset LIBRETRO_SYSTEM_DIRECTORY LIBRETRO_DIRECTORY LIBRETRO_ASSETS_DIRECTORY LIBRETRO_AUTOCONFIG_DIRECTORY LIBRETRO_CHEATS_DIRECTORY LIBRETRO_DATABASE_DIRECTORY LIBRETRO_VIDEO_FILTER_DIRECTORY LIBRETRO_VIDEO_SHADER_DIRECTORY
 export ROMINABOX_DATA_DIR="$data_dir"
@@ -2951,7 +2946,9 @@ mod tests {
         )
         .unwrap();
         let script = fs::read_to_string(launcher).unwrap();
-        assert!(script.contains("export ROMINABOX_SPLASH=1"));
+        // We show the logo only when we staged its file. There is no separate
+        // splash flag in the launcher.
+        assert!(!script.contains("ROMINABOX_SPLASH"));
         assert!(script.contains("menu_driver = \"rmlui\""));
         assert!(script.contains("input_menu_toggle = \"nul\""));
         assert!(script.contains("input_menu_toggle_gamepad_combo = \"0\""));

@@ -551,7 +551,7 @@ progress::-webkit-progress-value {
   margin-bottom: 8px;
 }
 .menu-frame {
-  background: #1049c3;
+  background: var(--palette-screen, #1049c3);
   border: 2px solid var(--ink);
   width: min(100%, calc((100svh - 355px) * 1.6));
   min-width: 430px;
