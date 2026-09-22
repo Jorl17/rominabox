@@ -268,6 +268,13 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/shader_state.py")],
         slow=True,
     ),
+    Scope(
+        "discs",
+        "that a cartridge and a single disc are not a multi-disc game, and that choosing the second image of a playlist makes the core report that index",
+        "that the menu drew the list or shortened the name — the bridge scope measures the name, and a photograph is the list",
+        ["python3", str(ROOT / "scripts/test_discs.py")],
+        slow=True,
+    ),
 ]
 
 BY_NAME = {scope.name: scope for scope in SCOPES}

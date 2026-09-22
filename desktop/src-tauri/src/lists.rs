@@ -193,7 +193,7 @@ pub fn render_list(screen: &str, template: &str, items: &[ListItem], page_size: 
         return String::new();
     }
     let page_count = items.len().div_ceil(page_size);
-    let mut html = String::from("<div class=\"list\">");
+    let mut html = format!("<div id=\"{screen}-list\" class=\"list\">");
     for (index, chunk) in items.chunks(page_size).enumerate() {
         let hidden = if index == 0 {
             ""
@@ -296,6 +296,21 @@ pub fn declare_screen(
             button = screen.button,
         ));
     }
+    if let Some(images) = &screen.images {
+        let key = format!("screen_images_{}", screen.id);
+        if declared_value(&cfg, &key).is_none() {
+            cfg.push_str(&format!(
+                "screen_images_{id} = \"{images}\"\n",
+                id = screen.id
+            ));
+        }
+    }
+    if let Some(mark) = &screen.mark {
+        let key = format!("screen_mark_{}", screen.id);
+        if declared_value(&cfg, &key).is_none() {
+            cfg.push_str(&format!("screen_mark_{id} = \"{mark}\"\n", id = screen.id));
+        }
+    }
     if let Some((host, button)) = also_opens {
         let key = format!("screen_button_{host}");
         let Some((value_at, value_end)) = declared_value(&cfg, &key) else {
@@ -391,7 +406,14 @@ pub fn install(
         ));
         // The player opens an entry inside Options from there, so it has no
         // button on the pause row. We generate the Options entries separately.
-        if list.screen.option_label.is_none() {
+        // The player opens an entry inside Options from there. A list whose
+        // button is already drawn in the design, such as the disc column's
+        // DISC, gets no second one, and for a list without a button of its
+        // own we retarget that existing button.
+        if list.screen.option_label.is_none()
+            && !list.screen.button.is_empty()
+            && !document.contains(&format!("id=\"{}\"", list.screen.button))
+        {
             links.push_str(&format!(
                 "<button class=\"menu-action screen-link\" id=\"{button}\">{heading}</button>",
                 button = list.screen.button,
@@ -486,6 +508,8 @@ mod tests {
             place: ScreenPlace::Plain,
             option_label: Some("ACHIEVEMENTS".into()),
             option_default: false,
+            images: None,
+            mark: None,
             toggle: None,
         };
         screen.toggle = Some(crate::themes::Toggle {
@@ -528,6 +552,8 @@ mod tests {
             place: ScreenPlace::Plain,
             option_label: Some("ACHIEVEMENTS".into()),
             option_default: false,
+            images: None,
+            mark: None,
             toggle: None,
         };
         let cfg = "screens = \"pause achievements\"\nscreen_panel_achievements = \"achievements-panel\"\nscreen_heading_achievements = \"ACHIEVEMENTS\"\nscreen_footer_achievements = \"ESC  BACK\"\nscreen_button_achievements = \"achievements\"\nscreen_panel_pause = \"pause-panel\"\nscreen_button_pause = \"options-back\"\n";

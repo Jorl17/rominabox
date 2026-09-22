@@ -1166,6 +1166,59 @@ int main(int argc, char **argv)
                "the right arrow is still there for a pointer");
       }
 
+      /* DISC is in the document for every game, because we cannot create it
+       * in the player once the core has reported how many images it loaded.
+       * While that count is one or none we hide it, and a hidden entry must
+       * not take focus, or Down moves to it and no ring is drawn. Showing it
+       * must not move the entries above it. */
+      {
+         char ids[16][64];
+         const int count = rib_rmlui_focusables("options-panel", ids, 16);
+         bool landed = false;
+         int controls_y = 0;
+         int controls_x = 0;
+         for (int index = 0; index < count; ++index)
+            if (std::strcmp(ids[index], "discs") == 0)
+               landed = true;
+         CHECK(!landed, "a hidden disc entry is not a focus stop");
+         CHECK(rib_rmlui_element_center("controls", &controls_x, &controls_y),
+               "controls is where it was");
+         const int before = controls_y;
+         rib_rmlui_set_shown("discs", true);
+         rib_rmlui_set_disabled("discs", false);
+         CHECK(rib_rmlui_element_center("controls", &controls_x, &controls_y),
+               "controls is still there once disc is shown");
+         CHECK(controls_y == before,
+               "showing the disc entry does not move the entries above it");
+         rib_rmlui_set_shown("discs", false);
+         rib_rmlui_set_disabled("discs", true);
+         const int after = rib_rmlui_focusables("options-panel", ids, 16);
+         landed = false;
+         for (int index = 0; index < after; ++index)
+            if (std::strcmp(ids[index], "discs") == 0)
+               landed = true;
+         CHECK(!landed, "hiding the disc entry takes it back out of the walk");
+      }
+      {
+         const char *long_name =
+            "/Users/mariowilde/Games/Final Fantasy VII/Final Fantasy VII (USA) (Disc 4).cue";
+         rib_rmlui_fit_row_title("fixture-one", long_name);
+         const std::string fitted(rib_rmlui_test_text("fixture-one-title"));
+         char message[512];
+         std::snprintf(message, sizeof(message),
+               "a long disc name is shortened in the middle, got '%s'",
+               fitted.c_str());
+         const auto dots = fitted.find("\u2026");
+         const auto number = fitted.rfind("(Disc 4)");
+         CHECK(dots != std::string::npos, message);
+         std::snprintf(message, sizeof(message),
+               "the disc number stays after the ellipsis, got '%s'",
+               fitted.c_str());
+         CHECK(number != std::string::npos && dots < number, message);
+         CHECK(fitted.size() < std::strlen(long_name),
+               "the shortened name is shorter than the path");
+      }
+
       /* One move cue per step that changes the level, and none at an end
        * where it does not move. The words come from the pack: up and down. */
       rib_rmlui_set_slider(RIB_VOLUME_SLIDER_ID, 1.0f, nullptr);

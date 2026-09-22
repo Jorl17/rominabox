@@ -24,6 +24,9 @@
  *     --pad digital|dualshock  the controller in port 1. Some games, for
  *                          example Ape Escape, do not work with a digital
  *                          pad
+ *     --disc N             after loading, eject and set image index N, in
+ *                          the order of CMD_EVENT_DISK_INDEX. Print
+ *                          disc-images / disc-index before and after.
  *     --spam BUTTON:PERIOD[:UNTIL]  tap BUTTON every PERIOD frames, until frame
  *                          UNTIL if given, so that you can then choose in a
  *                          menu with --press. Tapping gets you past logos and
@@ -57,6 +60,13 @@ static unsigned current_frame = 0;
  * has effects. For example, Ape Escape was made for the DualShock and does not
  * work with any other controller. */
 static unsigned pad_device = RETRO_DEVICE_JOYPAD;
+/* -1 means keep the image that loaded first. We apply any other value after
+ * loading, when we have the disk callbacks from the core. */
+static int disc_swap = -1;
+static struct retro_disk_control_ext_callback disk_ext;
+static struct retro_disk_control_callback disk_v0;
+static bool have_disk_ext = false;
+static bool have_disk_v0 = false;
 
 /* Core options are the only way to configure a core.
  *
@@ -173,6 +183,71 @@ static void remember_v1(const struct retro_core_option_definition *definitions)
         if (def->default_value) remember_default(def->key, def->default_value);
 }
 
+static unsigned disc_num_images(void)
+{
+    if (have_disk_ext && disk_ext.get_num_images)
+        return disk_ext.get_num_images();
+    if (have_disk_v0 && disk_v0.get_num_images)
+        return disk_v0.get_num_images();
+    return 0;
+}
+
+static unsigned disc_image_index(void)
+{
+    if (have_disk_ext && disk_ext.get_image_index)
+        return disk_ext.get_image_index();
+    if (have_disk_v0 && disk_v0.get_image_index)
+        return disk_v0.get_image_index();
+    return 0;
+}
+
+static void disc_image_label(unsigned index, char *label, size_t length)
+{
+    label[0] = '\0';
+    if (have_disk_ext && disk_ext.get_image_label)
+        disk_ext.get_image_label(index, label, length);
+}
+
+/* Eject, then set, in the same order as disk_control_set_index. The index
+ * changes while the tray is open, and a disc change with the tray shut fails
+ * in the core. In the player, the tray closes later with a delayed insert,
+ * and the index is already the new one before that. */
+static void apply_disc_index(unsigned index)
+{
+    if (have_disk_ext) {
+        if (disk_ext.get_eject_state && disk_ext.set_eject_state
+                && !disk_ext.get_eject_state())
+            disk_ext.set_eject_state(true);
+        if (disk_ext.set_image_index)
+            disk_ext.set_image_index(index);
+        return;
+    }
+    if (!have_disk_v0)
+        return;
+    if (disk_v0.get_eject_state && disk_v0.set_eject_state
+            && !disk_v0.get_eject_state())
+        disk_v0.set_eject_state(true);
+    if (disk_v0.set_image_index)
+        disk_v0.set_image_index(index);
+}
+
+static void print_discs(const char *phase)
+{
+    unsigned count = disc_num_images();
+    unsigned index;
+
+    printf("disc-phase %s\n", phase);
+    printf("disc-images %u\n", count);
+    index = disc_image_index();
+    printf("disc-index %u\n", index);
+    for (unsigned i = 0; i < count; i++) {
+        char label[512];
+        disc_image_label(i, label, sizeof(label));
+        printf("disc-label %u %s\n", i, label);
+    }
+    fflush(stdout);
+}
+
 static bool environment(unsigned command, void *data)
 {
     switch (command) {
@@ -254,6 +329,29 @@ static bool environment(unsigned command, void *data)
     case RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
         ((struct retro_log_callback *)data)->log = log_printf;
         return true;
+    case RETRO_ENVIRONMENT_GET_DISK_CONTROL_INTERFACE_VERSION:
+        /* Version 0 has no label. When we reject this query, PCSX is at
+         * version 0 and every disc is unnamed. RetroArch returns 1. */
+        *(unsigned *)data = 1;
+        return true;
+    case RETRO_ENVIRONMENT_SET_DISK_CONTROL_EXT_INTERFACE: {
+        /* A refusal here means that there is no tray. get_num_images then
+         * stays unset, and a game on several discs looks like one disc. */
+        const struct retro_disk_control_ext_callback *callback = data;
+        if (!callback)
+            return false;
+        disk_ext = *callback;
+        have_disk_ext = true;
+        return true;
+    }
+    case RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE: {
+        const struct retro_disk_control_callback *callback = data;
+        if (!callback)
+            return false;
+        disk_v0 = *callback;
+        have_disk_v0 = true;
+        return true;
+    }
     /* Refusing an optional request from the core is always safe, and so we
      * provide nothing beyond what this file handles. */
     default:
@@ -385,6 +483,8 @@ int main(int argc, char **argv)
             else if (!strcmp(kind, "digital")) pad_device = RETRO_DEVICE_JOYPAD;
             else if (kind[0] >= '0' && kind[0] <= '9') pad_device = (unsigned)atoi(kind);
             else { fprintf(stderr, "--pad wants digital, dualshock, or a device id\n"); return 2; }
+        } else if (!strcmp(argv[i], "--disc") && i + 1 < argc) {
+            disc_swap = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "--press") && i + 1 < argc && press_count < MAX_EVENTS) {
             char *spec = argv[++i];
             char *first = strchr(spec, ':');
@@ -486,6 +586,11 @@ int main(int argc, char **argv)
     retro_get_system_av_info_fn(&av);
     fprintf(stderr, "loaded %s %s: %ux%u\n", info.library_name, info.library_version,
             av.geometry.base_width, av.geometry.base_height);
+
+    print_discs("before");
+    if (disc_swap >= 0)
+        apply_disc_index((unsigned)disc_swap);
+    print_discs("after");
 
     for (current_frame = 1; current_frame <= frames; current_frame++)
         retro_run_fn();

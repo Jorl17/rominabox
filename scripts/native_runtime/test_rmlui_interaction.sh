@@ -67,7 +67,7 @@ p = pathlib.Path(sys.argv[1])
 panel = (
     '<div id="fixture-panel" class="screen-panel" style="display:none;">'
     '<div class="list"><div id="fixture-page-1" class="list-page">'
-    '<button id="fixture-one" class="list-row "><div class="list-row-title">ONE</div>'
+    '<button id="fixture-one" class="list-row "><div id="fixture-one-title" class="list-row-title">ONE</div>'
     '<div id="fixture-one-state" class="list-row-state"></div></button>'
     '<button id="fixture-two" class="list-row "><div class="list-row-title">TWO</div>'
     '<div id="fixture-two-state" class="list-row-state"></div></button>'

@@ -416,9 +416,67 @@ FROM_THE_CANONICAL_CHECKOUT = [
 ]
 
 # These checks give the same result anywhere, and are most useful in a worktree.
+def a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote() -> None:
+    """Check a compile of broken source over the stamped binary in prove_scopes.
+
+    We do not stamp the failure, and the new binary often has the same size,
+    so after we restore the source, the next run would replay the broken
+    binary, and the identification tests would reject a valid cover.
+    """
+    import cargo_replay
+
+    root = Path(__file__).resolve().parent.parent
+    manifest = root / "desktop/src-tauri/Cargo.toml"
+    plan = cargo_replay.Plan(manifest, True, ["measure::"])
+    with tempfile.TemporaryDirectory() as tmp:
+        stamps = Path(tmp)
+        binary = stamps / "lib-test"
+        binary.write_bytes(b"same-size-either-way")
+        saved = (
+            cargo_replay.STAMPS,
+            cargo_replay.source_digest,
+            cargo_replay.subprocess.run,
+        )
+        cargo_replay.STAMPS = stamps
+        cargo_replay.source_digest = lambda _manifest: "broken-tree"
+        stamp = cargo_replay._stamp_path(plan)
+        stamp.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "source": "good-tree",
+                    "binaries": [
+                        {
+                            "label": "unittests src/lib.rs",
+                            "path": str(binary),
+                            "size": binary.stat().st_size,
+                        }
+                    ],
+                }
+            )
+        )
+
+        def fail_run(*_args, **_kwargs):
+            return subprocess.CompletedProcess(["cargo"], 1, "failed\n", "")
+
+        cargo_replay.subprocess.run = fail_run
+        try:
+            cargo_replay.cargo_test(
+                ["cargo", "test", "--manifest-path", str(manifest), "--lib", "measure::"],
+                root,
+            )
+        finally:
+            cargo_replay.STAMPS, cargo_replay.source_digest, cargo_replay.subprocess.run = saved
+        check(
+            not stamp.exists(),
+            "a failed cargo test drops the stamp of the binary it rewrote",
+        )
+
+
 ANYWHERE = [
     the_built_cli_follows_the_redirected_cargo_target,
     a_file_compiled_into_the_tool_counts_as_its_source,
+    a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote,
 ]
 
 

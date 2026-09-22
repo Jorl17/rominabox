@@ -602,6 +602,11 @@ where
         // lists in this game. An achievements entry in a game with no
         // achievements would be a button that opens an empty screen.
         let mut lists: Vec<crate::lists::List> = Vec::new();
+        if let Some(discs) = crate::disc_menu::list(&design)
+            .map_err(|message| ExportError::new("stage", message))?
+        {
+            lists.push(discs);
+        }
         let staged_shaders = crate::shaders::stage(&design, &menu_assets, &request.shaders)
             .map_err(|message| ExportError::new("stage", message))?;
         lists.extend(staged_shaders.list);

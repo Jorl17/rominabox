@@ -559,6 +559,8 @@ fn shader_screen(design: &Path) -> crate::themes::Screen {
             // through the Options entries as whatever the panel contains.
             option_label: Some("SHADERS".into()),
             option_default: false,
+            images: None,
+            mark: None,
             toggle: None,
         })
 }

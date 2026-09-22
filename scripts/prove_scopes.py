@@ -501,6 +501,28 @@ def case_shaderstate():
     )
 
 
+def case_discs():
+    # Leave the tray on the image the core loaded. Choosing disc 2 must move
+    # the index, so we notice a missing swap only when we query the core
+    # afterwards.
+    path = ROOT / "scripts/native_runtime/frame_harness.c"
+    raw = replace(
+        path,
+        "apply_disc_index((unsigned)disc_swap);",
+        "apply_disc_index(0);",
+    )
+    try:
+        code, output = run_scope("discs")
+    finally:
+        restore(path, raw)
+    return expect(
+        "discs",
+        code,
+        output,
+        ("after choosing disc 2 the core still reports image index",),
+    )
+
+
 def case_overlays():
     path = ROOT / "desktop/controls.json"
     raw = path.read_bytes()
@@ -544,6 +566,7 @@ CASES = {
     "isolation": case_isolation,
     "overlays": case_overlays,
     "shaderstate": case_shaderstate,
+    "discs": case_discs,
 }
 
 
