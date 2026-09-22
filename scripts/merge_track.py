@@ -138,6 +138,14 @@ def merge(track: str) -> int:
         subprocess.run(["git", "-C", str(where), "merge", "--abort"], capture_output=True)
         return 1
 
+    # A branch may add a dependency. We install it as part of the merge, so
+    # that we get no typecheck error for a missing type definition.
+    if (where / "desktop/package.json").exists():
+        subprocess.run(
+            ["npm", "install", "--silent"],
+            cwd=where / "desktop", capture_output=True, text=True,
+        )
+
     # In several test scopes we drive the exporter through its command line, so
     # the binary must exist in the tree under test. Without it we get an empty
     # error that looks like a fault of the branch.
@@ -170,6 +178,11 @@ def merge(track: str) -> int:
         print(f"  the merge conflicts:\n{done.stdout}{done.stderr}", file=sys.stderr)
         subprocess.run(["git", "-C", str(ROOT), "merge", "--abort"], capture_output=True)
         return 1
+    # The same, in the tree the branch was just merged into.
+    subprocess.run(
+        ["npm", "install", "--silent"],
+        cwd=ROOT / "desktop", capture_output=True, text=True,
+    )
     if not suite(ROOT):
         print(
             f"  {track} passes alone and the tree fails with it in. Undone.",
