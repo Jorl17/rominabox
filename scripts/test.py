@@ -133,6 +133,12 @@ SCOPES = [
         ["node", str(ROOT / "scripts/native_runtime/test_glsl_core.mjs")],
     ),
     Scope(
+        "dcmenu",
+        "that a core-profile context draws the menu and a legacy context still does, and that a log line reaches the file before the process exits",
+        "that a Dreamcast disc boots, or where the menu sits; the pictures are a separate run",
+        ["python3", str(ROOT / "scripts/test_dcmenu.py")],
+    ),
+    Scope(
         "joypad",
         "that every hid profile the pin declares is staged, and that RetroArch's match rules would accept it",
         "that a physical pad's buttons match those numbers; nothing here opens a device",

@@ -16,6 +16,15 @@
 #define LINE_CAP 8192
 #define MANAGED_CAP 64
 
+/* stdout is fully buffered when it is not a terminal. In the launcher we
+ * point it at launch.log, so when the player is killed, or still running when
+ * someone reads the log, RetroArch's lines stay in that buffer. */
+void rominabox_line_buffer_stdio(void)
+{
+    setvbuf(stdout, NULL, _IOLBF, 0);
+    setvbuf(stderr, NULL, _IOLBF, 0);
+}
+
 static void die(const char *message) {
     fprintf(stderr, "ROM-in-a-Box: %s\n", message);
     exit(1);
@@ -697,6 +706,7 @@ static void prepare(void) {
         dup2(log_fd, STDERR_FILENO);
         if (log_fd > STDERR_FILENO)
             close(log_fd);
+        rominabox_line_buffer_stdio();
     }
     if (chdir(data_dir) != 0)
         die_errno(data_dir);
