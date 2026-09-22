@@ -488,6 +488,34 @@ export function App() {
     heading.current?.focus();
     setError("");
   }, [step]);
+  // A disclosure on the Menu step opens below the fold, because the preview
+  // above it is 445 points tall and the content area of the step scrolls.
+  // When someone opens one, we scroll it into view.
+  //
+  // We use one listener for all five disclosures, because `toggle` does not
+  // bubble but can be captured.
+  //
+  // We scroll only when the opened content does not fit, and then put the
+  // summary at the top so the content has the whole area under it. If we
+  // scrolled as little as possible, a tall section would show only its first
+  // few points.
+  useEffect(() => {
+    const opened = (event: Event) => {
+      const element = event.target;
+      if (!(element instanceof HTMLDetailsElement) || !element.open) return;
+      const area = element.closest(".screen");
+      const bottom = area
+        ? area.getBoundingClientRect().bottom
+        : window.innerHeight;
+      if (element.getBoundingClientRect().bottom <= bottom) return;
+      // After the next frame. `toggle` fires when the attribute changes, and
+      // at that moment the scrolling area has not grown yet, so scrolling here
+      // moves nothing.
+      requestAnimationFrame(() => element.scrollIntoView({ block: "start" }));
+    };
+    document.addEventListener("toggle", opened, true);
+    return () => document.removeEventListener("toggle", opened, true);
+  }, []);
   // We draw the controller scene and the menu frame in the colours of the
   // palette the author picked, so the editor matches the exported game.
   useEffect(() => {

@@ -397,6 +397,44 @@ async function main() {
     }
 
     await openShaders(page);
+    // Opening Advanced must show Advanced. On the Menu step the section is
+    // below a 445pt preview inside a scrolling content area, so opening it
+    // must scroll it into view.
+    // The scroll happens on the frame after the section opens, so we wait
+    // for it to settle instead of racing it.
+    await page.waitForTimeout(400);
+    const visible = await page.evaluate(() => {
+      const details = [...document.querySelectorAll("details.advanced")].find(
+        (element) => element.open && element.querySelector(".shader-choices"),
+      );
+      if (!details) return { found: false };
+      const screen = details.closest(".screen");
+      // We check the cards, not the summary row. The check must fail when the
+      // top of the summary is just inside the area and every shader is below
+      // the fold, and the <details> element is the same in both cases.
+      const box = details.querySelector(".shader-grid").getBoundingClientRect();
+      const frame = screen
+        ? screen.getBoundingClientRect()
+        : { top: 0, bottom: window.innerHeight };
+      return {
+        found: true,
+        top: Math.round(box.top),
+        frameTop: Math.round(frame.top),
+        frameBottom: Math.round(frame.bottom),
+        bottom: Math.round(box.bottom),
+        inside: box.top >= frame.top - 1 && box.bottom <= frame.bottom + 1,
+      };
+    });
+    console.log(`ADVANCED ${JSON.stringify(visible)}`);
+    if (!visible.found || !visible.inside) {
+      console.error(
+        "opening Advanced does not bring the shader packaging into view",
+      );
+      console.error(JSON.stringify(visible));
+      code = 1;
+      return;
+    }
+
     const shaders = (await shaderText(page)).replace(/\s+/g, " ").trim();
     const pictures = await page.locator(".shader-choices img").count();
     console.log(`SHADERS pictures=${pictures} text=${JSON.stringify(shaders)}`);
