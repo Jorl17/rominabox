@@ -126,21 +126,60 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
  * has an unstyled list, and we reject it in the design contract test.
  */
 .screen-link { position: absolute; top: 18dp; right: 24dp; width: 148dp; height: 36dp; z-index: 2; font-family: Silkscreen; font-size: 13dp; line-height: 30dp; text-align: center; }
-.list { position: absolute; left: 56dp; top: 76dp; width: 840dp; }
-.list-row { display: block; position: relative; width: 100%; height: 64dp; margin: 0 0 8dp 0; padding: 0; background-color: design(surface); color: design(ink); border-width: 3dp; border-color: design(edge); font-family: Silkscreen; text-align: left; }
+.list { position: absolute; left: 36dp; top: 68dp; width: 880dp; }
+.list-row { display: block; position: relative; overflow: hidden; width: 100%; height: 68dp; margin: 0 0 4dp 0; padding: 0; background-color: design(surface); color: design(ink); border-width: 2dp; border-color: design(edge); font-family: Silkscreen; text-align: left; }
 .list-row:hover, .list-row.focused { border-color: design(ink); }
 .list-row.selected, .list-row.selected:hover, .list-row.selected.focused { border-color: design(highlight); }
 .list-row:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
-.list-row-icon { position: absolute; left: 8dp; top: 8dp; width: 48dp; height: 48dp; }
-.list-row-title { position: absolute; left: 68dp; top: 8dp; font-size: 18dp; color: design(ink); }
-.list-row-detail { position: absolute; left: 68dp; top: 32dp; font-size: 14dp; color: design(muted); }
-.list-row-state { position: absolute; right: 16dp; top: 20dp; font-size: 14dp; color: design(highlight); }
-.list-pager { position: absolute; left: 0; top: 304dp; width: 100%; height: 36dp; }
-.list-pager-prev, .list-pager-next, .list-pager-count { position: absolute; top: 0; height: 36dp; line-height: 30dp; background-color: design(surface); color: design(ink); border-width: 3dp; border-color: design(edge); font-family: Silkscreen; font-size: 14dp; text-align: center; }
-.list-pager-prev { left: 0; width: 72dp; }
-.list-pager-count { left: 84dp; width: 120dp; }
-.list-pager-next { left: 216dp; width: 72dp; }
+/* Four units above, below and to the left, so the picture is in the middle
+ * of the row and not on its frame. The bevel is the same as on the save
+ * slots, so a badge looks set into the row. */
+.list-row-icon { position: absolute; left: 4dp; top: 4dp; width: 56dp; height: 56dp; border-top: 2dp design(background); border-left: 2dp design(background); border-right: 2dp design(edge); border-bottom: 2dp design(edge); }
+/* Each of the three parts of a row has a column and stays in it. An
+ * achievement description can be 149 characters long, and then it wraps to
+ * two lines here instead of running under the state text. */
+.list-row-title { position: absolute; left: 76dp; right: 164dp; top: 6dp; font-size: 16dp; color: design(ink); white-space: nowrap; overflow: hidden; }
+.list-row-detail { position: absolute; left: 76dp; right: 164dp; top: 33dp; height: 30dp; overflow: hidden; font-size: 12dp; color: design(muted); }
+/* The full height of the row, so the word is vertically centred. */
+.list-row-state { position: absolute; right: 12dp; top: 0; width: 140dp; height: 68dp; line-height: 68dp; font-size: 12dp; text-align: right; white-space: nowrap; color: design(muted); }
+/* We highlight the row that is in effect, such as the shader that is on. A
+ * row that is only listed has no highlight. */
+.list-row.selected .list-row-state { color: design(highlight); }
+/* A row marked in its list, such as the win condition among achievements. */
+.list-row.accent .list-row-title { color: design(highlight); }
+.list-pager { position: absolute; left: 0; top: 400dp; width: 100%; height: 40dp; }
+.list-pager-prev, .list-pager-next, .list-pager-count { position: absolute; top: 0; height: 36dp; line-height: 34dp; font-family: Silkscreen; font-size: 18dp; text-align: center; }
+.list-pager-prev, .list-pager-next { background-color: design(surface); color: design(ink); border-width: 2dp; border-color: design(edge); }
+.list-pager-prev { left: 300dp; width: 56dp; }
+.list-pager-count { left: 380dp; width: 120dp; color: design(highlight); }
+.list-pager-next { left: 524dp; width: 56dp; }
 .list-pager-prev:hover, .list-pager-next:hover, .list-pager-prev.focused, .list-pager-next.focused { background-color: design(highlight); color: design(surface); border-color: design(ink); }
-.list-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
-.list-actions .menu-action { position: absolute; left: 0; width: 160dp; height: 38dp; font-family: Silkscreen; font-size: 18dp; line-height: 32dp; text-align: center; }
-.list-status { position: absolute; left: 56dp; top: 440dp; color: design(highlight); font-size: 14dp; }
+.list-pager-prev.disabled, .list-pager-next.disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
+.list-actions { position: absolute; left: 36dp; top: 508dp; width: 880dp; height: 40dp; }
+.list-actions .menu-action { position: absolute; top: 0; height: 36dp; line-height: 34dp; border-width: 2dp; font-family: Silkscreen; font-size: 18dp; text-align: center; }
+.list-back { right: 0; width: 196dp; }
+/* A switch is as wide as its words and no wider, in proportion to the
+ * 200-unit BACK beside it. */
+.list-toggle { left: 0; width: 260dp; }
+.list-toggle-label { position: absolute; left: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 16dp; }
+.list-toggle-state { position: absolute; right: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 16dp; color: design(muted); }
+.list-toggle.on .list-toggle-state { color: design(highlight); }
+.list-toggle:hover .list-toggle-state, .list-toggle.focused .list-toggle-state { color: design(surface); }
+.list-status { position: absolute; left: 36dp; top: 552dp; width: 880dp; text-align: center; color: design(highlight); font-size: 14dp; }
+
+/* A save slot that nobody can use at the moment. The words are in the
+ * design, on the switch that disables the slot. */
+.slot.disabled, .slot.disabled:hover { border-color: design(rule); }
+.slot.disabled .slot-label { background-color: design(well-edge); color: design(disabled); }
+.slot.disabled .slot-state { color: design(disabled); }
+
+/* The unlock notice. The box is as wide as its contents: it is centred in
+ * the row, it is as wide as its words, and a long description wraps.
+ */
+#notice-row { position: absolute; left: 0; top: 24dp; width: 100%; text-align: center; z-index: 90; }
+#notice { display: inline-block; text-align: left; padding: 10dp; background-color: design(surface); border: 3dp design(highlight); }
+#notice-badge { display: inline-block; vertical-align: top; width: 64dp; height: 64dp; border-top: 2dp design(background); border-left: 2dp design(background); border-right: 2dp design(edge); border-bottom: 2dp design(edge); }
+#notice-words { display: inline-block; vertical-align: top; margin-left: 12dp; max-width: 560dp; }
+#notice-kicker { font-size: 12dp; color: design(highlight); }
+#notice-title { font-size: 18dp; color: design(ink); margin-top: 4dp; }
+#notice-detail { font-size: 12dp; color: design(muted); margin-top: 4dp; }

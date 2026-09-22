@@ -715,6 +715,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         advanced_emulator_access: true,
         menu_entries: None,
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
+        achievements: Default::default(),
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: kit,

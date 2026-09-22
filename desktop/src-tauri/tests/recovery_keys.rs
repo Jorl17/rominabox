@@ -110,6 +110,7 @@ fn export_request(root: &Path, advanced: bool) -> ExportRequest {
         advanced_emulator_access: advanced,
         menu_entries: None,
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
+        achievements: Default::default(),
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: fixture_kit(root),

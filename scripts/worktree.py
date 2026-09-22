@@ -353,6 +353,56 @@ def environment() -> int:
     return 0
 
 
+# Where we keep a checkout's copy of the binaries built in it.
+OWN_BINARIES = "work/cli"
+
+
+def cli_path(root: Path) -> Path:
+    """Return the exporter binary to run from a script.
+
+    We share CARGO_TARGET_DIR between worktrees on purpose, so
+    `release/rominabox-cli` is shared too. Two checkouts build the same package
+    at the same path, and the last build replaces the other. An export from a
+    script could then come from another tree without any sign of it.
+
+    With `python3 scripts/worktree.py cli` we copy the binary just built into
+    this checkout's directory, and we prefer that copy in every script.
+    """
+    own = root / OWN_BINARIES / "rominabox-cli"
+    if own.is_file():
+        return own
+    return root / "desktop/src-tauri/target/release/rominabox-cli"
+
+
+def claim_cli() -> int:
+    """Build the exporter from this checkout and keep the result.
+
+    The build and the copy are one command on purpose. Between a separate
+    `cargo build` and a copy, a build from another checkout can replace the
+    binary on the shared path, and we would then copy that one. The result
+    is an exported game with a missing screen, and no error.
+    """
+    checkout = Path.cwd().resolve()
+    manifest = checkout / "desktop/src-tauri/Cargo.toml"
+    built = subprocess.run(
+        ["cargo", "build", "--release", "--bin", "rominabox-cli",
+         "--manifest-path", str(manifest)],
+        cwd=checkout,
+    )
+    if built.returncode != 0:
+        raise SystemExit("the exporter did not build")
+    built = checkout / "desktop/src-tauri/target/release/rominabox-cli"
+    if not built.is_file():
+        raise SystemExit(f"nothing built at {built}")
+    own = checkout / OWN_BINARIES
+    own.mkdir(parents=True, exist_ok=True)
+    destination = own / "rominabox-cli"
+    shutil.copyfile(built, destination)
+    destination.chmod(0o755)
+    print(f"{destination}")
+    return 0
+
+
 def show() -> int:
     for entry in worktrees():
         local = entry.get("local")
@@ -402,6 +452,11 @@ def main() -> int:
     commands.add_parser("adopt", help="set up a worktree that already exists")
     commands.add_parser("env", help="print the exports this worktree needs")
     commands.add_parser("list", help="every checkout and the resources it owns")
+    commands.add_parser(
+        "cli",
+        help="copy the exporter binary this checkout built into work/cli, so a "
+             "build in another checkout cannot replace the one the scripts run",
+    )
     gone = commands.add_parser("remove", help="remove a worktree and its data")
     gone.add_argument("suffix")
     gone.add_argument("--keep-data", action="store_true", help="leave its Application Support directory")
@@ -415,6 +470,8 @@ def main() -> int:
         return environment()
     if arguments.command == "list":
         return show()
+    if arguments.command == "cli":
+        return claim_cli()
     return remove(arguments.suffix, arguments.keep_data)
 
 
