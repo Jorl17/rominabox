@@ -1135,3 +1135,15 @@ select {
 .firmware-required .firmware-status {
   color: #c2241c;
 }
+/* The other half of the ready badge: what the step is waiting for. When we
+   disable Next, we must show why, where the tick would be, or the button
+   looks broken. */
+.waiting {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: #8a4b00;
+  font-weight: 700;
+  white-space: nowrap;
+}

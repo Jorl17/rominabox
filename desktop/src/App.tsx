@@ -9,6 +9,7 @@ import {
   LoaderCircle,
   Plus,
   Save,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import { SYSTEMS, formatBytes, inspectRom } from "./inspection";
@@ -754,10 +755,30 @@ export function App() {
                 <h1 ref={heading} tabIndex={-1}>
                   Game details
                 </h1>
-                {info && validDetails && (
+                {info && validDetails && !firmwareBlocked && (
                   <span className="ready">
                     <Check size={17} />
                     Ready to go
+                  </span>
+                )}
+                {/* We disable Next while a console requires a BIOS that the
+                    author has not added, and while the check for a BIOS is
+                    still running. We show different text for the two states,
+                    because a console whose BIOS is optional must not look as
+                    if it were missing one. */}
+                {info && validDetails && firmwareBlocked && (
+                  <span className="waiting" role="status">
+                    {firmwareAssessment === null ? (
+                      <>
+                        <LoaderCircle size={17} className="spin" />
+                        Checking what {systemName} needs
+                      </>
+                    ) : (
+                      <>
+                        <TriangleAlert size={17} />
+                        {systemName} needs a BIOS file
+                      </>
+                    )}
                   </span>
                 )}
               </div>

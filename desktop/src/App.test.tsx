@@ -303,6 +303,35 @@ describe("App workflow", () => {
     expect(progressButton("Export", progress).disabled).toBe(true);
   });
 
+  it("never says Ready to go beside a Next it has disabled", async () => {
+    await openDetails();
+    await act(async () => {
+      chooseConsole("pcecd");
+    });
+    const assessment = await assessWithCli("pcecd", []);
+    const required = assessment.notices.find(
+      (notice) => notice.kind === "required",
+    );
+    if (!required) throw new Error("the engine did not require a BIOS");
+    await waitForText(required.text);
+    expect(button("Next").disabled).toBe(true);
+    expect(container.textContent).not.toContain("Ready to go");
+    expect(container.textContent).toContain("needs a BIOS file");
+
+    // And the other way, so this is not simply "never say it": a console whose
+    // BIOS is optional is ready, and we must not say that it requires one.
+    await act(async () => {
+      chooseConsole("ps1");
+    });
+    const optional = assessment.notices.length ? await assessWithCli("ps1", []) : null;
+    if (!optional?.notices.some((notice) => notice.kind === "optional")) {
+      throw new Error("the engine did not explain the optional BIOS");
+    }
+    await waitForText("Ready to go");
+    expect(button("Next").disabled).toBe(false);
+    expect(container.textContent).not.toContain("needs a BIOS file");
+  });
+
   it("does not stop for a console whose BIOS is optional", async () => {
     await openDetails();
     await act(async () => {
