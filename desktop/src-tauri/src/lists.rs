@@ -93,6 +93,35 @@ pub fn page_size(design: &Path) -> Result<usize, String> {
     }
 }
 
+/// The vertical space of one row, so that a list shorter than a page ends
+/// where its content does.
+///
+/// In the design, the actions and the status are placed for a full page. These
+/// two numbers are also in the design's stylesheet. We declare them here so
+/// that we can read them in the exporter without parsing CSS.
+pub fn row_step(design: &Path) -> Result<usize, String> {
+    let path = design.join("design.json");
+    let Ok(text) = fs::read_to_string(&path) else {
+        return Ok(0);
+    };
+    let declared: serde_json::Value =
+        serde_json::from_str(&text).map_err(|error| format!("{}: {error}", path.display()))?;
+    let at = |key: &str| {
+        declared
+            .get("list")
+            .and_then(|list| list.get(key))
+            .and_then(|value| value.as_u64())
+            .unwrap_or(0) as usize
+    };
+    // Both or neither, because with a height and no gap we would move the
+    // actions up by slightly too little each time, which looks like a mistake.
+    let (height, gap) = (at("rowHeight"), at("rowGap"));
+    if height == 0 {
+        return Ok(0);
+    }
+    Ok(height + gap)
+}
+
 pub fn rml_text(value: &str) -> String {
     value
         .replace('&', "&amp;")
@@ -333,6 +362,7 @@ pub fn install(
 
     let template = row_template(design)?;
     let pages = page_size(design)?;
+    let step = row_step(design)?;
     let mut screens = String::new();
     let mut links = String::new();
     for list in lists {
@@ -341,8 +371,19 @@ pub fn install(
         }
         let rows = render_list(&list.screen.id, &template, &list.items, pages);
         let back = list.screen.back_label.clone().unwrap_or_else(|| "BACK".into());
+        // In the design, the actions are placed for a full page of rows. For a
+        // list with fewer rows, we move them up by the missing rows, so the
+        // screen ends where its content does. For a full list we do not move
+        // them.
+        let short = pages.saturating_sub(list.items.len().min(pages));
+        let lift = short * step;
+        let up = if lift > 0 {
+            format!(" style=\"margin-top:-{lift}dp;\"")
+        } else {
+            String::new()
+        };
         screens.push_str(&format!(
-            "<div id=\"{panel}\" class=\"screen-panel\" style=\"display:none;\">{rows}<div class=\"list-actions\">{toggle}<button class=\"menu-action list-back\" id=\"{id}-back\">{back}</button></div><div id=\"{id}-status\" class=\"list-status\"></div></div>",
+            "<div id=\"{panel}\" class=\"screen-panel\" style=\"display:none;\">{rows}<div class=\"list-actions\"{up}>{toggle}<button class=\"menu-action list-back\" id=\"{id}-back\">{back}</button></div><div id=\"{id}-status\" class=\"list-status\"{up}></div></div>",
             panel = list.screen.panel,
             id = list.screen.id,
             toggle = toggle_markup(&list.screen),

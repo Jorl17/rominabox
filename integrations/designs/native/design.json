@@ -37,7 +37,9 @@
     }
   },
   "list": {
-    "pageSize": 5
+    "pageSize": 5,
+    "rowHeight": 68,
+    "rowGap": 4
   },
   "binds": {
     "afterMs": 400,
