@@ -50,6 +50,28 @@ def owner(binary: Path) -> str | None:
     return asked.stdout.strip() if asked.returncode == 0 else None
 
 
+SOURCES = [
+    Path("desktop/src-tauri/src"),
+    Path("desktop/src-tauri/Cargo.toml"),
+    Path("desktop/crates"),
+]
+
+
+def newest_source() -> float:
+    """The time of the last change to the exporter's code."""
+    newest = 0.0
+    for relative in SOURCES:
+        path = ROOT / relative
+        if path.is_file():
+            newest = max(newest, path.stat().st_mtime)
+        elif path.is_dir():
+            for found in path.rglob("*.rs"):
+                newest = max(newest, found.stat().st_mtime)
+            for found in path.rglob("Cargo.toml"):
+                newest = max(newest, found.stat().st_mtime)
+    return newest
+
+
 def cli(build: bool = False) -> Path:
     """This checkout's command-line tool, checked as its own.
 
@@ -58,16 +80,18 @@ def cli(build: bool = False) -> Path:
     lock, so we would wait in the script for a compile in another checkout.
     In the scripts we expect a binary that is already built.
 
-    This check does not show that the binary is current with the source,
-    only which checkout it comes from. `where` prints a path compiled into
-    the binary, not a hash of the code, so a binary built here last week
-    still contains the path of this checkout. Pass `build=True` when it must
-    be current.
+    We rebuild it when the source is newer than the binary. `where` prints a
+    path compiled into a binary, from which we learn its checkout but not its
+    age. Without the mtime check we would return a binary built before a
+    merge, and in the menu state tests we would get a wrong answer, not an
+    error, for a design that is not in that binary.
     """
     mine = str((ROOT / "desktop/src-tauri").resolve())
 
-    if not build and owner(MINE) == mine:
+    stale = MINE.is_file() and MINE.stat().st_mtime < newest_source()
+    if not build and not stale and owner(MINE) == mine:
         return MINE
+    build = build or stale
 
     candidates = [target_dir() / "release/rominabox-cli"]
     local = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
