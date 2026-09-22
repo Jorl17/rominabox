@@ -630,6 +630,11 @@ where
     }
     check_cancelled(cancelled)?;
 
+    // A freshly built player still refers to the libraries it was linked
+    // against, and the frozen kit was already rewritten. In both cases we must
+    // point the game at the copies that we just staged next to it.
+    relocate_dependencies(&mach_objects, "@executable_path/../Frameworks", Some(cancelled))?;
+
     emit(progress, ExportStage::Sign, 0.70, "Signing the local app");
     for object in mach_objects.iter().rev() {
         run_command_cancellable(
@@ -895,6 +900,51 @@ fn stage_legal_materials(
     Ok(())
 }
 
+/// The libraries in `frameworks` that `roots` load, following the links of
+/// each dylib. `None` means that none of the roots was a Mach-O we could read,
+/// for example a fixture shell script, so we ship the whole inventory, as
+/// those tests expect. For a compiled player we return the closure, and we
+/// leave anything outside it in the kit and do not copy it into the game.
+fn framework_closure(
+    roots: &[PathBuf],
+    frameworks: &Path,
+) -> Result<Option<HashSet<String>>, ExportError> {
+    fn leaf(dependency: &str, frameworks: &Path) -> Option<String> {
+        let name = Path::new(dependency).file_name()?.to_str()?.to_string();
+        frameworks.join(&name).is_file().then_some(name)
+    }
+
+    let mut needed = HashSet::new();
+    let mut readable = false;
+    let mut queue = VecDeque::new();
+    for root in roots {
+        let dependencies = match macho_dependencies(root) {
+            Ok(dependencies) => dependencies,
+            Err(_) => continue,
+        };
+        readable = true;
+        for dependency in dependencies {
+            if let Some(name) = leaf(&dependency, frameworks) {
+                queue.push_back(name);
+            }
+        }
+    }
+    if !readable {
+        return Ok(None);
+    }
+    while let Some(name) = queue.pop_front() {
+        if !needed.insert(name.clone()) {
+            continue;
+        }
+        for dependency in macho_dependencies(&frameworks.join(&name))? {
+            if let Some(next) = leaf(&dependency, frameworks) {
+                queue.push_back(next);
+            }
+        }
+    }
+    Ok(Some(needed))
+}
+
 fn stage_frozen_dependencies(
     runtime_kit: &Path,
     destination: &Path,
@@ -921,6 +971,7 @@ fn stage_frozen_dependencies(
         ));
     }
     let source_directory = runtime_kit.join("Frameworks");
+    let closure = framework_closure(signed_objects, &source_directory)?;
     let mut declared = HashSet::new();
     for dependency in inventory.files {
         check_cancelled(cancelled)?;
@@ -936,6 +987,12 @@ fn stage_frozen_dependencies(
                 "dependencies",
                 format!("duplicate dependency filename: {}", dependency.name),
             ));
+        }
+        if closure
+            .as_ref()
+            .is_some_and(|needed| !needed.contains(&dependency.name))
+        {
+            continue;
         }
         let source = source_directory.join(&dependency.name);
         let actual = sha256_file(&source)?;
@@ -967,6 +1024,19 @@ fn stage_frozen_dependencies(
             return Err(ExportError::new(
                 "dependencies",
                 format!("undeclared file in frozen Frameworks: {name}"),
+            ));
+        }
+    }
+    if let Some(needed) = &closure {
+        let mut missing: Vec<_> = needed.difference(&declared).cloned().collect();
+        missing.sort();
+        if !missing.is_empty() {
+            return Err(ExportError::new(
+                "dependencies",
+                format!(
+                    "player links {} which the runtime dependency inventory does not list",
+                    missing.join(", ")
+                ),
             ));
         }
     }
