@@ -1,29 +1,46 @@
 /**
- * Whether we can make a game for a console, and what to show when we cannot.
+ * What to show for a console whose core is not on disk yet.
  *
- * In the builder we resolve every declared console against the prepared kit
- * and get back the ones that have a core. We report a console without one
- * before the person chooses a ROM, a title, an icon and a menu, not as a
- * refusal on the export step.
- *
- * We use this module everywhere, so the check and its wording exist once.
+ * In the picker we show only the console's name and do not grey the option.
+ * The one sentence is on the export step, as the warning before we download
+ * anything.
  */
 
-/** The answer from the kit, or nothing before there is one. */
+/** Consoles whose core is already on disk, or nothing if that is not known yet. */
 export type Usable = ReadonlySet<string>;
 
 /**
- * Can we make a game for this console?
+ * We never grey a console out in the picker.
  *
- * An empty answer means "not known", not "none". The browser build has no kit
- * to resolve against, and greying out every console in the picker because
- * there is no answer yet is worse than greying out none.
+ * An empty answer means we have not read the kit. For a console missing from
+ * an answer we fetch the core when we create the app.
  */
-export function canExport(usable: Usable, id: string): boolean {
-  return usable.size === 0 || usable.has(id);
+export function canExport(_usable: Usable, _id: string): boolean {
+  return true;
 }
 
-/** Three words for a console that has no core. Empty when it has one. */
-export function whyNot(usable: Usable, id: string): string {
-  return canExport(usable, id) ? "" : "no core yet";
+/** Nothing is appended to the console's name. */
+export function whyNot(_usable: Usable, _id: string): string {
+  return "";
+}
+
+/**
+ * Whether we will fetch the core of this console when we create the app.
+ *
+ * An empty answer is "not known", not "fetch everything". We fetch a core
+ * only when the kit has answered and this console was not among the cores on
+ * disk. `declared` is the other case in the exporter: for a console with no
+ * core at all there is nothing to download, and we must not promise one.
+ */
+export function willDownload(
+  usable: Usable,
+  id: string,
+  declared: boolean,
+): boolean {
+  return declared && usable.size > 0 && !usable.has(id);
+}
+
+/** The one sentence on the export step. Empty when we will fetch nothing. */
+export function downloadNotice(name: string, fetching: boolean): string {
+  return fetching ? `The ${name} core will be downloaded.` : "";
 }

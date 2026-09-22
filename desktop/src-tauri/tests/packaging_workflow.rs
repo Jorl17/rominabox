@@ -5,6 +5,7 @@ use rominabox_desktop::packaging::{
     MANAGED_DATA_DIRECTORIES,
 };
 use std::{
+    cell::Cell,
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -225,4 +226,72 @@ fn failed_export_removes_its_staging_directory() {
 
     assert_eq!(error.stage, "stage");
     assert_no_export_staging(&request.output_dir);
+}
+
+/// Write the Dreamcast core into the cache and count how often we request it.
+struct CountingFetch {
+    calls: Cell<usize>,
+    bytes: &'static [u8],
+}
+
+impl rominabox_desktop::packaging::CoreFetch for CountingFetch {
+    fn fetch_component(&self, cache: &Path, component: &str, target: &str) -> Result<(), String> {
+        let _ = target;
+        assert_eq!(component, "flycast");
+        self.calls.set(self.calls.get() + 1);
+        let system = rominabox_desktop::systems::find("dreamcast").unwrap();
+        let core = system.preferred_core().unwrap();
+        let filename = core.artifact().unwrap();
+        fs::create_dir_all(cache.join("cores")).unwrap();
+        fs::create_dir_all(cache.join("licenses")).unwrap();
+        fs::write(cache.join("cores").join(filename), self.bytes).unwrap();
+        fs::write(
+            cache.join("licenses").join(&core.license_file),
+            b"flycast-licence",
+        )
+        .unwrap();
+        Ok(())
+    }
+}
+
+fn dreamcast_request(root: &Path) -> rominabox_desktop::packaging::ExportRequest {
+    let mut request = export_request(root);
+    let rom = root.join("sonic.cdi");
+    fs::write(&rom, b"RIBdreamcast").unwrap();
+    request.rom = rom;
+    request.title = "Dreamcast Fetch".into();
+    request.system = "dreamcast".into();
+    request.core_cache = Some(root.join("core-cache"));
+    fs::create_dir_all(request.core_cache.as_ref().unwrap()).unwrap();
+    request
+}
+
+#[test]
+fn a_missing_core_is_fetched_before_the_game_is_built_and_not_again() {
+    let root = workspace();
+    let mut request = dreamcast_request(&root);
+    let fetch = CountingFetch {
+        calls: Cell::new(0),
+        bytes: b"flycast-bytes",
+    };
+    let cancelled = AtomicBool::new(false);
+    let first =
+        rominabox_desktop::packaging::export_game_fetching(&request, &cancelled, |_| {}, &fetch);
+    assert!(
+        fetch.calls.get() >= 1,
+        "export did not fetch the missing core before building: {first:?}"
+    );
+    let first = first.expect("the game is built after the core is fetched");
+    let embedded = fs::read(first.app_path.join("Contents/Resources/game-core.dylib")).unwrap();
+    assert_eq!(embedded, b"flycast-bytes");
+    let again = workspace();
+    request.output_dir = again.join("out");
+    let second =
+        rominabox_desktop::packaging::export_game_fetching(&request, &cancelled, |_| {}, &fetch);
+    assert!(second.is_ok(), "{second:?}");
+    assert_eq!(
+        fetch.calls.get(),
+        1,
+        "the second export fetched a core that was already kept"
+    );
 }

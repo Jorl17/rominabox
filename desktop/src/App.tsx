@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { SYSTEMS, formatBytes, inspectRom } from "./inspection";
 import * as bridge from "./bridge";
-import { canExport, whyNot } from "./consoles";
+import { canExport, downloadNotice, whyNot, willDownload } from "./consoles";
 import designs from "../designs.json";
 import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
@@ -428,6 +428,16 @@ export function App() {
     try {
       const value = await bridge.exportGame(exportRequest());
       setResult(value);
+      // The core is in the cache now. In a second export in this session we
+      // must not show that it will be downloaded.
+      if (systemId) {
+        setSupported((current) => {
+          if (current.size === 0) return current;
+          const next = new Set(current);
+          next.add(systemId);
+          return next;
+        });
+      }
     } catch (e) {
       fail(e);
     } finally {
@@ -493,6 +503,14 @@ export function App() {
       });
   };
   useEffect(() => {
+    // The browser walkthrough has no kit, so we supply the answer of the
+    // desktop command here: which consoles already have a core on disk.
+    if (bridge.native) return;
+    const prepared = (window as Window & { __ROMINABOX_PREPARED__?: string[] })
+      .__ROMINABOX_PREPARED__;
+    if (prepared) setSupported(new Set(prepared));
+  }, []);
+  useEffect(() => {
     if (!bridge.native) return;
     let disposed = false;
     const cleanups: (() => void)[] = [];
@@ -509,18 +527,14 @@ export function App() {
       .catch(fail);
     bridge.onExportProgress(setProgress).then(save).catch(fail);
     bridge.defaultDestination().then(setDestination).catch(fail);
+    // Which cores are already on disk. We fetch only on Create app, after we
+    // have told the author on the export step.
     bridge
-      .ensureCores()
-      .catch(() => undefined)
-      .finally(() => {
-        if (disposed) return;
-        bridge
-          .availableSystems()
-          .then((ids) => {
-            if (!disposed) setSupported(new Set(ids));
-          })
-          .catch(fail);
-      });
+      .availableSystems()
+      .then((ids) => {
+        if (!disposed) setSupported(new Set(ids));
+      })
+      .catch(fail);
     return () => {
       disposed = true;
       cleanups.forEach((fn) => fn());
@@ -633,6 +647,13 @@ export function App() {
       ),
   );
   const systemName = systemDefinition?.name || "Choose a console";
+  const systemId = systemDefinition?.id || draft.system;
+  const fetchingCore = willDownload(
+    supported,
+    systemId,
+    (systemDefinition?.cores.length ?? 0) > 0,
+  );
+  const coreNotice = downloadNotice(systemName, fetchingCore);
 
   const requirements = systemDefinition?.firmware || [];
   const asksFirmware = requirements.length > 0;
@@ -1449,14 +1470,7 @@ export function App() {
                       <span>Change</span>
                     </button>
                   </div>
-                  {!canExport(
-                    supported,
-                    systemDefinition?.id || draft.system,
-                  ) && (
-                    <p className="error">
-                      This build does not include the {systemName} core yet.
-                    </p>
-                  )}
+                  {coreNotice && <p className="note">{coreNotice}</p>}
                   {!bridge.native && (
                     <p className="note">
                       Export is available in the desktop app.
@@ -1542,11 +1556,7 @@ export function App() {
             <button
               className="primary"
               disabled={
-                !!busy ||
-                !bridge.native ||
-                !canExport(supported, systemDefinition?.id || draft.system) ||
-                !destination ||
-                firmwareBlocked
+                !!busy || !bridge.native || !destination || firmwareBlocked
               }
               onClick={packageGame}
             >
