@@ -1,0 +1,151 @@
+div { display: block; }
+body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size: 16dp; color: design(ink); background-color: design(background); }
+#screen { position: absolute; left: 0; top: 0; width: 960dp; height: 600dp; background-color: design(screen); }
+#spine { position: absolute; left: 0; top: 0; width: 8dp; height: 600dp; background-color: design(frame); z-index: 3; }
+
+/* An overlay is this design drawn over a running game. In the player we add
+ * `showing`, later `leaving`, and `overlay` on the body while the menu is
+ * closed. Its arrival, its exit and its position are defined here. */
+body.overlay { background-color: transparent; }
+body.overlay #screen { background-color: transparent; }
+body.overlay #spine, body.overlay #heading, body.overlay #footer,
+body.overlay #pause-panel, body.overlay #controls-panel,
+body.overlay #options-panel, body.overlay #disc-panel,
+body.overlay .screen-panel { display: none; }
+
+#splash { display: none; position: absolute; left: 0; top: 0; width: 960dp; height: 600dp; z-index: 100; background-color: design(background); opacity: 0; transition: opacity 0.1s linear-in-out; }
+#splash.showing { display: block; opacity: 1; }
+#splash.leaving { display: block; opacity: 0; transition: opacity design(overlay-leave-splash)s linear-in-out; }
+#splash-logo { position: absolute; right: 48dp; bottom: 36dp; width: 220dp; height: 220dp; }
+
+/* A thin strip along the top edge, like the short prompts of a disc console.
+ * It slides down into view and back up out of it. */
+.notice { position: absolute; right: 16dp; top: -44dp; width: 300dp; height: 32dp; z-index: 90; pointer-events: none; opacity: 0; line-height: 32dp; text-align: center; font-family: Silkscreen; font-size: 13dp; color: design(ink); background-color: design(surface); border-bottom: 2dp design(highlight); transition: top opacity 0.2s cubic-out; }
+body.overlay .notice.showing { opacity: 1; top: 0; }
+body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity design(overlay-leave-notice)s cubic-in; }
+
+#heading { position: absolute; top: 10dp; left: 24dp; width: 700dp; height: 28dp; line-height: 28dp; text-align: left; font-size: 22dp; color: design(ink); }
+
+/* Six blocks, two across and three down, with the picture next to the words.
+ * The picture area is 138dp tall because in the player we measure the game
+ * aspect, limit the height to 138 and write it on the parent of the picture.
+ * A shorter row would cut off the save picture. */
+#slots { position: absolute; left: 20dp; top: 46dp; width: 730dp; height: 492dp; }
+.slot { position: absolute; width: 360dp; height: 156dp; padding: 0; overflow: hidden; background-color: design(surface); color: design(ink); border-width: 1dp; border-color: design(rule); font-family: Silkscreen; text-align: left; }
+#slot-1, #slot-3, #slot-5 { left: 0; }
+#slot-2, #slot-4, #slot-6 { left: 368dp; }
+#slot-1, #slot-2 { top: 0; }
+#slot-3, #slot-4 { top: 164dp; }
+#slot-5, #slot-6 { top: 328dp; }
+.slot:hover { border-color: design(edge); }
+.slot.focused { border-color: design(ink); border-left-width: 6dp; border-left-color: design(highlight); }
+.slot.selected, .slot.selected:hover, .slot.selected.focused { background-color: design(focus); border-color: design(highlight); }
+.slot:active, .slot.selected:active { background-color: design(highlight); color: design(slot-label); }
+.slot-label { position: absolute; left: 248dp; top: 36dp; height: 24dp; font-size: 16dp; color: design(ink); }
+.slot.selected .slot-label { color: design(highlight); }
+.slot:active .slot-label, .slot.selected:active .slot-label { color: design(slot-label); }
+.slot-picture { position: absolute; left: 8dp; top: 8dp; width: 176dp; height: 138dp; background-color: design(picture); border-top: 1dp design(bevel-dark); border-left: 1dp design(bevel-dark); border-right: 1dp design(bevel-light); border-bottom: 1dp design(bevel-light); }
+.slot-image { width: 100%; height: 100%; }
+.slot.empty .slot-image { display: none; }
+.slot-state { position: absolute; left: 248dp; top: 78dp; height: 20dp; font-size: 13dp; color: design(muted); }
+.slot:active .slot-state { color: design(slot-label); }
+
+#actions { position: absolute; left: 766dp; top: 46dp; width: 176dp; height: 280dp; }
+#actions button { position: absolute; left: 0; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; }
+#resume { top: 0; }
+#save { top: 44dp; }
+#load { top: 88dp; }
+#disc { top: 132dp; }
+#actions #controls, #actions #options { top: 176dp; }
+#quit { top: 220dp; }
+
+#status { position: absolute; left: 24dp; top: 544dp; width: 700dp; text-align: left; font-size: 13dp; color: design(muted); }
+#footer { position: absolute; left: 24dp; bottom: 8dp; width: 912dp; height: 20dp; font-size: 13dp; color: design(edge); }
+
+#controller-scene { position: absolute; left: 0; top: 44dp; width: design(scene-width)dp; height: design(scene-height)dp; }
+#controller-image { position: absolute; left: 0; top: 0; width: design(scene-width)dp; height: design(scene-height)dp; }
+.control-leader { position: absolute; background-color: design(rule); }
+.control-leader.horizontal { height: 1dp; }
+.control-leader.vertical { width: 1dp; }
+.control-hit { position: absolute; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 1dp transparent; border-radius: design(marker-radius)dp; }
+.control-hit:hover { border-color: design(edge); border-width: 2dp; }
+.control-hit.focused { border-color: design(highlight); border-width: 2dp; }
+.control-callout { position: absolute; width: design(callout-width)dp; height: design(callout-height)dp; padding: 0; border-width: 1dp; border-color: design(rule); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
+.control-callout:hover { border-color: design(edge); }
+.control-callout.focused { border-left-width: 4dp; border-left-color: design(highlight); }
+
+/* Below the scene, in the band without callouts. The list opens upward from
+ * here and ends before the d-pad, so when a drag ends off the list, the
+ * button under the pointer still shows the hover state. */
+.control-picker { position: absolute; left: 24dp; top: 508dp; width: 320dp; height: 36dp; z-index: 50; }
+.control-picker-label { position: absolute; left: 0; top: -16dp; font-size: 11dp; color: design(muted); }
+.control-picker-current { position: absolute; left: 0; right: 0; top: 0; height: 32dp; font-family: Silkscreen; font-size: 13dp; line-height: 32dp; white-space: nowrap; text-align: left; padding-left: 10dp; border-width: 1dp; border-color: design(rule); background-color: design(surface); color: design(ink); }
+.control-picker-current:hover { border-color: design(edge); color: design(highlight); }
+.control-picker-current.focused { border-left-width: 4dp; border-left-color: design(highlight); }
+.control-picker-current:active { background-color: design(highlight); color: design(slot-label); border-color: design(highlight); }
+.control-picker-list { position: absolute; left: 0; right: 0; bottom: 100%; border-width: 1dp; border-color: design(highlight); background-color: design(surface); z-index: 50; display: block; }
+.control-picker-option { display: block; position: relative; height: 26dp; font-family: Silkscreen; font-size: 13dp; line-height: 26dp; white-space: nowrap; text-align: left; padding-left: 12dp; border-left: 4dp design(surface); background-color: design(surface); color: design(muted); }
+.control-picker-option + .control-picker-option { border-top: 1dp design(rule); }
+.control-picker-option:hover { color: design(ink); border-bottom: 2dp design(edge); }
+.control-picker-option.focused { color: design(ink); background-color: design(focus); border-left-color: design(highlight); }
+.control-picker-option:active { background-color: design(highlight); color: design(slot-label); border-left-color: design(ink); }
+.control-picker-option.selected { color: design(highlight); }
+.control-picker-option.selected:hover, .control-picker-option.selected.focused { color: design(highlight); }
+.control-picker-option.selected:active { color: design(slot-label); }
+
+.control-group { position: absolute; width: design(group-width)dp; height: design(group-height)dp; padding: 0; border-width: 1dp; border-color: design(rule); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
+.control-group:hover { border-color: design(edge); }
+.control-group.focused { border-left-width: 4dp; border-left-color: design(highlight); }
+.control-label { margin-left: 8dp; margin-top: 2dp; height: 18dp; font-size: 13dp; overflow: hidden; white-space: nowrap; }
+.control-assignment { margin-left: 8dp; font-size: 12dp; color: design(muted); white-space: nowrap; overflow: hidden; }
+.control-original { margin-right: 8dp; color: design(highlight); }
+#controls-actions { position: absolute; left: 360dp; top: 508dp; width: 420dp; height: 36dp; }
+#controls-actions button { position: absolute; top: 0; height: 32dp; line-height: 32dp; font-family: Silkscreen; font-size: 13dp; border-width: 1dp; text-align: center; }
+#controls-back { left: 0; width: 100dp; }
+#controls-reset { left: 112dp; width: 180dp; }
+#controls-cancel { left: 304dp; width: 110dp; }
+#controls-status { position: absolute; left: 24dp; top: 548dp; width: 700dp; font-size: 13dp; color: design(muted); text-align: left; }
+
+.menu-action { color: design(ink); background-color: design(surface); border-color: design(rule); }
+.menu-action:hover { background-color: design(highlight); color: design(slot-label); border-color: design(highlight); }
+.menu-action.focused { background-color: design(surface); color: design(ink); border-left-width: 4dp; border-left-color: design(highlight); }
+.menu-action:active { background-color: design(focus); color: design(highlight); border-color: design(ink); }
+.menu-action.disabled, .menu-action:disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
+
+@keyframes capture-pulse { from { border-color: design(highlight); } to { border-color: design(rule); } }
+.control-callout.capturing, .control-hit.capturing { animation: 0.55s capture-pulse infinite alternate; }
+
+/* One list for every screen with a list. We write the rows when we bundle
+ * the game, and no screen has a separate list style. */
+.screen-link { position: absolute; top: 10dp; right: 16dp; width: 140dp; height: 28dp; z-index: 2; font-family: Silkscreen; font-size: 12dp; line-height: 28dp; text-align: center; }
+.list { position: absolute; left: 24dp; top: 52dp; width: 700dp; }
+.list-row { display: block; position: relative; width: 100%; height: 48dp; margin: 0 0 4dp 0; padding: 0; background-color: design(surface); color: design(ink); border-width: 0 0 1dp 0; border-color: design(rule); font-family: Silkscreen; text-align: left; }
+.list-row:hover { border-color: design(edge); }
+.list-row.focused { border-left-width: 4dp; border-left-color: design(highlight); }
+.list-row.selected, .list-row.selected:hover, .list-row.selected.focused { background-color: design(focus); border-color: design(highlight); }
+.list-row:active { background-color: design(highlight); color: design(slot-label); }
+.list-row-icon { position: absolute; left: 8dp; top: 8dp; width: 32dp; height: 32dp; }
+.list-row-title { position: absolute; left: 52dp; top: 6dp; font-size: 14dp; color: design(ink); }
+.list-row-detail { position: absolute; left: 52dp; top: 26dp; font-size: 12dp; color: design(muted); }
+.list-row-state { position: absolute; right: 12dp; top: 16dp; font-size: 12dp; color: design(highlight); }
+.list-pager { position: absolute; left: 0; top: 272dp; width: 100%; height: 32dp; }
+.list-pager-prev, .list-pager-next, .list-pager-count { position: absolute; top: 0; height: 32dp; line-height: 32dp; background-color: design(surface); color: design(ink); border-width: 1dp; border-color: design(rule); font-family: Silkscreen; font-size: 13dp; text-align: center; }
+.list-pager-prev { left: 0; width: 64dp; }
+.list-pager-count { left: 72dp; width: 100dp; }
+.list-pager-next { left: 180dp; width: 64dp; }
+.list-pager-prev:hover, .list-pager-next:hover { background-color: design(highlight); color: design(slot-label); border-color: design(highlight); }
+.list-pager-prev.focused, .list-pager-next.focused { border-left-width: 4dp; border-left-color: design(highlight); }
+.list-actions { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; }
+.list-actions .menu-action { position: absolute; left: 0; width: 176dp; height: 36dp; font-family: Silkscreen; font-size: 14dp; line-height: 36dp; text-align: center; }
+.list-status { position: absolute; left: 24dp; top: 544dp; color: design(muted); font-size: 13dp; }
+
+.menu-index { position: absolute; left: 24dp; top: 56dp; width: 680dp; height: 420dp; }
+.option-entry { position: absolute; left: 0; width: 680dp; height: 52dp; line-height: 52dp; font-family: Silkscreen; font-size: 18dp; border-width: 0 0 1dp 0; border-color: design(rule); text-align: left; padding-left: 16dp; background-color: transparent; }
+.option-entry:hover { background-color: design(focus); color: design(ink); border-color: design(edge); }
+.option-entry.focused { border-left-width: 6dp; border-left-color: design(highlight); background-color: transparent; color: design(ink); }
+.option-entry:active { background-color: design(highlight); color: design(slot-label); }
+.options-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
+
+#disc-face { position: absolute; left: 250dp; top: 100dp; width: 280dp; height: 280dp; border-radius: 140dp; background-color: design(edge); border: 14dp design(highlight); }
+#disc-hole { position: absolute; left: 116dp; top: 116dp; width: 48dp; height: 48dp; border-radius: 24dp; background-color: design(background); }
+#disc-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }

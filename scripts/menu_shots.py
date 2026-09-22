@@ -143,7 +143,6 @@ def take(app: Path, name: str, script: list[str], output: Path,
 
 
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
-DESIGN = ROOT / "integrations/designs/native"
 # We build it here and check that it comes from this checkout, because every
 # worktree shares one cargo target, so the binary next to the manifest may be
 # out of date or from another checkout. See scripts/built.py.
@@ -173,6 +172,8 @@ def build_a_game(
     workspace: Path,
     system: str = "megadrive",
     settings: dict | None = None,
+    design: str = "native",
+    palette: str = "blue",
 ) -> Path:
     """Export a game from the tree as it is now, and return the app.
 
@@ -190,10 +191,18 @@ def build_a_game(
     shutil.copytree(KIT, kit, symlinks=True)
 
     # Copy the design as it is in this tree, not as when we froze the kit.
-    for document in DESIGN.iterdir():
+    # We read designs/<id> in the exporter. We also copy Native into menu-assets,
+    # because in one shot path we read the controller art from there.
+    package = ROOT / "integrations/designs" / design
+    if not package.is_dir():
+        raise SystemExit(f"no design package at {package}")
+    staged_design = kit / "designs" / design
+    staged_design.mkdir(parents=True, exist_ok=True)
+    for document in package.iterdir():
         if document.is_file():
-            shutil.copyfile(document, kit / "designs/native" / document.name)
-            shutil.copyfile(document, kit / "menu-assets" / document.name)
+            shutil.copyfile(document, staged_design / document.name)
+            if design == "native":
+                shutil.copyfile(document, kit / "menu-assets" / document.name)
     player = built_player()
     if player:
         shutil.copyfile(player, kit / "bin/retroarch")
@@ -208,8 +217,8 @@ def build_a_game(
         "system": system,
         "showMenu": True,
         "startAtMenu": True,
-        "theme": "native",
-        "palette": "blue",
+        "theme": design,
+        "palette": palette,
         "menuSounds": "off",
         "splash": False,
         "advancedEmulatorAccess": False,
@@ -247,6 +256,12 @@ def main() -> int:
         help="export a game from this ROM first, using the tree as it is now",
     )
     parser.add_argument("--system", default="megadrive", help="the console --rom is for")
+    parser.add_argument("--design", default="native", help="which design to export")
+    parser.add_argument("--palette", default="blue", help="which palette to export")
+    parser.add_argument(
+        "--only",
+        help="comma-separated shot names to take, instead of every declared shot",
+    )
     parser.add_argument("output", type=Path, nargs="?", default=ROOT / "work/menu-shots")
     parser.add_argument("--record", action="store_true", help="record what each shot looks like")
     parser.add_argument("--check", action="store_true", help="fail if a shot changed")
@@ -276,10 +291,18 @@ def main() -> int:
             workspace = ROOT / "work" / f"menu-shots-build-{len(exported)}"
             workspace.mkdir(parents=True, exist_ok=True)
             exported[key] = build_a_game(
-                arguments.rom, workspace, arguments.system, settings
+                arguments.rom, workspace, arguments.system, settings,
+                arguments.design, arguments.palette,
             )
             print(f"  built    {exported[key].name} {key if settings else ''}")
         return exported[key]
+
+    if arguments.only:
+        wanted = [name.strip() for name in arguments.only.split(",") if name.strip()]
+        unknown = [name for name in wanted if name not in shots]
+        if unknown:
+            raise SystemExit(f"no such shot(s): {', '.join(unknown)}")
+        shots = {name: shots[name] for name in wanted}
 
     failures: list[str] = []
     digests: dict[str, str] = {}

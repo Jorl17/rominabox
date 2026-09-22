@@ -9,10 +9,12 @@ without this script we would have to launch a game to see one.
     python3 scripts/menu_states.py --check      # every state still renders
 
 The states are in `scripts/fixtures/menu-states.json`, where we declare them
-once. A state is a small stylesheet that we append to the stylesheet of the
-design, never an edit to the markup. If we matched markup strings, we would
-have to change the generator and this tool together whenever an element
-changed, and we use console packages to avoid that kind of duplication.
+once. We draw every design in `desktop/designs.json` in every palette, and
+the digest key is `<design>/<palette>/<state>`. A state that is the same in
+two designs is an error. A state is a small stylesheet that we append to the
+stylesheet of the design, never an edit to the markup. If we matched markup
+strings, we would have to change the generator and this tool together
+whenever an element changed, and we use console packages to avoid that.
 
 Each state lists the selectors it depends on, and we refuse to render a
 state when any of its selectors are missing from the document. So after
@@ -41,7 +43,6 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILT_PREVIEW = ROOT / "work/experiments/rml-preview/build/rml-preview"
 STAGED_PREVIEW = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
 PREVIEW = BUILT_PREVIEW if BUILT_PREVIEW.exists() else STAGED_PREVIEW
-DESIGN = ROOT / "integrations/designs/native"
 ARTWORK = ROOT / "desktop/assets/controllers"
 STATES = ROOT / "scripts/fixtures/menu-states.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-state-digests.json"
@@ -68,14 +69,33 @@ def declared_states() -> dict[str, dict]:
     return json.loads(STATES.read_text())["states"]
 
 
+def declared_designs() -> list[str]:
+    """Every design we can export a game with, in registry order.
+
+    The designs come from the same file as the palettes, so we render a new
+    design there with no change here. That is the reason for more than one
+    design, because we write the check once for all of them.
+    """
+    declared = json.loads((ROOT / "desktop/designs.json").read_text())
+    return [entry["id"] for entry in declared["designs"]]
+
+
+def design_dir(design: str) -> Path:
+    return ROOT / "integrations/designs" / design
+
+
 def stage(system: str, workspace: Path, variant: str | None = None,
-          palette: str = "blue") -> Path:
+          palette: str = "blue", design: str | None = None) -> Path:
     """Stage the design and the generated scene for a console, as in an export.
 
     Source and destination are separate directories because in the exporter we
     copy artwork from one to the other, and with both in one directory we
     would copy each file onto itself, which truncates it.
     """
+    design = design or declared_designs()[0]
+    package = design_dir(design)
+    if not package.is_dir():
+        raise SystemExit(f"design '{design}' is declared but {package} is not a directory")
     source = workspace / "source"
     staged = workspace / "staged"
     for directory in (source, staged):
@@ -83,7 +103,7 @@ def stage(system: str, workspace: Path, variant: str | None = None,
     # The whole design package, because that is what a design is. With a
     # separate list of its documents here, we could stage something else than
     # the kit and render the tests in a different frame from the one in the kit.
-    for document in DESIGN.iterdir():
+    for document in package.iterdir():
         if document.is_file():
             shutil.copyfile(document, source / document.name)
             shutil.copyfile(document, staged / document.name)
@@ -468,15 +488,21 @@ def main() -> int:
     missing: list[str] = []
     digests: dict[str, str] = {}
     rendered = 0
-    for palette in palettes():
-        workspace = ROOT / f"work/menu-states-staging/{palette}"
-        shutil.rmtree(workspace, ignore_errors=True)
-        staging = stage(arguments.system, workspace, arguments.variant, palette)
-        document = (staging / "menu.rml").read_text()
-        print(f"\n{palette}")
-        rendered += render_palette(
-            palette, staging, document, arguments, digests, missing
-        )
+    # We draw every state of every design in every palette. The key contains all
+    # three, so we record a second design next to the first, not in its place.
+    for design in declared_designs():
+        print(f"\n{design}")
+        for palette in palettes():
+            workspace = ROOT / "work" / "menu-states-staging" / design / palette
+            shutil.rmtree(workspace, ignore_errors=True)
+            staging = stage(
+                arguments.system, workspace, arguments.variant, palette, design
+            )
+            document = (staging / "menu.rml").read_text()
+            print(f"  {palette}")
+            rendered += render_palette(
+                design, palette, staging, document, arguments, digests, missing
+            )
 
     return finish(arguments, digests, missing, rendered)
 
@@ -496,13 +522,13 @@ def palettes() -> list[str]:
     return [entry["id"] for entry in declared["palettes"]]
 
 
-def render_palette(palette, staging, document, arguments, digests, missing) -> int:
-    """Draw every declared state in one colour scheme."""
+def render_palette(design, palette, staging, document, arguments, digests, missing) -> int:
+    """Draw every declared state in one design and one colour scheme."""
     rendered = 0
-    output = arguments.output / palette
+    output = arguments.output / design / palette
     output.mkdir(parents=True, exist_ok=True)
     for name, state in declared_states().items():
-        key = f"{palette}/{name}"
+        key = f"{design}/{palette}/{name}"
         resolved = {i: resolve(document, i) for i in state["set"]}
         absent = [i for i, found in resolved.items() if found is None]
         if absent:
@@ -543,26 +569,46 @@ def render_palette(palette, staging, document, arguments, digests, missing) -> i
             continue
         digests[key] = hashlib.sha256(target.read_bytes()).hexdigest()[:16]
         rendered += 1
-        print(f"  {name:<26}{state['describes']}")
+        print(f"    {name:<26}{state['describes']}")
     return rendered
 
 
-def finish(arguments, digests, missing, rendered) -> int:
-    """Report twins, refusals and digest drift across every palette drawn."""
+def same_picture(digests: dict[str, str]) -> tuple[list[list[str]], list[str]]:
+    """Pictures that should differ and do not.
 
-    # Two states with the same picture are one state with two names. Hover,
-    # keyboard focus and held-down must differ, so that a player using the
-    # arrow keys can see which option they would choose with a press.
-    same: dict[tuple[str, str], list[str]] = {}
-    for key, value in digests.items():
-        palette, name = key.split("/", 1)
-        same.setdefault((palette, value), []).append(key)
-    twins = [names for names in same.values() if len(names) > 1]
+    We ask two separate questions, because the causes differ. When two
+    states in one design give the same picture, the player cannot tell hover
+    from keyboard focus or a held button. When two designs give the same
+    picture for one state, the second design is not a design.
+    """
+    within: dict[tuple[str, str, str], list[str]] = {}
+    across: dict[tuple[str, str, str], list[str]] = {}
+    for key, digest in digests.items():
+        design, palette, state = key.split("/", 2)
+        within.setdefault((design, palette, digest), []).append(key)
+        across.setdefault((palette, state, digest), []).append(design)
+    twins = [names for names in within.values() if len(names) > 1]
+    collided = []
+    for (palette, state, _digest), designs in sorted(across.items()):
+        unique = sorted(set(designs))
+        if len(unique) > 1:
+            collided.append(
+                f"{palette}/{state}: {', '.join(unique)} draw the same picture"
+            )
+    return twins, collided
+
+
+def finish(arguments, digests, missing, rendered) -> int:
+    """Report twins, refusals and digest drift across every design drawn."""
+
+    twins, collided = same_picture(digests)
     for names in twins:
         print(
             f"  IDENTICAL {', '.join(sorted(names))}: the same picture",
             file=sys.stderr,
         )
+    for line in collided:
+        print(f"  SAME DESIGN {line}", file=sys.stderr)
 
     if missing:
         print(
@@ -579,6 +625,24 @@ def finish(arguments, digests, missing, rendered) -> int:
             "design draws no difference between them — which is the defect, "
             "because the player cannot see one either — or they are the same "
             "state declared twice.",
+            file=sys.stderr,
+        )
+        return 1
+
+    if len(declared_designs()) < 2:
+        print(
+            "\nonly one design is declared, so nothing compared two designs. "
+            "A state that renders once proves nothing about the second one.",
+            file=sys.stderr,
+        )
+        return 1
+
+    if collided:
+        print(
+            f"\n{len(collided)} state(s) render identically across designs. "
+            "The same palette and the same state must not come out the same "
+            "picture: a second design that draws the first one has not changed "
+            "what a menu is.",
             file=sys.stderr,
         )
         return 1

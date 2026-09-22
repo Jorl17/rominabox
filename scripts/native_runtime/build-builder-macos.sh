@@ -55,7 +55,17 @@ for asset in $controller_pngs CONTROLLERS.txt; do
 done
 # We give Tauri this directory as the runtime resource. Refresh the authored
 # menu and controller assets without freezing or rebuilding the runtime kit.
-cp -R "$menu_source/." "$menu_assets/"
+# We copy every design, because in the staleness check we go through
+# integrations/designs and reject any design that is not in the kit.
+# Then we copy the controller art into the native directory, which is where
+# we keep that art in the kit.
+for design in "$designs_root"/*; do
+  [ -d "$design" ] || continue
+  name=$(basename "$design")
+  dest="$root/desktop/src-tauri/resources/runtime/designs/$name"
+  mkdir -p "$dest"
+  cp -R "$design/." "$dest/"
+done
 for asset in $controller_pngs; do
   cp -p "$controller_source/$asset" "$menu_assets/$asset"
 done
