@@ -207,6 +207,95 @@ fn screen_declarations(design: &Path) -> Result<String, String> {
     Ok(text)
 }
 
+/// Everything declared in a design by name, its colours and its geometry.
+///
+/// A design contains `design(surface)` where a colour goes, and
+/// `design(scene-width)dp` where a size goes. We take the value
+/// from the chosen palette, or from the `tokens` of the design when the
+/// palette does not have it, so a design may have extra colours whose names
+/// are not in this code.
+///
+/// We substitute the values into the rules of the design. Nothing goes after
+/// the stylesheet of the design, because appended rules with equal
+/// specificity would override the selectors of the design, such as the
+/// separate hover, keyboard focus and pressed styles of the picker.
+fn design_tokens(
+    design: &Path,
+    palette: &Palette,
+) -> Result<std::collections::BTreeMap<String, String>, String> {
+    let mut tokens = std::collections::BTreeMap::new();
+    // The values of the design first, so a palette may override any of them.
+    if let Ok(text) = fs::read_to_string(design.join("design.json")) {
+        let declared: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| e.to_string())?;
+        if let Some(own) = declared.get("tokens").and_then(|v| v.as_object()) {
+            for (name, value) in own {
+                if let Some(value) = value.as_str() {
+                    tokens.insert(name.clone(), value.to_string());
+                }
+            }
+        }
+    }
+    let m = scene_metrics(design)?;
+    for (name, value) in [
+        ("scene-width", m.scene_width),
+        ("scene-height", m.scene_height),
+        ("marker-diameter", m.marker),
+        ("marker-radius", m.marker / 2),
+        ("callout-width", m.callout_width),
+        ("callout-height", m.callout_height),
+        ("group-width", m.group_width),
+        ("group-height", m.group_height),
+    ] {
+        tokens.insert(name.to_string(), value.to_string());
+    }
+    for (name, value) in [
+        ("screen", &palette.screen),
+        ("background", &palette.background),
+        ("surface", &palette.surface),
+        ("picture", &palette.picture),
+        ("edge", &palette.edge),
+        ("highlight", &palette.highlight),
+        ("muted", &palette.muted),
+        ("focus", &palette.focus),
+    ] {
+        tokens.insert(name.to_string(), value.clone());
+    }
+    Ok(tokens)
+}
+
+/// Put the colours into the rules of the design.
+///
+/// The result is the stylesheet of the design with other characters in its
+/// values, with the same rules and selectors in the same order. We append
+/// nothing, so nothing can override the rules of the design.
+fn substitute_tokens(
+    css: &str,
+    tokens: &std::collections::BTreeMap<String, String>,
+) -> Result<String, String> {
+    let mut out = String::with_capacity(css.len());
+    let mut rest = css;
+    while let Some(at) = rest.find("design(") {
+        out.push_str(&rest[..at]);
+        let after = &rest[at + "design(".len()..];
+        let close = after
+            .find(')')
+            .ok_or_else(|| "a design( token is never closed".to_string())?;
+        let name = after[..close].trim();
+        let value = tokens.get(name).ok_or_else(|| {
+            format!(
+                "the stylesheet asks for design({name}), which the design does \
+                 not declare and no palette names. Declared: {}",
+                tokens.keys().cloned().collect::<Vec<_>>().join(", ")
+            )
+        })?;
+        out.push_str(value);
+        rest = &after[close + 1..];
+    }
+    out.push_str(rest);
+    Ok(out)
+}
+
 pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
     let declaration = design.join("design.json");
     let Ok(text) = fs::read_to_string(&declaration) else {
@@ -297,38 +386,11 @@ pub fn prepare_theme_assets(
     )
     .map_err(|e| format!("Could not write the design's declarations: {e}"))?;
     let mut css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
-    css.push_str(&scene_metrics_rules(source)?);
-    css.push_str(&format!(r#"
-body {{ background-color: {background}; }}
-#screen {{ background-color: {screen}; border-color: {edge}; }}
-#heading, #status {{ color: {highlight}; }}
-.slot {{ background-color: {surface}; border-color: {edge}; }}
-.slot.focused, .slot:hover {{ border-color: #ffffff; }}
-.slot.selected, .slot.selected:hover, .slot.selected.focused {{ border-color: {highlight}; }}
-.slot:active, .slot.selected:active {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
-.slot.selected .slot-label {{ color: {highlight}; }}
-.slot-label {{ background-color: {surface}; }}
-.slot-picture {{ background-color: {picture}; border-top-color: {background}; border-left-color: {background}; border-right-color: {edge}; border-bottom-color: {edge}; }}
-.slot-state {{ color: {muted}; }}
-#footer {{ color: #ffffff; }}
-#screen .menu-action {{ background-color: {surface}; color: #ffffff; border-color: {edge}; }}
-#screen .menu-action:hover, #screen .menu-action.focused {{ background-color: {highlight}; color: {surface}; border-color: #ffffff; }}
-#screen .menu-action:active {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
-#screen .menu-action.disabled, #screen .menu-action:disabled {{ background-color: {background}; color: {edge}; border-color: {surface}; }}
-.control-callout, .control-group {{ background-color: {surface}; border-color: {edge}; }}
-.control-picker-current {{ background-color: {surface}; border-color: {edge}; }}
-.control-picker-list {{ background-color: {surface}; border-color: {highlight}; }}
-.control-picker-option {{ background-color: {surface}; color: {muted}; }}
-.control-picker-option:hover, .control-picker-option.focused {{ background-color: {focus}; color: #ffffff; }}
-.control-picker-option.selected {{ color: {highlight}; }}
-.control-picker-label {{ color: {muted}; }}
-.control-callout:hover, .control-group:hover, .control-hit:hover {{ border-color: #ffffff; }}
-.control-callout.focused, .control-group.focused {{ background-color: {focus}; border-color: {highlight}; }}
-.control-hit.focused {{ border-color: {highlight}; }}
-.control-original, #controls-status {{ color: {highlight}; }}
-.control-assignment {{ color: {muted}; }}
-@keyframes capture-pulse {{ from {{ border-color: {highlight}; }} to {{ border-color: transparent; }} }}
-"#,background=palette.background,screen=palette.screen,edge=palette.edge,highlight=palette.highlight,surface=palette.surface,focus=palette.focus,picture=palette.picture,muted=palette.muted));
+    // The colours of the design, in the rules of the design. We append nothing,
+    // because a palette contains values and no styles. Appended rules would
+    // declare selectors of the design again and, coming later with equal
+    // specificity, override them.
+    css = substitute_tokens(&css, &design_tokens(source, &palette)?)?;
     if let Some(image_path) = background {
         let image = crate::icons::read_image(image_path).map_err(|e| e.to_string())?;
         image
