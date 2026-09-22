@@ -77,6 +77,26 @@ static void move_to_id(const char *id)
    rib_rmlui_pointer_move(x, y);
 }
 
+// Press on one element and release somewhere else. People do this: they put
+// the button down, change their mind, slide off and let go. Nothing should
+// happen.
+static void press_then_release_at(const char *id, int x, int y)
+{
+   int from_x = 0;
+   int from_y = 0;
+   CHECK(rib_rmlui_element_center(id, &from_x, &from_y), "element has a hit centre");
+   rib_rmlui_pointer_move(from_x, from_y);
+   rib_rmlui_pointer_button(true);
+   rib_rmlui_pointer_move(x, y);
+   rib_rmlui_pointer_button(false);
+}
+
+static void drain_actions(void)
+{
+   while (rib_rmlui_take_action() != RIB_RMLUI_ACTION_NONE)
+      ;
+}
+
 int main(int argc, char **argv)
 {
    const char *assets = argc > 1 ? argv[1] : nullptr;
@@ -138,8 +158,14 @@ int main(int argc, char **argv)
    const int second = rib_rmlui_take_action();
    CHECK(first == RIB_RMLUI_ACTION_SAVE,
          "mailbox preserves the first click");
-   CHECK(second == RIB_RMLUI_ACTION_CONTROLS,
+   // Changing screen has no separate action. We pass the requested screen
+   // next to one shared action, so declaring a screen never adds to the
+   // enum. This test is mainly about the order, and it also checks that the
+   // id arrived.
+   CHECK(second == RIB_RMLUI_ACTION_SHOW_SCREEN,
          "mailbox preserves the following click");
+   CHECK(std::string(rib_rmlui_requested_screen()) == "controls",
+         "the screen asked for travels with the action");
    CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
          "mailbox is empty after both intents");
 
@@ -269,6 +295,73 @@ int main(int argc, char **argv)
       CHECK(!rib_rmlui_element_center(
             "controls-device-option-megadrive6", &image_x, &image_y),
             "picker options are export markup, not created by the bridge");
+   }
+
+   // Letting go somewhere else must not press the button.
+   //
+   // In the recorded interaction scenario we press and release at the same
+   // point, which is the easy half. This test covers the other half.
+   {
+      // Earlier checks can leave the controls screen up, where SAVE is hidden
+      // and nothing can be clicked, so we set the screen explicitly.
+      rib_rmlui_show_screen("pause");
+      drain_actions();
+      press_then_release_at("save", 4, 4);
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+            "pressing a button and releasing off it does nothing");
+
+      // The other half, to show that this does not pass because clicks have
+      // stopped working: a press and release on the same button still acts.
+      drain_actions();
+      click_id("save");
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SAVE,
+            "pressing and releasing on a button still presses it");
+
+      // Sliding off and back on is a press, because the release happens on the
+      // element where the press began.
+      drain_actions();
+      {
+         int x = 0;
+         int y = 0;
+         CHECK(rib_rmlui_element_center("save", &x, &y), "element has a hit centre");
+         rib_rmlui_pointer_move(x, y);
+         rib_rmlui_pointer_button(true);
+         rib_rmlui_pointer_move(4, 4);
+         rib_rmlui_pointer_move(x, y);
+         rib_rmlui_pointer_button(false);
+      }
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SAVE,
+            "sliding off a button and back on still presses it");
+      drain_actions();
+   }
+
+   // Every intent that we can queue in the menu plays a sound, unless we chose
+   // silence for it on purpose, so an action added later cannot be silent
+   // without a test failure. Changing screen, for example, must still play
+   // the confirm cue of the menu.
+   {
+      const int silent[] = {
+         RIB_RMLUI_ACTION_NONE,
+         RIB_RMLUI_ACTION_SELECT_SLOT_1, RIB_RMLUI_ACTION_SELECT_SLOT_2,
+         RIB_RMLUI_ACTION_SELECT_SLOT_3, RIB_RMLUI_ACTION_SELECT_SLOT_4,
+         RIB_RMLUI_ACTION_SELECT_SLOT_5, RIB_RMLUI_ACTION_SELECT_SLOT_6,
+      };
+      for (int action = RIB_RMLUI_ACTION_NONE;
+            action <= RIB_RMLUI_ACTION_SHOW_SCREEN; ++action)
+      {
+         bool expected_silent = false;
+         for (int quiet : silent)
+            if (quiet == action)
+               expected_silent = true;
+         const bool is_silent =
+            rib_rmlui_action_sound(action) == RIB_MENU_SOUND_NONE;
+         CHECK(is_silent == expected_silent,
+               "every intent is audible unless silence was chosen for it");
+      }
+      CHECK(rib_rmlui_action_sound(RIB_RMLUI_ACTION_SHOW_SCREEN)
+            == RIB_MENU_SOUND_OK, "changing screen is confirmed, not silent");
+      CHECK(rib_rmlui_action_sound(RIB_RMLUI_ACTION_CONTROLS_BACK)
+            == RIB_MENU_SOUND_CANCEL, "leaving a screen cancels, not confirms");
    }
 
    rib_rmlui_shutdown();
