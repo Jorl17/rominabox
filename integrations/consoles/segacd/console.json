@@ -15,8 +15,15 @@
       "m3u"
     ],
     "category": "disc",
-    "recognizeOnly": [
-      "m3u"
+    "sheets": [
+      {
+        "extension": "cue",
+        "parser": "cue"
+      },
+      {
+        "extension": "m3u",
+        "parser": "playlist"
+      }
     ]
   },
   "recognition": {},

@@ -181,6 +181,140 @@ fn gdi_track(line: &str) -> Option<(String, &str)> {
     (!name.is_empty()).then_some((name, track_type))
 }
 
+/// Every file a sheet lists, in the order in which the core opens them.
+///
+/// We read GD-ROM tracks with `gdi_track` for identification. When
+/// collecting, we read every track with it, including audio, because the
+/// game does not start in Flycast when a named file is missing. With one
+/// reader, we parse quoted names the same way in both places.
+pub fn sheet_references(parser: crate::systems::SheetParser, text: &str) -> Result<Vec<PathBuf>, String> {
+    match parser {
+        crate::systems::SheetParser::Cue => cue_file_references(text),
+        crate::systems::SheetParser::Gdi => gdi_file_references(text),
+        crate::systems::SheetParser::Playlist => playlist_references(text),
+        crate::systems::SheetParser::Toc => toc_file_references(text),
+    }
+}
+
+fn gdi_file_references(text: &str) -> Result<Vec<PathBuf>, String> {
+    let mut lines = text.lines();
+    let header = lines.next().unwrap_or("").trim();
+    let count: usize = header.parse().map_err(|_| {
+        "GDI sheet does not start with a track count.".to_string()
+    })?;
+    let mut references = Vec::new();
+    for line in lines {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let Some((name, _)) = gdi_track(line) else {
+            return Err(format!(
+                "GDI sheet has a track line that could not be read: {line}"
+            ));
+        };
+        references.push(PathBuf::from(name.replace('\\', "/")));
+    }
+    if references.len() != count {
+        return Err(format!(
+            "GDI sheet says {count} tracks but names {}",
+            references.len()
+        ));
+    }
+    Ok(references)
+}
+
+fn playlist_references(text: &str) -> Result<Vec<PathBuf>, String> {
+    let mut references = Vec::new();
+    for (index, raw) in text.lines().enumerate() {
+        let mut line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix('"') {
+            line = rest.strip_suffix('"').ok_or_else(|| {
+                format!(
+                    "invalid playlist entry on line {}: missing closing quote",
+                    index + 1
+                )
+            })?;
+        }
+        if line.is_empty() {
+            return Err(format!(
+                "invalid playlist entry on line {}: filename is empty",
+                index + 1
+            ));
+        }
+        references.push(PathBuf::from(line.replace('\\', "/")));
+    }
+    Ok(references)
+}
+
+fn toc_file_references(text: &str) -> Result<Vec<PathBuf>, String> {
+    let mut references = Vec::new();
+    for (index, raw) in text.lines().enumerate() {
+        let line = raw.split("//").next().unwrap_or(raw).trim();
+        if line.is_empty() {
+            continue;
+        }
+        // DATAFILE and AUDIOFILE are the cdrdao names for FILE. We test
+        // longer keywords first, so we handle FILE without a special case.
+        let rest = strip_ascii_keyword(line, "DATAFILE")
+            .or_else(|| strip_ascii_keyword(line, "AUDIOFILE"))
+            .or_else(|| strip_ascii_keyword(line, "FILE"));
+        let Some(rest) = rest else {
+            continue;
+        };
+        let value = quoted_or_token(rest.trim_start());
+        if value.is_empty() {
+            return Err(format!(
+                "invalid TOC file entry on line {}: filename is empty",
+                index + 1
+            ));
+        }
+        references.push(PathBuf::from(value.replace('\\', "/")));
+    }
+    Ok(references)
+}
+
+fn cue_file_references(cue: &str) -> Result<Vec<PathBuf>, String> {
+    let mut references = Vec::new();
+    for (index, raw_line) in cue.lines().enumerate() {
+        let line = raw_line.trim_start();
+        let Some(rest) = strip_ascii_keyword(line, "FILE") else {
+            continue;
+        };
+        let rest = rest.trim_start();
+        let value = if let Some(quoted) = rest.strip_prefix('"') {
+            let end = quoted.find('"').ok_or_else(|| {
+                format!(
+                    "invalid CUE FILE entry on line {}: missing closing quote",
+                    index + 1
+                )
+            })?;
+            &quoted[..end]
+        } else {
+            rest.split_ascii_whitespace().next().unwrap_or_default()
+        };
+        if value.is_empty() {
+            return Err(format!(
+                "invalid CUE FILE entry on line {}: filename is empty",
+                index + 1
+            ));
+        }
+        references.push(PathBuf::from(value.replace('\\', "/")));
+    }
+    Ok(references)
+}
+
+pub(crate) fn strip_ascii_keyword<'a>(line: &'a str, keyword: &str) -> Option<&'a str> {
+    let prefix = line.get(..keyword.len())?;
+    if !prefix.eq_ignore_ascii_case(keyword) {
+        return None;
+    }
+    let rest = &line[keyword.len()..];
+    rest.starts_with(char::is_whitespace).then_some(rest)
+}
+
 fn next_field(text: &str) -> Option<(&str, &str)> {
     let text = text.trim_start();
     if text.is_empty() {

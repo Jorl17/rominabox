@@ -11,11 +11,39 @@
     "extensions": [
       "cue",
       "chd",
-      "m3u"
+      "m3u",
+      "ccd",
+      "toc"
     ],
     "category": "disc",
-    "recognizeOnly": [
-      "m3u"
+    "sheets": [
+      {
+        "extension": "cue",
+        "parser": "cue"
+      },
+      {
+        "extension": "m3u",
+        "parser": "playlist"
+      },
+      {
+        "extension": "toc",
+        "parser": "toc"
+      }
+    ],
+    "companions": [
+      {
+        "extension": "sbi"
+      },
+      {
+        "when": "ccd",
+        "extension": "img",
+        "required": true
+      },
+      {
+        "when": "ccd",
+        "extension": "sub",
+        "required": true
+      }
     ]
   },
   "recognition": {},

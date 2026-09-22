@@ -9,9 +9,21 @@
   "content": {
     "extensions": [
       "iso",
-      "chd"
+      "chd",
+      "cue",
+      "m3u"
     ],
-    "category": "disc"
+    "category": "disc",
+    "sheets": [
+      {
+        "extension": "cue",
+        "parser": "cue"
+      },
+      {
+        "extension": "m3u",
+        "parser": "playlist"
+      }
+    ]
   },
   "recognition": {},
   "metadata": {

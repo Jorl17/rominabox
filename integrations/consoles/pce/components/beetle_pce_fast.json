@@ -13,9 +13,11 @@
     "file": "beetle_pce_fast.txt"
   },
   "capabilities": [
+    "ccd",
     "chd",
     "cue",
-    "m3u"
+    "m3u",
+    "toc"
   ],
   "provenance": {
     "origin": "libretro-buildbot",

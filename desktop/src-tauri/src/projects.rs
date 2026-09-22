@@ -215,7 +215,7 @@ impl ProjectSettings {
 
 pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult, String> {
     validate_settings(&request.settings)?;
-    let content = content::collect(&request.settings.rom)?;
+    let content = content::collect_for(&request.settings.rom, Some(&request.settings.system))?;
     refuse_existing(&request.archive_path, "project archive")?;
     let parent = request
         .archive_path

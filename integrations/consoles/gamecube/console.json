@@ -9,9 +9,16 @@
     "extensions": [
       "gcm",
       "rvz",
-      "iso"
+      "iso",
+      "m3u"
     ],
-    "category": "disc"
+    "category": "disc",
+    "sheets": [
+      {
+        "extension": "m3u",
+        "parser": "playlist"
+      }
+    ]
   },
   "recognition": {},
   "metadata": {

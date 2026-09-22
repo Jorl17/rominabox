@@ -12,7 +12,8 @@
 pub mod model;
 
 use model::{
-    Console, ControllerProfile, CoreComponent, Presentation, CONTROL_IDS, SCHEMA_VERSION,
+    Console, ControllerProfile, CoreComponent, Presentation, SheetParser, CONTROL_IDS,
+    SCHEMA_VERSION,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -308,6 +309,9 @@ impl Catalog {
     /// than one file.
     fn validate(&self, problems: &mut Vec<Diagnostic>) {
         let mut aliases: BTreeMap<String, String> = BTreeMap::new();
+        // Each extension has one parser. Two consoles may share `cue`, but we
+        // read the track names in a cue sheet the same way for both.
+        let mut parsers: BTreeMap<String, (String, SheetParser)> = BTreeMap::new();
 
         for (id, entry) in &self.consoles {
             let console = &entry.console;
@@ -320,6 +324,76 @@ impl Catalog {
                     "content.extensions",
                     "a console must declare at least one content extension",
                 ));
+            }
+            for sheet in &console.content.sheets {
+                if !console
+                    .content
+                    .extensions
+                    .iter()
+                    .any(|extension| extension.eq_ignore_ascii_case(&sheet.extension))
+                {
+                    problems.push(Diagnostic::new(
+                        "content.sheet_not_recognised",
+                        package,
+                        "content.sheets",
+                        format!(
+                            "{} is followed as a sheet but is not an extension this console recognises",
+                            sheet.extension
+                        ),
+                    ));
+                }
+                if console.content.recognize_only.iter().any(|extension| {
+                    extension.eq_ignore_ascii_case(&sheet.extension)
+                }) {
+                    problems.push(Diagnostic::new(
+                        "content.sheet_is_recognise_only",
+                        package,
+                        "content.sheets",
+                        format!(
+                            "{} is followed as a sheet and also declared recognise-only",
+                            sheet.extension
+                        ),
+                    ));
+                }
+                let key = sheet.extension.to_ascii_lowercase();
+                if let Some((owner, parser)) = parsers.get(&key) {
+                    if *parser != sheet.parser {
+                        problems.push(Diagnostic::new(
+                            "content.sheet_parser_conflict",
+                            package,
+                            "content.sheets",
+                            format!(
+                                "{} is a {} sheet here and a {} sheet on {owner}",
+                                sheet.extension,
+                                sheet.parser.as_str(),
+                                parser.as_str()
+                            ),
+                        ));
+                    }
+                } else {
+                    parsers.insert(key, (id.clone(), sheet.parser));
+                }
+            }
+            for companion in &console.content.companions {
+                let Some(when) = &companion.when else {
+                    continue;
+                };
+                if !console
+                    .content
+                    .extensions
+                    .iter()
+                    .any(|extension| extension.eq_ignore_ascii_case(when))
+                {
+                    problems.push(Diagnostic::new(
+                        "content.companion_host",
+                        package,
+                        "content.companions",
+                        format!(
+                            ".{} travels with a .{} file, which this console does not recognise",
+                            companion.extension, when
+                        ),
+                    ));
+                }
             }
 
             // If an alias named two consoles, recognition would depend on
@@ -637,8 +711,11 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
         system.insert("name".into(), json!(console.name));
         system.insert("aliases".into(), json!(console.aliases));
         system.insert("extensions".into(), json!(console.content.extensions));
-        if !console.content.support_files.is_empty() {
-            system.insert("supportFiles".into(), json!(console.content.support_files));
+        if !console.content.sheets.is_empty() {
+            system.insert("sheets".into(), json!(console.content.sheets));
+        }
+        if !console.content.companions.is_empty() {
+            system.insert("companions".into(), json!(console.content.companions));
         }
         if !console.content.recognize_only.is_empty() {
             system.insert(
