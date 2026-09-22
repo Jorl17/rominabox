@@ -52,10 +52,10 @@ cmake --build "$destination/build-rmlui" --parallel "$jobs"
   ./configure \
     --enable-cocoa \
     --enable-opengl \
-    --enable-opengl_core \
+    --disable-opengl_core \
     --enable-glsl \
-    --enable-slang \
-    --enable-builtinglslang \
+    --disable-slang \
+    --disable-builtinglslang \
     --disable-metal \
     --disable-vulkan \
     --enable-menu \
@@ -72,10 +72,14 @@ cmake --build "$destination/build-rmlui" --parallel "$jobs"
     --disable-qt \
     --disable-sdl \
     --disable-sdl2 \
-    --disable-test_drivers
+    --disable-test_drivers \
+    --disable-ffmpeg \
+    --disable-cg \
+    --disable-langextra
   make -j"$jobs" \
     RMLUI_SOURCE_DIR=../vendor/RmlUi \
     RMLUI_BUILD_DIR=../build-rmlui
+  strip retroarch
 )
 
 printf '{"retroarchCommit":"%s","rmluiCommit":"ba95ffe8bfb6370efb2cdcca927eaad4710c5413"}\n' "$retroarch_commit" > "$destination/build-info.json"

@@ -301,6 +301,19 @@ def case_artwork():
     return expect("artwork", code, output, ("DRIFTED", "drawing moved"))
 
 
+def case_size():
+    path = ROOT / "scripts/fixtures/size-budgets.json"
+    raw = path.read_bytes()
+    data = json.loads(raw)
+    data["installed_bytes"] = 1
+    path.write_text(json.dumps(data, indent=2) + "\n")
+    try:
+        code, output = run_scope("size")
+    finally:
+        restore(path, raw)
+    return expect("size", code, output, ("exceeds",))
+
+
 def case_overlays():
     path = ROOT / "desktop/controls.json"
     raw = path.read_bytes()
@@ -332,6 +345,7 @@ CASES = {
     "identification": case_identification,
     "automation": case_automation,
     "artwork": case_artwork,
+    "size": case_size,
     "overlays": case_overlays,
 }
 

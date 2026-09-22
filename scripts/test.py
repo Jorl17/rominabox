@@ -191,6 +191,12 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "size",
+        "that an exported game, installed and as a zip, stays under the size ceiling, and does not carry the video encoders",
+        "a cartridge's own size, or that the player was rebuilt; it measures the kit already on disk",
+        ["python3", str(ROOT / "scripts/size_bundles.py")],
+    ),
+    Scope(
         "overlays",
         "that no controller callout or button anchor moved, across every illustrated profile",
         "that the positions are correct — only that they are unchanged since a human looked",
