@@ -19,7 +19,12 @@
     ]
   },
   "recognition": {},
-  "metadata": {},
+  "metadata": {
+    "catalog": {
+      "provider": "redump",
+      "name": "NEC - PC Engine CD - TurboGrafx-CD"
+    }
+  },
   "cores": [
     {
       "component": "beetle_pce_fast"

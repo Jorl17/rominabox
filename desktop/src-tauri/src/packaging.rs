@@ -460,6 +460,7 @@ where
     )
     .map_err(|message| ExportError::new("stage", message))?;
     stage_controller_remap(&controls_profile, selected_core, &resources.join("remaps"))?;
+    stage_pixel_options(selected_core, &resources.join("core-options"))?;
     if request.show_menu {
         crate::themes::prepare_sound_assets(
             &request.runtime_kit.join("sound-packs"),
@@ -1091,6 +1092,55 @@ fn stage_controller_remap(
     Ok(())
 }
 
+/// Write the options that show the pixels of this core as they are.
+///
+/// We write them to `<config dir>/<library name>/<library name>.opt`, the
+/// path for per-core options in RetroArch, with the library name of the
+/// remap. For a core with nothing declared we write no file, so the core
+/// defaults apply. In the launcher, we copy the file into the game's config
+/// directory on first launch, and keep a file the player already changed.
+fn stage_pixel_options(core: &crate::systems::Core, destination: &Path) -> Result<(), ExportError> {
+    if core.pixels.is_empty() {
+        return Ok(());
+    }
+    let Some(library) = core.library_name.as_deref() else {
+        return Err(ExportError::new(
+            "stage",
+            format!(
+                "component '{}' keeps its picture with core options, but does not declare its \
+                 libraryName, so there is nowhere to write the options file RetroArch reads",
+                core.component
+            ),
+        ));
+    };
+    if library.is_empty()
+        || library.contains(['/', '\\'])
+        || core.pixels.iter().any(|option| {
+            option.key.is_empty()
+                || option.value.is_empty()
+                || option.key.contains([' ', '=', '"', '\n', '/'])
+                || option.value.contains(['"', '\n'])
+        })
+    {
+        return Err(ExportError::new(
+            "stage",
+            format!(
+                "component '{}' has a picture option that cannot be written as a core options line",
+                core.component
+            ),
+        ));
+    }
+    let directory = destination.join(library);
+    fs::create_dir_all(&directory).map_err(|error| ExportError::io("stage", &directory, error))?;
+    let path = directory.join(format!("{library}.opt"));
+    let mut contents = String::new();
+    for option in &core.pixels {
+        contents.push_str(&format!("{} = \"{}\"\n", option.key, option.value));
+    }
+    fs::write(&path, contents).map_err(|error| ExportError::io("stage", &path, error))?;
+    Ok(())
+}
+
 /// The writable directories we create and manage under each game's data root.
 pub const MANAGED_DATA_DIRECTORIES: &[&str] = &[
     "saves",
@@ -1627,6 +1677,16 @@ for autoconfig_dir in "$bundle_dir"/Resources/autoconfig/*; do
     [ -f "$profile" ] || continue
     base=${{profile##*/}}
     [ -f "$data_dir/autoconfig/$name/$base" ] || /bin/cp "$profile" "$data_dir/autoconfig/$name/$base"
+  done
+done
+for options_dir in "$bundle_dir"/Resources/core-options/*; do
+  [ -d "$options_dir" ] || continue
+  name=${{options_dir##*/}}
+  /bin/mkdir -p "$data_dir/config/$name"
+  for options in "$options_dir"/*; do
+    [ -f "$options" ] || continue
+    base=${{options##*/}}
+    [ -f "$data_dir/config/$name/$base" ] || /bin/cp "$options" "$data_dir/config/$name/$base"
   done
 done
 for firmware in "$bundle_dir"/Resources/firmware/*; do
@@ -2634,6 +2694,7 @@ mod tests {
             license_file: "pcsx_rearmed.txt".into(),
             capabilities: Vec::new(),
             library_name: Some("PCSX-ReARMed".into()),
+            pixels: Vec::new(),
         };
         let remaps = root.join("remaps");
         stage_controller_remap(&profile, &core, &remaps).expect("a remap is written");
@@ -2667,10 +2728,68 @@ mod tests {
             license_file: "nestopia.txt".into(),
             capabilities: Vec::new(),
             library_name: None,
+            pixels: Vec::new(),
         };
         let remaps = root.join("remaps");
         stage_controller_remap(&profile, &core, &remaps).expect("nothing to do is not an error");
         assert!(!remaps.exists(), "no remap directory should be created");
+    }
+
+    /// We write picture options where RetroArch reads per-core options.
+    ///
+    /// The folder name is the library name of the core, as for the remap.
+    /// For a core with no declared options we write no file, because the
+    /// defaults of the core already leave the pixels unchanged.
+    #[test]
+    fn picture_options_are_written_where_retroarch_reads_them() {
+        let root = scratch_dir();
+        let core = crate::systems::Core {
+            artifacts: Default::default(),
+            component: "nestopia".into(),
+            license: "GPL-2.0".into(),
+            license_file: "nestopia.txt".into(),
+            capabilities: Vec::new(),
+            library_name: Some("Nestopia".into()),
+            pixels: vec![crate::systems::PixelOption {
+                key: "nestopia_blargg_ntsc_filter".into(),
+                value: "disabled".into(),
+            }],
+        };
+        let destination = root.join("core-options");
+        stage_pixel_options(&core, &destination).expect("options are written");
+        let text = fs::read_to_string(destination.join("Nestopia/Nestopia.opt"))
+            .expect("options exist at the path RetroArch reads");
+        assert_eq!(text, "nestopia_blargg_ntsc_filter = \"disabled\"\n");
+
+        let untouched = crate::systems::Core {
+            pixels: Vec::new(),
+            library_name: None,
+            ..core
+        };
+        let empty = root.join("empty");
+        stage_pixel_options(&untouched, &empty).expect("nothing to write is not an error");
+        assert!(!empty.exists(), "no options directory should be created");
+
+        let nameless = crate::systems::Core {
+            library_name: None,
+            pixels: vec![crate::systems::PixelOption {
+                key: "nestopia_blargg_ntsc_filter".into(),
+                value: "disabled".into(),
+            }],
+            ..untouched
+        };
+        let error = stage_pixel_options(&nameless, &root.join("missing"))
+            .expect_err("options with no library name have nowhere to go");
+        assert!(error.message.contains("libraryName"), "{}", error.message);
+
+        let launcher = write_test_launcher(request(false));
+        assert!(
+            launcher.contains("for options_dir in \"$bundle_dir\"/Resources/core-options/*; do"),
+            "the launcher has to copy the options into the game's config directory"
+        );
+        assert!(launcher.contains(
+            "[ -f \"$data_dir/config/$name/$base\" ] || /bin/cp \"$options\" \"$data_dir/config/$name/$base\""
+        ));
     }
 
     /// When a device is required and there is no place to write it, export fails.
@@ -2692,6 +2811,7 @@ mod tests {
             license_file: "genesis_plus_gx.txt".into(),
             capabilities: Vec::new(),
             library_name: None,
+            pixels: Vec::new(),
         };
         let error = stage_controller_remap(&profile, &core, &root.join("remaps"))
             .expect_err("silently shipping the wrong pad is the defect being prevented");

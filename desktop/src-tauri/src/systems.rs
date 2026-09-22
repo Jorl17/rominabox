@@ -144,12 +144,28 @@ pub struct Core {
     /// format, that does not mean the artifact we download includes it.
     #[serde(default)]
     pub capabilities: Vec<String>,
-    /// The libretro library name of this build.
+    /// The libretro library name of this build of the core.
     ///
-    /// We apply the emulated controller with a remap file in a folder named
-    /// after this string, so without it there is no place to write one.
+    /// We set the emulated controller in a remap file in a directory named
+    /// after this string, and the picture options in an options file in a
+    /// directory of the same name. Without it, we have nowhere to write
+    /// either file.
     #[serde(default, rename = "libraryName")]
     pub library_name: Option<String>,
+    /// Core options that keep the picture as the core's pixels, with no blended
+    /// reconstruction. Empty when the core's defaults already give that.
+    #[serde(default)]
+    pub pixels: Vec<PixelOption>,
+}
+
+/// A core option that we write so the picture stays the core's pixels.
+///
+/// The strings are the key and value that the core defines. We copy them into
+/// the options file at export and do not interpret them.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PixelOption {
+    pub key: String,
+    pub value: String,
 }
 
 impl Core {

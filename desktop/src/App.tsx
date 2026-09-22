@@ -672,7 +672,7 @@ export function App() {
                       setOnline(value);
                       setInfo(null);
                     }}
-                    help="Use established game catalogs and artwork. Artwork requests send the matched title to GitHub. The ROM stays on your computer."
+                    help="Use established game catalogs and artwork. Only the matched title is sent to look up the cover. The ROM stays on your computer."
                   />
                 </details>
                 {bridge.native && (
