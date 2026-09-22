@@ -3,11 +3,16 @@
 
 #include "rmlui_bridge.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
+#include <vector>
 /* rmlui.c is not linked here because it depends on the whole of RetroArch,
  * so we stub the control list that it normally supplies. With the stub a test
  * can declare more than sixteen controls, and the bridge must address all of
@@ -57,6 +62,10 @@ extern "C" void rib_rmlui_play_move_sound(int direction)
 
 extern "C" unsigned rib_rmlui_test_texture_loads();
 extern "C" const char *rib_rmlui_test_property(const char *, const char *);
+extern "C" bool rib_rmlui_test_box(const char *, int *, int *, int *, int *);
+extern "C" bool rib_rmlui_test_row_glyphs_overlap(const char *);
+extern "C" int rib_rmlui_test_class_count(const char *);
+extern "C" const char *rib_rmlui_test_class_id(const char *, int);
 
 extern "C" void rib_rmlui_test_advance(double);
 extern "C" const char *rib_rmlui_test_text(const char *);
@@ -122,6 +131,376 @@ static void settle(double seconds)
    }
 }
 
+struct Box { int x, y, w, h; bool ok; };
+
+static Box box_of(const char *id)
+{
+   Box box{};
+   box.ok = rib_rmlui_test_box(id, &box.x, &box.y, &box.w, &box.h);
+   return box;
+}
+
+static bool boxes_overlap(const Box &a, const Box &b)
+{
+   return a.x < b.x + b.w && b.x < a.x + a.w
+         && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+/* Positive when the boxes are apart on x. Zero is touching, which still
+ * hides the thumb under the arrow. */
+static int horizontal_gap(const Box &a, const Box &b)
+{
+   if (a.x + a.w <= b.x)
+      return b.x - (a.x + a.w);
+   if (b.x + b.w <= a.x)
+      return a.x - (b.x + b.w);
+   const int overlap = std::min(a.x + a.w, b.x + b.w) - std::max(a.x, b.x);
+   return -overlap;
+}
+
+/* Flush with the edge is the cut corner: in popup-a-off-right-edge the list
+ * border is on the window's last pixel. Touching the edge counts as off. */
+static bool inside_screen(const Box &box, const Box &screen)
+{
+   return box.x >= screen.x && box.y >= screen.y
+         && box.x + box.w < screen.x + screen.w
+         && box.y + box.h < screen.y + screen.h;
+}
+
+static void fill_bind_rows(void)
+{
+   const int rows = rib_rmlui_rows_in("control-binds");
+   for (int index = 0; index < rows; ++index)
+   {
+      const char *id = rib_rmlui_row_in("control-binds", index);
+      if (!id || !*id)
+         break;
+      if (index < 2)
+      {
+         /* The long line is what a fixed width would size every list for: a
+          * list of "UP / UP / KEY" would be as wide as "LEFT STICK UP / BUTTON 12". */
+         rib_rmlui_set_row_text(id,
+               index == 0 ? "LEFT STICK UP" : "UP",
+               index == 0 ? "BUTTON 12" : "HAT #0 UP",
+               index == 0 ? "AXIS" : "PAD");
+         rib_rmlui_set_shown(id, true);
+      }
+      else
+         rib_rmlui_set_shown(id, false);
+   }
+   rib_rmlui_retarget_pages("control-binds");
+}
+
+static int anchors(const char *class_name, std::vector<std::string> &out)
+{
+   const int count = rib_rmlui_test_class_count(class_name);
+   for (int index = 0; index < count; ++index)
+   {
+      const char *id = rib_rmlui_test_class_id(class_name, index);
+      if (id && *id)
+         out.emplace_back(id);
+   }
+   return count;
+}
+
+/* Pads where every candidate position covers a label, so we choose the one
+ * that covers least. RetroPad is a grid with no empty middle. On PlayStation
+ * the stick groups fill that middle, and a list as wide as "LEFT STICK UP"
+ * next to the right stick still reaches the left one. The taller rows in
+ * Disc also reach Select and Start. */
+static bool named_least_cover(const char *design, const char *profile,
+      const char *anchor)
+{
+   static const char *const native_retropad[] = {
+      "control-a", "control-b", "control-x", "control-y",
+      "control-l", "control-r", "control-l2", "control-r2", nullptr
+   };
+   static const char *const disc_retropad[] = {
+      "control-up", "control-down", "control-left", "control-right",
+      "control-a", "control-b", "control-x", "control-y",
+      "control-l", "control-r", "control-l2", "control-r2", nullptr
+   };
+   static const char *const native_ps[] = {
+      "control-down", "control-b", "control-group-r_stick", nullptr
+   };
+   static const char *const disc_ps[] = {
+      "control-down", "control-b", "control-select", "control-start", nullptr
+   };
+   const char *const *allowed = nullptr;
+   if (std::strcmp(profile, "retropad") == 0)
+      allowed = std::strcmp(design, "disc") == 0 ? disc_retropad : native_retropad;
+   else if (std::strcmp(profile, "ps1") == 0 || std::strcmp(profile, "ps1-analog") == 0)
+      allowed = std::strcmp(design, "disc") == 0 ? disc_ps : native_ps;
+   if (!allowed)
+      return false;
+   for (int index = 0; allowed[index]; ++index)
+      if (std::strcmp(anchor, allowed[index]) == 0)
+         return true;
+   return false;
+}
+
+static std::vector<std::string> least_cover_seen;
+
+static int check_one_list(const char *design, const char *profile,
+      const char *anchor, int width, int window_w, int window_h)
+{
+   char message[512];
+   rib_rmlui_place_list("control-binds", anchor, width);
+   const Box screen = box_of("screen");
+   const Box list = box_of("control-binds");
+   if (!screen.ok || !list.ok)
+   {
+      std::snprintf(message, sizeof(message),
+            "%s/%s %s at %dx%d: the list or the screen has no box",
+            design, profile, anchor, window_w, window_h);
+      CHECK(false, message);
+      return 1;
+   }
+   int missed = 0;
+   if (!inside_screen(list, screen))
+   {
+      std::snprintf(message, sizeof(message),
+            "%s/%s %s at %dx%d: list %d,%d %dx%d leaves the screen %d,%d %dx%d",
+            design, profile, anchor, window_w, window_h,
+            list.x, list.y, list.w, list.h,
+            screen.x, screen.y, screen.w, screen.h);
+      CHECK(false, message);
+      ++missed;
+   }
+   /* A row is width 100% plus its border, so it extends past the list box
+    * measured for the clamp. That is the strip cut off in the corner. */
+   const int row_count = rib_rmlui_rows_in("control-binds");
+   for (int index = 0; index < row_count; ++index)
+   {
+      const char *row_id = rib_rmlui_row_in("control-binds", index);
+      const Box row = row_id ? box_of(row_id) : Box{};
+      if (!row.ok || inside_screen(row, screen))
+         continue;
+      std::snprintf(message, sizeof(message),
+            "%s/%s %s at %dx%d: %s %d,%d %dx%d leaves the screen %d,%d %dx%d",
+            design, profile, anchor, window_w, window_h, row_id,
+            row.x, row.y, row.w, row.h,
+            screen.x, screen.y, screen.w, screen.h);
+      CHECK(false, message);
+      ++missed;
+   }
+   std::vector<std::string> labels;
+   anchors("control-callout", labels);
+   anchors("control-group", labels);
+   std::vector<std::string> covered;
+   std::vector<Box> painted;
+   painted.push_back(list);
+   for (int index = 0; index < row_count; ++index)
+   {
+      const char *row_id = rib_rmlui_row_in("control-binds", index);
+      const Box row = row_id ? box_of(row_id) : Box{};
+      if (row.ok)
+         painted.push_back(row);
+   }
+   for (const std::string &label : labels)
+   {
+      if (label == anchor)
+         continue;
+      const Box other = box_of(label.c_str());
+      if (!other.ok)
+         continue;
+      bool hit = false;
+      for (const Box &part : painted)
+         hit = hit || boxes_overlap(part, other);
+      if (hit)
+         covered.push_back(label);
+   }
+   /* The rows in Disc are taller, so on a grid cell the list covers at least
+    * two neighbours. On the native grid and next to a stick it is one. */
+   const int least = std::strcmp(design, "disc") == 0 ? 2 : 1;
+   if (!covered.empty()
+         && named_least_cover(design, profile, anchor)
+         && (int)covered.size() <= least)
+   {
+      const std::string key = std::string(design) + "/" + profile + " " + anchor;
+      if (std::find(least_cover_seen.begin(), least_cover_seen.end(), key)
+            == least_cover_seen.end())
+         least_cover_seen.push_back(key);
+      return missed;
+   }
+   for (const std::string &label : covered)
+   {
+      std::snprintf(message, sizeof(message),
+            "%s/%s %s at %dx%d: list covers %s",
+            design, profile, anchor, window_w, window_h, label.c_str());
+      CHECK(false, message);
+      ++missed;
+   }
+   return missed;
+}
+
+static void check_glyphs(const char *design, const char *which)
+{
+   const int rows = rib_rmlui_rows_in("control-binds");
+   for (int index = 0; index < rows; ++index)
+   {
+      const char *id = rib_rmlui_row_in("control-binds", index);
+      if (!id || !*id || !rib_rmlui_test_row_glyphs_overlap(id))
+         continue;
+      char message[256];
+      std::snprintf(message, sizeof(message),
+            "%s %s row %s: the label is drawn on top of the binding",
+            design, which, id);
+      CHECK(false, message);
+   }
+}
+
+/* A fixed width would make "UP / UP / KEY" as wide as "LEFT STICK UP / BUTTON 12".
+ * Two short rows and a hidden pager have nothing that needs the ceiling. */
+static void check_short_list(const char *design, int declared)
+{
+   check_glyphs(design, "long");
+   const int rows = rib_rmlui_rows_in("control-binds");
+   for (int index = 0; index < rows; ++index)
+   {
+      const char *id = rib_rmlui_row_in("control-binds", index);
+      if (!id || !*id)
+         break;
+      if (index < 2)
+         rib_rmlui_set_row_text(id, "A", "BUTTON 2", "PAD");
+      else
+         rib_rmlui_set_shown(id, false);
+   }
+   rib_rmlui_retarget_pages("control-binds");
+   rib_rmlui_render(960, 600);
+   rib_rmlui_place_list("control-binds", "control-up", declared);
+   const char *prop = rib_rmlui_test_property("control-binds", "width");
+   int parsed = 0;
+   if (prop)
+      std::sscanf(prop, "%d", &parsed);
+   char message[256];
+   std::snprintf(message, sizeof(message),
+         "%s short list width is %s; two short words should be under 200dp (declared %d)",
+         design, prop ? prop : "(none)", declared);
+   CHECK(parsed > 0 && parsed < 200 && parsed <= declared, message);
+   check_glyphs(design, "short");
+}
+
+static void check_volume_ends(const char *design, int window_w, int window_h)
+{
+   char message[384];
+   const struct { float fraction; const char *end; const char *arrow; } ends[] = {
+      {0.f, "quiet", RIB_VOLUME_DOWN_ID},
+      {1.f, "normal", RIB_VOLUME_UP_ID},
+   };
+   for (const auto &end : ends)
+   {
+      rib_rmlui_set_slider(RIB_VOLUME_SLIDER_ID, end.fraction, nullptr);
+      const Box thumb = box_of("volume-level-thumb");
+      const Box arrow = box_of(end.arrow);
+      const int gap = (thumb.ok && arrow.ok) ? horizontal_gap(thumb, arrow) : -1;
+      const bool covered = thumb.ok && arrow.ok && boxes_overlap(thumb, arrow);
+      std::snprintf(message, sizeof(message),
+            "%s volume at %s (%dx%d): thumb %d,%d %dx%d arrow %s %d,%d %dx%d gap %d",
+            design, end.end, window_w, window_h,
+            thumb.x, thumb.y, thumb.w, thumb.h, end.arrow,
+            arrow.x, arrow.y, arrow.w, arrow.h, gap);
+      CHECK(thumb.ok && arrow.ok && !covered && gap >= 1, message);
+   }
+}
+
+/* Every drawn pad and the RetroPad grid, in this design.
+ *
+ * A list must not hide the labels of its neighbours or run off the window.
+ * The list for UP leaves LEFT visible, and the list for A stays inside the
+ * window once the clamp moves its left edge back. */
+static int check_placement(const char *assets, const char *scenes,
+      const char *design, int width)
+{
+   if (!rib_rmlui_init(assets, 960, 600))
+   {
+      std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
+      return 1;
+   }
+   rib_rmlui_clear_screens();
+   rib_rmlui_declare_screen("pause", "pause-panel", "GAME PAUSED",
+         "ESC  CONTINUE", "options");
+   rib_rmlui_declare_screen("controls", "controls-panel", "CONTROLS",
+         "ESC  BACK", "controls");
+   rib_rmlui_declare_screen("options", "options-panel", "OPTIONS",
+         "ESC  BACK", "options");
+
+   /* 1920x1200 is a 960x600 window on a 2x display, the size at which the
+    * right border of the list is on the last pixel. */
+   const int sizes[][2] = {{960, 600}, {1440, 900}, {1920, 1200}};
+   rib_rmlui_show_screen("options");
+   for (const auto &size : sizes)
+   {
+      rib_rmlui_render(size[0], size[1]);
+      check_volume_ends(design, size[0], size[1]);
+   }
+
+   rib_rmlui_show_screen("controls");
+   fill_bind_rows();
+   int scenes_seen = 0;
+   for (const auto &entry : std::filesystem::directory_iterator(scenes))
+   {
+      if (entry.path().extension() != ".rml")
+         continue;
+      const std::string profile = entry.path().stem().string();
+      std::ifstream in(entry.path());
+      std::stringstream buffer;
+      buffer << in.rdbuf();
+      const std::string markup = buffer.str();
+      if (!rib_rmlui_set_scene(markup.c_str()))
+      {
+         char message[256];
+         std::snprintf(message, sizeof(message),
+               "%s/%s: the scene did not load", design, profile.c_str());
+         CHECK(false, message);
+         continue;
+      }
+      ++scenes_seen;
+      std::vector<std::string> labels;
+      /* Lay out once so the labels exist before we count them. A scene
+       * swapped in while its panel is showing still has to be formatted. */
+      rib_rmlui_render(960, 600);
+      anchors("control-callout", labels);
+      anchors("control-group", labels);
+      if (labels.empty())
+      {
+         char message[256];
+         std::snprintf(message, sizeof(message),
+               "%s/%s: no control labels", design, profile.c_str());
+         CHECK(false, message);
+         continue;
+      }
+      for (const auto &size : sizes)
+      {
+         rib_rmlui_render(size[0], size[1]);
+         for (const std::string &anchor : labels)
+            check_one_list(design, profile.c_str(), anchor.c_str(), width,
+                  size[0], size[1]);
+      }
+   }
+   {
+      char message[128];
+      std::snprintf(message, sizeof(message),
+            "%s: no controller scenes were staged", design);
+      CHECK(scenes_seen > 0, message);
+   }
+   if (!least_cover_seen.empty())
+   {
+      std::fprintf(stderr, "least cover (no side misses every label):");
+      for (const std::string &name : least_cover_seen)
+         std::fprintf(stderr, " %s", name.c_str());
+      std::fprintf(stderr, "\n");
+   }
+   check_short_list(design, width);
+   rib_rmlui_shutdown();
+   if (failures)
+   {
+      std::fprintf(stderr, "%d check(s) failed\n", failures);
+      return 1;
+   }
+   return 0;
+}
+
 int main(int argc, char **argv)
 {
    const char *assets = argc > 1 ? argv[1] : nullptr;
@@ -129,6 +508,16 @@ int main(int argc, char **argv)
    {
       std::fprintf(stderr, "usage: test_rmlui_interaction ASSET_DIR\n");
       return 2;
+   }
+   if (argc > 2 && std::strcmp(argv[2], "placement") == 0)
+   {
+      if (argc < 6)
+      {
+         std::fprintf(stderr,
+               "usage: test_rmlui_interaction ASSET_DIR placement SCENES DESIGN WIDTH\n");
+         return 2;
+      }
+      return check_placement(assets, argv[3], argv[4], std::atoi(argv[5]));
    }
 
    CHECK(rib_rmlui_map_menu_toggle(false, true) ==
