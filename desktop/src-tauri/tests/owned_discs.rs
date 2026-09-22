@@ -224,13 +224,13 @@ fn his_sonic_adventure_2_track_is_the_same_disc_as_the_layout() {
     };
     assert_eq!(files(&from_track), files(&layout));
 
-    let receipt = |path: &Path| {
-        rominabox_desktop::traveling::files_for(path, Some("dreamcast")).expect("receipt")
+    let listed = |path: &Path| {
+        rominabox_desktop::traveling::files_for(path, Some("dreamcast")).expect("the files that travel")
     };
-    let track_receipt = receipt(&track);
-    let layout_receipt = receipt(&layout);
-    assert_eq!(track_receipt.entry, layout_receipt.entry);
-    assert_eq!(track_receipt.files, layout_receipt.files);
+    let track_listed = listed(&track);
+    let layout_listed = listed(&layout);
+    assert_eq!(track_listed.entry, layout_listed.entry);
+    assert_eq!(track_listed.files, layout_listed.files);
 
     let cache = scratch();
     stage(

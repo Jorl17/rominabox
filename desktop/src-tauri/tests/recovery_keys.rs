@@ -125,6 +125,8 @@ fn export_request(root: &Path, advanced: bool) -> ExportRequest {
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: advanced,
+        keep_playing_in_background: false,
+        autosave_on_quit: false,
         menu_entries: None,
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
         achievements: Default::default(),

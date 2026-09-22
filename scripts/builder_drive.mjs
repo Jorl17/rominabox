@@ -185,10 +185,24 @@ async function shot(page, file) {
 }
 
 async function downloadNotice(page, out) {
-  await page.getByRole("button", { name: "Details", exact: true }).click();
+  // A Mega Drive ROM is not a Dreamcast game. When someone chooses Dreamcast
+  // for it, we refuse and keep the console, so we read the sentence for a
+  // file valid for Dreamcast. Then we put the Mega Drive game back.
+  const directory = path.join(ROOT, "work/test-output/builder-shots");
+  fs.mkdirSync(directory, { recursive: true });
+  const cdi = path.join(directory, "game.cdi");
+  fs.writeFileSync(cdi, Buffer.from("not a real disc"));
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, cdi);
   await page.getByRole("heading", { name: "Game details" }).waitFor();
-  await page.locator(".fields select").selectOption("dreamcast");
-  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const chosen = await page.locator(".fields select").inputValue();
+  if (chosen !== "dreamcast") {
+    console.error(`a .cdi was not opened as Dreamcast (${chosen})`);
+    return false;
+  }
+  await clickNext(page);
+  await clickNext(page);
   await page.getByRole("heading", { name: "Export your game" }).waitFor();
   const text = (await page.locator("main").innerText()).replace(/\s+/g, " ");
   console.log(`DOWNLOAD ${JSON.stringify(text)}`);
@@ -203,6 +217,13 @@ async function downloadNotice(page, out) {
     );
     return false;
   }
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, writeRom());
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  await clickNext(page);
+  await clickNext(page);
+  await page.getByRole("heading", { name: "Export your game" }).waitFor();
   return true;
 }
 
@@ -224,9 +245,9 @@ async function dropRom(page, rom) {
   await page.locator("[data-drop='game']").evaluate(
     (zone, payload) => {
       const file = new File([new Uint8Array(payload.bytes)], payload.name);
-      // A file dropped in the browser has no path. For the receipt we ask the
-      // exporter which files go with this one, and for that we require the
-      // path we wrote the file to.
+      // A file dropped in the browser has no path. For the Also importing line
+      // we ask the exporter which files go with this one, and for that we
+      // require the path we wrote the file to.
       if (payload.path) {
         Object.defineProperty(file, "path", { value: payload.path });
       }
@@ -273,17 +294,25 @@ async function checkWhatTravels(page, out) {
 
   await dropRom(page, chd);
   await page.getByRole("heading", { name: "Game details" }).waitFor();
-  const receipt = page.locator("[data-traveling]");
-  const appeared = await receipt
+  const alsoImporting = page.locator("[data-traveling]");
+  const appeared = await alsoImporting
     .waitFor({ timeout: 20000 })
     .then(() => true)
     .catch(() => false);
   const text = appeared
-    ? (await receipt.innerText()).replace(/\s+/g, " ")
+    ? (await alsoImporting.innerText()).replace(/\s+/g, " ")
     : "";
-  console.log(`TRAVELING ${JSON.stringify(text || "(no receipt)")}`);
+  console.log(`TRAVELING ${JSON.stringify(text || "(no Also importing line)")}`);
   const namesDisc = text.includes("Ape Escape.chd");
-  const namesSibling = text.includes("Ape Escape.sbi");
+  const alsoLine = appeared
+    ? (
+        (await alsoImporting.locator(".traveling-also").innerText().catch(() => "")) ||
+        ""
+      ).replace(/\s+/g, " ")
+    : "";
+  // The line above has the game's name, so we show the rest of the sibling's name.
+  const namesSibling =
+    alsoLine.includes(".sbi") && !alsoLine.includes("Ape Escape");
   const saysAlso = text.includes("Also importing");
   if (!namesDisc || !namesSibling || !saysAlso) {
     console.error(
@@ -295,13 +324,14 @@ async function checkWhatTravels(page, out) {
     return false;
   }
   if ((await page.locator("[data-drop='game']").count()) !== 0) {
-    console.error("the receipt is being shown on the drop target");
+    console.error("the Also importing line is being shown on the drop target");
     return false;
   }
   if (out) await shot(page, path.join(out, "h3-sibling.png"));
 
-  // A sheet lists its tracks inside the file. The receipt must show every
-  // name that collect returns, however many there are, not only a sibling.
+  // A sheet lists its tracks inside the file. The Also importing line must
+  // show every name that collect returns, however many there are, not only a
+  // sibling.
   const sheetDir = path.join(
     ROOT,
     "work/test-output/builder-shots/sheet-tracks",
@@ -330,7 +360,7 @@ async function checkWhatTravels(page, out) {
   const sheetText = sheetShown
     ? (await sheet.innerText()).replace(/\s+/g, " ")
     : "";
-  console.log(`SHEET ${JSON.stringify(sheetText || "(no receipt)")}`);
+  console.log(`SHEET ${JSON.stringify(sheetText || "(no Also importing line)")}`);
   const missing = ["Sonic Adventure 2.cue", ...tracks].filter(
     (name) => !sheetText.includes(name),
   );
@@ -338,13 +368,13 @@ async function checkWhatTravels(page, out) {
     console.error(
       "the details step does not name every track that travels with the sheet",
     );
-    console.error(missing.join(", ") || "(receipt missing)");
+    console.error(missing.join(", ") || "(Also importing line missing)");
     return false;
   }
   if (out) await shot(page, path.join(out, "h3-tracks.png"));
 
   // Here someone drops track 3 of a disc, the .bin. The layout in the same
-  // folder lists that .bin, so the receipt must be the layout's.
+  // folder lists that .bin, so the Also importing line must be the layout's.
   const trackDir = path.join(
     ROOT,
     "work/test-output/builder-shots/dropped-track",
@@ -365,31 +395,216 @@ async function checkWhatTravels(page, out) {
   await page.getByRole("heading", { name: "Choose a game" }).waitFor();
   await dropRom(page, path.join(trackDir, trackName));
   await page.getByRole("heading", { name: "Game details" }).waitFor();
-  const trackReceipt = page.locator("[data-traveling]");
-  const trackShown = await trackReceipt
+  const trackLine = page.locator("[data-traveling]");
+  const trackShown = await trackLine
     .waitFor({ timeout: 20000 })
     .then(() => true)
     .catch(() => false);
   const trackText = trackShown
-    ? (await trackReceipt.innerText()).replace(/\s+/g, " ")
+    ? (await trackLine.innerText()).replace(/\s+/g, " ")
     : "";
-  console.log(`TRACK ${JSON.stringify(trackText || "(no receipt)")}`);
-  const trackMissing = [layoutName, trackName].filter(
+  console.log(`TRACK ${JSON.stringify(trackText || "(no Also importing line)")}`);
+  // On the line under the layout we leave out the game's name, which is
+  // already on the layout line, so the track shows as the rest of its name.
+  const trackShort = trackName.replace(layoutName.replace(/\.gdi$/, ""), "").trim();
+  const trackMissing = [layoutName, trackShort].filter(
     (name) => !trackText.includes(name),
   );
   const firstLine = trackShown
-    ? (await trackReceipt.locator("p").first().innerText()).trim()
+    ? (await trackLine.locator("p").first().innerText()).trim()
     : "";
   if (!trackShown || trackMissing.length || firstLine !== layoutName) {
     console.error(
       "dropping a track did not present the sheet that names it",
     );
     console.error(
-      trackMissing.join(", ") || `first=${firstLine || "(receipt missing)"}`,
+      trackMissing.join(", ") || `first=${firstLine || "(Also importing line missing)"}`,
     );
     return false;
   }
   if (out) await shot(page, path.join(out, "i3-track.png"));
+
+  // Track file names as they appear in dumps. Each contains the game's name,
+  // which is already on the line above, so the Also importing line must not repeat it.
+  const longDir = path.join(
+    ROOT,
+    "work/test-output/builder-shots/long-tracks",
+  );
+  fs.mkdirSync(longDir, { recursive: true });
+  const stem = "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es)";
+  const longTracks = [1, 2, 3].map(
+    (index) => `${stem} (Track ${index}).bin`,
+  );
+  for (const name of longTracks) {
+    fs.writeFileSync(path.join(longDir, name), Buffer.from("track"));
+  }
+  const gdi = path.join(longDir, `${stem}.gdi`);
+  fs.writeFileSync(
+    gdi,
+    `${longTracks.length}\n` +
+      longTracks
+        .map(
+          (name, index) => `${index + 1} 0 4 2352 "${name}" 0\n`,
+        )
+        .join(""),
+  );
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, gdi);
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  const long = page.locator("[data-traveling]");
+  const longShown = await long
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  const longText = longShown
+    ? (await long.innerText()).replace(/\s+/g, " ")
+    : "";
+  console.log(`LONG ${JSON.stringify(longText || "(no Also importing line)")}`);
+  if (out) await shot(page, path.join(out, "i4-also-importing.png"));
+  const also = longShown
+    ? ((await long.locator(".traveling-also").innerText()) || "").replace(
+        /\s+/g,
+        " ",
+      )
+    : "";
+  const short =
+    also ===
+    "Also importing: (Track 1).bin, (Track 2).bin, (Track 3).bin";
+  if (!longShown || !short || also.includes(stem)) {
+    console.error(
+      "the Also importing line repeats the game's name instead of one short line",
+    );
+    console.error(also || "(no also line)");
+    return false;
+  }
+  const alsoBox = await long.locator(".traveling-also").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      fontSize: style.fontSize,
+      whiteSpace: style.whiteSpace,
+      lineHeight: element.getBoundingClientRect().height,
+    };
+  });
+  console.log(`ALSO ${JSON.stringify(alsoBox)}`);
+  if (alsoBox.fontSize !== "12px" || alsoBox.whiteSpace !== "nowrap") {
+    console.error("the Also importing line is not the small one-line text");
+    console.error(JSON.stringify(alsoBox));
+    return false;
+  }
+  if (alsoBox.lineHeight > 20) {
+    console.error("the Also importing line is taller than one line of text");
+    return false;
+  }
+
+  const manyDir = path.join(ROOT, "work/test-output/builder-shots/many-tracks");
+  fs.mkdirSync(manyDir, { recursive: true });
+  const many = Array.from({ length: 6 }, (_, index) => `track${index + 1}.bin`);
+  for (const name of many) {
+    fs.writeFileSync(path.join(manyDir, name), Buffer.from("track"));
+  }
+  const manyCue = path.join(manyDir, "Long Disc.cue");
+  fs.writeFileSync(
+    manyCue,
+    many
+      .map(
+        (name, index) =>
+          `FILE "${name}" BINARY\n  TRACK ${String(index + 1).padStart(2, "0")} MODE1/2352\n`,
+      )
+      .join(""),
+  );
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, manyCue);
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  const counted = page.locator(".traveling-also");
+  const countedText = (
+    (await counted.innerText().catch(() => "")) || ""
+  ).replace(/\s+/g, " ");
+  console.log(`COUNT ${JSON.stringify(countedText)}`);
+  if (countedText !== "Also importing 6 files") {
+    console.error(
+      "past a handful of files the Also importing line still lists every name",
+    );
+    return false;
+  }
+
+  // We reject PlayStation for a GD-ROM in inspection. The console must go
+  // back to Dreamcast, or the line and the export list different files.
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, gdi);
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  const kept = page.locator(".traveling-also");
+  await kept.waitFor({ timeout: 20000 });
+  const keptLine = (await kept.innerText()).replace(/\s+/g, " ");
+  await page.locator(".fields select").selectOption("ps1");
+  const rejected = page.locator(".error");
+  const rejectedShown = await rejected
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  const rejectedText = rejectedShown
+    ? (await rejected.innerText()).replace(/\s+/g, " ")
+    : "";
+  const chosen = await page.locator(".fields select").inputValue();
+  const lineAfter = rejectedShown
+    ? ((await kept.innerText().catch(() => "")) || "").replace(/\s+/g, " ")
+    : "";
+  console.log(
+    `REJECTED ${JSON.stringify({ rejectedText, chosen, lineAfter })}`,
+  );
+  if (
+    !rejectedShown ||
+    !rejectedText.includes("does not support .gdi") ||
+    chosen !== "dreamcast" ||
+    lineAfter !== keptLine
+  ) {
+    console.error(
+      "a console inspection rejected stayed selected, or the Also importing line changed",
+    );
+    return false;
+  }
+  if (out) await shot(page, path.join(out, "i4-console-stays.png"));
+
+  // We refuse a CloneCD sheet without a .sub for PC Engine CD. We must show
+  // that on the page, and must not present the sheet as a one-file game.
+  const ccdDir = path.join(ROOT, "work/test-output/builder-shots/pce-ccd");
+  fs.mkdirSync(ccdDir, { recursive: true });
+  fs.writeFileSync(path.join(ccdDir, "game.ccd"), "[CloneCD]\n");
+  fs.writeFileSync(path.join(ccdDir, "game.img"), "data");
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, path.join(ccdDir, "game.ccd"));
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  await page.locator(".fields select").selectOption("pcecd");
+  const refusal = page.locator(".error");
+  const refusalShown = await refusal
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  const refusalText = refusalShown
+    ? (await refusal.innerText()).replace(/\s+/g, " ")
+    : "";
+  const consoleNow = await page.locator(".fields select").inputValue();
+  const refusedLine = (
+    (await page.locator("[data-traveling]").innerText().catch(() => "")) || ""
+  ).replace(/\s+/g, " ");
+  console.log(
+    `REFUSED ${JSON.stringify({ refusalText, consoleNow, refusedLine })}`,
+  );
+  if (
+    !refusalShown ||
+    !refusalText.includes("game.sub") ||
+    consoleNow !== "pcecd" ||
+    refusedLine.trim() === "game.ccd"
+  ) {
+    console.error(
+      "the exporter's refusal was not shown, or the sheet was presented as one file",
+    );
+    return false;
+  }
+  if (out) await shot(page, path.join(out, "i4-refused-disc.png"));
   return true;
 }
 
@@ -929,8 +1144,8 @@ async function main() {
     const cartridgeText = (await cartridge.count())
       ? (await cartridge.innerText()).replace(/\s+/g, " ")
       : "";
-    console.log(`CARTRIDGE ${JSON.stringify(cartridgeText || "(no receipt)")}`);
-    // The receipt shows the file name, not the game's. The title comes from
+    console.log(`CARTRIDGE ${JSON.stringify(cartridgeText || "(no Also importing line)")}`);
+    // The line shows the file name, not the game's. The title comes from
     // the header, and the file that goes with the game keeps its name on disk.
     if (
       !cartridgeText.includes(path.basename(rom)) ||
@@ -988,6 +1203,53 @@ async function main() {
       );
       code = 1;
       return;
+    }
+
+    const playOptions = await page.evaluate(() => {
+      const wanted = [
+        "Keep playing in the background",
+        "Autosave on quit",
+      ];
+      const settings = document.querySelector(".menu-settings");
+      return wanted.map((label) => {
+        const box = [...document.querySelectorAll("label")].find((item) =>
+          (item.textContent || "").includes(label),
+        );
+        const input = box?.querySelector("input");
+        return {
+          label,
+          present: !!box,
+          checked: !!input?.checked,
+          inSettings: !!(settings && box && settings.contains(box)),
+          inDisclosure: !!box?.closest("details"),
+          help: !!document.querySelector(
+            `[aria-label="About ${label.toLowerCase()}"]`,
+          ),
+        };
+      });
+    });
+    console.log(`PLAY ${JSON.stringify(playOptions)}`);
+    if (
+      playOptions.some(
+        (option) =>
+          !option.present ||
+          option.checked ||
+          !option.inSettings ||
+          option.inDisclosure ||
+          option.help,
+      )
+    ) {
+      console.error(
+        "background play and autosave are not plain options beside the startup logo",
+      );
+      code = 1;
+      return;
+    }
+    if (out) {
+      await page.locator(".menu-settings").screenshot({
+        path: path.join(out, "i4-options.png"),
+      });
+      console.log("shot i4-options.png");
     }
 
     if (!checking) {
@@ -1327,13 +1589,19 @@ async function main() {
       if (!profile.system || seen.has(profile.id)) continue;
       await page.getByRole("button", { name: "Details", exact: true }).click();
       await page.getByRole("heading", { name: "Game details" }).waitFor();
-      await page.locator(".fields select").selectOption(profile.system);
+      const select = page.locator(".fields select");
+      await select.selectOption(profile.system);
       await page.waitForTimeout(200);
+      // When this console does not accept the extension, we keep the previous
+      // console and Next stays available, and the pad on screen is not this profile's.
+      const kept = await select.inputValue();
       const blocked = await page
         .getByRole("button", { name: "Next", exact: true })
         .isDisabled();
-      if (blocked) {
-        console.log(`UNREACHABLE ${profile.id} via ${profile.system}`);
+      if (blocked || kept !== profile.system) {
+        console.log(
+          `UNREACHABLE ${profile.id} via ${profile.system} (console is ${kept})`,
+        );
         continue;
       }
       await clickNext(page);

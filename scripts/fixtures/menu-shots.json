@@ -12,9 +12,9 @@
     "",
     "A shot that needs a different game says so beside its script: what is drawn",
     "over a running game does not exist in an export that opens at the menu,",
-    "because the player is already looking at the menu. A shot may also name",
-    "settings its run needs; `pause_nonactive` is how the emulated console keeps",
-    "running while its window sits in the background, which it always does here.",
+    "because the player is already looking at the menu. The window is never",
+    "focused here. The launcher sees ROMINABOX_MENU_SHOT and keeps the console",
+    "moving for that run, without writing the player's controls.cfg.",
     "",
     "These are the same states scripts/fixtures/menu-states.json declares, but",
     "reached rather than posed: menu-states sets the classes itself, and cannot",
@@ -101,58 +101,40 @@
         "wait:20"
       ],
       "startAtMenu": false,
-      "splash": true,
-      "config": {
-        "pause_nonactive": "false"
-      }
+      "splash": true
     },
     "boot-2-game": {
       "script": [
         "wait:60"
       ],
       "startAtMenu": false,
-      "splash": true,
-      "config": {
-        "pause_nonactive": "false"
-      }
+      "splash": true
     },
     "boot-3-notice": {
       "script": [
         "wait:180"
       ],
       "startAtMenu": false,
-      "splash": true,
-      "config": {
-        "pause_nonactive": "false"
-      }
+      "splash": true
     },
     "boot-4-gone": {
       "script": [
         "wait:400"
       ],
       "startAtMenu": false,
-      "splash": true,
-      "config": {
-        "pause_nonactive": "false"
-      }
+      "splash": true
     },
     "notice-without-logo": {
       "script": [
         "wait:120"
       ],
-      "startAtMenu": false,
-      "config": {
-        "pause_nonactive": "false"
-      }
+      "startAtMenu": false
     },
     "notice-leaving": {
       "script": [
         "wait:265"
       ],
       "startAtMenu": false,
-      "config": {
-        "pause_nonactive": "false"
-      },
       "inMotion": true
     },
     "logo-without-notice": {
@@ -161,10 +143,7 @@
       ],
       "startAtMenu": false,
       "showMenu": false,
-      "splash": true,
-      "config": {
-        "pause_nonactive": "false"
-      }
+      "splash": true
     },
     "achievements": {
       "script": [

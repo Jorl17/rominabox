@@ -131,6 +131,16 @@ pub struct ExportRequest {
     /// Restore stock RetroArch native menus in the exported app.
     #[serde(default)]
     pub advanced_emulator_access: bool,
+    /// Keep emulating when the window does not have the focus. RetroArch's
+    /// `pause_nonactive` is the opposite of this. We write it into the frozen
+    /// config, as we do quit-autosave, because the player has no control for
+    /// it and a per-game `controls.cfg` would otherwise replace it.
+    #[serde(default)]
+    pub keep_playing_in_background: bool,
+    /// Save on quit and load that save the next time the player opens the
+    /// game. The author makes one choice for both.
+    #[serde(default)]
+    pub autosave_on_quit: bool,
     /// The Options entries we offer in this game. When absent, we use the
     /// design's defaults. With an empty list, we show no Options button.
     #[serde(default)]
@@ -644,10 +654,11 @@ where
     let controls_assets = resources.join("menu-assets");
     fs::create_dir_all(&controls_assets)
         .map_err(|error| ExportError::io("stage", &controls_assets, error))?;
+    let controls_defaults = controls_assets.join("controls-defaults.cfg");
     let controls_profile = controls::write_defaults_config_with_advanced_access(
         &request.system,
         &request.controls,
-        &controls_assets.join("controls-defaults.cfg"),
+        &controls_defaults,
         request.advanced_emulator_access,
     )
     .map_err(|message| ExportError::new("stage", message))?;
@@ -742,6 +753,8 @@ where
         "firmware": request.firmware.iter().filter_map(|path| firmware_destination_name(path, system)).collect::<Vec<_>>(),
         "splash": request.splash,
         "advancedEmulatorAccess": request.advanced_emulator_access,
+        "keepPlayingInBackground": request.keep_playing_in_background,
+        "autosaveOnQuit": request.autosave_on_quit,
         "menuEntries": request.menu_entries,
     });
     fs::write(
@@ -1861,6 +1874,20 @@ fn isolated_runtime_config(request: &ExportRequest) -> String {
         "null"
     };
     let menu_audio = request.show_menu && request.menu_sounds != "off";
+    // We set both halves with one option. The file is `<savestate>.auto`, not
+    // a numbered pause-menu slot, so Save and Load on that row are unchanged.
+    let autosave = if request.autosave_on_quit {
+        "true"
+    } else {
+        "false"
+    };
+    // On means the game keeps running, so RetroArch must not pause. We put it
+    // in the frozen config, so a later player controls.cfg cannot replace it.
+    let pause_nonactive = if request.keep_playing_in_background {
+        "false"
+    } else {
+        "true"
+    };
     let assets = if menu_audio {
         "$bundle_dir/Resources/assets"
     } else {
@@ -1893,6 +1920,9 @@ video_windowed_position_height = "600"
 {}config_save_on_exit = "false"
 savefile_directory = "$data_dir/saves"
 savestate_directory = "$data_dir/states"
+savestate_auto_save = "{autosave}"
+savestate_auto_load = "{autosave}"
+pause_nonactive = "{pause_nonactive}"
 system_directory = "$data_dir/system"
 cache_directory = "$data_dir/cache"
 log_dir = "$data_dir/logs"
@@ -2753,6 +2783,8 @@ mod tests {
             firmware: Vec::new(),
             splash,
             advanced_emulator_access: false,
+            keep_playing_in_background: false,
+            autosave_on_quit: false,
             menu_entries: None,
             shaders: crate::shaders::ShaderSelection::default(),
             achievements: Default::default(),
@@ -2840,6 +2872,34 @@ mod tests {
             let (name, value) = line.split_once(" = ")?;
             (name == key).then(|| value.trim_matches('"'))
         })
+    }
+
+    #[test]
+    fn export_records_background_play_and_quit_autosave() {
+        let mut settings = request(false);
+        let off = embedded_runtime_config(&write_test_launcher(settings.clone()));
+        assert_eq!(
+            config_value(&off, "savestate_auto_save"),
+            Some("false"),
+            "quit autosave is left at RetroArch's default instead of being written"
+        );
+        assert_eq!(config_value(&off, "savestate_auto_load"), Some("false"));
+        assert_eq!(
+            config_value(&off, "pause_nonactive"),
+            Some("true"),
+            "keeping the window in the background off still has to say so, where a player file cannot replace it"
+        );
+
+        settings.keep_playing_in_background = true;
+        settings.autosave_on_quit = true;
+        let on = embedded_runtime_config(&write_test_launcher(settings.clone()));
+        assert_eq!(config_value(&on, "savestate_auto_save"), Some("true"));
+        assert_eq!(config_value(&on, "savestate_auto_load"), Some("true"));
+        assert_eq!(
+            config_value(&on, "pause_nonactive"),
+            Some("false"),
+            "keeping the window in the background on is the same frozen key, not a player default"
+        );
     }
 
     #[test]
@@ -3023,8 +3083,7 @@ mod tests {
 
     #[test]
     fn hotkey_policy_matches_pinned_retroarch_meta_binds() {
-        let source = crate::repo::at(
-            "work/experiments/rml-retroarch/retroarch/configuration.c");
+        let source = crate::repo::at("work/experiments/rml-retroarch/retroarch/configuration.c");
         if !source.is_file() {
             return;
         }

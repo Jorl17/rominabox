@@ -483,8 +483,13 @@ main {
   margin: 0;
 }
 .traveling-also {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #596663;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .advanced {
   border-top: 1px solid var(--line);
@@ -1064,7 +1069,8 @@ select {
   border-left: 2px solid var(--line);
   padding-left: 22px;
 }
-.menu-settings .option-toggle {
+.menu-settings .option-toggle,
+.play-options .option-toggle {
   display: flex;
   margin: 0 0 12px;
 }

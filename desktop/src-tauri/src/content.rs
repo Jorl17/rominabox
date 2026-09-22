@@ -1237,7 +1237,7 @@ mod tests {
             root.join("Final Fantasy VII (Disc 2).cue"),
             root.join("Final Fantasy VII (Disc 3).bin"),
         ];
-        let receipts: Vec<_> = drops
+        let listed: Vec<_> = drops
             .iter()
             .map(|dropped| {
                 let resolved = resolve_dropped(dropped).unwrap();
@@ -1246,23 +1246,23 @@ mod tests {
                 (resolved, set.entrypoint, files)
             })
             .collect();
-        assert_eq!(receipts[0].0, playlist, "dropping the playlist");
-        assert_eq!(receipts[1].0, receipts[0].0, "dropping disc 2's cue");
-        assert_eq!(receipts[2].0, receipts[0].0, "dropping disc 3's track");
+        assert_eq!(listed[0].0, playlist, "dropping the playlist");
+        assert_eq!(listed[1].0, listed[0].0, "dropping disc 2's cue");
+        assert_eq!(listed[2].0, listed[0].0, "dropping disc 3's track");
         assert_eq!(
-            receipts[1].1, receipts[0].1,
+            listed[1].1, listed[0].1,
             "disc 2's cue is a different entry"
         );
         assert_eq!(
-            receipts[2].1, receipts[0].1,
+            listed[2].1, listed[0].1,
             "disc 3's track is a different entry"
         );
         assert_eq!(
-            receipts[1].2, receipts[0].2,
+            listed[1].2, listed[0].2,
             "disc 2's cue collects different files"
         );
         assert_eq!(
-            receipts[2].2, receipts[0].2,
+            listed[2].2, listed[0].2,
             "disc 3's track collects different files"
         );
         for name in [
@@ -1275,9 +1275,9 @@ mod tests {
             "Final Fantasy VII (Disc 3).bin",
         ] {
             assert!(
-                receipts[0].2.iter().any(|file| file == name),
+                listed[0].2.iter().any(|file| file == name),
                 "{name} is not in the game: {:?}",
-                receipts[0].2
+                listed[0].2
             );
         }
     }

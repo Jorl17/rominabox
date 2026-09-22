@@ -29,6 +29,8 @@ export type ExportRequest = {
   showMenu: boolean;
   startAtMenu: boolean;
   splash: boolean;
+  keepPlayingInBackground: boolean;
+  autosaveOnQuit: boolean;
   advancedEmulatorAccess: boolean;
   shaders?: {
     bundled: string[];
@@ -110,23 +112,31 @@ export function inspectGame(
 }
 export type Traveling = { entry: string; files: string[] };
 // We ask with the console, as in the export, because a companion required
-// for one console is optional for another. Without it, the receipt could
-// list files that we do not copy in the export.
+// for one console is optional for another. Without it, the Also importing
+// line could list files that we do not copy in the export.
 export function travelingFiles(
   path: string,
   system: string,
 ): Promise<Traveling> {
   // The browser walkthrough has no desktop shell, but we must still use
   // content::collect, because with a second copy of that rule in the page,
-  // the receipt and the export could list different files. In the walkthrough
-  // server we run the same command as in the shell.
+  // the Also importing line and the export could list different files. In the
+  // walkthrough server we run the same command as in the shell.
   if (native) return invoke("traveling_files", { path, system });
   const query = new URLSearchParams({ path, system });
   return fetch(`/__rominabox/traveling?${query}`).then(async (response) => {
-    if (!response.ok)
-      throw new Error(
-        "The files that travel with this game could not be read.",
-      );
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+      // We show this sentence on the page. Replacing it would hide the reason
+      // from the exporter and make the drop look like a one-file game.
+      const message =
+        body && typeof body.message === "string" && body.message
+          ? body.message
+          : "The files that travel with this game could not be read.";
+      throw new Error(message);
+    }
     return response.json() as Promise<Traveling>;
   });
 }

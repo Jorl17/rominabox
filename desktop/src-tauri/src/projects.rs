@@ -57,6 +57,12 @@ pub struct ProjectSettings {
     /// Restore stock RetroArch native menus in the exported app.
     #[serde(default)]
     pub advanced_emulator_access: bool,
+    /// Keep emulating when the window is not focused. Per game, set at export.
+    #[serde(default)]
+    pub keep_playing_in_background: bool,
+    /// Save on quit and resume from that save next launch. Per game.
+    #[serde(default)]
+    pub autosave_on_quit: bool,
     /// The Options entries we offer in this game. When absent, we use the
     /// design's defaults. With an empty list, we show no Options button.
     #[serde(default)]
@@ -128,6 +134,10 @@ struct StoredSettings {
     #[serde(default)]
     advanced_emulator_access: bool,
     #[serde(default)]
+    keep_playing_in_background: bool,
+    #[serde(default)]
+    autosave_on_quit: bool,
+    #[serde(default)]
     menu_entries: Option<Vec<String>>,
     #[serde(default)]
     shaders: crate::shaders::ShaderSelection,
@@ -169,6 +179,8 @@ impl From<&ExportRequest> for ProjectSettings {
             firmware: request.firmware.clone(),
             splash: request.splash,
             advanced_emulator_access: request.advanced_emulator_access,
+            keep_playing_in_background: request.keep_playing_in_background,
+            autosave_on_quit: request.autosave_on_quit,
             menu_entries: request.menu_entries.clone(),
             shaders: request.shaders.clone(),
             achievements: request.achievements.clone(),
@@ -201,6 +213,8 @@ impl ProjectSettings {
             firmware: self.firmware,
             splash: self.splash,
             advanced_emulator_access: self.advanced_emulator_access,
+            keep_playing_in_background: self.keep_playing_in_background,
+            autosave_on_quit: self.autosave_on_quit,
             menu_entries: self.menu_entries,
             shaders: self.shaders,
             achievements: self.achievements,
@@ -272,6 +286,8 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             controls: request.settings.controls.clone(),
             splash: request.settings.splash,
             advanced_emulator_access: request.settings.advanced_emulator_access,
+            keep_playing_in_background: request.settings.keep_playing_in_background,
+            autosave_on_quit: request.settings.autosave_on_quit,
             menu_entries: request.settings.menu_entries.clone(),
             shaders: stored_shaders,
             achievements: request.settings.achievements.clone(),
@@ -402,6 +418,8 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
         firmware,
         splash: manifest.settings.splash,
         advanced_emulator_access: manifest.settings.advanced_emulator_access,
+        keep_playing_in_background: manifest.settings.keep_playing_in_background,
+        autosave_on_quit: manifest.settings.autosave_on_quit,
         menu_entries: manifest.settings.menu_entries,
         shaders: crate::shaders::unpack_selection(
             manifest.settings.shaders,
@@ -543,6 +561,8 @@ fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
         controls: settings.controls.clone(),
         splash: settings.splash,
         advanced_emulator_access: settings.advanced_emulator_access,
+        keep_playing_in_background: settings.keep_playing_in_background,
+        autosave_on_quit: settings.autosave_on_quit,
         menu_entries: settings.menu_entries.clone(),
         shaders: settings.shaders.clone(),
         achievements: settings.achievements.clone(),
@@ -918,9 +938,11 @@ mod tests {
                 firmware: Vec::new(),
                 splash: false,
                 advanced_emulator_access: false,
+                keep_playing_in_background: false,
+                autosave_on_quit: false,
                 menu_entries: None,
                 shaders: crate::shaders::ShaderSelection::default(),
-            achievements: Default::default(),
+                achievements: Default::default(),
                 target: ExportTarget::Macos,
             },
         })
@@ -942,6 +964,29 @@ mod tests {
         assert!(!opened.settings.advanced_emulator_access);
     }
 
+    #[test]
+    fn project_round_trip_preserves_background_play_and_quit_autosave() {
+        let root = fixture("play-settings");
+        let rom = root.join("game.bin");
+        fs::write(&rom, b"rom bytes").unwrap();
+        let mut settings = settings(rom, false);
+        settings.keep_playing_in_background = true;
+        settings.autosave_on_quit = true;
+        let archive_path = root.join("game.rominabox");
+        save_project(&ProjectSaveRequest {
+            archive_path: archive_path.clone(),
+            settings,
+        })
+        .unwrap();
+        let opened = open_project(&ProjectOpenRequest {
+            archive_path,
+            extraction_dir: root.join("opened"),
+        })
+        .unwrap();
+        assert!(opened.settings.keep_playing_in_background);
+        assert!(opened.settings.autosave_on_quit);
+    }
+
     fn settings(rom: PathBuf, advanced_emulator_access: bool) -> ProjectSettings {
         ProjectSettings {
             rom,
@@ -959,6 +1004,8 @@ mod tests {
             firmware: Vec::new(),
             splash: false,
             advanced_emulator_access,
+            keep_playing_in_background: false,
+            autosave_on_quit: false,
             menu_entries: None,
             shaders: crate::shaders::ShaderSelection::default(),
             achievements: Default::default(),
@@ -1025,5 +1072,7 @@ mod tests {
         })
         .unwrap();
         assert!(!opened.settings.advanced_emulator_access);
+        assert!(!opened.settings.keep_playing_in_background);
+        assert!(!opened.settings.autosave_on_quit);
     }
 }
