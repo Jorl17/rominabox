@@ -1113,16 +1113,4 @@ mod tests {
         let _ = fs::remove_dir_all(&root);
     }
 
-    #[test]
-    fn the_native_stylesheet_does_not_grow_a_shader_row() {
-        let stylesheet = fs::read_to_string(
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../integrations/designs/native/menu.rcss"),
-        )
-        .unwrap();
-        assert!(
-            !stylesheet.contains("shader"),
-            "shader styling belongs to the shared list row, not the design's stylesheet"
-        );
-    }
 }

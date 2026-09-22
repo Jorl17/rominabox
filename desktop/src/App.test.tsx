@@ -1,8 +1,40 @@
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { App } from "./App";
+import { type FirmwareAssessment } from "./bridge";
+
+const { firmwareHandlers } = vi.hoisted(() => ({
+  firmwareHandlers: {
+    assess: null as
+      ((system: string, files: string[]) => Promise<FirmwareAssessment>) | null,
+  },
+}));
+
+vi.mock("./bridge", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./bridge")>();
+  return {
+    ...actual,
+    assessFirmware: (system: string, files: string[]) => {
+      const assess = firmwareHandlers.assess;
+      if (!assess) return actual.assessFirmware(system, files);
+      return assess(system, files);
+    },
+  };
+});
 
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
@@ -30,7 +62,88 @@ beforeAll(() => {
   }
 });
 
+function cliBinary(): string {
+  const roots: string[] = [];
+  if (process.env.CARGO_TARGET_DIR) roots.push(process.env.CARGO_TARGET_DIR);
+  const here = dirname(fileURLToPath(import.meta.url));
+  // A copy in this checkout. Checkouts that share a cargo target overwrite its
+  // binary at each build, so the binary is not stable.
+  const privateCopy = resolve(here, "../../work/bios-cli/rominabox-cli");
+  if (existsSync(privateCopy)) return privateCopy;
+  roots.push(resolve(here, "../src-tauri/target"));
+  try {
+    const git = readFileSync(resolve(here, "../../.git"), "utf8");
+    const match = git.match(/^gitdir:\s*(.+)$/m);
+    if (match) {
+      const gitdir = resolve(
+        dirname(resolve(here, "../../.git")),
+        match[1].trim(),
+      );
+      const common = gitdir.includes(`${sep}worktrees${sep}`)
+        ? resolve(gitdir, "../..")
+        : gitdir;
+      roots.push(join(common, "shared-cargo-target"));
+    }
+  } catch {
+    // In a normal checkout the cargo output is under src-tauri/target.
+  }
+  for (const root of roots) {
+    for (const profile of ["debug", "release"]) {
+      const candidate = join(root, profile, "rominabox-cli");
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  throw new Error(
+    "rominabox-cli is not built, so the builder cannot ask whether a BIOS is required",
+  );
+}
+
+function assessWithCli(
+  system: string,
+  files: string[],
+): Promise<FirmwareAssessment> {
+  const stdout = execFileSync(cliBinary(), ["firmware"], {
+    input: JSON.stringify({ system, files }),
+    encoding: "utf8",
+  });
+  const line = stdout
+    .trim()
+    .split("\n")
+    .find((row: string) => row.startsWith("{"));
+  if (!line) throw new Error(stdout);
+  const parsed = JSON.parse(line) as {
+    type: string;
+    result?: FirmwareAssessment;
+    message?: string;
+  };
+  if (parsed.type !== "result" || !parsed.result) {
+    throw new Error(parsed.message || stdout);
+  }
+  return Promise.resolve(parsed.result);
+}
+
+async function waitForText(text: string): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (container.textContent?.includes(text)) return;
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+  }
+  throw new Error(`Timed out waiting for: ${text}`);
+}
+
+function chooseConsole(id: string): void {
+  const select = container.querySelector(".fields select") as HTMLSelectElement;
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLSelectElement.prototype,
+    "value",
+  )?.set;
+  setter?.call(select, id);
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 beforeEach(() => {
+  firmwareHandlers.assess = assessWithCli;
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -168,6 +281,90 @@ describe("App workflow", () => {
   it("omits firmware authoring for a console with no firmware requirement", async () => {
     await openDetails();
     expect(container.textContent).not.toContain("Add BIOS files");
+  });
+
+  it("stops at the BIOS step while a required file is missing", async () => {
+    await openDetails();
+    await act(async () => {
+      chooseConsole("pcecd");
+    });
+    expect(button("Next").disabled).toBe(true);
+    const assessment = await assessWithCli("pcecd", []);
+    const required = assessment.notices.find(
+      (notice) => notice.kind === "required",
+    );
+    if (!required) throw new Error("the engine did not require a BIOS");
+    await waitForText(required.text);
+    expect(button("Next").disabled).toBe(true);
+    expect(container.querySelector(".firmware-required")).not.toBeNull();
+    const progress = container.querySelector('nav[aria-label="Progress"]')!;
+    expect(progressButton("Menu", progress).disabled).toBe(true);
+    expect(progressButton("Export", progress).disabled).toBe(true);
+  });
+
+  it("does not stop for a console whose BIOS is optional", async () => {
+    await openDetails();
+    await act(async () => {
+      chooseConsole("ps1");
+    });
+    const assessment = await assessWithCli("ps1", []);
+    const optional = assessment.notices.find(
+      (notice) => notice.kind === "optional",
+    );
+    if (!optional)
+      throw new Error("the engine did not explain the optional BIOS");
+    await waitForText(optional.text);
+    expect(button("Next").disabled).toBe(false);
+    expect(container.querySelector(".firmware-required")).toBeNull();
+    const progress = container.querySelector('nav[aria-label="Progress"]')!;
+    expect(progressButton("Menu", progress).disabled).toBe(false);
+    expect(progressButton("Export", progress).disabled).toBe(false);
+  });
+
+  it("explains a BIOS file that does not match this console", async () => {
+    await openDetails();
+    await act(async () => {
+      chooseConsole("pcecd");
+    });
+    const input = container.querySelector(
+      "input[data-firmware]",
+    ) as HTMLInputElement;
+    await act(async () => {
+      Object.defineProperty(input, "files", {
+        configurable: true,
+        value: [new File([""], "notes.txt")],
+      });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    const assessment = await assessWithCli("pcecd", ["notes.txt"]);
+    const reason = assessment.files[0]?.reason;
+    if (!reason)
+      throw new Error("the engine did not explain the unmatched file");
+    await waitForText(reason);
+    expect(button("Next").disabled).toBe(true);
+  });
+
+  it("continues once the required BIOS file is provided", async () => {
+    await openDetails();
+    await act(async () => {
+      chooseConsole("pcecd");
+    });
+    const input = container.querySelector(
+      "input[data-firmware]",
+    ) as HTMLInputElement;
+    await act(async () => {
+      Object.defineProperty(input, "files", {
+        configurable: true,
+        value: [new File([""], "syscard3.pce")],
+      });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    const assessment = await assessWithCli("pcecd", ["syscard3.pce"]);
+    const ready = assessment.notices.find((notice) => notice.kind === "ready");
+    if (!ready) throw new Error("the engine did not accept the BIOS file");
+    await waitForText(ready.text);
+    expect(button("Next").disabled).toBe(false);
+    expect(container.querySelector(".firmware-required")).toBeNull();
   });
 
   it("puts help outside scrolling content and outside checkbox activation", async () => {

@@ -14,7 +14,12 @@
     "category": "disc"
   },
   "recognition": {},
-  "metadata": {},
+  "metadata": {
+    "catalog": {
+      "provider": "redump",
+      "name": "Sony - PlayStation 2"
+    }
+  },
   "cores": [
     {
       "component": "pcsx2"

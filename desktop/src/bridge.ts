@@ -108,6 +108,26 @@ export function inspectGame(
 ): Promise<GameInfo> {
   return invoke("inspect_game", { path, online, systemOverride });
 }
+export const FirmwareNoticeKind = {
+  Required: "required",
+  Duplicate: "duplicate",
+  Unmatched: "unmatched",
+  Optional: "optional",
+  Ready: "ready",
+} as const;
+export type FirmwareNoticeKind =
+  (typeof FirmwareNoticeKind)[keyof typeof FirmwareNoticeKind];
+export type FirmwareAssessment = {
+  canContinue: boolean;
+  notices: { kind: FirmwareNoticeKind; text: string }[];
+  files: { name: string; counted: boolean; reason: string | null }[];
+};
+export function assessFirmware(
+  system: string,
+  files: string[],
+): Promise<FirmwareAssessment> {
+  return invoke("assess_firmware", { system, files });
+}
 export async function pickFirmware(): Promise<string[]> {
   const files = await open({
     multiple: true,

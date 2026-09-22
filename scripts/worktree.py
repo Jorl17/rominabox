@@ -219,11 +219,22 @@ def write_local(path: Path, suffix: str, offset: int) -> dict:
 # The prepared runtime kit (the frozen RetroArch player, the cores, the menu
 # assets) is build output and is not in git. Without it we cannot export or
 # launch anything in a worktree, and a RetroArch build per worktree is too slow.
-# It is the same in every worktree unless the fork changes, so we share it
-# with a symlink, and use a separate copy in a worktree that changes the fork.
+# It is the same in every worktree unless the fork or a design changes, so we
+# share it with a symlink.
+#
+# Staging a design through that symlink would write into the canonical
+# checkout and give every other worktree a kit that does not match its
+# design. So in `build-builder-macos.sh` we refuse to stage through a shared
+# kit and suggest `--own-runtime`.
 SHARED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/runtime"),
     Path("desktop/src-tauri/resources/preview"),
+    # Without these we cannot run the whole suite in a worktree, and the
+    # failures look like a fault in the change. The `frontend` tests stop with
+    # "tsc: command not found", and in `menu` and `bridge` we cannot link RmlUi.
+    # Both are build output, the same in every worktree, and not in git.
+    Path("desktop/node_modules"),
+    Path("work/experiments"),
 ]
 
 
@@ -363,7 +374,7 @@ def main() -> int:
     made.add_argument(
         "--own-runtime",
         action="store_true",
-        help="copy the 164 MB runtime kit instead of sharing it; needed only when changing the RetroArch fork",
+        help="copy the 164 MB runtime kit instead of sharing it; needed when changing the fork OR a design, because staging writes into the kit",
     )
     commands.add_parser("adopt", help="set up a worktree that already exists")
     commands.add_parser("env", help="print the exports this worktree needs")
