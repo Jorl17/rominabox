@@ -100,8 +100,7 @@ const GENERATED_PREFIXES: &[&str] = &[
 ];
 
 fn repo_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
+    rominabox_desktop::repo::root()
         .canonicalize()
         .expect("repository root")
 }
@@ -519,7 +518,7 @@ fn no_design_styles_one_list_by_name() {
     // named after a particular screen in a design, and it is not one when
     // it is named after the screen's button or panel.
     const PARTS: [&str; 4] = ["row", "list", "pager", "entry"];
-    let designs = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs");
+    let designs = rominabox_desktop::repo::at("integrations/designs");
     let mut read = 0;
     for entry in std::fs::read_dir(&designs).expect("designs directory") {
         let sheet = entry.expect("design entry").path().join("menu.rcss");

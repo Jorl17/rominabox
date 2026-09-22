@@ -160,6 +160,42 @@ pub struct Screen {
     /// Whether we ship the entry in a game without a set of entries. Shaders
     /// and the rest stay off until the author turns them on for a game.
     pub option_default: bool,
+    /// A switch on this screen, with the words from the design and the value
+    /// it has while it is on.
+    pub toggle: Option<Toggle>,
+}
+
+/// A switch on a screen, such as achievement mode.
+///
+/// Every word on it comes from the design. In the player we act only on
+/// `guard`, which is a closed set, so a design can choose only an effect that
+/// we implement. We reject any other value here, so that it is not ignored
+/// when the player presses the switch.
+#[derive(Clone, Debug)]
+pub struct Toggle {
+    pub id: String,
+    pub label: String,
+    pub on: String,
+    pub off: String,
+    pub default_on: bool,
+    pub guard: ToggleGuard,
+    pub guard_label: String,
+    pub guard_status: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ToggleGuard {
+    Nothing,
+    Saves,
+}
+
+impl ToggleGuard {
+    fn declared(self) -> &'static str {
+        match self {
+            ToggleGuard::Nothing => "",
+            ToggleGuard::Saves => "saves",
+        }
+    }
 }
 
 /// The place of a declared screen. We parse it from the design so that we do
@@ -185,6 +221,7 @@ fn built_in_screens() -> Vec<Screen> {
             place: ScreenPlace::Plain,
             option_label: None,
             option_default: false,
+            toggle: None,
         },
         Screen {
             id: "controls".into(),
@@ -197,6 +234,7 @@ fn built_in_screens() -> Vec<Screen> {
             place: ScreenPlace::Plain,
             option_label: None,
             option_default: false,
+            toggle: None,
         },
     ]
 }
@@ -247,6 +285,63 @@ fn screen_option(
     Ok((Some(label.to_string()), default))
 }
 
+fn screen_toggle(
+    entry: &serde_json::Value,
+    index: usize,
+    declaration: &Path,
+) -> Result<Option<Toggle>, String> {
+    let Some(declared) = entry.get("toggle") else {
+        return Ok(None);
+    };
+    if declared.is_null() {
+        return Ok(None);
+    }
+    let word = |key: &str| -> Result<String, String> {
+        declared
+            .get(key)
+            .and_then(|value| value.as_str())
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+            .ok_or_else(|| {
+                format!(
+                    "the switch on screen {index} in {} declares no {key}",
+                    declaration.display()
+                )
+            })
+    };
+    let guard = match declared.get("guard").and_then(|value| value.as_str()) {
+        None | Some("") => ToggleGuard::Nothing,
+        Some("saves") => ToggleGuard::Saves,
+        Some(other) => {
+            return Err(format!(
+                "the switch on screen {index} in {} guards '{other}', which is not \
+                 something a player can hold",
+                declaration.display()
+            ))
+        }
+    };
+    let optional = |key: &str| -> String {
+        declared
+            .get(key)
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string()
+    };
+    Ok(Some(Toggle {
+        id: word("id")?,
+        label: word("label")?,
+        on: word("on")?,
+        off: word("off")?,
+        default_on: declared
+            .get("default")
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false),
+        guard,
+        guard_label: optional("guardLabel"),
+        guard_status: optional("guardStatus"),
+    }))
+}
+
 pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
     let declaration = design.join("design.json");
     let Ok(text) = fs::read_to_string(&declaration) else {
@@ -278,6 +373,7 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
             place: screen_place(entry, index, &declaration)?,
             option_label,
             option_default,
+            toggle: screen_toggle(entry, index, &declaration)?,
         });
     }
     if screens.is_empty() {
@@ -296,6 +392,31 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
 /// left on. We drop every screen in that set that this document cannot draw,
 /// so a logo-only export lists no screens at all, instead of panels that are
 /// not in the file.
+/// The switches on these screens, written to the file that the player reads.
+///
+/// We write the switches of every screen with this function, also for a
+/// generated list, whose panel we write after the declarations of the design.
+/// A second copy of this format could write an empty `toggles` for a switch
+/// whose button is on screen.
+pub fn toggle_declarations(screens: &[Screen]) -> String {
+    let switches: Vec<&Toggle> = screens.iter().filter_map(|s| s.toggle.as_ref()).collect();
+    let ids: Vec<&str> = switches.iter().map(|t| t.id.as_str()).collect();
+    let mut text = format!("toggles = \"{}\"\n", ids.join(" "));
+    for toggle in switches {
+        text.push_str(&format!(
+            "toggle_on_{id} = \"{on}\"\ntoggle_off_{id} = \"{off}\"\ntoggle_default_{id} = \"{default}\"\ntoggle_guard_{id} = \"{guard}\"\ntoggle_guard_label_{id} = \"{label}\"\ntoggle_guard_status_{id} = \"{status}\"\n",
+            id = toggle.id,
+            on = toggle.on,
+            off = toggle.off,
+            default = toggle.default_on,
+            guard = toggle.guard.declared(),
+            label = toggle.guard_label,
+            status = toggle.guard_status,
+        ));
+    }
+    text
+}
+
 fn screen_declarations(screens: &[Screen], markup: &str) -> String {
     let screens: Vec<&Screen> = screens
         .iter()
@@ -313,6 +434,9 @@ fn screen_declarations(screens: &[Screen], markup: &str) -> String {
             id = screen.id,
         ));
     }
+    text.push_str(&toggle_declarations(
+        &screens.iter().copied().cloned().collect::<Vec<Screen>>(),
+    ));
     text
 }
 
@@ -368,6 +492,7 @@ fn screens_for_export(screens: &[Screen], chosen: Option<&[String]>) -> Result<V
                 place: ScreenPlace::Options,
                 option_label: None,
                 option_default: false,
+                toggle: None,
             },
         );
     }
@@ -528,7 +653,7 @@ fn apply_options(
         } else {
             let back = options.back_label.clone().unwrap_or_else(|| "BACK".into());
             let shell = format!(
-                "<div id=\"options-panel\" style=\"display:none;\"><div id=\"options-entries\">{entries}</div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
+                "<div id=\"options-panel\" class=\"screen-panel\" style=\"display:none;\"><div id=\"options-entries\">{entries}</div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
                 entries = entries,
                 back = rml_text(&back),
             );
@@ -1142,7 +1267,7 @@ pub fn prepare_controls_assets(
     system: &str,
     controls: &crate::controls::Controls,
     entries: Option<&[String]>,
-) -> Result<(), String> {
+) -> Result<Vec<Screen>, String> {
     // We take the frame from the design, so a change of the scene position in
     // design.json moves the box in the stylesheet and every generated
     // coordinate together.
@@ -1208,7 +1333,21 @@ pub fn prepare_controls_assets(
     write_declarations(design, destination, &screens, &menu)?;
     fs::write(destination.join("menu.rml"), menu).map_err(|e| e.to_string())?;
     let show_options = screens.iter().any(|screen| screen.place == ScreenPlace::Options);
-    write_options_css(destination, show_options)
+    write_options_css(destination, show_options)?;
+    Ok(screens)
+}
+
+/// The entries for a game without a set, each with its default.
+///
+/// We make this list explicit because we add to it at export. For example, we
+/// ship the achievements entry in a game with achievements, and None cannot
+/// express "the defaults and this one".
+pub fn default_entries(design: &Path) -> Result<Vec<String>, String> {
+    Ok(declared_screens(design)?
+        .into_iter()
+        .filter(|screen| screen.option_label.is_some() && screen.option_default)
+        .map(|screen| screen.id)
+        .collect())
 }
 
 /// The pads in an export: every pad in the picker.

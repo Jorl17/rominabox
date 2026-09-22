@@ -54,4 +54,32 @@ else
   exit 1
 fi
 
+# A generated list screen, in the same form that we write into <!--SCREENS-->
+# at export. We add it after staging the stylesheet, because staging copies the
+# menu.rml of the design over this one. Without it the bridge has no list, and
+# the checks of the rows and controls on a list screen cannot fail.
+python3 - "$assets/menu.rml" <<'FIXTURE'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1])
+panel = (
+    '<div id="fixture-panel" class="screen-panel" style="display:none;">'
+    '<div class="list"><div id="fixture-page-1" class="list-page">'
+    '<button id="fixture-one" class="list-row "><div class="list-row-title">ONE</div>'
+    '<div id="fixture-one-state" class="list-row-state"></div></button>'
+    '<button id="fixture-two" class="list-row "><div class="list-row-title">TWO</div>'
+    '<div id="fixture-two-state" class="list-row-state"></div></button>'
+    '</div></div>'
+    '<div class="list-actions">'
+    '<button class="menu-action list-toggle" id="fixture-mode">'
+    '<span class="list-toggle-label">MODE</span>'
+    '<span id="fixture-mode-state" class="list-toggle-state">OFF</span></button>'
+    '<button class="menu-action list-back" id="fixture-back">BACK</button>'
+    '</div></div>'
+)
+document = p.read_text()
+if "<!--SCREENS-->" not in document:
+    raise SystemExit("menu.rml has no <!--SCREENS--> slot for the list fixture")
+p.write_text(document.replace("<!--SCREENS-->", panel))
+FIXTURE
+
 "$out" "$assets" "$build_dir/thumbnail-test.png"

@@ -28,3 +28,6 @@ worktree.local.json
 # Controller artwork staged for the builder UI; generated from the SVG sources.
 /desktop/public/controllers/
 /desktop/node_modules
+
+# Cargo build output; shared between worktrees through CARGO_TARGET_DIR.
+/desktop/src-tauri/target

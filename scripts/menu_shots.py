@@ -19,6 +19,8 @@ nothing stays open. When an id is not in the document, we stop the run
 instead of taking a picture of the wrong screen.
 
     python3 scripts/menu_shots.py --app "/path/to/Game.app"
+    python3 scripts/menu_shots.py --rom game.md --palette amber
+    python3 scripts/menu_shots.py --rom game.md --every-palette
     python3 scripts/menu_shots.py --app "/path/to/Game.app" --check
 
 This does not test window placement, focus or fullscreen behaviour, which
@@ -57,6 +59,50 @@ DIGESTS = ROOT / "scripts/fixtures/menu-shot-digests.json"
 TIMEOUT_SECONDS = 120
 
 DATA_DIR = re.compile(r'^data_dir="([^"]+)"', re.MULTILINE)
+
+
+def declared_palettes() -> list[str]:
+    """Palette ids from desktop/designs.json, in the order they are declared.
+
+    We read them instead of listing them here, so we take pictures of a new
+    palette without a change to this code.
+    """
+    declared = json.loads((ROOT / "desktop/designs.json").read_text())["palettes"]
+    names = [entry["id"] for entry in declared]
+    if not names:
+        raise SystemExit("desktop/designs.json declares no palettes")
+    return names
+
+
+def require_palette(name: str) -> str:
+    declared = declared_palettes()
+    if name not in declared:
+        raise SystemExit(f"unknown palette '{name}'; declared: {', '.join(declared)}")
+    return name
+
+
+def achievement_request(directory: Path | None) -> dict:
+    """The achievement settings we pass to the export.
+
+    The list and its badges come from the service and are not in this
+    repository. Without a directory we export a game with no achievements
+    screen, and then we report the achievement shots as failed instead of
+    taking pictures of the pause menu.
+    """
+    if directory is None:
+        return {}
+    catalog = directory / "achievements.json"
+    if not catalog.is_file():
+        raise SystemExit(
+            f"{catalog} is not there. Fetch it first:\n"
+            "  rominabox-cli achievements <<< '{\"gameId\": N, \"into\": \"<dir>\"}'"
+        )
+    return {
+        "gameId": json.loads(catalog.read_text())["gameId"],
+        "bundle": True,
+        "catalog": str(catalog),
+        "badges": str(directory / "badges"),
+    }
 
 
 def declared_shots() -> dict[str, dict]:
@@ -117,6 +163,10 @@ def take(app: Path, name: str, script: list[str], output: Path,
         (data / volume_file()).unlink(missing_ok=True)
         for remap in (data / "remaps").rglob("*.rmp"):
             remap.unlink()
+        # We save the position of each switch, so otherwise the shot that turns on
+        # achievement mode would change the pictures of every later shot.
+        for switch in data.glob("toggle-*"):
+            switch.unlink()
 
     # Settings required for this shot, which we add to the per-game override
     # that is already part of the exported launch. The important one is
@@ -259,12 +309,39 @@ def main() -> int:
         help="export a game from this ROM first, using the tree as it is now",
     )
     parser.add_argument("--system", default="megadrive", help="the console --rom is for")
+    parser.add_argument("--palette", help="export this declared palette (default: blue)")
+    parser.add_argument(
+        "--every-palette",
+        action="store_true",
+        help="export and shoot every palette desktop/designs.json declares",
+    )
+    parser.add_argument(
+        "--achievements",
+        type=Path,
+        help="a directory holding achievements.json and badges/, as written by "
+             "`rominabox-cli achievements`; without it the game has no achievements screen",
+    )
     parser.add_argument("output", type=Path, nargs="?", default=ROOT / "work/menu-shots")
     parser.add_argument("--record", action="store_true", help="record what each shot looks like")
     parser.add_argument("--check", action="store_true", help="fail if a shot changed")
     arguments = parser.parse_args()
 
     shots = declared_shots()
+    if arguments.every_palette and arguments.palette:
+        raise SystemExit("pass --palette or --every-palette, not both")
+    if arguments.every_palette and not arguments.rom:
+        raise SystemExit(
+            "--every-palette exports each palette itself, so pass --rom. "
+            "One --app is already one palette."
+        )
+    palettes = (
+        declared_palettes()
+        if arguments.every_palette
+        else [require_palette(arguments.palette or "blue")]
+    )
+    # This applies to the whole run and not to one shot. We fetch the data once
+    # and include it in every export of this game.
+    achievements = achievement_request(arguments.achievements)
     if not arguments.app:
         if not arguments.rom:
             raise SystemExit("give --app an exported game, or --rom to export one first")
@@ -295,23 +372,33 @@ def main() -> int:
 
     failures: list[str] = []
     digests: dict[str, str] = {}
-    for name, shot in shots.items():
-        script = shot["script"]
-        config = shot.get("config")
-        settings = {
-            key: value
-            for key, value in shot.items()
-            if key not in ("script", "config")
-        }
-        problem = take(game_for(settings), name, script, arguments.output, config)
-        if problem:
-            print(f"  FAILED  {name}: {problem}", file=sys.stderr)
-            failures.append(name)
-            continue
-        digests[name] = hashlib.sha256(
-            (arguments.output / f"{name}.png").read_bytes()
-        ).hexdigest()[:16]
-        print(f"  {name:<20}{' -> '.join(script) or '(the menu as it opens)'}")
+    nested = len(palettes) > 1
+    for palette in palettes:
+        destination = arguments.output / palette if nested else arguments.output
+        destination.mkdir(parents=True, exist_ok=True)
+        for name, shot in shots.items():
+            script = shot["script"]
+            config = shot.get("config")
+            # The palette and the achievement list are export settings, so we
+            # add them to the export key with the settings of the shot.
+            settings = {
+                key: value
+                for key, value in shot.items()
+                if key not in ("script", "config")
+            }
+            settings["palette"] = palette
+            if achievements:
+                settings["achievements"] = achievements
+            key = f"{palette}/{name}" if nested else name
+            problem = take(game_for(settings), name, script, destination, config)
+            if problem:
+                print(f"  FAILED  {key}: {problem}", file=sys.stderr)
+                failures.append(key)
+                continue
+            digests[key] = hashlib.sha256(
+                (destination / f"{name}.png").read_bytes()
+            ).hexdigest()[:16]
+            print(f"  {key:<28}{' -> '.join(script) or '(the menu as it opens)'}")
 
     if failures:
         print(f"\n{len(failures)} shot(s) failed: {', '.join(failures)}", file=sys.stderr)
@@ -339,7 +426,7 @@ def main() -> int:
         print(f"\n{len(digests)} shots unchanged")
         return 0
 
-    print(f"\n{len(digests)} shots -> {arguments.output}")
+    print(f"\n{len(digests)} shots across {len(palettes)} palette(s) -> {arguments.output}")
     return 0
 
 
