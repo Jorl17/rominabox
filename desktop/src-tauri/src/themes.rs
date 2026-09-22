@@ -674,6 +674,36 @@ fn overlay_declarations(design: &Path, markup: &str) -> Result<String, String> {
     Ok(text)
 }
 
+/// When the bind list appears and how wide it is, written next to the
+/// overlay clocks that the player reads.
+///
+/// `afterMs` is a declaration like that of an overlay. The time comes from
+/// the design, and we wait for it in the player. Without a `binds` block in
+/// the design, there is no list and the callout contains one assignment.
+fn binds_declarations(design: &Path) -> Result<String, String> {
+    let path = design.join("design.json");
+    let Ok(text) = fs::read_to_string(&path) else {
+        return Ok(String::new());
+    };
+    let declared: serde_json::Value =
+        serde_json::from_str(&text).map_err(|error| format!("{}: {error}", path.display()))?;
+    let Some(binds) = declared.get("binds") else {
+        return Ok(String::new());
+    };
+    let after = binds
+        .get("afterMs")
+        .and_then(|value| value.as_u64())
+        .ok_or_else(|| "binds.afterMs must be a number of milliseconds".to_string())?;
+    let width = binds
+        .get("width")
+        .and_then(|value| value.as_u64())
+        .filter(|value| *value > 0)
+        .ok_or_else(|| "binds.width must be a width in dp".to_string())?;
+    Ok(format!(
+        "binds_after = \"{after}\"\nbinds_width = \"{width}\"\nbinds_list = \"control-binds\"\n"
+    ))
+}
+
 /// Seconds, as we write them in a stylesheet: `design(overlay-leave-notice)s`.
 fn seconds(milliseconds: u32) -> String {
     let text = format!("{:.3}", milliseconds as f32 / 1000.0);
@@ -837,9 +867,10 @@ fn write_declarations(
     markup: &str,
 ) -> Result<(), String> {
     let text = format!(
-        "{}{}",
+        "{}{}{}",
         screen_declarations(screens, markup),
-        overlay_declarations(design, markup)?
+        overlay_declarations(design, markup)?,
+        binds_declarations(design)?
     );
     fs::write(destination.join("design.cfg"), text)
         .map_err(|e| format!("Could not write the design's declarations: {e}"))
@@ -1058,9 +1089,17 @@ pub fn prepare_controls_assets(
             system
         ));
     }
+    let binds = bind_list_markup(design, &offered)?;
+    if !template.contains(BINDS_SLOT) {
+        return Err(format!(
+            "this design has no {BINDS_SLOT} for the binds on a control. \
+             Add the slot to menu.rml, outside #controller-scene."
+        ));
+    }
     let menu = template
         .replace("<!--CONTROLS-->", &markup)
-        .replace(PICKER_SLOT, &picker);
+        .replace(PICKER_SLOT, &picker)
+        .replace(BINDS_SLOT, &binds);
     let (menu, screens) = apply_options(design, &menu, entries)?;
     // The same file as in prepare_theme_assets. This version replaces it,
     // because here we know the entries chosen for the game and we just built
@@ -1069,6 +1108,55 @@ pub fn prepare_controls_assets(
     fs::write(destination.join("menu.rml"), menu).map_err(|e| e.to_string())?;
     let show_options = screens.iter().any(|screen| screen.place == ScreenPlace::Options);
     write_options_css(destination, show_options)
+}
+
+/// Where the bind list goes, as a sibling of the scene like the picker, so
+/// it stays when we replace the scene after someone swaps pads.
+const BINDS_SLOT: &str = "<!--BINDS-->";
+
+/// One row for each input that the bundled pads can bind to a single control.
+///
+/// A `retro_keybind` contains a key, a button, an axis and a mouse button. A
+/// stick is several controls drawn as one object, so its list has the inputs
+/// of every direction. We write the rows now because we cannot create
+/// elements in the player while the game runs. There we fill these rows and
+/// hide the rest. There is always one row more than a page, so we can say
+/// that the rest did not fit, even on a pad whose busiest control would fill
+/// exactly one page.
+fn bind_list_markup(
+    design: &Path,
+    profiles: &[crate::controls::ControlProfile],
+) -> Result<String, String> {
+    let template = crate::shaders::row_template(design)?;
+    let page_size = crate::shaders::page_size(design)?;
+    let mut slots = 4usize;
+    for profile in profiles {
+        let mut groups: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+        for control in &profile.controls {
+            if let Some(name) = control.group.as_deref() {
+                *groups.entry(name).or_default() += 1;
+            }
+        }
+        for size in groups.values() {
+            slots = slots.max(size * 4);
+        }
+    }
+    slots = slots.max(page_size.saturating_add(1));
+    let items: Vec<crate::shaders::ListItem> = (1..=slots)
+        .map(|index| crate::shaders::ListItem {
+            id: format!("bind-{index}"),
+            icon: String::new(),
+            title: String::new(),
+            detail: String::new(),
+            state: String::new(),
+            selected: false,
+        })
+        .collect();
+    Ok(crate::shaders::render_list("binds", &template, &items, page_size).replacen(
+        "<div class=\"list\">",
+        "<div id=\"control-binds\" class=\"list\" style=\"display:none;\">",
+        1,
+    ))
 }
 
 /// The pads in an export: every pad in the picker.
@@ -1283,7 +1371,6 @@ fn control_group_markup(
             }
         }
 
-        // The directions are written on one line.
         let keys: Vec<String> = members
             .iter()
             .filter(|item| item.id.ends_with("_plus") || item.id.ends_with("_minus"))

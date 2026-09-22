@@ -327,3 +327,49 @@ fn each_offered_controller_carries_the_device_it_means() {
         "a picker shows names, not ids"
     );
 }
+
+/// Every input on a control is a row of the shared list, which we write when
+/// we bundle the game.
+///
+/// A callout can show one assignment, but a control can have a key, a pad
+/// button, an axis and a mouse button, and a stick is several of those. At
+/// export we write a row for each input the bundled pads can have, plus one
+/// page more than fits, so we can show that there is a next page. In the
+/// player we fill those rows, and we cannot add rows there.
+#[test]
+fn every_bind_is_a_row_of_the_shared_list() {
+    let root = workspace();
+    let options = Controls::default();
+    themes::prepare_controls_assets(&illustrated_assets(), &assets(), &root, "ps1", &options, None)
+        .unwrap();
+    let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
+    let declared = fs::read_to_string(root.join("design.cfg")).unwrap();
+    controls::write_defaults_config("ps1", &options, &root.join("controls.cfg")).unwrap();
+    let defaults = fs::read_to_string(root.join("controls.cfg")).unwrap();
+
+    assert!(
+        markup.contains("id=\"control-binds\" class=\"list\" style=\"display:none;\""),
+        "the controls screen has no shared list for the binds"
+    );
+    let rows = markup.matches("class=\"list-row ").count();
+    assert!(
+        rows > 4,
+        "a PlayStation stick is five directions and a page holds four, but the list has {rows} rows"
+    );
+    assert!(
+        markup.contains("id=\"binds-pager\""),
+        "more rows than fit, and no pager"
+    );
+    assert!(
+        !markup.contains("bind-row"),
+        "the binds grew their own row"
+    );
+    assert!(
+        declared.contains("binds_after = \""),
+        "when the list appears is not declared: {declared}"
+    );
+    assert!(
+        defaults.contains("rib_group_l_y_minus = \"l_stick\""),
+        "a stick's directions are not one control: {defaults}"
+    );
+}

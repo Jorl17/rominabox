@@ -34,8 +34,8 @@ pub const LINKS_SLOT: &str = "<!--SCREEN-LINKS-->";
 const BUILT_IN_ROW: &str = concat!(
     "<button id=\"ROW-ID\" class=\"list-row SELECTED\">",
     "<img class=\"list-row-icon\" src=\"ICON\"/>",
-    "<div class=\"list-row-title\">TITLE</div>",
-    "<div class=\"list-row-detail\">DETAIL</div>",
+    "<div id=\"ROW-ID-title\" class=\"list-row-title\">TITLE</div>",
+    "<div id=\"ROW-ID-detail\" class=\"list-row-detail\">DETAIL</div>",
     "<div id=\"ROW-ID-state\" class=\"list-row-state\">STATE</div>",
     "</button>\n",
 );
@@ -215,13 +215,19 @@ fn rml_text(value: &str) -> String {
 /// so that text in a title cannot add a placeholder.
 pub fn render_row(template: &str, item: &ListItem) -> String {
     let selected = if item.selected { "selected" } else { "" };
-    template
+    let mut html = template
         .replace("ROW-ID", &item.id)
         .replace("ICON", &item.icon)
         .replace("TITLE", &rml_text(&item.title))
         .replace("DETAIL", &rml_text(&item.detail))
         .replace("STATE", &rml_text(&item.state))
-        .replace("SELECTED", selected)
+        .replace("SELECTED", selected);
+    if item.icon.is_empty() {
+        // A row with no picture. We remove the img, because loading a missing
+        // texture in RmlUi makes the render fail.
+        html = html.replace("<img class=\"list-row-icon\" src=\"\"/>", "");
+    }
+    html
 }
 
 /// One list, with the same template on every page, and a pager only when the
@@ -250,7 +256,7 @@ pub fn render_list(screen: &str, template: &str, items: &[ListItem], page_size: 
     }
     if page_count > 1 {
         html.push_str(&format!(
-            "<div class=\"list-pager\"><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev\">PREV</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">1 / {page_count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">NEXT</button></div>"
+            "<div id=\"{screen}-pager\" class=\"list-pager\"><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev\">PREV</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">1 / {page_count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">NEXT</button></div>"
         ));
     }
     html.push_str("</div>");

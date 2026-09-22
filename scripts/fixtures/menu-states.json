@@ -240,6 +240,130 @@
           "class": "focused"
         }
       }
+    },
+    "binds-closed": {
+      "describes": "the pointer is on a control and the list has not opened yet",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "block" },
+        "control-up": { "pseudo": "hover" },
+        "control-binds": { "display": "none" }
+      }
+    },
+    "binds-pointer": {
+      "describes": "the list open because the pointer is on the control",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "block" },
+        "control-up": { "pseudo": "hover" },
+        "control-binds": { "display": "block", "left": "220dp", "top": "96dp", "width": "320dp" },
+        "bind-1-title": { "text": "Up" },
+        "bind-1-detail": { "text": "Up" },
+        "bind-1-state": { "text": "KEY" },
+        "bind-2-title": { "text": "Up" },
+        "bind-2-detail": { "text": "Button 1" },
+        "bind-2-state": { "text": "PAD" },
+        "bind-3": { "display": "none" },
+        "bind-4": { "display": "none" },
+        "binds-pager": { "display": "none" }
+      }
+    },
+    "binds-keyboard": {
+      "describes": "the same list, opened because the control was reached with the arrow keys",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "block" },
+        "control-up": { "class": "focused" },
+        "control-hit-up": { "class": "focused" },
+        "control-binds": { "display": "block", "left": "220dp", "top": "96dp", "width": "320dp" },
+        "bind-1-title": { "text": "Up" },
+        "bind-1-detail": { "text": "Up" },
+        "bind-1-state": { "text": "KEY" },
+        "bind-2-title": { "text": "Up" },
+        "bind-2-detail": { "text": "Button 1" },
+        "bind-2-state": { "text": "PAD" },
+        "bind-3": { "display": "none" },
+        "bind-4": { "display": "none" },
+        "binds-pager": { "display": "none" }
+      }
+    },
+    "binds-line-hover": {
+      "describes": "the pointer on one line of the open list",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "block" },
+        "control-up": { "pseudo": "hover" },
+        "control-binds": { "display": "block", "left": "220dp", "top": "96dp", "width": "320dp" },
+        "bind-1": { "pseudo": "hover" },
+        "bind-1-title": { "text": "Up" },
+        "bind-1-detail": { "text": "Up" },
+        "bind-1-state": { "text": "KEY" },
+        "bind-2-title": { "text": "Up" },
+        "bind-2-detail": { "text": "Button 1" },
+        "bind-2-state": { "text": "PAD" },
+        "bind-3": { "display": "none" },
+        "bind-4": { "display": "none" },
+        "binds-pager": { "display": "none" }
+      }
+    },
+    "binds-line-pressed": {
+      "describes": "a line held down, before it is released",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "block" },
+        "control-up": { "pseudo": "hover" },
+        "control-binds": { "display": "block", "left": "220dp", "top": "96dp", "width": "320dp" },
+        "bind-1": { "pseudo": "active" },
+        "bind-1-title": { "text": "Up" },
+        "bind-1-detail": { "text": "Up" },
+        "bind-1-state": { "text": "KEY" },
+        "bind-2-title": { "text": "Up" },
+        "bind-2-detail": { "text": "Button 1" },
+        "bind-2-state": { "text": "PAD" },
+        "bind-3": { "display": "none" },
+        "bind-4": { "display": "none" },
+        "binds-pager": { "display": "none" }
+      }
+    },
+    "binds-line-dragged": {
+      "describes": "a line held down and the pointer dragged off it before release",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "block" },
+        "control-binds": { "display": "block", "left": "220dp", "top": "96dp", "width": "320dp" },
+        "bind-1": { "pseudo": "active" },
+        "bind-1-title": { "text": "Up" },
+        "bind-1-detail": { "text": "Up" },
+        "bind-1-state": { "text": "KEY" },
+        "bind-2-title": { "text": "Up" },
+        "bind-2-detail": { "text": "Button 1" },
+        "bind-2-state": { "text": "PAD" },
+        "bind-3": { "display": "none" },
+        "bind-4": { "display": "none" },
+        "binds-pager": { "display": "none" },
+        "control-a": { "pseudo": "hover" }
+      }
+    },
+    "binds-overflow": {
+      "describes": "more bindings than fit on one page, so the rest are on the next",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "controls-panel": { "display": "block" },
+        "control-up": { "pseudo": "hover" },
+        "control-binds": { "display": "block", "left": "220dp", "top": "96dp", "width": "320dp" },
+        "bind-1-title": { "text": "Left stick" },
+        "bind-1-detail": { "text": "Up" },
+        "bind-1-state": { "text": "KEY" },
+        "bind-2-title": { "text": "Left stick" },
+        "bind-2-detail": { "text": "Down" },
+        "bind-2-state": { "text": "KEY" },
+        "bind-3-title": { "text": "Left stick" },
+        "bind-3-detail": { "text": "Left" },
+        "bind-3-state": { "text": "KEY" },
+        "bind-4-title": { "text": "Left stick" },
+        "bind-4-detail": { "text": "Right" },
+        "bind-4-state": { "text": "KEY" }
+      }
     }
   }
 }

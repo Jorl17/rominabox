@@ -248,6 +248,13 @@ pub fn write_defaults_config_with_advanced_access(
             control.id,
             escape_config_value(&value.key),
         ));
+        if let Some(group) = &control.group {
+            config.push_str(&format!(
+                "rib_group_{} = \"{}\"\n",
+                control.id,
+                escape_config_value(group),
+            ));
+        }
         if let Some(button) = &value.button {
             config.push_str(&format!(
                 "input_player1_{}_btn = \"{}\"\n",

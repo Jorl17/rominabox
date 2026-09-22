@@ -42,6 +42,7 @@ extern "C" const char *rib_rmlui_control_id(int index)
       return nullptr;
    return stub_control_ids[index];
 }
+extern "C" const char *rib_rmlui_control_group(int) { return nullptr; }
 
 extern "C" unsigned rib_rmlui_test_texture_loads();
 extern "C" const char *rib_rmlui_test_property(const char *, const char *);

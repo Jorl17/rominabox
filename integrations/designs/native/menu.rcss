@@ -151,7 +151,11 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .screen-link { position: absolute; top: 18dp; right: 24dp; width: 148dp; height: 36dp; z-index: 2; font-family: Silkscreen; font-size: 13dp; line-height: 30dp; text-align: center; }
 .list { position: absolute; left: 56dp; top: 76dp; width: 840dp; }
 .list-row { display: block; position: relative; width: 100%; height: 64dp; margin: 0 0 8dp 0; padding: 0; background-color: design(surface); color: design(ink); border-width: 3dp; border-color: design(edge); font-family: Silkscreen; text-align: left; }
-.list-row:hover, .list-row.focused { border-color: design(ink); }
+.list-row:hover { border-color: design(ink); }
+/* Not the same rule as hover. We draw a row reached with the arrow keys
+ * differently from one under the pointer, so a player can see which row a
+ * press would choose. */
+.list-row.focused { border-color: design(ink); border-left-color: design(highlight); }
 .list-row.selected, .list-row.selected:hover, .list-row.selected.focused { border-color: design(highlight); }
 .list-row:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 .list-row-icon { position: absolute; left: 8dp; top: 8dp; width: 48dp; height: 48dp; }
