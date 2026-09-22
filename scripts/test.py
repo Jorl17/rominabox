@@ -10,8 +10,9 @@ skip the frontend tests, and after a React change the ten overlay renders.
     python3 scripts/test.py --all           # everything, including slow
     python3 scripts/test.py --list          # what exists and what it covers
 
-Run with --list to see what each scope tests and what it leaves out. None of
-the scopes shows that a game runs, which requires the player.
+Run with --list to see what each scope tests and what it leaves out. Passing
+the fast scopes does not show that a game runs. In the isolation scope we run
+a game for a few frames, and we test window placement and fullscreen by hand.
 """
 
 from __future__ import annotations
@@ -209,6 +210,24 @@ SCOPES = [
         "that an exported game, installed and as a zip, stays under the size ceiling, and does not carry the video encoders",
         "a cartridge's own size, or that the player was rebuilt; it measures the kit already on disk",
         ["python3", str(ROOT / "scripts/size_bundles.py")],
+    ),
+    Scope(
+        "isolation",
+        "that a signed export keeps the sandbox entitlement, cannot read or write the player's RetroArch profile or another game's container, and still loads a core with audio and a gamepad",
+        "window placement, focus, fullscreen, or that Gatekeeper accepts an ad-hoc signature",
+        [
+            "cargo",
+            "test",
+            "--manifest-path",
+            str(ROOT / "desktop/src-tauri/Cargo.toml"),
+            "--test",
+            "isolation",
+            "--",
+            "--ignored",
+            "--nocapture",
+            "--test-threads=1",
+        ],
+        slow=True,
     ),
     Scope(
         "overlays",

@@ -345,6 +345,18 @@ def case_size():
         restore(path, raw)
     return expect("size", code, output, ("exceeds",))
 
+def case_isolation():
+    path = ROOT / "desktop/src-tauri/src/packaging.rs"
+    raw = replace(
+        path,
+        "com.apple.security.app-sandbox",
+        "com.apple.security.sandbox-removed",
+    )
+    try:
+        code, output = run_scope("isolation")
+    finally:
+        restore(path, raw)
+    return expect("isolation", code, output, ("entitlements were dropped",))
 
 def case_overlays():
     path = ROOT / "desktop/controls.json"
@@ -380,6 +392,8 @@ CASES = {
     "artwork": case_artwork,
     "shaderpreview": case_shaderpreview,
     "size": case_size,
+
+    "isolation": case_isolation,
     "overlays": case_overlays,
 }
 

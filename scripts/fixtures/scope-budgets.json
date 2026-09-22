@@ -1,6 +1,6 @@
 {
   "slack_seconds": 10,
-  "wall": 9.6,
+  "wall": 28.0,
   "scopes": {
     "catalog": 0.1,
     "exporter": 1.7,
@@ -20,6 +20,6 @@
     "automation": 0.1,
     "artwork": 2.4,
     "size": 5.2,
-    "overlays": 0.9
+    "isolation": 23.6,    "overlays": 0.9
   }
 }

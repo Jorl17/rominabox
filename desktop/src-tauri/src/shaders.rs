@@ -674,28 +674,6 @@ pub fn launch_preset(selection: &ShaderSelection) -> Result<Option<String>, Stri
     }
 }
 
-/// Shell code that we insert before the player starts. A choice saved in the
-/// game's folder replaces the starting preset of the author. With a blank
-/// choice we leave `video_shader_enable` unset, as in an ordinary game.
-pub fn launcher_shader_shell(initial_relative: Option<&str>) -> String {
-    let baked = match initial_relative {
-        Some(relative) => format!("$bundle_dir/Resources/menu-assets/{relative}"),
-        None => String::new(),
-    };
-    format!(
-        r#"shader_preset=""
-if [ -f "$data_dir/shader-choice" ]; then
-  shader_preset=$(/usr/bin/head -n 1 "$data_dir/shader-choice" || true)
-else
-  shader_preset="{baked}"
-fi
-if [ -n "$shader_preset" ]; then
-  printf 'video_shader_enable = "true"\n' >> "$cfg"
-fi
-"#
-    )
-}
-
 /// The files we keep in a project archive so that we can still find a custom
 /// shader when someone opens the project elsewhere. Catalog presets are not
 /// among them, because they come with the builder.
