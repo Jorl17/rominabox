@@ -892,6 +892,28 @@ fn seconds(milliseconds: u32) -> String {
 /// the stylesheet of the design, because appended rules with equal
 /// specificity would override the selectors of the design, such as the
 /// separate hover, keyboard focus and pressed styles of the picker.
+/// The values that a document can use from the product, as opposed to the
+/// values that a stylesheet uses from the design.
+///
+/// A design contains `design(version)` where the version number goes, so the
+/// footer contains the product version and nobody has to edit the design
+/// when the version changes.
+fn product_tokens() -> std::collections::BTreeMap<String, String> {
+    let mut tokens = std::collections::BTreeMap::new();
+    tokens.insert("version".to_string(), env!("CARGO_PKG_VERSION").to_string());
+    tokens
+}
+
+/// The document of the design, with those values filled in.
+///
+/// We read the markup of the design in both stages that write the final menu,
+/// the theme stage and the controls stage, and the second overwrites the
+/// first. We write the document only through this function, so we replace
+/// `design(version)` in both.
+fn substitute_document(markup: &str) -> Result<String, String> {
+    substitute_tokens(markup, &product_tokens())
+}
+
 fn design_tokens(
     design: &Path,
     palette: &Palette,
@@ -909,6 +931,7 @@ fn design_tokens(
             }
         }
     }
+    tokens.extend(product_tokens());
     let m = scene_metrics(design)?;
     for (name, value) in [
         ("scene-width", m.scene_width),
@@ -1188,7 +1211,13 @@ pub fn prepare_theme_assets(
         fs::copy(source.join(name), destination.join(name))
             .map_err(|e| format!("Could not prepare menu asset {name}: {e}"))?;
     }
-    let menu = fs::read_to_string(destination.join("menu.rml")).map_err(|e| e.to_string())?;
+    let tokens = design_tokens(source, &palette)?;
+    // The document too, not only the stylesheet. A design contains design(…)
+    // where a value comes from outside the design, such as the version, and
+    // the same rule applies to words as to colours.
+    let menu = substitute_document(
+        &fs::read_to_string(destination.join("menu.rml")).map_err(|e| e.to_string())?,
+    )?;
     // The same Options panel as in the controls stage. We add volume to it
     // here too, because a theme staged alone, as in the interaction checks,
     // never reaches the controls stage.
@@ -1212,7 +1241,7 @@ pub fn prepare_theme_assets(
     // because a palette contains values and no styles. Appended rules would
     // declare selectors of the design again and, coming later with equal
     // specificity, override them.
-    css = substitute_tokens(&css, &design_tokens(source, &palette)?)?;
+    css = substitute_tokens(&css, &tokens)?;
     if let Some(image_path) = background {
         let image = crate::icons::read_image(image_path).map_err(|e| e.to_string())?;
         image
@@ -1415,6 +1444,7 @@ pub fn prepare_controls_assets(
     // The same file as in prepare_theme_assets. This version replaces it,
     // because here we know the entries chosen for the game and we just built
     // the markup from them.
+    let menu = substitute_document(&menu)?;
     write_declarations(design, destination, &screens, &menu)?;
     fs::write(destination.join("menu.rml"), menu).map_err(|e| e.to_string())?;
     let show_options = screens.iter().any(|screen| screen.place == ScreenPlace::Options);
@@ -2003,6 +2033,67 @@ mod tests {
             native_cfg.contains("screen_button_pause = \"options-back\""),
             "a design with no screen of its own is unchanged"
         );
+    }
+
+    /// The footer of an exported game contains the product version, not a
+    /// fixed label.
+    ///
+    /// The footer in the native design contains `design(version)`, as its
+    /// stylesheet contains the name of a colour, so the fixed text
+    /// "ROM-IN-A-BOX / PROTOTYPE" is in no exported game.
+    #[test]
+    fn an_exported_game_says_its_version_and_not_that_it_is_unfinished() {
+        let (design, menu) = native_menu();
+        assert!(
+            menu.contains("design(version)"),
+            "the design asks for the version rather than typing one in"
+        );
+        assert!(!menu.contains("PROTOTYPE"));
+
+        let root = std::env::temp_dir().join(format!(
+            "rominabox-version-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        prepare_theme_assets(&design, &root, "blue", None).expect("staged");
+        let staged = fs::read_to_string(root.join("menu.rml")).expect("the staged menu");
+        assert!(
+            !staged.contains("PROTOTYPE"),
+            "the word survived staging: {staged}"
+        );
+        assert!(
+            staged.contains(&format!("ROM-IN-A-BOX / {}", env!("CARGO_PKG_VERSION"))),
+            "the footer should read the version: {staged}"
+        );
+        assert!(
+            !staged.contains("design(version)"),
+            "the token was left unsubstituted"
+        );
+
+        // Also run after the controls stage, in which we rewrite the same file
+        // from the markup of the design. With substitution only in the theme
+        // stage, `design(version)` would stay in every rendered state.
+        prepare_controls_assets(
+            &design,
+            &design,
+            &root,
+            // A console with no drawing, so no artwork is required next to it.
+            // We check the document here, not the pad.
+            "atari2600",
+            &crate::controls::Controls::default(),
+            None,
+        )
+        .expect("controls staged");
+        let after = fs::read_to_string(root.join("menu.rml")).expect("the staged menu");
+        assert!(
+            after.contains(&format!("ROM-IN-A-BOX / {}", env!("CARGO_PKG_VERSION"))),
+            "the controls stage put the token back: {after}"
+        );
+        assert!(!after.contains("PROTOTYPE") && !after.contains("design(version)"));
+        let _ = fs::remove_dir_all(&root);
     }
 
     /// We move the Controls button from the pause row into Options. A game with
