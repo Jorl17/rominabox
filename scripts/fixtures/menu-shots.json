@@ -1,0 +1,23 @@
+{
+  "comment": [
+    "Each shot names the elements clicked to reach it, in order, one per frame.",
+    "",
+    "They are element ids in the exported menu.rml, clicked through the bridge's",
+    "own listeners — the same path a player's pointer takes. An id that is not",
+    "in the document stops the run rather than screenshotting the wrong screen.",
+    "",
+    "These are the same states scripts/fixtures/menu-states.json declares, but",
+    "reached rather than posed: menu-states sets the classes itself, and cannot",
+    "show that pressing CONTROLS gets you to the controls screen."
+  ],
+  "shots": {
+    "pause-menu": [],
+    "controls": ["controls"],
+    "picker-open": ["controls", "controls-device-current"],
+    "picker-chosen": [
+      "controls",
+      "controls-device-current",
+      "controls-device-option-megadrive6"
+    ]
+  }
+}

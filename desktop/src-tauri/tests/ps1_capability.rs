@@ -149,74 +149,90 @@ fn a_console_that_cannot_start_without_a_bios_demands_one() {
     );
 }
 
-/// We do NOT offer the analogue pad, because it is not analogue.
+/// We offer both PlayStation pads, and both are complete.
 ///
-/// `ps1-analog` declares sixteen controls: the fourteen digital buttons plus
-/// L3 and R3, which are the stick *clicks*. It declares no axes at all, no
-/// left stick and no right stick. There is nothing to bind, so the in-game
-/// controls menu would show nothing, and an author who chose it would get a
-/// pad that looks analogue and behaves digitally.
-///
-/// For PlayStation we offer only the digital pad until the sticks are
-/// declared. This test fails if we offer the analogue pad without them.
+/// `ps1-analog` declares the same twenty-four controls as the DualShock,
+/// because the Dual Analog is the same physical pad without vibration. A pad
+/// with only the digital buttons and L3 and R3, which are the stick clicks,
+/// would look analogue and work digitally. The two differ only in the
+/// emulated device, 261 for the analogue pad and 517 for the DualShock, and a
+/// game such as Ape Escape does not start without 517.
 #[test]
-fn the_analogue_pad_is_not_offered_while_it_declares_no_sticks() {
+fn both_playstation_pads_are_offered_and_both_declare_their_sticks() {
     let pad = controls::profile_for_system("ps1").expect("a default pad");
-    assert_eq!(pad.id, "ps1");
-    assert_eq!(pad.image, "controller-ps1.png");
+    assert_eq!(pad.id, "ps1", "the DualShock stays the default");
+
+    let offered = controls::variants_for_system("ps1").expect("PlayStation variants");
+    let ids: Vec<&str> = offered.iter().map(|p| p.id.as_str()).collect();
+    assert!(
+        ids.contains(&"ps1") && ids.contains(&"ps1-analog"),
+        "PlayStation offers both pads: {ids:?}"
+    );
+
+    // Check both axes of both sticks. With only some of the eight directions,
+    // a pad without any vertical axis would pass.
+    let dualshock = offered
+        .iter()
+        .find(|p| p.id == "ps1")
+        .expect("the DualShock is offered");
+    let reference: Vec<&str> = dualshock.controls.iter().map(|c| c.id.as_str()).collect();
+    for profile in &offered {
+        let declared: Vec<&str> = profile.controls.iter().map(|c| c.id.as_str()).collect();
+        for stick in [
+            "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
+            "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus",
+            "l3", "r3",
+        ] {
+            assert!(
+                declared.contains(&stick),
+                "{} declares {stick}; a pad offered as analogue must have both \
+                 axes of both sticks, not only the stick clicks",
+                profile.id
+            );
+        }
+        // The Dual Analog is the same physical pad as the DualShock without
+        // vibration, so it must have every binding of the DualShock.
+        for id in &reference {
+            assert!(
+                declared.contains(id),
+                "{} is missing {id}, which the DualShock declares",
+                profile.id
+            );
+        }
+    }
+
+    // The two pads differ only in the emulated device, and nothing on screen
+    // shows it, because they have the same drawing, controls and overlay
+    // digest. A game such as Ape Escape does not start on 261.
+    assert_eq!(
+        dualshock.core_device,
+        Some(517),
+        "the DualShock is device 517"
+    );
+    let analogue = offered
+        .iter()
+        .find(|p| p.id == "ps1-analog")
+        .expect("the analogue pad is offered");
+    assert_eq!(
+        analogue.core_device,
+        Some(261),
+        "the analogue pad is device 261; offering two pads that reach the core \
+         as the same device is offering one pad under two names"
+    );
 
     let pick = |id: &str| -> Controls {
         let mut options = Controls::default();
         options.profile = Some(id.to_string());
         options
     };
-    assert!(
-        controls::validate_for_system("ps1", &pick("ps1-analog")).is_err(),
-        "the analogue pad must not be selectable while it declares no axes"
-    );
+    controls::validate_for_system("ps1", &pick("ps1-analog"))
+        .expect("the analogue pad is selectable now that it is a whole pad");
     assert!(
         controls::validate_for_system("nes", &pick("ps1-analog")).is_err(),
         "a PlayStation pad must not be selectable for another console"
     );
 }
 
-/// What it must declare before we can offer it.
-///
-/// In RetroArch, analogue directions are separate bind entries, `l_x_plus`,
-/// `l_x_minus`, `l_y_plus`, `l_y_minus` and the `r_` equivalents, and in
-/// `controls.rs` we write `input_player1_<id>_axis` from the id of a control.
-/// So we can express the sticks, and only their declaration is missing.
-#[test]
-fn the_analogue_profile_still_declares_only_the_stick_clicks() {
-    // We cannot reach the profile through the console, so we read its
-    // declaration from the generated registry, which the player reads too.
-    let registry: serde_json::Value =
-        serde_json::from_str(include_str!("../../controls.json")).expect("controls registry");
-    let profile = registry["profiles"]
-        .as_array()
-        .expect("profiles")
-        .iter()
-        .find(|p| p["id"] == "ps1-analog")
-        .expect("the profile still exists");
-    let ids: Vec<&str> = profile["controls"]
-        .as_array()
-        .expect("controls")
-        .iter()
-        .map(|c| c["id"].as_str().unwrap())
-        .collect();
-    for click in ["l3", "r3"] {
-        assert!(
-            ids.contains(&click),
-            "the stick clicks are declared: {ids:?}"
-        );
-    }
-    for stick in ["l_x_plus", "l_x_minus", "r_x_plus", "r_x_minus"] {
-        assert!(
-            !ids.contains(&stick),
-            "{stick} is now declared — offer the pad again and delete this test"
-        );
-    }
-}
 
 #[test]
 fn a_disc_format_we_cannot_collect_is_refused_with_a_reason() {
@@ -430,6 +446,6 @@ fn crate_themes_prepare(
     system: &str,
     options: &Controls,
 ) {
-    rominabox_desktop::themes::prepare_controls_assets(source, destination, system, options)
+    rominabox_desktop::themes::prepare_controls_assets(source, source, destination, system, options)
         .expect("the scene markup is generated");
 }

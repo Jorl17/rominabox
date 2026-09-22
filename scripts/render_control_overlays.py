@@ -51,6 +51,11 @@ SCENE = (_METRICS["scene"]["width"], _METRICS["scene"]["height"])
 MARKER_RADIUS = _METRICS["marker"]["diameter"] // 2
 CALLOUT = (_METRICS["callout"]["width"], _METRICS["callout"]["height"])
 GROUP = _METRICS["group"]
+
+# How far above the strips we draw a rail. Across every illustrated profile,
+# with 0, 4 and 6 we reroute the same two controls, and with 8 others too, so
+# 4 is inside a stable range.
+RAIL_CLEARANCE = 4
 SCALE = 2
 MARKER = (255, 255, 255, 255)
 STAGE = (32, 36, 44, 255)
@@ -89,7 +94,7 @@ def _font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def render(profile: dict, destination: Path, colours: dict) -> Path:
+def render(profile: dict, destination: Path, colours: dict, route: str = "current") -> Path:
     """Draw one profile's overlay over its illustration."""
     image = ARTWORK / profile["image"]
     if not image.exists():
@@ -118,20 +123,45 @@ def render(profile: dict, destination: Path, colours: dict) -> Path:
             groups.setdefault(control["group"], []).append(control)
     ungrouped = [c for c in profile["controls"] if not c.get("group")]
 
+    def horizontal(at_y: float, x0: float, x1: float) -> None:
+        draw.rectangle([s(min(x0, x1)), s(at_y) - 1, s(max(x0, x1)), s(at_y) + 1], fill=leader)
+
+    def vertical(at_x: float, y0: float, y1: float) -> None:
+        draw.rectangle([s(at_x) - 1, s(min(y0, y1)), s(at_x) + 1, s(max(y0, y1))], fill=leader)
+
+    # The area for a rail, above the strips and below the lowest callout midline.
+    strip_top = SCENE[1] - GROUP["height"] - GROUP["bottomMargin"]
+    rail_y = strip_top - RAIL_CLEARANCE
+
     for control in ungrouped:
         x, y = control["x"], control["y"]
         callout_x, callout_y = control["calloutX"], control["calloutY"]
         # The callout's inner edge is its right side in the left gutter and its
         # left side in the right gutter.
         edge = callout_x + 200 if callout_x < 400 else callout_x
-        draw.rectangle(
-            [s(min(edge, x)), s(callout_y + 28) - 1, s(max(edge, x)), s(callout_y + 28) + 1],
-            fill=leader,
-        )
-        draw.rectangle(
-            [s(x) - 1, s(min(callout_y + 28, y)), s(x) + 1, s(max(callout_y + 28, y))],
-            fill=leader,
-        )
+        midline = callout_y + 28
+
+        if route == "rail" and midline > rail_y:
+            # Draw three segments instead of two, out of the callout, along a
+            # rail clear of the strips, then up to the button. With two
+            # segments, the horizontal line of this row would cross a stick
+            # strip, because the midline of the lowest callout is inside one.
+            # We draw the rail just inside the gutter column, so that it does
+            # not run along the border of the next callout.
+            rail_x = edge if callout_x < 400 else edge - 1
+            vertical(rail_x, midline, rail_y)
+            horizontal(rail_y, rail_x, x)
+            vertical(x, rail_y, y)
+        elif route == "mirrored" and midline > rail_y:
+            # Go straight up the button's column first, then across at the
+            # button's height. This is clear to read, but the horizontal line
+            # then crosses the face of the pad.
+            horizontal(y, edge, x)
+            vertical(edge, midline, y)
+        else:
+            horizontal(midline, edge, x)
+            vertical(x, midline, y)
+
         draw.ellipse(
             [s(x - MARKER_RADIUS), s(y - MARKER_RADIUS),
              s(x + MARKER_RADIUS), s(y + MARKER_RADIUS)],
@@ -201,6 +231,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
     parser.add_argument(
+        "--route",
+        default="current",
+        choices=["current", "rail", "mirrored"],
+        help="which leader routing to draw, for comparing them before choosing one",
+    )
+    parser.add_argument(
         "--record",
         action="store_true",
         help="rewrite the committed digests after a deliberate layout change",
@@ -221,7 +257,7 @@ def main() -> int:
     illustrated = [p for p in registry["profiles"] if p.get("image")]
     digests = {}
     for profile in illustrated:
-        path = render(profile, arguments.output / f"{profile['id']}.png", colours)
+        path = render(profile, arguments.output / f"{profile['id']}.png", colours, arguments.route)
         digests[profile["id"]] = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
         print(f"{profile['id']:<14}{len(profile['controls']):>3} controls  {digests[profile['id']]}")
 

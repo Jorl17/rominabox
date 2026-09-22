@@ -32,7 +32,8 @@
   "controllers": {
     "default": "ps1",
     "variants": [
-      "ps1"
+      "ps1",
+      "ps1-analog"
     ]
   },
   "support": {

@@ -48,7 +48,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|preview|export|project-save|project-open|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|project-save|project-open|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     if command == "schemas" {
@@ -138,6 +138,42 @@ fn run() -> Result<(), String> {
                 .map_err(|error| format!("invalid project open request: {error}"))?;
             let result = projects::open_project(&request)?;
             println!("{}", json!({ "type": "result", "result": result }));
+            Ok(())
+        }
+        "stage-controls" => {
+            // We generate the controls scene in the exporter from a console
+            // package. To see that markup, for example in a screenshot harness or
+            // when checking a design, get it from the exporter instead of
+            // assembling a copy, because two copies would come to differ.
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                system: String,
+                source: PathBuf,
+                /// The design for whose frame we generate the scene. The default
+                /// is the artwork directory, which is a design directory when
+                /// the two are the same place.
+                #[serde(default)]
+                design: Option<PathBuf>,
+                destination: PathBuf,
+                #[serde(default)]
+                controls: controls::Controls,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid stage-controls request: {error}"))?;
+            themes::prepare_controls_assets(
+                &request.source,
+                request.design.as_deref().unwrap_or(&request.source),
+                &request.destination,
+                &request.system,
+                &request.controls,
+            )?;
+            println!(
+                "{}",
+                json!({ "type": "result", "result": {
+                    "document": request.destination.join("menu.rml"),
+                }})
+            );
             Ok(())
         }
         "preview" => {

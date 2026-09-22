@@ -433,6 +433,10 @@ where
             // The controller artwork is the same for every design, because all
             // designs show the same pads, so we keep it in the shared menu-assets.
             &request.runtime_kit.join("menu-assets"),
+            // The frame in which we draw the pads comes from the design, and
+            // the generated coordinates must match the stylesheet of that
+            // design.
+            &crate::themes::staged_design(&request.runtime_kit, &request.theme),
             &resources.join("menu-assets"),
             &request.system,
             &request.controls,
@@ -448,10 +452,11 @@ where
     let controls_assets = resources.join("menu-assets");
     fs::create_dir_all(&controls_assets)
         .map_err(|error| ExportError::io("stage", &controls_assets, error))?;
-    let controls_profile = controls::write_defaults_config(
+    let controls_profile = controls::write_defaults_config_with_advanced_access(
         &request.system,
         &request.controls,
         &controls_assets.join("controls-defaults.cfg"),
+        request.advanced_emulator_access,
     )
     .map_err(|message| ExportError::new("stage", message))?;
     stage_controller_remap(&controls_profile, selected_core, &resources.join("remaps"))?;
@@ -621,8 +626,12 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
             "startAtMenu requires showMenu",
         ));
     }
-    controls::validate_for_system(&request.system, &request.controls)
-        .map_err(|message| ExportError::new("validate", message))?;
+    controls::validate_for_system_with_advanced_access(
+        &request.system,
+        &request.controls,
+        request.advanced_emulator_access,
+    )
+    .map_err(|message| ExportError::new("validate", message))?;
     for (label, path) in [
         ("ROM", &request.rom),
         ("runtime", &request.runtime_kit.join("bin/retroarch")),
@@ -1044,7 +1053,8 @@ fn stable_identity(
 ///
 /// `advanced_key` is a second keyboard tier. We write it only when the author
 /// set `advancedEmulatorAccess`, and it never replaces the button, axis or
-/// mouse `nul`. A normal export contains the `keyboard` value.
+/// mouse `nul`. A normal export contains `keyboard`, which is `nul` for every
+/// bind except the menu toggle.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HotkeyBind {
     pub name: &'static str,
@@ -1058,8 +1068,6 @@ pub struct HotkeyBind {
 pub enum HotkeyKeyboard {
     Neutral,
     MenuToggle,
-    Exit,
-    Fullscreen,
 }
 
 /// Write the emulated controller where RetroArch reads it.
@@ -1142,8 +1150,11 @@ pub const HOTKEY_BINDS: &[HotkeyBind] = &[
     },
     HotkeyBind {
         name: "exit_emulator",
-        keyboard: HotkeyKeyboard::Exit,
-        advanced_key: None,
+        keyboard: HotkeyKeyboard::Neutral,
+        // In a shipped game the player quits from the in-game menu (Escape,
+        // then Quit). Q is easy to press by accident during play, so we ship
+        // the key only with advanced emulator access.
+        advanced_key: Some("q"),
     },
     HotkeyBind {
         name: "close_content",
@@ -1349,8 +1360,11 @@ pub const HOTKEY_BINDS: &[HotkeyBind] = &[
     },
     HotkeyBind {
         name: "toggle_fullscreen",
-        keyboard: HotkeyKeyboard::Fullscreen,
-        advanced_key: None,
+        keyboard: HotkeyKeyboard::Neutral,
+        // Fullscreen works like quit. If f stayed bound while q and f are
+        // ordinary gameplay keys, one press would trigger the hotkey and the
+        // bind together. The macOS window menu has a Full Screen item.
+        advanced_key: Some("f"),
     },
     HotkeyBind {
         name: "desktop_menu_toggle",
@@ -1440,17 +1454,16 @@ impl HotkeyBind {
             HotkeyKeyboard::Neutral => "nul",
             HotkeyKeyboard::MenuToggle if show_menu => "escape",
             HotkeyKeyboard::MenuToggle => "nul",
-            HotkeyKeyboard::Exit => "q",
-            HotkeyKeyboard::Fullscreen => "f",
         }
     }
 }
 
 /// Render the exported hotkey policy. Callers must not keep a second list.
 ///
-/// With `advanced` set, we write `advanced_key` for the binds that have one
-/// and leave button, axis and mouse unchanged. Without it, we write the plain
-/// keyboard policy.
+/// With `advanced` we write `advanced_key` for the binds that have one:
+/// fast-forward, quit and fullscreen. We do not change button, axis or
+/// mouse. When it is false, those keys stay `nul`, and we still write Escape
+/// for the menu toggle when the menu is on.
 pub fn isolated_hotkey_config(show_menu: bool, advanced: bool) -> String {
     let mut config = String::new();
     for bind in HOTKEY_BINDS {
@@ -2409,13 +2422,18 @@ mod tests {
             .filter(|bind| bind.advanced_key.is_some())
             .map(|bind| (bind.name, bind.advanced_key.unwrap(), bind.keyboard))
             .collect();
+        // Quit and fullscreen are in this tier, so q and f stay free for
+        // gameplay and Q cannot quit a shipped game. The base keyboard stays
+        // Neutral, so a default export contains nul for each of them.
         assert_eq!(
             advanced_tier,
             vec![
+                ("exit_emulator", "q", HotkeyKeyboard::Neutral),
                 ("toggle_fast_forward", "space", HotkeyKeyboard::Neutral),
                 ("hold_fast_forward", "l", HotkeyKeyboard::Neutral),
+                ("toggle_fullscreen", "f", HotkeyKeyboard::Neutral),
             ],
-            "the advanced tier adds fast-forward keys; it does not retier any other bind"
+            "the advanced tier is fast-forward, quit and fullscreen; a default export writes nul for all four"
         );
 
         let mut ordinary = request(false);
@@ -2432,6 +2450,16 @@ mod tests {
         assert!(
             !ordinary_config.contains(" = \"space\""),
             "a normal export must not write the advanced Space binding"
+        );
+        // The player quits a shipped game from the menu, and we handle f like
+        // q so that no gameplay bind is also a hotkey. Keep this default.
+        assert_eq!(
+            config_value(&ordinary_config, "input_exit_emulator"),
+            Some("nul")
+        );
+        assert_eq!(
+            config_value(&ordinary_config, "input_toggle_fullscreen"),
+            Some("nul")
         );
 
         let mut advanced = request(false);
@@ -2460,6 +2488,8 @@ mod tests {
             }
         }
         assert_eq!(config_value(&config, "input_menu_toggle"), Some("escape"));
+        // q and f when advanced access is on. The default export above
+        // contains nul.
         assert_eq!(config_value(&config, "input_exit_emulator"), Some("q"));
         assert_eq!(config_value(&config, "input_toggle_fullscreen"), Some("f"));
         assert_eq!(config_value(&config, "input_rewind"), Some("nul"));
@@ -2471,8 +2501,12 @@ mod tests {
         assert!(config.contains(&isolated_hotkey_config(true, true)));
     }
 
+    /// The player still opens the menu with Escape and quits a game from it.
+    /// Quit and fullscreen are advanced-access keys, so this default export
+    /// contains nul for both. So Q cannot quit in the middle of a game, and f
+    /// stays free for gameplay.
     #[test]
-    fn hotkey_policy_preserves_escape_menu_and_fullscreen_and_skips_gameplay_binds() {
+    fn escape_stays_the_menu_toggle_and_quit_and_fullscreen_are_advanced_only() {
         let mut with_menu = request(false);
         with_menu.show_menu = true;
         let menu_config = embedded_runtime_config(&write_test_launcher(with_menu));
@@ -2480,11 +2514,18 @@ mod tests {
             config_value(&menu_config, "input_menu_toggle"),
             Some("escape")
         );
+        // We handle fullscreen like quit, so that a gameplay bind on f does
+        // not also toggle fullscreen. The macOS window menu has a Full Screen item.
         assert_eq!(
             config_value(&menu_config, "input_toggle_fullscreen"),
-            Some("f")
+            Some("nul")
         );
-        assert_eq!(config_value(&menu_config, "input_exit_emulator"), Some("q"));
+        // A default export has no exit key. The player quits from the menu
+        // that Escape opens, not with a hidden keyboard shortcut.
+        assert_eq!(
+            config_value(&menu_config, "input_exit_emulator"),
+            Some("nul")
+        );
         assert_eq!(
             config_value(&menu_config, "input_menu_toggle_gamepad_combo"),
             Some("2")
@@ -2510,9 +2551,11 @@ mod tests {
             config_value(&splash_config, "input_menu_toggle"),
             Some("nul")
         );
+        // A splash export is still a default export, so f is nul unless
+        // advanced access is on.
         assert_eq!(
             config_value(&splash_config, "input_toggle_fullscreen"),
-            Some("f")
+            Some("nul")
         );
     }
 
@@ -2805,11 +2848,19 @@ mod tests {
         fn a_namespace_gives_the_same_game_a_separate_home() {
             let rom = rom_with(b"rominabox-identity-fixture");
             let shared = stable_identity(&rom, "megadrive", None).unwrap();
-            let first = stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-a")).unwrap();
-            let second = stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-b")).unwrap();
+            let first =
+                stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-a")).unwrap();
+            let second =
+                stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-b")).unwrap();
 
-            assert_ne!(first, shared, "a namespaced export must not land on the shared home");
-            assert_ne!(first, second, "two worktrees must not share one game's home");
+            assert_ne!(
+                first, shared,
+                "a namespaced export must not land on the shared home"
+            );
+            assert_ne!(
+                first, second,
+                "two worktrees must not share one game's home"
+            );
             assert_eq!(
                 stable_identity(&rom, "megadrive", Some("  ")).unwrap(),
                 shared,
@@ -2843,7 +2894,10 @@ mod tests {
         fn identity_ignores_surrounding_space_and_letter_case() {
             let rom = rom_with(b"rominabox-identity-fixture");
             let canonical = stable_identity(&rom, "megadrive", None).unwrap();
-            assert_eq!(stable_identity(&rom, "  MegaDrive  ", None).unwrap(), canonical);
+            assert_eq!(
+                stable_identity(&rom, "  MegaDrive  ", None).unwrap(),
+                canonical
+            );
             assert_eq!(stable_identity(&rom, "MEGADRIVE", None).unwrap(), canonical);
         }
 
@@ -2873,7 +2927,10 @@ mod tests {
             let other_rom = rom_with(b"rominabox-identity-fixture-2");
             let base = stable_identity(&rom, "megadrive", None).unwrap();
             assert_ne!(stable_identity(&rom, "nes", None).unwrap(), base);
-            assert_ne!(stable_identity(&other_rom, "megadrive", None).unwrap(), base);
+            assert_ne!(
+                stable_identity(&other_rom, "megadrive", None).unwrap(),
+                base
+            );
         }
     }
 

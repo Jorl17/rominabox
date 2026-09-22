@@ -17,9 +17,10 @@ menu_assets="$root/desktop/src-tauri/resources/runtime/designs/native"
 menu_source="$designs_root/native"
 controller_source="$root/desktop/assets/controllers"
 branding_source="$root/desktop/assets/branding"
-for asset in menu.rml splash.rml menu.rcss Silkscreen-Regular.ttf Silkscreen-OFL.txt; do
-  [ -f "$menu_source/$asset" ] || { echo "Missing current menu source: $asset" >&2; exit 1; }
-done
+# A design package is a directory, so we copy the whole directory. A list of
+# its documents here could miss a file added to the design, and the kit would
+# then contain an older copy than the source we copied it from.
+[ -d "$menu_source" ] || { echo "Missing design package: $menu_source" >&2; exit 1; }
 # We take the declared illustrations from the catalog, so adding a console
 # does not require extending a list here.
 controller_pngs=$(cargo run --quiet \
@@ -33,9 +34,7 @@ for asset in $controller_pngs CONTROLLERS.txt; do
 done
 # We give Tauri this directory as the runtime resource. Refresh the authored
 # menu and controller assets without freezing or rebuilding the runtime kit.
-for asset in menu.rml splash.rml menu.rcss Silkscreen-Regular.ttf Silkscreen-OFL.txt; do
-  cp "$menu_source/$asset" "$menu_assets/$asset"
-done
+cp -R "$menu_source/." "$menu_assets/"
 for asset in $controller_pngs; do
   cp -p "$controller_source/$asset" "$menu_assets/$asset"
 done

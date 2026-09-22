@@ -1,0 +1,222 @@
+{
+  "comment": [
+    "Every visual state of the in-game menu, declared once.",
+    "",
+    "A state is a set of element overrides, applied through RmlUi's own API by",
+    "the offscreen renderer — the same SetProperty, SetClass and SetPseudoClass",
+    "calls the bridge and RmlUi itself make at runtime. It is never an edit to",
+    "the markup: matching markup strings would mean this file and the generator",
+    "both had to change whenever an element did, which is the duplication",
+    "console packages exist to avoid.",
+    "",
+    "'pseudo' sets a real pseudo-class, so a hover state renders the design's",
+    "own :hover rule rather than a second rule written for the screenshot.",
+    "",
+    "A state names elements by id, or by position — 'controls-device-list>1' is the second option in the picker, whatever that console calls it, so one declaration renders on every console. scripts/menu_states.py refuses",
+    "a state whose elements are not in the document, and refuses two states that",
+    "render the same picture — declaring a state the design does not actually",
+    "draw differently is how three of these were the same image.",
+    "",
+    "Adding a screen means adding entries here. Nothing else changes."
+  ],
+  "states": {
+    "pause-menu": {
+      "describes": "the menu as it opens, before anything is chosen",
+      "set": {
+        "pause-panel": {
+          "display": "block"
+        },
+        "controls-panel": {
+          "display": "none"
+        }
+      }
+    },
+    "controls": {
+      "describes": "the controls screen, with the pad and its callouts",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        }
+      }
+    },
+    "picker-hovered": {
+      "describes": "the pointer on the closed picker, before it opens",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-device-list": {
+          "display": "none"
+        },
+        "controls-device-current": {
+          "pseudo": "hover"
+        }
+      }
+    },
+    "picker-pressed": {
+      "describes": "the closed picker held down, before the list appears",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-device-list": {
+          "display": "none"
+        },
+        "controls-device-current": {
+          "pseudo": "active"
+        }
+      }
+    },
+    "picker-open": {
+      "describes": "the picker open, listing what the author included",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-device-list": {
+          "display": "block"
+        }
+      }
+    },
+    "picker-hover-selected": {
+      "describes": "the pointer on the option already in use",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-device-list": {
+          "display": "block"
+        },
+        "controls-device-list>0": {
+          "pseudo": "hover"
+        }
+      }
+    },
+    "picker-hover-unselected": {
+      "describes": "the pointer on an option that is not in use",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-device-list": {
+          "display": "block"
+        },
+        "controls-device-list>1": {
+          "pseudo": "hover"
+        }
+      }
+    },
+    "picker-keyboard": {
+      "describes": "an option reached by the arrow keys rather than the pointer",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-device-list": {
+          "display": "block"
+        },
+        "controls-device-list>1": {
+          "class": "focused"
+        }
+      }
+    },
+    "picker-option-pressed": {
+      "describes": "an option held down, before the button is released",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-device-list": {
+          "display": "block"
+        },
+        "controls-device-list>1": {
+          "pseudo": "active"
+        }
+      }
+    },
+    "picker-dragged-outside": {
+      "describes": "held down, pointer dragged off the list; releasing must not choose",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-device-list": {
+          "display": "block"
+        },
+        "controls-device-list>1": {
+          "pseudo": "active"
+        },
+        "control-hit-up": {
+          "pseudo": "hover"
+        }
+      }
+    },
+    "control-focused": {
+      "describes": "a control selected for rebinding, ring and callout lit",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "control-up": {
+          "class": "focused"
+        },
+        "control-hit-up": {
+          "class": "focused"
+        }
+      }
+    },
+    "capturing": {
+      "describes": "a button being captured, when CANCEL joins the action row",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-cancel": {
+          "display": "block"
+        },
+        "controls-status": {
+          "text": "PRESS A KEY"
+        },
+        "control-up": {
+          "class": "focused"
+        },
+        "control-hit-up": {
+          "class": "focused"
+        }
+      }
+    }
+  }
+}

@@ -71,51 +71,95 @@ pub fn design_root(design: &str) -> Result<PathBuf, String> {
 }
 
 /// The files in every design, under the names declared in it.
-pub const DESIGN_DOCUMENTS: [&str; 4] = [
-    "menu.rml",
-    "menu.rcss",
-    "Silkscreen-Regular.ttf",
-    "Silkscreen-OFL.txt",
-];
-
 /// The geometry of the scene, written from the declaration in the design.
 ///
 /// We append the scene size, marker diameter, callout size and stick strip
 /// here from the declaration, like the palette block, so the frame is the same
 /// in the stylesheet and in `scripts/render_control_overlays.py`.
-fn scene_metrics_rules(design: &Path) -> Result<String, String> {
+/// The frame in which a design draws its controller scene.
+///
+/// We read it from the design, the only source for these numbers.
+/// `control_group_markup`, the stylesheet and
+/// `scripts/render_control_overlays.py` all use the declaration, so a change
+/// to it moves the CSS box and the generated coordinates together.
+#[derive(Clone, Copy)]
+pub struct SceneMetrics {
+    pub scene_width: i32,
+    pub scene_height: i32,
+    pub callout_width: i32,
+    pub callout_height: i32,
+    pub marker: i32,
+    pub group_width: i32,
+    pub group_height: i32,
+    pub group_gap: i32,
+    pub group_bottom_margin: i32,
+}
+
+impl Default for SceneMetrics {
+    /// The values in the stylesheet, for a staged kit that contains the
+    /// documents but not the declaration. Equal to `integrations/designs/native`.
+    fn default() -> Self {
+        Self {
+            scene_width: 960,
+            scene_height: 380,
+            callout_width: 196,
+            callout_height: 54,
+            marker: 42,
+            group_width: 236,
+            group_height: 62,
+            group_gap: 16,
+            group_bottom_margin: 12,
+        }
+    }
+}
+
+pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
     let declaration = design.join("design.json");
     let Ok(text) = fs::read_to_string(&declaration) else {
-        // A staged kit contains the documents but may lack the declaration,
-        // and then we keep the values in the stylesheet.
-        return Ok(String::new());
+        return Ok(SceneMetrics::default());
     };
     let declared: serde_json::Value =
         serde_json::from_str(&text).map_err(|e| format!("{}: {e}", declaration.display()))?;
     let Some(metrics) = declared.get("metrics") else {
+        return Ok(SceneMetrics::default());
+    };
+    let fallback = SceneMetrics::default();
+    let at = |group: &str, key: &str, default: i32| -> i32 {
+        metrics[group][key].as_i64().map(|v| v as i32).unwrap_or(default)
+    };
+    Ok(SceneMetrics {
+        scene_width: at("scene", "width", fallback.scene_width),
+        scene_height: at("scene", "height", fallback.scene_height),
+        callout_width: at("callout", "width", fallback.callout_width),
+        callout_height: at("callout", "height", fallback.callout_height),
+        marker: at("marker", "diameter", fallback.marker),
+        group_width: at("group", "width", fallback.group_width),
+        group_height: at("group", "height", fallback.group_height),
+        group_gap: at("group", "gap", fallback.group_gap),
+        group_bottom_margin: at("group", "bottomMargin", fallback.group_bottom_margin),
+    })
+}
+
+fn scene_metrics_rules(design: &Path) -> Result<String, String> {
+    // A staged kit contains the documents but may lack the declaration, and
+    // then we keep the values in the stylesheet.
+    if !design.join("design.json").exists() {
         return Ok(String::new());
-    };
-    let at = |group: &str, key: &str| -> Result<i64, String> {
-        metrics[group][key]
-            .as_i64()
-            .ok_or_else(|| format!("design metrics are missing {group}.{key}"))
-    };
-    let scene_width = at("scene", "width")?;
-    let scene_height = at("scene", "height")?;
-    let marker = at("marker", "diameter")?;
+    }
+    let m = scene_metrics(design)?;
     Ok(format!(
         r#"
-#controller-scene {{ width: {scene_width}dp; height: {scene_height}dp; }}
-#controller-image {{ width: {scene_width}dp; height: {scene_height}dp; }}
-.control-hit {{ width: {marker}dp; height: {marker}dp; border-radius: {}dp; }}
+#controller-scene {{ width: {}dp; height: {}dp; }}
+#controller-image {{ width: {}dp; height: {}dp; }}
+.control-hit {{ width: {}dp; height: {}dp; border-radius: {}dp; }}
 .control-callout {{ width: {}dp; height: {}dp; }}
 .control-group {{ width: {}dp; height: {}dp; }}
 "#,
-        marker / 2,
-        at("callout", "width")?,
-        at("callout", "height")?,
-        at("group", "width")?,
-        at("group", "height")?,
+        m.scene_width, m.scene_height,
+        m.scene_width, m.scene_height,
+        m.marker, m.marker, m.marker / 2,
+        m.callout_width, m.callout_height,
+        m.group_width, m.group_height,
     ))
 }
 
@@ -220,6 +264,9 @@ pub fn render_preview(request: &PreviewRequest) -> Result<std::path::PathBuf, St
     )?;
     prepare_controls_assets(
         &request.assets,
+        // The preview assets are a design folder, so the frame is declared
+        // there.
+        &request.assets,
         &request.output_dir,
         "megadrive",
         &crate::controls::Controls::default(),
@@ -265,22 +312,141 @@ pub fn default_menu_sounds() -> String {
     "off".into()
 }
 
-/// Generate the selected controller's hit regions and callouts from the same
-/// declaration used by the builder. We copy only the illustration of this profile.
+/// Copy one staged file, and reject a copy onto itself.
+///
+/// Copying a file onto itself empties it, so staging into the folder that we
+/// read from would destroy the artwork that we are about to use.
+fn stage_file(source: &Path, destination: &Path, name: &str) -> Result<(), String> {
+    let from = source.join(name);
+    let to = destination.join(name);
+    // When both sides canonicalize to None, neither exists, and they are not
+    // the same file. We report missing artwork as missing.
+    let same_file = match (from.canonicalize(), to.canonicalize()) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    };
+    if from == to || same_file {
+        return Err(format!(
+            "refusing to stage {name} onto itself: source and destination are \
+             the same directory, which would truncate the artwork"
+        ));
+    }
+    fs::copy(&from, &to)
+        .map_err(|e| format!("Could not prepare controller artwork {name}: {e}"))?;
+    Ok(())
+}
+
+/// Generate the hit regions and callouts for every controller offered for
+/// the console, from the same declaration as in the builder.
+///
+/// We stage the illustration of every offered pad, and write the scene of
+/// each next to the menu as `scene-<id>.rml`. Only the chosen one goes into
+/// the document. The others are there so the player can switch to them, and
+/// when the player picks another pad, both the emulated device and the
+/// drawing change.
 pub fn prepare_controls_assets(
     source: &Path,
+    design: &Path,
     destination: &Path,
     system: &str,
     controls: &crate::controls::Controls,
 ) -> Result<(), String> {
+    // We take the frame from the design, so a change of the scene position in
+    // design.json moves the box in the stylesheet and every generated
+    // coordinate together.
+    let metrics = scene_metrics(design)?;
     let profile = crate::controls::validate_for_system(system, controls)?;
-    for name in [&profile.image, &"CONTROLLERS.txt".to_string()]
-        .into_iter()
-        .filter(|name| !name.is_empty() && !profile.image.is_empty())
+    let offered = carried(system, &profile)?;
+    let mut staged: Vec<&str> = Vec::new();
+    for image in offered
+        .iter()
+        .map(|entry| entry.image.as_str())
+        .filter(|image| !image.is_empty())
     {
-        fs::copy(source.join(name), destination.join(name))
-            .map_err(|e| format!("Could not prepare controller artwork {name}: {e}"))?;
+        if staged.contains(&image) {
+            // Two variants can share a drawing: a PlayStation Dual Analog is a
+            // DualShock without the vibration.
+            continue;
+        }
+        stage_file(source, destination, image)?;
+        staged.push(image);
     }
+    if !profile.image.is_empty() {
+        stage_file(source, destination, "CONTROLLERS.txt")?;
+    }
+    // We write the scene of every offered pad next to the menu. In the player
+    // we switch pads by loading one of these files, because we cannot
+    // generate markup there.
+    for entry in &offered {
+        fs::write(
+            destination.join(format!("{}{}.rml", SCENE_PREFIX, entry.id)),
+            scene_markup(entry, controls, metrics),
+        )
+        .map_err(|e| format!("Could not write the scene for {}: {e}", entry.id))?;
+    }
+    let markup = scene_markup(&profile, controls, metrics);
+    let picker = controller_picker_markup(&offered, &profile.id);
+
+    let template = fs::read_to_string(source.join("menu.rml")).map_err(|e| e.to_string())?;
+    // The picker is a sibling of the scene, not a child of it. Inside the
+    // scene its coordinates would be scene coordinates, and the scene starts
+    // 80 dp down the screen, so the picker would cover the first two
+    // callouts. We reject a design without a marker for it, so that no game
+    // is exported without a way to change controller.
+    if !picker.is_empty() && !template.contains(PICKER_SLOT) {
+        return Err(format!(
+            "this design has no {PICKER_SLOT} for the controller picker, and \
+             {} offers more than one controller. Add the slot to menu.rml, \
+             outside #controller-scene.",
+            system
+        ));
+    }
+    fs::write(
+        destination.join("menu.rml"),
+        template
+            .replace("<!--CONTROLS-->", &markup)
+            .replace(PICKER_SLOT, &picker),
+    )
+    .map_err(|e| e.to_string())
+}
+
+/// The pads in an export: every pad in the picker.
+///
+/// We use this one rule for the artwork staging, the scene files and the
+/// picker, because they have to agree. We do not copy a console illustration
+/// for a pad that is not in the picker.
+///
+/// With fewer than two there is no picker, and we export only the chosen pad.
+fn carried(
+    system: &str,
+    profile: &crate::controls::ControlProfile,
+) -> Result<Vec<crate::controls::ControlProfile>, String> {
+    let offered = crate::controls::variants_for_system(system)?;
+    let swappable = offered.len() > 1 && offered.iter().any(|entry| entry.id == profile.id);
+    Ok(if swappable {
+        offered
+    } else {
+        vec![profile.clone()]
+    })
+}
+
+/// The marker for the controller picker in a design. It is separate from the
+/// marker for the scene, because the picker is not part of the scene.
+const PICKER_SLOT: &str = "<!--CONTROLLER-PICKER-->";
+
+/// The scene of each offered pad, next to the menu, in a file named after the
+/// pad id. We load one in the player when someone picks another controller.
+pub const SCENE_PREFIX: &str = "scene-";
+
+/// One controller's scene: its illustration, hit regions, callouts and groups.
+///
+/// We write it once for each offered pad, because a player who picks another
+/// pad needs its scene, and we cannot generate markup in the game.
+fn scene_markup(
+    profile: &crate::controls::ControlProfile,
+    controls: &crate::controls::Controls,
+    metrics: SceneMetrics,
+) -> String {
     let illustrated = !profile.image.is_empty();
     let mut markup = if illustrated {
         format!("<img id=\"controller-image\" src=\"{}\"/>", profile.image)
@@ -302,10 +468,7 @@ pub fn prepare_controls_assets(
         .collect();
     group_names.sort_unstable();
     group_names.dedup();
-    markup.push_str(&control_group_markup(&group_names, &grouped, controls, illustrated));
-    let offered = crate::controls::variants_for_system(system)?;
-    markup.push_str(&controller_picker_markup(&offered, &profile.id));
-
+    markup.push_str(&control_group_markup(&group_names, &grouped, controls, illustrated, metrics));
     for item in profile.controls.iter().filter(|item| item.group.is_none()) {
         let item = item.clone();
         let custom = controls.bindings.get(&item.id);
@@ -342,38 +505,34 @@ pub fn prepare_controls_assets(
         }
         markup.push_str(&control_callout_markup(id, label, original, key, cx, cy));
     }
-    let template = fs::read_to_string(source.join("menu.rml")).map_err(|e| e.to_string())?;
-    fs::write(
-        destination.join("menu.rml"),
-        template.replace("<!--CONTROLS-->", &markup),
-    )
-    .map_err(|e| e.to_string())
+    markup
 }
 
-/// Draw each group once, below the illustration.
+
+/// The in-game controller picker.
 ///
-/// We put the strip at the bottom of the scene because the side margins are
-/// full, with seven 54 dp callouts filling 378 of 380 dp. Its geometry matches
-/// `scripts/render_control_overlays.py`, the reference renderer for the
-/// controller scene.
-/// The in-game controller picker, drawn above the scene.
+/// We draw it at the place set in the design: the markup has no coordinates,
+/// and we place it with `menu.rcss`. In the native design it is on the action
+/// row beside BACK and RESET DEFAULTS, the one band that no console's pad
+/// covers. Both gutters are full of callouts, the heading is at the top
+/// centre, and the scene fills everything between.
 ///
-/// We put it in the band above the illustration and not inside it, because
-/// both side margins are full and the callout arrows are central to the
-/// design. Moving them for a control that most players use once would be a
-/// poor trade.
-///
-/// We add it only when there is a choice. A dropdown with one option is
-/// useless, and most consoles have exactly one pad.
+/// We emit it only when there is a choice. A dropdown with one option is
+/// noise, and most consoles have exactly one pad.
 fn controller_picker_markup(offered: &[crate::controls::ControlProfile], chosen: &str) -> String {
     if offered.len() < 2 {
         return String::new();
     }
-    let mut markup = String::from(
+    let chosen_name = offered
+        .iter()
+        .find(|entry| entry.id == chosen)
+        .map(|entry| rml_text(&entry.name.to_uppercase()))
+        .unwrap_or_default();
+    let mut markup = format!(
         r#"
 <div id="controls-device" class="control-picker">
 <div id="controls-device-label" class="control-picker-label">CONTROLLER</div>
-<button id="controls-device-current" class="control-picker-current"></button>
+<button id="controls-device-current" class="control-picker-current">{chosen_name}</button>
 <div id="controls-device-list" class="control-picker-list" style="display:none;">
 "#,
     );
@@ -392,17 +551,27 @@ fn controller_picker_markup(offered: &[crate::controls::ControlProfile], chosen:
     markup
 }
 
+/// Draw each group once, below the illustration.
+///
+/// We put the strip at the bottom of the scene because the side margins are
+/// full, with seven 54 dp callouts filling 378 of 380 dp. We take its geometry
+/// from the declaration in the design, so the layout is the same in
+/// `scripts/render_control_overlays.py` and in this markup.
+#[allow(non_snake_case)]
 fn control_group_markup(
     names: &[&str],
     grouped: &[&crate::controls::ControlDefinition],
     controls: &crate::controls::Controls,
     illustrated: bool,
+    metrics: SceneMetrics,
 ) -> String {
-    const WIDTH: i32 = 236;
-    const HEIGHT: i32 = 62;
-    const GAP: i32 = 16;
-    const SCENE_WIDTH: i32 = 960;
-    const SCENE_HEIGHT: i32 = 380;
+    let (WIDTH, HEIGHT, GAP, SCENE_WIDTH, SCENE_HEIGHT) = (
+        metrics.group_width,
+        metrics.group_height,
+        metrics.group_gap,
+        metrics.scene_width,
+        metrics.scene_height,
+    );
 
     if names.is_empty() {
         return String::new();
@@ -410,7 +579,7 @@ fn control_group_markup(
     let count = names.len() as i32;
     let total = count * WIDTH + (count - 1) * GAP;
     let left_edge = (SCENE_WIDTH - total) / 2;
-    let top = SCENE_HEIGHT - HEIGHT - 12;
+    let top = SCENE_HEIGHT - HEIGHT - metrics.group_bottom_margin;
 
     let mut markup = String::new();
     for (index, name) in names.iter().enumerate() {

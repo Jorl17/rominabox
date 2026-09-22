@@ -1,92 +1,203 @@
 {
   "schemaVersion": 1,
   "id": "ps1-analog",
-  "name": "PlayStation \u00b7 analogue",
+  "name": "PlayStation · analogue",
   "coreDevice": 261,
   "presentation": {
-    "kind": "generic"
+    "kind": "illustrated",
+    "image": "controller-ps1.png"
   },
   "presentationOrder": 14,
   "controls": [
     {
-      "id": "up",
-      "label": "Up",
-      "key": "up"
-    },
-    {
-      "id": "down",
-      "label": "Down",
-      "key": "down"
-    },
-    {
-      "id": "left",
-      "label": "Left",
-      "key": "left"
-    },
-    {
-      "id": "right",
-      "label": "Right",
-      "key": "right"
-    },
-    {
-      "id": "b",
-      "label": "Cross",
-      "key": "z"
-    },
-    {
-      "id": "a",
-      "label": "Circle",
-      "key": "x"
-    },
-    {
-      "id": "y",
-      "label": "Square",
-      "key": "a"
-    },
-    {
-      "id": "x",
-      "label": "Triangle",
-      "key": "s"
-    },
-    {
       "id": "l",
       "label": "L1",
-      "key": "d"
-    },
-    {
-      "id": "r",
-      "label": "R1",
-      "key": "c"
+      "key": "d",
+      "x": 301,
+      "y": 46,
+      "calloutX": 16,
+      "calloutY": 0
     },
     {
       "id": "l2",
       "label": "L2",
-      "key": "w"
+      "key": "w",
+      "x": 345,
+      "y": 46,
+      "calloutX": 16,
+      "calloutY": 54
     },
     {
-      "id": "r2",
-      "label": "R2",
-      "key": "e"
+      "id": "up",
+      "label": "Up",
+      "key": "up",
+      "x": 323,
+      "y": 120,
+      "calloutX": 16,
+      "calloutY": 108
     },
     {
-      "id": "l3",
-      "label": "L3",
-      "key": "1"
+      "id": "left",
+      "label": "Left",
+      "key": "left",
+      "x": 296,
+      "y": 147,
+      "calloutX": 16,
+      "calloutY": 162
     },
     {
-      "id": "r3",
-      "label": "R3",
-      "key": "2"
+      "id": "right",
+      "label": "Right",
+      "key": "right",
+      "x": 350,
+      "y": 147,
+      "calloutX": 16,
+      "calloutY": 216
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 323,
+      "y": 174,
+      "calloutX": 16,
+      "calloutY": 270
     },
     {
       "id": "select",
       "label": "Select",
-      "key": "rshift"
+      "key": "rshift",
+      "x": 430,
+      "y": 156,
+      "calloutX": 16,
+      "calloutY": 324
+    },
+    {
+      "id": "r",
+      "label": "R1",
+      "key": "c",
+      "x": 652,
+      "y": 46,
+      "calloutX": 744,
+      "calloutY": 0
+    },
+    {
+      "id": "r2",
+      "label": "R2",
+      "key": "e",
+      "x": 608,
+      "y": 46,
+      "calloutX": 744,
+      "calloutY": 54
+    },
+    {
+      "id": "x",
+      "label": "Triangle",
+      "key": "s",
+      "x": 632,
+      "y": 110,
+      "calloutX": 744,
+      "calloutY": 108
+    },
+    {
+      "id": "a",
+      "label": "Circle",
+      "key": "x",
+      "x": 670,
+      "y": 148,
+      "calloutX": 744,
+      "calloutY": 162
+    },
+    {
+      "id": "y",
+      "label": "Square",
+      "key": "a",
+      "x": 594,
+      "y": 148,
+      "calloutX": 744,
+      "calloutY": 216
+    },
+    {
+      "id": "b",
+      "label": "Cross",
+      "key": "z",
+      "x": 632,
+      "y": 186,
+      "calloutX": 744,
+      "calloutY": 270
     },
     {
       "id": "start",
       "label": "Start",
-      "key": "enter"
+      "key": "enter",
+      "x": 520,
+      "y": 156,
+      "calloutX": 744,
+      "calloutY": 324
+    },
+    {
+      "id": "l_y_minus",
+      "label": "Left stick up",
+      "key": "t",
+      "group": "l_stick"
+    },
+    {
+      "id": "l_y_plus",
+      "label": "Left stick down",
+      "key": "g",
+      "group": "l_stick"
+    },
+    {
+      "id": "l_x_minus",
+      "label": "Left stick left",
+      "key": "v",
+      "group": "l_stick"
+    },
+    {
+      "id": "l_x_plus",
+      "label": "Left stick right",
+      "key": "b",
+      "group": "l_stick"
+    },
+    {
+      "id": "l3",
+      "label": "Left stick press",
+      "key": "1",
+      "group": "l_stick",
+      "x": 405,
+      "y": 226
+    },
+    {
+      "id": "r_y_minus",
+      "label": "Right stick up",
+      "key": "i",
+      "group": "r_stick"
+    },
+    {
+      "id": "r_y_plus",
+      "label": "Right stick down",
+      "key": "k",
+      "group": "r_stick"
+    },
+    {
+      "id": "r_x_minus",
+      "label": "Right stick left",
+      "key": "j",
+      "group": "r_stick"
+    },
+    {
+      "id": "r_x_plus",
+      "label": "Right stick right",
+      "key": "l",
+      "group": "r_stick"
+    },
+    {
+      "id": "r3",
+      "label": "Right stick press",
+      "key": "2",
+      "group": "r_stick",
+      "x": 547,
+      "y": 226
     }
   ]
 }

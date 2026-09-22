@@ -85,6 +85,33 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "states",
+        "that every declared menu state still renders, with its artwork, and looks the same",
+        "that the bridge sets those classes at the right moment; the bridge scope covers that",
+        ["python3", str(ROOT / "scripts/menu_states.py"), "--check"],
+        slow=True,
+    ),
+    Scope(
+        "placement",
+        "that the controller picker lands in the same place on every console that offers one",
+        "that the place is a good one — only that it is the same one, whichever pad is drawn",
+        ["python3", str(ROOT / "scripts/menu_states.py"), "--fixed-place", str(SCRATCH / "picker-place")],
+        slow=True,
+    ),
+    Scope(
+        "variants",
+        "that every controller a player can pick has artwork staged and a scene to swap to",
+        "that the player actually swaps to it; that is the bridge, and rmlui.c is not linked here",
+        ["python3", str(ROOT / "scripts/menu_states.py"), "--every-variant", str(SCRATCH / "variants")],
+        slow=True,
+    ),
+    Scope(
+        "automation",
+        "that something other than a person still runs this suite",
+        "that the hook is installed in a fresh clone; core.hooksPath is local configuration",
+        ["python3", str(ROOT / "scripts/test_automation.py")],
+    ),
+    Scope(
         "artwork",
         "that every controller PNG still matches a fresh render of its SVG source",
         "that the artwork is correct — only that the PNG has not diverged from the drawing",

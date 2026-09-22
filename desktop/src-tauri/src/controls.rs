@@ -83,7 +83,24 @@ pub fn profile_for_system(system: &str) -> Result<ControlProfile, String> {
 }
 
 /// Validates author-provided overrides against the selected controller layout.
+///
+/// This is the check for a shipped game, with advanced emulator access off,
+/// so `q` and `f` are ordinary keys. Escape stays reserved in both modes.
 pub fn validate_for_system(system: &str, controls: &Controls) -> Result<ControlProfile, String> {
+    validate_for_system_with_advanced_access(system, controls, false)
+}
+
+/// Same validation as [`validate_for_system`], with quit and fullscreen reserved
+/// only when `advanced_emulator_access` is on.
+///
+/// The flag is the advanced-access opt-in, not a second recovery setting.
+/// While it is on, `q` quits and `f` toggles fullscreen, so with a gameplay
+/// bind on either key, one press would trigger both.
+pub fn validate_for_system_with_advanced_access(
+    system: &str,
+    controls: &Controls,
+    advanced_emulator_access: bool,
+) -> Result<ControlProfile, String> {
     let profile = if let Some(id) = &controls.profile {
         let normalized = normalize_system(system);
         registry()?
@@ -101,7 +118,7 @@ pub fn validate_for_system(system: &str, controls: &Controls) -> Result<ControlP
     } else {
         profile_for_system(system)?
     };
-    validate_for_profile(&profile, controls)?;
+    validate_for_profile(&profile, controls, advanced_emulator_access)?;
     Ok(profile)
 }
 
@@ -133,13 +150,28 @@ pub fn variants_for_system(system: &str) -> Result<Vec<ControlProfile>, String> 
     Ok(offered)
 }
 
-/// Write the defaults for the Controls screen of the player.
+/// Write the immutable defaults for the native Controls screen.
+///
+/// We use this for a shipped game, without advanced emulator access, so we do
+/// not reserve quit and fullscreen.
 pub fn write_defaults_config(
     system: &str,
     controls: &Controls,
     destination: &Path,
 ) -> Result<ControlProfile, String> {
-    let profile = validate_for_system(system, controls)?;
+    write_defaults_config_with_advanced_access(system, controls, destination, false)
+}
+
+/// [`write_defaults_config`] for an export that may have reserved quit and
+/// fullscreen. `advanced_emulator_access` is the same flag as in the hotkey policy.
+pub fn write_defaults_config_with_advanced_access(
+    system: &str,
+    controls: &Controls,
+    destination: &Path,
+    advanced_emulator_access: bool,
+) -> Result<ControlProfile, String> {
+    let profile =
+        validate_for_system_with_advanced_access(system, controls, advanced_emulator_access)?;
     let values = effective_controls(&profile, controls);
     let mut config = format!("controls_profile = \"{}\"\n", profile.id);
     // The controllers that we offer in the picker in the game. We separate
@@ -244,7 +276,11 @@ fn effective_controls(
         .collect()
 }
 
-fn validate_for_profile(profile: &ControlProfile, controls: &Controls) -> Result<(), String> {
+fn validate_for_profile(
+    profile: &ControlProfile,
+    controls: &Controls,
+    advanced_emulator_access: bool,
+) -> Result<(), String> {
     let valid_ids: HashSet<&str> = profile
         .controls
         .iter()
@@ -261,7 +297,7 @@ fn validate_for_profile(profile: &ControlProfile, controls: &Controls) -> Result
             validate_label(id, label)?;
         }
         if let Some(key) = &value.key {
-            validate_key(id, key)?;
+            validate_key(id, key, advanced_emulator_access)?;
         }
         if let Some(button) = &value.button {
             validate_button(id, button)?;
@@ -283,7 +319,7 @@ fn validate_for_profile(profile: &ControlProfile, controls: &Controls) -> Result
     // and keys, because they are values and not identities.
     for control in &profile.controls {
         validate_label(&control.id, &control.label)?;
-        validate_key(&control.id, &control.key)?;
+        validate_key(&control.id, &control.key, advanced_emulator_access)?;
     }
     Ok(())
 }
@@ -321,11 +357,21 @@ fn validate_label(id: &str, value: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn validate_key(id: &str, value: &str) -> Result<(), String> {
+fn validate_key(id: &str, value: &str, advanced_emulator_access: bool) -> Result<(), String> {
     if value.len() > MAX_KEY_BYTES || !retroarch_keys().contains(value) {
         return Err(format!("key for {id} is not an allowed RetroArch key"));
     }
-    if matches!(value, "q" | "f" | "escape") {
+    // The player opens the menu with Escape in both modes, the only way to Quit
+    // when Q is not a hotkey, so Escape is never a gameplay binding.
+    if value == "escape" {
+        return Err(format!(
+            "key for {id} toggles the menu and cannot be a gameplay binding"
+        ));
+    }
+    // Q quits and F toggles fullscreen only while advanced access is on. With
+    // a gameplay bind on the same key, one press would trigger both. In a
+    // shipped game the keys are free.
+    if advanced_emulator_access && matches!(value, "q" | "f") {
         return Err(format!(
             "key for {id} is reserved for player recovery and cannot be rebound"
         ));

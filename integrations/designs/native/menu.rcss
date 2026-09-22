@@ -46,18 +46,46 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
 .control-callout { position: absolute; width: 196dp; height: 54dp; padding: 0; border: 2dp #75b2e4; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
 .control-callout:hover { border-color: #ffffff; }
 .control-callout.focused { border-color: #fff13d; }
-/* The controller picker is above the scene and never inside it, because both
- * gutters are full and the callout arrows are part of the design. Closed it
- * is one line, and open it lists the pads the author included. A console
- * with one pad has no picker, because a list of one is useless. */
-.control-picker { position: absolute; left: 600dp; top: 26dp; width: 320dp; height: 40dp; }
-.control-picker-label { position: absolute; left: 0; top: 10dp; font-size: 14dp; color: #b4e6ff; }
-.control-picker-current { position: absolute; left: 110dp; top: 0; width: 210dp; height: 36dp; font-family: Silkscreen; font-size: 16dp; line-height: 36dp; text-align: left; padding-left: 10dp; border: 2dp #75b2e4; background-color: #061a48; color: #ffffff; }
-.control-picker-current:hover, .control-picker-current.focused { border-color: #ffffff; }
-.control-picker-list { position: absolute; left: 110dp; top: 36dp; width: 210dp; border: 2dp #fff13d; background-color: #061a48; z-index: 50; }
-.control-picker-option { display: block; width: 100%; height: 34dp; font-family: Silkscreen; font-size: 15dp; line-height: 34dp; text-align: left; padding-left: 10dp; border: 0; background-color: #061a48; color: #b4e6ff; }
-.control-picker-option:hover, .control-picker-option.focused { background-color: #193e88; color: #ffffff; }
+
+/* When closed, the picker is on the action row between RESET DEFAULTS and
+ * CANCEL, because the heading is at the top centre and both gutters are full.
+ *
+ * These are screen coordinates, so the picker is a sibling of
+ * #controller-scene. Inside the scene, we would measure them from the origin
+ * of the scene. The list opens upward (bottom, not top) because the status
+ * line is directly under this row.
+ *
+ * We set the width once, here, and the button and the list stretch to it.
+ * The options have no width, because a fixed width plus the focus border and
+ * padding would be wider than the content box of the list. */
+.control-picker { position: absolute; left: 484dp; top: 480dp; width: 228dp; height: 42dp; z-index: 50; }
+.control-picker-label { position: absolute; left: 0; top: -16dp; font-size: 12dp; color: #b4e6ff; }
+/* nowrap, because the widest controller name sets this width, and a name
+ * that wrapped would draw its second line outside the border. */
+.control-picker-current { position: absolute; left: 0; right: 0; top: 0; height: 38dp; font-family: Silkscreen; font-size: 13dp; line-height: 38dp; white-space: nowrap; text-align: left; padding-left: 8dp; border: 2dp #75b2e4; background-color: #061a48; color: #ffffff; }
+.control-picker-current:hover { border-color: #ffffff; }
+.control-picker-current.focused { border-color: #fff13d; }
+.control-picker-current:active { background-color: #193e88; border-color: #ffffff; }
+/* We lay out the options through the list, because block elements inside
+ * an absolutely positioned parent would draw on top of one another. */
+.control-picker-list { position: absolute; left: 0; right: 0; bottom: 100%; border: 2dp #fff13d; background-color: #061a48; z-index: 50; display: block; }
+.control-picker-option { display: block; position: relative; height: 22dp; font-family: Silkscreen; font-size: 13dp; line-height: 22dp; white-space: nowrap; text-align: left; padding-left: 12dp; border-left: 4dp #061a48; background-color: #061a48; color: #b4e6ff; }
+/* A hairline between rows. With the adjacent-sibling selector the last row
+ * has no hairline, so the yellow list border is the bottom edge. */
+.control-picker-option + .control-picker-option { border-top: 1dp #476eab; }
+/* The pointer, keyboard focus and a held press are three states, and we draw
+ * each differently, so a player using the arrow keys can see which option a
+ * press would choose. */
+.control-picker-option:hover { background-color: #193e88; color: #ffffff; }
+.control-picker-option.focused { background-color: #193e88; color: #ffffff; border-left-color: #fff13d; }
+.control-picker-option:active { background-color: #fff13d; color: #061a48; border-left-color: #ffffff; }
 .control-picker-option.selected { color: #fff13d; }
+/* The controller in use keeps yellow text under the pointer and under the
+ * arrow keys, so it still looks in use. During a press the row itself turns
+ * yellow and yellow text on it would disappear, so the text is not yellow
+ * then. */
+.control-picker-option.selected:hover, .control-picker-option.selected.focused { color: #fff13d; }
+.control-picker-option.selected:active { color: #061a48; }
 
 /* A stick is one object on the pad but several binds, so we draw it once,
  * under the illustration and not in a gutter. Each gutter is full with seven

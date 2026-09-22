@@ -71,11 +71,20 @@ fn six_button_authoring_configures_the_emulated_device_and_labels() {
 fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
     let root = workspace();
     let options = Controls::default();
-    themes::prepare_controls_assets(&assets(), &root, "atari2600", &options).unwrap();
+    themes::prepare_controls_assets(&assets(), &assets(), &root, "atari2600", &options).unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("id=\"control-r3\""));
     assert!(!markup.contains("id=\"controller-image\""));
-    assert_eq!(fs::read_dir(&root).unwrap().count(), 1);
+    // Only the document and the scene that the player can switch to. For a
+    // console with no illustration, no artwork may go into the export.
+    let written: Vec<String> = fs::read_dir(&root)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    assert!(
+        written.iter().all(|name| name.ends_with(".rml")),
+        "an asset-free console staged something that is not markup: {written:?}"
+    );
     controls::write_defaults_config("atari2600", &options, &root.join("controls.cfg")).unwrap();
     assert!(fs::read_to_string(root.join("controls.cfg"))
         .unwrap()
@@ -87,7 +96,7 @@ fn custom_labels_are_escaped_without_changing_control_identity() {
     let options: Controls =
         serde_json::from_value(serde_json::json!({"bindings":{"a":{"label":"Jump <go> & fly"}}}))
             .unwrap();
-    themes::prepare_controls_assets(&illustrated_assets(), &root, "nes", &options).unwrap();
+    themes::prepare_controls_assets(&illustrated_assets(), &illustrated_assets(), &root, "nes", &options).unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("Jump &lt;go&gt; &amp; fly"));
     assert!(markup.contains("id=\"control-a\""));
@@ -107,7 +116,7 @@ fn default_callout_labels_occur_once_and_custom_labels_keep_console_identity() {
         ("nes", illustrated_assets(), "A"),
     ] {
         let root = workspace();
-        themes::prepare_controls_assets(&source, &root, system, &options).unwrap();
+        themes::prepare_controls_assets(&source, &source, &root, system, &options).unwrap();
         let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
         for label in ["Up", "Down", "Left", "Start"] {
             assert_eq!(
@@ -163,17 +172,21 @@ fn splash_only_document_has_no_pause_controls_and_can_make_its_background_transp
 #[test]
 fn the_controller_picker_is_offered_only_when_there_is_a_choice() {
     let root = workspace();
-    let staged = |system: &str, profile_image: &str| -> String {
+    let staged = |system: &str, _profile_image: &str| -> String {
         let source = root.join(format!("source-{system}"));
         let destination = root.join(format!("staged-{system}"));
         fs::create_dir_all(&source).unwrap();
         fs::create_dir_all(&destination).unwrap();
         fs::copy(assets().join("menu.rml"), source.join("menu.rml")).unwrap();
-        fs::write(source.join(profile_image), []).unwrap();
+        // Every pad for the console, and not only the chosen one. We stage
+        // them all at export, so we can show another one when a player picks it.
+        for entry in controls::variants_for_system(system).unwrap() {
+            if !entry.image.is_empty() {
+                fs::write(source.join(&entry.image), []).unwrap();
+            }
+        }
         fs::write(source.join("CONTROLLERS.txt"), []).unwrap();
-        rominabox_desktop::themes::prepare_controls_assets(
-            &source,
-            &destination,
+        rominabox_desktop::themes::prepare_controls_assets(&source, &source, &destination,
             system,
             &Controls::default(),
         )
@@ -195,10 +208,21 @@ fn the_controller_picker_is_offered_only_when_there_is_a_choice() {
         "the list starts closed"
     );
 
+    // For PlayStation we declare a DualShock and an analogue pad, and offer
+    // both.
     let playstation = staged("ps1", "controller-ps1.png");
     assert!(
-        !playstation.contains("controls-device"),
-        "PlayStation offers one pad; a list of one is noise, not a choice"
+        playstation.contains("controls-device-option-ps1-analog"),
+        "PlayStation distinguishes an analogue pad from a DualShock, and a game \
+         that wants one will not accept the other; the picker must list both"
+    );
+
+    // We show a picker only when there is a choice. The Super Nintendo has
+    // one pad, and a list of one is noise.
+    let snes = staged("snes", "controller-snes.png");
+    assert!(
+        !snes.contains("controls-device"),
+        "a console with one pad gets no picker"
     );
 }
 
