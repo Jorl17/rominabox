@@ -59,12 +59,28 @@ def partitioned_components(target: str) -> tuple[dict, dict]:
             "license": entry["license"]["spdx"],
             "corresponds_to_artifact": provenance["correspondsToArtifact"],
             "build": provenance.get("build") or {},
+            "downloads": provenance.get("downloads") or {},
         }
-        if provenance["origin"] == "built":
+        # A recipe named osx compiles for this machine. With it, we would give
+        # a Windows or Linux target the host executable under that platform's
+        # file name, so for those targets we use the pinned nightly.
+        if provenance["origin"] == "built" and recipe_covers(record, target):
             built[cid] = record
-        else:
+        elif record["downloads"].get(target):
+            if provenance["origin"] == "built":
+                record["corresponds_to_artifact"] = False
+            prebuilt[cid] = record
+        elif provenance["origin"] != "built":
             prebuilt[cid] = record
     return built, prebuilt
+
+
+def recipe_covers(record: dict, target: str) -> bool:
+    """Return whether we can build `target` here with the component's recipe."""
+    platform_name = (record.get("build") or {}).get("platform")
+    if platform_name != "osx":
+        return False
+    return target == host_target() and target.startswith("macos")
 
 
 # The address of the official nightly build for each target. We prepare a kit
@@ -150,8 +166,25 @@ def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object], t
         with package.open(binary_name) as source, binary.open("wb") as output:
             shutil.copyfileobj(source, output)
 
-    # lipo exists only on macOS. Other targets require their own check, and we
-    # must not accept them without one.
+    downloads = spec.get("downloads") or {}
+    pinned = downloads.get(target) or {}
+    # libretro replaces the file at `latest` in place. The hash recorded on the
+    # component identifies one nightly, and a file with another hash is a different core.
+    expected_archive = pinned.get("archiveSha256")
+    if expected_archive and digest(binary_archive) != expected_archive:
+        raise RuntimeError(
+            f"{component} archive for {target} is not the recorded nightly"
+        )
+    expected_binary = pinned.get("binarySha256")
+    if expected_binary and digest(binary) != expected_binary:
+        raise RuntimeError(
+            f"{component} binary for {target} is not the recorded nightly"
+        )
+
+    # lipo exists only on macOS. We accept a core for another target when its
+    # hash matches the recorded one, because then the bytes are the ones whose
+    # architecture we read when we recorded the hash. Without a recorded hash
+    # we have nothing to trust, and we do not stage the core.
     if target.startswith("macos"):
         architecture = subprocess.run(
             ["/usr/bin/lipo", "-archs", str(binary)],
@@ -159,15 +192,17 @@ def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object], t
             capture_output=True,
             text=True,
         ).stdout.split()
+        expected = target.rsplit("-", 1)[1]
+        if expected not in architecture:
+            raise RuntimeError(
+                f"Buildbot core for {target} is not {expected}: {binary}: {architecture}"
+            )
+    elif expected_binary:
+        architecture = [target.rsplit("-", 1)[1]]
     else:
         raise SystemExit(
-            f"Preparing {target} needs an architecture check for that platform; "
-            "refusing to stage a core whose architecture was never verified."
-        )
-    expected = target.rsplit("-", 1)[1]
-    if expected not in architecture:
-        raise RuntimeError(
-            f"Buildbot core for {target} is not {expected}: {binary}: {architecture}"
+            f"Preparing {target} needs a recorded hash for that platform; "
+            "refusing to stage a core whose bytes were never verified."
         )
 
     repo = str(spec["repo"])

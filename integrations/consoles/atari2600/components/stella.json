@@ -3,7 +3,10 @@
   "id": "stella",
   "name": "stella",
   "artifacts": {
-    "macos-arm64": "stella_libretro.dylib"
+    "linux-x86_64": "stella_libretro.so",
+    "macos-arm64": "stella_libretro.dylib",
+    "macos-x86_64": "stella_libretro.dylib",
+    "windows-x86_64": "stella_libretro.dll"
   },
   "license": {
     "spdx": "GPL-2.0",
@@ -20,6 +23,33 @@
       "LICENSE",
       "COPYING"
     ],
-    "correspondsToArtifact": false
+    "correspondsToArtifact": false,
+    "licenseSha256": "310782e1abd43c4de6217c513e328bddf999d39302d67c6e05b10a59959827af",
+    "downloads": {
+      "linux-x86_64": {
+        "archiveSha256": "0017d57ee79982a5f5dab0b0cc5f41665fca998e6cff8998c9c5c6f7aece4ef2",
+        "binarySha256": "ba83fcc744049e7c75e74b3407075ae7ac3815250a333d177bf9e99d9680adff",
+        "archiveBytes": 1892567,
+        "binaryBytes": 7410880
+      },
+      "macos-arm64": {
+        "archiveSha256": "ace19180d179330a5b0861117edd6ff340bb4163ce7f6042046c950cee56467d",
+        "binarySha256": "8ba747d971903b297e8071d891746a6ec8886005d7d5817de440ddc420c80923",
+        "archiveBytes": 923539,
+        "binaryBytes": 3200872
+      },
+      "macos-x86_64": {
+        "archiveSha256": "67f1702517dfdd9a41807bf4e1ef53eb1260b586e31673d66f46d1c2afa6c5b5",
+        "binarySha256": "8492acfe2807deb7f36d6a485fa596f45362facf9b70850647cb89663789a202",
+        "archiveBytes": 973456,
+        "binaryBytes": 3271528
+      },
+      "windows-x86_64": {
+        "archiveSha256": "075e1d0368761a4b20f49dd249bd499148659cf0c2fb1cbeb1593d4a86cdc113",
+        "binarySha256": "a99ff000ea11771f8e2573be22725acd7c59b7976be2befcc1b5da8084c10bab",
+        "archiveBytes": 1819730,
+        "binaryBytes": 5745664
+      }
+    }
   }
 }

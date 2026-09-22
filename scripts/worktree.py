@@ -16,11 +16,16 @@ changes: the port is 1420, the identifiers have no suffix, and
 `stable_identity` is the same. This is important, because a regression test
 checks it so that a player's saves survive a re-export of the same game.
 
-We do NOT isolate the prepared runtime kit, the cargo target directory and
-the submodule's object store. An isolated 6 GB target would cost 6 GB per
-worktree to avoid a lock that only serialises compilation, and isolated
-submodule objects would mean a new clone of 289 MB that git can share at
-no cost. We share large artifacts that depend only on their content.
+We do NOT isolate the cargo target and the submodule's object store. An
+isolated 6 GB target would cost 6 GB per worktree to avoid a lock that only
+serialises compilation, and isolated submodule objects would mean a new
+clone of 289 MB that git can share at no cost. We share large artifacts
+that depend only on their content.
+
+We copy the prepared runtime kit and do not share it. Through a symlink,
+staging a design in a worktree would write into the checkout it came from,
+and every worktree linked to it would then have a kit that does not match
+its design.
 """
 
 from __future__ import annotations
@@ -34,7 +39,30 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+def _canonical() -> Path:
+    """Return the main checkout, whatever checkout we run this script from.
+
+    Inside a worktree the script's parent directory is the worktree. With it,
+    in `adopt`, which we run from inside a worktree, we would take the
+    worktree for the canonical checkout and refuse it. The checkout would then
+    stay on port 1420 with the canonical bundle identifiers and data root. We
+    wrote this tool to prevent that collision, and it produces no error.
+
+    The common git directory is the main checkout's `.git` in every worktree,
+    so its parent is the main checkout.
+    """
+    here = Path(__file__).resolve().parent.parent
+    try:
+        common = subprocess.run(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            cwd=here, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (subprocess.CalledProcessError, OSError):
+        return here
+    return Path(common).resolve().parent if common else here
+
+
+ROOT = _canonical()
 BASE_PORT = 1420
 BASE_BUNDLE = "com.rominabox.desktop"
 LOCAL_CONFIG = "worktree.local.json"
@@ -219,15 +247,19 @@ def write_local(path: Path, suffix: str, offset: int) -> dict:
 # The prepared runtime kit (the frozen RetroArch player, the cores, the menu
 # assets) is build output and is not in git. Without it we cannot export or
 # launch anything in a worktree, and a RetroArch build per worktree is too slow.
-# It is the same in every worktree unless the fork or a design changes, so we
-# share it with a symlink.
 #
-# Staging a design through that symlink would write into the canonical
-# checkout and give every other worktree a kit that does not match its
-# design. So in `build-builder-macos.sh` we refuse to stage through a shared
-# kit and suggest `--own-runtime`.
-SHARED_ARTIFACTS = [
+# We copy the kit and do not share it with a symlink. Staging a design writes
+# into the kit, and we stage designs in several scripts (for example, we build
+# a kit to photograph in menu_shots.py), so through a shared link one worktree
+# would overwrite the canonical kit and every other worktree would have a kit
+# that does not match its design.
+COPIED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/runtime"),
+]
+
+# We only ever read these, so we share them at no cost and save a lot of
+# space, because node_modules alone is larger than the kit.
+SHARED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/preview"),
     # Without these we cannot run the whole suite in a worktree, and the
     # failures look like a fault in the change. The `frontend` tests stop with
@@ -235,11 +267,24 @@ SHARED_ARTIFACTS = [
     # Both are build output, the same in every worktree, and not in git.
     Path("desktop/node_modules"),
     Path("work/experiments"),
+    # These are bundled resources in the tauri build, so without them we cannot
+    # compile the desktop crate. The error, "resource path `resources/skills`
+    # doesn't exist", looks like a missing file and not a missing link, and
+    # most test scopes then fail.
+    Path("desktop/src-tauri/resources/bin"),
+    Path("desktop/src-tauri/resources/skills"),
+    # The catalogues and picture lists for the identification measurement. We
+    # fetch them on purpose and never during a test, so without them we cannot
+    # run those tests in a worktree. The error message suggests a fetch, and in
+    # every checkout that would mean many requests to another party's API for
+    # the same files.
+    Path("work/identification-cache"),
 ]
 
 
 def link_build_artifacts(path: Path, own_copy: bool) -> None:
-    for relative in SHARED_ARTIFACTS:
+    for relative in COPIED_ARTIFACTS + SHARED_ARTIFACTS:
+        copy = own_copy or relative in COPIED_ARTIFACTS
         source = ROOT / relative
         if not source.exists():
             print(f"  {relative} is not prepared here; skipping")
@@ -248,7 +293,7 @@ def link_build_artifacts(path: Path, own_copy: bool) -> None:
         if target.exists() or target.is_symlink():
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
-        if own_copy:
+        if copy:
             started = time.monotonic()
             shutil.copytree(source, target, symlinks=True)
             print(f"  copied {relative} ({time.monotonic() - started:.0f}s)")
@@ -318,7 +363,6 @@ def adopt() -> int:
         local = write_local(here, suffix, offset)
     print(f"{here}\n{describe(local)}")
     return 0
-
 
 def environment() -> int:
     """Print the shell exports for a worktree, for `eval`."""

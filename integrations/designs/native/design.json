@@ -36,6 +36,25 @@
       "bottomMargin": 12
     }
   },
+  "list": {
+    "pageSize": 4
+  },
+  "overlays": [
+    {
+      "id": "splash",
+      "afterMs": 0,
+      "holdMs": 550,
+      "leaveMs": 250,
+      "needs": "splash-logo.png"
+    },
+    {
+      "id": "notice",
+      "follows": "splash",
+      "afterMs": 700,
+      "holdMs": 3600,
+      "leaveMs": 500
+    }
+  ],
   "screens": [
     {
       "id": "pause",
@@ -60,17 +79,13 @@
       "heading": "CONTROLS",
       "footer": "ESC  BACK",
       "button": "controls",
-      "option": { "label": "CONTROLS", "default": true }
+      "option": {
+        "label": "CONTROLS",
+        "default": true
+      }
     }
   ],
   "tokens": {
-    "ink": "#ffffff",
-    "bevel-light": "#9edaff",
-    "bevel-dark": "#020b27",
-    "rule": "#476eab",
-    "disabled": "#647cad",
-    "frame": "#5296ef",
-    "slot-label": "#081433",
-    "well-edge": "#092754"
+    "ink": "#ffffff"
   }
 }

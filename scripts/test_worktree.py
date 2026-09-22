@@ -127,6 +127,59 @@ def the_canonical_checkout_is_never_suffixed() -> None:
     )
 
 
+
+def adopt_works_from_inside_the_worktree_it_adopts() -> None:
+    """Check that the documented use of adopt succeeds.
+
+    We run `worktree.py adopt` in a checkout created some other way. If ROOT
+    were the parent directory of the script, inside a worktree it would be the
+    worktree, so `here == ROOT` would be true and in adopt we would refuse it
+    with "this is the canonical checkout". The checkout would then stay on
+    port 1420 with the canonical bundle identifiers and data root. We wrote
+    this tool to prevent that collision, and it produces no error.
+
+    We run the script in a temporary worktree of this repository and remove
+    the worktree afterwards.
+    """
+    made = Path(tempfile.mkdtemp(prefix="rominabox-adopt-")) / "checkout"
+    try:
+        subprocess.run(
+            ["git", "worktree", "add", "--detach", str(made), "HEAD"],
+            cwd=worktree.ROOT, capture_output=True, text=True, check=True,
+        )
+        # The checkout is at HEAD, so its copy of the script is the committed
+        # one. Put the working copy there instead, because we test the script
+        # as it is now, not as it was in the last commit.
+        (made / "scripts/worktree.py").write_text(
+            (worktree.ROOT / "scripts/worktree.py").read_text()
+        )
+        done = subprocess.run(
+            # The copy of the script IN THE WORKTREE, which is the one we run in
+            # that checkout. With the canonical copy we would miss the defect,
+            # because ROOT would come from the script's location.
+            [sys.executable, str(made / "scripts/worktree.py"), "adopt"],
+            cwd=made, capture_output=True, text=True,
+        )
+        check(
+            done.returncode == 0,
+            f"adopt succeeds inside a worktree: {done.stdout.strip() or done.stderr.strip()}",
+        )
+        local = made / worktree.LOCAL_CONFIG
+        check(local.is_file(), "it wrote the worktree's own resources")
+        if local.is_file():
+            settings = json.loads(local.read_text())
+            check(
+                settings.get("port") != worktree.BASE_PORT,
+                f"and gave it a port of its own, not {worktree.BASE_PORT}",
+            )
+    finally:
+        subprocess.run(
+            ["git", "worktree", "remove", "--force", str(made)],
+            cwd=worktree.ROOT, capture_output=True, text=True,
+        )
+        subprocess.run(["rm", "-rf", str(made.parent)], check=False)
+
+
 def the_local_config_is_never_committed() -> None:
     """It contains local resources of this machine, so we must not commit it."""
     ignored = subprocess.run(
@@ -152,10 +205,58 @@ def removal_never_touches_the_canonical_data() -> None:
         )
 
 
-# From inside a worktree, every check here is the wrong check. The common git
+def the_built_cli_follows_the_redirected_cargo_target() -> None:
+    """Check where four scripts find cargo's output, which moves in a worktree.
+
+    A fixed `desktop/src-tauri/target/release` path in a script is correct only
+    while nothing redirects cargo. Inside a worktree we always redirect it to
+    the shared store, so with such a path we would look in a directory without
+    cargo's output and report the tool as missing.
+
+    We answer this now with scripts/built.py, where we also refuse a binary
+    built in another checkout, which the path alone cannot show.
+    """
+    import built  # noqa: PLC0415 — imported here so this file loads without it
+
+    shared = Path("/shared-cargo-target")
+    before = os.environ.get("CARGO_TARGET_DIR")
+    try:
+        os.environ["CARGO_TARGET_DIR"] = str(shared)
+        check(
+            built.target_dir() == shared,
+            "the command line is looked for where cargo was redirected",
+        )
+        os.environ.pop("CARGO_TARGET_DIR")
+        check(
+            built.target_dir() == built.ROOT / "desktop/src-tauri/target",
+            "with nothing redirecting it, the checkout's own target directory",
+        )
+    finally:
+        if before is None:
+            os.environ.pop("CARGO_TARGET_DIR", None)
+        else:
+            os.environ["CARGO_TARGET_DIR"] = before
+
+
+# From inside a worktree, these checks are the wrong checks. The common git
 # directory is always the canonical checkout's, and we do not test a worktree
 # of a worktree. Without this, a run of the full suite inside a worktree would
-# fail here.
+# fail on them.
+FROM_THE_CANONICAL_CHECKOUT = [
+    the_common_dir_is_shared_not_per_worktree,
+    two_worktrees_never_share_a_port,
+    the_lock_is_exclusive_and_reentrant_after_release,
+    a_dead_holders_lock_is_reclaimed,
+    the_canonical_checkout_is_never_suffixed,
+    adopt_works_from_inside_the_worktree_it_adopts,
+    the_local_config_is_never_committed,
+    removal_never_touches_the_canonical_data,
+]
+
+# These checks give the same result anywhere, and are most useful in a worktree.
+ANYWHERE = [the_built_cli_follows_the_redirected_cargo_target]
+
+
 def inside_a_worktree() -> bool:
     import subprocess
 
@@ -169,21 +270,15 @@ def inside_a_worktree() -> bool:
 
 
 def main() -> int:
+    tests = list(ANYWHERE)
     if inside_a_worktree():
         print(
-            "  skipped: this checks how worktrees are created, from the "
-            "checkout they are created from. Run it there."
+            "  how worktrees are created is checked from the checkout they are "
+            "created from, so those are skipped here."
         )
-        return 0
-    for test in [
-        the_common_dir_is_shared_not_per_worktree,
-        two_worktrees_never_share_a_port,
-        the_lock_is_exclusive_and_reentrant_after_release,
-        a_dead_holders_lock_is_reclaimed,
-        the_canonical_checkout_is_never_suffixed,
-        the_local_config_is_never_committed,
-        removal_never_touches_the_canonical_data,
-    ]:
+    else:
+        tests += FROM_THE_CANONICAL_CHECKOUT
+    for test in tests:
         print(f"{test.__name__}")
         test()
     if FAILURES:

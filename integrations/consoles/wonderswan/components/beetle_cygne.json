@@ -3,11 +3,51 @@
   "id": "beetle_cygne",
   "name": "beetle cygne",
   "artifacts": {
-    "macos-arm64": "mednafen_wswan_libretro.dylib"
+    "linux-x86_64": "mednafen_wswan_libretro.so",
+    "macos-arm64": "mednafen_wswan_libretro.dylib",
+    "macos-x86_64": "mednafen_wswan_libretro.dylib",
+    "windows-x86_64": "mednafen_wswan_libretro.dll"
   },
   "license": {
     "spdx": "GPL-2.0",
     "file": "beetle_cygne.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "libretro/beetle-wswan-libretro",
+    "revision": "4b01295838ea89e3f1355bbe4cb5cf98aa6108cd",
+    "licenseCandidates": [
+      "COPYING",
+      "LICENSE"
+    ],
+    "correspondsToArtifact": false,
+    "licenseSha256": "a6996dcf0c334281f734560926e079b2dbbd5b78e81c0ca00a413ec01e1cd2fb",
+    "downloads": {
+      "linux-x86_64": {
+        "archiveSha256": "ebebf6c2cf877bc904b5fed16cdde6c38a506fd4b9ddbb05c408a8aa4ea74fac",
+        "binarySha256": "e181289190fee462ad6d8f2cf6b0df2ab7f094710257995c50f95d2bf2baa174",
+        "archiveBytes": 130140,
+        "binaryBytes": 1165224
+      },
+      "macos-arm64": {
+        "archiveSha256": "ce5cc93744e5dc3c61ac2b9e2dc4ac6ae619f65f8e0e502b9bf8fc3ef9c847f8",
+        "binarySha256": "258f7380e39c5d7f6845be986561430691c9365f6331919e878f253b812bf304",
+        "archiveBytes": 89550,
+        "binaryBytes": 1065792
+      },
+      "macos-x86_64": {
+        "archiveSha256": "32bcc1b02e92395ff95eb7ba4e8c4f5b81a5840dd21be2033d76dd14e3edbcaf",
+        "binarySha256": "8ae0cfe61f42b4ecfc02cea223c29e30c621b89320db2acc5af34638b319e6c3",
+        "archiveBytes": 93359,
+        "binaryBytes": 1056904
+      },
+      "windows-x86_64": {
+        "archiveSha256": "d710b8fd21b80ca0b4f596a1c05cbf9e8ee1d2e2f3116ca26b7e8d0e348f2eff",
+        "binarySha256": "5d750e1f6d05ac92ccd3ab06452c7a4b8a643ee019fbcb7b5b257ba1dff4bf71",
+        "archiveBytes": 121646,
+        "binaryBytes": 1073507
+      }
+    }
+  }
 }

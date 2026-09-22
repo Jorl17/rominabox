@@ -1,0 +1,16 @@
+{
+  "presets": [
+    {
+      "id": "scanlines",
+      "name": "Scanlines",
+      "detail": "Darkens every other line",
+      "fragment": "vec3 colour = COMPAT_TEXTURE(Texture, TEX0.xy).rgb; float line = mod(floor(TEX0.y * TextureSize.y), 2.0); colour *= mix(1.0, 0.45, line); FragColor = vec4(colour, 1.0);"
+    },
+    {
+      "id": "phosphor",
+      "name": "Phosphor",
+      "detail": "A strong green tint",
+      "fragment": "vec3 colour = COMPAT_TEXTURE(Texture, TEX0.xy).rgb; colour = vec3(colour.r * 0.22, min(colour.g * 1.25, 1.0), colour.b * 0.28); FragColor = vec4(colour, 1.0);"
+    }
+  ]
+}

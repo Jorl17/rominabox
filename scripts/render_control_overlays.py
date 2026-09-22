@@ -89,7 +89,13 @@ def _font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+# We build it here and check that it comes from this checkout, because every
+# worktree shares one cargo target, so the binary next to the manifest may be
+# out of date or from another checkout. See scripts/built.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from built import cli as _cli  # noqa: E402
+
+CLI = _cli()
 
 
 def scene_geometry(profile_id: str) -> dict:

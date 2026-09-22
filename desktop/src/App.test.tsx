@@ -451,6 +451,19 @@ describe("App workflow", () => {
     expect(restored.checked).toBe(true);
   });
 
+  it("keeps shader choices inside advanced options and off by default", async () => {
+    await openMenu();
+    const advanced = [...container.querySelectorAll("details.advanced")].find(
+      (details) =>
+        details.querySelector("summary")?.textContent?.includes("Advanced"),
+    );
+    const scanlines = [...advanced!.querySelectorAll("label")]
+      .find((label) => label.textContent?.includes("Scanlines"))
+      ?.querySelector("input") as HTMLInputElement;
+    expect(scanlines.checked).toBe(false);
+    expect(advanced!.querySelector('[aria-label="Starts on"]')).toBeNull();
+  });
+
   it("presents export as an honest disabled integration step", async () => {
     await openMenu();
     act(() => click(button("Next")));

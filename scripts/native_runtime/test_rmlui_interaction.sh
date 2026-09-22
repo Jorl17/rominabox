@@ -41,16 +41,17 @@ mkdir -p "$assets"
 for document in "$design"/*; do
   [ -f "$document" ] && cp "$document" "$assets/"
 done
-
-cli=${CARGO_TARGET_DIR:-$repo_root/desktop/src-tauri/target}/release/rominabox-cli
-if [ ! -x "$cli" ]; then
-  cargo build --release --manifest-path "$repo_root/desktop/src-tauri/Cargo.toml" --bin rominabox-cli
+# We build it here and check that it comes from this checkout, because every
+# worktree shares one cargo target, so the binary next to the manifest may be
+# out of date or from another checkout. See scripts/built.py.
+cli=$(python3 "$repo_root/scripts/built.py")
+if [ -x "$cli" ]; then
+  printf '{"source":"%s","destination":"%s","palette":"blue"}' "$design" "$assets" \
+    | "$cli" stage-theme >/dev/null || {
+      echo "could not stage the design's stylesheet" >&2; exit 1; }
+else
+  echo "build the CLI first: cargo build --release --bin rominabox-cli" >&2
+  exit 1
 fi
-
-# The stylesheet that we write in an export, not the file of the design. A
-# design has design(surface) where a colour goes, and RmlUi cannot parse that.
-printf '{"source":"%s","destination":"%s","palette":"blue"}' "$design" "$assets" \
-  | "$cli" stage-theme >/dev/null || {
-    echo "could not stage the design's stylesheet" >&2; exit 1; }
 
 "$out" "$assets" "$build_dir/thumbnail-test.png"

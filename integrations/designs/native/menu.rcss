@@ -1,8 +1,31 @@
 div { display: block; }
 body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size: 18dp; color: design(ink); background-color: design(background); }
 #screen { position: absolute; left: 50%; top: 50%; margin-left: -480dp; margin-top: -300dp; width: 952dp; height: 592dp; border: 4dp design(frame); background-color: design(screen); }
-#splash { display: none; position: absolute; left: -4dp; top: -4dp; width: 960dp; height: 600dp; z-index: 100; background-color: design(background); opacity: 1; }
+
+/* An overlay is this design drawn over a running game: the logo while the
+ * console starts, and the notice about how to pause. In the player we add
+ * `showing`, later `leaving`, then remove both, and we add `overlay` to the
+ * body while the menu is not on screen. Everything between those moments is
+ * in this stylesheet, so a design can change how an overlay arrives, leaves
+ * and where it is. */
+body.overlay { background-color: transparent; }
+body.overlay #screen { background-color: transparent; border-color: transparent; decorator: none; }
+body.overlay #heading, body.overlay #footer, body.overlay #pause-panel,
+body.overlay #controls-panel, body.overlay .screen-panel { display: none; }
+
+#splash { display: none; position: absolute; left: -4dp; top: -4dp; width: 960dp; height: 600dp; z-index: 100; background-color: design(background); opacity: 0; transition: opacity 0.12s linear-in-out; }
+#splash.showing { display: block; opacity: 1; }
+#splash.leaving { display: block; opacity: 0; transition: opacity design(overlay-leave-splash)s linear-in-out; }
 #splash-logo { position: absolute; left: 320dp; top: 140dp; width: 320dp; height: 320dp; }
+
+/* Bottom left, where games put a prompt that the player soon stops noticing.
+ * It pops up into place and drops back out, because the lettering is stepped
+ * and a slow fade would not match it. It does not respond to clicks, and we
+ * do not show it over the menu, because the footer of the menu already
+ * contains ESC CONTINUE. */
+.notice { position: absolute; left: 24dp; bottom: 16dp; width: 276dp; height: 44dp; z-index: 90; pointer-events: none; opacity: 0; line-height: 38dp; text-align: center; font-family: Silkscreen; font-size: 17dp; color: design(ink); background-color: design(surface); border: 3dp design(highlight); transition: opacity bottom 0.25s cubic-out; }
+body.overlay .notice.showing { opacity: 1; bottom: 40dp; }
+body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bottom design(overlay-leave-notice)s cubic-in; }
 #heading { position: absolute; top: 16dp; left: 0; width: 100%; text-align: center; font-size: 36dp; color: design(highlight); }
 #slots { position: absolute; left: 56dp; top: 76dp; width: 840dp; height: 404dp; }
 .slot { position: absolute; width: 252dp; height: 194dp; padding: 0; background-color: design(surface); color: design(ink); border: 3dp design(edge); font-family: Silkscreen; text-align: center; }
@@ -157,3 +180,32 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
 @keyframes capture-pulse { from { border-color: design(highlight); } to { border-color: transparent; } }
 @keyframes capture-pulse { from { border-color: design(highlight); } to { border-color: transparent; } }
 .control-callout.capturing, .control-hit.capturing { animation: 0.55s capture-pulse infinite alternate; }
+
+/* The rules for every list screen. The achievement list, the shader list and
+ * any later list in Options have the same parts: rows we write when we
+ * bundle the game, a pager, and a state on the right. They use these rules,
+ * so for a new list we add a new screen and no new stylesheet.
+ *
+ * These rules are in the design and not in the exporter, so a design can
+ * override them for a different list. A design that declares none of them
+ * has an unstyled list, and we reject it in the design contract test.
+ */
+.screen-link { position: absolute; top: 18dp; right: 24dp; width: 148dp; height: 36dp; z-index: 2; font-family: Silkscreen; font-size: 13dp; line-height: 30dp; text-align: center; }
+.list { position: absolute; left: 56dp; top: 76dp; width: 840dp; }
+.list-row { display: block; position: relative; width: 100%; height: 64dp; margin: 0 0 8dp 0; padding: 0; background-color: design(surface); color: design(ink); border-width: 3dp; border-color: design(edge); font-family: Silkscreen; text-align: left; }
+.list-row:hover, .list-row.focused { border-color: design(ink); }
+.list-row.selected, .list-row.selected:hover, .list-row.selected.focused { border-color: design(highlight); }
+.list-row:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
+.list-row-icon { position: absolute; left: 8dp; top: 8dp; width: 48dp; height: 48dp; }
+.list-row-title { position: absolute; left: 68dp; top: 8dp; font-size: 18dp; color: design(ink); }
+.list-row-detail { position: absolute; left: 68dp; top: 32dp; font-size: 14dp; color: design(muted); }
+.list-row-state { position: absolute; right: 16dp; top: 20dp; font-size: 14dp; color: design(highlight); }
+.list-pager { position: absolute; left: 0; top: 304dp; width: 100%; height: 36dp; }
+.list-pager-prev, .list-pager-next, .list-pager-count { position: absolute; top: 0; height: 36dp; line-height: 30dp; background-color: design(surface); color: design(ink); border-width: 3dp; border-color: design(edge); font-family: Silkscreen; font-size: 14dp; text-align: center; }
+.list-pager-prev { left: 0; width: 72dp; }
+.list-pager-count { left: 84dp; width: 120dp; }
+.list-pager-next { left: 216dp; width: 72dp; }
+.list-pager-prev:hover, .list-pager-next:hover, .list-pager-prev.focused, .list-pager-next.focused { background-color: design(highlight); color: design(surface); border-color: design(ink); }
+.list-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
+.list-actions .menu-action { position: absolute; left: 0; width: 160dp; height: 38dp; font-family: Silkscreen; font-size: 18dp; line-height: 32dp; text-align: center; }
+.list-status { position: absolute; left: 56dp; top: 440dp; color: design(highlight); font-size: 14dp; }

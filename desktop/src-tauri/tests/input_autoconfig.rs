@@ -714,10 +714,12 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         splash: false,
         advanced_emulator_access: true,
         menu_entries: None,
+        shaders: rominabox_desktop::shaders::ShaderSelection::default(),
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: kit,
         core: None,
+        core_cache: None,
     };
     let cancelled = AtomicBool::new(false);
     let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();

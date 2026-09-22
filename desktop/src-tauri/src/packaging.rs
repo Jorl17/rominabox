@@ -67,6 +67,10 @@ pub struct ExportRequest {
     /// design's defaults. With an empty list, we show no Options button.
     #[serde(default)]
     pub menu_entries: Option<Vec<String>>,
+    /// The shader presets we bundle into the game. Usually there are none,
+    /// and then the game has no shader screen and no preset.
+    #[serde(default)]
+    pub shaders: crate::shaders::ShaderSelection,
     pub output_dir: PathBuf,
     pub target: ExportTarget,
     /// A frozen, redistributable kit. It contains `bin/retroarch`, `cores/`,
@@ -77,6 +81,11 @@ pub struct ExportRequest {
     pub runtime_kit: PathBuf,
     /// Optional explicit core path for development and future custom kits.
     pub core: Option<PathBuf>,
+    /// Cores downloaded on first start, in the layout of a kit, `cores/` and
+    /// `licenses/`. At export we copy the core of the game from here, so
+    /// there is no download when the game opens.
+    #[serde(default)]
+    pub core_cache: Option<PathBuf>,
 }
 
 fn default_palette() -> String {
@@ -123,6 +132,19 @@ pub fn system_availability(runtime_kit: &Path) -> Vec<SystemAvailability> {
 /// macOS we can answer "would this console work on Windows?", and we can
 /// test that question at all.
 pub fn system_availability_for(runtime_kit: &Path, target: &str) -> Vec<SystemAvailability> {
+    system_availability_in(runtime_kit, None, target)
+}
+
+/// Resolve availability, also looking in the cache filled on first start.
+///
+/// We search the bundled kit first. The cache contains the cores downloaded
+/// on first start, in the same `cores/` and `licenses/` layout, and it is not
+/// a global RetroArch folder.
+pub fn system_availability_in(
+    runtime_kit: &Path,
+    cache: Option<&Path>,
+    target: &str,
+) -> Vec<SystemAvailability> {
     crate::systems::registry()
         .iter()
         .map(|system| {
@@ -144,8 +166,13 @@ pub fn system_availability_for(runtime_kit: &Path, target: &str) -> Vec<SystemAv
                     ));
                     continue;
                 };
-                let artifact = runtime_kit.join("cores").join(filename);
-                let licence = runtime_kit.join("licenses").join(&core.license_file);
+                let artifact =
+                    resolve_cached(runtime_kit, cache, &Path::new("cores").join(filename));
+                let licence = resolve_cached(
+                    runtime_kit,
+                    cache,
+                    &Path::new("licenses").join(&core.license_file),
+                );
                 if artifact.is_file() && licence.is_file() {
                     return SystemAvailability {
                         id: system.id.clone(),
@@ -410,10 +437,11 @@ where
         )
     })?;
     let core_source = request.core.clone().unwrap_or_else(|| {
-        request
-            .runtime_kit
-            .join("cores")
-            .join(selected_core.artifact().unwrap_or_default())
+        resolve_cached(
+            &request.runtime_kit,
+            request.core_cache.as_deref(),
+            &Path::new("cores").join(selected_core.artifact().unwrap_or_default()),
+        )
     });
     let core_name = OsStr::new("game-core.dylib");
     let core = resources.join(core_name);
@@ -447,10 +475,17 @@ where
             request.menu_entries.as_deref(),
         )
         .map_err(|message| ExportError::new("stage", message))?;
+        crate::shaders::install(
+            &crate::themes::staged_design(&request.runtime_kit, &request.theme),
+            &resources.join("menu-assets"),
+            &request.shaders,
+        )
+        .map_err(|message| ExportError::new("stage", message))?;
     } else if request.splash {
         crate::themes::prepare_splash_assets(
             &crate::themes::staged_design(&request.runtime_kit, &request.theme),
             &resources.join("menu-assets"),
+            &request.palette,
         )
         .map_err(|message| ExportError::new("stage", message))?;
     }
@@ -484,6 +519,7 @@ where
     }
     stage_legal_materials(
         &request.runtime_kit,
+        request.core_cache.as_deref(),
         &resources.join("Legal"),
         selected_core,
     )?;
@@ -639,6 +675,14 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
         request.advanced_emulator_access,
     )
     .map_err(|message| ExportError::new("validate", message))?;
+    if !request.shaders.is_empty() && !request.show_menu {
+        return Err(ExportError::new(
+            "validate",
+            "Shaders need the in-game menu. Turn the menu on, or leave shaders unset.",
+        ));
+    }
+    crate::shaders::resolve(&request.shaders)
+        .map_err(|message| ExportError::new("validate", message))?;
     for (label, path) in [
         ("ROM", &request.rom),
         ("runtime", &request.runtime_kit.join("bin/retroarch")),
@@ -663,10 +707,11 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
         )
     })?;
     let core = request.core.clone().unwrap_or_else(|| {
-        request
-            .runtime_kit
-            .join("cores")
-            .join(selected_core.artifact().unwrap_or_default())
+        resolve_cached(
+            &request.runtime_kit,
+            request.core_cache.as_deref(),
+            &Path::new("cores").join(selected_core.artifact().unwrap_or_default()),
+        )
     });
     if !core.is_file() {
         return Err(ExportError::new(
@@ -721,8 +766,23 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
     Ok(())
 }
 
+fn resolve_cached(kit: &Path, cache: Option<&Path>, relative: &Path) -> PathBuf {
+    let bundled = kit.join(relative);
+    if bundled.is_file() {
+        return bundled;
+    }
+    if let Some(cache) = cache {
+        let fetched = cache.join(relative);
+        if fetched.is_file() {
+            return fetched;
+        }
+    }
+    bundled
+}
+
 fn stage_legal_materials(
     runtime_kit: &Path,
+    cache: Option<&Path>,
     destination: &Path,
     core: &crate::systems::Core,
 ) -> Result<(), ExportError> {
@@ -750,7 +810,11 @@ fn stage_legal_materials(
     )?;
 
     copy_file(
-        &runtime_kit.join("licenses").join(&core.license_file),
+        &resolve_cached(
+            runtime_kit,
+            cache,
+            &Path::new("licenses").join(&core.license_file),
+        ),
         &licenses.join(&core.license_file),
     )?;
     let joypad_licence = runtime_kit.join("licenses/retroarch-joypad-autoconfig.txt");
@@ -1626,11 +1690,6 @@ fn write_launcher(
     } else {
         ""
     };
-    let splash_env = if request.splash {
-        "export ROMINABOX_SPLASH=1"
-    } else {
-        "unset ROMINABOX_SPLASH"
-    };
     let advanced_access_env = if request.advanced_emulator_access {
         "export ROMINABOX_ADVANCED_ACCESS=1"
     } else {
@@ -1651,7 +1710,6 @@ for name in {managed_directories}; do
   /bin/mkdir -p "$data_dir/$name"
 done
 unset ROMINABOX_START_AT_MENU
-{splash_env}
 {advanced_access_env}
 unset LIBRETRO_SYSTEM_DIRECTORY LIBRETRO_DIRECTORY LIBRETRO_ASSETS_DIRECTORY LIBRETRO_AUTOCONFIG_DIRECTORY LIBRETRO_CHEATS_DIRECTORY LIBRETRO_DATABASE_DIRECTORY LIBRETRO_VIDEO_FILTER_DIRECTORY LIBRETRO_VIDEO_SHADER_DIRECTORY
 export ROMINABOX_DATA_DIR="$data_dir"
@@ -1665,6 +1723,13 @@ EOF
 "##,
     )
     .replace("@@RUNTIME_CONFIG@@", &runtime_config);
+    let shader_initial = if request.show_menu {
+        crate::shaders::launch_preset(&request.shaders)
+            .map_err(|message| ExportError::new("configure", message))?
+    } else {
+        None
+    };
+    let shader_shell = crate::shaders::launcher_shader_shell(shader_initial.as_deref());
     let script = format!(
         r##"{script}for remap_dir in "$bundle_dir"/Resources/remaps/*; do
   [ -d "$remap_dir" ] || continue
@@ -1720,7 +1785,12 @@ if [ -f "$volume_override" ]; then
   esac
   append_config="$append_config|$volume_override"
 fi
-exec "$bundle_dir/MacOS/retroarch" --config "$cfg" --appendconfig "$append_config" --libretro "$bundle_dir/Resources/game-core.dylib" "$bundle_dir/Resources/$content_relative" >>"$data_dir/logs/launch.log" 2>&1
+{shader_shell}
+set -- --config "$cfg" --appendconfig "$append_config" --libretro "$bundle_dir/Resources/game-core.dylib" "$bundle_dir/Resources/$content_relative"
+if [ -n "$shader_preset" ]; then
+  set -- "$@" --set-shader "$shader_preset"
+fi
+exec "$bundle_dir/MacOS/retroarch" "$@" >>"$data_dir/logs/launch.log" 2>&1
 "##,
     );
     fs::write(path, script).map_err(|error| ExportError::io("configure", path, error))?;
@@ -2360,10 +2430,12 @@ mod tests {
             splash,
             advanced_emulator_access: false,
             menu_entries: None,
+            shaders: crate::shaders::ShaderSelection::default(),
             output_dir: PathBuf::from("output"),
             target: ExportTarget::Macos,
             runtime_kit: PathBuf::from("runtime"),
             core: None,
+            core_cache: None,
         }
     }
 
@@ -2882,7 +2954,9 @@ mod tests {
         )
         .unwrap();
         let script = fs::read_to_string(launcher).unwrap();
-        assert!(script.contains("export ROMINABOX_SPLASH=1"));
+        // We show the logo only when we staged its file. There is no separate
+        // splash flag in the launcher.
+        assert!(!script.contains("ROMINABOX_SPLASH"));
         assert!(script.contains("menu_driver = \"rmlui\""));
         assert!(script.contains("input_menu_toggle = \"nul\""));
         assert!(script.contains("input_menu_toggle_gamepad_combo = \"0\""));
@@ -3194,6 +3268,19 @@ mod tests {
         }
 
         #[test]
+        fn a_core_in_the_first_boot_cache_is_enough() {
+            let kit_root = kit(&[]);
+            let cache = kit(&[("megadrive", true, true)]);
+            let megadrive =
+                system_availability_in(&kit_root, Some(&cache), crate::systems::current_target())
+                    .into_iter()
+                    .find(|entry| entry.id == "megadrive")
+                    .expect("every declared console is reported");
+            assert_eq!(megadrive.unavailable, None);
+            assert_eq!(megadrive.component.as_deref(), Some("genesis_plus_gx"));
+        }
+
+        #[test]
         fn a_prepared_console_names_the_component_that_will_run_it() {
             let root = kit(&[("megadrive", true, true)]);
             let megadrive = entry(&root, "megadrive");
@@ -3233,20 +3320,30 @@ mod tests {
             }
         }
 
-        /// We may generate the registry on one machine and use it on another,
-        /// because we ship on more than one platform. These tests check that
-        /// the target is a parameter and not a constant.
+        /// A declared target whose file is not in this kit is a missing file.
+        /// A target missing from the declaration of the component is another
+        /// problem, and the report must make clear which of the two it is.
         #[test]
         fn a_console_with_no_artifact_for_a_target_says_exactly_that() {
             let root = kit(&[("megadrive", true, true)]);
-            // This is a macOS kit. Check the result for Windows with it.
             let windows = system_availability_for(&root, "windows-x86_64")
                 .into_iter()
                 .find(|entry| entry.id == "megadrive")
                 .expect("every console is reported for every target");
             match windows.unavailable {
                 Some(Unavailable::NoPreparedCore { ref tried }) => assert!(
-                    tried[0].contains("no windows-x86_64 artifact declared"),
+                    tried[0].contains("artifact genesis_plus_gx_libretro.dll missing"),
+                    "windows is declared, so a macOS kit is missing the file: {tried:?}"
+                ),
+                other => panic!("expected a missing windows artifact, got {other:?}"),
+            }
+            let undeclared = system_availability_for(&root, "linux-arm64")
+                .into_iter()
+                .find(|entry| entry.id == "megadrive")
+                .expect("every console is reported for every target");
+            match undeclared.unavailable {
+                Some(Unavailable::NoPreparedCore { ref tried }) => assert!(
+                    tried[0].contains("no linux-arm64 artifact declared"),
                     "a target with nothing declared is a different problem from a missing file: {tried:?}"
                 ),
                 other => panic!("expected an undeclared target, got {other:?}"),

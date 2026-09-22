@@ -17,13 +17,14 @@ __pycache__/
 *.egg-info/
 
 *.rominabox
-/desktop/src-tauri/resources/runtime/
-/desktop/src-tauri/resources/preview/
-/desktop/src-tauri/resources/bin/
-/desktop/src-tauri/resources/skills/
+/desktop/src-tauri/resources/runtime
+/desktop/src-tauri/resources/preview
+/desktop/src-tauri/resources/bin
+/desktop/src-tauri/resources/skills
 
 # Per-worktree resource assignments; environment-local, never committed.
 worktree.local.json
 
 # Controller artwork staged for the builder UI; generated from the SVG sources.
 /desktop/public/controllers/
+/desktop/node_modules

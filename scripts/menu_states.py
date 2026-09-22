@@ -29,7 +29,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -46,17 +45,13 @@ DESIGN = ROOT / "integrations/designs/native"
 ARTWORK = ROOT / "desktop/assets/controllers"
 STATES = ROOT / "scripts/fixtures/menu-states.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-state-digests.json"
-def cli_binary() -> Path:
-    """The exporter. In a worktree we build into the shared cargo target."""
-    shared = os.environ.get("CARGO_TARGET_DIR")
-    if shared:
-        candidate = Path(shared) / "release" / "rominabox-cli"
-        if candidate.is_file():
-            return candidate
-    return ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+# We build it here and check that it comes from this checkout, because every
+# worktree shares one cargo target, so the binary next to the manifest may be
+# out of date or from another checkout. See scripts/built.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from built import cli as _cli  # noqa: E402
 
-
-CLI = cli_binary()
+CLI = _cli()
 
 # The window size of an exported game, because at any other size a rendered
 # state is not what a player sees.
@@ -464,11 +459,6 @@ def main() -> int:
     if arguments.fixed_place:
         return fixed_place(arguments.output, arguments.record)
 
-    workspace = ROOT / "work/menu-states-staging"
-    shutil.rmtree(workspace, ignore_errors=True)
-    staging = stage(arguments.system, workspace, arguments.variant)
-
-    document = (staging / "menu.rml").read_text()
     # We empty the directory, not only create it, because the old picture of a
     # renamed state would stay and show something that no longer exists as if
     # it were current.
@@ -478,14 +468,48 @@ def main() -> int:
     missing: list[str] = []
     digests: dict[str, str] = {}
     rendered = 0
+    for palette in palettes():
+        workspace = ROOT / f"work/menu-states-staging/{palette}"
+        shutil.rmtree(workspace, ignore_errors=True)
+        staging = stage(arguments.system, workspace, arguments.variant, palette)
+        document = (staging / "menu.rml").read_text()
+        print(f"\n{palette}")
+        rendered += render_palette(
+            palette, staging, document, arguments, digests, missing
+        )
+
+    return finish(arguments, digests, missing, rendered)
+
+
+def palettes() -> list[str]:
+    """Every colour scheme we can export a game with.
+
+    We declare three palettes, and we can see a CSS rule with a colour from
+    the palette, or a design with a hardcoded colour, only when we render
+    every palette.
+
+    The palettes come from the same file as in the exporter, so we render and
+    pin a new palette there with no change here. There is one check for all
+    palettes, not one per palette.
+    """
+    declared = json.loads((ROOT / "desktop/designs.json").read_text())
+    return [entry["id"] for entry in declared["palettes"]]
+
+
+def render_palette(palette, staging, document, arguments, digests, missing) -> int:
+    """Draw every declared state in one colour scheme."""
+    rendered = 0
+    output = arguments.output / palette
+    output.mkdir(parents=True, exist_ok=True)
     for name, state in declared_states().items():
+        key = f"{palette}/{name}"
         resolved = {i: resolve(document, i) for i in state["set"]}
         absent = [i for i, found in resolved.items() if found is None]
         if absent:
             # We do not skip it, because when the element of a state is gone,
             # someone has renamed or removed that element.
-            print(f"  REFUSED {name}: {', '.join(absent)} not in the document", file=sys.stderr)
-            missing.append(name)
+            print(f"  REFUSED {key}: {', '.join(absent)} not in the document", file=sys.stderr)
+            missing.append(key)
             continue
 
         overrides: list[str] = []
@@ -493,7 +517,7 @@ def main() -> int:
             for prop, value in properties.items():
                 overrides += ["--set", f"{resolved[element_id]}:{prop}={value}"]
 
-        target = arguments.output / f"{name}.png"
+        target = output / f"{name}.png"
         result = subprocess.run(
             [
                 str(PREVIEW),
@@ -507,26 +531,32 @@ def main() -> int:
             text=True,
         )
         if result.returncode != 0:
-            print(f"  FAILED  {name}: {result.stderr.strip()[:160]}", file=sys.stderr)
-            missing.append(name)
+            print(f"  FAILED  {key}: {result.stderr.strip()[:160]}", file=sys.stderr)
+            missing.append(key)
             continue
         # We report a texture that does not load instead of raising, because the
         # scene is then rendered without its controller and only looks empty,
         # for example when a PNG is truncated.
         if "Could not load texture" in result.stderr:
-            print(f"  FAILED  {name}: artwork did not load", file=sys.stderr)
-            missing.append(name)
+            print(f"  FAILED  {key}: artwork did not load", file=sys.stderr)
+            missing.append(key)
             continue
-        digests[name] = hashlib.sha256(target.read_bytes()).hexdigest()[:16]
+        digests[key] = hashlib.sha256(target.read_bytes()).hexdigest()[:16]
         rendered += 1
         print(f"  {name:<26}{state['describes']}")
+    return rendered
+
+
+def finish(arguments, digests, missing, rendered) -> int:
+    """Report twins, refusals and digest drift across every palette drawn."""
 
     # Two states with the same picture are one state with two names. Hover,
     # keyboard focus and held-down must differ, so that a player using the
     # arrow keys can see which option they would choose with a press.
-    same: dict[str, list[str]] = {}
-    for name, value in digests.items():
-        same.setdefault(value, []).append(name)
+    same: dict[tuple[str, str], list[str]] = {}
+    for key, value in digests.items():
+        palette, name = key.split("/", 1)
+        same.setdefault((palette, value), []).append(key)
     twins = [names for names in same.values() if len(names) > 1]
     for names in twins:
         print(

@@ -237,6 +237,103 @@ fn the_shipped_design_provides_every_splash_id() {
     assert!(missing.is_empty(), "splash.rml is missing {missing:?}");
 }
 
+/// An overlay is part of the design, so the design must contain its element.
+///
+/// In the player we show an overlay by the id it was declared under, and, as
+/// everywhere here, without failing. With a declaration but no element, the
+/// game waits in its first seconds to show nothing, and we report nothing.
+#[test]
+fn every_declared_overlay_has_an_element_in_the_design() {
+    for design in designs() {
+        let overlays = rominabox_desktop::themes::declared_overlays(&design)
+            .expect("a design's overlays");
+        assert!(
+            !overlays.is_empty(),
+            "{} declares no overlays, so a player who chose it is never told \
+             how to reach the pause menu",
+            design.display()
+        );
+        let drawn: String = ["menu.rml", "splash.rml"]
+            .iter()
+            .filter_map(|name| std::fs::read_to_string(design.join(name)).ok())
+            .collect();
+        for overlay in &overlays {
+            assert!(
+                drawn.contains(&format!("id=\"{}\"", overlay.id)),
+                "{} declares the overlay '{}' and no document draws it",
+                design.display(),
+                overlay.id
+            );
+        }
+    }
+}
+
+/// Every design package, so that a rule applies to the second as well as the
+/// first. If we checked a design only once we release it, it would be too late.
+fn designs() -> Vec<PathBuf> {
+    let root = repo_root().join("integrations/designs");
+    let found: Vec<PathBuf> = std::fs::read_dir(&root)
+        .expect("designs directory")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.join("design.json").is_file())
+        .collect();
+    assert!(!found.is_empty(), "no design was read, so this proved nothing");
+    found
+}
+
+/// An overlay is not a screen, and must not open as one.
+///
+/// We open a screen by name, give it the heading and the footer, hide every
+/// other panel, and the player reaches it from a button. None of that applies
+/// to something drawn over a running game, and if a design declared one as
+/// both, the player would get a button that blanks the menu.
+#[test]
+fn no_overlay_is_also_a_screen() {
+    for design in designs() {
+        let screens: Vec<String> = rominabox_desktop::themes::declared_screens(&design)
+            .expect("a design's screens")
+            .into_iter()
+            .map(|screen| screen.id)
+            .collect();
+        for overlay in
+            rominabox_desktop::themes::declared_overlays(&design).expect("a design's overlays")
+        {
+            assert!(
+                !screens.contains(&overlay.id),
+                "{} declares '{}' as both an overlay and a screen",
+                design.display(),
+                overlay.id
+            );
+        }
+    }
+}
+
+/// We declare in one place how long an overlay takes to leave.
+///
+/// In the player we hide the element when that time is up, and in the design
+/// the element fades out over the same time. If we wrote the time twice, the
+/// two could drift, and a notice would vanish mid-fade or stay a moment after
+/// it is invisible.
+#[test]
+fn an_overlays_leaving_time_is_declared_once_and_read_by_both_consumers() {
+    for design in designs() {
+        let sheet = std::fs::read_to_string(design.join("menu.rcss")).expect("a stylesheet");
+        for overlay in
+            rominabox_desktop::themes::declared_overlays(&design).expect("a design's overlays")
+        {
+            let token = format!("design(overlay-leave-{})", overlay.id);
+            assert!(
+                sheet.contains(&token),
+                "{} never reads {token}, so whatever it animates for '{}' is a \
+                 second copy of a number the design already declared",
+                design.join("menu.rcss").display(),
+                overlay.id
+            );
+        }
+    }
+}
+
 /// The controls placeholder is part of the contract too.
 ///
 /// It is not an id, so the checks above would miss it, and without it there
@@ -391,4 +488,106 @@ fn the_scene_geometry_is_declared_once_and_read_by_both_consumers() {
         !renderer.contains("SCENE = (960, 380)"),
         "the overlay renderer has a hardcoded scene size again"
     );
+}
+
+/// A design may style the shared list, but never the rows of one list.
+///
+/// The shader list, the achievement list and any list we add to Options have
+/// the same parts, which are rows we write when we bundle the game, a pager,
+/// and a state on the right. They share `.list-row` and the rules beside it.
+/// If a design styled `.shader-row`, every other design would have to do the
+/// same, and to add a screen we would have to edit every design.
+///
+/// A design MAY name the place of a composed screen. `#options` is the button
+/// on the pause row and `#options-panel` is the panel it opens, in the same
+/// way as `#controls`. So we accept `#actions #options`, because it places a
+/// button and does not restyle a list.
+///
+/// We strip comments first, so a comment that explains the shared list by
+/// naming the lists that use it is not a violation.
+///
+/// This test does NOT prove that the shared rules look right, that a design
+/// has them at all, or that we give the rows of a composed screen the shared
+/// class at export. For that last one we test the staged markup, and not on
+/// the stylesheet.
+#[test]
+fn no_design_styles_one_list_by_name() {
+    // Screens that we add at composition. The design defines pause and
+    // controls, and must not define these. To add a screen, add a word here.
+    const COMPOSED: [&str; 3] = ["shader", "achievement", "options"];
+    // The parts of the shared list. It is a defect when one of these is
+    // named after a particular screen in a design, and it is not one when
+    // it is named after the screen's button or panel.
+    const PARTS: [&str; 4] = ["row", "list", "pager", "entry"];
+    let designs = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs");
+    let mut read = 0;
+    for entry in std::fs::read_dir(&designs).expect("designs directory") {
+        let sheet = entry.expect("design entry").path().join("menu.rcss");
+        if !sheet.is_file() {
+            continue;
+        }
+        read += 1;
+        let text = std::fs::read_to_string(&sheet).expect("stylesheet");
+        for selector in selectors(&text) {
+            for identifier in named(&selector) {
+                for name in COMPOSED {
+                    let Some(rest) = identifier.strip_prefix(name) else {
+                        continue;
+                    };
+                    assert!(
+                        !PARTS.iter().any(|part| rest.contains(part)),
+                        "{} styles the {name} list's own rows: {}\n\
+                         Those rows are `.list-row`; a design that needs a \
+                         different list changes the shared rules.",
+                        sheet.display(),
+                        selector.trim()
+                    );
+                }
+            }
+        }
+    }
+    assert!(read > 0, "no stylesheet was read, so this proved nothing");
+}
+
+/// Every selector in a stylesheet: the text before each rule body, with
+/// comments removed first.
+fn selectors(stylesheet: &str) -> Vec<String> {
+    let mut plain = String::with_capacity(stylesheet.len());
+    let mut rest = stylesheet;
+    while let Some(open) = rest.find("/*") {
+        plain.push_str(&rest[..open]);
+        rest = match rest[open..].find("*/") {
+            Some(close) => &rest[open + close + 2..],
+            None => "",
+        };
+    }
+    plain.push_str(rest);
+    plain
+        .split('}')
+        .filter_map(|block| block.split('{').next())
+        .map(|selector| selector.trim().to_string())
+        .filter(|selector| !selector.is_empty())
+        .collect()
+}
+
+/// Every class and id named in a selector, lowercased.
+///
+/// Matching the whole selector text would catch too much. The design defines
+/// `.control-picker-option`, the controller picker, and it contains the word
+/// used for the options screen. A name matches when the identifier starts
+/// with it.
+fn named(selector: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut rest = selector;
+    while let Some(at) = rest.find(['.', '#']) {
+        let after = &rest[at + 1..];
+        let end = after
+            .find(|c: char| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
+            .unwrap_or(after.len());
+        if end > 0 {
+            found.push(after[..end].to_ascii_lowercase());
+        }
+        rest = &after[end..];
+    }
+    found
 }

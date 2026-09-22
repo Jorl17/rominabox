@@ -3,7 +3,10 @@
   "id": "snes9x",
   "name": "snes9x",
   "artifacts": {
-    "macos-arm64": "snes9x_libretro.dylib"
+    "linux-x86_64": "snes9x_libretro.so",
+    "macos-arm64": "snes9x_libretro.dylib",
+    "macos-x86_64": "snes9x_libretro.dylib",
+    "windows-x86_64": "snes9x_libretro.dll"
   },
   "license": {
     "spdx": "Non-commercial",
@@ -18,6 +21,33 @@
       "LICENSE",
       "docs/snes9x-license.txt"
     ],
-    "correspondsToArtifact": false
+    "correspondsToArtifact": false,
+    "licenseSha256": "70efeee282d82a6e9d26aeed5466d08c632369858371dc6a4644c8dcedc2be78",
+    "downloads": {
+      "linux-x86_64": {
+        "archiveSha256": "9e7d38f4d65c6e9305302353066c103e1400307f6e5117efdbfbb0a35bb8f3c5",
+        "binarySha256": "9b2b6ea9d88f96c156590443ddd05ee56aaf4e495329a889c979921942717a31",
+        "archiveBytes": 917066,
+        "binaryBytes": 2841720
+      },
+      "macos-arm64": {
+        "archiveSha256": "f51ee4b18e2123cca3b358fb1baa0e42e7d56d9789f1784f752c7c4b7aaa6d07",
+        "binarySha256": "8ed333ac04544cc6ab67ceb445d095f7600bb17586d4887d99117fbd1ef776f6",
+        "archiveBytes": 796467,
+        "binaryBytes": 2915160
+      },
+      "macos-x86_64": {
+        "archiveSha256": "0f2fefc8a2a3b38e47217a11a8540def8bd1c1c511d4fb8d79455aff0ee5947b",
+        "binarySha256": "120e5f4c32e00c686a40bdd37e107682b0dd3c1eadf19dcd4ec91d39de1ffa8d",
+        "archiveBytes": 932434,
+        "binaryBytes": 2950936
+      },
+      "windows-x86_64": {
+        "archiveSha256": "c249d118b2277e7ae2c36304daa02b95ad8fac5b249e5f0aa96b868c07d06df2",
+        "binarySha256": "731a8e9de9ed1c98146cbea2f7885d2c356b834c8b8ed18a772be34afd379cc9",
+        "archiveBytes": 1316252,
+        "binaryBytes": 3840000
+      }
+    }
   }
 }

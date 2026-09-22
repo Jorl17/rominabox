@@ -1,6 +1,8 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
-use rominabox_desktop::{controls, metadata, packaging, projects, systems, themes, volume};
+use rominabox_desktop::{
+    controls, cores, metadata, packaging, projects, shaders, systems, themes, volume,
+};
 use serde::Deserialize;
 use serde_json::json;
 use std::io::{self, Read};
@@ -48,7 +50,20 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume|volume-markup|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume|volume-markup|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the pinned cores for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        return Ok(());
+    }
+    // The checkout from which we built this binary.
+    //
+    // Checkouts can use one cargo target directory, and then
+    // release/rominabox-cli is a single file, replaced by the last build from
+    // any checkout. A caller could then photograph a menu, stage a design or
+    // measure an export with another checkout's code.
+    //
+    // We compile in the manifest directory, so we can print the origin of the
+    // binary, and a caller can reject a binary from another checkout.
+    if command == "where" {
+        println!("{}", env!("CARGO_MANIFEST_DIR"));
         return Ok(());
     }
     if command == "schemas" {
@@ -59,13 +74,23 @@ fn run() -> Result<(), String> {
                 "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
-                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "menuEntries?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "menuEntries": "option entry ids to offer; omit for the design's defaults; [] offers no Options button", "events": ["progress", "result", "error"] },
+                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "menuEntries?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "menuEntries": "option entry ids to offer; omit for the design's defaults; [] offers no Options button", "events": ["progress", "result", "error"] },
                 "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
-                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
+                "cores": { "request": ["cache", "target"], "target": "macos-arm64 | macos-x86_64 | windows-x86_64 | linux-x86_64", "result": "per-core present, installed, unreachable or notRecorded" },
+                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
+                "shaders": { "request": [], "result": "Catalog presets an author can bundle" },
+                "shaders-check": { "request": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "optional id" }, "result": "Resolved shaders, or an error" },
                 "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" },
                 "volume": { "request": ["dataDir", "position?"], "result": { "position": "0 is low, the last position is normal", "positions": "how many there are", "path": "volume.cfg" } },
                 "volume-markup": { "request": ["design"], "result": { "markup": "the volume control, in the design's slider, with an arrow either side" } }
             })
+        );
+        return Ok(());
+    }
+    if command == "shaders" {
+        println!(
+            "{}",
+            json!({ "type": "result", "result": { "presets": shaders::catalog()? } })
         );
         return Ok(());
     }
@@ -116,6 +141,20 @@ fn run() -> Result<(), String> {
             )
             .map_err(|error| error.to_string())?;
             println!("{}", json!({ "type": "result", "result": result }));
+            Ok(())
+        }
+        "cores" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                cache: PathBuf,
+                target: String,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid cores request: {error}"))?;
+            let report =
+                cores::install_target(&request.cache, &request.target, &cores::UreqTransport);
+            println!("{}", json!({ "type": "result", "result": report }));
             Ok(())
         }
         "firmware" => {
@@ -304,6 +343,24 @@ fn run() -> Result<(), String> {
                 "{}",
                 json!({ "type": "result", "result": { "markup": markup } })
             );
+            Ok(())
+        }
+        "shaders-check" => {
+            let selection: shaders::ShaderSelection = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid shader selection: {error}"))?;
+            let resolved = shaders::resolve(&selection)?;
+            let presets: Vec<_> = resolved
+                .iter()
+                .map(|item| {
+                    json!({
+                        "id": item.id,
+                        "name": item.name,
+                        "detail": item.detail,
+                        "preset": item.relative_preset,
+                    })
+                })
+                .collect();
+            println!("{}", json!({ "type": "result", "result": { "shaders": presets } }));
             Ok(())
         }
         "freeze-macos-executable" => {

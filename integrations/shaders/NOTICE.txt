@@ -1,0 +1,10 @@
+These presets are original to ROM-in-a-Box.
+
+They are GLSL in the form RetroArch's OpenGL driver compiles: one file
+split by VERTEX and FRAGMENT, with the uniform names that driver defines.
+They are not taken from the libretro shader repositories. Those packs were
+not reviewed for redistribution, and this build does not ship them.
+
+Exported games run the OpenGL driver. Metal and Vulkan are switched off at
+build time, and slang presets need one of those (or GLCore). A preset in
+another language is refused rather than turning those drivers back on.
