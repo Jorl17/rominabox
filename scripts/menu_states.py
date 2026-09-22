@@ -29,10 +29,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -68,6 +70,16 @@ def declared_states() -> dict[str, dict]:
     return json.loads(STATES.read_text())["states"]
 
 
+def mapped(items, function):
+    """Run independent renders together. Each one is a separate process, and
+    the pictures do not share a document or an output file."""
+    if len(items) <= 1:
+        return [function(item) for item in items]
+    workers = min(4, len(items), os.cpu_count() or 4)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return list(pool.map(function, items))
+
+
 def stage(system: str, workspace: Path, variant: str | None = None,
           palette: str = "blue") -> Path:
     """Stage the design and the generated scene for a console, as in an export.
@@ -101,7 +113,8 @@ def stage(system: str, workspace: Path, variant: str | None = None,
         text=True,
     )
     if themed.returncode != 0:
-        raise SystemExit(f"could not stage the {palette} palette: {themed.stderr}")
+        detail = themed.stderr.strip() or themed.stdout.strip()
+        raise SystemExit(f"could not stage the {palette} palette: {detail}")
     for art in ARTWORK.glob("controller-*.png"):
         shutil.copyfile(art, source / art.name)
     shutil.copyfile(ARTWORK / "CONTROLLERS.txt", source / "CONTROLLERS.txt")
@@ -125,7 +138,10 @@ def stage(system: str, workspace: Path, variant: str | None = None,
         text=True,
     )
     if generated.returncode != 0:
-        raise SystemExit(f"could not stage controls for {system}: {generated.stderr}")
+        # A failure from the CLI is a JSON line on stdout. stderr is often empty,
+        # and with an empty message we would not know why the tests failed.
+        detail = generated.stderr.strip() or generated.stdout.strip()
+        raise SystemExit(f"could not stage controls for {system}: {detail}")
     return staged
 
 
@@ -247,12 +263,7 @@ def fixed_place(output: Path, record: bool = False) -> int:
         )
 
     output.mkdir(parents=True, exist_ok=True)
-    closed_boxes: dict[str, tuple] = {}
-    open_boxes: dict[str, tuple] = {}
-    covers: dict[str, int] = {}
-    failures: list[str] = []
-
-    for console in consoles:
+    def measure(console: str):
         workspace = ROOT / f"work/menu-states-fixed/{console}"
         shutil.rmtree(workspace, ignore_errors=True)
         staging = stage(console, workspace)
@@ -278,19 +289,26 @@ def fixed_place(output: Path, record: bool = False) -> int:
         if closed is None:
             # When nothing is drawn, the consoles do not agree. Three missing boxes
             # are not a match, so we report a picker moved over another control.
-            failures.append(f"{console}: hiding the picker changed nothing, so it drew nothing")
-            continue
+            return console, f"{console}: hiding the picker changed nothing, so it drew nothing", None, None, None
         if opened_box is None:
-            failures.append(f"{console}: opening the list changed nothing")
+            return console, f"{console}: opening the list changed nothing", None, None, None
+        # We check both rectangles against the screen without the picker. The
+        # closed control must be in a free band, and so must its list.
+        cover = max(covered_ink(without, closed), covered_ink(without, opened_box))
+        return console, None, closed, opened_box, cover
+
+    closed_boxes: dict[str, tuple] = {}
+    open_boxes: dict[str, tuple] = {}
+    covers: dict[str, int] = {}
+    failures: list[str] = []
+    for console, failure, closed, opened_box, cover in mapped(consoles, measure):
+        if failure:
+            failures.append(failure)
             continue
         closed_boxes[console] = closed
         open_boxes[console] = opened_box
-        # We check both rectangles against the screen without the picker. The
-        # closed control must be in a free band, and so must its list.
-        covers[console] = max(
-            covered_ink(without, closed), covered_ink(without, opened_box)
-        )
-        print(f"  {console:<12}closed {closed}  open {opened_box}  covers {covers[console]} drawn px")
+        covers[console] = cover
+        print(f"  {console:<12}closed {closed}  open {opened_box}  covers {cover} drawn px")
 
     if failures:
         for failure in failures:
@@ -361,50 +379,58 @@ def every_variant(output: Path) -> int:
 
     The change of picture in the player is tested in the bridge tests.
     """
+    registry = json.loads((ROOT / "desktop/controls.json").read_text())
+    jobs = [
+        (console, entry["id"])
+        for console in consoles_offering_a_picker()
+        for entry in registry["profiles"]
+        if console in entry.get("systems", [])
+    ]
+
+    def draw(job: tuple[str, str]):
+        console, variant = job
+        problems: list[str] = []
+        workspace = ROOT / f"work/menu-variants/{console}-{variant}"
+        shutil.rmtree(workspace, ignore_errors=True)
+        staging = stage(console, workspace, variant)
+        document = (staging / "menu.rml").read_text()
+        state = declared_states()["controls"]
+        overrides: list[str] = []
+        for element, properties in state["set"].items():
+            target = resolve(document, element)
+            if target is None:
+                problems.append(f"{console}/{variant}: {element} is absent")
+                continue
+            for prop, value in properties.items():
+                overrides += ["--set", f"{target}:{prop}={value}"]
+        output.mkdir(parents=True, exist_ok=True)
+        target_png = output / f"{console}-{variant}.png"
+        result = subprocess.run(
+            [str(PREVIEW), str(staging / "menu.rml"), str(target_png),
+             str(SIZE[0]), str(SIZE[1]), *overrides],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            problems.append(f"{console}/{variant}: {result.stderr.strip()[:120]}")
+            return problems, ""
+        if "Could not load texture" in result.stderr:
+            problems.append(f"{console}/{variant}: its artwork is not staged")
+            return problems, ""
+        # A scene file for each pad, because we cannot generate markup in the
+        # player and read a scene file when someone changes the controller.
+        beside = staging / f"scene-{variant}.rml"
+        if not beside.exists():
+            problems.append(f"{console}/{variant}: no {beside.name} to swap to")
+            return problems, ""
+        return problems, f"  {console:<12}{variant:<14}{beside.name}\n"
+
     failures: list[str] = []
     rendered = 0
-    for console in consoles_offering_a_picker():
-        registry = json.loads((ROOT / "desktop/controls.json").read_text())
-        variants = [
-            entry["id"]
-            for entry in registry["profiles"]
-            if console in entry.get("systems", [])
-        ]
-        for variant in variants:
-            workspace = ROOT / f"work/menu-variants/{console}-{variant}"
-            shutil.rmtree(workspace, ignore_errors=True)
-            staging = stage(console, workspace, variant)
-            document = (staging / "menu.rml").read_text()
-            state = declared_states()["controls"]
-            overrides: list[str] = []
-            for element, properties in state["set"].items():
-                target = resolve(document, element)
-                if target is None:
-                    failures.append(f"{console}/{variant}: {element} is absent")
-                    continue
-                for prop, value in properties.items():
-                    overrides += ["--set", f"{target}:{prop}={value}"]
-            output.mkdir(parents=True, exist_ok=True)
-            target_png = output / f"{console}-{variant}.png"
-            result = subprocess.run(
-                [str(PREVIEW), str(staging / "menu.rml"), str(target_png),
-                 str(SIZE[0]), str(SIZE[1]), *overrides],
-                capture_output=True, text=True,
-            )
-            if result.returncode != 0:
-                failures.append(f"{console}/{variant}: {result.stderr.strip()[:120]}")
-                continue
-            if "Could not load texture" in result.stderr:
-                failures.append(f"{console}/{variant}: its artwork is not staged")
-                continue
-            # A scene file for each pad, because we cannot generate markup in the
-            # player and read a scene file when someone changes the controller.
-            beside = staging / f"scene-{variant}.rml"
-            if not beside.exists():
-                failures.append(f"{console}/{variant}: no {beside.name} to swap to")
-                continue
+    for problems, line in mapped(jobs, draw):
+        failures.extend(problems)
+        if line:
+            print(line, end="")
             rendered += 1
-            print(f"  {console:<12}{variant:<14}{beside.name}")
 
     if failures:
         for failure in failures:
@@ -496,54 +522,64 @@ def palettes() -> list[str]:
     return [entry["id"] for entry in declared["palettes"]]
 
 
+def draw_state(palette: str, name: str, state: dict, staging: Path, document: str, output: Path):
+    """One picture. Returns (key, digest or None, line for stdout, line for stderr)."""
+    key = f"{palette}/{name}"
+    resolved = {i: resolve(document, i) for i in state["set"]}
+    absent = [i for i, found in resolved.items() if found is None]
+    if absent:
+        # We do not skip it, because when the element of a state is gone,
+        # someone has renamed or removed that element.
+        return key, None, "", f"  REFUSED {key}: {', '.join(absent)} not in the document\n"
+
+    overrides: list[str] = []
+    for element_id, properties in state["set"].items():
+        for prop, value in properties.items():
+            overrides += ["--set", f"{resolved[element_id]}:{prop}={value}"]
+
+    target = output / f"{name}.png"
+    result = subprocess.run(
+        [
+            str(PREVIEW),
+            str(staging / "menu.rml"),
+            str(target),
+            str(SIZE[0]),
+            str(SIZE[1]),
+            *overrides,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return key, None, "", f"  FAILED  {key}: {result.stderr.strip()[:160]}\n"
+    # We report a texture that does not load instead of raising, because the
+    # scene is then rendered without its controller and only looks empty, for
+    # example when a PNG is truncated.
+    if "Could not load texture" in result.stderr:
+        return key, None, "", f"  FAILED  {key}: artwork did not load\n"
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()[:16]
+    return key, digest, f"  {name:<26}{state['describes']}\n", ""
+
+
 def render_palette(palette, staging, document, arguments, digests, missing) -> int:
     """Draw every declared state in one colour scheme."""
-    rendered = 0
     output = arguments.output / palette
     output.mkdir(parents=True, exist_ok=True)
-    for name, state in declared_states().items():
-        key = f"{palette}/{name}"
-        resolved = {i: resolve(document, i) for i in state["set"]}
-        absent = [i for i, found in resolved.items() if found is None]
-        if absent:
-            # We do not skip it, because when the element of a state is gone,
-            # someone has renamed or removed that element.
-            print(f"  REFUSED {key}: {', '.join(absent)} not in the document", file=sys.stderr)
+    states = list(declared_states().items())
+    drawn = mapped(
+        states,
+        lambda item: draw_state(palette, item[0], item[1], staging, document, output),
+    )
+    rendered = 0
+    for key, digest, line, error in drawn:
+        if line:
+            print(line, end="")
+        if error:
+            print(error, end="", file=sys.stderr)
             missing.append(key)
             continue
-
-        overrides: list[str] = []
-        for element_id, properties in state["set"].items():
-            for prop, value in properties.items():
-                overrides += ["--set", f"{resolved[element_id]}:{prop}={value}"]
-
-        target = output / f"{name}.png"
-        result = subprocess.run(
-            [
-                str(PREVIEW),
-                str(staging / "menu.rml"),
-                str(target),
-                str(SIZE[0]),
-                str(SIZE[1]),
-                *overrides,
-            ],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            print(f"  FAILED  {key}: {result.stderr.strip()[:160]}", file=sys.stderr)
-            missing.append(key)
-            continue
-        # We report a texture that does not load instead of raising, because the
-        # scene is then rendered without its controller and only looks empty,
-        # for example when a PNG is truncated.
-        if "Could not load texture" in result.stderr:
-            print(f"  FAILED  {key}: artwork did not load", file=sys.stderr)
-            missing.append(key)
-            continue
-        digests[key] = hashlib.sha256(target.read_bytes()).hexdigest()[:16]
+        digests[key] = digest
         rendered += 1
-        print(f"  {name:<26}{state['describes']}")
     return rendered
 
 
