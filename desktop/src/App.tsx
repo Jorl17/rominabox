@@ -1386,7 +1386,7 @@ export function App() {
               disabled={
                 !!busy ||
                 !bridge.native ||
-                !supported.has(systemDefinition?.id || draft.system) ||
+                !canExport(supported, systemDefinition?.id || draft.system) ||
                 !destination ||
                 firmwareBlocked
               }
