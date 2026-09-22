@@ -117,7 +117,17 @@ def cli(build: bool = False) -> Path:
         # cannot replace it later. With the shared cargo target,
         # release/rominabox-cli is one file for every checkout.
         MINE.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(candidate, MINE)
+        # We write it beside the target and rename it into place, which is
+        # atomic. We call this from several test runs in parallel, so with a
+        # direct copy one run could execute the file while another is halfway
+        # through writing it.
+        #
+        # We skip this when the file already has the same bytes, which is the
+        # usual case and costs one comparison.
+        if not (MINE.is_file() and MINE.read_bytes() == candidate.read_bytes()):
+            spare = MINE.with_suffix(f".{os.getpid()}")
+            shutil.copy2(candidate, spare)
+            os.replace(spare, MINE)
         # We check the copy again. Checking the shared file and copying it are
         # two steps, and someone building in another checkout can replace that
         # file by a rename between them, so we could return a copy unchecked.

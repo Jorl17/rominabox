@@ -34,11 +34,11 @@ fn scratch() -> PathBuf {
 }
 
 fn menu_assets() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native")
+    rominabox_desktop::repo::at("integrations/designs/native")
 }
 
 fn controller_assets() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets/controllers")
+    rominabox_desktop::repo::at("desktop/assets/controllers")
 }
 
 fn file_names(dir: &Path) -> BTreeSet<String> {

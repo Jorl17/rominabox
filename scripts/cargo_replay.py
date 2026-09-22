@@ -170,6 +170,17 @@ def _save(plan: Plan, digest: str, output: str) -> None:
     )
 
 
+def belongs_to(cwd: Path) -> dict:
+    """Tell a test binary which checkout it runs against.
+
+    The path compiled into a binary is that of the checkout it was built in,
+    and all worktrees share one cargo target, so a checkout can get a binary
+    built in another. Without this, we would read the console packages of
+    the other checkout in the test.
+    """
+    return {**os.environ, "ROMINABOX_REPO": str(cwd)}
+
+
 def _replay(binaries: list[dict], harness: list[str], cwd: Path) -> subprocess.CompletedProcess:
     stdout: list[str] = ["replaying compiled tests; sources unchanged\n"]
     stderr: list[str] = []
@@ -182,6 +193,7 @@ def _replay(binaries: list[dict], harness: list[str], cwd: Path) -> subprocess.C
             capture_output=True,
             text=True,
             errors="replace",
+            env=belongs_to(cwd),
         )
         stdout.append(ran.stdout)
         stderr.append(ran.stderr)
@@ -194,7 +206,8 @@ def cargo_test(command: list[str], cwd: Path) -> subprocess.CompletedProcess:
     plan = parse(command)
     if plan is None or not plan.manifest.is_file():
         return subprocess.run(
-            command, cwd=cwd, capture_output=True, text=True, errors="replace"
+            command, cwd=cwd, capture_output=True, text=True, errors="replace",
+            env=belongs_to(cwd),
         )
     digest = source_digest(plan.manifest)
     saved = _load(plan, digest)
@@ -203,7 +216,10 @@ def cargo_test(command: list[str], cwd: Path) -> subprocess.CompletedProcess:
     # We read the stamp from the "Running … (path)" lines, not printed with --quiet.
     visible = [token for token in command if token != "--quiet"]
     with CARGO_LOCK:
-        ran = subprocess.run(visible, cwd=cwd, capture_output=True, text=True, errors="replace")
+        ran = subprocess.run(
+            visible, cwd=cwd, capture_output=True, text=True, errors="replace",
+            env=belongs_to(cwd),
+        )
     if ran.returncode == 0:
         _save(plan, digest, ran.stdout + ran.stderr)
     return ran

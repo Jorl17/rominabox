@@ -64,6 +64,8 @@ pub struct ProjectSettings {
     /// Presets bundled into the game. Usually this is empty.
     #[serde(default)]
     pub shaders: crate::shaders::ShaderSelection,
+    #[serde(default)]
+    pub achievements: crate::achievements::AchievementSelection,
     pub target: ExportTarget,
 }
 
@@ -129,6 +131,8 @@ struct StoredSettings {
     menu_entries: Option<Vec<String>>,
     #[serde(default)]
     shaders: crate::shaders::ShaderSelection,
+    #[serde(default)]
+    achievements: crate::achievements::AchievementSelection,
     target: ExportTarget,
 }
 
@@ -167,6 +171,7 @@ impl From<&ExportRequest> for ProjectSettings {
             advanced_emulator_access: request.advanced_emulator_access,
             menu_entries: request.menu_entries.clone(),
             shaders: request.shaders.clone(),
+            achievements: request.achievements.clone(),
             target: request.target.clone(),
         }
     }
@@ -198,6 +203,7 @@ impl ProjectSettings {
             advanced_emulator_access: self.advanced_emulator_access,
             menu_entries: self.menu_entries,
             shaders: self.shaders,
+            achievements: self.achievements,
             output_dir,
             target: self.target,
             runtime_kit,
@@ -268,6 +274,7 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             advanced_emulator_access: request.settings.advanced_emulator_access,
             menu_entries: request.settings.menu_entries.clone(),
             shaders: stored_shaders,
+            achievements: request.settings.achievements.clone(),
             target: request.settings.target.clone(),
         },
         assets: assets.clone(),
@@ -400,6 +407,7 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
             manifest.settings.shaders,
             &request.extraction_dir,
         ),
+        achievements: manifest.settings.achievements,
         target: manifest.settings.target,
     };
     Ok(OpenProject {
@@ -537,6 +545,7 @@ fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
         advanced_emulator_access: settings.advanced_emulator_access,
         menu_entries: settings.menu_entries.clone(),
         shaders: settings.shaders.clone(),
+        achievements: settings.achievements.clone(),
         target: settings.target.clone(),
     })?;
     for (label, path) in [
@@ -911,6 +920,7 @@ mod tests {
                 advanced_emulator_access: false,
                 menu_entries: None,
                 shaders: crate::shaders::ShaderSelection::default(),
+            achievements: Default::default(),
                 target: ExportTarget::Macos,
             },
         })
@@ -951,6 +961,7 @@ mod tests {
             advanced_emulator_access,
             menu_entries: None,
             shaders: crate::shaders::ShaderSelection::default(),
+            achievements: Default::default(),
             target: ExportTarget::Macos,
         }
     }

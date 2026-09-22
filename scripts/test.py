@@ -114,6 +114,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/test_joypad_autoconfig.py")],
     ),
     Scope(
+        "symlinks",
+        "that git carries no symbolic link, which would point somewhere else on every other machine",
+        "that a worktree has the links it needs, or that the ignore rules are right",
+        ["python3", str(ROOT / "scripts/test_no_symlinks.py")],
+    ),
+    Scope(
         "worktree",
         "isolation between parallel checkouts: the shared git dir, the lock, refusing the canonical tree",
         "that a real worktree builds or runs; it creates nothing outside a temporary directory",
@@ -128,9 +134,16 @@ SCOPES = [
     ),
     Scope(
         "states",
-        "that every declared menu state still renders, with its artwork, and looks the same",
+        "that every declared menu state still renders in every palette from desktop/designs.json, with its artwork, and looks the same",
         "that the bridge sets those classes at the right moment; the bridge scope covers that",
         ["python3", str(ROOT / "scripts/menu_states.py"), "--check"],
+        slow=True,
+    ),
+    Scope(
+        "fallback",
+        "the controls screen a console with no controller drawing gets, in every state and palette",
+        "that its layout is good — only that every control is there and that hover, focus and capture still differ",
+        ["python3", str(ROOT / "scripts/menu_states.py"), "--system", "atari2600", "--check"],
         slow=True,
     ),
     Scope(
@@ -193,8 +206,20 @@ def execute(command: list[str]) -> subprocess.CompletedProcess:
     if command and command[0] == "cargo" and "test" in command[:2]:
         return cargo_test(command, ROOT)
     return subprocess.run(
-        command, cwd=ROOT, capture_output=True, text=True, errors="replace"
+        command, cwd=ROOT, capture_output=True, text=True, errors="replace",
+        env=running_here(),
     )
+
+
+def running_here() -> dict:
+    """Tell the tests which checkout they belong to.
+
+    A path compiled into a binary is that of the checkout where it was built.
+    Every worktree uses one cargo target, so one checkout can get a test
+    binary built in another, and the tests would then read the other
+    checkout's console packages.
+    """
+    return {**os.environ, "ROMINABOX_REPO": str(ROOT)}
 
 
 def run(scope: Scope) -> tuple[bool, float, str]:

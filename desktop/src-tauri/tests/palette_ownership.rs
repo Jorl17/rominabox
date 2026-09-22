@@ -23,7 +23,7 @@ use std::{
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
 fn repo() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+    rominabox_desktop::repo::root()
 }
 
 fn scratch(name: &str) -> PathBuf {

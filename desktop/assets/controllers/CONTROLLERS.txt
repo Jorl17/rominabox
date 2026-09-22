@@ -36,9 +36,19 @@ Adaptation: manufacturer wordmarks (SEGA, Nintendo, Super Nintendo, and the
 compatible controls; functional button labels (A/B/C, 1/2, etc.) are retained.
 
 controller-gameboy.png / .svg
-Original illustration created for ROM-in-a-Box. No third-party artwork.
+controller-gba.png / .svg            (Game Boy Advance)
+controller-gamegear.png / .svg       (Game Gear)
+
+These three were drawn for this project. No third-party artwork.
+
+ES-DE's resources/graphics/controllers/ has no Game Boy, Game Boy Advance or
+Game Gear — that directory is gamepads, not the handheld body — so there was
+no file there to adapt. The drawings follow the Game Boy already in this
+directory: flat shapes, a short palette, no gradients, no manufacturer
+wordmark. Button letters (A, B, L, R, 1, 2) are the control names.
 
 Runtime PNGs are 1920x760 (2x of the 960x380 menu scene), rasterised from the
-SVG with librsvg. Regenerate with:
-  rsvg-convert -w 1920 -h 760 -o controller-<name>.png controller-<name>.svg
-This is a developer asset operation; exported applications do not require it.
+SVG with librsvg by scripts/render_controllers.py. A straight
+`rsvg-convert -w 1920 -h 760` stretches the square icons; the script scales
+each drawing from the placement JSON beside it. Exported applications do not
+run that step.

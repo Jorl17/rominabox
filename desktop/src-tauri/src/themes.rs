@@ -160,6 +160,42 @@ pub struct Screen {
     /// Whether we ship the entry in a game without a set of entries. Shaders
     /// and the rest stay off until the author turns them on for a game.
     pub option_default: bool,
+    /// A switch on this screen, with the words from the design and the value
+    /// it has while it is on.
+    pub toggle: Option<Toggle>,
+}
+
+/// A switch on a screen, such as achievement mode.
+///
+/// Every word on it comes from the design. In the player we act only on
+/// `guard`, which is a closed set, so a design can choose only an effect that
+/// we implement. We reject any other value here, so that it is not ignored
+/// when the player presses the switch.
+#[derive(Clone, Debug)]
+pub struct Toggle {
+    pub id: String,
+    pub label: String,
+    pub on: String,
+    pub off: String,
+    pub default_on: bool,
+    pub guard: ToggleGuard,
+    pub guard_label: String,
+    pub guard_status: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ToggleGuard {
+    Nothing,
+    Saves,
+}
+
+impl ToggleGuard {
+    fn declared(self) -> &'static str {
+        match self {
+            ToggleGuard::Nothing => "",
+            ToggleGuard::Saves => "saves",
+        }
+    }
 }
 
 /// The place of a declared screen. We parse it from the design so that we do
@@ -185,6 +221,7 @@ fn built_in_screens() -> Vec<Screen> {
             place: ScreenPlace::Plain,
             option_label: None,
             option_default: false,
+            toggle: None,
         },
         Screen {
             id: "controls".into(),
@@ -197,6 +234,7 @@ fn built_in_screens() -> Vec<Screen> {
             place: ScreenPlace::Plain,
             option_label: None,
             option_default: false,
+            toggle: None,
         },
     ]
 }
@@ -247,6 +285,63 @@ fn screen_option(
     Ok((Some(label.to_string()), default))
 }
 
+fn screen_toggle(
+    entry: &serde_json::Value,
+    index: usize,
+    declaration: &Path,
+) -> Result<Option<Toggle>, String> {
+    let Some(declared) = entry.get("toggle") else {
+        return Ok(None);
+    };
+    if declared.is_null() {
+        return Ok(None);
+    }
+    let word = |key: &str| -> Result<String, String> {
+        declared
+            .get(key)
+            .and_then(|value| value.as_str())
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+            .ok_or_else(|| {
+                format!(
+                    "the switch on screen {index} in {} declares no {key}",
+                    declaration.display()
+                )
+            })
+    };
+    let guard = match declared.get("guard").and_then(|value| value.as_str()) {
+        None | Some("") => ToggleGuard::Nothing,
+        Some("saves") => ToggleGuard::Saves,
+        Some(other) => {
+            return Err(format!(
+                "the switch on screen {index} in {} guards '{other}', which is not \
+                 something a player can hold",
+                declaration.display()
+            ))
+        }
+    };
+    let optional = |key: &str| -> String {
+        declared
+            .get(key)
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string()
+    };
+    Ok(Some(Toggle {
+        id: word("id")?,
+        label: word("label")?,
+        on: word("on")?,
+        off: word("off")?,
+        default_on: declared
+            .get("default")
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false),
+        guard,
+        guard_label: optional("guardLabel"),
+        guard_status: optional("guardStatus"),
+    }))
+}
+
 pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
     let declaration = design.join("design.json");
     let Ok(text) = fs::read_to_string(&declaration) else {
@@ -278,6 +373,7 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
             place: screen_place(entry, index, &declaration)?,
             option_label,
             option_default,
+            toggle: screen_toggle(entry, index, &declaration)?,
         });
     }
     if screens.is_empty() {
@@ -296,6 +392,31 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
 /// left on. We drop every screen in that set that this document cannot draw,
 /// so a logo-only export lists no screens at all, instead of panels that are
 /// not in the file.
+/// The switches on these screens, written to the file that the player reads.
+///
+/// We write the switches of every screen with this function, also for a
+/// generated list, whose panel we write after the declarations of the design.
+/// A second copy of this format could write an empty `toggles` for a switch
+/// whose button is on screen.
+pub fn toggle_declarations(screens: &[Screen]) -> String {
+    let switches: Vec<&Toggle> = screens.iter().filter_map(|s| s.toggle.as_ref()).collect();
+    let ids: Vec<&str> = switches.iter().map(|t| t.id.as_str()).collect();
+    let mut text = format!("toggles = \"{}\"\n", ids.join(" "));
+    for toggle in switches {
+        text.push_str(&format!(
+            "toggle_on_{id} = \"{on}\"\ntoggle_off_{id} = \"{off}\"\ntoggle_default_{id} = \"{default}\"\ntoggle_guard_{id} = \"{guard}\"\ntoggle_guard_label_{id} = \"{label}\"\ntoggle_guard_status_{id} = \"{status}\"\n",
+            id = toggle.id,
+            on = toggle.on,
+            off = toggle.off,
+            default = toggle.default_on,
+            guard = toggle.guard.declared(),
+            label = toggle.guard_label,
+            status = toggle.guard_status,
+        ));
+    }
+    text
+}
+
 fn screen_declarations(screens: &[Screen], markup: &str) -> String {
     let screens: Vec<&Screen> = screens
         .iter()
@@ -313,6 +434,9 @@ fn screen_declarations(screens: &[Screen], markup: &str) -> String {
             id = screen.id,
         ));
     }
+    text.push_str(&toggle_declarations(
+        &screens.iter().copied().cloned().collect::<Vec<Screen>>(),
+    ));
     text
 }
 
@@ -368,6 +492,7 @@ fn screens_for_export(screens: &[Screen], chosen: Option<&[String]>) -> Result<V
                 place: ScreenPlace::Options,
                 option_label: None,
                 option_default: false,
+                toggle: None,
             },
         );
     }
@@ -392,8 +517,8 @@ fn screens_for_export(screens: &[Screen], chosen: Option<&[String]>) -> Result<V
 const OPTION_ENTRY_STEP: usize = 60;
 
 const OPTIONS_LAYOUT_CSS: &str = r#"
-#options-entries { position: absolute; left: 276dp; top: 148dp; width: 400dp; height: 320dp; }
-.option-entry { position: absolute; left: 0; width: 400dp; height: 48dp; line-height: 42dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; }
+#options-entries { position: absolute; left: 56dp; top: 272dp; width: 840dp; height: 200dp; }
+.option-entry { position: absolute; left: 0; width: 840dp; height: 64dp; line-height: 58dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; white-space: nowrap; overflow: hidden; }
 .options-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
 "#;
 
@@ -528,7 +653,7 @@ fn apply_options(
         } else {
             let back = options.back_label.clone().unwrap_or_else(|| "BACK".into());
             let shell = format!(
-                "<div id=\"options-panel\" style=\"display:none;\"><div id=\"options-entries\">{entries}</div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
+                "<div id=\"options-panel\" class=\"screen-panel\" style=\"display:none;\"><div id=\"options-entries\">{entries}</div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
                 entries = entries,
                 back = rml_text(&back),
             );
@@ -842,6 +967,127 @@ pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
     })
 }
 
+/// The marker a design puts where the volume control goes, when it goes
+/// somewhere other than the start of the Options panel. Without the marker,
+/// we insert the control into the Options panel that we already built.
+pub const VOLUME_SLOT: &str = "<!--VOLUME-->";
+
+const BUILTIN_SLIDER: &str = include_str!("../../../integrations/parts/slider.rml");
+
+fn has_class(template: &str, class: &str) -> bool {
+    template.split("class=\"").skip(1).any(|rest| {
+        rest.split('"')
+            .next()
+            .unwrap_or("")
+            .split_whitespace()
+            .any(|token| token == class)
+    })
+}
+
+fn part_template(design: &Path, name: &str, builtin: &str) -> Result<String, String> {
+    let override_path = design.join("parts").join(format!("{name}.rml"));
+    if override_path.is_file() {
+        return fs::read_to_string(&override_path)
+            .map_err(|e| format!("Could not read {}: {e}", override_path.display()));
+    }
+    Ok(builtin.to_string())
+}
+
+fn require_classes(kind: &str, template: &str, classes: &[&str]) -> Result<(), String> {
+    for class in classes {
+        if !has_class(template, class) {
+            return Err(format!(
+                "the {kind} part must carry class `{class}`, so every design draws it and the control can find it"
+            ));
+        }
+    }
+    if !template.contains("PART-ID") {
+        return Err(format!(
+            "the {kind} part must contain PART-ID, so each use can name its own"
+        ));
+    }
+    Ok(())
+}
+
+fn fill_part(template: &str, id: &str, label: &str) -> String {
+    template.replace("PART-ID", id).replace("LABEL", label)
+}
+
+/// The volume control, made of its name, the low end, an arrow, the slider
+/// from the design, an arrow and the high end.
+///
+/// The slider comes first in the document, so the keyboard focus goes to it
+/// first and the left and right keys move it. The design places the rest, so
+/// the order in the document is not the order on screen. There is no number
+/// and no mute button, because the quiet end is the quietest the volume goes.
+pub fn volume_control_markup(design: &Path) -> Result<String, String> {
+    let slider = part_template(design, "slider", BUILTIN_SLIDER)?;
+    require_classes(
+        "slider",
+        &slider,
+        &["slider", "slider-track", "slider-fill", "slider-thumb", "slider-readout"],
+    )?;
+    Ok(format!(
+        "<div id=\"volume-control\">{slider}<button id=\"{down}\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{up}\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{low}\" class=\"volume-end\">LOW</div><div id=\"{high}\" class=\"volume-end\">HIGH</div><div class=\"volume-name\">VOLUME</div></div>",
+        slider = fill_part(&slider, crate::volume::slider_id(), ""),
+        down = crate::volume::down_id(),
+        up = crate::volume::up_id(),
+        low = crate::volume::low_id(),
+        high = crate::volume::high_id(),
+    ))
+}
+
+/// Put the volume control in Options.
+///
+/// When the design contains `<!--VOLUME-->`, we put the control there.
+/// Otherwise we insert it at the start of the Options panel and leave the
+/// Options entries where they are. A menu with no Options screen has no
+/// volume control either.
+pub fn install_volume_control(document: &str, design: &Path) -> Result<String, String> {
+    if document.contains("id=\"volume-control\"") {
+        return Ok(document.to_string());
+    }
+    let markup = volume_control_markup(design)?;
+    if document.contains(VOLUME_SLOT) {
+        return Ok(document.replacen(VOLUME_SLOT, &markup, 1));
+    }
+    let marker = "id=\"options-panel\"";
+    let Some(at) = document.find(marker) else {
+        return Ok(document.to_string());
+    };
+    let tag_end = document[at..]
+        .find('>')
+        .map(|end| at + end + 1)
+        .ok_or_else(|| "the options panel tag is never closed".to_string())?;
+    let mut installed = String::with_capacity(document.len() + markup.len());
+    installed.push_str(&document[..tag_end]);
+    installed.push_str(&markup);
+    installed.push_str(&document[tag_end..]);
+    Ok(installed)
+}
+
+/// Geometry for a design with no styles for a slider.
+///
+/// The colours come from the palette block, as for a button. We leave a design
+/// that already styles `.slider` unchanged, because that styling is part of it.
+pub fn builtin_part_rules(stylesheet: &str) -> &'static str {
+    if stylesheet.contains(".slider") {
+        ""
+    } else {
+        r#"
+/* part:slider */
+.slider { display: block; width: 100%; }
+.slider-readout { display: block; width: 100%; height: 36dp; font-family: Silkscreen; font-size: 28dp; text-align: center; }
+.slider-track { display: block; position: relative; width: 100%; height: 28dp; margin-top: 12dp; border-width: 4dp; }
+.slider-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0; }
+.slider-thumb { position: absolute; top: -8dp; width: 22dp; height: 44dp; border-width: 4dp; }
+.toggle { display: block; position: relative; width: 240dp; height: 48dp; margin-top: 28dp; font-family: Silkscreen; font-size: 18dp; line-height: 42dp; padding-left: 56dp; border-width: 3dp; }
+.toggle-knob { position: absolute; left: 8dp; top: 6dp; width: 28dp; height: 28dp; border-width: 3dp; }
+.toggle.on .toggle-knob { left: 196dp; }
+"#
+    }
+}
+
 /// Stage only the selected design's assets and apply the same palette/background
 /// for both an offscreen preview and an exported player.
 /// The folder of the staged files of a design in a prepared kit.
@@ -897,6 +1143,16 @@ pub fn prepare_theme_assets(
         fs::copy(source.join(name), destination.join(name))
             .map_err(|e| format!("Could not prepare menu asset {name}: {e}"))?;
     }
+    let menu = fs::read_to_string(destination.join("menu.rml")).map_err(|e| e.to_string())?;
+    // The same Options panel as in the controls stage. We add volume to it
+    // here too, because a theme staged alone, as in the interaction checks,
+    // never reaches the controls stage.
+    let (menu, _) = apply_options(source, &menu, None)?;
+    fs::write(
+        destination.join("menu.rml"),
+        install_volume_control(&menu, source)?,
+    )
+    .map_err(|e| format!("Could not install the volume control: {e}"))?;
     // The declarations of the design, in the file that the player reads. We
     // write them next to the stylesheet because both belong to the design. A
     // design lists its screens, and we show them by name in the player.
@@ -906,6 +1162,7 @@ pub fn prepare_theme_assets(
     let markup = fs::read_to_string(destination.join("menu.rml")).map_err(|e| e.to_string())?;
     write_declarations(source, destination, &staged, &markup)?;
     let mut css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
+    css.push_str(builtin_part_rules(&css));
     // The colours of the design, in the rules of the design. We append nothing,
     // because a palette contains values and no styles. Appended rules would
     // declare selectors of the design again and, coming later with equal
@@ -919,7 +1176,13 @@ pub fn prepare_theme_assets(
             .map_err(|e| e.to_string())?;
         css.push_str("\n#screen { decorator: image(\"background.png\" cover); }\n");
     }
-    fs::write(destination.join("menu.rcss"), css).map_err(|e| e.to_string())
+    fs::write(destination.join("menu.rcss"), css)
+        .map_err(|e| e.to_string())?;
+    // We place the options entries with this, because a theme staged alone
+    // (for the offscreen pictures) never reaches the controls stage that writes
+    // it for an export. The colour comes from the button in the design.
+    let show_options = staged.iter().any(|screen| screen.place == ScreenPlace::Options);
+    write_options_css(destination, show_options)
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -1036,7 +1299,7 @@ pub fn prepare_controls_assets(
     system: &str,
     controls: &crate::controls::Controls,
     entries: Option<&[String]>,
-) -> Result<(), String> {
+) -> Result<Vec<Screen>, String> {
     // We take the frame from the design, so a change of the scene position in
     // design.json moves the box in the stylesheet and every generated
     // coordinate together.
@@ -1101,13 +1364,30 @@ pub fn prepare_controls_assets(
         .replace(PICKER_SLOT, &picker)
         .replace(BINDS_SLOT, &binds);
     let (menu, screens) = apply_options(design, &menu, entries)?;
+    // Volume is part of the Options screen that we just built. It is not
+    // another screen, and we leave the Options entries where they are.
+    let menu = install_volume_control(&menu, design)?;
     // The same file as in prepare_theme_assets. This version replaces it,
     // because here we know the entries chosen for the game and we just built
     // the markup from them.
     write_declarations(design, destination, &screens, &menu)?;
     fs::write(destination.join("menu.rml"), menu).map_err(|e| e.to_string())?;
     let show_options = screens.iter().any(|screen| screen.place == ScreenPlace::Options);
-    write_options_css(destination, show_options)
+    write_options_css(destination, show_options)?;
+    Ok(screens)
+}
+
+/// The entries for a game without a set, each with its default.
+///
+/// We make this list explicit because we add to it at export. For example, we
+/// ship the achievements entry in a game with achievements, and None cannot
+/// express "the defaults and this one".
+pub fn default_entries(design: &Path) -> Result<Vec<String>, String> {
+    Ok(declared_screens(design)?
+        .into_iter()
+        .filter(|screen| screen.option_label.is_some() && screen.option_default)
+        .map(|screen| screen.id)
+        .collect())
 }
 
 /// Where the bind list goes, as a sibling of the scene like the picker, so
@@ -1127,8 +1407,8 @@ fn bind_list_markup(
     design: &Path,
     profiles: &[crate::controls::ControlProfile],
 ) -> Result<String, String> {
-    let template = crate::shaders::row_template(design)?;
-    let page_size = crate::shaders::page_size(design)?;
+    let template = crate::lists::row_template(design)?;
+    let page_size = crate::lists::page_size(design)?;
     let mut slots = 4usize;
     for profile in profiles {
         let mut groups: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
@@ -1142,17 +1422,18 @@ fn bind_list_markup(
         }
     }
     slots = slots.max(page_size.saturating_add(1));
-    let items: Vec<crate::shaders::ListItem> = (1..=slots)
-        .map(|index| crate::shaders::ListItem {
+    let items: Vec<crate::lists::ListItem> = (1..=slots)
+        .map(|index| crate::lists::ListItem {
             id: format!("bind-{index}"),
             icon: String::new(),
             title: String::new(),
             detail: String::new(),
             state: String::new(),
             selected: false,
+            accent: false,
         })
         .collect();
-    Ok(crate::shaders::render_list("binds", &template, &items, page_size).replacen(
+    Ok(crate::lists::render_list("binds", &template, &items, page_size).replacen(
         "<div class=\"list\">",
         "<div id=\"control-binds\" class=\"list\" style=\"display:none;\">",
         1,
@@ -1227,9 +1508,12 @@ fn scene_markup(
             .and_then(|value| value.label.as_deref())
             .filter(|label| !label.trim().is_empty());
         let label = author_label.unwrap_or(&item.label);
-        let key = custom
-            .and_then(|value| value.key.as_deref())
-            .unwrap_or(&item.key);
+        let key = callout_line(&binding_words(
+            custom.and_then(|value| value.key.as_deref()).unwrap_or(&item.key),
+            custom.and_then(|value| value.button.as_deref()),
+            custom.and_then(|value| value.axis.as_deref()),
+            custom.and_then(|value| value.mouse),
+        ));
         let original = author_label
             .filter(|value| value.trim() != item.label.trim())
             .map(|_| item.label.as_str());
@@ -1261,7 +1545,7 @@ fn scene_markup(
                 placed.marker.x, placed.marker.y
             ));
         }
-        markup.push_str(&control_callout_markup(id, label, original, key, cx, cy));
+        markup.push_str(&control_callout_markup(id, label, original, &key, cx, cy));
     }
     markup
 }
@@ -1371,31 +1655,71 @@ fn control_group_markup(
             }
         }
 
-        let keys: Vec<String> = members
-            .iter()
-            .filter(|item| item.id.ends_with("_plus") || item.id.ends_with("_minus"))
-            .map(|item| {
-                controls
-                    .bindings
-                    .get(&item.id)
-                    .and_then(|value| value.key.clone())
-                    .unwrap_or_else(|| item.key.clone())
-                    .to_uppercase()
-            })
-            .collect();
+        let mut words = Vec::new();
+        for item in &members {
+            let custom = controls.bindings.get(&item.id);
+            words.extend(binding_words(
+                custom
+                    .and_then(|value| value.key.as_deref())
+                    .unwrap_or(&item.key),
+                custom.and_then(|value| value.button.as_deref()),
+                custom.and_then(|value| value.axis.as_deref()),
+                custom.and_then(|value| value.mouse),
+            ));
+        }
         let title = name.replace('_', " ").to_uppercase();
         markup.push_str(&format!(
             r#"
 <button id="control-group-{name}" class="control-group" style="left:{box_x}dp;top:{top}dp;">
 <div class="control-label">{}</div>
-<div class="control-assignment">{}</div>
+<div id="control-group-binding-{name}" class="control-assignment">{}</div>
 </button>
 "#,
             rml_text(&title),
-            rml_text(&keys.join(" ")),
+            rml_text(&callout_line(&words)),
         ));
     }
     markup
+}
+
+/// The words that a callout can contain about one control, in list order.
+fn binding_words(
+    key: &str,
+    button: Option<&str>,
+    axis: Option<&str>,
+    mouse: Option<u32>,
+) -> Vec<String> {
+    let mut words = Vec::new();
+    if !key.is_empty() && key != "nul" {
+        words.push(key.to_string());
+    }
+    if let Some(button) = button.filter(|value| !value.is_empty()) {
+        words.push(format!("Button {button}"));
+    }
+    if let Some(axis) = axis.filter(|value| !value.is_empty()) {
+        words.push(format!("Axis {axis}"));
+    }
+    if let Some(mouse) = mouse {
+        words.push(match mouse {
+            2 => "Left".to_string(),
+            3 => "Right".to_string(),
+            4 => "Wheel up".to_string(),
+            5 => "Wheel down".to_string(),
+            6 => "Middle".to_string(),
+            other => format!("Mouse {other}"),
+        });
+    }
+    words
+}
+
+/// Every binding, separated by commas. One binding stays that binding, and
+/// none is a dash. We show no count such as "3 binds", which the player cannot see.
+fn callout_line(words: &[String]) -> String {
+    match words {
+        [] => "---".to_string(),
+        [only] => only.clone(),
+        many => many.join(", "),
+    }
 }
 
 fn control_callout_markup(
@@ -1469,6 +1793,20 @@ mod tests {
 
     fn sound_source() -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../assets/menu-sounds")
+    }
+
+    /// A callout with one binding of a control that has three is false, and a
+    /// count with no bindings refers to something the player cannot see.
+    #[test]
+    fn a_callout_names_every_binding_and_never_a_count() {
+        let three = binding_words("up", Some("0"), Some("+0"), None);
+        let line = callout_line(&three);
+        assert_eq!(line, "up, Button 0, Axis +0");
+        assert!(line.starts_with("up"), "the first binding is visible");
+        assert!(line.contains("Button 0") && line.contains("Axis +0"));
+        assert!(!line.contains("bind"), "a count is not a binding: {line}");
+        assert_eq!(callout_line(&binding_words("c", None, None, None)), "c");
+        assert_eq!(callout_line(&[]), "---");
     }
 
     /// The stylesheet uses seconds, the declaration uses milliseconds, and

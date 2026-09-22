@@ -13,8 +13,7 @@
 use std::path::PathBuf;
 
 fn repo_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
+    rominabox_desktop::repo::root()
         .canonicalize()
         .expect("repository root")
 }

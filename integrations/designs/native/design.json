@@ -37,7 +37,7 @@
     }
   },
   "list": {
-    "pageSize": 4
+    "pageSize": 5
   },
   "binds": {
     "afterMs": 400,
@@ -86,6 +86,28 @@
       "option": {
         "label": "CONTROLS",
         "default": true
+      }
+    },
+    {
+      "id": "achievements",
+      "panel": "achievements-panel",
+      "heading": "ACHIEVEMENTS",
+      "footer": "ESC  BACK",
+      "button": "achievements",
+      "back": "BACK",
+      "option": {
+        "label": "ACHIEVEMENTS",
+        "default": false
+      },
+      "toggle": {
+        "id": "achievement-mode",
+        "label": "ACHIEVEMENT MODE",
+        "on": "ON",
+        "off": "OFF",
+        "default": false,
+        "guard": "saves",
+        "guardLabel": "ACHIEVEMENTS ON",
+        "guardStatus": "SAVE SLOTS ARE OFF WHILE ACHIEVEMENTS ARE ON"
       }
     }
   ],
