@@ -22,7 +22,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import menu_shots  # noqa: E402
 
-BUILD = ROOT / "work/fork-build-quit/retroarch"
 EXPORT_DIR = ROOT / "work/quit-export"
 APP = EXPORT_DIR / "Quit Subject.app"
 ARCHIVE = EXPORT_DIR / "Quit Subject-macOS.zip"
@@ -35,12 +34,6 @@ TRACKS = (
     "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es) (Track 3).bin",
 )
 PREFIX = "app.rominabox.game.wt-quit"
-# The Cocoa sources of the player, which we compare with the binary.
-COCOA = (
-    "ui/drivers/ui_cocoa.m",
-    "ui/drivers/cocoa/cocoa_common.m",
-    "ui/drivers/cocoa/apple_platform.h",
-)
 
 
 def free_gb() -> float:
@@ -56,29 +49,30 @@ def require_disk(floor: float) -> None:
         raise SystemExit(f"disk has {free:.2f} GB free, below {floor:.0f}; stopping")
 
 
-def player_binary() -> Path:
-    """Return the fork binary, rebuilt when the cocoa sources in git are newer."""
-    binary = BUILD / "retroarch"
-    if not binary.is_file():
-        raise SystemExit(f"no player at {binary}; the fork build was not staged")
-    changed = False
-    for relative in COCOA:
-        source = ROOT / "vendor/retroarch" / relative
-        staged = BUILD / relative
-        if source.read_bytes() != staged.read_bytes():
-            staged.write_bytes(source.read_bytes())
-            changed = True
-    if changed:
-        made = subprocess.run(
-            ["make", "-j", str(os.cpu_count() or 4)],
-            cwd=BUILD,
-            capture_output=True,
-            text=True,
-            timeout=180,
-        )
-        if made.returncode != 0:
-            raise SystemExit(f"player rebuild failed:\n{made.stderr[-800:]}")
-    return binary
+def launched_player() -> Path:
+    """Return the binary for the quit tests.
+
+    menu_shots.built_player contains the path of the checkout's build. With
+    no fresh build, we keep in the export the retroarch copied from the
+    runtime kit, which is the player in a packaged game.
+    """
+    found = menu_shots.built_player()
+    if found is not None:
+        return found
+    return menu_shots.KIT / "bin/retroarch"
+
+
+def use_checkout_player(app: Path, workspace: Path) -> None:
+    retroarch = app / "Contents/MacOS/retroarch"
+    if not retroarch.is_file():
+        raise SystemExit(f"exported game has no player at {retroarch}")
+    # For the pause row we edit launch.plan, and to sign again we need the
+    # entitlements from the export. After a replacement there is nothing to read.
+    binary = menu_shots.built_player()
+    if binary is None:
+        menu_shots.capture_export_entitlements(app, workspace / "entitlements.plist")
+        return
+    install_player(app, binary, workspace)
 
 
 def export_stub() -> None:
@@ -112,13 +106,13 @@ def export_stub() -> None:
         "autosaveOnQuit": True,
         "outputDir": str(EXPORT_DIR),
         "target": "macos",
-        "runtimeKit": str(ROOT / "desktop/src-tauri/resources/runtime"),
+        "runtimeKit": str(menu_shots.KIT),
         "coreCache": str(ROOT / "work/core-cache/macos-arm64"),
     }
     import json
 
     result = subprocess.run(
-        [str(cli(build=True)), "export"],
+        [str(cli()), "export"],
         input=json.dumps(request),
         capture_output=True,
         text=True,
@@ -177,11 +171,11 @@ def install_player(app: Path, binary: Path, workspace: Path = EXPORT_DIR) -> Non
     menu_shots.resign_replaced_player(app, entitlements)
 
 
-def ensure_flycast_app(binary: Path) -> Path:
+def ensure_flycast_app() -> Path:
     if not APP.is_dir():
         export_stub()
         install_disc(APP)
-    install_player(APP, binary)
+    use_checkout_player(APP, EXPORT_DIR)
     gdi = APP / "Contents/Resources/content" / GDI
     if not gdi.is_file():
         raise SystemExit(f"exported game has no disc at {gdi}")
@@ -358,11 +352,11 @@ def export_rom(rom: Path, title: str, system: str, workspace: Path) -> Path:
         "autosaveOnQuit": True,
         "outputDir": str(workspace),
         "target": "macos",
-        "runtimeKit": str(ROOT / "desktop/src-tauri/resources/runtime"),
+        "runtimeKit": str(menu_shots.KIT),
         "coreCache": str(ROOT / "work/core-cache/macos-arm64"),
     }
     result = subprocess.run(
-        [str(cli(build=True)), "export"],
+        [str(cli()), "export"],
         input=json.dumps(request),
         capture_output=True,
         text=True,
@@ -451,8 +445,7 @@ def pause_menu_quit(app: Path) -> tuple[str, str]:
 
 def main() -> int:
     require_disk(20.2)
-    binary = player_binary()
-    flycast = ensure_flycast_app(binary)
+    flycast = ensure_flycast_app()
     failed = judge("flycast apple-event", *apple_event_quit(flycast), apple_event=True)
     if failed:
         print(failed)
@@ -472,7 +465,7 @@ def main() -> int:
     advance = Path("/Users/mariowilde/Downloads/roms/Sonic Advance (Europe) (En,Ja,Fr,De,Es).gba")
     gba_dir = ROOT / "work/quit-gba"
     gba = export_rom(advance, "Quit Cartridge", "gba", gba_dir)
-    install_player(gba, binary, gba_dir)
+    use_checkout_player(gba, gba_dir)
     failed = judge("cartridge apple-event", *apple_event_quit(gba), apple_event=True)
     if failed:
         print(failed)
@@ -481,7 +474,7 @@ def main() -> int:
     ape = Path("/Users/mariowilde/Downloads/roms/Ape Escape (Europe).chd")
     ape_dir = ROOT / "work/quit-ape"
     disc = export_rom(ape, "Quit Ape", "ps1", ape_dir)
-    install_player(disc, binary, ape_dir)
+    use_checkout_player(disc, ape_dir)
     failed = judge("ape escape apple-event", *apple_event_quit(disc), apple_event=True)
     if failed:
         print(failed)
