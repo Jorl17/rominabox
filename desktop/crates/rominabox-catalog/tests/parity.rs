@@ -11,11 +11,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 fn repo_root() -> PathBuf {
-    // desktop/crates/rominabox-catalog -> repository root
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../..")
-        .canonicalize()
-        .expect("repository root")
+    // Checkouts may share the parity binary, and the path compiled into it is
+    // that of the checkout where we built it. When we run the suite, we set
+    // ROMINABOX_REPO to the checkout we run it in.
+    let root = match std::env::var("ROMINABOX_REPO") {
+        Ok(declared) if !declared.is_empty() => PathBuf::from(declared),
+        _ => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.."),
+    };
+    root.canonicalize().expect("repository root")
 }
 
 fn catalog() -> Catalog {

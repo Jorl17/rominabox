@@ -256,6 +256,12 @@ export function App() {
     setBusy("inspect");
     setError("");
     setStep(1);
+    // We identify a cartridge before the next paint, so this screen is
+    // normally gone before a screenshot. With `?hold-lookup` we keep it
+    // visible, and nothing else sets that.
+    if (new URLSearchParams(window.location.search).has("hold-lookup")) {
+      await new Promise((resolve) => window.setTimeout(resolve, 800));
+    }
     try {
       const data: bridge.GameInfo = bridge.native
         ? await bridge.inspectGame(selection.path, online)
@@ -281,6 +287,12 @@ export function App() {
       if (request === generation.current) setBusy(null);
     }
   }
+  // Dropping a file moves straight to the next step, because the lookup
+  // screen exists only on that step.
+  useEffect(() => {
+    if (!selection || info) return;
+    void identify();
+  }, [selection]);
   function goToStep(nextStep: number) {
     if (busy || nextStep === step) return;
     if (nextStep === 0) {
@@ -941,6 +953,11 @@ export function App() {
                               : "No exact catalog match was available. You can edit the name and choose the console."}
                         </Help>
                       </div>
+                      {info.supportFiles && info.supportFiles.length > 0 && (
+                        <p className="note">
+                          Includes {info.supportFiles.join(", ")}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {asksFirmware && (

@@ -17,6 +17,7 @@ export type GameInfo = {
   description?: string;
   iconPath?: string;
   warnings: string[];
+  supportFiles?: string[];
 };
 export type Picture = { path: string; url: string };
 export type ExportRequest = {

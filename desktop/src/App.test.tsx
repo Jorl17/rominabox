@@ -18,10 +18,21 @@ import designs from "../designs.json";
 import { App } from "./App";
 import { type FirmwareAssessment } from "./bridge";
 
-const { firmwareHandlers } = vi.hoisted(() => ({
+const { firmwareHandlers, inspectHandlers } = vi.hoisted(() => ({
   firmwareHandlers: {
     assess: null as
       ((system: string, files: string[]) => Promise<FirmwareAssessment>) | null,
+  },
+  inspectHandlers: {
+    inspect: null as
+      | ((file: File) => Promise<{
+          title: string;
+          system: string;
+          source: "header" | "filename";
+          filename: string;
+          size: number;
+        }>)
+      | null,
   },
 }));
 
@@ -33,6 +44,22 @@ vi.mock("./bridge", async (importOriginal) => {
       const assess = firmwareHandlers.assess;
       if (!assess) return actual.assessFirmware(system, files);
       return assess(system, files);
+    },
+  };
+});
+
+vi.mock("./inspection", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./inspection")>();
+  return {
+    ...actual,
+    inspectRom: (
+      file: File,
+      onProgress?: (label: string) => void,
+      systemOverride?: string,
+    ) => {
+      const inspect = inspectHandlers.inspect;
+      if (inspect) return inspect(file);
+      return actual.inspectRom(file, onProgress, systemOverride);
     },
   };
 });
@@ -145,6 +172,7 @@ function chooseConsole(id: string): void {
 
 beforeEach(() => {
   firmwareHandlers.assess = assessWithCli;
+  inspectHandlers.inspect = null;
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -207,12 +235,22 @@ async function openDetails(): Promise<void> {
     });
     input.dispatchEvent(new Event("change", { bubbles: true }));
   });
-  expect(container.textContent).toContain("upload.gen");
-  await act(async () => {
-    click(button("Next"));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-  expect(container.querySelector("h1")?.textContent).toBe("Game details");
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const looking = container.querySelector(
+      'progress[aria-label="Game identification"]',
+    );
+    if (
+      container.querySelector("h1")?.textContent === "Game details" &&
+      !looking
+    ) {
+      expect(container.textContent).toContain("upload.gen");
+      return;
+    }
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+  }
+  throw new Error("choosing a game did not finish identifying it");
 }
 
 async function openMenu(): Promise<void> {
@@ -222,6 +260,49 @@ async function openMenu(): Promise<void> {
 }
 
 describe("App workflow", () => {
+  it("shows that a dropped game is being identified before the result arrives", async () => {
+    let finish: (value: {
+      title: string;
+      system: string;
+      source: "header" | "filename";
+      filename: string;
+      size: number;
+    }) => void = () => {};
+    inspectHandlers.inspect = () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      });
+    const input = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await act(async () => {
+      Object.defineProperty(input, "files", {
+        configurable: true,
+        value: [new File([new Uint8Array(32)], "Ape Escape (Europe).chd")],
+      });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(
+      container.querySelector('progress[aria-label="Game identification"]'),
+    ).not.toBeNull();
+    expect(container.textContent).toContain("Finding your game");
+    const progress = container.querySelector('nav[aria-label="Progress"]')!;
+    expect(progressButton("Menu", progress).disabled).toBe(true);
+
+    await act(async () => {
+      finish({
+        title: "Ape Escape",
+        system: "ps1",
+        source: "filename",
+        filename: "Ape Escape (Europe).chd",
+        size: 32,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    inspectHandlers.inspect = null;
+  });
+
   it("navigates through available progress steps without bypassing inspection", async () => {
     const progress = container.querySelector('nav[aria-label="Progress"]')!;
     expect(progressButton("Game", progress).getAttribute("aria-current")).toBe(
@@ -250,11 +331,12 @@ describe("App workflow", () => {
     });
 
     expect(progressButton("Details", progress).disabled).toBe(false);
-    expect(progressButton("Menu", progress).disabled).toBe(true);
-    await act(async () => {
-      click(progressButton("Details", progress));
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    // Choosing the file starts identification. The menu stays unavailable
+    // until it finishes. The held-lookup test covers the wait itself.
+    await waitForText("Game details");
+    expect(
+      container.querySelector('progress[aria-label="Game identification"]'),
+    ).toBeNull();
     expect(container.querySelector("h1")?.textContent).toBe("Game details");
     expect(
       progressButton("Details", progress).getAttribute("aria-current"),

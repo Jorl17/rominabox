@@ -12,6 +12,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
+chd = "0.3"
 crc32fast = "1.5"
 datary = "0.3"
 md-5 = "0.11"

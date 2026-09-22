@@ -279,13 +279,18 @@ async function main() {
     });
     if (!checking) await shot(page, path.join(out, "02-game-dragging.png"));
     await dropRom(page, rom);
-    await page
-      .getByRole("heading", { name: "SONIC THE HEDGEHOG.md" })
-      .waitFor();
-    if (!checking) await shot(page, path.join(out, "03-game-dropped.png"));
-
-    await clickNext(page);
-    await page.getByRole("heading", { name: "Game details" }).waitFor();
+    // We start identifying a dropped file at once, without waiting for Next.
+    // The lookup is the only sign that we are reading the file.
+    const lookup = page.getByRole("heading", { name: "Finding your game…" });
+    const details = page.getByRole("heading", { name: "Game details" });
+    const sawLookup = await lookup
+      .waitFor({ timeout: 800 })
+      .then(() => true)
+      .catch(() => false);
+    if (!checking && sawLookup) {
+      await shot(page, path.join(out, "03-identifying.png"));
+    }
+    await details.waitFor();
     await page.waitForFunction(() => {
       const title = document.querySelector(".fields input");
       const system = document.querySelector(".fields select");
