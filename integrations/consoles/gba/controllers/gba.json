@@ -8,94 +8,94 @@
   },
   "controls": [
     {
+      "id": "l",
+      "label": "L",
+      "key": "d",
+      "x": 327,
+      "y": 36,
+      "calloutX": 16,
+      "calloutY": 8
+    },
+    {
       "id": "up",
       "label": "Up",
       "key": "up",
-      "x": 304,
-      "y": 193,
+      "x": 284,
+      "y": 133,
       "calloutX": 16,
       "calloutY": 66
-    },
-    {
-      "id": "down",
-      "label": "Down",
-      "key": "down",
-      "x": 304,
-      "y": 236,
-      "calloutX": 16,
-      "calloutY": 248
     },
     {
       "id": "left",
       "label": "Left",
       "key": "left",
-      "x": 283,
-      "y": 214,
+      "x": 257,
+      "y": 160,
       "calloutX": 16,
       "calloutY": 124
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 284,
+      "y": 187,
+      "calloutX": 16,
+      "calloutY": 182
     },
     {
       "id": "right",
       "label": "Right",
       "key": "right",
-      "x": 326,
-      "y": 214,
+      "x": 311,
+      "y": 160,
       "calloutX": 16,
-      "calloutY": 182
-    },
-    {
-      "id": "b",
-      "label": "B",
-      "key": "z",
-      "x": 614,
-      "y": 232,
-      "calloutX": 744,
-      "calloutY": 124
-    },
-    {
-      "id": "a",
-      "label": "A",
-      "key": "x",
-      "x": 662,
-      "y": 196,
-      "calloutX": 744,
-      "calloutY": 66
-    },
-    {
-      "id": "l",
-      "label": "L",
-      "key": "d",
-      "x": 308,
-      "y": 49,
-      "calloutX": 16,
-      "calloutY": 8
+      "calloutY": 240
     },
     {
       "id": "r",
       "label": "R",
       "key": "c",
-      "x": 652,
-      "y": 49,
+      "x": 633,
+      "y": 36,
       "calloutX": 744,
       "calloutY": 8
+    },
+    {
+      "id": "a",
+      "label": "A",
+      "key": "x",
+      "x": 697,
+      "y": 151,
+      "calloutX": 744,
+      "calloutY": 66
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "key": "z",
+      "x": 652,
+      "y": 178,
+      "calloutX": 744,
+      "calloutY": 182
     },
     {
       "id": "select",
       "label": "Select",
       "key": "rshift",
-      "x": 448,
-      "y": 277,
+      "x": 462,
+      "y": 282,
       "calloutX": 744,
-      "calloutY": 234
+      "calloutY": 240
     },
     {
       "id": "start",
       "label": "Start",
       "key": "enter",
-      "x": 516,
-      "y": 277,
+      "x": 523,
+      "y": 282,
       "calloutX": 744,
-      "calloutY": 292
+      "calloutY": 298
     }
   ],
   "presentationOrder": 5

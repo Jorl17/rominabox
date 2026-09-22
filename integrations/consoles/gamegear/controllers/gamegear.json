@@ -11,64 +11,64 @@
       "id": "up",
       "label": "Up",
       "key": "up",
-      "x": 306,
-      "y": 191,
+      "x": 291,
+      "y": 163,
       "calloutX": 16,
       "calloutY": 16
-    },
-    {
-      "id": "down",
-      "label": "Down",
-      "key": "down",
-      "x": 306,
-      "y": 234,
-      "calloutX": 16,
-      "calloutY": 292
     },
     {
       "id": "left",
       "label": "Left",
       "key": "left",
-      "x": 285,
-      "y": 212,
+      "x": 264,
+      "y": 190,
       "calloutX": 16,
-      "calloutY": 108
+      "calloutY": 100
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down",
+      "x": 291,
+      "y": 217,
+      "calloutX": 16,
+      "calloutY": 184
     },
     {
       "id": "right",
       "label": "Right",
       "key": "right",
-      "x": 328,
-      "y": 212,
+      "x": 318,
+      "y": 190,
       "calloutX": 16,
-      "calloutY": 184
-    },
-    {
-      "id": "b",
-      "label": "1",
-      "key": "z",
-      "x": 616,
-      "y": 218,
-      "calloutX": 744,
-      "calloutY": 108
-    },
-    {
-      "id": "a",
-      "label": "2",
-      "key": "x",
-      "x": 672,
-      "y": 218,
-      "calloutX": 744,
-      "calloutY": 200
+      "calloutY": 268
     },
     {
       "id": "start",
       "label": "Start",
       "key": "enter",
-      "x": 644,
-      "y": 162,
+      "x": 669,
+      "y": 130,
       "calloutX": 744,
       "calloutY": 16
+    },
+    {
+      "id": "b",
+      "label": "1",
+      "key": "z",
+      "x": 642,
+      "y": 212,
+      "calloutX": 744,
+      "calloutY": 128
+    },
+    {
+      "id": "a",
+      "label": "2",
+      "key": "x",
+      "x": 696,
+      "y": 212,
+      "calloutX": 744,
+      "calloutY": 240
     }
   ],
   "presentationOrder": 7,

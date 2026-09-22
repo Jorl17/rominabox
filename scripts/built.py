@@ -21,6 +21,7 @@ menu, stage a design or measure an export with another checkout's code.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -56,9 +57,34 @@ SOURCES = [
     Path("desktop/crates"),
 ]
 
+# `include_str!("../../controls.json")` and similar macros: files that are not
+# Rust but are compiled into the binary, so editing one makes the built tool
+# stale exactly as editing a `.rs` file does. We read them out of the sources
+# instead of listing them here, because a list would be a second copy of the
+# same fact and could disagree with the sources.
+_INCLUDES = re.compile(r"""include_(?:str|bytes)!\s*\(\s*"([^"]+)"\s*\)""")
+
+
+def _rust_files() -> "list[Path]":
+    found = []
+    for relative in SOURCES:
+        path = ROOT / relative
+        if path.is_dir():
+            found.extend(path.rglob("*.rs"))
+    return found
+
+
+def compiled_in(source: Path) -> "list[Path]":
+    """The non-Rust files that we compile into the binary from this source."""
+    try:
+        text = source.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return []
+    return [(source.parent / captured).resolve() for captured in _INCLUDES.findall(text)]
+
 
 def newest_source() -> float:
-    """The time of the last change to the exporter's code."""
+    """The time of the last change to anything we build the exporter from."""
     newest = 0.0
     for relative in SOURCES:
         path = ROOT / relative
@@ -69,6 +95,10 @@ def newest_source() -> float:
                 newest = max(newest, found.stat().st_mtime)
             for found in path.rglob("Cargo.toml"):
                 newest = max(newest, found.stat().st_mtime)
+    for source in _rust_files():
+        for baked in compiled_in(source):
+            if baked.is_file():
+                newest = max(newest, baked.stat().st_mtime)
     return newest
 
 
