@@ -104,4 +104,21 @@ mod tests {
         assert!(refused.contains("game.sub"), "{refused}");
         fs::remove_dir_all(&root).unwrap();
     }
+
+    /// The details step lists whatever we will copy at export. A track is
+    /// the same game as the sheet that lists it, so we list the same
+    /// files for either drop.
+    #[test]
+    fn dropping_a_track_lists_the_same_files_as_dropping_its_sheet() {
+        let root = fixture("track-receipt");
+        fs::write(root.join("track03.bin"), b"track").unwrap();
+        let cue = root.join("game.cue");
+        fs::write(&cue, "FILE \"track03.bin\" BINARY\n  TRACK 01 MODE1/2352\n").unwrap();
+
+        let from_track = files_for(&root.join("track03.bin"), Some("ps1")).unwrap();
+        let from_sheet = files_for(&cue, Some("ps1")).unwrap();
+        assert_eq!(from_track.entry, from_sheet.entry);
+        assert_eq!(from_track.files, from_sheet.files);
+        fs::remove_dir_all(&root).unwrap();
+    }
 }
