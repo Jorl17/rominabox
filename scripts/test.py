@@ -134,6 +134,13 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "fallback",
+        "the controls screen a console with no controller drawing gets, in every state and palette",
+        "that its layout is good — only that every control is there and that hover, focus and capture still differ",
+        ["python3", str(ROOT / "scripts/menu_states.py"), "--system", "atari2600", "--check"],
+        slow=True,
+    ),
+    Scope(
         "placement",
         "that the controller picker lands in the same place on every console that offers one",
         "that the place is a good one — only that it is the same one, whichever pad is drawn",

@@ -3,7 +3,7 @@
     "Every visual state of the in-game menu, declared once.",
     "",
     "A state is a set of element overrides, applied through RmlUi's own API by",
-    "the offscreen renderer — the same SetProperty, SetClass and SetPseudoClass",
+    "the offscreen renderer \u2014 the same SetProperty, SetClass and SetPseudoClass",
     "calls the bridge and RmlUi itself make at runtime. It is never an edit to",
     "the markup: matching markup strings would mean this file and the generator",
     "both had to change whenever an element did, which is the duplication",
@@ -12,9 +12,9 @@
     "'pseudo' sets a real pseudo-class, so a hover state renders the design's",
     "own :hover rule rather than a second rule written for the screenshot.",
     "",
-    "A state names elements by id, or by position — 'controls-device-list>1' is the second option in the picker, whatever that console calls it, so one declaration renders on every console. scripts/menu_states.py refuses",
+    "A state names elements by id, or by position \u2014 'controls-device-list>1' is the second option in the picker, whatever that console calls it, so one declaration renders on every console. scripts/menu_states.py refuses",
     "a state whose elements are not in the document, and refuses two states that",
-    "render the same picture — declaring a state the design does not actually",
+    "render the same picture \u2014 declaring a state the design does not actually",
     "draw differently is how three of these were the same image.",
     "",
     "Adding a screen means adding entries here. Nothing else changes."
@@ -82,7 +82,8 @@
         "controls-device-current": {
           "pseudo": "hover"
         }
-      }
+      },
+      "needs": "controls-device-list"
     },
     "picker-pressed": {
       "describes": "the closed picker held down, before the list appears",
@@ -99,7 +100,8 @@
         "controls-device-current": {
           "pseudo": "active"
         }
-      }
+      },
+      "needs": "controls-device-list"
     },
     "picker-open": {
       "describes": "the picker open, listing what the author included",
@@ -113,7 +115,8 @@
         "controls-device-list": {
           "display": "block"
         }
-      }
+      },
+      "needs": "controls-device-list"
     },
     "picker-hover-selected": {
       "describes": "the pointer on the option already in use",
@@ -130,7 +133,8 @@
         "controls-device-list>0": {
           "pseudo": "hover"
         }
-      }
+      },
+      "needs": "controls-device-list"
     },
     "picker-hover-unselected": {
       "describes": "the pointer on an option that is not in use",
@@ -147,7 +151,8 @@
         "controls-device-list>1": {
           "pseudo": "hover"
         }
-      }
+      },
+      "needs": "controls-device-list"
     },
     "picker-keyboard": {
       "describes": "an option reached by the arrow keys rather than the pointer",
@@ -164,7 +169,8 @@
         "controls-device-list>1": {
           "class": "focused"
         }
-      }
+      },
+      "needs": "controls-device-list"
     },
     "picker-option-pressed": {
       "describes": "an option held down, before the button is released",
@@ -181,7 +187,8 @@
         "controls-device-list>1": {
           "pseudo": "active"
         }
-      }
+      },
+      "needs": "controls-device-list"
     },
     "picker-dragged-outside": {
       "describes": "held down, pointer dragged off the list; releasing must not choose",
@@ -198,10 +205,11 @@
         "controls-device-list>1": {
           "pseudo": "active"
         },
-        "control-hit-up": {
+        "control-hit-up?": {
           "pseudo": "hover"
         }
-      }
+      },
+      "needs": "controls-device-list"
     },
     "control-focused": {
       "describes": "a control selected for rebinding, ring and callout lit",
@@ -215,7 +223,7 @@
         "control-up": {
           "class": "focused"
         },
-        "control-hit-up": {
+        "control-hit-up?": {
           "class": "focused"
         }
       }
@@ -238,7 +246,7 @@
         "control-up": {
           "class": "focused"
         },
-        "control-hit-up": {
+        "control-hit-up?": {
           "class": "focused"
         }
       }

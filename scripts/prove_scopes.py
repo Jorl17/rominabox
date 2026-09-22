@@ -205,6 +205,28 @@ def case_states():
     return expect("states", code, output, ("IDENTICAL",))
 
 
+def case_fallback():
+    """Remove one control from the grid we show for a console with no drawing.
+
+    For a console without a controller illustration, that grid is the whole
+    controls screen. We wrote this scope to catch a control without a box.
+    Without the box, the player could not rebind that button, and we would
+    show no error.
+    """
+    path = ROOT / "integrations/designs/native/menu.rml"
+    raw = path.read_bytes()
+    text = raw.decode()
+    marker = "<!--CONTROLS-->"
+    if marker not in text:
+        return expect("fallback", 1, f"{marker} is not in the design's markup", (marker,))
+    path.write_text(text.replace(marker, "<!--CONTROLS-REMOVED-->", 1))
+    try:
+        code, output = run_scope("fallback")
+    finally:
+        restore(path, raw)
+    return expect("fallback", code, output, ("REFUSED", "did not render", "not in the document"))
+
+
 def case_placement():
     path = ROOT / "scripts/fixtures/picker-coverage.json"
     raw = path.read_bytes()
@@ -304,6 +326,7 @@ CASES = {
     "worktree": case_worktree,
     "bridge": case_bridge,
     "states": case_states,
+    "fallback": case_fallback,
     "placement": case_placement,
     "variants": case_variants,
     "identification": case_identification,
