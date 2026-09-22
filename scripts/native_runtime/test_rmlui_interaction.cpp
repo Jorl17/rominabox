@@ -203,20 +203,13 @@ static int anchors(const char *class_name, std::vector<std::string> &out)
    return count;
 }
 
-/* Pads where every candidate position covers a label, so we choose the one
- * that covers least. RetroPad is a grid with no empty middle. On PlayStation
- * the stick groups fill that middle, and a list as wide as "LEFT STICK UP"
- * next to the right stick still reaches the left one. The taller rows in
- * Disc also reach Select and Start. */
-/* How many labels this anchor may still cover. -1 means none: with the
- * bind text of the control, the grid and PlayStation Down clear every label.
- * The list for the right stick has five rows and a pager, and the position
- * clear of the buttons, status line and footer still covers B and Start. */
+/* How many labels this anchor may still cover. -1 means none. Because the
+ * list may cover the drawing, every control, including the right stick,
+ * has a position that covers no label. */
 static int least_allowed(const char *profile, const char *anchor)
 {
-   if ((std::strcmp(profile, "ps1") == 0 || std::strcmp(profile, "ps1-analog") == 0)
-         && std::strcmp(anchor, "control-group-r_stick") == 0)
-      return 2;
+   (void)profile;
+   (void)anchor;
    return -1;
 }
 
@@ -300,7 +293,13 @@ static const char *const list_part_ids[] = {
 /* The buttons of the screen, the status line and the footer. The list may
  * never cover these, even when it covers least there. The pager buttons share
  * the menu-action class but belong to the list, so they are not here. */
+/* We read this from the controls document instead of guessing. While that
+ * screen is up, the readable and pressable pieces are the heading, the
+ * controller picker (its label and button, not the option list, which is
+ * display:none), Back, Reset, Cancel when shown, the status line and the
+ * footer. The drawing, the leader lines and the hit rings are not in it. */
 static const char *const chrome_ids[] = {
+   "heading", "controls-device-label", "controls-device-current",
    "controls-back", "controls-reset", "controls-status", "footer", nullptr
 };
 
@@ -534,8 +533,28 @@ static int check_one_list(const char *design, const char *profile,
    }
    for (const std::string &label : labels)
    {
+      /* The player is reading the control of the list. Its box counts like a
+       * button, and the list may never cover it. */
       if (label == anchor)
+      {
+         const Box own = box_of(label.c_str());
+         bool hit = own.ok;
+         if (hit)
+         {
+            hit = false;
+            for (const Box &part : painted)
+               hit = hit || boxes_overlap(part, own);
+         }
+         if (hit)
+         {
+            std::snprintf(message, sizeof(message),
+                  "%s/%s %s at %dx%d: list covers its own control",
+                  design, profile, anchor, window_w, window_h);
+            CHECK(false, message);
+            ++missed;
+         }
          continue;
+      }
       const Box other = box_of(label.c_str());
       if (!other.ok)
          continue;
