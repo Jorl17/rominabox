@@ -551,7 +551,13 @@ fn shader_screen(design: &Path) -> crate::themes::Screen {
             label: None,
             back_label: None,
             place: crate::themes::ScreenPlace::Plain,
-            option_label: None,
+            // Inside Options, not a separate button on the pause row. One
+            // Options screen contains controls, shaders and sound, and it is
+            // the only way to reach this screen with a pad. We move through the
+            // pause row as a fixed range of five actions, so a sixth button
+            // generated there could be clicked but never focused. We move
+            // through the Options entries as whatever the panel contains.
+            option_label: Some("SHADERS".into()),
             option_default: false,
             toggle: None,
         })
@@ -737,9 +743,14 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native");
         fs::create_dir_all(&root).unwrap();
         fs::copy(design.join("menu.rml"), root.join("menu.rml")).unwrap();
+        // As in an export. Options must be here, because the shader screen is
+        // an entry inside it, and BACK in an entry returns to the screen that
+        // contains the entry.
         fs::write(
             root.join("design.cfg"),
-            "screens = \"pause controls\"\nscreen_panel_pause = \"pause-panel\"\nscreen_button_pause = \"controls-back\"\n",
+            "screens = \"pause options controls\"\n\
+             screen_panel_pause = \"pause-panel\"\nscreen_button_pause = \"options-back\"\n\
+             screen_panel_options = \"options-panel\"\nscreen_button_options = \"options\"\n",
         )
         .unwrap();
         (design, root)
@@ -804,7 +815,20 @@ mod tests {
         let document = fs::read_to_string(root.join("menu.rml")).unwrap();
         assert_eq!(document.matches("class=\"list-row ").count(), 3);
         assert!(document.contains("id=\"phosphor\""));
-        assert!(document.contains("id=\"shaders\""));
+        // No button on the pause row. The shader screen is an entry inside
+        // Options, which contains controls, shaders and sound. That is also
+        // the only way to reach it with a pad, because we move through the
+        // pause row as a fixed range of five actions, so a sixth button there
+        // could be clicked but never focused. We generate the button of the
+        // entry with Options.
+        assert!(
+            !document.contains("class=\"menu-action screen-link\" id=\"shaders\""),
+            "the shader screen must not add a button to the pause row"
+        );
+        assert_eq!(
+            staged.list.as_ref().unwrap().screen.option_label.as_deref(),
+            Some("SHADERS")
+        );
         assert!(!document.contains(crate::lists::LINKS_SLOT));
         assert!(staged
             .config
@@ -816,8 +840,14 @@ mod tests {
         assert!(source.contains("#if defined(VERTEX)"));
         assert!(source.contains("#elif defined(FRAGMENT)"));
         let declarations = fs::read_to_string(root.join("design.cfg")).unwrap();
-        assert!(declarations.contains("screens = \"pause controls shaders\""));
-        assert!(declarations.contains("screen_button_pause = \"controls-back shaders-back\""));
+        assert!(declarations.contains("screens = \"pause options controls shaders\""));
+        // BACK on the shader screen returns to the screen that contains it,
+        // which is Options, not the pause row.
+        assert!(
+            declarations.contains("screen_button_options = \"options shaders-back\""),
+            "{declarations}"
+        );
+        assert!(declarations.contains("screen_button_pause = \"options-back\""));
         let _ = fs::remove_dir_all(&root);
     }
 

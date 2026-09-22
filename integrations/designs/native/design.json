@@ -91,6 +91,18 @@
       }
     },
     {
+      "id": "shaders",
+      "panel": "shaders-panel",
+      "heading": "SHADERS",
+      "footer": "ESC  BACK",
+      "button": "shaders",
+      "back": "BACK",
+      "option": {
+        "label": "SHADERS",
+        "default": false
+      }
+    },
+    {
       "id": "achievements",
       "panel": "achievements-panel",
       "heading": "ACHIEVEMENTS",

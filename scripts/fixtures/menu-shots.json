@@ -42,70 +42,149 @@
       "controls-device-current",
       "controls-device-option-megadrive6"
     ],
-    "volume-low": ["options", "volume-level@0"],
-    "volume-step": ["options", "volume-down"],
-    "volume-arrow": ["options", "volume-level@0", "volume-up"],
+    "volume-low": [
+      "options",
+      "volume-level@0"
+    ],
+    "volume-step": [
+      "options",
+      "volume-down"
+    ],
+    "volume-arrow": [
+      "options",
+      "volume-level@0",
+      "volume-up"
+    ],
     "shaders": {
-      "script": ["shaders"],
-      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
+      "script": [
+        "options",
+        "shaders"
+      ],
+      "shaders": {
+        "bundled": [
+          "scanlines",
+          "phosphor"
+        ],
+        "initial": "phosphor"
+      }
     },
     "shaders-phosphor": {
-      "script": ["shaders", "phosphor"],
-      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
+      "script": [
+        "options",
+        "shaders",
+        "phosphor"
+      ],
+      "shaders": {
+        "bundled": [
+          "scanlines",
+          "phosphor"
+        ],
+        "initial": "phosphor"
+      }
     },
     "shaders-scanlines": {
-      "script": ["shaders", "scanlines"],
-      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
+      "script": [
+        "options",
+        "shaders",
+        "scanlines"
+      ],
+      "shaders": {
+        "bundled": [
+          "scanlines",
+          "phosphor"
+        ],
+        "initial": "phosphor"
+      }
     },
     "boot-1-logo": {
-      "script": ["wait:20"],
+      "script": [
+        "wait:20"
+      ],
       "startAtMenu": false,
       "splash": true,
-      "config": { "pause_nonactive": "false" }
+      "config": {
+        "pause_nonactive": "false"
+      }
     },
     "boot-2-game": {
-      "script": ["wait:60"],
+      "script": [
+        "wait:60"
+      ],
       "startAtMenu": false,
       "splash": true,
-      "config": { "pause_nonactive": "false" }
+      "config": {
+        "pause_nonactive": "false"
+      }
     },
     "boot-3-notice": {
-      "script": ["wait:180"],
+      "script": [
+        "wait:180"
+      ],
       "startAtMenu": false,
       "splash": true,
-      "config": { "pause_nonactive": "false" }
+      "config": {
+        "pause_nonactive": "false"
+      }
     },
     "boot-4-gone": {
-      "script": ["wait:400"],
+      "script": [
+        "wait:400"
+      ],
       "startAtMenu": false,
       "splash": true,
-      "config": { "pause_nonactive": "false" }
+      "config": {
+        "pause_nonactive": "false"
+      }
     },
     "notice-without-logo": {
-      "script": ["wait:120"],
+      "script": [
+        "wait:120"
+      ],
       "startAtMenu": false,
-      "config": { "pause_nonactive": "false" }
+      "config": {
+        "pause_nonactive": "false"
+      }
     },
     "notice-leaving": {
-      "script": ["wait:265"],
+      "script": [
+        "wait:265"
+      ],
       "startAtMenu": false,
-      "config": { "pause_nonactive": "false" }
+      "config": {
+        "pause_nonactive": "false"
+      },
+      "inMotion": true
     },
     "logo-without-notice": {
-      "script": ["wait:20"],
+      "script": [
+        "wait:20"
+      ],
       "startAtMenu": false,
       "showMenu": false,
       "splash": true,
-      "config": { "pause_nonactive": "false" }
+      "config": {
+        "pause_nonactive": "false"
+      }
     },
     "achievements": {
-      "script": ["options", "achievements"]
+      "script": [
+        "options",
+        "achievements"
+      ]
     },
     "achievements-next": {
-      "script": ["options", "achievements", "achievements-next"]
+      "script": [
+        "options",
+        "achievements",
+        "achievements-next"
+      ]
     },
     "achievement-mode": {
-      "script": ["options", "achievements", "achievement-mode"]
+      "script": [
+        "options",
+        "achievements",
+        "achievement-mode"
+      ]
     },
     "achievement-mode-pause": {
       "script": [

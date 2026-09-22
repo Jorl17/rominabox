@@ -189,7 +189,10 @@ def log_of(app: Path) -> Path | None:
 def take(app: Path, name: str, script: list[str], output: Path,
          config: dict | None = None) -> str:
     """Run the game to a state and screenshot it. Empty string on success."""
-    target = output / f"{name}.png"
+    # An absolute path, because we tell the game where to write and its working
+    # directory is not this one. With a relative output directory, we get the
+    # error "failed to open file for writing" for every shot.
+    target = output.resolve() / f"{name}.png"
     target.unlink(missing_ok=True)
     log = log_of(app)
     if log and log.exists():
@@ -220,6 +223,16 @@ def take(app: Path, name: str, script: list[str], output: Path,
             "".join(f'{key} = "{value}"\n' for key, value in config.items())
         )
 
+    # In a sandbox, writing is allowed only inside the game's container, so we
+    # cannot have the picture written into this repository. We have it written
+    # into the game's storage and copy it out here. With a path in the tree, we
+    # would get "failed to open file for writing" for every shot.
+    inside = target
+    if data is not None and sandboxed(app):
+        inside = data / "shots" / f"{name}.png"
+        inside.parent.mkdir(parents=True, exist_ok=True)
+        inside.unlink(missing_ok=True)
+
     result = subprocess.run(
         [str(launcher_of(app))],
         capture_output=True,
@@ -228,9 +241,12 @@ def take(app: Path, name: str, script: list[str], output: Path,
         env=dict(
             os.environ,
             ROMINABOX_MENU_SCRIPT=",".join(script),
-            ROMINABOX_MENU_SHOT=str(target),
+            ROMINABOX_MENU_SHOT=str(inside),
         ),
     )
+    if inside != target and inside.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(inside), str(target))
     written = log.read_text() if log and log.exists() else result.stderr
 
     # We read this from the player report. Otherwise, when no click in the
@@ -469,7 +485,9 @@ def main() -> int:
             settings = {
                 key: value
                 for key, value in shot.items()
-                if key not in ("script", "config")
+                # "inMotion" is about how we compare this shot, not how we
+                # export the game.
+                if key not in ("script", "config", "inMotion")
             }
             settings["palette"] = palette
             settings["theme"] = arguments.design
@@ -481,9 +499,14 @@ def main() -> int:
                 print(f"  FAILED  {key}: {problem}", file=sys.stderr)
                 failures.append(key)
                 continue
-            digests[key] = hashlib.sha256(
-                (destination / f"{name}.png").read_bytes()
-            ).hexdigest()[:16]
+            # A shot during an animation has no stable picture. We take this one
+            # while the notice is fading out, so two runs differ slightly. We
+            # still take it, so we notice when the state can no longer be
+            # reached, but we do not compare its picture.
+            if not shots[name].get("inMotion"):
+                digests[key] = hashlib.sha256(
+                    (destination / f"{name}.png").read_bytes()
+                ).hexdigest()[:16]
             print(f"  {key:<28}{' -> '.join(script) or '(the menu as it opens)'}")
 
     # A shot we could not take and a shot that changed are two different
@@ -502,7 +525,11 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        DIGESTS.write_text(json.dumps(digests, indent=2, sort_keys=True) + "\n")
+        # We merge instead of replacing. A run with --only has no results for
+        # the other shots, and writing only its results would drop theirs.
+        kept = json.loads(DIGESTS.read_text()) if DIGESTS.exists() else {}
+        kept.update(digests)
+        DIGESTS.write_text(json.dumps(kept, indent=2, sort_keys=True) + "\n")
         print(f"\nrecorded {len(digests)} shots -> {DIGESTS.name}")
         return 0
 

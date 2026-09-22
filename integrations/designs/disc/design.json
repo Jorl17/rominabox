@@ -96,6 +96,18 @@
         "label": "PAD",
         "default": true
       }
+    },
+    {
+      "id": "shaders",
+      "panel": "shaders-panel",
+      "heading": "FILTERS",
+      "footer": "ESC  BACK",
+      "button": "shaders",
+      "back": "BACK",
+      "option": {
+        "label": "FILTERS",
+        "default": false
+      }
     }
   ],
   "tokens": {
