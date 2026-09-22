@@ -39,6 +39,22 @@
   "list": {
     "pageSize": 4
   },
+  "overlays": [
+    {
+      "id": "splash",
+      "afterMs": 0,
+      "holdMs": 550,
+      "leaveMs": 250,
+      "needs": "splash-logo.png"
+    },
+    {
+      "id": "notice",
+      "follows": "splash",
+      "afterMs": 700,
+      "holdMs": 3600,
+      "leaveMs": 500
+    }
+  ],
   "screens": [
     {
       "id": "pause",

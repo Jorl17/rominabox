@@ -97,6 +97,18 @@ static void drain_actions(void)
       ;
 }
 
+/* Draw for this long. RmlUi advances an animation by at most a tenth of a
+ * second per update, so a transition finishes only if we draw frames while
+ * the clock moves, as at sixty frames a second in a running game. */
+static void settle(double seconds)
+{
+   for (double at = 0; at < seconds; at += 0.05)
+   {
+      rib_rmlui_test_advance(0.05);
+      rib_rmlui_render(960, 600);
+   }
+}
+
 int main(int argc, char **argv)
 {
    const char *assets = argc > 1 ? argv[1] : nullptr;
@@ -362,6 +374,42 @@ int main(int argc, char **argv)
             == RIB_MENU_SOUND_OK, "changing screen is confirmed, not silent");
       CHECK(rib_rmlui_action_sound(RIB_RMLUI_ACTION_CONTROLS_BACK)
             == RIB_MENU_SOUND_CANCEL, "leaving a screen cancels, not confirms");
+   }
+
+   // We draw an overlay over a running game, and how it looks is up to the
+   // design. In the player we only move an element between three states and
+   // state whether the menu is on screen. If the rules in the design did not
+   // act on that, the notice would appear and vanish without the arriving,
+   // leaving or hiding animations in the design.
+   {
+      rib_rmlui_set_overlay("notice", RIB_OVERLAY_HIDDEN);
+      rib_rmlui_set_overlay_mode(true);
+      rib_rmlui_render(960, 600);
+      const std::string away = rib_rmlui_test_property("notice", "opacity");
+      const std::string resting = rib_rmlui_test_property("notice", "bottom");
+      CHECK(std::string(rib_rmlui_test_property("footer", "display")) == "none",
+            "the design puts the menu away while only overlays are drawn");
+
+      rib_rmlui_set_overlay("notice", RIB_OVERLAY_SHOWING);
+      settle(0.6);
+      const std::string shown = rib_rmlui_test_property("notice", "opacity");
+      CHECK(shown != away, "showing an overlay makes the design draw it");
+      CHECK(std::string(rib_rmlui_test_property("notice", "bottom")) != resting,
+            "the design moves the notice into place, not only fades it in");
+
+      rib_rmlui_set_overlay("notice", RIB_OVERLAY_LEAVING);
+      rib_rmlui_render(960, 600);
+      CHECK(std::string(rib_rmlui_test_property("notice", "opacity")) != away,
+            "leaving is a transition, not a cut: the first frame is still drawn");
+      settle(1.0);
+      CHECK(std::string(rib_rmlui_test_property("notice", "opacity")) == away,
+            "the design takes the notice away over its own declared time");
+
+      rib_rmlui_set_overlay("notice", RIB_OVERLAY_HIDDEN);
+      rib_rmlui_set_overlay_mode(false);
+      rib_rmlui_render(960, 600);
+      CHECK(std::string(rib_rmlui_test_property("footer", "display")) != "none",
+            "the menu comes back when it is what is on screen");
    }
 
    rib_rmlui_shutdown();
