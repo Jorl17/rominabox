@@ -958,4 +958,49 @@ mod tests {
         assert!(error.contains("available menu sound pack"), "{error}");
         assert!(!temporary.exists(), "rejection must not create output");
     }
+
+    /// The person who bundles the game picks the BIOS. The player never does.
+    ///
+    /// We put no BIOS picker and no BIOS uploader in the exported game. A
+    /// player who wants a different BIOS goes through Advanced, which unlocks
+    /// the whole emulator.
+    ///
+    /// Everything about the BIOS is in the builder (`assess_firmware`, the
+    /// details step, the export refusal), and the player sees none of it. A
+    /// design may not contain a screen, a button or a declaration that offers a
+    /// BIOS choice. We still bundle a BIOS, with no way to change it in the menu.
+    #[test]
+    fn no_design_offers_the_player_a_bios() {
+        let designs = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs");
+        let mut looked = 0;
+        for entry in fs::read_dir(&designs).expect("designs directory") {
+            let design = entry.expect("design entry").path();
+            if !design.is_dir() {
+                continue;
+            }
+            for file in fs::read_dir(&design).expect("design files") {
+                let file = file.expect("design file").path();
+                let Some(name) = file.file_name().and_then(|n| n.to_str()) else {
+                    continue;
+                };
+                if !name.ends_with(".rml") && !name.ends_with(".rcss") && !name.ends_with(".json") {
+                    continue;
+                }
+                let body = fs::read_to_string(&file).unwrap_or_default();
+                looked += 1;
+                for (number, line) in body.lines().enumerate() {
+                    assert!(
+                        !line.to_ascii_lowercase().contains("bios"),
+                        "{}:{} offers the player a BIOS: {}\n\
+                         The BIOS is chosen by whoever bundles the game. A player \
+                         who wants another one uses Advanced.",
+                        file.display(),
+                        number + 1,
+                        line.trim()
+                    );
+                }
+            }
+        }
+        assert!(looked > 0, "no design files were read, so this proved nothing");
+    }
 }
