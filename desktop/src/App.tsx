@@ -20,6 +20,25 @@ import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
+// The same pictures as in the exported game, rendered from the GLSL of each
+// shader with scripts/render_shader_previews.py. We read them as a directory
+// and do not list them, so a preset added to the catalogue comes with its
+// preview instead of a broken image.
+const shaderPreviews = Object.fromEntries(
+  Object.entries(
+    import.meta.glob("../../integrations/shaders/previews/*.png", {
+      eager: true,
+      query: "?url",
+      import: "default",
+    }) as Record<string, string>,
+  ).map(([path, url]) => [
+    path
+      .split("/")
+      .pop()!
+      .replace(/\.png$/, ""),
+    url,
+  ]),
+);
 import "./style.css";
 
 const steps = ["Game", "Details", "Menu", "Export"];
@@ -1151,26 +1170,50 @@ export function App() {
                   help="Restore RetroArch's native menus. Ordinary exports keep About, Hide, Quit and standard window actions."
                 />
                 <div className="shader-choices">
-                  {shaderCatalog.presets.map((preset) => (
-                    <Checkbox
-                      key={preset.id}
-                      label={preset.name}
-                      checked={bundledShaders.includes(preset.id)}
-                      onChange={(value) => {
-                        setBundledShaders((current) =>
-                          value
-                            ? [...current, preset.id]
-                            : current.filter((id) => id !== preset.id),
-                        );
-                        if (!value) {
-                          setShaderInitial((current) =>
-                            current === preset.id ? null : current,
-                          );
-                        }
-                      }}
-                      help={preset.detail}
-                    />
-                  ))}
+                  <div className="shader-heading">Picture filters</div>
+                  <p className="shader-lede">
+                    A game that bundles none of these has no shader screen at
+                    all. Each picture is that filter run over a test card.
+                  </p>
+                  <div className="shader-grid">
+                    {shaderCatalog.presets.map((preset) => {
+                      const bundled = bundledShaders.includes(preset.id);
+                      return (
+                        <label
+                          key={preset.id}
+                          className={`shader-card${bundled ? " chosen" : ""}`}
+                        >
+                          <img
+                            className="shader-preview"
+                            src={shaderPreviews[preset.id]}
+                            alt=""
+                          />
+                          <span className="shader-name">{preset.name}</span>
+                          <span className="shader-detail">{preset.detail}</span>
+                          <span className="shader-pick">
+                            <input
+                              type="checkbox"
+                              checked={bundled}
+                              onChange={(event) => {
+                                const value = event.target.checked;
+                                setBundledShaders((current) =>
+                                  value
+                                    ? [...current, preset.id]
+                                    : current.filter((id) => id !== preset.id),
+                                );
+                                if (!value) {
+                                  setShaderInitial((current) =>
+                                    current === preset.id ? null : current,
+                                  );
+                                }
+                              }}
+                            />
+                            Bundle
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                   {customShaders.map((shader) => (
                     <div key={shader.path} className="custom-shader">
                       <span>{shader.name}</span>
@@ -1191,6 +1234,7 @@ export function App() {
                   ))}
                   <button
                     type="button"
+                    className="secondary"
                     onClick={() => {
                       void bridge.pickShader().then((path) => {
                         if (!path) return;
@@ -1211,7 +1255,7 @@ export function App() {
                     Add shader
                   </button>
                   {bundledShaders.length + customShaders.length > 0 && (
-                    <label>
+                    <label className="shader-initial">
                       Starts on
                       <select
                         aria-label="Starts on"

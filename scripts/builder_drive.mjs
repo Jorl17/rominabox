@@ -369,6 +369,22 @@ async function main() {
       code = 1;
       return;
     }
+    // An <img> that does not load shows as an empty box, not an error, so
+    // counting them would not catch broken pictures. We require each preview
+    // to have loaded and to have pixels.
+    const blank = await page
+      .locator(".shader-choices img")
+      .evaluateAll((images) =>
+        images
+          .filter((image) => !image.complete || image.naturalWidth === 0)
+          .map((image) => image.getAttribute("src") || "(no src)"),
+      );
+    if (pictures < 2 || blank.length) {
+      console.error("a picture filter has no preview a person can see");
+      console.error(`pictures=${pictures} blank=${JSON.stringify(blank)}`);
+      code = 1;
+      return;
+    }
     if (!checking) {
       await shot(page, path.join(out, "09-shaders.png"));
       await page.getByRole("checkbox", { name: "Scanlines" }).check();

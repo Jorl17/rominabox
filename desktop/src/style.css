@@ -1147,3 +1147,70 @@ select {
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* Picture filters. Each card has the same preview as the exported game,
+   rendered from the GLSL of that shader. */
+.shader-heading {
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 18px;
+}
+.shader-lede {
+  margin: 4px 0 10px;
+  font-size: 12px;
+  color: #55606e;
+  max-width: 52ch;
+}
+.shader-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 12px;
+  max-width: 560px;
+}
+.shader-card {
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  gap: 2px;
+  padding: 8px;
+  border: 2px solid #d8dce4;
+  background: #fff;
+  cursor: pointer;
+}
+.shader-card:hover {
+  border-color: #9aa4b4;
+}
+.shader-card.chosen {
+  border-color: #1b1f28;
+}
+.shader-preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  /* A console's picture is not smoothed, and neither is a picture of one. */
+  image-rendering: pixelated;
+  background: #10131a;
+}
+.shader-name {
+  font-weight: 700;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.shader-detail {
+  font-size: 11px;
+  color: #55606e;
+  line-height: 1.35;
+}
+.shader-pick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.shader-initial {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+}
