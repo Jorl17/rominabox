@@ -531,6 +531,7 @@ fn author_background_play_survives_an_old_controls_file() {
     let leftover = "pause_nonactive = \"false\"\n";
     fs::write(&controls, leftover).unwrap();
 
+    assert_main_executable_keeps_the_sandbox(&app);
     let mut quiet = Command::new(app.join("Contents/MacOS/retroarch"));
     quiet.env_remove("ROMINABOX_MENU_SHOT");
     let status = run_until(&mut quiet, Duration::from_secs(20));
@@ -563,6 +564,56 @@ fn author_background_play_survives_an_old_controls_file() {
         fs::read_to_string(&controls).unwrap(),
         pad,
         "the screenshot run wrote pause_nonactive into the player's controls.cfg"
+    );
+}
+
+/// Without the signature there is no sandbox, and `$HOME` is the account home.
+/// The launch must not create the directory for this identity under the
+/// ROM-in-a-Box folder of the account, or write `retroarch.cfg` there.
+#[test]
+#[ignore = "launches an unsigned stub; the isolation scope runs it"]
+fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
+    let root = scratch();
+    let app = export(&request(
+        &root,
+        b"rominabox-background-play-author-v1",
+        "Background Play",
+        fixture_kit(&root),
+        "megadrive",
+    ));
+    let identity = identity_of(&app);
+    let _container = RemoveDir(container_for(&identity));
+    let host = home()
+        .join("Library/Application Support/ROM-in-a-Box/Games")
+        .join(&identity)
+        .join("retroarch.cfg");
+    let before = fs::metadata(&host)
+        .ok()
+        .map(|info| (info.len(), info.modified().ok()));
+    let executable = app.join("Contents/MacOS/retroarch");
+    let removed = Command::new("/usr/bin/codesign")
+        .args(["--remove-signature"])
+        .arg(&executable)
+        .status()
+        .expect("codesign can be executed");
+    assert!(removed.success(), "could not drop the signature");
+    let output = Command::new(&executable)
+        .env_remove("ROMINABOX_MENU_SHOT")
+        .output()
+        .expect("the unsigned launcher can be executed");
+    let after = fs::metadata(&host)
+        .ok()
+        .map(|info| (info.len(), info.modified().ok()));
+    assert_eq!(
+        before, after,
+        "an unsandboxed launch wrote {}\n{}",
+        host.display(),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("refusing to write the account's ROM-in-a-Box directory"),
+        "the launch did not refuse the account directory\n{stderr}"
     );
 }
 

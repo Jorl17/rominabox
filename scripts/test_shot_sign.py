@@ -137,11 +137,25 @@ def the_suite_names_a_path_created_under_the_real_support_directory() -> None:
     )
 
 
+def the_suite_names_a_file_a_run_rewrote() -> None:
+    """Check that after a second run the path is the same and the file is new."""
+    before = {"games/02e5ccd65c9ebc8c79a8da5d/retroarch.cfg": (1200, 100)}
+    after = {"games/02e5ccd65c9ebc8c79a8da5d/retroarch.cfg": (1200, 200)}
+    changed = player_support.modifications(before, after)
+    check(
+        changed == ["games/02e5ccd65c9ebc8c79a8da5d/retroarch.cfg"],
+        "a rewritten file is named"
+        if changed == ["games/02e5ccd65c9ebc8c79a8da5d/retroarch.cfg"]
+        else f"a rewritten file was reported as {changed}",
+    )
+
+
 def main() -> int:
     for test in (
         the_replaced_player_keeps_the_export_sandbox,
         shots_reuse_one_bundle_namespace,
         the_suite_names_a_path_created_under_the_real_support_directory,
+        the_suite_names_a_file_a_run_rewrote,
     ):
         print(test.__name__)
         test()

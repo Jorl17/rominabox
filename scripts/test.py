@@ -30,6 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cargo_replay import cargo_test  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
+from player_support import modifications as support_modifications  # noqa: E402
 from player_support import snapshot as support_snapshot  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -409,7 +410,9 @@ def main() -> int:
     print(f"\nwall {wall:0.1f}s{wall_ratio}")
     if wall_budget and limits is not None and over_budget(wall, wall_budget, limits):
         slow.append("wall")
-    created = support_additions(support_before, support_snapshot())
+    support_after = support_snapshot()
+    created = support_additions(support_before, support_after)
+    modified = support_modifications(support_before, support_after)
     if created:
         print(
             "\nA test run created paths under ~/Library/Application Support/ROM-in-a-Box:"
@@ -418,10 +421,18 @@ def main() -> int:
             print(f"  {path}")
         if len(created) > 20:
             print(f"  … and {len(created) - 20} more")
+    if modified:
+        print(
+            "\nA test run modified paths under ~/Library/Application Support/ROM-in-a-Box:"
+        )
+        for path in modified[:20]:
+            print(f"  {path}")
+        if len(modified) > 20:
+            print(f"  … and {len(modified) - 20} more")
     failed = [scope.name for scope in selected if not recorded[scope.name][0]]
     if failed:
         print(f"\n{len(failed)} scope(s) failed: {', '.join(failed)}")
-    if created or failed:
+    if created or modified or failed:
         return 1
     if slow:
         print(

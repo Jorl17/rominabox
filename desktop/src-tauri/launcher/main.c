@@ -456,6 +456,23 @@ static void first_line(const char *path, char *out, size_t out_cap) {
     }
 }
 
+static int writes_the_account_support_directory(const char *data_dir) {
+    struct passwd *user = getpwuid(getuid());
+    char prefix[PATH_CAP];
+    int wrote;
+    if (!user || !user->pw_dir || user->pw_dir[0] != '/')
+        return 0;
+    wrote = snprintf(
+        prefix,
+        sizeof prefix,
+        "%s/Library/Application Support/ROM-in-a-Box/",
+        user->pw_dir
+    );
+    if (wrote < 0 || (size_t)wrote >= sizeof prefix)
+        return 0;
+    return starts_with(data_dir, prefix);
+}
+
 static void migrate_previous_saves(const char *data_dir) {
     struct passwd *user = getpwuid(getuid());
     const char *home = getenv("HOME");
@@ -609,6 +626,11 @@ static void prepare(void) {
     }
     if (data_dir[0] != '/')
         die("the data directory is not absolute");
+    /* In a sandbox, HOME is the container, so this is the container path.
+     * Without the sandbox, HOME is the account's home, and this line would
+     * create the player's real game directory. Refuse that instead. */
+    if (writes_the_account_support_directory(data_dir))
+        die("refusing to write the account's ROM-in-a-Box directory");
 
     migrate_previous_saves(data_dir);
     mkdir_p(data_dir);
