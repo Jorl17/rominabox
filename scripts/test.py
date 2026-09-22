@@ -66,6 +66,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/menu_interaction.py"), "--check"],
     ),
     Scope(
+        "heldkey",
+        "that Escape still toggles the menu while another key is held, including a press that starts and ends between two samples",
+        "that a physical keyboard delivers the events; the decision is the function the runloop calls",
+        ["bash", str(ROOT / "scripts/test_held_key.sh")],
+    ),
+    Scope(
         "staging",
         "that the runtime-kit staging script names paths that exist, after any rename",
         "that the script runs or produces a correct kit; it builds a whole application",
