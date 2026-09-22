@@ -81,6 +81,51 @@ static int failures = 0;
       } \
    } while (0)
 
+/* The accent is on .list-row, so a shader row (a picture) and a disc row
+ * (one line) are the same button. Focusing one must not move its name. */
+static void check_focus_leaves_the_name(void)
+{
+   rib_rmlui_set_shown("fixture-panel", true);
+   struct Pair { int index; const char *focused; const char *rest; const char *which; };
+   const Pair pairs[] = {
+      {0, "fixture-one-title", "fixture-rest-title", "one-line row"},
+      {2, "fixture-two-title", "fixture-pic-title", "picture row"},
+   };
+   for (const Pair &pair : pairs)
+   {
+      rib_rmlui_focus_list_row(pair.index);
+      int focused_x = 0, focused_y = 0, focused_w = 0, focused_h = 0;
+      int rest_x = 0, rest_y = 0, rest_w = 0, rest_h = 0;
+      CHECK(rib_rmlui_element_box(pair.focused, &focused_x, &focused_y, &focused_w, &focused_h),
+            "the focused row's name has a box");
+      CHECK(rib_rmlui_element_box(pair.rest, &rest_x, &rest_y, &rest_w, &rest_h),
+            "the unfocused row's name has a box");
+      char message[256];
+      std::snprintf(message, sizeof(message),
+            "a focused %s name starts at %d and the other row's name at %d",
+            pair.which, focused_x, rest_x);
+      CHECK(std::abs(focused_x - rest_x) <= 1, message);
+   }
+   /* The bind list sets the row border again. We must reserve space for a
+    * focused accent there too, or the names in that list still move. */
+   rib_rmlui_set_shown("fixture-panel", false);
+   rib_rmlui_set_shown("control-binds", true);
+   rib_rmlui_focus_list_row(0);
+   int focused_x = 0, focused_y = 0, focused_w = 0, focused_h = 0;
+   int rest_x = 0, rest_y = 0, rest_w = 0, rest_h = 0;
+   CHECK(rib_rmlui_element_box("bind-one-title", &focused_x, &focused_y, &focused_w, &focused_h),
+         "the focused bind row's name has a box");
+   CHECK(rib_rmlui_element_box("bind-rest-title", &rest_x, &rest_y, &rest_w, &rest_h),
+         "the unfocused bind row's name has a box");
+   char message[256];
+   std::snprintf(message, sizeof(message),
+         "a focused bind row name starts at %d and the other row's name at %d",
+         focused_x, rest_x);
+   CHECK(std::abs(focused_x - rest_x) <= 1, message);
+   rib_rmlui_set_shown("control-binds", false);
+   rib_rmlui_set_shown("fixture-panel", true);
+}
+
 static void click_id(const char *id)
 {
    int x = 0;
@@ -816,6 +861,23 @@ int main(int argc, char **argv)
       std::fprintf(stderr, "usage: test_rmlui_interaction ASSET_DIR\n");
       return 2;
    }
+   if (argc > 2 && std::strcmp(argv[2], "row-edge") == 0)
+   {
+      if (!rib_rmlui_init(assets, 960, 600))
+      {
+         std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
+         return 1;
+      }
+      check_focus_leaves_the_name();
+      rib_rmlui_shutdown();
+      if (failures)
+      {
+         std::fprintf(stderr, "%d check(s) failed\n", failures);
+         return 1;
+      }
+      std::printf("ok\n");
+      return 0;
+   }
    if (argc > 2 && std::strcmp(argv[2], "placement") == 0)
    {
       if (argc < 6)
@@ -1262,6 +1324,7 @@ int main(int argc, char **argv)
                "the name still starts in the picture column (title x %d, picture title x %d, row x %d)",
                title_x, pic_title_x, row_x);
          CHECK(title_x - row_x + 8 < pic_title_x - pic_x, message);
+         check_focus_leaves_the_name();
          rib_rmlui_set_shown("fixture-panel", false);
       }
 
@@ -1406,7 +1469,7 @@ int main(int argc, char **argv)
       rib_rmlui_wire_lists();
       rib_rmlui_wire_toggles();
       drain_actions();
-      CHECK(rib_rmlui_visible_row_count() == 2,
+      CHECK(rib_rmlui_visible_row_count() == 4,
             "the generated list reports its rows");
       CHECK(rib_rmlui_list_control_count() == 2,
             "the list screen reports its switch and its back button");
