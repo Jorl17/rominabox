@@ -223,11 +223,26 @@ fn distinct_names(bytes: &[u8]) -> BTreeSet<String> {
         .collect()
 }
 
+/// Read the catalogues fetched earlier. We fetch them only when asked to.
+///
+/// Fetching on demand would make the measurement depend on a third-party web
+/// API and its rate limits. Set `ROMINABOX_REFRESH_CATALOGUES=1` to refresh.
 fn read_cached(path: &Path, url: &str) -> Vec<u8> {
     if let Ok(bytes) = fs::read(path) {
         if !bytes.is_empty() {
             return bytes;
         }
+    }
+    if std::env::var("ROMINABOX_REFRESH_CATALOGUES").is_err() {
+        panic!(
+            "no cached copy of {url}\n\
+             at {}\n\n\
+             The measurement runs offline, against catalogues and picture lists \
+             fetched once. It does not call anyone's API while testing.\n\
+             To fetch what is missing:\n\
+             \x20 ROMINABOX_REFRESH_CATALOGUES=1 python3 scripts/test.py identification",
+            path.display()
+        );
     }
     eprintln!("fetching {url}");
     let bytes = get_all(url);
