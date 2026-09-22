@@ -165,6 +165,11 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #volume-control .slider-readout { display: none; }
 #volume-control .slider-track { margin-top: 0; height: 28dp; background-color: design(bevel-dark); border-top: 4dp design(bevel-dark); border-left: 4dp design(bevel-dark); border-right: 4dp design(bevel-light); border-bottom: 4dp design(bevel-light); }
 #volume-control .slider-fill { top: 0; height: 100%; width: 100%; }
+/* The shared thumb is sized for the taller track of a slider on a separate
+ * screen: 56dp plus borders is 64dp, which would hang 2dp past the bottom of
+ * a 64dp row and draw bright yellow over its border. Inside this row the
+ * thumb is the height of the row minus a margin at each end. */
+#volume-control .slider-thumb { top: -6dp; height: 40dp; }
 
 /* The slider is a shared part. We draw hover, keyboard focus and a held
  * drag differently. */
@@ -234,10 +239,12 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .list-pager-prev.disabled, .list-pager-next.disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
 .list-actions { position: absolute; left: 36dp; top: 508dp; width: 880dp; height: 40dp; }
 .list-actions .menu-action { position: absolute; top: 0; height: 36dp; line-height: 34dp; border-width: 2dp; font-family: Silkscreen; font-size: 18dp; text-align: center; }
-.list-back { right: 0; width: 196dp; }
+/* BACK is at the bottom left on every screen of this design, so the button
+ * stays at the same end of the screen when the player leaves a list. */
+.list-back { left: 0; width: 196dp; }
 /* A switch is as wide as its words and no wider, in proportion to the
  * 200-unit BACK beside it. */
-.list-toggle { left: 0; width: 260dp; }
+.list-toggle { left: 212dp; width: 260dp; }
 .list-toggle-label { position: absolute; left: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 16dp; }
 .list-toggle-state { position: absolute; right: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 16dp; color: design(muted); }
 .list-toggle.on .list-toggle-state { color: design(highlight); }

@@ -419,11 +419,22 @@ def main() -> int:
             ).hexdigest()[:16]
             print(f"  {key:<28}{' -> '.join(script) or '(the menu as it opens)'}")
 
+    # A shot we could not take and a shot that changed are two different
+    # results. We report both, so that in one run the shots we could not take
+    # do not hide the pictures that changed.
     if failures:
         print(f"\n{len(failures)} shot(s) failed: {', '.join(failures)}", file=sys.stderr)
-        return 1
+        if not arguments.check:
+            return 1
 
     if arguments.record:
+        if failures:
+            print(
+                "nothing was recorded: a run that could not take every shot "
+                "would drop the ones it missed.",
+                file=sys.stderr,
+            )
+            return 1
         DIGESTS.write_text(json.dumps(digests, indent=2, sort_keys=True) + "\n")
         print(f"\nrecorded {len(digests)} shots -> {DIGESTS.name}")
         return 0
@@ -433,14 +444,15 @@ def main() -> int:
             raise SystemExit(f"no recorded shots at {DIGESTS}; run --record first")
         expected = json.loads(DIGESTS.read_text())
         changed = [n for n, d in digests.items() if expected.get(n) != d]
+        for name in changed:
+            print(f"  CHANGED {name}", file=sys.stderr)
         if changed:
-            for name in changed:
-                print(f"  CHANGED {name}", file=sys.stderr)
             print(
                 "\nThe game draws a menu state differently. Look at the pictures "
                 "before re-recording.",
                 file=sys.stderr,
             )
+        if changed or failures:
             return 1
         print(f"\n{len(digests)} shots unchanged")
         return 0
