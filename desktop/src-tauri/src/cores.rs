@@ -1,23 +1,22 @@
-//! Obtaining a core, and rejecting any file that is not the recorded core.
+//! Obtaining a core from the download list.
 //!
 //! On the buildbot each core is under a directory named `latest`, which is
-//! replaced in place. With a recorded hash this is safe, because we install
-//! neither a different file nor a short one, and do not fetch again a file we
-//! already checked. The same rule applies to the licence text.
+//! replaced in place, so a recorded hash cannot identify it. We accept a
+//! download as the core when it succeeds and the archive contains the file
+//! name in the list. The licence is the text on the repository's current
+//! branch. We do not fetch a file already in the cache again. In
+//! `fetched.json` we record what we downloaded and when, for a later update.
 
 use std::fs;
 use std::io::Read;
 use std::path::Path;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
 
 pub struct CoreDownload {
     pub filename: String,
     pub mirrors: Vec<String>,
-    pub archive_sha256: String,
-    pub binary_sha256: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,65 +52,18 @@ impl Transport for UreqTransport {
     }
 }
 
-pub fn sha256_hex(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
-}
-
-/// Place the recorded core into `directory`, or refuse.
+/// Place the named core into `directory`, or return an error.
 ///
-/// We keep a file already there only when its hash matches. A `.partial` file
-/// is never the core. It remains when a download stops halfway, and on the
-/// next attempt we delete it and start again.
+/// We reuse a file that is already there without checking its bytes, because
+/// the nightlies on the buildbot change in place. A `.partial` file is not the
+/// core. It remains when a download stops halfway, and on the next attempt we
+/// delete it and start again.
 pub fn ensure_core(
     directory: &Path,
     core: &CoreDownload,
     transport: &dyn Transport,
 ) -> Result<CoreState, CoreFailure> {
-    let path = directory.join(&core.filename);
-    discard_partial(directory, &core.filename);
-    if file_matches(&path, &core.binary_sha256) {
-        return Ok(CoreState::Present);
-    }
-    let archive = match fetch_recorded(&core.mirrors, &core.archive_sha256, transport) {
-        Ok(bytes) => bytes,
-        Err(error) => {
-            discard_unless_recorded(&path, &core.binary_sha256);
-            return Err(error);
-        }
-    };
-    let binary = match extract_named(&archive, &core.filename) {
-        Some(bytes) if sha256_hex(&bytes) == core.binary_sha256 => bytes,
-        _ => {
-            discard_unless_recorded(&path, &core.binary_sha256);
-            return Err(CoreFailure::NotRecorded);
-        }
-    };
-    install_bytes(directory, &core.filename, &binary)?;
-    Ok(CoreState::Installed)
-}
-
-/// Place a recorded file, such as a licence, that is not inside a zip.
-pub fn ensure_file(
-    directory: &Path,
-    filename: &str,
-    mirrors: &[String],
-    sha256: &str,
-    transport: &dyn Transport,
-) -> Result<CoreState, CoreFailure> {
-    let path = directory.join(filename);
-    discard_partial(directory, filename);
-    if file_matches(&path, sha256) {
-        return Ok(CoreState::Present);
-    }
-    let bytes = match fetch_recorded(mirrors, sha256, transport) {
-        Ok(bytes) => bytes,
-        Err(error) => {
-            discard_unless_recorded(&path, sha256);
-            return Err(error);
-        }
-    };
-    install_bytes(directory, filename, &bytes)?;
-    Ok(CoreState::Installed)
+    Ok(place_archive(directory, &core.filename, &core.mirrors, transport)?.0)
 }
 
 #[derive(Debug, Deserialize)]
@@ -128,23 +80,20 @@ struct PinSet {
 struct PinnedCore {
     component: String,
     repository: String,
-    revision: String,
     #[serde(rename = "licenseFile")]
     license_file: String,
     #[serde(rename = "licensePath")]
     license_path: String,
-    #[serde(rename = "licenseSha256")]
-    license_sha256: String,
+    /// The branch whose tip we read the licence from. We use a branch and not
+    /// a commit, because the nightly can be newer than any recorded commit.
+    #[serde(rename = "licenseRef")]
+    license_ref: String,
     artifacts: std::collections::BTreeMap<String, PinnedArtifact>,
 }
 
 #[derive(Debug, Deserialize)]
 struct PinnedArtifact {
     filename: String,
-    #[serde(rename = "archiveSha256")]
-    archive_sha256: String,
-    #[serde(rename = "binarySha256")]
-    binary_sha256: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -175,7 +124,10 @@ impl From<Result<CoreState, CoreFailure>> for InstallOutcome {
     }
 }
 
-/// The pinned hashes for the nightly cores. Generated from the console packages.
+/// The download list that we ship with the app.
+///
+/// It is the file next to the crate, so when a host moves we change that
+/// file and need no new build.
 fn pins() -> PinSet {
     serde_json::from_str(include_str!("../../core-pins.json")).expect("core pins parse")
 }
@@ -230,15 +182,14 @@ fn install_one(
         .core_mirrors
         .iter()
         .map(|base| format!("{base}/{folder}/latest/{}.zip", artifact.filename))
-        .collect();
-    let core_state = ensure_core(
-        &directory.join("cores"),
-        &CoreDownload {
-            filename: artifact.filename.clone(),
-            mirrors,
-            archive_sha256: artifact.archive_sha256.clone(),
-            binary_sha256: artifact.binary_sha256.clone(),
-        },
+        .collect::<Vec<_>>();
+    let core_state = place_recorded(
+        directory,
+        "cores",
+        &core.component,
+        &artifact.filename,
+        &mirrors,
+        true,
         transport,
     );
     let license_mirrors = pins
@@ -247,15 +198,17 @@ fn install_one(
         .map(|pattern| {
             pattern
                 .replace("{repository}", &core.repository)
-                .replace("{revision}", &core.revision)
+                .replace("{ref}", &core.license_ref)
                 .replace("{path}", &core.license_path)
         })
         .collect::<Vec<_>>();
-    let license_state = ensure_file(
-        &directory.join("licenses"),
+    let license_state = place_recorded(
+        directory,
+        "licenses",
+        &core.component,
         &core.license_file,
         &license_mirrors,
-        &core.license_sha256,
+        false,
         transport,
     );
     Some(CoreInstall {
@@ -265,28 +218,178 @@ fn install_one(
     })
 }
 
-fn fetch_recorded(
+/// `(state, source)`. `source` is the URL of the installed file. A file
+/// already on disk has no source, because we did not download it in this call.
+fn place_archive(
+    directory: &Path,
+    filename: &str,
     mirrors: &[String],
-    expected: &str,
     transport: &dyn Transport,
-) -> Result<Vec<u8>, CoreFailure> {
+) -> Result<(CoreState, Option<String>), CoreFailure> {
+    let path = directory.join(filename);
+    discard_partial(directory, filename);
+    if path.is_file() {
+        return Ok((CoreState::Present, None));
+    }
+    let (binary, source) = fetch_named(mirrors, filename, transport)?;
+    install_bytes(directory, filename, &binary)?;
+    Ok((CoreState::Installed, Some(source)))
+}
+
+fn place_text(
+    directory: &Path,
+    filename: &str,
+    mirrors: &[String],
+    transport: &dyn Transport,
+) -> Result<(CoreState, Option<String>), CoreFailure> {
+    let path = directory.join(filename);
+    discard_partial(directory, filename);
+    if path.is_file() {
+        return Ok((CoreState::Present, None));
+    }
+    let (bytes, source) = fetch_body(mirrors, transport)?;
+    install_bytes(directory, filename, &bytes)?;
+    Ok((CoreState::Installed, Some(source)))
+}
+
+/// Install, then record what we downloaded. We would skip a core without a
+/// record on the next export and have nothing to compare on an update, so
+/// when the record fails we remove the file and try again next time.
+fn place_recorded(
+    cache: &Path,
+    section: &str,
+    component: &str,
+    filename: &str,
+    mirrors: &[String],
+    archive: bool,
+    transport: &dyn Transport,
+) -> Result<CoreState, CoreFailure> {
+    let directory = cache.join(section);
+    let placed = if archive {
+        place_archive(&directory, filename, mirrors, transport)
+    } else {
+        place_text(&directory, filename, mirrors, transport)
+    };
+    let (state, source) = placed?;
+    let Some(source) = source else {
+        return Ok(state);
+    };
+    if let Err(error) = record_download(cache, section, component, filename, &source) {
+        let _ = fs::remove_file(directory.join(filename));
+        return Err(error);
+    }
+    Ok(state)
+}
+
+fn fetch_named(
+    mirrors: &[String],
+    filename: &str,
+    transport: &dyn Transport,
+) -> Result<(Vec<u8>, String), CoreFailure> {
     let mut saw_bytes = false;
     for url in mirrors {
-        match transport.get(url) {
-            Ok(bytes) => {
-                saw_bytes = true;
-                if sha256_hex(&bytes) == expected {
-                    return Ok(bytes);
-                }
-            }
-            Err(()) => {}
+        let Ok(archive) = transport.get(url) else {
+            continue;
+        };
+        saw_bytes = true;
+        if let Some(binary) = extract_named(&archive, filename) {
+            return Ok((binary, url.clone()));
         }
     }
-    if saw_bytes {
-        Err(CoreFailure::NotRecorded)
+    Err(if saw_bytes {
+        CoreFailure::NotRecorded
     } else {
-        Err(CoreFailure::Unreachable)
+        CoreFailure::Unreachable
+    })
+}
+
+/// An empty body is not a licence. If we saved it, on the next export we
+/// would treat the blank file as present and never ask again.
+fn fetch_body(
+    mirrors: &[String],
+    transport: &dyn Transport,
+) -> Result<(Vec<u8>, String), CoreFailure> {
+    let mut saw_bytes = false;
+    for url in mirrors {
+        let Ok(bytes) = transport.get(url) else {
+            continue;
+        };
+        if bytes.is_empty() {
+            saw_bytes = true;
+            continue;
+        }
+        return Ok((bytes, url.clone()));
     }
+    Err(if saw_bytes {
+        CoreFailure::NotRecorded
+    } else {
+        CoreFailure::Unreachable
+    })
+}
+
+fn record_download(
+    cache: &Path,
+    section: &str,
+    component: &str,
+    filename: &str,
+    source: &str,
+) -> Result<(), CoreFailure> {
+    let path = cache.join("fetched.json");
+    let mut doc: serde_json::Value = fs::read(&path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .filter(|value: &serde_json::Value| value.is_object())
+        .unwrap_or_else(|| serde_json::json!({}));
+    let entry = serde_json::json!({
+        "filename": filename,
+        "source": source,
+        "downloadedAt": utc_now(),
+    });
+    let object = doc.as_object_mut().ok_or(CoreFailure::Unreachable)?;
+    let slot = object
+        .entry(section)
+        .or_insert_with(|| serde_json::json!({}));
+    if !slot.is_object() {
+        *slot = serde_json::json!({});
+    }
+    slot.as_object_mut()
+        .ok_or(CoreFailure::Unreachable)?
+        .insert(component.to_string(), entry);
+    let text = serde_json::to_vec_pretty(&doc).map_err(|_| CoreFailure::Unreachable)?;
+    install_bytes(cache, "fetched.json", &text)
+}
+
+fn utc_now() -> String {
+    let secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0);
+    format_unix_utc(secs)
+}
+
+fn format_unix_utc(secs: u64) -> String {
+    let days = (secs / 86_400) as i64;
+    let tod = secs % 86_400;
+    let hour = tod / 3_600;
+    let minute = (tod % 3_600) / 60;
+    let second = tod % 60;
+    let (year, month, day) = civil_from_days(days);
+    format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z")
+}
+
+/// Days since 1970-01-01 to a civil date. Howard Hinnant's `civil_from_days`.
+fn civil_from_days(z: i64) -> (i64, u32, u32) {
+    let z = z + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let year = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = if month <= 2 { year + 1 } else { year };
+    (year, month as u32, day as u32)
 }
 
 fn extract_named(archive: &[u8], filename: &str) -> Option<Vec<u8>> {
@@ -314,23 +417,10 @@ fn extract_named(archive: &[u8], filename: &str) -> Option<Vec<u8>> {
     found
 }
 
-fn file_matches(path: &Path, expected: &str) -> bool {
-    let Ok(bytes) = fs::read(path) else {
-        return false;
-    };
-    sha256_hex(&bytes) == expected
-}
-
 fn discard_partial(directory: &Path, filename: &str) {
     let partial = directory.join(format!("{filename}.partial"));
     if partial.is_file() {
         let _ = fs::remove_file(partial);
-    }
-}
-
-fn discard_unless_recorded(path: &Path, expected: &str) {
-    if path.is_file() && !file_matches(path, expected) {
-        let _ = fs::remove_file(path);
     }
 }
 
@@ -388,8 +478,6 @@ mod tests {
         let core = CoreDownload {
             filename: filename.to_string(),
             mirrors: mirrors.iter().map(|url| (*url).to_string()).collect(),
-            archive_sha256: sha256_hex(&archive),
-            binary_sha256: sha256_hex(body),
         };
         (core, archive)
     }
@@ -404,6 +492,61 @@ mod tests {
         let _ = fs::remove_dir_all(&path);
         fs::create_dir_all(&path).unwrap();
         path
+    }
+
+    /// Libretro replaces `latest` in place, so a downloaded file can differ
+    /// from an earlier one. We accept the download as the core when the
+    /// archive contains the file name in the list.
+    #[test]
+    fn a_file_that_was_never_recorded_is_installed_when_the_archive_names_it() {
+        let body = b"replaced-after-the-pin";
+        let (core, archive) = download("handy_libretro.dylib", body, &["https://mirror/a"]);
+        let dir = temp();
+        let transport = Scripted {
+            files: HashMap::from([("https://mirror/a".into(), Ok(archive))]),
+            calls: Cell::new(0),
+        };
+        let state = ensure_core(&dir, &core, &transport).unwrap();
+        assert_eq!(state, CoreState::Installed);
+        assert_eq!(fs::read(dir.join(&core.filename)).unwrap(), body);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_archive_without_the_named_file_is_refused() {
+        let archive = zip_of("someone_else.dylib", b"not-the-core");
+        let (core, _) = download("handy_libretro.dylib", b"the-core", &["https://mirror/a"]);
+        let dir = temp();
+        let transport = Scripted {
+            files: HashMap::from([("https://mirror/a".into(), Ok(archive))]),
+            calls: Cell::new(0),
+        };
+        let error = ensure_core(&dir, &core, &transport).unwrap_err();
+        assert_eq!(error, CoreFailure::NotRecorded);
+        assert!(!dir.join(&core.filename).exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// We accept a file already in the cache as the fetched core, whatever
+    /// bytes it contains. We do not check it against a recorded hash, because
+    /// nightly cores are replaced in place on the buildbot.
+    #[test]
+    fn a_core_already_there_is_not_fetched_even_when_its_bytes_differ() {
+        let (core, _) = download("handy_libretro.dylib", b"the-core", &["https://mirror/a"]);
+        let dir = temp();
+        fs::write(dir.join(&core.filename), b"not-the-bytes-we-recorded").unwrap();
+        let transport = Scripted {
+            files: HashMap::new(),
+            calls: Cell::new(0),
+        };
+        let state = ensure_core(&dir, &core, &transport).unwrap();
+        assert_eq!(state, CoreState::Present);
+        assert_eq!(transport.calls.get(), 0);
+        assert_eq!(
+            fs::read(dir.join(&core.filename)).unwrap(),
+            b"not-the-bytes-we-recorded"
+        );
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -468,21 +611,6 @@ mod tests {
     }
 
     #[test]
-    fn a_corrupt_file_is_not_trusted_and_a_wrong_replacement_is_not_kept() {
-        let (core, _) = download("handy_libretro.dylib", b"the-core", &["https://mirror/a"]);
-        let dir = temp();
-        fs::write(dir.join(&core.filename), b"garbage").unwrap();
-        let transport = Scripted {
-            files: HashMap::from([("https://mirror/a".into(), Ok(b"not-the-zip".to_vec()))]),
-            calls: Cell::new(0),
-        };
-        let error = ensure_core(&dir, &core, &transport).unwrap_err();
-        assert_eq!(error, CoreFailure::NotRecorded);
-        assert!(!dir.join(&core.filename).exists());
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
     fn a_partial_file_is_not_a_core() {
         let (core, _) = download("handy_libretro.dylib", b"the-core", &["https://mirror/a"]);
         let dir = temp();
@@ -509,37 +637,31 @@ mod tests {
                 "macos-arm64".into(),
                 "apple/osx/arm64".into(),
             )]),
-            license_mirrors: vec!["https://licence/{repository}/{revision}/{path}".into()],
+            license_mirrors: vec!["https://licence/{repository}/{ref}/{path}".into()],
             cores: vec![
                 PinnedCore {
                     component: "a".into(),
                     repository: "libretro/a".into(),
-                    revision: "abc".into(),
                     license_file: "a.txt".into(),
                     license_path: "COPYING".into(),
-                    license_sha256: sha256_hex(b"licence-a"),
+                    license_ref: "master".into(),
                     artifacts: std::collections::BTreeMap::from([(
                         "macos-arm64".into(),
                         PinnedArtifact {
                             filename: first.filename,
-                            archive_sha256: first.archive_sha256,
-                            binary_sha256: first.binary_sha256,
                         },
                     )]),
                 },
                 PinnedCore {
                     component: "b".into(),
                     repository: "libretro/b".into(),
-                    revision: "def".into(),
                     license_file: "b.txt".into(),
                     license_path: "COPYING".into(),
-                    license_sha256: sha256_hex(b"licence-b"),
+                    license_ref: "develop".into(),
                     artifacts: std::collections::BTreeMap::from([(
                         "macos-arm64".into(),
                         PinnedArtifact {
                             filename: second.filename,
-                            archive_sha256: second.archive_sha256,
-                            binary_sha256: second.binary_sha256,
                         },
                     )]),
                 },
@@ -555,7 +677,7 @@ mod tests {
                     Ok(second_zip),
                 ),
                 (
-                    "https://licence/libretro/b/def/COPYING".into(),
+                    "https://licence/libretro/b/develop/COPYING".into(),
                     Ok(b"licence-b".to_vec()),
                 ),
             ]),
@@ -572,5 +694,90 @@ mod tests {
         let again = install_pins(&dir, "macos-arm64", &pins, &transport);
         assert_eq!(again[1].core, InstallOutcome::Present);
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// The licence is the text on the repository's current branch, and we
+    /// store that text with the download.
+    #[test]
+    fn a_licence_that_was_never_recorded_is_kept() {
+        let pins = PinSet {
+            core_mirrors: vec!["https://cores".into()],
+            targets: std::collections::BTreeMap::from([(
+                "macos-arm64".into(),
+                "apple/osx/arm64".into(),
+            )]),
+            license_mirrors: vec!["https://licence/{repository}/{ref}/{path}".into()],
+            cores: vec![PinnedCore {
+                component: "flycast".into(),
+                repository: "flyinghead/flycast".into(),
+                license_file: "flycast.txt".into(),
+                license_path: "LICENSE".into(),
+                license_ref: "master".into(),
+                artifacts: std::collections::BTreeMap::from([(
+                    "macos-arm64".into(),
+                    PinnedArtifact {
+                        filename: "flycast_libretro.dylib".into(),
+                    },
+                )]),
+            }],
+        };
+        let archive = zip_of("flycast_libretro.dylib", b"the-core");
+        let today = b"the licence as it stands now";
+        let transport = Scripted {
+            files: HashMap::from([
+                (
+                    "https://cores/apple/osx/arm64/latest/flycast_libretro.dylib.zip".into(),
+                    Ok(archive),
+                ),
+                (
+                    "https://licence/flyinghead/flycast/master/LICENSE".into(),
+                    Ok(today.to_vec()),
+                ),
+            ]),
+            calls: Cell::new(0),
+        };
+        let dir = temp();
+        let report = install_pins(&dir, "macos-arm64", &pins, &transport);
+        assert_eq!(report[0].core, InstallOutcome::Installed);
+        assert_eq!(report[0].license, InstallOutcome::Installed);
+        assert_eq!(fs::read(dir.join("licenses/flycast.txt")).unwrap(), today);
+        let record: serde_json::Value =
+            serde_json::from_slice(&fs::read(dir.join("fetched.json")).unwrap()).unwrap();
+        assert_eq!(
+            record["cores"]["flycast"]["filename"],
+            "flycast_libretro.dylib"
+        );
+        assert_eq!(
+            record["cores"]["flycast"]["source"],
+            "https://cores/apple/osx/arm64/latest/flycast_libretro.dylib.zip"
+        );
+        assert_eq!(
+            record["licenses"]["flycast"]["source"],
+            "https://licence/flyinghead/flycast/master/LICENSE"
+        );
+        let when = record["cores"]["flycast"]["downloadedAt"].as_str().unwrap();
+        assert!(
+            when.len() == 20 && when.ends_with('Z') && when.contains('T'),
+            "{when}"
+        );
+        let calls = transport.calls.get();
+        let again = install_pins(&dir, "macos-arm64", &pins, &transport);
+        assert_eq!(again[0].core, InstallOutcome::Present);
+        assert_eq!(again[0].license, InstallOutcome::Present);
+        assert_eq!(
+            transport.calls.get(),
+            calls,
+            "a second fetch asked the network"
+        );
+        let again_record: serde_json::Value =
+            serde_json::from_slice(&fs::read(dir.join("fetched.json")).unwrap()).unwrap();
+        assert_eq!(again_record["cores"]["flycast"]["downloadedAt"], when);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_download_is_stamped_in_utc() {
+        assert_eq!(format_unix_utc(0), "1970-01-01T00:00:00Z");
+        assert_eq!(format_unix_utc(86_400), "1970-01-02T00:00:00Z");
     }
 }

@@ -295,3 +295,80 @@ fn a_missing_core_is_fetched_before_the_game_is_built_and_not_again() {
         "the second export fetched a core that was already kept"
     );
 }
+
+/// A Windows package contains the Windows core even when we run on a Mac.
+struct RecordingFetch {
+    calls: Cell<usize>,
+    target: std::cell::RefCell<String>,
+}
+
+impl rominabox_desktop::packaging::CoreFetch for RecordingFetch {
+    fn fetch_component(&self, _cache: &Path, component: &str, target: &str) -> Result<(), String> {
+        assert_eq!(component, "flycast");
+        self.calls.set(self.calls.get() + 1);
+        *self.target.borrow_mut() = target.to_string();
+        Ok(())
+    }
+}
+
+#[test]
+fn a_windows_export_fetches_the_windows_core_not_this_machines() {
+    let root = workspace();
+    let mut request = dreamcast_request(&root);
+    request.target = ExportTarget::Windows;
+    let fetch = RecordingFetch {
+        calls: Cell::new(0),
+        target: std::cell::RefCell::new(String::new()),
+    };
+    let _ = rominabox_desktop::packaging::export_game_fetching(
+        &request,
+        &AtomicBool::new(false),
+        |_| {},
+        &fetch,
+    );
+    assert_eq!(fetch.calls.get(), 1, "the missing core was not fetched");
+    assert_eq!(
+        fetch.target.borrow().as_str(),
+        "windows-x86_64",
+        "the export asked for the host platform's core"
+    );
+}
+
+/// We find a Windows core that is already in the cache for a Windows export.
+///
+/// We name the download for the platform of the export, and look for the
+/// same name in the cache. On a Mac, the core of a Windows Dreamcast export
+/// is `flycast_libretro.dll`, and a missing `.dylib` in the kit is no reason
+/// to refuse it.
+#[test]
+fn a_windows_export_with_the_windows_core_cached_does_not_ask_for_the_mac_file() {
+    let root = workspace();
+    let mut request = dreamcast_request(&root);
+    request.target = ExportTarget::Windows;
+    let cache = request.core_cache.as_ref().unwrap();
+    fs::create_dir_all(cache.join("cores")).unwrap();
+    fs::create_dir_all(cache.join("licenses")).unwrap();
+    fs::write(cache.join("cores/flycast_libretro.dll"), b"flycast-windows").unwrap();
+    fs::write(cache.join("licenses/flycast.txt"), b"flycast-licence").unwrap();
+    let fetch = RecordingFetch {
+        calls: Cell::new(0),
+        target: std::cell::RefCell::new(String::new()),
+    };
+    let error = rominabox_desktop::packaging::export_game_fetching(
+        &request,
+        &AtomicBool::new(false),
+        |_| {},
+        &fetch,
+    )
+    .expect_err("this build does not finish a windows package");
+    assert_eq!(
+        fetch.calls.get(),
+        0,
+        "the windows core was already cached; export fetched anyway"
+    );
+    assert!(
+        !error.message.contains("flycast_libretro.dylib"),
+        "windows core was cached; export said: {}",
+        error.message
+    );
+}

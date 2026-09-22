@@ -14,7 +14,8 @@ fn repo_root() -> PathBuf {
     // The rule is in the crate, so its binary and its tests cannot drift apart.
     rominabox_catalog::repo_root()
         .canonicalize()
-        .expect("repository root")}
+        .expect("repository root")
+}
 
 fn catalog() -> Catalog {
     let root = repo_root().join(PACKAGE_ROOT);
@@ -22,7 +23,10 @@ fn catalog() -> Catalog {
         Ok(catalog) => catalog,
         Err(problems) => {
             let report: Vec<String> = problems.iter().map(ToString::to_string).collect();
-            panic!("the shipped packages do not validate:\n{}", report.join("\n"));
+            panic!(
+                "the shipped packages do not validate:\n{}",
+                report.join("\n")
+            );
         }
     }
 }
@@ -157,7 +161,11 @@ fn every_controller_profile_survives_with_its_exact_layout() {
             .profile(id)
             .unwrap_or_else(|| panic!("controller profile '{id}' should exist in the catalog"));
 
-        assert_eq!(ported.name, legacy_profile["name"].as_str().unwrap(), "{id} name");
+        assert_eq!(
+            ported.name,
+            legacy_profile["name"].as_str().unwrap(),
+            "{id} name"
+        );
         assert_eq!(
             ported.core_device,
             legacy_profile["coreDevice"].as_u64().map(|v| v as u32),
@@ -166,7 +174,12 @@ fn every_controller_profile_survives_with_its_exact_layout() {
 
         let image = legacy_profile["image"].as_str().unwrap_or_default();
         match (&ported.presentation, image.is_empty()) {
-            (Presentation::Illustrated { image: ported_image }, false) => {
+            (
+                Presentation::Illustrated {
+                    image: ported_image,
+                },
+                false,
+            ) => {
                 assert_eq!(ported_image, image, "{id} illustration")
             }
             (Presentation::Generic, true) => {}
@@ -274,7 +287,10 @@ fn an_alias_resolves_to_the_same_console_it_always_did() {
 
     for system in systems["systems"].as_array().unwrap() {
         let id = system["id"].as_str().unwrap();
-        for alias in strings(&system["aliases"]).iter().chain(std::iter::once(&id.to_string())) {
+        for alias in strings(&system["aliases"])
+            .iter()
+            .chain(std::iter::once(&id.to_string()))
+        {
             let resolved = catalog
                 .find(alias)
                 .unwrap_or_else(|| panic!("'{alias}' should resolve"));
@@ -312,22 +328,25 @@ fn the_core_pins_are_the_packages() {
             .find(|item| item["component"] == *id)
             .unwrap_or_else(|| panic!("{id} is missing from core-pins.json"));
         assert_eq!(entry["repository"], provenance.repository);
-        assert_eq!(entry["revision"], provenance.revision);
         assert_eq!(entry["licenseFile"], component.license.file);
         assert_eq!(entry["licensePath"], provenance.license_candidates[0]);
+        assert!(entry.get("revision").is_none());
+        assert!(entry.get("licenseSha256").is_none());
         assert_eq!(
-            entry["licenseSha256"],
-            provenance.license_sha256.as_deref().unwrap()
+            entry["licenseRef"],
+            provenance.branch.as_deref().unwrap(),
+            "{id} licence ref"
+        );
+        let license_ref = entry["licenseRef"].as_str().unwrap();
+        assert!(
+            license_ref.len() < 40,
+            "{id} licence ref is a commit, not the current branch"
         );
         for target in SHIPPED_TARGETS {
-            let pin = provenance
-                .downloads
-                .get(*target)
-                .unwrap_or_else(|| panic!("{id} has no {target} pin"));
             let artifact = &entry["artifacts"][target];
             assert_eq!(artifact["filename"], component.artifacts[*target]);
-            assert_eq!(artifact["archiveSha256"], pin.archive_sha256);
-            assert_eq!(artifact["binarySha256"], pin.binary_sha256);
+            assert!(artifact.get("archiveSha256").is_none());
+            assert!(artifact.get("binarySha256").is_none());
         }
     }
     assert_eq!(listed.len(), expected);
@@ -344,13 +363,14 @@ fn every_component_can_be_obtained_for_every_shipped_target() {
         match &component.provenance {
             None => problems.push(format!("{id}: no provenance")),
             Some(provenance) => {
-                if provenance
-                    .license_sha256
-                    .as_deref()
-                    .map(|value| value.len() != 64)
-                    .unwrap_or(true)
-                {
-                    problems.push(format!("{id}: no recorded licence hash"));
+                if provenance.downloads.is_empty() {
+                    problems.push(format!("{id}: no download entry"));
+                }
+                match provenance.branch.as_deref() {
+                    Some(branch) if branch != provenance.revision && branch.len() < 40 => {}
+                    _ => problems.push(format!(
+                        "{id}: licence is still a fixed commit, not the current branch"
+                    )),
                 }
                 for target in SHIPPED_TARGETS {
                     if !provenance.downloads.contains_key(*target) {
@@ -390,8 +410,7 @@ fn the_checked_in_registries_are_what_the_catalog_generates() {
         let path = repo_root().join("desktop").join(name);
         let actual = std::fs::read_to_string(&path).expect("registry is readable");
         assert_eq!(
-            actual,
-            expected,
+            actual, expected,
             "{name} has drifted from the packages; regenerate it instead of editing it by hand"
         );
     }

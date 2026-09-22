@@ -404,9 +404,12 @@ impl Catalog {
                         ),
                     ));
                 }
-                if console.content.recognize_only.iter().any(|extension| {
-                    extension.eq_ignore_ascii_case(&sheet.extension)
-                }) {
+                if console
+                    .content
+                    .recognize_only
+                    .iter()
+                    .any(|extension| extension.eq_ignore_ascii_case(&sheet.extension))
+                {
                     problems.push(Diagnostic::new(
                         "content.sheet_is_recognise_only",
                         package,
@@ -1014,12 +1017,12 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
     Ok(rendered)
 }
 
-/// The bytes we accept at a first boot.
+/// Where we download a core from, per platform.
 ///
-/// libretro replaces `latest` on the buildbot in place, so we reject a file
-/// whose hash differs from the pinned one. We compile Gambatte and Genesis
-/// Plus GX locally on macOS when the recipe matches. At first boot we fetch
-/// the pinned file when the kit lacks that compiled file.
+/// libretro replaces `latest` on the buildbot in place, so this list contains
+/// the file and the branch we read the licence from, and no hash. We compile
+/// Gambatte and Genesis Plus GX locally on macOS when the recipe matches. In
+/// an export we fetch the listed file when the kit lacks that compiled file.
 fn core_pins(catalog: &Catalog) -> Result<String, String> {
     use serde_json::{json, Map, Value};
 
@@ -1033,41 +1036,32 @@ fn core_pins(catalog: &Catalog) -> Result<String, String> {
         if provenance.downloads.is_empty() {
             continue;
         }
-        let Some(license_sha256) = &provenance.license_sha256 else {
-            continue;
-        };
         let Some(license_path) = provenance.license_candidates.first() else {
-            continue;
+            return Err(format!("{id} has no licence path"));
+        };
+        let Some(license_ref) = provenance.branch.as_deref() else {
+            return Err(format!(
+                "{id} has no branch for the licence that travels with the nightly"
+            ));
         };
         let mut artifacts = Map::new();
-        for (target, pin) in &provenance.downloads {
+        for target in provenance.downloads.keys() {
             let Some(filename) = component.artifacts.get(target) else {
                 continue;
             };
-            artifacts.insert(
-                target.clone(),
-                json!({
-                    "filename": filename,
-                    "archiveSha256": pin.archive_sha256,
-                    "binarySha256": pin.binary_sha256,
-                    "archiveBytes": pin.archive_bytes,
-                    "binaryBytes": pin.binary_bytes,
-                }),
-            );
+            artifacts.insert(target.clone(), json!({ "filename": filename }));
         }
         cores.push(json!({
             "component": id,
             "repository": provenance.repository,
-            "revision": provenance.revision,
             "licenseFile": component.license.file,
             "licensePath": license_path,
-            "licenseSha256": license_sha256,
+            "licenseRef": license_ref,
             "artifacts": Value::Object(artifacts),
         }));
     }
     let value = json!({
-        "schemaVersion": 1,
-        "measured": "2026-09-22",
+        "schemaVersion": 2,
         "coreMirrors": [
             "https://buildbot.libretro.com/nightly",
             "https://bot.libretro.com/nightly"
@@ -1079,8 +1073,8 @@ fn core_pins(catalog: &Catalog) -> Result<String, String> {
             "windows-x86_64": "windows/x86_64"
         },
         "licenseMirrors": [
-            "https://raw.githubusercontent.com/{repository}/{revision}/{path}",
-            "https://cdn.jsdelivr.net/gh/{repository}@{revision}/{path}"
+            "https://raw.githubusercontent.com/{repository}/{ref}/{path}",
+            "https://cdn.jsdelivr.net/gh/{repository}@{ref}/{path}"
         ],
         "cores": cores
     });

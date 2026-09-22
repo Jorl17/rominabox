@@ -17,6 +17,7 @@
     "origin": "libretro-buildbot",
     "repository": "snes9xgit/snes9x",
     "revision": "4998efce010c95c1d83859a0530cdf43d2d27cb9",
+    "branch": "master",
     "licenseCandidates": [
       "LICENSE",
       "docs/snes9x-license.txt"
