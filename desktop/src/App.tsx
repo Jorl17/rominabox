@@ -452,6 +452,26 @@ export function App() {
     heading.current?.focus();
     setError("");
   }, [step]);
+  // We draw the controller scene and the menu frame in the colours of the
+  // palette the author picked, so the editor matches the exported game.
+  useEffect(() => {
+    const chosen = designs.palettes.find((entry) => entry.id === palette);
+    if (!chosen) return;
+    const root = document.documentElement;
+    const applied: string[] = [];
+    const set = (name: string, value: string) => {
+      root.style.setProperty(`--palette-${name}`, value);
+      applied.push(`--palette-${name}`);
+    };
+    for (const [name, value] of Object.entries(chosen)) {
+      if (typeof value === "string" && value.startsWith("#")) set(name, value);
+    }
+    for (const [name, value] of Object.entries(chosen.tokens ?? {})) {
+      if (typeof value === "string") set(name, value);
+    }
+    return () => applied.forEach((name) => root.style.removeProperty(name));
+  }, [palette]);
+
   useEffect(() => {
     if (step !== 2 || !draft.showMenu) return;
     if (!bridge.native) {

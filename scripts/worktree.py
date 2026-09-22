@@ -242,15 +242,19 @@ def write_local(path: Path, suffix: str, offset: int) -> dict:
 # The prepared runtime kit (the frozen RetroArch player, the cores, the menu
 # assets) is build output and is not in git. Without it we cannot export or
 # launch anything in a worktree, and a RetroArch build per worktree is too slow.
-# It is the same in every worktree unless the fork or a design changes, so we
-# share it with a symlink.
 #
-# Staging a design through that symlink would write into the canonical
-# checkout and give every other worktree a kit that does not match its
-# design. So in `build-builder-macos.sh` we refuse to stage through a shared
-# kit and suggest `--own-runtime`.
-SHARED_ARTIFACTS = [
+# We copy the kit and do not share it with a symlink. Staging a design writes
+# into the kit, and we stage designs in several scripts (for example, we build
+# a kit to photograph in menu_shots.py), so through a shared link one worktree
+# would overwrite the canonical kit and every other worktree would have a kit
+# that does not match its design.
+COPIED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/runtime"),
+]
+
+# We only ever read these, so we share them at no cost and save a lot of
+# space, because node_modules alone is larger than the kit.
+SHARED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/preview"),
     # Without these we cannot run the whole suite in a worktree, and the
     # failures look like a fault in the change. The `frontend` tests stop with
@@ -258,11 +262,24 @@ SHARED_ARTIFACTS = [
     # Both are build output, the same in every worktree, and not in git.
     Path("desktop/node_modules"),
     Path("work/experiments"),
+    # These are bundled resources in the tauri build, so without them we cannot
+    # compile the desktop crate. The error, "resource path `resources/skills`
+    # doesn't exist", looks like a missing file and not a missing link, and
+    # most test scopes then fail.
+    Path("desktop/src-tauri/resources/bin"),
+    Path("desktop/src-tauri/resources/skills"),
+    # The catalogues and picture lists for the identification measurement. We
+    # fetch them on purpose and never during a test, so without them we cannot
+    # run those tests in a worktree. The error message suggests a fetch, and in
+    # every checkout that would mean many requests to another party's API for
+    # the same files.
+    Path("work/identification-cache"),
 ]
 
 
 def link_build_artifacts(path: Path, own_copy: bool) -> None:
-    for relative in SHARED_ARTIFACTS:
+    for relative in COPIED_ARTIFACTS + SHARED_ARTIFACTS:
+        copy = own_copy or relative in COPIED_ARTIFACTS
         source = ROOT / relative
         if not source.exists():
             print(f"  {relative} is not prepared here; skipping")
@@ -271,7 +288,7 @@ def link_build_artifacts(path: Path, own_copy: bool) -> None:
         if target.exists() or target.is_symlink():
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
-        if own_copy:
+        if copy:
             started = time.monotonic()
             shutil.copytree(source, target, symlinks=True)
             print(f"  copied {relative} ({time.monotonic() - started:.0f}s)")
@@ -335,7 +352,6 @@ def adopt() -> int:
         local = write_local(here, suffix, offset)
     print(f"{here}\n{describe(local)}")
     return 0
-
 
 def environment() -> int:
     """Print the shell exports for a worktree, for `eval`."""

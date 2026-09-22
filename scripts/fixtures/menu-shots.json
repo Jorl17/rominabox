@@ -8,11 +8,11 @@
     "A step written \"wait:120\" waits that many frames instead, which is how",
     "anything on a clock is photographed at a chosen moment.",
     "",
-    "A shot that needs a different game says so beside its script: the boot",
-    "notice does not exist in an export that opens at the menu, because the",
-    "player is already looking at the menu. A shot may also name settings its",
-    "run needs; `pause_nonactive` is how the emulated console keeps running",
-    "while its window sits in the background, which it always does here.",
+    "A shot that needs a different game says so beside its script: what is drawn",
+    "over a running game does not exist in an export that opens at the menu,",
+    "because the player is already looking at the menu. A shot may also name",
+    "settings its run needs; `pause_nonactive` is how the emulated console keeps",
+    "running while its window sits in the background, which it always does here.",
     "",
     "These are the same states scripts/fixtures/menu-states.json declares, but",
     "reached rather than posed: menu-states sets the classes itself, and cannot",
@@ -20,103 +20,67 @@
   ],
   "shots": {
     "pause-menu": [],
-    "controls": [
-      "controls"
-    ],
-    "picker-open": [
-      "controls",
-      "controls-device-current"
-    ],
+    "options": ["options"],
+    "controls": ["options", "controls"],
+    "picker-open": ["options", "controls", "controls-device-current"],
     "picker-chosen": [
+      "options",
       "controls",
       "controls-device-current",
       "controls-device-option-megadrive6"
     ],
     "shaders": {
-      "script": [
-        "shaders"
-      ],
-      "shaders": {
-        "bundled": [
-          "scanlines",
-          "phosphor"
-        ],
-        "initial": "phosphor"
-      }
+      "script": ["shaders"],
+      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
     },
     "shaders-phosphor": {
-      "script": [
-        "shaders",
-        "phosphor"
-      ],
-      "shaders": {
-        "bundled": [
-          "scanlines",
-          "phosphor"
-        ],
-        "initial": "phosphor"
-      }
+      "script": ["shaders", "phosphor"],
+      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
     },
     "shaders-scanlines": {
-      "script": [
-        "shaders",
-        "scanlines"
-      ],
-      "shaders": {
-        "bundled": [
-          "scanlines",
-          "phosphor"
-        ],
-        "initial": "phosphor"
-      }
+      "script": ["shaders", "scanlines"],
+      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
     },
-    "boot-notice": {
-      "script": [
-        "wait:200"
-      ],
-      "startAtMenu": false,
-      "config": {
-        "pause_nonactive": "false"
-      }
-    },
-    "boot-notice-gone": {
-      "script": [
-        "wait:420"
-      ],
-      "startAtMenu": false,
-      "config": {
-        "pause_nonactive": "false"
-      }
-    },
-    "boot-notice-leaving": {
-      "script": [
-        "wait:285"
-      ],
-      "startAtMenu": false,
-      "config": {
-        "pause_nonactive": "false"
-      }
-    },
-    "boot-splash": {
-      "script": [
-        "wait:20"
-      ],
+    "boot-1-logo": {
+      "script": ["wait:20"],
       "startAtMenu": false,
       "splash": true,
-      "config": {
-        "pause_nonactive": "false"
-      }
+      "config": { "pause_nonactive": "false" }
     },
-    "logo-only-game": {
-      "script": [
-        "wait:20"
-      ],
+    "boot-2-game": {
+      "script": ["wait:60"],
+      "startAtMenu": false,
+      "splash": true,
+      "config": { "pause_nonactive": "false" }
+    },
+    "boot-3-notice": {
+      "script": ["wait:180"],
+      "startAtMenu": false,
+      "splash": true,
+      "config": { "pause_nonactive": "false" }
+    },
+    "boot-4-gone": {
+      "script": ["wait:400"],
+      "startAtMenu": false,
+      "splash": true,
+      "config": { "pause_nonactive": "false" }
+    },
+    "notice-without-logo": {
+      "script": ["wait:120"],
+      "startAtMenu": false,
+      "config": { "pause_nonactive": "false" }
+    },
+    "notice-leaving": {
+      "script": ["wait:265"],
+      "startAtMenu": false,
+      "config": { "pause_nonactive": "false" }
+    },
+    "logo-without-notice": {
+      "script": ["wait:20"],
       "startAtMenu": false,
       "showMenu": false,
       "splash": true,
-      "config": {
-        "pause_nonactive": "false"
-      }
+      "config": { "pause_nonactive": "false" }
     }
   }
 }

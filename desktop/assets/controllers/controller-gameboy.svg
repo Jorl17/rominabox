@@ -8,7 +8,7 @@
   <path d="M414 65h137v99H414z" fill="#242f35"/>
   <path d="M420 71h125v87H420z" fill="#a3bd45"/>
   <path d="M420 71h125v7H420zm0 0h7v87h-7z" fill="#738c35"/>
-  <path d="M433 112h18v18h-18zm24-12h18v30h-18zm24-12h18v42h-18zm24-12h18v54h-18z" fill="#526d34"/>
+  <path d="M441 140h18v18h-18zm24-12h18v30h-18zm24-12h18v42h-18zm24-12h18v54h-18z" fill="#526d34"/>
   <circle cx="394" cy="89" r="4" fill="#ed3f53"/>
   <path d="M411 202h26v21h21v26h-21v21h-26v-21h-21v-26h21z" fill="#898b88"/>
   <path d="M413 203h22v22h22v22h-22v22h-22v-22h-22v-22h22z" fill="#263146"/>
@@ -20,5 +20,5 @@
   <g fill="#fff0d7" font-family="sans-serif" font-size="17" font-weight="bold" text-anchor="middle"><text x="526" y="242">B</text><text x="569" y="220">A</text></g>
   <path d="m439 307 32-12 5 9-32 12zm55 0 32-12 5 9-32 12z" fill="#4a5367" stroke="#9b9d9c" stroke-width="2"/>
   <g fill="#4a5367" font-family="sans-serif" font-size="8" text-anchor="middle"><text x="458" y="331">SELECT</text><text x="513" y="331">START</text></g>
-  <path d="M555 310v29m9-29v25m9-25v19m9-19v12" stroke="#a4a99f" stroke-width="4"/>
+  <path d="M552 318v26m7-28v24m7-26v22m7-24v20m7-22v18m7-20v16" stroke="#a4a99f" stroke-width="4"/>
 </svg>

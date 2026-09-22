@@ -684,40 +684,26 @@ fn icon_png(id: &str) -> Result<Vec<u8>, String> {
     Ok(bytes.into_inner())
 }
 
+/// The shader screen as declared in the design, read with the same function
+/// as every other screen of a design.
 fn shader_screen(design: &Path) -> crate::themes::Screen {
-    if let Ok(text) = fs::read_to_string(design.join("design.json")) {
-        if let Ok(declared) = serde_json::from_str::<serde_json::Value>(&text) {
-            if let Some(listed) = declared.get("screens").and_then(|value| value.as_array()) {
-                if let Some(entry) = listed
-                    .iter()
-                    .find(|entry| entry.get("id").and_then(|id| id.as_str()) == Some("shaders"))
-                {
-                    let at = |key: &str, fallback: &str| {
-                        entry
-                            .get(key)
-                            .and_then(|value| value.as_str())
-                            .unwrap_or(fallback)
-                            .to_string()
-                    };
-                    return crate::themes::Screen {
-                        id: "shaders".into(),
-                        panel: at("panel", "shaders-panel"),
-                        heading: at("heading", "SHADERS"),
-                        footer: at("footer", "ESC  BACK"),
-                        button: at("button", "shaders"),
-                    };
-                }
-            }
-        }
-    }
-    crate::themes::Screen {
-        id: "shaders".into(),
-        panel: "shaders-panel".into(),
-        heading: "SHADERS".into(),
-        footer: "ESC  BACK".into(),
-        button: "shaders".into(),
-    }
+    crate::themes::declared_screens(design)
+        .ok()
+        .and_then(|screens| screens.into_iter().find(|screen| screen.id == "shaders"))
+        .unwrap_or_else(|| crate::themes::Screen {
+            id: "shaders".into(),
+            panel: "shaders-panel".into(),
+            heading: "SHADERS".into(),
+            footer: "ESC  BACK".into(),
+            button: "shaders".into(),
+            label: None,
+            back_label: None,
+            place: crate::themes::ScreenPlace::Plain,
+            option_label: None,
+            option_default: false,
+        })
 }
+
 
 /// Copy presets into the menu assets and fill the list markers. For an empty
 /// selection we clear the markers and write nothing else.

@@ -56,7 +56,7 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #resume { width: 216dp; }
 #save { left: 240dp; width: 124dp; }
 #load { left: 388dp; width: 124dp; }
-#controls { left: 536dp; width: 164dp; }
+#actions #controls, #actions #options { left: 536dp; width: 164dp; }
 #quit { left: 724dp; width: 112dp; }
 #controller-scene { position: absolute; left: -4dp; top: 80dp; width: design(scene-width)dp; height: design(scene-height)dp; }
 #controller-image { position: absolute; left: 0; top: 0; width: design(scene-width)dp; height: design(scene-height)dp; }

@@ -71,7 +71,7 @@ fn six_button_authoring_configures_the_emulated_device_and_labels() {
 fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
     let root = workspace();
     let options = Controls::default();
-    themes::prepare_controls_assets(&assets(), &assets(), &root, "atari2600", &options).unwrap();
+    themes::prepare_controls_assets(&assets(), &assets(), &root, "atari2600", &options, None).unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("id=\"control-r3\""));
     assert!(!markup.contains("id=\"controller-image\""));
@@ -82,8 +82,8 @@ fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
         .collect();
     assert!(
-        written.iter().all(|name| name.ends_with(".rml")),
-        "an asset-free console staged something that is not markup: {written:?}"
+        written.iter().all(|name| name.ends_with(".rml") || name == "design.cfg"),
+        "an asset-free console staged something that is not the menu: {written:?}"
     );
     controls::write_defaults_config("atari2600", &options, &root.join("controls.cfg")).unwrap();
     assert!(fs::read_to_string(root.join("controls.cfg"))
@@ -96,7 +96,7 @@ fn custom_labels_are_escaped_without_changing_control_identity() {
     let options: Controls =
         serde_json::from_value(serde_json::json!({"bindings":{"a":{"label":"Jump <go> & fly"}}}))
             .unwrap();
-    themes::prepare_controls_assets(&illustrated_assets(), &illustrated_assets(), &root, "nes", &options).unwrap();
+    themes::prepare_controls_assets(&illustrated_assets(), &illustrated_assets(), &root, "nes", &options, None).unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("Jump &lt;go&gt; &amp; fly"));
     assert!(markup.contains("id=\"control-a\""));
@@ -116,7 +116,7 @@ fn default_callout_labels_occur_once_and_custom_labels_keep_console_identity() {
         ("nes", illustrated_assets(), "A"),
     ] {
         let root = workspace();
-        themes::prepare_controls_assets(&source, &source, &root, system, &options).unwrap();
+        themes::prepare_controls_assets(&source, &source, &root, system, &options, None).unwrap();
         let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
         for label in ["Up", "Down", "Left", "Start"] {
             assert_eq!(
@@ -197,12 +197,46 @@ fn a_document_is_only_told_about_what_it_draws() {
         declared.contains("overlay_needs_splash = \"splash-logo.png\""),
         "{declared}"
     );
+    // We wait for the logo before the notice, not for a delay long enough on
+    // one machine, because a slow start delays both, so they cannot overlap.
+    assert!(
+        declared.contains("overlay_follows_notice = \"splash\""),
+        "{declared}"
+    );
 
     let logo_only = workspace();
     themes::prepare_splash_assets(&assets(), &logo_only, "blue").unwrap();
     let declared = fs::read_to_string(logo_only.join("design.cfg")).unwrap();
     assert!(declared.contains("overlays = \"splash\""), "{declared}");
     assert!(declared.contains("screens = \"\""), "{declared}");
+}
+
+/// An overlay may wait only for one declared before it.
+///
+/// If two overlays waited for each other, both would wait for ever, and the
+/// game would spend its first seconds drawing a menu document nobody asked
+/// for. Because of the order in which we declare them, that cannot happen.
+#[test]
+fn an_overlay_cannot_wait_for_one_that_comes_after_it() {
+    let design = workspace();
+    fs::copy(assets().join("menu.rml"), design.join("menu.rml")).unwrap();
+    let mut declared: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(assets().join("design.json")).unwrap()).unwrap();
+    declared["overlays"] = serde_json::json!([
+        { "id": "notice", "follows": "splash", "afterMs": 0, "holdMs": 10, "leaveMs": 0 },
+        { "id": "splash", "follows": "notice", "afterMs": 0, "holdMs": 10, "leaveMs": 0 },
+    ]);
+    fs::write(
+        design.join("design.json"),
+        serde_json::to_string(&declared).unwrap(),
+    )
+    .unwrap();
+    let refusal = match themes::declared_overlays(&design) {
+        Err(message) => message,
+        Ok(_) => panic!("a wait with no end was accepted"),
+    };
+    assert!(refusal.contains("notice"), "{refusal}");
+    assert!(refusal.contains("splash"), "{refusal}");
 }
 
 /// We show a picker only where there is a choice.
@@ -230,6 +264,7 @@ fn the_controller_picker_is_offered_only_when_there_is_a_choice() {
         rominabox_desktop::themes::prepare_controls_assets(&source, &source, &destination,
             system,
             &Controls::default(),
+            None,
         )
         .expect("the scene markup is generated");
         fs::read_to_string(destination.join("menu.rml")).unwrap()

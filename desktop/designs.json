@@ -17,7 +17,16 @@
       "edge": "#75b2e4",
       "highlight": "#fff13d",
       "muted": "#b4e6ff",
-      "focus": "#193e88"
+      "focus": "#193e88",
+      "tokens": {
+        "bevel-light": "#9edaff",
+        "bevel-dark": "#020b27",
+        "rule": "#476eab",
+        "disabled": "#647cad",
+        "frame": "#5296ef",
+        "slot-label": "#081433",
+        "well-edge": "#092754"
+      }
     },
     {
       "id": "green",
@@ -29,7 +38,16 @@
       "edge": "#8cf3bf",
       "highlight": "#fff13d",
       "muted": "#d9ffe7",
-      "focus": "#174760"
+      "focus": "#174760",
+      "tokens": {
+        "bevel-light": "#b6f7d5",
+        "bevel-dark": "#03121c",
+        "rule": "#3f7f68",
+        "disabled": "#6fa891",
+        "frame": "#2fb98f",
+        "slot-label": "#08222c",
+        "well-edge": "#0d2d3a"
+      }
     },
     {
       "id": "amber",
@@ -41,7 +59,16 @@
       "edge": "#ffd198",
       "highlight": "#fff13d",
       "muted": "#ffe3b4",
-      "focus": "#7c310d"
+      "focus": "#7c310d",
+      "tokens": {
+        "bevel-light": "#ffe6c4",
+        "bevel-dark": "#150b03",
+        "rule": "#8a4a22",
+        "disabled": "#b98a5f",
+        "frame": "#e8702a",
+        "slot-label": "#1d0f06",
+        "well-edge": "#2a1409"
+      }
     }
   ],
   "soundPacks": [

@@ -28,7 +28,6 @@ a person has to check. Here we test only what is on screen in the game.
 from __future__ import annotations
 
 import argparse
-import functools
 import hashlib
 import json
 import os
@@ -145,6 +144,13 @@ def take(app: Path, name: str, script: list[str], output: Path,
 
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 DESIGN = ROOT / "integrations/designs/native"
+# We build it here and check that it comes from this checkout, because every
+# worktree shares one cargo target, so the binary next to the manifest may be
+# out of date or from another checkout. See scripts/built.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from built import cli as _cli  # noqa: E402
+
+CLI = _cli()
 
 
 def built_player() -> Path | None:
@@ -160,33 +166,6 @@ def built_player() -> Path | None:
         key=lambda entry: entry.stat().st_mtime,
     )
     return builds[-1] if builds else None
-
-
-@functools.cache
-def command_line_tool() -> Path:
-    """Build the exporter from this checkout, and keep a copy of it.
-
-    Worktrees share one cargo target directory so that the dependencies are
-    not duplicated, but that also means they share the built binary, which
-    comes from the last build in any checkout. An export could then use the
-    exporter of another checkout with the design of this tree and give a
-    plausible but wrong shot. Builds through cargo happen one at a time, so
-    we copy the result here to keep the exporter of this checkout.
-    """
-    target = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "desktop/src-tauri/target"))
-    subprocess.run(
-        [
-            "cargo", "build", "--release",
-            "--manifest-path", str(ROOT / "desktop/src-tauri/Cargo.toml"),
-            "--bin", "rominabox-cli",
-        ],
-        check=True,
-    )
-    ours = ROOT / "work/rominabox-cli"
-    ours.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(target / "release/rominabox-cli", ours)
-    ours.chmod(0o755)
-    return ours
 
 
 def build_a_game(
@@ -240,7 +219,7 @@ def build_a_game(
     }
     request.update(settings)
     result = subprocess.run(
-        [str(command_line_tool()), "export"],
+        [str(CLI), "export"],
         input=json.dumps(request),
         capture_output=True,
         text=True,
