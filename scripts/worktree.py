@@ -337,6 +337,19 @@ def adopt() -> int:
     return 0
 
 
+def built_cli(checkout: Path) -> Path:
+    """Return the authoring command line to run from a script.
+
+    A fixed `desktop/src-tauri/target/release` path in a script is correct only
+    while nothing redirects cargo. Inside a worktree we redirect it to the
+    shared store in `environment`, so with such a path we would look in a
+    directory without cargo's output and report the tool as missing.
+    """
+    redirected = os.environ.get("CARGO_TARGET_DIR")
+    target = Path(redirected) if redirected else checkout / "desktop/src-tauri/target"
+    return target / "release/rominabox-cli"
+
+
 def environment() -> int:
     """Print the shell exports for a worktree, for `eval`."""
     config = Path.cwd().resolve() / LOCAL_CONFIG

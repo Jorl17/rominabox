@@ -200,10 +200,55 @@ def removal_never_touches_the_canonical_data() -> None:
         )
 
 
-# From inside a worktree, every check here is the wrong check. The common git
+def the_built_cli_follows_the_redirected_cargo_target() -> None:
+    """Check where four scripts find cargo's output, which moves in a worktree.
+
+    A fixed `desktop/src-tauri/target/release` path in a script is correct only
+    while nothing redirects cargo. Inside a worktree we always redirect it to
+    the shared store, so with such a path we would look in a directory without
+    cargo's output and report the tool as missing.
+    """
+    checkout = Path("/checkout")
+    shared = Path("/shared-cargo-target")
+    before = os.environ.get("CARGO_TARGET_DIR")
+    try:
+        os.environ["CARGO_TARGET_DIR"] = str(shared)
+        check(
+            worktree.built_cli(checkout) == shared / "release/rominabox-cli",
+            "the command line is looked for where cargo was redirected",
+        )
+        os.environ.pop("CARGO_TARGET_DIR")
+        check(
+            worktree.built_cli(checkout)
+            == checkout / "desktop/src-tauri/target/release/rominabox-cli",
+            "with nothing redirecting it, the checkout's own target directory",
+        )
+    finally:
+        if before is None:
+            os.environ.pop("CARGO_TARGET_DIR", None)
+        else:
+            os.environ["CARGO_TARGET_DIR"] = before
+
+
+# From inside a worktree, these checks are the wrong checks. The common git
 # directory is always the canonical checkout's, and we do not test a worktree
 # of a worktree. Without this, a run of the full suite inside a worktree would
-# fail here.
+# fail on them.
+FROM_THE_CANONICAL_CHECKOUT = [
+    the_common_dir_is_shared_not_per_worktree,
+    two_worktrees_never_share_a_port,
+    the_lock_is_exclusive_and_reentrant_after_release,
+    a_dead_holders_lock_is_reclaimed,
+    the_canonical_checkout_is_never_suffixed,
+    adopt_works_from_inside_the_worktree_it_adopts,
+    the_local_config_is_never_committed,
+    removal_never_touches_the_canonical_data,
+]
+
+# These checks give the same result anywhere, and are most useful in a worktree.
+ANYWHERE = [the_built_cli_follows_the_redirected_cargo_target]
+
+
 def inside_a_worktree() -> bool:
     import subprocess
 
@@ -217,22 +262,15 @@ def inside_a_worktree() -> bool:
 
 
 def main() -> int:
+    tests = list(ANYWHERE)
     if inside_a_worktree():
         print(
-            "  skipped: this checks how worktrees are created, from the "
-            "checkout they are created from. Run it there."
+            "  how worktrees are created is checked from the checkout they are "
+            "created from, so those are skipped here."
         )
-        return 0
-    for test in [
-        the_common_dir_is_shared_not_per_worktree,
-        two_worktrees_never_share_a_port,
-        the_lock_is_exclusive_and_reentrant_after_release,
-        a_dead_holders_lock_is_reclaimed,
-        the_canonical_checkout_is_never_suffixed,
-        adopt_works_from_inside_the_worktree_it_adopts,
-        the_local_config_is_never_committed,
-        removal_never_touches_the_canonical_data,
-    ]:
+    else:
+        tests += FROM_THE_CANONICAL_CHECKOUT
+    for test in tests:
         print(f"{test.__name__}")
         test()
     if FAILURES:

@@ -41,7 +41,9 @@ mkdir -p "$assets"
 for document in "$design"/*; do
   [ -f "$document" ] && cp "$document" "$assets/"
 done
-cli=$repo_root/desktop/src-tauri/target/release/rominabox-cli
+# Cargo writes to the default target only when nothing redirects it, and a
+# worktree always redirects it.
+cli=${CARGO_TARGET_DIR:-$repo_root/desktop/src-tauri/target}/release/rominabox-cli
 if [ -x "$cli" ]; then
   printf '{"source":"%s","destination":"%s","palette":"blue"}' "$design" "$assets" \
     | "$cli" stage-theme >/dev/null || {
