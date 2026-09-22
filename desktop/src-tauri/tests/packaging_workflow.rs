@@ -78,6 +78,7 @@ fn export_request(root: &Path) -> ExportRequest {
         target: ExportTarget::Macos,
         runtime_kit: fixture_kit(root),
         core: None,
+        core_cache: None,
     }
 }
 

@@ -1,6 +1,6 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
-use rominabox_desktop::{controls, metadata, packaging, projects, shaders, systems, themes};
+use rominabox_desktop::{controls, cores, metadata, packaging, projects, shaders, systems, themes};
 use serde::Deserialize;
 use serde_json::json;
 use std::io::{self, Read};
@@ -48,7 +48,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|shaders|shaders-check|schemas|where|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nshaders prints the catalog. shaders-check reads a selection on stdin.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the pinned cores for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     // The checkout from which we built this binary.
@@ -74,6 +74,7 @@ fn run() -> Result<(), String> {
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
                 "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "menuEntries?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "menuEntries": "option entry ids to offer; omit for the design's defaults; [] offers no Options button", "events": ["progress", "result", "error"] },
                 "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
+                "cores": { "request": ["cache", "target"], "target": "macos-arm64 | macos-x86_64 | windows-x86_64 | linux-x86_64", "result": "per-core present, installed, unreachable or notRecorded" },
                 "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
                 "shaders": { "request": [], "result": "Catalog presets an author can bundle" },
                 "shaders-check": { "request": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "optional id" }, "result": "Resolved shaders, or an error" },
@@ -136,6 +137,20 @@ fn run() -> Result<(), String> {
             )
             .map_err(|error| error.to_string())?;
             println!("{}", json!({ "type": "result", "result": result }));
+            Ok(())
+        }
+        "cores" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                cache: PathBuf,
+                target: String,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid cores request: {error}"))?;
+            let report =
+                cores::install_target(&request.cache, &request.target, &cores::UreqTransport);
+            println!("{}", json!({ "type": "result", "result": report }));
             Ok(())
         }
         "firmware" => {

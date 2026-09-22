@@ -163,6 +163,9 @@ export function cancelExport(): Promise<void> {
 export function availableSystems(): Promise<string[]> {
   return invoke("available_systems");
 }
+export function ensureCores(): Promise<unknown> {
+  return invoke("ensure_cores");
+}
 export function defaultDestination(): Promise<string> {
   return invoke("default_destination");
 }

@@ -772,5 +772,81 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
         text.push('\n');
         rendered.push((name, text));
     }
+    rendered.push(("core-pins.json", core_pins(catalog)?));
     Ok(rendered)
+}
+
+/// The bytes we accept at a first boot.
+///
+/// libretro replaces `latest` on the buildbot in place, so we reject a file
+/// whose hash differs from the pinned one. We compile Gambatte and Genesis
+/// Plus GX locally on macOS when the recipe matches. At first boot we fetch
+/// the pinned file when the kit lacks that compiled file.
+fn core_pins(catalog: &Catalog) -> Result<String, String> {
+    use serde_json::{json, Map, Value};
+
+    let mut cores = Vec::new();
+    let mut components: Vec<_> = catalog.components().collect();
+    components.sort_by(|left, right| left.0.cmp(right.0));
+    for (id, component) in components {
+        let Some(provenance) = &component.provenance else {
+            continue;
+        };
+        if provenance.downloads.is_empty() {
+            continue;
+        }
+        let Some(license_sha256) = &provenance.license_sha256 else {
+            continue;
+        };
+        let Some(license_path) = provenance.license_candidates.first() else {
+            continue;
+        };
+        let mut artifacts = Map::new();
+        for (target, pin) in &provenance.downloads {
+            let Some(filename) = component.artifacts.get(target) else {
+                continue;
+            };
+            artifacts.insert(
+                target.clone(),
+                json!({
+                    "filename": filename,
+                    "archiveSha256": pin.archive_sha256,
+                    "binarySha256": pin.binary_sha256,
+                    "archiveBytes": pin.archive_bytes,
+                    "binaryBytes": pin.binary_bytes,
+                }),
+            );
+        }
+        cores.push(json!({
+            "component": id,
+            "repository": provenance.repository,
+            "revision": provenance.revision,
+            "licenseFile": component.license.file,
+            "licensePath": license_path,
+            "licenseSha256": license_sha256,
+            "artifacts": Value::Object(artifacts),
+        }));
+    }
+    let value = json!({
+        "schemaVersion": 1,
+        "measured": "2026-09-22",
+        "coreMirrors": [
+            "https://buildbot.libretro.com/nightly",
+            "https://bot.libretro.com/nightly"
+        ],
+        "targets": {
+            "linux-x86_64": "linux/x86_64",
+            "macos-arm64": "apple/osx/arm64",
+            "macos-x86_64": "apple/osx/x86_64",
+            "windows-x86_64": "windows/x86_64"
+        },
+        "licenseMirrors": [
+            "https://raw.githubusercontent.com/{repository}/{revision}/{path}",
+            "https://cdn.jsdelivr.net/gh/{repository}@{revision}/{path}"
+        ],
+        "cores": cores
+    });
+    let mut text = serde_json::to_string_pretty(&value).map_err(|error| error.to_string())?;
+    text.push('\n');
+    Ok(text)
 }

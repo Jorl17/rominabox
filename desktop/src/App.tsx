@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { SYSTEMS, formatBytes, inspectRom } from "./inspection";
 import * as bridge from "./bridge";
+import { canExport, whyNot } from "./consoles";
 import designs from "../designs.json";
 import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
@@ -428,9 +429,17 @@ export function App() {
     bridge.onExportProgress(setProgress).then(save).catch(fail);
     bridge.defaultDestination().then(setDestination).catch(fail);
     bridge
-      .availableSystems()
-      .then((ids) => setSupported(new Set(ids)))
-      .catch(fail);
+      .ensureCores()
+      .catch(() => undefined)
+      .finally(() => {
+        if (disposed) return;
+        bridge
+          .availableSystems()
+          .then((ids) => {
+            if (!disposed) setSupported(new Set(ids));
+          })
+          .catch(fail);
+      });
     return () => {
       disposed = true;
       cleanups.forEach((fn) => fn());
@@ -513,6 +522,7 @@ export function App() {
       ),
   );
   const systemName = systemDefinition?.name || "Choose a console";
+
   const requirements = systemDefinition?.firmware || [];
   const asksFirmware = requirements.length > 0;
   const firmwareBlocked =
@@ -822,8 +832,15 @@ export function App() {
                             Choose a console
                           </option>
                           {SYSTEMS.map((s) => (
-                            <option key={s.id} value={s.id}>
+                            <option
+                              key={s.id}
+                              value={s.id}
+                              disabled={!canExport(supported, s.id)}
+                            >
                               {s.name}
+                              {whyNot(supported, s.id)
+                                ? ` — ${whyNot(supported, s.id)}`
+                                : ""}
                             </option>
                           ))}
                         </select>
@@ -1282,12 +1299,14 @@ export function App() {
                       <span>Change</span>
                     </button>
                   </div>
-                  {bridge.native &&
-                    !supported.has(systemDefinition?.id || draft.system) && (
-                      <p className="error">
-                        This build does not include the {systemName} core yet.
-                      </p>
-                    )}
+                  {!canExport(
+                    supported,
+                    systemDefinition?.id || draft.system,
+                  ) && (
+                    <p className="error">
+                      This build does not include the {systemName} core yet.
+                    </p>
+                  )}
                   {!bridge.native && (
                     <p className="note">
                       Export is available in the desktop app.
@@ -1375,7 +1394,7 @@ export function App() {
               disabled={
                 !!busy ||
                 !bridge.native ||
-                !supported.has(systemDefinition?.id || draft.system) ||
+                !canExport(supported, systemDefinition?.id || draft.system) ||
                 !destination ||
                 firmwareBlocked
               }

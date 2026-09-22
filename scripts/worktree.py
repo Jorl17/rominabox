@@ -16,11 +16,16 @@ changes: the port is 1420, the identifiers have no suffix, and
 `stable_identity` is the same. This is important, because a regression test
 checks it so that a player's saves survive a re-export of the same game.
 
-We do NOT isolate the prepared runtime kit, the cargo target directory and
-the submodule's object store. An isolated 6 GB target would cost 6 GB per
-worktree to avoid a lock that only serialises compilation, and isolated
-submodule objects would mean a new clone of 289 MB that git can share at
-no cost. We share large artifacts that depend only on their content.
+We do NOT isolate the cargo target and the submodule's object store. An
+isolated 6 GB target would cost 6 GB per worktree to avoid a lock that only
+serialises compilation, and isolated submodule objects would mean a new
+clone of 289 MB that git can share at no cost. We share large artifacts
+that depend only on their content.
+
+We copy the prepared runtime kit and do not share it. Through a symlink,
+staging a design in a worktree would write into the checkout it came from,
+and every worktree linked to it would then have a kit that does not match
+its design.
 """
 
 from __future__ import annotations

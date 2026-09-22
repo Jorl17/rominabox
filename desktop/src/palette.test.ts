@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import designs from "../designs.json";
@@ -46,8 +46,16 @@ for (const palette of designs.palettes) {
   }
 }
 
+// Every stylesheet of the builder, found by a search and not listed, so we
+// check a new stylesheet without its name here.
+const sheets = readdirSync(here).filter((name) => name.endsWith(".css"));
+
 describe("the builder's stylesheets", () => {
-  for (const sheet of ["style.css", "controls.css"]) {
+  it("has some, or this proves nothing", () => {
+    expect(sheets.length).toBeGreaterThan(1);
+  });
+
+  for (const sheet of sheets) {
     it(`${sheet} fixes no colour that belongs to a palette`, () => {
       const css = readFileSync(resolve(here, sheet), "utf8");
       const stuck = colours(css).filter((colour) => declared.has(colour));

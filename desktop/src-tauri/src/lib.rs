@@ -1,4 +1,5 @@
 pub mod artwork;
+pub mod cores;
 pub mod content;
 pub mod controls;
 pub mod discs;

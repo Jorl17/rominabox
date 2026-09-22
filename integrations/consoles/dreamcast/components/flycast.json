@@ -3,11 +3,51 @@
   "id": "flycast",
   "name": "flycast",
   "artifacts": {
-    "macos-arm64": "flycast_libretro.dylib"
+    "linux-x86_64": "flycast_libretro.so",
+    "macos-arm64": "flycast_libretro.dylib",
+    "macos-x86_64": "flycast_libretro.dylib",
+    "windows-x86_64": "flycast_libretro.dll"
   },
   "license": {
     "spdx": "GPL-2.0",
     "file": "flycast.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "flyinghead/flycast",
+    "revision": "628bd3dbb160ea2750230fc6b00c0bb8173cb1f6",
+    "licenseCandidates": [
+      "LICENSE",
+      "COPYING"
+    ],
+    "correspondsToArtifact": false,
+    "licenseSha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+    "downloads": {
+      "linux-x86_64": {
+        "archiveSha256": "9262a27481c8aa4b12e378a5f1155db185ef4d05fc0b9d9c0cd9d65a483738b7",
+        "binarySha256": "4721f45c12a46a46ee5c251f49426552300bbb765f108f7e4a476cd2a8090e30",
+        "archiveBytes": 6280418,
+        "binaryBytes": 38812480
+      },
+      "macos-arm64": {
+        "archiveSha256": "700a29959d4ad293a20b9a24f0816ba062f64dbb01e8130c093be97d5fdee2ba",
+        "binarySha256": "bdf91ca016e9c8211eddb06e32bf0510e2933f31c0859562e81b6ec1738a9a9b",
+        "archiveBytes": 4737798,
+        "binaryBytes": 18318840
+      },
+      "macos-x86_64": {
+        "archiveSha256": "5dcf7ca7375583530fddc45e889e4bcf3ce4e378053f9a11e1b08fafa8297ee4",
+        "binarySha256": "a0901b3c1b729a325c7af6d04d7300a89750a45ab2f3ad6e7cc454dfab3f199c",
+        "archiveBytes": 4830999,
+        "binaryBytes": 18324928
+      },
+      "windows-x86_64": {
+        "archiveSha256": "bf845fc7ffea3d870806dcd42846d9e2b46dc49163dceaab9618c1d1fcaceac8",
+        "binarySha256": "3cba632733ec4f4be2baf07a7a63dfee89d1d92bbac7a7e22a7dec46def548f8",
+        "archiveBytes": 6474655,
+        "binaryBytes": 22595072
+      }
+    }
+  }
 }
