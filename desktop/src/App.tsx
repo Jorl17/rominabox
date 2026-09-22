@@ -17,6 +17,7 @@ import designs from "../designs.json";
 import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
+import shaderCatalog from "../../integrations/shaders/catalog.json";
 import "./style.css";
 
 const steps = ["Game", "Details", "Menu", "Export"];
@@ -71,6 +72,11 @@ export function App() {
   const [palette, setPalette] = useState("blue");
   const [menuSounds, setMenuSounds] = useState("off");
   const [firmware, setFirmware] = useState<string[]>([]);
+  const [bundledShaders, setBundledShaders] = useState<string[]>([]);
+  const [customShaders, setCustomShaders] = useState<
+    { name: string; path: string }[]
+  >([]);
+  const [shaderInitial, setShaderInitial] = useState<string | null>(null);
   const [controls, setControls] = useState<Controls>(emptyControls);
   const [destination, setDestination] = useState("");
   const [busy, setBusy] = useState<"inspect" | "export" | "project" | null>(
@@ -271,6 +277,11 @@ export function App() {
       showMenu: draft.showMenu,
       splash: draft.splash,
       advancedEmulatorAccess: draft.advancedEmulatorAccess,
+      shaders: {
+        bundled: bundledShaders,
+        custom: customShaders,
+        initial: shaderInitial,
+      },
       startAtMenu: draft.showMenu && draft.startAtMenu,
       theme: "native",
       palette,
@@ -334,6 +345,9 @@ export function App() {
       setMenuSounds(settings.menuSounds || "off");
       setControls(settings.controls || emptyControls());
       setFirmware(settings.firmware || []);
+      setBundledShaders(settings.shaders?.bundled ?? []);
+      setCustomShaders(settings.shaders?.custom ?? []);
+      setShaderInitial(settings.shaders?.initial ?? null);
       setInfo({
         title: settings.title,
         system: settings.system,
@@ -1016,6 +1030,95 @@ export function App() {
                   onChange={(value) => update("advancedEmulatorAccess", value)}
                   help="Restore RetroArch's native menus. Ordinary exports keep About, Hide, Quit and standard window actions."
                 />
+                <div className="shader-choices">
+                  {shaderCatalog.presets.map((preset) => (
+                    <Checkbox
+                      key={preset.id}
+                      label={preset.name}
+                      checked={bundledShaders.includes(preset.id)}
+                      onChange={(value) => {
+                        setBundledShaders((current) =>
+                          value
+                            ? [...current, preset.id]
+                            : current.filter((id) => id !== preset.id),
+                        );
+                        if (!value) {
+                          setShaderInitial((current) =>
+                            current === preset.id ? null : current,
+                          );
+                        }
+                      }}
+                      help={preset.detail}
+                    />
+                  ))}
+                  {customShaders.map((shader) => (
+                    <div key={shader.path} className="custom-shader">
+                      <span>{shader.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomShaders((current) =>
+                            current.filter((item) => item.path !== shader.path),
+                          );
+                          setShaderInitial((current) =>
+                            current === shader.name ? null : current,
+                          );
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void bridge.pickShader().then((path) => {
+                        if (!path) return;
+                        const name =
+                          path
+                            .split(/[\\/]/)
+                            .pop()
+                            ?.replace(/\.(glslp|glsl)$/i, "") || "Shader";
+                        setCustomShaders((current) => {
+                          if (current.some((item) => item.path === path)) {
+                            return current;
+                          }
+                          return [...current, { name, path }];
+                        });
+                      });
+                    }}
+                  >
+                    Add shader
+                  </button>
+                  {bundledShaders.length + customShaders.length > 0 && (
+                    <label>
+                      Starts on
+                      <select
+                        aria-label="Starts on"
+                        value={shaderInitial ?? ""}
+                        onChange={(event) =>
+                          setShaderInitial(event.target.value || null)
+                        }
+                      >
+                        <option value="">Unfiltered</option>
+                        {shaderCatalog.presets
+                          .filter((preset) =>
+                            bundledShaders.includes(preset.id),
+                          )
+                          .map((preset) => (
+                            <option key={preset.id} value={preset.id}>
+                              {preset.name}
+                            </option>
+                          ))}
+                        {customShaders.map((shader) => (
+                          <option key={shader.path} value={shader.name}>
+                            {shader.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
               </details>
             </>
           ) : (

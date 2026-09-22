@@ -1,6 +1,6 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
-use rominabox_desktop::{controls, metadata, packaging, projects, systems, themes};
+use rominabox_desktop::{controls, metadata, packaging, projects, shaders, systems, themes};
 use serde::Deserialize;
 use serde_json::json;
 use std::io::{self, Read};
@@ -48,7 +48,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|project-save|project-open|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|project-save|project-open|shaders|shaders-check|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nshaders prints the catalog. shaders-check reads a selection on stdin.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     if command == "schemas" {
@@ -59,10 +59,19 @@ fn run() -> Result<(), String> {
                 "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
-                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "events": ["progress", "result", "error"] },
-                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "target"], "result": "ProjectArchiveResult" },
+                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "events": ["progress", "result", "error"] },
+                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "target"], "result": "ProjectArchiveResult" },
+                "shaders": { "request": [], "result": "Catalog presets an author can bundle" },
+                "shaders-check": { "request": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "optional id" }, "result": "Resolved shaders, or an error" },
                 "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" }
             })
+        );
+        return Ok(());
+    }
+    if command == "shaders" {
+        println!(
+            "{}",
+            json!({ "type": "result", "result": { "presets": shaders::catalog()? } })
         );
         return Ok(());
     }
@@ -184,6 +193,24 @@ fn run() -> Result<(), String> {
                 "{}",
                 json!({ "type": "result", "result": { "imagePath": image_path } })
             );
+            Ok(())
+        }
+        "shaders-check" => {
+            let selection: shaders::ShaderSelection = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid shader selection: {error}"))?;
+            let resolved = shaders::resolve(&selection)?;
+            let presets: Vec<_> = resolved
+                .iter()
+                .map(|item| {
+                    json!({
+                        "id": item.id,
+                        "name": item.name,
+                        "detail": item.detail,
+                        "preset": item.relative_preset,
+                    })
+                })
+                .collect();
+            println!("{}", json!({ "type": "result", "result": { "shaders": presets } }));
             Ok(())
         }
         "freeze-macos-executable" => {

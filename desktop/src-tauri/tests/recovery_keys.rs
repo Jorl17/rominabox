@@ -108,6 +108,7 @@ fn export_request(root: &Path, advanced: bool) -> ExportRequest {
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: advanced,
+        shaders: rominabox_desktop::shaders::ShaderSelection::default(),
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: fixture_kit(root),

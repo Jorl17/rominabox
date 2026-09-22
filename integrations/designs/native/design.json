@@ -35,6 +35,9 @@
       "bottomMargin": 12
     }
   },
+  "list": {
+    "pageSize": 4
+  },
   "screens": [
     {
       "id": "pause",

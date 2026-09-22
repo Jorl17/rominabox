@@ -704,6 +704,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: true,
+        shaders: rominabox_desktop::shaders::ShaderSelection::default(),
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: kit,

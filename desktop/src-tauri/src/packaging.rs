@@ -63,6 +63,10 @@ pub struct ExportRequest {
     /// Restore stock RetroArch native menus in the exported app.
     #[serde(default)]
     pub advanced_emulator_access: bool,
+    /// The shader presets we bundle into the game. Usually there are none,
+    /// and then the game has no shader screen and no preset.
+    #[serde(default)]
+    pub shaders: crate::shaders::ShaderSelection,
     pub output_dir: PathBuf,
     pub target: ExportTarget,
     /// A frozen, redistributable kit. It contains `bin/retroarch`, `cores/`,
@@ -442,6 +446,12 @@ where
             &request.controls,
         )
         .map_err(|message| ExportError::new("stage", message))?;
+        crate::shaders::install(
+            &crate::themes::staged_design(&request.runtime_kit, &request.theme),
+            &resources.join("menu-assets"),
+            &request.shaders,
+        )
+        .map_err(|message| ExportError::new("stage", message))?;
     } else if request.splash {
         crate::themes::prepare_splash_assets(
             &crate::themes::staged_design(&request.runtime_kit, &request.theme),
@@ -632,6 +642,14 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
         request.advanced_emulator_access,
     )
     .map_err(|message| ExportError::new("validate", message))?;
+    if !request.shaders.is_empty() && !request.show_menu {
+        return Err(ExportError::new(
+            "validate",
+            "Shaders need the in-game menu. Turn the menu on, or leave shaders unset.",
+        ));
+    }
+    crate::shaders::resolve(&request.shaders)
+        .map_err(|message| ExportError::new("validate", message))?;
     for (label, path) in [
         ("ROM", &request.rom),
         ("runtime", &request.runtime_kit.join("bin/retroarch")),
@@ -1625,6 +1643,13 @@ EOF
 "##,
     )
     .replace("@@RUNTIME_CONFIG@@", &runtime_config);
+    let shader_initial = if request.show_menu {
+        crate::shaders::launch_preset(&request.shaders)
+            .map_err(|message| ExportError::new("configure", message))?
+    } else {
+        None
+    };
+    let shader_shell = crate::shaders::launcher_shader_shell(shader_initial.as_deref());
     let script = format!(
         r##"{script}for remap_dir in "$bundle_dir"/Resources/remaps/*; do
   [ -d "$remap_dir" ] || continue
@@ -1663,7 +1688,12 @@ if [ -f "$controls_override" ]; then
   esac
   append_config="$append_config|$controls_override"
 fi
-exec "$bundle_dir/MacOS/retroarch" --config "$cfg" --appendconfig "$append_config" --libretro "$bundle_dir/Resources/game-core.dylib" "$bundle_dir/Resources/$content_relative" >>"$data_dir/logs/launch.log" 2>&1
+{shader_shell}
+set -- --config "$cfg" --appendconfig "$append_config" --libretro "$bundle_dir/Resources/game-core.dylib" "$bundle_dir/Resources/$content_relative"
+if [ -n "$shader_preset" ]; then
+  set -- "$@" --set-shader "$shader_preset"
+fi
+exec "$bundle_dir/MacOS/retroarch" "$@" >>"$data_dir/logs/launch.log" 2>&1
 "##,
     );
     fs::write(path, script).map_err(|error| ExportError::io("configure", path, error))?;
@@ -2302,6 +2332,7 @@ mod tests {
             firmware: Vec::new(),
             splash,
             advanced_emulator_access: false,
+            shaders: crate::shaders::ShaderSelection::default(),
             output_dir: PathBuf::from("output"),
             target: ExportTarget::Macos,
             runtime_kit: PathBuf::from("runtime"),

@@ -329,6 +329,29 @@ body {{ background-color: {background}; }}
 .control-assignment {{ color: {muted}; }}
 @keyframes capture-pulse {{ from {{ border-color: {highlight}; }} to {{ border-color: transparent; }} }}
 "#,background=palette.background,screen=palette.screen,edge=palette.edge,highlight=palette.highlight,surface=palette.surface,focus=palette.focus,picture=palette.picture,muted=palette.muted));
+    /* One row for every list. The layout is here, with the palette, so the
+     * menu.rcss of a design never has a rule for one kind of list. */
+    css.push_str(&format!(r#"
+.screen-link {{ position: absolute; top: 18dp; right: 24dp; width: 148dp; height: 36dp; z-index: 2; font-family: Silkscreen; font-size: 13dp; line-height: 30dp; text-align: center; }}
+.list {{ position: absolute; left: 56dp; top: 76dp; width: 840dp; }}
+.list-row {{ display: block; position: relative; width: 100%; height: 64dp; margin: 0 0 8dp 0; padding: 0; background-color: {surface}; color: #ffffff; border-width: 3dp; border-color: {edge}; font-family: Silkscreen; text-align: left; }}
+.list-row:hover, .list-row.focused {{ border-color: #ffffff; }}
+.list-row.selected, .list-row.selected:hover, .list-row.selected.focused {{ border-color: {highlight}; }}
+.list-row:active {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
+.list-row-icon {{ position: absolute; left: 8dp; top: 8dp; width: 48dp; height: 48dp; }}
+.list-row-title {{ position: absolute; left: 68dp; top: 8dp; font-size: 18dp; color: #ffffff; }}
+.list-row-detail {{ position: absolute; left: 68dp; top: 32dp; font-size: 14dp; color: {muted}; }}
+.list-row-state {{ position: absolute; right: 16dp; top: 20dp; font-size: 14dp; color: {highlight}; }}
+.list-pager {{ position: absolute; left: 0; top: 304dp; width: 100%; height: 36dp; }}
+.list-pager-prev, .list-pager-next, .list-pager-count {{ position: absolute; top: 0; height: 36dp; line-height: 30dp; background-color: {surface}; color: #ffffff; border-width: 3dp; border-color: {edge}; font-family: Silkscreen; font-size: 14dp; text-align: center; }}
+.list-pager-prev {{ left: 0; width: 72dp; }}
+.list-pager-count {{ left: 84dp; width: 120dp; }}
+.list-pager-next {{ left: 216dp; width: 72dp; }}
+.list-pager-prev:hover, .list-pager-next:hover, .list-pager-prev.focused, .list-pager-next.focused {{ background-color: {highlight}; color: {surface}; border-color: #ffffff; }}
+.list-actions {{ position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }}
+.list-actions .menu-action {{ position: absolute; left: 0; width: 160dp; height: 38dp; font-family: Silkscreen; font-size: 18dp; line-height: 32dp; text-align: center; }}
+.list-status {{ position: absolute; left: 56dp; top: 440dp; color: {highlight}; font-size: 14dp; }}
+"#, background = palette.background, edge = palette.edge, highlight = palette.highlight, surface = palette.surface, muted = palette.muted));
     if let Some(image_path) = background {
         let image = crate::icons::read_image(image_path).map_err(|e| e.to_string())?;
         image
@@ -489,7 +512,9 @@ pub fn prepare_controls_assets(
     let markup = scene_markup(&profile, controls, metrics);
     let picker = controller_picker_markup(&offered, &profile.id);
 
-    let template = fs::read_to_string(source.join("menu.rml")).map_err(|e| e.to_string())?;
+    // The document is the menu.rml of the design. If we filled the controls
+    // from any other copy, we would lose changes made to the design.
+    let template = fs::read_to_string(design.join("menu.rml")).map_err(|e| e.to_string())?;
     // The picker is a sibling of the scene, not a child of it. Inside the
     // scene its coordinates would be scene coordinates, and the scene starts
     // 80 dp down the screen, so the picker would cover the first two
