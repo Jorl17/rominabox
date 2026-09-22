@@ -142,6 +142,120 @@ pub fn collect(entrypoint: &Path) -> Result<ContentSet, String> {
     })
 }
 
+/// The game file for a dropped path.
+///
+/// A folder is not a game file, so when someone drops a folder, for example
+/// one with a Dreamcast game, we use the GD-ROM inside it. A sibling `.sbi` is
+/// subchannel data, not a game, so for that file we use the disc next to it.
+pub fn resolve_dropped(path: &Path) -> Result<PathBuf, String> {
+    if path.is_dir() {
+        return sole_game_in(path);
+    }
+    if !path.is_file() {
+        return Err(format!(
+            "game content does not exist or is not a regular file: {}",
+            path.display()
+        ));
+    }
+    let extension = extension_of(path);
+    if is_support_extension(&extension) {
+        if let Some(game) = sibling_game(path) {
+            return Ok(game);
+        }
+    }
+    Ok(path.to_path_buf())
+}
+
+fn sole_game_in(directory: &Path) -> Result<PathBuf, String> {
+    let mut games = Vec::new();
+    let mut sheets = Vec::new();
+    let entries = fs::read_dir(directory)
+        .map_err(|error| format!("read game folder {}: {error}", directory.display()))?;
+    for entry in entries {
+        let entry =
+            entry.map_err(|error| format!("read game folder {}: {error}", directory.display()))?;
+        if !entry
+            .file_type()
+            .map(|kind| kind.is_file())
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        let path = entry.path();
+        let extension = extension_of(&path);
+        if extension.is_empty() || is_support_extension(&extension) {
+            continue;
+        }
+        if crate::systems::candidates_for_extension(&extension).is_empty() {
+            continue;
+        }
+        if is_sheet(&extension) {
+            sheets.push(path);
+        } else {
+            games.push(path);
+        }
+    }
+    if sheets.len() == 1 {
+        return Ok(sheets.remove(0));
+    }
+    if sheets.is_empty() && games.len() == 1 {
+        return Ok(games.remove(0));
+    }
+    if sheets.is_empty() && games.is_empty() {
+        return Err(format!(
+            "This folder has no game file: {}",
+            directory.display()
+        ));
+    }
+    Err(format!(
+        "This folder contains more than one game. Drop the game file itself: {}",
+        directory.display()
+    ))
+}
+
+fn sibling_game(support: &Path) -> Option<PathBuf> {
+    let stem = support.file_stem()?;
+    let directory = support.parent()?;
+    let mut found = Vec::new();
+    for system in crate::systems::registry() {
+        for extension in &system.extensions {
+            let candidate = directory.join(stem).with_extension(extension);
+            if candidate.is_file() && !found.contains(&candidate) {
+                found.push(candidate);
+            }
+        }
+    }
+    if found.len() == 1 {
+        return found.pop();
+    }
+    found
+        .into_iter()
+        .find(|candidate| is_sheet(&extension_of(candidate)))
+}
+
+fn extension_of(path: &Path) -> String {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase()
+}
+
+fn is_support_extension(extension: &str) -> bool {
+    crate::systems::registry().iter().any(|system| {
+        system
+            .support_files
+            .iter()
+            .any(|candidate| candidate.eq_ignore_ascii_case(extension))
+    })
+}
+
+fn is_sheet(extension: &str) -> bool {
+    extension == "cue"
+        || crate::systems::registry()
+            .iter()
+            .any(|system| system.is_recognize_only(extension))
+}
+
 fn normalize_cue_separators(cue: &str) -> String {
     cue.lines()
         .map(|line| {

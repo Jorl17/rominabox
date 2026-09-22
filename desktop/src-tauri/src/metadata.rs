@@ -9,7 +9,7 @@ use std::time::Duration;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::Serialize;
 
-use crate::{artwork, discs, dumps};
+use crate::{artwork, content, discs, dumps};
 
 use crate::systems::{self, System};
 
@@ -29,6 +29,10 @@ pub struct Inspection {
     pub description: Option<String>,
     pub icon_path: Option<PathBuf>,
     pub warnings: Vec<String>,
+    /// Files that we copy with the game but that are not the game itself. We
+    /// list a PlayStation `.sbi` here when it is next to the CHD, because
+    /// someone who drops the disc must get that file without asking for it.
+    pub support_files: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -74,6 +78,8 @@ pub fn inspect_game_with_system(
     online: bool,
     system_override: Option<&str>,
 ) -> Result<Inspection, InspectionError> {
+    let dropped = rom.to_path_buf();
+    let rom = content::resolve_dropped(rom).map_err(InspectionError::new)?;
     let metadata = rom
         .metadata()
         .map_err(|_| InspectionError::new("Choose an existing game file."))?;
@@ -84,10 +90,12 @@ pub fn inspect_game_with_system(
         return Err(InspectionError::new("Choose a non-empty game file."));
     }
 
-    let prepared = dumps::prepare(rom).map_err(InspectionError::new)?;
+    let prepared = dumps::prepare(&rom).map_err(InspectionError::new)?;
     let filename = prepared.filename.clone();
     let extension = prepared.extension.clone();
     let header = dumps::identification_header(&prepared.path)?;
+    let support_files = included_support(&prepared.path);
+    let queries = disc_name_queries(&filename, &dropped);
     let (system, warnings) = if let Some(requested) = system_override {
         let selected = systems::find(requested)
             .ok_or_else(|| InspectionError::new(format!("Unknown console: {requested}")))?;
@@ -105,7 +113,17 @@ pub fn inspect_game_with_system(
     } else {
         identify_system(&extension, &header)
     };
-    let (system, mut warnings) = resolve_disc(system, warnings, &prepared.path, &extension);
+    // We read once, because we need the serial both to find the console and
+    // to match the catalogue, and we have to decompress a CHD to get it.
+    let disc_read = if systems::candidates_for_extension(&extension)
+        .iter()
+        .any(|candidate| candidate.category == "disc")
+    {
+        Some(discs::read_disc(&prepared.path, &extension))
+    } else {
+        None
+    };
+    let (system, mut warnings) = resolve_disc(system, warnings, disc_read.as_ref(), &extension);
     let mut title = filename_title(&filename);
     let mut source = MetadataSource::Filename;
 
@@ -134,6 +152,7 @@ pub fn inspect_game_with_system(
             description: None,
             icon_path: None,
             warnings,
+            support_files,
         });
     };
 
@@ -143,10 +162,13 @@ pub fn inspect_game_with_system(
     let disc = system.category == "disc";
     if system.catalog.is_some() {
         if disc {
+            let read = disc_read
+                .as_ref()
+                .expect("a disc console is reached through a disc extension");
             apply_disc_catalog(
                 &mut system,
-                &prepared.path,
-                &extension,
+                read,
+                &queries,
                 cache,
                 online,
                 &mut title,
@@ -193,6 +215,7 @@ pub fn inspect_game_with_system(
         description,
         icon_path,
         warnings,
+        support_files,
     })
 }
 
@@ -274,8 +297,8 @@ fn apply_cartridge_catalog(
 
 fn apply_disc_catalog(
     system: &mut &'static systems::System,
-    rom: &Path,
-    extension: &str,
+    read: &discs::DiscRead,
+    names: &[String],
     cache: &Path,
     online: bool,
     title: &mut String,
@@ -285,28 +308,28 @@ fn apply_disc_catalog(
     icon_path: &mut Option<PathBuf>,
     warnings: &mut Vec<String>,
 ) -> Result<(), InspectionError> {
-    let keys = match discs::read_disc(rom, extension) {
+    let mut serial_note = None;
+    let keys = match read {
         discs::DiscRead::Compressed => {
-            warnings.push(
+            serial_note = Some(
                 "This disc image is compressed, so its serial cannot be read. Use a cue, iso or gdi image."
-                    .into(),
+                    .to_owned(),
             );
-            return Ok(());
+            Vec::new()
         }
         discs::DiscRead::Unreadable(message) => {
-            warnings.push(message);
-            return Ok(());
+            serial_note = Some(message.clone());
+            Vec::new()
         }
-        discs::DiscRead::Found { keys, .. } if keys.is_empty() => {
-            warnings.push("No serial was found in this disc image. Using the filename.".into());
-            return Ok(());
-        }
-        discs::DiscRead::Found { keys, .. } => keys,
+        discs::DiscRead::Found { keys, .. } => keys.clone(),
     };
     let catalog = system.catalog.as_deref().expect("disc catalogue");
     let path = match catalog_path(cache, catalog, online, true) {
         Ok(Some(path)) => path,
         Ok(None) => {
+            if let Some(note) = serial_note {
+                warnings.push(note);
+            }
             warnings.push(format!("The {catalog} serial catalogue is not cached."));
             return Ok(());
         }
@@ -316,8 +339,18 @@ fn apply_disc_catalog(
         }
     };
     let candidate = *system;
-    match match_serial(&keys, &candidate.id, &path) {
-        Ok(Some(entry)) => remember_match(
+    let serial = if keys.is_empty() {
+        None
+    } else {
+        match match_serial(&keys, &candidate.id, &path) {
+            Ok(found) => found,
+            // Two editions have the same serial, so we choose by filename, for
+            // example to tell Sonic Adventure 2 from its beta.
+            Err(_) => None,
+        }
+    };
+    if let Some(entry) = serial {
+        return remember_match(
             system,
             candidate,
             &entry,
@@ -330,16 +363,35 @@ fn apply_disc_catalog(
             catalog_name,
             icon_path,
             warnings,
-        ),
-        Ok(None) => {
-            warnings.push("No catalogue entry has this disc's serial. Using the filename.".into());
-            Ok(())
-        }
-        Err(error) => {
-            warnings.push(error.to_string());
-            Ok(())
-        }
+        );
     }
+    if let Some(entry) = match_by_name(names, &path)? {
+        remember_match(
+            system,
+            candidate,
+            &entry,
+            catalog,
+            cache,
+            online,
+            title,
+            source,
+            description,
+            catalog_name,
+            icon_path,
+            warnings,
+        )?;
+        // The title is from the catalogue row, which the serial did not pick.
+        *source = MetadataSource::Filename;
+        return Ok(());
+    }
+    if let Some(note) = serial_note {
+        warnings.push(note);
+    } else if keys.is_empty() {
+        warnings.push("No serial was found in this disc image. Using the filename.".into());
+    } else {
+        warnings.push("No catalogue entry has this disc's serial. Using the filename.".into());
+    }
+    Ok(())
 }
 
 fn remember_match(
@@ -375,16 +427,16 @@ fn remember_match(
 fn resolve_disc(
     system: Option<&'static systems::System>,
     warnings: Vec<String>,
-    path: &Path,
+    read: Option<&discs::DiscRead>,
     extension: &str,
 ) -> (Option<&'static systems::System>, Vec<String>) {
     if system.is_some() {
         return (system, warnings);
     }
-    let discs::DiscRead::Found {
+    let Some(discs::DiscRead::Found {
         system_id: Some(id),
         keys,
-    } = discs::read_disc(path, extension)
+    }) = read
     else {
         return (system, warnings);
     };
@@ -402,6 +454,80 @@ fn resolve_disc(
         return (system, warnings);
     }
     (Some(detected), Vec::new())
+}
+
+fn included_support(path: &Path) -> Vec<String> {
+    let Ok(set) = content::collect(path) else {
+        return Vec::new();
+    };
+    set.files
+        .iter()
+        .skip(1)
+        .filter_map(|file| {
+            file.relative
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(str::to_owned)
+        })
+        .collect()
+}
+
+fn disc_name_queries(filename: &str, dropped: &Path) -> Vec<String> {
+    let mut queries = Vec::new();
+    let mut push = |value: &str| {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() && !queries.iter().any(|existing| existing == trimmed) {
+            queries.push(trimmed.to_owned());
+        }
+    };
+    if let Some(stem) = Path::new(filename)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+    {
+        push(stem);
+    }
+    if dropped.is_dir() {
+        if let Some(name) = dropped.file_name().and_then(|name| name.to_str()) {
+            push(name);
+        }
+    }
+    queries
+}
+
+/// We use the filename only when the serial is missing or two catalogue rows
+/// have it. We compare names with the code of the cover matcher, so we do
+/// not parse a name in a second way.
+fn match_by_name(
+    names: &[String],
+    catalog_path: &Path,
+) -> Result<Option<CatalogEntry>, InspectionError> {
+    let dat = datary::read_file(catalog_path)
+        .map_err(|error| InspectionError::new(format!("invalid DAT catalog: {error}")))?;
+    let mut entry_for_name: HashMap<String, CatalogEntry> = HashMap::new();
+    let mut catalog_names = Vec::new();
+    for game in dat.games {
+        if entry_for_name.contains_key(&game.name) {
+            continue;
+        }
+        catalog_names.push(game.name.clone());
+        entry_for_name.insert(
+            game.name.clone(),
+            CatalogEntry {
+                name: game.name.clone(),
+                description: (!game.description.is_empty()).then_some(game.description),
+            },
+        );
+    }
+    let index = artwork::ArtworkIndex::from_filenames(&catalog_names);
+    for name in names {
+        let Some(found) = artwork::match_cover(&index, name) else {
+            continue;
+        };
+        if let Some(entry) = entry_for_name.remove(&found.filename) {
+            return Ok(Some(entry));
+        }
+    }
+    Ok(None)
 }
 
 fn match_serial(
@@ -776,6 +902,9 @@ fn is_catalog_tag(group: &str) -> bool {
     if !parts.is_empty() && parts.iter().all(|part| REGIONS.contains(part)) {
         return true;
     }
+    if artwork::is_language_tag(group) {
+        return true;
+    }
     let lower = group.to_ascii_lowercase();
     lower.starts_with("rev ")
         || lower.starts_with("revision ")
@@ -1112,6 +1241,23 @@ game (
     #[test]
     fn a_compressed_disc_is_not_checksummed() {
         let root = fixture_directory("chd");
+        // We do not open or hash a .cdi image, and we report it with a warning.
+        let cdi = root.join("game.cdi");
+        std::fs::write(&cdi, b"not a real compressed disc").unwrap();
+        let inspection =
+            inspect_game_with_system(&cdi, &root.join("cache"), false, Some("dreamcast")).unwrap();
+        assert!(!inspection.matched);
+        assert!(
+            inspection
+                .warnings
+                .iter()
+                .any(|warning| warning.contains("compressed")),
+            "{:?}",
+            inspection.warnings
+        );
+
+        // We open a CHD. Bytes that are not a CHD stay unmatched, and we do
+        // not claim that we checksummed the file.
         let rom = root.join("game.chd");
         std::fs::write(&rom, b"not a real compressed disc").unwrap();
         let inspection =
@@ -1122,7 +1268,15 @@ game (
             inspection
                 .warnings
                 .iter()
-                .any(|warning| warning.contains("compressed")),
+                .any(|warning| warning.contains("CHD")),
+            "{:?}",
+            inspection.warnings
+        );
+        assert!(
+            inspection
+                .warnings
+                .iter()
+                .all(|warning| !warning.to_ascii_lowercase().contains("checksum")),
             "{:?}",
             inspection.warnings
         );

@@ -14,8 +14,7 @@ fn repo_root() -> PathBuf {
     // The rule is in the crate, so its binary and its tests cannot drift apart.
     rominabox_catalog::repo_root()
         .canonicalize()
-        .expect("repository root")
-}
+        .expect("repository root")}
 
 fn catalog() -> Catalog {
     let root = repo_root().join(PACKAGE_ROOT);

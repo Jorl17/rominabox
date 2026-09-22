@@ -430,6 +430,13 @@ fn classify_tag(group: &str) -> &'static str {
     "other"
 }
 
+/// A bracketed language list such as `En,Ja,Fr,De,Es`. We drop these from the
+/// displayed title. The rule is here so that we decide in one place which
+/// groups are languages, for both the title and the cover.
+pub fn is_language_tag(group: &str) -> bool {
+    is_language(group)
+}
+
 fn is_language(group: &str) -> bool {
     let compact: String = group
         .chars()

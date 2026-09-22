@@ -1,15 +1,15 @@
 //! Serial numbers printed inside a disc, with which we identify it without
 //! reading the whole image.
 //!
-//! The catalogues next to the cartridge lists (libretro-database's redump
-//! set) contain that serial for each game. On a PlayStation disc it is
-//! `SLUS_012.34`, and in the catalogue `SLUS-01234`. We ignore punctuation,
-//! and the letters and digits must match exactly. We leave a compressed image
-//! (chd, cdi, pbp, rvz) unmatched instead of hashing it, because the serial is
-//! inside the compressed data, and this code exists to avoid hashing a DVD.
+//! The catalogues next to the cartridge lists (the redump set in
+//! libretro-database) contain that serial for each game. A PlayStation disc
+//! has it as `SLUS_012.34`, and the catalogue as `SLUS-01234`. We ignore
+//! punctuation, and the letters and digits must match exactly. In a CHD we
+//! decompress only the first sectors. We do not read cdi, pbp or rvz. This
+//! way we never hash a whole DVD.
 
 use std::fs::File;
-use std::io::Read;
+use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 
 const PREFIX_BYTES: u64 = 4 * 1024 * 1024;
@@ -20,14 +20,17 @@ pub enum DiscRead {
         keys: Vec<String>,
         system_id: Option<&'static str>,
     },
-    /// The serial is inside compressed data. The caller must not fall back to
-    /// hashing the image.
+    /// The serial is inside a container that we do not open here. We must
+    /// not then hash the image instead.
     Compressed,
     Unreadable(String),
 }
 
 pub fn read_disc(path: &Path, extension: &str) -> DiscRead {
-    if matches!(extension, "chd" | "cdi" | "pbp" | "rvz") {
+    if extension == "chd" {
+        return read_chd(path);
+    }
+    if matches!(extension, "cdi" | "pbp" | "rvz") {
         return DiscRead::Compressed;
     }
     if extension == "m3u" {
@@ -203,6 +206,52 @@ fn m3u_first(path: &Path) -> Result<PathBuf, String> {
     } else {
         Err("The playlist's first disc is not next to it.".into())
     }
+}
+
+/// The serial is in the first sectors. We read a hunk at a time and stop
+/// once we find it, so we never decompress or hash the rest of a CHD, which
+/// can be hundreds of megabytes.
+fn read_chd(path: &Path) -> DiscRead {
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(_) => return DiscRead::Unreadable("The disc image could not be read.".into()),
+    };
+    let mut file = BufReader::new(file);
+    let mut image = match chd::Chd::open(&mut file, None) {
+        Ok(image) => image,
+        Err(_) => {
+            return DiscRead::Unreadable(
+                "This CHD could not be opened, so its serial was not read.".into(),
+            );
+        }
+    };
+    let hunk_count = image.header().hunk_count();
+    let mut output = image.get_hunksized_buffer();
+    let mut compressed = Vec::new();
+    let mut collected = Vec::new();
+    let limit = PREFIX_BYTES as usize;
+    for index in 0..hunk_count {
+        if collected.len() >= limit {
+            break;
+        }
+        let mut hunk = match image.hunk(index) {
+            Ok(hunk) => hunk,
+            Err(_) => {
+                return DiscRead::Unreadable("This CHD could not be read.".into());
+            }
+        };
+        if hunk.read_hunk_in(&mut compressed, &mut output).is_err() {
+            return DiscRead::Unreadable("This CHD could not be read.".into());
+        }
+        let remaining = limit.saturating_sub(collected.len());
+        collected.extend_from_slice(&output[..remaining.min(output.len())]);
+        let (system_id, keys) = keys_from_bytes(&collected, "chd");
+        if !keys.is_empty() {
+            return DiscRead::Found { keys, system_id };
+        }
+    }
+    let (system_id, keys) = keys_from_bytes(&collected, "chd");
+    DiscRead::Found { keys, system_id }
 }
 
 fn read_prefix(path: &Path) -> Result<Vec<u8>, String> {
