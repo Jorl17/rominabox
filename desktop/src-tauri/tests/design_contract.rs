@@ -427,14 +427,33 @@ fn controller_artwork_is_not_a_designs_to_own() {
         eprintln!("the runtime kit is not prepared here; nothing was verified");
         return;
     }
-    let art: Vec<_> = std::fs::read_dir(&staged)
-        .expect("kit menu-assets")
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_name().to_string_lossy().starts_with("controller-"))
+    // Every pad we can offer in the builder, and not only one. With a check for
+    // "at least one drawing", we would miss the artwork of a newly added pad,
+    // and the export for that console would then fail when we prepare its
+    // controller artwork.
+    let controls: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(repo_root().join("desktop/controls.json"))
+            .expect("controls.json"),
+    )
+    .expect("valid JSON");
+    let offered: Vec<String> = controls["profiles"]
+        .as_array()
+        .expect("profiles")
+        .iter()
+        .filter_map(|profile| profile["image"].as_str())
+        .filter(|image| !image.is_empty())
+        .map(str::to_string)
+        .collect();
+    assert!(!offered.is_empty(), "controls.json offers no illustrated pad");
+    let missing: Vec<&String> = offered
+        .iter()
+        .filter(|image| !staged.join(image).is_file())
         .collect();
     assert!(
-        !art.is_empty(),
-        "controller artwork should stay in the kit's shared menu-assets"
+        missing.is_empty(),
+        "the kit's shared menu-assets is missing controller artwork the builder \
+         offers, so exporting those consoles fails: {missing:?}. Restage with \
+         sh scripts/native_runtime/build-builder-macos.sh"
     );
     let design = repo_root().join("integrations/designs/native");
     let owned: Vec<_> = std::fs::read_dir(&design)

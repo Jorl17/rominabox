@@ -14,6 +14,13 @@ esac
 # not one unnamed set of menu files. Each new design is a new directory here.
 designs_root="$root/integrations/designs"
 menu_assets="$root/desktop/src-tauri/resources/runtime/designs/native"
+# The controller artwork is common to every design, because the pads are the
+# same in each. At export we read it from the kit's shared directory, so we
+# copy it there. A copy only in the native design's directory would leave the
+# shared copy out of date, and export would then stop with
+# "Could not prepare controller artwork" for a console whose drawing is
+# missing from the shared directory.
+shared_assets="$root/desktop/src-tauri/resources/runtime/menu-assets"
 menu_source="$designs_root/native"
 controller_source="$root/desktop/assets/controllers"
 branding_source="$root/desktop/assets/branding"
@@ -56,10 +63,11 @@ done
 # We give Tauri this directory as the runtime resource. Refresh the authored
 # menu and controller assets without freezing or rebuilding the runtime kit.
 cp -R "$menu_source/." "$menu_assets/"
+mkdir -p "$shared_assets"
 for asset in $controller_pngs; do
-  cp -p "$controller_source/$asset" "$menu_assets/$asset"
+  cp -p "$controller_source/$asset" "$shared_assets/$asset"
 done
-cp -p "$controller_source/CONTROLLERS.txt" "$menu_assets/CONTROLLERS.txt"
+cp -p "$controller_source/CONTROLLERS.txt" "$shared_assets/CONTROLLERS.txt"
 # At export we copy the selected menu sound pack from the runtime kit, so the
 # kit contains exactly the packs in desktop/assets/menu-sounds. A pack is one
 # complete set of up/down/ok/cancel. We remove packs that are no longer in use
