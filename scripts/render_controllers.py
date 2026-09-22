@@ -34,6 +34,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ARTWORK = ROOT / "desktop/assets/controllers"
 DESIGN = ROOT / "integrations/designs/native/design.json"
+DESIGN_DIR = DESIGN.parent
+CONTROLS = ROOT / "desktop/controls.json"
+CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
 BASELINE = ROOT / "scripts/fixtures/controller-digests.json"
 
 # We render at twice the scene size so the artwork stays crisp on a retina
@@ -165,7 +168,37 @@ def main() -> int:
         for svg in sources:
             shutil.copyfile(svg, destination / svg.name)
             shutil.copyfile(svg.with_suffix(".json"), destination / f"{svg.stem}.json")
-        print(f"staged {len(sources)} SVGs and their placement -> {destination}")
+        # We take the positions of the rings, callouts and leader lines from
+        # the exporter instead of computing them again for the builder, so the
+        # builder shows the same positions as the shipped game.
+        staged = 0
+        for profile in json.loads(CONTROLS.read_text())["profiles"]:
+            if not profile.get("image"):
+                continue
+            system = next(iter(profile.get("systems", [])), None)
+            if system is None:
+                continue
+            asked = subprocess.run(
+                [str(CLI), "scene-geometry"],
+                input=json.dumps(
+                    {"system": system, "profile": profile["id"], "design": str(DESIGN_DIR)}
+                ),
+                capture_output=True,
+                text=True,
+            )
+            if asked.returncode != 0:
+                raise SystemExit(
+                    f"could not ask for {profile['id']}'s geometry: {asked.stderr}"
+                )
+            layout = json.loads(asked.stdout)["result"]
+            (destination / f"{profile['image'].removesuffix('.png')}-layout.json").write_text(
+                json.dumps(layout, indent=2, sort_keys=True) + "\n"
+            )
+            staged += 1
+        print(
+            f"staged {len(sources)} SVGs, their placement and {staged} layouts "
+            f"-> {destination}"
+        )
         return 0
 
     scratch = ROOT / "work/controller-render"

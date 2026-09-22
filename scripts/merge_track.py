@@ -104,6 +104,14 @@ def merge(track: str) -> int:
         ["git", "-C", str(where), "merge", "--no-edit", "main"],
         capture_output=True, text=True,
     )
+    # The fork is a submodule. Merging main moves the pointer, but the checkout
+    # of the fork in the worktree stays where it was, and the difference
+    # appears as an uncommitted file that looks like unfinished work.
+    if brought.returncode == 0:
+        subprocess.run(
+            ["git", "-C", str(where), "submodule", "update", "--init", "--recursive"],
+            capture_output=True, text=True,
+        )
     if brought.returncode != 0:
         print(
             f"  {track} conflicts with main:\n{brought.stdout}{brought.stderr}",
