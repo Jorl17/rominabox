@@ -36,7 +36,13 @@ ARTWORK = ROOT / "desktop/assets/controllers"
 DESIGN = ROOT / "integrations/designs/native/design.json"
 DESIGN_DIR = DESIGN.parent
 CONTROLS = ROOT / "desktop/controls.json"
-CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+# We build it here and check that it comes from this checkout, because every
+# worktree shares one cargo target, so the binary next to the manifest may be
+# out of date or from another checkout. See scripts/built.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from built import cli as _cli  # noqa: E402
+
+CLI = _cli()
 BASELINE = ROOT / "scripts/fixtures/controller-digests.json"
 
 # We render at twice the scene size so the artwork stays crisp on a retina

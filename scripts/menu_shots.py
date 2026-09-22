@@ -124,7 +124,13 @@ def take(app: Path, name: str, script: list[str], output: Path) -> str:
 BUILT_PLAYER = ROOT / "work/fork-build-20260920/retroarch/retroarch"
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 DESIGN = ROOT / "integrations/designs/native"
-CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+# We build it here and check that it comes from this checkout, because every
+# worktree shares one cargo target, so the binary next to the manifest may be
+# out of date or from another checkout. See scripts/built.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from built import cli as _cli  # noqa: E402
+
+CLI = _cli()
 
 
 def build_a_game(rom: Path, workspace: Path, system: str = "megadrive") -> Path:

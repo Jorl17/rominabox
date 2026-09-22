@@ -45,7 +45,13 @@ DESIGN = ROOT / "integrations/designs/native"
 ARTWORK = ROOT / "desktop/assets/controllers"
 STATES = ROOT / "scripts/fixtures/menu-states.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-state-digests.json"
-CLI = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+# We build it here and check that it comes from this checkout, because every
+# worktree shares one cargo target, so the binary next to the manifest may be
+# out of date or from another checkout. See scripts/built.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from built import cli as _cli  # noqa: E402
+
+CLI = _cli()
 
 # The window size of an exported game, because at any other size a rendered
 # state is not what a player sees.

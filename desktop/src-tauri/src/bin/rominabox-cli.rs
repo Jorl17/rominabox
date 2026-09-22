@@ -48,7 +48,20 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|shaders|shaders-check|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nshaders prints the catalog. shaders-check reads a selection on stdin.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|shaders|shaders-check|schemas|where|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nshaders prints the catalog. shaders-check reads a selection on stdin.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        return Ok(());
+    }
+    // The checkout from which we built this binary.
+    //
+    // Checkouts can use one cargo target directory, and then
+    // release/rominabox-cli is a single file, replaced by the last build from
+    // any checkout. A caller could then photograph a menu, stage a design or
+    // measure an export with another checkout's code.
+    //
+    // We compile in the manifest directory, so we can print the origin of the
+    // binary, and a caller can reject a binary from another checkout.
+    if command == "where" {
+        println!("{}", env!("CARGO_MANIFEST_DIR"));
         return Ok(());
     }
     if command == "schemas" {
