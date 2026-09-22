@@ -7,6 +7,7 @@
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,9 +54,60 @@ function findChrome() {
   return found;
 }
 
+let travelingCli = null;
+
+function exporter() {
+  if (travelingCli) return travelingCli;
+  const found = spawnSync(
+    "python3",
+    [
+      "-c",
+      "import sys; sys.path.insert(0, 'scripts'); from built import cli; print(cli())",
+    ],
+    { cwd: ROOT, encoding: "utf8", timeout: 240000 },
+  );
+  if (found.status !== 0) {
+    const detail = `${found.stderr || ""}${found.stdout || ""}`.trim();
+    throw new Error(detail.slice(-800) || "the exporter could not be built");
+  }
+  travelingCli = found.stdout.trim().split("\n").pop();
+  return travelingCli;
+}
+
+function askTraveling(filePath) {
+  const run = spawnSync(exporter(), ["content"], {
+    input: JSON.stringify({ rom: filePath }),
+    encoding: "utf8",
+    timeout: 30000,
+  });
+  const body = `${run.stdout || ""}`.trim();
+  const line = body.split("\n").filter(Boolean).pop();
+  if (!line) {
+    throw new Error((run.stderr || "content returned nothing").slice(-800));
+  }
+  const parsed = JSON.parse(line);
+  if (run.status !== 0 || parsed.type === "error") {
+    throw new Error(parsed.message || (run.stderr || "content failed").slice(-800));
+  }
+  return parsed.result;
+}
+
 function serve(root) {
   const server = createServer((request, response) => {
     const url = new URL(request.url, "http://127.0.0.1");
+    if (url.pathname === "/__rominabox/traveling") {
+      try {
+        const result = askTraveling(url.searchParams.get("path") || "");
+        response.writeHead(200, { "Content-Type": "application/json" });
+        response.end(JSON.stringify(result));
+      } catch (error) {
+        const message = String(error.message || error);
+        console.error(`TRAVELING ${message}`);
+        response.writeHead(422, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({ message }));
+      }
+      return;
+    }
     let file = path.resolve(root, `.${decodeURIComponent(url.pathname)}`);
     if (file !== root && !file.startsWith(root + path.sep)) {
       response.writeHead(403);
@@ -167,6 +219,12 @@ async function dropRom(page, rom) {
   await page.locator("[data-drop='game']").evaluate(
     (zone, payload) => {
       const file = new File([new Uint8Array(payload.bytes)], payload.name);
+      // A file dropped in the browser has no path. For the receipt we ask the
+      // exporter which files go with this one, and for that we require the
+      // path we wrote the file to.
+      if (payload.path) {
+        Object.defineProperty(file, "path", { value: payload.path });
+      }
       const data = new DataTransfer();
       data.items.add(file);
       zone.dispatchEvent(
@@ -176,8 +234,110 @@ async function dropRom(page, rom) {
         new DragEvent("drop", { bubbles: true, dataTransfer: data }),
       );
     },
-    { bytes, name },
+    { bytes, name, path: rom },
   );
+}
+
+// A disc and the sibling file that must go with it. We show the sibling's
+// name on the details step, not while someone drags. A cartridge, just below,
+// is one file, and the page must show that.
+async function checkWhatTravels(page, out) {
+  const directory = path.join(
+    ROOT,
+    "work/test-output/builder-shots/ape-escape",
+  );
+  fs.mkdirSync(directory, { recursive: true });
+  const chd = path.join(directory, "Ape Escape.chd");
+  const sbi = path.join(directory, "Ape Escape.sbi");
+  fs.writeFileSync(chd, Buffer.from("not a real disc"));
+  fs.writeFileSync(sbi, Buffer.from("subchannel"));
+
+  await page.locator("[data-drop='game']").evaluate((zone) => {
+    zone.dispatchEvent(new DragEvent("dragover", { bubbles: true }));
+  });
+  const whileDragging = await page.locator("main").innerText();
+  if (
+    whileDragging.includes("Ape Escape.sbi") ||
+    whileDragging.includes("Also importing")
+  ) {
+    console.error(
+      "a file that travels with the game is named while it is only being dragged",
+    );
+    return false;
+  }
+
+  await dropRom(page, chd);
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  const receipt = page.locator("[data-traveling]");
+  const appeared = await receipt
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  const text = appeared
+    ? (await receipt.innerText()).replace(/\s+/g, " ")
+    : "";
+  console.log(`TRAVELING ${JSON.stringify(text || "(no receipt)")}`);
+  const namesDisc = text.includes("Ape Escape.chd");
+  const namesSibling = text.includes("Ape Escape.sbi");
+  const saysAlso = text.includes("Also importing");
+  if (!namesDisc || !namesSibling || !saysAlso) {
+    console.error(
+      "the details step does not name the sibling that travels with the game",
+    );
+    console.error(
+      `disc=${namesDisc} sibling=${namesSibling} also=${saysAlso}`,
+    );
+    return false;
+  }
+  if ((await page.locator("[data-drop='game']").count()) !== 0) {
+    console.error("the receipt is being shown on the drop target");
+    return false;
+  }
+  if (out) await shot(page, path.join(out, "h3-sibling.png"));
+
+  // A sheet lists its tracks inside the file. The receipt must show every
+  // name that collect returns, however many there are, not only a sibling.
+  const sheetDir = path.join(
+    ROOT,
+    "work/test-output/builder-shots/sheet-tracks",
+  );
+  fs.mkdirSync(sheetDir, { recursive: true });
+  const tracks = ["track01.bin", "track02.bin", "track03.raw"];
+  for (const name of tracks) {
+    fs.writeFileSync(path.join(sheetDir, name), Buffer.from("track"));
+  }
+  const cue = path.join(sheetDir, "Sonic Adventure 2.cue");
+  fs.writeFileSync(
+    cue,
+    tracks
+      .map((name, index) => `FILE "${name}" BINARY\n  TRACK ${String(index + 1).padStart(2, "0")} MODE1/2352\n`)
+      .join(""),
+  );
+  await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+  await dropRom(page, cue);
+  await page.getByRole("heading", { name: "Game details" }).waitFor();
+  const sheet = page.locator("[data-traveling]");
+  const sheetShown = await sheet
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  const sheetText = sheetShown
+    ? (await sheet.innerText()).replace(/\s+/g, " ")
+    : "";
+  console.log(`SHEET ${JSON.stringify(sheetText || "(no receipt)")}`);
+  const missing = ["Sonic Adventure 2.cue", ...tracks].filter(
+    (name) => !sheetText.includes(name),
+  );
+  if (!sheetShown || missing.length || !sheetText.includes("Also importing")) {
+    console.error(
+      "the details step does not name every track that travels with the sheet",
+    );
+    console.error(missing.join(", ") || "(receipt missing)");
+    return false;
+  }
+  if (out) await shot(page, path.join(out, "h3-tracks.png"));
+  return true;
 }
 
 async function waitForMenuImage(page, palette) {
@@ -611,6 +771,12 @@ async function main() {
   }
 
   const rom = writeRom();
+  try {
+    exporter();
+  } catch (error) {
+    console.error(error.message || error);
+    return 1;
+  }
   const server = await serve(dist);
   const address = server.address();
   const browser = await chromium.launch({
@@ -634,6 +800,15 @@ async function main() {
     await page.addInitScript((ids) => {
       window.__ROMINABOX_PREPARED__ = ids;
     }, prepared);
+    await page.goto(`http://127.0.0.1:${address.port}/`, {
+      waitUntil: "networkidle",
+    });
+    await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+
+    if (!(await checkWhatTravels(page, checking ? null : out))) {
+      code = 1;
+      return;
+    }
     await page.goto(`http://127.0.0.1:${address.port}/`, {
       waitUntil: "networkidle",
     });
@@ -694,6 +869,21 @@ async function main() {
       );
       console.error(JSON.stringify(dreamcast));
       console.error(JSON.stringify(marked.slice(0, 5)));
+      code = 1;
+      return;
+    }
+    const cartridge = page.locator("[data-traveling]");
+    const cartridgeText = (await cartridge.count())
+      ? (await cartridge.innerText()).replace(/\s+/g, " ")
+      : "";
+    console.log(`CARTRIDGE ${JSON.stringify(cartridgeText || "(no receipt)")}`);
+    if (
+      !cartridgeText.includes("SONIC THE HEDGEHOG.md") ||
+      cartridgeText.includes("Also importing")
+    ) {
+      console.error(
+        "a single file does not show just itself on the details step",
+      );
       code = 1;
       return;
     }

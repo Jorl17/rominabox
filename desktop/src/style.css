@@ -469,6 +469,23 @@ main {
   color: #596663;
   margin-top: -6px;
 }
+.traveling {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.traveling p {
+  margin: 0;
+}
+.traveling-also {
+  font-size: 14px;
+  font-weight: 500;
+}
 .advanced {
   border-top: 1px solid var(--line);
   margin-top: 24px;

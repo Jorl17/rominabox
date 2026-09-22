@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use rominabox_desktop::{cores, icons, metadata, packaging, projects, systems, themes};
+use rominabox_desktop::{cores, icons, metadata, packaging, projects, systems, themes, traveling};
 use std::{
     fs,
     io::Cursor,
@@ -216,6 +216,11 @@ async fn ensure_cores(app: tauri::AppHandle) -> Result<Vec<cores::CoreInstall>, 
 }
 
 #[tauri::command]
+fn traveling_files(path: PathBuf) -> Result<traveling::Traveling, String> {
+    traveling::files_for(&path)
+}
+
+#[tauri::command]
 fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let kit = resource(&app, "runtime")?;
     let cache = core_cache(&app).ok();
@@ -244,7 +249,8 @@ fn main() {
             export_game,
             cancel_export,
             save_project,
-            open_project
+            open_project,
+            traveling_files
         ])
         .run(tauri::generate_context!())
         .expect("failed to run ROM-in-a-Box desktop shell");

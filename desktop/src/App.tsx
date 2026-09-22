@@ -99,6 +99,7 @@ export function App() {
   const [supported, setSupported] = useState<Set<string>>(new Set());
   const [selection, setSelection] = useState<Selection | null>(null);
   const [info, setInfo] = useState<bridge.GameInfo | null>(null);
+  const [traveling, setTraveling] = useState<string[]>([]);
   const [draft, setDraft] = useState<Draft>(defaults);
   const [icon, setIcon] = useState<bridge.Picture | null>(null);
   const [background, setBackground] = useState<bridge.Picture | null>(null);
@@ -181,6 +182,7 @@ export function App() {
     imageGeneration.current.background++;
     setSelection(value);
     setInfo(null);
+    setTraveling([]);
     setDraft(defaults);
     setControls(emptyControls());
     setFirmware([]);
@@ -198,12 +200,26 @@ export function App() {
       setError("Choose one game at a time.");
       return;
     }
+    const file = files[0] as File & { path?: string };
     choose({
-      path: "",
-      name: files[0].name,
-      size: files[0].size,
-      browserFile: files[0],
+      path: typeof file.path === "string" ? file.path : "",
+      name: file.name,
+      size: file.size,
+      browserFile: file,
     });
+  }
+  async function filesThatTravel(filePath: string, fallbackName: string) {
+    if (!filePath)
+      return { files: fallbackName ? [fallbackName] : [], entry: "" };
+    try {
+      const listed = await bridge.travelingFiles(filePath);
+      if (listed.files.length > 0)
+        return { files: listed.files, entry: listed.entry || filePath };
+    } catch {
+      // We rejected this drop in collect. Show the name of the file the
+      // person gave and do not invent companions that we did not copy.
+    }
+    return { files: fallbackName ? [fallbackName] : [], entry: filePath };
   }
   async function chooseGame() {
     setError("");
@@ -286,6 +302,17 @@ export function App() {
             source: "filename",
           };
       if (request !== generation.current) return;
+      const traveled = await filesThatTravel(selection.path, selection.name);
+      if (request !== generation.current) return;
+      setTraveling(traveled.files);
+      const entryName = traveled.entry.split(/[\\/]/).pop();
+      if (traveled.entry && entryName && entryName !== selection.name) {
+        setSelection((current) =>
+          current && current.path === selection.path
+            ? { ...current, path: traveled.entry, name: entryName }
+            : current,
+        );
+      }
       setInfo(data);
       setDraft({
         ...defaults,
@@ -405,10 +432,13 @@ export function App() {
       setBundledShaders(settings.shaders?.bundled ?? []);
       setCustomShaders(settings.shaders?.custom ?? []);
       setShaderInitial(settings.shaders?.initial ?? null);
+      const filename = settings.rom.split(/[\\/]/).pop() || settings.title;
+      const traveled = await filesThatTravel(settings.rom, filename);
+      setTraveling(traveled.files);
       setInfo({
         title: settings.title,
         system: settings.system,
-        filename: settings.rom.split(/[\\/]/).pop() || settings.title,
+        filename,
         size: 0,
         source: "project",
         matched: false,
@@ -977,6 +1007,16 @@ export function App() {
                       </div>
                     </div>
                     <div className="fields">
+                      {traveling.length > 0 && (
+                        <div className="traveling" data-traveling>
+                          <p>{traveling[0]}</p>
+                          {traveling.length > 1 && (
+                            <p className="traveling-also">
+                              Also importing: {traveling.slice(1).join(", ")}
+                            </p>
+                          )}
+                        </div>
+                      )}
                       <label>
                         Game name
                         <input
@@ -1028,11 +1068,6 @@ export function App() {
                               : "No exact catalog match was available. You can edit the name and choose the console."}
                         </Help>
                       </div>
-                      {info.supportFiles && info.supportFiles.length > 0 && (
-                        <p className="note">
-                          Includes {info.supportFiles.join(", ")}
-                        </p>
-                      )}
                     </div>
                   </div>
                   {asksFirmware && (
