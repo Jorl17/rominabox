@@ -483,17 +483,52 @@ describe("App workflow", () => {
     expect(restored.checked).toBe(true);
   });
 
-  it("keeps shader choices inside advanced options and off by default", async () => {
+  it("gives picture filters their own section and one way to say selected", async () => {
     await openMenu();
-    const advanced = [...container.querySelectorAll("details.advanced")].find(
-      (details) =>
-        details.querySelector("summary")?.textContent?.includes("Advanced"),
+    const text = (element: Element | null | undefined) =>
+      (element?.textContent || "").replace(/\s+/g, " ").trim();
+    const filters = [...container.querySelectorAll("details")].find((details) =>
+      details.querySelector(".shader-grid"),
     );
-    const scanlines = [...advanced!.querySelectorAll("label")]
-      .find((label) => label.textContent?.includes("Scanlines"))
-      ?.querySelector("input") as HTMLInputElement;
-    expect(scanlines.checked).toBe(false);
-    expect(advanced!.querySelector('[aria-label="Starts on"]')).toBeNull();
+    const controls = container.querySelector("details.author-controls");
+    const advanced = [...container.querySelectorAll("details")].find(
+      (details) => text(details.querySelector("summary")) === "Advanced",
+    );
+    // The title is the count, so a selected card has no Bundle tick that
+    // repeats it.
+    expect(text(filters?.querySelector("summary"))).toBe(
+      "Picture filters · none selected",
+    );
+    expect(filters?.querySelector("input[type='checkbox']")).toBeNull();
+    expect(text(filters)).not.toMatch(/\bBundle\b/);
+    expect(text(filters?.querySelector(".shader-grid .shader-add"))).toContain(
+      "Add your own",
+    );
+    expect(
+      controls &&
+        filters &&
+        controls.compareDocumentPosition(filters) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(advanced?.querySelector(".shader-grid")).toBeNull();
+
+    const scanlines = [
+      ...(filters?.querySelectorAll(".shader-grid .shader-card") ?? []),
+    ].find((card) => card.textContent?.includes("Scanlines"));
+    if (!(scanlines instanceof HTMLElement)) {
+      throw new Error("Scanlines is not a card in the grid");
+    }
+    act(() => click(scanlines));
+    expect(text(filters?.querySelector("summary"))).toBe(
+      "Picture filters · 1 selected",
+    );
+    expect(scanlines.classList.contains("chosen")).toBe(true);
+    expect(scanlines.querySelector("input")).toBeNull();
+    act(() => click(scanlines));
+    expect(text(filters?.querySelector("summary"))).toBe(
+      "Picture filters · none selected",
+    );
+    expect(filters?.querySelector('[aria-label="Starts on"]')).toBeNull();
   });
 
   it("presents export as an honest disabled integration step", async () => {

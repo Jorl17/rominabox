@@ -43,6 +43,19 @@ import "./style.css";
 
 const steps = ["Game", "Details", "Menu", "Export"];
 
+function shaderFileName(filePath: string): string {
+  return (
+    filePath
+      .split(/[\\/]/)
+      .pop()
+      ?.replace(/\.(glslp|glsl)$/i, "") || "Shader"
+  );
+}
+
+function isShaderFile(filePath: string): boolean {
+  return /\.(glslp|glsl)$/i.test(filePath.split(/[\\/]/).pop() ?? "");
+}
+
 type Selection = {
   path: string;
   name: string;
@@ -118,6 +131,7 @@ export function App() {
   const [previewError, setPreviewError] = useState("");
   const gameInput = useRef<HTMLInputElement>(null);
   const firmwareInput = useRef<HTMLInputElement>(null);
+  const shaderInput = useRef<HTMLInputElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const imageTarget = useRef<"icon" | "background">("icon");
   const heading = useRef<HTMLHeadingElement>(null);
@@ -420,6 +434,45 @@ export function App() {
       setBusy(null);
     }
   }
+  function togglePreset(id: string) {
+    const on = bundledShaders.includes(id);
+    setBundledShaders(
+      on
+        ? bundledShaders.filter((item) => item !== id)
+        : [...bundledShaders, id],
+    );
+    if (on) setShaderInitial((current) => (current === id ? null : current));
+  }
+  function removeCustomShader(shader: { name: string; path: string }) {
+    setCustomShaders((current) =>
+      current.filter((item) => item.path !== shader.path),
+    );
+    setShaderInitial((current) => (current === shader.name ? null : current));
+  }
+  function addCustomShader(filePath: string) {
+    if (!isShaderFile(filePath)) {
+      setError("Choose a .glsl or .glslp file.");
+      return;
+    }
+    const name = shaderFileName(filePath);
+    setCustomShaders((current) => {
+      if (current.some((item) => item.path === filePath)) return current;
+      return [...current, { name, path: filePath }];
+    });
+  }
+  async function chooseShaderFile() {
+    setError("");
+    if (!bridge.native) {
+      shaderInput.current?.click();
+      return;
+    }
+    try {
+      const path = await bridge.pickShader();
+      if (path) addCustomShader(path);
+    } catch (e) {
+      fail(e);
+    }
+  }
   nativeDropHandler.current = (paths, pos) => {
     if (busy) return;
     const target = document
@@ -432,6 +485,7 @@ export function App() {
     }
     if (target === "icon" || target === "background")
       loadPicture(target, paths[0]).catch(fail);
+    else if (target === "shader") addCustomShader(paths[0]);
     else if (step === 0)
       choose({
         path: paths[0],
@@ -1188,30 +1242,28 @@ export function App() {
                   onChange={setControls}
                 />
               </details>
-              <details className="advanced">
+              <details className="advanced picture-filters">
                 <summary>
                   <ChevronRight size={16} />
-                  Advanced
+                  {bundledShaders.length + customShaders.length === 0
+                    ? "Picture filters · none selected"
+                    : `Picture filters · ${bundledShaders.length + customShaders.length} selected`}
                 </summary>
-                <Checkbox
-                  label="Advanced emulator access"
-                  checked={draft.advancedEmulatorAccess}
-                  onChange={(value) => update("advancedEmulatorAccess", value)}
-                  help="Restore RetroArch's native menus. Ordinary exports keep About, Hide, Quit and standard window actions."
-                />
                 <div className="shader-choices">
-                  <div className="shader-heading">Picture filters</div>
                   <p className="shader-lede">
-                    A game that bundles none of these has no shader screen at
-                    all. Each picture is that filter run over a test card.
+                    A game with none selected has no shader screen. Each picture
+                    is that filter run over a test card.
                   </p>
                   <div className="shader-grid">
                     {shaderCatalog.presets.map((preset) => {
-                      const bundled = bundledShaders.includes(preset.id);
+                      const chosen = bundledShaders.includes(preset.id);
                       return (
-                        <label
+                        <button
                           key={preset.id}
-                          className={`shader-card${bundled ? " chosen" : ""}`}
+                          type="button"
+                          className={`shader-card${chosen ? " chosen" : ""}`}
+                          aria-pressed={chosen}
+                          onClick={() => togglePreset(preset.id)}
                         >
                           <img
                             className="shader-preview"
@@ -1220,70 +1272,54 @@ export function App() {
                           />
                           <span className="shader-name">{preset.name}</span>
                           <span className="shader-detail">{preset.detail}</span>
-                          <span className="shader-pick">
-                            <input
-                              type="checkbox"
-                              checked={bundled}
-                              onChange={(event) => {
-                                const value = event.target.checked;
-                                setBundledShaders((current) =>
-                                  value
-                                    ? [...current, preset.id]
-                                    : current.filter((id) => id !== preset.id),
-                                );
-                                if (!value) {
-                                  setShaderInitial((current) =>
-                                    current === preset.id ? null : current,
-                                  );
-                                }
-                              }}
-                            />
-                            Bundle
-                          </span>
-                        </label>
+                        </button>
                       );
                     })}
-                  </div>
-                  {customShaders.map((shader) => (
-                    <div key={shader.path} className="custom-shader">
-                      <span>{shader.name}</span>
+                    {customShaders.map((shader) => (
                       <button
+                        key={shader.path}
                         type="button"
-                        onClick={() => {
-                          setCustomShaders((current) =>
-                            current.filter((item) => item.path !== shader.path),
-                          );
-                          setShaderInitial((current) =>
-                            current === shader.name ? null : current,
-                          );
-                        }}
+                        className="shader-card chosen"
+                        aria-pressed={true}
+                        onClick={() => removeCustomShader(shader)}
                       >
-                        Remove
+                        <span className="shader-name">{shader.name}</span>
                       </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => {
-                      void bridge.pickShader().then((path) => {
-                        if (!path) return;
-                        const name =
-                          path
-                            .split(/[\\/]/)
-                            .pop()
-                            ?.replace(/\.(glslp|glsl)$/i, "") || "Shader";
-                        setCustomShaders((current) => {
-                          if (current.some((item) => item.path === path)) {
-                            return current;
-                          }
-                          return [...current, { name, path }];
-                        });
-                      });
+                    ))}
+                    <button
+                      type="button"
+                      className="shader-card shader-add"
+                      data-drop="shader"
+                      onClick={() => {
+                        void chooseShaderFile();
+                      }}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        const file = event.dataTransfer.files[0];
+                        if (!file) return;
+                        const dropped = file as File & { path?: string };
+                        addCustomShader(dropped.path || file.name);
+                      }}
+                    >
+                      <span>
+                        <Plus size={22} aria-hidden="true" />
+                        Add your own
+                      </span>
+                    </button>
+                  </div>
+                  <input
+                    ref={shaderInput}
+                    type="file"
+                    hidden
+                    accept=".glsl,.glslp"
+                    data-shader
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) addCustomShader(file.name);
+                      event.target.value = "";
                     }}
-                  >
-                    Add shader
-                  </button>
+                  />
                   {bundledShaders.length + customShaders.length > 0 && (
                     <label className="shader-initial">
                       Starts on
@@ -1313,6 +1349,18 @@ export function App() {
                     </label>
                   )}
                 </div>
+              </details>
+              <details className="advanced">
+                <summary>
+                  <ChevronRight size={16} />
+                  Advanced
+                </summary>
+                <Checkbox
+                  label="Advanced emulator access"
+                  checked={draft.advancedEmulatorAccess}
+                  onChange={(value) => update("advancedEmulatorAccess", value)}
+                  help="Restore RetroArch's native menus. Ordinary exports keep About, Hide, Quit and standard window actions."
+                />
               </details>
             </>
           ) : (
