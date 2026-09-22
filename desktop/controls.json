@@ -493,97 +493,97 @@
       "systems": [
         "gba"
       ],
-      "image": "",
+      "image": "controller-gba.png",
       "controls": [
         {
           "id": "up",
           "label": "Up",
           "key": "up",
-          "x": 0,
-          "y": 0,
-          "calloutX": 32,
-          "calloutY": 20
+          "x": 304,
+          "y": 193,
+          "calloutX": 16,
+          "calloutY": 66
         },
         {
           "id": "down",
           "label": "Down",
           "key": "down",
-          "x": 0,
-          "y": 0,
-          "calloutX": 264,
-          "calloutY": 20
+          "x": 304,
+          "y": 236,
+          "calloutX": 16,
+          "calloutY": 248
         },
         {
           "id": "left",
           "label": "Left",
           "key": "left",
-          "x": 0,
-          "y": 0,
-          "calloutX": 496,
-          "calloutY": 20
+          "x": 283,
+          "y": 214,
+          "calloutX": 16,
+          "calloutY": 124
         },
         {
           "id": "right",
           "label": "Right",
           "key": "right",
-          "x": 0,
-          "y": 0,
-          "calloutX": 728,
-          "calloutY": 20
+          "x": 326,
+          "y": 214,
+          "calloutX": 16,
+          "calloutY": 182
         },
         {
           "id": "b",
           "label": "B",
           "key": "z",
-          "x": 0,
-          "y": 0,
-          "calloutX": 32,
-          "calloutY": 104
+          "x": 614,
+          "y": 232,
+          "calloutX": 744,
+          "calloutY": 124
         },
         {
           "id": "a",
           "label": "A",
           "key": "x",
-          "x": 0,
-          "y": 0,
-          "calloutX": 264,
-          "calloutY": 104
+          "x": 662,
+          "y": 196,
+          "calloutX": 744,
+          "calloutY": 66
         },
         {
           "id": "l",
           "label": "L",
           "key": "d",
-          "x": 0,
-          "y": 0,
-          "calloutX": 496,
-          "calloutY": 104
+          "x": 308,
+          "y": 49,
+          "calloutX": 16,
+          "calloutY": 8
         },
         {
           "id": "r",
           "label": "R",
           "key": "c",
-          "x": 0,
-          "y": 0,
-          "calloutX": 728,
-          "calloutY": 104
+          "x": 652,
+          "y": 49,
+          "calloutX": 744,
+          "calloutY": 8
         },
         {
           "id": "select",
           "label": "Select",
           "key": "rshift",
-          "x": 0,
-          "y": 0,
-          "calloutX": 32,
-          "calloutY": 188
+          "x": 448,
+          "y": 277,
+          "calloutX": 744,
+          "calloutY": 234
         },
         {
           "id": "start",
           "label": "Start",
           "key": "enter",
-          "x": 0,
-          "y": 0,
-          "calloutX": 264,
-          "calloutY": 188
+          "x": 516,
+          "y": 277,
+          "calloutX": 744,
+          "calloutY": 292
         }
       ]
     },
@@ -668,70 +668,70 @@
       "systems": [
         "gamegear"
       ],
-      "image": "",
+      "image": "controller-gamegear.png",
       "controls": [
         {
           "id": "up",
           "label": "Up",
           "key": "up",
-          "x": 0,
-          "y": 0,
-          "calloutX": 32,
-          "calloutY": 20
+          "x": 306,
+          "y": 191,
+          "calloutX": 16,
+          "calloutY": 16
         },
         {
           "id": "down",
           "label": "Down",
           "key": "down",
-          "x": 0,
-          "y": 0,
-          "calloutX": 264,
-          "calloutY": 20
+          "x": 306,
+          "y": 234,
+          "calloutX": 16,
+          "calloutY": 292
         },
         {
           "id": "left",
           "label": "Left",
           "key": "left",
-          "x": 0,
-          "y": 0,
-          "calloutX": 496,
-          "calloutY": 20
+          "x": 285,
+          "y": 212,
+          "calloutX": 16,
+          "calloutY": 108
         },
         {
           "id": "right",
           "label": "Right",
           "key": "right",
-          "x": 0,
-          "y": 0,
-          "calloutX": 728,
-          "calloutY": 20
+          "x": 328,
+          "y": 212,
+          "calloutX": 16,
+          "calloutY": 184
         },
         {
           "id": "b",
           "label": "1",
           "key": "z",
-          "x": 0,
-          "y": 0,
-          "calloutX": 32,
-          "calloutY": 104
+          "x": 616,
+          "y": 218,
+          "calloutX": 744,
+          "calloutY": 108
         },
         {
           "id": "a",
           "label": "2",
           "key": "x",
-          "x": 0,
-          "y": 0,
-          "calloutX": 264,
-          "calloutY": 104
+          "x": 672,
+          "y": 218,
+          "calloutX": 744,
+          "calloutY": 200
         },
         {
           "id": "start",
           "label": "Start",
           "key": "enter",
-          "x": 0,
-          "y": 0,
-          "calloutX": 496,
-          "calloutY": 104
+          "x": 644,
+          "y": 162,
+          "calloutX": 744,
+          "calloutY": 16
         }
       ],
       "coreDevice": 769
