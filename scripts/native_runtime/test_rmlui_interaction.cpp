@@ -208,43 +208,231 @@ static int anchors(const char *class_name, std::vector<std::string> &out)
  * the stick groups fill that middle, and a list as wide as "LEFT STICK UP"
  * next to the right stick still reaches the left one. The taller rows in
  * Disc also reach Select and Start. */
-static bool named_least_cover(const char *design, const char *profile,
-      const char *anchor)
+/* How many labels this anchor may still cover. -1 means none: with the
+ * bind text of the control, the grid and PlayStation Down clear every label.
+ * The list for the right stick has five rows and a pager, and the position
+ * clear of the buttons, status line and footer still covers B and Start. */
+static int least_allowed(const char *profile, const char *anchor)
 {
-   static const char *const native_retropad[] = {
-      "control-a", "control-b", "control-x", "control-y",
-      "control-l", "control-r", "control-l2", "control-r2", nullptr
-   };
-   static const char *const disc_retropad[] = {
-      "control-up", "control-down", "control-left", "control-right",
-      "control-a", "control-b", "control-x", "control-y",
-      "control-l", "control-r", "control-l2", "control-r2", nullptr
-   };
-   static const char *const native_ps[] = {
-      "control-down", "control-b", "control-group-r_stick", nullptr
-   };
-   static const char *const disc_ps[] = {
-      "control-down", "control-b", "control-select", "control-start", nullptr
-   };
-   const char *const *allowed = nullptr;
-   if (std::strcmp(profile, "retropad") == 0)
-      allowed = std::strcmp(design, "disc") == 0 ? disc_retropad : native_retropad;
-   else if (std::strcmp(profile, "ps1") == 0 || std::strcmp(profile, "ps1-analog") == 0)
-      allowed = std::strcmp(design, "disc") == 0 ? disc_ps : native_ps;
-   if (!allowed)
-      return false;
-   for (int index = 0; allowed[index]; ++index)
-      if (std::strcmp(anchor, allowed[index]) == 0)
-         return true;
-   return false;
+   if ((std::strcmp(profile, "ps1") == 0 || std::strcmp(profile, "ps1-analog") == 0)
+         && std::strcmp(anchor, "control-group-r_stick") == 0)
+      return 2;
+   return -1;
 }
 
 static std::vector<std::string> least_cover_seen;
+
+struct BindLine
+{
+   std::string anchor;
+   std::string title;
+   std::string detail;
+   std::string kind;
+};
+
+static std::vector<BindLine> bind_lines;
+
+/* One line per bind in the list: the label and key of the control, then the
+ * short pad word (Hat, Axis, Button), not "LEFT STICK UP / BUTTON 12". */
+static void load_bind_lines(const std::filesystem::path &scene)
+{
+   bind_lines.clear();
+   std::filesystem::path lines = scene;
+   lines.replace_extension(".lines");
+   std::ifstream in(lines);
+   std::string row;
+   while (std::getline(in, row))
+   {
+      if (row.empty())
+         continue;
+      BindLine line;
+      std::stringstream fields(row);
+      if (!std::getline(fields, line.anchor, '\t'))
+         continue;
+      std::getline(fields, line.title, '\t');
+      std::getline(fields, line.detail, '\t');
+      std::getline(fields, line.kind, '\t');
+      if (!line.anchor.empty())
+         bind_lines.push_back(line);
+   }
+}
+
+static void fill_anchor_rows(const char *anchor)
+{
+   std::vector<const BindLine*> matched;
+   for (const BindLine &line : bind_lines)
+      if (line.anchor == anchor)
+         matched.push_back(&line);
+   if (matched.size() < 2)
+      return;
+   const int rows = rib_rmlui_rows_in("control-binds");
+   for (int index = 0; index < rows; ++index)
+   {
+      const char *id = rib_rmlui_row_in("control-binds", index);
+      if (!id || !*id)
+         break;
+      if (index < (int)matched.size())
+      {
+         rib_rmlui_set_row_text(id, matched[index]->title.c_str(),
+               matched[index]->detail.c_str(), matched[index]->kind.c_str());
+         rib_rmlui_set_shown(id, true);
+      }
+      else
+         rib_rmlui_set_shown(id, false);
+   }
+   rib_rmlui_retarget_pages("control-binds");
+}
+
+/* Inside the outline, not on it. Flush with the border box means that the
+ * row or the pager covers the border, which causes the missing right edge
+ * and the pager on the bottom line. */
+static bool inside_box(const Box &child, const Box &parent)
+{
+   return child.x > parent.x && child.y > parent.y
+         && child.x + child.w < parent.x + parent.w
+         && child.y + child.h < parent.y + parent.h;
+}
+
+static const char *const list_part_ids[] = {
+   "binds-pager", "binds-prev", "binds-next", "binds-page-count", nullptr
+};
+
+/* The buttons of the screen, the status line and the footer. The list may
+ * never cover these, even when it covers least there. The pager buttons share
+ * the menu-action class but belong to the list, so they are not here. */
+static const char *const chrome_ids[] = {
+   "controls-back", "controls-reset", "controls-status", "footer", nullptr
+};
+
+static bool list_part(const std::string &id)
+{
+   return id.rfind("binds-", 0) == 0;
+}
+
+static int stacking_rank(const char *value)
+{
+   if (!value || !*value || std::strcmp(value, "auto") == 0)
+      return 0;
+   return std::atoi(value);
+}
+
+/* We must paint the focused callout, and the one under the pointer, above
+ * the next control. Otherwise the box of L2 covers the bottom edge of L1. */
+static void check_drawn_above(const char *design)
+{
+   std::vector<std::string> callouts;
+   anchors("control-callout", callouts);
+   char message[512];
+   if (callouts.size() < 2)
+   {
+      std::snprintf(message, sizeof(message),
+            "%s: need two callouts to see which one paints on top", design);
+      CHECK(false, message);
+      return;
+   }
+   const std::string &focused = callouts[0];
+   const std::string &neighbour = callouts[1];
+   const std::string focused_id = focused.substr(std::strlen("control-"));
+   const std::string neighbour_id = neighbour.substr(std::strlen("control-"));
+   rib_rmlui_set_control_state(focused_id.c_str(), "A", "a", true, false);
+   rib_rmlui_set_control_state(neighbour_id.c_str(), "B", "b", false, false);
+   /* test_property uses one buffer, so we copy the value before the next
+    * read. */
+   const std::string focused_z = rib_rmlui_test_property(focused.c_str(), "z-index");
+   const std::string neighbour_z = rib_rmlui_test_property(neighbour.c_str(), "z-index");
+   std::snprintf(message, sizeof(message),
+         "%s: focused %s z-index is '%s' and %s is '%s'; the focused control is under its neighbour",
+         design, focused.c_str(), focused_z.c_str(),
+         neighbour.c_str(), neighbour_z.c_str());
+   CHECK(stacking_rank(focused_z.c_str()) > stacking_rank(neighbour_z.c_str()), message);
+
+   move_to_id(neighbour.c_str());
+   const std::string hover_z = rib_rmlui_test_property(neighbour.c_str(), "z-index");
+   std::snprintf(message, sizeof(message),
+         "%s: hovered %s z-index is '%s'; the control under the pointer is under its neighbour",
+         design, neighbour.c_str(), hover_z.c_str());
+   CHECK(stacking_rank(hover_z.c_str()) > 0, message);
+
+   if (rib_rmlui_has_element("control-group-l_stick"))
+   {
+      rib_rmlui_focus_group("l_stick");
+      const std::string group_z = rib_rmlui_test_property(
+            "control-group-l_stick", "z-index");
+      std::snprintf(message, sizeof(message),
+            "%s: focused stick group z-index is '%s'",
+            design, group_z.c_str());
+      CHECK(stacking_rank(group_z.c_str()) > 0, message);
+      rib_rmlui_focus_group(nullptr);
+   }
+
+   rib_rmlui_set_control_state(focused_id.c_str(), "A", "a", false, false);
+   rib_rmlui_pointer_move(1, 1);
+}
+
+static void collect_painted(const Box &list, std::vector<Box> &painted)
+{
+   painted.clear();
+   if (list.ok)
+      painted.push_back(list);
+   const int row_count = rib_rmlui_rows_in("control-binds");
+   for (int index = 0; index < row_count; ++index)
+   {
+      const char *row_id = rib_rmlui_row_in("control-binds", index);
+      const Box row = row_id ? box_of(row_id) : Box{};
+      if (row.ok)
+         painted.push_back(row);
+   }
+   for (int index = 0; list_part_ids[index]; ++index)
+   {
+      const Box part = box_of(list_part_ids[index]);
+      if (part.ok)
+         painted.push_back(part);
+   }
+}
+
+/* Every row, its separator (the border of the row) and every pager button
+ * must be inside the list border. Being inside the window is not enough. */
+static int check_parts_inside_list(const char *design, const char *profile,
+      const char *anchor, int window_w, int window_h, const Box &list)
+{
+   int missed = 0;
+   char message[512];
+   const int row_count = rib_rmlui_rows_in("control-binds");
+   for (int index = 0; index < row_count; ++index)
+   {
+      const char *row_id = rib_rmlui_row_in("control-binds", index);
+      const Box row = row_id ? box_of(row_id) : Box{};
+      if (!row.ok)
+         continue;
+      if (inside_box(row, list))
+         continue;
+      std::snprintf(message, sizeof(message),
+            "%s/%s %s at %dx%d: %s (and its separator) %d,%d %dx%d paints outside the list border %d,%d %dx%d",
+            design, profile, anchor, window_w, window_h, row_id,
+            row.x, row.y, row.w, row.h, list.x, list.y, list.w, list.h);
+      CHECK(false, message);
+      ++missed;
+   }
+   for (int index = 0; list_part_ids[index]; ++index)
+   {
+      const Box part = box_of(list_part_ids[index]);
+      if (!part.ok || inside_box(part, list))
+         continue;
+      std::snprintf(message, sizeof(message),
+            "%s/%s %s at %dx%d: %s %d,%d %dx%d hangs outside the list border %d,%d %dx%d",
+            design, profile, anchor, window_w, window_h, list_part_ids[index],
+            part.x, part.y, part.w, part.h, list.x, list.y, list.w, list.h);
+      CHECK(false, message);
+      ++missed;
+   }
+   return missed;
+}
 
 static int check_one_list(const char *design, const char *profile,
       const char *anchor, int width, int window_w, int window_h)
 {
    char message[512];
+   fill_anchor_rows(anchor);
    rib_rmlui_place_list("control-binds", anchor, width);
    const Box screen = box_of("screen");
    const Box list = box_of("control-binds");
@@ -257,6 +445,20 @@ static int check_one_list(const char *design, const char *profile,
       return 1;
    }
    int missed = 0;
+   {
+      static bool stand_in_noted = false;
+      const char *first = rib_rmlui_row_in("control-binds", 0);
+      const std::string title_id = first ? std::string(first) + "-title" : "";
+      const char *title = first ? rib_rmlui_test_text(title_id.c_str()) : "";
+      if (!stand_in_noted && title && std::strcmp(title, "LEFT STICK UP") == 0)
+      {
+         stand_in_noted = true;
+         CHECK(false,
+               "placement still fills the list with the stand-in LEFT STICK UP / BUTTON 12, not the control's own bind");
+         ++missed;
+      }
+   }
+   missed += check_parts_inside_list(design, profile, anchor, window_w, window_h, list);
    if (!inside_screen(list, screen))
    {
       std::snprintf(message, sizeof(message),
@@ -297,6 +499,39 @@ static int check_one_list(const char *design, const char *profile,
       if (row.ok)
          painted.push_back(row);
    }
+   for (int index = 0; list_part_ids[index]; ++index)
+   {
+      const Box part = box_of(list_part_ids[index]);
+      if (part.ok)
+         painted.push_back(part);
+   }
+   std::vector<std::string> chrome;
+   for (int index = 0; chrome_ids[index]; ++index)
+      chrome.emplace_back(chrome_ids[index]);
+   {
+      std::vector<std::string> actions;
+      anchors("menu-action", actions);
+      for (const std::string &action : actions)
+         if (!list_part(action)
+               && std::find(chrome.begin(), chrome.end(), action) == chrome.end())
+            chrome.push_back(action);
+   }
+   for (const std::string &id : chrome)
+   {
+      const Box other = box_of(id.c_str());
+      if (!other.ok)
+         continue;
+      bool hit = false;
+      for (const Box &part : painted)
+         hit = hit || boxes_overlap(part, other);
+      if (!hit)
+         continue;
+      std::snprintf(message, sizeof(message),
+            "%s/%s %s at %dx%d: list covers %s",
+            design, profile, anchor, window_w, window_h, id.c_str());
+      CHECK(false, message);
+      ++missed;
+   }
    for (const std::string &label : labels)
    {
       if (label == anchor)
@@ -310,14 +545,12 @@ static int check_one_list(const char *design, const char *profile,
       if (hit)
          covered.push_back(label);
    }
-   /* The rows in Disc are taller, so on a grid cell the list covers at least
-    * two neighbours. On the native grid and next to a stick it is one. */
-   const int least = std::strcmp(design, "disc") == 0 ? 2 : 1;
-   if (!covered.empty()
-         && named_least_cover(design, profile, anchor)
-         && (int)covered.size() <= least)
+   const int least = least_allowed(profile, anchor);
+   if (!covered.empty() && least >= 0 && (int)covered.size() <= least)
    {
-      const std::string key = std::string(design) + "/" + profile + " " + anchor;
+      std::string key = std::string(design) + "/" + profile + " " + anchor;
+      for (const std::string &label : covered)
+         key += " covers " + label;
       if (std::find(least_cover_seen.begin(), least_cover_seen.end(), key)
             == least_cover_seen.end())
          least_cover_seen.push_back(key);
@@ -354,6 +587,9 @@ static void check_glyphs(const char *design, const char *which)
  * Two short rows and a hidden pager have nothing that needs the ceiling. */
 static void check_short_list(const char *design, int declared)
 {
+   /* In the placement sweep we use the words of each control. Here we use the
+    * long stand-in, the text that a fixed width would have to fit. */
+   fill_bind_rows();
    check_glyphs(design, "long");
    const int rows = rib_rmlui_rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
@@ -402,6 +638,54 @@ static void check_volume_ends(const char *design, int window_w, int window_h)
             arrow.x, arrow.y, arrow.w, arrow.h, gap);
       CHECK(thumb.ok && arrow.ok && !covered && gap >= 1, message);
    }
+}
+
+/* The right-stick picture: five rows and a pager, tall enough to reach the
+ * status line, the footer and BACK. Two short stand-in rows are not that
+ * list, so we fill the pages that the player shows for a stick. */
+static void fill_stick_pages(void)
+{
+   const int rows = rib_rmlui_rows_in("control-binds");
+   for (int index = 0; index < rows; ++index)
+   {
+      const char *id = rib_rmlui_row_in("control-binds", index);
+      if (!id || !*id)
+         break;
+      if (index < 10)
+      {
+         rib_rmlui_set_row_text(id, "Right stick up", "Axis -0", "AXIS");
+         rib_rmlui_set_shown(id, true);
+      }
+      else
+         rib_rmlui_set_shown(id, false);
+   }
+   rib_rmlui_retarget_pages("control-binds");
+}
+
+static int check_rstick_picture(const char *design, const char *profile, int width)
+{
+   if (std::strcmp(profile, "ps1") != 0 && std::strcmp(profile, "ps1-analog") != 0)
+      return 0;
+   if (!rib_rmlui_has_element("control-group-r_stick"))
+   {
+      char message[256];
+      std::snprintf(message, sizeof(message),
+            "%s/%s: no right-stick group to place the pager list on",
+            design, profile);
+      CHECK(false, message);
+      return 1;
+   }
+   fill_stick_pages();
+   const int sizes[][2] = {{960, 600}, {1440, 900}, {1920, 1200}};
+   int missed = 0;
+   for (const auto &size : sizes)
+   {
+      rib_rmlui_render(size[0], size[1]);
+      missed += check_one_list(design, profile, "control-group-r_stick", width,
+            size[0], size[1]);
+   }
+   fill_bind_rows();
+   return missed;
 }
 
 /* Every drawn pad and the RetroPad grid, in this design.
@@ -456,6 +740,7 @@ static int check_placement(const char *assets, const char *scenes,
          continue;
       }
       ++scenes_seen;
+      load_bind_lines(entry.path());
       std::vector<std::string> labels;
       /* Lay out once so the labels exist before we count them. A scene
        * swapped in while its panel is showing still has to be formatted. */
@@ -470,6 +755,8 @@ static int check_placement(const char *assets, const char *scenes,
          CHECK(false, message);
          continue;
       }
+      if (scenes_seen == 1)
+         check_drawn_above(design);
       for (const auto &size : sizes)
       {
          rib_rmlui_render(size[0], size[1]);
@@ -477,6 +764,7 @@ static int check_placement(const char *assets, const char *scenes,
             check_one_list(design, profile.c_str(), anchor.c_str(), width,
                   size[0], size[1]);
       }
+      check_rstick_picture(design, profile.c_str(), width);
    }
    {
       char message[128];

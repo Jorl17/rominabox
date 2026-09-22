@@ -25,6 +25,9 @@ if [ ! -f "$rmlui_lib" ]; then
   exit 1
 fi
 
+focus_status=0
+node "$script_dir/test_control_focus.mjs" || focus_status=$?
+
 mkdir -p "$build_dir"
 freetype_cflags=$(pkg-config --cflags freetype2)
 freetype_libs=$(pkg-config --libs freetype2)
@@ -137,6 +140,21 @@ for design in designs:
             failed = True
             continue
         (scenes / f"{profile['id']}.rml").write_text(scene.read_text())
+        lines = []
+        for control in profile["controls"]:
+            group = control.get("group") or ""
+            anchor = f"control-group-{group}" if group else f"control-{control['id']}"
+            title = control["label"]
+            lines.append(f"{anchor}\t{title}\t{control['key']}\tKEY")
+            control_id = control["id"]
+            if control_id in ("up", "down", "left", "right"):
+                detail, kind = f"Hat #0 {title}", "PAD"
+            elif group.endswith("stick") and not control_id.endswith("3"):
+                detail, kind = "Axis -0", "AXIS"
+            else:
+                detail, kind = "Button 0", "PAD"
+            lines.append(f"{anchor}\t{title}\t{detail}\t{kind}")
+        (scenes / f"{profile['id']}.lines").write_text("\n".join(lines) + "\n")
     # We measure the list in the document of one export, which has the
     # bind rows and the volume control, and swap in the scenes above.
     shell = assets / "stage" / profiles[0]["id"]
@@ -155,3 +173,7 @@ for design in designs:
 if failed:
     sys.exit(1)
 PY
+
+if [ "$focus_status" -ne 0 ]; then
+  exit "$focus_status"
+fi

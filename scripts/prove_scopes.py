@@ -202,6 +202,16 @@ def case_worktree():
     )
 
 
+def case_edges():
+    path = ROOT / "scripts/check_menu_edges.py"
+    raw = replace(path, "HIGHLIGHT = (0xFF, 0xF1, 0x3D)", "HIGHLIGHT = (0x00, 0x00, 0x00)")
+    try:
+        code, output = run_scope("edges")
+    finally:
+        restore(path, raw)
+    return expect("edges", code, output, ("no highlight outline",))
+
+
 def case_bridge():
     path = ROOT / "vendor/retroarch/menu/drivers/rmlui_bridge.h"
     raw = replace(
@@ -516,6 +526,7 @@ CASES = {
     "joypad": case_joypad,
     "worktree": case_worktree,
     "bridge": case_bridge,
+    "edges": case_edges,
     "states": case_states,
     "fallback": case_fallback,
     "placement": case_placement,
