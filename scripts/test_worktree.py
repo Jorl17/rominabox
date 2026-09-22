@@ -398,6 +398,62 @@ def a_file_compiled_into_the_tool_counts_as_its_source() -> None:
     )
 
 
+def create_refuses_an_existing_branch_instead_of_checking_it_out() -> None:
+    """Check that we refuse `git worktree add <path>` onto an existing branch.
+
+    Without a branch, git checks out the branch of that name. The worktree is
+    then at an old commit and looks like a fresh checkout of HEAD. In create
+    we must refuse, report that the branch already exists, and not check it out.
+    """
+    suffix = "shotsignold"
+    path = worktree.ROOT.parent / f"{worktree.ROOT.name}-{suffix}"
+    name = path.name
+    if path.exists():
+        check(False, f"{path} is already there, so this check cannot start")
+        return
+    head = subprocess.run(
+        ["git", "-C", str(worktree.ROOT), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    made = subprocess.run(
+        ["git", "-C", str(worktree.ROOT), "branch", name, "HEAD~1"],
+        capture_output=True, text=True,
+    )
+    if made.returncode != 0:
+        check(False, f"could not plant {name} at HEAD~1: {made.stderr.strip()}")
+        return
+    try:
+        try:
+            worktree.create(suffix, None, False)
+        except SystemExit as refusal:
+            text = str(refusal)
+            check(
+                name in text and "already exists" in text,
+                f"create refuses {name}: {text}",
+            )
+            check(not path.exists(), "the old branch was not checked out")
+            return
+        checked = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "HEAD"],
+            capture_output=True, text=True,
+        ).stdout.strip()
+        check(
+            False,
+            f"create checked out existing branch {name} at {checked[:12]}, "
+            f"not this checkout's HEAD {head[:12]}",
+        )
+    finally:
+        if path.exists():
+            subprocess.run(
+                ["git", "-C", str(worktree.ROOT), "worktree", "remove", "--force", str(path)],
+                capture_output=True, text=True,
+            )
+        subprocess.run(
+            ["git", "-C", str(worktree.ROOT), "branch", "-D", name],
+            capture_output=True, text=True,
+        )
+
+
 # From inside a worktree, these checks are the wrong checks. The common git
 # directory is always the canonical checkout's, and we do not test a worktree
 # of a worktree. Without this, a run of the full suite inside a worktree would
@@ -419,6 +475,10 @@ FROM_THE_CANONICAL_CHECKOUT = [
 ANYWHERE = [
     the_built_cli_follows_the_redirected_cargo_target,
     a_file_compiled_into_the_tool_counts_as_its_source,
+    # We also run create() from inside a worktree, where we could check out an
+    # old branch by mistake. If we skipped that case here, the tests would pass
+    # on the checkout where the mistake happens.
+    create_refuses_an_existing_branch_instead_of_checking_it_out,
 ]
 
 

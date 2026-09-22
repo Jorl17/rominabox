@@ -270,7 +270,79 @@ KIT = ROOT / "desktop/src-tauri/resources/runtime"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from built import cli as _cli  # noqa: E402
 
-CLI = _cli()
+
+def command() -> Path:
+    """The exporter, which we look up only when we build a game.
+
+    We do not build it on import, because the signature check imports this
+    module without exporting, and during a build we take the cargo lock
+    shared by every other checkout.
+    """
+    return _cli()
+
+
+# One namespace for every shot, so that we do not create a separate
+# container for each palette. We must never delete containers under other
+# names from a script.
+SHOT_BUNDLE_PREFIX = "app.rominabox.game.shots"
+
+
+def shot_bundle_prefix(_workspace: Path) -> str:
+    """One namespace for every shot, not one per build directory.
+
+    Build directories such as menu-shots-build-0 and shaderstate-build give
+    different bundle ids, so we would leave one more container per palette,
+    and we must not delete those from a script. In a worktree we use its
+    ROMINABOX_GAME_BUNDLE_PREFIX, and elsewhere SHOT_BUNDLE_PREFIX, never
+    the identity of a player's game.
+    """
+    published = os.environ.get("ROMINABOX_GAME_BUNDLE_PREFIX", "").strip()
+    if published:
+        return published
+    return SHOT_BUNDLE_PREFIX
+
+
+def capture_export_entitlements(app: Path, destination: Path) -> None:
+    """Save the sandbox we signed on export before replacing the player binary.
+
+    Replacing Contents/MacOS/retroarch discards that signature, and after
+    that there is nothing left to read and put back.
+    """
+    dumped = subprocess.run(
+        ["/usr/bin/codesign", "-d", "--entitlements", str(destination), "--xml", str(app)],
+        capture_output=True,
+    )
+    text = destination.read_text() if destination.is_file() else ""
+    if dumped.returncode != 0 or "com.apple.security.app-sandbox" not in text:
+        detail = dumped.stderr.decode(errors="replace")[-400:]
+        raise SystemExit(
+            "the export is not sandboxed, so a shot would not be either\n" + detail
+        )
+
+
+def resign_replaced_player(app: Path, entitlements: Path) -> None:
+    """Sign the replacement with the entitlements we wrote on export.
+
+    Signing the new binary with a bare `codesign --sign -` drops the sandbox,
+    and `--preserve-metadata=entitlements` on the bundle does not restore it.
+    The game's storage would then be under
+    ~/Library/Application Support/ROM-in-a-Box instead of in a container.
+    """
+    if not entitlements.is_file():
+        raise SystemExit(f"no entitlements to re-sign with at {entitlements}")
+    library = app / "Contents/MacOS/librominabox-launch.dylib"
+    retroarch = launcher_of(app)
+    if library.is_file():
+        subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(library)], check=True)
+    subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(retroarch)], check=True)
+    subprocess.run(
+        [
+            "/usr/bin/codesign", "--force", "--sign", "-",
+            "--entitlements", str(entitlements),
+            str(app),
+        ],
+        check=True,
+    )
 
 
 def built_player() -> Path | None:
@@ -303,8 +375,9 @@ def build_a_game(
     binary, and each of these four steps can go wrong. The kit is a build
     output, so we refresh it from the tree here instead of trusting it.
 
-    The exported game has a separate isolation prefix, so two checkouts
-    taking pictures at the same time never share saves or a build.
+    All shots use one bundle namespace, so we do not make another container
+    for a second palette. Two checkouts stay apart only when
+    ROMINABOX_GAME_BUNDLE_PREFIX is set in each of them.
     """
     settings = dict(settings or {})
     # In a shot, or in the palette loop, we can set the theme and the palette
@@ -353,11 +426,11 @@ def build_a_game(
     }
     request.update(settings)
     result = subprocess.run(
-        [str(CLI), "export"],
+        [str(command()), "export"],
         input=json.dumps(request),
         capture_output=True,
         text=True,
-        env=dict(os.environ, ROMINABOX_GAME_BUNDLE_PREFIX=workspace.name),
+        env=dict(os.environ, ROMINABOX_GAME_BUNDLE_PREFIX=shot_bundle_prefix(workspace)),
     )
     if result.returncode != 0:
         raise SystemExit(f"could not export a game to shoot:\n{result.stdout[-900:]}")
@@ -367,6 +440,8 @@ def build_a_game(
     # The player next to the launcher comes from the kit. Replace it with the
     # freshly built one so that the shot shows this tree.
     if player:
+        # Do this before the copy. After the copy, the export has no signature.
+        capture_export_entitlements(app, workspace / "entitlements.plist")
         retroarch = app / "Contents/MacOS/retroarch"
         shutil.copyfile(player, retroarch)
         retroarch.chmod(0o755)
@@ -379,13 +454,7 @@ def build_a_game(
             [str(injector), str(retroarch), "@executable_path/librominabox-launch.dylib"],
             check=True,
         )
-        library = app / "Contents/MacOS/librominabox-launch.dylib"
-        subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(library)], check=True)
-        subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(retroarch)], check=True)
-        subprocess.run(
-            ["/usr/bin/codesign", "--force", "--sign", "-", "--preserve-metadata=entitlements", str(app)],
-            check=True,
-        )
+        resign_replaced_player(app, workspace / "entitlements.plist")
     return app
 
 
