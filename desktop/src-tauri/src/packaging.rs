@@ -51,6 +51,56 @@ pub fn core_platform(target: &ExportTarget) -> &'static str {
     }
 }
 
+/// The core we ship in this export, with the file name for its platform.
+///
+/// A Windows export made on macOS contains `flycast_libretro.dll`, not the
+/// host's `flycast_libretro.dylib`. We use this for the presence check, the
+/// download, the copy and the licence. What the host runs is in `current_target`.
+struct ExportCore<'a> {
+    platform: &'static str,
+    system_name: &'a str,
+    core: &'a crate::systems::Core,
+    artifact_name: &'a str,
+}
+
+fn export_core(request: &ExportRequest) -> Option<ExportCore<'static>> {
+    let system = crate::systems::find(&request.system)?;
+    let core = system.preferred_core()?;
+    let platform = core_platform(&request.target);
+    Some(ExportCore {
+        platform,
+        system_name: &system.name,
+        artifact_name: core.artifact_for(platform)?,
+        core,
+    })
+}
+
+impl ExportCore<'_> {
+    fn artifact_relative(&self) -> PathBuf {
+        Path::new("cores").join(self.artifact_name)
+    }
+
+    fn licence_relative(&self) -> PathBuf {
+        Path::new("licenses").join(&self.core.license_file)
+    }
+}
+
+/// The path of the core binary for this export. An explicit `request.core` is
+/// a development override. Otherwise it is the file chosen in `export_core`.
+fn shipped_core(request: &ExportRequest, resolved: Option<&ExportCore<'_>>) -> PathBuf {
+    if let Some(explicit) = &request.core {
+        return explicit.clone();
+    }
+    let relative = resolved
+        .map(ExportCore::artifact_relative)
+        .unwrap_or_else(|| PathBuf::from("cores"));
+    resolve_cached(
+        &request.runtime_kit,
+        request.core_cache.as_deref(),
+        &relative,
+    )
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportRequest {
@@ -431,17 +481,21 @@ where
     // This comes before we validate the file. Here we download into the cache
     // a core that is declared but not in the kit, and we build the game with
     // that file in it. A second export uses that file and downloads nothing.
-    fetch_missing_core(request, &mut progress, fetch)?;
+    // We fix the platform here, and every later step uses `resolved`.
+    let resolved = export_core(request);
+    fetch_missing_core(request, resolved.as_ref(), &mut progress, fetch)?;
     emit(
         &mut progress,
         ExportStage::Validate,
         0.02,
         "Checking export inputs",
     );
-    validate_request(request)?;
+    validate_request(request, resolved.as_ref())?;
     check_cancelled(cancelled)?;
     match request.target {
-        ExportTarget::Macos => export_macos(request, cancelled, &mut progress),
+        ExportTarget::Macos => {
+            export_macos(request, resolved.as_ref(), cancelled, &mut progress)
+        }
         ExportTarget::Windows => Err(ExportError::new(
             "validate",
             "Windows export is not available from this build; a pinned Windows runtime kit and native packaging implementation are still required",
@@ -451,6 +505,7 @@ where
 
 fn export_macos<F>(
     request: &ExportRequest,
+    resolved: Option<&ExportCore<'_>>,
     cancelled: &AtomicBool,
     progress: &mut F,
 ) -> Result<ExportResult, ExportError>
@@ -503,19 +558,16 @@ where
             format!("unsupported system: {}", request.system),
         )
     })?;
-    let selected_core = system.preferred_core().ok_or_else(|| {
-        ExportError::new(
-            "validate",
-            format!("{} has no configured core", system.name),
-        )
-    })?;
-    let core_source = request.core.clone().unwrap_or_else(|| {
-        resolve_cached(
-            &request.runtime_kit,
-            request.core_cache.as_deref(),
-            &Path::new("cores").join(selected_core.artifact().unwrap_or_default()),
-        )
-    });
+    let selected_core = match resolved {
+        Some(export_core) => export_core.core,
+        None => system.preferred_core().ok_or_else(|| {
+            ExportError::new(
+                "validate",
+                format!("{} has no configured core", system.name),
+            )
+        })?,
+    };
+    let core_source = shipped_core(request, resolved);
     let core_name = OsStr::new("game-core.dylib");
     let core = resources.join(core_name);
     copy_file(&core_source, &core)?;
@@ -617,11 +669,15 @@ where
             &resources.join("menu-assets/splash-logo.png"),
         )?;
     }
+    let licence = resolved
+        .map(ExportCore::licence_relative)
+        .unwrap_or_else(|| Path::new("licenses").join(&selected_core.license_file));
     stage_legal_materials(
         &request.runtime_kit,
         request.core_cache.as_deref(),
         &resources.join("Legal"),
         selected_core,
+        &licence,
     )?;
     check_cancelled(cancelled)?;
 
@@ -680,7 +736,7 @@ where
         "startAtMenu": request.start_at_menu,
         "runtime": "RetroArch",
         "core": "game-core.dylib",
-        "coreSource": selected_core.artifact().unwrap_or_default(),
+        "coreSource": resolved.map(|export_core| export_core.artifact_name).unwrap_or(""),
         "content": collected_content.files.iter().map(|file| file.relative.to_string_lossy()).collect::<Vec<_>>(),
         "rom": rom_relative.to_string_lossy(),
         "firmware": request.firmware.iter().filter_map(|path| firmware_destination_name(path, system)).collect::<Vec<_>>(),
@@ -769,7 +825,10 @@ where
     })
 }
 
-fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
+fn validate_request(
+    request: &ExportRequest,
+    resolved: Option<&ExportCore<'_>>,
+) -> Result<(), ExportError> {
     if request.title.trim().is_empty() {
         return Err(ExportError::new("validate", "title is required"));
     }
@@ -814,19 +873,13 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
             format!("unsupported system: {}", request.system),
         )
     })?;
-    let selected_core = system.preferred_core().ok_or_else(|| {
-        ExportError::new(
+    if system.preferred_core().is_none() {
+        return Err(ExportError::new(
             "validate",
             format!("{} has no configured core", system.name),
-        )
-    })?;
-    let core = request.core.clone().unwrap_or_else(|| {
-        resolve_cached(
-            &request.runtime_kit,
-            request.core_cache.as_deref(),
-            &Path::new("cores").join(selected_core.artifact().unwrap_or_default()),
-        )
-    });
+        ));
+    }
+    let core = shipped_core(request, resolved);
     if !core.is_file() {
         return Err(ExportError::new(
             "validate",
@@ -883,46 +936,40 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
 
 fn fetch_missing_core<F>(
     request: &ExportRequest,
+    resolved: Option<&ExportCore<'_>>,
     progress: &mut F,
     fetch: &dyn CoreFetch,
 ) -> Result<(), ExportError>
 where
     F: FnMut(ExportProgress),
 {
-    let Some(system) = crate::systems::find(&request.system) else {
-        return Ok(());
-    };
-    let Some(core) = system.preferred_core() else {
+    let Some(resolved) = resolved else {
         return Ok(());
     };
     let Some(cache) = request.core_cache.as_deref() else {
         return Ok(());
     };
-    let platform = core_platform(&request.target);
-    let Some(filename) = core.artifact_for(platform) else {
-        return Ok(());
-    };
     let artifact = resolve_cached(
         &request.runtime_kit,
         Some(cache),
-        &Path::new("cores").join(filename),
+        &resolved.artifact_relative(),
     );
     let licence = resolve_cached(
         &request.runtime_kit,
         Some(cache),
-        &Path::new("licenses").join(&core.license_file),
+        &resolved.licence_relative(),
     );
     if artifact.is_file() && licence.is_file() {
         return Ok(());
     }
-    let message = format!("Downloading the {} core.", system.name);
+    let message = format!("Downloading the {} core.", resolved.system_name);
     emit(progress, ExportStage::Validate, 0.04, &message);
     fetch
-        .fetch_component(cache, &core.component, platform)
+        .fetch_component(cache, &resolved.core.component, resolved.platform)
         .map_err(|_| {
             ExportError::new(
                 "validate",
-                format!("The {} core could not be downloaded.", system.name),
+                format!("The {} core could not be downloaded.", resolved.system_name),
             )
         })
 }
@@ -946,6 +993,7 @@ fn stage_legal_materials(
     cache: Option<&Path>,
     destination: &Path,
     core: &crate::systems::Core,
+    licence: &Path,
 ) -> Result<(), ExportError> {
     let licenses = destination.join("Licenses");
     fs::create_dir_all(&licenses).map_err(|error| ExportError::io("stage", &licenses, error))?;
@@ -971,11 +1019,7 @@ fn stage_legal_materials(
     )?;
 
     copy_file(
-        &resolve_cached(
-            runtime_kit,
-            cache,
-            &Path::new("licenses").join(&core.license_file),
-        ),
+        &resolve_cached(runtime_kit, cache, licence),
         &licenses.join(&core.license_file),
     )?;
     let joypad_licence = runtime_kit.join("licenses/retroarch-joypad-autoconfig.txt");
