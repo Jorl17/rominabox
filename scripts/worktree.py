@@ -34,7 +34,30 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+def _canonical() -> Path:
+    """Return the main checkout, whatever checkout we run this script from.
+
+    Inside a worktree the script's parent directory is the worktree. With it,
+    in `adopt`, which we run from inside a worktree, we would take the
+    worktree for the canonical checkout and refuse it. The checkout would then
+    stay on port 1420 with the canonical bundle identifiers and data root. We
+    wrote this tool to prevent that collision, and it produces no error.
+
+    The common git directory is the main checkout's `.git` in every worktree,
+    so its parent is the main checkout.
+    """
+    here = Path(__file__).resolve().parent.parent
+    try:
+        common = subprocess.run(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            cwd=here, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (subprocess.CalledProcessError, OSError):
+        return here
+    return Path(common).resolve().parent if common else here
+
+
+ROOT = _canonical()
 BASE_PORT = 1420
 BASE_BUNDLE = "com.rominabox.desktop"
 LOCAL_CONFIG = "worktree.local.json"
