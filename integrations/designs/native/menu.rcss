@@ -146,7 +146,7 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
  * The track meets both arrows. At rest the fill is the whole content box,
  * which is the top, and it stays in that box so the light edge of the bevel
  * runs the full width of the track. */
-#volume-control { position: absolute; left: 56dp; top: 196dp; width: 840dp; height: 64dp; background-color: design(surface); border-width: 3dp; border-color: design(edge); }
+#volume-control { position: absolute; left: 56dp; top: 104dp; width: 840dp; height: 64dp; background-color: design(surface); border-width: 3dp; border-color: design(edge); }
 .volume-name { position: absolute; left: 16dp; top: 0; width: 112dp; height: 64dp; line-height: 64dp; font-family: Silkscreen; font-size: 18dp; color: design(ink); }
 .volume-end { position: absolute; top: 0; height: 64dp; line-height: 64dp; font-family: Silkscreen; font-size: 16dp; color: design(ink); text-align: center; white-space: nowrap; overflow: hidden; }
 #volume-low { left: 136dp; width: 56dp; }
@@ -157,7 +157,7 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 /* Options lists what we bundled with this game. The positions are in the
  * design, and we append nothing afterwards that could override them. A long
  * label stays inside the button. */
-#options-entries { position: absolute; left: 56dp; top: 272dp; width: 840dp; height: 200dp; }
+#options-entries { position: absolute; left: 56dp; top: 176dp; width: 840dp; height: 296dp; }
 .option-entry { position: absolute; left: 0; width: 840dp; height: 64dp; line-height: 58dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; white-space: nowrap; overflow: hidden; }
 .options-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
 
