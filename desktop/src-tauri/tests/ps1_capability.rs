@@ -17,18 +17,9 @@ use rominabox_desktop::{
 };
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
-static NEXT: AtomicU64 = AtomicU64::new(0);
-
-fn scratch() -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "rominabox-ps1-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).unwrap();
-    path
+fn scratch() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-ps1")
 }
 
 fn ps1() -> &'static systems::System {
@@ -65,7 +56,8 @@ fn availability(kit: &Path) -> SystemAvailability {
 fn playstation_is_declared_but_not_claimed_as_shipped_support() {
     // We keep intent apart from availability so that we can describe and
     // recognise PS1 without a build that claims it can export one.
-    let empty = scratch().join("empty-kit");
+    let root = scratch();
+    let empty = root.join("empty-kit");
     fs::create_dir_all(empty.join("cores")).unwrap();
     fs::create_dir_all(empty.join("licenses")).unwrap();
 

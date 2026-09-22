@@ -2,20 +2,10 @@ use rominabox_desktop::{
     controls::{self, Controls},
     themes,
 };
-use std::{
-    fs,
-    path::PathBuf,
-    sync::atomic::{AtomicU64, Ordering},
-};
-static NEXT: AtomicU64 = AtomicU64::new(0);
-fn workspace() -> PathBuf {
-    let p = std::env::temp_dir().join(format!(
-        "rominabox-controls-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&p).unwrap();
-    p
+use std::{fs, path::PathBuf};
+
+fn workspace() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-controls")
 }
 fn assets() -> PathBuf {
     rominabox_desktop::repo::at("integrations/designs/native")
@@ -23,7 +13,7 @@ fn assets() -> PathBuf {
 /// A source directory with artwork for every profile that declares it. We
 /// take the filenames from controls.json, so adding an illustrated profile
 /// cannot silently break these tests.
-fn illustrated_assets() -> PathBuf {
+fn illustrated_assets() -> rominabox_scratch::Scratch {
     let root = workspace();
     fs::copy(assets().join("menu.rml"), root.join("menu.rml")).unwrap();
     let registry: serde_json::Value = serde_json::from_str(
@@ -186,7 +176,7 @@ fn splash_only_document_has_no_pause_controls_and_can_make_its_background_transp
     assert!(markup.contains("id=\"splash-logo\""));
     assert!(!markup.contains("pause-panel"));
     assert!(!markup.contains("controller-image"));
-    assert_eq!(fs::read_dir(root).unwrap().count(), 5);
+    assert_eq!(fs::read_dir(&root).unwrap().count(), 5);
 }
 
 /// We give a game with a logo and no menu a stylesheet that RmlUi can read.

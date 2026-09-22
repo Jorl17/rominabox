@@ -58,9 +58,14 @@ dependencies = [
 name = "rominabox-catalog"
 version = "0.1.0"
 dependencies = [
+ "rominabox-scratch",
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "rominabox-scratch"
+version = "0.1.0"
 
 [[package]]
 name = "serde"

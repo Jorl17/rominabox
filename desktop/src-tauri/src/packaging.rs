@@ -2817,15 +2817,7 @@ mod tests {
 
     #[test]
     fn launcher_quotes_hostile_content_filename_as_data() {
-        let directory = std::env::temp_dir().join(format!(
-            "rominabox-launcher-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&directory).unwrap();
+        let directory = rominabox_scratch::Scratch::dir("rominabox-launcher");
         let launcher = directory.join("launcher");
         let hostile = OsStr::new("content/weird'$(touch PWNED)`echo nope`.bin");
         let mut settings = request(false);
@@ -2839,15 +2831,7 @@ mod tests {
     }
 
     fn write_test_launcher(settings: ExportRequest) -> String {
-        let directory = std::env::temp_dir().join(format!(
-            "rominabox-hotkey-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&directory).unwrap();
+        let directory = rominabox_scratch::Scratch::dir("rominabox-hotkey");
         let launcher = directory.join("launcher");
         write_launch_plan(
             &launcher,
@@ -3117,17 +3101,8 @@ mod tests {
     }
 
     /// A unique empty directory, following the pattern of the other tests.
-    fn scratch_dir() -> PathBuf {
-        let directory = std::env::temp_dir().join(format!(
-            "rominabox-remap-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&directory).unwrap();
-        directory
+    fn scratch_dir() -> rominabox_scratch::Scratch {
+        rominabox_scratch::Scratch::dir("rominabox-remap")
     }
 
     /// We write the emulated controller where RetroArch reads it.
@@ -3307,15 +3282,7 @@ mod tests {
 
     #[test]
     fn splash_without_menu_uses_rmlui_but_disables_menu_shortcuts() {
-        let directory = std::env::temp_dir().join(format!(
-            "rominabox-splash-launcher-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&directory).unwrap();
+        let directory = rominabox_scratch::Scratch::dir("rominabox-splash-launcher");
         let launcher = directory.join("launcher");
         write_launch_plan(
             &launcher,
@@ -3374,23 +3341,16 @@ mod tests {
     mod save_identity {
         use super::*;
 
-        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
-        fn rom_with(bytes: &[u8]) -> PathBuf {
-            let dir = std::env::temp_dir().join(format!(
-                "rominabox-identity-{}-{}",
-                std::process::id(),
-                NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-            ));
-            fs::create_dir_all(&dir).unwrap();
+        fn rom_with(bytes: &[u8]) -> (rominabox_scratch::Scratch, PathBuf) {
+            let dir = rominabox_scratch::Scratch::dir("rominabox-identity");
             let rom = dir.join("game.bin");
             fs::write(&rom, bytes).unwrap();
-            rom
+            (dir, rom)
         }
 
         #[test]
         fn identity_is_stable_for_the_same_rom_and_system() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let first = stable_identity(&rom, "megadrive", None).unwrap();
             let second = stable_identity(&rom, "megadrive", None).unwrap();
             assert_eq!(first, second);
@@ -3409,7 +3369,7 @@ mod tests {
         /// folders of ordinary exports move with worktree isolation.
         #[test]
         fn an_absent_namespace_leaves_the_identity_exactly_as_it_was() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             // We compare with a fixed value and not with a second computation,
             // because with both sides computed, a changed hash would go unnoticed.
             let identity = stable_identity(&rom, "megadrive", None).unwrap();
@@ -3428,7 +3388,7 @@ mod tests {
         /// one launch.log, and a screenshot can show the wrong build.
         #[test]
         fn a_namespace_gives_the_same_game_a_separate_home() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let shared = stable_identity(&rom, "megadrive", None).unwrap();
             let first =
                 stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-a")).unwrap();
@@ -3460,7 +3420,7 @@ mod tests {
         /// with the same identifier is running.
         #[test]
         fn the_bundle_identifier_is_namespaced_with_the_identity() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let shared = stable_identity(&rom, "megadrive", None).unwrap();
             let isolated =
                 stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-a")).unwrap();
@@ -3474,7 +3434,7 @@ mod tests {
 
         #[test]
         fn identity_ignores_surrounding_space_and_letter_case() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let canonical = stable_identity(&rom, "megadrive", None).unwrap();
             assert_eq!(
                 stable_identity(&rom, "  MegaDrive  ", None).unwrap(),
@@ -3489,7 +3449,7 @@ mod tests {
         /// together with a move of the saves that players already have.
         #[test]
         fn an_alias_does_not_share_a_save_directory_with_its_canonical_id() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let canonical = crate::systems::find("gb").expect("gb is a known system");
             let via_alias = crate::systems::find("Game Boy").expect("alias resolves");
             assert_eq!(
@@ -3505,8 +3465,8 @@ mod tests {
 
         #[test]
         fn a_different_system_or_different_bytes_changes_the_identity() {
-            let rom = rom_with(b"rominabox-identity-fixture");
-            let other_rom = rom_with(b"rominabox-identity-fixture-2");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
+            let (_other, other_rom) = rom_with(b"rominabox-identity-fixture-2");
             let base = stable_identity(&rom, "megadrive", None).unwrap();
             assert_ne!(stable_identity(&rom, "nes", None).unwrap(), base);
             assert_ne!(
@@ -3599,15 +3559,9 @@ mod tests {
     mod availability {
         use super::*;
 
-        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
         /// A kit containing exactly the named cores and licence texts.
-        fn kit(cores: &[(&str, bool, bool)]) -> PathBuf {
-            let root = std::env::temp_dir().join(format!(
-                "rominabox-availability-{}-{}",
-                std::process::id(),
-                NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-            ));
+        fn kit(cores: &[(&str, bool, bool)]) -> rominabox_scratch::Scratch {
+            let root = rominabox_scratch::Scratch::dir("rominabox-availability");
             fs::create_dir_all(root.join("cores")).unwrap();
             fs::create_dir_all(root.join("licenses")).unwrap();
             for (system, artifact, licence) in cores {

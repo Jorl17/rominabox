@@ -438,8 +438,6 @@ mod tests {
     use std::cell::Cell;
     use std::collections::HashMap;
     use std::io::Write;
-    use std::path::PathBuf;
-    use std::sync::atomic::{AtomicU64, Ordering};
 
     struct Scripted {
         files: HashMap<String, Result<Vec<u8>, ()>>,
@@ -482,16 +480,8 @@ mod tests {
         (core, archive)
     }
 
-    fn temp() -> PathBuf {
-        static SEQUENCE: AtomicU64 = AtomicU64::new(0);
-        let path = std::env::temp_dir().join(format!(
-            "rominabox-core-fetch-{}-{}",
-            std::process::id(),
-            SEQUENCE.fetch_add(1, Ordering::Relaxed)
-        ));
-        let _ = fs::remove_dir_all(&path);
-        fs::create_dir_all(&path).unwrap();
-        path
+    fn temp() -> rominabox_scratch::Scratch {
+        rominabox_scratch::Scratch::dir("rominabox-core-fetch")
     }
 
     /// Libretro replaces `latest` in place, so a downloaded file can differ

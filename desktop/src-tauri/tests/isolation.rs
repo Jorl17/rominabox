@@ -12,11 +12,8 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    sync::atomic::{AtomicU64, Ordering},
     time::{Duration, Instant},
 };
-
-static NEXT: AtomicU64 = AtomicU64::new(0);
 
 struct RemoveDir(PathBuf);
 
@@ -91,14 +88,8 @@ fn repo_at(relative: &str) -> PathBuf {
     rominabox_desktop::repo::at(relative)
 }
 
-fn scratch() -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "rominabox-isolation-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).unwrap();
-    path
+fn scratch() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-isolation")
 }
 
 fn fixture_kit(root: &Path) -> PathBuf {

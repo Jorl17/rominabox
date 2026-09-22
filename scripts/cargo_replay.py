@@ -91,16 +91,29 @@ def _rustc() -> str:
     return asked.stdout.strip() if asked.returncode == 0 else "unknown"
 
 
-def source_digest(manifest: Path) -> str:
-    """Hash of everything that can change what the test binaries contain."""
-    package = manifest.parent
+def _package_files(package: Path) -> list[Path]:
     files: list[Path] = []
+    if not package.is_dir():
+        return files
     for directory, dirnames, filenames in os.walk(package):
         dirnames[:] = [name for name in dirnames if name not in SKIP_DIRS]
         for name in filenames:
             path = Path(directory) / name
             if path.suffix in SOURCE_SUFFIXES or path.name == "build.rs":
                 files.append(path)
+    return files
+
+
+def source_digest(manifest: Path) -> str:
+    """Hash of everything that can change what the test binaries contain."""
+    package = manifest.parent
+    files = _package_files(package)
+    # A path dependency, such as rominabox-scratch, is outside the package. We
+    # hash its sources as well, so after a change to it the stamp no longer
+    # matches and we rebuild the binary.
+    for match in re.finditer(r'path\s*=\s*"([^"]+)"', manifest.read_text()):
+        dependency = (package / match.group(1)).resolve()
+        files.extend(_package_files(dependency))
     embedded: list[Path] = []
     for path in files:
         if path.suffix == ".rs":

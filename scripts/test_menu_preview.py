@@ -18,7 +18,6 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -27,6 +26,7 @@ RENDERER = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
 DESIGNS = ROOT / "integrations/designs"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import scratch  # noqa: E402
 from built import cli as _cli  # noqa: E402
 
 
@@ -79,7 +79,7 @@ def main() -> int:
         raise SystemExit(f"no designs in {DESIGNS}")
 
     failures: list[str] = []
-    with tempfile.TemporaryDirectory() as temporary:
+    with scratch.scratch() as temporary:
         area = Path(temporary)
         for design in designs:
             for palette in palettes():

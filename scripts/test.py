@@ -31,6 +31,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cargo_replay import cargo_test  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
 from player_support import snapshot as support_snapshot  # noqa: E402
+from temp_entries import additions as temp_additions  # noqa: E402
+from temp_entries import directory as temp_directory  # noqa: E402
+from temp_entries import snapshot as temp_snapshot  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRATCH = ROOT / "work/test-output"
@@ -367,7 +370,12 @@ def main() -> int:
         selected = [scope for scope in SCOPES if not scope.slow]
 
     SCRATCH.mkdir(parents=True, exist_ok=True)
+    # We put this stamp in every scratch directory of this run. A diff of
+    # $TMPDIR also shows other processes, so only names with this stamp are ours.
+    scratch_run = f"{os.getpid()}-{time.time_ns()}"
+    os.environ["ROMINABOX_SCRATCH_RUN"] = scratch_run
     support_before = support_snapshot()
+    temp_before = temp_snapshot()
     recorded: dict[str, tuple[bool, float]] = {}
     wall_started = time.monotonic()
 
@@ -426,10 +434,21 @@ def main() -> int:
             print(f"  {path}")
         if len(created) > 20:
             print(f"  … and {len(created) - 20} more")
+    leftover = [
+        name for name in temp_additions(temp_before, temp_snapshot()) if scratch_run in name
+    ]
+    if leftover:
+        print(
+            f"\nA test run left {len(leftover)} entries in {temp_directory()} named rominabox*:"
+        )
+        for name in leftover[:20]:
+            print(f"  {name}")
+        if len(leftover) > 20:
+            print(f"  … and {len(leftover) - 20} more")
     failed = [scope.name for scope in selected if not recorded[scope.name][0]]
     if failed:
         print(f"\n{len(failed)} scope(s) failed: {', '.join(failed)}")
-    if created or failed:
+    if created or leftover or failed:
         return 1
     if slow:
         print(

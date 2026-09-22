@@ -792,19 +792,9 @@ fn validate_relative_content_path(path: &Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::{SystemTime, UNIX_EPOCH};
 
-    fn fixture(name: &str) -> PathBuf {
-        let nonce = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let path = std::env::temp_dir().join(format!(
-            "rominabox-content-{name}-{}-{nonce}",
-            std::process::id()
-        ));
-        fs::create_dir_all(&path).unwrap();
-        path
+    fn fixture(name: &str) -> rominabox_scratch::Scratch {
+        rominabox_scratch::Scratch::dir(&format!("rominabox-content-{name}"))
     }
 
     #[test]

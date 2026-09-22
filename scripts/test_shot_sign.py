@@ -15,11 +15,11 @@ import os
 import plistlib
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import menu_shots  # noqa: E402
+import scratch  # noqa: E402
 import player_support  # noqa: E402
 
 FAILURES: list[str] = []
@@ -45,8 +45,8 @@ def entitlement_text(path: Path) -> str:
 
 def the_replaced_player_keeps_the_export_sandbox() -> None:
     """Check that the player has the entitlements that we wrote in the export."""
-    with tempfile.TemporaryDirectory(prefix="rominabox-shotsign-") as scratch:
-        directory = Path(scratch)
+    with scratch.scratch("rominabox-shotsign-") as made:
+        directory = Path(made)
         source = directory / "main.c"
         source.write_text("int main(void){return 0;}\n")
         binary = directory / "player"

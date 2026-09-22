@@ -9,7 +9,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
-    sync::atomic::{AtomicBool, AtomicU64, Ordering},
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 fn write_runtime_stub(path: &Path) {
@@ -28,16 +28,8 @@ fn write_runtime_stub(path: &Path) {
     assert!(status.success(), "could not compile the runtime stub");
 }
 
-static NEXT: AtomicU64 = AtomicU64::new(0);
-
-fn workspace() -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "rominabox-packaging-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).unwrap();
-    path
+fn workspace() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-packaging")
 }
 
 fn fixture_kit(root: &Path) -> PathBuf {

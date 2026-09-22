@@ -4,13 +4,9 @@
 //! design changes the style of the slider, the volume control changes too.
 
 use std::fs;
-use std::path::Path;
 
-fn scratch(name: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(name);
-    let _ = fs::remove_dir_all(&dir);
-    fs::create_dir_all(&dir).unwrap();
-    dir
+fn scratch(name: &str) -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir(name)
 }
 
 #[test]

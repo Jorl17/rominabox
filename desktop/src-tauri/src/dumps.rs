@@ -372,17 +372,8 @@ fn read_probe(path: &Path) -> io::Result<Vec<u8>> {
 mod tests {
     use super::*;
 
-    fn temp(name: &str) -> PathBuf {
-        let path = std::env::temp_dir().join(format!(
-            "rominabox-dumps-{}-{}-{name}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        std::fs::create_dir_all(&path).unwrap();
-        path
+    fn temp(name: &str) -> rominabox_scratch::Scratch {
+        rominabox_scratch::Scratch::dir(&format!("rominabox-dumps-{name}"))
     }
 
     #[test]

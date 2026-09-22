@@ -19,8 +19,10 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import scratch  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGES = ROOT / "integrations/consoles"
@@ -231,7 +233,7 @@ def main() -> int:
         raise SystemExit(f"the shipped core is not in the runtime kit: {core}")
 
     overrides = component.get("pixels") or []
-    with tempfile.TemporaryDirectory(prefix="picture-edges-") as temporary:
+    with scratch.scratch("rominabox-picture-edges-") as temporary:
         root = Path(temporary)
         harness = root / "frame_harness"
         rom = root / "edge.nes"

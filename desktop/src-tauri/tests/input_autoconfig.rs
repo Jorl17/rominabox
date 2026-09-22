@@ -17,10 +17,8 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
-    sync::atomic::{AtomicBool, AtomicU64, Ordering},
+    sync::atomic::AtomicBool,
 };
-
-static NEXT: AtomicU64 = AtomicU64::new(0);
 
 fn write_runtime_stub(path: &Path) {
     let source = path.with_extension("c");
@@ -51,14 +49,8 @@ impl Drop for ContainerGuard {
     }
 }
 
-fn scratch() -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "rominabox-autoconfig-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).unwrap();
-    path
+fn scratch() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-autoconfig")
 }
 
 fn config_value<'a>(config: &'a str, key: &str) -> Option<&'a str> {

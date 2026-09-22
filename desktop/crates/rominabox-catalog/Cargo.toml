@@ -10,3 +10,6 @@ description = "Loads, validates and resolves ROM-in-a-Box console packages"
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
+
+[dev-dependencies]
+rominabox-scratch = { path = "../rominabox-scratch" }
