@@ -490,6 +490,10 @@ input_b = \"c\"
 input_r_btn = \"5\"
 input_a_btn_label = \"Circle\"
 input_l_x_plus_axis = \"+0\"
+input_device_alt1 = \"DualSense Wireless Controller\"
+input_vendor_id_alt1 = \"1356\"
+input_product_id_alt1 = \"3302\"
+input_phys = \"usb-1\"
 # input_menu_toggle_btn = \"99\"
 input_menu_toggle_btn = \"12\"
 input_menu_toggle_btn_label = \"PS\"
@@ -514,10 +518,14 @@ input_reset_btn = \"3\"
         "input_r_btn = \"5\"",
         "input_a_btn_label = \"Circle\"",
         "input_l_x_plus_axis = \"+0\"",
+        "input_device_alt1 = \"DualSense Wireless Controller\"",
+        "input_vendor_id_alt1 = \"1356\"",
+        "input_product_id_alt1 = \"3302\"",
+        "input_phys = \"usb-1\"",
     ] {
         assert!(
             stripped.contains(kept),
-            "gameplay line was stripped with the meta binds: {kept}\n{stripped}"
+            "a recognition or gameplay line was stripped with the meta binds: {kept}\n{stripped}"
         );
     }
     let surviving: Vec<_> = stripped
@@ -622,13 +630,14 @@ fn joypad_autoconfig_licence_and_provenance_match_the_pin() {
     );
 }
 
-/// An export contains the staged profiles, which we copy once at launch.
+/// An export contains the staged profiles, which we copy into the game's
+/// data on the first launch.
 ///
-/// `joypad_autoconfig_dir` is the per-game data directory. Creating it is not
-/// enough: a profile counts only after we copy it there, and we copy it only
-/// when the destination is absent, as for firmware and remaps. This does not
-/// run the launcher, so it does not prove that a later launch leaves an
-/// edited profile alone, or that a pad matches.
+/// `joypad_autoconfig_dir` is the per-game data directory. We copy a profile
+/// there only when the destination does not exist yet, as with firmware and
+/// remaps. In the fixture, retroarch is an empty shell script, so the game
+/// exits right after the copy. We do not check that a later launch keeps an
+/// edited profile, or that a pad matches a profile.
 #[test]
 #[cfg(target_os = "macos")]
 fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
@@ -795,6 +804,59 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         .find(|item| item["name"] == "retroarch-joypad-autoconfig")
         .expect("export provenance keeps the joypad component");
     assert_eq!(exported_joypad["revision"], pinned_autoconfig_revision());
+
+    // Run the exported launcher. retroarch in this fixture is `#!/bin/sh` with
+    // an empty body, so the process exits by itself and no window opens. We
+    // run the copy loop because only that puts profiles where RetroArch looks
+    // for them. A string in the script does not prove the copy.
+    let home = root.join("home");
+    fs::create_dir_all(&home).unwrap();
+    let launched = Command::new(&launcher)
+        .env("HOME", &home)
+        .output()
+        .expect("the launcher can be executed");
+    assert!(
+        launched.status.success(),
+        "launcher seed failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&launched.stdout),
+        String::from_utf8_lossy(&launched.stderr)
+    );
+    let game: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(result.app_path.join("Contents/Resources/game.json")).unwrap(),
+    )
+    .unwrap();
+    let identity = game["identity"].as_str().unwrap();
+    let game_dir = home
+        .join("Library/Application Support/ROM-in-a-Box/Games")
+        .join(identity);
+    let kit_hid = resources.join("autoconfig/hid");
+    let seeded_hid = game_dir.join("autoconfig/hid");
+    let mut kit_profiles: Vec<_> = fs::read_dir(&kit_hid)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("cfg"))
+        .collect();
+    kit_profiles.sort();
+    assert!(
+        !kit_profiles.is_empty(),
+        "the kit has to ship hid profiles for the seed to copy"
+    );
+    for kit_profile in &kit_profiles {
+        let name = kit_profile.file_name().unwrap();
+        let seeded = seeded_hid.join(name);
+        assert_eq!(
+            fs::read(&seeded).unwrap_or_else(|error| panic!("{}: {error}", seeded.display())),
+            fs::read(kit_profile).unwrap(),
+            "the launcher has to copy every hid profile into the directory the config names"
+        );
+    }
+    let written = fs::read_to_string(game_dir.join("retroarch.cfg")).unwrap();
+    let autoconfig_dir = seeded_hid.parent().unwrap();
+    assert_eq!(
+        config_value(&written, "joypad_autoconfig_dir"),
+        Some(autoconfig_dir.to_str().unwrap()),
+        "the config must name the directory the seed just filled, not the literal $data_dir"
+    );
 }
 
 /// We strip at least every bind that RetroArch loads from a profile.
