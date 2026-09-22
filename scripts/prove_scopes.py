@@ -511,6 +511,45 @@ def case_isolation():
         restore(path, raw)
     return expect("isolation", code, output, ("entitlements were dropped",))
 
+def case_quit():
+    # In this scope we run menu_shots.built_player(), or the retroarch copied
+    # from the runtime kit at export, and build no player. So with
+    # NSTerminateNow back in ui_cocoa.m, we would see no failure here.
+    import test_quit
+
+    player = test_quit.launched_player()
+    raw = player.read_bytes()
+    marker = b"AppKit quit handed to orderly shutdown"
+    if marker not in raw:
+        raise SystemExit(f"{player} has no quit fix to revert")
+    unfixed = pre_fix_player(player, marker)
+    if unfixed is None:
+        raise SystemExit(
+            "the scope runs the frozen kit player, and this checkout has no "
+            "earlier retroarch at work/quit-player-pre-fix"
+        )
+    player.write_bytes(unfixed)
+    try:
+        code, output = run_scope("quit")
+    finally:
+        player.write_bytes(raw)
+    return expect("quit", code, output, ("quit aborted in the loaded core",))
+
+
+def pre_fix_player(player: Path, marker: bytes) -> bytes | None:
+    """Return a retroarch that still returns NSTerminateNow, if this checkout has one."""
+    import menu_shots
+    kit = menu_shots.KIT / "bin/retroarch"
+    if kit != player and kit.is_file() and marker not in kit.read_bytes():
+        return kit.read_bytes()
+    saved = ROOT / "work/quit-player-pre-fix"
+    if saved.is_file():
+        data = saved.read_bytes()
+        if marker not in data and len(data) > 1_000_000:
+            return data
+    return None
+
+
 def case_shaderstate():
     # Return the unfiltered row whatever preset is running. In the check we
     # expect the row of a scanlines preset, and with this change we get the other.
@@ -573,6 +612,7 @@ CASES = {
     "isolation": case_isolation,
     "overlays": case_overlays,
     "shaderstate": case_shaderstate,
+    "quit": case_quit,
 }
 
 

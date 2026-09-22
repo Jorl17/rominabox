@@ -20,7 +20,9 @@
     "automation": 0.1,
     "artwork": 2.4,
     "size": 5.2,
-    "isolation": 23.6,    "overlays": 0.9,
-    "shaderstate": 6.0
+    "isolation": 23.6,
+    "overlays": 0.9,
+    "shaderstate": 6.0,
+    "quit": 108.0
   }
 }

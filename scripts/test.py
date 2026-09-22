@@ -282,6 +282,13 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/shader_state.py")],
         slow=True,
     ),
+    Scope(
+        "quit",
+        "that an Apple Event quit of an exported Flycast game unloads the core before the process exits",
+        "window placement and fullscreen; closing the window is the same AppKit terminate path",
+        ["python3", str(ROOT / "scripts/test_quit.py")],
+        slow=True,
+    ),
 ]
 
 BY_NAME = {scope.name: scope for scope in SCOPES}
@@ -397,7 +404,15 @@ def main() -> int:
             mark = "SLOW"
             slow.append(scope.name)
         print(f"{mark}  {scope.name:<12}{seconds:6.1f}s{ratio}")
-    wall_budget = (limits or {}).get("wall")
+    # `wall` is the limit for the fast selection. We do not apply it to a named
+    # scope or to --all, because quitting Flycast once takes longer than the
+    # whole fast suite.
+    if arguments.all:
+        wall_budget = (limits or {}).get("wall_all")
+    elif arguments.scopes:
+        wall_budget = None
+    else:
+        wall_budget = (limits or {}).get("wall")
     wall_ratio = f"  {wall / wall_budget:4.1f}x" if wall_budget else ""
     print(f"\nwall {wall:0.1f}s{wall_ratio}")
     if wall_budget and limits is not None and over_budget(wall, wall_budget, limits):
