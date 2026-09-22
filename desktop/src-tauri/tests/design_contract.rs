@@ -71,11 +71,6 @@ const MENU_PANELS: &[Panel] = &[
             "controller-scene",
         ],
     },
-    Panel {
-        name: "volume",
-        required: true,
-        ids: &["volume-panel", "volume", "volume-back"],
-    },
 ];
 
 fn menu_ids(required_only: bool) -> Vec<&'static str> {

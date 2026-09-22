@@ -42,21 +42,25 @@
       "panel": "pause-panel",
       "heading": "GAME PAUSED",
       "footer": "ESC  CONTINUE",
-      "button": "controls-back volume-back"
+      "button": "controls-back"
+    },
+    {
+      "id": "options",
+      "panel": "options-panel",
+      "heading": "OPTIONS",
+      "footer": "ESC  BACK",
+      "button": "options",
+      "label": "OPTIONS",
+      "back": "BACK",
+      "place": "options"
     },
     {
       "id": "controls",
       "panel": "controls-panel",
       "heading": "CONTROLS",
       "footer": "ESC  BACK",
-      "button": "controls"
-    },
-    {
-      "id": "volume",
-      "panel": "volume-panel",
-      "heading": "VOLUME",
-      "footer": "ESC  BACK",
-      "button": "volume"
+      "button": "controls",
+      "option": { "label": "CONTROLS", "default": true }
     }
   ],
   "tokens": {

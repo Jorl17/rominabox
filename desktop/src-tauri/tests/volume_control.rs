@@ -1,8 +1,7 @@
-//! The volume control is a slider and a mute toggle.
+//! The volume control is the slider of the design, with an arrow on each side.
 //!
-//! We draw those parts as the design styles them, and the control contains
-//! one of each. When a design restyles the slider, volume changes with it,
-//! and a design without any rule for volume still has the control.
+//! It is in Options, without a screen, a number or a mute switch. When a
+//! design changes the style of the slider, the volume control changes too.
 
 use std::fs;
 use std::path::Path;
@@ -15,17 +14,12 @@ fn scratch(name: &str) -> std::path::PathBuf {
 }
 
 #[test]
-fn volume_is_built_from_the_designs_slider_and_toggle() {
+fn volume_is_built_from_the_designs_slider() {
     let design = scratch("rominabox-volume-parts");
     fs::create_dir(design.join("parts")).unwrap();
     fs::write(
         design.join("parts/slider.rml"),
         r#"<div id="PART-ID" class="slider owned-slider"><div class="slider-track"><div class="slider-fill"></div><div class="slider-thumb"></div></div><div class="slider-readout"></div></div>"#,
-    )
-    .unwrap();
-    fs::write(
-        design.join("parts/toggle.rml"),
-        r#"<button id="PART-ID" class="toggle owned-toggle"><span class="toggle-knob"></span><span class="toggle-label">LABEL</span></button>"#,
     )
     .unwrap();
 
@@ -34,12 +28,19 @@ fn volume_is_built_from_the_designs_slider_and_toggle() {
         markup.contains("owned-slider"),
         "a design's own slider has to be the one volume uses, got {markup}"
     );
-    assert!(
-        markup.contains("owned-toggle"),
-        "mute has to be the design's toggle, got {markup}"
-    );
     assert!(markup.contains("id=\"volume-level\""));
-    assert!(markup.contains("MUTE"));
+    assert!(markup.contains("id=\"volume-down\""));
+    assert!(markup.contains("id=\"volume-up\""));
+    assert!(markup.contains("id=\"volume-low\""));
+    assert!(markup.contains("id=\"volume-high\""));
+    assert!(
+        markup.contains(">LOW<") && markup.contains(">HIGH<"),
+        "the ends say low and high, got {markup}"
+    );
+    assert!(
+        !markup.contains("MUTE") && !markup.contains("dB") && !markup.contains("toggle"),
+        "there is no mute and no decibel readout, got {markup}"
+    );
     assert!(
         !markup.contains("PART-ID"),
         "the holes have to be filled, got {markup}"
@@ -50,7 +51,7 @@ fn volume_is_built_from_the_designs_slider_and_toggle() {
 fn a_design_with_no_parts_still_gets_a_slider() {
     let design = scratch("rominabox-volume-builtin");
     let markup = rominabox_desktop::themes::volume_control_markup(&design).unwrap();
-    for class in ["slider", "slider-track", "slider-fill", "slider-thumb", "slider-readout", "toggle"] {
+    for class in ["slider", "slider-track", "slider-fill", "slider-thumb", "slider-readout", "volume-arrow"] {
         assert!(
             markup.contains(class),
             "the built-in volume control is missing {class}: {markup}"
@@ -100,39 +101,57 @@ fn the_shipped_design_styles_the_slider_rather_than_volume() {
         "the design has to say what a slider looks like"
     );
     assert!(
-        css.contains(".toggle"),
-        "the design has to say what a toggle looks like"
+        css.contains(".volume-arrow"),
+        "the design has to say what the arrows look like"
     );
     assert!(
         !css.contains("#volume-level"),
         "volume-specific styling is the slider failing to be a part"
     );
+    let literal = css.match_indices('#').any(|(at, _)| {
+        let rest = &css[at + 1..];
+        let token: String = rest.chars().take_while(|c| c.is_ascii_hexdigit()).collect();
+        if !matches!(token.len(), 3 | 6 | 8) {
+            return false;
+        }
+        // #volume-control starts with three hex digits and then continues.
+        // A colour token ends after its digits.
+        let next = rest[token.len()..].chars().next();
+        !matches!(next, Some(c) if c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    });
+    assert!(
+        !literal,
+        "a colour in this design is a token, written design(name)"
+    );
 }
 
 #[test]
-fn a_design_that_never_mentions_volume_still_has_the_screen() {
-    let design = scratch("rominabox-volume-omitted");
-    fs::write(
-        design.join("design.json"),
-        r#"{"screens":[{"id":"pause","panel":"pause-panel","heading":"PAUSED","footer":"ESC","button":"back"}]}"#,
-    )
-    .unwrap();
-    let screens = rominabox_desktop::themes::declared_screens(&design).unwrap();
+fn volume_drops_into_options_and_does_not_open_a_screen() {
+    let design = scratch("rominabox-volume-in-options");
+    fs::write(design.join("design.json"), "{}").unwrap();
+    let document = r#"<body><div id="options-panel" style="display:none;"><div id="options-entries"><button class="menu-action option-entry" id="controls">CONTROLS</button></div></div><div id="footer"></div></body>"#;
+    let installed = rominabox_desktop::themes::install_volume_control(document, &design).unwrap();
+    let panel = installed.find("id=\"options-panel\"").expect("options panel");
+    let control = installed.find("id=\"volume-control\"").expect("the control");
+    let entries = installed.find("id=\"options-entries\"").expect("the links");
     assert!(
-        screens.iter().any(|screen| screen.id == "volume"),
-        "omitting volume from the declaration must not omit the screen"
+        panel < control && control < entries,
+        "volume sits in the options panel, ahead of the links, got {installed}"
     );
-    let pause = screens.iter().find(|screen| screen.id == "pause").unwrap();
-    assert!(
-        pause.button.split_whitespace().any(|button| button == "volume-back"),
-        "pause has to be reachable from the volume screen, buttons are {}",
-        pause.button
-    );
-    assert_eq!(pause.heading, "PAUSED", "ensuring volume must not rewrite the design's words");
+    assert!(installed.contains("id=\"controls\""), "the links stay, got {installed}");
+    assert!(!installed.contains("id=\"volume-panel\""));
+    assert!(!installed.contains("id=\"volume-mute\""));
+    assert!(!installed.contains(">VOLUME<"));
+}
 
+#[test]
+fn a_menu_with_no_options_screen_has_no_volume_control() {
+    let design = scratch("rominabox-volume-nowhere");
+    fs::write(design.join("design.json"), "{}").unwrap();
     let document = r#"<body><button class="menu-action" id="quit">QUIT</button><div id="footer"></div></body>"#;
     let installed = rominabox_desktop::themes::install_volume_control(document, &design).unwrap();
-    assert!(installed.contains("id=\"volume-panel\""));
-    assert!(installed.contains("class=\"slider\""));
-    assert!(installed.contains("id=\"volume\""));
+    assert!(
+        !installed.contains("volume"),
+        "volume lives in Options, so a menu without that screen does not grow one, got {installed}"
+    );
 }

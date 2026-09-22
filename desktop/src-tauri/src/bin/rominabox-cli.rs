@@ -48,8 +48,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|project-save|project-open|volume|volume-markup|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume|volume-markup|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     if command == "schemas" {
@@ -60,12 +59,12 @@ fn run() -> Result<(), String> {
                 "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
-                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "events": ["progress", "result", "error"] },
+                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "menuEntries?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "menuEntries": "option entry ids to offer; omit for the design's defaults; [] offers no Options button", "events": ["progress", "result", "error"] },
                 "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
-                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "target"], "result": "ProjectArchiveResult" },
+                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
                 "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" },
-                "volume": { "request": ["dataDir", "decibels?", "muted?"], "result": { "decibels": "dB", "muted": "bool", "path": "volume.cfg" } },
-                "volume-markup": { "request": ["design"], "result": { "markup": "the volume control, in the design's slider and toggle" } }
+                "volume": { "request": ["dataDir", "position?"], "result": { "position": "0 is low, the last position is normal", "positions": "how many there are", "path": "volume.cfg" } },
+                "volume-markup": { "request": ["design"], "result": { "markup": "the volume control, in the design's slider, with an arrow either side" } }
             })
         );
         return Ok(());
@@ -233,6 +232,9 @@ fn run() -> Result<(), String> {
                 destination: PathBuf,
                 #[serde(default)]
                 controls: controls::Controls,
+                /// Options entries to stage, or the design's defaults when absent.
+                #[serde(default)]
+                menu_entries: Option<Vec<String>>,
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid stage-controls request: {error}"))?;
@@ -242,6 +244,7 @@ fn run() -> Result<(), String> {
                 &request.destination,
                 &request.system,
                 &request.controls,
+                request.menu_entries.as_deref(),
             )?;
             println!(
                 "{}",
@@ -266,29 +269,24 @@ fn run() -> Result<(), String> {
             #[serde(rename_all = "camelCase")]
             struct Request {
                 data_dir: PathBuf,
+                /// 0 is the quietest position. The last position is normal
+                /// volume, and there is nothing above it.
                 #[serde(default)]
-                decibels: Option<f32>,
-                #[serde(default)]
-                muted: Option<bool>,
+                position: Option<i32>,
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid volume request: {error}"))?;
             let mut level = volume::read(&request.data_dir);
-            if request.decibels.is_some() || request.muted.is_some() {
-                if let Some(decibels) = request.decibels {
-                    level.decibels = decibels;
-                }
-                if let Some(muted) = request.muted {
-                    level.muted = muted;
-                }
+            if let Some(position) = request.position {
+                level.decibels = volume::db_for_position(position);
                 level = level.clamp();
                 volume::write(&request.data_dir, level)?;
             }
             println!(
                 "{}",
                 json!({ "type": "result", "result": {
-                    "decibels": level.decibels,
-                    "muted": level.muted,
+                    "position": volume::position_for_db(level.decibels),
+                    "positions": volume::position_count(),
                     "path": request.data_dir.join(volume::file_name()),
                 }})
             );

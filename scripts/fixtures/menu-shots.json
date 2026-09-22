@@ -14,15 +14,17 @@
   ],
   "shots": {
     "pause-menu": [],
-    "controls": ["controls"],
-    "picker-open": ["controls", "controls-device-current"],
+    "options": ["options"],
+    "controls": ["options", "controls"],
+    "picker-open": ["options", "controls", "controls-device-current"],
     "picker-chosen": [
+      "options",
       "controls",
       "controls-device-current",
       "controls-device-option-megadrive6"
     ],
-    "volume": ["volume"],
-    "volume-low": ["volume", "volume-level@0.15"],
-    "volume-muted": ["volume", "volume-mute"]
+    "volume-low": ["options", "volume-level@0"],
+    "volume-step": ["options", "volume-down"],
+    "volume-arrow": ["options", "volume-level@0", "volume-up"]
   }
 }

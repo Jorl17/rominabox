@@ -2,7 +2,8 @@
   "capturing": "0c9fef4d7962adc5",
   "control-focused": "84103992d1e0cd98",
   "controls": "8ef2f09a4609e968",
-  "pause-menu": "c36de88119a52d37",
+  "options": "b098baac35006193",
+  "pause-menu": "86fec8253f32007b",
   "picker-dragged-outside": "52f460c07ff15d10",
   "picker-hover-selected": "63892268aa89a610",
   "picker-hover-unselected": "594acecfc3ef628c",
@@ -11,10 +12,11 @@
   "picker-open": "e731ceb5e361b6f0",
   "picker-option-pressed": "a8e003b8df49df38",
   "picker-pressed": "ed3a060e4974c8b6",
-  "volume": "051924a4e05a3c14",
-  "volume-dragging": "1fd343b2c68a0808",
-  "volume-focused": "2f1a031dae54c851",
-  "volume-hover": "1f67a02c657d3b1d",
-  "volume-low": "afa5b84295042ef4",
-  "volume-muted": "6e3079374815ba97"
+  "volume-arrow": "f39a4ed1267107a0",
+  "volume-dragging": "5d29af7313152d24",
+  "volume-focused": "4e16b3a74015a4b8",
+  "volume-hover": "2863e43a0fc34707",
+  "volume-long": "e4178f1210a0b230",
+  "volume-low": "e72398fcdfb35f24",
+  "volume-step": "95101225af7a03b9"
 }

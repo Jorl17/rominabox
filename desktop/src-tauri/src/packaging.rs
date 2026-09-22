@@ -63,6 +63,10 @@ pub struct ExportRequest {
     /// Restore stock RetroArch native menus in the exported app.
     #[serde(default)]
     pub advanced_emulator_access: bool,
+    /// The Options entries we offer in this game. When absent, we use the
+    /// design's defaults. With an empty list, we show no Options button.
+    #[serde(default)]
+    pub menu_entries: Option<Vec<String>>,
     pub output_dir: PathBuf,
     pub target: ExportTarget,
     /// A frozen, redistributable kit. It contains `bin/retroarch`, `cores/`,
@@ -440,6 +444,7 @@ where
             &resources.join("menu-assets"),
             &request.system,
             &request.controls,
+            request.menu_entries.as_deref(),
         )
         .map_err(|message| ExportError::new("stage", message))?;
     } else if request.splash {
@@ -544,6 +549,7 @@ where
         "firmware": request.firmware.iter().filter_map(|path| firmware_destination_name(path, system)).collect::<Vec<_>>(),
         "splash": request.splash,
         "advancedEmulatorAccess": request.advanced_emulator_access,
+        "menuEntries": request.menu_entries,
     });
     fs::write(
         resources.join("game.json"),
@@ -2353,6 +2359,7 @@ mod tests {
             firmware: Vec::new(),
             splash,
             advanced_emulator_access: false,
+            menu_entries: None,
             output_dir: PathBuf::from("output"),
             target: ExportTarget::Macos,
             runtime_kit: PathBuf::from("runtime"),

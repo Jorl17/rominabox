@@ -137,6 +137,11 @@ int main(int argc, char **argv)
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;
    }
+   /* The screen button on the pause row is Options. `controls` is inside
+    * that panel, so this click cannot reach the built-in handler for
+    * `controls`. */
+   rib_rmlui_declare_screen("options", "options-panel", "OPTIONS",
+         "ESC  BACK", "options");
 
    rib_rmlui_set_status("SAVED");
    rib_rmlui_set_controls_status("DEFAULTS RESTORED");
@@ -153,7 +158,7 @@ int main(int argc, char **argv)
    }
    rib_rmlui_set_game_aspect(4.0f/3);
    click_id("save");
-   click_id("controls");
+   click_id("options");
    const int first = rib_rmlui_take_action();
    const int second = rib_rmlui_take_action();
    CHECK(first == RIB_RMLUI_ACTION_SAVE,
@@ -164,7 +169,7 @@ int main(int argc, char **argv)
    // id arrived.
    CHECK(second == RIB_RMLUI_ACTION_SHOW_SCREEN,
          "mailbox preserves the following click");
-   CHECK(std::string(rib_rmlui_requested_screen()) == "controls",
+   CHECK(std::string(rib_rmlui_requested_screen()) == "options",
          "the screen asked for travels with the action");
    CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
          "mailbox is empty after both intents");
@@ -297,25 +302,48 @@ int main(int argc, char **argv)
             "picker options are export markup, not created by the bridge");
    }
 
-   CHECK(rib_volume_db_from_fraction(0.0f) == -80.0f,
-         "the left end of the slider is the quietest RetroArch allows");
-   CHECK(rib_volume_db_from_fraction(1.0f) == 12.0f,
-         "the right end of the slider is the loudest RetroArch allows");
+   CHECK(RIB_VOLUME_POSITIONS > 1 && RIB_VOLUME_POSITIONS < 10,
+         "volume has a handful of positions, fewer than ten");
+   CHECK(AUDIO_VOLUME_MAX_DB == 0.0f,
+         "the right end is normal, and the control cannot boost past it");
+   CHECK(AUDIO_VOLUME_DEFAULT_DB == AUDIO_VOLUME_MAX_DB,
+         "the default is the maximum");
+   CHECK(AUDIO_VOLUME_STEP_DB * (RIB_VOLUME_POSITIONS - 1)
+               == AUDIO_VOLUME_MAX_DB - AUDIO_VOLUME_MIN_DB,
+         "the positions are equal steps from quiet to normal");
+   CHECK(rib_volume_db_from_fraction(0.0f) == AUDIO_VOLUME_MIN_DB,
+         "the left end of the slider is the quietest it goes");
+   CHECK(rib_volume_db_from_fraction(1.0f) == AUDIO_VOLUME_MAX_DB,
+         "the right end of the slider is normal");
    CHECK(rib_volume_db_from_fraction(rib_volume_fraction_from_db(0.0f)) == 0.0f,
-         "unity gain, the default, round-trips through the slider");
-   CHECK(rib_volume_db_from_fraction(-1.0f) == -80.0f,
+         "normal, the default, round-trips through the slider");
+   CHECK(rib_volume_db_from_fraction(-1.0f) == AUDIO_VOLUME_MIN_DB,
          "a drag past the left end stops at the end");
-   CHECK(rib_volume_db_from_fraction(2.0f) == 12.0f,
-         "a drag past the right end stops at the end");
-   CHECK(rib_volume_quantize_db(-6.4f) == -6.0f,
-         "volume moves in the same one-decibel steps as RetroArch's setting");
+   CHECK(rib_volume_db_from_fraction(2.0f) == AUDIO_VOLUME_MAX_DB,
+         "a drag past the right end stops at normal");
+   CHECK(rib_volume_quantize_db(-6.4f) == 0.0f,
+         "a level near the top snaps to a position, not to the nearest decibel");
 
-   rib_rmlui_show_screen("volume");
+   /* We do not read design.cfg in the interaction harness. We declare Options
+    * as an export writes it, so showing it shows the screen that a player
+    * opens. */
+   rib_rmlui_clear_screens();
+   rib_rmlui_declare_screen("pause", "pause-panel", "GAME PAUSED",
+         "ESC  CONTINUE", "options-back");
+   rib_rmlui_declare_screen("options", "options-panel", "OPTIONS",
+         "ESC  BACK", "options");
+   rib_rmlui_declare_screen("controls", "controls-panel", "CONTROLS",
+         "ESC  BACK", "controls");
+   rib_rmlui_show_screen("options");
    {
       int slider_x = 0;
       int slider_y = 0;
+      int mute_x = 0;
+      int mute_y = 0;
       CHECK(rib_rmlui_element_center("volume-level", &slider_x, &slider_y),
-            "the volume screen has the design's slider");
+            "Options has the design's slider");
+      CHECK(!rib_rmlui_element_center("volume-mute", &mute_x, &mute_y),
+            "there is no mute button");
       rib_rmlui_clear_intents();
       rib_rmlui_pointer_move(slider_x, slider_y);
       rib_rmlui_pointer_button(true);
@@ -328,16 +356,6 @@ int main(int argc, char **argv)
       CHECK(rib_rmlui_changed_fraction() == 0.0f,
             "a drag off the left end is the bottom of the range");
 
-      rib_rmlui_clear_intents();
-      click_id("volume-mute");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_TOGGLE,
-            "mute is the toggle, not a second control");
-      CHECK(rib_rmlui_changed_on(), "the first press mutes");
-      rib_rmlui_clear_intents();
-      click_id("volume-mute");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_TOGGLE, "mute toggles back");
-      CHECK(!rib_rmlui_changed_on(), "the second press unmutes");
-
       rib_rmlui_set_slider("volume-level", 0.5f, nullptr);
       rib_rmlui_clear_intents();
       CHECK(!rib_rmlui_nudge_slider("volume-level", 1),
@@ -348,6 +366,16 @@ int main(int argc, char **argv)
             "the nudge is the same change a drag commits");
       CHECK(rib_rmlui_changed_fraction() > 0.59f && rib_rmlui_changed_fraction() < 0.61f,
             "the nudge adds the slider's own step, not a volume-shaped one");
+
+      rib_rmlui_set_slider("volume-level", 1.0f, nullptr);
+      rib_rmlui_set_slider_step("volume-level",
+            AUDIO_VOLUME_STEP_DB / (AUDIO_VOLUME_MAX_DB - AUDIO_VOLUME_MIN_DB));
+      rib_rmlui_clear_intents();
+      click_id("volume-down");
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SLIDER,
+            "the left arrow is the slider moving down one position");
+      CHECK(rib_rmlui_changed_fraction() > 0.74f && rib_rmlui_changed_fraction() < 0.76f,
+            "one arrow is one position, not a decibel");
    }
 
    // Letting go somewhere else must not press the button.

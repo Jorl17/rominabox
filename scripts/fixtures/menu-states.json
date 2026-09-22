@@ -26,9 +26,34 @@
         "pause-panel": {
           "display": "block"
         },
+        "options-panel": {
+          "display": "none"
+        },
         "controls-panel": {
           "display": "none"
         }
+      }
+    },
+    "options": {
+      "describes": "the options screen, listing what this game bundled",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "options-panel": {
+          "display": "block"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "heading": {
+          "text": "OPTIONS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "volume-level-fill": { "width": "256px" },
+        "volume-level-thumb": { "left": "222px" }
       }
     },
     "controls": {
@@ -218,43 +243,40 @@
         }
       }
     },
-    "volume": {
-      "describes": "the volume screen, slider at rest and mute off",
+    "volume-low": {
+      "describes": "volume at the quiet end, which is as far down as it goes",
       "set": {
         "pause-panel": { "display": "none" },
+        "options-panel": { "display": "block" },
         "controls-panel": { "display": "none" },
-        "volume-panel": { "display": "block" },
-        "heading": { "text": "VOLUME" },
+        "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-readout": { "text": "0.0 dB" },
-        "volume-level-fill": { "width": "626px" },
-        "volume-level-thumb": { "left": "597px" }
+        "volume-level-fill": { "width": "0px" },
+        "volume-level-thumb": { "left": "0px" }
       }
     },
-    "volume-low": {
-      "describes": "the slider part way down, which is what a drag draws",
+    "volume-step": {
+      "describes": "one position down from normal, which is one arrow press",
       "set": {
         "pause-panel": { "display": "none" },
+        "options-panel": { "display": "block" },
         "controls-panel": { "display": "none" },
-        "volume-panel": { "display": "block" },
-        "heading": { "text": "VOLUME" },
+        "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-fill": { "width": "180px" },
-        "volume-level-thumb": { "left": "160px" },
-        "volume-level-readout": { "text": "-40.0 dB" }
+        "volume-level-fill": { "width": "192px" },
+        "volume-level-thumb": { "left": "167px" }
       }
     },
     "volume-focused": {
-      "describes": "the slider reached by the arrow keys",
+      "describes": "the slider reached by the arrow keys, still at normal",
       "set": {
         "pause-panel": { "display": "none" },
+        "options-panel": { "display": "block" },
         "controls-panel": { "display": "none" },
-        "volume-panel": { "display": "block" },
-        "heading": { "text": "VOLUME" },
+        "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-readout": { "text": "0.0 dB" },
-        "volume-level-fill": { "width": "626px" },
-        "volume-level-thumb": { "left": "597px" },
+        "volume-level-fill": { "width": "256px" },
+        "volume-level-thumb": { "left": "222px" },
         "volume-level": { "class": "focused" }
       }
     },
@@ -262,13 +284,12 @@
       "describes": "the slider held, which is not the same as focused",
       "set": {
         "pause-panel": { "display": "none" },
+        "options-panel": { "display": "block" },
         "controls-panel": { "display": "none" },
-        "volume-panel": { "display": "block" },
-        "heading": { "text": "VOLUME" },
+        "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-readout": { "text": "0.0 dB" },
-        "volume-level-fill": { "width": "626px" },
-        "volume-level-thumb": { "left": "597px" },
+        "volume-level-fill": { "width": "256px" },
+        "volume-level-thumb": { "left": "222px" },
         "volume-level": { "class": "dragging" }
       }
     },
@@ -276,28 +297,41 @@
       "describes": "the pointer on the slider, which is not the keyboard",
       "set": {
         "pause-panel": { "display": "none" },
+        "options-panel": { "display": "block" },
         "controls-panel": { "display": "none" },
-        "volume-panel": { "display": "block" },
-        "heading": { "text": "VOLUME" },
+        "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-readout": { "text": "0.0 dB" },
-        "volume-level-fill": { "width": "626px" },
-        "volume-level-thumb": { "left": "597px" },
+        "volume-level-fill": { "width": "256px" },
+        "volume-level-thumb": { "left": "222px" },
         "volume-level": { "pseudo": "hover" }
       }
     },
-    "volume-muted": {
-      "describes": "mute on, the toggle in its other position",
+    "volume-arrow": {
+      "describes": "the pointer on the arrow that lowers the volume",
       "set": {
         "pause-panel": { "display": "none" },
+        "options-panel": { "display": "block" },
         "controls-panel": { "display": "none" },
-        "volume-panel": { "display": "block" },
-        "heading": { "text": "VOLUME" },
+        "heading": { "text": "OPTIONS" },
         "footer-hint": { "text": "ESC  BACK" },
-        "volume-level-readout": { "text": "0.0 dB" },
-        "volume-level-fill": { "width": "626px" },
-        "volume-level-thumb": { "left": "597px" },
-        "volume-mute": { "class": "on" }
+        "volume-level-fill": { "width": "256px" },
+        "volume-level-thumb": { "left": "222px" },
+        "volume-down": { "pseudo": "hover" }
+      }
+    },
+    "volume-long": {
+      "describes": "labels longer than LOW, HIGH and CONTROLS, and then longer still",
+      "set": {
+        "pause-panel": { "display": "none" },
+        "options-panel": { "display": "block" },
+        "controls-panel": { "display": "none" },
+        "heading": { "text": "OPTIONS" },
+        "footer-hint": { "text": "ESC  BACK" },
+        "volume-level-fill": { "width": "256px" },
+        "volume-level-thumb": { "left": "222px" },
+        "volume-low": { "text": "QUIETEST THE GAME CAN BE", "font-size": "22dp" },
+        "volume-high": { "text": "NORMAL LOUDNESS AND THEN SOMETHING LONGER STILL", "font-size": "22dp" },
+        "controls": { "text": "CONTROLLER SETUP FOR THIS CONSOLE AND THEN SOME", "font-size": "22dp" }
       }
     }
   }

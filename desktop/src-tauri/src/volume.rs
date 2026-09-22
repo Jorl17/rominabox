@@ -40,8 +40,20 @@ pub fn slider_id() -> &'static str {
     defined_string("RIB_VOLUME_SLIDER_ID")
 }
 
-pub fn toggle_id() -> &'static str {
-    defined_string("RIB_VOLUME_TOGGLE_ID")
+pub fn down_id() -> &'static str {
+    defined_string("RIB_VOLUME_DOWN_ID")
+}
+
+pub fn up_id() -> &'static str {
+    defined_string("RIB_VOLUME_UP_ID")
+}
+
+pub fn low_id() -> &'static str {
+    defined_string("RIB_VOLUME_LOW_ID")
+}
+
+pub fn high_id() -> &'static str {
+    defined_string("RIB_VOLUME_HIGH_ID")
 }
 
 pub fn file_name() -> &'static str {
@@ -68,19 +80,42 @@ pub fn default_db() -> f32 {
     defined_float("AUDIO_VOLUME_DEFAULT_DB")
 }
 
-/// The saved volume of a game. Without the file we use the RetroArch default,
-/// unity gain and not muted.
+pub fn position_count() -> i32 {
+    defined_float("RIB_VOLUME_POSITIONS") as i32
+}
+
+/// A position is 0 at the quiet end and `position_count() - 1` at normal.
+/// Normal is as loud as the control goes.
+pub fn db_for_position(position: i32) -> f32 {
+    let last = position_count() - 1;
+    let position = position.clamp(0, last);
+    if last <= 0 {
+        return max_db();
+    }
+    min_db() + (max_db() - min_db()) * (position as f32) / (last as f32)
+}
+
+pub fn position_for_db(decibels: f32) -> i32 {
+    let last = position_count() - 1;
+    let decibels = decibels.clamp(min_db(), max_db());
+    let span = max_db() - min_db();
+    if last <= 0 || span == 0.0 {
+        return last.max(0);
+    }
+    ((decibels - min_db()) / span * last as f32).round() as i32
+}
+
+/// The saved volume of a game. Without the file the volume is normal, the top.
+/// The decibels are on the RetroArch scale, and we show the player a position.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Level {
     pub decibels: f32,
-    pub muted: bool,
 }
 
 impl Default for Level {
     fn default() -> Self {
         Self {
             decibels: default_db(),
-            muted: false,
         }
     }
 }
@@ -89,7 +124,6 @@ impl Level {
     pub fn clamp(self) -> Self {
         Self {
             decibels: self.decibels.clamp(min_db(), max_db()),
-            muted: self.muted,
         }
     }
 }
@@ -101,6 +135,7 @@ fn path_in(data_dir: &Path) -> PathBuf {
 /// `key = "value"` lines, the config format that RetroArch already reads.
 fn parse(text: &str) -> Level {
     let mut level = Level::default();
+    let mut muted = false;
     for line in text.lines() {
         let Some((key, value)) = line.split_once('=') else {
             continue;
@@ -112,21 +147,19 @@ fn parse(text: &str) -> Level {
                 level.decibels = decibels;
             }
         } else if key == mute_key() {
-            level.muted = value == "true";
+            // An older file format stored muting as a button. Map it to the quiet end.
+            muted = value == "true";
         }
+    }
+    if muted {
+        level.decibels = min_db();
     }
     level.clamp()
 }
 
 fn render(level: Level) -> String {
     let level = level.clamp();
-    format!(
-        "{} = \"{:.1}\"\n{} = \"{}\"\n",
-        volume_key(),
-        level.decibels,
-        mute_key(),
-        if level.muted { "true" } else { "false" }
-    )
+    format!("{} = \"{:.1}\"\n", volume_key(), level.decibels)
 }
 
 pub fn read(data_dir: &Path) -> Level {
@@ -149,10 +182,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_range_is_retroarchs_decibel_scale() {
+    fn the_top_is_normal_and_there_are_a_few_positions() {
         assert_eq!(min_db(), -80.0);
-        assert_eq!(max_db(), 12.0);
-        assert_eq!(default_db(), 0.0);
+        assert_eq!(max_db(), 0.0);
+        assert_eq!(default_db(), max_db());
+        assert!(position_count() > 1);
+        assert!(position_count() < 10, "ten positions is already too many");
+        assert_eq!(db_for_position(0), min_db());
+        assert_eq!(db_for_position(position_count() - 1), max_db());
+        assert_eq!(position_for_db(max_db()), position_count() - 1);
+        assert_eq!(db_for_position(position_for_db(-40.0)), -40.0);
+        let step = defined_float("AUDIO_VOLUME_STEP_DB");
+        assert_eq!(
+            step * (position_count() - 1) as f32,
+            max_db() - min_db(),
+            "the positions have to cover the range in equal steps"
+        );
     }
 
     #[test]
@@ -166,36 +211,31 @@ mod tests {
     fn a_level_roundtrips_and_a_value_past_the_ends_is_pulled_back() {
         let dir = std::env::temp_dir().join("rominabox-volume-roundtrip");
         let _ = fs::remove_dir_all(&dir);
-        write(
-            &dir,
-            Level {
-                decibels: -6.0,
-                muted: true,
-            },
-        )
-        .unwrap();
-        assert_eq!(
-            read(&dir),
-            Level {
-                decibels: -6.0,
-                muted: true
-            }
+        write(&dir, Level { decibels: -40.0 }).unwrap();
+        assert_eq!(read(&dir), Level { decibels: -40.0 });
+        let written = fs::read_to_string(path_in(&dir)).unwrap();
+        assert!(
+            !written.contains(mute_key()),
+            "the file must not bring mute back, got {written}"
         );
-        write(
-            &dir,
-            Level {
-                decibels: 40.0,
-                muted: false,
-            },
-        )
-        .unwrap();
+        write(&dir, Level { decibels: 40.0 }).unwrap();
         assert_eq!(read(&dir).decibels, max_db());
-        write(
-            &dir,
-            Level {
-                decibels: -200.0,
-                muted: false,
-            },
+        write(&dir, Level { decibels: -200.0 }).unwrap();
+        assert_eq!(read(&dir).decibels, min_db());
+    }
+
+    #[test]
+    fn an_old_mute_is_the_quiet_end() {
+        let dir = std::env::temp_dir().join("rominabox-volume-old-mute");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            path_in(&dir),
+            format!(
+                "{} = \"0.0\"\n{} = \"true\"\n",
+                volume_key(),
+                mute_key()
+            ),
         )
         .unwrap();
         assert_eq!(read(&dir).decibels, min_db());
