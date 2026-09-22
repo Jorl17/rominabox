@@ -21,7 +21,7 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
 .slot.empty .slot-image { display: none; }
 .slot-state { height: 20dp; font-size: 14dp; color: #b4e6ff; padding-top: 2dp; }
 #actions { position: absolute; left: 56dp; top: 494dp; width: 840dp; height: 48dp; }
-#actions button { text-align: center; line-height: 42dp; position: absolute; height: 42dp; top: 0; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; }
+#actions button { text-align: center; line-height: 42dp; position: absolute; height: 42dp; top: 0; font-family: Silkscreen; font-size: 16dp; border-width: 3dp; }
 #resume { left: 0; width: 260dp; }
 #save { left: 284dp; width: 168dp; }
 #load { left: 476dp; width: 168dp; }
@@ -30,11 +30,12 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
 #footer { position: absolute; left: 24dp; bottom: 10dp; width: 904dp; font-size: 16dp; color: #ffffff; }
 #version { position: absolute; right: 0; top: 0; }
 
-#resume { width: 216dp; }
-#save { left: 240dp; width: 124dp; }
-#load { left: 388dp; width: 124dp; }
-#controls { left: 536dp; width: 164dp; }
-#quit { left: 724dp; width: 112dp; }
+#resume { left: 0; width: 168dp; }
+#save { left: 176dp; width: 96dp; }
+#load { left: 280dp; width: 96dp; }
+#controls { left: 384dp; width: 156dp; }
+#volume { left: 548dp; width: 148dp; }
+#quit { left: 704dp; width: 136dp; }
 #controller-scene { position: absolute; left: -4dp; top: 80dp; width: 960dp; height: 380dp; }
 #controller-image { position: absolute; left: 0; top: 0; width: 960dp; height: 380dp; }
 .control-leader { position: absolute; background-color: #b4e6ff; }
@@ -112,6 +113,27 @@ body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size:
 .menu-action:hover, .menu-action.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
 .menu-action:active { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
+
+/* The slider is a shared part. Volume uses it without separate styles. We
+ * draw hover, keyboard focus and a held drag differently. */
+#volume-control { position: absolute; left: 120dp; top: 150dp; width: 720dp; }
+#volume-back { position: absolute; left: 56dp; top: 480dp; width: 168dp; height: 42dp; line-height: 36dp; font-family: Silkscreen; font-size: 18dp; text-align: center; border-width: 3dp; }
+.slider { display: block; width: 100%; }
+.slider-readout { display: block; width: 100%; height: 44dp; font-family: Silkscreen; font-size: 32dp; text-align: center; color: #fff13d; }
+.slider-track { display: block; position: relative; width: 100%; height: 32dp; margin-top: 18dp; background-color: #020b27; border-top: 4dp #020b27; border-left: 4dp #020b27; border-right: 4dp #9edaff; border-bottom: 4dp #9edaff; }
+.slider-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0; background-color: #fff13d; }
+.slider-thumb { position: absolute; top: -12dp; width: 26dp; height: 56dp; background-color: #061a48; border-top: 4dp #ffffff; border-left: 4dp #ffffff; border-right: 4dp #041738; border-bottom: 4dp #041738; }
+.slider:hover .slider-thumb { border-color: #ffffff; }
+.slider.focused .slider-thumb, .slider.focused:hover .slider-thumb { background-color: #193e88; border-color: #fff13d; }
+.slider.dragging .slider-thumb, .slider:active .slider-thumb { background-color: #fff13d; border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
+.toggle { display: block; position: relative; width: 260dp; height: 52dp; margin-top: 56dp; margin-left: 230dp; padding-left: 64dp; font-family: Silkscreen; font-size: 18dp; line-height: 46dp; text-align: left; color: #ffffff; background-color: #061a48; border: 3dp #75b2e4; }
+.toggle-knob { position: absolute; left: 8dp; top: 6dp; width: 32dp; height: 32dp; background-color: #75b2e4; border-top: 3dp #ffffff; border-left: 3dp #ffffff; border-right: 3dp #041738; border-bottom: 3dp #041738; }
+.toggle:hover { border-color: #ffffff; }
+.toggle.focused, .toggle.focused:hover { border-color: #fff13d; }
+.toggle.on { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
+.toggle.on .toggle-knob { left: 212dp; background-color: #061a48; }
+.toggle:active .toggle-knob { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
+.toggle-label { font-family: Silkscreen; }
 
 @keyframes capture-pulse { from { border-color: #fff13d; } to { border-color: transparent; } }
 .control-callout.capturing, .control-hit.capturing { animation: 0.55s capture-pulse infinite alternate; }

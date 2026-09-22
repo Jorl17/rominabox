@@ -140,7 +140,7 @@ fn built_in_screens() -> Vec<Screen> {
             panel: "pause-panel".into(),
             heading: "GAME PAUSED".into(),
             footer: "ESC  CONTINUE".into(),
-            button: "controls-back".into(),
+            button: "controls-back volume-back".into(),
         },
         Screen {
             id: "controls".into(),
@@ -149,7 +149,43 @@ fn built_in_screens() -> Vec<Screen> {
             footer: "ESC  BACK".into(),
             button: "controls".into(),
         },
+        Screen {
+            id: "volume".into(),
+            panel: "volume-panel".into(),
+            heading: "VOLUME".into(),
+            footer: "ESC  BACK".into(),
+            button: "volume".into(),
+        },
     ]
+}
+
+/// For a design that lists its screens without volume we still add a volume
+/// screen. When the design declares that screen, we keep its heading.
+fn ensure_volume_screen(mut screens: Vec<Screen>) -> Vec<Screen> {
+    if let Some(pause) = screens.iter_mut().find(|screen| screen.id == "pause") {
+        if !pause
+            .button
+            .split_whitespace()
+            .any(|button| button == "volume-back")
+        {
+            if pause.button.is_empty() {
+                pause.button = "volume-back".into();
+            } else {
+                pause.button.push_str(" volume-back");
+            }
+        }
+    }
+    if screens.iter().any(|screen| screen.id == "volume") {
+        return screens;
+    }
+    screens.push(Screen {
+        id: "volume".into(),
+        panel: "volume-panel".into(),
+        heading: "VOLUME".into(),
+        footer: "ESC  BACK".into(),
+        button: "volume".into(),
+    });
+    screens
 }
 
 pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
@@ -182,7 +218,7 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
     if screens.is_empty() {
         return Ok(built_in_screens());
     }
-    Ok(screens)
+    Ok(ensure_volume_screen(screens))
 }
 
 /// The screens, written to the file that the player reads.
@@ -257,6 +293,127 @@ fn scene_metrics_rules(design: &Path) -> Result<String, String> {
     ))
 }
 
+/// The marker on a screen for the volume control. We use the same marker in
+/// Options, or on the volume screen when there is no Options screen.
+pub const VOLUME_SLOT: &str = "<!--VOLUME-->";
+
+const BUILTIN_SLIDER: &str = include_str!("../../../integrations/parts/slider.rml");
+const BUILTIN_TOGGLE: &str = include_str!("../../../integrations/parts/toggle.rml");
+
+fn has_class(template: &str, class: &str) -> bool {
+    template.split("class=\"").skip(1).any(|rest| {
+        rest.split('"')
+            .next()
+            .unwrap_or("")
+            .split_whitespace()
+            .any(|token| token == class)
+    })
+}
+
+fn part_template(design: &Path, name: &str, builtin: &str) -> Result<String, String> {
+    let override_path = design.join("parts").join(format!("{name}.rml"));
+    if override_path.is_file() {
+        return fs::read_to_string(&override_path)
+            .map_err(|e| format!("Could not read {}: {e}", override_path.display()));
+    }
+    Ok(builtin.to_string())
+}
+
+fn require_classes(kind: &str, template: &str, classes: &[&str]) -> Result<(), String> {
+    for class in classes {
+        if !has_class(template, class) {
+            return Err(format!(
+                "the {kind} part must carry class `{class}`, so every design draws it and the control can find it"
+            ));
+        }
+    }
+    if !template.contains("PART-ID") {
+        return Err(format!(
+            "the {kind} part must contain PART-ID, so each use can name its own"
+        ));
+    }
+    Ok(())
+}
+
+fn fill_part(template: &str, id: &str, label: &str) -> String {
+    template.replace("PART-ID", id).replace("LABEL", label)
+}
+
+/// The volume control, drawn with the slider and toggle declared in this design.
+///
+/// For a design that declares neither, we use the built-in parts. The control
+/// markup contains a slider but no styles for it.
+pub fn volume_control_markup(design: &Path) -> Result<String, String> {
+    let slider = part_template(design, "slider", BUILTIN_SLIDER)?;
+    let toggle = part_template(design, "toggle", BUILTIN_TOGGLE)?;
+    require_classes(
+        "slider",
+        &slider,
+        &["slider", "slider-track", "slider-fill", "slider-thumb", "slider-readout"],
+    )?;
+    require_classes("toggle", &toggle, &["toggle", "toggle-knob", "toggle-label"])?;
+    Ok(format!(
+        "<div id=\"volume-control\">{}{}</div>",
+        fill_part(&slider, crate::volume::slider_id(), ""),
+        fill_part(&toggle, crate::volume::toggle_id(), "MUTE")
+    ))
+}
+
+/// Put the volume control at the marker in the design.
+///
+/// Without a marker in the design, we still put the control on the volume
+/// screen, because a screen added later must appear without editing the design.
+pub fn install_volume_control(document: &str, design: &Path) -> Result<String, String> {
+    let markup = volume_control_markup(design)?;
+    if document.contains(VOLUME_SLOT) {
+        return Ok(document.replacen(VOLUME_SLOT, &markup, 1));
+    }
+    if document.contains("id=\"volume-panel\"") {
+        return Ok(document.to_string());
+    }
+    let panel = format!(
+        "<div id=\"volume-panel\" style=\"display:none;\">{markup}<button class=\"menu-action\" id=\"volume-back\">BACK</button></div>"
+    );
+    let with_panel = if let Some(at) = document.rfind("<div id=\"footer\">") {
+        format!("{}{panel}{}", &document[..at], &document[at..])
+    } else {
+        document.replacen("</body>", &format!("{panel}</body>"), 1)
+    };
+    if with_panel.contains("id=\"volume\"") {
+        return Ok(with_panel);
+    }
+    if let Some(at) = with_panel.find("<button class=\"menu-action\" id=\"quit\">") {
+        return Ok(format!(
+            "{}<button class=\"menu-action\" id=\"volume\">VOLUME</button>{}",
+            &with_panel[..at],
+            &with_panel[at..]
+        ));
+    }
+    Ok(with_panel)
+}
+
+/// Geometry for a design with no styles for a slider.
+///
+/// The colours come from the palette block, as for a button. We leave a design
+/// that already styles `.slider` unchanged, because that styling is part of it.
+pub fn builtin_part_rules(stylesheet: &str) -> &'static str {
+    if stylesheet.contains(".slider") {
+        ""
+    } else {
+        r#"
+/* part:slider */
+.slider { display: block; width: 100%; }
+.slider-readout { display: block; width: 100%; height: 36dp; font-family: Silkscreen; font-size: 28dp; text-align: center; }
+.slider-track { display: block; position: relative; width: 100%; height: 28dp; margin-top: 12dp; border-width: 4dp; }
+.slider-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0; }
+.slider-thumb { position: absolute; top: -8dp; width: 22dp; height: 44dp; border-width: 4dp; }
+.toggle { display: block; position: relative; width: 240dp; height: 48dp; margin-top: 28dp; font-family: Silkscreen; font-size: 18dp; line-height: 42dp; padding-left: 56dp; border-width: 3dp; }
+.toggle-knob { position: absolute; left: 8dp; top: 6dp; width: 28dp; height: 28dp; border-width: 3dp; }
+.toggle.on .toggle-knob { left: 196dp; }
+"#
+    }
+}
+
 /// Stage only the selected design's assets and apply the same palette/background
 /// for both an offscreen preview and an exported player.
 /// The folder of the staged files of a design in a prepared kit.
@@ -288,6 +445,12 @@ pub fn prepare_theme_assets(
         fs::copy(source.join(name), destination.join(name))
             .map_err(|e| format!("Could not prepare menu asset {name}: {e}"))?;
     }
+    let menu = fs::read_to_string(destination.join("menu.rml")).map_err(|e| e.to_string())?;
+    fs::write(
+        destination.join("menu.rml"),
+        install_volume_control(&menu, source)?,
+    )
+    .map_err(|e| format!("Could not install the volume control: {e}"))?;
     // The declarations of the design, in the file that the player reads. We
     // write them next to the stylesheet because both belong to the design. A
     // design lists its screens, and we show them by name in the player.
@@ -298,6 +461,7 @@ pub fn prepare_theme_assets(
     .map_err(|e| format!("Could not write the design's declarations: {e}"))?;
     let mut css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
     css.push_str(&scene_metrics_rules(source)?);
+    css.push_str(builtin_part_rules(&css));
     css.push_str(&format!(r#"
 body {{ background-color: {background}; }}
 #screen {{ background-color: {screen}; border-color: {edge}; }}
@@ -315,6 +479,20 @@ body {{ background-color: {background}; }}
 #screen .menu-action:hover, #screen .menu-action.focused {{ background-color: {highlight}; color: {surface}; border-color: #ffffff; }}
 #screen .menu-action:active {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
 #screen .menu-action.disabled, #screen .menu-action:disabled {{ background-color: {background}; color: {edge}; border-color: {surface}; }}
+.slider-readout {{ color: {highlight}; }}
+.slider-track {{ background-color: {background}; border-top-color: {background}; border-left-color: {background}; border-right-color: {edge}; border-bottom-color: {edge}; }}
+.slider-fill {{ background-color: {highlight}; }}
+.slider-thumb {{ background-color: {surface}; border-top-color: #ffffff; border-left-color: #ffffff; border-right-color: {background}; border-bottom-color: {background}; }}
+.slider:hover .slider-thumb {{ border-color: #ffffff; }}
+.slider.focused .slider-thumb, .slider.focused:hover .slider-thumb {{ background-color: {focus}; border-color: {highlight}; }}
+.slider.dragging .slider-thumb, .slider:active .slider-thumb {{ background-color: {highlight}; border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
+.toggle {{ background-color: {surface}; color: #ffffff; border-color: {edge}; }}
+.toggle-knob {{ background-color: {edge}; border-top-color: #ffffff; border-left-color: #ffffff; border-right-color: {background}; border-bottom-color: {background}; }}
+.toggle:hover {{ border-color: #ffffff; }}
+.toggle.focused, .toggle.focused:hover {{ border-color: {highlight}; }}
+.toggle.on {{ background-color: {highlight}; color: {surface}; }}
+.toggle.on .toggle-knob {{ background-color: {surface}; }}
+.toggle:active .toggle-knob {{ border-top-color: {background}; border-left-color: {background}; border-bottom-color: #ffffff; border-right-color: #ffffff; }}
 .control-callout, .control-group {{ background-color: {surface}; border-color: {edge}; }}
 .control-picker-current {{ background-color: {surface}; border-color: {edge}; }}
 .control-picker-list {{ background-color: {surface}; border-color: {highlight}; }}
@@ -503,13 +681,13 @@ pub fn prepare_controls_assets(
             system
         ));
     }
-    fs::write(
-        destination.join("menu.rml"),
-        template
+    let document = install_volume_control(
+        &template
             .replace("<!--CONTROLS-->", &markup)
             .replace(PICKER_SLOT, &picker),
-    )
-    .map_err(|e| e.to_string())
+        design,
+    )?;
+    fs::write(destination.join("menu.rml"), document).map_err(|e| e.to_string())
 }
 
 /// The pads in an export: every pad in the picker.

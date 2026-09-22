@@ -1,6 +1,6 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
-use rominabox_desktop::{controls, metadata, packaging, projects, systems, themes};
+use rominabox_desktop::{controls, metadata, packaging, projects, systems, themes, volume};
 use serde::Deserialize;
 use serde_json::json;
 use std::io::{self, Read};
@@ -48,7 +48,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|project-save|project-open|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|project-save|project-open|volume|volume-markup|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     if command == "schemas" {
@@ -61,7 +61,9 @@ fn run() -> Result<(), String> {
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
                 "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "events": ["progress", "result", "error"] },
                 "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "target"], "result": "ProjectArchiveResult" },
-                "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" }
+                "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" },
+                "volume": { "request": ["dataDir", "decibels?", "muted?"], "result": { "decibels": "dB", "muted": "bool", "path": "volume.cfg" } },
+                "volume-markup": { "request": ["design"], "result": { "markup": "the volume control, in the design's slider and toggle" } }
             })
         );
         return Ok(());
@@ -183,6 +185,53 @@ fn run() -> Result<(), String> {
             println!(
                 "{}",
                 json!({ "type": "result", "result": { "imagePath": image_path } })
+            );
+            Ok(())
+        }
+        "volume" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                data_dir: PathBuf,
+                #[serde(default)]
+                decibels: Option<f32>,
+                #[serde(default)]
+                muted: Option<bool>,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid volume request: {error}"))?;
+            let mut level = volume::read(&request.data_dir);
+            if request.decibels.is_some() || request.muted.is_some() {
+                if let Some(decibels) = request.decibels {
+                    level.decibels = decibels;
+                }
+                if let Some(muted) = request.muted {
+                    level.muted = muted;
+                }
+                level = level.clamp();
+                volume::write(&request.data_dir, level)?;
+            }
+            println!(
+                "{}",
+                json!({ "type": "result", "result": {
+                    "decibels": level.decibels,
+                    "muted": level.muted,
+                    "path": request.data_dir.join(volume::file_name()),
+                }})
+            );
+            Ok(())
+        }
+        "volume-markup" => {
+            #[derive(Deserialize)]
+            struct Request {
+                design: PathBuf,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid volume-markup request: {error}"))?;
+            let markup = themes::volume_control_markup(&request.design)?;
+            println!(
+                "{}",
+                json!({ "type": "result", "result": { "markup": markup } })
             );
             Ok(())
         }

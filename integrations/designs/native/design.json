@@ -41,7 +41,7 @@
       "panel": "pause-panel",
       "heading": "GAME PAUSED",
       "footer": "ESC  CONTINUE",
-      "button": "controls-back"
+      "button": "controls-back volume-back"
     },
     {
       "id": "controls",
@@ -49,6 +49,13 @@
       "heading": "CONTROLS",
       "footer": "ESC  BACK",
       "button": "controls"
+    },
+    {
+      "id": "volume",
+      "panel": "volume-panel",
+      "heading": "VOLUME",
+      "footer": "ESC  BACK",
+      "button": "volume"
     }
   ]
 }

@@ -67,6 +67,11 @@ const MENU_PANELS: &[Panel] = &[
             "controls-cancel", "controls-status",
         ],
     },
+    Panel {
+        name: "volume",
+        required: true,
+        ids: &["volume-panel", "volume", "volume-back"],
+    },
 ];
 
 fn menu_ids(required_only: bool) -> Vec<&'static str> {
