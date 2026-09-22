@@ -288,7 +288,13 @@
           "license": "GPL-2.0",
           "licenseFile": "nestopia.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Nestopia",
+          "pixels": [
+            {
+              "key": "nestopia_blargg_ntsc_filter",
+              "value": "disabled"
+            }
+          ]
         }
       ],
       "controllerProfile": "nes",

@@ -52,6 +52,12 @@ SCOPES = [
         ["cargo", "test", "--quiet", *CARGO_DESKTOP],
     ),
     Scope(
+        "picture",
+        "that a hard edge in a core's picture is still a hard edge after the options an export ships",
+        "window placement, bilinear scaling of an already-sharp frame, or any console whose core is not in the kit",
+        ["python3", str(ROOT / "scripts/picture_edges.py")],
+    ),
+    Scope(
         "frontend",
         "the React builder UI: controls editor, sound preview, app flow, and that it typechecks",
         "anything about the exported player, which is a different codebase",
