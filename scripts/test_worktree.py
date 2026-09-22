@@ -207,20 +207,23 @@ def the_built_cli_follows_the_redirected_cargo_target() -> None:
     while nothing redirects cargo. Inside a worktree we always redirect it to
     the shared store, so with such a path we would look in a directory without
     cargo's output and report the tool as missing.
+
+    We answer this now with scripts/built.py, where we also refuse a binary
+    built in another checkout, which the path alone cannot show.
     """
-    checkout = Path("/checkout")
+    import built  # noqa: PLC0415 — imported here so this file loads without it
+
     shared = Path("/shared-cargo-target")
     before = os.environ.get("CARGO_TARGET_DIR")
     try:
         os.environ["CARGO_TARGET_DIR"] = str(shared)
         check(
-            worktree.built_cli(checkout) == shared / "release/rominabox-cli",
+            built.target_dir() == shared,
             "the command line is looked for where cargo was redirected",
         )
         os.environ.pop("CARGO_TARGET_DIR")
         check(
-            worktree.built_cli(checkout)
-            == checkout / "desktop/src-tauri/target/release/rominabox-cli",
+            built.target_dir() == built.ROOT / "desktop/src-tauri/target",
             "with nothing redirecting it, the checkout's own target directory",
         )
     finally:

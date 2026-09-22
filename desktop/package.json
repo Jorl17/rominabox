@@ -4,15 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run catalog && vite",
-    "build": "npm run catalog && tsc --noEmit && vite build",
-    "check": "tsc --noEmit && vitest run && prettier --check .",
+    "dev": "npm run catalog && npm run scene && vite",
+    "build": "npm run catalog && npm run scene && tsc --noEmit && vite build",
+    "check": "npm run scene && tsc --noEmit && vitest run && prettier --check .",
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "tauri": "tauri",
     "catalog": "cargo run --quiet --manifest-path crates/rominabox-catalog/Cargo.toml --bin rominabox-catalog -- generate",
-    "catalog:validate": "cargo run --quiet --manifest-path crates/rominabox-catalog/Cargo.toml --bin rominabox-catalog -- validate"
+    "catalog:validate": "cargo run --quiet --manifest-path crates/rominabox-catalog/Cargo.toml --bin rominabox-catalog -- validate",
+    "scene": "python3 ../scripts/render_controllers.py --stage-frontend"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

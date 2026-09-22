@@ -258,6 +258,18 @@ SHARED_ARTIFACTS = [
     # Both are build output, the same in every worktree, and not in git.
     Path("desktop/node_modules"),
     Path("work/experiments"),
+    # These are bundled resources in the tauri build, so without them we cannot
+    # compile the desktop crate. The error, "resource path `resources/skills`
+    # doesn't exist", looks like a missing file and not a missing link, and
+    # most test scopes then fail.
+    Path("desktop/src-tauri/resources/bin"),
+    Path("desktop/src-tauri/resources/skills"),
+    # The catalogues and picture lists for the identification measurement. We
+    # fetch them on purpose and never during a test, so without them we cannot
+    # run those tests in a worktree. The error message suggests a fetch, and in
+    # every checkout that would mean many requests to another party's API for
+    # the same files.
+    Path("work/identification-cache"),
 ]
 
 
@@ -335,20 +347,6 @@ def adopt() -> int:
         local = write_local(here, suffix, offset)
     print(f"{here}\n{describe(local)}")
     return 0
-
-
-def built_cli(checkout: Path) -> Path:
-    """Return the authoring command line to run from a script.
-
-    A fixed `desktop/src-tauri/target/release` path in a script is correct only
-    while nothing redirects cargo. Inside a worktree we redirect it to the
-    shared store in `environment`, so with such a path we would look in a
-    directory without cargo's output and report the tool as missing.
-    """
-    redirected = os.environ.get("CARGO_TARGET_DIR")
-    target = Path(redirected) if redirected else checkout / "desktop/src-tauri/target"
-    return target / "release/rominabox-cli"
-
 
 def environment() -> int:
     """Print the shell exports for a worktree, for `eval`."""

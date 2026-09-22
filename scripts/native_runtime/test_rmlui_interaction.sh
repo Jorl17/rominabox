@@ -41,9 +41,10 @@ mkdir -p "$assets"
 for document in "$design"/*; do
   [ -f "$document" ] && cp "$document" "$assets/"
 done
-# Cargo writes to the default target only when nothing redirects it, and a
-# worktree always redirects it.
-cli=${CARGO_TARGET_DIR:-$repo_root/desktop/src-tauri/target}/release/rominabox-cli
+# We build it here and check that it comes from this checkout, because every
+# worktree shares one cargo target, so the binary next to the manifest may be
+# out of date or from another checkout. See scripts/built.py.
+cli=$(python3 "$repo_root/scripts/built.py")
 if [ -x "$cli" ]; then
   printf '{"source":"%s","destination":"%s","palette":"blue"}' "$design" "$assets" \
     | "$cli" stage-theme >/dev/null || {

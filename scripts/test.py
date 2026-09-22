@@ -75,16 +75,22 @@ SCOPES = [
         "anything about the exported player, which is a different codebase",
         # With `npm test` we run vitest, without a type check, so we include the
         # type check in this scope instead of leaving it to a full build.
+        # With `npm run check` we also stage the geometry, so in this scope and
+        # in `npm run build` (the same type check, in the tauri build) we use
+        # the same staged layout JSON on a clean checkout.
         ["npm", "--prefix", str(ROOT / "desktop"), "run", "check"],
-        # In the builder we draw the geometry from the exporter, staged beside
-        # the artwork. In its tests we read the same staged files as in the app.
-        prepare=[["python3", str(ROOT / "scripts/render_controllers.py"), "--stage-frontend"]],
     ),
     Scope(
         "menu",
         "what RmlUi does with the real menu.rml when clicked: hit testing, hover, focus, classes",
         "that the menu looks right, or anything about the C++ bridge, which is not loaded",
         ["python3", str(ROOT / "scripts/menu_interaction.py"), "--check"],
+    ),
+    Scope(
+        "heldkey",
+        "that Escape still toggles the menu while another key is held, including a press that starts and ends between two samples",
+        "that a physical keyboard delivers the events; the decision is the function the runloop calls",
+        ["bash", str(ROOT / "scripts/test_held_key.sh")],
     ),
     Scope(
         "staging",

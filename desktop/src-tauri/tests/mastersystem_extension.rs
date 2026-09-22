@@ -185,7 +185,7 @@ fn an_author_can_pick_the_generic_retropad_and_get_an_asset_free_grid() {
         profile: Some("retropad".to_string()),
         ..Controls::default()
     };
-    themes::prepare_controls_assets(&menu_assets(), &menu_assets(), &root, "mastersystem", &options)
+    themes::prepare_controls_assets(&menu_assets(), &menu_assets(), &root, "mastersystem", &options, None)
         .expect("RetroPad is offered for every console");
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("id=\"control-r3\""));
@@ -193,7 +193,12 @@ fn an_author_can_pick_the_generic_retropad_and_get_an_asset_free_grid() {
     // The document and its one alternative scene, with no artwork.
     assert_eq!(
         file_names(&root),
-        BTreeSet::from(["menu.rml".to_string(), "scene-retropad.rml".to_string()])
+        BTreeSet::from([
+            "menu.rml".to_string(),
+            "scene-retropad.rml".to_string(),
+            // We stage the screen declarations with the menu.
+            "design.cfg".to_string(),
+        ])
     );
     controls::write_defaults_config("mastersystem", &options, &root.join("controls.cfg")).unwrap();
     assert!(fs::read_to_string(root.join("controls.cfg"))
@@ -270,7 +275,7 @@ fn export_stages_only_the_mastersystem_illustration() {
     );
 
     let destination = scratch();
-    themes::prepare_controls_assets(&source, &source, &destination, "mastersystem", &Controls::default())
+    themes::prepare_controls_assets(&source, &source, &destination, "mastersystem", &Controls::default(), None)
         .expect("stage the default pad");
 
     assert_eq!(
@@ -290,6 +295,8 @@ fn export_stages_only_the_mastersystem_illustration() {
             profile.image.clone(),
             "CONTROLLERS.txt".to_string(),
             "menu.rml".to_string(),
+            // We stage the screen declarations with the menu.
+            "design.cfg".to_string(),
             // The scene we read in the player when someone picks another pad.
             // There is one pad for Master System, so there is exactly one.
             format!("scene-{}.rml", profile.id),

@@ -48,7 +48,20 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|shaders|shaders-check|schemas|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nshaders prints the catalog. shaders-check reads a selection on stdin.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|shaders|shaders-check|schemas|where|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nshaders prints the catalog. shaders-check reads a selection on stdin.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        return Ok(());
+    }
+    // The checkout from which we built this binary.
+    //
+    // Checkouts can use one cargo target directory, and then
+    // release/rominabox-cli is a single file, replaced by the last build from
+    // any checkout. A caller could then photograph a menu, stage a design or
+    // measure an export with another checkout's code.
+    //
+    // We compile in the manifest directory, so we can print the origin of the
+    // binary, and a caller can reject a binary from another checkout.
+    if command == "where" {
+        println!("{}", env!("CARGO_MANIFEST_DIR"));
         return Ok(());
     }
     if command == "schemas" {
@@ -59,9 +72,9 @@ fn run() -> Result<(), String> {
                 "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
-                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "events": ["progress", "result", "error"] },
+                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "menuEntries?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "menuEntries": "option entry ids to offer; omit for the design's defaults; [] offers no Options button", "events": ["progress", "result", "error"] },
                 "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
-                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "target"], "result": "ProjectArchiveResult" },
+                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
                 "shaders": { "request": [], "result": "Catalog presets an author can bundle" },
                 "shaders-check": { "request": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "optional id" }, "result": "Resolved shaders, or an error" },
                 "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" }
@@ -239,6 +252,9 @@ fn run() -> Result<(), String> {
                 destination: PathBuf,
                 #[serde(default)]
                 controls: controls::Controls,
+                /// Options entries to stage, or the design's defaults when absent.
+                #[serde(default)]
+                menu_entries: Option<Vec<String>>,
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid stage-controls request: {error}"))?;
@@ -248,6 +264,7 @@ fn run() -> Result<(), String> {
                 &request.destination,
                 &request.system,
                 &request.controls,
+                request.menu_entries.as_deref(),
             )?;
             println!(
                 "{}",
