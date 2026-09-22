@@ -24,6 +24,14 @@ pub struct Palette {
     pub highlight: String,
     pub muted: String,
     pub focus: String,
+    /// Values for tokens that the design declares and the palette roles above
+    /// do not name, such as the outer frame, the bevels and the disabled greys.
+    ///
+    /// Without them, the design's defaults would apply in every palette. A
+    /// palette gives a value for each token the design declares, so to add a
+    /// token, add a line to each palette and not a field here.
+    #[serde(default)]
+    pub tokens: std::collections::BTreeMap<String, String>,
 }
 /// One pack is one complete set of the four menu cues, `up`, `down`, `ok` and
 /// `cancel`. Packs have no variants or layers. `off` is the one entry with no
@@ -604,6 +612,12 @@ fn design_tokens(
         ("focus", &palette.focus),
     ] {
         tokens.insert(name.to_string(), value.clone());
+    }
+    // Last, so the values of a palette replace the defaults of the design for
+    // the same names. The design defines where a colour is used, and the
+    // palette defines which colour it is.
+    for (name, value) in &palette.tokens {
+        tokens.insert(name.clone(), value.clone());
     }
     Ok(tokens)
 }

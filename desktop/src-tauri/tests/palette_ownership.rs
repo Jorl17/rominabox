@@ -138,3 +138,89 @@ fn no_other_palettes_colour_survives_an_export() {
         }
     }
 }
+
+/// Every colour that we write in an export comes from the chosen palette.
+///
+/// A design declares colours of its own, such as the frame around the
+/// screen, the bevels on a save slot's picture and the greys of a disabled
+/// button. A palette gives a value for every token of the design, so an
+/// export in Green or Amber must have no blue frame, navy label strips or
+/// blue disabled button around an amber menu.
+///
+/// We export in each palette and check that the palette declares every
+/// colour in the result. We do not check whether a colour changes between
+/// palettes, because the highlight is the same yellow in all three, and all
+/// three declare it. Only the source of each colour counts.
+#[test]
+fn no_colour_survives_every_palette() {
+    // White and black are not chosen in a palette. They are the ends of the
+    // range, for a highlight edge and a shadow, and a palette with its own
+    // would have a token for it.
+    const NEUTRAL: [&str; 4] = ["#ffffff", "#000000", "#fff", "#000"];
+
+    let declared: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(repo().join("desktop/designs.json")).unwrap())
+            .unwrap();
+    let palettes: Vec<String> = declared["palettes"]
+        .as_array()
+        .expect("palettes")
+        .iter()
+        .map(|entry| entry["id"].as_str().unwrap().to_string())
+        .collect();
+    assert!(
+        palettes.len() > 1,
+        "one palette proves nothing about whether colour follows the palette"
+    );
+
+    for entry in declared["palettes"].as_array().unwrap() {
+        let palette = entry["id"].as_str().unwrap();
+        let mut allowed: BTreeSet<String> =
+            NEUTRAL.iter().map(|c| c.to_string()).collect();
+        for (name, value) in entry.as_object().unwrap() {
+            if name == "tokens" {
+                for value in value.as_object().unwrap().values() {
+                    allowed.insert(value.as_str().unwrap().to_ascii_lowercase());
+                }
+            } else if let Some(value) = value.as_str() {
+                if value.starts_with('#') {
+                    allowed.insert(value.to_ascii_lowercase());
+                }
+            }
+        }
+
+        let written = hex_colours(&exported_stylesheet(palette));
+        assert!(
+            !written.is_empty(),
+            "the {palette} export wrote a stylesheet with no colours in it"
+        );
+        let stray: Vec<String> = written.difference(&allowed).cloned().collect();
+        assert!(
+            stray.is_empty(),
+            "the {palette} export writes {} colour(s) that palette never \
+             declared: {}\n\
+             A colour the design decides is a colour no scheme can change. \
+             Declare a token for it in the design and give every palette a \
+             value in desktop/designs.json.",
+            stray.len(),
+            stray.join(", ")
+        );
+    }
+}
+
+/// Every hex colour in a stylesheet, lowercased.
+fn hex_colours(css: &str) -> BTreeSet<String> {
+    let bytes = css.as_bytes();
+    let mut found = BTreeSet::new();
+    for (at, _) in css.match_indices('#') {
+        let rest = &bytes[at + 1..];
+        let len = rest
+            .iter()
+            .take(8)
+            .take_while(|byte| byte.is_ascii_hexdigit())
+            .count();
+        if len == 3 || len == 6 || len == 8 {
+            found.insert(css[at..at + 1 + len].to_ascii_lowercase());
+        }
+    }
+    found
+}

@@ -131,8 +131,13 @@ def draw(tree: Path) -> tuple[dict[str, Path], list[str]]:
             print(f"  {track_of(tree)}: no {kind} — {reason}")
             broken.append(f"{track_of(tree)} cannot draw its {kind}: {reason}")
             continue
-        for picture in sorted(out.glob("*.png")):
-            drawn[picture.stem] = picture
+        # We render the states into a directory per palette, so we put the
+        # palette in the picture's name too. Amber and Green are different
+        # pictures and would otherwise have the same name as Blue's.
+        for picture in sorted(out.glob("**/*.png")):
+            where = picture.parent.name
+            name = picture.stem if where == kind else f"{where}-{picture.stem}"
+            drawn[name] = picture
     return drawn, broken
 
 
