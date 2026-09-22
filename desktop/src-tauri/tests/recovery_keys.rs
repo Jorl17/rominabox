@@ -71,7 +71,7 @@ fn fixture_kit(root: &Path) -> PathBuf {
     )
     .unwrap();
     let design =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native");
+        rominabox_desktop::repo::at("integrations/designs/native");
     copy_tree(&design, &kit.join("designs/native"));
     fs::create_dir_all(kit.join("menu-assets")).unwrap();
     // We read the scene template for the controls from the kit's shared

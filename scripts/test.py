@@ -193,8 +193,20 @@ def execute(command: list[str]) -> subprocess.CompletedProcess:
     if command and command[0] == "cargo" and "test" in command[:2]:
         return cargo_test(command, ROOT)
     return subprocess.run(
-        command, cwd=ROOT, capture_output=True, text=True, errors="replace"
+        command, cwd=ROOT, capture_output=True, text=True, errors="replace",
+        env=running_here(),
     )
+
+
+def running_here() -> dict:
+    """Tell the tests which checkout they belong to.
+
+    A path compiled into a binary is that of the checkout where it was built.
+    Every worktree uses one cargo target, so one checkout can get a test
+    binary built in another, and the tests would then read the other
+    checkout's console packages.
+    """
+    return {**os.environ, "ROMINABOX_REPO": str(ROOT)}
 
 
 def run(scope: Scope) -> tuple[bool, float, str]:

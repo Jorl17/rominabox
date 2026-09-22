@@ -18,7 +18,7 @@ fn workspace() -> PathBuf {
     p
 }
 fn assets() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../integrations/designs/native")
+    rominabox_desktop::repo::at("integrations/designs/native")
 }
 /// A source directory with artwork for every profile that declares it. We
 /// take the filenames from controls.json, so adding an illustrated profile
@@ -27,7 +27,7 @@ fn illustrated_assets() -> PathBuf {
     let root = workspace();
     fs::copy(assets().join("menu.rml"), root.join("menu.rml")).unwrap();
     let registry: serde_json::Value = serde_json::from_str(
-        &fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../controls.json"))
+        &fs::read_to_string(rominabox_desktop::repo::at("desktop/controls.json"))
             .unwrap(),
     )
     .unwrap();

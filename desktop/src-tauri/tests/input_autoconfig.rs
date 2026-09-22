@@ -57,7 +57,7 @@ fn keyboard_assignments(config: &str) -> BTreeMap<&str, &str> {
 }
 
 fn declared_gameplay_keys() -> BTreeSet<String> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../controls.json");
+    let path = rominabox_desktop::repo::at("desktop/controls.json");
     let registry: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
     let mut keys = BTreeSet::new();
@@ -73,7 +73,7 @@ fn declared_gameplay_keys() -> BTreeSet<String> {
 
 fn pinned_meta_bind_names() -> Vec<String> {
     let path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../vendor/retroarch/configuration.c");
+        rominabox_desktop::repo::at("vendor/retroarch/configuration.c");
     let text = fs::read_to_string(&path).unwrap_or_else(|_| {
         panic!(
             "pinned RetroArch configuration.c is required to check the allow-list: {}",
@@ -99,11 +99,11 @@ fn pinned_meta_bind_names() -> Vec<String> {
 }
 
 fn repo_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+    rominabox_desktop::repo::root()
 }
 
 fn runtime_resources() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/runtime")
+    rominabox_desktop::repo::at("desktop/src-tauri/resources/runtime")
 }
 
 fn pinned_autoconfig_revision() -> String {
@@ -939,7 +939,7 @@ fn gameplay_button_labels_are_kept() {
 }
 
 fn staged_autoconfig_root() -> std::path::PathBuf {
-    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/runtime/autoconfig/hid")
+    rominabox_desktop::repo::at("desktop/src-tauri/resources/runtime/autoconfig/hid")
 }
 
 fn read_profiles(root: &std::path::Path) -> Option<Vec<(String, String)>> {
