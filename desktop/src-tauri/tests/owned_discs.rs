@@ -78,13 +78,17 @@ fn his_ape_escape_chd_is_named_and_given_a_cover() {
         "no cover: {:?}",
         inspection.warnings
     );
+    // The files listed on the details step are the files we copy in the
+    // export: one query, with the console we just found by inspection.
+    let traveling = rominabox_desktop::traveling::files_for(&chd, Some(&inspection.system))
+        .expect("the CHD's files can be listed");
     assert!(
-        inspection
-            .support_files
+        traveling
+            .files
             .iter()
             .any(|name| name == "Ape Escape (Europe).sbi"),
-        "the CHD inspection did not name the sibling SBI: {:?}",
-        inspection.support_files
+        "the details step would not name the sibling SBI: {:?}",
+        traveling.files
     );
 }
 

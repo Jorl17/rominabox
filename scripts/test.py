@@ -92,7 +92,7 @@ SCOPES = [
     ),
     Scope(
         "builder",
-        "that the browser build of the builder can be walked, and that shader packaging is on the menu step",
+        "that the browser build of the builder can be walked, that a dropped file's companions are named on the details step, and that shader packaging is on the menu step",
         "the desktop shell: catalog artwork, a rendered menu preview, firmware wording, and creating the app",
         ["python3", str(ROOT / "scripts/builder_shots.py"), "--check"],
         slow=True,

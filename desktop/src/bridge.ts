@@ -17,7 +17,6 @@ export type GameInfo = {
   description?: string;
   iconPath?: string;
   warnings: string[];
-  supportFiles?: string[];
 };
 export type Picture = { path: string; url: string };
 export type ExportRequest = {
@@ -108,6 +107,28 @@ export function inspectGame(
   systemOverride?: string,
 ): Promise<GameInfo> {
   return invoke("inspect_game", { path, online, systemOverride });
+}
+export type Traveling = { entry: string; files: string[] };
+// We ask with the console, as in the export, because a companion required
+// for one console is optional for another. Without it, the receipt could
+// list files that we do not copy in the export.
+export function travelingFiles(
+  path: string,
+  system: string,
+): Promise<Traveling> {
+  // The browser walkthrough has no desktop shell, but we must still use
+  // content::collect, because with a second copy of that rule in the page,
+  // the receipt and the export could list different files. In the walkthrough
+  // server we run the same command as in the shell.
+  if (native) return invoke("traveling_files", { path, system });
+  const query = new URLSearchParams({ path, system });
+  return fetch(`/__rominabox/traveling?${query}`).then(async (response) => {
+    if (!response.ok)
+      throw new Error(
+        "The files that travel with this game could not be read.",
+      );
+    return response.json() as Promise<Traveling>;
+  });
 }
 export const FirmwareNoticeKind = {
   Required: "required",

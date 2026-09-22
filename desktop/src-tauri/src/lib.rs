@@ -14,6 +14,7 @@ pub mod repo;
 pub mod shaders;
 pub mod scene_layout;
 pub mod systems;
+pub mod traveling;
 
 pub mod themes;
 pub mod volume;

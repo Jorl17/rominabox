@@ -29,10 +29,6 @@ pub struct Inspection {
     pub description: Option<String>,
     pub icon_path: Option<PathBuf>,
     pub warnings: Vec<String>,
-    /// Files that we copy with the game but that are not the game itself. We
-    /// list a PlayStation `.sbi` here when it is next to the CHD, because
-    /// someone who drops the disc must get that file without asking for it.
-    pub support_files: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -94,7 +90,6 @@ pub fn inspect_game_with_system(
     let filename = prepared.filename.clone();
     let extension = prepared.extension.clone();
     let header = dumps::identification_header(&prepared.path)?;
-    let support_files = included_support(&prepared.path);
     let queries = disc_name_queries(&filename, &dropped);
     let (system, warnings) = if let Some(requested) = system_override {
         let selected = systems::find(requested)
@@ -157,7 +152,6 @@ pub fn inspect_game_with_system(
             description: None,
             icon_path: None,
             warnings,
-            support_files,
         });
     };
 
@@ -220,7 +214,6 @@ pub fn inspect_game_with_system(
         description,
         icon_path,
         warnings,
-        support_files,
     })
 }
 
@@ -460,22 +453,6 @@ fn resolve_disc(
         return (system, warnings);
     }
     (Some(detected), Vec::new())
-}
-
-fn included_support(path: &Path) -> Vec<String> {
-    let Ok(set) = content::collect(path) else {
-        return Vec::new();
-    };
-    set.files
-        .iter()
-        .skip(1)
-        .filter_map(|file| {
-            file.relative
-                .file_name()
-                .and_then(|name| name.to_str())
-                .map(str::to_owned)
-        })
-        .collect()
 }
 
 fn disc_name_queries(filename: &str, dropped: &Path) -> Vec<String> {
