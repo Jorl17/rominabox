@@ -15,8 +15,10 @@ the last build in any checkout. A script in one checkout could then
 photograph a menu, stage a design or measure an export with another
 checkout's code.
 
-So we build it, read from the binary the checkout it was built in, and keep
-a copy inside this checkout, outside the shared target.
+So we read from the binary the checkout it was built in, and keep a copy
+inside this checkout, outside the shared target. We build only when we must,
+because taking the shared cargo lock every time a script runs would make us
+wait in every script for whatever else is compiling.
 
     from built import cli
     subprocess.run([str(cli()), "stage-theme"], ...)
@@ -41,42 +43,70 @@ def target_dir() -> Path:
     return Path(shared) if shared else ROOT / "desktop/src-tauri/target"
 
 
-def cli(rebuild: bool = True) -> Path:
-    """Return this checkout's command-line tool, built and checked as its own."""
-    if rebuild:
-        built = subprocess.run(
+def owner(binary: Path) -> str | None:
+    """The checkout this binary was built in, or None if we cannot read it."""
+    if not binary.is_file():
+        return None
+    asked = subprocess.run(
+        [str(binary), "where"], capture_output=True, text=True, timeout=30
+    )
+    return asked.stdout.strip() if asked.returncode == 0 else None
+
+
+def cli(build: bool = False) -> Path:
+    """This checkout's command-line tool, checked as its own.
+
+    We do not build it by default. Building would take the cargo lock every
+    time any script runs, even for `--help`, and other checkouts share that
+    lock, so we would wait in the script for a compile in another checkout.
+    In the scripts we expect a binary that is already built.
+    """
+    mine = str((ROOT / "desktop/src-tauri").resolve())
+
+    # The copy inside this checkout, if it exists and still comes from here.
+    if owner(MINE) == mine and not build:
+        return MINE
+
+    # Otherwise the last build output, in the cargo target for this shell.
+    candidates = [target_dir() / "release/rominabox-cli"]
+    local = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+    if local not in candidates:
+        candidates.append(local)
+
+    if build or not any(owner(c) == mine for c in candidates):
+        made = subprocess.run(
             ["cargo", "build", "--quiet", "--release",
              "--manifest-path", str(MANIFEST), "--bin", "rominabox-cli"],
             capture_output=True, text=True,
         )
-        if built.returncode != 0:
+        if made.returncode != 0:
             raise SystemExit(
-                f"could not build rominabox-cli:\n{built.stderr.strip()[-800:]}"
+                f"no rominabox-cli belonging to this checkout, and it would not "
+                f"build:\n{made.stderr.strip()[-800:]}"
             )
 
-    fresh = target_dir() / "release/rominabox-cli"
-    if not fresh.is_file():
-        raise SystemExit(f"cargo reported success but {fresh} is not there")
+    for candidate in candidates:
+        if owner(candidate) == mine:
+            # We copy it inside this checkout, so that building in another
+            # checkout cannot replace it before we use it. All worktrees share
+            # one cargo target directory, so release/rominabox-cli is a single
+            # file that a build in any checkout may overwrite.
+            MINE.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(candidate, MINE)
+            return MINE
 
-    where = subprocess.run([str(fresh), "where"], capture_output=True, text=True)
-    belongs = where.stdout.strip()
-    expected = str((ROOT / "desktop/src-tauri").resolve())
-    if where.returncode != 0 or belongs != expected:
-        raise SystemExit(
-            f"the built rominabox-cli belongs to another checkout.\n"
-            f"  it says     {belongs or '(nothing — an older build with no `where`)'}\n"
-            f"  this is     {expected}\n\n"
-            f"Every worktree shares one cargo target, so that binary is whichever\n"
-            f"checkout built last. Build again here and nothing else at the same\n"
-            f"time, or give this checkout its own target directory."
-        )
-
-    # We keep it inside this checkout, so that building in another checkout
-    # cannot replace the binary before we use it.
-    MINE.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(fresh, MINE)
-    return MINE
+    said = {str(c): owner(c) for c in candidates}
+    raise SystemExit(
+        "no rominabox-cli here belongs to this checkout.\n"
+        + "".join(f"  {where}\n    says {who or '(an older build that cannot say)'}\n"
+                  for where, who in said.items())
+        + f"  this checkout is\n    {mine}\n\n"
+        "Every worktree shares one cargo target, so that binary is whichever\n"
+        "checkout built last. Build it here:\n"
+        "  cargo build --release --manifest-path desktop/src-tauri/Cargo.toml "
+        "--bin rominabox-cli"
+    )
 
 
 if __name__ == "__main__":
-    print(cli(rebuild="--no-build" not in sys.argv))
+    print(cli(build="--build" in sys.argv))
