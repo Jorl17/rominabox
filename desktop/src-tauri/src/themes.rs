@@ -387,22 +387,21 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
 /// We use the same format as for the controller list, a space-separated list
 /// of ids and one key per field, read with `config_get_array`. The player
 /// code contains the name of no particular screen.
-fn screen_declarations(screens: &[Screen]) -> String {
-    let ids: Vec<&str> = screens.iter().map(|s| s.id.as_str()).collect();
-    let mut text = format!("screens = \"{}\"\n", ids.join(" "));
-    for screen in screens {
-        text.push_str(&format!(
-            "screen_panel_{id} = \"{}\"\nscreen_heading_{id} = \"{}\"\nscreen_footer_{id} = \"{}\"\nscreen_button_{id} = \"{}\"\n",
-            screen.panel,
-            screen.heading,
-            screen.footer,
-            screen.button,
-            id = screen.id,
-        ));
-    }
+///
+/// `screens` is already the set for the export, the screens that the author
+/// left on. We drop every screen in that set that this document cannot draw,
+/// so a logo-only export lists no screens at all, instead of panels that are
+/// not in the file.
+/// The switches on these screens, written to the file that the player reads.
+///
+/// We write the switches of every screen with this function, also for a
+/// generated list, whose panel we write after the declarations of the design.
+/// A second copy of this format could write an empty `toggles` for a switch
+/// whose button is on screen.
+pub fn toggle_declarations(screens: &[Screen]) -> String {
     let switches: Vec<&Toggle> = screens.iter().filter_map(|s| s.toggle.as_ref()).collect();
     let ids: Vec<&str> = switches.iter().map(|t| t.id.as_str()).collect();
-    text.push_str(&format!("toggles = \"{}\"\n", ids.join(" ")));
+    let mut text = format!("toggles = \"{}\"\n", ids.join(" "));
     for toggle in switches {
         text.push_str(&format!(
             "toggle_on_{id} = \"{on}\"\ntoggle_off_{id} = \"{off}\"\ntoggle_default_{id} = \"{default}\"\ntoggle_guard_{id} = \"{guard}\"\ntoggle_guard_label_{id} = \"{label}\"\ntoggle_guard_status_{id} = \"{status}\"\n",
@@ -415,6 +414,29 @@ fn screen_declarations(screens: &[Screen]) -> String {
             status = toggle.guard_status,
         ));
     }
+    text
+}
+
+fn screen_declarations(screens: &[Screen], markup: &str) -> String {
+    let screens: Vec<&Screen> = screens
+        .iter()
+        .filter(|screen| markup.contains(&format!("id=\"{}\"", screen.panel)))
+        .collect();
+    let ids: Vec<&str> = screens.iter().map(|s| s.id.as_str()).collect();
+    let mut text = format!("screens = \"{}\"\n", ids.join(" "));
+    for screen in &screens {
+        text.push_str(&format!(
+            "screen_panel_{id} = \"{}\"\nscreen_heading_{id} = \"{}\"\nscreen_footer_{id} = \"{}\"\nscreen_button_{id} = \"{}\"\n",
+            screen.panel,
+            screen.heading,
+            screen.footer,
+            screen.button,
+            id = screen.id,
+        ));
+    }
+    text.push_str(&toggle_declarations(
+        &screens.iter().copied().cloned().collect::<Vec<Screen>>(),
+    ));
     text
 }
 
@@ -671,6 +693,118 @@ fn write_options_css(destination: &Path, show_options: bool) -> Result<(), Strin
     fs::write(&css_path, css).map_err(|e| e.to_string())
 }
 
+/// Something from the design that we draw over the running game for a moment.
+///
+/// An overlay is not a screen. Nobody opens it by name, it has no input, it
+/// hides nothing, and it is over the game and not inside the menu. So it has
+/// no heading, footer or button, and we add no bridge action for it.
+///
+/// In the player we show it, mark it as leaving and hide it on this clock.
+/// The stylesheet of the design styles its arrival and its exit, with the same
+/// exit time as `design(overlay-leave-<id>)`.
+pub struct Overlay {
+    /// The element in the design's markup, which is also the overlay's name.
+    pub id: String,
+    /// An overlay declared before this one that has to finish first. Empty
+    /// means that we wait for the start of the game instead.
+    pub follows: String,
+    /// How long after that before it appears.
+    pub after_ms: u32,
+    /// How long it stays once it has arrived.
+    pub hold_ms: u32,
+    /// How long the overlay takes to leave. The animation in the stylesheet
+    /// lasts exactly this long, from the same declaration.
+    pub leave_ms: u32,
+    /// A staged file required for the overlay, which we check in the player
+    /// against the files shipped in the export. Empty means none.
+    pub needs: String,
+}
+
+pub fn declared_overlays(design: &Path) -> Result<Vec<Overlay>, String> {
+    let declaration = design.join("design.json");
+    let Ok(text) = fs::read_to_string(&declaration) else {
+        return Ok(Vec::new());
+    };
+    let declared: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("{}: {e}", declaration.display()))?;
+    let Some(listed) = declared.get("overlays").and_then(|v| v.as_array()) else {
+        return Ok(Vec::new());
+    };
+    let mut overlays = Vec::new();
+    for (index, entry) in listed.iter().enumerate() {
+        let id = entry["id"].as_str().ok_or_else(|| {
+            format!("overlay {index} in {} declares no id", declaration.display())
+        })?;
+        let ms = |key: &str| -> Result<u32, String> {
+            entry[key]
+                .as_u64()
+                .map(|v| v as u32)
+                .ok_or_else(|| format!("overlay '{id}' declares no {key}"))
+        };
+        // Only an overlay declared earlier, so that no design can make two
+        // overlays wait for each other forever.
+        let follows = entry["follows"].as_str().unwrap_or_default();
+        if !follows.is_empty() && !overlays.iter().any(|before: &Overlay| before.id == follows) {
+            return Err(format!(
+                "overlay '{id}' follows '{follows}', which {} does not declare \
+                 before it",
+                declaration.display()
+            ));
+        }
+        overlays.push(Overlay {
+            id: id.to_string(),
+            follows: follows.to_string(),
+            after_ms: ms("afterMs")?,
+            hold_ms: ms("holdMs")?,
+            leave_ms: ms("leaveMs")?,
+            needs: entry["needs"].as_str().unwrap_or_default().to_string(),
+        });
+    }
+    Ok(overlays)
+}
+
+/// The overlays, written to the file that the player reads, and only those in
+/// this document.
+///
+/// For a splash-only export we stage a document with a logo and nothing else.
+/// Without this check it would still list every overlay in the design, and in
+/// the first seconds of the game we would wait in the player to show an element
+/// that is not there. We go by the markup, as we go by the number of pads for
+/// the controller picker.
+fn overlay_declarations(design: &Path, markup: &str) -> Result<String, String> {
+    let drawn: Vec<Overlay> = declared_overlays(design)?
+        .into_iter()
+        .filter(|overlay| markup.contains(&format!("id=\"{}\"", overlay.id)))
+        .collect();
+    let ids: Vec<&str> = drawn.iter().map(|o| o.id.as_str()).collect();
+    let mut text = format!("overlays = \"{}\"\n", ids.join(" "));
+    for overlay in &drawn {
+        text.push_str(&format!(
+            "overlay_follows_{id} = \"{}\"\noverlay_after_{id} = \"{}\"\noverlay_hold_{id} = \"{}\"\noverlay_leave_{id} = \"{}\"\noverlay_needs_{id} = \"{}\"\n",
+            // When the previous overlay is not in this document, we time this
+            // overlay from the game start instead, so with the logo off the
+            // notice does not wait for something that never plays.
+            if drawn.iter().any(|before| before.id == overlay.follows) {
+                overlay.follows.as_str()
+            } else {
+                ""
+            },
+            overlay.after_ms,
+            overlay.hold_ms,
+            overlay.leave_ms,
+            overlay.needs,
+            id = overlay.id,
+        ));
+    }
+    Ok(text)
+}
+
+/// Seconds, as we write them in a stylesheet: `design(overlay-leave-notice)s`.
+fn seconds(milliseconds: u32) -> String {
+    let text = format!("{:.3}", milliseconds as f32 / 1000.0);
+    text.trim_end_matches('0').trim_end_matches('.').to_string()
+}
+
 /// Everything declared in a design by name, its colours and its geometry.
 ///
 /// A design contains `design(surface)` where a colour goes, and
@@ -712,6 +846,15 @@ fn design_tokens(
         ("group-height", m.group_height),
     ] {
         tokens.insert(name.to_string(), value.to_string());
+    }
+    // The exit time of an overlay, in seconds, the unit of a stylesheet. In
+    // the player we hide the element after this time, and the animation in the
+    // design lasts exactly as long, from this one declaration.
+    for overlay in declared_overlays(design)? {
+        tokens.insert(
+            format!("overlay-leave-{}", overlay.id),
+            seconds(overlay.leave_ms),
+        );
     }
     for (name, value) in [
         ("screen", &palette.screen),
@@ -804,6 +947,29 @@ pub fn staged_design(kit: &Path, design: &str) -> PathBuf {
     kit.join("designs").join(design)
 }
 
+/// The declarations of the design, written next to the document they describe.
+///
+/// We list a screen only when it is in `screens`, the screens the author left
+/// on, and also in this document, as staged. The author has no switch for
+/// overlays, so for them only the document counts. We write both in one place
+/// because they are in one file. In the controls stage we rewrite the file once
+/// the markup is final, and code that wrote only the screens would remove the
+/// overlays again.
+fn write_declarations(
+    design: &Path,
+    destination: &Path,
+    screens: &[Screen],
+    markup: &str,
+) -> Result<(), String> {
+    let text = format!(
+        "{}{}",
+        screen_declarations(screens, markup),
+        overlay_declarations(design, markup)?
+    );
+    fs::write(destination.join("design.cfg"), text)
+        .map_err(|e| format!("Could not write the design's declarations: {e}"))
+}
+
 pub fn prepare_theme_assets(
     source: &Path,
     destination: &Path,
@@ -831,11 +997,8 @@ pub fn prepare_theme_assets(
     // These are defaults until we apply the set of the game in the controls
     // stage. For a game with a set we overwrite them with the same function.
     let staged = screens_for_export(&declared_screens(source)?, None)?;
-    fs::write(
-        destination.join("design.cfg"),
-        screen_declarations(&staged),
-    )
-    .map_err(|e| format!("Could not write the design's declarations: {e}"))?;
+    let markup = fs::read_to_string(destination.join("menu.rml")).map_err(|e| e.to_string())?;
+    write_declarations(source, destination, &staged, &markup)?;
     let mut css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
     // The colours of the design, in the rules of the design. We append nothing,
     // because a palette contains values and no styles. Appended rules would
@@ -1024,12 +1187,11 @@ pub fn prepare_controls_assets(
         .replace("<!--CONTROLS-->", &markup)
         .replace(PICKER_SLOT, &picker);
     let (menu, screens) = apply_options(design, &menu, entries)?;
-    fs::write(destination.join("menu.rml"), menu).map_err(|e| e.to_string())?;
     // The same file as in prepare_theme_assets. This version replaces it,
     // because here we know the entries chosen for the game and we just built
     // the markup from them.
-    fs::write(destination.join("design.cfg"), screen_declarations(&screens))
-        .map_err(|e| format!("Could not write the design's declarations: {e}"))?;
+    write_declarations(design, destination, &screens, &menu)?;
+    fs::write(destination.join("menu.rml"), menu).map_err(|e| e.to_string())?;
     let show_options = screens.iter().any(|screen| screen.place == ScreenPlace::Options);
     write_options_css(destination, show_options)?;
     Ok(screens)
@@ -1320,7 +1482,20 @@ fn rml_text(value: &str) -> String {
 }
 
 /// Stage the logo-only document without pause controls, controller art or backgrounds.
-pub fn prepare_splash_assets(source: &Path, destination: &Path) -> Result<(), String> {
+///
+/// We still apply the palette here. A stylesheet copied unchanged would
+/// contain values such as `design(background)`, which RmlUi cannot parse, so
+/// every rule that uses one would be lost.
+pub fn prepare_splash_assets(
+    source: &Path,
+    destination: &Path,
+    palette: &str,
+) -> Result<(), String> {
+    let palette = registry()?
+        .palettes
+        .into_iter()
+        .find(|p| p.id == palette)
+        .ok_or_else(|| "Choose an available colour palette.".to_string())?;
     fs::create_dir_all(destination).map_err(|e| e.to_string())?;
     for (from, to) in [
         ("splash.rml", "menu.rml"),
@@ -1331,7 +1506,12 @@ pub fn prepare_splash_assets(source: &Path, destination: &Path) -> Result<(), St
         fs::copy(source.join(from), destination.join(to))
             .map_err(|e| format!("Could not prepare splash asset {from}: {e}"))?;
     }
-    Ok(())
+    let staged = screens_for_export(&declared_screens(source)?, None)?;
+    let markup = fs::read_to_string(destination.join("menu.rml")).map_err(|e| e.to_string())?;
+    write_declarations(source, destination, &staged, &markup)?;
+    let css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
+    let css = substitute_tokens(&css, &design_tokens(source, &palette)?)?;
+    fs::write(destination.join("menu.rcss"), css).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -1341,6 +1521,18 @@ mod tests {
 
     fn sound_source() -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../assets/menu-sounds")
+    }
+
+    /// The stylesheet uses seconds, the declaration uses milliseconds, and
+    /// RmlUi parses either number without an error. `500s` would be a fade
+    /// that never seems to end, and only the game would look wrong.
+    #[test]
+    fn a_leaving_time_reaches_the_stylesheet_in_seconds() {
+        assert_eq!(seconds(500), "0.5");
+        assert_eq!(seconds(250), "0.25");
+        assert_eq!(seconds(1000), "1");
+        assert_eq!(seconds(0), "0");
+        assert_eq!(seconds(120), "0.12");
     }
 
     /// A pack is one complete set that we can play. We declare no partial
@@ -1452,7 +1644,7 @@ mod tests {
             screens.iter().find(|screen| screen.id == "pause").unwrap().button,
             "options-back"
         );
-        let cfg = screen_declarations(&screens);
+        let cfg = screen_declarations(&screens, &staged);
         assert!(cfg.contains("screens = \"pause options controls\"") || cfg.contains("options"));
         assert!(cfg.contains("screen_button_pause = \"options-back\""));
         assert!(cfg.contains("screen_button_options = \"options\""));

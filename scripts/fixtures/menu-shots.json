@@ -5,6 +5,14 @@
     "They are element ids in the exported menu.rml, clicked through the bridge's",
     "own listeners \u2014 the same path a player's pointer takes. An id that is not",
     "in the document stops the run rather than screenshotting the wrong screen.",
+    "A step written \"wait:120\" waits that many frames instead, which is how",
+    "anything on a clock is photographed at a chosen moment.",
+    "",
+    "A shot that needs a different game says so beside its script: what is drawn",
+    "over a running game does not exist in an export that opens at the menu,",
+    "because the player is already looking at the menu. A shot may also name",
+    "settings its run needs; `pause_nonactive` is how the emulated console keeps",
+    "running while its window sits in the background, which it always does here.",
     "",
     "These are the same states scripts/fixtures/menu-states.json declares, but",
     "reached rather than posed: menu-states sets the classes itself, and cannot",
@@ -32,37 +40,76 @@
       "controls-device-current",
       "controls-device-option-megadrive6"
     ],
-    "shaders": [
-      "shaders"
-    ],
-    "shaders-phosphor": [
-      "shaders",
-      "phosphor"
-    ],
-    "shaders-scanlines": [
-      "shaders",
-      "scanlines"
-    ],
-    "achievements": [
-      "options",
-      "achievements"
-    ],
-    "achievements-next": [
-      "options",
-      "achievements",
-      "achievements-next"
-    ],
-    "achievement-mode": [
-      "options",
-      "achievements",
-      "achievement-mode"
-    ],
-    "achievement-mode-pause": [
-      "options",
-      "achievements",
-      "achievement-mode",
-      "achievements-back",
-      "options-back"
-    ]
+    "shaders": {
+      "script": ["shaders"],
+      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
+    },
+    "shaders-phosphor": {
+      "script": ["shaders", "phosphor"],
+      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
+    },
+    "shaders-scanlines": {
+      "script": ["shaders", "scanlines"],
+      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
+    },
+    "boot-1-logo": {
+      "script": ["wait:20"],
+      "startAtMenu": false,
+      "splash": true,
+      "config": { "pause_nonactive": "false" }
+    },
+    "boot-2-game": {
+      "script": ["wait:60"],
+      "startAtMenu": false,
+      "splash": true,
+      "config": { "pause_nonactive": "false" }
+    },
+    "boot-3-notice": {
+      "script": ["wait:180"],
+      "startAtMenu": false,
+      "splash": true,
+      "config": { "pause_nonactive": "false" }
+    },
+    "boot-4-gone": {
+      "script": ["wait:400"],
+      "startAtMenu": false,
+      "splash": true,
+      "config": { "pause_nonactive": "false" }
+    },
+    "notice-without-logo": {
+      "script": ["wait:120"],
+      "startAtMenu": false,
+      "config": { "pause_nonactive": "false" }
+    },
+    "notice-leaving": {
+      "script": ["wait:265"],
+      "startAtMenu": false,
+      "config": { "pause_nonactive": "false" }
+    },
+    "logo-without-notice": {
+      "script": ["wait:20"],
+      "startAtMenu": false,
+      "showMenu": false,
+      "splash": true,
+      "config": { "pause_nonactive": "false" }
+    },
+    "achievements": {
+      "script": ["options", "achievements"]
+    },
+    "achievements-next": {
+      "script": ["options", "achievements", "achievements-next"]
+    },
+    "achievement-mode": {
+      "script": ["options", "achievements", "achievement-mode"]
+    },
+    "achievement-mode-pause": {
+      "script": [
+        "options",
+        "achievements",
+        "achievement-mode",
+        "achievements-back",
+        "options-back"
+      ]
+    }
   }
 }

@@ -230,6 +230,28 @@ pub fn declare_screen(
         };
         cfg.replace_range(value_at..value_end, &next);
     }
+    // We also declare a switch on a generated screen here. We write the
+    // design's own declarations before this panel exists, and in main we
+    // filter out the markup of a screen whose panel is not yet in the
+    // document, so the switch's labels would be lost.
+    if let Some(toggle) = &screen.toggle {
+        if declared_value(&cfg, &format!("toggle_on_{}", toggle.id)).is_none() {
+            let declared = crate::themes::toggle_declarations(std::slice::from_ref(screen));
+            let (list_at, list_end) = declared_value(&cfg, "toggles")
+                .ok_or_else(|| "design.cfg has no toggles list".to_string())?;
+            let existing = cfg[list_at..list_end].to_string();
+            let ids = if existing.is_empty() {
+                toggle.id.clone()
+            } else {
+                format!("{existing} {}", toggle.id)
+            };
+            cfg.replace_range(list_at..list_end, &ids);
+            for line in declared.lines().filter(|line| !line.starts_with("toggles = ")) {
+                cfg.push_str(line);
+                cfg.push('\n');
+            }
+        }
+    }
     if declared_value(&cfg, &format!("screen_panel_{}", screen.id)).is_none() {
         cfg.push_str(&format!(
             "screen_panel_{id} = \"{panel}\"\nscreen_heading_{id} = \"{heading}\"\nscreen_footer_{id} = \"{footer}\"\nscreen_button_{id} = \"{button}\"\n",
@@ -403,6 +425,48 @@ mod tests {
         assert!(row.contains(">STATE OF THE ART<"), "{row}");
         assert!(row.contains(">TITLE FIGHT, WITH DETAIL<"), "{row}");
         assert_eq!(row.matches("LOCKED 5 PTS").count(), 1, "{row}");
+    }
+
+    #[test]
+    fn a_generated_screens_switch_is_declared_with_it() {
+        let mut screen = Screen {
+            id: "achievements".into(),
+            panel: "achievements-panel".into(),
+            heading: "ACHIEVEMENTS".into(),
+            footer: "ESC  BACK".into(),
+            button: "achievements".into(),
+            label: None,
+            back_label: None,
+            place: ScreenPlace::Plain,
+            option_label: Some("ACHIEVEMENTS".into()),
+            option_default: false,
+            toggle: None,
+        };
+        screen.toggle = Some(crate::themes::Toggle {
+            id: "achievement-mode".into(),
+            label: "ACHIEVEMENT MODE".into(),
+            on: "ON".into(),
+            off: "OFF".into(),
+            default_on: false,
+            guard: crate::themes::ToggleGuard::Saves,
+            guard_label: "ACHIEVEMENTS ON".into(),
+            guard_status: "SAVE SLOTS ARE OFF WHILE ACHIEVEMENTS ARE ON".into(),
+        });
+        // The design's own declarations before this panel exists. We filter out
+        // the screen, and its switch with it.
+        let cfg = "screens = \"pause options controls\"\nscreen_panel_pause = \"pause-panel\"\nscreen_button_pause = \"options-back\"\ntoggles = \"\"\n";
+        let out = declare_screen(cfg, &screen, None).expect("declared");
+        assert!(out.contains("toggles = \"achievement-mode\""), "{out}");
+        assert!(out.contains("toggle_on_achievement-mode = \"ON\""), "{out}");
+        assert!(out.contains("toggle_guard_achievement-mode = \"saves\""), "{out}");
+        assert!(
+            out.contains("toggle_guard_status_achievement-mode = \"SAVE SLOTS ARE OFF WHILE ACHIEVEMENTS ARE ON\""),
+            "{out}"
+        );
+        // When we declare the same screen again, it must not appear twice.
+        let again = declare_screen(&out, &screen, None).expect("declared");
+        assert_eq!(again.matches("toggle_on_achievement-mode = ").count(), 1, "{again}");
+        assert_eq!(again.matches("achievement-mode achievement-mode").count(), 0, "{again}");
     }
 
     #[test]
