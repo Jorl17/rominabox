@@ -517,8 +517,8 @@ fn screens_for_export(screens: &[Screen], chosen: Option<&[String]>) -> Result<V
 const OPTION_ENTRY_STEP: usize = 60;
 
 const OPTIONS_LAYOUT_CSS: &str = r#"
-#options-entries { position: absolute; left: 276dp; top: 148dp; width: 400dp; height: 320dp; }
-.option-entry { position: absolute; left: 0; width: 400dp; height: 48dp; line-height: 42dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; }
+#options-entries { position: absolute; left: 56dp; top: 272dp; width: 840dp; height: 200dp; }
+.option-entry { position: absolute; left: 0; width: 840dp; height: 64dp; line-height: 58dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; white-space: nowrap; overflow: hidden; }
 .options-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
 "#;
 
@@ -937,6 +937,127 @@ pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
     })
 }
 
+/// The marker a design puts where the volume control goes, when it goes
+/// somewhere other than the start of the Options panel. Without the marker,
+/// we insert the control into the Options panel that we already built.
+pub const VOLUME_SLOT: &str = "<!--VOLUME-->";
+
+const BUILTIN_SLIDER: &str = include_str!("../../../integrations/parts/slider.rml");
+
+fn has_class(template: &str, class: &str) -> bool {
+    template.split("class=\"").skip(1).any(|rest| {
+        rest.split('"')
+            .next()
+            .unwrap_or("")
+            .split_whitespace()
+            .any(|token| token == class)
+    })
+}
+
+fn part_template(design: &Path, name: &str, builtin: &str) -> Result<String, String> {
+    let override_path = design.join("parts").join(format!("{name}.rml"));
+    if override_path.is_file() {
+        return fs::read_to_string(&override_path)
+            .map_err(|e| format!("Could not read {}: {e}", override_path.display()));
+    }
+    Ok(builtin.to_string())
+}
+
+fn require_classes(kind: &str, template: &str, classes: &[&str]) -> Result<(), String> {
+    for class in classes {
+        if !has_class(template, class) {
+            return Err(format!(
+                "the {kind} part must carry class `{class}`, so every design draws it and the control can find it"
+            ));
+        }
+    }
+    if !template.contains("PART-ID") {
+        return Err(format!(
+            "the {kind} part must contain PART-ID, so each use can name its own"
+        ));
+    }
+    Ok(())
+}
+
+fn fill_part(template: &str, id: &str, label: &str) -> String {
+    template.replace("PART-ID", id).replace("LABEL", label)
+}
+
+/// The volume control, made of its name, the low end, an arrow, the slider
+/// from the design, an arrow and the high end.
+///
+/// The slider comes first in the document, so the keyboard focus goes to it
+/// first and the left and right keys move it. The design places the rest, so
+/// the order in the document is not the order on screen. There is no number
+/// and no mute button, because the quiet end is the quietest the volume goes.
+pub fn volume_control_markup(design: &Path) -> Result<String, String> {
+    let slider = part_template(design, "slider", BUILTIN_SLIDER)?;
+    require_classes(
+        "slider",
+        &slider,
+        &["slider", "slider-track", "slider-fill", "slider-thumb", "slider-readout"],
+    )?;
+    Ok(format!(
+        "<div id=\"volume-control\">{slider}<button id=\"{down}\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{up}\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{low}\" class=\"volume-end\">LOW</div><div id=\"{high}\" class=\"volume-end\">HIGH</div><div class=\"volume-name\">VOLUME</div></div>",
+        slider = fill_part(&slider, crate::volume::slider_id(), ""),
+        down = crate::volume::down_id(),
+        up = crate::volume::up_id(),
+        low = crate::volume::low_id(),
+        high = crate::volume::high_id(),
+    ))
+}
+
+/// Put the volume control in Options.
+///
+/// When the design contains `<!--VOLUME-->`, we put the control there.
+/// Otherwise we insert it at the start of the Options panel and leave the
+/// Options entries where they are. A menu with no Options screen has no
+/// volume control either.
+pub fn install_volume_control(document: &str, design: &Path) -> Result<String, String> {
+    if document.contains("id=\"volume-control\"") {
+        return Ok(document.to_string());
+    }
+    let markup = volume_control_markup(design)?;
+    if document.contains(VOLUME_SLOT) {
+        return Ok(document.replacen(VOLUME_SLOT, &markup, 1));
+    }
+    let marker = "id=\"options-panel\"";
+    let Some(at) = document.find(marker) else {
+        return Ok(document.to_string());
+    };
+    let tag_end = document[at..]
+        .find('>')
+        .map(|end| at + end + 1)
+        .ok_or_else(|| "the options panel tag is never closed".to_string())?;
+    let mut installed = String::with_capacity(document.len() + markup.len());
+    installed.push_str(&document[..tag_end]);
+    installed.push_str(&markup);
+    installed.push_str(&document[tag_end..]);
+    Ok(installed)
+}
+
+/// Geometry for a design with no styles for a slider.
+///
+/// The colours come from the palette block, as for a button. We leave a design
+/// that already styles `.slider` unchanged, because that styling is part of it.
+pub fn builtin_part_rules(stylesheet: &str) -> &'static str {
+    if stylesheet.contains(".slider") {
+        ""
+    } else {
+        r#"
+/* part:slider */
+.slider { display: block; width: 100%; }
+.slider-readout { display: block; width: 100%; height: 36dp; font-family: Silkscreen; font-size: 28dp; text-align: center; }
+.slider-track { display: block; position: relative; width: 100%; height: 28dp; margin-top: 12dp; border-width: 4dp; }
+.slider-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0; }
+.slider-thumb { position: absolute; top: -8dp; width: 22dp; height: 44dp; border-width: 4dp; }
+.toggle { display: block; position: relative; width: 240dp; height: 48dp; margin-top: 28dp; font-family: Silkscreen; font-size: 18dp; line-height: 42dp; padding-left: 56dp; border-width: 3dp; }
+.toggle-knob { position: absolute; left: 8dp; top: 6dp; width: 28dp; height: 28dp; border-width: 3dp; }
+.toggle.on .toggle-knob { left: 196dp; }
+"#
+    }
+}
+
 /// Stage only the selected design's assets and apply the same palette/background
 /// for both an offscreen preview and an exported player.
 /// The folder of the staged files of a design in a prepared kit.
@@ -991,6 +1112,16 @@ pub fn prepare_theme_assets(
         fs::copy(source.join(name), destination.join(name))
             .map_err(|e| format!("Could not prepare menu asset {name}: {e}"))?;
     }
+    let menu = fs::read_to_string(destination.join("menu.rml")).map_err(|e| e.to_string())?;
+    // The same Options panel as in the controls stage. We add volume to it
+    // here too, because a theme staged alone, as in the interaction checks,
+    // never reaches the controls stage.
+    let (menu, _) = apply_options(source, &menu, None)?;
+    fs::write(
+        destination.join("menu.rml"),
+        install_volume_control(&menu, source)?,
+    )
+    .map_err(|e| format!("Could not install the volume control: {e}"))?;
     // The declarations of the design, in the file that the player reads. We
     // write them next to the stylesheet because both belong to the design. A
     // design lists its screens, and we show them by name in the player.
@@ -1000,6 +1131,7 @@ pub fn prepare_theme_assets(
     let markup = fs::read_to_string(destination.join("menu.rml")).map_err(|e| e.to_string())?;
     write_declarations(source, destination, &staged, &markup)?;
     let mut css = fs::read_to_string(destination.join("menu.rcss")).map_err(|e| e.to_string())?;
+    css.push_str(builtin_part_rules(&css));
     // The colours of the design, in the rules of the design. We append nothing,
     // because a palette contains values and no styles. Appended rules would
     // declare selectors of the design again and, coming later with equal
@@ -1013,7 +1145,13 @@ pub fn prepare_theme_assets(
             .map_err(|e| e.to_string())?;
         css.push_str("\n#screen { decorator: image(\"background.png\" cover); }\n");
     }
-    fs::write(destination.join("menu.rcss"), css).map_err(|e| e.to_string())
+    fs::write(destination.join("menu.rcss"), css)
+        .map_err(|e| e.to_string())?;
+    // We place the options entries with this, because a theme staged alone
+    // (for the offscreen pictures) never reaches the controls stage that writes
+    // it for an export. The colour comes from the button in the design.
+    let show_options = staged.iter().any(|screen| screen.place == ScreenPlace::Options);
+    write_options_css(destination, show_options)
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -1187,6 +1325,9 @@ pub fn prepare_controls_assets(
         .replace("<!--CONTROLS-->", &markup)
         .replace(PICKER_SLOT, &picker);
     let (menu, screens) = apply_options(design, &menu, entries)?;
+    // Volume is part of the Options screen that we just built. It is not
+    // another screen, and we leave the Options entries where they are.
+    let menu = install_volume_control(&menu, design)?;
     // The same file as in prepare_theme_assets. This version replaces it,
     // because here we know the entries chosen for the game and we just built
     // the markup from them.

@@ -1,7 +1,7 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
 use rominabox_desktop::{
-    achievements, controls, cores, metadata, packaging, projects, shaders, systems, themes,
+    achievements, controls, cores, metadata, packaging, projects, shaders, systems, themes, volume,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -50,7 +50,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the pinned cores for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume|volume-markup|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nRequests are JSON on stdin; progress and results are JSON Lines on stdout.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the pinned cores for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     // The checkout from which we built this binary.
@@ -80,7 +80,9 @@ fn run() -> Result<(), String> {
                 "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "shaders?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
                 "shaders": { "request": [], "result": "Catalog presets an author can bundle" },
                 "shaders-check": { "request": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "optional id" }, "result": "Resolved shaders, or an error" },
-                "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" }
+                "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" },
+                "volume": { "request": ["dataDir", "position?"], "result": { "position": "0 is low, the last position is normal", "positions": "how many there are", "path": "volume.cfg" } },
+                "volume-markup": { "request": ["design"], "result": { "markup": "the volume control, in the design's slider, with an arrow either side" } }
             })
         );
         return Ok(());
@@ -298,6 +300,48 @@ fn run() -> Result<(), String> {
             println!(
                 "{}",
                 json!({ "type": "result", "result": { "imagePath": image_path } })
+            );
+            Ok(())
+        }
+        "volume" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                data_dir: PathBuf,
+                /// 0 is the quietest position. The last position is normal
+                /// volume, and there is nothing above it.
+                #[serde(default)]
+                position: Option<i32>,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid volume request: {error}"))?;
+            let mut level = volume::read(&request.data_dir);
+            if let Some(position) = request.position {
+                level.decibels = volume::db_for_position(position);
+                level = level.clamp();
+                volume::write(&request.data_dir, level)?;
+            }
+            println!(
+                "{}",
+                json!({ "type": "result", "result": {
+                    "position": volume::position_for_db(level.decibels),
+                    "positions": volume::position_count(),
+                    "path": request.data_dir.join(volume::file_name()),
+                }})
+            );
+            Ok(())
+        }
+        "volume-markup" => {
+            #[derive(Deserialize)]
+            struct Request {
+                design: PathBuf,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid volume-markup request: {error}"))?;
+            let markup = themes::volume_control_markup(&request.design)?;
+            println!(
+                "{}",
+                json!({ "type": "result", "result": { "markup": markup } })
             );
             Ok(())
         }

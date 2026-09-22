@@ -5,6 +5,8 @@
     "They are element ids in the exported menu.rml, clicked through the bridge's",
     "own listeners \u2014 the same path a player's pointer takes. An id that is not",
     "in the document stops the run rather than screenshotting the wrong screen.",
+    "A slider has no click, so id@fraction sets it: volume-level@0.15 is the",
+    "slider fifteen percent of the way across.",
     "A step written \"wait:120\" waits that many frames instead, which is how",
     "anything on a clock is photographed at a chosen moment.",
     "",
@@ -40,6 +42,9 @@
       "controls-device-current",
       "controls-device-option-megadrive6"
     ],
+    "volume-low": ["options", "volume-level@0"],
+    "volume-step": ["options", "volume-down"],
+    "volume-arrow": ["options", "volume-level@0", "volume-up"],
     "shaders": {
       "script": ["shaders"],
       "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }

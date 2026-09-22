@@ -17,5 +17,8 @@
   "picker-open": "2ae5986eeb163a79",
   "shaders": "0b655980df423de0",
   "shaders-phosphor": "0b655980df423de0",
-  "shaders-scanlines": "b76b89b4db0826c9"
+  "shaders-scanlines": "b76b89b4db0826c9",
+  "volume-arrow": "d301963ad837df96",
+  "volume-low": "6716b81d6b67ebf9",
+  "volume-step": "cde3f8e081aaef7f"
 }

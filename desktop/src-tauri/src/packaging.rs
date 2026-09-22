@@ -1730,6 +1730,7 @@ fn write_launcher(
     let content_relative = shell_quote(&rom.to_string_lossy());
     let game_title = shell_quote(&request.title);
     let managed_directories = MANAGED_DATA_DIRECTORIES.join(" ");
+    let volume_file = crate::volume::file_name();
     let runtime_config = isolated_runtime_config(request);
     let script = format!(
         r##"#!/bin/sh
@@ -1808,6 +1809,13 @@ if [ -f "$controls_override" ]; then
     *'|'*) echo "ROM-in-a-Box cannot load controls from a path containing |." >&2; exit 1 ;;
   esac
   append_config="$append_config|$controls_override"
+fi
+volume_override="$data_dir/{volume_file}"
+if [ -f "$volume_override" ]; then
+  case "$volume_override" in
+    *'|'*) echo "ROM-in-a-Box cannot load volume from a path containing |." >&2; exit 1 ;;
+  esac
+  append_config="$append_config|$volume_override"
 fi
 {shader_shell}
 set -- --config "$cfg" --appendconfig "$append_config" --libretro "$bundle_dir/Resources/game-core.dylib" "$bundle_dir/Resources/$content_relative"

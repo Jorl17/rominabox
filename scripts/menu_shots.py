@@ -40,6 +40,17 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+def volume_file() -> str:
+    """The per-game file for the player. We take its name from the header,
+    so a new name there applies here as well."""
+    header = (ROOT / "vendor/retroarch/audio/volume_range.h").read_text()
+    for line in header.splitlines():
+        line = line.strip()
+        if line.startswith("#define RIB_VOLUME_FILE "):
+            return line.split('"')[1]
+    raise SystemExit("RIB_VOLUME_FILE is not a string in volume_range.h")
+
+
 SHOTS = ROOT / "scripts/fixtures/menu-shots.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-shot-digests.json"
 
@@ -149,6 +160,7 @@ def take(app: Path, name: str, script: list[str], output: Path,
     data = data_dir_of(app)
     if data:
         (data / "controls.cfg").unlink(missing_ok=True)
+        (data / volume_file()).unlink(missing_ok=True)
         for remap in (data / "remaps").rglob("*.rmp"):
             remap.unlink()
         # We save the position of each switch, so otherwise the shot that turns on
@@ -223,6 +235,7 @@ def build_a_game(
     workspace: Path,
     system: str = "megadrive",
     settings: dict | None = None,
+    palette: str = "blue",
 ) -> Path:
     """Export a game from the tree as it is now, and return the app.
 
@@ -259,7 +272,7 @@ def build_a_game(
         "showMenu": True,
         "startAtMenu": True,
         "theme": "native",
-        "palette": "blue",
+        "palette": palette,
         "menuSounds": "off",
         "splash": False,
         "advancedEmulatorAccess": False,
@@ -304,6 +317,12 @@ def main() -> int:
         help="export and shoot every palette desktop/designs.json declares",
     )
     parser.add_argument(
+        "--shot",
+        action="append",
+        default=[],
+        help="only this shot; repeat for more than one",
+    )
+    parser.add_argument(
         "--achievements",
         type=Path,
         help="a directory holding achievements.json and badges/, as written by "
@@ -315,6 +334,11 @@ def main() -> int:
     arguments = parser.parse_args()
 
     shots = declared_shots()
+    if arguments.shot:
+        unknown = [name for name in arguments.shot if name not in shots]
+        if unknown:
+            raise SystemExit(f"no such shot: {', '.join(unknown)}")
+        shots = {name: shots[name] for name in arguments.shot}
     if arguments.every_palette and arguments.palette:
         raise SystemExit("pass --palette or --every-palette, not both")
     if arguments.every_palette and not arguments.rom:
@@ -322,6 +346,8 @@ def main() -> int:
             "--every-palette exports each palette itself, so pass --rom. "
             "One --app is already one palette."
         )
+    if arguments.every_palette and (arguments.record or arguments.check):
+        raise SystemExit("--record and --check are for one palette")
     palettes = (
         declared_palettes()
         if arguments.every_palette
@@ -342,10 +368,10 @@ def main() -> int:
     # because the build is slow and most shots use the same game.
     exported: dict[str, Path] = {}
 
-    def game_for(settings: dict) -> Path:
+    def game_for(settings: dict, palette: str) -> Path:
         if not arguments.rom:
             return arguments.app
-        key = json.dumps(settings, sort_keys=True)
+        key = json.dumps({"palette": palette, **settings}, sort_keys=True)
         if key not in exported:
             # A separate directory for each export, because we delete the first
             # game when we build a second one in the same directory, and a
@@ -353,7 +379,7 @@ def main() -> int:
             workspace = ROOT / "work" / f"menu-shots-build-{len(exported)}"
             workspace.mkdir(parents=True, exist_ok=True)
             exported[key] = build_a_game(
-                arguments.rom, workspace, arguments.system, settings
+                arguments.rom, workspace, arguments.system, settings, palette
             )
             print(f"  built    {exported[key].name} {key if settings else ''}")
         return exported[key]
@@ -364,21 +390,23 @@ def main() -> int:
     for palette in palettes:
         destination = arguments.output / palette if nested else arguments.output
         destination.mkdir(parents=True, exist_ok=True)
+        if nested:
+            print(f"\n{palette}")
         for name, shot in shots.items():
             script = shot["script"]
             config = shot.get("config")
-            # The palette and the achievement list are export settings, so we
-            # add them to the export key with the settings of the shot.
+            # The achievement list is an export setting, so we add it to the export
+            # key with the settings of the shot. The palette is an argument of
+            # the export and not one of those settings.
             settings = {
                 key: value
                 for key, value in shot.items()
                 if key not in ("script", "config")
             }
-            settings["palette"] = palette
             if achievements:
                 settings["achievements"] = achievements
             key = f"{palette}/{name}" if nested else name
-            problem = take(game_for(settings), name, script, destination, config)
+            problem = take(game_for(settings, palette), name, script, destination, config)
             if problem:
                 print(f"  FAILED  {key}: {problem}", file=sys.stderr)
                 failures.append(key)

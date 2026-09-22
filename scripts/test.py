@@ -114,6 +114,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/test_joypad_autoconfig.py")],
     ),
     Scope(
+        "symlinks",
+        "that git carries no symbolic link, which would point somewhere else on every other machine",
+        "that a worktree has the links it needs, or that the ignore rules are right",
+        ["python3", str(ROOT / "scripts/test_no_symlinks.py")],
+    ),
+    Scope(
         "worktree",
         "isolation between parallel checkouts: the shared git dir, the lock, refusing the canonical tree",
         "that a real worktree builds or runs; it creates nothing outside a temporary directory",
@@ -131,6 +137,13 @@ SCOPES = [
         "that every declared menu state still renders in every palette from desktop/designs.json, with its artwork, and looks the same",
         "that the bridge sets those classes at the right moment; the bridge scope covers that",
         ["python3", str(ROOT / "scripts/menu_states.py"), "--check"],
+        slow=True,
+    ),
+    Scope(
+        "fallback",
+        "the controls screen a console with no controller drawing gets, in every state and palette",
+        "that its layout is good — only that every control is there and that hover, focus and capture still differ",
+        ["python3", str(ROOT / "scripts/menu_states.py"), "--system", "atari2600", "--check"],
         slow=True,
     ),
     Scope(

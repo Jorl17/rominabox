@@ -16,6 +16,7 @@ pub mod scene_layout;
 pub mod systems;
 
 pub mod themes;
+pub mod volume;
 
 #[cfg(test)]
 mod measure;
