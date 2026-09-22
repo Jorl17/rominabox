@@ -511,6 +511,16 @@ def case_isolation():
         restore(path, raw)
     return expect("isolation", code, output, ("entitlements were dropped",))
 
+def case_quit():
+    path = ROOT / "vendor/retroarch/ui/drivers/ui_cocoa.m"
+    raw = replace(path, "return NSTerminateCancel;", "return NSTerminateNow;")
+    try:
+        code, output = run_scope("quit")
+    finally:
+        restore(path, raw)
+    return expect("quit", code, output, ("quit aborted in the loaded core",))
+
+
 def case_shaderstate():
     # Return the unfiltered row whatever preset is running. In the check we
     # expect the row of a scanlines preset, and with this change we get the other.
@@ -573,6 +583,7 @@ CASES = {
     "isolation": case_isolation,
     "overlays": case_overlays,
     "shaderstate": case_shaderstate,
+    "quit": case_quit,
 }
 
 
