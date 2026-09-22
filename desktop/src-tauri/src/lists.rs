@@ -49,6 +49,9 @@ pub struct ListItem {
     /// A row we single out in its list, drawn as the design styles `accent`.
     /// In an achievement list, we mark the game's win condition.
     pub accent: bool,
+    /// No picture and no second line. We fill a bind slot after export, so
+    /// an empty string does not mean this, and the caller must say so.
+    pub line: bool,
 }
 
 /// One screen of rows, ready to write into the menu.
@@ -176,10 +179,22 @@ pub fn render_row(template: &str, item: &ListItem) -> String {
         out.push_str(&template[at..next]);
         at = next;
     }
+    if item.line {
+        // The same code for every list. According to the caller, this row has no
+        // picture and no second line, so we do not name the disc list here.
+        out = out.replacen("class=\"list-row", "class=\"list-row line", 1);
+    }
     if item.icon.is_empty() {
         // A row with no picture. We remove the img, because loading a missing
         // texture in RmlUi makes the render fail.
         out = out.replace("<img class=\"list-row-icon\" src=\"\"/>", "");
+    }
+    if item.line && item.detail.is_empty() {
+        let detail = format!(
+            "<div id=\"{}-detail\" class=\"list-row-detail\"></div>",
+            item.id
+        );
+        out = out.replace(&detail, "");
     }
     out
 }
@@ -448,7 +463,56 @@ mod tests {
             state: String::new(),
             selected: false,
             accent: false,
+            line: false,
         }
+    }
+
+    #[test]
+    fn a_row_with_no_picture_and_no_detail_is_one_line() {
+        let template = row_template(Path::new("/nonexistent")).expect("built-in row");
+        let bare = ListItem {
+            id: "discs-0".into(),
+            icon: String::new(),
+            title: "Ape Escape".into(),
+            detail: String::new(),
+            state: "IN".into(),
+            selected: true,
+            accent: false,
+            line: true,
+        };
+        let row = render_row(&template, &bare);
+        assert!(
+            row.contains("class=\"list-row line"),
+            "a row with nothing beside the name was still the two-line picture row: {row}"
+        );
+        assert!(
+            !row.contains("list-row-icon"),
+            "a row with no picture still reserved one: {row}"
+        );
+        let pictured = render_row(&template, &item("shader", "Scanlines"));
+        assert!(
+            !pictured.contains("list-row line"),
+            "a shader row lost the picture column: {pictured}"
+        );
+        let slot = ListItem {
+            id: "bind-1".into(),
+            icon: String::new(),
+            title: String::new(),
+            detail: String::new(),
+            state: String::new(),
+            selected: false,
+            accent: false,
+            line: false,
+        };
+        let bind = render_row(&template, &slot);
+        assert!(
+            bind.contains("id=\"bind-1-detail\""),
+            "a bind slot lost the detail it is filled with later: {bind}"
+        );
+        assert!(
+            !bind.contains("list-row line"),
+            "an empty bind slot was treated as a one-line row: {bind}"
+        );
     }
 
     #[test]
@@ -488,6 +552,7 @@ mod tests {
                 state: "LOCKED 5 PTS".into(),
                 selected: false,
                 accent: false,
+                line: false,
             },
         );
         assert!(row.contains(">STATE OF THE ART<"), "{row}");

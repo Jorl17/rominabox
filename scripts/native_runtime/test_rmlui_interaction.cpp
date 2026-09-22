@@ -1200,8 +1200,12 @@ int main(int argc, char **argv)
          CHECK(!landed, "hiding the disc entry takes it back out of the walk");
       }
       {
+         /* Long enough that we still have to shorten it in the one-line column.
+          * The picture column is narrower, so we shorten the same string sooner
+          * there. The one-line row uses the width that the picture left free. */
          const char *long_name =
-            "/Users/mariowilde/Games/Final Fantasy VII/Final Fantasy VII (USA) (Disc 4).cue";
+            "/Users/mariowilde/Games/Final Fantasy VII/Final Fantasy VII/"
+            "Final Fantasy VII/Final Fantasy VII (USA) (Disc 4).cue";
          rib_rmlui_fit_row_title("fixture-one", long_name);
          const std::string fitted(rib_rmlui_test_text("fixture-one-title"));
          char message[512];
@@ -1217,6 +1221,48 @@ int main(int argc, char **argv)
          CHECK(number != std::string::npos && dots < number, message);
          CHECK(fitted.size() < std::strlen(long_name),
                "the shortened name is shorter than the path");
+         rib_rmlui_set_shown("fixture-panel", true);
+         rib_rmlui_fit_row_title("fixture-two", long_name);
+         const std::string pictured(rib_rmlui_test_text("fixture-two-title"));
+         const auto picture_dots = pictured.find("\u2026");
+         std::snprintf(message, sizeof(message),
+               "the one-line row still shortens where the picture column does, line '%s' picture '%s'",
+               fitted.c_str(), pictured.c_str());
+         CHECK(dots != std::string::npos && picture_dots != std::string::npos
+               && dots > picture_dots, message);
+         int row_x = 0, row_y = 0, row_w = 0, row_h = 0;
+         int title_x = 0, title_y = 0, title_w = 0, title_h = 0;
+         int state_x = 0, state_y = 0, state_w = 0, state_h = 0;
+         int pic_x = 0, pic_y = 0, pic_w = 0, pic_h = 0;
+         int pic_title_x = 0, pic_title_y = 0, pic_title_w = 0, pic_title_h = 0;
+         CHECK(rib_rmlui_element_box("fixture-one", &row_x, &row_y, &row_w, &row_h),
+               "the one-line row has a box");
+         CHECK(rib_rmlui_element_box("fixture-one-title", &title_x, &title_y, &title_w, &title_h),
+               "the one-line name has a box");
+         CHECK(rib_rmlui_element_box("fixture-one-state", &state_x, &state_y, &state_w, &state_h),
+               "the one-line state has a box");
+         CHECK(rib_rmlui_element_box("fixture-two", &pic_x, &pic_y, &pic_w, &pic_h),
+               "the picture row has a box");
+         CHECK(rib_rmlui_element_box("fixture-two-title",
+               &pic_title_x, &pic_title_y, &pic_title_w, &pic_title_h),
+               "the picture row's name has a box");
+         std::snprintf(message, sizeof(message),
+               "a row with no second line is still %d tall, the picture row is %d",
+               row_h, pic_h);
+         CHECK(row_h > 0 && row_h < pic_h * 3 / 4, message);
+         std::snprintf(message, sizeof(message),
+               "the name sits in the top half (title y %d h %d, row y %d h %d)",
+               title_y, title_h, row_y, row_h);
+         CHECK(std::abs((title_y + title_h / 2) - (row_y + row_h / 2)) <= 2, message);
+         std::snprintf(message, sizeof(message),
+               "IN is not on the name's line (state y %d h %d, title y %d h %d)",
+               state_y, state_h, title_y, title_h);
+         CHECK(std::abs((state_y + state_h / 2) - (title_y + title_h / 2)) <= 2, message);
+         std::snprintf(message, sizeof(message),
+               "the name still starts in the picture column (title x %d, picture title x %d, row x %d)",
+               title_x, pic_title_x, row_x);
+         CHECK(title_x - row_x + 8 < pic_title_x - pic_x, message);
+         rib_rmlui_set_shown("fixture-panel", false);
       }
 
       /* One move cue per step that changes the level, and none at an end

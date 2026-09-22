@@ -451,6 +451,7 @@ pub fn rows(
             state: row_state(achievement),
             selected: false,
             accent: achievement.kind.as_deref() == Some(WIN_CONDITION),
+            line: false,
         });
     }
     Ok(items)

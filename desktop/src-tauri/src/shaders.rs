@@ -642,6 +642,7 @@ pub fn stage(
             state: if selected { "ON".into() } else { String::new() },
             selected,
             accent: false,
+            line: false,
         });
         config.push_str(&format!(
             "shader_preset_{id} = \"{preset}\"\n",

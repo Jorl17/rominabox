@@ -31,6 +31,7 @@ pub fn list(design: &Path) -> Result<Option<List>, String> {
             state: String::new(),
             selected: false,
             accent: false,
+            line: true,
         })
         .collect();
     Ok(Some(List { screen, items }))

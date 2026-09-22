@@ -123,15 +123,20 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .screen-link { position: absolute; top: 10dp; right: 16dp; width: 140dp; height: 28dp; z-index: 2; font-family: Silkscreen; font-size: 12dp; line-height: 28dp; text-align: center; }
 .list { position: absolute; left: 24dp; top: 52dp; width: 700dp; }
 .list-row { display: block; position: relative; width: 100%; height: 48dp; margin: 0 0 4dp 0; padding: 0; background-color: design(surface); color: design(ink); border-width: 0 0 1dp 0; border-color: design(rule); font-family: Silkscreen; text-align: left; }
-.list-row:hover { border-color: design(edge); }
-.list-row.focused { border-left-width: 4dp; border-left-color: design(highlight); }
-.list-row.selected, .list-row.selected:hover, .list-row.selected.focused { background-color: design(focus); border-color: design(highlight); }
+/* Moving the pointer sets the same focus as the keys, so hover adds no border
+ * that would draw a second selected row. */
+.list-row:hover { }
+.list-row.focused { background-color: design(focus); border-left-width: 4dp; border-left-color: design(highlight); border-bottom-color: design(highlight); }
 .list-row:active { background-color: design(highlight); color: design(slot-label); }
 .list-row-icon { position: absolute; left: 8dp; top: 8dp; width: 32dp; height: 32dp; }
 .list-row-title { position: absolute; left: 52dp; top: 6dp; font-size: 14dp; color: design(ink); }
-/* A right edge on the disc list only. The bind list has the same class, and
- * there a right edge would cut off the end of a control's name. */
-#discs-list .list-row-title { right: 72dp; white-space: nowrap; overflow: hidden; }
+/* A row with no picture and no second line. We set the right edge on this
+ * class, not on the disc list, because the bind list has the same title
+ * class, and a right edge there would cut off the end of a control name. */
+.list-row.line { height: 28dp; }
+.list-row.line .list-row-title { left: 12dp; right: 64dp; top: 0; height: 28dp; line-height: 28dp; white-space: nowrap; overflow: hidden; }
+.list-row.line .list-row-detail { display: none; }
+.list-row.line .list-row-state { top: 0; height: 28dp; line-height: 28dp; }
 .list-row-detail { position: absolute; left: 52dp; top: 26dp; font-size: 12dp; color: design(muted); }
 .list-row-state { position: absolute; right: 12dp; top: 16dp; font-size: 12dp; color: design(highlight); }
 .list-pager { position: absolute; left: 0; top: 272dp; width: 100%; height: 32dp; }

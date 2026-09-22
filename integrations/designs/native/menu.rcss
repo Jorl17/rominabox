@@ -208,12 +208,17 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .screen-link { position: absolute; top: 18dp; right: 24dp; width: 148dp; height: 36dp; z-index: 2; font-family: Silkscreen; font-size: 13dp; line-height: 30dp; text-align: center; }
 .list { position: absolute; left: 36dp; top: 68dp; width: 880dp; }
 .list-row { display: block; position: relative; overflow: hidden; width: 100%; height: 68dp; margin: 0 0 4dp 0; padding: 0; background-color: design(surface); color: design(ink); border-width: 2dp; border-color: design(edge); font-family: Silkscreen; text-align: left; }
-.list-row:hover { border-color: design(ink); }
-/* Not the same rule as hover. We draw a row reached with the arrow keys
- * differently from one under the pointer, so a player can see which row a
- * press would choose. */
-.list-row.focused { border-color: design(ink); border-left-color: design(highlight); }
-.list-row.selected, .list-row.selected:hover, .list-row.selected.focused { border-color: design(highlight); }
+/* Moving the pointer sets the same focus as the keys, so a border here would
+ * draw a second selected row beside the current disc. */
+.list-row:hover { }
+.list-row.focused { border-color: design(highlight); }
+/* A row with no picture and no second line. Rows with a picture or a second
+ * line keep the picture gutter and the two-line height. Any list can use this
+ * class, and the disc list is not a special case. */
+.list-row.line { height: 32dp; }
+.list-row.line .list-row-title { left: 12dp; right: 72dp; top: 0; height: 32dp; line-height: 32dp; }
+.list-row.line .list-row-detail { display: none; }
+.list-row.line .list-row-state { top: 0; width: 56dp; height: 32dp; line-height: 32dp; }
 .list-row:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 /* Four units above, below and to the left, so the picture is in the middle
  * of the row and not on its frame. The bevel is the same as on the save

@@ -1560,6 +1560,7 @@ fn bind_list_markup(
             state: String::new(),
             selected: false,
             accent: false,
+            line: false,
         })
         .collect();
     // We name the wrapper after the screen in render_list (discs-list). In the
