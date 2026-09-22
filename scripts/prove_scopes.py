@@ -449,6 +449,23 @@ def case_isolation():
         restore(path, raw)
     return expect("isolation", code, output, ("entitlements were dropped",))
 
+def case_shaderstate():
+    # Return the unfiltered row whatever preset is running. In the check we
+    # expect the row of a scanlines preset, and with this change we get the other.
+    path = ROOT / "vendor/retroarch/menu/drivers/rmlui_shader_mark.h"
+    raw = replace(path, "return found;", "return unfiltered;")
+    try:
+        code, output = run_scope("shaderstate")
+    finally:
+        restore(path, raw)
+    return expect(
+        "shaderstate",
+        code,
+        output,
+        ("the row marked ON is not the shader that is running",),
+    )
+
+
 def case_overlays():
     path = ROOT / "desktop/controls.json"
     raw = path.read_bytes()
@@ -489,6 +506,7 @@ CASES = {
     "symlinks": case_symlinks,
     "isolation": case_isolation,
     "overlays": case_overlays,
+    "shaderstate": case_shaderstate,
 }
 
 
