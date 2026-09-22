@@ -122,6 +122,12 @@ SCOPES = [
         ["node", str(ROOT / "scripts/native_runtime/test_pad_bindings.mjs")],
     ),
     Scope(
+        "glslcore",
+        "that a core OpenGL context is given a GLSL version it accepts, and that a missing shader path is not passed to path_basename",
+        "that a real context compiles the stock shader; it compiles the decision from the fork and hands it versions",
+        ["node", str(ROOT / "scripts/native_runtime/test_glsl_core.mjs")],
+    ),
+    Scope(
         "joypad",
         "that every hid profile the pin declares is staged, and that RetroArch's match rules would accept it",
         "that a physical pad's buttons match those numbers; nothing here opens a device",

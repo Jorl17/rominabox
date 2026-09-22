@@ -358,6 +358,19 @@ def case_artwork():
     return expect("artwork", code, output, ("EDITED",))
 
 
+def case_glslcore():
+    # Give a 3.2 core context GLSL 130, a version that fails to compile on
+    # macOS. The check for a NULL path is the other half of the fix, and this
+    # break covers the version number.
+    path = ROOT / "vendor/retroarch/gfx/drivers_shader/shader_glsl.c"
+    raw = replace(path, "      return 150;", "      return 130;")
+    try:
+        code, output = run_scope("glslcore")
+    finally:
+        restore(path, raw)
+    return expect("glslcore", code, output, ("a 3.2 core context gets GLSL 150",))
+
+
 def case_padbinds():
     # Read only the binds from the configuration. We then show nothing for a
     # pad bound by an autoconfig profile, although its buttons work.
@@ -535,6 +548,7 @@ CASES = {
     "automation": case_automation,
     "artwork": case_artwork,
     "padbinds": case_padbinds,
+    "glslcore": case_glslcore,
     "menupreview": case_menupreview,
     "shaderpreview": case_shaderpreview,
     "size": case_size,
