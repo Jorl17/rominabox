@@ -180,6 +180,25 @@ def adopt_works_from_inside_the_worktree_it_adopts() -> None:
         subprocess.run(["rm", "-rf", str(made.parent)], check=False)
 
 
+def a_fresh_worktree_has_the_fixtures_its_scopes_need() -> None:
+    """Check that the isolation tests can run in a worktree.
+
+    `work/` is git-ignored, so a fresh checkout has no `work/test-game.gbc`,
+    and the isolation tests stop with "work/test-game.gbc is not in this
+    checkout". That failure looks like a fault in the change under test.
+    """
+    for relative in worktree.UNTRACKED_FIXTURES:
+        here = worktree.ROOT / relative
+        check(
+            here.is_file(),
+            f"{relative} is in the canonical checkout to copy from",
+        )
+        check(
+            relative in worktree.UNTRACKED_FIXTURES,
+            f"{relative} is declared, so creating a worktree carries it",
+        )
+
+
 def the_local_config_is_never_committed() -> None:
     """It contains local resources of this machine, so we must not commit it."""
     ignored = subprocess.run(
@@ -390,6 +409,7 @@ FROM_THE_CANONICAL_CHECKOUT = [
     a_dead_holders_lock_is_reclaimed,
     the_canonical_checkout_is_never_suffixed,
     adopt_works_from_inside_the_worktree_it_adopts,
+    a_fresh_worktree_has_the_fixtures_its_scopes_need,
     the_local_config_is_never_committed,
     removal_never_touches_the_canonical_data,
     removing_a_worktree_keeps_the_fork_commits_its_branch_needs,
