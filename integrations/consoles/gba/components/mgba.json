@@ -3,7 +3,10 @@
   "id": "mgba",
   "name": "mgba",
   "artifacts": {
-    "macos-arm64": "mgba_libretro.dylib"
+    "linux-x86_64": "mgba_libretro.so",
+    "macos-arm64": "mgba_libretro.dylib",
+    "macos-x86_64": "mgba_libretro.dylib",
+    "windows-x86_64": "mgba_libretro.dll"
   },
   "license": {
     "spdx": "MPL-2.0",
@@ -17,6 +20,33 @@
     "licenseCandidates": [
       "LICENSE"
     ],
-    "correspondsToArtifact": false
+    "correspondsToArtifact": false,
+    "licenseSha256": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85",
+    "downloads": {
+      "linux-x86_64": {
+        "archiveSha256": "45dde77c8d758d9324b2ff31190ee19527b31f46d9e5151e5cbf062947b7805a",
+        "binarySha256": "c840f305825d07c9bec7a6ec18841073c4b539fd234f73623474f97c507f1cdc",
+        "archiveBytes": 524108,
+        "binaryBytes": 3314664
+      },
+      "macos-arm64": {
+        "archiveSha256": "df80dfc617be1eafac6a6e464e0e39522f956bae62e9ab01f9cf8b55795c72dc",
+        "binarySha256": "54ae92e80b012013f6d777fb3158b9f925be22c97896049b8549614d7514f505",
+        "archiveBytes": 453573,
+        "binaryBytes": 2829600
+      },
+      "macos-x86_64": {
+        "archiveSha256": "751adc0bc6b7a991f86d5dcd4fb752cebf293d1c70cc122c94b2fd7d628fbf32",
+        "binarySha256": "65b73779c9772146f5a0106775c7c8c92defb1034a14590cef71078b7c832d6b",
+        "archiveBytes": 488500,
+        "binaryBytes": 3072504
+      },
+      "windows-x86_64": {
+        "archiveSha256": "938624edb0d6beeba42077d665df63bfadcd3d450a78a05f7c9d5ccbb1c6ca3b",
+        "binarySha256": "5590a4868a587b43ad874bdc20f6830ef2bddecdbba84021baa45f879b55814e",
+        "archiveBytes": 569965,
+        "binaryBytes": 3045973
+      }
+    }
   }
 }

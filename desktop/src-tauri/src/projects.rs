@@ -208,6 +208,7 @@ impl ProjectSettings {
             target: self.target,
             runtime_kit,
             core,
+            core_cache: None,
         }
     }
 }

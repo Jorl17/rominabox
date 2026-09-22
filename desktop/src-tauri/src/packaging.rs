@@ -85,6 +85,11 @@ pub struct ExportRequest {
     pub runtime_kit: PathBuf,
     /// Optional explicit core path for development and future custom kits.
     pub core: Option<PathBuf>,
+    /// Cores downloaded on first start, in the layout of a kit, `cores/` and
+    /// `licenses/`. At export we copy the core of the game from here, so
+    /// there is no download when the game opens.
+    #[serde(default)]
+    pub core_cache: Option<PathBuf>,
 }
 
 fn default_palette() -> String {
@@ -131,6 +136,19 @@ pub fn system_availability(runtime_kit: &Path) -> Vec<SystemAvailability> {
 /// macOS we can answer "would this console work on Windows?", and we can
 /// test that question at all.
 pub fn system_availability_for(runtime_kit: &Path, target: &str) -> Vec<SystemAvailability> {
+    system_availability_in(runtime_kit, None, target)
+}
+
+/// Resolve availability, also looking in the cache filled on first start.
+///
+/// We search the bundled kit first. The cache contains the cores downloaded
+/// on first start, in the same `cores/` and `licenses/` layout, and it is not
+/// a global RetroArch folder.
+pub fn system_availability_in(
+    runtime_kit: &Path,
+    cache: Option<&Path>,
+    target: &str,
+) -> Vec<SystemAvailability> {
     crate::systems::registry()
         .iter()
         .map(|system| {
@@ -152,8 +170,13 @@ pub fn system_availability_for(runtime_kit: &Path, target: &str) -> Vec<SystemAv
                     ));
                     continue;
                 };
-                let artifact = runtime_kit.join("cores").join(filename);
-                let licence = runtime_kit.join("licenses").join(&core.license_file);
+                let artifact =
+                    resolve_cached(runtime_kit, cache, &Path::new("cores").join(filename));
+                let licence = resolve_cached(
+                    runtime_kit,
+                    cache,
+                    &Path::new("licenses").join(&core.license_file),
+                );
                 if artifact.is_file() && licence.is_file() {
                     return SystemAvailability {
                         id: system.id.clone(),
@@ -418,10 +441,11 @@ where
         )
     })?;
     let core_source = request.core.clone().unwrap_or_else(|| {
-        request
-            .runtime_kit
-            .join("cores")
-            .join(selected_core.artifact().unwrap_or_default())
+        resolve_cached(
+            &request.runtime_kit,
+            request.core_cache.as_deref(),
+            &Path::new("cores").join(selected_core.artifact().unwrap_or_default()),
+        )
     });
     let core_name = OsStr::new("game-core.dylib");
     let core = resources.join(core_name);
@@ -527,6 +551,7 @@ where
     }
     stage_legal_materials(
         &request.runtime_kit,
+        request.core_cache.as_deref(),
         &resources.join("Legal"),
         selected_core,
     )?;
@@ -714,10 +739,11 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
         )
     })?;
     let core = request.core.clone().unwrap_or_else(|| {
-        request
-            .runtime_kit
-            .join("cores")
-            .join(selected_core.artifact().unwrap_or_default())
+        resolve_cached(
+            &request.runtime_kit,
+            request.core_cache.as_deref(),
+            &Path::new("cores").join(selected_core.artifact().unwrap_or_default()),
+        )
     });
     if !core.is_file() {
         return Err(ExportError::new(
@@ -772,8 +798,23 @@ fn validate_request(request: &ExportRequest) -> Result<(), ExportError> {
     Ok(())
 }
 
+fn resolve_cached(kit: &Path, cache: Option<&Path>, relative: &Path) -> PathBuf {
+    let bundled = kit.join(relative);
+    if bundled.is_file() {
+        return bundled;
+    }
+    if let Some(cache) = cache {
+        let fetched = cache.join(relative);
+        if fetched.is_file() {
+            return fetched;
+        }
+    }
+    bundled
+}
+
 fn stage_legal_materials(
     runtime_kit: &Path,
+    cache: Option<&Path>,
     destination: &Path,
     core: &crate::systems::Core,
 ) -> Result<(), ExportError> {
@@ -801,7 +842,11 @@ fn stage_legal_materials(
     )?;
 
     copy_file(
-        &runtime_kit.join("licenses").join(&core.license_file),
+        &resolve_cached(
+            runtime_kit,
+            cache,
+            &Path::new("licenses").join(&core.license_file),
+        ),
         &licenses.join(&core.license_file),
     )?;
     let joypad_licence = runtime_kit.join("licenses/retroarch-joypad-autoconfig.txt");
@@ -2415,6 +2460,7 @@ mod tests {
             target: ExportTarget::Macos,
             runtime_kit: PathBuf::from("runtime"),
             core: None,
+            core_cache: None,
         }
     }
 
@@ -3247,6 +3293,19 @@ mod tests {
         }
 
         #[test]
+        fn a_core_in_the_first_boot_cache_is_enough() {
+            let kit_root = kit(&[]);
+            let cache = kit(&[("megadrive", true, true)]);
+            let megadrive =
+                system_availability_in(&kit_root, Some(&cache), crate::systems::current_target())
+                    .into_iter()
+                    .find(|entry| entry.id == "megadrive")
+                    .expect("every declared console is reported");
+            assert_eq!(megadrive.unavailable, None);
+            assert_eq!(megadrive.component.as_deref(), Some("genesis_plus_gx"));
+        }
+
+        #[test]
         fn a_prepared_console_names_the_component_that_will_run_it() {
             let root = kit(&[("megadrive", true, true)]);
             let megadrive = entry(&root, "megadrive");
@@ -3286,20 +3345,30 @@ mod tests {
             }
         }
 
-        /// We may generate the registry on one machine and use it on another,
-        /// because we ship on more than one platform. These tests check that
-        /// the target is a parameter and not a constant.
+        /// A declared target whose file is not in this kit is a missing file.
+        /// A target missing from the declaration of the component is another
+        /// problem, and the report must make clear which of the two it is.
         #[test]
         fn a_console_with_no_artifact_for_a_target_says_exactly_that() {
             let root = kit(&[("megadrive", true, true)]);
-            // This is a macOS kit. Check the result for Windows with it.
             let windows = system_availability_for(&root, "windows-x86_64")
                 .into_iter()
                 .find(|entry| entry.id == "megadrive")
                 .expect("every console is reported for every target");
             match windows.unavailable {
                 Some(Unavailable::NoPreparedCore { ref tried }) => assert!(
-                    tried[0].contains("no windows-x86_64 artifact declared"),
+                    tried[0].contains("artifact genesis_plus_gx_libretro.dll missing"),
+                    "windows is declared, so a macOS kit is missing the file: {tried:?}"
+                ),
+                other => panic!("expected a missing windows artifact, got {other:?}"),
+            }
+            let undeclared = system_availability_for(&root, "linux-arm64")
+                .into_iter()
+                .find(|entry| entry.id == "megadrive")
+                .expect("every console is reported for every target");
+            match undeclared.unavailable {
+                Some(Unavailable::NoPreparedCore { ref tried }) => assert!(
+                    tried[0].contains("no linux-arm64 artifact declared"),
                     "a target with nothing declared is a different problem from a missing file: {tried:?}"
                 ),
                 other => panic!("expected an undeclared target, got {other:?}"),

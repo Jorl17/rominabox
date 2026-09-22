@@ -8,6 +8,7 @@
 //! links between consoles and profiles always match in both directions.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 /// We raise this when a field changes meaning. We reject a package that
 /// declares a version unknown to this build, and never read it in part.
@@ -198,6 +199,19 @@ pub struct ComponentProvenance {
     pub license_candidates: Vec<String>,
     #[serde(rename = "correspondsToArtifact")]
     pub corresponds_to_artifact: bool,
+    /// SHA-256 of the licence text in the first candidate path that exists.
+    ///
+    /// We check a download against this, not against its length. It is absent
+    /// for a core we compile, whose licence we copy out of that source tree.
+    #[serde(default, rename = "licenseSha256", skip_serializing_if = "Option::is_none")]
+    pub license_sha256: Option<String>,
+    /// The nightly bytes we accept, per target.
+    ///
+    /// The buildbot directory is `latest`, which libretro replaces in place.
+    /// With a hash recorded here we never take a later nightly for the pinned
+    /// core, and we reject a file that does not match.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub downloads: BTreeMap<String, PinnedDownload>,
     /// How we build it, for components we compile ourselves.
     ///
     /// What the artifact supports depends on these flags, so we keep them with
@@ -205,6 +219,21 @@ pub struct ComponentProvenance {
     /// `HAVE_CHD=0` there is no CHD support for any Sega console.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build: Option<BuildRecipe>,
+}
+
+/// One pinned buildbot artifact. The hashes are of the zip and of the core
+/// inside it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PinnedDownload {
+    #[serde(rename = "archiveSha256")]
+    pub archive_sha256: String,
+    #[serde(rename = "binarySha256")]
+    pub binary_sha256: String,
+    #[serde(rename = "archiveBytes")]
+    pub archive_bytes: u64,
+    #[serde(rename = "binaryBytes")]
+    pub binary_bytes: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

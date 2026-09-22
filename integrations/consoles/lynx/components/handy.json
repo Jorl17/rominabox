@@ -3,11 +3,52 @@
   "id": "handy",
   "name": "handy",
   "artifacts": {
-    "macos-arm64": "handy_libretro.dylib"
+    "linux-x86_64": "handy_libretro.so",
+    "macos-arm64": "handy_libretro.dylib",
+    "macos-x86_64": "handy_libretro.dylib",
+    "windows-x86_64": "handy_libretro.dll"
   },
   "license": {
     "spdx": "Zlib",
     "file": "handy.txt"
   },
-  "capabilities": []
+  "capabilities": [],
+  "provenance": {
+    "origin": "libretro-buildbot",
+    "repository": "libretro/libretro-handy",
+    "revision": "bc55d462f0b2d6b073ea93dc552ebd73cec60fd1",
+    "licenseCandidates": [
+      "lynx/license.txt",
+      "COPYING",
+      "LICENSE"
+    ],
+    "correspondsToArtifact": false,
+    "licenseSha256": "c75a7fed8afe9d6a5a70a48c0b52bf37207e8dee49dfa664b0b73819248db671",
+    "downloads": {
+      "linux-x86_64": {
+        "archiveSha256": "1443dbf6c623cb22b2a3192bb7fd04defd28399e4975d172743788cbc1340ab6",
+        "binarySha256": "8732475e7398129afd77a55f70a33a98808f6967caeb7363e495d9a4923e43cf",
+        "archiveBytes": 100912,
+        "binaryBytes": 892352
+      },
+      "macos-arm64": {
+        "archiveSha256": "53cea9e00f7ec272cb8dce2fd4869e339a440d03c01989970244b093348d1cba",
+        "binarySha256": "d5a25d317094e6a724c50c4899c367470067df9e3fbca502d86145feb61fd3d0",
+        "archiveBytes": 94099,
+        "binaryBytes": 766936
+      },
+      "macos-x86_64": {
+        "archiveSha256": "0e940a806f6df90a505e938fef5f70bafcb05960ff094855f0e6f1403ef7f229",
+        "binarySha256": "13c4457b4cf72c76a70df5156db7f034b588c9bb4f98031110e46ee11bdf9c68",
+        "archiveBytes": 91265,
+        "binaryBytes": 744840
+      },
+      "windows-x86_64": {
+        "archiveSha256": "211c84ceff5a7478af5f69a7c5e2c1721c3b6beca276274cb34f6dba2ef1ae19",
+        "binarySha256": "c44cdd02f0c04ab51873bbb573ef2484dd38b38f0c392003a8a15cab6dff71fb",
+        "archiveBytes": 173107,
+        "binaryBytes": 1011420
+      }
+    }
+  }
 }

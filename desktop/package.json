@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npm run catalog && npm run scene && vite",
     "build": "npm run catalog && npm run scene && tsc --noEmit && vite build",
-    "check": "npm run scene && tsc --noEmit && vitest run && prettier --check .",
+    "check": "npm run scene && python3 ../scripts/frontend_check.py",
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

@@ -429,9 +429,17 @@ export function App() {
     bridge.onExportProgress(setProgress).then(save).catch(fail);
     bridge.defaultDestination().then(setDestination).catch(fail);
     bridge
-      .availableSystems()
-      .then((ids) => setSupported(new Set(ids)))
-      .catch(fail);
+      .ensureCores()
+      .catch(() => undefined)
+      .finally(() => {
+        if (disposed) return;
+        bridge
+          .availableSystems()
+          .then((ids) => {
+            if (!disposed) setSupported(new Set(ids));
+          })
+          .catch(fail);
+      });
     return () => {
       disposed = true;
       cleanups.forEach((fn) => fn());

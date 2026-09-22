@@ -285,6 +285,95 @@ fn an_alias_resolves_to_the_same_console_it_always_did() {
     }
 }
 
+const SHIPPED_TARGETS: &[&str] = &[
+    "linux-x86_64",
+    "macos-arm64",
+    "macos-x86_64",
+    "windows-x86_64",
+];
+
+/// We generate the builder's download list from the packages.
+///
+/// With a second copy that could drift, we could fetch a core under a hash
+/// that is no longer in the package.
+#[test]
+fn the_core_pins_are_the_packages() {
+    let catalog = catalog();
+    let pins: serde_json::Value = serde_json::from_str(include_str!("../../../core-pins.json"))
+        .expect("desktop/core-pins.json parses");
+    let listed: Vec<&serde_json::Value> = pins["cores"].as_array().unwrap().iter().collect();
+    let mut expected = 0;
+    for (id, component) in catalog.components() {
+        let provenance = component
+            .provenance
+            .as_ref()
+            .unwrap_or_else(|| panic!("{id} has no provenance"));
+        expected += 1;
+        let entry = listed
+            .iter()
+            .find(|item| item["component"] == *id)
+            .unwrap_or_else(|| panic!("{id} is missing from core-pins.json"));
+        assert_eq!(entry["repository"], provenance.repository);
+        assert_eq!(entry["revision"], provenance.revision);
+        assert_eq!(entry["licenseFile"], component.license.file);
+        assert_eq!(entry["licensePath"], provenance.license_candidates[0]);
+        assert_eq!(
+            entry["licenseSha256"],
+            provenance.license_sha256.as_deref().unwrap()
+        );
+        for target in SHIPPED_TARGETS {
+            let pin = provenance
+                .downloads
+                .get(*target)
+                .unwrap_or_else(|| panic!("{id} has no {target} pin"));
+            let artifact = &entry["artifacts"][target];
+            assert_eq!(artifact["filename"], component.artifacts[*target]);
+            assert_eq!(artifact["archiveSha256"], pin.archive_sha256);
+            assert_eq!(artifact["binarySha256"], pin.binary_sha256);
+        }
+    }
+    assert_eq!(listed.len(), expected);
+    assert!(pins["coreMirrors"].as_array().unwrap().len() >= 2);
+}
+
+/// We cannot fetch a component with no provenance, and a component must name
+/// every target and not only macOS.
+#[test]
+fn every_component_can_be_obtained_for_every_shipped_target() {
+    let catalog = catalog();
+    let mut problems = Vec::new();
+    for (id, component) in catalog.components() {
+        match &component.provenance {
+            None => problems.push(format!("{id}: no provenance")),
+            Some(provenance) => {
+                if provenance
+                    .license_sha256
+                    .as_deref()
+                    .map(|value| value.len() != 64)
+                    .unwrap_or(true)
+                {
+                    problems.push(format!("{id}: no recorded licence hash"));
+                }
+                for target in SHIPPED_TARGETS {
+                    if !provenance.downloads.contains_key(*target) {
+                        problems.push(format!("{id}: no pinned {target} download"));
+                    }
+                }
+            }
+        }
+        for target in SHIPPED_TARGETS {
+            if !component.artifacts.contains_key(*target) {
+                problems.push(format!("{id}: no {target} artifact"));
+            }
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "cores that cannot be obtained:\n{}",
+        problems.join("\n")
+    );
+}
+
 /// The checked-in registries must match what we generate from the catalog.
 ///
 /// We generate `systems.json` and `controls.json`, so do not edit them by

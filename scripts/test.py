@@ -17,13 +17,22 @@ the scopes shows that a game runs, which requires the player.
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import subprocess
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cargo_replay import cargo_test  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRATCH = ROOT / "work/test-output"
+BUDGETS = ROOT / "scripts/fixtures/scope-budgets.json"
+PRINT_LOCK = threading.Lock()
 
 CARGO_DESKTOP = ["--manifest-path", str(ROOT / "desktop/src-tauri/Cargo.toml")]
 CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog/Cargo.toml")]
@@ -180,17 +189,41 @@ SCOPES = [
 BY_NAME = {scope.name: scope for scope in SCOPES}
 
 
-def run(scope: Scope) -> tuple[bool, float]:
+def execute(command: list[str]) -> subprocess.CompletedProcess:
+    if command and command[0] == "cargo" and "test" in command[:2]:
+        return cargo_test(command, ROOT)
+    return subprocess.run(
+        command, cwd=ROOT, capture_output=True, text=True, errors="replace"
+    )
+
+
+def run(scope: Scope) -> tuple[bool, float, str]:
     started = time.monotonic()
+    chunks: list[str] = []
     for step in scope.prepare:
-        staged = subprocess.run(step, cwd=ROOT, capture_output=True, text=True)
+        staged = execute(step)
+        chunks.append(staged.stdout or "")
+        chunks.append(staged.stderr or "")
         if staged.returncode != 0:
-            print(
-                f"  could not stage what {scope.name} needs:\n{staged.stderr.strip()[-600:]}"
-            )
-            return False, time.monotonic() - started
-    result = subprocess.run(scope.command, cwd=ROOT)
-    return result.returncode == 0, time.monotonic() - started
+            chunks.append(f"  could not stage what {scope.name} needs\n")
+            return False, time.monotonic() - started, "".join(chunks)
+    result = execute(scope.command)
+    chunks.append(result.stdout or "")
+    chunks.append(result.stderr or "")
+    return result.returncode == 0, time.monotonic() - started, "".join(chunks)
+
+
+def load_budgets() -> dict | None:
+    if not BUDGETS.is_file():
+        return None
+    return json.loads(BUDGETS.read_text())
+
+
+def over_budget(seconds: float, budget: float, limits: dict) -> bool:
+    """Return twice the time, and at least `slack` seconds more, so that on a
+    busy machine we do not fail a scope that took a moment longer."""
+    slack = float(limits.get("slack_seconds", 10))
+    return seconds > max(budget * 2, budget + slack)
 
 
 def main() -> int:
@@ -217,18 +250,57 @@ def main() -> int:
         selected = [scope for scope in SCOPES if not scope.slow]
 
     SCRATCH.mkdir(parents=True, exist_ok=True)
-    results = []
-    for scope in selected:
-        print(f"\n=== {scope.name} ===", flush=True)
-        passed, seconds = run(scope)
-        results.append((scope.name, passed, seconds))
+    recorded: dict[str, tuple[bool, float]] = {}
+    wall_started = time.monotonic()
 
+    def finish(scope: Scope) -> None:
+        with PRINT_LOCK:
+            print(f"start {scope.name}", flush=True)
+        passed, seconds, output = run(scope)
+        with PRINT_LOCK:
+            print(f"\n=== {scope.name} ===", flush=True)
+            if output:
+                print(output, end="" if output.endswith("\n") else "\n", flush=True)
+            recorded[scope.name] = (passed, seconds)
+
+    # Four at a time. With more, the renders and the test binaries wait for
+    # each other and the run is no faster. We run Cargo one at a time in
+    # cargo_replay, because the target directory is shared.
+    workers = min(4, len(selected), os.cpu_count() or 4)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending = [pool.submit(finish, scope) for scope in selected]
+        for future in as_completed(pending):
+            future.result()
+
+    wall = time.monotonic() - wall_started
+    limits = load_budgets()
+    scope_budgets = (limits or {}).get("scopes") or {}
     print("\n" + "=" * 46)
-    for name, passed, seconds in results:
-        print(f"{'PASS' if passed else 'FAIL'}  {name:<12}{seconds:6.1f}s")
-    failed = [name for name, passed, _ in results if not passed]
+    slow: list[str] = []
+    for scope in selected:
+        passed, seconds = recorded[scope.name]
+        budget = scope_budgets.get(scope.name)
+        ratio = f"  {seconds / budget:4.1f}x" if budget else ""
+        mark = "PASS" if passed else "FAIL"
+        if passed and budget is not None and limits is not None and over_budget(seconds, budget, limits):
+            mark = "SLOW"
+            slow.append(scope.name)
+        print(f"{mark}  {scope.name:<12}{seconds:6.1f}s{ratio}")
+    wall_budget = (limits or {}).get("wall")
+    wall_ratio = f"  {wall / wall_budget:4.1f}x" if wall_budget else ""
+    print(f"\nwall {wall:0.1f}s{wall_ratio}")
+    if wall_budget and limits is not None and over_budget(wall, wall_budget, limits):
+        slow.append("wall")
+    failed = [scope.name for scope in selected if not recorded[scope.name][0]]
     if failed:
         print(f"\n{len(failed)} scope(s) failed: {', '.join(failed)}")
+        return 1
+    if slow:
+        print(
+            f"\n{len(slow)} timing(s) exceeded the budget in {BUDGETS.name}: {', '.join(slow)}\n"
+            "A budget is the last measured time for that scope. It is exceeded "
+            "when a run takes more than twice as long and at least the slack longer."
+        )
         return 1
     if not arguments.all and not arguments.scopes:
         print("\nSlow scopes were skipped. Run --all before a checkpoint.")

@@ -1,0 +1,23 @@
+{
+  "slack_seconds": 10,
+  "wall": 9.6,
+  "scopes": {
+    "catalog": 0.1,
+    "exporter": 1.7,
+    "picture": 0.2,
+    "frontend": 4.8,
+    "menu": 0.1,
+    "heldkey": 0.1,
+    "staging": 0.1,
+    "joypad": 0.3,
+    "worktree": 0.1,
+    "bridge": 2.5,
+    "states": 2.6,
+    "placement": 0.9,
+    "variants": 0.6,
+    "identification": 6.7,
+    "automation": 0.1,
+    "artwork": 2.4,
+    "overlays": 0.9
+  }
+}
