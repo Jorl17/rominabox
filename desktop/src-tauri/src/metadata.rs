@@ -1,18 +1,18 @@
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt;
-use std::fs::{self, File};
+use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crc32fast::Hasher;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::Serialize;
-use sha1::{Digest, Sha1};
+
+use crate::{artwork, discs, dumps};
 
 use crate::systems::{self, System};
 
-const HEADER_BYTES: u64 = 512;
 const CATALOG_LIMIT: u64 = 32 * 1024 * 1024;
 const ARTWORK_LIMIT: u64 = 8 * 1024 * 1024;
 
@@ -84,18 +84,11 @@ pub fn inspect_game_with_system(
         return Err(InspectionError::new("Choose a non-empty game file."));
     }
 
-    let filename = rom
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| InspectionError::new("Choose a game file with a valid filename."))?
-        .to_owned();
-    let extension = rom
-        .extension()
-        .and_then(|value| value.to_str())
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-    let header = read_header(rom)?;
-    let (system, mut warnings) = if let Some(requested) = system_override {
+    let prepared = dumps::prepare(rom).map_err(InspectionError::new)?;
+    let filename = prepared.filename.clone();
+    let extension = prepared.extension.clone();
+    let header = dumps::identification_header(&prepared.path)?;
+    let (system, warnings) = if let Some(requested) = system_override {
         let selected = systems::find(requested)
             .ok_or_else(|| InspectionError::new(format!("Unknown console: {requested}")))?;
         if !selected
@@ -112,6 +105,7 @@ pub fn inspect_game_with_system(
     } else {
         identify_system(&extension, &header)
     };
+    let (system, mut warnings) = resolve_disc(system, warnings, &prepared.path, &extension);
     let mut title = filename_title(&filename);
     let mut source = MetadataSource::Filename;
 
@@ -146,64 +140,41 @@ pub fn inspect_game_with_system(
     let mut catalog_name = None;
     let mut description = None;
     let mut icon_path = None;
+    let disc = system.category == "disc";
     if system.catalog.is_some() {
-        let catalog_systems = if matches!(system.id.as_str(), "gb" | "gbc") {
-            if extension == "gb" {
-                vec![systems::find("gb").unwrap(), systems::find("gbc").unwrap()]
-            } else {
-                vec![systems::find("gbc").unwrap(), systems::find("gb").unwrap()]
-            }
+        if disc {
+            apply_disc_catalog(
+                &mut system,
+                &prepared.path,
+                &extension,
+                cache,
+                online,
+                &mut title,
+                &mut source,
+                &mut description,
+                &mut catalog_name,
+                &mut icon_path,
+                &mut warnings,
+            )?;
         } else {
-            vec![system]
-        };
-        let mut fingerprints = None;
-        let mut catalogs_checked = Vec::new();
-        for candidate in catalog_systems {
-            let catalog = candidate.catalog.as_deref().expect("catalog candidate");
-            match catalog_path(cache, catalog, online) {
-                Ok(Some(path)) => {
-                    // Compute every required fingerprint in one streaming pass,
-                    // only once a catalog is available. The fingerprints include
-                    // the headerless iNES form that checksum catalogs use.
-                    if fingerprints.is_none() {
-                        fingerprints =
-                            Some(stream_fingerprints(rom, header.starts_with(b"NES\x1a"))?);
-                    }
-                    match match_catalog(fingerprints.as_deref().unwrap(), &path) {
-                        Ok(Some(entry)) => {
-                            system = candidate;
-                            title = display_title(&entry.name);
-                            source = MetadataSource::Catalog;
-                            description = entry.description.filter(|value| value != &entry.name);
-                            catalog_name = Some(entry.name.clone());
-                            if online {
-                                match cache_boxart(cache, catalog, &entry.name) {
-                                    Ok(Some(path)) => icon_path = Some(path),
-                                    Ok(None) => warnings
-                                        .push("No matching Libretro box art was available.".into()),
-                                    Err(error) => {
-                                        warnings.push(format!("Box art was not available: {error}"))
-                                    }
-                                }
-                            } else {
-                                icon_path = cached_boxart(cache, catalog, &entry.name);
-                            }
-                            break;
-                        }
-                        Ok(None) => catalogs_checked.push(catalog),
-                        Err(error) => warnings.push(format!("Could not read {catalog}: {error}")),
-                    }
-                }
-                Ok(None) => warnings.push(format!("The {catalog} checksum catalog is not cached.")),
-                Err(error) => warnings.push(format!("Could not fetch {catalog}: {error}")),
-            }
+            apply_cartridge_catalog(
+                &mut system,
+                &prepared.path,
+                &extension,
+                &header,
+                cache,
+                online,
+                &mut title,
+                &mut source,
+                &mut description,
+                &mut catalog_name,
+                &mut icon_path,
+                &mut warnings,
+            )?;
         }
-        if catalog_name.is_none() && !catalogs_checked.is_empty() {
-            warnings.push(format!(
-                "No exact checksum match was found in {}; using embedded or filename metadata.",
-                catalogs_checked.join(" or ")
-            ));
-        }
+    } else if disc {
+        warnings
+            .push("This disc image was not matched. Its serial was not in the catalogue.".into());
     } else {
         warnings.push(
             "This container needs system-specific identification and was not checksum-scanned."
@@ -230,8 +201,260 @@ struct CatalogEntry {
     description: Option<String>,
 }
 
+fn apply_cartridge_catalog(
+    system: &mut &'static systems::System,
+    rom: &Path,
+    extension: &str,
+    header: &[u8],
+    cache: &Path,
+    online: bool,
+    title: &mut String,
+    source: &mut MetadataSource,
+    description: &mut Option<String>,
+    catalog_name: &mut Option<String>,
+    icon_path: &mut Option<PathBuf>,
+    warnings: &mut Vec<String>,
+) -> Result<(), InspectionError> {
+    let catalog_systems = if matches!(system.id.as_str(), "gb" | "gbc") {
+        if extension == "gb" {
+            vec![systems::find("gb").unwrap(), systems::find("gbc").unwrap()]
+        } else {
+            vec![systems::find("gbc").unwrap(), systems::find("gb").unwrap()]
+        }
+    } else {
+        vec![*system]
+    };
+    let mut fingerprints = None;
+    let mut catalogs_checked = Vec::new();
+    for candidate in catalog_systems {
+        let catalog = candidate.catalog.as_deref().expect("catalog candidate");
+        match catalog_path(cache, catalog, online, false) {
+            Ok(Some(path)) => {
+                if fingerprints.is_none() {
+                    fingerprints = Some(dumps::fingerprints(
+                        rom,
+                        extension,
+                        header.starts_with(b"NES\x1a"),
+                    )?);
+                }
+                match match_catalog(fingerprints.as_deref().unwrap(), &path) {
+                    Ok(Some(entry)) => {
+                        remember_match(
+                            system,
+                            candidate,
+                            &entry,
+                            catalog,
+                            cache,
+                            online,
+                            title,
+                            source,
+                            description,
+                            catalog_name,
+                            icon_path,
+                            warnings,
+                        )?;
+                        return Ok(());
+                    }
+                    Ok(None) => catalogs_checked.push(catalog),
+                    Err(error) => warnings.push(format!("Could not read {catalog}: {error}")),
+                }
+            }
+            Ok(None) => warnings.push(format!("The {catalog} checksum catalog is not cached.")),
+            Err(error) => warnings.push(format!("Could not fetch {catalog}: {error}")),
+        }
+    }
+    if catalog_name.is_none() && !catalogs_checked.is_empty() {
+        warnings.push(format!(
+            "No exact checksum match was found in {}; using embedded or filename metadata.",
+            catalogs_checked.join(" or ")
+        ));
+    }
+    Ok(())
+}
+
+fn apply_disc_catalog(
+    system: &mut &'static systems::System,
+    rom: &Path,
+    extension: &str,
+    cache: &Path,
+    online: bool,
+    title: &mut String,
+    source: &mut MetadataSource,
+    description: &mut Option<String>,
+    catalog_name: &mut Option<String>,
+    icon_path: &mut Option<PathBuf>,
+    warnings: &mut Vec<String>,
+) -> Result<(), InspectionError> {
+    let keys = match discs::read_disc(rom, extension) {
+        discs::DiscRead::Compressed => {
+            warnings.push(
+                "This disc image is compressed, so its serial cannot be read. Use a cue, iso or gdi image."
+                    .into(),
+            );
+            return Ok(());
+        }
+        discs::DiscRead::Unreadable(message) => {
+            warnings.push(message);
+            return Ok(());
+        }
+        discs::DiscRead::Found { keys, .. } if keys.is_empty() => {
+            warnings.push("No serial was found in this disc image. Using the filename.".into());
+            return Ok(());
+        }
+        discs::DiscRead::Found { keys, .. } => keys,
+    };
+    let catalog = system.catalog.as_deref().expect("disc catalogue");
+    let path = match catalog_path(cache, catalog, online, true) {
+        Ok(Some(path)) => path,
+        Ok(None) => {
+            warnings.push(format!("The {catalog} serial catalogue is not cached."));
+            return Ok(());
+        }
+        Err(error) => {
+            warnings.push(format!("Could not fetch {catalog}: {error}"));
+            return Ok(());
+        }
+    };
+    let candidate = *system;
+    match match_serial(&keys, &candidate.id, &path) {
+        Ok(Some(entry)) => remember_match(
+            system,
+            candidate,
+            &entry,
+            catalog,
+            cache,
+            online,
+            title,
+            source,
+            description,
+            catalog_name,
+            icon_path,
+            warnings,
+        ),
+        Ok(None) => {
+            warnings.push("No catalogue entry has this disc's serial. Using the filename.".into());
+            Ok(())
+        }
+        Err(error) => {
+            warnings.push(error.to_string());
+            Ok(())
+        }
+    }
+}
+
+fn remember_match(
+    system: &mut &'static systems::System,
+    candidate: &'static systems::System,
+    entry: &CatalogEntry,
+    catalog: &str,
+    cache: &Path,
+    online: bool,
+    title: &mut String,
+    source: &mut MetadataSource,
+    description: &mut Option<String>,
+    catalog_name: &mut Option<String>,
+    icon_path: &mut Option<PathBuf>,
+    warnings: &mut Vec<String>,
+) -> Result<(), InspectionError> {
+    *system = candidate;
+    *title = display_title(&entry.name);
+    *source = MetadataSource::Catalog;
+    *description = entry
+        .description
+        .clone()
+        .filter(|value| value != &entry.name);
+    *catalog_name = Some(entry.name.clone());
+    match lookup_boxart(cache, catalog, &entry.name, online) {
+        Ok(Some(path)) => *icon_path = Some(path),
+        Ok(None) => warnings.push("No cover is published for this game.".into()),
+        Err(error) => warnings.push(format!("Box art was not available: {error}")),
+    }
+    Ok(())
+}
+
+fn resolve_disc(
+    system: Option<&'static systems::System>,
+    warnings: Vec<String>,
+    path: &Path,
+    extension: &str,
+) -> (Option<&'static systems::System>, Vec<String>) {
+    if system.is_some() {
+        return (system, warnings);
+    }
+    let discs::DiscRead::Found {
+        system_id: Some(id),
+        keys,
+    } = discs::read_disc(path, extension)
+    else {
+        return (system, warnings);
+    };
+    if keys.is_empty() {
+        return (system, warnings);
+    }
+    let Some(detected) = systems::find(id) else {
+        return (system, warnings);
+    };
+    let extension_matches = detected
+        .extensions
+        .iter()
+        .any(|candidate| candidate.eq_ignore_ascii_case(extension));
+    if !extension_matches {
+        return (system, warnings);
+    }
+    (Some(detected), Vec::new())
+}
+
+fn match_serial(
+    keys: &[String],
+    system_id: &str,
+    catalog_path: &Path,
+) -> Result<Option<CatalogEntry>, InspectionError> {
+    let dat = datary::read_file(catalog_path)
+        .map_err(|error| InspectionError::new(format!("invalid DAT catalog: {error}")))?;
+    let mut names_for_key: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut entry_for_name: HashMap<String, CatalogEntry> = HashMap::new();
+    for game in dat.games {
+        entry_for_name
+            .entry(game.name.clone())
+            .or_insert_with(|| CatalogEntry {
+                name: game.name.clone(),
+                description: (!game.description.is_empty()).then_some(game.description.clone()),
+            });
+        for rom in &game.roms {
+            let Some(serial) = rom.serial.as_deref() else {
+                continue;
+            };
+            for key in discs::keys_for_catalog_serial(system_id, serial) {
+                names_for_key
+                    .entry(key)
+                    .or_default()
+                    .insert(game.name.clone());
+            }
+        }
+    }
+    let mut matched = HashSet::new();
+    for key in keys {
+        let Some(names) = names_for_key.get(key) else {
+            continue;
+        };
+        if names.len() == 1 {
+            matched.extend(names.iter().cloned());
+        }
+    }
+    if matched.len() > 1 {
+        return Err(InspectionError::new(
+            "This disc serial matches more than one game, so no cover was chosen.",
+        ));
+    }
+    if matched.is_empty() {
+        return Ok(None);
+    }
+    let name = matched.into_iter().next().expect("one name");
+    Ok(entry_for_name.remove(&name))
+}
+
 fn match_catalog(
-    fingerprints: &[Fingerprint],
+    fingerprints: &[dumps::Fingerprint],
     catalog_path: &Path,
 ) -> Result<Option<CatalogEntry>, InspectionError> {
     let dat = datary::read_file(catalog_path)
@@ -269,61 +492,11 @@ fn match_catalog(
     Ok(None)
 }
 
-struct Fingerprint {
-    size: u64,
-    crc32: u32,
-    sha1: String,
-}
-
-fn stream_fingerprints(
-    path: &Path,
-    normalize_ines: bool,
-) -> Result<Vec<Fingerprint>, InspectionError> {
-    let mut file = File::open(path)?;
-    let mut crc32 = Hasher::new();
-    let mut sha1 = Sha1::new();
-    let mut normalized_crc32 = Hasher::new();
-    let mut normalized_sha1 = Sha1::new();
-    let mut size = 0_u64;
-    let mut buffer = [0_u8; 1024 * 1024];
-    loop {
-        let count = file.read(&mut buffer)?;
-        if count == 0 {
-            break;
-        }
-        crc32.update(&buffer[..count]);
-        sha1.update(&buffer[..count]);
-        if normalize_ines {
-            let skipped = 16_u64.saturating_sub(size).min(count as u64) as usize;
-            normalized_crc32.update(&buffer[skipped..count]);
-            normalized_sha1.update(&buffer[skipped..count]);
-        }
-        size += count as u64;
-    }
-    let sha1 = sha1.finalize();
-    let mut fingerprints = vec![Fingerprint {
-        size,
-        crc32: crc32.finalize(),
-        sha1: sha1.iter().map(|byte| format!("{byte:02x}")).collect(),
-    }];
-    if normalize_ines && size >= 16 {
-        let normalized_sha1 = normalized_sha1.finalize();
-        fingerprints.push(Fingerprint {
-            size: size - 16,
-            crc32: normalized_crc32.finalize(),
-            sha1: normalized_sha1
-                .iter()
-                .map(|byte| format!("{byte:02x}"))
-                .collect(),
-        });
-    }
-    Ok(fingerprints)
-}
-
 fn catalog_path(
     cache: &Path,
     catalog: &str,
     online: bool,
+    disc: bool,
 ) -> Result<Option<PathBuf>, InspectionError> {
     let path = cache.join("catalogs").join(format!("{catalog}.dat"));
     if path.is_file() {
@@ -332,11 +505,7 @@ fn catalog_path(
     if !online {
         return Ok(None);
     }
-    let encoded = utf8_percent_encode(catalog, NON_ALPHANUMERIC);
-    let url = format!(
-        "https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/no-intro/{encoded}.dat"
-    );
-    let bytes = download(&url, CATALOG_LIMIT)?;
+    let bytes = download(&checksum_catalog_url(catalog, disc), CATALOG_LIMIT)?;
     datary::from_bytes(&bytes).map_err(|error| {
         InspectionError::new(format!("downloaded DAT catalog was invalid: {error}"))
     })?;
@@ -344,53 +513,85 @@ fn catalog_path(
     Ok(Some(path))
 }
 
-fn cache_boxart(
+pub fn checksum_catalog_url(catalog: &str, disc: bool) -> String {
+    let folder = if disc { "redump" } else { "no-intro" };
+    let encoded = utf8_percent_encode(catalog, NON_ALPHANUMERIC);
+    format!(
+        "https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/{folder}/{encoded}.dat"
+    )
+}
+
+fn lookup_boxart(
     cache: &Path,
     catalog: &str,
     name: &str,
+    online: bool,
 ) -> Result<Option<PathBuf>, InspectionError> {
-    if let Some(path) = cached_boxart(cache, catalog, name) {
+    let index = match artwork_index(cache, catalog, online)? {
+        Some(index) => index,
+        None => {
+            return Ok(cached_boxart(
+                cache,
+                catalog,
+                &artwork::scrub_filename(name),
+            ))
+        }
+    };
+    let Some(matched) = artwork::match_cover(&index, name) else {
+        return Ok(None);
+    };
+    if let Some(path) = cached_boxart(cache, catalog, &matched.filename) {
         return Ok(Some(path));
     }
-    let filename = thumbnail_name(name);
-    let repository = catalog.replace(' ', "_");
-    let encoded_catalog = utf8_percent_encode(&repository, NON_ALPHANUMERIC);
-    let encoded_filename = utf8_percent_encode(&filename, NON_ALPHANUMERIC);
-    let url = format!(
-        "https://raw.githubusercontent.com/libretro-thumbnails/{encoded_catalog}/master/Named_Boxarts/{encoded_filename}.png"
-    );
-    let bytes = match download(&url, ARTWORK_LIMIT) {
+    if !online {
+        return Ok(None);
+    }
+    let bytes = match download(
+        &artwork::artwork_download_url(catalog, &matched.filename),
+        ARTWORK_LIMIT,
+    ) {
         Ok(bytes) => bytes,
         Err(_) => return Ok(None),
     };
     if !bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
         return Err(InspectionError::new("downloaded artwork was not a PNG"));
     }
-    let path = artwork_path(cache, catalog, name);
+    let path = artwork_path(cache, catalog, &matched.filename);
     write_cached(&path, &bytes)?;
     Ok(Some(path))
 }
 
-fn cached_boxart(cache: &Path, catalog: &str, name: &str) -> Option<PathBuf> {
-    let path = artwork_path(cache, catalog, name);
+fn artwork_index(
+    cache: &Path,
+    catalog: &str,
+    online: bool,
+) -> Result<Option<artwork::ArtworkIndex>, InspectionError> {
+    let path = cache.join("artwork-index").join(format!("{catalog}.txt"));
+    if let Ok(text) = fs::read_to_string(&path) {
+        return Ok(Some(artwork::ArtworkIndex::from_filenames(
+            text.lines().filter(|line| !line.is_empty()),
+        )));
+    }
+    if !online {
+        return Ok(None);
+    }
+    let bytes = download(&artwork::artwork_index_url(catalog), CATALOG_LIMIT)?;
+    let names = artwork::filenames_from_git_tree(&bytes).map_err(InspectionError::new)?;
+    write_cached(&path, names.join("\n").as_bytes())?;
+    Ok(Some(artwork::ArtworkIndex::from_filenames(names)))
+}
+
+fn cached_boxart(cache: &Path, catalog: &str, filename: &str) -> Option<PathBuf> {
+    let path = artwork_path(cache, catalog, filename);
     path.is_file().then_some(path)
 }
 
-fn artwork_path(cache: &Path, catalog: &str, name: &str) -> PathBuf {
+fn artwork_path(cache: &Path, catalog: &str, filename: &str) -> PathBuf {
     cache
         .join("artwork")
         .join(catalog)
         .join("Named_Boxarts")
-        .join(format!("{}.png", thumbnail_name(name)))
-}
-
-fn thumbnail_name(name: &str) -> String {
-    name.chars()
-        .map(|character| match character {
-            '&' | '*' | '/' | ':' | '`' | '<' | '>' | '?' | '\\' | '|' | '"' => '_',
-            other => other,
-        })
-        .collect()
+        .join(format!("{filename}.png"))
 }
 
 fn download(url: &str, limit: u64) -> Result<Vec<u8>, InspectionError> {
@@ -418,14 +619,6 @@ fn write_cached(path: &Path, bytes: &[u8]) -> Result<(), InspectionError> {
     fs::write(&temporary, bytes)?;
     fs::rename(temporary, path)?;
     Ok(())
-}
-
-fn read_header(path: &Path) -> Result<Vec<u8>, InspectionError> {
-    let mut header = Vec::with_capacity(HEADER_BYTES as usize);
-    File::open(path)?
-        .take(HEADER_BYTES)
-        .read_to_end(&mut header)?;
-    Ok(header)
 }
 
 fn identify_system(extension: &str, header: &[u8]) -> (Option<&'static System>, Vec<String>) {
@@ -619,6 +812,7 @@ fn clean_title(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     fn fixture_directory(label: &str) -> PathBuf {
@@ -788,5 +982,149 @@ game (
                 assert_eq!((window.offset, window.length), (offset, length), "{id}");
             }
         }
+    }
+
+    #[test]
+    fn a_zipped_rom_is_identified_from_the_game_inside() {
+        let root = fixture_directory("zip-nes");
+        let archive_path = root.join("game.zip");
+        let file = std::fs::File::create(&archive_path).unwrap();
+        let mut writer = zip::ZipWriter::new(file);
+        writer
+            .start_file("readme.txt", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(b"notes").unwrap();
+        let mut bytes = b"NES\x1a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".to_vec();
+        bytes.extend([1, 2, 3, 4]);
+        writer
+            .start_file("fixture.nes", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(&bytes).unwrap();
+        writer.finish().unwrap();
+
+        let cache = root.join("cache");
+        let catalog = cache
+            .join("catalogs")
+            .join("Nintendo - Nintendo Entertainment System.dat");
+        std::fs::create_dir_all(catalog.parent().unwrap()).unwrap();
+        std::fs::write(
+            &catalog,
+            r#"clrmamepro (
+  name "fixture"
+)
+game (
+  name "Tiny Adventure (USA)"
+  rom ( name "fixture.nes" size 4 crc B63CFBCD sha1 12dada1fff4d4787ade3333147202c3b443e376f )
+)
+"#,
+        )
+        .unwrap();
+
+        let inspection = inspect_game(&archive_path, &cache, false).unwrap();
+        assert!(inspection.matched);
+        assert_eq!(inspection.filename, "game.zip");
+        assert_eq!(inspection.title, "Tiny Adventure");
+    }
+
+    #[test]
+    fn an_extra_tag_on_the_cover_is_used_when_the_picture_list_has_it() {
+        let root = fixture_directory("cover-tag");
+        let rom = root.join("fixture.nes");
+        let mut bytes = b"NES\x1a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".to_vec();
+        bytes.extend([1, 2, 3, 4]);
+        std::fs::write(&rom, bytes).unwrap();
+        let cache = root.join("cache");
+        let catalog = cache
+            .join("catalogs")
+            .join("Nintendo - Nintendo Entertainment System.dat");
+        std::fs::create_dir_all(catalog.parent().unwrap()).unwrap();
+        std::fs::write(
+            &catalog,
+            r#"clrmamepro (
+  name "fixture"
+)
+game (
+  name "Tiny Adventure (USA)"
+  rom ( name "fixture.nes" size 4 crc B63CFBCD sha1 12dada1fff4d4787ade3333147202c3b443e376f )
+)
+"#,
+        )
+        .unwrap();
+        let index = cache
+            .join("artwork-index")
+            .join("Nintendo - Nintendo Entertainment System.txt");
+        std::fs::create_dir_all(index.parent().unwrap()).unwrap();
+        std::fs::write(&index, "Tiny Adventure (USA) (Unl)\n").unwrap();
+        let picture = cache
+            .join("artwork")
+            .join("Nintendo - Nintendo Entertainment System")
+            .join("Named_Boxarts")
+            .join("Tiny Adventure (USA) (Unl).png");
+        std::fs::create_dir_all(picture.parent().unwrap()).unwrap();
+        std::fs::write(&picture, b"\x89PNG\r\n\x1a\n").unwrap();
+
+        let inspection = inspect_game(&rom, &cache, false).unwrap();
+        assert_eq!(inspection.icon_path.as_deref(), Some(picture.as_path()));
+        assert!(inspection
+            .warnings
+            .iter()
+            .all(|warning| warning != "No cover is published for this game."));
+    }
+
+    #[test]
+    fn a_playstation_disc_is_identified_from_its_serial() {
+        let root = fixture_directory("ps1-serial");
+        let bin = root.join("track.bin");
+        let mut image = vec![0; 64];
+        image[..11].copy_from_slice(b"SLUS_012.34");
+        std::fs::write(&bin, &image).unwrap();
+        let cue = root.join("game.cue");
+        std::fs::write(&cue, "FILE \"track.bin\" BINARY\n  TRACK 01 MODE2/2352\n").unwrap();
+        let cache = root.join("cache");
+        let catalog = cache.join("catalogs").join("Sony - PlayStation.dat");
+        std::fs::create_dir_all(catalog.parent().unwrap()).unwrap();
+        std::fs::write(
+            &catalog,
+            r#"clrmamepro (
+  name "fixture"
+)
+game (
+  name "Tiny Adventure (USA)"
+  serial "SLUS-99999"
+  rom ( name "other.bin" size 1 crc 00000000 serial "SLUS-99999" )
+)
+game (
+  name "Crash Sample (USA)"
+  serial "SLUS-01234"
+  rom ( name "track.bin" size 999999 crc FFFFFFFF serial "SLUS-01234" )
+)
+"#,
+        )
+        .unwrap();
+
+        let inspection =
+            inspect_game_with_system(&cue, &cache, false, Some("PlayStation")).unwrap();
+        assert_eq!(inspection.system, "ps1");
+        assert!(inspection.matched, "{:?}", inspection.warnings);
+        assert_eq!(inspection.title, "Crash Sample");
+    }
+
+    #[test]
+    fn a_compressed_disc_is_not_checksummed() {
+        let root = fixture_directory("chd");
+        let rom = root.join("game.chd");
+        std::fs::write(&rom, b"not a real compressed disc").unwrap();
+        let inspection =
+            inspect_game_with_system(&rom, &root.join("cache"), false, Some("PlayStation"))
+                .unwrap();
+        assert!(!inspection.matched);
+        assert!(
+            inspection
+                .warnings
+                .iter()
+                .any(|warning| warning.contains("compressed")),
+            "{:?}",
+            inspection.warnings
+        );
     }
 }
