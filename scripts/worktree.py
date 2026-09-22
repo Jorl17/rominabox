@@ -403,6 +403,7 @@ def remove(suffix: str, keep_data: bool) -> int:
         if data_root.exists() and data_root != CANONICAL_DATA:
             shutil.rmtree(data_root)
             print(f"removed {data_root}")
+    kept = keep_fork_commits(path, entry.get("branch"))
     # A shared kit is a symlink into the canonical checkout. When we remove the
     # worktree we must unlink it and never follow it.
     for relative in SHARED_ARTIFACTS:
@@ -411,8 +412,59 @@ def remove(suffix: str, keep_data: bool) -> int:
             link.unlink()
     git("worktree", "remove", "--force", str(path))
     print(f"removed {path}")
-    print("shared runtime kit, cargo target and submodule objects were left alone")
+    if kept:
+        print(f"kept its fork commits at {kept}")
+    print("shared runtime kit and cargo target were left alone")
     return 0
+
+
+FORK = Path("vendor/retroarch")
+KEPT_REFS = "refs/rominabox/kept"
+
+
+def keep_fork_commits(path: Path, branch: str | None) -> str | None:
+    """Copy a worktree's fork commits into the canonical submodule before it goes.
+
+    A worktree does not share the submodule's object store. Git puts it under
+    `.git/worktrees/<name>/modules/`, and `git worktree remove` deletes that
+    directory with everything else in it. Removing the worktree of an unmerged
+    branch would destroy the only copy of the fork commits of the branch. The
+    branch would remain, with a submodule commit that exists nowhere, and the
+    failure would appear at checkout time and not at removal time.
+
+    We fetch them under a separate ref, so that `git gc` cannot collect them.
+    Return the ref, or None when the worktree has no fork to keep.
+    """
+    if not (path / FORK).exists():
+        return None
+    canonical = ROOT / FORK
+    if not canonical.is_dir():
+        return None
+    name = f"{KEPT_REFS}/{path.name}"
+    try:
+        git("fetch", "--quiet", str(path / FORK), f"+HEAD:{name}", cwd=canonical)
+    except subprocess.CalledProcessError as error:
+        raise SystemExit(
+            f"could not copy {path.name}'s fork commits out of its worktree, "
+            "and removing it would destroy them:\n"
+            f"{(error.stderr or '').strip()}"
+        )
+    # HEAD is where that checkout is now. A merge uses the pointer recorded on
+    # the branch, and the two differ on a branch where we committed the
+    # superproject and then moved the submodule on.
+    if branch and branch != "(detached)":
+        recorded = git("rev-parse", f"{branch}:{FORK}")
+        if not reachable(canonical, recorded):
+            git("fetch", "--quiet", str(path / FORK), f"+{recorded}:{name}-recorded",
+                cwd=canonical)
+    return name
+
+
+def reachable(repository: Path, commit: str) -> bool:
+    return subprocess.run(
+        ["git", "cat-file", "-e", f"{commit}^{{commit}}"],
+        cwd=repository, capture_output=True,
+    ).returncode == 0
 
 
 def main() -> int:

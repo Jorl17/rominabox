@@ -205,6 +205,98 @@ def removal_never_touches_the_canonical_data() -> None:
         )
 
 
+def removing_a_worktree_keeps_the_fork_commits_its_branch_needs() -> None:
+    """Check that the submodule commits of a branch remain after its worktree goes.
+
+    A worktree does not share the submodule object store. Git keeps it under
+    `.git/worktrees/<name>/modules/`, and `git worktree remove` deletes it with
+    the rest. After removing a worktree with an unmerged branch, the branch
+    would point to a fork commit that exists nowhere, and the failure would
+    appear only at a later checkout.
+
+    We build a superproject, a submodule and a worktree that advances the fork
+    in a temporary directory, and remove the worktree. This shows both that
+    the commits would be lost, and that we save them by keeping them first.
+    """
+    import shutil
+
+    def run(*arguments: str, cwd: Path) -> str:
+        return subprocess.run(
+            ["git", "-c", "protocol.file.allow=always", *arguments],
+            cwd=cwd, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+
+    with tempfile.TemporaryDirectory() as temporary:
+        area = Path(temporary)
+        fork = area / "fork"
+        fork.mkdir()
+        run("init", "--quiet", "-b", "main", cwd=fork)
+        run("config", "user.email", "t@example.com", cwd=fork)
+        run("config", "user.name", "t", cwd=fork)
+        (fork / "player.c").write_text("one\n")
+        run("add", "player.c", cwd=fork)
+        run("commit", "--quiet", "-m", "one", cwd=fork)
+
+        super_ = area / "super"
+        super_.mkdir()
+        run("init", "--quiet", "-b", "main", cwd=super_)
+        run("config", "user.email", "t@example.com", cwd=super_)
+        run("config", "user.name", "t", cwd=super_)
+        run("submodule", "add", "--quiet", str(fork), "vendor/retroarch", cwd=super_)
+        run("commit", "--quiet", "-m", "vendor the fork", cwd=super_)
+
+        checkout = area / "super-track"
+        run("worktree", "add", "--quiet", str(checkout), "-b", "track", cwd=super_)
+        run("submodule", "update", "--init", "--quiet", cwd=checkout)
+
+        # We advance the fork on the branch, as on most worktree branches here.
+        theirs = checkout / "vendor/retroarch"
+        run("config", "user.email", "t@example.com", cwd=theirs)
+        run("config", "user.name", "t", cwd=theirs)
+        (theirs / "player.c").write_text("two\n")
+        run("add", "player.c", cwd=theirs)
+        run("commit", "--quiet", "-m", "two", cwd=theirs)
+        advanced = run("rev-parse", "HEAD", cwd=theirs)
+        run("add", "vendor/retroarch", cwd=checkout)
+        run("commit", "--quiet", "-m", "take the advanced fork", cwd=checkout)
+
+        canonical = super_ / "vendor/retroarch"
+        check(
+            not worktree.reachable(canonical, advanced),
+            "a worktree branch's fork commit really does live only in its own worktree",
+        )
+
+        original_root, original_fork = worktree.ROOT, worktree.FORK
+        try:
+            worktree.ROOT = super_
+            worktree.FORK = Path("vendor/retroarch")
+            kept = worktree.keep_fork_commits(checkout, "track")
+        finally:
+            worktree.ROOT, worktree.FORK = original_root, original_fork
+
+        check(bool(kept), "removal copies the fork commits out before it deletes anything")
+        check(
+            worktree.reachable(canonical, advanced),
+            "the advanced fork commit is in the canonical submodule afterwards",
+        )
+
+        # Now remove the worktree, and confirm that the ref remains afterwards.
+        run("worktree", "remove", "--force", str(checkout), cwd=super_)
+        shutil.rmtree(checkout, ignore_errors=True)
+        check(
+            not (checkout / "vendor/retroarch").exists(),
+            "the worktree and its private submodule store are gone",
+        )
+        check(
+            worktree.reachable(canonical, advanced),
+            "the fork commit survives the removal that used to destroy it",
+        )
+        check(
+            bool(kept) and run("rev-parse", kept, cwd=canonical) == advanced,
+            "and a ref names it, so a later gc cannot collect it",
+        )
+
+
 def the_built_cli_follows_the_redirected_cargo_target() -> None:
     """Check where four scripts find cargo's output, which moves in a worktree.
 
@@ -251,6 +343,7 @@ FROM_THE_CANONICAL_CHECKOUT = [
     adopt_works_from_inside_the_worktree_it_adopts,
     the_local_config_is_never_committed,
     removal_never_touches_the_canonical_data,
+    removing_a_worktree_keeps_the_fork_commits_its_branch_needs,
 ]
 
 # These checks give the same result anywhere, and are most useful in a worktree.
