@@ -49,6 +49,25 @@ impl Drop for RemoveDir {
     }
 }
 
+/// A HOME for an unsigned launch. It must be under `work/` in this checkout
+/// and have this prefix, or we leave it alone.
+struct RemoveWorkHome(PathBuf);
+
+impl Drop for RemoveWorkHome {
+    fn drop(&mut self) {
+        let Some(name) = self.0.file_name().and_then(|name| name.to_str()) else {
+            return;
+        };
+        if !name.starts_with("isolation-home-") || !self.0.is_dir() {
+            return;
+        }
+        if self.0.parent() != Some(repo_at("work").as_path()) {
+            return;
+        }
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
 struct RemoveFile(PathBuf);
 
 impl Drop for RemoveFile {
@@ -567,9 +586,10 @@ fn author_background_play_survives_an_old_controls_file() {
     );
 }
 
-/// Without the signature there is no sandbox, and `$HOME` is the account home.
-/// The launch must not create the directory for this identity under the
-/// ROM-in-a-Box folder of the account, or write `retroarch.cfg` there.
+/// Without the signature there is no sandbox, and `$HOME` is whatever we give
+/// the launch. With the home of the account, the launch would create the
+/// game's `Games/<identity>` directory there. The stub must still run, so we
+/// give it a HOME under `work/` that we remove with the test.
 #[test]
 #[ignore = "launches an unsigned stub; the isolation scope runs it"]
 fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
@@ -597,8 +617,16 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
         .status()
         .expect("codesign can be executed");
     assert!(removed.success(), "could not drop the signature");
+    let launch_home = repo_at("work").join(format!(
+        "isolation-home-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ));
+    fs::create_dir_all(&launch_home).unwrap();
+    let _launch_home = RemoveWorkHome(launch_home.clone());
     let output = Command::new(&executable)
         .env_remove("ROMINABOX_MENU_SHOT")
+        .env("HOME", &launch_home)
         .output()
         .expect("the unsigned launcher can be executed");
     let after = fs::metadata(&host)
@@ -610,10 +638,19 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
         host.display(),
         String::from_utf8_lossy(&output.stderr)
     );
-    let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("refusing to write the account's ROM-in-a-Box directory"),
-        "the launch did not refuse the account directory\n{stderr}"
+        output.status.success(),
+        "the unsigned stub did not exit\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let written = launch_home
+        .join("Library/Application Support/ROM-in-a-Box/Games")
+        .join(&identity)
+        .join("retroarch.cfg");
+    assert!(
+        written.is_file(),
+        "the unsandboxed launch did not write under {}",
+        launch_home.display()
     );
 }
 
