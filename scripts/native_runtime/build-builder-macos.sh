@@ -21,6 +21,27 @@ branding_source="$root/desktop/assets/branding"
 # its documents here could miss a file added to the design, and the kit would
 # then contain an older copy than the source we copied it from.
 [ -d "$menu_source" ] || { echo "Missing design package: $menu_source" >&2; exit 1; }
+# We share the prepared kit between a worktree and the checkout it was made
+# from, through a symlink, so that we do not rebuild RetroArch in each one. We
+# treat the shared kit as read-only, because copying a design through the
+# symlink would write into the other checkout, and every other worktree would
+# then have a kit that does not match its own design.
+kit_root=$root/desktop/src-tauri/resources/runtime
+if [ -L "$kit_root" ]; then
+  cat >&2 <<MESSAGE
+This checkout shares its prepared runtime kit with another one:
+
+  $kit_root -> $(readlink "$kit_root")
+
+Staging into it would change that checkout's kit, and every worktree linked to
+it. If this worktree needs its own kit — which it does if it is changing a
+design or the fork — ask for one:
+
+  python3 scripts/worktree.py create <name> --own-runtime
+
+MESSAGE
+  exit 1
+fi
 # We take the declared illustrations from the catalog, so adding a console
 # does not require extending a list here.
 controller_pngs=$(cargo run --quiet \

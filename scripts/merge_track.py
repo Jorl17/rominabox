@@ -56,11 +56,29 @@ def readiness(track: str) -> tuple[bool, list[str]]:
         return False, ["it has no worktree"]
 
     problems: list[str] = []
-    # The symlinked runtime always appears as untracked and is not work on the branch.
+    # Build output shared with the canonical checkout always appears as
+    # untracked in a worktree, and it is not work on the branch. We take the
+    # list of shared paths from the worktree tool.
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import worktree as worktree_tool
+
+    shared = [str(relative) for relative in worktree_tool.SHARED_ARTIFACTS]
+
+    def is_shared(entry: str) -> bool:
+        # In Git status a directory with only untracked contents appears as the
+        # directory itself, so two shared symlinks appear as their parent. We
+        # match both ways round, the entry inside a shared path or a shared
+        # path inside the entry.
+        entry = entry.rstrip("/")
+        return any(
+            entry == name or entry.startswith(name + "/") or name.startswith(entry + "/")
+            for name in shared
+        )
+
     dirty = [
         line
         for line in git(where, "status", "--short").splitlines()
-        if line.strip() and "resources/" not in line
+        if line.strip() and not is_shared(line[3:].strip())
     ]
     if dirty:
         problems.append(f"{len(dirty)} file(s) are uncommitted, so it is not finished")

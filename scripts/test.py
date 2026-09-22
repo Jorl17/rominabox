@@ -30,12 +30,24 @@ CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog
 
 
 class Scope:
-    def __init__(self, name: str, covers: str, not_covered: str, command: list[str], slow: bool = False):
+    def __init__(
+        self,
+        name: str,
+        covers: str,
+        not_covered: str,
+        command: list[str],
+        slow: bool = False,
+        prepare: list[list[str]] | None = None,
+    ):
         self.name = name
         self.covers = covers
         self.not_covered = not_covered
         self.command = command
         self.slow = slow
+        # What we must stage before the scope runs. We declare it here because
+        # without the declaration, a scope with generated input would work only
+        # in a checkout where someone had generated it, and fail everywhere else.
+        self.prepare = prepare or []
 
 
 SCOPES = [
@@ -58,6 +70,9 @@ SCOPES = [
         # With `npm test` we run vitest, without a type check, so we include the
         # type check in this scope instead of leaving it to a full build.
         ["npm", "--prefix", str(ROOT / "desktop"), "run", "check"],
+        # In the builder we draw the geometry from the exporter, staged beside
+        # the artwork. In its tests we read the same staged files as in the app.
+        prepare=[["python3", str(ROOT / "scripts/render_controllers.py"), "--stage-frontend"]],
     ),
     Scope(
         "menu",
@@ -138,6 +153,13 @@ BY_NAME = {scope.name: scope for scope in SCOPES}
 
 def run(scope: Scope) -> tuple[bool, float]:
     started = time.monotonic()
+    for step in scope.prepare:
+        staged = subprocess.run(step, cwd=ROOT, capture_output=True, text=True)
+        if staged.returncode != 0:
+            print(
+                f"  could not stage what {scope.name} needs:\n{staged.stderr.strip()[-600:]}"
+            )
+            return False, time.monotonic() - started
     result = subprocess.run(scope.command, cwd=ROOT)
     return result.returncode == 0, time.monotonic() - started
 
