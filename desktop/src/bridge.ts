@@ -148,8 +148,13 @@ export async function readImage(path: string): Promise<Picture> {
 export async function menuPreview(
   background: string | null,
   palette: string,
+  design: string,
 ): Promise<string> {
-  const bytes = await invoke<number[]>("menu_preview", { background, palette });
+  const bytes = await invoke<number[]>("menu_preview", {
+    background,
+    palette,
+    design,
+  });
   return URL.createObjectURL(
     new Blob([new Uint8Array(bytes)], { type: "image/png" }),
   );

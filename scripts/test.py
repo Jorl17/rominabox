@@ -199,6 +199,13 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "menupreview",
+        "that the builder can draw its own preview of every design it offers, in every palette",
+        "what the preview looks like — the states scope asks that; this asks whether it draws at all",
+        ["python3", str(ROOT / "scripts/test_menu_preview.py")],
+        slow=True,
+    ),
+    Scope(
         "shaderpreview",
         "that every shader's preview is still what that shader does to a picture, rendered from its own GLSL",
         "that the filter is a good one — only that the picture of it is made by running it",

@@ -339,6 +339,26 @@ def case_artwork():
     return expect("artwork", code, output, ("EDITED",))
 
 
+def case_menupreview():
+    # Remove the element for the multi-bind list from the design, as in a
+    # copy of the menu staged before that element existed.
+    path = ROOT / "integrations/designs/native/menu.rml"
+    raw = replace(path, "<!--BINDS-->", "")
+    try:
+        # In the builder we read the design from the kit, so we copy the broken
+        # file into the kit, as staging would.
+        kit = ROOT / "desktop/src-tauri/resources/runtime/designs/native/menu.rml"
+        staged = kit.read_bytes()
+        kit.write_bytes(path.read_bytes())
+        try:
+            code, output = run_scope("menupreview")
+        finally:
+            kit.write_bytes(staged)
+    finally:
+        restore(path, raw)
+    return expect("menupreview", code, output, ("<!--BINDS-->", "cannot draw"))
+
+
 def case_shaderpreview():
     # Change the shader, so the picture of it must stop matching. An edit to
     # the recorded PNG would only show that we run the comparison. This shows
@@ -444,6 +464,7 @@ CASES = {
     "identification": case_identification,
     "automation": case_automation,
     "artwork": case_artwork,
+    "menupreview": case_menupreview,
     "shaderpreview": case_shaderpreview,
     "size": case_size,
 

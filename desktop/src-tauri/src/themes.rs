@@ -1262,6 +1262,16 @@ pub fn prepare_theme_assets(
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreviewRequest {
+    /// The design to draw, as a separate package, the same folder that we
+    /// stage from in an export.
+    ///
+    /// The `assets` folder below is not a design. It contains the controller
+    /// artwork shared by every design, and we do not use any menu documents in
+    /// it. Choosing another design changes the preview, because we draw the
+    /// preview from this folder.
+    #[serde(default)]
+    pub design: std::path::PathBuf,
+    /// Where the controller artwork is. It is not part of any design.
     pub assets: std::path::PathBuf,
     pub renderer: std::path::PathBuf,
     pub output_dir: std::path::PathBuf,
@@ -1277,17 +1287,25 @@ pub fn render_preview(request: &PreviewRequest) -> Result<std::path::PathBuf, St
     if !(320..=3840).contains(&request.width) || !(200..=2400).contains(&request.height) {
         return Err("Preview dimensions are outside the supported range.".into());
     }
+    // For a caller without a design we use the artwork folder for both. The
+    // call then fails as an export would, with the name, and we do not draw a
+    // menu that no game ships.
+    let design = if request.design.as_os_str().is_empty() {
+        request.assets.clone()
+    } else {
+        request.design.clone()
+    };
     prepare_theme_assets(
-        &request.assets,
+        &design,
         &request.output_dir,
         &request.palette,
         request.background.as_deref(),
     )?;
     prepare_controls_assets(
+        // The artwork from the shared folder and the frame from the design,
+        // the same two arguments from the same two places as in an export.
         &request.assets,
-        // The preview assets are a design folder, so the frame is declared
-        // there.
-        &request.assets,
+        &design,
         &request.output_dir,
         "megadrive",
         &crate::controls::Controls::default(),

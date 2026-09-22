@@ -546,7 +546,7 @@ export function App() {
     setPreviewBusy(true);
     setPreviewError("");
     bridge
-      .menuPreview(background?.path || null, palette)
+      .menuPreview(background?.path || null, palette, design)
       .then((url) => {
         if (cancelled) URL.revokeObjectURL(url);
         else {
@@ -563,7 +563,9 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [step, draft.showMenu, background?.path, palette]);
+    // The design too. We draw the picture beside the chooser from the chosen
+    // design, so it matches what we export.
+  }, [step, draft.showMenu, background?.path, palette, design]);
   function imageDrop(e: React.DragEvent, target: "icon" | "background") {
     e.preventDefault();
     e.stopPropagation();

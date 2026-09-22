@@ -79,8 +79,13 @@ async fn menu_preview(
     app: tauri::AppHandle,
     background: Option<PathBuf>,
     palette: Option<String>,
+    design: Option<String>,
 ) -> Result<Vec<u8>, String> {
     let renderer = resource(&app, "preview/rml-preview")?;
+    // The design the author picked, from its own directory, and the shared
+    // controller artwork from the kit's directory, which is not a design.
+    let chosen = design.unwrap_or_else(|| "native".into());
+    let design = resource(&app, &format!("runtime/designs/{chosen}"))?;
     let assets = resource(&app, "runtime/menu-assets")?;
     let cache = app.path().app_cache_dir().map_err(|e| e.to_string())?;
     let directory = cache.join(format!(
@@ -90,6 +95,7 @@ async fn menu_preview(
     ));
     tauri::async_runtime::spawn_blocking(move || {
         let output = themes::render_preview(&themes::PreviewRequest {
+            design,
             assets,
             renderer,
             output_dir: directory,
