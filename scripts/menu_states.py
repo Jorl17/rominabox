@@ -41,11 +41,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-# The freshly built helper when there is one, because a staged copy is a
-# build output that can be older than a change to the helper.
-BUILT_PREVIEW = ROOT / "work/experiments/rml-preview/build/rml-preview"
-STAGED_PREVIEW = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
-PREVIEW = BUILT_PREVIEW if BUILT_PREVIEW.exists() else STAGED_PREVIEW
+# The helper we package in the builder, as built in this checkout.
+PREVIEW = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
 ARTWORK = ROOT / "desktop/assets/controllers"
 STATES = ROOT / "scripts/fixtures/menu-states.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-state-digests.json"

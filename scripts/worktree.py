@@ -261,12 +261,10 @@ COPIED_ARTIFACTS = [
 # space, because node_modules alone is larger than the kit.
 SHARED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/preview"),
-    # Without these we cannot run the whole suite in a worktree, and the
-    # failures look like a fault in the change. The `frontend` tests stop with
-    # "tsc: command not found", and in `menu` and `bridge` we cannot link RmlUi.
-    # Both are build output, the same in every worktree, and not in git.
+    # Without node_modules we cannot run the frontend tests in a worktree, and
+    # the failure, "tsc: command not found", looks like a fault in the change.
+    # It is build output, the same in every worktree, and not in git.
     Path("desktop/node_modules"),
-    Path("work/experiments"),
     # These are bundled resources in the tauri build, so without them we cannot
     # compile the desktop crate. The error, "resource path `resources/skills`
     # doesn't exist", looks like a missing file and not a missing link, and

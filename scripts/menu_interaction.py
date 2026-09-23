@@ -22,17 +22,17 @@ from __future__ import annotations
 
 import argparse
 import difflib
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+# We link the probe with the same archive as the player build.
+from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
+
 PROBE = ROOT / "work/probe/rml_probe"
 PROBE_SOURCE = ROOT / "scripts/native_runtime/rml_probe.cpp"
-RMLUI_INCLUDE = ROOT / "work/experiments/rml-retroarch/vendor/RmlUi/Include"
-RMLUI_LIB_DIR = ROOT / "work/experiments/rml-preview/build"
-RMLUI_LIB = RMLUI_LIB_DIR / "librmlui.dylib"
 DOCUMENT = ROOT / "integrations/designs/native/menu.rml"
 BASELINE = ROOT / "scripts/fixtures/menu-interaction.jsonl"
 
@@ -69,17 +69,22 @@ SCENARIO = [
 
 def build() -> None:
     """Compile the probe if the source is newer than the binary."""
-    if not RMLUI_LIB.exists():
+    if not LIBRARY.is_file():
         raise SystemExit(
-            f"RmlUi is not built at {RMLUI_LIB}.\n"
-            "The probe links the same library the offscreen preview uses."
+            f"RmlUi is not built at {LIBRARY}.\n"
+            "python3 scripts/prepare_rmlui.py"
         )
     if PROBE.exists() and PROBE.stat().st_mtime >= PROBE_SOURCE.stat().st_mtime:
         return
     PROBE.parent.mkdir(parents=True, exist_ok=True)
+    flags = subprocess.run(
+        ["pkg-config", "--cflags", "--libs", "freetype2"],
+        capture_output=True, text=True, check=True,
+    ).stdout.split()
     subprocess.run(
-        ["c++", "-std=c++17", "-O1", f"-I{RMLUI_INCLUDE}",
-         "-o", str(PROBE), str(PROBE_SOURCE), str(RMLUI_LIB)],
+        ["c++", "-std=c++17", "-O1",
+         *[f"-I{path}" for path in HEADER_DIRS],
+         "-o", str(PROBE), str(PROBE_SOURCE), str(LIBRARY), *flags],
         check=True,
     )
 
@@ -89,12 +94,10 @@ def run() -> str:
     steps: list[str] = []
     for entry in SCENARIO:
         steps += ["--step", entry]
-    environment = dict(os.environ, DYLD_LIBRARY_PATH=str(RMLUI_LIB_DIR))
     result = subprocess.run(
         [str(PROBE), "--document", str(DOCUMENT), "--size", "960x600", *steps],
         capture_output=True,
         text=True,
-        env=environment,
     )
     if result.returncode != 0:
         raise SystemExit(f"probe failed ({result.returncode}):\n{result.stderr}")
