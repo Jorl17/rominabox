@@ -292,6 +292,29 @@ def decision_check() -> list[str]:
         return failures
 
 
+def window_visibility_check() -> list[str]:
+    """Check transparency, mouse pass-through and the opt-out without showing a window.
+
+    We check the drawn picture itself in the exported-game workflows.
+    """
+    with scratch.scratch("rominabox-quiet-window-") as made:
+        binary = Path(made) / "window-visibility"
+        subprocess.run(
+            [
+                "clang", "-fobjc-arc", "-I", str(ROOT / "vendor/retroarch"),
+                "-framework", "Cocoa", "-o", str(binary),
+                str(ROOT / "scripts/native_runtime/test_quiet_window.m"),
+            ],
+            check=True, capture_output=True, text=True,
+        )
+        checked = subprocess.run(
+            [str(binary)], capture_output=True, text=True, timeout=15,
+        )
+        if checked.returncode:
+            return [checked.stderr.strip() or "quiet window visibility check failed"]
+    return []
+
+
 def main() -> int:
     # We run this check first, so that we report a launch without the switch
     # before we execute anything.
@@ -301,7 +324,9 @@ def main() -> int:
     if not failures:
         failures.extend(plan_check())
     if not failures:
-        print("quiet: the switch forces a null audio driver, and every launch sets it")
+        failures.extend(window_visibility_check())
+    if not failures:
+        print("quiet: null audio, transparent noninteractive window, and explicit hands-on opt-outs")
         return 0
     print(f"\n{len(failures)} quiet check(s) failed:")
     for item in failures:

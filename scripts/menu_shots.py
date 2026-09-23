@@ -37,9 +37,13 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
+import tempfile
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
+from typing import Iterator
 
 ROOT = Path(__file__).resolve().parent.parent
 SHOTS = ROOT / "scripts/fixtures/menu-shots.json"
@@ -48,6 +52,15 @@ DIGESTS = ROOT / "scripts/fixtures/menu-shot-digests.json"
 # A generous limit. The game quits as soon as the picture is written, and we
 # use this limit only so that a stuck run cannot stop the tests forever.
 TIMEOUT_SECONDS = 120
+
+
+class PlayerTimeout(SystemExit):
+    """The exported app may still be in use by a player we launched."""
+
+    def __init__(self, message: str, app: Path) -> None:
+        super().__init__(message)
+        self.app = app
+
 
 DATA_DIR = re.compile(r'^data_dir\t(.+)$', re.MULTILINE)
 # The switch is declared in the launcher, and we read its spelling from
@@ -199,7 +212,7 @@ def log_of(app: Path) -> Path | None:
 
 
 def take(app: Path, name: str, script: list[str], output: Path,
-         config: dict | None = None) -> str:
+         config: dict | None = None, *, reset_settings: bool = True) -> str:
     """Run the game to a state and screenshot it. Empty string on success."""
     # An absolute path, because we tell the game where to write and its working
     # directory is not this one. With a relative output directory, we get the
@@ -214,7 +227,7 @@ def take(app: Path, name: str, script: list[str], output: Path,
     # picker writes it to the per-game override, so without this step the shot
     # of the six-button pad would change the pictures of every later shot.
     data = data_dir_of(app)
-    if data:
+    if data and reset_settings:
         (data / "controls.cfg").unlink(missing_ok=True)
         for remap in (data / "remaps").rglob("*.rmp"):
             remap.unlink()
@@ -248,24 +261,45 @@ def take(app: Path, name: str, script: list[str], output: Path,
         inside.parent.mkdir(parents=True, exist_ok=True)
         inside.unlink(missing_ok=True)
 
-    result = subprocess.run(
-        [str(launcher_of(app))],
-        capture_output=True,
-        text=True,
-        timeout=TIMEOUT_SECONDS,
-        env=dict(
-            os.environ,
-            ROMINABOX_MENU_SCRIPT=",".join(script),
-            ROMINABOX_MENU_SHOT=str(inside),
-            # No sound and no visible window. Without this, we would open
-            # CoreAudio during a shot and leave a window on the display.
-            **{quiet_env(): "1"},
-        ),
-    )
+    with (
+        tempfile.TemporaryFile(mode="w+t") as stdout_capture,
+        tempfile.TemporaryFile(mode="w+t") as stderr_capture,
+    ):
+        player = subprocess.Popen(
+            [str(launcher_of(app))],
+            stdout=stdout_capture,
+            stderr=stderr_capture,
+            text=True,
+            env=dict(
+                os.environ,
+                ROMINABOX_MENU_SCRIPT=",".join(script),
+                ROMINABOX_MENU_SHOT=str(inside),
+                # No sound, and a transparent window. Without this, we would open
+                # CoreAudio during a shot and leave a window on the display.
+                **{quiet_env(): "1"},
+            ),
+        )
+        try:
+            player.wait(timeout=TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            log_tail = log.read_text(errors="replace")[-800:] if log and log.exists() else ""
+            stderr_capture.seek(0, os.SEEK_END)
+            stderr_capture.seek(max(stderr_capture.tell() - 800, 0))
+            partial = stderr_capture.read()
+            raise PlayerTimeout(
+                f"player timed out after {TIMEOUT_SECONDS}s (pid {player.pid}); "
+                "left running for inspection\n"
+                f"{log_tail or partial}",
+                app,
+            ) from None
+        stderr_capture.seek(0)
+        stderr = stderr_capture.read()
     if inside != target and inside.exists():
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(inside), str(target))
-    written = log.read_text() if log and log.exists() else result.stderr
+    written = log.read_text() if log and log.exists() else stderr
+    # Copy the evidence next to its picture before we overwrite it next launch.
+    (output / f"{name}.log").write_text(written)
 
     # We read this from the player report. Otherwise, when no click in the
     # script happened, we would take a picture of whatever was on screen.
@@ -274,7 +308,7 @@ def take(app: Path, name: str, script: list[str], output: Path,
             return line.split("[RIB]")[-1].strip()
     if not target.exists():
         tail = "\n".join(written.strip().splitlines()[-6:])
-        return f"no screenshot was written (exit {result.returncode})\n{tail}"
+        return f"no screenshot was written (exit {player.returncode})\n{tail}"
     return ""
 
 
@@ -368,6 +402,20 @@ def built_player() -> Path | None:
     checkout has a separate build directory, so in a worktree where we built
     the player, the shots show that player.
     """
+    selected = os.environ.get("ROMINABOX_TEST_BUILD")
+    if selected:
+        build = Path(selected).resolve()
+        info = json.loads((build / "build-info.json").read_text())
+        revision = subprocess.check_output(
+            ["git", "-C", str(ROOT / "vendor/retroarch"), "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
+        if info.get("retroarchCommit") != revision:
+            raise SystemExit(f"{build} was not built from the current fork commit {revision}")
+        player = build / "retroarch/retroarch"
+        if not player.is_file():
+            raise SystemExit(f"the selected build contains no player: {player}")
+        return player
     builds = sorted(
         (ROOT / "work").glob("fork-build-*/retroarch/retroarch"),
         key=lambda entry: entry.stat().st_mtime,
@@ -375,9 +423,10 @@ def built_player() -> Path | None:
     return builds[-1] if builds else None
 
 
-def build_a_game(
+def _build_a_game(
     rom: Path,
     workspace: Path,
+    run_dir: Path,
     system: str = "megadrive",
     settings: dict | None = None,
     design: str = "native",
@@ -399,8 +448,7 @@ def build_a_game(
     # like any other export setting. We copy the package for that export.
     design = str(settings.get("theme", design))
     palette = str(settings.get("palette", palette))
-    kit = workspace / "kit"
-    shutil.rmtree(kit, ignore_errors=True)
+    kit = run_dir / "kit"
     shutil.copytree(KIT, kit, symlinks=True)
 
     # Copy the design as it is in this tree, not as when we froze the kit.
@@ -421,8 +469,7 @@ def build_a_game(
         shutil.copyfile(player, kit / "bin/retroarch")
         (kit / "bin/retroarch").chmod(0o755)
 
-    out = workspace / "exported"
-    shutil.rmtree(out, ignore_errors=True)
+    out = run_dir / "exported"
     out.mkdir(parents=True)
     request = {
         "rom": str(rom),
@@ -456,11 +503,11 @@ def build_a_game(
     # freshly built one so that the shot shows this tree.
     if player:
         # Do this before the copy. After the copy, the export has no signature.
-        capture_export_entitlements(app, workspace / "entitlements.plist")
+        capture_export_entitlements(app, run_dir / "entitlements.plist")
         retroarch = app / "Contents/MacOS/retroarch"
         shutil.copyfile(player, retroarch)
         retroarch.chmod(0o755)
-        injector = workspace / "inject-dylib"
+        injector = run_dir / "inject-dylib"
         subprocess.run(
             ["cc", "-Oz", "-o", str(injector), str(ROOT / "scripts/native_runtime/inject_dylib.c")],
             check=True,
@@ -469,8 +516,49 @@ def build_a_game(
             [str(injector), str(retroarch), "@executable_path/librominabox-launch.dylib"],
             check=True,
         )
-        resign_replaced_player(app, workspace / "entitlements.plist")
+        resign_replaced_player(app, run_dir / "entitlements.plist")
     return app
+
+
+@contextmanager
+def build_a_game(
+    rom: Path,
+    workspace: Path,
+    system: str = "megadrive",
+    settings: dict | None = None,
+    design: str = "native",
+    palette: str = "blue",
+) -> Iterator[Path]:
+    """Keep one generated export only until the end of the block.
+
+    The app may still be in use by a player that timed out. In that case
+    only, keep the temporary directory and print its location for inspection.
+    """
+    run = os.environ.get("ROMINABOX_SCRATCH_RUN", "direct")
+    if not run or "/" in run or "\\" in run or ".." in run:
+        raise ValueError(f"scratch run id must be one path component, got {run!r}")
+    run_dir = Path(tempfile.mkdtemp(prefix=f"rominabox-menu-shots-{run}-"))
+    created = run_dir.lstat()
+    keep = False
+    try:
+        app = _build_a_game(rom, workspace, run_dir, system, settings, design, palette)
+        try:
+            yield app
+        except PlayerTimeout as error:
+            keep = error.app == app
+            if keep:
+                print(f"retained timed-out player's export for inspection: {run_dir}", file=sys.stderr)
+            raise
+    finally:
+        if not keep:
+            current = run_dir.lstat()
+            if (
+                not stat.S_ISDIR(current.st_mode)
+                or current.st_dev != created.st_dev
+                or current.st_ino != created.st_ino
+            ):
+                raise RuntimeError(f"temporary export changed ownership: {run_dir}")
+            shutil.rmtree(run_dir)
 
 
 def main() -> int:
@@ -528,7 +616,6 @@ def main() -> int:
             raise SystemExit("give --app an exported game, or --rom to export one first")
     elif not arguments.app.exists():
         raise SystemExit(f"no exported game at {arguments.app}")
-    shutil.rmtree(arguments.output, ignore_errors=True)
     arguments.output.mkdir(parents=True, exist_ok=True)
 
     # We make one export for each set of export settings, not one per shot,
@@ -540,13 +627,9 @@ def main() -> int:
             return arguments.app
         key = json.dumps(settings, sort_keys=True)
         if key not in exported:
-            # A separate directory for each export, because we delete the first
-            # game when we build a second one in the same directory, and a
-            # separate name, so that two exports have separate saves and bundle ids.
             workspace = ROOT / "work" / f"menu-shots-build-{len(exported)}"
-            workspace.mkdir(parents=True, exist_ok=True)
-            exported[key] = build_a_game(
-                arguments.rom, workspace, arguments.system, settings
+            exported[key] = export_stack.enter_context(
+                build_a_game(arguments.rom, workspace, arguments.system, settings)
             )
             print(f"  built    {exported[key].name} {key if settings else ''}")
         return exported[key]
@@ -561,40 +644,41 @@ def main() -> int:
     failures: list[str] = []
     digests: dict[str, str] = {}
     nested = len(palettes) > 1
-    for palette in palettes:
-        destination = arguments.output / palette if nested else arguments.output
-        destination.mkdir(parents=True, exist_ok=True)
-        for name, shot in shots.items():
-            script = shot["script"]
-            config = shot.get("config")
-            # The palette and the achievement list are export settings, so we
-            # add them to the export key with the settings of the shot.
-            settings = {
-                key: value
-                for key, value in shot.items()
-                # "inMotion" is about how we compare this shot, not how we
-                # export the game.
-                if key not in ("script", "config", "inMotion")
-            }
-            settings["palette"] = palette
-            settings["theme"] = arguments.design
-            if achievements:
-                settings["achievements"] = achievements
-            key = f"{palette}/{name}" if nested else name
-            problem = take(game_for(settings), name, script, destination, config)
-            if problem:
-                print(f"  FAILED  {key}: {problem}", file=sys.stderr)
-                failures.append(key)
-                continue
-            # A shot during an animation has no stable picture. We take this one
-            # while the notice is fading out, so two runs differ slightly. We
-            # still take it, so we notice when the state can no longer be
-            # reached, but we do not compare its picture.
-            if not shots[name].get("inMotion"):
-                digests[key] = hashlib.sha256(
-                    (destination / f"{name}.png").read_bytes()
-                ).hexdigest()[:16]
-            print(f"  {key:<28}{' -> '.join(script) or '(the menu as it opens)'}")
+    with ExitStack() as export_stack:
+        for palette in palettes:
+            destination = arguments.output / palette if nested else arguments.output
+            destination.mkdir(parents=True, exist_ok=True)
+            for name, shot in shots.items():
+                script = shot["script"]
+                config = shot.get("config")
+                # The palette and the achievement list are export settings, so we
+                # add them to the export key with the settings of the shot.
+                settings = {
+                    key: value
+                    for key, value in shot.items()
+                    # "inMotion" is about how we compare this shot, not how we
+                    # export the game.
+                    if key not in ("script", "config", "inMotion")
+                }
+                settings["palette"] = palette
+                settings["theme"] = arguments.design
+                if achievements:
+                    settings["achievements"] = achievements
+                key = f"{palette}/{name}" if nested else name
+                problem = take(game_for(settings), name, script, destination, config)
+                if problem:
+                    print(f"  FAILED  {key}: {problem}", file=sys.stderr)
+                    failures.append(key)
+                    continue
+                # A shot during an animation has no stable picture. We take this one
+                # while the notice is fading out, so two runs differ slightly. We
+                # still take it, so we notice when the state can no longer be
+                # reached, but we do not compare its picture.
+                if not shots[name].get("inMotion"):
+                    digests[key] = hashlib.sha256(
+                        (destination / f"{name}.png").read_bytes()
+                    ).hexdigest()[:16]
+                print(f"  {key:<28}{' -> '.join(script) or '(the menu as it opens)'}")
 
     # A shot we could not take and a shot that changed are two different
     # results. We report both, so that in one run the shots we could not take

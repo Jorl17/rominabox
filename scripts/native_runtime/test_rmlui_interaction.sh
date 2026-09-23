@@ -106,7 +106,6 @@ FIXTURE
 row_edge_failed=0
 for edge_design in native disc; do
   edge_assets="$build_dir/row-edge-$edge_design"
-  rm -rf "$edge_assets"
   mkdir -p "$edge_assets"
   printf '{"source":"%s","destination":"%s","palette":"blue"}' \
     "$repo_root/integrations/designs/$edge_design" "$edge_assets" \

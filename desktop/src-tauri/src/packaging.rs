@@ -3187,10 +3187,7 @@ mod tests {
             let identity = stable_identity(&rom, "megadrive", None).unwrap();
             assert_eq!(identity.len(), 24);
             assert!(identity.chars().all(|c| c.is_ascii_hexdigit()));
-            assert!(
-                std::env::var("ROMINABOX_GAME_BUNDLE_PREFIX").is_err(),
-                "this test only means anything with no namespace set"
-            );
+            assert_eq!(identity, "0d17b49ea458b50bd16ea900");
         }
 
         /// Two worktrees must not use the same data folder for a game.

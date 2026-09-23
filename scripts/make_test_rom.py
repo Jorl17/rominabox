@@ -3,6 +3,54 @@
 from pathlib import Path
 
 
+def make_megadrive_rom() -> bytes:
+    """Original 32 KiB diagnostic: initialise the VDP and show a red field.
+
+    For menu workflows we require a console with two controllers here.
+    This is original 68000 code, with no game data or SDK linked into it.
+    Hardware register reference: https://stephane-d.github.io/SGDK/vdp_8h.html
+    """
+    import struct
+
+    rom = bytearray(32768)
+    struct.pack_into(">II", rom, 0, 0x00FFFF00, 0x200)
+    rom[0x100:0x110] = b"SEGA MEGA DRIVE "
+    rom[0x120:0x150] = b"ROM-IN-A-BOX MENU TEST".ljust(48)
+    rom[0x150:0x180] = b"ROM-IN-A-BOX MENU TEST".ljust(48)
+    rom[0x190:0x1A0] = b"J".ljust(16)
+    struct.pack_into(">IIII", rom, 0x1A0, 0, len(rom) - 1, 0xFF0000, 0xFFFFFF)
+    rom[0x1F0:0x200] = b"U".ljust(16)
+    words = [0x46FC, 0x2700]  # Disable interrupts; the fixture polls no input.
+
+    def write_word(address: int, value: int) -> None:
+        words.extend((0x33FC, value, address >> 16, address & 0xFFFF))
+
+    def write_long(address: int, value: int) -> None:
+        words.extend((0x23FC, value >> 16, value & 0xFFFF, address >> 16, address & 0xFFFF))
+
+    write_word(0xA11100, 0x0100)  # Hold the unused sound CPU.
+    write_long(0xA14000, 0x53454741)  # Hardware security signature, "SEGA".
+    control, data = 0xC00004, 0xC00000
+    registers = (0x04, 0x04, 0x30, 0x3C, 0x07, 0x6C, 0, 0, 0, 0, 0, 0, 0x81, 0x3F, 0, 2, 0, 0, 0)
+    for index, value in enumerate(registers):
+        write_word(control, 0x8000 | index << 8 | value)
+    write_long(control, 0x40000000)  # VRAM write, address zero.
+    words.extend((0x303C, 0x7FFF))  # 32,768 zero words clear VRAM.
+    write_word(data, 0)
+    words.extend((0x51C8, 0xFFF6))  # DBRA to the write above.
+    write_long(control, 0x40000010)  # VSRAM write, zero vertical scroll.
+    write_word(data, 0)
+    write_word(data, 0)
+    write_long(control, 0xC0000000)  # CRAM colour zero, a saturated red.
+    write_word(data, 0x000E)
+    write_word(control, 0x8144)  # Enable display after initialisation.
+    words.append(0x60FE)  # BRA to itself; frames remain deterministic.
+    rom[0x200:0x200 + len(words) * 2] = struct.pack(f">{len(words)}H", *words)
+    checksum = sum(struct.unpack(f">{(len(rom) - 0x200) // 2}H", rom[0x200:])) & 0xFFFF
+    struct.pack_into(">H", rom, 0x18E, checksum)
+    return bytes(rom)
+
+
 def make_rom() -> bytes:
     """Create a 32 KiB cartridge showing moving colored stripes."""
     rom = bytearray(32768)
@@ -77,7 +125,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--system", choices=("gbc", "megadrive"), default="gbc")
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_bytes(make_rom())
+    args.output.write_bytes(make_megadrive_rom() if args.system == "megadrive" else make_rom())
     print(args.output)

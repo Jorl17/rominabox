@@ -36,8 +36,10 @@ import re
 import shutil
 import subprocess
 import sys
-import time
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import menu_shots  # noqa: E402
@@ -369,14 +371,9 @@ def palette_color(name: str) -> tuple[int, int, int]:
 
 
 def fresh_player_dir() -> None:
-    target = ROOT / "work" / "discs-player"
-    if target.is_symlink() or (target.exists() and not target.is_dir()):
-        raise SystemExit(f"{target} is not the discs export directory")
-    if target.exists() and target.resolve() != (ROOT / "work" / "discs-player").resolve():
-        raise SystemExit(f"{target} does not resolve to the discs export directory")
-    if target.exists():
-        shutil.rmtree(ROOT / "work" / "discs-player")
-    SHOTS.mkdir(parents=True)
+    if PLAYER.is_symlink() or (PLAYER.exists() and not PLAYER.is_dir()):
+        raise SystemExit(f"{PLAYER} is not the discs output directory")
+    SHOTS.mkdir(parents=True, exist_ok=True)
 
 
 def forget_tray_record(app: Path) -> None:
@@ -397,8 +394,8 @@ def forget_tray_record(app: Path) -> None:
             record.unlink()
 
 
-def still_running() -> str:
-    marker = str(ROOT / "work" / "discs-player")
+def still_running(app: Path) -> str:
+    marker = str(app)
     found = subprocess.run(
         ["pgrep", "-fl", marker],
         capture_output=True,
@@ -410,42 +407,16 @@ def still_running() -> str:
     )
 
 
-def quit_if_left(app: Path) -> str | None:
-    left = still_running()
-    if not left:
-        return None
-    identifier = subprocess.run(
-        [
-            "/usr/bin/plutil",
-            "-extract",
-            "CFBundleIdentifier",
-            "raw",
-            str(app / "Contents/Info.plist"),
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=15,
-    ).stdout.strip()
-    subprocess.run(
-        ["osascript", "-e", f'tell application id "{identifier}" to quit'],
-        capture_output=True,
-        text=True,
-        timeout=20,
-    )
-    time.sleep(1)
-    left = still_running()
-    if left:
-        return f"a player is still running:\n{left}"
-    return None
+def leftover_problem(app: Path) -> str | None:
+    left = still_running(app)
+    return f"a player is still running:\n{left}" if left else None
 
 
 def launch(app: Path, script: str, shot: Path | None) -> str:
     """Drive the menu and let the frame limit end the process.
 
-    We run it under lldb, so that a crash stops here and not in a dialog. The
-    Apple Event is only the fallback that the quit tests also use, and we send
-    no signal to the process.
+    We report a timeout or a leftover process with its PID, and leave the
+    process running so that someone can inspect it.
     """
     if not menu_shots.sandboxed(app):
         raise SystemExit(f"{app.name} is not sandboxed; refusing to launch")
@@ -471,54 +442,46 @@ def launch(app: Path, script: str, shot: Path | None) -> str:
     if inside is not None:
         env["ROMINABOX_MENU_SHOT"] = str(inside.resolve())
     print(f"  {script}", flush=True)
-    process = subprocess.Popen(
-        [
-            "lldb",
-            "--batch",
-            "-o",
-            "process handle SIGBUS SIGSEGV -s false -n false -p true",
-            "-o",
-            "run",
-            "-k",
-            "bt",
-            "-k",
-            "process kill",
-            "--",
-            str(menu_shots.launcher_of(app)),
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        env=env,
-    )
-    try:
-        output, _ = process.communicate(timeout=90)
-    except subprocess.TimeoutExpired:
-        output = ""
-        left = quit_if_left(app)
-        if left:
-            raise SystemExit(left)
+    with tempfile.TemporaryFile(mode="w+t") as capture:
+        process = subprocess.Popen(
+            [str(menu_shots.launcher_of(app))],
+            stdout=capture,
+            stderr=capture,
+            text=True,
+            env=env,
+        )
         try:
-            output, _ = process.communicate(timeout=15)
+            process.wait(timeout=90)
         except subprocess.TimeoutExpired:
-            raise SystemExit("the player did not exit after the frame limit")
+            capture.seek(0, os.SEEK_END)
+            capture.seek(max(capture.tell() - 800, 0))
+            partial = capture.read()
+            left = leftover_problem(app)
+            raise menu_shots.PlayerTimeout(
+                f"the player did not exit after the frame limit (pid {process.pid}); "
+                "left running for inspection\n"
+                f"{left or ''}\n{partial}",
+                app,
+            ) from None
+        capture.seek(0)
+        output = capture.read()
     written = log.read_text(errors="replace") if log and log.exists() else ""
     if inside is not None and shot is not None and inside != shot and inside.exists():
         shutil.move(str(inside), str(shot))
-    left = quit_if_left(app)
+    left = leftover_problem(app)
     if left:
-        raise SystemExit(left)
+        raise menu_shots.PlayerTimeout(left, app)
     if shot is not None and not shot.exists():
         tail = "\n".join(written.strip().splitlines()[-8:])
-        debugger = "\n".join((output or "").strip().splitlines()[-12:])
+        launch_output = "\n".join((output or "").strip().splitlines()[-12:])
         raise SystemExit(
-            f"no screenshot was written (exit {process.returncode})\n{tail}\n{debugger}"
+            f"no screenshot was written (exit {process.returncode})\n{tail}\n{launch_output}"
         )
     if shot is None and "core image" not in written and "names no element" not in written:
-        debugger = "\n".join((output or "").strip().splitlines()[-20:])
+        launch_output = "\n".join((output or "").strip().splitlines()[-20:])
         raise SystemExit(
             f"the player did not report a core image (exit {process.returncode})\n"
-            f"{written[-800:]}\n{debugger}"
+            f"{written[-800:]}\n{launch_output}"
         )
     return written
 
@@ -541,17 +504,19 @@ def require_swap(design: str, written: str) -> str | None:
     return f"{design}: the log does not say {SWAPPED}:\n{shown}"
 
 
-def export_game(content: Path, design: str) -> Path:
+@contextmanager
+def export_game(content: Path, design: str) -> Iterator[Path]:
     if free_gb() < 22:
         raise SystemExit(f"disk has {free_gb()} GB free, below 22; stopping")
     print(f"export {design} {content.name}", flush=True)
-    return menu_shots.build_a_game(
+    with menu_shots.build_a_game(
         content,
-        ROOT / "work" / "discs-player",
+        PLAYER,
         system=system_for(content),
         design=design,
         palette=palette_id(),
-    )
+    ) as app:
+        yield app
 
 
 def menu_asset(app: Path, name: str) -> str:
@@ -736,59 +701,63 @@ def exported_player(playlist: Path) -> list[str]:
     fresh_player_dir()
     before = player_support.snapshot()
     found: list[str] = []
+    exported_apps: list[Path] = []
     try:
         for design in disc_designs():
-            app = export_game(playlist, design)
-            written = launch(
-                app,
-                script_of(swap_steps(design), tray_countdown() + 40),
-                SHOTS / f"{design}-two-list.png",
-            )
-            problem = require_swap(design, written)
-            if problem:
-                found.append(problem)
-                return found
-            screens = design_screens(design)
-            listing = listing_of(screens)
-            if listing.get("option"):
-                shot = SHOTS / f"{design}-two-options.png"
-                launch(app, script_of([
-                    next(
-                        screen["button"]
-                        for screen in screens
-                        if screen.get("place") == "options"
-                    )
-                ]), shot)
-                if not options_entry_visible(app, shot, listing["button"]):
-                    found.append(f"{design}: a two-disc game does not show the Disc entry")
-                    return found
-        for design in disc_designs():
-            app = export_game(CARTRIDGE, design)
-            screens = design_screens(design)
-            listing = listing_of(screens)
-            redirect = redirect_of(screens, listing["id"])
-            shot = SHOTS / f"{design}-one.png"
-            launch(app, script_of(one_disc_steps(design)), shot)
-            if listing.get("option"):
-                if options_entry_visible(app, shot, listing["button"]):
-                    found.append("a one-disc game must not show the entry")
-                    return found
-                controls = next(
-                    screen for screen in screens if screen.get("id") == "controls"
+            with export_game(playlist, design) as app:
+                exported_apps.append(app)
+                written = launch(
+                    app,
+                    script_of(swap_steps(design), tray_countdown() + 40),
+                    SHOTS / f"{design}-two-list.png",
                 )
-                if not options_entry_visible(app, shot, controls["button"]):
-                    found.append(
-                        "the options screen did not show CONTROLS, so the Disc slot was not measured"
+                problem = require_swap(design, written)
+                if problem:
+                    found.append(problem)
+                    return found
+                screens = design_screens(design)
+                listing = listing_of(screens)
+                if listing.get("option"):
+                    shot = SHOTS / f"{design}-two-options.png"
+                    launch(app, script_of([
+                        next(
+                            screen["button"]
+                            for screen in screens
+                            if screen.get("place") == "options"
+                        )
+                    ]), shot)
+                    if not options_entry_visible(app, shot, listing["button"]):
+                        found.append(f"{design}: a two-disc game does not show the Disc entry")
+                        return found
+        for design in disc_designs():
+            with export_game(CARTRIDGE, design) as app:
+                exported_apps.append(app)
+                screens = design_screens(design)
+                listing = listing_of(screens)
+                redirect = redirect_of(screens, listing["id"])
+                shot = SHOTS / f"{design}-one.png"
+                launch(app, script_of(one_disc_steps(design)), shot)
+                if listing.get("option"):
+                    if options_entry_visible(app, shot, listing["button"]):
+                        found.append("a one-disc game must not show the entry")
+                        return found
+                    controls = next(
+                        screen for screen in screens if screen.get("id") == "controls"
                     )
-                    return found
-            if redirect is not None:
-                if not circle_open(open_image(shot), menu_asset(app, "menu.rcss"), app):
-                    found.append("the DISC button did not open the circle")
-                    return found
+                    if not options_entry_visible(app, shot, controls["button"]):
+                        found.append(
+                            "the options screen did not show CONTROLS, so the Disc slot was not measured"
+                        )
+                        return found
+                if redirect is not None:
+                    if not circle_open(open_image(shot), menu_asset(app, "menu.rcss"), app):
+                        found.append("the DISC button did not open the circle")
+                        return found
     finally:
-        left = still_running()
-        if left:
-            found.append(f"a player is still running:\n{left}")
+        for app in exported_apps:
+            left = still_running(app)
+            if left:
+                found.append(f"a player is still running:\n{left}")
         after = player_support.snapshot()
         leaked = player_support.additions(before, after) + player_support.modifications(
             before, after

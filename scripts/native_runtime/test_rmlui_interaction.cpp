@@ -844,6 +844,23 @@ static int check_placement(const char *assets, const char *scenes,
       std::fprintf(stderr, "\n");
    }
    check_short_list(design, width);
+   {
+      rib_rmlui_show_screen("pause");
+      rib_rmlui_focus_element("save");
+      rib_rmlui_set_status("A \"quoted\" status\\path\nline");
+      rib_rmlui_render(960, 600);
+      drain_actions();
+      const std::string report = rib_rmlui_script_report(
+            "pause", true, false, false, "megadrive", -12.0f);
+      CHECK(report.find("\"focused\":[\"save\"]") != std::string::npos,
+            "the checkpoint observes the actual visible focus");
+      CHECK(report.find("A &quot;quoted&quot; status\\\\path\\u000aline") != std::string::npos,
+            "the checkpoint preserves serialized RML and JSON-escapes its backslash and newline");
+      CHECK(report.find("\"profile\":\"megadrive\",\"volumeDb\":-12.000000") != std::string::npos,
+            "the checkpoint carries the runtime profile and volume");
+      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+            "observation does not generate a menu action");
+   }
    rib_rmlui_shutdown();
    if (failures)
    {

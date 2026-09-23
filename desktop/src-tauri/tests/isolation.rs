@@ -248,9 +248,10 @@ fn run_until(command: &mut Command, limit: Duration) -> std::process::ExitStatus
         match child.try_wait() {
             Ok(Some(status)) => return status,
             Ok(None) if started.elapsed() > limit => {
-                let _ = child.kill();
-                let _ = child.wait();
-                panic!("the launched game did not exit");
+                panic!(
+                    "the launched game did not exit within {limit:?} (pid {}); left running for inspection",
+                    child.id()
+                );
             }
             Ok(None) => std::thread::sleep(Duration::from_millis(200)),
             Err(error) => panic!("could not wait for the launcher: {error}"),

@@ -1,0 +1,13 @@
+{
+  "gameId": 1,
+  "title": "Original menu diagnostic",
+  "achievements": [
+    {"id": 1, "title": "First step", "description": "An original fixture row", "points": 5, "badge": "fixture", "earned": true},
+    {"id": 2, "title": "Second step", "description": "A locked fixture row", "points": 10, "badge": "fixture", "earned": false},
+    {"id": 3, "title": "Third step", "description": "Another fixture row", "points": 10, "badge": "fixture", "earned": false},
+    {"id": 4, "title": "Fourth step", "description": "A progression fixture", "points": 15, "badge": "fixture", "earned": true, "kind": "progression"},
+    {"id": 5, "title": "A deliberately long achievement title for the menu list", "description": "Exercises existing title truncation", "points": 20, "badge": "fixture", "earned": false},
+    {"id": 6, "title": "Another page", "description": "The list must have a second page", "points": 25, "badge": "fixture", "earned": false},
+    {"id": 7, "title": "Last step", "description": "The original diagnostic is complete", "points": 50, "badge": "fixture", "earned": false, "kind": "win_condition"}
+  ]
+}
