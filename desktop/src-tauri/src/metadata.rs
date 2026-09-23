@@ -1110,17 +1110,9 @@ fn clean_title(value: &str) -> String {
 mod tests {
     use super::*;
     use std::io::Write;
-    use std::sync::atomic::{AtomicU64, Ordering};
 
-    fn fixture_directory(label: &str) -> PathBuf {
-        static SEQUENCE: AtomicU64 = AtomicU64::new(0);
-        let path = std::env::temp_dir().join(format!(
-            "rominabox-metadata-{label}-{}-{}",
-            std::process::id(),
-            SEQUENCE.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).unwrap();
-        path
+    fn fixture_directory(label: &str) -> rominabox_scratch::Scratch {
+        rominabox_scratch::Scratch::dir(&format!("rominabox-metadata-{label}"))
     }
 
     #[test]
@@ -1424,55 +1416,73 @@ game (
             assert!(matches!(inspection.source, MetadataSource::Filename));
         }
 
-        /// These are files from a local test collection. The header is
-        /// shorter or less specific than the name on the file, so we keep the
-        /// filename. The collection is not in git, so we skip the assertions
-        /// on a machine without it.
+        /// We keep a longer filename instead of a twelve- or fifteen-character
+        /// header title. Game Boy Advance and Dreamcast have separate fixtures
+        /// for this, and here we test the other title windows.
         #[test]
-        fn the_owners_named_files_are_not_replaced_by_a_shorter_header() {
-            let root = PathBuf::from("/Users/mariowilde/Downloads/roms");
-            if !root.is_dir() {
-                return;
-            }
-            let cache = fixture_directory("owned-headers");
-            let cases = [
-                (
-                    "Pokemon - Gold Version (USA, Europe) (SGB Enhanced) (GB Compatible).gbc",
-                    "gbc",
-                ),
-                (
-                    "Pokemon - Yellow Version - Special Pikachu Edition (USA, Europe) (CGB+SGB Enhanced).gb",
-                    "gbc",
-                ),
-                (
-                    "Sonic & Knuckles + Sonic The Hedgehog 3 (USA) (Lock-on Combination).md",
-                    "megadrive",
-                ),
-                (
-                    "Sonic Advance (Europe) (En,Ja,Fr,De,Es).gba",
-                    "gba",
-                ),
-                ("Super Mario Bros. 3 (USA).nes", "nes"),
-                ("Super Mario World (USA).sfc", "snes"),
-                (
-                    "Sonic Adventure 2 (Europe)/Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es).gdi",
-                    "dreamcast",
-                ),
-            ];
-            for (relative, system) in cases {
-                let path = root.join(relative);
-                assert!(path.is_file(), "missing {}", path.display());
+        fn a_longer_filename_is_not_replaced_by_a_shorter_header() {
+            let root = fixture_directory("named-headers");
+            let cache = root.join("cache");
+            let mut cases: Vec<(PathBuf, &str, &str)> = Vec::new();
+
+            cases.push((
+                game_boy(&root, "Palette Demo (USA, Europe).gbc", "PALETTE DEMO", true),
+                "gbc",
+                "Palette Demo (USA, Europe)",
+            ));
+            cases.push((
+                game_boy(&root, "Palette Demo (USA).gb", "PALETTE DEMO", false),
+                "gb",
+                "Palette Demo (USA)",
+            ));
+
+            let mut megadrive = vec![0u8; 0x200];
+            megadrive[0x100..0x104].copy_from_slice(b"SEGA");
+            megadrive[0x150..0x15B].copy_from_slice(b"VECTOR DEMO");
+            let megadrive_path = root.join("Vector Demo (World).md");
+            fs::write(&megadrive_path, megadrive).unwrap();
+            cases.push((megadrive_path, "megadrive", "Vector Demo (World)"));
+
+            let mut snes = vec![0u8; 0x10000];
+            write_snes_header(&mut snes, 0x7FC0, "SUPER DEMOWORLD", true);
+            let snes_path = root.join("Super Demo World (USA).sfc");
+            fs::write(&snes_path, snes).unwrap();
+            cases.push((snes_path, "snes", "Super Demo World (USA)"));
+
+            // The NES has no title window, so we use the filename as the name.
+            let mut nes = b"NES\x1a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".to_vec();
+            nes.extend([1, 2, 3, 4]);
+            let nes_path = root.join("Nest Demo (USA).nes");
+            fs::write(&nes_path, nes).unwrap();
+            cases.push((nes_path, "nes", "Nest Demo (USA)"));
+
+            for (path, system, title) in cases {
                 let inspection = inspect_game(&path, &cache, false).unwrap();
-                let expected = filename_title(path.file_name().unwrap().to_str().unwrap());
-                assert_eq!(inspection.system, system, "{relative}");
-                assert_eq!(inspection.title, expected, "{relative}");
+                assert_eq!(inspection.system, system, "{}", path.display());
+                assert_eq!(inspection.title, title, "{}", path.display());
                 assert!(
                     matches!(inspection.source, MetadataSource::Filename),
-                    "{relative} took {} from {:?}",
+                    "{} took {} from {:?}",
+                    path.display(),
                     inspection.title,
                     inspection.source
                 );
             }
+        }
+
+        fn game_boy(root: &Path, name: &str, title: &str, color: bool) -> PathBuf {
+            let mut bytes = vec![0u8; 0x200];
+            bytes[0x104..0x134].copy_from_slice(NINTENDO_LOGO);
+            bytes[0x134..0x134 + title.len()].copy_from_slice(title.as_bytes());
+            if color {
+                bytes[0x143] = 0x80;
+            }
+            bytes[0x14D] = bytes[0x134..=0x14C]
+                .iter()
+                .fold(0_u8, |checksum, byte| checksum.wrapping_sub(*byte).wrapping_sub(1));
+            let rom = root.join(name);
+            fs::write(&rom, &bytes).unwrap();
+            rom
         }
 
         #[test]
@@ -1659,5 +1669,148 @@ game (
             "{:?}",
             inspection.warnings
         );
+    }
+
+    /// We can only open a CHD with the vendored `chd` crate, and have no code
+    /// to write one. So we put the serial bytes in a cue, which is what we give
+    /// the same matcher in `read_chd` after decompressing.
+    fn stage_disc_cover(cache: &Path, system_id: &str, picture: &str, serial: &str) -> PathBuf {
+        let catalog = systems::find(system_id)
+            .unwrap()
+            .catalog
+            .clone()
+            .unwrap();
+        let dat = cache.join("catalogs").join(format!("{catalog}.dat"));
+        fs::create_dir_all(dat.parent().unwrap()).unwrap();
+        fs::write(
+            &dat,
+            format!(
+                r#"clrmamepro (
+  name "fixture"
+)
+game (
+  name "{picture}"
+  rom ( name "track.bin" size 1 crc 00000000 serial "{serial}" )
+)
+"#
+            ),
+        )
+        .unwrap();
+        let index = cache.join("artwork-index").join(format!("{catalog}.txt"));
+        fs::create_dir_all(index.parent().unwrap()).unwrap();
+        fs::write(&index, format!("{picture}\n")).unwrap();
+        let png = cache
+            .join("artwork")
+            .join(&catalog)
+            .join("Named_Boxarts")
+            .join(format!("{picture}.png"));
+        fs::create_dir_all(png.parent().unwrap()).unwrap();
+        fs::write(&png, b"\x89PNG\r\n\x1a\n").unwrap();
+        png
+    }
+
+    #[test]
+    fn a_generated_disc_is_named_from_its_serial_and_given_a_cover() {
+        let root = fixture_directory("disc-cover");
+        let mut image = vec![0; 64];
+        image[..11].copy_from_slice(b"SLUS_012.34");
+        fs::write(root.join("Tiny Disc.bin"), &image).unwrap();
+        let cue = root.join("Tiny Disc.cue");
+        fs::write(
+            &cue,
+            "FILE \"Tiny Disc.bin\" BINARY\n  TRACK 01 MODE2/2352\n",
+        )
+        .unwrap();
+        let cache = root.join("cache");
+        let picture = stage_disc_cover(&cache, "ps1", "Tiny Disc (Europe)", "SLUS-01234");
+
+        let inspection = inspect_game(&cue, &cache, false).unwrap();
+        assert_eq!(inspection.system, "ps1", "{:?}", inspection.warnings);
+        assert!(inspection.matched, "{:?}", inspection.warnings);
+        assert_eq!(inspection.catalog_name.as_deref(), Some("Tiny Disc (Europe)"));
+        assert_eq!(inspection.title, "Tiny Disc");
+        assert_eq!(inspection.icon_path.as_deref(), Some(picture.as_path()));
+    }
+
+    /// When someone drops the subchannel file, we use the disc with the same
+    /// name next to it as the game.
+    #[test]
+    fn a_subchannel_file_is_identified_as_the_disc_beside_it() {
+        let root = fixture_directory("sbi-identify");
+        let mut image = vec![0; 64];
+        image[..11].copy_from_slice(b"SLUS_012.34");
+        fs::write(root.join("Tiny Disc.bin"), &image).unwrap();
+        fs::write(
+            root.join("Tiny Disc.cue"),
+            "FILE \"Tiny Disc.bin\" BINARY\n  TRACK 01 MODE2/2352\n",
+        )
+        .unwrap();
+        let subchannel = root.join("Tiny Disc.sbi");
+        fs::write(&subchannel, b"subchannel").unwrap();
+        let cache = root.join("cache");
+        let picture = stage_disc_cover(&cache, "ps1", "Tiny Disc (Europe)", "SLUS-01234");
+
+        let inspection = inspect_game(&subchannel, &cache, false).unwrap();
+        assert!(
+            inspection.matched,
+            "the subchannel file was not identified as the disc: {:?}",
+            inspection.warnings
+        );
+        assert_eq!(inspection.system, "ps1");
+        assert_eq!(inspection.catalog_name.as_deref(), Some("Tiny Disc (Europe)"));
+        assert_eq!(inspection.icon_path.as_deref(), Some(picture.as_path()));
+
+        let traveling = crate::traveling::files_for(&subchannel, Some("ps1")).unwrap();
+        assert!(
+            traveling.files.iter().any(|name| name == "Tiny Disc.sbi"),
+            "the details step would not name the subchannel file: {:?}",
+            traveling.files
+        );
+    }
+
+    #[test]
+    fn a_generated_gd_rom_folder_is_named_and_given_a_cover() {
+        let root = fixture_directory("gd-cover");
+        let folder = root.join("Tiny Disc");
+        fs::create_dir(&folder).unwrap();
+        let mut image = vec![0u8; 0x100];
+        image[..15].copy_from_slice(b"SEGA SEGAKATANA");
+        image[0x40..0x4A].copy_from_slice(b"T-00001   ");
+        image[0x80..0x89].copy_from_slice(b"TINY DISC");
+        let tracks = [
+            "Tiny Disc (Track 1).bin",
+            "Tiny Disc (Track 2).bin",
+            "Tiny Disc (Track 3).bin",
+        ];
+        fs::write(folder.join(tracks[0]), &image).unwrap();
+        fs::write(folder.join(tracks[1]), b"audio").unwrap();
+        fs::write(folder.join(tracks[2]), b"data").unwrap();
+        let layout = folder.join("Tiny Disc.gdi");
+        fs::write(
+            &layout,
+            "3\n\
+             1 0 4 2352 \"Tiny Disc (Track 1).bin\" 0\n\
+             2 450 0 2352 \"Tiny Disc (Track 2).bin\" 0\n\
+             3 2250 4 2352 \"Tiny Disc (Track 3).bin\" 0\n",
+        )
+        .unwrap();
+        let cache = root.join("cache");
+        let picture = stage_disc_cover(&cache, "dreamcast", "Tiny Disc (Europe)", "T-00001");
+
+        let from_folder = inspect_game(&folder, &cache, false).unwrap();
+        let from_layout = inspect_game(&layout, &cache, false).unwrap();
+        let from_track = inspect_game(&folder.join(tracks[2]), &cache, false).unwrap();
+        assert_eq!(from_folder.system, "dreamcast", "{:?}", from_folder.warnings);
+        assert!(from_folder.matched, "{:?}", from_folder.warnings);
+        assert_eq!(from_folder.title, "Tiny Disc");
+        assert_eq!(
+            from_folder.catalog_name.as_deref(),
+            Some("Tiny Disc (Europe)")
+        );
+        assert_eq!(from_folder.icon_path.as_deref(), Some(picture.as_path()));
+        assert_eq!(from_track.system, from_layout.system);
+        assert_eq!(from_track.title, from_layout.title);
+        assert_eq!(from_track.catalog_name, from_layout.catalog_name);
+        assert_eq!(from_folder.catalog_name, from_layout.catalog_name);
     }
 }

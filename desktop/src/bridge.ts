@@ -52,9 +52,7 @@ export type ExportProgress = {
 };
 export type ExportResult = {
   appPath: string;
-  archivePath: string;
   installedBytes: number;
-  archiveBytes: number;
   runtimeBytes: number;
   contentBytes: number;
 };

@@ -8,8 +8,8 @@ use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::ffi::OsStr;
 use std::fmt;
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, Read, Write};
+use std::fs;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -20,14 +20,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::content;
 use crate::controls;
 use crate::icons;
-use zip::write::SimpleFileOptions;
-use zip::{CompressionMethod, ZipWriter};
 
 /// Disc image containers whose support depends on how a core was built.
 const CONTAINER_FORMATS: &[&str] = &[
     "ccd", "cdi", "chd", "cue", "gdi", "iso", "m3u", "pbp", "rvz", "toc",
 ];
 
+/// What we write in an export. On macOS we write one `.app`. On Windows we
+/// write the executable and, when the runtime requires one, a folder next to
+/// it. We put that app in the output folder and nothing else.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ExportTarget {
@@ -300,7 +301,6 @@ pub enum ExportStage {
     Dependencies,
     Configure,
     Sign,
-    Archive,
     Complete,
 }
 
@@ -316,9 +316,7 @@ pub struct ExportProgress {
 #[serde(rename_all = "camelCase")]
 pub struct ExportResult {
     pub app_path: PathBuf,
-    pub archive_path: PathBuf,
     pub installed_bytes: u64,
-    pub archive_bytes: u64,
     pub runtime_bytes: u64,
     pub content_bytes: u64,
 }
@@ -534,9 +532,7 @@ where
     }
     let safe_title = safe_filename(&request.title);
     let final_app = request.output_dir.join(format!("{safe_title}.app"));
-    let final_archive = request.output_dir.join(format!("{safe_title}-macOS.zip"));
     refuse_existing(&final_app)?;
-    refuse_existing(&final_archive)?;
     fs::create_dir_all(&request.output_dir)
         .map_err(|error| ExportError::io("stage", &request.output_dir, error))?;
 
@@ -805,18 +801,7 @@ where
     )?;
     check_cancelled(cancelled)?;
 
-    emit(
-        progress,
-        ExportStage::Archive,
-        0.82,
-        "Creating the game archive",
-    );
-    let staged_archive = staging.path().join(final_archive.file_name().unwrap());
-    archive_macos_app(&app, &staged_archive, cancelled)?;
     let installed_bytes = tree_size(&app)?;
-    let archive_bytes = fs::metadata(&staged_archive)
-        .map_err(|error| ExportError::io("archive", &staged_archive, error))?
-        .len();
     let runtime_bytes = tree_size(&runtime)?
         + tree_size(&core)?
         + tree_size(&frameworks)?
@@ -829,15 +814,11 @@ where
             .as_ref()
             .map_or(0, |path| fs::metadata(path).map(|m| m.len()).unwrap_or(0));
     fs::rename(&app, &final_app).map_err(|error| ExportError::io("complete", &final_app, error))?;
-    fs::rename(&staged_archive, &final_archive)
-        .map_err(|error| ExportError::io("complete", &final_archive, error))?;
     staging.cleanup()?;
     emit(progress, ExportStage::Complete, 1.0, "Export complete");
     Ok(ExportResult {
         app_path: final_app,
-        archive_path: final_archive,
         installed_bytes,
-        archive_bytes,
         runtime_bytes,
         content_bytes,
     })
@@ -2467,180 +2448,6 @@ fn copy_file(source: &Path, destination: &Path) -> Result<(), ExportError> {
     Ok(())
 }
 
-/// Archive a staged app without platform ZIP tools. We start from the parent
-/// folder of the staged app, so the archive contains `Game.app/`.
-fn archive_macos_app(
-    app: &Path,
-    destination: &Path,
-    cancelled: &AtomicBool,
-) -> Result<(), ExportError> {
-    let root = app
-        .parent()
-        .ok_or_else(|| ExportError::new("archive", "staged app has no parent directory"))?;
-    let output = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(destination)
-        .map_err(|error| ExportError::io("archive", destination, error))?;
-    let mut writer = ZipWriter::new(output);
-    archive_directory(&mut writer, app, root, cancelled)?;
-    check_cancelled(cancelled)?;
-    writer.finish().map_err(|error| {
-        ExportError::new(
-            "archive",
-            format!("could not finish {}: {error}", destination.display()),
-        )
-    })?;
-    Ok(())
-}
-
-fn archive_directory<W: Write + io::Seek>(
-    writer: &mut ZipWriter<W>,
-    directory: &Path,
-    root: &Path,
-    cancelled: &AtomicBool,
-) -> Result<(), ExportError> {
-    check_cancelled(cancelled)?;
-    let metadata = fs::symlink_metadata(directory)
-        .map_err(|error| ExportError::io("archive", directory, error))?;
-    if metadata.file_type().is_symlink() {
-        return Err(ExportError::new(
-            "archive",
-            format!("refusing to archive symlink: {}", directory.display()),
-        ));
-    }
-    if !metadata.is_dir() {
-        return Err(ExportError::new(
-            "archive",
-            format!(
-                "expected directory while archiving: {}",
-                directory.display()
-            ),
-        ));
-    }
-    let directory_name = archive_member_name(directory, root)?;
-    writer
-        .add_directory(
-            format!("{directory_name}/"),
-            archive_options(&metadata, true),
-        )
-        .map_err(|error| {
-            ExportError::new(
-                "archive",
-                format!("could not add {directory_name}: {error}"),
-            )
-        })?;
-    let mut entries: Vec<_> = fs::read_dir(directory)
-        .map_err(|error| ExportError::io("archive", directory, error))?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| ExportError::io("archive", directory, error))?;
-    entries.sort_by_key(|entry| entry.file_name());
-    for entry in entries {
-        let path = entry.path();
-        let metadata = fs::symlink_metadata(&path)
-            .map_err(|error| ExportError::io("archive", &path, error))?;
-        if metadata.file_type().is_symlink() {
-            return Err(ExportError::new(
-                "archive",
-                format!("refusing to archive symlink: {}", path.display()),
-            ));
-        }
-        if metadata.is_dir() {
-            archive_directory(writer, &path, root, cancelled)?;
-        } else if metadata.is_file() {
-            archive_file(writer, &path, root, &metadata, cancelled)?;
-        } else {
-            return Err(ExportError::new(
-                "archive",
-                format!(
-                    "refusing to archive unsupported file type: {}",
-                    path.display()
-                ),
-            ));
-        }
-    }
-    Ok(())
-}
-
-fn archive_file<W: Write + io::Seek>(
-    writer: &mut ZipWriter<W>,
-    path: &Path,
-    root: &Path,
-    metadata: &fs::Metadata,
-    cancelled: &AtomicBool,
-) -> Result<(), ExportError> {
-    let name = archive_member_name(path, root)?;
-    writer
-        .start_file(&name, archive_options(metadata, false))
-        .map_err(|error| ExportError::new("archive", format!("could not add {name}: {error}")))?;
-    let mut source = File::open(path).map_err(|error| ExportError::io("archive", path, error))?;
-    let mut buffer = [0_u8; 128 * 1024];
-    loop {
-        check_cancelled(cancelled)?;
-        let bytes = source
-            .read(&mut buffer)
-            .map_err(|error| ExportError::io("archive", path, error))?;
-        if bytes == 0 {
-            break;
-        }
-        writer.write_all(&buffer[..bytes]).map_err(|error| {
-            ExportError::new("archive", format!("could not write {name}: {error}"))
-        })?;
-    }
-    Ok(())
-}
-
-fn archive_member_name(path: &Path, root: &Path) -> Result<String, ExportError> {
-    let relative = path.strip_prefix(root).map_err(|_| {
-        ExportError::new(
-            "archive",
-            format!("path escapes app staging root: {}", path.display()),
-        )
-    })?;
-    let mut parts = Vec::new();
-    for component in relative.components() {
-        match component {
-            std::path::Component::Normal(part) => parts.push(part.to_string_lossy().into_owned()),
-            _ => {
-                return Err(ExportError::new(
-                    "archive",
-                    format!("unsafe app archive path: {}", path.display()),
-                ))
-            }
-        }
-    }
-    if parts.is_empty() {
-        return Err(ExportError::new(
-            "archive",
-            "app archive member name is empty",
-        ));
-    }
-    Ok(parts.join("/"))
-}
-
-fn archive_options(metadata: &fs::Metadata, directory: bool) -> SimpleFileOptions {
-    let mode = archive_mode(metadata, directory);
-    SimpleFileOptions::default()
-        .compression_method(CompressionMethod::Deflated)
-        .large_file(true)
-        .unix_permissions(mode)
-}
-
-#[cfg(unix)]
-fn archive_mode(metadata: &fs::Metadata, _directory: bool) -> u32 {
-    use std::os::unix::fs::PermissionsExt;
-    metadata.permissions().mode() & 0o777
-}
-
-#[cfg(not(unix))]
-fn archive_mode(_metadata: &fs::Metadata, directory: bool) -> u32 {
-    if directory {
-        0o755
-    } else {
-        0o644
-    }
-}
-
 fn copy_optional_tree(source: &Path, destination: &Path) -> Result<(), ExportError> {
     let source_metadata =
         fs::symlink_metadata(source).map_err(|error| ExportError::io("stage", source, error))?;
@@ -2822,15 +2629,7 @@ mod tests {
 
     #[test]
     fn launcher_quotes_hostile_content_filename_as_data() {
-        let directory = std::env::temp_dir().join(format!(
-            "rominabox-launcher-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&directory).unwrap();
+        let directory = rominabox_scratch::Scratch::dir("rominabox-launcher");
         let launcher = directory.join("launcher");
         let hostile = OsStr::new("content/weird'$(touch PWNED)`echo nope`.bin");
         let mut settings = request(false);
@@ -2844,15 +2643,7 @@ mod tests {
     }
 
     fn write_test_launcher(settings: ExportRequest) -> String {
-        let directory = std::env::temp_dir().join(format!(
-            "rominabox-hotkey-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&directory).unwrap();
+        let directory = rominabox_scratch::Scratch::dir("rominabox-hotkey");
         let launcher = directory.join("launcher");
         write_launch_plan(
             &launcher,
@@ -3122,17 +2913,8 @@ mod tests {
     }
 
     /// A unique empty directory, following the pattern of the other tests.
-    fn scratch_dir() -> PathBuf {
-        let directory = std::env::temp_dir().join(format!(
-            "rominabox-remap-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&directory).unwrap();
-        directory
+    fn scratch_dir() -> rominabox_scratch::Scratch {
+        rominabox_scratch::Scratch::dir("rominabox-remap")
     }
 
     /// We write the emulated controller where RetroArch reads it.
@@ -3312,15 +3094,7 @@ mod tests {
 
     #[test]
     fn splash_without_menu_uses_rmlui_but_disables_menu_shortcuts() {
-        let directory = std::env::temp_dir().join(format!(
-            "rominabox-splash-launcher-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&directory).unwrap();
+        let directory = rominabox_scratch::Scratch::dir("rominabox-splash-launcher");
         let launcher = directory.join("launcher");
         write_launch_plan(
             &launcher,
@@ -3379,23 +3153,16 @@ mod tests {
     mod save_identity {
         use super::*;
 
-        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
-        fn rom_with(bytes: &[u8]) -> PathBuf {
-            let dir = std::env::temp_dir().join(format!(
-                "rominabox-identity-{}-{}",
-                std::process::id(),
-                NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-            ));
-            fs::create_dir_all(&dir).unwrap();
+        fn rom_with(bytes: &[u8]) -> (rominabox_scratch::Scratch, PathBuf) {
+            let dir = rominabox_scratch::Scratch::dir("rominabox-identity");
             let rom = dir.join("game.bin");
             fs::write(&rom, bytes).unwrap();
-            rom
+            (dir, rom)
         }
 
         #[test]
         fn identity_is_stable_for_the_same_rom_and_system() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let first = stable_identity(&rom, "megadrive", None).unwrap();
             let second = stable_identity(&rom, "megadrive", None).unwrap();
             assert_eq!(first, second);
@@ -3414,7 +3181,7 @@ mod tests {
         /// folders of ordinary exports move with worktree isolation.
         #[test]
         fn an_absent_namespace_leaves_the_identity_exactly_as_it_was() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             // We compare with a fixed value and not with a second computation,
             // because with both sides computed, a changed hash would go unnoticed.
             let identity = stable_identity(&rom, "megadrive", None).unwrap();
@@ -3433,7 +3200,7 @@ mod tests {
         /// one launch.log, and a screenshot can show the wrong build.
         #[test]
         fn a_namespace_gives_the_same_game_a_separate_home() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let shared = stable_identity(&rom, "megadrive", None).unwrap();
             let first =
                 stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-a")).unwrap();
@@ -3465,7 +3232,7 @@ mod tests {
         /// with the same identifier is running.
         #[test]
         fn the_bundle_identifier_is_namespaced_with_the_identity() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let shared = stable_identity(&rom, "megadrive", None).unwrap();
             let isolated =
                 stable_identity(&rom, "megadrive", Some("app.rominabox.game.wt-a")).unwrap();
@@ -3479,7 +3246,7 @@ mod tests {
 
         #[test]
         fn identity_ignores_surrounding_space_and_letter_case() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let canonical = stable_identity(&rom, "megadrive", None).unwrap();
             assert_eq!(
                 stable_identity(&rom, "  MegaDrive  ", None).unwrap(),
@@ -3494,7 +3261,7 @@ mod tests {
         /// together with a move of the saves that players already have.
         #[test]
         fn an_alias_does_not_share_a_save_directory_with_its_canonical_id() {
-            let rom = rom_with(b"rominabox-identity-fixture");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let canonical = crate::systems::find("gb").expect("gb is a known system");
             let via_alias = crate::systems::find("Game Boy").expect("alias resolves");
             assert_eq!(
@@ -3510,8 +3277,8 @@ mod tests {
 
         #[test]
         fn a_different_system_or_different_bytes_changes_the_identity() {
-            let rom = rom_with(b"rominabox-identity-fixture");
-            let other_rom = rom_with(b"rominabox-identity-fixture-2");
+            let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
+            let (_other, other_rom) = rom_with(b"rominabox-identity-fixture-2");
             let base = stable_identity(&rom, "megadrive", None).unwrap();
             assert_ne!(stable_identity(&rom, "nes", None).unwrap(), base);
             assert_ne!(
@@ -3604,15 +3371,9 @@ mod tests {
     mod availability {
         use super::*;
 
-        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
         /// A kit containing exactly the named cores and licence texts.
-        fn kit(cores: &[(&str, bool, bool)]) -> PathBuf {
-            let root = std::env::temp_dir().join(format!(
-                "rominabox-availability-{}-{}",
-                std::process::id(),
-                NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-            ));
+        fn kit(cores: &[(&str, bool, bool)]) -> rominabox_scratch::Scratch {
+            let root = rominabox_scratch::Scratch::dir("rominabox-availability");
             fs::create_dir_all(root.join("cores")).unwrap();
             fs::create_dir_all(root.join("licenses")).unwrap();
             for (system, artifact, licence) in cores {

@@ -3,8 +3,9 @@
 The prepared runtime kit is ignored by Git, and we do not compile RetroArch.
 The ROM is a few bytes that we write in the work directory, so the size is
 that of the player and the one core the game uses. A real Game Boy Advance ROM
-adds its own size. We check the installed .app and the zip a person would
-download against scripts/fixtures/size-budgets.json.
+adds its own size. We check the .app on disk against
+scripts/fixtures/size-budgets.json. At export we write that app and nothing
+else.
 
 We also refuse the video encoders. They can take a cartridge export past
 50 MB, and with a budget alone we could miss them if something else shrank to
@@ -107,7 +108,6 @@ def main() -> int:
         )
     budgets = json.loads(BUDGETS.read_text())
     installed_ceiling = int(budgets["installed_bytes"])
-    archive_ceiling = int(budgets["archive_bytes"])
 
     rom = WORK / "stand-in.bin"
     WORK.mkdir(parents=True, exist_ok=True)
@@ -128,20 +128,22 @@ def main() -> int:
     failed = False
     for name, extra in bundles.items():
         app = export(command, name, kit, rom, extra)
-        archive = next(app.parent.glob("*-macOS.zip"))
+        extras = sorted(
+            entry.name
+            for entry in app.parent.iterdir()
+            if entry.name != app.name
+        )
+        if extras:
+            print(f"  {name} wrote more than the app: {', '.join(extras)}")
+            failed = True
         installed = du(app)
-        archived = archive.stat().st_size
         frameworks = app / "Contents/Frameworks"
         names = {path.name for path in frameworks.iterdir() if path.is_file()}
         print(
-            f"  {name:<12} installed {installed:8d}  archive {archived:8d}  "
-            f"frameworks {len(names)}"
+            f"  {name:<12} app {installed:8d}  frameworks {len(names)}"
         )
         if installed > installed_ceiling:
-            print(f"  {name} installed {installed} exceeds {installed_ceiling}")
-            failed = True
-        if archived > archive_ceiling:
-            print(f"  {name} archive {archived} exceeds {archive_ceiling}")
+            print(f"  {name} app {installed} exceeds {installed_ceiling}")
             failed = True
         carried = [wanted for wanted in ABSENT if wanted in names]
         if carried:
@@ -152,10 +154,7 @@ def main() -> int:
             failed = True
     if failed:
         return 1
-    print(
-        f"\n3 bundles within {installed_ceiling} installed bytes "
-        f"and {archive_ceiling} archive bytes"
-    )
+    print(f"\n3 apps within {installed_ceiling} bytes on disk")
     return 0
 
 

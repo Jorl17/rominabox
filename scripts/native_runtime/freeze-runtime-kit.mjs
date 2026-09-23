@@ -11,7 +11,9 @@ const info=JSON.parse(fs.readFileSync(path.join(build,'build-info.json'),'utf8')
 const source=path.join(root,'vendor/retroarch');
 const revision=execFileSync('git',['rev-parse',info.retroarchCommit+'^{commit}'],{cwd:source,encoding:'utf8'}).trim();
 const frozen=path.join(fs.mkdtempSync(path.join(build,'frozen-')),'retroarch');
-const cli=path.join(root,'desktop/src-tauri/target/debug/rominabox-cli');
+// We get the CLI from scripts/built.py, with which we build it from this
+// checkout and reject a CLI built in another checkout.
+const cli=execFileSync('python3',[path.join(root,'scripts/built.py'),'--build'],{cwd:root,encoding:'utf8'}).trim().split('\n').pop();
 execFileSync(cli,['freeze-macos-executable'],{input:JSON.stringify({source:path.join(build,'retroarch/retroarch'),destination:frozen}),stdio:['pipe','inherit','inherit']});
 const binary=path.join(kit,'bin/retroarch');
 const dependencies=execFileSync('otool',['-L',frozen],{encoding:'utf8'}).split('\n').slice(1).map(x=>x.trim().split(' (')[0]).filter(x=>x.startsWith('@executable_path/Frameworks/'));

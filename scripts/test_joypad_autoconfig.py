@@ -18,11 +18,11 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import joypad_autoconfig as joypad  # noqa: E402
+import scratch  # noqa: E402
 import prepare_runtime  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -113,7 +113,7 @@ def the_observed_pad_matches_by_id_even_though_the_name_differs(profiles: list[j
 def removing_that_profile_scores_zero(profiles: list[joypad.Profile]) -> None:
     """Check the logged failure, when the directory had no profile for this pad."""
     device = observed_device()
-    with tempfile.TemporaryDirectory() as temporary:
+    with scratch.scratch() as temporary:
         directory = Path(temporary)
         for profile in profiles:
             shutil.copy(profile.path, directory / profile.path.name)

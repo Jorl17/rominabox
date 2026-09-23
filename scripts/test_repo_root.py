@@ -54,6 +54,36 @@ OVERRIDE = re.compile(r'env::var\(\s*"ROMINABOX_REPO"\s*\)')
 # package itself, and we do not check it.
 CLIMBS = re.compile(r'env!\("CARGO_MANIFEST_DIR"\)\s*\)?\s*\.?\s*\n?\s*\.join\("\.\.')
 
+# Split so that this file does not contain the directory name that we forbid.
+# A test that anyone can run must not use a folder in one person's home.
+COLLECTION = "roms-" + "to-test"
+SCANNED = [Path("desktop"), Path("scripts")]
+SKIPPED_PARTS = {"target", "node_modules", "dist", "work"}
+
+
+def collection_mentions() -> list[str]:
+    """Return the tests and scripts that contain one person's ROM directory."""
+    found: list[str] = []
+    for relative in SCANNED:
+        directory = ROOT / relative
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.rglob("*")):
+            if not path.is_file() or SKIPPED_PARTS.intersection(path.parts):
+                continue
+            if path.stat().st_size > 1_000_000:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            if COLLECTION not in text:
+                continue
+            for number, line in enumerate(text.splitlines(), 1):
+                if COLLECTION in line:
+                    found.append(f"{path.relative_to(ROOT)}:{number}")
+    return found
+
 
 def climbing_uses(path: Path) -> list[int]:
     """Return the line numbers where a compiled-in path leads out of the crate."""
@@ -65,6 +95,16 @@ def climbing_uses(path: Path) -> list[int]:
 
 
 def main() -> int:
+    named = collection_mentions()
+    if named:
+        print(
+            f"{len(named)} test(s) or script(s) name one person's ROM directory:",
+            file=sys.stderr,
+        )
+        for hit in named:
+            print(f"  FAIL {hit}", file=sys.stderr)
+        return 1
+
     offenders: list[str] = []
     checked = 0
     exempt = 0

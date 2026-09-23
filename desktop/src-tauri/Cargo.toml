@@ -31,3 +31,4 @@ custom-protocol = ["tauri/custom-protocol"]
 
 [dev-dependencies]
 libc = "0.2.189"
+rominabox-scratch = { path = "../crates/rominabox-scratch" }

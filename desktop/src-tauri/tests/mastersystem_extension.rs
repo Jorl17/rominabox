@@ -13,24 +13,15 @@ use std::{
     collections::BTreeSet,
     fs,
     path::{Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
 };
-
-static NEXT: AtomicU64 = AtomicU64::new(0);
 
 /// The consoles whose preferred core is the one Genesis Plus GX definition,
 /// in registry order, which is the order of `available_systems`.
 const GENESIS_PLUS_GX_CONSOLES: [&str; 5] =
     ["megadrive", "segacd", "mastersystem", "gamegear", "sg1000"];
 
-fn scratch() -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "rominabox-mastersystem-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).expect("scratch directory");
-    path
+fn scratch() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-mastersystem")
 }
 
 fn menu_assets() -> PathBuf {

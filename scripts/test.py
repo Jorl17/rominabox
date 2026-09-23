@@ -32,6 +32,9 @@ from cargo_replay import cargo_test  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
 from player_support import modifications as support_modifications  # noqa: E402
 from player_support import snapshot as support_snapshot  # noqa: E402
+from temp_entries import additions as temp_additions  # noqa: E402
+from temp_entries import directory as temp_directory  # noqa: E402
+from temp_entries import snapshot as temp_snapshot  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRATCH = ROOT / "work/test-output"
@@ -51,12 +54,15 @@ class Scope:
         command: list[str],
         slow: bool = False,
         prepare: list[list[str]] | None = None,
+        skipped: str | None = None,
     ):
         self.name = name
         self.covers = covers
         self.not_covered = not_covered
         self.command = command
         self.slow = slow
+        # Why we leave a scope out of an ordinary run. We still run it when named.
+        self.skipped = skipped
         # What we must stage before the scope runs. We declare it here because
         # without the declaration, a scope with generated input would work only
         # in a checkout where someone had generated it, and fail everywhere else.
@@ -131,6 +137,12 @@ SCOPES = [
         ["node", str(ROOT / "scripts/native_runtime/test_glsl_core.mjs")],
     ),
     Scope(
+        "dcmenu",
+        "that a core-profile context draws the menu and a legacy context still does, and that a log line reaches the file before the process exits",
+        "that a Dreamcast disc boots, or where the menu sits; the pictures are a separate run",
+        ["python3", str(ROOT / "scripts/test_dcmenu.py")],
+    ),
+    Scope(
         "joypad",
         "that every hid profile the pin declares is staged, and that RetroArch's match rules would accept it",
         "that a physical pad's buttons match those numbers; nothing here opens a device",
@@ -138,9 +150,15 @@ SCOPES = [
     ),
     Scope(
         "reporoot",
-        "that nothing finds the repository by the path it was compiled in, which a shared cargo target makes another checkout's",
+        "that nothing finds the repository by the path it was compiled in, and that no test or script names one person's ROM directory",
         "that the rule is right, or that a binary really came from elsewhere; it reads how each place asks",
         ["python3", str(ROOT / "scripts/test_repo_root.py")],
+    ),
+    Scope(
+        "fixtures",
+        "that a test file this repository does not generate is fetched or skipped out loud, and that the generated cartridge is ready",
+        "that a fetched disc boots; the quit scope launches one, and only when the file is actually there",
+        ["python3", str(ROOT / "scripts/test_fetch_content.py")],
     ),
     Scope(
         "symlinks",
@@ -247,13 +265,13 @@ SCOPES = [
     ),
     Scope(
         "size",
-        "that an exported game, installed and as a zip, stays under the size ceiling, and does not carry the video encoders",
+        "that an exported app stays under the size ceiling, and does not carry the video encoders",
         "a cartridge's own size, or that the player was rebuilt; it measures the kit already on disk",
         ["python3", str(ROOT / "scripts/size_bundles.py")],
     ),
     Scope(
         "isolation",
-        "that a signed export keeps the sandbox entitlement, cannot read or write the player's RetroArch profile or another game's container, and still loads a core with audio and a gamepad",
+        "that a signed export keeps the sandbox entitlement, cannot read or write the player's RetroArch profile or another game's container, and still loads a core, stays quiet, and sees a gamepad",
         "window placement, focus, fullscreen, or that Gatekeeper accepts an ad-hoc signature",
         [
             "cargo",
@@ -288,6 +306,22 @@ SCOPES = [
         "that a cartridge and a single disc are not a multi-disc game, and that choosing the second image of a playlist makes the core report that index",
         "that the menu drew the list or shortened the name — the bridge scope measures the name, and a photograph is the list",
         ["python3", str(ROOT / "scripts/test_discs.py")],
+        slow=True,
+    ),
+    Scope(
+        "quit",
+        "that an Apple Event quit of an exported Flycast game unloads the core before the process exits",
+        "window placement and fullscreen; closing the window is the same AppKit terminate path",
+        ["python3", str(ROOT / "scripts/test_quit.py")],
+        slow=True,
+        prepare=[["python3", str(ROOT / "scripts/fetch_test_content.py"), "--scope", "quit"]],
+        skipped="its Dreamcast half needs a bootable Dreamcast image the repository does not have yet; name it to run the rest",
+    ),
+    Scope(
+        "quiet",
+        "that a harness launch is quiet unless it asks for sound, and that every player launch still sets the switch",
+        "that a person launching the game is silent; they never set the switch. The off-screen window is a separate change",
+        ["python3", str(ROOT / "scripts/test_quiet.py")],
         slow=True,
     ),
 ]
@@ -354,6 +388,8 @@ def main() -> int:
     if arguments.list:
         for scope in SCOPES:
             mark = " (slow)" if scope.slow else ""
+            if scope.skipped:
+                mark += f" (skipped unless named: {scope.skipped})"
             print(f"{scope.name}{mark}\n  covers    {scope.covers}\n  does not  {scope.not_covered}\n")
         return 0
 
@@ -363,12 +399,21 @@ def main() -> int:
             raise SystemExit(f"unknown scope(s): {', '.join(unknown)}; try --list")
         selected = [BY_NAME[name] for name in arguments.scopes]
     elif arguments.all:
-        selected = SCOPES
+        selected = [scope for scope in SCOPES if not scope.skipped]
     else:
-        selected = [scope for scope in SCOPES if not scope.slow]
+        selected = [scope for scope in SCOPES if not scope.slow and not scope.skipped]
+    if not arguments.scopes:
+        for scope in SCOPES:
+            if scope.skipped:
+                print(f"skipped {scope.name}: {scope.skipped}")
 
     SCRATCH.mkdir(parents=True, exist_ok=True)
+    # We put this stamp in every scratch directory of this run. A diff of
+    # $TMPDIR also shows other processes, so only names with this stamp are ours.
+    scratch_run = f"{os.getpid()}-{time.time_ns()}"
+    os.environ["ROMINABOX_SCRATCH_RUN"] = scratch_run
     support_before = support_snapshot()
+    temp_before = temp_snapshot()
     recorded: dict[str, tuple[bool, float]] = {}
     wall_started = time.monotonic()
 
@@ -405,7 +450,15 @@ def main() -> int:
             mark = "SLOW"
             slow.append(scope.name)
         print(f"{mark}  {scope.name:<12}{seconds:6.1f}s{ratio}")
-    wall_budget = (limits or {}).get("wall")
+    # `wall` is the limit for the fast selection. We do not apply it to a named
+    # scope or to --all, because quitting Flycast once takes longer than the
+    # whole fast suite.
+    if arguments.all:
+        wall_budget = (limits or {}).get("wall_all")
+    elif arguments.scopes:
+        wall_budget = None
+    else:
+        wall_budget = (limits or {}).get("wall")
     wall_ratio = f"  {wall / wall_budget:4.1f}x" if wall_budget else ""
     print(f"\nwall {wall:0.1f}s{wall_ratio}")
     if wall_budget and limits is not None and over_budget(wall, wall_budget, limits):
@@ -429,10 +482,21 @@ def main() -> int:
             print(f"  {path}")
         if len(modified) > 20:
             print(f"  … and {len(modified) - 20} more")
+    leftover = [
+        name for name in temp_additions(temp_before, temp_snapshot()) if scratch_run in name
+    ]
+    if leftover:
+        print(
+            f"\nA test run left {len(leftover)} entries in {temp_directory()} named rominabox*:"
+        )
+        for name in leftover[:20]:
+            print(f"  {name}")
+        if len(leftover) > 20:
+            print(f"  … and {len(leftover) - 20} more")
     failed = [scope.name for scope in selected if not recorded[scope.name][0]]
     if failed:
         print(f"\n{len(failed)} scope(s) failed: {', '.join(failed)}")
-    if created or modified or failed:
+    if created or modified or leftover or failed:
         return 1
     if slow:
         print(

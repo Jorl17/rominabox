@@ -12,11 +12,8 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    sync::atomic::{AtomicU64, Ordering},
     time::{Duration, Instant},
 };
-
-static NEXT: AtomicU64 = AtomicU64::new(0);
 
 struct RemoveDir(PathBuf);
 
@@ -46,25 +43,6 @@ impl Drop for RemoveDir {
         if container || game {
             let _ = fs::remove_dir_all(&self.0);
         }
-    }
-}
-
-/// A HOME for an unsigned launch. It must be under `work/` in this checkout
-/// and have this prefix, or we leave it alone.
-struct RemoveWorkHome(PathBuf);
-
-impl Drop for RemoveWorkHome {
-    fn drop(&mut self) {
-        let Some(name) = self.0.file_name().and_then(|name| name.to_str()) else {
-            return;
-        };
-        if !name.starts_with("isolation-home-") || !self.0.is_dir() {
-            return;
-        }
-        if self.0.parent() != Some(repo_at("work").as_path()) {
-            return;
-        }
-        let _ = fs::remove_dir_all(&self.0);
     }
 }
 
@@ -104,20 +82,20 @@ fn write_runtime_stub(path: &Path) {
     assert!(status.success(), "could not compile the runtime stub");
 }
 
+fn stay_quiet(command: &mut Command) {
+    // ROMINABOX_QUIET_ENV in the launcher. Without it the game uses CoreAudio.
+    // In the quiet tests we read that define and compare it with this name.
+    command.env("ROMINABOX_QUIET", "1");
+}
+
 /// A path in the checkout of this run, not in the checkout where the binary
 /// was built. Several checkouts can share one cargo target, so they can differ.
 fn repo_at(relative: &str) -> PathBuf {
     rominabox_desktop::repo::at(relative)
 }
 
-fn scratch() -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "rominabox-isolation-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).unwrap();
-    path
+fn scratch() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-isolation")
 }
 
 fn fixture_kit(root: &Path) -> PathBuf {
@@ -460,6 +438,7 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     assert_main_executable_keeps_the_sandbox(&app);
 
     let mut command = Command::new(app.join("Contents/MacOS/retroarch"));
+    stay_quiet(&mut command);
     command
         .env("ROMINABOX_PROBE_READ", &leak)
         .env("ROMINABOX_PROBE_WRITE", &write_path)
@@ -552,6 +531,7 @@ fn author_background_play_survives_an_old_controls_file() {
 
     assert_main_executable_keeps_the_sandbox(&app);
     let mut quiet = Command::new(app.join("Contents/MacOS/retroarch"));
+    stay_quiet(&mut quiet);
     quiet.env_remove("ROMINABOX_MENU_SHOT");
     let status = run_until(&mut quiet, Duration::from_secs(20));
     assert!(status.success(), "the stub did not exit");
@@ -570,6 +550,7 @@ fn author_background_play_survives_an_old_controls_file() {
     let pad = "input_player1_a = \"x\"\n";
     fs::write(&controls, pad).unwrap();
     let mut shot = Command::new(app.join("Contents/MacOS/retroarch"));
+    stay_quiet(&mut shot);
     shot.env("ROMINABOX_MENU_SHOT", "/tmp/rominabox-menu-shot-proof.png");
     let status = run_until(&mut shot, Duration::from_secs(20));
     assert!(status.success(), "the screenshot stub did not exit");
@@ -589,7 +570,7 @@ fn author_background_play_survives_an_old_controls_file() {
 /// Without the signature there is no sandbox, and `$HOME` is whatever we give
 /// the launch. With the home of the account, the launch would create the
 /// game's `Games/<identity>` directory there. The stub must still run, so we
-/// give it a HOME under `work/` that we remove with the test.
+/// give it a scratch HOME that we remove with the test.
 #[test]
 #[ignore = "launches an unsigned stub; the isolation scope runs it"]
 fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
@@ -617,16 +598,12 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
         .status()
         .expect("codesign can be executed");
     assert!(removed.success(), "could not drop the signature");
-    let launch_home = repo_at("work").join(format!(
-        "isolation-home-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&launch_home).unwrap();
-    let _launch_home = RemoveWorkHome(launch_home.clone());
-    let output = Command::new(&executable)
+    let launch_home = rominabox_scratch::Scratch::dir("rominabox-isolation-home");
+    let mut command = Command::new(&executable);
+    stay_quiet(&mut command);
+    let output = command
         .env_remove("ROMINABOX_MENU_SHOT")
-        .env("HOME", &launch_home)
+        .env("HOME", launch_home.path())
         .output()
         .expect("the unsigned launcher can be executed");
     let after = fs::metadata(&host)
@@ -656,9 +633,9 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
 
 #[test]
 #[ignore = "runs an exported core for a few frames, then exits"]
-fn exported_game_loads_a_core_opens_audio_and_sees_a_gamepad() {
-    let rom = repo_at("work/test-game.gbc");
-    assert!(rom.is_file(), "work/test-game.gbc is not in this checkout");
+fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
+    let rom = repo_at("scripts/fixtures/test-game.gbc");
+    assert!(rom.is_file(), "scripts/fixtures/test-game.gbc is not in this checkout");
     let kit = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/runtime");
     let root = scratch();
     fs::copy(&rom, root.join("game.bin")).unwrap();
@@ -679,6 +656,7 @@ fn exported_game_loads_a_core_opens_audio_and_sees_a_gamepad() {
     let leak = home().join("Documents/RetroArch/playlists/builtin/content_history.lpl");
     let leak_before = fs::read(&leak).unwrap_or_default();
     let mut command = Command::new(app.join("Contents/MacOS/retroarch"));
+    stay_quiet(&mut command);
     command.env("ROMINABOX_VERBOSE", "1");
     command.env("ROMINABOX_MAX_FRAMES", "30");
     // The window is not focused, and the author chose to pause then, so the
@@ -688,8 +666,12 @@ fn exported_game_loads_a_core_opens_audio_and_sees_a_gamepad() {
         "ROMINABOX_MENU_SHOT",
         "/tmp/rominabox-menu-shot-proof.png",
     );
+    // We append to this log in the launcher. An earlier shot of this ROM put
+    // [CoreAudio] in this file, so a quiet run would still look loud.
+    let log_path = data_dir_for(&identity).join("logs/launch.log");
+    let _ = fs::remove_file(&log_path);
     let status = run_until(&mut command, Duration::from_secs(60));
-    let log = fs::read_to_string(data_dir_for(&identity).join("logs/launch.log")).unwrap_or_default();
+    let log = fs::read_to_string(&log_path).unwrap_or_default();
     let tail = log.lines().rev().take(40).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n");
     assert!(
         status.success(),
@@ -700,9 +682,22 @@ fn exported_game_loads_a_core_opens_audio_and_sees_a_gamepad() {
         "a core did not load\n{tail}"
     );
     assert!(
-        log.contains("[CoreAudio] Using output sample rate"),
-        "audio did not open\n{tail}"
+        !log.contains("[CoreAudio]"),
+        "a quiet run opened CoreAudio\n{tail}"
     );
+    // A test game that runs as a regular app appears in the Dock, so in a
+    // quiet run we launch it as an accessory app.
+    assert!(
+        log.contains("[RIB] quiet activation accessory"),
+        "a quiet run took a Dock icon\n{tail}"
+    );
+    let written = fs::read_to_string(data_dir_for(&identity).join("retroarch.cfg")).unwrap_or_default();
+    assert_eq!(
+        config_value(&written, "audio_driver"),
+        Some("null"),
+        "a quiet run left a device driver in the config\n{written}"
+    );
+    assert_eq!(config_value(&written, "audio_enable"), Some("false"));
     assert!(
         log.contains("[IOHID] Port "),
         "a gamepad was not seen\n{tail}"

@@ -372,6 +372,18 @@ def case_artwork():
     return expect("artwork", code, output, ("EDITED",))
 
 
+def case_dcmenu():
+    # Draw the menu with the GL2 backend in a core profile. We give Flycast
+    # that context, and with client arrays the menu stays blank in it.
+    path = ROOT / "vendor/retroarch/menu/drivers/rmlui_gl.cpp"
+    raw = replace(path, "   if (core_context)", "   if (false)")
+    try:
+        code, output = run_scope("dcmenu")
+    finally:
+        restore(path, raw)
+    return expect("dcmenu", code, output, ("core context menu draw left the framebuffer clear",))
+
+
 def case_glslcore():
     # Give a 3.2 core context GLSL 130, a version that fails to compile on
     # macOS. The check for a NULL path is the other half of the fix, and this
@@ -451,6 +463,16 @@ def case_size():
         restore(path, raw)
     return expect("size", code, output, ("exceeds",))
 
+def case_fixtures():
+    path = ROOT / "scripts/fetch_test_content.py"
+    raw = replace(path, "skipped: ", "quiet: ")
+    try:
+        code, output = run_scope("fixtures")
+    finally:
+        restore(path, raw)
+    return expect("fixtures", code, output, ("not reported as skipped",))
+
+
 def case_reporoot():
     # Put a compiled-in path back in the crate, so that in the catalog scope we
     # validate the packages of another checkout.
@@ -510,6 +532,57 @@ def case_isolation():
     finally:
         restore(path, raw)
     return expect("isolation", code, output, ("entitlements were dropped",))
+
+def case_quiet():
+    # Without the switch, the guardrail check must fail before we launch
+    # anything, because a launch would open CoreAudio and play sound.
+    path = ROOT / "scripts/menu_shots.py"
+    raw = replace(path, '**{quiet_env(): "1"},\n', "")
+    try:
+        code, output = run_scope("quiet")
+    finally:
+        restore(path, raw)
+    return expect("quiet", code, output, ("without ROMINABOX_QUIET",))
+
+
+def case_quit():
+    # In this scope we run menu_shots.built_player(), or the retroarch copied
+    # from the runtime kit at export, and build no player. So with
+    # NSTerminateNow back in ui_cocoa.m, we would see no failure here.
+    import test_quit
+
+    player = test_quit.launched_player()
+    raw = player.read_bytes()
+    marker = b"AppKit quit handed to orderly shutdown"
+    if marker not in raw:
+        raise SystemExit(f"{player} has no quit fix to revert")
+    unfixed = pre_fix_player(player, marker)
+    if unfixed is None:
+        raise SystemExit(
+            "the scope runs the frozen kit player, and this checkout has no "
+            "earlier retroarch at work/quit-player-pre-fix"
+        )
+    player.write_bytes(unfixed)
+    try:
+        code, output = run_scope("quit")
+    finally:
+        player.write_bytes(raw)
+    return expect("quit", code, output, ("quit aborted in the loaded core",))
+
+
+def pre_fix_player(player: Path, marker: bytes) -> bytes | None:
+    """Return a retroarch that still returns NSTerminateNow, if this checkout has one."""
+    import menu_shots
+    kit = menu_shots.KIT / "bin/retroarch"
+    if kit != player and kit.is_file() and marker not in kit.read_bytes():
+        return kit.read_bytes()
+    saved = ROOT / "work/quit-player-pre-fix"
+    if saved.is_file():
+        data = saved.read_bytes()
+        if marker not in data and len(data) > 1_000_000:
+            return data
+    return None
+
 
 def case_shaderstate():
     # Return the unfiltered row whatever preset is running. In the check we
@@ -586,21 +659,34 @@ CASES = {
     "artwork": case_artwork,
     "padbinds": case_padbinds,
     "glslcore": case_glslcore,
+    "dcmenu": case_dcmenu,
     "menupreview": case_menupreview,
     "shaderpreview": case_shaderpreview,
     "size": case_size,
 
     "reporoot": case_reporoot,
+    "fixtures": case_fixtures,
     "symlinks": case_symlinks,
     "isolation": case_isolation,
     "overlays": case_overlays,
     "shaderstate": case_shaderstate,
     "discs": case_discs,
+    "quit": case_quit,
+    "quiet": case_quiet,
 }
 
 
+def skipped_scopes() -> set[str]:
+    """Return the scopes we run in test.py only when named. Proving one runs it."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("rib_test_runner", ROOT / "scripts/test.py")
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    return {scope.name for scope in runner.SCOPES if scope.skipped}
+
+
 def main() -> int:
-    wanted = sys.argv[1:] or list(CASES)
+    wanted = sys.argv[1:] or [name for name in CASES if name not in skipped_scopes()]
     unknown = [name for name in wanted if name not in CASES]
     if unknown:
         raise SystemExit(f"unknown scope(s): {', '.join(unknown)}")

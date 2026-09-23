@@ -733,18 +733,10 @@ pub fn unpack_selection(mut selection: ShaderSelection, root: &Path) -> ShaderSe
 mod tests {
     use super::*;
 
-    fn staged_menu(name: &str) -> (PathBuf, PathBuf) {
-        let root = std::env::temp_dir().join(format!(
-            "rominabox-{name}-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
+    fn staged_menu(name: &str) -> (PathBuf, rominabox_scratch::Scratch) {
+        let root = rominabox_scratch::Scratch::dir(&format!("rominabox-{name}"));
         let design =
             crate::repo::at("integrations/designs/native");
-        fs::create_dir_all(&root).unwrap();
         fs::copy(design.join("menu.rml"), root.join("menu.rml")).unwrap();
         // As in an export. Options must be here, because the shader screen is
         // an entry inside it, and BACK in an entry returns to the screen that
@@ -777,15 +769,7 @@ mod tests {
 
     #[test]
     fn slang_is_refused_because_those_drivers_stay_off() {
-        let root = std::env::temp_dir().join(format!(
-            "rominabox-slang-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(&root).unwrap();
+        let root = rominabox_scratch::Scratch::dir("rominabox-slang");
         let path = root.join("crt.slangp");
         fs::write(&path, "shaders = 1\n").unwrap();
         let error = resolve(&ShaderSelection {

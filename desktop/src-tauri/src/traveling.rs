@@ -44,19 +44,9 @@ pub fn files_for(dropped: &Path, system: Option<&str>) -> Result<Traveling, Stri
 mod tests {
     use super::*;
     use std::fs;
-    use std::time::{SystemTime, UNIX_EPOCH};
 
-    fn fixture(name: &str) -> PathBuf {
-        let nonce = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let path = std::env::temp_dir().join(format!(
-            "rominabox-traveling-{name}-{}-{nonce}",
-            std::process::id()
-        ));
-        fs::create_dir_all(&path).unwrap();
-        path
+    fn fixture(name: &str) -> rominabox_scratch::Scratch {
+        rominabox_scratch::Scratch::dir(&format!("rominabox-traveling-{name}"))
     }
 
     fn export_copies(entry: &Path, system: &str) -> Vec<String> {

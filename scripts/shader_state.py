@@ -5,17 +5,17 @@ the same preset to RetroArch. If we marked the row from the author's starting
 preset when we bundle the game, ON would stay on that row after a restart
 while a different filter was running.
 
-We export a Game Boy Advance game with two presets, with the author's choice
-on the second. In the first launch we choose the other one. In the second
-launch we open the shader screen, and the row marked ON must be the preset
-running in that launch. We take the picture of the menu from inside the game.
+We export our generated Game Boy Color cartridge with two presets, with the
+author's choice on the second. In the first launch we choose the other one.
+In the second launch we open the shader screen, and the row marked ON must
+be the preset running in that launch. We take the picture of the menu from
+inside the game.
 
     python3 scripts/shader_state.py
 """
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -24,10 +24,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import menu_shots  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-ROM_SOURCE = Path(
-    "/Users/mariowilde/Downloads/roms/Sonic Advance (Europe) (En,Ja,Fr,De,Es).gba"
-)
-ROM = ROOT / "work/shaderstate-rom/Sonic Advance (Europe) (En,Ja,Fr,De,Es).gba"
+# Our own committed cartridge. Any game in which we can open the shader screen will do.
+ROM = ROOT / "scripts/fixtures/test-game.gbc"
 BUILD = ROOT / "work/shaderstate-build"
 SHOTS = ROOT / "work/shaderstate-shots"
 MARK_SOURCE = ROOT / "scripts/native_runtime/test_shader_mark.c"
@@ -37,14 +35,6 @@ MARK_BINARY = ROOT / "work/shaderstate-mark"
 HIGHLIGHT = (255, 241, 61)
 CHOSEN = "scanlines"
 INITIAL = "phosphor"
-
-
-def copy_rom() -> None:
-    if not ROM_SOURCE.is_file():
-        raise SystemExit(f"the test ROM is not at {ROM_SOURCE}")
-    ROM.parent.mkdir(parents=True, exist_ok=True)
-    if not ROM.is_file() or ROM.stat().st_size != ROM_SOURCE.stat().st_size:
-        shutil.copy2(ROM_SOURCE, ROM)
 
 
 def shader_config(app: Path) -> dict[str, str]:
@@ -170,11 +160,12 @@ def unit() -> None:
 
 def main() -> int:
     unit()
-    copy_rom()
+    if not ROM.is_file():
+        raise SystemExit(f"the generated cartridge is not at {ROM}")
     app = menu_shots.build_a_game(
         ROM,
         BUILD,
-        system="gba",
+        system="gbc",
         settings={
             "shaders": {
                 "bundled": ["scanlines", "phosphor"],

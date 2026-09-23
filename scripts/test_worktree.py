@@ -21,6 +21,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import scratch  # noqa: E402
 import worktree  # noqa: E402
 
 FAILURES: list[str] = []
@@ -77,8 +78,8 @@ def two_worktrees_never_share_a_port() -> None:
 
 def the_lock_is_exclusive_and_reentrant_after_release() -> None:
     """Check that of two allocations at the same time, only one proceeds."""
-    with tempfile.TemporaryDirectory() as scratch:
-        path = Path(scratch) / "lock"
+    with scratch.scratch() as made:
+        path = Path(made) / "lock"
         with worktree.Lock(path):
             check(path.exists(), "the lock directory exists while held")
             holder = (path / "pid").read_text().strip()
@@ -90,8 +91,8 @@ def the_lock_is_exclusive_and_reentrant_after_release() -> None:
 
 def a_dead_holders_lock_is_reclaimed() -> None:
     """Check that after a crash, later runs can still take the lock."""
-    with tempfile.TemporaryDirectory() as scratch:
-        path = Path(scratch) / "lock"
+    with scratch.scratch() as made:
+        path = Path(made) / "lock"
         path.mkdir()
         # Start a process, wait for it and use its pid. The process has ended,
         # and so soon after, the number is not yet in use again.
@@ -141,62 +142,60 @@ def adopt_works_from_inside_the_worktree_it_adopts() -> None:
     We run the script in a temporary worktree of this repository and remove
     the worktree afterwards.
     """
-    made = Path(tempfile.mkdtemp(prefix="rominabox-adopt-")) / "checkout"
-    try:
-        subprocess.run(
-            ["git", "worktree", "add", "--detach", str(made), "HEAD"],
-            cwd=worktree.ROOT, capture_output=True, text=True, check=True,
-        )
-        # The checkout is at HEAD, so its copy of the script is the committed
-        # one. Put the working copy there instead, because we test the script
-        # as it is now, not as it was in the last commit.
-        (made / "scripts/worktree.py").write_text(
-            (worktree.ROOT / "scripts/worktree.py").read_text()
-        )
-        done = subprocess.run(
-            # The copy of the script IN THE WORKTREE, which is the one we run in
-            # that checkout. With the canonical copy we would miss the defect,
-            # because ROOT would come from the script's location.
-            [sys.executable, str(made / "scripts/worktree.py"), "adopt"],
-            cwd=made, capture_output=True, text=True,
-        )
-        check(
-            done.returncode == 0,
-            f"adopt succeeds inside a worktree: {done.stdout.strip() or done.stderr.strip()}",
-        )
-        local = made / worktree.LOCAL_CONFIG
-        check(local.is_file(), "it wrote the worktree's own resources")
-        if local.is_file():
-            settings = json.loads(local.read_text())
-            check(
-                settings.get("port") != worktree.BASE_PORT,
-                f"and gave it a port of its own, not {worktree.BASE_PORT}",
+    with scratch.scratch("rominabox-adopt-") as parent:
+        made = Path(parent) / "checkout"
+        try:
+            subprocess.run(
+                ["git", "worktree", "add", "--detach", str(made), "HEAD"],
+                cwd=worktree.ROOT, capture_output=True, text=True, check=True,
             )
-    finally:
-        subprocess.run(
-            ["git", "worktree", "remove", "--force", str(made)],
-            cwd=worktree.ROOT, capture_output=True, text=True,
-        )
-        subprocess.run(["rm", "-rf", str(made.parent)], check=False)
+            # The checkout is at HEAD, so its copy of the script is the committed
+            # one. Put the working copy there instead, because we test the script
+            # as it is now, not as it was in the last commit.
+            (made / "scripts/worktree.py").write_text(
+                (worktree.ROOT / "scripts/worktree.py").read_text()
+            )
+            done = subprocess.run(
+                # The copy of the script IN THE WORKTREE, which is the one we run in
+                # that checkout. With the canonical copy we would miss the defect,
+                # because ROOT would come from the script's location.
+                [sys.executable, str(made / "scripts/worktree.py"), "adopt"],
+                cwd=made, capture_output=True, text=True,
+            )
+            check(
+                done.returncode == 0,
+                f"adopt succeeds inside a worktree: {done.stdout.strip() or done.stderr.strip()}",
+            )
+            local = made / worktree.LOCAL_CONFIG
+            check(local.is_file(), "it wrote the worktree's own resources")
+            if local.is_file():
+                settings = json.loads(local.read_text())
+                check(
+                    settings.get("port") != worktree.BASE_PORT,
+                    f"and gave it a port of its own, not {worktree.BASE_PORT}",
+                )
+        finally:
+            subprocess.run(
+                ["git", "worktree", "remove", "--force", str(made)],
+                cwd=worktree.ROOT, capture_output=True, text=True,
+            )
 
 
-def a_fresh_worktree_has_the_fixtures_its_scopes_need() -> None:
-    """Check that the isolation tests can run in a worktree.
+def the_test_cartridge_is_in_the_repository() -> None:
+    """Check that the test cartridge comes with a clone, not from one machine.
 
-    `work/` is git-ignored, so a fresh checkout has no `work/test-game.gbc`,
-    and the isolation tests stop with "work/test-game.gbc is not in this
-    checkout". That failure looks like a fault in the change under test.
+    We generate it with scripts/make_test_rom.py, so it belongs in the
+    repository. The git-ignored `work/` is absent from a fresh checkout,
+    where the isolation tests would stop with "work/test-game.gbc is not in
+    this checkout".
     """
-    for relative in worktree.UNTRACKED_FIXTURES:
-        here = worktree.ROOT / relative
-        check(
-            here.is_file(),
-            f"{relative} is in the canonical checkout to copy from",
-        )
-        check(
-            relative in worktree.UNTRACKED_FIXTURES,
-            f"{relative} is declared, so creating a worktree carries it",
-        )
+    tracked = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", "scripts/fixtures/test-game.gbc"],
+        cwd=worktree.ROOT,
+        capture_output=True,
+        text=True,
+    )
+    check(tracked.returncode == 0, "scripts/fixtures/test-game.gbc is tracked by git")
 
 
 def the_local_config_is_never_committed() -> None:
@@ -245,7 +244,7 @@ def removing_a_worktree_keeps_the_fork_commits_its_branch_needs() -> None:
             cwd=cwd, capture_output=True, text=True, check=True,
         ).stdout.strip()
 
-    with tempfile.TemporaryDirectory() as temporary:
+    with scratch.scratch() as temporary:
         area = Path(temporary)
         fork = area / "fork"
         fork.mkdir()
@@ -369,7 +368,7 @@ def a_file_compiled_into_the_tool_counts_as_its_source() -> None:
         "one reader of include_str!, used by both scripts",
     )
 
-    with tempfile.TemporaryDirectory() as temporary:
+    with scratch.scratch() as temporary:
         area = Path(temporary)
         (area / "src").mkdir()
         source = area / "src/controls.rs"
@@ -465,7 +464,7 @@ FROM_THE_CANONICAL_CHECKOUT = [
     a_dead_holders_lock_is_reclaimed,
     the_canonical_checkout_is_never_suffixed,
     adopt_works_from_inside_the_worktree_it_adopts,
-    a_fresh_worktree_has_the_fixtures_its_scopes_need,
+    the_test_cartridge_is_in_the_repository,
     the_local_config_is_never_committed,
     removal_never_touches_the_canonical_data,
     removing_a_worktree_keeps_the_fork_commits_its_branch_needs,

@@ -50,6 +50,18 @@ DIGESTS = ROOT / "scripts/fixtures/menu-shot-digests.json"
 TIMEOUT_SECONDS = 120
 
 DATA_DIR = re.compile(r'^data_dir\t(.+)$', re.MULTILINE)
+# The switch is declared in the launcher, and we read its spelling from
+# there instead of keeping a second copy. We use the same variable in Cocoa.
+QUIET_ENV = re.compile(r'#define ROMINABOX_QUIET_ENV "([A-Z0-9_]+)"')
+
+
+def quiet_env() -> str:
+    found = QUIET_ENV.search(
+        (ROOT / "desktop/src-tauri/launcher/main.c").read_text()
+    )
+    if not found:
+        raise SystemExit("launcher does not declare ROMINABOX_QUIET_ENV")
+    return found.group(1)
 
 
 def declared_palettes() -> list[str]:
@@ -245,6 +257,9 @@ def take(app: Path, name: str, script: list[str], output: Path,
             os.environ,
             ROMINABOX_MENU_SCRIPT=",".join(script),
             ROMINABOX_MENU_SHOT=str(inside),
+            # No sound and no visible window. Without this, we would open
+            # CoreAudio during a shot and leave a window on the display.
+            **{quiet_env(): "1"},
         ),
     )
     if inside != target and inside.exists():

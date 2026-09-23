@@ -650,8 +650,7 @@ mod tests {
     /// filename.
     #[test]
     fn a_gd_rom_layout_points_at_a_quoted_data_track() {
-        let root = std::env::temp_dir().join(format!("rominabox-gdi-{}", std::process::id()));
-        std::fs::create_dir_all(&root).unwrap();
+        let root = rominabox_scratch::Scratch::dir("rominabox-gdi");
         let mut image = vec![0; 0x50];
         image[..15].copy_from_slice(b"SEGA SEGAKATANA");
         image[0x40..0x48].copy_from_slice(b"T-9708N ");
@@ -679,8 +678,7 @@ mod tests {
 
     #[test]
     fn a_cue_sheet_points_at_its_data_track() {
-        let root = std::env::temp_dir().join(format!("rominabox-cue-{}", std::process::id()));
-        std::fs::create_dir_all(&root).unwrap();
+        let root = rominabox_scratch::Scratch::dir("rominabox-cue");
         let bin = root.join("track.bin");
         let mut image = vec![0; 64];
         image[..11].copy_from_slice(b"SLUS_012.34");

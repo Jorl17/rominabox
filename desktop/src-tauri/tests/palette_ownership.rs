@@ -10,30 +10,18 @@
 //! We check the file that we write in an export: it changes no style, and it
 //! contains no colour from a palette other than the chosen one.
 
-use std::{
-    collections::BTreeSet,
-    fs,
-    path::PathBuf,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::{collections::BTreeSet, fs, path::PathBuf};
 
 // We run the tests in parallel, and two of them export the same palette. With
 // a directory named only after the palette, each test would read what the
 // other had half written.
-static NEXT: AtomicU64 = AtomicU64::new(0);
 
 fn repo() -> PathBuf {
     rominabox_desktop::repo::root()
 }
 
-fn scratch(name: &str) -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "rominabox-palette-{name}-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    fs::create_dir_all(&path).unwrap();
-    path
+fn scratch(name: &str) -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir(&format!("rominabox-palette-{name}"))
 }
 
 fn exported_stylesheet(palette: &str) -> String {

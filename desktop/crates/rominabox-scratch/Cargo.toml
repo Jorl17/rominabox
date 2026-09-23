@@ -1,0 +1,9 @@
+[package]
+name = "rominabox-scratch"
+version = "0.1.0"
+edition = "2021"
+description = "Temporary directories a test removes when it finishes"
+publish = false
+
+# Standalone, like rominabox-catalog, so it is not part of a parent workspace.
+[workspace]

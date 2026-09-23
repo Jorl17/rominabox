@@ -6,7 +6,7 @@
     "exporter": 1.7,
     "picture": 0.2,
     "frontend": 4.8,
-    "builder": 30.0,
+    "builder": 32.0,
     "menu": 0.1,
     "heldkey": 0.1,
     "staging": 0.1,
@@ -20,7 +20,9 @@
     "automation": 0.1,
     "artwork": 2.4,
     "size": 5.2,
-    "isolation": 23.6,    "overlays": 0.9,
-    "shaderstate": 6.0
+    "isolation": 23.6,
+    "overlays": 0.9,
+    "shaderstate": 6.0,
+    "quit": 108.0
   }
 }
