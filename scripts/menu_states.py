@@ -121,17 +121,11 @@ def stage(system: str, workspace: Path, variant: str | None = None,
     package = design_dir(design)
     if not package.is_dir():
         raise SystemExit(f"design '{design}' is declared but {package} is not a directory")
-    source = workspace / "source"
     staged = workspace / "staged"
-    for directory in (source, staged):
-        directory.mkdir(parents=True, exist_ok=True)
-    # The whole design package, because that is what a design is. With a
-    # separate list of its documents here, we could stage something else than
-    # the kit and render the tests in a different frame from the one in the kit.
-    for document in package.iterdir():
-        if document.is_file():
-            shutil.copyfile(document, source / document.name)
-            shutil.copyfile(document, staged / document.name)
+    staged.mkdir(parents=True, exist_ok=True)
+    # Resolve from the package tree, where Native and the selected design are
+    # siblings. We compose them in the shared engine, and in this harness we
+    # must not make a detached package or copy a second version of the resolver.
 
     # We take the stylesheet from the exporter, not from the file of the design.
     # In a design we write design(surface) where a colour goes and fill it in
@@ -140,7 +134,7 @@ def stage(system: str, workspace: Path, variant: str | None = None,
     themed = subprocess.run(
         [str(CLI), "stage-theme"],
         input=json.dumps(
-            {"source": str(source), "destination": str(staged), "palette": palette}
+            {"source": str(package), "destination": str(staged), "palette": palette}
         ),
         capture_output=True,
         text=True,
@@ -148,10 +142,6 @@ def stage(system: str, workspace: Path, variant: str | None = None,
     if themed.returncode != 0:
         detail = themed.stderr.strip() or themed.stdout.strip()
         raise SystemExit(f"could not stage the {palette} palette: {detail}")
-    for art in ARTWORK.glob("controller-*.png"):
-        shutil.copyfile(art, source / art.name)
-    shutil.copyfile(ARTWORK / "CONTROLLERS.txt", source / "CONTROLLERS.txt")
-
     # We generate it with the exporter, through its CLI, so that these pictures
     # show the markup we ship in an exported game and not an imitation of it.
     generated = subprocess.run(
@@ -159,8 +149,8 @@ def stage(system: str, workspace: Path, variant: str | None = None,
         input=json.dumps(
             {
                 "system": system,
-                "source": str(source),
-                "design": str(source),
+                "source": str(ARTWORK),
+                "design": str(package),
                 "destination": str(staged),
                 # The pad an author or a player picked, staged as in the
                 # exporter and not by editing its markup.
