@@ -1010,6 +1010,53 @@ mod tests {
         );
     }
 
+    /// When someone drops the folder or one track of a GD-ROM, we use the
+    /// layout, whose name does not contain `(Track 3)`. We collect the audio
+    /// track (type 0) too. Without every track, the game does not start.
+    #[test]
+    fn a_gd_rom_folder_track_and_layout_are_one_disc() {
+        let root = fixture("gd-rom-folder");
+        let tracks = [
+            "Tiny Disc (Track 1).bin",
+            "Tiny Disc (Track 2).bin",
+            "Tiny Disc (Track 3).bin",
+        ];
+        for name in tracks {
+            fs::write(root.join(name), b"track").unwrap();
+        }
+        let layout = root.join("Tiny Disc.gdi");
+        fs::write(
+            &layout,
+            "3\n\
+             1 0 4 2352 \"Tiny Disc (Track 1).bin\" 0\n\
+             2 450 0 2352 \"Tiny Disc (Track 2).bin\" 0\n\
+             3 2250 4 2352 \"Tiny Disc (Track 3).bin\" 0\n",
+        )
+        .unwrap();
+
+        let from_folder = resolve_dropped(&root).unwrap();
+        let from_layout = resolve_dropped(&layout).unwrap();
+        let from_track = resolve_dropped(&root.join(tracks[2])).unwrap();
+        assert_eq!(from_folder, layout, "dropping the folder must select the layout");
+        assert_eq!(from_track, from_layout, "dropping the track is not dropping the layout");
+
+        let names = relative_names(&collect(&from_layout).unwrap());
+        assert!(names.iter().any(|name| name.ends_with(".gdi")), "{names:?}");
+        for track in tracks {
+            assert!(
+                names.iter().any(|name| name == track),
+                "{track} was not collected: {names:?}"
+            );
+        }
+        assert_eq!(relative_names(&collect(&from_track).unwrap()), names);
+
+        let from_track = crate::traveling::files_for(&root.join(tracks[2]), Some("dreamcast"))
+            .unwrap();
+        let from_layout = crate::traveling::files_for(&layout, Some("dreamcast")).unwrap();
+        assert_eq!(from_track.entry, from_layout.entry);
+        assert_eq!(from_track.files, from_layout.files);
+    }
+
     /// When someone drops a folder, we use its layout. A multi-disc folder
     /// also contains the discs the playlist lists, and we use the playlist.
     #[test]
