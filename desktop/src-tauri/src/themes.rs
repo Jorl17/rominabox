@@ -765,21 +765,30 @@ fn apply_options(
             entries.push_str(&entry_button(design, entry, index)?);
         }
 
-        if document.contains("<!--OPTIONS-->") {
-            document = document.replace("<!--OPTIONS-->", &entries);
-        } else if document.contains("id=\"options-panel\"") {
-            document = document.replacen(
-                "id=\"options-entries\">",
-                &format!("id=\"options-entries\">{entries}"),
-                1,
-            );
-        } else {
-            let back = options.back_label.clone().unwrap_or_else(|| "BACK".into());
-            let shell = format!(
-                "<div id=\"options-panel\" class=\"screen-panel\" style=\"display:none;\"><div id=\"options-entries\">{entries}</div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
-                entries = entries,
-                back = rml_text(&back),
-            );
+        let panel_id = format!("id=\"{}\"", options.panel);
+        if !document.contains(&panel_id) {
+            if options.id.is_empty()
+                || !options.id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+            {
+                return Err(format!("Invalid Options screen id '{}'", options.id));
+            }
+            let name = format!("screen-{}.rml", options.id);
+            let base = base_design(design)?;
+            let shell = if design.join(&name).is_file() || base.join(&name).is_file() {
+                design_fragment(design, &base, &name)?
+            } else {
+                let back = options.back_label.clone().unwrap_or_else(|| "BACK".into());
+                format!(
+                    "<div {panel_id} class=\"screen-panel\" style=\"display:none;\"><div id=\"options-entries\"><!--OPTIONS--></div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
+                    back = rml_text(&back),
+                )
+            };
+            if !shell.contains(&panel_id) {
+                return Err(format!("{name} must contain {panel_id}"));
+            }
+            if !shell.contains("<!--OPTIONS-->") && !shell.contains("id=\"options-entries\">") {
+                return Err(format!("{name} must contain <!--OPTIONS--> or #options-entries"));
+            }
             let footer = "<div id=\"footer\">";
             if let Some(at) = document.find(footer) {
                 document.insert_str(at, &shell);
@@ -788,6 +797,15 @@ fn apply_options(
                     "menu.rml has no footer, so the options screen has nowhere to go".into(),
                 );
             }
+        }
+        if document.contains("<!--OPTIONS-->") {
+            document = document.replace("<!--OPTIONS-->", &entries);
+        } else if document.contains(&panel_id) {
+            document = document.replacen(
+                "id=\"options-entries\">",
+                &format!("id=\"options-entries\">{entries}"),
+                1,
+            );
         }
     } else {
         for entry in &declared_entries {

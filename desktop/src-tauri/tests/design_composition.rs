@@ -273,6 +273,33 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
 }
 
 #[test]
+fn an_options_screen_override_needs_no_separate_order_file() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-options-screen-override");
+    let design = root.join("style-only");
+    let staged = root.join("staged");
+    style_only_design(&design);
+    fs::write(
+        design.join("screen-options.rml"),
+        "<div id=\"options-panel\" style=\"display:none;\"><div id=\"custom-options-chrome\">INDEX</div><div id=\"options-entries\"><!--OPTIONS--></div><button class=\"menu-action options-back\" id=\"options-back\">BACK</button></div>",
+    )
+    .unwrap();
+    themes::prepare_theme_assets(&design, &staged, "blue", None).unwrap();
+    themes::prepare_controls_assets(
+        &repo::at("desktop/assets/controllers"),
+        &design,
+        &staged,
+        "megadrive",
+        &Controls::default(),
+        None,
+    )
+    .unwrap();
+    let menu = fs::read_to_string(staged.join("menu.rml")).unwrap();
+    assert_eq!(menu.matches("id=\"custom-options-chrome\"").count(), 1);
+    assert_eq!(menu.matches("id=\"options-panel\"").count(), 1);
+    assert!(menu.contains("id=\"controls\""));
+}
+
+#[test]
 fn a_missing_adjacent_native_package_is_not_read_from_the_repository() {
     let root = rominabox_scratch::Scratch::dir("rominabox-no-global-design-fallback");
     let design = root.join("style-only");
