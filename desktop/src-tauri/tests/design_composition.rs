@@ -208,6 +208,71 @@ fn explicit_screen_order_rejects_missing_and_repeated_ids() {
 }
 
 #[test]
+fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-list-screen-override");
+    let design = root.join("style-only");
+    let staged = root.join("staged");
+    style_only_design(&design);
+    fs::write(
+        design.join("screen-achievements.rml"),
+        "<div id=\"PANEL-ID\" class=\"screen-panel\" style=\"display:none;\"><div id=\"custom-achievements-chrome\">TROPHIES</div><!--ROWS--><!--ACTIONS--><!--STATUS--></div>",
+    )
+    .unwrap();
+    themes::prepare_theme_assets(&design, &staged, "blue", None).unwrap();
+    let screens = themes::prepare_controls_assets(
+        &repo::at("desktop/assets/controllers"),
+        &design,
+        &staged,
+        "megadrive",
+        &Controls::default(),
+        Some(&["achievements".into()]),
+    )
+    .unwrap();
+    let achievement = screens
+        .iter()
+        .find(|screen| screen.id == "achievements")
+        .unwrap();
+    lists::install(
+        &design,
+        &staged,
+        &screens,
+        &[lists::List {
+            screen: achievement.clone(),
+            items: vec![lists::ListItem {
+                id: "earned-first".into(),
+                icon: "".into(),
+                title: "FIRST".into(),
+                detail: "".into(),
+                state: "LOCKED".into(),
+                selected: false,
+                accent: false,
+                line: false,
+            }],
+        }],
+    )
+    .unwrap();
+    let menu = fs::read_to_string(staged.join("menu.rml")).unwrap();
+    assert_eq!(menu.matches("id=\"achievements-panel\"").count(), 1);
+    for id in [
+        "custom-achievements-chrome",
+        "earned-first",
+        "achievement-mode",
+        "achievements-back",
+        "achievements-status",
+    ] {
+        assert_eq!(
+            menu.matches(&format!("id=\"{id}\"")).count(),
+            1,
+            "missing or duplicate {id}"
+        );
+    }
+    assert!(
+        menu.find("id=\"controls-panel\"").unwrap()
+            < menu.find("id=\"achievements-panel\"").unwrap()
+    );
+}
+
+#[test]
 fn a_missing_adjacent_native_package_is_not_read_from_the_repository() {
     let root = rominabox_scratch::Scratch::dir("rominabox-no-global-design-fallback");
     let design = root.join("style-only");

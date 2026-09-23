@@ -76,6 +76,40 @@ pub fn row_template(design: &Path) -> Result<String, String> {
     Ok(text)
 }
 
+/// A selected screen may frame the shared list parts without replacing their
+/// rows, toggle, Back action, or status. The optional base wrapper is in
+/// Native, beside the selected package. Without it we use the built-in one.
+fn screen_template(design: &Path, id: &str) -> Result<Option<String>, String> {
+    if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        return Err(format!("Invalid list screen id '{id}'"));
+    }
+    let name = format!("screen-{id}.rml");
+    let selected = design.join(&name);
+    let base = crate::themes::base_design(design)?.join(&name);
+    let source = if selected.is_file() {
+        selected
+    } else if base.is_file() {
+        base
+    } else {
+        return Ok(None);
+    };
+    let template = fs::read_to_string(&source)
+        .map_err(|error| format!("Could not read {}: {error}", source.display()))?;
+    for required in [
+        "id=\"PANEL-ID\"",
+        "class=\"screen-panel",
+        "display:none",
+        "<!--ROWS-->",
+        "<!--ACTIONS-->",
+        "<!--STATUS-->",
+    ] {
+        if template.matches(required).count() != 1 {
+            return Err(format!("{} must contain one {required}", source.display()));
+        }
+    }
+    Ok(Some(template))
+}
+
 /// How many rows fit on one page, as declared in the design. When it is absent,
 /// we use four, which fit under the Native heading and above its back button.
 pub fn page_size(design: &Path) -> Result<usize, String> {
@@ -412,13 +446,37 @@ pub fn install(
         } else {
             String::new()
         };
-        screens.push_str(&format!(
-            "<div id=\"{panel}\" class=\"screen-panel\" style=\"display:none;\">{rows}<div class=\"list-actions\"{up}>{toggle}<button class=\"menu-action list-back\" id=\"{id}-back\">{back}</button></div><div id=\"{id}-status\" class=\"list-status\"{up}></div></div>",
-            panel = list.screen.panel,
+        if document.contains(&format!("id=\"{}\"", list.screen.panel))
+            || screens.contains(&format!("id=\"{}\"", list.screen.panel))
+        {
+            return Err(format!(
+                "List screen '{}' is already in menu.rml; its wrapper belongs at <!--SCREENS-->",
+                list.screen.id
+            ));
+        }
+        let toggle = toggle_markup(&list.screen);
+        let actions = format!(
+            "<div class=\"list-actions\"{up}>{toggle}<button class=\"menu-action list-back\" id=\"{id}-back\">{back}</button></div>",
             id = list.screen.id,
-            toggle = toggle_markup(&list.screen),
             back = rml_text(&back),
-        ));
+        );
+        let status = format!(
+            "<div id=\"{}-status\" class=\"list-status\"{up}></div>",
+            list.screen.id
+        );
+        let panel = if let Some(template) = screen_template(design, &list.screen.id)? {
+            template
+                .replace("PANEL-ID", &list.screen.panel)
+                .replace("<!--ROWS-->", &rows)
+                .replace("<!--ACTIONS-->", &actions)
+                .replace("<!--STATUS-->", &status)
+        } else {
+            format!(
+                "<div id=\"{panel}\" class=\"screen-panel\" style=\"display:none;\">{rows}{actions}{status}</div>",
+                panel = list.screen.panel,
+            )
+        };
+        screens.push_str(&panel);
         // The player opens an entry inside Options from there, so it has no
         // button on the pause row. We generate the Options entries separately.
         // The player opens an entry inside Options from there. A list whose

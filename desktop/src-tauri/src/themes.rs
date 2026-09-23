@@ -217,7 +217,7 @@ pub enum ScreenPlace {
 /// The base must come from the same source tree or frozen kit as the design.
 /// With a fallback to a path in the repository, an export could mix
 /// different versions of the menu without anyone noticing.
-fn base_design(design: &Path) -> Result<PathBuf, String> {
+pub(crate) fn base_design(design: &Path) -> Result<PathBuf, String> {
     let base = if design.file_name().is_some_and(|name| name == "native") {
         design.to_path_buf()
     } else {
