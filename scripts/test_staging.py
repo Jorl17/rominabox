@@ -31,12 +31,30 @@ ASSIGNMENT = re.compile(r'^\s*(\w+)="\$(\w+)/([^"$]+)"\s*$', re.MULTILINE)
 DESTINATIONS = {"shared_assets", "sound_staging", "app"}
 
 
+def builder_uses_cargo_target(text: str) -> bool:
+    return "from built import target_dir" in text and all(
+        path in text
+        for path in (
+            'staging="$cargo_target_dir/$profile"',
+            'cp "$cargo_target_dir/release/rominabox-cli" resources/bin/rominabox-cli',
+            'app="$cargo_target_dir/release/bundle/macos/ROM-in-a-Box.app"',
+        )
+    )
+
+
 def main() -> int:
     if not SCRIPT.exists():
         raise SystemExit(f"no staging script at {SCRIPT}")
     text = SCRIPT.read_text()
     failures: list[str] = []
     checked = 0
+
+    # Cargo may write into the shared target outside this checkout. For the
+    # builder we must use the same target directory as in the other build
+    # scripts, for the permission pass, the CLI copy and the final app bundle.
+    if not builder_uses_cargo_target(text):
+        failures.append("cargo_target_dir")
+        print("  FAIL builder does not use built.target_dir for every Cargo output")
 
     # Resolve one level of indirection: a name defined earlier can be the base
     # of a later path.
