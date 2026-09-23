@@ -515,13 +515,15 @@ fn disc_guard_message_wraps_within_its_slot() {
     let original = render("original", &base);
     let guard = render("guard", &guarded);
 
-    // The gap between slot 2 and the action column must not receive letters.
+    // Keep the last glyph out of the 12dp inner inset of the slot and out of
+    // the gap before the action column. A word inside the border still looks
+    // crowded when it reaches into this inset.
     for y in 120..170 {
-        for x in 749..766 {
+        for x in 737..766 {
             assert_eq!(
                 guard.get_pixel(x, y),
                 original.get_pixel(x, y),
-                "guard text escaped slot 2 at ({x}, {y})"
+                "guard text crowded the inner edge of slot 2 at ({x}, {y})"
             );
         }
     }
