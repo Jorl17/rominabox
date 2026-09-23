@@ -870,8 +870,12 @@ static int check_placement(const char *assets, const char *scenes,
    return 0;
 }
 
+int test_menu_declarations();
+
 int main(int argc, char **argv)
 {
+   if (argc == 2 && std::strcmp(argv[1], "declarations") == 0)
+      return test_menu_declarations();
    const char *assets = argc > 1 ? argv[1] : nullptr;
    if (!assets || !*assets)
    {

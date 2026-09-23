@@ -35,12 +35,16 @@ freetype_cflags=$(pkg-config --cflags freetype2)
 freetype_libs=$(pkg-config --libs freetype2)
 
 c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
-  $rmlui_includes -I "$bridge_dir" $freetype_cflags \
+  $rmlui_includes -I "$bridge_dir" -I "$repo_root/vendor/retroarch/libretro-common/include" $freetype_cflags \
   -o "$out" \
   "$script_dir/test_rmlui_interaction.cpp" \
   "$bridge_dir/rmlui_bridge.cpp" \
+  "$bridge_dir/rmlui/declarations.cpp" \
+  "$script_dir/test_menu_declarations.cpp" \
   "$rmlui_lib" \
   $freetype_libs
+
+"$out" declarations
 
 mkdir -p "$assets"
 for document in "$design"/*; do
