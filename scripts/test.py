@@ -264,7 +264,7 @@ SCOPES = [
     ),
     Scope(
         "isolation",
-        "that a signed export keeps the sandbox entitlement, cannot read or write the player's RetroArch profile or another game's container, and still loads a core with audio and a gamepad",
+        "that a signed export keeps the sandbox entitlement, cannot read or write the player's RetroArch profile or another game's container, and still loads a core, stays quiet, and sees a gamepad",
         "window placement, focus, fullscreen, or that Gatekeeper accepts an ad-hoc signature",
         [
             "cargo",
@@ -301,7 +301,14 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/test_quit.py")],
         slow=True,
         prepare=[["python3", str(ROOT / "scripts/fetch_test_content.py"), "--scope", "quit"]],
-        skipped="it launches an exported game; name it once the player stays silent",
+        skipped="its Dreamcast half needs a bootable Dreamcast image the repository does not have yet; name it to run the rest",
+    ),
+    Scope(
+        "quiet",
+        "that a harness launch is quiet unless it asks for sound, and that every player launch still sets the switch",
+        "that a person launching the game is silent; they never set the switch. The off-screen window is a separate change",
+        ["python3", str(ROOT / "scripts/test_quiet.py")],
+        slow=True,
     ),
 ]
 

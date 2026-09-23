@@ -12,6 +12,7 @@ regression shows up as the abort and not as a changed string.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -23,6 +24,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import menu_shots  # noqa: E402
 
 EXPORT_DIR = ROOT / "work/quit-export"
+# Every directory that we write in an export of the quit tests, declared once.
+OWN_WORKSPACES = (ROOT / "work/quit-gbc", EXPORT_DIR, ROOT / "work/quit-ps1")
 PREFIX = "app.rominabox.game.wt-quit"
 
 
@@ -155,6 +158,7 @@ def apple_event_quit(app: Path) -> tuple[str, str]:
             "ROMINABOX_VERBOSE": "1",
             "ROMINABOX_MENU_SHOT": str(EXPORT_DIR / "unused-shot.png"),
             "ROMINABOX_GAME_BUNDLE_PREFIX": PREFIX,
+            menu_shots.quiet_env(): "1",
         },
     )
     reader = threading.Thread(target=collect, args=(process.stdout,), daemon=True)
@@ -231,11 +235,15 @@ def judge(name: str, debugger: str, log: str, apple_event: bool) -> str | None:
 def export_rom(rom: Path, title: str, system: str, workspace: Path) -> Path:
     """Export a single-file game and return the app to launch."""
     require_disk(20.3)
-    app = workspace / f"{title}.app"
-    if app.is_dir():
-        return app
+    # For a named run we export again, so that the app has the current launcher.
+    # We only ever remove the directories of these tests.
+    if workspace.resolve() not in {path.resolve() for path in OWN_WORKSPACES}:
+        raise SystemExit(f"{workspace} is not a directory this scope exports")
+    if workspace.is_symlink() or (workspace.exists() and not workspace.is_dir()):
+        raise SystemExit(f"{workspace} is not this scope's directory")
     if workspace.exists():
-        raise SystemExit(f"refusing to reuse a partial export at {workspace}")
+        shutil.rmtree(workspace)
+    app = workspace / f"{title}.app"
     workspace.mkdir(parents=True)
     import json
     from built import cli  # noqa: E402
@@ -302,6 +310,7 @@ def scripted_quit(app: Path, script: str) -> tuple[str, str]:
             "ROMINABOX_MENU_SCRIPT": script,
             "ROMINABOX_MENU_SHOT": str(EXPORT_DIR / "unused-shot.png"),
             "ROMINABOX_GAME_BUNDLE_PREFIX": PREFIX,
+            menu_shots.quiet_env(): "1",
         },
     )
     reader = threading.Thread(target=collect, args=(process.stdout,), daemon=True)

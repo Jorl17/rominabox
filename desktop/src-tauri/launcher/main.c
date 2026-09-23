@@ -16,6 +16,13 @@
 #define LINE_CAP 8192
 #define MANAGED_CAP 64
 
+/* One switch for an automated run, and a person who opens the game does not
+ * set it. Without it, a screenshot run would open an output device and leave a
+ * zero-alpha window on a display, which is still visible in the dark. We read
+ * the same variable in the Cocoa code. */
+#define ROMINABOX_QUIET_ENV "ROMINABOX_QUIET"
+#define ROMINABOX_SOUND_ENV "ROMINABOX_SOUND"
+
 static void die(const char *message) {
     fprintf(stderr, "ROM-in-a-Box: %s\n", message);
     exit(1);
@@ -514,6 +521,19 @@ static void publish_arguments(void) {
     }
 }
 
+/* Quiet unless a person opened the game through Launch Services, or sound is
+ * turned on in the environment. Quiet is opt-out, and the parent of a harness
+ * is not launchd, so a run from a harness is quiet even when nothing is set.
+ * ROMINABOX_QUIET makes even a Dock launch quiet. In the fork's accessory
+ * check we read the variable set here instead of repeating the test. */
+static int rominabox_launch_is_quiet(pid_t parent, const char *quiet, const char *sound) {
+    if (quiet && quiet[0])
+        return 1;
+    if (sound && sound[0])
+        return 0;
+    return parent != 1;
+}
+
 static void prepare(void) {
     char executable[PATH_CAP];
     char bundle[PATH_CAP];
@@ -657,6 +677,36 @@ static void prepare(void) {
                 "pause_nonactive = \"false\""
             );
     }
+    /* After the player files, so a controls.cfg cannot turn CoreAudio back
+     * on for this launch. With audio_enable false, no audio driver is ever
+     * opened. We replace the frozen coreaudio line with null so the written
+     * config contains no device, and do not write this into the player's file.
+     * Quiet is opt-out, and we publish ROMINABOX_QUIET so that we apply the
+     * same choice in the fork. */
+    if (rominabox_launch_is_quiet(
+            getppid(), getenv(ROMINABOX_QUIET_ENV), getenv(ROMINABOX_SOUND_ENV)))
+        setenv(ROMINABOX_QUIET_ENV, "1", 1);
+    {
+        const char *quiet = getenv(ROMINABOX_QUIET_ENV);
+        if (quiet && quiet[0]) {
+            force_line(&lines, &line_count, &line_capacity,
+                "audio_driver", "audio_driver = \"null\"");
+            force_line(&lines, &line_count, &line_capacity,
+                "audio_enable", "audio_enable = \"false\"");
+            force_line(&lines, &line_count, &line_capacity,
+                "audio_enable_menu", "audio_enable_menu = \"false\"");
+            force_line(&lines, &line_count, &line_capacity,
+                "audio_enable_menu_ok", "audio_enable_menu_ok = \"false\"");
+            force_line(&lines, &line_count, &line_capacity,
+                "audio_enable_menu_cancel", "audio_enable_menu_cancel = \"false\"");
+            force_line(&lines, &line_count, &line_capacity,
+                "audio_enable_menu_scroll", "audio_enable_menu_scroll = \"false\"");
+            force_line(&lines, &line_count, &line_capacity,
+                "audio_enable_menu_bgm", "audio_enable_menu_bgm = \"false\"");
+            force_line(&lines, &line_count, &line_capacity,
+                "audio_enable_menu_notice", "audio_enable_menu_notice = \"false\"");
+        }
+    }
 
     shader_preset[0] = '\0';
     join_path(shader_choice, sizeof shader_choice, data_dir, "shader-choice");
@@ -671,6 +721,11 @@ static void prepare(void) {
 
     join_path(config_path, sizeof config_path, data_dir, "retroarch.cfg");
     write_config(config_path, lines, line_count);
+    /* In the quiet check we run this binary to read the config from this run.
+     * Going on would start the game, and without the switch the check would
+     * open CoreAudio. Stop once the file is on disk. */
+    if (getenv("ROMINABOX_PLAN_ONLY"))
+        _exit(0);
 
     setenv("ROMINABOX_DATA_DIR", data_dir, 1);
     setenv("ROMINABOX_TITLE", title, 1);
@@ -697,6 +752,13 @@ static void prepare(void) {
         dup2(log_fd, STDERR_FILENO);
         if (log_fd > STDERR_FILENO)
             close(log_fd);
+    }
+    {
+        const char *quiet = getenv(ROMINABOX_QUIET_ENV);
+        if (quiet && quiet[0]) {
+            fprintf(stdout, "[RIB] quiet: audio driver null, output disabled\n");
+            fflush(stdout);
+        }
     }
     if (chdir(data_dir) != 0)
         die_errno(data_dir);
@@ -741,6 +803,21 @@ static void prepare(void) {
     }
 }
 
+#ifdef ROMINABOX_DECISION_MAIN
+int main(int argc, char **argv) {
+    pid_t parent = argc > 1 ? (pid_t)atoi(argv[1]) : 0;
+    const char *quiet = argc > 2 && argv[2][0] ? argv[2] : NULL;
+    const char *sound = argc > 3 && argv[3][0] ? argv[3] : NULL;
+    printf("%s\n", rominabox_launch_is_quiet(parent, quiet, sound) ? "quiet" : "sound");
+    return 0;
+}
+#elif defined ROMINABOX_PLAN_MAIN
+int main(void) {
+    prepare();
+    return 0;
+}
+#else
 __attribute__((constructor)) static void start_launch(void) {
     prepare();
 }
+#endif

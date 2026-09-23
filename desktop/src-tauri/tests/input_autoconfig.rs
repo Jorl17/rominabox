@@ -838,6 +838,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         .join(&bundle_id);
     let _container = ContainerGuard(container.clone());
     let launched = Command::new(&launcher)
+        .env("ROMINABOX_QUIET", "1")
         .output()
         .expect("the launcher can be executed");
     assert!(

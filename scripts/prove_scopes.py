@@ -521,6 +521,18 @@ def case_isolation():
         restore(path, raw)
     return expect("isolation", code, output, ("entitlements were dropped",))
 
+def case_quiet():
+    # Without the switch, the guardrail check must fail before we launch
+    # anything, because a launch would open CoreAudio and play sound.
+    path = ROOT / "scripts/menu_shots.py"
+    raw = replace(path, '**{quiet_env(): "1"},\n', "")
+    try:
+        code, output = run_scope("quiet")
+    finally:
+        restore(path, raw)
+    return expect("quiet", code, output, ("without ROMINABOX_QUIET",))
+
+
 def case_quit():
     # In this scope we run menu_shots.built_player(), or the retroarch copied
     # from the runtime kit at export, and build no player. So with
@@ -624,6 +636,7 @@ CASES = {
     "overlays": case_overlays,
     "shaderstate": case_shaderstate,
     "quit": case_quit,
+    "quiet": case_quiet,
 }
 
 
