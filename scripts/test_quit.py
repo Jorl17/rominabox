@@ -23,15 +23,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import menu_shots  # noqa: E402
 
 EXPORT_DIR = ROOT / "work/quit-export"
-APP = EXPORT_DIR / "Quit Subject.app"
-STUB_DIR = ROOT / "work/quit-stub"
-DISC = Path("/Users/mariowilde/Downloads/roms/Sonic Adventure 2 (Europe)")
-GDI = "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es).gdi"
-TRACKS = (
-    "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es) (Track 1).bin",
-    "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es) (Track 2).bin",
-    "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es) (Track 3).bin",
-)
 PREFIX = "app.rominabox.game.wt-quit"
 
 
@@ -74,80 +65,6 @@ def use_checkout_player(app: Path, workspace: Path) -> None:
     install_player(app, binary, workspace)
 
 
-def export_stub() -> None:
-    """Export a tiny sheet, and clone the disc into the app afterwards.
-
-    A copy in Rust is a clone on APFS, so the disc does not have to be in the
-    export that we build first.
-    """
-    require_disk(20.3)
-    STUB_DIR.mkdir(parents=True, exist_ok=True)
-    stub_bin = STUB_DIR / "stub.bin"
-    stub_gdi = STUB_DIR / "stub.gdi"
-    stub_bin.write_bytes(b"\0" * 2048)
-    stub_gdi.write_text("1\n1 0 4 2352 stub.bin 0\n")
-    if EXPORT_DIR.exists():
-        raise SystemExit(f"refusing to reuse {EXPORT_DIR}; remove it by hand first")
-    EXPORT_DIR.mkdir(parents=True)
-    from built import cli  # noqa: E402
-
-    request = {
-        "rom": str(stub_gdi),
-        "title": "Quit Subject",
-        "system": "dreamcast",
-        "showMenu": True,
-        "startAtMenu": False,
-        "theme": "native",
-        "palette": "blue",
-        "menuSounds": "off",
-        "splash": False,
-        "advancedEmulatorAccess": False,
-        "autosaveOnQuit": True,
-        "outputDir": str(EXPORT_DIR),
-        "target": "macos",
-        "runtimeKit": str(menu_shots.KIT),
-        "coreCache": str(ROOT / "work/core-cache/macos-arm64"),
-    }
-    import json
-
-    result = subprocess.run(
-        [str(cli()), "export"],
-        input=json.dumps(request),
-        capture_output=True,
-        text=True,
-        timeout=180,
-        env={**os.environ, "ROMINABOX_GAME_BUNDLE_PREFIX": PREFIX},
-    )
-    if result.returncode != 0:
-        raise SystemExit(f"export failed:\n{result.stdout[-900:]}\n{result.stderr[-400:]}")
-    if not APP.is_dir():
-        raise SystemExit(f"export wrote no app at {APP}")
-
-
-def install_disc(app: Path) -> None:
-    content = app / "Contents/Resources/content"
-    content.mkdir(parents=True, exist_ok=True)
-    names = (GDI, *TRACKS)
-    for name in names:
-        source = DISC / name
-        if not source.is_file():
-            raise SystemExit(f"disc file missing: {source}")
-        destination = content / name
-        if destination.exists():
-            destination.unlink()
-        subprocess.run(["cp", "-c", str(source), str(destination)], check=True, timeout=60)
-    for stale in (content / "stub.gdi", content / "stub.bin"):
-        if stale.is_file():
-            stale.unlink()
-    plan_path = app / "Contents/Resources/launch.plan"
-    plan = plan_path.read_text()
-    old = "content\tcontent/stub.gdi\n"
-    new = f"content\tcontent/{GDI}\n"
-    if old not in plan:
-        raise SystemExit("launch plan does not name the stub sheet this export staged")
-    plan_path.write_text(plan.replace(old, new, 1))
-
-
 def install_player(app: Path, binary: Path, workspace: Path = EXPORT_DIR) -> None:
     entitlements = workspace / "entitlements.plist"
     menu_shots.capture_export_entitlements(app, entitlements)
@@ -166,17 +83,6 @@ def install_player(app: Path, binary: Path, workspace: Path = EXPORT_DIR) -> Non
         timeout=30,
     )
     menu_shots.resign_replaced_player(app, entitlements)
-
-
-def ensure_flycast_app() -> Path:
-    if not APP.is_dir():
-        export_stub()
-        install_disc(APP)
-    use_checkout_player(APP, EXPORT_DIR)
-    gdi = APP / "Contents/Resources/content" / GDI
-    if not gdi.is_file():
-        raise SystemExit(f"exported game has no disc at {gdi}")
-    return APP
 
 
 def bundle_id(app: Path) -> str:
@@ -437,43 +343,68 @@ def pause_menu_quit(app: Path) -> tuple[str, str]:
         menu_shots.resign_replaced_player(app, EXPORT_DIR / "entitlements.plist")
 
 
+def ready(name: str) -> Path | None:
+    """Return the fetched or committed file, or None after printing the skip line.
+
+    A missing disc is not a failed quit, but we still report it.
+    """
+    import fetch_test_content
+
+    path, reason = fetch_test_content.locate(name)
+    if path is None:
+        print(f"skipped: {name} not available ({reason})", flush=True)
+        return None
+    return path
+
+
+def exported(rom: Path, title: str, system: str, workspace: Path) -> Path:
+    app = export_rom(rom, title, system, workspace)
+    use_checkout_player(app, workspace)
+    return app
+
+
 def main() -> int:
     require_disk(20.2)
-    flycast = ensure_flycast_app()
-    failed = judge("flycast apple-event", *apple_event_quit(flycast), apple_event=True)
-    if failed:
-        print(failed)
-        return 1
-    log = menu_shots.log_of(flycast)
-    saved = log.read_text(errors="replace") if log and log.exists() else ""
-    if "Auto save state" not in saved or "succeeded" not in saved:
-        print("autosave on quit did not succeed")
-        return 1
-    print("autosave on quit succeeded")
+    failed = False
 
-    failed = judge("flycast pause menu", *pause_menu_quit(flycast), apple_event=False)
-    if failed:
-        print(failed)
-        return 1
+    # We use the generated cartridge as "a game that boots". For Dreamcast and
+    # PlayStation a working program is required. We leave those entries out of
+    # the manifest until we can fetch one, and skip the cases without a disc.
+    cartridge = ready("test-game")
+    if cartridge is not None:
+        app = exported(cartridge, "Quit Cartridge", "gbc", ROOT / "work/quit-gbc")
+        problem = judge("cartridge apple-event", *apple_event_quit(app), apple_event=True)
+        if problem:
+            print(problem)
+            failed = True
 
-    advance = Path("/Users/mariowilde/Downloads/roms/Sonic Advance (Europe) (En,Ja,Fr,De,Es).gba")
-    gba_dir = ROOT / "work/quit-gba"
-    gba = export_rom(advance, "Quit Cartridge", "gba", gba_dir)
-    use_checkout_player(gba, gba_dir)
-    failed = judge("cartridge apple-event", *apple_event_quit(gba), apple_event=True)
-    if failed:
-        print(failed)
-        return 1
+    dreamcast = ready("240p-dreamcast")
+    if dreamcast is not None:
+        app = exported(dreamcast, "Quit Subject", "dreamcast", EXPORT_DIR)
+        problem = judge("flycast apple-event", *apple_event_quit(app), apple_event=True)
+        if problem:
+            print(problem)
+            return 1
+        log = menu_shots.log_of(app)
+        saved = log.read_text(errors="replace") if log and log.exists() else ""
+        if "Auto save state" not in saved or "succeeded" not in saved:
+            print("autosave on quit did not succeed")
+            return 1
+        print("autosave on quit succeeded")
+        problem = judge("flycast pause menu", *pause_menu_quit(app), apple_event=False)
+        if problem:
+            print(problem)
+            failed = True
 
-    ape = Path("/Users/mariowilde/Downloads/roms/Ape Escape (Europe).chd")
-    ape_dir = ROOT / "work/quit-ape"
-    disc = export_rom(ape, "Quit Ape", "ps1", ape_dir)
-    use_checkout_player(disc, ape_dir)
-    failed = judge("ape escape apple-event", *apple_event_quit(disc), apple_event=True)
-    if failed:
-        print(failed)
-        return 1
-    return 0
+    playstation = ready("ps1-homebrew")
+    if playstation is not None:
+        app = exported(playstation, "Quit Disc", "ps1", ROOT / "work/quit-ps1")
+        problem = judge("playstation apple-event", *apple_event_quit(app), apple_event=True)
+        if problem:
+            print(problem)
+            failed = True
+
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

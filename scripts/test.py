@@ -143,9 +143,15 @@ SCOPES = [
     ),
     Scope(
         "reporoot",
-        "that nothing finds the repository by the path it was compiled in, which a shared cargo target makes another checkout's",
+        "that nothing finds the repository by the path it was compiled in, and that no test or script names one person's ROM directory",
         "that the rule is right, or that a binary really came from elsewhere; it reads how each place asks",
         ["python3", str(ROOT / "scripts/test_repo_root.py")],
+    ),
+    Scope(
+        "fixtures",
+        "that a test file this repository does not generate is fetched or skipped out loud, and that the generated cartridge is ready",
+        "that a fetched disc boots; the quit scope launches one, and only when the file is actually there",
+        ["python3", str(ROOT / "scripts/test_fetch_content.py")],
     ),
     Scope(
         "symlinks",
@@ -294,7 +300,8 @@ SCOPES = [
         "window placement and fullscreen; closing the window is the same AppKit terminate path",
         ["python3", str(ROOT / "scripts/test_quit.py")],
         slow=True,
-        skipped="it runs a 1.1 GB Sonic Adventure 2 disc image; run it by name",
+        prepare=[["python3", str(ROOT / "scripts/fetch_test_content.py"), "--scope", "quit"]],
+        skipped="it launches an exported game; name it once the player stays silent",
     ),
 ]
 

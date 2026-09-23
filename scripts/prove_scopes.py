@@ -451,6 +451,16 @@ def case_size():
         restore(path, raw)
     return expect("size", code, output, ("exceeds",))
 
+def case_fixtures():
+    path = ROOT / "scripts/fetch_test_content.py"
+    raw = replace(path, "skipped: ", "quiet: ")
+    try:
+        code, output = run_scope("fixtures")
+    finally:
+        restore(path, raw)
+    return expect("fixtures", code, output, ("not reported as skipped",))
+
+
 def case_reporoot():
     # Put a compiled-in path back in the crate, so that in the catalog scope we
     # validate the packages of another checkout.
@@ -608,6 +618,7 @@ CASES = {
     "size": case_size,
 
     "reporoot": case_reporoot,
+    "fixtures": case_fixtures,
     "symlinks": case_symlinks,
     "isolation": case_isolation,
     "overlays": case_overlays,
