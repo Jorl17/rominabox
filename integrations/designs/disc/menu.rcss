@@ -207,3 +207,12 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #control-binds .list-pager-prev { left: 0; width: 72dp; }
 #control-binds .list-pager-count { left: 80dp; width: 110dp; }
 #control-binds .list-pager-next { left: 198dp; width: 72dp; }
+
+/* The inherited achievement notice, with the thin rules and compact type of this design. */
+#unlock-row { position: absolute; left: 0; top: 24dp; width: 100%; text-align: center; z-index: 90; }
+#unlock { display: inline-block; text-align: left; padding: 8dp; background-color: design(surface); border: 1dp design(highlight); }
+#unlock-badge { display: inline-block; vertical-align: top; width: 48dp; height: 48dp; border: 1dp design(rule); }
+#unlock-words { display: inline-block; vertical-align: top; margin-left: 12dp; max-width: 560dp; }
+#unlock-kicker { font-size: 11dp; color: design(highlight); }
+#unlock-title { font-size: 16dp; color: design(ink); margin-top: 3dp; }
+#unlock-detail { font-size: 11dp; color: design(muted); margin-top: 3dp; }

@@ -214,41 +214,26 @@ pub enum ScreenPlace {
     Options,
 }
 
-/// The screens for a design that declares none, the two default screens with
-/// the default words of the player.
-fn built_in_screens() -> Vec<Screen> {
-    vec![
-        Screen {
-            id: "pause".into(),
-            panel: "pause-panel".into(),
-            heading: "GAME PAUSED".into(),
-            footer: "ESC  CONTINUE".into(),
-            button: "controls-back".into(),
-            label: None,
-            back_label: None,
-            place: ScreenPlace::Plain,
-            option_label: None,
-            option_default: false,
-            images: None,
-            mark: None,
-            toggle: None,
-        },
-        Screen {
-            id: "controls".into(),
-            panel: "controls-panel".into(),
-            heading: "CONTROLS".into(),
-            footer: "ESC  BACK".into(),
-            button: "controls".into(),
-            label: None,
-            back_label: None,
-            place: ScreenPlace::Plain,
-            option_label: None,
-            option_default: false,
-            images: None,
-            mark: None,
-            toggle: None,
-        },
-    ]
+/// The base must come from the same source tree or frozen kit as the design.
+/// With a fallback to a path in the repository, an export could mix
+/// different versions of the menu without anyone noticing.
+fn base_design(design: &Path) -> Result<PathBuf, String> {
+    let base = if design.file_name().is_some_and(|name| name == "native") {
+        design.to_path_buf()
+    } else {
+        design
+            .parent()
+            .ok_or_else(|| format!("Design has no package parent: {}", design.display()))?
+            .join("native")
+    };
+    if !base.is_dir() {
+        return Err(format!(
+            "Native base design is missing beside {}: {}",
+            design.display(),
+            base.display()
+        ));
+    }
+    Ok(base)
 }
 
 fn screen_place(entry: &serde_json::Value, index: usize, declaration: &Path) -> Result<ScreenPlace, String> {
@@ -354,16 +339,63 @@ fn screen_toggle(
     }))
 }
 
-pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
+fn screen_entries(design: &Path) -> Result<Vec<serde_json::Value>, String> {
     let declaration = design.join("design.json");
-    let Ok(text) = fs::read_to_string(&declaration) else {
-        return Ok(built_in_screens());
-    };
+    let text = fs::read_to_string(&declaration)
+        .map_err(|e| format!("Could not read {}: {e}", declaration.display()))?;
     let declared: serde_json::Value =
         serde_json::from_str(&text).map_err(|e| format!("{}: {e}", declaration.display()))?;
-    let Some(listed) = declared.get("screens").and_then(|v| v.as_array()) else {
-        return Ok(built_in_screens());
+    match declared.get("screens") {
+        None => Ok(Vec::new()),
+        Some(screens) => screens
+            .as_array()
+            .cloned()
+            .ok_or_else(|| format!("Screens in {} must be an array", declaration.display())),
+    }
+}
+
+/// Every base screen comes from Native. A design may replace the fields of a
+/// screen by id or add a screen, and for any other id we keep Native's.
+pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
+    let base = base_design(design)?;
+    let base_entries = screen_entries(&base)?;
+    if base_entries.is_empty() {
+        return Err(format!("Native declares no screens: {}", base.display()));
+    }
+    let selected = if design == base {
+        Vec::new()
+    } else {
+        screen_entries(design)?
     };
+    let mut listed = Vec::new();
+    let mut used = BTreeSet::new();
+    for override_entry in selected {
+        let id = override_entry["id"].as_str().ok_or_else(|| {
+            format!("Screen override in {} declares no id", design.display())
+        })?;
+        if !used.insert(id.to_string()) {
+            return Err(format!("Duplicate screen override '{id}' in {}", design.display()));
+        }
+        let mut entry = base_entries
+            .iter()
+            .find(|base_entry| base_entry["id"] == id)
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
+        let fields = override_entry.as_object().ok_or_else(|| {
+            format!("Screen override '{id}' in {} is not an object", design.display())
+        })?;
+        entry.as_object_mut().expect("base screen is an object").extend(fields.clone());
+        listed.push(entry);
+    }
+    for entry in base_entries {
+        let id = entry["id"].as_str().ok_or_else(|| {
+            format!("Native screen in {} declares no id", base.display())
+        })?;
+        if used.insert(id.to_string()) {
+            listed.push(entry);
+        }
+    }
+    let declaration = design.join("design.json");
     let mut screens = Vec::new();
     for (index, entry) in listed.iter().enumerate() {
         let at = |key: &str| -> Result<String, String> {
@@ -389,9 +421,6 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
             mark: entry["mark"].as_str().map(str::to_string),
             toggle: screen_toggle(entry, index, &declaration)?,
         });
-    }
-    if screens.is_empty() {
-        return Ok(built_in_screens());
     }
     Ok(screens)
 }
@@ -1202,6 +1231,75 @@ pub fn staged_design(kit: &Path, design: &str) -> PathBuf {
     kit.join("designs").join(design)
 }
 
+fn design_fragment(design: &Path, base: &Path, name: &str) -> Result<String, String> {
+    let selected = design.join(name);
+    let source = if selected.is_file() { selected } else { base.join(name) };
+    fs::read_to_string(&source).map_err(|e| format!("Could not read {}: {e}", source.display()))
+}
+
+/// Compose the Native document with the selected screen and chrome fragments.
+/// The screen order is explicit. The small screen-order.rml of a design lists
+/// only the extra panels that go before the generated list screens.
+fn menu_document(design: &Path) -> Result<String, String> {
+    let base = base_design(design)?;
+    let mut menu = fs::read_to_string(base.join("menu.rml"))
+        .map_err(|e| format!("Could not read Native menu.rml: {e}"))?;
+    for (slot, name) in [
+        ("<!--SPINE-->", "spine.rml"),
+        ("<!--HEADING-->", "heading.rml"),
+        ("<!--FOOTER-->", "footer.rml"),
+        ("<!--SCREEN:pause-->", "screen-pause.rml"),
+        ("<!--SCREEN:controls-->", "screen-controls.rml"),
+    ] {
+        let selected = design.join(name);
+        let base_file = base.join(name);
+        let value = if selected.is_file() || base_file.is_file() {
+            design_fragment(design, &base, name)?
+        } else {
+            String::new()
+        };
+        if !menu.contains(slot) {
+            return Err(format!("Native menu has no {slot} insertion point"));
+        }
+        menu = menu.replace(slot, &value);
+    }
+    let order = design.join("screen-order.rml");
+    let extra = if order.is_file() {
+        fs::read_to_string(&order).map_err(|e| format!("Could not read {}: {e}", order.display()))?
+    } else {
+        String::new()
+    };
+    let screens = declared_screens(design)?;
+    let mut expanded = String::new();
+    let mut remaining = extra.as_str();
+    let mut placed = BTreeSet::new();
+    while let Some(start) = remaining.find("<!--SCREEN:") {
+        expanded.push_str(&remaining[..start]);
+        let after = &remaining[start + "<!--SCREEN:".len()..];
+        let end = after.find("-->").ok_or_else(|| format!("Unclosed screen in {}", order.display()))?;
+        let id = &after[..end];
+        if !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') || id.is_empty() {
+            return Err(format!("Invalid screen id '{id}' in {}", order.display()));
+        }
+        if !screens.iter().any(|screen| screen.id == id) {
+            return Err(format!("Screen '{id}' in {} is not declared", order.display()));
+        }
+        if !placed.insert(id) {
+            return Err(format!("Screen '{id}' occurs twice in {}", order.display()));
+        }
+        expanded.push_str(&design_fragment(design, &base, &format!("screen-{id}.rml"))?);
+        remaining = &after[end + "-->".len()..];
+    }
+    expanded.push_str(remaining);
+    if !menu.contains("<!--EXTRA-SCREENS-->") {
+        return Err("Native menu has no extra-screen insertion point".into());
+    }
+    let slots = design_fragment(design, &base, "save-slots.rml")?;
+    Ok(menu
+        .replace("<!--EXTRA-SCREENS-->", &expanded)
+        .replace("<!--SAVE-SLOTS-->", &slots))
+}
+
 /// The declarations of the design, written next to the document they describe.
 ///
 /// We list a screen only when it is in `screens`, the screens the author left
@@ -1238,15 +1336,15 @@ pub fn prepare_theme_assets(
         .find(|p| p.id == palette)
         .ok_or_else(|| "Choose an available colour palette.".to_string())?;
     fs::create_dir_all(destination).map_err(|e| e.to_string())?;
-    for name in [
-        "menu.rml",
-        "menu.rcss",
-        "Silkscreen-Regular.ttf",
-        "Silkscreen-OFL.txt",
-    ] {
-        fs::copy(source.join(name), destination.join(name))
+    let base = base_design(source)?;
+    for name in ["menu.rcss", "Silkscreen-Regular.ttf", "Silkscreen-OFL.txt"] {
+        let selected = source.join(name);
+        let input = if selected.is_file() { selected } else { base.join(name) };
+        fs::copy(&input, destination.join(name))
             .map_err(|e| format!("Could not prepare menu asset {name}: {e}"))?;
     }
+    fs::write(destination.join("menu.rml"), menu_document(source)?)
+        .map_err(|e| format!("Could not prepare menu.rml: {e}"))?;
     let tokens = design_tokens(source, &palette)?;
     // The document too, not only the stylesheet. A design contains design(…)
     // where a value comes from outside the design, such as the version, and
@@ -1464,9 +1562,9 @@ pub fn prepare_controls_assets(
     let markup = scene_markup(&profile, controls, metrics);
     let picker = controller_picker_markup(&offered, &profile.id);
 
-    // The document is the menu.rml of the design. If we filled the controls
-    // from any other copy, we would lose changes made to the design.
-    let template = fs::read_to_string(design.join("menu.rml")).map_err(|e| e.to_string())?;
+    // Use the same base-and-overrides composition as prepare_theme_assets.
+    // If we read a raw design file again here, we would lose the resolved screens.
+    let template = menu_document(design)?;
     // The picker is a sibling of the scene, not a child of it. Inside the
     // scene its coordinates would be scene coordinates, and the scene starts
     // 80 dp down the screen, so the picker would cover the first two
@@ -1904,13 +2002,16 @@ pub fn prepare_splash_assets(
         .find(|p| p.id == palette)
         .ok_or_else(|| "Choose an available colour palette.".to_string())?;
     fs::create_dir_all(destination).map_err(|e| e.to_string())?;
+    let base = base_design(source)?;
     for (from, to) in [
         ("splash.rml", "menu.rml"),
         ("menu.rcss", "menu.rcss"),
         ("Silkscreen-Regular.ttf", "Silkscreen-Regular.ttf"),
         ("Silkscreen-OFL.txt", "Silkscreen-OFL.txt"),
     ] {
-        fs::copy(source.join(from), destination.join(to))
+        let selected = source.join(from);
+        let input = if selected.is_file() { selected } else { base.join(from) };
+        fs::copy(input, destination.join(to))
             .map_err(|e| format!("Could not prepare splash asset {from}: {e}"))?;
     }
     let staged = screens_for_export(&declared_screens(source)?, None)?;
@@ -2061,13 +2162,13 @@ mod tests {
 
     fn native_menu() -> (PathBuf, String) {
         let design = crate::repo::at("integrations/designs/native");
-        let menu = fs::read_to_string(design.join("menu.rml")).expect("native menu");
+        let menu = menu_document(&design).expect("native menu");
         (design, menu)
     }
 
     fn design_menu(name: &str) -> (PathBuf, String) {
         let design = crate::repo::at("integrations/designs").join(name);
-        let menu = fs::read_to_string(design.join("menu.rml")).expect("design menu");
+        let menu = menu_document(&design).expect("design menu");
         (design, menu)
     }
 
@@ -2201,13 +2302,15 @@ mod tests {
     #[test]
     fn an_entry_appears_only_when_that_game_enables_it() {
         let root = rominabox_scratch::Scratch::dir("rominabox-options");
+        let design = root.join("native");
+        fs::create_dir_all(&design).unwrap();
         fs::write(
-            root.join("menu.rml"),
+            design.join("menu.rml"),
             "<rml><body><div id=\"screen\"><div id=\"actions\"><button class=\"menu-action\" id=\"resume\">CONTINUE</button><button class=\"menu-action\" id=\"quit\">QUIT</button></div><div id=\"footer\"></div></div></body></rml>",
         )
         .unwrap();
         fs::write(
-            root.join("design.json"),
+            design.join("design.json"),
             r#"{
                 "screens": [
                     {"id":"pause","panel":"pause-panel","heading":"PAUSED","footer":"ESC  CONTINUE","button":"controls-back"},
@@ -2217,17 +2320,17 @@ mod tests {
             }"#,
         )
         .unwrap();
-        let menu = fs::read_to_string(root.join("menu.rml")).unwrap();
+        let menu = fs::read_to_string(design.join("menu.rml")).unwrap();
         // The design declares no options screen. We still add one, and leave
         // shaders out because it is not enabled for this game.
-        let (defaults, screens) = apply_options(&root, &menu, None).unwrap();
+        let (defaults, screens) = apply_options(&design, &menu, None).unwrap();
         assert!(defaults.contains(">OPTIONS<"), "a design that declares no options screen still gets one");
         assert!(defaults.contains(">CONTROLS<"));
         assert!(!defaults.contains("SHADERS"));
         assert!(screens.iter().any(|screen| screen.place == ScreenPlace::Options));
 
         let (both, _) = apply_options(
-            &root,
+            &design,
             &menu,
             Some(&["controls".to_string(), "shaders".to_string()]),
         )
@@ -2238,15 +2341,15 @@ mod tests {
         let controls_at = both.find("id=\"controls\"").unwrap();
         assert!(controls_at < shaders_at, "entries follow the design's order");
 
-        let refused = apply_options(&root, &menu, Some(&["nope".to_string()])).unwrap_err();
+        let refused = apply_options(&design, &menu, Some(&["nope".to_string()])).unwrap_err();
         assert!(refused.contains("nope"), "{refused}");
 
         fs::write(
-            root.join("option-entry.rml"),
+            design.join("option-entry.rml"),
             "<div id=\"BUTTON\" class=\"list-row\">LABEL</div>",
         )
         .unwrap();
-        let (templated, _) = apply_options(&root, &menu, Some(&["shaders".to_string()])).unwrap();
+        let (templated, _) = apply_options(&design, &menu, Some(&["shaders".to_string()])).unwrap();
         assert!(
             templated.contains("<div id=\"shaders\" class=\"list-row\">SHADERS</div>"),
             "a design's entry template is what gets filled, got {templated}"
