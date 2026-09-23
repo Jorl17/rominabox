@@ -605,21 +605,31 @@ def case_discs():
     # Leave the tray on the image the core loaded. Choosing disc 2 must move
     # the index, so we notice a missing swap only when we query the core
     # afterwards.
-    path = ROOT / "scripts/native_runtime/frame_harness.c"
-    raw = replace(
-        path,
+    # We find the menu row's click listener by this class. Without it, the
+    # row still gets the click from the script, but we never run the
+    # command, and the player's log stays on image 0 of 2.
+    harness = ROOT / "scripts/native_runtime/frame_harness.c"
+    rows = ROOT / "desktop/src-tauri/src/lists.rs"
+    raw_harness = replace(
+        harness,
         "apply_disc_index((unsigned)disc_swap);",
         "apply_disc_index(0);",
+    )
+    raw_rows = replace(
+        rows,
+        '<button id=\\"ROW-ID\\" class=\\"list-row SELECTED\\">',
+        '<button id=\\"ROW-ID\\" class=\\"row SELECTED\\">',
     )
     try:
         code, output = run_scope("discs")
     finally:
-        restore(path, raw)
+        restore(harness, raw_harness)
+        restore(rows, raw_rows)
     return expect(
         "discs",
         code,
         output,
-        ("after choosing disc 2 the core still reports image index",),
+        ("core image 0 of 2",),
     )
 
 
