@@ -47,6 +47,18 @@ CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog
 # uses it, or in a checkout where nobody has compiled it the scope fails.
 RMLUI_PREPARE = [["python3", str(ROOT / "scripts/prepare_rmlui.py")]]
 
+# For native workflow comparisons we select a committed player explicitly and
+# use isolated storage, in a namespace apart from the other native scopes.
+WORKFLOW_PREFIX = os.environ.get("ROMINABOX_GAME_BUNDLE_PREFIX", "")
+WORKFLOW_COMMAND = [
+    "env", f"ROMINABOX_GAME_BUNDLE_PREFIX={WORKFLOW_PREFIX}.workflows",
+    "python3", str(ROOT / "scripts/menu_workflows.py"),
+]
+WORKFLOW_UNAVAILABLE = None if (
+    os.environ.get("ROMINABOX_TEST_BUILD")
+    and WORKFLOW_PREFIX.startswith("app.rominabox.game.wt-")
+) else "requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player; name it after configuring both"
+
 
 class Scope:
     def __init__(
@@ -190,6 +202,15 @@ SCOPES = [
         ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
         slow=True,
         prepare=RMLUI_PREPARE,
+    ),
+    Scope(
+        "workflows",
+        "94 original native screenshot/state/persistence cases and 25 inherited Disc screen cases, in isolated workflow storage",
+        "audible cues, physical input or native focus/fullscreen; inspect the captured images directly too",
+        WORKFLOW_COMMAND + ["--composition", "--output", str(SCRATCH / "menu-composition")],
+        slow=True,
+        prepare=[WORKFLOW_COMMAND + ["--output", str(SCRATCH / "menu-workflows")]],
+        skipped=WORKFLOW_UNAVAILABLE,
     ),
     Scope(
         "edges",
