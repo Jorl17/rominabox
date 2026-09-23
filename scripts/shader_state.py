@@ -162,7 +162,7 @@ def main() -> int:
     unit()
     if not ROM.is_file():
         raise SystemExit(f"the generated cartridge is not at {ROM}")
-    app = menu_shots.build_a_game(
+    with menu_shots.build_a_game(
         ROM,
         BUILD,
         system="gbc",
@@ -172,27 +172,27 @@ def main() -> int:
                 "initial": INITIAL,
             },
         },
-    )
-    listed = shader_config(app)
-    if list(listed)[:3] != ["none", "scanlines", "phosphor"]:
-        raise SystemExit(f"unexpected shader list: {list(listed)}")
-    if INITIAL not in listed or CHOSEN not in listed:
-        raise SystemExit(f"the export is missing a shader: {list(listed)}")
+    ) as app:
+        listed = shader_config(app)
+        if list(listed)[:3] != ["none", "scanlines", "phosphor"]:
+            raise SystemExit(f"unexpected shader list: {list(listed)}")
+        if INITIAL not in listed or CHOSEN not in listed:
+            raise SystemExit(f"the export is missing a shader: {list(listed)}")
 
-    data = menu_shots.data_dir_of(app)
-    if data is not None:
-        choice = data / "shader-choice"
-        if choice.is_file():
-            choice.unlink()
+        data = menu_shots.data_dir_of(app)
+        if data is not None:
+            choice = data / "shader-choice"
+            if choice.is_file():
+                choice.unlink()
 
-    shoot(app, "chosen", ["options", "shaders", CHOSEN])
-    running = running_id(app, listed)
-    if running != CHOSEN:
-        raise SystemExit(
-            f"the first launch was asked for {CHOSEN} and saved {running}"
-        )
+        shoot(app, "chosen", ["options", "shaders", CHOSEN])
+        running = running_id(app, listed)
+        if running != CHOSEN:
+            raise SystemExit(
+                f"the first launch was asked for {CHOSEN} and saved {running}"
+            )
 
-    shoot(app, "restarted", ["options", "shaders"])
+        shoot(app, "restarted", ["options", "shaders"])
     picture = SHOTS / "restarted.png"
     index, scores = marked_row(picture, len(listed))
     shown = list(listed)[index]

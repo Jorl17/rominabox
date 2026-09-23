@@ -171,9 +171,16 @@ fn both_playstation_pads_are_offered_and_both_declare_their_sticks() {
     for profile in &offered {
         let declared: Vec<&str> = profile.controls.iter().map(|c| c.id.as_str()).collect();
         for stick in [
-            "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
-            "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus",
-            "l3", "r3",
+            "l_x_plus",
+            "l_x_minus",
+            "l_y_plus",
+            "l_y_minus",
+            "r_x_plus",
+            "r_x_minus",
+            "r_y_plus",
+            "r_y_minus",
+            "l3",
+            "r3",
         ] {
             assert!(
                 declared.contains(&stick),
@@ -224,7 +231,6 @@ fn both_playstation_pads_are_offered_and_both_declare_their_sticks() {
         "a PlayStation pad must not be selectable for another console"
     );
 }
-
 
 #[test]
 fn a_playlist_collects_each_disc_and_names_one_that_is_missing() {
@@ -440,12 +446,14 @@ fn the_playstation_scene_draws_each_stick_once() {
     }
 }
 
-fn crate_themes_prepare(
-    source: &Path,
-    destination: &Path,
-    system: &str,
-    options: &Controls,
-) {
-    rominabox_desktop::themes::prepare_controls_assets(source, source, destination, system, options, None)
-        .expect("the scene markup is generated");
+fn crate_themes_prepare(source: &Path, destination: &Path, system: &str, options: &Controls) {
+    rominabox_desktop::themes::prepare_controls_assets(
+        source,
+        &rominabox_desktop::repo::at("integrations/designs/native"),
+        destination,
+        system,
+        options,
+        None,
+    )
+    .expect("the scene markup is generated");
 }

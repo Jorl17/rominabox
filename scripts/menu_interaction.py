@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -30,10 +31,15 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 # We link the probe with the same archive as the player build.
 from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
+from built import cli  # noqa: E402
 
 PROBE = ROOT / "work/probe/rml_probe"
 PROBE_SOURCE = ROOT / "scripts/native_runtime/rml_probe.cpp"
-DOCUMENT = ROOT / "integrations/designs/native/menu.rml"
+DESIGN = ROOT / "integrations/designs/native"
+ASSETS = ROOT / "work/probe/menu-assets"
+DOCUMENT = ASSETS / "menu.rml"
+# The expected result after staging. It differs from the raw-document fixture
+# only in the Controls option-entry class, and the rest is the same.
 BASELINE = ROOT / "scripts/fixtures/menu-interaction.jsonl"
 
 # One scenario with every interaction in the menu. Keep the watched elements
@@ -91,6 +97,11 @@ def build() -> None:
 
 def run() -> str:
     build()
+    subprocess.run(
+        [str(cli()), "stage-theme"],
+        input=json.dumps({"source": str(DESIGN), "destination": str(ASSETS), "palette": "blue"}),
+        capture_output=True, text=True, check=True,
+    )
     steps: list[str] = []
     for entry in SCENARIO:
         steps += ["--step", entry]

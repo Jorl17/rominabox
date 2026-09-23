@@ -20,7 +20,8 @@
     "reached rather than posed: menu-states sets the classes itself, and cannot",
     "show that pressing CONTROLS gets you to the controls screen.",
     "",
-    "The achievement shots need --achievements <dir>: the list and its badges come from the service and are not in this repository."
+    "The achievement shots need --achievements <dir> containing achievements.json and badges/.",
+    "The rewrite baseline stages the original menu-achievements.json fixture and generated badges, without using the service."
   ],
   "shots": {
     "pause-menu": [],

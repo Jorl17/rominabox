@@ -598,8 +598,8 @@ where
         // lists in this game. An achievements entry in a game with no
         // achievements would be a button that opens an empty screen.
         let mut lists: Vec<crate::lists::List> = Vec::new();
-        if let Some(discs) = crate::disc_menu::list(&design)
-            .map_err(|message| ExportError::new("stage", message))?
+        if let Some(discs) =
+            crate::disc_menu::list(&design).map_err(|message| ExportError::new("stage", message))?
         {
             lists.push(discs);
         }
@@ -3187,10 +3187,7 @@ mod tests {
             let identity = stable_identity(&rom, "megadrive", None).unwrap();
             assert_eq!(identity.len(), 24);
             assert!(identity.chars().all(|c| c.is_ascii_hexdigit()));
-            assert!(
-                std::env::var("ROMINABOX_GAME_BUNDLE_PREFIX").is_err(),
-                "this test only means anything with no namespace set"
-            );
+            assert_eq!(identity, "0d17b49ea458b50bd16ea900");
         }
 
         /// Two worktrees must not use the same data folder for a game.

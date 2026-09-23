@@ -17,8 +17,8 @@ build_dir=$repo_root/work/bridge-interaction
 assets=$build_dir/assets
 out=$build_dir/test_rmlui_interaction
 
-if [ ! -f "$bridge_dir/rmlui_bridge.cpp" ]; then
-  echo "missing experimental RmlUi bridge at $bridge_dir" >&2
+if [ ! -f "$bridge_dir/rmlui/view.cpp" ]; then
+  echo "missing RmlUi menu view at $bridge_dir" >&2
   exit 1
 fi
 if [ ! -f "$rmlui_lib" ]; then
@@ -26,21 +26,30 @@ if [ ! -f "$rmlui_lib" ]; then
   exit 1
 fi
 
-focus_status=0
-node "$script_dir/test_control_focus.mjs" || focus_status=$?
-node "$script_dir/test_list_focus.mjs" || focus_status=$?
-
 mkdir -p "$build_dir"
 freetype_cflags=$(pkg-config --cflags freetype2)
 freetype_libs=$(pkg-config --libs freetype2)
 
-c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
-  $rmlui_includes -I "$bridge_dir" $freetype_cflags \
+c++ -std=c++17 -Werror=return-type -DRIB_RMLUI_HEADLESS -DHAVE_AUDIOMIXER \
+  $rmlui_includes -I "$bridge_dir" -I "$repo_root/vendor/retroarch/libretro-common/include" $freetype_cflags \
   -o "$out" \
   "$script_dir/test_rmlui_interaction.cpp" \
-  "$bridge_dir/rmlui_bridge.cpp" \
+  "$bridge_dir/rmlui/view.cpp" \
+  "$bridge_dir/rmlui/script_report.cpp" \
+  "$bridge_dir/rmlui/control_view.cpp" \
+  "$bridge_dir/rmlui/declarations.cpp" \
+  "$bridge_dir/rmlui/parts.cpp" \
+  "$bridge_dir/rmlui/slots.cpp" \
+  "$bridge_dir/rmlui/status.cpp" \
+  "$bridge_dir/rmlui/screens.cpp" \
+  "$bridge_dir/rmlui/lists.cpp" \
+  "$bridge_dir/rmlui/binds_popup.cpp" \
+  "$bridge_dir/rmlui/document.cpp" \
+  "$script_dir/test_menu_declarations.cpp" \
   "$rmlui_lib" \
   $freetype_libs
+
+"$out" declarations
 
 mkdir -p "$assets"
 for document in "$design"/*; do
@@ -106,7 +115,6 @@ FIXTURE
 row_edge_failed=0
 for edge_design in native disc; do
   edge_assets="$build_dir/row-edge-$edge_design"
-  rm -rf "$edge_assets"
   mkdir -p "$edge_assets"
   printf '{"source":"%s","destination":"%s","palette":"blue"}' \
     "$repo_root/integrations/designs/$edge_design" "$edge_assets" \
@@ -230,9 +238,132 @@ if failed:
     sys.exit(1)
 PY
 
-if [ "$focus_status" -ne 0 ]; then
-  exit "$focus_status"
-fi
+# Test the C++ menu frame/action lifecycle against the same staged Native
+# export as above. We replace only the RetroArch host commands. Config parsing,
+# file writes, declarations and the RmlUi document are the production code.
+# All eight declared Mega Drive callouts are active, so we can move through
+# the scene by pointer or keyboard. These are fixture bindings, no runtime remap.
+python3 - "$build_dir/placement-native/controls-defaults.cfg" <<'FIXTURE'
+import pathlib
+import sys
+ids = ("up", "left", "right", "down", "y", "b", "a", "start")
+pathlib.Path(sys.argv[1]).write_text(''.join(
+    f'rib_label_{id} = "{id}"\ninput_player1_{id} = "a"\n' for id in ids
+))
+FIXTURE
+python3 - "$build_dir/placement-native" "$repo_root/desktop/controls.json" <<'FIXTURE'
+import json
+import pathlib
+import sys
+
+assets = pathlib.Path(sys.argv[1])
+menu = assets / "menu.rml"
+markup = menu.read_text()
+assert "<!--SCREENS-->" in markup
+assert '<button class="menu-action options-back"' in markup
+markup = markup.replace(
+    "<!--SCREENS-->",
+    '<div id="fixture-panel" class="screen-panel" '
+    'style="display:none;position:absolute;left:100dp;top:100dp;width:600dp;height:300dp;">'
+    '<div class="list" style="width:500dp;"><div class="list-page">'
+    '<button id="fixture-one" class="list-row" style="width:400dp;height:42dp;">ONE</button>'
+    '<button id="fixture-two" class="list-row" style="width:400dp;height:42dp;">TWO</button>'
+    '</div></div><button id="fixture-back" class="menu-action list-back">BACK</button>'
+    '</div>',
+    1,
+)
+markup = markup.replace(
+    '<button class="menu-action options-back"',
+    '<button id="fixture" class="menu-action option-entry">TEST LIST</button>'
+    '<button class="menu-action options-back"',
+    1,
+)
+menu.write_text(markup)
+declarations = assets / "design.cfg"
+config = declarations.read_text()
+assert 'screens = "pause options controls"' in config
+assert 'screen_button_options = "options"' in config
+config = config.replace('screens = "pause options controls"',
+                        'screens = "pause options controls fixture"', 1)
+config = config.replace('screen_button_options = "options"',
+                        'screen_button_options = "options fixture-back"', 1)
+config += ('\nscreen_panel_fixture = "fixture-panel"'
+           '\nscreen_heading_fixture = "TEST LIST"'
+           '\nscreen_footer_fixture = "ESC BACK"'
+           '\nscreen_button_fixture = "fixture"\n')
+declarations.write_text(config)
+
+profiles = json.loads(pathlib.Path(sys.argv[2]).read_text())["profiles"]
+assert max(len(profile["controls"]) for profile in profiles) <= 48, "declared profile exceeds the preserved player limit"
+profile = next(profile for profile in profiles if profile["id"] == "ps1-analog")
+ids = [control["id"] for control in profile["controls"]]
+assert len(ids) == 24
+ids += [f"extra{index:02d}" for index in range(25)]
+defaults = assets / "stage" / "ps1-analog" / "controls-defaults.cfg"
+(defaults.parent / "expected-controls.txt").write_text("\n".join(ids[:48]) + "\n")
+for support in ("menu.rcss", "Silkscreen-Regular.ttf"):
+    (defaults.parent / support).write_bytes((assets / support).read_bytes())
+groups = {control["id"]: control.get("group") for control in profile["controls"]}
+defaults.write_text(
+    'controls_profile = "ps1-analog"\n'
+    + 'controls_variant_controls_ps1-analog = "' + ' '.join(ids) + '"\n'
+    + ''.join(f'rib_label_{id} = "{id}"\ninput_player1_{id} = "a"\n' for id in ids)
+    + ''.join(f'rib_group_{id} = "{group}"\n' for id, group in groups.items() if group)
+)
+FIXTURE
+libretro_common=$repo_root/vendor/retroarch/libretro-common
+orchestration_objects=""
+for source in \
+  file/config_file.c file/file_path.c file/file_path_io.c \
+  streams/file_stream.c string/stdstring.c vfs/vfs_implementation.c \
+  encodings/encoding_utf.c time/rtime.c compat/compat_strl.c; do
+  object=$build_dir/$(basename "$source" .c)-orchestration.o
+  cc -I "$libretro_common/include" -c "$libretro_common/$source" -o "$object"
+  orchestration_objects="$orchestration_objects $object"
+done
+c++ -std=c++17 -Werror=return-type -DRIB_RMLUI_HEADLESS -DHAVE_AUDIOMIXER \
+  $rmlui_includes -I "$bridge_dir" -I "$libretro_common/include" $freetype_cflags \
+  -o "$build_dir/test_menu_orchestration" \
+  "$script_dir/test_menu_orchestration.cpp" \
+  "$bridge_dir/rmlui/menu.cpp" \
+  "$bridge_dir/rmlui/navigation.cpp" \
+  "$bridge_dir/rmlui/slot_tasks.cpp" \
+  "$bridge_dir/rmlui/sounds.cpp" \
+  "$bridge_dir/rmlui/controls.cpp" \
+  "$bridge_dir/rmlui/overlays.cpp" \
+  "$bridge_dir/rmlui/script.cpp" \
+  "$bridge_dir/rmlui/shaders.cpp" \
+  "$bridge_dir/rmlui/discs.cpp" \
+  "$bridge_dir/rmlui/settings.cpp" \
+  "$bridge_dir/rmlui/view.cpp" \
+  "$bridge_dir/rmlui/script_report.cpp" \
+  "$bridge_dir/rmlui/control_view.cpp" \
+  "$bridge_dir/rmlui/declarations.cpp" \
+  "$bridge_dir/rmlui/parts.cpp" \
+  "$bridge_dir/rmlui/slots.cpp" \
+  "$bridge_dir/rmlui/status.cpp" \
+  "$bridge_dir/rmlui/screens.cpp" \
+  "$bridge_dir/rmlui/lists.cpp" \
+  "$bridge_dir/rmlui/binds_popup.cpp" \
+  "$bridge_dir/rmlui/document.cpp" \
+  "$bridge_dir/rmlui/files.cpp" \
+  $orchestration_objects "$rmlui_lib" $freetype_libs
+# A failing workflow may save a configuration before it reports the failure.
+# Use the project's scratch context so every run starts with fixed inputs.
+PYTHONPATH="$repo_root/scripts" python3 - "$build_dir" <<'ORCHESTRATION'
+from pathlib import Path
+import subprocess
+import sys
+from scratch import scratch
+build = Path(sys.argv[1])
+with scratch("rominabox-menu-orchestration-") as data:
+    subprocess.run([str(build / "test_menu_orchestration"),
+                    str(build / "placement-native"), data], check=True)
+with scratch("rominabox-menu-capacity-") as data:
+    subprocess.run([str(build / "test_menu_orchestration"), "--capacity",
+                    str(build / "placement-native/stage/ps1-analog"), data], check=True)
+ORCHESTRATION
+
 if [ "$row_edge_failed" -ne 0 ]; then
   exit 1
 fi

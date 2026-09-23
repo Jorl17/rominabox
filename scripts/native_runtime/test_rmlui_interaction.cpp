@@ -2,6 +2,16 @@
  * We compile rmlui_bridge.cpp with a dummy renderer and create no window. */
 
 #include "rmlui_bridge.h"
+#include "rmlui/view.hpp"
+#include "rmlui/script.hpp"
+#include "rmlui/binds_popup.hpp"
+#include "../../vendor/retroarch/audio/volume_range.h"
+#include "rmlui/overlays.hpp"
+#include "menu_test_view.hpp"
+#include "rmlui/sounds.hpp"
+#include "rmlui/focus.hpp"
+static rib::View view;
+static rib::test::Inspection inspect(view.document);
 
 #include <algorithm>
 #include <cmath>
@@ -13,64 +23,38 @@
 #include <sstream>
 #include <string>
 #include <vector>
-/* rmlui.c is not linked here because it depends on the whole of RetroArch,
- * so we stub the control list that it normally supplies. With the stub a test
- * can declare more than sixteen controls, and the bridge must address all of
- * them. A PlayStation DualShock declares twenty-four. */
-static const char *stub_control_ids[] = {
-   "up", "down", "left", "right", "a", "b", "x", "y",
-   "l", "r", "l2", "r2", "l3", "r3", "start", "select",
-   "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
-   "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus"
-};
-static const int stub_control_count =
-   (int)(sizeof(stub_control_ids) / sizeof(stub_control_ids[0]));
-
-/* Two controllers, so there is a choice in the picker, as on the Mega Drive. */
-static const char *stub_device_ids[] = {"megadrive", "megadrive6"};
-static const char *stub_device_names[] = {"Mega Drive", "Mega Drive six-button"};
-
-extern "C" int rib_rmlui_device_count(void) { return 2; }
-extern "C" const char *rib_rmlui_device_id(int index)
-{
-   return (index >= 0 && index < 2) ? stub_device_ids[index] : nullptr;
-}
-extern "C" const char *rib_rmlui_device_name(int index)
-{
-   return (index >= 0 && index < 2) ? stub_device_names[index] : nullptr;
-}
-
-extern "C" int rib_rmlui_control_capacity(void) { return stub_control_count; }
-extern "C" const char *rib_rmlui_control_id(int index)
-{
-   if (index < 0 || index >= stub_control_count)
-      return nullptr;
-   return stub_control_ids[index];
-}
-extern "C" const char *rib_rmlui_control_group(int) { return nullptr; }
+// The document fixture has the same typed declaration catalog as Menu.
+// With twenty-four declared controls we test the larger controller layout.
+static rib_controls_catalog fixture_controls = [] {
+   rib_controls_catalog catalog{};
+   const char *ids[] = {
+      "up", "down", "left", "right", "a", "b", "x", "y",
+      "l", "r", "l2", "r2", "l3", "r3", "start", "select",
+      "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
+      "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus"
+   };
+   for (const char *id : ids)
+      std::snprintf(catalog.entries[catalog.count++].id, 32, "%s", id);
+   catalog.device_count = 2;
+   std::snprintf(catalog.devices[0].id, 32, "megadrive");
+   std::snprintf(catalog.devices[0].name, NAME_MAX_LENGTH, "Mega Drive");
+   std::snprintf(catalog.devices[1].id, 32, "megadrive6");
+   std::snprintf(catalog.devices[1].name, NAME_MAX_LENGTH, "Mega Drive six-button");
+   return catalog;
+}();
 
 /* The cue that we requested from the sound pack for a move. Empty until a
  * step changes a level. The player has the production function, and this
  * one only records the call. */
 static std::string move_sound_log;
-extern "C" void rib_rmlui_play_move_sound(int direction)
+extern "C" void rib_host_scroll_sound(bool up)
 {
    if (!move_sound_log.empty())
       move_sound_log.push_back(' ');
-   move_sound_log += direction > 0 ? "up" : "down";
+   move_sound_log += up ? "up" : "down";
 }
 
-extern "C" unsigned rib_rmlui_test_texture_loads();
-extern "C" const char *rib_rmlui_test_property(const char *, const char *);
-extern "C" bool rib_rmlui_test_box(const char *, int *, int *, int *, int *);
-extern "C" bool rib_rmlui_test_row_glyphs_overlap(const char *);
-extern "C" int rib_rmlui_test_class_count(const char *);
-extern "C" const char *rib_rmlui_test_class_id(const char *, int);
 
-extern "C" void rib_rmlui_test_advance(double);
-extern "C" const char *rib_rmlui_test_text(const char *);
-extern "C" bool rib_rmlui_test_has_class(const char *, const char *);
-extern "C" float rib_rmlui_test_picture_aspect();
 static int failures = 0;
 
 #define CHECK(cond, msg) \
@@ -85,7 +69,7 @@ static int failures = 0;
  * (one line) are the same button. Focusing one must not move its name. */
 static void check_focus_leaves_the_name(void)
 {
-   rib_rmlui_set_shown("fixture-panel", true);
+   view.document.set_shown("fixture-panel", true);
    struct Pair { int index; const char *focused; const char *rest; const char *which; };
    const Pair pairs[] = {
       {0, "fixture-one-title", "fixture-rest-title", "one-line row"},
@@ -93,12 +77,12 @@ static void check_focus_leaves_the_name(void)
    };
    for (const Pair &pair : pairs)
    {
-      rib_rmlui_focus_list_row(pair.index);
+      view.lists.focus_list_row(pair.index);
       int focused_x = 0, focused_y = 0, focused_w = 0, focused_h = 0;
       int rest_x = 0, rest_y = 0, rest_w = 0, rest_h = 0;
-      CHECK(rib_rmlui_element_box(pair.focused, &focused_x, &focused_y, &focused_w, &focused_h),
+      CHECK(view.document.element_box(pair.focused, &focused_x, &focused_y, &focused_w, &focused_h),
             "the focused row's name has a box");
-      CHECK(rib_rmlui_element_box(pair.rest, &rest_x, &rest_y, &rest_w, &rest_h),
+      CHECK(view.document.element_box(pair.rest, &rest_x, &rest_y, &rest_w, &rest_h),
             "the unfocused row's name has a box");
       char message[256];
       std::snprintf(message, sizeof(message),
@@ -108,40 +92,40 @@ static void check_focus_leaves_the_name(void)
    }
    /* The bind list sets the row border again. We must reserve space for a
     * focused accent there too, or the names in that list still move. */
-   rib_rmlui_set_shown("fixture-panel", false);
-   rib_rmlui_set_shown("control-binds", true);
-   rib_rmlui_focus_list_row(0);
+   view.document.set_shown("fixture-panel", false);
+   view.document.set_shown("control-binds", true);
+   view.lists.focus_list_row(0);
    int focused_x = 0, focused_y = 0, focused_w = 0, focused_h = 0;
    int rest_x = 0, rest_y = 0, rest_w = 0, rest_h = 0;
-   CHECK(rib_rmlui_element_box("bind-one-title", &focused_x, &focused_y, &focused_w, &focused_h),
+   CHECK(view.document.element_box("bind-one-title", &focused_x, &focused_y, &focused_w, &focused_h),
          "the focused bind row's name has a box");
-   CHECK(rib_rmlui_element_box("bind-rest-title", &rest_x, &rest_y, &rest_w, &rest_h),
+   CHECK(view.document.element_box("bind-rest-title", &rest_x, &rest_y, &rest_w, &rest_h),
          "the unfocused bind row's name has a box");
    char message[256];
    std::snprintf(message, sizeof(message),
          "a focused bind row name starts at %d and the other row's name at %d",
          focused_x, rest_x);
    CHECK(std::abs(focused_x - rest_x) <= 1, message);
-   rib_rmlui_set_shown("control-binds", false);
-   rib_rmlui_set_shown("fixture-panel", true);
+   view.document.set_shown("control-binds", false);
+   view.document.set_shown("fixture-panel", true);
 }
 
 static void click_id(const char *id)
 {
    int x = 0;
    int y = 0;
-   CHECK(rib_rmlui_element_center(id, &x, &y), "element has a hit centre");
-   rib_rmlui_pointer_move(x, y);
-   rib_rmlui_pointer_button(true);
-   rib_rmlui_pointer_button(false);
+   CHECK(view.document.element_center(id, &x, &y), "element has a hit centre");
+   view.pointer_move(x, y);
+   view.pointer_button(true);
+   view.pointer_button(false);
 }
 
 static void move_to_id(const char *id)
 {
    int x = 0;
    int y = 0;
-   CHECK(rib_rmlui_element_center(id, &x, &y), "element has a hover centre");
-   rib_rmlui_pointer_move(x, y);
+   CHECK(view.document.element_center(id, &x, &y), "element has a hover centre");
+   view.pointer_move(x, y);
 }
 
 // Press on one element and release somewhere else. People do this: they put
@@ -151,16 +135,16 @@ static void press_then_release_at(const char *id, int x, int y)
 {
    int from_x = 0;
    int from_y = 0;
-   CHECK(rib_rmlui_element_center(id, &from_x, &from_y), "element has a hit centre");
-   rib_rmlui_pointer_move(from_x, from_y);
-   rib_rmlui_pointer_button(true);
-   rib_rmlui_pointer_move(x, y);
-   rib_rmlui_pointer_button(false);
+   CHECK(view.document.element_center(id, &from_x, &from_y), "element has a hit centre");
+   view.pointer_move(from_x, from_y);
+   view.pointer_button(true);
+   view.pointer_move(x, y);
+   view.pointer_button(false);
 }
 
 static void drain_actions(void)
 {
-   while (rib_rmlui_take_action() != RIB_RMLUI_ACTION_NONE)
+   while (view.intents.take().kind != RIB_RMLUI_ACTION_NONE)
       ;
 }
 
@@ -171,8 +155,8 @@ static void settle(double seconds)
 {
    for (double at = 0; at < seconds; at += 0.05)
    {
-      rib_rmlui_test_advance(0.05);
-      rib_rmlui_render(960, 600);
+      inspect.advance(0.05);
+      view.render(960, 600);
    }
 }
 
@@ -181,7 +165,7 @@ struct Box { int x, y, w, h; bool ok; };
 static Box box_of(const char *id)
 {
    Box box{};
-   box.ok = rib_rmlui_test_box(id, &box.x, &box.y, &box.w, &box.h);
+   box.ok = inspect.box(id, &box.x, &box.y, &box.w, &box.h);
    return box;
 }
 
@@ -214,34 +198,34 @@ static bool inside_screen(const Box &box, const Box &screen)
 
 static void fill_bind_rows(void)
 {
-   const int rows = rib_rmlui_rows_in("control-binds");
+   const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
    {
-      const char *id = rib_rmlui_row_in("control-binds", index);
+      const char *id = view.lists.row_in("control-binds", index);
       if (!id || !*id)
          break;
       if (index < 2)
       {
          /* The long line is what a fixed width would size every list for: a
           * list of "UP / UP / KEY" would be as wide as "LEFT STICK UP / BUTTON 12". */
-         rib_rmlui_set_row_text(id,
+         view.lists.set_row_text(id,
                index == 0 ? "LEFT STICK UP" : "UP",
                index == 0 ? "BUTTON 12" : "HAT #0 UP",
                index == 0 ? "AXIS" : "PAD");
-         rib_rmlui_set_shown(id, true);
+         view.document.set_shown(id, true);
       }
       else
-         rib_rmlui_set_shown(id, false);
+         view.document.set_shown(id, false);
    }
-   rib_rmlui_retarget_pages("control-binds");
+   view.lists.retarget_pages("control-binds");
 }
 
 static int anchors(const char *class_name, std::vector<std::string> &out)
 {
-   const int count = rib_rmlui_test_class_count(class_name);
+   const int count = inspect.class_count(class_name);
    for (int index = 0; index < count; ++index)
    {
-      const char *id = rib_rmlui_test_class_id(class_name, index);
+      const char *id = inspect.class_id(class_name, index);
       if (id && *id)
          out.emplace_back(id);
    }
@@ -303,22 +287,22 @@ static void fill_anchor_rows(const char *anchor)
          matched.push_back(&line);
    if (matched.size() < 2)
       return;
-   const int rows = rib_rmlui_rows_in("control-binds");
+   const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
    {
-      const char *id = rib_rmlui_row_in("control-binds", index);
+      const char *id = view.lists.row_in("control-binds", index);
       if (!id || !*id)
          break;
       if (index < (int)matched.size())
       {
-         rib_rmlui_set_row_text(id, matched[index]->title.c_str(),
+         view.lists.set_row_text(id, matched[index]->title.c_str(),
                matched[index]->detail.c_str(), matched[index]->kind.c_str());
-         rib_rmlui_set_shown(id, true);
+         view.document.set_shown(id, true);
       }
       else
-         rib_rmlui_set_shown(id, false);
+         view.document.set_shown(id, false);
    }
-   rib_rmlui_retarget_pages("control-binds");
+   view.lists.retarget_pages("control-binds");
 }
 
 /* Inside the outline, not on it. Flush with the border box means that the
@@ -378,12 +362,12 @@ static void check_drawn_above(const char *design)
    const std::string &neighbour = callouts[1];
    const std::string focused_id = focused.substr(std::strlen("control-"));
    const std::string neighbour_id = neighbour.substr(std::strlen("control-"));
-   rib_rmlui_set_control_state(focused_id.c_str(), "A", "a", true, false);
-   rib_rmlui_set_control_state(neighbour_id.c_str(), "B", "b", false, false);
+   view.controls.set_control_state(focused_id.c_str(), "A", "a", true, false);
+   view.controls.set_control_state(neighbour_id.c_str(), "B", "b", false, false);
    /* test_property uses one buffer, so we copy the value before the next
     * read. */
-   const std::string focused_z = rib_rmlui_test_property(focused.c_str(), "z-index");
-   const std::string neighbour_z = rib_rmlui_test_property(neighbour.c_str(), "z-index");
+   const std::string focused_z = inspect.property(focused.c_str(), "z-index");
+   const std::string neighbour_z = inspect.property(neighbour.c_str(), "z-index");
    std::snprintf(message, sizeof(message),
          "%s: focused %s z-index is '%s' and %s is '%s'; the focused control is under its neighbour",
          design, focused.c_str(), focused_z.c_str(),
@@ -391,26 +375,26 @@ static void check_drawn_above(const char *design)
    CHECK(stacking_rank(focused_z.c_str()) > stacking_rank(neighbour_z.c_str()), message);
 
    move_to_id(neighbour.c_str());
-   const std::string hover_z = rib_rmlui_test_property(neighbour.c_str(), "z-index");
+   const std::string hover_z = inspect.property(neighbour.c_str(), "z-index");
    std::snprintf(message, sizeof(message),
          "%s: hovered %s z-index is '%s'; the control under the pointer is under its neighbour",
          design, neighbour.c_str(), hover_z.c_str());
    CHECK(stacking_rank(hover_z.c_str()) > 0, message);
 
-   if (rib_rmlui_has_element("control-group-l_stick"))
+   if (view.document.has_element("control-group-l_stick"))
    {
-      rib_rmlui_focus_group("l_stick");
-      const std::string group_z = rib_rmlui_test_property(
+      view.controls.focus_group("l_stick");
+      const std::string group_z = inspect.property(
             "control-group-l_stick", "z-index");
       std::snprintf(message, sizeof(message),
             "%s: focused stick group z-index is '%s'",
             design, group_z.c_str());
       CHECK(stacking_rank(group_z.c_str()) > 0, message);
-      rib_rmlui_focus_group(nullptr);
+      view.controls.focus_group(nullptr);
    }
 
-   rib_rmlui_set_control_state(focused_id.c_str(), "A", "a", false, false);
-   rib_rmlui_pointer_move(1, 1);
+   view.controls.set_control_state(focused_id.c_str(), "A", "a", false, false);
+   view.pointer_move(1, 1);
 }
 
 static void collect_painted(const Box &list, std::vector<Box> &painted)
@@ -418,10 +402,10 @@ static void collect_painted(const Box &list, std::vector<Box> &painted)
    painted.clear();
    if (list.ok)
       painted.push_back(list);
-   const int row_count = rib_rmlui_rows_in("control-binds");
+   const int row_count = view.lists.rows_in("control-binds");
    for (int index = 0; index < row_count; ++index)
    {
-      const char *row_id = rib_rmlui_row_in("control-binds", index);
+      const char *row_id = view.lists.row_in("control-binds", index);
       const Box row = row_id ? box_of(row_id) : Box{};
       if (row.ok)
          painted.push_back(row);
@@ -441,10 +425,10 @@ static int check_parts_inside_list(const char *design, const char *profile,
 {
    int missed = 0;
    char message[512];
-   const int row_count = rib_rmlui_rows_in("control-binds");
+   const int row_count = view.lists.rows_in("control-binds");
    for (int index = 0; index < row_count; ++index)
    {
-      const char *row_id = rib_rmlui_row_in("control-binds", index);
+      const char *row_id = view.lists.row_in("control-binds", index);
       const Box row = row_id ? box_of(row_id) : Box{};
       if (!row.ok)
          continue;
@@ -477,7 +461,7 @@ static int check_one_list(const char *design, const char *profile,
 {
    char message[512];
    fill_anchor_rows(anchor);
-   rib_rmlui_place_list("control-binds", anchor, width);
+   view.lists.place_list("control-binds", anchor, width);
    const Box screen = box_of("screen");
    const Box list = box_of("control-binds");
    if (!screen.ok || !list.ok)
@@ -491,9 +475,9 @@ static int check_one_list(const char *design, const char *profile,
    int missed = 0;
    {
       static bool stand_in_noted = false;
-      const char *first = rib_rmlui_row_in("control-binds", 0);
+      const char *first = view.lists.row_in("control-binds", 0);
       const std::string title_id = first ? std::string(first) + "-title" : "";
-      const char *title = first ? rib_rmlui_test_text(title_id.c_str()) : "";
+      const char *title = first ? inspect.text(title_id.c_str()) : "";
       if (!stand_in_noted && title && std::strcmp(title, "LEFT STICK UP") == 0)
       {
          stand_in_noted = true;
@@ -515,10 +499,10 @@ static int check_one_list(const char *design, const char *profile,
    }
    /* A row is width 100% plus its border, so it extends past the list box
     * measured for the clamp. That is the strip cut off in the corner. */
-   const int row_count = rib_rmlui_rows_in("control-binds");
+   const int row_count = view.lists.rows_in("control-binds");
    for (int index = 0; index < row_count; ++index)
    {
-      const char *row_id = rib_rmlui_row_in("control-binds", index);
+      const char *row_id = view.lists.row_in("control-binds", index);
       const Box row = row_id ? box_of(row_id) : Box{};
       if (!row.ok || inside_screen(row, screen))
          continue;
@@ -538,7 +522,7 @@ static int check_one_list(const char *design, const char *profile,
    painted.push_back(list);
    for (int index = 0; index < row_count; ++index)
    {
-      const char *row_id = rib_rmlui_row_in("control-binds", index);
+      const char *row_id = view.lists.row_in("control-binds", index);
       const Box row = row_id ? box_of(row_id) : Box{};
       if (row.ok)
          painted.push_back(row);
@@ -633,11 +617,11 @@ static int check_one_list(const char *design, const char *profile,
 
 static void check_glyphs(const char *design, const char *which)
 {
-   const int rows = rib_rmlui_rows_in("control-binds");
+   const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
    {
-      const char *id = rib_rmlui_row_in("control-binds", index);
-      if (!id || !*id || !rib_rmlui_test_row_glyphs_overlap(id))
+      const char *id = view.lists.row_in("control-binds", index);
+      if (!id || !*id || !inspect.row_glyphs_overlap(id))
          continue;
       char message[256];
       std::snprintf(message, sizeof(message),
@@ -655,21 +639,21 @@ static void check_short_list(const char *design, int declared)
     * long stand-in, the text that a fixed width would have to fit. */
    fill_bind_rows();
    check_glyphs(design, "long");
-   const int rows = rib_rmlui_rows_in("control-binds");
+   const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
    {
-      const char *id = rib_rmlui_row_in("control-binds", index);
+      const char *id = view.lists.row_in("control-binds", index);
       if (!id || !*id)
          break;
       if (index < 2)
-         rib_rmlui_set_row_text(id, "A", "BUTTON 2", "PAD");
+         view.lists.set_row_text(id, "A", "BUTTON 2", "PAD");
       else
-         rib_rmlui_set_shown(id, false);
+         view.document.set_shown(id, false);
    }
-   rib_rmlui_retarget_pages("control-binds");
-   rib_rmlui_render(960, 600);
-   rib_rmlui_place_list("control-binds", "control-up", declared);
-   const char *prop = rib_rmlui_test_property("control-binds", "width");
+   view.lists.retarget_pages("control-binds");
+   view.render(960, 600);
+   view.lists.place_list("control-binds", "control-up", declared);
+   const char *prop = inspect.property("control-binds", "width");
    int parsed = 0;
    if (prop)
       std::sscanf(prop, "%d", &parsed);
@@ -690,7 +674,7 @@ static void check_volume_ends(const char *design, int window_w, int window_h)
    };
    for (const auto &end : ends)
    {
-      rib_rmlui_set_slider(RIB_VOLUME_SLIDER_ID, end.fraction, nullptr);
+      view.parts.set_slider(RIB_VOLUME_SLIDER_ID, end.fraction, nullptr);
       const Box thumb = box_of("volume-level-thumb");
       const Box arrow = box_of(end.arrow);
       const int gap = (thumb.ok && arrow.ok) ? horizontal_gap(thumb, arrow) : -1;
@@ -709,28 +693,28 @@ static void check_volume_ends(const char *design, int window_w, int window_h)
  * list, so we fill the pages that the player shows for a stick. */
 static void fill_stick_pages(void)
 {
-   const int rows = rib_rmlui_rows_in("control-binds");
+   const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
    {
-      const char *id = rib_rmlui_row_in("control-binds", index);
+      const char *id = view.lists.row_in("control-binds", index);
       if (!id || !*id)
          break;
       if (index < 10)
       {
-         rib_rmlui_set_row_text(id, "Right stick up", "Axis -0", "AXIS");
-         rib_rmlui_set_shown(id, true);
+         view.lists.set_row_text(id, "Right stick up", "Axis -0", "AXIS");
+         view.document.set_shown(id, true);
       }
       else
-         rib_rmlui_set_shown(id, false);
+         view.document.set_shown(id, false);
    }
-   rib_rmlui_retarget_pages("control-binds");
+   view.lists.retarget_pages("control-binds");
 }
 
 static int check_rstick_picture(const char *design, const char *profile, int width)
 {
    if (std::strcmp(profile, "ps1") != 0 && std::strcmp(profile, "ps1-analog") != 0)
       return 0;
-   if (!rib_rmlui_has_element("control-group-r_stick"))
+   if (!view.document.has_element("control-group-r_stick"))
    {
       char message[256];
       std::snprintf(message, sizeof(message),
@@ -744,7 +728,7 @@ static int check_rstick_picture(const char *design, const char *profile, int wid
    int missed = 0;
    for (const auto &size : sizes)
    {
-      rib_rmlui_render(size[0], size[1]);
+      view.render(size[0], size[1]);
       missed += check_one_list(design, profile, "control-group-r_stick", width,
             size[0], size[1]);
    }
@@ -760,30 +744,30 @@ static int check_rstick_picture(const char *design, const char *profile, int wid
 static int check_placement(const char *assets, const char *scenes,
       const char *design, int width)
 {
-   if (!rib_rmlui_init(assets, 960, 600, false))
+   if (!view.initialize(assets, 960, 600, false, fixture_controls))
    {
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;
    }
-   rib_rmlui_clear_screens();
-   rib_rmlui_declare_screen("pause", "pause-panel", "GAME PAUSED",
+   view.screens.clear_screens();
+   view.screens.declare_screen("pause", "pause-panel", "GAME PAUSED",
          "ESC  CONTINUE", "options");
-   rib_rmlui_declare_screen("controls", "controls-panel", "CONTROLS",
+   view.screens.declare_screen("controls", "controls-panel", "CONTROLS",
          "ESC  BACK", "controls");
-   rib_rmlui_declare_screen("options", "options-panel", "OPTIONS",
+   view.screens.declare_screen("options", "options-panel", "OPTIONS",
          "ESC  BACK", "options");
 
    /* 1920x1200 is a 960x600 window on a 2x display, the size at which the
     * right border of the list is on the last pixel. */
    const int sizes[][2] = {{960, 600}, {1440, 900}, {1920, 1200}};
-   rib_rmlui_show_screen("options");
+   view.screens.show_screen("options");
    for (const auto &size : sizes)
    {
-      rib_rmlui_render(size[0], size[1]);
+      view.render(size[0], size[1]);
       check_volume_ends(design, size[0], size[1]);
    }
 
-   rib_rmlui_show_screen("controls");
+   view.screens.show_screen("controls");
    fill_bind_rows();
    int scenes_seen = 0;
    for (const auto &entry : std::filesystem::directory_iterator(scenes))
@@ -795,7 +779,7 @@ static int check_placement(const char *assets, const char *scenes,
       std::stringstream buffer;
       buffer << in.rdbuf();
       const std::string markup = buffer.str();
-      if (!rib_rmlui_set_scene(markup.c_str()))
+      if (!view.controls.set_scene(markup.c_str()))
       {
          char message[256];
          std::snprintf(message, sizeof(message),
@@ -808,7 +792,7 @@ static int check_placement(const char *assets, const char *scenes,
       std::vector<std::string> labels;
       /* Lay out once so the labels exist before we count them. A scene
        * swapped in while its panel is showing still has to be formatted. */
-      rib_rmlui_render(960, 600);
+      view.render(960, 600);
       anchors("control-callout", labels);
       anchors("control-group", labels);
       if (labels.empty())
@@ -823,7 +807,7 @@ static int check_placement(const char *assets, const char *scenes,
          check_drawn_above(design);
       for (const auto &size : sizes)
       {
-         rib_rmlui_render(size[0], size[1]);
+         view.render(size[0], size[1]);
          for (const std::string &anchor : labels)
             check_one_list(design, profile.c_str(), anchor.c_str(), width,
                   size[0], size[1]);
@@ -844,7 +828,24 @@ static int check_placement(const char *assets, const char *scenes,
       std::fprintf(stderr, "\n");
    }
    check_short_list(design, width);
-   rib_rmlui_shutdown();
+   {
+      view.screens.show_screen("pause");
+      view.slots.focus_element("save");
+      view.status.set_main("A \"quoted\" status\\path\nline");
+      view.render(960, 600);
+      drain_actions();
+      const std::string report = rib::Script(view).report(
+            "pause", true, false, false, "megadrive", -12.0f);
+      CHECK(report.find("\"focused\":[\"save\"]") != std::string::npos,
+            "the checkpoint observes the actual visible focus");
+      CHECK(report.find("A &quot;quoted&quot; status\\\\path\\u000aline") != std::string::npos,
+            "the checkpoint preserves serialized RML and JSON-escapes its backslash and newline");
+      CHECK(report.find("\"profile\":\"megadrive\",\"volumeDb\":-12.000000") != std::string::npos,
+            "the checkpoint carries the runtime profile and volume");
+      CHECK(view.intents.take().kind == RIB_RMLUI_ACTION_NONE,
+            "observation does not generate a menu action");
+   }
+   view.shutdown();
    if (failures)
    {
       std::fprintf(stderr, "%d check(s) failed\n", failures);
@@ -853,8 +854,12 @@ static int check_placement(const char *assets, const char *scenes,
    return 0;
 }
 
+int test_menu_declarations();
+
 int main(int argc, char **argv)
 {
+   if (argc == 2 && std::strcmp(argv[1], "declarations") == 0)
+      return test_menu_declarations();
    const char *assets = argc > 1 ? argv[1] : nullptr;
    if (!assets || !*assets)
    {
@@ -863,13 +868,13 @@ int main(int argc, char **argv)
    }
    if (argc > 2 && std::strcmp(argv[2], "row-edge") == 0)
    {
-      if (!rib_rmlui_init(assets, 960, 600, false))
+      if (!view.initialize(assets, 960, 600, false, fixture_controls))
       {
          std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
          return 1;
       }
       check_focus_leaves_the_name();
-      rib_rmlui_shutdown();
+      view.shutdown();
       if (failures)
       {
          std::fprintf(stderr, "%d check(s) failed\n", failures);
@@ -889,33 +894,33 @@ int main(int argc, char **argv)
       return check_placement(assets, argv[3], argv[4], std::atoi(argv[5]));
    }
 
-   CHECK(rib_rmlui_map_menu_toggle(false, true) ==
+   CHECK(rib::map_menu_toggle(false, true) ==
             RIB_RMLUI_ACTION_CONTROLS_CANCEL,
          "toggle cancels capture first");
-   CHECK(rib_rmlui_map_menu_toggle(true, false) ==
+   CHECK(rib::map_menu_toggle(true, false) ==
             RIB_RMLUI_ACTION_CONTROLS_BACK,
          "toggle leaves Controls next");
-   CHECK(rib_rmlui_map_menu_toggle(false, false) ==
+   CHECK(rib::map_menu_toggle(false, false) ==
             RIB_RMLUI_ACTION_RESUME,
          "toggle resumes from the main screen");
-   CHECK(rib_rmlui_toggle_stays_in_menu(true, false),
+   CHECK(rib::toggle_stays_in_menu(true, false),
          "Controls keeps the menu open");
    CHECK(!rib_rmlui_ok_includes_pointer_select(true),
          "RmlUi OK does not consume the pointer select bit");
-   CHECK(!rib_rmlui_load_is_actionable(false),
+   CHECK(!view.slots.occupied(1),
          "empty Load is not actionable");
-   CHECK(!rib_rmlui_state_task_matches(false, true, "/s", 1, "/s", 1, true),
+   CHECK(!rib::state_task_matches(false, true, "/s", 1, "/s", 1, true),
          "no pending operation does not match");
-   CHECK(!rib_rmlui_state_task_matches(true, true, "/s", 1, "/s", 1, false),
+   CHECK(!rib::state_task_matches(true, true, "/s", 1, "/s", 1, false),
          "a load result does not resolve a save");
-   CHECK(!rib_rmlui_state_task_matches(true, true, "/s1", 1, "/s2", 1, true),
+   CHECK(!rib::state_task_matches(true, true, "/s1", 1, "/s2", 1, true),
          "another path is ignored");
-   CHECK(!rib_rmlui_state_task_matches(true, true, "/s", 1, "/s", 2, true),
+   CHECK(!rib::state_task_matches(true, true, "/s", 1, "/s", 2, true),
          "another slot is ignored");
-   CHECK(rib_rmlui_state_task_matches(true, false, "/s", 3, "/s", 3, false),
+   CHECK(rib::state_task_matches(true, false, "/s", 3, "/s", 3, false),
          "exact load path and slot match");
 
-   if (!rib_rmlui_init(assets, 960, 600, false))
+   if (!view.initialize(assets, 960, 600, false, fixture_controls))
    {
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;
@@ -923,164 +928,177 @@ int main(int argc, char **argv)
    /* The screen button on the pause row is Options. `controls` is inside
     * that panel, so this click cannot reach the built-in handler for
     * `controls`. */
-   rib_rmlui_declare_screen("options", "options-panel", "OPTIONS",
+   view.screens.declare_screen("options", "options-panel", "OPTIONS",
          "ESC  BACK", "options");
 
-   rib_rmlui_set_status("SAVED");
-   rib_rmlui_set_controls_status("DEFAULTS RESTORED");
-   rib_rmlui_test_advance(4);
-   rib_rmlui_render(960, 600);
-   CHECK(std::string(rib_rmlui_test_text("status")) == "SAVED", "status remains briefly");
-   rib_rmlui_test_advance(2);
-   rib_rmlui_render(960, 600);
-   CHECK(std::string(rib_rmlui_test_text("status")).empty(), "main status expires");
-   CHECK(std::string(rib_rmlui_test_text("controls-status")).empty(), "controls status expires");
+   view.status.set_main("SAVED");
+   view.status.set_controls("DEFAULTS RESTORED");
+   inspect.advance(4);
+   view.render(960, 600);
+   CHECK(std::string(inspect.text("status")) == "SAVED", "status remains briefly");
+   inspect.advance(2);
+   view.render(960, 600);
+   CHECK(std::string(inspect.text("status")).empty(), "main status expires");
+   CHECK(std::string(inspect.text("controls-status")).empty(), "controls status expires");
    for (float aspect : {10.0f/9, 4.0f/3, 16.0f/9}) {
-      rib_rmlui_set_game_aspect(aspect);
-      CHECK(std::abs(rib_rmlui_test_picture_aspect() - aspect) < 0.02f, "well follows live core aspect");
+      view.slots.set_game_aspect(aspect);
+      CHECK(std::abs(inspect.picture_aspect() - aspect) < 0.02f, "well follows live core aspect");
    }
-   rib_rmlui_set_game_aspect(4.0f/3);
+   view.lists.place_list("fixture-panel", nullptr, 0);
+   CHECK(std::string(inspect.property("fixture-panel", "display")) != "none",
+         "popup placement accepts its declared element without requiring a list class");
+   view.document.set_shown("fixture-panel", false);
+   view.slots.set_game_aspect(4.0f/3);
    click_id("save");
    click_id("options");
-   const int first = rib_rmlui_take_action();
-   const int second = rib_rmlui_take_action();
-   CHECK(first == RIB_RMLUI_ACTION_SAVE,
+   const auto first = view.intents.take();
+   const auto second = view.intents.take();
+   CHECK(first.kind == RIB_RMLUI_ACTION_SAVE,
          "mailbox preserves the first click");
    // Changing screen has no separate action. We pass the requested screen
    // next to one shared action, so declaring a screen never adds to the
    // enum. This test is mainly about the order, and it also checks that the
    // id arrived.
-   CHECK(second == RIB_RMLUI_ACTION_SHOW_SCREEN,
+   CHECK(second.kind == RIB_RMLUI_ACTION_SHOW_SCREEN,
          "mailbox preserves the following click");
-   CHECK(std::string(rib_rmlui_requested_screen()) == "options",
+   CHECK(second.id == "options",
          "the screen asked for travels with the action");
-   CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+   CHECK(view.intents.take().kind == RIB_RMLUI_ACTION_NONE,
          "mailbox is empty after both intents");
 
+   click_id("slot-3");
+   click_id("slot-5");
+   const auto third_slot = view.intents.take();
+   const auto fifth_slot = view.intents.take();
+   CHECK(third_slot.kind == RIB_RMLUI_ACTION_SELECT_SLOT && third_slot.slot == 3,
+         "first queued slot click carries its own slot");
+   CHECK(fifth_slot.kind == RIB_RMLUI_ACTION_SELECT_SLOT && fifth_slot.slot == 5,
+         "second queued slot click carries its own slot");
+
    move_to_id("resume");
-   CHECK(rib_rmlui_hovered_action() == RIB_RMLUI_ACTION_RESUME,
+   CHECK(view.hovered.kind == RIB_RMLUI_ACTION_RESUME,
          "pointer hover tracks Resume");
-   rib_rmlui_pointer_move(8, 8);
-   CHECK(rib_rmlui_hovered_action() == RIB_RMLUI_ACTION_NONE,
+   view.pointer_move(8, 8);
+   CHECK(view.hovered.kind == RIB_RMLUI_ACTION_NONE,
          "pointer leave clears hover instead of sticking");
 
-   rib_rmlui_set_focused(RIB_RMLUI_ACTION_QUIT);
-   rib_rmlui_set_selected_slot(4);
+   view.slots.focus_action(RIB_RMLUI_ACTION_QUIT);
+   view.slots.set_selected_slot(4);
    move_to_id("resume");
-   CHECK(rib_rmlui_hovered_action() == RIB_RMLUI_ACTION_RESUME,
+   CHECK(view.hovered.kind == RIB_RMLUI_ACTION_RESUME,
          "hover is independent of keyboard focus");
 
-   rib_rmlui_set_selected_slot(4);
-   rib_rmlui_set_focused(RIB_RMLUI_ACTION_RESUME);
-   rib_rmlui_pointer_move(1, 1);
-   const std::string selected_border = rib_rmlui_test_property("slot-4", "border-top-color");
+   view.slots.set_selected_slot(4);
+   view.slots.focus_action(RIB_RMLUI_ACTION_RESUME);
+   view.pointer_move(1, 1);
+   const std::string selected_border = inspect.property("slot-4", "border-top-color");
    move_to_id("slot-4");
-   rib_rmlui_set_focused(RIB_RMLUI_ACTION_SELECT_SLOT_1 + 3);
-   CHECK(selected_border == rib_rmlui_test_property("slot-4", "border-top-color"),
+   view.slots.focus_action(rib::Event::select_slot(4));
+   CHECK(selected_border == inspect.property("slot-4", "border-top-color"),
          "selected slot keeps its border across hover and keyboard focus");
-   rib_rmlui_pointer_button(true);
-   CHECK(selected_border != rib_rmlui_test_property("slot-4", "border-top-color"),
+   view.pointer_button(true);
+   CHECK(selected_border != inspect.property("slot-4", "border-top-color"),
          "slot has pressed feedback while held");
-   rib_rmlui_pointer_move(1, 1);
-   rib_rmlui_pointer_button(false);
+   view.pointer_move(1, 1);
+   view.pointer_button(false);
 
-   rib_rmlui_set_slot_state(1, false, nullptr);
-   CHECK(rib_rmlui_element_disabled("load"),
+   view.slots.set_slot_state(1, false, nullptr);
+   CHECK(view.document.element_disabled("load"),
          "empty Load is disabled");
-   rib_rmlui_clear_intents();
+   view.clear_intents();
    click_id("load");
-   CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+   CHECK(view.intents.take().kind == RIB_RMLUI_ACTION_NONE,
          "disabled Load does not enqueue an action");
 
-   rib_rmlui_show_controls(true);
+   view.screens.show_screen("controls");
    int control_x = 0, control_y = 0;
-   if (rib_rmlui_element_center("control-up", &control_x, &control_y)) {
-      rib_rmlui_set_control_state("up", "Up", "up", true, true);
-      const std::string animation = rib_rmlui_test_property("control-up", "animation");
+   if (view.document.element_center("control-up", &control_x, &control_y)) {
+      view.controls.set_control_state("up", "Up", "up", true, true);
+      const std::string animation = inspect.property("control-up", "animation");
       CHECK(animation.find("capture-pulse") != std::string::npos, "capture animates the control itself");
-      rib_rmlui_render(960, 600);
-      const std::string border = rib_rmlui_test_property("control-up", "border-top-color");
-      rib_rmlui_test_advance(0.3);
-      rib_rmlui_render(960, 600);
-      CHECK(border != rib_rmlui_test_property("control-up", "border-top-color"), "capture border changes over time");
-      rib_rmlui_set_control_state("up", "Up", "up", true, false);
-      CHECK(std::string(rib_rmlui_test_property("control-up", "animation")).find("capture-pulse") == std::string::npos, "capture cue stops when capture ends");
+      view.render(960, 600);
+      const std::string border = inspect.property("control-up", "border-top-color");
+      inspect.advance(0.3);
+      view.render(960, 600);
+      CHECK(border != inspect.property("control-up", "border-top-color"), "capture border changes over time");
+      view.controls.set_control_state("up", "Up", "up", true, false);
+      CHECK(std::string(inspect.property("control-up", "animation")).find("capture-pulse") == std::string::npos, "capture cue stops when capture ends");
    }
-   rib_rmlui_set_controls_action_focus(false, false, true);
+   view.controls.set_controls_action_focus(false, false, true);
    int cancel_x = 0;
    int cancel_y = 0;
-   CHECK(rib_rmlui_element_center("controls-cancel", &cancel_x, &cancel_y),
+   CHECK(view.document.element_center("controls-cancel", &cancel_x, &cancel_y),
          "Cancel has a hit centre while capture is visible");
-   rib_rmlui_clear_intents();
-   rib_rmlui_pointer_move(cancel_x, cancel_y);
-   rib_rmlui_pointer_button(true);
-   rib_rmlui_pointer_button(false);
-   CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_CONTROLS_CANCEL,
+   view.clear_intents();
+   view.pointer_move(cancel_x, cancel_y);
+   view.pointer_button(true);
+   view.pointer_button(false);
+   CHECK(view.intents.take().kind == RIB_RMLUI_ACTION_CONTROLS_CANCEL,
          "Cancel is consumed by RmlUi before any binder poll");
 
    for (const char *id : {"controls-cancel", "controls-reset", "controls-back"})
    {
       move_to_id(id);
-      const std::string hovered = rib_rmlui_test_property(id, "border-top-color");
-      rib_rmlui_pointer_button(true);
-      CHECK(hovered != rib_rmlui_test_property(id, "border-top-color"),
+      const std::string hovered = inspect.property(id, "border-top-color");
+      view.pointer_button(true);
+      CHECK(hovered != inspect.property(id, "border-top-color"),
             "press is visible while pointer remains over a controls button");
-      rib_rmlui_pointer_move(1, 1);
-      rib_rmlui_pointer_button(false);
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+      view.pointer_move(1, 1);
+      view.pointer_button(false);
+      CHECK(view.intents.take().kind == RIB_RMLUI_ACTION_NONE,
             "dragging out and releasing does not activate a controls button");
    }
 
-   rib_rmlui_show_controls(false);
-   rib_rmlui_clear_intents();
-   rib_rmlui_pointer_button(true);
-   rib_rmlui_pointer_leave();
+   view.screens.show_screen("pause");
+   view.clear_intents();
+   view.pointer_button(true);
+   view.pointer_leave();
    click_id("quit");
-   CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_QUIT,
+   CHECK(view.intents.take().kind == RIB_RMLUI_ACTION_QUIT,
          "pointer down/up stay in sync after leave");
 
-   rib_rmlui_clear_intents();
-   rib_rmlui_show_controls(true);
-   CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+   view.clear_intents();
+   view.screens.show_screen("controls");
+   CHECK(view.intents.take().kind == RIB_RMLUI_ACTION_NONE,
          "screen transition drops stale mailbox intents");
 
    if (argc > 2)
    {
-      rib_rmlui_show_controls(false);
+      view.screens.show_screen("pause");
       FILE *image = std::fopen(argv[2], "wb");
       CHECK(image, "writable thumbnail fixture");
       if (image) { std::fputs("first", image); std::fclose(image); }
-      rib_rmlui_set_slot_state(2, true, argv[2]);
-      rib_rmlui_render(960, 600);
-      const unsigned before = rib_rmlui_test_texture_loads();
+      view.slots.set_slot_state(2, true, argv[2]);
+      view.render(960, 600);
+      const unsigned before = inspect.texture_loads();
       image = std::fopen(argv[2], "wb");
       if (image) { std::fputs("updated image content", image); std::fclose(image); }
-      rib_rmlui_set_slot_state(2, true, argv[2]);
-      rib_rmlui_render(960, 600);
-      CHECK(rib_rmlui_test_texture_loads() > before,
+      view.slots.set_slot_state(2, true, argv[2]);
+      view.render(960, 600);
+      CHECK(inspect.texture_loads() > before,
             "overwriting a thumbnail reloads the same file without reopening the menu");
    }
 
    /* We write the controls scene into menu.rml in the builder. This template
     * still has the placeholder, and nothing in the bridge replaces it. We
-    * write the remap in rmlui.c, which is not linked here, so this does not
-    * prove that a choice is saved or applied. */
-   rib_rmlui_show_controls(true);
+    * write the remap behind the host boundary, which is not linked here, so
+    * this does not prove that a choice is saved or applied. */
+   view.screens.show_screen("controls");
    {
       int image_x = 0;
       int image_y = 0;
-      const std::string scene(rib_rmlui_test_text("controller-scene"));
+      const std::string scene(inspect.text("controller-scene"));
       CHECK(scene.find("control-") == std::string::npos,
             "the player template has no generated control callouts");
-      CHECK(!rib_rmlui_element_center("controller-image", &image_x, &image_y),
+      CHECK(!view.document.element_center("controller-image", &image_x, &image_y),
             "the player template has no controller illustration");
-      rib_rmlui_wire_device_picker();
-      rib_rmlui_set_device_picker(true, "megadrive6");
-      CHECK(std::string(rib_rmlui_test_text("controller-scene")) == scene,
+      view.controls.wire_device_picker(fixture_controls);
+      view.controls.set_device_picker(fixture_controls, true, "megadrive6");
+      CHECK(std::string(inspect.text("controller-scene")) == scene,
             "naming another pad does not redraw the controls scene");
-      CHECK(!rib_rmlui_element_center("controller-image", &image_x, &image_y),
+      CHECK(!view.document.element_center("controller-image", &image_x, &image_y),
             "naming another pad does not add an illustration");
-      CHECK(!rib_rmlui_element_center(
+      CHECK(!view.document.element_center(
             "controls-device-option-megadrive6", &image_x, &image_y),
             "picker options are export markup, not created by the bridge");
    }
@@ -1110,12 +1128,12 @@ int main(int argc, char **argv)
    /* We do not read design.cfg in the interaction harness. We declare Options
     * as an export writes it, so showing it shows the screen that a player
     * opens. */
-   rib_rmlui_clear_screens();
-   rib_rmlui_declare_screen("pause", "pause-panel", "GAME PAUSED",
+   view.screens.clear_screens();
+   view.screens.declare_screen("pause", "pause-panel", "GAME PAUSED",
          "ESC  CONTINUE", "options-back");
-   rib_rmlui_declare_screen("options", "options-panel", "OPTIONS",
+   view.screens.declare_screen("options", "options-panel", "OPTIONS",
          "ESC  BACK", "options");
-   rib_rmlui_declare_screen("controls", "controls-panel", "CONTROLS",
+   view.screens.declare_screen("controls", "controls-panel", "CONTROLS",
          "ESC  BACK", "controls");
 
    /* Every button on the pause row can take focus, and only one at a time.
@@ -1125,10 +1143,10 @@ int main(int argc, char **argv)
     * right from SAVE, reaching Options by keyboard or pad, and pressing down
     * from slot 6 must each focus an element. A button added in a design or an
     * export is reachable without any change here. */
-   rib_rmlui_show_screen("pause");
+   view.screens.show_screen("pause");
    {
       char row[16][64];
-      const int count = rib_rmlui_focusables("pause-panel", row, 16);
+      const int count = view.document.focusables("pause-panel", row, 16);
       bool options_on_the_row = false;
       int index;
 
@@ -1142,59 +1160,62 @@ int main(int argc, char **argv)
       for (index = 0; index < count; ++index)
       {
          int other;
-         rib_rmlui_focus_element(row[index]);
-         CHECK(rib_rmlui_test_has_class(row[index], "focused"),
+         view.slots.focus_element(row[index]);
+         CHECK(inspect.has_class(row[index], "focused"),
                "every button on the pause row can be focused");
          for (other = 0; other < count; ++other)
             if (other != index)
-               CHECK(!rib_rmlui_test_has_class(row[other], "focused"),
+               CHECK(!inspect.has_class(row[other], "focused"),
                      "and only one of them at a time");
       }
-      CHECK(std::string(rib_rmlui_focused_element()) == row[count - 1],
+      CHECK(std::string(view.focus.pause_element().c_str()) == row[count - 1],
             "the row remembers which button has it");
    }
 
-   rib_rmlui_show_screen("options");
+   view.screens.show_screen("options");
    {
       int slider_x = 0;
       int slider_y = 0;
       int mute_x = 0;
       int mute_y = 0;
-      CHECK(rib_rmlui_element_center("volume-level", &slider_x, &slider_y),
+      CHECK(view.document.element_center("volume-level", &slider_x, &slider_y),
             "Options has the design's slider");
-      CHECK(!rib_rmlui_element_center("volume-mute", &mute_x, &mute_y),
+      CHECK(!view.document.element_center("volume-mute", &mute_x, &mute_y),
             "there is no mute button");
-      rib_rmlui_clear_intents();
-      rib_rmlui_pointer_move(slider_x, slider_y);
-      rib_rmlui_pointer_button(true);
-      rib_rmlui_pointer_move(0, 0);
-      rib_rmlui_pointer_button(false);
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SLIDER,
+      view.clear_intents();
+      view.pointer_move(slider_x, slider_y);
+      view.pointer_button(true);
+      view.pointer_move(0, 0);
+      view.pointer_button(false);
+      const auto drag = view.intents.take();
+      CHECK(drag.kind == RIB_RMLUI_ACTION_SLIDER,
             "dragging off a slider still sets the level");
-      CHECK(std::string(rib_rmlui_changed_part()) == "volume-level",
+      CHECK(drag.id == "volume-level",
             "the slider reports which part moved");
-      CHECK(rib_rmlui_changed_fraction() == 0.0f,
+      CHECK(drag.fraction == 0.0f,
             "a drag off the left end is the bottom of the range");
 
-      rib_rmlui_set_slider("volume-level", 0.5f, nullptr);
-      rib_rmlui_clear_intents();
-      CHECK(!rib_rmlui_nudge_slider("volume-level", 1),
+      view.parts.set_slider("volume-level", 0.5f, nullptr);
+      view.clear_intents();
+      CHECK(!view.parts.nudge_slider("volume-level", 1),
             "a slider with no step does not move, so a key cannot invent one");
-      rib_rmlui_set_slider_step("volume-level", 0.1f);
-      CHECK(rib_rmlui_nudge_slider("volume-level", 1), "a key nudges the focused slider");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SLIDER,
+      view.parts.set_slider_step("volume-level", 0.1f);
+      CHECK(view.parts.nudge_slider("volume-level", 1), "a key nudges the focused slider");
+      const auto nudge = view.intents.take();
+      CHECK(nudge.kind == RIB_RMLUI_ACTION_SLIDER,
             "the nudge is the same change a drag commits");
-      CHECK(rib_rmlui_changed_fraction() > 0.59f && rib_rmlui_changed_fraction() < 0.61f,
+      CHECK(nudge.fraction > 0.59f && nudge.fraction < 0.61f,
             "the nudge adds the slider's own step, not a volume-shaped one");
 
-      rib_rmlui_set_slider("volume-level", 1.0f, nullptr);
-      rib_rmlui_set_slider_step("volume-level",
+      view.parts.set_slider("volume-level", 1.0f, nullptr);
+      view.parts.set_slider_step("volume-level",
             AUDIO_VOLUME_STEP_DB / (AUDIO_VOLUME_MAX_DB - AUDIO_VOLUME_MIN_DB));
-      rib_rmlui_clear_intents();
+      view.clear_intents();
       click_id("volume-down");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SLIDER,
+      const auto arrow = view.intents.take();
+      CHECK(arrow.kind == RIB_RMLUI_ACTION_SLIDER,
             "the left arrow is the slider moving down one position");
-      CHECK(rib_rmlui_changed_fraction() > 0.88f && rib_rmlui_changed_fraction() < 0.90f,
+      CHECK(arrow.fraction > 0.88f && arrow.fraction < 0.90f,
             "one arrow is one position, not a decibel");
 
       /* With Options open and the slider selected, Down skips the left and
@@ -1203,7 +1224,7 @@ int main(int argc, char **argv)
        * to the next focusable element, as for the player. */
       {
          char ids[16][64];
-         const int count = rib_rmlui_focusables("options-panel", ids, 16);
+         const int count = view.document.focusables("options-panel", ids, 16);
          int slider = -1;
          for (int index = 0; index < count; ++index)
             if (std::strcmp(ids[index], RIB_VOLUME_SLIDER_ID) == 0)
@@ -1222,9 +1243,9 @@ int main(int argc, char **argv)
          CHECK(std::strcmp(again, RIB_VOLUME_UP_ID) != 0, message);
          int arrow_x = 0;
          int arrow_y = 0;
-         CHECK(rib_rmlui_element_center(RIB_VOLUME_DOWN_ID, &arrow_x, &arrow_y),
+         CHECK(view.document.element_center(RIB_VOLUME_DOWN_ID, &arrow_x, &arrow_y),
                "the left arrow is still there for a pointer");
-         CHECK(rib_rmlui_element_center(RIB_VOLUME_UP_ID, &arrow_x, &arrow_y),
+         CHECK(view.document.element_center(RIB_VOLUME_UP_ID, &arrow_x, &arrow_y),
                "the right arrow is still there for a pointer");
       }
 
@@ -1235,7 +1256,7 @@ int main(int argc, char **argv)
        * must not move the entries above it. */
       {
          char ids[16][64];
-         const int count = rib_rmlui_focusables("options-panel", ids, 16);
+         const int count = view.document.focusables("options-panel", ids, 16);
          bool landed = false;
          int controls_y = 0;
          int controls_x = 0;
@@ -1243,18 +1264,18 @@ int main(int argc, char **argv)
             if (std::strcmp(ids[index], "discs") == 0)
                landed = true;
          CHECK(!landed, "a hidden disc entry is not a focus stop");
-         CHECK(rib_rmlui_element_center("controls", &controls_x, &controls_y),
+         CHECK(view.document.element_center("controls", &controls_x, &controls_y),
                "controls is where it was");
          const int before = controls_y;
-         rib_rmlui_set_shown("discs", true);
-         rib_rmlui_set_disabled("discs", false);
-         CHECK(rib_rmlui_element_center("controls", &controls_x, &controls_y),
+         view.document.set_shown("discs", true);
+         view.document.set_disabled("discs", false);
+         CHECK(view.document.element_center("controls", &controls_x, &controls_y),
                "controls is still there once disc is shown");
          CHECK(controls_y == before,
                "showing the disc entry does not move the entries above it");
-         rib_rmlui_set_shown("discs", false);
-         rib_rmlui_set_disabled("discs", true);
-         const int after = rib_rmlui_focusables("options-panel", ids, 16);
+         view.document.set_shown("discs", false);
+         view.document.set_disabled("discs", true);
+         const int after = view.document.focusables("options-panel", ids, 16);
          landed = false;
          for (int index = 0; index < after; ++index)
             if (std::strcmp(ids[index], "discs") == 0)
@@ -1268,8 +1289,8 @@ int main(int argc, char **argv)
          const char *long_name =
             "/Users/mariowilde/Games/Final Fantasy VII/Final Fantasy VII/"
             "Final Fantasy VII/Final Fantasy VII (USA) (Disc 4).cue";
-         rib_rmlui_fit_row_title("fixture-one", long_name);
-         const std::string fitted(rib_rmlui_test_text("fixture-one-title"));
+         view.lists.fit_row_title("fixture-one", long_name);
+         const std::string fitted(inspect.text("fixture-one-title"));
          char message[512];
          std::snprintf(message, sizeof(message),
                "a long disc name is shortened in the middle, got '%s'",
@@ -1283,9 +1304,9 @@ int main(int argc, char **argv)
          CHECK(number != std::string::npos && dots < number, message);
          CHECK(fitted.size() < std::strlen(long_name),
                "the shortened name is shorter than the path");
-         rib_rmlui_set_shown("fixture-panel", true);
-         rib_rmlui_fit_row_title("fixture-two", long_name);
-         const std::string pictured(rib_rmlui_test_text("fixture-two-title"));
+         view.document.set_shown("fixture-panel", true);
+         view.lists.fit_row_title("fixture-two", long_name);
+         const std::string pictured(inspect.text("fixture-two-title"));
          const auto picture_dots = pictured.find("\u2026");
          std::snprintf(message, sizeof(message),
                "the one-line row still shortens where the picture column does, line '%s' picture '%s'",
@@ -1297,15 +1318,15 @@ int main(int argc, char **argv)
          int state_x = 0, state_y = 0, state_w = 0, state_h = 0;
          int pic_x = 0, pic_y = 0, pic_w = 0, pic_h = 0;
          int pic_title_x = 0, pic_title_y = 0, pic_title_w = 0, pic_title_h = 0;
-         CHECK(rib_rmlui_element_box("fixture-one", &row_x, &row_y, &row_w, &row_h),
+         CHECK(view.document.element_box("fixture-one", &row_x, &row_y, &row_w, &row_h),
                "the one-line row has a box");
-         CHECK(rib_rmlui_element_box("fixture-one-title", &title_x, &title_y, &title_w, &title_h),
+         CHECK(view.document.element_box("fixture-one-title", &title_x, &title_y, &title_w, &title_h),
                "the one-line name has a box");
-         CHECK(rib_rmlui_element_box("fixture-one-state", &state_x, &state_y, &state_w, &state_h),
+         CHECK(view.document.element_box("fixture-one-state", &state_x, &state_y, &state_w, &state_h),
                "the one-line state has a box");
-         CHECK(rib_rmlui_element_box("fixture-two", &pic_x, &pic_y, &pic_w, &pic_h),
+         CHECK(view.document.element_box("fixture-two", &pic_x, &pic_y, &pic_w, &pic_h),
                "the picture row has a box");
-         CHECK(rib_rmlui_element_box("fixture-two-title",
+         CHECK(view.document.element_box("fixture-two-title",
                &pic_title_x, &pic_title_y, &pic_title_w, &pic_title_h),
                "the picture row's name has a box");
          std::snprintf(message, sizeof(message),
@@ -1325,20 +1346,20 @@ int main(int argc, char **argv)
                title_x, pic_title_x, row_x);
          CHECK(title_x - row_x + 8 < pic_title_x - pic_x, message);
          check_focus_leaves_the_name();
-         rib_rmlui_set_shown("fixture-panel", false);
+         view.document.set_shown("fixture-panel", false);
       }
 
       /* One move cue per step that changes the level, and none at an end
        * where it does not move. The words come from the pack: up and down. */
-      rib_rmlui_set_slider(RIB_VOLUME_SLIDER_ID, 1.0f, nullptr);
-      rib_rmlui_set_slider_step(RIB_VOLUME_SLIDER_ID,
+      view.parts.set_slider(RIB_VOLUME_SLIDER_ID, 1.0f, nullptr);
+      view.parts.set_slider_step(RIB_VOLUME_SLIDER_ID,
             AUDIO_VOLUME_STEP_DB / (AUDIO_VOLUME_MAX_DB - AUDIO_VOLUME_MIN_DB));
       move_sound_log.clear();
-      rib_rmlui_nudge_slider(RIB_VOLUME_SLIDER_ID, 1);
-      rib_rmlui_nudge_slider(RIB_VOLUME_SLIDER_ID, -1);
-      rib_rmlui_nudge_slider(RIB_VOLUME_SLIDER_ID, 1);
-      rib_rmlui_set_slider(RIB_VOLUME_SLIDER_ID, 0.0f, nullptr);
-      rib_rmlui_nudge_slider(RIB_VOLUME_SLIDER_ID, -1);
+      view.parts.nudge_slider(RIB_VOLUME_SLIDER_ID, 1);
+      view.parts.nudge_slider(RIB_VOLUME_SLIDER_ID, -1);
+      view.parts.nudge_slider(RIB_VOLUME_SLIDER_ID, 1);
+      view.parts.set_slider(RIB_VOLUME_SLIDER_ID, 0.0f, nullptr);
+      view.parts.nudge_slider(RIB_VOLUME_SLIDER_ID, -1);
       {
          char message[256];
          std::snprintf(message, sizeof(message),
@@ -1356,17 +1377,17 @@ int main(int argc, char **argv)
    {
       // Earlier checks can leave the controls screen up, where SAVE is hidden
       // and nothing can be clicked, so we set the screen explicitly.
-      rib_rmlui_show_screen("pause");
+      view.screens.show_screen("pause");
       drain_actions();
       press_then_release_at("save", 4, 4);
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+      CHECK(view.intents.take().kind == RIB_RMLUI_ACTION_NONE,
             "pressing a button and releasing off it does nothing");
 
       // The other half, to show that this does not pass because clicks have
       // stopped working: a press and release on the same button still acts.
       drain_actions();
       click_id("save");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SAVE,
+      CHECK(view.intents.take().kind == RIB_RMLUI_ACTION_SAVE,
             "pressing and releasing on a button still presses it");
 
       // Sliding off and back on is a press, because the release happens on the
@@ -1375,14 +1396,14 @@ int main(int argc, char **argv)
       {
          int x = 0;
          int y = 0;
-         CHECK(rib_rmlui_element_center("save", &x, &y), "element has a hit centre");
-         rib_rmlui_pointer_move(x, y);
-         rib_rmlui_pointer_button(true);
-         rib_rmlui_pointer_move(4, 4);
-         rib_rmlui_pointer_move(x, y);
-         rib_rmlui_pointer_button(false);
+         CHECK(view.document.element_center("save", &x, &y), "element has a hit centre");
+         view.pointer_move(x, y);
+         view.pointer_button(true);
+         view.pointer_move(4, 4);
+         view.pointer_move(x, y);
+         view.pointer_button(false);
       }
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SAVE,
+      CHECK(view.intents.take().kind == RIB_RMLUI_ACTION_SAVE,
             "sliding off a button and back on still presses it");
       drain_actions();
    }
@@ -1397,9 +1418,7 @@ int main(int argc, char **argv)
          /* A step plays the move cue of the pack when the level changes, not
           * the confirm cue, so the two never play together, even at an end. */
          RIB_RMLUI_ACTION_SLIDER,
-         RIB_RMLUI_ACTION_SELECT_SLOT_1, RIB_RMLUI_ACTION_SELECT_SLOT_2,
-         RIB_RMLUI_ACTION_SELECT_SLOT_3, RIB_RMLUI_ACTION_SELECT_SLOT_4,
-         RIB_RMLUI_ACTION_SELECT_SLOT_5, RIB_RMLUI_ACTION_SELECT_SLOT_6,
+         RIB_RMLUI_ACTION_SELECT_SLOT,
       };
       for (int action = RIB_RMLUI_ACTION_NONE;
             action <= RIB_RMLUI_ACTION_SHOW_SCREEN; ++action)
@@ -1409,14 +1428,14 @@ int main(int argc, char **argv)
             if (quiet == action)
                expected_silent = true;
          const bool is_silent =
-            rib_rmlui_action_sound(action) == RIB_MENU_SOUND_NONE;
+            rib::action_sound(action) == rib::Sound::None;
          CHECK(is_silent == expected_silent,
                "every intent is audible unless silence was chosen for it");
       }
-      CHECK(rib_rmlui_action_sound(RIB_RMLUI_ACTION_SHOW_SCREEN)
-            == RIB_MENU_SOUND_OK, "changing screen is confirmed, not silent");
-      CHECK(rib_rmlui_action_sound(RIB_RMLUI_ACTION_CONTROLS_BACK)
-            == RIB_MENU_SOUND_CANCEL, "leaving a screen cancels, not confirms");
+      CHECK(rib::action_sound(RIB_RMLUI_ACTION_SHOW_SCREEN)
+            == rib::Sound::Confirm, "changing screen is confirmed, not silent");
+      CHECK(rib::action_sound(RIB_RMLUI_ACTION_CONTROLS_BACK)
+            == rib::Sound::Cancel, "leaving a screen cancels, not confirms");
    }
 
    // We draw an overlay over a running game, and how it looks is up to the
@@ -1425,33 +1444,33 @@ int main(int argc, char **argv)
    // act on that, the notice would appear and vanish without the arriving,
    // leaving or hiding animations in the design.
    {
-      rib_rmlui_set_overlay("notice", RIB_OVERLAY_HIDDEN);
-      rib_rmlui_set_overlay_mode(true);
-      rib_rmlui_render(960, 600);
-      const std::string away = rib_rmlui_test_property("notice", "opacity");
-      const std::string resting = rib_rmlui_test_property("notice", "bottom");
-      CHECK(std::string(rib_rmlui_test_property("footer", "display")) == "none",
+      rib::paint_overlay(view.document, "notice", rib::RIB_OVERLAY_HIDDEN);
+      view.set_overlay_mode(true);
+      view.render(960, 600);
+      const std::string away = inspect.property("notice", "opacity");
+      const std::string resting = inspect.property("notice", "bottom");
+      CHECK(std::string(inspect.property("footer", "display")) == "none",
             "the design puts the menu away while only overlays are drawn");
 
-      rib_rmlui_set_overlay("notice", RIB_OVERLAY_SHOWING);
+      rib::paint_overlay(view.document, "notice", rib::RIB_OVERLAY_SHOWING);
       settle(0.6);
-      const std::string shown = rib_rmlui_test_property("notice", "opacity");
+      const std::string shown = inspect.property("notice", "opacity");
       CHECK(shown != away, "showing an overlay makes the design draw it");
-      CHECK(std::string(rib_rmlui_test_property("notice", "bottom")) != resting,
+      CHECK(std::string(inspect.property("notice", "bottom")) != resting,
             "the design moves the notice into place, not only fades it in");
 
-      rib_rmlui_set_overlay("notice", RIB_OVERLAY_LEAVING);
-      rib_rmlui_render(960, 600);
-      CHECK(std::string(rib_rmlui_test_property("notice", "opacity")) != away,
+      rib::paint_overlay(view.document, "notice", rib::RIB_OVERLAY_LEAVING);
+      view.render(960, 600);
+      CHECK(std::string(inspect.property("notice", "opacity")) != away,
             "leaving is a transition, not a cut: the first frame is still drawn");
       settle(1.0);
-      CHECK(std::string(rib_rmlui_test_property("notice", "opacity")) == away,
+      CHECK(std::string(inspect.property("notice", "opacity")) == away,
             "the design takes the notice away over its own declared time");
 
-      rib_rmlui_set_overlay("notice", RIB_OVERLAY_HIDDEN);
-      rib_rmlui_set_overlay_mode(false);
-      rib_rmlui_render(960, 600);
-      CHECK(std::string(rib_rmlui_test_property("footer", "display")) != "none",
+      rib::paint_overlay(view.document, "notice", rib::RIB_OVERLAY_HIDDEN);
+      view.set_overlay_mode(false);
+      view.render(960, 600);
+      CHECK(std::string(inspect.property("footer", "display")) != "none",
             "the menu comes back when it is what is on screen");
    }
 
@@ -1462,36 +1481,59 @@ int main(int argc, char **argv)
       // We find the screen button on the pause row instead of naming it. With
       // Options in a game it is not the controls button, so with a fixed name
       // a pad would open Controls instead of Options.
-      CHECK(std::string(rib_rmlui_pause_screen_button()) == "options",
+      CHECK(std::string(view.screens.pause_screen_button()) == "options",
             "the pause row's screen button is the one the document has");
-      rib_rmlui_declare_screen("fixture", "fixture-panel", "LIST", "ESC  BACK", "");
-      CHECK(rib_rmlui_show_screen("fixture"), "a declared list screen shows");
-      rib_rmlui_wire_lists();
-      rib_rmlui_wire_toggles();
+      view.screens.declare_screen("fixture", "fixture-panel", "LIST", "ESC  BACK", "");
+      CHECK(view.screens.show_screen("fixture"), "a declared list screen shows");
+      view.lists.wire_lists();
+      view.wire_toggles();
       drain_actions();
-      CHECK(rib_rmlui_visible_row_count() == 4,
+      CHECK(view.lists.visible_row_count() == 4,
             "the generated list reports its rows");
-      CHECK(rib_rmlui_list_control_count() == 2,
+      CHECK(view.lists.list_control_count() == 2,
             "the list screen reports its switch and its back button");
-      CHECK(std::string(rib_rmlui_list_control_id(0)) == "fixture-mode",
+      CHECK(std::string(view.lists.list_control_id(0)) == "fixture-mode",
             "the switch comes first, as it is drawn");
-      CHECK(std::string(rib_rmlui_list_control_id(1)) == "fixture-back",
+      CHECK(std::string(view.lists.list_control_id(1)) == "fixture-back",
             "back comes after it");
-      CHECK(std::string(rib_rmlui_list_control_id(2)).empty(),
+      CHECK(std::string(view.lists.list_control_id(2)).empty(),
             "asking past the end names nothing");
-      rib_rmlui_focus_list_control(1);
+      view.lists.focus_list_control(1);
       click_id("fixture-mode");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_TOGGLE,
+      const auto toggle = view.intents.take();
+      CHECK(toggle.kind == RIB_RMLUI_ACTION_TOGGLE,
             "pressing a switch is the general toggle intent");
-      CHECK(std::string(rib_rmlui_chosen_item()) == "fixture-mode",
+      CHECK(toggle.id == "fixture-mode",
             "which switch travels beside the action");
-      rib_rmlui_set_toggle("fixture-mode", "ON", true);
-      CHECK(std::string(rib_rmlui_test_text("fixture-mode-state")) == "ON",
+      view.lists.set_toggle("fixture-mode", "ON", true);
+      CHECK(std::string(inspect.text("fixture-mode-state")) == "ON",
             "the switch shows the word the design gave it");
       drain_actions();
    }
 
-   rib_rmlui_shutdown();
+   // Each queued slider input must keep its payload until we consume it.
+   view.screens.show_screen("options");
+   view.clear_intents();
+   CHECK(view.parts.commit_slider("volume-level", 0.25f), "first queued slider input");
+   CHECK(view.parts.commit_slider("volume-level", 0.75f), "second queued slider input");
+   const auto queued_first = view.intents.take();
+   CHECK(queued_first.kind == RIB_RMLUI_ACTION_SLIDER, "first queued slider kind");
+   CHECK(queued_first.fraction == 0.25f, "first queued slider keeps its own value");
+   const auto queued_second = view.intents.take();
+   CHECK(queued_second.kind == RIB_RMLUI_ACTION_SLIDER, "second queued slider kind");
+   CHECK(queued_second.fraction == 0.75f, "second queued slider keeps its own value");
+
+   // When we create the document again, slider values and configured steps stay.
+   view.parts.set_slider_step("volume-level", 0.125f);
+   view.shutdown();
+   CHECK(view.initialize(argv[1], 960, 600, false, fixture_controls), "document recreates for slider state");
+   view.clear_intents();
+   CHECK(view.parts.nudge_slider("volume-level", -1), "recreated slider retains its step");
+   const auto recreated_slider = view.intents.take();
+   CHECK(recreated_slider.kind == RIB_RMLUI_ACTION_SLIDER
+         && recreated_slider.fraction == 0.625f,
+         "recreated slider steps from its previous value");
+   view.shutdown();
    if (failures)
    {
       std::fprintf(stderr, "%d check(s) failed\n", failures);

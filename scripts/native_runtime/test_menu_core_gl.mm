@@ -7,7 +7,7 @@
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/gl.h>
 
-#include "rmlui_gl.h"
+#include "rmlui/render/rmlui_gl.h"
 
 #include <cstdio>
 

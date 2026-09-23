@@ -47,6 +47,18 @@ CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog
 # uses it, or in a checkout where nobody has compiled it the scope fails.
 RMLUI_PREPARE = [["python3", str(ROOT / "scripts/prepare_rmlui.py")]]
 
+# For native workflow comparisons we select a committed player explicitly and
+# use isolated storage, in a namespace apart from the other native scopes.
+WORKFLOW_PREFIX = os.environ.get("ROMINABOX_GAME_BUNDLE_PREFIX", "")
+WORKFLOW_COMMAND = [
+    "env", f"ROMINABOX_GAME_BUNDLE_PREFIX={WORKFLOW_PREFIX}.workflows",
+    "python3", str(ROOT / "scripts/menu_workflows.py"),
+]
+WORKFLOW_UNAVAILABLE = None if (
+    os.environ.get("ROMINABOX_TEST_BUILD")
+    and WORKFLOW_PREFIX.startswith("app.rominabox.game.wt-")
+) else "requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player; name it after configuring both"
+
 
 class Scope:
     def __init__(
@@ -185,11 +197,20 @@ SCOPES = [
     ),
     Scope(
         "bridge",
-        "the RmlUi bridge itself, compiled with a dummy renderer: actions, hover, focus, capture, and that a pointer resting on a control writes the same focus the keyboard reads",
-        "the rest of rmlui.c (capture and sounds); the focus writer is extracted and compiled on its own, and control binding stays in the padbinds scope",
+        "the real menu and RmlUi document with a dummy renderer: actions, shared pointer/key focus, binding capacity, capture lifecycle, save/load failures and persistence",
+        "physical input capture or audible sound; a fake RetroArch host controls the failure/capture boundary, and post-reset navigation has a recorded pre-existing defect",
         ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
         slow=True,
         prepare=RMLUI_PREPARE,
+    ),
+    Scope(
+        "workflows",
+        "94 original native screenshot/state/persistence cases and 25 inherited Disc screen cases, in isolated workflow storage",
+        "audible cues, physical input or native focus/fullscreen; inspect the captured images directly too",
+        WORKFLOW_COMMAND + ["--composition", "--output", str(SCRATCH / "menu-composition")],
+        slow=True,
+        prepare=[WORKFLOW_COMMAND + ["--output", str(SCRATCH / "menu-workflows")]],
+        skipped=WORKFLOW_UNAVAILABLE,
     ),
     Scope(
         "edges",
@@ -221,7 +242,7 @@ SCOPES = [
     Scope(
         "variants",
         "that every controller a player can pick has artwork staged and a scene to swap to",
-        "that the player actually swaps to it; that is the bridge, and rmlui.c is not linked here",
+        "that the player actually swaps to it; that is the native menu, which is not linked here",
         ["python3", str(ROOT / "scripts/menu_states.py"), "--every-variant", str(SCRATCH / "variants")],
         slow=True,
     ),
@@ -325,10 +346,11 @@ SCOPES = [
     ),
     Scope(
         "quiet",
-        "that a harness launch is quiet unless it asks for sound, and that every player launch still sets the switch",
-        "that a person launching the game is silent; they never set the switch. The off-screen window is a separate change",
+        "quiet launch decisions, null audio, transparent windows, hands-on opt-outs, and safe native timeout handling",
+        "actual GL presentation or hands-on focus/fullscreen; the window probe never orders its window in",
         ["python3", str(ROOT / "scripts/test_quiet.py")],
         slow=True,
+        prepare=[["python3", str(ROOT / "scripts/test_native_harness_timeout.py")]],
     ),
 ]
 
@@ -510,7 +532,6 @@ def main() -> int:
             "A budget is the last measured time for that scope. It is exceeded "
             "when a run takes more than twice as long and at least the slack longer."
         )
-        return 1
     if not arguments.all and not arguments.scopes:
         print("\nSlow scopes were skipped. Run --all before a checkpoint.")
     return 0

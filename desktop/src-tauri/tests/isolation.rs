@@ -128,7 +128,13 @@ fn fixture_kit(root: &Path) -> PathBuf {
     kit
 }
 
-fn request(root: &Path, rom_bytes: &[u8], title: &str, kit: PathBuf, system: &str) -> ExportRequest {
+fn request(
+    root: &Path,
+    rom_bytes: &[u8],
+    title: &str,
+    kit: PathBuf,
+    system: &str,
+) -> ExportRequest {
     let rom = root.join("game.bin");
     fs::write(&rom, rom_bytes).unwrap();
     ExportRequest {
@@ -248,9 +254,10 @@ fn run_until(command: &mut Command, limit: Duration) -> std::process::ExitStatus
         match child.try_wait() {
             Ok(Some(status)) => return status,
             Ok(None) if started.elapsed() > limit => {
-                let _ = child.kill();
-                let _ = child.wait();
-                panic!("the launched game did not exit");
+                panic!(
+                    "the launched game did not exit within {limit:?} (pid {}); left running for inspection",
+                    child.id()
+                );
             }
             Ok(None) => std::thread::sleep(Duration::from_millis(200)),
             Err(error) => panic!("could not wait for the launcher: {error}"),
@@ -338,7 +345,10 @@ fn every_library_the_game_loads_is_inside_the_bundle() {
             }
         }
     }
-    assert!(checked > 0, "no bundle-relative load command was found to check");
+    assert!(
+        checked > 0,
+        "no bundle-relative load command was found to check"
+    );
     assert!(missing.is_empty(), "{}", missing.join("\n"));
 }
 
@@ -390,10 +400,7 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
 
     let leak = home().join("Documents/RetroArch/playlists/builtin/content_history.lpl");
     let leak_before = fs::read(&leak).expect("the host RetroArch history is not there to protect");
-    let write_path = leak
-        .parent()
-        .unwrap()
-        .join("rominabox-isolation-probe");
+    let write_path = leak.parent().unwrap().join("rominabox-isolation-probe");
     let _written = RemoveFile(write_path.clone());
     let secret = "isolation-secret-marker";
     let other_secret = data_dir_for(&other_identity).join("secret.txt");
@@ -447,15 +454,27 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     let log_path = data.join("logs/launch.log");
     let log = fs::read_to_string(&log_path).unwrap_or_default();
     assert!(status.success(), "probe launch failed\n{log}");
-    assert!(log.contains("READ_DENIED"), "the host profile was readable\n{log}");
-    assert!(log.contains("WRITE_DENIED"), "the host profile was writable\n{log}");
+    assert!(
+        log.contains("READ_DENIED"),
+        "the host profile was readable\n{log}"
+    );
+    assert!(
+        log.contains("WRITE_DENIED"),
+        "the host profile was writable\n{log}"
+    );
     assert!(
         log.contains("OTHER_DENIED"),
         "another game's container was readable\n{log}"
     );
     assert!(!log.contains(secret), "another game's marker leaked\n{log}");
-    assert!(log.contains("SHM_DENIED"), "shared memory was available\n{log}");
-    assert!(log.contains("UDP_DENIED"), "the network command port was bindable\n{log}");
+    assert!(
+        log.contains("SHM_DENIED"),
+        "shared memory was available\n{log}"
+    );
+    assert!(
+        log.contains("UDP_DENIED"),
+        "the network command port was bindable\n{log}"
+    );
     let container = container_for(&identity);
     let home_line = log
         .lines()
@@ -473,7 +492,10 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
         tmp_line.contains(container.to_str().unwrap()),
         "TMPDIR was not inside the container\n{log}"
     );
-    assert!(!write_path.exists(), "the probe created a file on the host profile");
+    assert!(
+        !write_path.exists(),
+        "the probe created a file on the host profile"
+    );
     assert_eq!(fs::read(&leak).unwrap(), leak_before);
 
     let config = fs::read_to_string(data.join("retroarch.cfg")).unwrap();
@@ -610,7 +632,8 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
         .ok()
         .map(|info| (info.len(), info.modified().ok()));
     assert_eq!(
-        before, after,
+        before,
+        after,
         "an unsandboxed launch wrote {}\n{}",
         host.display(),
         String::from_utf8_lossy(&output.stderr)
@@ -635,17 +658,14 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
 #[ignore = "runs an exported core for a few frames, then exits"]
 fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
     let rom = repo_at("scripts/fixtures/test-game.gbc");
-    assert!(rom.is_file(), "scripts/fixtures/test-game.gbc is not in this checkout");
+    assert!(
+        rom.is_file(),
+        "scripts/fixtures/test-game.gbc is not in this checkout"
+    );
     let kit = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/runtime");
     let root = scratch();
     fs::copy(&rom, root.join("game.bin")).unwrap();
-    let mut settings = request(
-        &root,
-        b"",
-        "Sandbox Game",
-        kit,
-        "gbc",
-    );
+    let mut settings = request(&root, b"", "Sandbox Game", kit, "gbc");
     settings.rom = rom;
     let app = export(&settings);
     let identity = identity_of(&app);
@@ -662,17 +682,22 @@ fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
     // The window is not focused, and the author chose to pause then, so the
     // console would stop before we log these lines. We set the screenshot
     // variable to keep it running without writing the player's controls.cfg.
-    command.env(
-        "ROMINABOX_MENU_SHOT",
-        "/tmp/rominabox-menu-shot-proof.png",
-    );
+    command.env("ROMINABOX_MENU_SHOT", "/tmp/rominabox-menu-shot-proof.png");
     // We append to this log in the launcher. An earlier shot of this ROM put
     // [CoreAudio] in this file, so a quiet run would still look loud.
     let log_path = data_dir_for(&identity).join("logs/launch.log");
     let _ = fs::remove_file(&log_path);
     let status = run_until(&mut command, Duration::from_secs(60));
     let log = fs::read_to_string(&log_path).unwrap_or_default();
-    let tail = log.lines().rev().take(40).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n");
+    let tail = log
+        .lines()
+        .rev()
+        .take(40)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>()
+        .join("\n");
     assert!(
         status.success(),
         "the game did not exit cleanly ({status})\n{tail}"
@@ -691,7 +716,8 @@ fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
         log.contains("[RIB] quiet activation accessory"),
         "a quiet run took a Dock icon\n{tail}"
     );
-    let written = fs::read_to_string(data_dir_for(&identity).join("retroarch.cfg")).unwrap_or_default();
+    let written =
+        fs::read_to_string(data_dir_for(&identity).join("retroarch.cfg")).unwrap_or_default();
     assert_eq!(
         config_value(&written, "audio_driver"),
         Some("null"),

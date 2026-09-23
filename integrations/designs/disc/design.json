@@ -5,7 +5,6 @@
   "description": "The memory-card browser of a late-90s disc console.",
   "slots": 6,
   "documents": {
-    "menu": "menu.rml",
     "splash": "splash.rml",
     "style": "menu.rcss"
   },
@@ -84,7 +83,8 @@
       "footer": "ESC  BACK",
       "back": "BACK",
       "images": "list",
-      "mark": "IN"
+      "mark": "IN",
+      "option": null
     },
     {
       "id": "options",
@@ -120,6 +120,7 @@
       }
     }
   ],
+  "screenOrder": ["pause", "disc", "discs", "options", "controls", "shaders"],
   "tokens": {
     "ink": "#ffffff"
   }
