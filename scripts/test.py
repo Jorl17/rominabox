@@ -53,12 +53,15 @@ class Scope:
         command: list[str],
         slow: bool = False,
         prepare: list[list[str]] | None = None,
+        skipped: str | None = None,
     ):
         self.name = name
         self.covers = covers
         self.not_covered = not_covered
         self.command = command
         self.slow = slow
+        # Why we leave a scope out of an ordinary run. We still run it when named.
+        self.skipped = skipped
         # What we must stage before the scope runs. We declare it here because
         # without the declaration, a scope with generated input would work only
         # in a checkout where someone had generated it, and fail everywhere else.
@@ -249,7 +252,7 @@ SCOPES = [
     ),
     Scope(
         "size",
-        "that an exported game, installed and as a zip, stays under the size ceiling, and does not carry the video encoders",
+        "that an exported app stays under the size ceiling, and does not carry the video encoders",
         "a cartridge's own size, or that the player was rebuilt; it measures the kit already on disk",
         ["python3", str(ROOT / "scripts/size_bundles.py")],
     ),
@@ -291,6 +294,7 @@ SCOPES = [
         "window placement and fullscreen; closing the window is the same AppKit terminate path",
         ["python3", str(ROOT / "scripts/test_quit.py")],
         slow=True,
+        skipped="it runs a 1.1 GB Sonic Adventure 2 disc image; run it by name",
     ),
     Scope(
         "quiet",
@@ -363,6 +367,8 @@ def main() -> int:
     if arguments.list:
         for scope in SCOPES:
             mark = " (slow)" if scope.slow else ""
+            if scope.skipped:
+                mark += f" (skipped unless named: {scope.skipped})"
             print(f"{scope.name}{mark}\n  covers    {scope.covers}\n  does not  {scope.not_covered}\n")
         return 0
 
@@ -372,9 +378,13 @@ def main() -> int:
             raise SystemExit(f"unknown scope(s): {', '.join(unknown)}; try --list")
         selected = [BY_NAME[name] for name in arguments.scopes]
     elif arguments.all:
-        selected = SCOPES
+        selected = [scope for scope in SCOPES if not scope.skipped]
     else:
-        selected = [scope for scope in SCOPES if not scope.slow]
+        selected = [scope for scope in SCOPES if not scope.slow and not scope.skipped]
+    if not arguments.scopes:
+        for scope in SCOPES:
+            if scope.skipped:
+                print(f"skipped {scope.name}: {scope.skipped}")
 
     SCRATCH.mkdir(parents=True, exist_ok=True)
     # We put this stamp in every scratch directory of this run. A diff of

@@ -569,8 +569,8 @@ fn author_background_play_survives_an_old_controls_file() {
 #[test]
 #[ignore = "runs an exported core for a few frames, then exits"]
 fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
-    let rom = repo_at("work/test-game.gbc");
-    assert!(rom.is_file(), "work/test-game.gbc is not in this checkout");
+    let rom = repo_at("scripts/fixtures/test-game.gbc");
+    assert!(rom.is_file(), "scripts/fixtures/test-game.gbc is not in this checkout");
     let kit = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/runtime");
     let root = scratch();
     fs::copy(&rom, root.join("game.bin")).unwrap();

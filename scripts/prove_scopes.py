@@ -629,8 +629,17 @@ CASES = {
 }
 
 
+def skipped_scopes() -> set[str]:
+    """Return the scopes we run in test.py only when named. Proving one runs it."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("rib_test_runner", ROOT / "scripts/test.py")
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    return {scope.name for scope in runner.SCOPES if scope.skipped}
+
+
 def main() -> int:
-    wanted = sys.argv[1:] or list(CASES)
+    wanted = sys.argv[1:] or [name for name in CASES if name not in skipped_scopes()]
     unknown = [name for name in wanted if name not in CASES]
     if unknown:
         raise SystemExit(f"unknown scope(s): {', '.join(unknown)}")

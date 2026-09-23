@@ -259,12 +259,6 @@ COPIED_ARTIFACTS = [
 
 # We only ever read these, so we share them at no cost and save a lot of
 # space, because node_modules alone is larger than the kit.
-# Fixtures for the tests that are not in git. work/ is ignored, so a fresh
-# worktree has no test-game.gbc and we cannot run the isolation tests at all.
-UNTRACKED_FIXTURES = [
-    Path("work/test-game.gbc"),
-]
-
 SHARED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/preview"),
     # Without these we cannot run the whole suite in a worktree, and the
@@ -289,20 +283,6 @@ SHARED_ARTIFACTS = [
 
 
 def link_build_artifacts(path: Path, own_copy: bool) -> None:
-    # Small files for the tests, copied and not linked, so that overwriting one
-    # in a worktree does not overwrite the canonical checkout's copy.
-    for relative in UNTRACKED_FIXTURES:
-        source = ROOT / relative
-        target = path / relative
-        if not source.is_file():
-            print(f"  {relative} is not here; the scopes that need it cannot run")
-            continue
-        if target.exists():
-            continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
-        print(f"  copied {relative}")
-
     for relative in COPIED_ARTIFACTS + SHARED_ARTIFACTS:
         copy = own_copy or relative in COPIED_ARTIFACTS
         source = ROOT / relative
