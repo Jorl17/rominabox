@@ -80,7 +80,11 @@ pub fn row_template(design: &Path) -> Result<String, String> {
 /// rows, toggle, Back action, or status. The optional base wrapper is in
 /// Native, beside the selected package. Without it we use the built-in one.
 fn screen_template(design: &Path, id: &str) -> Result<Option<String>, String> {
-    if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+    if id.is_empty()
+        || !id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
         return Err(format!("Invalid list screen id '{id}'"));
     }
     let name = format!("screen-{id}.rml");
@@ -329,7 +333,10 @@ pub fn declare_screen(
                 format!("{existing} {}", toggle.id)
             };
             cfg.replace_range(list_at..list_end, &ids);
-            for line in declared.lines().filter(|line| !line.starts_with("toggles = ")) {
+            for line in declared
+                .lines()
+                .filter(|line| !line.starts_with("toggles = "))
+            {
                 cfg.push_str(line);
                 cfg.push('\n');
             }
@@ -434,7 +441,11 @@ pub fn install(
             continue;
         }
         let rows = render_list(&list.screen.id, &template, &list.items, pages);
-        let back = list.screen.back_label.clone().unwrap_or_else(|| "BACK".into());
+        let back = list
+            .screen
+            .back_label
+            .clone()
+            .unwrap_or_else(|| "BACK".into());
         // In the design, the actions are placed for a full page of rows. For a
         // list with fewer rows, we move them up by the missing rows, so the
         // screen ends where its content does. For a full list we do not move
@@ -594,7 +605,10 @@ mod tests {
         assert!(paged.contains("x-page-2"));
         assert!(paged.contains("1/2"));
         let single = render_list("x", &template, &[item("a", "A")], 4);
-        assert!(!single.contains("list-pager"), "one page does not grow arrows");
+        assert!(
+            !single.contains("list-pager"),
+            "one page does not grow arrows"
+        );
     }
 
     #[test]
@@ -651,15 +665,26 @@ mod tests {
         let out = declare_screen(cfg, &screen, None).expect("declared");
         assert!(out.contains("toggles = \"achievement-mode\""), "{out}");
         assert!(out.contains("toggle_on_achievement-mode = \"ON\""), "{out}");
-        assert!(out.contains("toggle_guard_achievement-mode = \"saves\""), "{out}");
+        assert!(
+            out.contains("toggle_guard_achievement-mode = \"saves\""),
+            "{out}"
+        );
         assert!(
             out.contains("toggle_guard_status_achievement-mode = \"SAVE SLOTS ARE OFF WHILE ACHIEVEMENTS ARE ON\""),
             "{out}"
         );
         // When we declare the same screen again, it must not appear twice.
         let again = declare_screen(&out, &screen, None).expect("declared");
-        assert_eq!(again.matches("toggle_on_achievement-mode = ").count(), 1, "{again}");
-        assert_eq!(again.matches("achievement-mode achievement-mode").count(), 0, "{again}");
+        assert_eq!(
+            again.matches("toggle_on_achievement-mode = ").count(),
+            1,
+            "{again}"
+        );
+        assert_eq!(
+            again.matches("achievement-mode achievement-mode").count(),
+            0,
+            "{again}"
+        );
     }
 
     #[test]
@@ -680,8 +705,8 @@ mod tests {
             toggle: None,
         };
         let cfg = "screens = \"pause achievements\"\nscreen_panel_achievements = \"achievements-panel\"\nscreen_heading_achievements = \"ACHIEVEMENTS\"\nscreen_footer_achievements = \"ESC  BACK\"\nscreen_button_achievements = \"achievements\"\nscreen_panel_pause = \"pause-panel\"\nscreen_button_pause = \"options-back\"\n";
-        let out = declare_screen(cfg, &screen, Some(("pause", "achievements-back")))
-            .expect("declared");
+        let out =
+            declare_screen(cfg, &screen, Some(("pause", "achievements-back"))).expect("declared");
         assert_eq!(out.matches("screen_panel_achievements = ").count(), 1);
         assert!(out.contains("screen_button_pause = \"options-back achievements-back\""));
     }

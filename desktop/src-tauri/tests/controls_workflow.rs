@@ -17,8 +17,7 @@ fn illustrated_assets() -> rominabox_scratch::Scratch {
     let root = workspace();
     fs::copy(assets().join("menu.rml"), root.join("menu.rml")).unwrap();
     let registry: serde_json::Value = serde_json::from_str(
-        &fs::read_to_string(rominabox_desktop::repo::at("desktop/controls.json"))
-            .unwrap(),
+        &fs::read_to_string(rominabox_desktop::repo::at("desktop/controls.json")).unwrap(),
     )
     .unwrap();
     for profile in registry["profiles"].as_array().unwrap() {
@@ -61,7 +60,8 @@ fn six_button_authoring_configures_the_emulated_device_and_labels() {
 fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
     let root = workspace();
     let options = Controls::default();
-    themes::prepare_controls_assets(&assets(), &assets(), &root, "atari2600", &options, None).unwrap();
+    themes::prepare_controls_assets(&assets(), &assets(), &root, "atari2600", &options, None)
+        .unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(!markup.contains("id=\"controller-image\""));
 
@@ -97,7 +97,9 @@ fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
         .collect();
     assert!(
-        written.iter().all(|name| name.ends_with(".rml") || name == "design.cfg"),
+        written
+            .iter()
+            .all(|name| name.ends_with(".rml") || name == "design.cfg"),
         "an asset-free console staged something that is not the menu: {written:?}"
     );
     controls::write_defaults_config("atari2600", &options, &root.join("controls.cfg")).unwrap();
@@ -111,7 +113,15 @@ fn custom_labels_are_escaped_without_changing_control_identity() {
     let options: Controls =
         serde_json::from_value(serde_json::json!({"bindings":{"a":{"label":"Jump <go> & fly"}}}))
             .unwrap();
-    themes::prepare_controls_assets(&illustrated_assets(), &assets(), &root, "nes", &options, None).unwrap();
+    themes::prepare_controls_assets(
+        &illustrated_assets(),
+        &assets(),
+        &root,
+        "nes",
+        &options,
+        None,
+    )
+    .unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("Jump &lt;go&gt; &amp; fly"));
     assert!(markup.contains("id=\"control-a\""));
@@ -206,8 +216,14 @@ fn a_document_is_only_told_about_what_it_draws() {
     let full = workspace();
     themes::prepare_theme_assets(&assets(), &full, "blue", None).unwrap();
     let declared = fs::read_to_string(full.join("design.cfg")).unwrap();
-    assert!(declared.contains("overlays = \"splash notice\""), "{declared}");
-    assert!(declared.contains("screens = \"pause options controls\""), "{declared}");
+    assert!(
+        declared.contains("overlays = \"splash notice\""),
+        "{declared}"
+    );
+    assert!(
+        declared.contains("screens = \"pause options controls\""),
+        "{declared}"
+    );
     assert!(
         declared.contains("overlay_needs_splash = \"splash-logo.png\""),
         "{declared}"
@@ -276,7 +292,10 @@ fn the_controller_picker_is_offered_only_when_there_is_a_choice() {
             }
         }
         fs::write(source.join("CONTROLLERS.txt"), []).unwrap();
-        rominabox_desktop::themes::prepare_controls_assets(&source, &assets(), &destination,
+        rominabox_desktop::themes::prepare_controls_assets(
+            &source,
+            &assets(),
+            &destination,
             system,
             &Controls::default(),
             None,
@@ -294,10 +313,7 @@ fn the_controller_picker_is_offered_only_when_there_is_a_choice() {
         megadrive.contains(r#"id="controls-device-list""#),
         "the picker's list element must exist for the bridge to open"
     );
-    assert!(
-        megadrive.contains("display:none"),
-        "the list starts closed"
-    );
+    assert!(megadrive.contains("display:none"), "the list starts closed");
 
     // For PlayStation we declare a DualShock and an analogue pad, and offer
     // both.
@@ -355,8 +371,15 @@ fn each_offered_controller_carries_the_device_it_means() {
 fn every_bind_is_a_row_of_the_shared_list() {
     let root = workspace();
     let options = Controls::default();
-    themes::prepare_controls_assets(&illustrated_assets(), &assets(), &root, "ps1", &options, None)
-        .unwrap();
+    themes::prepare_controls_assets(
+        &illustrated_assets(),
+        &assets(),
+        &root,
+        "ps1",
+        &options,
+        None,
+    )
+    .unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     let declared = fs::read_to_string(root.join("design.cfg")).unwrap();
     controls::write_defaults_config("ps1", &options, &root.join("controls.cfg")).unwrap();
@@ -375,10 +398,7 @@ fn every_bind_is_a_row_of_the_shared_list() {
         markup.contains("id=\"binds-pager\""),
         "more rows than fit, and no pager"
     );
-    assert!(
-        !markup.contains("bind-row"),
-        "the binds grew their own row"
-    );
+    assert!(!markup.contains("bind-row"), "the binds grew their own row");
     assert!(
         declared.contains("binds_after = \""),
         "when the list appears is not declared: {declared}"
@@ -428,5 +448,8 @@ fn a_callout_names_every_binding_on_the_control() {
         .nth(1)
         .and_then(|rest| rest.split('<').next())
         .unwrap_or("");
-    assert_eq!(alone, "c", "one binding is that binding, not a count: {alone}");
+    assert_eq!(
+        alone, "c",
+        "one binding is that binding, not a count: {alone}"
+    );
 }

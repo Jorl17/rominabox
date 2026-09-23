@@ -3,6 +3,9 @@
 #include "rmlui/menu_api.h"
 #include "rmlui/host.h"
 #include "rmlui_bridge.h"
+#include "rmlui/view.hpp"
+#include "rmlui/overlays.hpp"
+#include "menu_test_view.hpp"
 #include <file/config_file.h>
 #include "../../vendor/retroarch/audio/volume_range.h"
 
@@ -16,10 +19,10 @@
 #include <vector>
 #include <algorithm>
 
-extern "C" const char *rib_rmlui_test_text(const char *id);
-extern "C" bool rib_rmlui_test_has_class(const char *id, const char *name);
 
 namespace {
+rib::View& view = rib::menu_view();
+rib::test::Inspection inspect(view.document);
 int failures;
 int captures_started;
 int captures_cancelled;
@@ -37,6 +40,7 @@ std::string captured_id;
 rib_capture_result capture_result = RIB_CAPTURE_PENDING;
 float capture_remaining = 9.0f;
 bool capture_accepts_pointer;
+bool capture_start_accepted = true;
 float volume_db = -12.0f;
 constexpr const char *state_path = "/headless-game/slot-1.state";
 
@@ -53,30 +57,30 @@ void frame(void *menu) { rib_menu_frame(menu, 960, 600); }
 
 void click_and_frame(void *menu, const char *id)
 {
-   check(rib_rmlui_click_element(id), id);
+   check(view.document.click_element(id), id);
    frame(menu);
 }
 
 void hover_and_frame(void *menu, const char *id)
 {
-   check(rib_rmlui_element_center(id, &pointer_state.x, &pointer_state.y), id);
+   check(view.document.element_center(id, &pointer_state.x, &pointer_state.y), id);
    frame(menu);
 }
 
 bool focused(const char *id)
 {
-   return rib_rmlui_test_has_class(id, "focused");
+   return inspect.has_class(id, "focused");
 }
 
 bool binds_visible(int *x, int *y)
 {
-   return rib_rmlui_element_center("control-binds", x, y)
-         && rib_rmlui_pointer_inside("control-binds", *x, *y);
+   return view.document.element_center("control-binds", x, y)
+         && view.document.pointer_inside("control-binds", *x, *y);
 }
 
 bool status_is(const char *expected)
 {
-   const char *status = rib_rmlui_test_text("status");
+   const char *status = inspect.text("status");
    return status && std::strcmp(status, expected) == 0;
 }
 }
@@ -116,6 +120,7 @@ extern "C" void rib_host_bind_lines(unsigned index, char details[][64], char kin
 }
 extern "C" bool rib_host_capture_start(unsigned index, unsigned)
 {
+   if (!capture_start_accepted) return false;
    captured_id = index < bind_ids.size() ? bind_ids[index] : "";
    ++captures_started;
    return true;
@@ -209,7 +214,7 @@ static int capacity_case(const char *assets, const char *data)
             "the 49th declaration reports overflow");
       click_and_frame(menu, "options");
       click_and_frame(menu, "controls");
-      check(rib_rmlui_has_element("control-group-l_stick"),
+      check(view.document.has_element("control-group-l_stick"),
             "the staged 24-control document has its analogue direction group");
       for (int index = 0; index < 24 && index < static_cast<int>(expected.size()); ++index)
       {
@@ -247,7 +252,7 @@ int main(int argc, char **argv)
    check(menu != nullptr, "create menu state");
    if (!menu) return 1;
    frame(menu);
-   check(rib_rmlui_has_element("save"), "first frame loads the real document");
+   check(view.document.has_element("save"), "first frame loads the real document");
    rib_menu_toggle(menu, true);
    frame(menu);
 
@@ -283,7 +288,7 @@ int main(int argc, char **argv)
    check(status_is("SLOT 1 LOADED"), "matching load completion reports success");
 
    click_and_frame(menu, "options");
-   check(rib_rmlui_commit_slider(RIB_VOLUME_SLIDER_ID, 0.5f),
+   check(view.parts.commit_slider(RIB_VOLUME_SLIDER_ID, 0.5f),
          "the staged Options screen exposes its volume slider");
    frame(menu);
    const std::string volume_path = std::string(argv[2]) + "/" + RIB_VOLUME_FILE;
@@ -300,6 +305,13 @@ int main(int argc, char **argv)
    rib_menu_key(menu, RIB_KEY_DOWN);
    check(focused("control-down") && !focused("control-right"),
          "the next key continues from the control reached by pointer");
+
+   hover_and_frame(menu, "control-up");
+   capture_start_accepted = false;
+   rib_menu_key(menu, RIB_KEY_OK);
+   check(std::string(inspect.text("controls-status")) == "CAPTURE COULD NOT START",
+         "a rejected keyboard capture does not fall through to Reset");
+   capture_start_accepted = true;
 
    clock_us = 0;
    hover_and_frame(menu, "control-up");
@@ -348,7 +360,10 @@ int main(int argc, char **argv)
    rib_menu_key(menu, RIB_KEY_UP);
    check(focused("fixture-one") && !focused("fixture-two"),
          "list keyboard navigation continues from the hovered row");
-   click_and_frame(menu, "fixture-back");
+   rib_menu_key(menu, RIB_KEY_CANCEL);
+   frame(menu);
+   check(std::string(inspect.text("heading")) == "OPTIONS",
+         "keyboard Back follows the declared destination through its listener");
    click_and_frame(menu, "controls");
    pointer_state.x = 0;
    pointer_state.y = 0;
@@ -356,18 +371,26 @@ int main(int argc, char **argv)
    click_and_frame(menu, "control-up");
    check(captures_started == 1, "control click starts capture through fake host");
    check(!capture_accepts_pointer, "the opening pointer gesture is excluded from capture");
+   for (rib_key key : {RIB_KEY_UP, RIB_KEY_DOWN, RIB_KEY_LEFT, RIB_KEY_RIGHT,
+         RIB_KEY_OK, RIB_KEY_SELECT, RIB_KEY_START})
+   {
+      rib_menu_key(menu, key);
+      check(captures_started == 1 && captured_id == "up" && focused("control-up")
+            && inspect.has_class("control-up", "capturing"),
+            "capture keeps its target and ignores navigation, confirmation and Start");
+   }
    capture_remaining = 5.0f;
    frame(menu);
-   check(std::string(rib_rmlui_test_text("controls-status")) == "up: PRESS AN INPUT (5)",
+   check(std::string(inspect.text("controls-status")) == "up: PRESS AN INPUT (5)",
          "capture countdown remains visible while the opening pointer is held");
    capture_remaining = 4.0f;
    frame(menu);
-   check(std::string(rib_rmlui_test_text("controls-status")) == "up: PRESS AN INPUT (4)",
+   check(std::string(inspect.text("controls-status")) == "up: PRESS AN INPUT (4)",
          "capture countdown continues while pointer input is gated");
    capture_result = RIB_CAPTURE_TIMED_OUT;
    capture_remaining = 0.0f;
    frame(menu);
-   check(std::string(rib_rmlui_test_text("controls-status")) == "TIMED OUT; BINDING UNCHANGED",
+   check(std::string(inspect.text("controls-status")) == "TIMED OUT; BINDING UNCHANGED",
          "host timeout ends capture even while the opening pointer is held");
    pointer_state.pressed = false;
    capture_result = RIB_CAPTURE_PENDING;
@@ -379,7 +402,7 @@ int main(int argc, char **argv)
    check(capture_accepts_pointer, "pointer release enables capture input on the next frame");
    rib_menu_destroy(menu);
    check(captures_cancelled == 1, "destruction cancels live capture");
-   check(!rib_rmlui_has_element("save"), "destruction releases the document");
+   check(!view.document.has_element("save"), "destruction releases the document");
    rib_rmlui_notify_state_task(state_path, 1, true, true);
 
    menu = rib_menu_create();
@@ -387,13 +410,13 @@ int main(int argc, char **argv)
    if (menu)
    {
       frame(menu);
-      check(rib_rmlui_has_element("save"), "new menu loads after prior destruction");
+      check(view.document.has_element("save"), "new menu loads after prior destruction");
       rib_menu_toggle(menu, true);
       rib_menu_context_destroy(menu);
-      check(!rib_rmlui_has_element("save"), "context destruction releases document");
+      check(!view.document.has_element("save"), "context destruction releases document");
       rib_menu_context_reset(menu);
       frame(menu);
-      check(rib_rmlui_has_element("save"), "context reset reloads the document");
+      check(view.document.has_element("save"), "context reset reloads the document");
       rib_menu_destroy(menu);
    }
 

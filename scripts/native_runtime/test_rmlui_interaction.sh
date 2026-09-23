@@ -17,8 +17,8 @@ build_dir=$repo_root/work/bridge-interaction
 assets=$build_dir/assets
 out=$build_dir/test_rmlui_interaction
 
-if [ ! -f "$bridge_dir/rmlui_bridge.cpp" ]; then
-  echo "missing experimental RmlUi bridge at $bridge_dir" >&2
+if [ ! -f "$bridge_dir/rmlui/view.cpp" ]; then
+  echo "missing RmlUi menu view at $bridge_dir" >&2
   exit 1
 fi
 if [ ! -f "$rmlui_lib" ]; then
@@ -30,11 +30,13 @@ mkdir -p "$build_dir"
 freetype_cflags=$(pkg-config --cflags freetype2)
 freetype_libs=$(pkg-config --libs freetype2)
 
-c++ -std=c++17 -DRIB_RMLUI_HEADLESS -DHAVE_AUDIOMIXER \
+c++ -std=c++17 -Werror=return-type -DRIB_RMLUI_HEADLESS -DHAVE_AUDIOMIXER \
   $rmlui_includes -I "$bridge_dir" -I "$repo_root/vendor/retroarch/libretro-common/include" $freetype_cflags \
   -o "$out" \
   "$script_dir/test_rmlui_interaction.cpp" \
-  "$bridge_dir/rmlui_bridge.cpp" \
+  "$bridge_dir/rmlui/view.cpp" \
+  "$bridge_dir/rmlui/script_report.cpp" \
+  "$bridge_dir/rmlui/control_view.cpp" \
   "$bridge_dir/rmlui/declarations.cpp" \
   "$bridge_dir/rmlui/parts.cpp" \
   "$bridge_dir/rmlui/slots.cpp" \
@@ -319,18 +321,23 @@ for source in \
   cc -I "$libretro_common/include" -c "$libretro_common/$source" -o "$object"
   orchestration_objects="$orchestration_objects $object"
 done
-c++ -std=c++17 -DRIB_RMLUI_HEADLESS -DHAVE_AUDIOMIXER \
+c++ -std=c++17 -Werror=return-type -DRIB_RMLUI_HEADLESS -DHAVE_AUDIOMIXER \
   $rmlui_includes -I "$bridge_dir" -I "$libretro_common/include" $freetype_cflags \
   -o "$build_dir/test_menu_orchestration" \
   "$script_dir/test_menu_orchestration.cpp" \
   "$bridge_dir/rmlui/menu.cpp" \
+  "$bridge_dir/rmlui/navigation.cpp" \
+  "$bridge_dir/rmlui/slot_tasks.cpp" \
+  "$bridge_dir/rmlui/sounds.cpp" \
   "$bridge_dir/rmlui/controls.cpp" \
   "$bridge_dir/rmlui/overlays.cpp" \
   "$bridge_dir/rmlui/script.cpp" \
   "$bridge_dir/rmlui/shaders.cpp" \
   "$bridge_dir/rmlui/discs.cpp" \
   "$bridge_dir/rmlui/settings.cpp" \
-  "$bridge_dir/rmlui_bridge.cpp" \
+  "$bridge_dir/rmlui/view.cpp" \
+  "$bridge_dir/rmlui/script_report.cpp" \
+  "$bridge_dir/rmlui/control_view.cpp" \
   "$bridge_dir/rmlui/declarations.cpp" \
   "$bridge_dir/rmlui/parts.cpp" \
   "$bridge_dir/rmlui/slots.cpp" \
@@ -341,11 +348,21 @@ c++ -std=c++17 -DRIB_RMLUI_HEADLESS -DHAVE_AUDIOMIXER \
   "$bridge_dir/rmlui/document.cpp" \
   "$bridge_dir/rmlui/files.cpp" \
   $orchestration_objects "$rmlui_lib" $freetype_libs
-mkdir -p "$build_dir/orchestration-data"
-"$build_dir/test_menu_orchestration" \
-  "$build_dir/placement-native" "$build_dir/orchestration-data"
-"$build_dir/test_menu_orchestration" --capacity \
-  "$build_dir/placement-native/stage/ps1-analog" "$build_dir/orchestration-data"
+# A failing workflow may save a configuration before it reports the failure.
+# Use the project's scratch context so every run starts with fixed inputs.
+PYTHONPATH="$repo_root/scripts" python3 - "$build_dir" <<'ORCHESTRATION'
+from pathlib import Path
+import subprocess
+import sys
+from scratch import scratch
+build = Path(sys.argv[1])
+with scratch("rominabox-menu-orchestration-") as data:
+    subprocess.run([str(build / "test_menu_orchestration"),
+                    str(build / "placement-native"), data], check=True)
+with scratch("rominabox-menu-capacity-") as data:
+    subprocess.run([str(build / "test_menu_orchestration"), "--capacity",
+                    str(build / "placement-native/stage/ps1-analog"), data], check=True)
+ORCHESTRATION
 
 if [ "$row_edge_failed" -ne 0 ]; then
   exit 1

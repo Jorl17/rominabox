@@ -176,8 +176,15 @@ fn an_author_can_pick_the_generic_retropad_and_get_an_asset_free_grid() {
         profile: Some("retropad".to_string()),
         ..Controls::default()
     };
-    themes::prepare_controls_assets(&menu_assets(), &menu_assets(), &root, "mastersystem", &options, None)
-        .expect("RetroPad is offered for every console");
+    themes::prepare_controls_assets(
+        &menu_assets(),
+        &menu_assets(),
+        &root,
+        "mastersystem",
+        &options,
+        None,
+    )
+    .expect("RetroPad is offered for every console");
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("id=\"control-r3\""));
     assert!(!markup.contains("id=\"controller-image\""));
@@ -266,8 +273,15 @@ fn export_stages_only_the_mastersystem_illustration() {
     );
 
     let destination = scratch();
-    themes::prepare_controls_assets(&source, &menu_assets(), &destination, "mastersystem", &Controls::default(), None)
-        .expect("stage the default pad");
+    themes::prepare_controls_assets(
+        &source,
+        &menu_assets(),
+        &destination,
+        "mastersystem",
+        &Controls::default(),
+        None,
+    )
+    .expect("stage the default pad");
 
     assert_eq!(
         fs::read(destination.join(&profile.image)).unwrap(),

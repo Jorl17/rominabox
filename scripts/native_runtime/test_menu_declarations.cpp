@@ -4,6 +4,7 @@
 #include "rmlui/declarations.h"
 #include <file/config_file.h>
 #include <map>
+#include <vector>
 #include <string>
 #include <cstdio>
 #include <cstring>
@@ -11,9 +12,16 @@
 
 static std::map<std::string, std::string> values;
 static unsigned reads;
+static std::vector<config_entry_list> entries;
 extern "C" config_file_t *config_file_new_from_path_to_string(const char *)
 {
    ++reads;
+   entries.clear();
+   for (auto& value : values)
+      entries.push_back({const_cast<char*>(value.first.c_str()),
+            const_cast<char*>(value.second.c_str()), nullptr, false});
+   for (size_t index = 1; index < entries.size(); ++index)
+      entries[index - 1].next = &entries[index];
    return reinterpret_cast<config_file_t *>(&values);
 }
 extern "C" void config_file_free(config_file_t *) {}
@@ -21,6 +29,24 @@ extern "C" bool config_get_array(config_file_t *, const char *key, char *out, si
 {
    auto found = values.find(key);
    return found != values.end() && strlcpy(out, found->second.c_str(), size) < size;
+}
+extern "C" config_entry_list *config_get_entry(const config_file_t *, const char *key)
+{
+   for (auto& entry : entries)
+      if (std::strcmp(entry.key, key) == 0) return &entry;
+   return nullptr;
+}
+extern "C" bool config_get_entry_list_next(config_file_entry *entry)
+{
+   if (!entry->next) return false;
+   const auto *current = entry->next;
+   *entry = {current->key, current->value, current->next};
+   return true;
+}
+extern "C" bool config_get_entry_list_head(config_file_t *, config_file_entry *entry)
+{
+   entry->next = entries.empty() ? nullptr : &entries[0];
+   return config_get_entry_list_next(entry);
 }
 extern "C" bool config_get_int(config_file_t *, const char *key, int *out)
 {
@@ -78,6 +104,17 @@ int test_menu_declarations()
    check(data->toggle_count == 1 && std::strlen(data->toggles[0].on) == 31,
          "toggle words retain their existing truncation policy");
    rib_design_free(loaded);
+   values = {{"controls_profile", std::string(64, 'p')}};
+   reads = 0;
+   rib_controls_catalog controls{};
+   char profile[32] = "megadrive";
+   bool profile_present = false;
+   auto *config = rib_open_controls("fixture", false, profile, &controls,
+         &profile_present, [](const char *, unsigned *) { return false; });
+   check(config && reads == 1, "a controls override is opened once");
+   check(std::strcmp(profile, "megadrive") == 0 && profile_present,
+         "a truncated override keeps the profile but still repaints the picker");
+   config_file_free(config);
    if (!failures) std::puts("declaration load and existing field limits pass");
    return failures ? 1 : 0;
 }

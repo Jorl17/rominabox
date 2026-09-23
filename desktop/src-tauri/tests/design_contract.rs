@@ -1,20 +1,9 @@
-//! The elements a menu design must contain for the player to work.
+//! Built-in ids and component classes required in a composed player menu.
 //!
-//! In `rmlui_bridge.cpp` we look up elements in the document by id, and we
-//! check every lookup for a missing element, for example
-//!
-//!     if (Rml::Element *hit = document->GetElementById("control-hit-" + suffix))
-//!
-//! So a design without an id does not fail. Part of it works without a
-//! warning, and the fault appears somewhere unrelated, such as a button that
-//! does nothing or a panel that never appears.
-//!
-//! We declare the contract here once and check it in both directions. Every
-//! id that we look up in the bridge must be classified here, and every
-//! classified id must be in the design for that mode.
-//!
-//! These tests do not check that the elements behave, are visible, are
-//! styled or are connected to anything, only that they exist.
+//! In the native player we use the string constants generated from
+//! `document_contract.inc`. In this test we read the same declaration, so a
+//! design cannot omit a built-in element and leave the C++ lookup returning
+//! null. We check presence, and not visibility, styling or event behaviour.
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -25,86 +14,6 @@ fn menu_document(design: &std::path::Path) -> String {
         .expect("the design composes and stages");
     std::fs::read_to_string(staged.join("menu.rml")).unwrap()
 }
-
-/// A group of ids on one screen, and whether a design must have that screen.
-///
-/// We group the ids by panel and not in one flat list, because the author
-/// chooses the sections of a game. A design without an optional panel must
-/// stay valid, and to add a panel we add an entry here.
-struct Panel {
-    name: &'static str,
-    required: bool,
-    ids: &'static [&'static str],
-}
-
-/// The ids that the full menu document must contain.
-///
-/// In splash mode we stage `splash.rml` over `menu.rml`, so we always load one
-/// file name in the bridge, and these are the ids we require when that file is
-/// the menu.
-const MENU_PANELS: &[Panel] = &[
-    Panel {
-        name: "shell",
-        required: true,
-        ids: &["body", "screen", "heading", "status", "footer-hint"],
-    },
-    Panel {
-        name: "pause",
-        required: true,
-        // The player can click every one of these, and we read the table that
-        // connects them in the scanner.
-        ids: &[
-            "pause-panel", "load", "resume", "save", "controls", "quit",
-            "slot-1", "slot-2", "slot-3", "slot-4", "slot-5", "slot-6",
-        ],
-    },
-    Panel {
-        // Optional, because we generate it only when there is more than one
-        // controller for a console. A design without it stays valid, and this
-        // panel tests that case.
-        name: "controller-picker",
-        required: false,
-        ids: &["controls-device", "controls-device-current", "controls-device-list"],
-    },
-    Panel {
-        name: "controls",
-        required: true,
-        ids: &[
-            "controls-panel", "controls-back", "controls-reset",
-            "controls-cancel", "controls-status",
-            // The block in which we draw the controller. We list it here because
-            // we replace its content in the player when someone picks another
-            // pad, and without it that change would fail without a warning.
-            "controller-scene",
-        ],
-    },
-];
-
-fn menu_ids(required_only: bool) -> Vec<&'static str> {
-    MENU_PANELS
-        .iter()
-        .filter(|panel| panel.required || !required_only)
-        .flat_map(|panel| panel.ids.iter().copied())
-        .collect()
-}
-
-/// The ids that the splash document must contain, a much smaller set.
-const SPLASH_IDS: &[&str] = &["body", "screen", "splash", "splash-logo"];
-
-/// Ids that we make in the bridge by appending a control id or a slot number.
-/// They cannot be literally in the design, because we generate the controls
-/// into `<!--CONTROLS-->` from the console package, and the slots are numbered.
-const GENERATED_PREFIXES: &[&str] = &[
-    "control-",
-    "control-binding-",
-    "control-hit-",
-    "control-label-",
-    "slot-",
-    "slot-image-",
-    "slot-label-",
-    "slot-state-",
-    "controls-device-option-",
-];
 
 fn repo_root() -> PathBuf {
     rominabox_desktop::repo::root()
@@ -129,116 +38,158 @@ fn ids_in(document: &str) -> BTreeSet<String> {
     found
 }
 
-fn ids_the_bridge_looks_up(source: &str) -> BTreeSet<String> {
+fn classes_in(document: &str) -> BTreeSet<String> {
     let mut found = BTreeSet::new();
-    let mut rest = source;
-    while let Some(at) = rest.find("GetElementById(\"") {
-        rest = &rest[at + 16..];
+    let mut rest = document;
+    while let Some(at) = rest.find("class=\"") {
+        rest = &rest[at + 7..];
         if let Some(end) = rest.find('"') {
-            found.insert(rest[..end].to_string());
+            found.extend(rest[..end].split_whitespace().map(str::to_string));
             rest = &rest[end..];
         }
     }
-    // In the scan above we miss ids looked up through a variable, and those are
-    // the ids that a player clicks. We call `GetElementById(binding.id)` for
-    // each entry in a table of {"resume", ACTION}, {"save", ACTION} and the rest.
-    // If we scanned only literal call sites, a design without Continue, Save,
-    // Controls and Quit would count as valid.
-    found.extend(ids_in_binding_table(source));
     found
 }
 
-/// The `{"id", RIB_RMLUI_ACTION_...}` pairs in the table of the bridge.
-fn ids_in_binding_table(source: &str) -> BTreeSet<String> {
-    let mut found = BTreeSet::new();
-    let mut rest = source;
-    while let Some(at) = rest.find("{\"") {
-        rest = &rest[at + 2..];
-        let Some(end) = rest.find('"') else { break };
-        let id = &rest[..end];
-        let after = &rest[end..];
-        // Only a pair whose second element is an action; other braced literals
-        // in this file are not element ids.
-        if after
-            .split(',')
-            .nth(1)
-            .is_some_and(|value| value.trim_start().starts_with("RIB_RMLUI_ACTION_"))
-        {
-            found.insert(id.to_string());
-        }
-        rest = after;
-    }
-    found
+struct ContractEntry {
+    name: String,
+    value: String,
+    scope: String,
+    presence: String,
 }
 
-/// We may look up only ids that this contract classifies.
-///
-/// Without this check the contract would go stale. A new `GetElementById` in
-/// the bridge would add a requirement for every design, and nobody would know
-/// about it until something stopped working without a warning.
-#[test]
-fn every_id_the_bridge_reaches_for_is_classified() {
-    let Some(bridge) = read("vendor/retroarch/menu/drivers/rmlui_bridge.cpp") else {
-        // This must fail. A contract check that checks nothing without a
-        // warning when the submodule is missing is worse than no check at all.
-        panic!(
-            "vendor/retroarch is not checked out, so the contract cannot be \
-             checked. Run `git submodule update --init` before trusting this."
-        );
-    };
-    let classified: BTreeSet<&str> = menu_ids(false)
-        .into_iter()
-        .chain(SPLASH_IDS.iter().copied())
-        .chain(GENERATED_PREFIXES.iter().copied())
-        .collect();
+fn contract_source() -> String {
+    read("vendor/retroarch/menu/drivers/rmlui/document_contract.inc")
+        .expect("vendor/retroarch is checked out with the document contract")
+}
 
-    // We may also look up a generated id literally. For example, in the bridge
-    // we measure `slot-image-1` to get the picture aspect. So we classify an id
-    // that begins with a generated prefix by that prefix.
-    let unclassified: Vec<String> = ids_the_bridge_looks_up(&bridge)
-        .into_iter()
-        .filter(|id| {
-            !classified.contains(id.as_str())
-                && !GENERATED_PREFIXES
-                    .iter()
-                    .any(|prefix| id.starts_with(prefix) && id.len() > prefix.len())
+fn contract_entries(kind: &str) -> Vec<ContractEntry> {
+    let prefix = format!("RIB_{kind}(");
+    let entries: Vec<ContractEntry> = contract_source()
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix(&prefix))
+        .map(|tail| {
+            let declaration = tail.strip_suffix(')').expect("closed contract declaration");
+            let fields: Vec<&str> = declaration.split(',').map(str::trim).collect();
+            assert_eq!(fields.len(), 4, "four contract fields: {declaration}");
+            ContractEntry {
+                name: fields[0].to_string(),
+                value: fields[1]
+                    .strip_prefix('"')
+                    .and_then(|value| value.strip_suffix('"'))
+                    .expect("quoted contract value")
+                    .to_string(),
+                scope: fields[2].to_string(),
+                presence: fields[3].to_string(),
+            }
         })
         .collect();
-    assert!(
-        unclassified.is_empty(),
-        "the bridge looks up ids this contract does not classify: {unclassified:?}. \
-         Add each to MENU_IDS, SPLASH_IDS or GENERATED_PREFIXES, so every design \
-         knows it has to provide them."
-    );
+    assert!(!entries.is_empty(), "no RIB_{kind} declarations were read");
+    entries
+}
+
+fn slot_count() -> usize {
+    let source = contract_source();
+    let line = source
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("RIB_SLOT_COUNT("))
+        .expect("slot count declaration");
+    let count: usize = line
+        .strip_suffix(')')
+        .expect("closed slot count")
+        .parse()
+        .expect("numeric slot count");
+    assert_eq!(count, 6, "the current player contract has six slots");
+    count
 }
 
 #[test]
-fn the_shipped_design_provides_every_menu_id() {
-    let document = menu_document(&repo_root().join("integrations/designs/native"));
-    let present = ids_in(&document);
-    for panel in MENU_PANELS.iter().filter(|panel| panel.required) {
-        let missing: Vec<&&str> = panel.ids.iter().filter(|id| !present.contains(**id)).collect();
-        assert!(
-            missing.is_empty(),
-            "menu.rml omits {missing:?} from the required '{}' panel. The bridge \
-             looks these up defensively, so whatever they belong to does nothing \
-             and reports nothing.",
-            panel.name
-        );
+fn built_in_document_contract_is_well_formed() {
+    for kind in ["ELEMENT", "CLASS"] {
+        let entries = contract_entries(kind);
+        let mut names = BTreeSet::new();
+        for entry in entries {
+            assert!(
+                names.insert(entry.name.clone()),
+                "duplicate {kind} name: {}",
+                entry.name
+            );
+            assert!(
+                !entry.value.is_empty(),
+                "empty {kind} value: {}",
+                entry.name
+            );
+            assert!(matches!(entry.presence.as_str(), "Required" | "Optional"));
+            assert!(matches!(
+                entry.scope.as_str(),
+                "Shared" | "Menu" | "Splash" | "Slots" | "Generated" | "State"
+            ));
+        }
+    }
+    slot_count();
+}
+
+#[test]
+fn the_shipped_designs_provide_every_required_menu_id_and_class() {
+    let elements = contract_entries("ELEMENT");
+    let classes = contract_entries("CLASS");
+    let slots = slot_count();
+    for design in designs() {
+        let document = menu_document(&design);
+        let ids = ids_in(&document);
+        let styled = classes_in(&document);
+        for entry in elements.iter().filter(|entry| entry.presence == "Required") {
+            match entry.scope.as_str() {
+                "Shared" | "Menu" => assert!(
+                    ids.contains(&entry.value),
+                    "{} omits required id '{}'",
+                    design.display(),
+                    entry.value
+                ),
+                "Slots" => {
+                    for slot in 1..=slots {
+                        let id = format!("{}{slot}", entry.value);
+                        assert!(
+                            ids.contains(&id),
+                            "{} omits required slot id '{id}'",
+                            design.display()
+                        );
+                    }
+                }
+                _ => {}
+            }
+        }
+        for entry in classes.iter().filter(|entry| entry.presence == "Required") {
+            if matches!(entry.scope.as_str(), "Shared" | "Menu" | "Slots") {
+                assert!(
+                    styled.contains(&entry.value),
+                    "{} omits required class '{}'",
+                    design.display(),
+                    entry.value
+                );
+            }
+        }
     }
 }
 
 #[test]
-fn the_shipped_design_provides_every_splash_id() {
-    let Some(document) = read("integrations/designs/native/splash.rml") else {
-        panic!("the shipped design has no splash.rml");
-    };
-    let present = ids_in(&document);
-    let missing: Vec<&&str> = SPLASH_IDS
-        .iter()
-        .filter(|id| !present.contains(**id))
-        .collect();
-    assert!(missing.is_empty(), "splash.rml is missing {missing:?}");
+fn the_shipped_designs_provide_every_required_splash_id() {
+    let elements = contract_entries("ELEMENT");
+    for design in designs() {
+        let document = std::fs::read_to_string(design.join("splash.rml"))
+            .expect("the design has a splash document");
+        let ids = ids_in(&document);
+        for entry in elements.iter().filter(|entry| entry.presence == "Required") {
+            if matches!(entry.scope.as_str(), "Shared" | "Splash") {
+                assert!(
+                    ids.contains(&entry.value),
+                    "{} omits required splash id '{}'",
+                    design.display(),
+                    entry.value
+                );
+            }
+        }
+    }
 }
 
 /// An overlay is part of the design, so the design must contain its element.
@@ -249,16 +200,16 @@ fn the_shipped_design_provides_every_splash_id() {
 #[test]
 fn every_declared_overlay_has_an_element_in_the_design() {
     for design in designs() {
-        let overlays = rominabox_desktop::themes::declared_overlays(&design)
-            .expect("a design's overlays");
+        let overlays =
+            rominabox_desktop::themes::declared_overlays(&design).expect("a design's overlays");
         assert!(
             !overlays.is_empty(),
             "{} declares no overlays, so a player who chose it is never told \
              how to reach the pause menu",
             design.display()
         );
-        let drawn = menu_document(&design)
-            + &std::fs::read_to_string(design.join("splash.rml")).unwrap();
+        let drawn =
+            menu_document(&design) + &std::fs::read_to_string(design.join("splash.rml")).unwrap();
         for overlay in &overlays {
             assert!(
                 drawn.contains(&format!("id=\"{}\"", overlay.id)),
@@ -280,7 +231,10 @@ fn designs() -> Vec<PathBuf> {
         .map(|entry| entry.path())
         .filter(|path| path.join("design.json").is_file())
         .collect();
-    assert!(!found.is_empty(), "no design was read, so this proved nothing");
+    assert!(
+        !found.is_empty(),
+        "no design was read, so this proved nothing"
+    );
     found
 }
 
@@ -356,15 +310,18 @@ fn the_menu_document_has_somewhere_to_put_the_controls() {
 /// reachable.
 #[test]
 fn a_design_resolves_to_its_own_directory() {
-    let native = rominabox_desktop::themes::design_root("native")
-        .expect("the shipped design resolves");
+    let native =
+        rominabox_desktop::themes::design_root("native").expect("the shipped design resolves");
     assert!(
         native.ends_with("integrations/designs/native"),
         "a design lives in its own package directory, got {native:?}"
     );
     // We can resolve a design only when its directory exists, so we fail here
     // for a declared design with no package, and not later at staging.
-    assert!(native.is_dir(), "resolving must confirm the package exists: {native:?}");
+    assert!(
+        native.is_dir(),
+        "resolving must confirm the package exists: {native:?}"
+    );
     assert!(
         native.is_absolute(),
         "the builder does not run from the repository root, so a relative \
@@ -382,12 +339,18 @@ fn a_design_resolves_to_its_own_directory() {
 #[test]
 fn the_shipped_design_package_is_complete() {
     let root = repo_root().join("integrations/designs/native");
-    let declared: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(root.join("design.json")).expect("design.json"))
-            .expect("valid JSON");
+    let declared: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(root.join("design.json")).expect("design.json"),
+    )
+    .expect("valid JSON");
     for key in ["menu", "splash", "style"] {
-        let name = declared["documents"][key].as_str().expect("a declared document");
-        assert!(root.join(name).exists(), "{key} document '{name}' is missing");
+        let name = declared["documents"][key]
+            .as_str()
+            .expect("a declared document");
+        assert!(
+            root.join(name).exists(),
+            "{key} document '{name}' is missing"
+        );
     }
     for font in declared["fonts"].as_array().expect("fonts") {
         for key in ["file", "license"] {
@@ -433,8 +396,7 @@ fn controller_artwork_is_not_a_designs_to_own() {
     // and the export for that console would then fail when we prepare its
     // controller artwork.
     let controls: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(repo_root().join("desktop/controls.json"))
-            .expect("controls.json"),
+        &std::fs::read_to_string(repo_root().join("desktop/controls.json")).expect("controls.json"),
     )
     .expect("valid JSON");
     let offered: Vec<String> = controls["profiles"]
@@ -445,7 +407,10 @@ fn controller_artwork_is_not_a_designs_to_own() {
         .filter(|image| !image.is_empty())
         .map(str::to_string)
         .collect();
-    assert!(!offered.is_empty(), "controls.json offers no illustrated pad");
+    assert!(
+        !offered.is_empty(),
+        "controls.json offers no illustrated pad"
+    );
     let missing: Vec<&String> = offered
         .iter()
         .filter(|image| !staged.join(image).is_file())
@@ -460,7 +425,12 @@ fn controller_artwork_is_not_a_designs_to_own() {
     let owned: Vec<_> = std::fs::read_dir(&design)
         .expect("design package")
         .filter_map(Result::ok)
-        .filter(|entry| entry.file_name().to_string_lossy().starts_with("controller-"))
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with("controller-")
+        })
         .collect();
     assert!(
         owned.is_empty(),
@@ -622,6 +592,9 @@ fn list_hover_does_not_paint_a_second_focus_border() {
             .and_then(|(_, rule)| rule.split_once('}'))
             .map(|(rule, _)| rule)
             .expect("list row hover rule");
-        assert!(!hover.contains("border-color"), "{design} paints a second list focus border on hover");
+        assert!(
+            !hover.contains("border-color"),
+            "{design} paints a second list focus border on hover"
+        );
     }
 }

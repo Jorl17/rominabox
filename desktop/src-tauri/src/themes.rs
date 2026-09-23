@@ -236,7 +236,11 @@ pub(crate) fn base_design(design: &Path) -> Result<PathBuf, String> {
     Ok(base)
 }
 
-fn screen_place(entry: &serde_json::Value, index: usize, declaration: &Path) -> Result<ScreenPlace, String> {
+fn screen_place(
+    entry: &serde_json::Value,
+    index: usize,
+    declaration: &Path,
+) -> Result<ScreenPlace, String> {
     match entry.get("place").and_then(|value| value.as_str()) {
         None => Ok(ScreenPlace::Plain),
         Some("options") => Ok(ScreenPlace::Options),
@@ -359,9 +363,12 @@ fn screen_entries(design: &Path) -> Result<(Vec<serde_json::Value>, Vec<String>)
             .ok_or_else(|| format!("screenOrder in {} must be an array", declaration.display()))?
             .iter()
             .map(|id| {
-                id.as_str()
-                    .map(str::to_string)
-                    .ok_or_else(|| format!("screenOrder in {} must contain screen ids", declaration.display()))
+                id.as_str().map(str::to_string).ok_or_else(|| {
+                    format!(
+                        "screenOrder in {} must contain screen ids",
+                        declaration.display()
+                    )
+                })
             })
             .collect::<Result<Vec<_>, _>>()?,
     };
@@ -384,25 +391,34 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
     let mut overrides = Vec::new();
     let mut used = BTreeSet::new();
     for override_entry in selected {
-        let id = override_entry["id"].as_str().ok_or_else(|| {
-            format!("Screen override in {} declares no id", design.display())
-        })?;
+        let id = override_entry["id"]
+            .as_str()
+            .ok_or_else(|| format!("Screen override in {} declares no id", design.display()))?;
         if !used.insert(id.to_string()) {
-            return Err(format!("Duplicate screen override '{id}' in {}", design.display()));
+            return Err(format!(
+                "Duplicate screen override '{id}' in {}",
+                design.display()
+            ));
         }
         let fields = override_entry.as_object().ok_or_else(|| {
-            format!("Screen override '{id}' in {} is not an object", design.display())
+            format!(
+                "Screen override '{id}' in {} is not an object",
+                design.display()
+            )
         })?;
         overrides.push((id.to_string(), fields.clone()));
     }
     let mut listed = Vec::new();
     for entry in base_entries {
-        let id = entry["id"].as_str().ok_or_else(|| {
-            format!("Native screen in {} declares no id", base.display())
-        })?;
+        let id = entry["id"]
+            .as_str()
+            .ok_or_else(|| format!("Native screen in {} declares no id", base.display()))?;
         let mut merged = entry.clone();
         if let Some((_, fields)) = overrides.iter().find(|(selected_id, _)| selected_id == id) {
-            merged.as_object_mut().expect("base screen is an object").extend(fields.clone());
+            merged
+                .as_object_mut()
+                .expect("base screen is an object")
+                .extend(fields.clone());
         }
         listed.push(merged);
     }
@@ -418,10 +434,16 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
         let mut seen = BTreeSet::new();
         for id in order {
             if !seen.insert(id.clone()) {
-                return Err(format!("Duplicate screen '{id}' in screenOrder for {}", design.display()));
+                return Err(format!(
+                    "Duplicate screen '{id}' in screenOrder for {}",
+                    design.display()
+                ));
             }
             let Some(index) = listed.iter().position(|entry| entry["id"] == id) else {
-                return Err(format!("Unknown screen '{id}' in screenOrder for {}", design.display()));
+                return Err(format!(
+                    "Unknown screen '{id}' in screenOrder for {}",
+                    design.display()
+                ));
             };
             ordered.push(listed.remove(index));
         }
@@ -432,10 +454,12 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
     let mut screens = Vec::new();
     for (index, entry) in listed.iter().enumerate() {
         let at = |key: &str| -> Result<String, String> {
-            entry[key]
-                .as_str()
-                .map(str::to_string)
-                .ok_or_else(|| format!("screen {index} in {} declares no {key}", declaration.display()))
+            entry[key].as_str().map(str::to_string).ok_or_else(|| {
+                format!(
+                    "screen {index} in {} declares no {key}",
+                    declaration.display()
+                )
+            })
         };
         let (option_label, option_default) = screen_option(entry, index, &declaration)?;
         screens.push(Screen {
@@ -575,8 +599,14 @@ fn screen_declarations(screens: &[Screen], markup: &str) -> String {
 /// `chosen` is the set for the export. Without it, each entry has its
 /// default. An empty set means a game with no Options button. We refuse an
 /// id that is not an entry in this design, instead of ignoring it.
-fn screens_for_export(screens: &[Screen], chosen: Option<&[String]>) -> Result<Vec<Screen>, String> {
-    let entries: Vec<&Screen> = screens.iter().filter(|screen| screen.option_label.is_some()).collect();
+fn screens_for_export(
+    screens: &[Screen],
+    chosen: Option<&[String]>,
+) -> Result<Vec<Screen>, String> {
+    let entries: Vec<&Screen> = screens
+        .iter()
+        .filter(|screen| screen.option_label.is_some())
+        .collect();
     let included: BTreeSet<&str> = match chosen {
         None => entries
             .iter()
@@ -605,7 +635,11 @@ fn screens_for_export(screens: &[Screen], chosen: Option<&[String]>) -> Result<V
         })
         .cloned()
         .collect();
-    if show_options && !staged.iter().any(|screen| screen.place == ScreenPlace::Options) {
+    if show_options
+        && !staged
+            .iter()
+            .any(|screen| screen.place == ScreenPlace::Options)
+    {
         return Err("The Native base must declare an Options screen for enabled entries".into());
     }
     // When the player leaves Options, the screen behind it appears, which is
@@ -701,8 +735,12 @@ fn apply_options(
 ) -> Result<(String, Vec<Screen>), String> {
     let declared = declared_screens(design)?;
     let staged = screens_for_export(&declared, chosen)?;
-    let show = staged.iter().any(|screen| screen.place == ScreenPlace::Options);
-    let options = staged.iter().find(|screen| screen.place == ScreenPlace::Options);
+    let show = staged
+        .iter()
+        .any(|screen| screen.place == ScreenPlace::Options);
+    let options = staged
+        .iter()
+        .find(|screen| screen.place == ScreenPlace::Options);
     let included: Vec<&Screen> = staged
         .iter()
         .filter(|screen| screen.option_label.is_some())
@@ -717,7 +755,10 @@ fn apply_options(
     let mut document = document.to_string();
     if show {
         let options = options.expect("show means an options screen is staged");
-        let opener_label = options.label.clone().unwrap_or_else(|| options.heading.clone());
+        let opener_label = options
+            .label
+            .clone()
+            .unwrap_or_else(|| options.heading.clone());
         let opener = format!(
             "<button class=\"menu-action\" id=\"{}\">{}</button>",
             options.button,
@@ -753,7 +794,7 @@ fn apply_options(
                 && document[..document
                     .find(&format!("id=\"{}\"", entry.button))
                     .unwrap_or(0)]
-                .contains("id=\"options-panel\"")
+                    .contains("id=\"options-panel\"")
             {
                 continue;
             }
@@ -768,7 +809,10 @@ fn apply_options(
         let panel_id = format!("id=\"{}\"", options.panel);
         if !document.contains(&panel_id) {
             if options.id.is_empty()
-                || !options.id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+                || !options
+                    .id
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
             {
                 return Err(format!("Invalid Options screen id '{}'", options.id));
             }
@@ -787,7 +831,9 @@ fn apply_options(
                 return Err(format!("{name} must contain {panel_id}"));
             }
             if !shell.contains("<!--OPTIONS-->") && !shell.contains("id=\"options-entries\">") {
-                return Err(format!("{name} must contain <!--OPTIONS--> or #options-entries"));
+                return Err(format!(
+                    "{name} must contain <!--OPTIONS--> or #options-entries"
+                ));
             }
             let footer = "<div id=\"footer\">";
             if let Some(at) = document.find(footer) {
@@ -874,7 +920,10 @@ pub fn declared_overlays(design: &Path) -> Result<Vec<Overlay>, String> {
     let mut overlays = Vec::new();
     for (index, entry) in listed.iter().enumerate() {
         let id = entry["id"].as_str().ok_or_else(|| {
-            format!("overlay {index} in {} declares no id", declaration.display())
+            format!(
+                "overlay {index} in {} declares no id",
+                declaration.display()
+            )
         })?;
         let ms = |key: &str| -> Result<u32, String> {
             entry[key]
@@ -1017,8 +1066,7 @@ fn design_tokens(
     let mut tokens = std::collections::BTreeMap::new();
     // The values of the design first, so a palette may override any of them.
     if let Ok(text) = fs::read_to_string(design.join("design.json")) {
-        let declared: serde_json::Value =
-            serde_json::from_str(&text).map_err(|e| e.to_string())?;
+        let declared: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
         if let Some(own) = declared.get("tokens").and_then(|v| v.as_object()) {
             for (name, value) in own {
                 if let Some(value) = value.as_str() {
@@ -1115,7 +1163,10 @@ pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
     };
     let fallback = SceneMetrics::default();
     let at = |group: &str, key: &str, default: i32| -> i32 {
-        metrics[group][key].as_i64().map(|v| v as i32).unwrap_or(default)
+        metrics[group][key]
+            .as_i64()
+            .map(|v| v as i32)
+            .unwrap_or(default)
     };
     Ok(SceneMetrics {
         scene_width: at("scene", "width", fallback.scene_width),
@@ -1189,7 +1240,13 @@ pub fn volume_control_markup(design: &Path) -> Result<String, String> {
     require_classes(
         "slider",
         &slider,
-        &["slider", "slider-track", "slider-fill", "slider-thumb", "slider-readout"],
+        &[
+            "slider",
+            "slider-track",
+            "slider-fill",
+            "slider-thumb",
+            "slider-readout",
+        ],
     )?;
     Ok(format!(
         "<div id=\"volume-control\">{slider}<button id=\"{down}\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{up}\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{low}\" class=\"volume-end\">LOW</div><div id=\"{high}\" class=\"volume-end\">HIGH</div><div class=\"volume-name\">VOLUME</div></div>",
@@ -1264,7 +1321,11 @@ pub fn staged_design(kit: &Path, design: &str) -> PathBuf {
 
 fn design_fragment(design: &Path, base: &Path, name: &str) -> Result<String, String> {
     let selected = design.join(name);
-    let source = if selected.is_file() { selected } else { base.join(name) };
+    let source = if selected.is_file() {
+        selected
+    } else {
+        base.join(name)
+    };
     fs::read_to_string(&source).map_err(|e| format!("Could not read {}: {e}", source.display()))
 }
 
@@ -1296,7 +1357,8 @@ fn menu_document(design: &Path) -> Result<String, String> {
     }
     let order = design.join("screen-order.rml");
     let extra = if order.is_file() {
-        fs::read_to_string(&order).map_err(|e| format!("Could not read {}: {e}", order.display()))?
+        fs::read_to_string(&order)
+            .map_err(|e| format!("Could not read {}: {e}", order.display()))?
     } else {
         String::new()
     };
@@ -1307,18 +1369,27 @@ fn menu_document(design: &Path) -> Result<String, String> {
     while let Some(start) = remaining.find("<!--SCREEN:") {
         expanded.push_str(&remaining[..start]);
         let after = &remaining[start + "<!--SCREEN:".len()..];
-        let end = after.find("-->").ok_or_else(|| format!("Unclosed screen in {}", order.display()))?;
+        let end = after
+            .find("-->")
+            .ok_or_else(|| format!("Unclosed screen in {}", order.display()))?;
         let id = &after[..end];
         if !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') || id.is_empty() {
             return Err(format!("Invalid screen id '{id}' in {}", order.display()));
         }
         if !screens.iter().any(|screen| screen.id == id) {
-            return Err(format!("Screen '{id}' in {} is not declared", order.display()));
+            return Err(format!(
+                "Screen '{id}' in {} is not declared",
+                order.display()
+            ));
         }
         if !placed.insert(id) {
             return Err(format!("Screen '{id}' occurs twice in {}", order.display()));
         }
-        expanded.push_str(&design_fragment(design, &base, &format!("screen-{id}.rml"))?);
+        expanded.push_str(&design_fragment(
+            design,
+            &base,
+            &format!("screen-{id}.rml"),
+        )?);
         remaining = &after[end + "-->".len()..];
     }
     expanded.push_str(remaining);
@@ -1370,7 +1441,11 @@ pub fn prepare_theme_assets(
     let base = base_design(source)?;
     for name in ["menu.rcss", "Silkscreen-Regular.ttf", "Silkscreen-OFL.txt"] {
         let selected = source.join(name);
-        let input = if selected.is_file() { selected } else { base.join(name) };
+        let input = if selected.is_file() {
+            selected
+        } else {
+            base.join(name)
+        };
         fs::copy(&input, destination.join(name))
             .map_err(|e| format!("Could not prepare menu asset {name}: {e}"))?;
     }
@@ -1415,12 +1490,13 @@ pub fn prepare_theme_assets(
             .map_err(|e| e.to_string())?;
         css.push_str("\n#screen { decorator: image(\"background.png\" cover); }\n");
     }
-    fs::write(destination.join("menu.rcss"), css)
-        .map_err(|e| e.to_string())?;
+    fs::write(destination.join("menu.rcss"), css).map_err(|e| e.to_string())?;
     // We place the options entries with this, because a theme staged alone
     // (for the offscreen pictures) never reaches the controls stage that writes
     // it for an export. The colour comes from the button in the design.
-    let show_options = staged.iter().any(|screen| screen.place == ScreenPlace::Options);
+    let show_options = staged
+        .iter()
+        .any(|screen| screen.place == ScreenPlace::Options);
     write_options_css(destination, show_options)
 }
 
@@ -1630,7 +1706,9 @@ pub fn prepare_controls_assets(
     let menu = substitute_document(&menu)?;
     write_declarations(design, destination, &screens, &menu)?;
     fs::write(destination.join("menu.rml"), menu).map_err(|e| e.to_string())?;
-    let show_options = screens.iter().any(|screen| screen.place == ScreenPlace::Options);
+    let show_options = screens
+        .iter()
+        .any(|screen| screen.place == ScreenPlace::Options);
     write_options_css(destination, show_options)?;
     Ok(screens)
 }
@@ -1697,11 +1775,13 @@ fn bind_list_markup(
     // in design.cfg, so we replace the tag of this wrapper with that id.
     // Without it, no bind list has a box, and the placement check fails for
     // every one of them.
-    Ok(crate::lists::render_list("binds", &template, &items, page_size).replacen(
-        "<div id=\"binds-list\" class=\"list\">",
-        "<div id=\"control-binds\" class=\"list\" style=\"display:none;\">",
-        1,
-    ))
+    Ok(
+        crate::lists::render_list("binds", &template, &items, page_size).replacen(
+            "<div id=\"binds-list\" class=\"list\">",
+            "<div id=\"control-binds\" class=\"list\" style=\"display:none;\">",
+            1,
+        ),
+    )
 }
 
 /// The pads in an export: every pad in the picker.
@@ -1762,7 +1842,13 @@ fn scene_markup(
         .collect();
     group_names.sort_unstable();
     group_names.dedup();
-    markup.push_str(&control_group_markup(&group_names, &grouped, controls, illustrated, metrics));
+    markup.push_str(&control_group_markup(
+        &group_names,
+        &grouped,
+        controls,
+        illustrated,
+        metrics,
+    ));
     let placed_scene = crate::scene_layout::layout(&profile.controls, metrics);
     let placements = &placed_scene.controls;
     for item in profile.controls.iter().filter(|item| item.group.is_none()) {
@@ -1773,7 +1859,9 @@ fn scene_markup(
             .filter(|label| !label.trim().is_empty());
         let label = author_label.unwrap_or(&item.label);
         let key = callout_line(&binding_words(
-            custom.and_then(|value| value.key.as_deref()).unwrap_or(&item.key),
+            custom
+                .and_then(|value| value.key.as_deref())
+                .unwrap_or(&item.key),
             custom.and_then(|value| value.button.as_deref()),
             custom.and_then(|value| value.axis.as_deref()),
             custom.and_then(|value| value.mouse),
@@ -1793,7 +1881,11 @@ fn scene_markup(
                 .find(|placement| placement.id == item.id)
                 .expect("every drawn control is placed");
             for run in &placed.leader {
-                let orientation = if run.height == 0 { "horizontal" } else { "vertical" };
+                let orientation = if run.height == 0 {
+                    "horizontal"
+                } else {
+                    "vertical"
+                };
                 let extent = if run.height == 0 {
                     format!("width:{}dp;", run.width)
                 } else {
@@ -1813,7 +1905,6 @@ fn scene_markup(
     }
     markup
 }
-
 
 /// The in-game controller picker.
 ///
@@ -1851,9 +1942,11 @@ fn controller_picker_markup(offered: &[crate::controls::ControlProfile], chosen:
             rml_text(&entry.name.to_uppercase()),
         ));
     }
-    markup.push_str("</div>
+    markup.push_str(
+        "</div>
 </div>
-");
+",
+    );
     markup
 }
 
@@ -2041,7 +2134,11 @@ pub fn prepare_splash_assets(
         ("Silkscreen-OFL.txt", "Silkscreen-OFL.txt"),
     ] {
         let selected = source.join(from);
-        let input = if selected.is_file() { selected } else { base.join(from) };
+        let input = if selected.is_file() {
+            selected
+        } else {
+            base.join(from)
+        };
         fs::copy(input, destination.join(to))
             .map_err(|e| format!("Could not prepare splash asset {from}: {e}"))?;
     }
@@ -2154,7 +2251,9 @@ mod tests {
             .find(|pack| pack.id == "off")
             .expect("off pack");
         assert!(
-            !off.description.to_ascii_lowercase().contains("no menu audio"),
+            !off.description
+                .to_ascii_lowercase()
+                .contains("no menu audio"),
             "the Off option already says it is off, and this is still under it: {}",
             off.description
         );
@@ -2211,7 +2310,10 @@ mod tests {
     #[test]
     fn a_designs_own_screen_has_a_back_that_goes_somewhere() {
         let (design, menu) = design_menu("disc");
-        assert!(menu.contains("id=\"disc-back\""), "the disc design draws this button");
+        assert!(
+            menu.contains("id=\"disc-back\""),
+            "the disc design draws this button"
+        );
         let (staged, screens) = apply_options(&design, &menu, None).expect("defaults");
         let cfg = screen_declarations(&screens, &staged);
 
@@ -2306,13 +2408,20 @@ mod tests {
         let panel = staged.find("id=\"options-panel\"").expect("options panel");
         let controls = staged.find("id=\"controls\"").expect("controls entry");
         let actions = staged.find("id=\"actions\"").expect("pause actions");
-        assert!(actions < panel && panel < controls, "controls sits inside options");
+        assert!(
+            actions < panel && panel < controls,
+            "controls sits inside options"
+        );
         assert!(staged.contains("id=\"options\""));
         assert!(staged.contains(">OPTIONS<"));
         assert!(staged.contains(">CONTROLS<"));
         assert!(staged.contains(">BACK<"));
         assert_eq!(
-            screens.iter().find(|screen| screen.id == "pause").unwrap().button,
+            screens
+                .iter()
+                .find(|screen| screen.id == "pause")
+                .unwrap()
+                .button,
             "options-back"
         );
         let cfg = screen_declarations(&screens, &staged);
@@ -2321,11 +2430,20 @@ mod tests {
         assert!(cfg.contains("screen_button_options = \"options\""));
         assert!(cfg.contains("screen_button_controls = \"controls\""));
 
-        let (empty, empty_screens) = apply_options(&design, &menu, Some(&[])).expect("nothing enabled");
-        assert!(!empty.contains("id=\"options\""), "no options button when nothing is enabled");
+        let (empty, empty_screens) =
+            apply_options(&design, &menu, Some(&[])).expect("nothing enabled");
+        assert!(
+            !empty.contains("id=\"options\""),
+            "no options button when nothing is enabled"
+        );
         assert!(!empty.contains("id=\"options-panel\""));
-        assert!(button_bounds(&empty, "controls").is_none(), "controls is not left on the pause row");
-        assert!(!empty_screens.iter().any(|screen| screen.place == ScreenPlace::Options));
+        assert!(
+            button_bounds(&empty, "controls").is_none(),
+            "controls is not left on the pause row"
+        );
+        assert!(!empty_screens
+            .iter()
+            .any(|screen| screen.place == ScreenPlace::Options));
     }
 
     /// Shaders is an entry that a design can declare. It is absent until the
@@ -2360,7 +2478,9 @@ mod tests {
         assert!(defaults.contains(">OPTIONS<"));
         assert!(defaults.contains(">CONTROLS<"));
         assert!(!defaults.contains("SHADERS"));
-        assert!(screens.iter().any(|screen| screen.place == ScreenPlace::Options));
+        assert!(screens
+            .iter()
+            .any(|screen| screen.place == ScreenPlace::Options));
 
         let (both, _) = apply_options(
             &design,
@@ -2372,7 +2492,10 @@ mod tests {
         assert!(both.contains(">CONTROLS<"));
         let shaders_at = both.find("id=\"shaders\"").unwrap();
         let controls_at = both.find("id=\"controls\"").unwrap();
-        assert!(controls_at < shaders_at, "entries follow the design's order");
+        assert!(
+            controls_at < shaders_at,
+            "entries follow the design's order"
+        );
 
         let refused = apply_options(&design, &menu, Some(&["nope".to_string()])).unwrap_err();
         assert!(refused.contains("nope"), "{refused}");
@@ -2387,7 +2510,10 @@ mod tests {
             templated.contains("<div id=\"shaders\" class=\"list-row\">SHADERS</div>"),
             "a design's entry template is what gets filled, got {templated}"
         );
-        assert!(!templated.contains(">CONTROLS<"), "controls was not in the set");
+        assert!(
+            !templated.contains(">CONTROLS<"),
+            "controls was not in the set"
+        );
     }
 
     #[test]
@@ -2396,7 +2522,10 @@ mod tests {
         let mut screens = declared_screens(&design).unwrap();
         screens.retain(|screen| screen.id != "options");
         let error = screens_for_export(&screens, Some(&["controls".into()])).unwrap_err();
-        assert!(error.contains("Native base must declare an Options screen"), "{error}");
+        assert!(
+            error.contains("Native base must declare an Options screen"),
+            "{error}"
+        );
     }
 
     /// The person who bundles the game picks the BIOS. The player never does.
@@ -2441,7 +2570,10 @@ mod tests {
                 }
             }
         }
-        assert!(looked > 0, "no design files were read, so this proved nothing");
+        assert!(
+            looked > 0,
+            "no design files were read, so this proved nothing"
+        );
     }
 
     /// The disc list is in the document before the core has loaded, because
