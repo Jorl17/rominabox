@@ -620,6 +620,12 @@ fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
         !log.contains("[CoreAudio]"),
         "a quiet run opened CoreAudio\n{tail}"
     );
+    // A test game that runs as a regular app appears in the Dock, so in a
+    // quiet run we launch it as an accessory app.
+    assert!(
+        log.contains("[RIB] quiet activation accessory"),
+        "a quiet run took a Dock icon\n{tail}"
+    );
     let written = fs::read_to_string(data_dir_for(&identity).join("retroarch.cfg")).unwrap_or_default();
     assert_eq!(
         config_value(&written, "audio_driver"),
