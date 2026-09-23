@@ -181,23 +181,21 @@ def adopt_works_from_inside_the_worktree_it_adopts() -> None:
             )
 
 
-def a_fresh_worktree_has_the_fixtures_its_scopes_need() -> None:
-    """Check that the isolation tests can run in a worktree.
+def the_test_cartridge_is_in_the_repository() -> None:
+    """Check that the test cartridge comes with a clone, not from one machine.
 
-    `work/` is git-ignored, so a fresh checkout has no `work/test-game.gbc`,
-    and the isolation tests stop with "work/test-game.gbc is not in this
-    checkout". That failure looks like a fault in the change under test.
+    We generate it with scripts/make_test_rom.py, so it belongs in the
+    repository. The git-ignored `work/` is absent from a fresh checkout,
+    where the isolation tests would stop with "work/test-game.gbc is not in
+    this checkout".
     """
-    for relative in worktree.UNTRACKED_FIXTURES:
-        here = worktree.ROOT / relative
-        check(
-            here.is_file(),
-            f"{relative} is in the canonical checkout to copy from",
-        )
-        check(
-            relative in worktree.UNTRACKED_FIXTURES,
-            f"{relative} is declared, so creating a worktree carries it",
-        )
+    tracked = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", "scripts/fixtures/test-game.gbc"],
+        cwd=worktree.ROOT,
+        capture_output=True,
+        text=True,
+    )
+    check(tracked.returncode == 0, "scripts/fixtures/test-game.gbc is tracked by git")
 
 
 def the_local_config_is_never_committed() -> None:
@@ -466,7 +464,7 @@ FROM_THE_CANONICAL_CHECKOUT = [
     a_dead_holders_lock_is_reclaimed,
     the_canonical_checkout_is_never_suffixed,
     adopt_works_from_inside_the_worktree_it_adopts,
-    a_fresh_worktree_has_the_fixtures_its_scopes_need,
+    the_test_cartridge_is_in_the_repository,
     the_local_config_is_never_committed,
     removal_never_touches_the_canonical_data,
     removing_a_worktree_keeps_the_fork_commits_its_branch_needs,
