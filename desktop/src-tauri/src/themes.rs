@@ -339,35 +339,49 @@ fn screen_toggle(
     }))
 }
 
-fn screen_entries(design: &Path) -> Result<Vec<serde_json::Value>, String> {
+fn screen_entries(design: &Path) -> Result<(Vec<serde_json::Value>, Vec<String>), String> {
     let declaration = design.join("design.json");
     let text = fs::read_to_string(&declaration)
         .map_err(|e| format!("Could not read {}: {e}", declaration.display()))?;
     let declared: serde_json::Value =
         serde_json::from_str(&text).map_err(|e| format!("{}: {e}", declaration.display()))?;
-    match declared.get("screens") {
-        None => Ok(Vec::new()),
+    let screens = match declared.get("screens") {
+        None => Vec::new(),
         Some(screens) => screens
             .as_array()
             .cloned()
-            .ok_or_else(|| format!("Screens in {} must be an array", declaration.display())),
-    }
+            .ok_or_else(|| format!("Screens in {} must be an array", declaration.display()))?,
+    };
+    let order = match declared.get("screenOrder") {
+        None => Vec::new(),
+        Some(order) => order
+            .as_array()
+            .ok_or_else(|| format!("screenOrder in {} must be an array", declaration.display()))?
+            .iter()
+            .map(|id| {
+                id.as_str()
+                    .map(str::to_string)
+                    .ok_or_else(|| format!("screenOrder in {} must contain screen ids", declaration.display()))
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+    };
+    Ok((screens, order))
 }
 
 /// Every base screen comes from Native. A design may replace the fields of a
 /// screen by id or add a screen, and for any other id we keep Native's.
 pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
     let base = base_design(design)?;
-    let base_entries = screen_entries(&base)?;
+    let (base_entries, _) = screen_entries(&base)?;
     if base_entries.is_empty() {
         return Err(format!("Native declares no screens: {}", base.display()));
     }
-    let selected = if design == base {
-        Vec::new()
+    let (selected, order) = if design == base {
+        (Vec::new(), Vec::new())
     } else {
         screen_entries(design)?
     };
-    let mut listed = Vec::new();
+    let mut overrides = Vec::new();
     let mut used = BTreeSet::new();
     for override_entry in selected {
         let id = override_entry["id"].as_str().ok_or_else(|| {
@@ -376,24 +390,43 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
         if !used.insert(id.to_string()) {
             return Err(format!("Duplicate screen override '{id}' in {}", design.display()));
         }
-        let mut entry = base_entries
-            .iter()
-            .find(|base_entry| base_entry["id"] == id)
-            .cloned()
-            .unwrap_or_else(|| serde_json::json!({}));
         let fields = override_entry.as_object().ok_or_else(|| {
             format!("Screen override '{id}' in {} is not an object", design.display())
         })?;
-        entry.as_object_mut().expect("base screen is an object").extend(fields.clone());
-        listed.push(entry);
+        overrides.push((id.to_string(), fields.clone()));
     }
+    let mut listed = Vec::new();
     for entry in base_entries {
         let id = entry["id"].as_str().ok_or_else(|| {
             format!("Native screen in {} declares no id", base.display())
         })?;
-        if used.insert(id.to_string()) {
-            listed.push(entry);
+        let mut merged = entry.clone();
+        if let Some((_, fields)) = overrides.iter().find(|(selected_id, _)| selected_id == id) {
+            merged.as_object_mut().expect("base screen is an object").extend(fields.clone());
         }
+        listed.push(merged);
+    }
+    for (id, fields) in &overrides {
+        if !listed.iter().any(|entry| entry["id"] == *id) {
+            listed.push(serde_json::Value::Object(fields.clone()));
+        }
+    }
+    // A design with another declaration order must declare it explicitly.
+    // In the native bridge, for example, we use the first pause-row button.
+    if !order.is_empty() {
+        let mut ordered = Vec::new();
+        let mut seen = BTreeSet::new();
+        for id in order {
+            if !seen.insert(id.clone()) {
+                return Err(format!("Duplicate screen '{id}' in screenOrder for {}", design.display()));
+            }
+            let Some(index) = listed.iter().position(|entry| entry["id"] == id) else {
+                return Err(format!("Unknown screen '{id}' in screenOrder for {}", design.display()));
+            };
+            ordered.push(listed.remove(index));
+        }
+        ordered.extend(listed);
+        listed = ordered;
     }
     let declaration = design.join("design.json");
     let mut screens = Vec::new();
@@ -573,27 +606,7 @@ fn screens_for_export(screens: &[Screen], chosen: Option<&[String]>) -> Result<V
         .cloned()
         .collect();
     if show_options && !staged.iter().any(|screen| screen.place == ScreenPlace::Options) {
-        // For a design with entries and no Options screen we still add one, with
-        // the built-in words. A design that declares the screen can choose the
-        // words.
-        staged.insert(
-            1.min(staged.len()),
-            Screen {
-                id: "options".into(),
-                panel: "options-panel".into(),
-                heading: "OPTIONS".into(),
-                footer: "ESC  BACK".into(),
-                button: "options".into(),
-                label: Some("OPTIONS".into()),
-                back_label: Some("BACK".into()),
-                place: ScreenPlace::Options,
-                option_label: None,
-                option_default: false,
-                images: None,
-                mark: None,
-                toggle: None,
-            },
-        );
+        return Err("The Native base must declare an Options screen for enabled entries".into());
     }
     // When the player leaves Options, the screen behind it appears, which is
     // the first screen that is not an entry. The generated back button is the
@@ -2314,6 +2327,7 @@ mod tests {
             r#"{
                 "screens": [
                     {"id":"pause","panel":"pause-panel","heading":"PAUSED","footer":"ESC  CONTINUE","button":"controls-back"},
+                    {"id":"options","panel":"options-panel","heading":"OPTIONS","footer":"ESC  BACK","button":"options","label":"OPTIONS","back":"BACK","place":"options"},
                     {"id":"controls","panel":"controls-panel","heading":"CONTROLS","footer":"ESC  BACK","button":"controls","option":{"label":"CONTROLS","default":true}},
                     {"id":"shaders","panel":"shaders-panel","heading":"SHADERS","footer":"ESC  BACK","button":"shaders","option":{"label":"SHADERS","default":false}}
                 ]
@@ -2321,10 +2335,11 @@ mod tests {
         )
         .unwrap();
         let menu = fs::read_to_string(design.join("menu.rml")).unwrap();
-        // The design declares no options screen. We still add one, and leave
-        // shaders out because it is not enabled for this game.
+        // We leave shaders out because it is not enabled for this game. The
+        // words of the screen come from its declaration, even when we supply a
+        // plain panel for this small fixture during staging.
         let (defaults, screens) = apply_options(&design, &menu, None).unwrap();
-        assert!(defaults.contains(">OPTIONS<"), "a design that declares no options screen still gets one");
+        assert!(defaults.contains(">OPTIONS<"));
         assert!(defaults.contains(">CONTROLS<"));
         assert!(!defaults.contains("SHADERS"));
         assert!(screens.iter().any(|screen| screen.place == ScreenPlace::Options));
@@ -2355,6 +2370,15 @@ mod tests {
             "a design's entry template is what gets filled, got {templated}"
         );
         assert!(!templated.contains(">CONTROLS<"), "controls was not in the set");
+    }
+
+    #[test]
+    fn an_enabled_entry_requires_the_base_options_screen() {
+        let (design, _) = native_menu();
+        let mut screens = declared_screens(&design).unwrap();
+        screens.retain(|screen| screen.id != "options");
+        let error = screens_for_export(&screens, Some(&["controls".into()])).unwrap_err();
+        assert!(error.contains("Native base must declare an Options screen"), "{error}");
     }
 
     /// The person who bundles the game picks the BIOS. The player never does.

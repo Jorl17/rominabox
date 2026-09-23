@@ -149,8 +149,14 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .list-pager-next { left: 180dp; width: 64dp; }
 .list-pager-prev:hover, .list-pager-next:hover { background-color: design(highlight); color: design(slot-label); border-color: design(highlight); }
 .list-pager-prev.focused, .list-pager-next.focused { border-left-width: 4dp; border-left-color: design(highlight); }
-.list-actions { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; }
-.list-actions .menu-action { position: absolute; left: 0; width: 176dp; height: 36dp; font-family: Silkscreen; font-size: 14dp; line-height: 36dp; text-align: center; }
+.list-actions { position: absolute; left: 466dp; top: 508dp; width: 476dp; height: 36dp; }
+.list-actions .menu-action { position: absolute; top: 0; height: 36dp; border-width: 1dp; font-family: Silkscreen; font-size: 14dp; line-height: 34dp; text-align: center; }
+.list-actions .list-back { left: 300dp; width: 176dp; }
+.list-actions .list-toggle { left: 0; width: 284dp; }
+.list-toggle-label { position: absolute; left: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 13dp; }
+.list-toggle-state { position: absolute; right: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 13dp; color: design(muted); }
+.list-toggle.on .list-toggle-state { color: design(highlight); }
+.list-toggle:hover .list-toggle-state, .list-toggle.focused .list-toggle-state { color: design(slot-label); }
 .list-status { position: absolute; left: 24dp; top: 544dp; color: design(muted); font-size: 13dp; }
 
 .menu-index { position: absolute; left: 24dp; top: 56dp; width: 680dp; height: 420dp; }

@@ -1,5 +1,5 @@
-use rominabox_desktop::{controls::Controls, repo, themes};
-use std::{fs, path::Path};
+use rominabox_desktop::{controls::Controls, lists, repo, themes};
+use std::{fs, path::Path, process::Command};
 
 fn style_only_design(destination: &Path) {
     let base = repo::at("integrations/designs/native");
@@ -80,6 +80,21 @@ fn a_style_only_design_stages_the_base_screens_with_its_styles() {
 #[test]
 fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
     let screens = themes::declared_screens(&repo::at("integrations/designs/disc")).unwrap();
+    assert_eq!(
+        screens
+            .iter()
+            .map(|screen| screen.id.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "pause",
+            "disc",
+            "discs",
+            "options",
+            "controls",
+            "shaders",
+            "achievements"
+        ]
+    );
     let achievements = screens
         .iter()
         .find(|screen| screen.id == "achievements")
@@ -137,6 +152,62 @@ fn one_screen_override_keeps_the_other_base_screens() {
 }
 
 #[test]
+fn a_non_pause_override_keeps_native_screen_and_entry_order() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-screen-order");
+    let design = root.join("style-only");
+    style_only_design(&design);
+    let mut declaration: serde_json::Value =
+        serde_json::from_slice(&fs::read(design.join("design.json")).unwrap()).unwrap();
+    declaration["screens"] = serde_json::json!([{"id": "achievements", "heading": "TROPHIES"}]);
+    fs::write(
+        design.join("design.json"),
+        serde_json::to_vec(&declaration).unwrap(),
+    )
+    .unwrap();
+    let native = themes::declared_screens(&root.join("native")).unwrap();
+    let selected = themes::declared_screens(&design).unwrap();
+    assert_eq!(
+        selected
+            .iter()
+            .map(|screen| screen.id.as_str())
+            .collect::<Vec<_>>(),
+        native
+            .iter()
+            .map(|screen| screen.id.as_str())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(selected[4].heading, "TROPHIES");
+}
+
+#[test]
+fn explicit_screen_order_rejects_missing_and_repeated_ids() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-explicit-screen-order");
+    let design = root.join("style-only");
+    style_only_design(&design);
+    let mut declaration: serde_json::Value =
+        serde_json::from_slice(&fs::read(design.join("design.json")).unwrap()).unwrap();
+    for (order, expected) in [
+        (
+            serde_json::json!(["pause", "missing"]),
+            "Unknown screen 'missing'",
+        ),
+        (
+            serde_json::json!(["pause", "pause"]),
+            "Duplicate screen 'pause'",
+        ),
+    ] {
+        declaration["screenOrder"] = order;
+        fs::write(
+            design.join("design.json"),
+            serde_json::to_vec(&declaration).unwrap(),
+        )
+        .unwrap();
+        let error = themes::declared_screens(&design).unwrap_err();
+        assert!(error.contains(expected), "{error}");
+    }
+}
+
+#[test]
 fn a_missing_adjacent_native_package_is_not_read_from_the_repository() {
     let root = rominabox_scratch::Scratch::dir("rominabox-no-global-design-fallback");
     let design = root.join("style-only");
@@ -183,4 +254,84 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
     assert!(screens
         .iter()
         .any(|screen| screen.id == "achievements" && screen.toggle.is_some()));
+
+    let achievement = screens
+        .iter()
+        .find(|screen| screen.id == "achievements")
+        .unwrap();
+    lists::install(
+        &design,
+        &root,
+        &screens,
+        &[lists::List {
+            screen: achievement.clone(),
+            items: (0..5)
+                .map(|index| lists::ListItem {
+                    id: format!("achievement-{index}"),
+                    icon: "".into(),
+                    title: format!("ACHIEVEMENT {index}"),
+                    detail: "".into(),
+                    state: "LOCKED".into(),
+                    selected: false,
+                    accent: false,
+                    line: false,
+                })
+                .collect(),
+        }],
+    )
+    .unwrap();
+    let menu = fs::read_to_string(root.join("menu.rml")).unwrap();
+    assert!(menu.contains("class=\"menu-action list-toggle\" id=\"achievement-mode\""));
+    assert!(menu.contains("class=\"menu-action list-back\" id=\"achievements-back\""));
+    let css = fs::read_to_string(root.join("menu.rcss")).unwrap();
+    assert!(
+        css.contains(".list-actions { position: absolute; left: 466dp; top: 508dp; width: 476dp;")
+    );
+    assert!(css.contains(".list-actions .list-toggle { left: 0; width: 284dp;"));
+    assert!(css.contains(".list-actions .list-back { left: 300dp; width: 176dp;"));
+    assert!(css.contains(".list-toggle-label") && css.contains(".list-toggle-state"));
+
+    // We can also hit-test the staged screen with the no-window RmlUi probe
+    // when its binary is present from the native test setup.
+    if let Ok(probe) = std::env::var("ROMINABOX_RML_PROBE") {
+        let document = menu
+            .replace(
+                "<div id=\"pause-panel\">",
+                "<div id=\"pause-panel\" style=\"display:none;\">",
+            )
+            .replace(
+                "id=\"achievements-panel\" class=\"screen-panel\" style=\"display:none;\"",
+                "id=\"achievements-panel\" class=\"screen-panel\"",
+            );
+        fs::write(root.join("menu.rml"), document).unwrap();
+        let output = Command::new(probe)
+            .arg("--document")
+            .arg(root.join("menu.rml"))
+            .args(["--step", "move:700,520", "--step", "move:800,520"])
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let hits: Vec<serde_json::Value> = output
+            .stdout
+            .split(|byte| *byte == b'\n')
+            .filter(|line| !line.is_empty())
+            .map(|line| serde_json::from_slice(line).unwrap())
+            .collect();
+        assert_eq!(
+            hits[0]["hover"],
+            "achievement-mode",
+            "hits: {hits:?}; stderr: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            hits[1]["hover"],
+            "achievements-back",
+            "hits: {hits:?}; stderr: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }

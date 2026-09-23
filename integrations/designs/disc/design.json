@@ -120,6 +120,7 @@
       }
     }
   ],
+  "screenOrder": ["pause", "disc", "discs", "options", "controls", "shaders"],
   "tokens": {
     "ink": "#ffffff"
   }
