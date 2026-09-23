@@ -98,13 +98,29 @@ def write_plan(app: Path, data: Path, driver: str) -> None:
     )
 
 
-def run_plan(binary: Path, data: Path, quiet: str | None) -> str:
+def sound_name() -> str:
+    """Return the opt-out as it is spelled once in the launcher."""
+    found = re.search(
+        r'#define ROMINABOX_SOUND_ENV "([A-Z0-9_]+)"',
+        (ROOT / "desktop/src-tauri/launcher/main.c").read_text(),
+    )
+    if not found:
+        raise SystemExit("launcher does not declare ROMINABOX_SOUND_ENV")
+    return found.group(1)
+
+
+def run_plan(binary: Path, data: Path, quiet: str | None, sound: bool = False) -> str:
     env = os.environ.copy()
     env["ROMINABOX_PLAN_ONLY"] = "1"
-    env.pop("ROMINABOX_QUIET", None)
+    # The parent process of the harness is not launchd. We remove both variables,
+    # so that a value left in this process cannot hide the default.
+    for key in (quiet_name(), sound_name()):
+        if key:
+            env.pop(key, None)
     if quiet:
-        env.pop(quiet, None)
         env[quiet] = "1"
+    if sound:
+        env[sound_name()] = "1"
     ran = subprocess.run(
         [str(binary)],
         env=env,
@@ -134,17 +150,28 @@ def plan_check() -> list[str]:
         binary = compile_plan(root)
         app = binary.parents[2]
         loud = root / "loud"
+        asked = root / "sound"
         silent = root / "silent"
         write_plan(app, loud, shipped)
         without = run_plan(binary, loud, None)
+        write_plan(app, asked, shipped)
+        with_sound = run_plan(binary, asked, None, sound=True)
         write_plan(app, silent, shipped)
         with_switch = run_plan(binary, silent, name)
     failures = []
+    # The harness is not Launch Services, so a launch with neither variable
+    # is quiet. In an export whose launcher does not read ROMINABOX_QUIET, the
+    # variable has no effect and there is sound.
     got = _config_value(without, "audio_driver")
+    if got != forced:
+        failures.append(
+            f"a harness launch with neither variable wrote audio_driver={got!r}, "
+            f"not {forced!r}"
+        )
+    got = _config_value(with_sound, "audio_driver")
     if got != shipped:
         failures.append(
-            f"without the switch the launcher wrote audio_driver={got!r}, "
-            f"not the shipped {shipped!r}"
+            f"{sound_name()} wrote audio_driver={got!r}, not the shipped {shipped!r}"
         )
     got = _config_value(with_switch, "audio_driver")
     enabled = _config_value(with_switch, "audio_enable")
@@ -228,10 +255,49 @@ def guardrail() -> list[str]:
     return missing
 
 
+def decision_check() -> list[str]:
+    """Check the four cases by calling the function directly, with no config or core."""
+    if free_gb() < 20:
+        raise SystemExit(f"disk has {free_gb():.1f} GB free, below 20; stopping")
+    with scratch.scratch("rominabox-quiet-decision-") as made:
+        binary = Path(made) / "decision"
+        compiled = subprocess.run(
+            [
+                "cc", "-DROMINABOX_DECISION_MAIN", "-O2",
+                "-o", str(binary),
+                str(ROOT / "desktop/src-tauri/launcher/main.c"),
+            ],
+            capture_output=True, text=True,
+        )
+        if compiled.returncode != 0:
+            raise SystemExit(compiled.stderr[-400:] or "the decision tool did not compile")
+        cases = (
+            ("1", "", "", "sound"),
+            ("20", "", "", "quiet"),
+            ("20", "", "1", "sound"),
+            ("1", "1", "", "quiet"),
+        )
+        failures = []
+        for parent, quiet, sound, expect in cases:
+            ran = subprocess.run(
+                [str(binary), parent, quiet, sound],
+                capture_output=True, text=True, timeout=15,
+            )
+            got = ran.stdout.strip()
+            if ran.returncode != 0 or got != expect:
+                failures.append(
+                    f"parent {parent} quiet={quiet!r} sound={sound!r} "
+                    f"decided {got!r}, not {expect!r}"
+                )
+        return failures
+
+
 def main() -> int:
     # We run this check first, so that we report a launch without the switch
     # before we execute anything.
     failures = guardrail()
+    if not failures:
+        failures.extend(decision_check())
     if not failures:
         failures.extend(plan_check())
     if not failures:

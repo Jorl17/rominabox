@@ -21,6 +21,7 @@
  * zero-alpha window on a display, which is still visible in the dark. We read
  * the same variable in the Cocoa code. */
 #define ROMINABOX_QUIET_ENV "ROMINABOX_QUIET"
+#define ROMINABOX_SOUND_ENV "ROMINABOX_SOUND"
 
 static void die(const char *message) {
     fprintf(stderr, "ROM-in-a-Box: %s\n", message);
@@ -520,6 +521,19 @@ static void publish_arguments(void) {
     }
 }
 
+/* Quiet unless a person opened the game through Launch Services, or sound is
+ * turned on in the environment. Quiet is opt-out, and the parent of a harness
+ * is not launchd, so a run from a harness is quiet even when nothing is set.
+ * ROMINABOX_QUIET makes even a Dock launch quiet. In the fork's accessory
+ * check we read the variable set here instead of repeating the test. */
+static int rominabox_launch_is_quiet(pid_t parent, const char *quiet, const char *sound) {
+    if (quiet && quiet[0])
+        return 1;
+    if (sound && sound[0])
+        return 0;
+    return parent != 1;
+}
+
 static void prepare(void) {
     char executable[PATH_CAP];
     char bundle[PATH_CAP];
@@ -666,7 +680,12 @@ static void prepare(void) {
     /* After the player files, so a controls.cfg cannot turn CoreAudio back
      * on for this launch. With audio_enable false, no audio driver is ever
      * opened. We replace the frozen coreaudio line with null so the written
-     * config contains no device, and do not write this into the player's file. */
+     * config contains no device, and do not write this into the player's file.
+     * Quiet is opt-out, and we publish ROMINABOX_QUIET so that we apply the
+     * same choice in the fork. */
+    if (rominabox_launch_is_quiet(
+            getppid(), getenv(ROMINABOX_QUIET_ENV), getenv(ROMINABOX_SOUND_ENV)))
+        setenv(ROMINABOX_QUIET_ENV, "1", 1);
     {
         const char *quiet = getenv(ROMINABOX_QUIET_ENV);
         if (quiet && quiet[0]) {
@@ -784,7 +803,15 @@ static void prepare(void) {
     }
 }
 
-#ifdef ROMINABOX_PLAN_MAIN
+#ifdef ROMINABOX_DECISION_MAIN
+int main(int argc, char **argv) {
+    pid_t parent = argc > 1 ? (pid_t)atoi(argv[1]) : 0;
+    const char *quiet = argc > 2 && argv[2][0] ? argv[2] : NULL;
+    const char *sound = argc > 3 && argv[3][0] ? argv[3] : NULL;
+    printf("%s\n", rominabox_launch_is_quiet(parent, quiet, sound) ? "quiet" : "sound");
+    return 0;
+}
+#elif defined ROMINABOX_PLAN_MAIN
 int main(void) {
     prepare();
     return 0;

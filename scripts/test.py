@@ -298,7 +298,7 @@ SCOPES = [
     ),
     Scope(
         "quiet",
-        "that the one switch forces a null audio driver and that every player launch sets it",
+        "that a harness launch is quiet unless it asks for sound, and that every player launch still sets the switch",
         "that a person launching the game is silent; they never set the switch. The off-screen window is a separate change",
         ["python3", str(ROOT / "scripts/test_quiet.py")],
         slow=True,

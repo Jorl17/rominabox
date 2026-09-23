@@ -74,6 +74,48 @@ def use_checkout_player(app: Path, workspace: Path) -> None:
     install_player(app, binary, workspace)
 
 
+def discard_owned(literal: str, app_name: str) -> None:
+    """Remove the previous export of the quit tests, and nothing else.
+
+    We check the directory twice: it must resolve to the literal path, and
+    every name in it must be one that we write in these tests. An old
+    Quit Subject.app may contain a launcher without the switch.
+    """
+    path = Path(literal)
+    if not path.exists():
+        return
+    if path.resolve() != Path(literal) or not path.is_dir():
+        raise SystemExit(f"{literal} is not this scope's directory")
+    allowed = {app_name, "entitlements.plist", "inject-dylib", "unused-shot.png"}
+    if app_name == "Quit Subject.app":
+        allowed.add("Quit Subject-macOS.zip")
+    stray = [child.name for child in path.iterdir() if child.name not in allowed]
+    if stray:
+        raise SystemExit(f"{literal} holds {stray}, so it is not this scope's directory")
+    marker = path / app_name
+    if marker.exists() and not marker.is_dir():
+        raise SystemExit(f"{literal} is not this scope's directory")
+    if path.resolve() != Path(literal) or not path.is_dir():
+        raise SystemExit(f"{literal} changed before removal")
+    if literal == "/Users/mariowilde/src/rominabox-quiet/work/quit-export":
+        subprocess.run(
+            ["rm", "-rf", "/Users/mariowilde/src/rominabox-quiet/work/quit-export"],
+            check=True, timeout=60,
+        )
+    elif literal == "/Users/mariowilde/src/rominabox-quiet/work/quit-gba":
+        subprocess.run(
+            ["rm", "-rf", "/Users/mariowilde/src/rominabox-quiet/work/quit-gba"],
+            check=True, timeout=60,
+        )
+    elif literal == "/Users/mariowilde/src/rominabox-quiet/work/quit-ape":
+        subprocess.run(
+            ["rm", "-rf", "/Users/mariowilde/src/rominabox-quiet/work/quit-ape"],
+            check=True, timeout=60,
+        )
+    else:
+        raise SystemExit(f"refusing to remove {literal}")
+
+
 def export_stub() -> None:
     """Export a tiny sheet, and clone the disc into the app afterwards.
 
@@ -86,8 +128,12 @@ def export_stub() -> None:
     stub_gdi = STUB_DIR / "stub.gdi"
     stub_bin.write_bytes(b"\0" * 2048)
     stub_gdi.write_text("1\n1 0 4 2352 stub.bin 0\n")
-    if EXPORT_DIR.exists():
-        raise SystemExit(f"refusing to reuse {EXPORT_DIR}; remove it by hand first")
+    # For a named run we export again, into the directory of these tests, so
+    # that the app has a launcher with the switch.
+    discard_owned(
+        "/Users/mariowilde/src/rominabox-quiet/work/quit-export",
+        "Quit Subject.app",
+    )
     EXPORT_DIR.mkdir(parents=True)
     from built import cli  # noqa: E402
 
@@ -169,9 +215,8 @@ def install_player(app: Path, binary: Path, workspace: Path = EXPORT_DIR) -> Non
 
 
 def ensure_flycast_app() -> Path:
-    if not APP.is_dir():
-        export_stub()
-        install_disc(APP)
+    export_stub()
+    install_disc(APP)
     use_checkout_player(APP, EXPORT_DIR)
     gdi = APP / "Contents/Resources/content" / GDI
     if not gdi.is_file():
@@ -326,11 +371,21 @@ def judge(name: str, debugger: str, log: str, apple_event: bool) -> str | None:
 def export_rom(rom: Path, title: str, system: str, workspace: Path) -> Path:
     """Export a single-file game and return the app to launch."""
     require_disk(20.3)
+    owned = {
+        (ROOT / "work/quit-gba").resolve(): (
+            "/Users/mariowilde/src/rominabox-quiet/work/quit-gba",
+            "Quit Cartridge.app",
+        ),
+        (ROOT / "work/quit-ape").resolve(): (
+            "/Users/mariowilde/src/rominabox-quiet/work/quit-ape",
+            "Quit Ape.app",
+        ),
+    }
+    fresh = owned.get(workspace.resolve())
+    if fresh is None:
+        raise SystemExit(f"{workspace} is not a directory this scope exports")
+    discard_owned(*fresh)
     app = workspace / f"{title}.app"
-    if app.is_dir():
-        return app
-    if workspace.exists():
-        raise SystemExit(f"refusing to reuse a partial export at {workspace}")
     workspace.mkdir(parents=True)
     import json
     from built import cli  # noqa: E402
