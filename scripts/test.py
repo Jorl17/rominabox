@@ -303,8 +303,8 @@ SCOPES = [
     ),
     Scope(
         "discs",
-        "that a cartridge and a single disc are not a multi-disc game, and that choosing the second image of a playlist makes the core report that index",
-        "that the menu drew the list or shortened the name — the bridge scope measures the name, and a photograph is the list",
+        "that a cartridge and a single disc are not a multi-disc game, that choosing the second image makes the core report that index, and that an exported game's menu does the same in both designs while a one-disc game hides the Disc entry and opens the circle",
+        "that a disc name was shortened — the bridge measures that",
         ["python3", str(ROOT / "scripts/test_discs.py")],
         slow=True,
     ),
