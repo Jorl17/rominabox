@@ -2879,10 +2879,10 @@ mod tests {
 
     #[test]
     fn hotkey_policy_matches_pinned_retroarch_meta_binds() {
-        let source = crate::repo::at("work/experiments/rml-retroarch/retroarch/configuration.c");
-        if !source.is_file() {
-            return;
-        }
+        // Read the fork's own source. A copy elsewhere can be missing, and then
+        // this test would return early and pass without checking anything.
+        let source = crate::repo::at("vendor/retroarch/configuration.c");
+        assert!(source.is_file(), "missing {}", source.display());
         let text = fs::read_to_string(&source).unwrap();
         let mut pinned = Vec::new();
         for line in text.lines() {
