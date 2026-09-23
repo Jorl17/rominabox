@@ -123,6 +123,20 @@
         "guardLabel": "ACHIEVEMENTS ON",
         "guardStatus": "SAVE SLOTS ARE OFF WHILE ACHIEVEMENTS ARE ON"
       }
+    },
+    {
+      "id": "discs",
+      "panel": "discs-panel",
+      "heading": "DISC",
+      "footer": "ESC  BACK",
+      "button": "discs",
+      "back": "BACK",
+      "images": "list",
+      "mark": "IN",
+      "option": {
+        "label": "DISC",
+        "default": true
+      }
     }
   ],
   "tokens": {

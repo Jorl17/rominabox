@@ -529,6 +529,7 @@ fn author_background_play_survives_an_old_controls_file() {
     let leftover = "pause_nonactive = \"false\"\n";
     fs::write(&controls, leftover).unwrap();
 
+    assert_main_executable_keeps_the_sandbox(&app);
     let mut quiet = Command::new(app.join("Contents/MacOS/retroarch"));
     stay_quiet(&mut quiet);
     quiet.env_remove("ROMINABOX_MENU_SHOT");
@@ -563,6 +564,70 @@ fn author_background_play_survives_an_old_controls_file() {
         fs::read_to_string(&controls).unwrap(),
         pad,
         "the screenshot run wrote pause_nonactive into the player's controls.cfg"
+    );
+}
+
+/// Without the signature there is no sandbox, and `$HOME` is whatever we give
+/// the launch. With the home of the account, the launch would create the
+/// game's `Games/<identity>` directory there. The stub must still run, so we
+/// give it a scratch HOME that we remove with the test.
+#[test]
+#[ignore = "launches an unsigned stub; the isolation scope runs it"]
+fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
+    let root = scratch();
+    let app = export(&request(
+        &root,
+        b"rominabox-background-play-author-v1",
+        "Background Play",
+        fixture_kit(&root),
+        "megadrive",
+    ));
+    let identity = identity_of(&app);
+    let _container = RemoveDir(container_for(&identity));
+    let host = home()
+        .join("Library/Application Support/ROM-in-a-Box/Games")
+        .join(&identity)
+        .join("retroarch.cfg");
+    let before = fs::metadata(&host)
+        .ok()
+        .map(|info| (info.len(), info.modified().ok()));
+    let executable = app.join("Contents/MacOS/retroarch");
+    let removed = Command::new("/usr/bin/codesign")
+        .args(["--remove-signature"])
+        .arg(&executable)
+        .status()
+        .expect("codesign can be executed");
+    assert!(removed.success(), "could not drop the signature");
+    let launch_home = rominabox_scratch::Scratch::dir("rominabox-isolation-home");
+    let mut command = Command::new(&executable);
+    stay_quiet(&mut command);
+    let output = command
+        .env_remove("ROMINABOX_MENU_SHOT")
+        .env("HOME", launch_home.path())
+        .output()
+        .expect("the unsigned launcher can be executed");
+    let after = fs::metadata(&host)
+        .ok()
+        .map(|info| (info.len(), info.modified().ok()));
+    assert_eq!(
+        before, after,
+        "an unsandboxed launch wrote {}\n{}",
+        host.display(),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        output.status.success(),
+        "the unsigned stub did not exit\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let written = launch_home
+        .join("Library/Application Support/ROM-in-a-Box/Games")
+        .join(&identity)
+        .join("retroarch.cfg");
+    assert!(
+        written.is_file(),
+        "the unsandboxed launch did not write under {}",
+        launch_home.display()
     );
 }
 

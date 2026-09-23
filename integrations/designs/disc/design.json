@@ -74,7 +74,17 @@
       "panel": "disc-panel",
       "heading": "DISC",
       "footer": "ESC  BACK",
-      "button": "disc"
+      "button": "disc",
+      "images": "discs"
+    },
+    {
+      "id": "discs",
+      "panel": "discs-panel",
+      "heading": "DISC",
+      "footer": "ESC  BACK",
+      "back": "BACK",
+      "images": "list",
+      "mark": "IN"
     },
     {
       "id": "options",

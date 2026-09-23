@@ -158,6 +158,16 @@ pub struct Screen {
     /// Whether we ship the entry in a game without a set of entries. Shaders
     /// and the rest stay off until the author turns them on for a game.
     pub option_default: bool,
+    /// What happens on this screen once the core has loaded more than one
+    /// disc.
+    ///
+    /// `list` means the disc list, and any other value is the screen to open
+    /// instead of this one. Without a value, the screen is unrelated to discs.
+    /// We read the number of discs from the core after loading.
+    pub images: Option<String>,
+    /// The word on the row of the disc in the tray. We read it from the design
+    /// in the player and keep no second copy of it.
+    pub mark: Option<String>,
     /// A switch on this screen, with the words from the design and the value
     /// it has while it is on.
     pub toggle: Option<Toggle>,
@@ -219,6 +229,8 @@ fn built_in_screens() -> Vec<Screen> {
             place: ScreenPlace::Plain,
             option_label: None,
             option_default: false,
+            images: None,
+            mark: None,
             toggle: None,
         },
         Screen {
@@ -232,6 +244,8 @@ fn built_in_screens() -> Vec<Screen> {
             place: ScreenPlace::Plain,
             option_label: None,
             option_default: false,
+            images: None,
+            mark: None,
             toggle: None,
         },
     ]
@@ -371,6 +385,8 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
             place: screen_place(entry, index, &declaration)?,
             option_label,
             option_default,
+            images: entry["images"].as_str().map(str::to_string),
+            mark: entry["mark"].as_str().map(str::to_string),
             toggle: screen_toggle(entry, index, &declaration)?,
         });
     }
@@ -476,6 +492,15 @@ fn screen_declarations(screens: &[Screen], markup: &str) -> String {
             shown_by(screen, &screens, markup),
             id = screen.id,
         ));
+        if let Some(images) = &screen.images {
+            text.push_str(&format!(
+                "screen_images_{id} = \"{images}\"\n",
+                id = screen.id
+            ));
+        }
+        if let Some(mark) = &screen.mark {
+            text.push_str(&format!("screen_mark_{id} = \"{mark}\"\n", id = screen.id));
+        }
     }
     text.push_str(&toggle_declarations(
         &screens.iter().copied().cloned().collect::<Vec<Screen>>(),
@@ -535,6 +560,8 @@ fn screens_for_export(screens: &[Screen], chosen: Option<&[String]>) -> Result<V
                 place: ScreenPlace::Options,
                 option_label: None,
                 option_default: false,
+                images: None,
+                mark: None,
                 toggle: None,
             },
         );
@@ -602,10 +629,21 @@ fn entry_button(design: &Path, screen: &Screen, index: usize) -> Result<String, 
         "<button class=\"menu-action option-entry\" id=\"BUTTON\" style=\"top: TOPdp;\">LABEL</button>"
             .to_string()
     };
-    Ok(template
+    let mut button = template
         .replace("BUTTON", &screen.button)
         .replace("TOP", &top)
-        .replace("LABEL", &rml_text(&label)))
+        .replace("LABEL", &rml_text(&label));
+    // We get the number of discs from the core after the game has loaded, so
+    // the entry must already be in the document. It starts hidden. A
+    // display:none button is still a focus stop unless it is also disabled,
+    // and the focus could then move onto an invisible button.
+    if screen.images.as_deref() == Some("list") {
+        button = button.replace(
+            "style=\"top: ",
+            "disabled=\"disabled\" style=\"display: none; top: ",
+        );
+    }
+    Ok(button)
 }
 
 /// Rewrite the menu so that Options has exactly the entries for this game.
@@ -1522,10 +1560,16 @@ fn bind_list_markup(
             state: String::new(),
             selected: false,
             accent: false,
+            line: false,
         })
         .collect();
+    // We name the wrapper after the screen in render_list (discs-list). In the
+    // player we look this one up as control-binds, the id stored in binds_list
+    // in design.cfg, so we replace the tag of this wrapper with that id.
+    // Without it, no bind list has a box, and the placement check fails for
+    // every one of them.
     Ok(crate::lists::render_list("binds", &template, &items, page_size).replacen(
-        "<div class=\"list\">",
+        "<div id=\"binds-list\" class=\"list\">",
         "<div id=\"control-binds\" class=\"list\" style=\"display:none;\">",
         1,
     ))
@@ -2253,5 +2297,75 @@ mod tests {
             }
         }
         assert!(looked > 0, "no design files were read, so this proved nothing");
+    }
+
+    /// The disc list is in the document before the core has loaded, because
+    /// we cannot create a button in the player afterwards. It starts hidden
+    /// and disabled, and it is the last Options entry, so in a one-disc game
+    /// there is no gap and Controls stays in place. It is not on the pause
+    /// row.
+    #[test]
+    fn the_disc_list_is_hidden_until_the_core_has_several_images() {
+        let (native, menu) = native_menu();
+        let screens = declared_screens(&native).expect("native screens");
+        let discs = screens
+            .iter()
+            .find(|screen| screen.id == "discs")
+            .expect("native declares a disc list");
+        assert_eq!(
+            discs.images.as_deref(),
+            Some("list"),
+            "the disc screen is the list the core fills"
+        );
+        assert_eq!(discs.mark.as_deref(), Some("IN"), "the current row's word");
+        let (staged, _) = apply_options(&native, &menu, None).expect("defaults");
+        let bounds = button_bounds(&staged, "discs").expect("the disc entry is in options");
+        let button = &staged[bounds.0..bounds.1];
+        assert!(
+            button.contains("display: none"),
+            "a one-disc game must not show the entry: {button}"
+        );
+        assert!(
+            button.contains("disabled"),
+            "a hidden entry is still a focus stop unless it is disabled: {button}"
+        );
+        let controls = button_bounds(&staged, "controls").expect("controls");
+        let controls_button = &staged[controls.0..controls.1];
+        assert!(
+            controls_button.contains("top: 0dp"),
+            "controls stays the first entry: {controls_button}"
+        );
+        assert!(
+            button.contains(&format!("top: {OPTION_ENTRY_STEP}dp")),
+            "the disc entry is the last slot, so hiding it leaves no hole: {button}"
+        );
+        let actions_at = staged.find("id=\"actions\"").expect("pause row");
+        let panel_at = staged.find("id=\"options-panel\"").expect("options");
+        assert!(
+            !staged[actions_at..panel_at].contains("id=\"discs\""),
+            "the pause row stays Continue / Save / Load / Options / Quit"
+        );
+
+        let (disc_design, disc_menu) = design_menu("disc");
+        let disc_screens = declared_screens(&disc_design).expect("disc screens");
+        let circle = disc_screens
+            .iter()
+            .find(|screen| screen.id == "disc")
+            .expect("the circle screen");
+        assert_eq!(
+            circle.images.as_deref(),
+            Some("discs"),
+            "several discs open the list from the button the column already has"
+        );
+        let (disc_staged, _) =
+            apply_options(&disc_design, &disc_menu, None).expect("disc defaults");
+        assert!(
+            disc_staged.contains("id=\"disc-face\""),
+            "one disc still opens the circle"
+        );
+        assert!(
+            button_bounds(&disc_staged, "disc").is_some(),
+            "the column keeps its DISC button, so it does not grow a gap"
+        );
     }
 }

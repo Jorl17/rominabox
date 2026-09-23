@@ -238,4 +238,10 @@ def cargo_test(command: list[str], cwd: Path) -> subprocess.CompletedProcess:
         )
     if ran.returncode == 0:
         _save(plan, digest, ran.stdout + ran.stderr)
+    else:
+        # A build failure can still leave a new binary in place of the stamped
+        # one. We do not stamp a failure, and the new binary is often the same
+        # size, so the old stamp would still match and on the next run we would
+        # run the broken binary. So we drop the stamp.
+        _stamp_path(plan).unlink(missing_ok=True)
     return ran

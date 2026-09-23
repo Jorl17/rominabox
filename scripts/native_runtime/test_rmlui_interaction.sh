@@ -27,6 +27,7 @@ fi
 
 focus_status=0
 node "$script_dir/test_control_focus.mjs" || focus_status=$?
+node "$script_dir/test_list_focus.mjs" || focus_status=$?
 
 mkdir -p "$build_dir"
 freetype_cflags=$(pkg-config --cflags freetype2)
@@ -67,16 +68,27 @@ p = pathlib.Path(sys.argv[1])
 panel = (
     '<div id="fixture-panel" class="screen-panel" style="display:none;">'
     '<div class="list"><div id="fixture-page-1" class="list-page">'
-    '<button id="fixture-one" class="list-row "><div class="list-row-title">ONE</div>'
+    '<button id="fixture-one" class="list-row line"><div id="fixture-one-title" class="list-row-title">ONE</div>'
     '<div id="fixture-one-state" class="list-row-state"></div></button>'
-    '<button id="fixture-two" class="list-row "><div class="list-row-title">TWO</div>'
+    '<button id="fixture-rest" class="list-row line"><div id="fixture-rest-title" class="list-row-title">REST</div>'
+    '<div id="fixture-rest-state" class="list-row-state"></div></button>'
+    '<button id="fixture-two" class="list-row "><div id="fixture-two-title" class="list-row-title">TWO</div>'
+    '<div id="fixture-two-detail" class="list-row-detail">detail</div>'
     '<div id="fixture-two-state" class="list-row-state"></div></button>'
+    '<button id="fixture-pic" class="list-row "><div id="fixture-pic-title" class="list-row-title">PIC</div>'
+    '<div id="fixture-pic-detail" class="list-row-detail">detail</div>'
+    '<div id="fixture-pic-state" class="list-row-state"></div></button>'
     '</div></div>'
     '<div class="list-actions">'
     '<button class="menu-action list-toggle" id="fixture-mode">'
     '<span class="list-toggle-label">MODE</span>'
     '<span id="fixture-mode-state" class="list-toggle-state">OFF</span></button>'
     '<button class="menu-action list-back" id="fixture-back">BACK</button>'
+    '</div></div>'
+    '<div id="control-binds" class="list" style="display:none;">'
+    '<div class="list-page">'
+    '<button id="bind-one" class="list-row line"><div id="bind-one-title" class="list-row-title">ONE</div></button>'
+    '<button id="bind-rest" class="list-row line"><div id="bind-rest-title" class="list-row-title">REST</div></button>'
     '</div></div>'
 )
 document = p.read_text()
@@ -86,6 +98,49 @@ p.write_text(document.replace("<!--SCREENS-->", panel))
 FIXTURE
 
 "$out" "$assets" "$build_dir/thumbnail-test.png"
+
+# The same rows under every design's stylesheet. Native keeps a constant
+# border, and the disc accent is present on every row, so focus does not
+# move the name of a row to the right.
+row_edge_failed=0
+for edge_design in native disc; do
+  edge_assets="$build_dir/row-edge-$edge_design"
+  rm -rf "$edge_assets"
+  mkdir -p "$edge_assets"
+  printf '{"source":"%s","destination":"%s","palette":"blue"}' \
+    "$repo_root/integrations/designs/$edge_design" "$edge_assets" \
+    | "$cli" stage-theme >/dev/null
+  python3 - "$edge_assets/menu.rml" <<'FIXTURE'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1])
+panel = (
+    '<div id="fixture-panel" class="screen-panel" style="display:none;">'
+    '<div class="list"><div id="fixture-page-1" class="list-page">'
+    '<button id="fixture-one" class="list-row line"><div id="fixture-one-title" class="list-row-title">ONE</div>'
+    '<div id="fixture-one-state" class="list-row-state"></div></button>'
+    '<button id="fixture-rest" class="list-row line"><div id="fixture-rest-title" class="list-row-title">REST</div>'
+    '<div id="fixture-rest-state" class="list-row-state"></div></button>'
+    '<button id="fixture-two" class="list-row "><div id="fixture-two-title" class="list-row-title">TWO</div>'
+    '<div id="fixture-two-detail" class="list-row-detail">detail</div>'
+    '<div id="fixture-two-state" class="list-row-state"></div></button>'
+    '<button id="fixture-pic" class="list-row "><div id="fixture-pic-title" class="list-row-title">PIC</div>'
+    '<div id="fixture-pic-detail" class="list-row-detail">detail</div>'
+    '<div id="fixture-pic-state" class="list-row-state"></div></button>'
+    '</div></div></div>'
+    '<div id="control-binds" class="list" style="display:none;">'
+    '<div class="list-page">'
+    '<button id="bind-one" class="list-row line"><div id="bind-one-title" class="list-row-title">ONE</div></button>'
+    '<button id="bind-rest" class="list-row line"><div id="bind-rest-title" class="list-row-title">REST</div></button>'
+    '</div></div>'
+)
+document = p.read_text()
+if "<!--SCREENS-->" not in document:
+    raise SystemExit("menu.rml has no <!--SCREENS--> slot for the list fixture")
+p.write_text(document.replace("<!--SCREENS-->", panel))
+FIXTURE
+  echo "row-edge $edge_design"
+  "$out" "$edge_assets" row-edge || row_edge_failed=1
+done
 
 # Bind lists and the volume thumb, for every controller declared in the
 # repository and both designs. We request the scenes from the exporter and
@@ -176,4 +231,7 @@ PY
 
 if [ "$focus_status" -ne 0 ]; then
   exit "$focus_status"
+fi
+if [ "$row_edge_failed" -ne 0 ]; then
+  exit 1
 fi

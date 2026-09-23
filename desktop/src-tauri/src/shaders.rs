@@ -559,6 +559,8 @@ fn shader_screen(design: &Path) -> crate::themes::Screen {
             // through the Options entries as whatever the panel contains.
             option_label: Some("SHADERS".into()),
             option_default: false,
+            images: None,
+            mark: None,
             toggle: None,
         })
 }
@@ -640,6 +642,7 @@ pub fn stage(
             state: if selected { "ON".into() } else { String::new() },
             selected,
             accent: false,
+            line: false,
         });
         config.push_str(&format!(
             "shader_preset_{id} = \"{preset}\"\n",

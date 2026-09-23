@@ -81,6 +81,51 @@ static int failures = 0;
       } \
    } while (0)
 
+/* The accent is on .list-row, so a shader row (a picture) and a disc row
+ * (one line) are the same button. Focusing one must not move its name. */
+static void check_focus_leaves_the_name(void)
+{
+   rib_rmlui_set_shown("fixture-panel", true);
+   struct Pair { int index; const char *focused; const char *rest; const char *which; };
+   const Pair pairs[] = {
+      {0, "fixture-one-title", "fixture-rest-title", "one-line row"},
+      {2, "fixture-two-title", "fixture-pic-title", "picture row"},
+   };
+   for (const Pair &pair : pairs)
+   {
+      rib_rmlui_focus_list_row(pair.index);
+      int focused_x = 0, focused_y = 0, focused_w = 0, focused_h = 0;
+      int rest_x = 0, rest_y = 0, rest_w = 0, rest_h = 0;
+      CHECK(rib_rmlui_element_box(pair.focused, &focused_x, &focused_y, &focused_w, &focused_h),
+            "the focused row's name has a box");
+      CHECK(rib_rmlui_element_box(pair.rest, &rest_x, &rest_y, &rest_w, &rest_h),
+            "the unfocused row's name has a box");
+      char message[256];
+      std::snprintf(message, sizeof(message),
+            "a focused %s name starts at %d and the other row's name at %d",
+            pair.which, focused_x, rest_x);
+      CHECK(std::abs(focused_x - rest_x) <= 1, message);
+   }
+   /* The bind list sets the row border again. We must reserve space for a
+    * focused accent there too, or the names in that list still move. */
+   rib_rmlui_set_shown("fixture-panel", false);
+   rib_rmlui_set_shown("control-binds", true);
+   rib_rmlui_focus_list_row(0);
+   int focused_x = 0, focused_y = 0, focused_w = 0, focused_h = 0;
+   int rest_x = 0, rest_y = 0, rest_w = 0, rest_h = 0;
+   CHECK(rib_rmlui_element_box("bind-one-title", &focused_x, &focused_y, &focused_w, &focused_h),
+         "the focused bind row's name has a box");
+   CHECK(rib_rmlui_element_box("bind-rest-title", &rest_x, &rest_y, &rest_w, &rest_h),
+         "the unfocused bind row's name has a box");
+   char message[256];
+   std::snprintf(message, sizeof(message),
+         "a focused bind row name starts at %d and the other row's name at %d",
+         focused_x, rest_x);
+   CHECK(std::abs(focused_x - rest_x) <= 1, message);
+   rib_rmlui_set_shown("control-binds", false);
+   rib_rmlui_set_shown("fixture-panel", true);
+}
+
 static void click_id(const char *id)
 {
    int x = 0;
@@ -816,6 +861,23 @@ int main(int argc, char **argv)
       std::fprintf(stderr, "usage: test_rmlui_interaction ASSET_DIR\n");
       return 2;
    }
+   if (argc > 2 && std::strcmp(argv[2], "row-edge") == 0)
+   {
+      if (!rib_rmlui_init(assets, 960, 600, false))
+      {
+         std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
+         return 1;
+      }
+      check_focus_leaves_the_name();
+      rib_rmlui_shutdown();
+      if (failures)
+      {
+         std::fprintf(stderr, "%d check(s) failed\n", failures);
+         return 1;
+      }
+      std::printf("ok\n");
+      return 0;
+   }
    if (argc > 2 && std::strcmp(argv[2], "placement") == 0)
    {
       if (argc < 6)
@@ -1166,6 +1228,106 @@ int main(int argc, char **argv)
                "the right arrow is still there for a pointer");
       }
 
+      /* DISC is in the document for every game, because we cannot create it
+       * in the player once the core has reported how many images it loaded.
+       * While that count is one or none we hide it, and a hidden entry must
+       * not take focus, or Down moves to it and no ring is drawn. Showing it
+       * must not move the entries above it. */
+      {
+         char ids[16][64];
+         const int count = rib_rmlui_focusables("options-panel", ids, 16);
+         bool landed = false;
+         int controls_y = 0;
+         int controls_x = 0;
+         for (int index = 0; index < count; ++index)
+            if (std::strcmp(ids[index], "discs") == 0)
+               landed = true;
+         CHECK(!landed, "a hidden disc entry is not a focus stop");
+         CHECK(rib_rmlui_element_center("controls", &controls_x, &controls_y),
+               "controls is where it was");
+         const int before = controls_y;
+         rib_rmlui_set_shown("discs", true);
+         rib_rmlui_set_disabled("discs", false);
+         CHECK(rib_rmlui_element_center("controls", &controls_x, &controls_y),
+               "controls is still there once disc is shown");
+         CHECK(controls_y == before,
+               "showing the disc entry does not move the entries above it");
+         rib_rmlui_set_shown("discs", false);
+         rib_rmlui_set_disabled("discs", true);
+         const int after = rib_rmlui_focusables("options-panel", ids, 16);
+         landed = false;
+         for (int index = 0; index < after; ++index)
+            if (std::strcmp(ids[index], "discs") == 0)
+               landed = true;
+         CHECK(!landed, "hiding the disc entry takes it back out of the walk");
+      }
+      {
+         /* Long enough that we still have to shorten it in the one-line column.
+          * The picture column is narrower, so we shorten the same string sooner
+          * there. The one-line row uses the width that the picture left free. */
+         const char *long_name =
+            "/Users/mariowilde/Games/Final Fantasy VII/Final Fantasy VII/"
+            "Final Fantasy VII/Final Fantasy VII (USA) (Disc 4).cue";
+         rib_rmlui_fit_row_title("fixture-one", long_name);
+         const std::string fitted(rib_rmlui_test_text("fixture-one-title"));
+         char message[512];
+         std::snprintf(message, sizeof(message),
+               "a long disc name is shortened in the middle, got '%s'",
+               fitted.c_str());
+         const auto dots = fitted.find("\u2026");
+         const auto number = fitted.rfind("(Disc 4)");
+         CHECK(dots != std::string::npos, message);
+         std::snprintf(message, sizeof(message),
+               "the disc number stays after the ellipsis, got '%s'",
+               fitted.c_str());
+         CHECK(number != std::string::npos && dots < number, message);
+         CHECK(fitted.size() < std::strlen(long_name),
+               "the shortened name is shorter than the path");
+         rib_rmlui_set_shown("fixture-panel", true);
+         rib_rmlui_fit_row_title("fixture-two", long_name);
+         const std::string pictured(rib_rmlui_test_text("fixture-two-title"));
+         const auto picture_dots = pictured.find("\u2026");
+         std::snprintf(message, sizeof(message),
+               "the one-line row still shortens where the picture column does, line '%s' picture '%s'",
+               fitted.c_str(), pictured.c_str());
+         CHECK(dots != std::string::npos && picture_dots != std::string::npos
+               && dots > picture_dots, message);
+         int row_x = 0, row_y = 0, row_w = 0, row_h = 0;
+         int title_x = 0, title_y = 0, title_w = 0, title_h = 0;
+         int state_x = 0, state_y = 0, state_w = 0, state_h = 0;
+         int pic_x = 0, pic_y = 0, pic_w = 0, pic_h = 0;
+         int pic_title_x = 0, pic_title_y = 0, pic_title_w = 0, pic_title_h = 0;
+         CHECK(rib_rmlui_element_box("fixture-one", &row_x, &row_y, &row_w, &row_h),
+               "the one-line row has a box");
+         CHECK(rib_rmlui_element_box("fixture-one-title", &title_x, &title_y, &title_w, &title_h),
+               "the one-line name has a box");
+         CHECK(rib_rmlui_element_box("fixture-one-state", &state_x, &state_y, &state_w, &state_h),
+               "the one-line state has a box");
+         CHECK(rib_rmlui_element_box("fixture-two", &pic_x, &pic_y, &pic_w, &pic_h),
+               "the picture row has a box");
+         CHECK(rib_rmlui_element_box("fixture-two-title",
+               &pic_title_x, &pic_title_y, &pic_title_w, &pic_title_h),
+               "the picture row's name has a box");
+         std::snprintf(message, sizeof(message),
+               "a row with no second line is still %d tall, the picture row is %d",
+               row_h, pic_h);
+         CHECK(row_h > 0 && row_h < pic_h * 3 / 4, message);
+         std::snprintf(message, sizeof(message),
+               "the name sits in the top half (title y %d h %d, row y %d h %d)",
+               title_y, title_h, row_y, row_h);
+         CHECK(std::abs((title_y + title_h / 2) - (row_y + row_h / 2)) <= 2, message);
+         std::snprintf(message, sizeof(message),
+               "IN is not on the name's line (state y %d h %d, title y %d h %d)",
+               state_y, state_h, title_y, title_h);
+         CHECK(std::abs((state_y + state_h / 2) - (title_y + title_h / 2)) <= 2, message);
+         std::snprintf(message, sizeof(message),
+               "the name still starts in the picture column (title x %d, picture title x %d, row x %d)",
+               title_x, pic_title_x, row_x);
+         CHECK(title_x - row_x + 8 < pic_title_x - pic_x, message);
+         check_focus_leaves_the_name();
+         rib_rmlui_set_shown("fixture-panel", false);
+      }
+
       /* One move cue per step that changes the level, and none at an end
        * where it does not move. The words come from the pack: up and down. */
       rib_rmlui_set_slider(RIB_VOLUME_SLIDER_ID, 1.0f, nullptr);
@@ -1307,7 +1469,7 @@ int main(int argc, char **argv)
       rib_rmlui_wire_lists();
       rib_rmlui_wire_toggles();
       drain_actions();
-      CHECK(rib_rmlui_visible_row_count() == 2,
+      CHECK(rib_rmlui_visible_row_count() == 4,
             "the generated list reports its rows");
       CHECK(rib_rmlui_list_control_count() == 2,
             "the list screen reports its switch and its back button");

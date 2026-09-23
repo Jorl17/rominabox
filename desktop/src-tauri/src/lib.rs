@@ -3,6 +3,7 @@ pub mod artwork;
 pub mod cores;
 pub mod content;
 pub mod controls;
+pub mod disc_menu;
 pub mod discs;
 pub mod dumps;
 pub mod icons;

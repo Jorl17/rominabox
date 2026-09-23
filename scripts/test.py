@@ -30,6 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cargo_replay import cargo_test  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
+from player_support import modifications as support_modifications  # noqa: E402
 from player_support import snapshot as support_snapshot  # noqa: E402
 from temp_entries import additions as temp_additions  # noqa: E402
 from temp_entries import directory as temp_directory  # noqa: E402
@@ -301,6 +302,13 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "discs",
+        "that a cartridge and a single disc are not a multi-disc game, and that choosing the second image of a playlist makes the core report that index",
+        "that the menu drew the list or shortened the name — the bridge scope measures the name, and a photograph is the list",
+        ["python3", str(ROOT / "scripts/test_discs.py")],
+        slow=True,
+    ),
+    Scope(
         "quit",
         "that an Apple Event quit of an exported Flycast game unloads the core before the process exits",
         "window placement and fullscreen; closing the window is the same AppKit terminate path",
@@ -455,7 +463,9 @@ def main() -> int:
     print(f"\nwall {wall:0.1f}s{wall_ratio}")
     if wall_budget and limits is not None and over_budget(wall, wall_budget, limits):
         slow.append("wall")
-    created = support_additions(support_before, support_snapshot())
+    support_after = support_snapshot()
+    created = support_additions(support_before, support_after)
+    modified = support_modifications(support_before, support_after)
     if created:
         print(
             "\nA test run created paths under ~/Library/Application Support/ROM-in-a-Box:"
@@ -464,6 +474,14 @@ def main() -> int:
             print(f"  {path}")
         if len(created) > 20:
             print(f"  … and {len(created) - 20} more")
+    if modified:
+        print(
+            "\nA test run modified paths under ~/Library/Application Support/ROM-in-a-Box:"
+        )
+        for path in modified[:20]:
+            print(f"  {path}")
+        if len(modified) > 20:
+            print(f"  … and {len(modified) - 20} more")
     leftover = [
         name for name in temp_additions(temp_before, temp_snapshot()) if scratch_run in name
     ]
@@ -478,7 +496,7 @@ def main() -> int:
     failed = [scope.name for scope in selected if not recorded[scope.name][0]]
     if failed:
         print(f"\n{len(failed)} scope(s) failed: {', '.join(failed)}")
-    if created or leftover or failed:
+    if created or modified or leftover or failed:
         return 1
     if slow:
         print(

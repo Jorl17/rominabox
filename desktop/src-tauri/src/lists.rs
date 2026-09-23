@@ -49,6 +49,9 @@ pub struct ListItem {
     /// A row we single out in its list, drawn as the design styles `accent`.
     /// In an achievement list, we mark the game's win condition.
     pub accent: bool,
+    /// No picture and no second line. We fill a bind slot after export, so
+    /// an empty string does not mean this, and the caller must say so.
+    pub line: bool,
 }
 
 /// One screen of rows, ready to write into the menu.
@@ -176,10 +179,22 @@ pub fn render_row(template: &str, item: &ListItem) -> String {
         out.push_str(&template[at..next]);
         at = next;
     }
+    if item.line {
+        // The same code for every list. According to the caller, this row has no
+        // picture and no second line, so we do not name the disc list here.
+        out = out.replacen("class=\"list-row", "class=\"list-row line", 1);
+    }
     if item.icon.is_empty() {
         // A row with no picture. We remove the img, because loading a missing
         // texture in RmlUi makes the render fail.
         out = out.replace("<img class=\"list-row-icon\" src=\"\"/>", "");
+    }
+    if item.line && item.detail.is_empty() {
+        let detail = format!(
+            "<div id=\"{}-detail\" class=\"list-row-detail\"></div>",
+            item.id
+        );
+        out = out.replace(&detail, "");
     }
     out
 }
@@ -193,7 +208,7 @@ pub fn render_list(screen: &str, template: &str, items: &[ListItem], page_size: 
         return String::new();
     }
     let page_count = items.len().div_ceil(page_size);
-    let mut html = String::from("<div class=\"list\">");
+    let mut html = format!("<div id=\"{screen}-list\" class=\"list\">");
     for (index, chunk) in items.chunks(page_size).enumerate() {
         let hidden = if index == 0 {
             ""
@@ -296,6 +311,21 @@ pub fn declare_screen(
             button = screen.button,
         ));
     }
+    if let Some(images) = &screen.images {
+        let key = format!("screen_images_{}", screen.id);
+        if declared_value(&cfg, &key).is_none() {
+            cfg.push_str(&format!(
+                "screen_images_{id} = \"{images}\"\n",
+                id = screen.id
+            ));
+        }
+    }
+    if let Some(mark) = &screen.mark {
+        let key = format!("screen_mark_{}", screen.id);
+        if declared_value(&cfg, &key).is_none() {
+            cfg.push_str(&format!("screen_mark_{id} = \"{mark}\"\n", id = screen.id));
+        }
+    }
     if let Some((host, button)) = also_opens {
         let key = format!("screen_button_{host}");
         let Some((value_at, value_end)) = declared_value(&cfg, &key) else {
@@ -391,7 +421,14 @@ pub fn install(
         ));
         // The player opens an entry inside Options from there, so it has no
         // button on the pause row. We generate the Options entries separately.
-        if list.screen.option_label.is_none() {
+        // The player opens an entry inside Options from there. A list whose
+        // button is already drawn in the design, such as the disc column's
+        // DISC, gets no second one, and for a list without a button of its
+        // own we retarget that existing button.
+        if list.screen.option_label.is_none()
+            && !list.screen.button.is_empty()
+            && !document.contains(&format!("id=\"{}\"", list.screen.button))
+        {
             links.push_str(&format!(
                 "<button class=\"menu-action screen-link\" id=\"{button}\">{heading}</button>",
                 button = list.screen.button,
@@ -426,7 +463,56 @@ mod tests {
             state: String::new(),
             selected: false,
             accent: false,
+            line: false,
         }
+    }
+
+    #[test]
+    fn a_row_with_no_picture_and_no_detail_is_one_line() {
+        let template = row_template(Path::new("/nonexistent")).expect("built-in row");
+        let bare = ListItem {
+            id: "discs-0".into(),
+            icon: String::new(),
+            title: "Ape Escape".into(),
+            detail: String::new(),
+            state: "IN".into(),
+            selected: true,
+            accent: false,
+            line: true,
+        };
+        let row = render_row(&template, &bare);
+        assert!(
+            row.contains("class=\"list-row line"),
+            "a row with nothing beside the name was still the two-line picture row: {row}"
+        );
+        assert!(
+            !row.contains("list-row-icon"),
+            "a row with no picture still reserved one: {row}"
+        );
+        let pictured = render_row(&template, &item("shader", "Scanlines"));
+        assert!(
+            !pictured.contains("list-row line"),
+            "a shader row lost the picture column: {pictured}"
+        );
+        let slot = ListItem {
+            id: "bind-1".into(),
+            icon: String::new(),
+            title: String::new(),
+            detail: String::new(),
+            state: String::new(),
+            selected: false,
+            accent: false,
+            line: false,
+        };
+        let bind = render_row(&template, &slot);
+        assert!(
+            bind.contains("id=\"bind-1-detail\""),
+            "a bind slot lost the detail it is filled with later: {bind}"
+        );
+        assert!(
+            !bind.contains("list-row line"),
+            "an empty bind slot was treated as a one-line row: {bind}"
+        );
     }
 
     #[test]
@@ -466,6 +552,7 @@ mod tests {
                 state: "LOCKED 5 PTS".into(),
                 selected: false,
                 accent: false,
+                line: false,
             },
         );
         assert!(row.contains(">STATE OF THE ART<"), "{row}");
@@ -486,6 +573,8 @@ mod tests {
             place: ScreenPlace::Plain,
             option_label: Some("ACHIEVEMENTS".into()),
             option_default: false,
+            images: None,
+            mark: None,
             toggle: None,
         };
         screen.toggle = Some(crate::themes::Toggle {
@@ -528,6 +617,8 @@ mod tests {
             place: ScreenPlace::Plain,
             option_label: Some("ACHIEVEMENTS".into()),
             option_default: false,
+            images: None,
+            mark: None,
             toggle: None,
         };
         let cfg = "screens = \"pause achievements\"\nscreen_panel_achievements = \"achievements-panel\"\nscreen_heading_achievements = \"ACHIEVEMENTS\"\nscreen_footer_achievements = \"ESC  BACK\"\nscreen_button_achievements = \"achievements\"\nscreen_panel_pause = \"pause-panel\"\nscreen_button_pause = \"options-back\"\n";
