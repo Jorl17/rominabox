@@ -19,6 +19,13 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
+fn menu_document(design: &std::path::Path) -> String {
+    let staged = rominabox_scratch::Scratch::dir("rominabox-design-contract");
+    rominabox_desktop::themes::prepare_theme_assets(design, &staged, "blue", None)
+        .expect("the design composes and stages");
+    std::fs::read_to_string(staged.join("menu.rml")).unwrap()
+}
+
 /// A group of ids on one screen, and whether a design must have that screen.
 ///
 /// We group the ids by panel and not in one flat list, because the author
@@ -207,9 +214,7 @@ fn every_id_the_bridge_reaches_for_is_classified() {
 
 #[test]
 fn the_shipped_design_provides_every_menu_id() {
-    let Some(document) = read("integrations/designs/native/menu.rml") else {
-        panic!("the shipped design has no menu.rml");
-    };
+    let document = menu_document(&repo_root().join("integrations/designs/native"));
     let present = ids_in(&document);
     for panel in MENU_PANELS.iter().filter(|panel| panel.required) {
         let missing: Vec<&&str> = panel.ids.iter().filter(|id| !present.contains(**id)).collect();
@@ -252,10 +257,8 @@ fn every_declared_overlay_has_an_element_in_the_design() {
              how to reach the pause menu",
             design.display()
         );
-        let drawn: String = ["menu.rml", "splash.rml"]
-            .iter()
-            .filter_map(|name| std::fs::read_to_string(design.join(name)).ok())
-            .collect();
+        let drawn = menu_document(&design)
+            + &std::fs::read_to_string(design.join("splash.rml")).unwrap();
         for overlay in &overlays {
             assert!(
                 drawn.contains(&format!("id=\"{}\"", overlay.id)),
@@ -339,9 +342,7 @@ fn an_overlays_leaving_time_is_declared_once_and_read_by_both_consumers() {
 /// is no controller in the menu of a design.
 #[test]
 fn the_menu_document_has_somewhere_to_put_the_controls() {
-    let Some(document) = read("integrations/designs/native/menu.rml") else {
-        panic!("the shipped design has no menu.rml");
-    };
+    let document = menu_document(&repo_root().join("integrations/designs/native"));
     assert!(
         document.contains("<!--CONTROLS-->"),
         "menu.rml has no <!--CONTROLS--> placeholder; the generated controller \

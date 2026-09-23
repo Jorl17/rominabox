@@ -13,9 +13,9 @@
 #include <sstream>
 #include <string>
 #include <vector>
-/* rmlui.c is not linked here because it depends on the whole of RetroArch,
- * so we stub the control list that it normally supplies. With the stub a test
- * can declare more than sixteen controls, and the bridge must address all of
+/* The menu orchestration is not linked in this document-only check, so we
+ * stub the control list that it normally supplies. With the stub a test can
+ * declare more than sixteen controls, and the bridge must address all of
  * them. A PlayStation DualShock declares twenty-four. */
 static const char *stub_control_ids[] = {
    "up", "down", "left", "right", "a", "b", "x", "y",
@@ -160,7 +160,7 @@ static void press_then_release_at(const char *id, int x, int y)
 
 static void drain_actions(void)
 {
-   while (rib_rmlui_take_action() != RIB_RMLUI_ACTION_NONE)
+   while (rib_rmlui_take_event().kind != RIB_RMLUI_ACTION_NONE)
       ;
 }
 
@@ -858,7 +858,7 @@ static int check_placement(const char *assets, const char *scenes,
             "the checkpoint preserves serialized RML and JSON-escapes its backslash and newline");
       CHECK(report.find("\"profile\":\"megadrive\",\"volumeDb\":-12.000000") != std::string::npos,
             "the checkpoint carries the runtime profile and volume");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+      CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_NONE,
             "observation does not generate a menu action");
    }
    rib_rmlui_shutdown();
@@ -960,22 +960,26 @@ int main(int argc, char **argv)
       rib_rmlui_set_game_aspect(aspect);
       CHECK(std::abs(rib_rmlui_test_picture_aspect() - aspect) < 0.02f, "well follows live core aspect");
    }
+   rib_rmlui_place_list("fixture-panel", nullptr, 0);
+   CHECK(std::string(rib_rmlui_test_property("fixture-panel", "display")) != "none",
+         "popup placement accepts its declared element without requiring a list class");
+   rib_rmlui_set_shown("fixture-panel", false);
    rib_rmlui_set_game_aspect(4.0f/3);
    click_id("save");
    click_id("options");
-   const int first = rib_rmlui_take_action();
-   const int second = rib_rmlui_take_action();
-   CHECK(first == RIB_RMLUI_ACTION_SAVE,
+   const auto first = rib_rmlui_take_event();
+   const auto second = rib_rmlui_take_event();
+   CHECK(first.kind == RIB_RMLUI_ACTION_SAVE,
          "mailbox preserves the first click");
    // Changing screen has no separate action. We pass the requested screen
    // next to one shared action, so declaring a screen never adds to the
    // enum. This test is mainly about the order, and it also checks that the
    // id arrived.
-   CHECK(second == RIB_RMLUI_ACTION_SHOW_SCREEN,
+   CHECK(second.kind == RIB_RMLUI_ACTION_SHOW_SCREEN,
          "mailbox preserves the following click");
-   CHECK(std::string(rib_rmlui_requested_screen()) == "options",
+   CHECK(second.id == "options",
          "the screen asked for travels with the action");
-   CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+   CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_NONE,
          "mailbox is empty after both intents");
 
    move_to_id("resume");
@@ -1010,7 +1014,7 @@ int main(int argc, char **argv)
          "empty Load is disabled");
    rib_rmlui_clear_intents();
    click_id("load");
-   CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+   CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_NONE,
          "disabled Load does not enqueue an action");
 
    rib_rmlui_show_controls(true);
@@ -1036,7 +1040,7 @@ int main(int argc, char **argv)
    rib_rmlui_pointer_move(cancel_x, cancel_y);
    rib_rmlui_pointer_button(true);
    rib_rmlui_pointer_button(false);
-   CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_CONTROLS_CANCEL,
+   CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_CONTROLS_CANCEL,
          "Cancel is consumed by RmlUi before any binder poll");
 
    for (const char *id : {"controls-cancel", "controls-reset", "controls-back"})
@@ -1048,7 +1052,7 @@ int main(int argc, char **argv)
             "press is visible while pointer remains over a controls button");
       rib_rmlui_pointer_move(1, 1);
       rib_rmlui_pointer_button(false);
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+      CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_NONE,
             "dragging out and releasing does not activate a controls button");
    }
 
@@ -1057,12 +1061,12 @@ int main(int argc, char **argv)
    rib_rmlui_pointer_button(true);
    rib_rmlui_pointer_leave();
    click_id("quit");
-   CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_QUIT,
+   CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_QUIT,
          "pointer down/up stay in sync after leave");
 
    rib_rmlui_clear_intents();
    rib_rmlui_show_controls(true);
-   CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+   CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_NONE,
          "screen transition drops stale mailbox intents");
 
    if (argc > 2)
@@ -1084,8 +1088,8 @@ int main(int argc, char **argv)
 
    /* We write the controls scene into menu.rml in the builder. This template
     * still has the placeholder, and nothing in the bridge replaces it. We
-    * write the remap in rmlui.c, which is not linked here, so this does not
-    * prove that a choice is saved or applied. */
+    * write the remap behind the host boundary, which is not linked here, so
+    * this does not prove that a choice is saved or applied. */
    rib_rmlui_show_controls(true);
    {
       int image_x = 0;
@@ -1190,11 +1194,12 @@ int main(int argc, char **argv)
       rib_rmlui_pointer_button(true);
       rib_rmlui_pointer_move(0, 0);
       rib_rmlui_pointer_button(false);
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SLIDER,
+      const auto drag = rib_rmlui_take_event();
+      CHECK(drag.kind == RIB_RMLUI_ACTION_SLIDER,
             "dragging off a slider still sets the level");
-      CHECK(std::string(rib_rmlui_changed_part()) == "volume-level",
+      CHECK(drag.id == "volume-level",
             "the slider reports which part moved");
-      CHECK(rib_rmlui_changed_fraction() == 0.0f,
+      CHECK(drag.fraction == 0.0f,
             "a drag off the left end is the bottom of the range");
 
       rib_rmlui_set_slider("volume-level", 0.5f, nullptr);
@@ -1203,9 +1208,10 @@ int main(int argc, char **argv)
             "a slider with no step does not move, so a key cannot invent one");
       rib_rmlui_set_slider_step("volume-level", 0.1f);
       CHECK(rib_rmlui_nudge_slider("volume-level", 1), "a key nudges the focused slider");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SLIDER,
+      const auto nudge = rib_rmlui_take_event();
+      CHECK(nudge.kind == RIB_RMLUI_ACTION_SLIDER,
             "the nudge is the same change a drag commits");
-      CHECK(rib_rmlui_changed_fraction() > 0.59f && rib_rmlui_changed_fraction() < 0.61f,
+      CHECK(nudge.fraction > 0.59f && nudge.fraction < 0.61f,
             "the nudge adds the slider's own step, not a volume-shaped one");
 
       rib_rmlui_set_slider("volume-level", 1.0f, nullptr);
@@ -1213,9 +1219,10 @@ int main(int argc, char **argv)
             AUDIO_VOLUME_STEP_DB / (AUDIO_VOLUME_MAX_DB - AUDIO_VOLUME_MIN_DB));
       rib_rmlui_clear_intents();
       click_id("volume-down");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SLIDER,
+      const auto arrow = rib_rmlui_take_event();
+      CHECK(arrow.kind == RIB_RMLUI_ACTION_SLIDER,
             "the left arrow is the slider moving down one position");
-      CHECK(rib_rmlui_changed_fraction() > 0.88f && rib_rmlui_changed_fraction() < 0.90f,
+      CHECK(arrow.fraction > 0.88f && arrow.fraction < 0.90f,
             "one arrow is one position, not a decibel");
 
       /* With Options open and the slider selected, Down skips the left and
@@ -1380,14 +1387,14 @@ int main(int argc, char **argv)
       rib_rmlui_show_screen("pause");
       drain_actions();
       press_then_release_at("save", 4, 4);
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_NONE,
+      CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_NONE,
             "pressing a button and releasing off it does nothing");
 
       // The other half, to show that this does not pass because clicks have
       // stopped working: a press and release on the same button still acts.
       drain_actions();
       click_id("save");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SAVE,
+      CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_SAVE,
             "pressing and releasing on a button still presses it");
 
       // Sliding off and back on is a press, because the release happens on the
@@ -1403,7 +1410,7 @@ int main(int argc, char **argv)
          rib_rmlui_pointer_move(x, y);
          rib_rmlui_pointer_button(false);
       }
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_SAVE,
+      CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_SAVE,
             "sliding off a button and back on still presses it");
       drain_actions();
    }
@@ -1502,15 +1509,28 @@ int main(int argc, char **argv)
             "asking past the end names nothing");
       rib_rmlui_focus_list_control(1);
       click_id("fixture-mode");
-      CHECK(rib_rmlui_take_action() == RIB_RMLUI_ACTION_TOGGLE,
+      const auto toggle = rib_rmlui_take_event();
+      CHECK(toggle.kind == RIB_RMLUI_ACTION_TOGGLE,
             "pressing a switch is the general toggle intent");
-      CHECK(std::string(rib_rmlui_chosen_item()) == "fixture-mode",
+      CHECK(toggle.id == "fixture-mode",
             "which switch travels beside the action");
       rib_rmlui_set_toggle("fixture-mode", "ON", true);
       CHECK(std::string(rib_rmlui_test_text("fixture-mode-state")) == "ON",
             "the switch shows the word the design gave it");
       drain_actions();
    }
+
+   // Each queued slider input must keep its payload until we consume it.
+   rib_rmlui_show_screen("options");
+   rib_rmlui_clear_intents();
+   CHECK(rib_rmlui_commit_slider("volume-level", 0.25f), "first queued slider input");
+   CHECK(rib_rmlui_commit_slider("volume-level", 0.75f), "second queued slider input");
+   const auto queued_first = rib_rmlui_take_event();
+   CHECK(queued_first.kind == RIB_RMLUI_ACTION_SLIDER, "first queued slider kind");
+   CHECK(queued_first.fraction == 0.25f, "first queued slider keeps its own value");
+   const auto queued_second = rib_rmlui_take_event();
+   CHECK(queued_second.kind == RIB_RMLUI_ACTION_SLIDER, "second queued slider kind");
+   CHECK(queued_second.fraction == 0.75f, "second queued slider keeps its own value");
 
    rib_rmlui_shutdown();
    if (failures)

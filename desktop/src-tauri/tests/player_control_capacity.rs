@@ -41,7 +41,7 @@ fn largest_declared_profile() -> (String, usize) {
 
 #[test]
 fn the_player_can_hold_every_control_the_largest_console_declares() {
-    let Some(source) = player_source("rmlui.c") else {
+    let Some(source) = player_source("rmlui/menu.cpp") else {
         eprintln!("vendor/retroarch is not checked out; nothing was verified");
         return;
     };
@@ -69,7 +69,7 @@ fn the_player_can_hold_every_control_the_largest_console_declares() {
 
 #[test]
 fn neither_the_player_nor_the_bridge_keeps_its_own_control_vocabulary() {
-    let (Some(player), Some(bridge)) = (player_source("rmlui.c"), player_source("rmlui_bridge.cpp"))
+    let (Some(player), Some(bridge)) = (player_source("rmlui/menu.cpp"), player_source("rmlui_bridge.cpp"))
     else {
         eprintln!("vendor/retroarch is not checked out; nothing was verified");
         return;
@@ -96,7 +96,7 @@ fn neither_the_player_nor_the_bridge_keeps_its_own_control_vocabulary() {
 
 #[test]
 fn navigation_order_is_not_hardcoded_per_console() {
-    let Some(player) = player_source("rmlui.c") else {
+    let Some(player) = player_source("rmlui/menu.cpp") else {
         eprintln!("vendor/retroarch is not checked out; nothing was verified");
         return;
     };

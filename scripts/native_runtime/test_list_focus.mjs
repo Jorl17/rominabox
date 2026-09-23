@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const source = readFileSync(resolve(root, 'vendor/retroarch/menu/drivers/rmlui.c'), 'utf8');
+const source = readFileSync(resolve(root, 'vendor/retroarch/menu/drivers/rmlui/menu.cpp'), 'utf8');
 
 const failures = [];
 function check(ok, what) {

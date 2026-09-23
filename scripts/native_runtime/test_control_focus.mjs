@@ -39,24 +39,24 @@ function extractOptional(file, signature, nextSignature) {
   return source.slice(start, end);
 }
 
-const active = extract('menu/drivers/rmlui.c',
+const active = extract('menu/drivers/rmlui/menu.cpp',
   'static bool rib_control_is_active(', '\nstatic const char *rib_control_console_name');
-const step = extract('menu/drivers/rmlui.c',
+const step = extract('menu/drivers/rmlui/menu.cpp',
   'static int rib_control_step(', '\nstatic int rib_pause_row(');
-const same = extract('menu/drivers/rmlui.c',
+const same = extract('menu/drivers/rmlui/menu.cpp',
   'static bool rib_same_bind_target(', '\nstatic void rib_bind_anchor(');
-const focus = extractOptional('menu/drivers/rmlui.c',
+const focus = extractOptional('menu/drivers/rmlui/menu.cpp',
   'static void rib_focus_control(rib_rmlui_menu_t *menu, int index)\n',
   '\nstatic void rib_rmlui_update_binds(');
-const update = extract('menu/drivers/rmlui.c',
-  'static void rib_rmlui_update_binds(', '\nstatic void rib_rmlui_frame(');
+const update = extract('menu/drivers/rmlui/menu.cpp',
+  'static void rib_rmlui_update_binds(', '\nvoid rib_menu_frame(');
 
-const source = readFileSync(resolve(native, 'menu/drivers/rmlui.c'), 'utf8');
+const source = readFileSync(resolve(native, 'menu/drivers/rmlui/menu.cpp'), 'utf8');
 const called = source.indexOf('rib_focus_control(menu, rib_control_step');
 const assigned = source.indexOf('menu->control_focus = rib_control_step');
 const focusWrite = called >= 0 ? called : assigned;
-const keysAt = focusWrite >= 0 ? source.lastIndexOf('case MENU_ACTION_UP:', focusWrite) : -1;
-const keysEnd = focusWrite >= 0 ? source.indexOf('case MENU_ACTION_OK:', focusWrite) : -1;
+const keysAt = focusWrite >= 0 ? source.lastIndexOf('case RIB_KEY_UP:', focusWrite) : -1;
+const keysEnd = focusWrite >= 0 ? source.indexOf('case RIB_KEY_OK:', focusWrite) : -1;
 const keys = keysAt >= 0 && keysEnd > keysAt ? source.slice(keysAt, keysEnd) : '';
 
 const generated = `
@@ -96,8 +96,6 @@ static int rib_binds_after_ms;
 static int rib_binds_for = -1;
 static retro_time_t rib_binds_since;
 static bool rib_binds_open;
-static char rib_script_hover[128];
-static bool rib_script_running;
 
 static int painted_focus = -999;
 static int shown_for = -999;
@@ -122,7 +120,7 @@ static bool rib_rmlui_pointer_inside(const char *id, int x, int y) {
 }
 static int rib_rmlui_hovered_action(void) { return hovered_action; }
 static retro_time_t now_us;
-static retro_time_t cpu_features_get_time_usec(void) { return now_us; }
+static retro_time_t rib_host_time_us(void) { return now_us; }
 
 ${active}
 ${step}
@@ -143,7 +141,7 @@ static void rest(rib_rmlui_menu_t *menu, int action) {
    hovered_action = action;
    pointer_inside = false;
    painted_focus = -999;
-   rib_rmlui_update_binds(menu, 40, 40);
+   rib_rmlui_update_binds(menu, 40, 40, true, true);
 }
 
 int main(void) {
@@ -178,13 +176,13 @@ int main(void) {
    menu.control_focus = 0;
    hovered_action = RIB_RMLUI_ACTION_CONTROL_FIRST;
    now_us = 0;
-   rib_rmlui_update_binds(&menu, 40, 40);
+   rib_rmlui_update_binds(&menu, 40, 40, true, true);
    now_us = 2000000;
-   rib_rmlui_update_binds(&menu, 40, 40);
+   rib_rmlui_update_binds(&menu, 40, 40, true, true);
    hovered_action = RIB_RMLUI_ACTION_CONTROLS_RESET;
    now_us = 4000000;
    painted_focus = -999;
-   rib_rmlui_update_binds(&menu, 40, 40);
+   rib_rmlui_update_binds(&menu, 40, 40, true, true);
    check(menu.control_focus == RIB_CONTROL_MAX,
          "resting on Reset focuses Reset, not a control");
    check(!rib_binds_open, "resting on Reset closes the bind list");
@@ -194,13 +192,13 @@ int main(void) {
    rib_binds_for = 1;
    rib_binds_open = true;
    hovered_action = RIB_RMLUI_ACTION_CONTROL_FIRST + 3;
-   rib_rmlui_update_binds(&menu, 40, 40);
+   rib_rmlui_update_binds(&menu, 40, 40, true, true);
    check(menu.control_focus == 1,
          "the pointer over the open list keeps that control focused");
 
    hovered_action = RIB_RMLUI_ACTION_NONE;
    pointer_inside = false;
-   rib_rmlui_update_binds(&menu, 1, 1);
+   rib_rmlui_update_binds(&menu, 1, 1, true, true);
    check(menu.control_focus == 1,
          "leaving the pointer does not drop the focus");
 

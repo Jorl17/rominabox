@@ -40,6 +40,8 @@ c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
   "$script_dir/test_rmlui_interaction.cpp" \
   "$bridge_dir/rmlui_bridge.cpp" \
   "$bridge_dir/rmlui/declarations.cpp" \
+  "$bridge_dir/rmlui/binds_popup.cpp" \
+  "$bridge_dir/rmlui/document.cpp" \
   "$script_dir/test_menu_declarations.cpp" \
   "$rmlui_lib" \
   $freetype_libs
@@ -232,6 +234,43 @@ for design in designs:
 if failed:
     sys.exit(1)
 PY
+
+# Test the C++ menu frame/action lifecycle against the same staged Native
+# export as above. We replace only the RetroArch host commands. Config parsing,
+# file writes, declarations and the RmlUi document are the production code.
+# One declared binding gives the capture path a control to click. The
+# generated placement scene has the callout, but no runtime default remap.
+printf 'rib_label_up = "UP"\ninput_player1_up = "up"\n' \
+  > "$build_dir/placement-native/controls-defaults.cfg"
+libretro_common=$repo_root/vendor/retroarch/libretro-common
+orchestration_objects=""
+for source in \
+  file/config_file.c file/file_path.c file/file_path_io.c \
+  streams/file_stream.c string/stdstring.c vfs/vfs_implementation.c \
+  encodings/encoding_utf.c time/rtime.c compat/compat_strl.c; do
+  object=$build_dir/$(basename "$source" .c)-orchestration.o
+  cc -I "$libretro_common/include" -c "$libretro_common/$source" -o "$object"
+  orchestration_objects="$orchestration_objects $object"
+done
+c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
+  $rmlui_includes -I "$bridge_dir" -I "$libretro_common/include" $freetype_cflags \
+  -o "$build_dir/test_menu_orchestration" \
+  "$script_dir/test_menu_orchestration.cpp" \
+  "$bridge_dir/rmlui/menu.cpp" \
+  "$bridge_dir/rmlui/overlays.cpp" \
+  "$bridge_dir/rmlui/script.cpp" \
+  "$bridge_dir/rmlui/shaders.cpp" \
+  "$bridge_dir/rmlui/discs.cpp" \
+  "$bridge_dir/rmlui/settings.cpp" \
+  "$bridge_dir/rmlui_bridge.cpp" \
+  "$bridge_dir/rmlui/declarations.cpp" \
+  "$bridge_dir/rmlui/binds_popup.cpp" \
+  "$bridge_dir/rmlui/document.cpp" \
+  "$bridge_dir/rmlui/files.cpp" \
+  $orchestration_objects "$rmlui_lib" $freetype_libs
+mkdir -p "$build_dir/orchestration-data"
+"$build_dir/test_menu_orchestration" \
+  "$build_dir/placement-native" "$build_dir/orchestration-data"
 
 if [ "$focus_status" -ne 0 ]; then
   exit "$focus_status"

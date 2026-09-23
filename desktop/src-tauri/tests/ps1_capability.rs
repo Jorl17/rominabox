@@ -446,6 +446,6 @@ fn crate_themes_prepare(
     system: &str,
     options: &Controls,
 ) {
-    rominabox_desktop::themes::prepare_controls_assets(source, source, destination, system, options, None)
+    rominabox_desktop::themes::prepare_controls_assets(source, &rominabox_desktop::repo::at("integrations/designs/native"), destination, system, options, None)
         .expect("the scene markup is generated");
 }

@@ -452,18 +452,20 @@ def _build_a_game(
     shutil.copytree(KIT, kit, symlinks=True)
 
     # Copy the design as it is in this tree, not as when we froze the kit.
-    # We read designs/<id> in the exporter. We also copy Native into menu-assets,
-    # because in one shot path we read the controller art from there.
-    package = ROOT / "integrations/designs" / design
-    if not package.is_dir():
-        raise SystemExit(f"no design package at {package}")
-    staged_design = kit / "designs" / design
-    staged_design.mkdir(parents=True, exist_ok=True)
-    for document in package.iterdir():
-        if document.is_file():
-            shutil.copyfile(document, staged_design / document.name)
-            if design == "native":
-                shutil.copyfile(document, kit / "menu-assets" / document.name)
+    # In the exporter we resolve Native and the selected design from this tree.
+    # We also copy Native into menu-assets, because in one shot path we read
+    # the controller art from there.
+    for package_name in dict.fromkeys(("native", design)):
+        package = ROOT / "integrations/designs" / package_name
+        if not package.is_dir():
+            raise SystemExit(f"no design package at {package}")
+        staged_design = kit / "designs" / package_name
+        staged_design.mkdir(parents=True, exist_ok=True)
+        for document in package.iterdir():
+            if document.is_file():
+                shutil.copyfile(document, staged_design / document.name)
+                if package_name == "native":
+                    shutil.copyfile(document, kit / "menu-assets" / document.name)
     player = built_player()
     if player:
         shutil.copyfile(player, kit / "bin/retroarch")

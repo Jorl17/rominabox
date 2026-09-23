@@ -186,7 +186,7 @@ SCOPES = [
     Scope(
         "bridge",
         "the RmlUi bridge itself, compiled with a dummy renderer: actions, hover, focus, capture, and that a pointer resting on a control writes the same focus the keyboard reads",
-        "the rest of rmlui.c (capture and sounds); the focus writer is extracted and compiled on its own, and control binding stays in the padbinds scope",
+        "the menu orchestration (capture and sounds); the focus writer is extracted and compiled on its own, and control binding stays in the padbinds scope",
         ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
         slow=True,
         prepare=RMLUI_PREPARE,
@@ -221,7 +221,7 @@ SCOPES = [
     Scope(
         "variants",
         "that every controller a player can pick has artwork staged and a scene to swap to",
-        "that the player actually swaps to it; that is the bridge, and rmlui.c is not linked here",
+        "that the player actually swaps to it; that is the native menu, which is not linked here",
         ["python3", str(ROOT / "scripts/menu_states.py"), "--every-variant", str(SCRATCH / "variants")],
         slow=True,
     ),

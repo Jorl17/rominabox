@@ -28,6 +28,7 @@ from make_test_rom import make_megadrive_rom
 
 ROOT = shots.ROOT
 EXPECTED = ROOT / "scripts/fixtures/menu-workflow-baseline.json"
+COMPOSITION_EXPECTED = ROOT / "scripts/fixtures/menu-composition-baseline.json"
 OUTPUT = ROOT / "work/test-output/menu-workflows"
 CHECKPOINT = re.compile(r"\[RIB\] checkpoint (\S+) (\{.*\})")
 
@@ -184,9 +185,58 @@ def capture(app: Path, destination: Path, name: str, script: list[str], *,
     }
 
 
+def inherited_screen_cases(rom: Path, achievements: dict, output: Path) -> dict:
+    """The Disc inheritance cases, separate from the baseline cases."""
+    results = {}
+    for palette in shots.declared_palettes():
+        destination = output / "disc" / palette
+        destination.mkdir(parents=True, exist_ok=True)
+        settings = {"theme": "disc", "palette": palette, "achievements": achievements,
+                    "shaders": {"bundled": ["scanlines"], "initial": "none"}}
+        with shots.build_a_game(rom, output, settings=settings) as app:
+            for name in ("achievements", "achievements-next", "achievement-mode", "achievement-mode-pause"):
+                script = shots.declared_shots()[name]["script"]
+                assert script[:2] == ["options", "achievements"], script
+                # We activate with the keyboard through the visible focus stops.
+                # Check the reported visible focus before opening each screen,
+                # because Click() by id can also reach hidden elements.
+                script = ["key:right", "key:right", "key:right", "report:pause-entry", "key:ok",
+                          "key:down", "key:down", "key:down", "report:options-entry",
+                          "key:ok", *script[2:]]
+                result = capture(app, destination, name, script)
+                assert "options" in result["reports"]["pause-entry"]["focused"], result
+                assert "achievements" in result["reports"]["options-entry"]["focused"], result
+                final = result["reports"]["final"]
+                expected_screen = "pause" if name == "achievement-mode-pause" else "achievements"
+                assert final["screen"] == expected_screen, (name, final)
+                if expected_screen == "achievements":
+                    assert "achievement-mode-state" in final["text"], final
+                    assert "achievements-page-count" in final["text"], final
+                if name.startswith("achievement-mode"):
+                    assert result["files"]["toggle-achievement-mode"] == "1\n", result["files"]
+                if name == "achievement-mode":
+                    assert final["text"]["achievement-mode-state"] == "ON", final
+                if name == "achievement-mode-pause":
+                    guarded = {"save", "load", *(f"slot-{slot}" for slot in range(1, 7))}
+                    assert guarded <= set(final["disabled"]), final
+                if name == "achievements-next":
+                    assert final["text"]["achievements-page-count"].startswith("2/"), final
+                results[f"disc/{palette}/{name}"] = result
+                print(f"captured inherited disc/{palette}/{name}", flush=True)
+            # In the preceding case we turned the mode on and returned through
+            # the visible Back buttons, so reopening must read that per-game file.
+            reopened = capture(app, destination, "reopened-mode",
+                               ["options", "achievements"], reset=False)
+            assert reopened["reports"]["final"]["text"]["achievement-mode-state"] == "ON", reopened
+            results[f"disc/{palette}/reopened-mode"] = reopened
+    return results
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--record", action="store_true")
+    parser.add_argument("--composition", action="store_true",
+                        help="check the separately recorded inherited Disc screens")
     parser.add_argument("--output", type=Path, default=OUTPUT)
     arguments = parser.parse_args()
     if not os.environ.get("ROMINABOX_TEST_BUILD"):
@@ -206,59 +256,63 @@ def main() -> int:
     provenance["binarySha256"] = hashlib.sha256(player.read_bytes()).hexdigest()
     provenance["cliSha256"] = hashlib.sha256(shots.command().read_bytes()).hexdigest()
     (output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
-    results = {}
-    for design in ("native", "disc"):
-        with ExitStack() as exports:
-            games = {}
+    expected_file = COMPOSITION_EXPECTED if arguments.composition else EXPECTED
+    if arguments.composition:
+        results = inherited_screen_cases(rom, achievements, output)
+    else:
+        results = {}
+        for design in ("native", "disc"):
+            with ExitStack() as exports:
+                games = {}
 
-            def game(settings: dict) -> Path:
-                key = json.dumps(settings, sort_keys=True)
-                if key not in games:
-                    games[key] = exports.enter_context(shots.build_a_game(rom, output, settings=settings))
-                return games[key]
+                def game(settings: dict) -> Path:
+                    key = json.dumps(settings, sort_keys=True)
+                    if key not in games:
+                        games[key] = exports.enter_context(shots.build_a_game(rom, output, settings=settings))
+                    return games[key]
 
-            for palette in shots.declared_palettes():
-                destination = output / design / palette
-                destination.mkdir(parents=True, exist_ok=True)
-                base = {"theme": design, "palette": palette}
-                if design == "native":
-                    base["achievements"] = achievements
-                cases = shots.declared_shots()
-                if design == "disc":
-                    # In these cases we record the screen as missing, and we
-                    # test it in the Disc inheritance cases.
-                    cases = {name: case for name, case in cases.items() if not name.startswith("achievement")}
-                if palette != "blue":
-                    cases = {name: cases[name] for name in ("pause-menu", "controls", "picker-open")}
-                for name, case in cases.items():
-                    if name in OVERLAY_WAITS[design]:
-                        case = case | {"script": [f"wait-ms:{OVERLAY_WAITS[design][name]}"]}
-                    settings = base | {k: v for k, v in case.items() if k not in ("script", "inMotion", "config")}
-                    result = capture(game(settings), destination, name, case["script"],
-                                     in_motion=case.get("inMotion", False), config=case.get("config"))
-                    results[f"{design}/{palette}/{name}"] = result
-                    print(f"captured {design}/{palette}/{name}", flush=True)
-                if palette != "blue":
-                    continue
-                app = game(base | {"shaders": {"bundled": ["scanlines", "phosphor"], "initial": "phosphor"}})
-                for name, script in WORKFLOWS.items():
-                    results[f"{design}/{palette}/{name}"] = capture(app, destination, name, script)
-                    print(f"captured {design}/{palette}/{name}", flush=True)
-                save = ["options", "volume-level@0.25", "controls", "controls-device-current",
-                        "controls-device-option-megadrive6", "report:chosen", "controls-back"]
-                reopen = ["options", "report:volume", "controls", "report:controller", "controls-back"]
-                if design == "native":
-                    save += ["achievements", "achievement-mode", "report:guard"]
-                    reopen += ["achievements", "report:guard"]
-                results[f"{design}/{palette}/persist"] = capture(app, destination, "persist", save)
-                results[f"{design}/{palette}/reopen"] = capture(app, destination, "reopen", reopen, reset=False)
+                for palette in shots.declared_palettes():
+                    destination = output / design / palette
+                    destination.mkdir(parents=True, exist_ok=True)
+                    base = {"theme": design, "palette": palette}
+                    if design == "native":
+                        base["achievements"] = achievements
+                    cases = shots.declared_shots()
+                    if design == "disc":
+                        # In these cases we record the screen as missing, and we
+                        # test it in the Disc inheritance cases.
+                        cases = {name: case for name, case in cases.items() if not name.startswith("achievement")}
+                    if palette != "blue":
+                        cases = {name: cases[name] for name in ("pause-menu", "controls", "picker-open")}
+                    for name, case in cases.items():
+                        if name in OVERLAY_WAITS[design]:
+                            case = case | {"script": [f"wait-ms:{OVERLAY_WAITS[design][name]}"]}
+                        settings = base | {k: v for k, v in case.items() if k not in ("script", "inMotion", "config")}
+                        result = capture(game(settings), destination, name, case["script"],
+                                         in_motion=case.get("inMotion", False), config=case.get("config"))
+                        results[f"{design}/{palette}/{name}"] = result
+                        print(f"captured {design}/{palette}/{name}", flush=True)
+                    if palette != "blue":
+                        continue
+                    app = game(base | {"shaders": {"bundled": ["scanlines", "phosphor"], "initial": "phosphor"}})
+                    for name, script in WORKFLOWS.items():
+                        results[f"{design}/{palette}/{name}"] = capture(app, destination, name, script)
+                        print(f"captured {design}/{palette}/{name}", flush=True)
+                    save = ["options", "volume-level@0.25", "controls", "controls-device-current",
+                            "controls-device-option-megadrive6", "report:chosen", "controls-back"]
+                    reopen = ["options", "report:volume", "controls", "report:controller", "controls-back"]
+                    if design == "native":
+                        save += ["achievements", "achievement-mode", "report:guard"]
+                        reopen += ["achievements", "report:guard"]
+                    results[f"{design}/{palette}/persist"] = capture(app, destination, "persist", save)
+                    results[f"{design}/{palette}/reopen"] = capture(app, destination, "reopen", reopen, reset=False)
     rendered = json.dumps(results, indent=2, sort_keys=True) + "\n"
     (output / "results.json").write_text(rendered)
     if arguments.record:
-        EXPECTED.write_text(rendered)
+        expected_file.write_text(rendered)
         print(f"recorded {len(results)} cases; inspect the pictures before accepting this baseline")
         return 0
-    expected = json.loads(EXPECTED.read_text())
+    expected = json.loads(expected_file.read_text())
     changed = [name for name in sorted(results.keys() | expected.keys()) if results.get(name) != expected.get(name)]
     for name in changed:
         before, after = expected.get(name, {}), results.get(name, {})

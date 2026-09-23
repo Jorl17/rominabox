@@ -266,7 +266,7 @@ fn export_stages_only_the_mastersystem_illustration() {
     );
 
     let destination = scratch();
-    themes::prepare_controls_assets(&source, &source, &destination, "mastersystem", &Controls::default(), None)
+    themes::prepare_controls_assets(&source, &menu_assets(), &destination, "mastersystem", &Controls::default(), None)
         .expect("stage the default pad");
 
     assert_eq!(

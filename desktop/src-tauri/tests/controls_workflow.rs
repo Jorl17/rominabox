@@ -111,7 +111,7 @@ fn custom_labels_are_escaped_without_changing_control_identity() {
     let options: Controls =
         serde_json::from_value(serde_json::json!({"bindings":{"a":{"label":"Jump <go> & fly"}}}))
             .unwrap();
-    themes::prepare_controls_assets(&illustrated_assets(), &illustrated_assets(), &root, "nes", &options, None).unwrap();
+    themes::prepare_controls_assets(&illustrated_assets(), &assets(), &root, "nes", &options, None).unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("Jump &lt;go&gt; &amp; fly"));
     assert!(markup.contains("id=\"control-a\""));
@@ -131,7 +131,7 @@ fn default_callout_labels_occur_once_and_custom_labels_keep_console_identity() {
         ("nes", illustrated_assets(), "A"),
     ] {
         let root = workspace();
-        themes::prepare_controls_assets(&source, &source, &root, system, &options, None).unwrap();
+        themes::prepare_controls_assets(&source, &assets(), &root, system, &options, None).unwrap();
         let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
         for label in ["Up", "Down", "Left", "Start"] {
             assert_eq!(
@@ -276,7 +276,7 @@ fn the_controller_picker_is_offered_only_when_there_is_a_choice() {
             }
         }
         fs::write(source.join("CONTROLLERS.txt"), []).unwrap();
-        rominabox_desktop::themes::prepare_controls_assets(&source, &source, &destination,
+        rominabox_desktop::themes::prepare_controls_assets(&source, &assets(), &destination,
             system,
             &Controls::default(),
             None,
