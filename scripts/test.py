@@ -43,6 +43,9 @@ PRINT_LOCK = threading.Lock()
 
 CARGO_DESKTOP = ["--manifest-path", str(ROOT / "desktop/src-tauri/Cargo.toml")]
 CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog/Cargo.toml")]
+# bridge, dcmenu and menu link one RmlUi. We declare it in each scope that
+# uses it, or in a checkout where nobody has compiled it the scope fails.
+RMLUI_PREPARE = [["python3", str(ROOT / "scripts/prepare_rmlui.py")]]
 
 
 class Scope:
@@ -111,6 +114,7 @@ SCOPES = [
         "what RmlUi does with the real menu.rml when clicked: hit testing, hover, focus, classes",
         "that the menu looks right, or anything about the C++ bridge, which is not loaded",
         ["python3", str(ROOT / "scripts/menu_interaction.py"), "--check"],
+        prepare=RMLUI_PREPARE,
     ),
     Scope(
         "heldkey",
@@ -141,6 +145,7 @@ SCOPES = [
         "that a core-profile context draws the menu and a legacy context still does, and that a log line reaches the file before the process exits",
         "that a Dreamcast disc boots, or where the menu sits; the pictures are a separate run",
         ["python3", str(ROOT / "scripts/test_dcmenu.py")],
+        prepare=RMLUI_PREPARE,
     ),
     Scope(
         "joypad",
@@ -150,7 +155,7 @@ SCOPES = [
     ),
     Scope(
         "reporoot",
-        "that nothing finds the repository by the path it was compiled in, and that no test or script names one person's ROM directory",
+        "that nothing finds the repository by the path it was compiled in, that no test or script names one person's ROM directory, and that no script or test names the removed experiment tree",
         "that the rule is right, or that a binary really came from elsewhere; it reads how each place asks",
         ["python3", str(ROOT / "scripts/test_repo_root.py")],
     ),
@@ -184,6 +189,7 @@ SCOPES = [
         "the rest of rmlui.c (capture and sounds); the focus writer is extracted and compiled on its own, and control binding stays in the padbinds scope",
         ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
         slow=True,
+        prepare=RMLUI_PREPARE,
     ),
     Scope(
         "edges",

@@ -5,11 +5,12 @@ set -eu
 script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/../.." && pwd)
 bridge_dir=$repo_root/vendor/retroarch/menu/drivers
-# Uses a prebuilt RmlUi from the work tree.
-rmlui_lib=$repo_root/work/experiments/rml-retroarch/build-rmlui/librmlui.a
-rmlui_inc=$repo_root/work/experiments/rml-retroarch/vendor/RmlUi/Include
+# The one declaration of the library path. The binary stays in this checkout,
+# so one checkout never runs another's tests.
+rmlui_lib=$(python3 "$repo_root/scripts/rmlui_paths.py" library)
+rmlui_includes=$(python3 "$repo_root/scripts/rmlui_paths.py" includes)
 design=$repo_root/integrations/designs/native
-build_dir=$repo_root/work/experiments/rml-retroarch/build-interaction-test
+build_dir=$repo_root/work/bridge-interaction
 # The stylesheet that we write in an export, not the file of the design. A
 # design has design(surface) where a colour goes, and we fill it in at export,
 # so the file of the design alone gives RmlUi tokens that it cannot parse.
@@ -21,7 +22,7 @@ if [ ! -f "$bridge_dir/rmlui_bridge.cpp" ]; then
   exit 1
 fi
 if [ ! -f "$rmlui_lib" ]; then
-  echo "missing prebuilt librmlui.a at $rmlui_lib" >&2
+  echo "missing $rmlui_lib (python3 scripts/prepare_rmlui.py)" >&2
   exit 1
 fi
 
@@ -34,7 +35,7 @@ freetype_cflags=$(pkg-config --cflags freetype2)
 freetype_libs=$(pkg-config --libs freetype2)
 
 c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
-  -I "$rmlui_inc" -I "$bridge_dir" $freetype_cflags \
+  $rmlui_includes -I "$bridge_dir" $freetype_cflags \
   -o "$out" \
   "$script_dir/test_rmlui_interaction.cpp" \
   "$bridge_dir/rmlui_bridge.cpp" \

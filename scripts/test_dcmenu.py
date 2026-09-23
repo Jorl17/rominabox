@@ -17,9 +17,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+# We take the headers and the archive from the player build, because a
+# literal path here could point to a folder that no script creates.
+from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
+
 DRIVERS = ROOT / "vendor/retroarch/menu/drivers"
-RMLUI = ROOT / "work/experiments/rml-retroarch/vendor/RmlUi"
-RMLUI_LIB = ROOT / "work/experiments/rml-retroarch/build-rmlui/librmlui.a"
 PROBE = ROOT / "work/dcmenu-probe"
 LAUNCHER = ROOT / "desktop/src-tauri/launcher/main.c"
 LINE = PROBE / "line.txt"
@@ -124,8 +127,8 @@ int main(int argc, char **argv) {
 
 
 def check_menu_draw() -> bool:
-    if not RMLUI_LIB.is_file():
-        print(f"FAIL missing {RMLUI_LIB}")
+    if not LIBRARY.is_file():
+        print(f"FAIL missing {LIBRARY}")
         return False
     PROBE.mkdir(parents=True, exist_ok=True)
     binary = PROBE / "menu_core_gl"
@@ -135,8 +138,7 @@ def check_menu_draw() -> bool:
     ).stdout.split()
     command = [
         "c++", "-std=c++17", "-fobjc-arc",
-        f"-I{RMLUI / 'Include'}",
-        f"-I{RMLUI / 'Backends'}",
+        *[f"-I{path}" for path in HEADER_DIRS],
         f"-I{DRIVERS}",
         "-Wno-deprecated-declarations",
         "-framework", "OpenGL",
@@ -146,7 +148,7 @@ def check_menu_draw() -> bool:
         str(DRIVERS / "rmlui_gl.cpp"),
         str(DRIVERS / "rmlui_gl3.cpp"),
         str(DRIVERS / "third_party/lodepng.cpp"),
-        str(RMLUI_LIB),
+        str(LIBRARY),
         *flags,
     ]
     compiled = subprocess.run(command, capture_output=True, text=True)

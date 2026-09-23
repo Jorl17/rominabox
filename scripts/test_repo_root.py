@@ -60,6 +60,12 @@ COLLECTION = "roms-" + "to-test"
 SCANNED = [Path("desktop"), Path("scripts")]
 SKIPPED_PARTS = {"target", "node_modules", "dist", "work"}
 
+# bridge, dcmenu and menu must not contain a directory that is not part of
+# a checkout, because we never create it. Split so that this file does not
+# contain the path that we forbid.
+EXPERIMENT_TREE = "work/" + "experiments"
+SCRIPT_SUFFIXES = {".py", ".sh", ".mjs", ".cpp", ".mm", ".h", ".c"}
+
 
 def collection_mentions() -> list[str]:
     """Return the tests and scripts that contain one person's ROM directory."""
@@ -85,6 +91,83 @@ def collection_mentions() -> list[str]:
     return found
 
 
+def experiment_tree_mentions() -> list[str]:
+    """Return the scripts and tests that still contain the removed experiment tree."""
+    found: list[str] = []
+    directory = ROOT / "scripts"
+    for path in sorted(directory.rglob("*")):
+        if not path.is_file() or path.suffix not in SCRIPT_SUFFIXES:
+            continue
+        if "__pycache__" in path.parts or path.stat().st_size > 1_000_000:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        if EXPERIMENT_TREE not in text:
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            if EXPERIMENT_TREE in line:
+                found.append(f"{path.relative_to(ROOT)}:{number}")
+    return found
+
+
+# We pass the path from the module to the shell script. A copy of the path
+# written into either of them is the defect.
+DECLARATION_READERS = [
+    Path("scripts/test_dcmenu.py"),
+    Path("scripts/menu_interaction.py"),
+    Path("scripts/prepare_rmlui.py"),
+    Path("scripts/native_runtime/test_rmlui_interaction.sh"),
+]
+
+
+def declaration_readers() -> list[str]:
+    missing: list[str] = []
+    for relative in DECLARATION_READERS:
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        if "rmlui_paths" not in text:
+            missing.append(f"{relative} does not read the RmlUi declaration")
+    return missing
+
+
+def copied_player_flags() -> list[str]:
+    """Check for a second copy of a cmake flag, which would build another RmlUi.
+
+    We read the flags from the player build at prepare time. A flag written
+    into the prepare script means that we no longer read it there.
+    """
+    build = (ROOT / "scripts/native_runtime/build-retroarch-rmlui-macos.sh").read_text(
+        encoding="utf-8"
+    )
+    flags = re.findall(r"-D[A-Z][A-Z0-9_]+=\S+", build)
+    if len(flags) < 3:
+        return ["the player build no longer shows the RmlUi cmake flags"]
+    copied: list[str] = []
+    for relative in (
+        Path("scripts/prepare_rmlui.py"),
+        Path("scripts/rmlui_paths.py"),
+    ):
+        body = (ROOT / relative).read_text(encoding="utf-8")
+        copied.extend(f"{relative} copies {flag}" for flag in flags if flag in body)
+    return copied
+
+
+def staged_preview() -> str | None:
+    """Check that we render menu_states with the helper in the builder package.
+
+    We use the staged helper, not a binary from a directory that we never
+    create.
+    """
+    import test_menu_preview
+
+    relative = test_menu_preview.RENDERER.relative_to(ROOT).as_posix()
+    text = (ROOT / "scripts/menu_states.py").read_text(encoding="utf-8")
+    if relative not in text:
+        return "menu_states.py does not use the staged preview helper"
+    return None
+
+
 def climbing_uses(path: Path) -> list[int]:
     """Return the line numbers where a compiled-in path leads out of the crate."""
     text = path.read_text(errors="replace")
@@ -95,6 +178,26 @@ def climbing_uses(path: Path) -> list[int]:
 
 
 def main() -> int:
+    named_tree = experiment_tree_mentions()
+    if named_tree:
+        print(
+            f"{len(named_tree)} script(s) or test(s) name the removed experiment tree:",
+            file=sys.stderr,
+        )
+        for hit in named_tree:
+            print(f"  FAIL {hit}", file=sys.stderr)
+        return 1
+
+    drifted = declaration_readers() + copied_player_flags()
+    preview = staged_preview()
+    if preview:
+        drifted.append(preview)
+    if drifted:
+        print("the RmlUi declaration is not what the tests read:", file=sys.stderr)
+        for hit in drifted:
+            print(f"  FAIL {hit}", file=sys.stderr)
+        return 1
+
     named = collection_mentions()
     if named:
         print(
