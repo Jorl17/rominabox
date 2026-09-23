@@ -528,10 +528,38 @@ def a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote() -> None:
         )
 
 
+def a_rebuilt_rmlui_archive_invalidates_the_menu_probe() -> None:
+    """Check that we relink an old probe after preparing the current RmlUi."""
+    from unittest.mock import patch
+    import menu_interaction
+
+    with scratch.scratch() as made:
+        directory = Path(made)
+        source, binary, library = (directory / name for name in ("probe.cpp", "probe", "librmlui.a"))
+        recipe = (Path(menu_interaction.__file__), menu_interaction.ROOT / "scripts/rmlui_paths.py")
+        stamp = max(path.stat().st_mtime for path in recipe) + 10
+        for path, modified in ((source, stamp), (binary, stamp + 1), (library, stamp + 2)):
+            path.write_bytes(b"fixture")
+            os.utime(path, (modified, modified))
+        with (
+            patch.object(menu_interaction, "PROBE_SOURCE", source),
+            patch.object(menu_interaction, "PROBE", binary),
+            patch.object(menu_interaction, "LIBRARY", library),
+            patch.object(menu_interaction.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "")) as run,
+        ):
+            menu_interaction.build()
+        compiles = [call.args[0] for call in run.call_args_list if call.args[0][0] == "c++"]
+        check(
+            len(compiles) == 1 and str(library) in compiles[0],
+            "the probe is relinked against a newer RmlUi archive even when its C++ source is unchanged",
+        )
+
+
 ANYWHERE = [
     the_built_cli_follows_the_redirected_cargo_target,
     a_file_compiled_into_the_tool_counts_as_its_source,
     a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote,
+    a_rebuilt_rmlui_archive_invalidates_the_menu_probe,
     # We also run create() from inside a worktree, where we could check out an
     # old branch by mistake. If we skipped that case here, the tests would pass
     # on the checkout where the mistake happens.

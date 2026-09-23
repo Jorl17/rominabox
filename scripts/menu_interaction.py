@@ -74,13 +74,14 @@ SCENARIO = [
 
 
 def build() -> None:
-    """Compile the probe if the source is newer than the binary."""
+    """Rebuild when the probe, build recipe or linked RmlUi archive changes."""
     if not LIBRARY.is_file():
         raise SystemExit(
             f"RmlUi is not built at {LIBRARY}.\n"
             "python3 scripts/prepare_rmlui.py"
         )
-    if PROBE.exists() and PROBE.stat().st_mtime >= PROBE_SOURCE.stat().st_mtime:
+    inputs = (PROBE_SOURCE, Path(__file__), ROOT / "scripts/rmlui_paths.py", LIBRARY)
+    if PROBE.exists() and PROBE.stat().st_mtime >= max(path.stat().st_mtime for path in inputs):
         return
     PROBE.parent.mkdir(parents=True, exist_ok=True)
     flags = subprocess.run(
