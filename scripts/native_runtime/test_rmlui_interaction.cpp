@@ -2,6 +2,8 @@
  * We compile rmlui_bridge.cpp with a dummy renderer and create no window. */
 
 #include "rmlui_bridge.h"
+#include "rmlui/focus.hpp"
+static rib::Focus focus;
 
 #include <algorithm>
 #include <cmath>
@@ -13,51 +15,35 @@
 #include <sstream>
 #include <string>
 #include <vector>
-/* The menu orchestration is not linked in this document-only check, so we
- * stub the control list that it normally supplies. With the stub a test can
- * declare more than sixteen controls, and the bridge must address all of
- * them. A PlayStation DualShock declares twenty-four. */
-static const char *stub_control_ids[] = {
-   "up", "down", "left", "right", "a", "b", "x", "y",
-   "l", "r", "l2", "r2", "l3", "r3", "start", "select",
-   "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
-   "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus"
-};
-static const int stub_control_count =
-   (int)(sizeof(stub_control_ids) / sizeof(stub_control_ids[0]));
-
-/* Two controllers, so there is a choice in the picker, as on the Mega Drive. */
-static const char *stub_device_ids[] = {"megadrive", "megadrive6"};
-static const char *stub_device_names[] = {"Mega Drive", "Mega Drive six-button"};
-
-extern "C" int rib_rmlui_device_count(void) { return 2; }
-extern "C" const char *rib_rmlui_device_id(int index)
-{
-   return (index >= 0 && index < 2) ? stub_device_ids[index] : nullptr;
-}
-extern "C" const char *rib_rmlui_device_name(int index)
-{
-   return (index >= 0 && index < 2) ? stub_device_names[index] : nullptr;
-}
-
-extern "C" int rib_rmlui_control_capacity(void) { return stub_control_count; }
-extern "C" const char *rib_rmlui_control_id(int index)
-{
-   if (index < 0 || index >= stub_control_count)
-      return nullptr;
-   return stub_control_ids[index];
-}
-extern "C" const char *rib_rmlui_control_group(int) { return nullptr; }
+// The document fixture has the same typed declaration catalog as Menu.
+// With twenty-four declared controls we test the larger controller layout.
+static rib_controls_catalog fixture_controls = [] {
+   rib_controls_catalog catalog{};
+   const char *ids[] = {
+      "up", "down", "left", "right", "a", "b", "x", "y",
+      "l", "r", "l2", "r2", "l3", "r3", "start", "select",
+      "l_x_plus", "l_x_minus", "l_y_plus", "l_y_minus",
+      "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus"
+   };
+   for (const char *id : ids)
+      std::snprintf(catalog.entries[catalog.count++].id, 32, "%s", id);
+   catalog.device_count = 2;
+   std::snprintf(catalog.devices[0].id, 32, "megadrive");
+   std::snprintf(catalog.devices[0].name, NAME_MAX_LENGTH, "Mega Drive");
+   std::snprintf(catalog.devices[1].id, 32, "megadrive6");
+   std::snprintf(catalog.devices[1].name, NAME_MAX_LENGTH, "Mega Drive six-button");
+   return catalog;
+}();
 
 /* The cue that we requested from the sound pack for a move. Empty until a
  * step changes a level. The player has the production function, and this
  * one only records the call. */
 static std::string move_sound_log;
-extern "C" void rib_rmlui_play_move_sound(int direction)
+extern "C" void rib_host_scroll_sound(bool up)
 {
    if (!move_sound_log.empty())
       move_sound_log.push_back(' ');
-   move_sound_log += direction > 0 ? "up" : "down";
+   move_sound_log += up ? "up" : "down";
 }
 
 extern "C" unsigned rib_rmlui_test_texture_loads();
@@ -760,7 +746,7 @@ static int check_rstick_picture(const char *design, const char *profile, int wid
 static int check_placement(const char *assets, const char *scenes,
       const char *design, int width)
 {
-   if (!rib_rmlui_init(assets, 960, 600, false))
+   if (!rib_rmlui_init(assets, 960, 600, false, focus, fixture_controls))
    {
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;
@@ -884,7 +870,7 @@ int main(int argc, char **argv)
    }
    if (argc > 2 && std::strcmp(argv[2], "row-edge") == 0)
    {
-      if (!rib_rmlui_init(assets, 960, 600, false))
+      if (!rib_rmlui_init(assets, 960, 600, false, focus, fixture_controls))
       {
          std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
          return 1;
@@ -936,7 +922,7 @@ int main(int argc, char **argv)
    CHECK(rib_rmlui_state_task_matches(true, false, "/s", 3, "/s", 3, false),
          "exact load path and slot match");
 
-   if (!rib_rmlui_init(assets, 960, 600, false))
+   if (!rib_rmlui_init(assets, 960, 600, false, focus, fixture_controls))
    {
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;
@@ -1539,6 +1525,16 @@ int main(int argc, char **argv)
    CHECK(queued_second.kind == RIB_RMLUI_ACTION_SLIDER, "second queued slider kind");
    CHECK(queued_second.fraction == 0.75f, "second queued slider keeps its own value");
 
+   // When we create the document again, slider values and configured steps stay.
+   rib_rmlui_set_slider_step("volume-level", 0.125f);
+   rib_rmlui_shutdown();
+   CHECK(rib_rmlui_init(argv[1], 960, 600, false, focus, fixture_controls), "document recreates for slider state");
+   rib_rmlui_clear_intents();
+   CHECK(rib_rmlui_nudge_slider("volume-level", -1), "recreated slider retains its step");
+   const auto recreated_slider = rib_rmlui_take_event();
+   CHECK(recreated_slider.kind == RIB_RMLUI_ACTION_SLIDER
+         && recreated_slider.fraction == 0.625f,
+         "recreated slider steps from its previous value");
    rib_rmlui_shutdown();
    if (failures)
    {

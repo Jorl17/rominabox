@@ -30,12 +30,17 @@ mkdir -p "$build_dir"
 freetype_cflags=$(pkg-config --cflags freetype2)
 freetype_libs=$(pkg-config --libs freetype2)
 
-c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
+c++ -std=c++17 -DRIB_RMLUI_HEADLESS -DHAVE_AUDIOMIXER \
   $rmlui_includes -I "$bridge_dir" -I "$repo_root/vendor/retroarch/libretro-common/include" $freetype_cflags \
   -o "$out" \
   "$script_dir/test_rmlui_interaction.cpp" \
   "$bridge_dir/rmlui_bridge.cpp" \
   "$bridge_dir/rmlui/declarations.cpp" \
+  "$bridge_dir/rmlui/parts.cpp" \
+  "$bridge_dir/rmlui/slots.cpp" \
+  "$bridge_dir/rmlui/status.cpp" \
+  "$bridge_dir/rmlui/screens.cpp" \
+  "$bridge_dir/rmlui/lists.cpp" \
   "$bridge_dir/rmlui/binds_popup.cpp" \
   "$bridge_dir/rmlui/document.cpp" \
   "$script_dir/test_menu_declarations.cpp" \
@@ -314,7 +319,7 @@ for source in \
   cc -I "$libretro_common/include" -c "$libretro_common/$source" -o "$object"
   orchestration_objects="$orchestration_objects $object"
 done
-c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
+c++ -std=c++17 -DRIB_RMLUI_HEADLESS -DHAVE_AUDIOMIXER \
   $rmlui_includes -I "$bridge_dir" -I "$libretro_common/include" $freetype_cflags \
   -o "$build_dir/test_menu_orchestration" \
   "$script_dir/test_menu_orchestration.cpp" \
@@ -327,6 +332,11 @@ c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
   "$bridge_dir/rmlui/settings.cpp" \
   "$bridge_dir/rmlui_bridge.cpp" \
   "$bridge_dir/rmlui/declarations.cpp" \
+  "$bridge_dir/rmlui/parts.cpp" \
+  "$bridge_dir/rmlui/slots.cpp" \
+  "$bridge_dir/rmlui/status.cpp" \
+  "$bridge_dir/rmlui/screens.cpp" \
+  "$bridge_dir/rmlui/lists.cpp" \
   "$bridge_dir/rmlui/binds_popup.cpp" \
   "$bridge_dir/rmlui/document.cpp" \
   "$bridge_dir/rmlui/files.cpp" \
