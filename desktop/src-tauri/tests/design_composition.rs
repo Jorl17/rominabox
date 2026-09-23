@@ -470,3 +470,69 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
         }
     }
 }
+
+#[cfg(target_os = "macos")]
+#[test]
+fn disc_guard_message_wraps_within_its_slot() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-disc-slot-guard");
+    themes::prepare_theme_assets(
+        &repo::at("integrations/designs/disc"),
+        &root,
+        "violet",
+        None,
+    )
+    .unwrap();
+    let base = fs::read_to_string(root.join("menu.rml")).unwrap();
+    let guarded = base
+        .replace(
+            "id=\"slot-2\" class=\"slot empty \">",
+            "id=\"slot-2\" class=\"slot empty disabled\">",
+        )
+        .replace(
+            "id=\"slot-state-2\" class=\"slot-state\">EMPTY",
+            "id=\"slot-state-2\" class=\"slot-state\">ACHIEVEMENTS ON",
+        );
+    assert_ne!(guarded, base, "the staged slot must accept the guard state");
+    assert!(guarded.contains("id=\"slot-2\" class=\"slot empty disabled\""));
+    assert!(guarded.contains("class=\"slot-state\">ACHIEVEMENTS ON"));
+    let preview = repo::at("desktop/src-tauri/resources/preview/rml-preview");
+    let render = |name: &str, markup: &str| {
+        let document = root.join(format!("{name}.rml"));
+        fs::write(&document, markup).unwrap();
+        let picture = root.join(format!("{name}.png"));
+        let result = Command::new(&preview)
+            .args([document.as_path(), picture.as_path()])
+            .args(["960", "600"])
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        image::open(picture).unwrap().to_rgba8()
+    };
+    let original = render("original", &base);
+    let guard = render("guard", &guarded);
+
+    // The gap between slot 2 and the action column must not receive letters.
+    for y in 120..170 {
+        for x in 749..766 {
+            assert_eq!(
+                guard.get_pixel(x, y),
+                original.get_pixel(x, y),
+                "guard text escaped slot 2 at ({x}, {y})"
+            );
+        }
+    }
+    // "ON" must appear on a second line. Clipping the long label also keeps
+    // the gap clear, but hides the state that the player must read.
+    let second_line_pixels = (142..170)
+        .flat_map(|y| (600..748).map(move |x| (x, y)))
+        .filter(|&(x, y)| guard.get_pixel(x, y) != original.get_pixel(x, y))
+        .count();
+    assert!(
+        second_line_pixels > 0,
+        "the guard state lost its second line"
+    );
+}
