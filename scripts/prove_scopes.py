@@ -372,6 +372,18 @@ def case_artwork():
     return expect("artwork", code, output, ("EDITED",))
 
 
+def case_dcmenu():
+    # Draw the menu with the GL2 backend in a core profile. We give Flycast
+    # that context, and with client arrays the menu stays blank in it.
+    path = ROOT / "vendor/retroarch/menu/drivers/rmlui_gl.cpp"
+    raw = replace(path, "   if (core_context)", "   if (false)")
+    try:
+        code, output = run_scope("dcmenu")
+    finally:
+        restore(path, raw)
+    return expect("dcmenu", code, output, ("core context menu draw left the framebuffer clear",))
+
+
 def case_glslcore():
     # Give a 3.2 core context GLSL 130, a version that fails to compile on
     # macOS. The check for a NULL path is the other half of the fix, and this
@@ -625,6 +637,7 @@ CASES = {
     "artwork": case_artwork,
     "padbinds": case_padbinds,
     "glslcore": case_glslcore,
+    "dcmenu": case_dcmenu,
     "menupreview": case_menupreview,
     "shaderpreview": case_shaderpreview,
     "size": case_size,

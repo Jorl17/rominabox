@@ -715,7 +715,7 @@ static int check_rstick_picture(const char *design, const char *profile, int wid
 static int check_placement(const char *assets, const char *scenes,
       const char *design, int width)
 {
-   if (!rib_rmlui_init(assets, 960, 600))
+   if (!rib_rmlui_init(assets, 960, 600, false))
    {
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;
@@ -853,7 +853,7 @@ int main(int argc, char **argv)
    CHECK(rib_rmlui_state_task_matches(true, false, "/s", 3, "/s", 3, false),
          "exact load path and slot match");
 
-   if (!rib_rmlui_init(assets, 960, 600))
+   if (!rib_rmlui_init(assets, 960, 600, false))
    {
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;

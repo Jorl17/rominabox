@@ -17,11 +17,19 @@
 #define MANAGED_CAP 64
 
 /* One switch for an automated run, and a person who opens the game does not
- * set it. Without it, a screenshot run would open an output device and leave a
- * zero-alpha window on a display, which is still visible in the dark. We read
- * the same variable in the Cocoa code. */
+ * set it. Without it, a screenshot run would open an output device and play
+ * sound. We read the same variable in the Cocoa code. */
 #define ROMINABOX_QUIET_ENV "ROMINABOX_QUIET"
 #define ROMINABOX_SOUND_ENV "ROMINABOX_SOUND"
+
+/* stdout is fully buffered when it is not a terminal. In the launcher we
+ * point it at launch.log, so when the player is killed, or still running when
+ * someone reads the log, RetroArch's lines stay in that buffer. */
+void rominabox_line_buffer_stdio(void)
+{
+    setvbuf(stdout, NULL, _IOLBF, 0);
+    setvbuf(stderr, NULL, _IOLBF, 0);
+}
 
 static void die(const char *message) {
     fprintf(stderr, "ROM-in-a-Box: %s\n", message);
@@ -752,6 +760,7 @@ static void prepare(void) {
         dup2(log_fd, STDERR_FILENO);
         if (log_fd > STDERR_FILENO)
             close(log_fd);
+        rominabox_line_buffer_stdio();
     }
     {
         const char *quiet = getenv(ROMINABOX_QUIET_ENV);
