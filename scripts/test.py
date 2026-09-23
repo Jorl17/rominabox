@@ -185,8 +185,8 @@ SCOPES = [
     ),
     Scope(
         "bridge",
-        "the RmlUi bridge itself, compiled with a dummy renderer: actions, hover, focus, capture, and that a pointer resting on a control writes the same focus the keyboard reads",
-        "the menu orchestration (capture and sounds); the focus writer is extracted and compiled on its own, and control binding stays in the padbinds scope",
+        "the real menu and RmlUi document with a dummy renderer: actions, shared pointer/key focus, binding capacity, capture lifecycle, save/load failures and persistence",
+        "physical input capture or audible sound; a fake RetroArch host controls the failure/capture boundary, and post-reset navigation has a recorded pre-existing defect",
         ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
         slow=True,
         prepare=RMLUI_PREPARE,

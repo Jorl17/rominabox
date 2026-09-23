@@ -26,10 +26,6 @@ if [ ! -f "$rmlui_lib" ]; then
   exit 1
 fi
 
-focus_status=0
-node "$script_dir/test_control_focus.mjs" || focus_status=$?
-node "$script_dir/test_list_focus.mjs" || focus_status=$?
-
 mkdir -p "$build_dir"
 freetype_cflags=$(pkg-config --cflags freetype2)
 freetype_libs=$(pkg-config --libs freetype2)
@@ -238,10 +234,76 @@ PY
 # Test the C++ menu frame/action lifecycle against the same staged Native
 # export as above. We replace only the RetroArch host commands. Config parsing,
 # file writes, declarations and the RmlUi document are the production code.
-# One declared binding gives the capture path a control to click. The
-# generated placement scene has the callout, but no runtime default remap.
-printf 'rib_label_up = "UP"\ninput_player1_up = "up"\n' \
-  > "$build_dir/placement-native/controls-defaults.cfg"
+# All eight declared Mega Drive callouts are active, so we can move through
+# the scene by pointer or keyboard. These are fixture bindings, no runtime remap.
+python3 - "$build_dir/placement-native/controls-defaults.cfg" <<'FIXTURE'
+import pathlib
+import sys
+ids = ("up", "left", "right", "down", "y", "b", "a", "start")
+pathlib.Path(sys.argv[1]).write_text(''.join(
+    f'rib_label_{id} = "{id}"\ninput_player1_{id} = "a"\n' for id in ids
+))
+FIXTURE
+python3 - "$build_dir/placement-native" "$repo_root/desktop/controls.json" <<'FIXTURE'
+import json
+import pathlib
+import sys
+
+assets = pathlib.Path(sys.argv[1])
+menu = assets / "menu.rml"
+markup = menu.read_text()
+assert "<!--SCREENS-->" in markup
+assert '<button class="menu-action options-back"' in markup
+markup = markup.replace(
+    "<!--SCREENS-->",
+    '<div id="fixture-panel" class="screen-panel" '
+    'style="display:none;position:absolute;left:100dp;top:100dp;width:600dp;height:300dp;">'
+    '<div class="list" style="width:500dp;"><div class="list-page">'
+    '<button id="fixture-one" class="list-row" style="width:400dp;height:42dp;">ONE</button>'
+    '<button id="fixture-two" class="list-row" style="width:400dp;height:42dp;">TWO</button>'
+    '</div></div><button id="fixture-back" class="menu-action list-back">BACK</button>'
+    '</div>',
+    1,
+)
+markup = markup.replace(
+    '<button class="menu-action options-back"',
+    '<button id="fixture" class="menu-action option-entry">TEST LIST</button>'
+    '<button class="menu-action options-back"',
+    1,
+)
+menu.write_text(markup)
+declarations = assets / "design.cfg"
+config = declarations.read_text()
+assert 'screens = "pause options controls"' in config
+assert 'screen_button_options = "options"' in config
+config = config.replace('screens = "pause options controls"',
+                        'screens = "pause options controls fixture"', 1)
+config = config.replace('screen_button_options = "options"',
+                        'screen_button_options = "options fixture-back"', 1)
+config += ('\nscreen_panel_fixture = "fixture-panel"'
+           '\nscreen_heading_fixture = "TEST LIST"'
+           '\nscreen_footer_fixture = "ESC BACK"'
+           '\nscreen_button_fixture = "fixture"\n')
+declarations.write_text(config)
+
+profiles = json.loads(pathlib.Path(sys.argv[2]).read_text())["profiles"]
+assert max(len(profile["controls"]) for profile in profiles) <= 48, "declared profile exceeds the preserved player limit"
+profile = next(profile for profile in profiles if profile["id"] == "ps1-analog")
+ids = [control["id"] for control in profile["controls"]]
+assert len(ids) == 24
+ids += [f"extra{index:02d}" for index in range(25)]
+defaults = assets / "stage" / "ps1-analog" / "controls-defaults.cfg"
+(defaults.parent / "expected-controls.txt").write_text("\n".join(ids[:48]) + "\n")
+for support in ("menu.rcss", "Silkscreen-Regular.ttf"):
+    (defaults.parent / support).write_bytes((assets / support).read_bytes())
+groups = {control["id"]: control.get("group") for control in profile["controls"]}
+defaults.write_text(
+    'controls_profile = "ps1-analog"\n'
+    + 'controls_variant_controls_ps1-analog = "' + ' '.join(ids) + '"\n'
+    + ''.join(f'rib_label_{id} = "{id}"\ninput_player1_{id} = "a"\n' for id in ids)
+    + ''.join(f'rib_group_{id} = "{group}"\n' for id, group in groups.items() if group)
+)
+FIXTURE
 libretro_common=$repo_root/vendor/retroarch/libretro-common
 orchestration_objects=""
 for source in \
@@ -257,6 +319,7 @@ c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
   -o "$build_dir/test_menu_orchestration" \
   "$script_dir/test_menu_orchestration.cpp" \
   "$bridge_dir/rmlui/menu.cpp" \
+  "$bridge_dir/rmlui/controls.cpp" \
   "$bridge_dir/rmlui/overlays.cpp" \
   "$bridge_dir/rmlui/script.cpp" \
   "$bridge_dir/rmlui/shaders.cpp" \
@@ -271,10 +334,9 @@ c++ -std=c++17 -DRIB_RMLUI_HEADLESS \
 mkdir -p "$build_dir/orchestration-data"
 "$build_dir/test_menu_orchestration" \
   "$build_dir/placement-native" "$build_dir/orchestration-data"
+"$build_dir/test_menu_orchestration" --capacity \
+  "$build_dir/placement-native/stage/ps1-analog" "$build_dir/orchestration-data"
 
-if [ "$focus_status" -ne 0 ]; then
-  exit "$focus_status"
-fi
 if [ "$row_edge_failed" -ne 0 ]; then
   exit 1
 fi

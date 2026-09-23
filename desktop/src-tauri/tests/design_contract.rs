@@ -610,3 +610,18 @@ fn named(selector: &str) -> Vec<String> {
     }
     found
 }
+
+/// Hover alone must not add another focus border beside keyboard selection.
+#[test]
+fn list_hover_does_not_paint_a_second_focus_border() {
+    for design in ["native", "disc"] {
+        let css = read(&format!("integrations/designs/{design}/menu.rcss"))
+            .expect("shipped design stylesheet");
+        let hover = css
+            .split_once(".list-row:hover")
+            .and_then(|(_, rule)| rule.split_once('}'))
+            .map(|(rule, _)| rule)
+            .expect("list row hover rule");
+        assert!(!hover.contains("border-color"), "{design} paints a second list focus border on hover");
+    }
+}

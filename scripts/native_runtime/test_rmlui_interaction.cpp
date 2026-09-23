@@ -982,17 +982,26 @@ int main(int argc, char **argv)
    CHECK(rib_rmlui_take_event().kind == RIB_RMLUI_ACTION_NONE,
          "mailbox is empty after both intents");
 
+   click_id("slot-3");
+   click_id("slot-5");
+   const auto third_slot = rib_rmlui_take_event();
+   const auto fifth_slot = rib_rmlui_take_event();
+   CHECK(third_slot.kind == RIB_RMLUI_ACTION_SELECT_SLOT && third_slot.slot == 3,
+         "first queued slot click carries its own slot");
+   CHECK(fifth_slot.kind == RIB_RMLUI_ACTION_SELECT_SLOT && fifth_slot.slot == 5,
+         "second queued slot click carries its own slot");
+
    move_to_id("resume");
-   CHECK(rib_rmlui_hovered_action() == RIB_RMLUI_ACTION_RESUME,
+   CHECK(rib_rmlui_hovered_event().kind == RIB_RMLUI_ACTION_RESUME,
          "pointer hover tracks Resume");
    rib_rmlui_pointer_move(8, 8);
-   CHECK(rib_rmlui_hovered_action() == RIB_RMLUI_ACTION_NONE,
+   CHECK(rib_rmlui_hovered_event().kind == RIB_RMLUI_ACTION_NONE,
          "pointer leave clears hover instead of sticking");
 
    rib_rmlui_set_focused(RIB_RMLUI_ACTION_QUIT);
    rib_rmlui_set_selected_slot(4);
    move_to_id("resume");
-   CHECK(rib_rmlui_hovered_action() == RIB_RMLUI_ACTION_RESUME,
+   CHECK(rib_rmlui_hovered_event().kind == RIB_RMLUI_ACTION_RESUME,
          "hover is independent of keyboard focus");
 
    rib_rmlui_set_selected_slot(4);
@@ -1000,7 +1009,7 @@ int main(int argc, char **argv)
    rib_rmlui_pointer_move(1, 1);
    const std::string selected_border = rib_rmlui_test_property("slot-4", "border-top-color");
    move_to_id("slot-4");
-   rib_rmlui_set_focused(RIB_RMLUI_ACTION_SELECT_SLOT_1 + 3);
+   rib_rmlui_set_focused(rib::Event::select_slot(4));
    CHECK(selected_border == rib_rmlui_test_property("slot-4", "border-top-color"),
          "selected slot keeps its border across hover and keyboard focus");
    rib_rmlui_pointer_button(true);
@@ -1425,9 +1434,7 @@ int main(int argc, char **argv)
          /* A step plays the move cue of the pack when the level changes, not
           * the confirm cue, so the two never play together, even at an end. */
          RIB_RMLUI_ACTION_SLIDER,
-         RIB_RMLUI_ACTION_SELECT_SLOT_1, RIB_RMLUI_ACTION_SELECT_SLOT_2,
-         RIB_RMLUI_ACTION_SELECT_SLOT_3, RIB_RMLUI_ACTION_SELECT_SLOT_4,
-         RIB_RMLUI_ACTION_SELECT_SLOT_5, RIB_RMLUI_ACTION_SELECT_SLOT_6,
+         RIB_RMLUI_ACTION_SELECT_SLOT,
       };
       for (int action = RIB_RMLUI_ACTION_NONE;
             action <= RIB_RMLUI_ACTION_SHOW_SCREEN; ++action)
