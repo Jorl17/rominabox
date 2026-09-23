@@ -82,6 +82,12 @@ fn write_runtime_stub(path: &Path) {
     assert!(status.success(), "could not compile the runtime stub");
 }
 
+fn stay_quiet(command: &mut Command) {
+    // ROMINABOX_QUIET_ENV in the launcher. Without it the game uses CoreAudio.
+    // In the quiet tests we read that define and compare it with this name.
+    command.env("ROMINABOX_QUIET", "1");
+}
+
 /// A path in the checkout of this run, not in the checkout where the binary
 /// was built. Several checkouts can share one cargo target, so they can differ.
 fn repo_at(relative: &str) -> PathBuf {
@@ -432,6 +438,7 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     assert_main_executable_keeps_the_sandbox(&app);
 
     let mut command = Command::new(app.join("Contents/MacOS/retroarch"));
+    stay_quiet(&mut command);
     command
         .env("ROMINABOX_PROBE_READ", &leak)
         .env("ROMINABOX_PROBE_WRITE", &write_path)
@@ -523,6 +530,7 @@ fn author_background_play_survives_an_old_controls_file() {
     fs::write(&controls, leftover).unwrap();
 
     let mut quiet = Command::new(app.join("Contents/MacOS/retroarch"));
+    stay_quiet(&mut quiet);
     quiet.env_remove("ROMINABOX_MENU_SHOT");
     let status = run_until(&mut quiet, Duration::from_secs(20));
     assert!(status.success(), "the stub did not exit");
@@ -541,6 +549,7 @@ fn author_background_play_survives_an_old_controls_file() {
     let pad = "input_player1_a = \"x\"\n";
     fs::write(&controls, pad).unwrap();
     let mut shot = Command::new(app.join("Contents/MacOS/retroarch"));
+    stay_quiet(&mut shot);
     shot.env("ROMINABOX_MENU_SHOT", "/tmp/rominabox-menu-shot-proof.png");
     let status = run_until(&mut shot, Duration::from_secs(20));
     assert!(status.success(), "the screenshot stub did not exit");
@@ -559,7 +568,7 @@ fn author_background_play_survives_an_old_controls_file() {
 
 #[test]
 #[ignore = "runs an exported core for a few frames, then exits"]
-fn exported_game_loads_a_core_opens_audio_and_sees_a_gamepad() {
+fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
     let rom = repo_at("work/test-game.gbc");
     assert!(rom.is_file(), "work/test-game.gbc is not in this checkout");
     let kit = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/runtime");
@@ -582,6 +591,7 @@ fn exported_game_loads_a_core_opens_audio_and_sees_a_gamepad() {
     let leak = home().join("Documents/RetroArch/playlists/builtin/content_history.lpl");
     let leak_before = fs::read(&leak).unwrap_or_default();
     let mut command = Command::new(app.join("Contents/MacOS/retroarch"));
+    stay_quiet(&mut command);
     command.env("ROMINABOX_VERBOSE", "1");
     command.env("ROMINABOX_MAX_FRAMES", "30");
     // The window is not focused, and the author chose to pause then, so the
@@ -591,8 +601,12 @@ fn exported_game_loads_a_core_opens_audio_and_sees_a_gamepad() {
         "ROMINABOX_MENU_SHOT",
         "/tmp/rominabox-menu-shot-proof.png",
     );
+    // We append to this log in the launcher. An earlier shot of this ROM put
+    // [CoreAudio] in this file, so a quiet run would still look loud.
+    let log_path = data_dir_for(&identity).join("logs/launch.log");
+    let _ = fs::remove_file(&log_path);
     let status = run_until(&mut command, Duration::from_secs(60));
-    let log = fs::read_to_string(data_dir_for(&identity).join("logs/launch.log")).unwrap_or_default();
+    let log = fs::read_to_string(&log_path).unwrap_or_default();
     let tail = log.lines().rev().take(40).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n");
     assert!(
         status.success(),
@@ -603,9 +617,16 @@ fn exported_game_loads_a_core_opens_audio_and_sees_a_gamepad() {
         "a core did not load\n{tail}"
     );
     assert!(
-        log.contains("[CoreAudio] Using output sample rate"),
-        "audio did not open\n{tail}"
+        !log.contains("[CoreAudio]"),
+        "a quiet run opened CoreAudio\n{tail}"
     );
+    let written = fs::read_to_string(data_dir_for(&identity).join("retroarch.cfg")).unwrap_or_default();
+    assert_eq!(
+        config_value(&written, "audio_driver"),
+        Some("null"),
+        "a quiet run left a device driver in the config\n{written}"
+    );
+    assert_eq!(config_value(&written, "audio_enable"), Some("false"));
     assert!(
         log.contains("[IOHID] Port "),
         "a gamepad was not seen\n{tail}"

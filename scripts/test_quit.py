@@ -252,6 +252,7 @@ def apple_event_quit(app: Path) -> tuple[str, str]:
             "ROMINABOX_VERBOSE": "1",
             "ROMINABOX_MENU_SHOT": str(EXPORT_DIR / "unused-shot.png"),
             "ROMINABOX_GAME_BUNDLE_PREFIX": PREFIX,
+            menu_shots.quiet_env(): "1",
         },
     )
     reader = threading.Thread(target=collect, args=(process.stdout,), daemon=True)
@@ -402,6 +403,7 @@ def scripted_quit(app: Path, script: str) -> tuple[str, str]:
             "ROMINABOX_MENU_SCRIPT": script,
             "ROMINABOX_MENU_SHOT": str(EXPORT_DIR / "unused-shot.png"),
             "ROMINABOX_GAME_BUNDLE_PREFIX": PREFIX,
+            menu_shots.quiet_env(): "1",
         },
     )
     reader = threading.Thread(target=collect, args=(process.stdout,), daemon=True)

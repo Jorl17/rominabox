@@ -255,7 +255,7 @@ SCOPES = [
     ),
     Scope(
         "isolation",
-        "that a signed export keeps the sandbox entitlement, cannot read or write the player's RetroArch profile or another game's container, and still loads a core with audio and a gamepad",
+        "that a signed export keeps the sandbox entitlement, cannot read or write the player's RetroArch profile or another game's container, and still loads a core, stays quiet, and sees a gamepad",
         "window placement, focus, fullscreen, or that Gatekeeper accepts an ad-hoc signature",
         [
             "cargo",
@@ -290,6 +290,13 @@ SCOPES = [
         "that an Apple Event quit of an exported Flycast game unloads the core before the process exits",
         "window placement and fullscreen; closing the window is the same AppKit terminate path",
         ["python3", str(ROOT / "scripts/test_quit.py")],
+        slow=True,
+    ),
+    Scope(
+        "quiet",
+        "that the one switch forces a null audio driver and that every player launch sets it",
+        "that a person launching the game is silent; they never set the switch. The off-screen window is a separate change",
+        ["python3", str(ROOT / "scripts/test_quiet.py")],
         slow=True,
     ),
 ]
