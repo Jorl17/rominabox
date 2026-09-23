@@ -291,19 +291,19 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
     assert!(css.contains(".list-actions .list-back { left: 300dp; width: 176dp;"));
     assert!(css.contains(".list-toggle-label") && css.contains(".list-toggle-state"));
 
-    // We can also hit-test the staged screen with the no-window RmlUi probe
-    // when its binary is present from the native test setup.
+    let document = menu
+        .replace(
+            "<div id=\"pause-panel\">",
+            "<div id=\"pause-panel\" style=\"display:none;\">",
+        )
+        .replace(
+            "id=\"achievements-panel\" class=\"screen-panel\" style=\"display:none;\"",
+            "id=\"achievements-panel\" class=\"screen-panel\"",
+        );
+    // We hit-test the staged screen with the no-window RmlUi probe when the
+    // native test setup provides its binary.
     if let Ok(probe) = std::env::var("ROMINABOX_RML_PROBE") {
-        let document = menu
-            .replace(
-                "<div id=\"pause-panel\">",
-                "<div id=\"pause-panel\" style=\"display:none;\">",
-            )
-            .replace(
-                "id=\"achievements-panel\" class=\"screen-panel\" style=\"display:none;\"",
-                "id=\"achievements-panel\" class=\"screen-panel\"",
-            );
-        fs::write(root.join("menu.rml"), document).unwrap();
+        fs::write(root.join("menu.rml"), &document).unwrap();
         let output = Command::new(probe)
             .arg("--document")
             .arg(root.join("menu.rml"))
@@ -333,5 +333,48 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
             "hits: {hits:?}; stderr: {}",
             String::from_utf8_lossy(&output.stderr)
         );
+    }
+    if let Ok(preview) = std::env::var("ROMINABOX_RML_PREVIEW") {
+        let start = css.find(".list-actions {").unwrap();
+        let end = css[start..].find(".list-status {").unwrap() + start;
+        let old_actions = concat!(
+            ".list-actions { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; }\n",
+            ".list-actions .menu-action { position: absolute; left: 0; width: 176dp; height: 36dp; font-family: Silkscreen; font-size: 14dp; line-height: 36dp; text-align: center; }\n",
+        );
+        let old_css = format!("{}{}{}", &css[..start], old_actions, &css[end..]);
+        let render = |name: &str, stylesheet: &str| {
+            let directory = root.join(name);
+            fs::create_dir_all(&directory).unwrap();
+            fs::write(directory.join("menu.rml"), &document).unwrap();
+            fs::write(directory.join("menu.rcss"), stylesheet).unwrap();
+            fs::copy(
+                root.join("Silkscreen-Regular.ttf"),
+                directory.join("Silkscreen-Regular.ttf"),
+            )
+            .unwrap();
+            let image = directory.join("capture.png");
+            let output = Command::new(&preview)
+                .args([directory.join("menu.rml"), image.clone()])
+                .args(["960", "600"])
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            image::open(image).unwrap().to_rgba8()
+        };
+        let old = render("old-back", &old_css);
+        let actual = render("new-back", &css);
+        for y in 508..544 {
+            for x in 766..942 {
+                assert_eq!(
+                    actual.get_pixel(x, y),
+                    old.get_pixel(x, y),
+                    "Disc Back pixel changed at ({x},{y})"
+                );
+            }
+        }
     }
 }
