@@ -1,12 +1,11 @@
 #include "core_options.h"
 
-#include <dirent.h>
+#include "portable_fs.h"
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #define OPTIONS_PATH_CAP 4096
 
@@ -117,7 +116,7 @@ static int options_read(const char *path, OptionFile *file) {
     long size;
     const char *cursor;
     memset(file, 0, sizeof *file);
-    stream = fopen(path, "rb");
+    stream = fs_open(path, "rb");
     if (!stream)
         return errno == ENOENT ? 0 : -1;
     if (fseek(stream, 0, SEEK_END) != 0 || (size = ftell(stream)) < 0 || fseek(stream, 0, SEEK_SET) != 0) {
@@ -229,18 +228,18 @@ static int write_text(const char *path, const char *text, size_t length) {
         errno = ENAMETOOLONG;
         return -1;
     }
-    stream = fopen(temporary, "wb");
+    stream = fs_open(temporary, "wb");
     if (!stream)
         return -1;
     if (fwrite(text, 1, length, stream) != length) {
         fclose(stream);
-        unlink(temporary);
+        fs_remove(temporary);
         errno = EIO;
         return -1;
     }
-    if (fclose(stream) != 0 || rename(temporary, path) != 0) {
+    if (fclose(stream) != 0 || fs_replace(temporary, path) != 0) {
         int saved = errno;
-        unlink(temporary);
+        fs_remove(temporary);
         errno = saved;
         return -1;
     }
@@ -280,7 +279,7 @@ static int join(char *out, size_t cap, const char *left, const char *right) {
 }
 
 static int make_directory(const char *path) {
-    return mkdir(path, 0755) == 0 || errno == EEXIST ? 0 : -1;
+    return fs_make_directory(path);
 }
 
 static int fail(const char *path, char *failed, size_t failed_cap) {
@@ -370,7 +369,7 @@ static int apply_file(
     }
     if (!shipped.raw) {
         where = applied_path;
-        if (unlink(applied_path) != 0 && errno != ENOENT)
+        if (fs_remove(applied_path) != 0)
             goto done;
     } else if (!applied.raw || strcmp(applied.raw, shipped.raw) != 0) {
         where = applied_dir;
@@ -403,74 +402,78 @@ typedef struct {
     int unshipped_only;
     char *failed;
     size_t failed_cap;
+    int recorded; /* `failed` holds the path that failed */
 } Roots;
 
+static int record(Roots *roots, const char *path) {
+    roots->recorded = 1;
+    return fail(path, roots->failed, roots->failed_cap);
+}
+
+/* One <core> directory under the walked root, and the root it is in. */
+typedef struct {
+    Roots *roots;
+    const char *walked;
+    char walked_dir[OPTIONS_PATH_CAP];
+    char shipped_dir[OPTIONS_PATH_CAP];
+    char game_dir[OPTIONS_PATH_CAP];
+    char applied_dir[OPTIONS_PATH_CAP];
+} CoreWalk;
+
+static int apply_one(const char *name, void *context) {
+    const CoreWalk *core = context;
+    Roots *roots = core->roots;
+    char walked_path[OPTIONS_PATH_CAP];
+    char shipped_path[OPTIONS_PATH_CAP];
+    char game_path[OPTIONS_PATH_CAP];
+    char applied_path[OPTIONS_PATH_CAP];
+    if (join(walked_path, sizeof walked_path, core->walked_dir, name) != 0
+        || join(shipped_path, sizeof shipped_path, core->shipped_dir, name) != 0
+        || join(game_path, sizeof game_path, core->game_dir, name) != 0
+        || join(applied_path, sizeof applied_path, core->applied_dir, name) != 0)
+        return record(roots, core->walked_dir);
+    if (!fs_is_file(walked_path))
+        return 0;
+    if (roots->unshipped_only && fs_exists(shipped_path))
+        return 0;
+    if (apply_file(
+            shipped_path, roots->game, core->game_dir, game_path,
+            roots->applied, core->applied_dir, applied_path,
+            roots->failed, roots->failed_cap) != 0) {
+        roots->recorded = 1;
+        return -1;
+    }
+    return 0;
+}
+
+static int apply_core(const char *name, void *context) {
+    CoreWalk *core = context;
+    Roots *roots = core->roots;
+    if (join(core->walked_dir, sizeof core->walked_dir, core->walked, name) != 0
+        || join(core->shipped_dir, sizeof core->shipped_dir, roots->shipped, name) != 0
+        || join(core->game_dir, sizeof core->game_dir, roots->game, name) != 0
+        || join(core->applied_dir, sizeof core->applied_dir, roots->applied, name) != 0)
+        return record(roots, core->walked);
+    if (!fs_is_directory(core->walked_dir))
+        return 0;
+    if (fs_list(core->walked_dir, apply_one, core) != 0)
+        return roots->recorded ? -1 : record(roots, core->walked_dir);
+    return 0;
+}
+
 /* Apply every <core>/<file> under `walked`. */
-static int apply_tree(const char *walked, const Roots *roots) {
-    DIR *cores = opendir(walked);
-    struct dirent *core;
-    int result = 0;
-    if (!cores)
-        return errno == ENOENT ? 0 : fail(walked, roots->failed, roots->failed_cap);
-    while (result == 0 && (core = readdir(cores))) {
-        char walked_dir[OPTIONS_PATH_CAP];
-        char shipped_dir[OPTIONS_PATH_CAP];
-        char game_dir[OPTIONS_PATH_CAP];
-        char applied_dir[OPTIONS_PATH_CAP];
-        struct stat info;
-        DIR *files;
-        struct dirent *file;
-        if (core->d_name[0] == '.')
-            continue;
-        if (join(walked_dir, sizeof walked_dir, walked, core->d_name) != 0
-            || join(shipped_dir, sizeof shipped_dir, roots->shipped, core->d_name) != 0
-            || join(game_dir, sizeof game_dir, roots->game, core->d_name) != 0
-            || join(applied_dir, sizeof applied_dir, roots->applied, core->d_name) != 0) {
-            result = fail(walked, roots->failed, roots->failed_cap);
-            break;
-        }
-        if (lstat(walked_dir, &info) != 0 || !S_ISDIR(info.st_mode))
-            continue;
-        files = opendir(walked_dir);
-        if (!files) {
-            result = fail(walked_dir, roots->failed, roots->failed_cap);
-            break;
-        }
-        while (result == 0 && (file = readdir(files))) {
-            char walked_path[OPTIONS_PATH_CAP];
-            char shipped_path[OPTIONS_PATH_CAP];
-            char game_path[OPTIONS_PATH_CAP];
-            char applied_path[OPTIONS_PATH_CAP];
-            if (file->d_name[0] == '.')
-                continue;
-            if (join(walked_path, sizeof walked_path, walked_dir, file->d_name) != 0
-                || join(shipped_path, sizeof shipped_path, shipped_dir, file->d_name) != 0
-                || join(game_path, sizeof game_path, game_dir, file->d_name) != 0
-                || join(applied_path, sizeof applied_path, applied_dir, file->d_name) != 0) {
-                result = fail(walked_dir, roots->failed, roots->failed_cap);
-                break;
-            }
-            if (lstat(walked_path, &info) != 0 || !S_ISREG(info.st_mode))
-                continue;
-            if (roots->unshipped_only && lstat(shipped_path, &info) == 0)
-                continue;
-            result = apply_file(
-                shipped_path, roots->game, game_dir, game_path,
-                roots->applied, applied_dir, applied_path,
-                roots->failed, roots->failed_cap);
-        }
-        {
-            int saved = errno;
-            closedir(files);
-            errno = saved;
-        }
-    }
-    {
-        int saved = errno;
-        closedir(cores);
-        errno = saved;
-    }
-    return result;
+static int apply_tree(const char *walked, Roots *roots) {
+    CoreWalk core;
+    core.roots = roots;
+    core.walked = walked;
+    if (fs_list(walked, apply_core, &core) == 0)
+        return 0;
+    if (roots->recorded)
+        return -1;
+    /* There is nothing to apply from a root that does not exist. */
+    if (errno == ENOENT && !fs_exists(walked))
+        return 0;
+    return record(roots, walked);
 }
 
 int rominabox_apply_core_options(
@@ -479,7 +482,7 @@ int rominabox_apply_core_options(
     const char *applied,
     char *failed,
     size_t failed_cap) {
-    Roots roots = {shipped, game, applied, 0, failed, failed_cap};
+    Roots roots = {shipped, game, applied, 0, failed, failed_cap, 0};
     /* What this export ships, then what an earlier one applied and this one
      * no longer ships at all. */
     if (apply_tree(shipped, &roots) != 0)

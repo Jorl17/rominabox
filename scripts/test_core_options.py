@@ -17,6 +17,7 @@ directory and exit before any core or window exists.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -181,8 +182,32 @@ def run() -> list[str]:
     return failures
 
 
+# The modules we will share with a Windows launcher. We cannot run them on
+# Windows here, but we compile them for it, to catch any POSIX-only call.
+PORTABLE = ("core_options.c", "portable_fs.c")
+
+
+def windows_build(directory: Path) -> list[str]:
+    zig = shutil.which("zig")
+    if not zig:
+        print("core options: Windows build not checked, zig is not installed")
+        return []
+    failures = []
+    for name in PORTABLE:
+        built = subprocess.run(
+            [zig, "cc", "-target", "x86_64-windows-gnu", "-Wall", "-Wextra", "-Werror",
+             "-c", str(LAUNCHER / name), "-o", str(directory / f"{name}.obj")],
+            capture_output=True, text=True,
+        )
+        if built.returncode != 0:
+            failures.append(f"{name} does not build for Windows:\n{built.stderr[-600:]}")
+    return failures
+
+
 def main() -> int:
     failures = run()
+    with scratch.scratch("rominabox-core-options-windows-") as made:
+        failures += windows_build(Path(made))
     for failure in failures:
         print(f"FAIL {failure}")
     if failures:
