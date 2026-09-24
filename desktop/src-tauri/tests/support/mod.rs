@@ -72,6 +72,7 @@ pub fn compose_with(
         include_achievements: entries
             .is_some_and(|entries| entries.iter().any(|entry| entry == "achievements")),
         menu_entries: entries.map(<[String]>::to_vec),
+        shaders: shaders_for(entries),
         discs,
         ..menu::MenuRequest::new(
             rominabox_desktop::themes::staged_design(kit, design),
@@ -192,6 +193,7 @@ pub fn stage_controls(
         include_achievements: entries
             .is_some_and(|entries| entries.iter().any(|entry| entry == "achievements")),
         menu_entries: entries.map(<[String]>::to_vec),
+        shaders: shaders_for(entries),
         ..menu::MenuRequest::new(design, artwork)
     })?
     .write(destination)
@@ -215,4 +217,14 @@ pub fn stage_splash(design: &Path, destination: &Path, palette: &str) -> Result<
         ..menu::MenuRequest::new(design, artwork())
     })?
     .write(destination)
+}
+
+/// The player opens the list of bundled shaders from the Shaders entry, so we
+/// bundle a shader in every set that lists the entry.
+pub fn shaders_for(entries: Option<&[String]>) -> rominabox_desktop::shaders::ShaderSelection {
+    let mut selection = rominabox_desktop::shaders::ShaderSelection::default();
+    if entries.is_some_and(|entries| entries.iter().any(|entry| entry == "shaders")) {
+        selection.bundled = vec!["scanlines".into()];
+    }
+    selection
 }

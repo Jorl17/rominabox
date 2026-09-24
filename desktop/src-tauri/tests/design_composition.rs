@@ -205,8 +205,8 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
     let staged = root.join("staged");
     style_only_design(&design);
     fs::write(
-        design.join("screen-achievements.rml"),
-        "<div id=\"PANEL-ID\" class=\"screen-panel\" style=\"display:none;\"><div id=\"custom-achievements-chrome\">TROPHIES</div><!--ROWS--><!--ACTIONS--><!--STATUS--></div>",
+        design.join("screen-shaders.rml"),
+        "<div id=\"PANEL-ID\" class=\"screen-panel\" style=\"display:none;\"><div id=\"custom-shaders-chrome\">FILTERS</div><!--ROWS--><!--ACTIONS--><!--STATUS--></div>",
     )
     .unwrap();
     support::stage_controls(
@@ -215,16 +215,16 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
         &staged,
         "megadrive",
         &Controls::default(),
-        Some(&["achievements".into()]),
+        Some(&["shaders".into()]),
     )
     .unwrap();
     let menu = fs::read_to_string(staged.join("menu.rml")).unwrap();
-    assert_eq!(menu.matches("id=\"achievements-panel\"").count(), 1);
+    assert_eq!(menu.matches("id=\"shaders-panel\"").count(), 1);
     for id in [
-        "custom-achievements-chrome",
-        "achievements-prototype",
-        "achievements-back",
-        "achievements-status",
+        "custom-shaders-chrome",
+        "scanlines",
+        "shaders-back",
+        "shaders-status",
     ] {
         assert_eq!(
             menu.matches(&format!("id=\"{id}\"")).count(),
@@ -233,9 +233,71 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
         );
     }
     assert!(
-        menu.find("id=\"controls-panel\"").unwrap()
-            < menu.find("id=\"achievements-panel\"").unwrap()
+        menu.find("id=\"controls-panel\"").unwrap() < menu.find("id=\"shaders-panel\"").unwrap()
     );
+}
+
+/// We refuse at composition a design that replaces the achievements screen
+/// and leaves out the sign-in button, and name the design, its file and the
+/// id, so we never export a game in which players cannot sign in.
+#[test]
+fn an_achievements_override_without_the_sign_in_button_is_rejected() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-achievements-contract");
+    let design = root.join("designs/style-only");
+    style_only_design(&design);
+    let screen = fs::read_to_string(repo::at("integrations/designs/native/screen-achievements.rml"))
+        .unwrap();
+    let start = screen.find("<button id=\"achievements-login\"").unwrap();
+    let end = screen[start..].find("</button>").unwrap() + start + "</button>".len();
+    let without = format!("{}{}", &screen[..start], &screen[end..]);
+    fs::write(design.join("screen-achievements.rml"), &without).unwrap();
+    let error = support::stage_controls(
+        &support::artwork(),
+        &design,
+        &root.join("staged"),
+        "megadrive",
+        &Controls::default(),
+        Some(&["controls".into(), "achievements".into()]),
+    )
+    .unwrap_err();
+    for part in [
+        "screen-achievements.rml",
+        "design 'style-only'",
+        "#achievements-login",
+        "achievements screen",
+    ] {
+        assert!(error.contains(part), "the refusal should name {part}: {error}");
+    }
+    assert!(!root.join("staged").exists(), "nothing is written for a refused menu");
+
+    // With the button back, we compose the same file.
+    fs::write(design.join("screen-achievements.rml"), &screen).unwrap();
+    support::stage_controls(
+        &support::artwork(),
+        &design,
+        &root.join("staged"),
+        "megadrive",
+        &Controls::default(),
+        Some(&["controls".into(), "achievements".into()]),
+    )
+    .unwrap();
+}
+
+/// We would ignore a file that replaces a screen the menu does not have, so
+/// we refuse it by name.
+#[test]
+fn an_override_for_an_unknown_screen_is_rejected() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-unknown-screen");
+    let design = root.join("designs/style-only");
+    style_only_design(&design);
+    fs::write(
+        design.join("screen-trophies.rml"),
+        "<div id=\"trophies-panel\" class=\"screen-panel\" style=\"display:none;\"></div>",
+    )
+    .unwrap();
+    let error = support::stage_theme(&design, &root.join("staged"), "blue").unwrap_err();
+    assert!(error.contains("screen-trophies.rml"), "{error}");
+    assert!(error.contains("design 'style-only'"), "{error}");
 }
 
 #[test]
@@ -246,7 +308,7 @@ fn an_options_screen_override_needs_no_separate_order_file() {
     style_only_design(&design);
     fs::write(
         design.join("screen-options.rml"),
-        "<div id=\"options-panel\" style=\"display:none;\"><div id=\"custom-options-chrome\">INDEX</div><div id=\"options-entries\"><!--OPTIONS--></div><button class=\"menu-action options-back\" id=\"options-back\">BACK</button></div>",
+        "<div id=\"options-panel\" class=\"screen-panel\" style=\"display:none;\"><div id=\"custom-options-chrome\">INDEX</div><div id=\"options-entries\"><!--OPTIONS--></div><button class=\"menu-action options-back\" id=\"options-back\">BACK</button></div>",
     )
     .unwrap();
     support::stage_controls(

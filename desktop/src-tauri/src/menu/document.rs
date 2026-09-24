@@ -20,6 +20,7 @@ use std::{
 pub(crate) fn staged_screens(
     screens: &[Screen],
     chosen: Option<&[String]>,
+    discs: usize,
 ) -> Result<Vec<Screen>, String> {
     let entries: Vec<&Screen> = screens
         .iter()
@@ -49,6 +50,8 @@ pub(crate) fn staged_screens(
         .iter()
         .filter(|screen| match screen.place {
             ScreenPlace::Options => show_options,
+            // The disc list exists only for a game of several discs.
+            ScreenPlace::Plain if screen.is_disc_list() && discs <= 1 => false,
             ScreenPlace::Plain => {
                 screen.option_label.is_none() || included.contains(screen.id.as_str())
             }

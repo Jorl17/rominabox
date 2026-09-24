@@ -68,6 +68,11 @@ fn screen_lines(text: &mut String, screen: &Screen, buttons: &[String]) -> Resul
     if let Some(mark) = &screen.mark {
         line(text, &format!("screen_mark_{id}"), mark)?;
     }
+    // The role of the screen, so that we find Pause or the achievements
+    // screen in the player by role, not by a literal id.
+    if let Some(role) = screen.role {
+        line(text, &format!("screen_role_{id}"), role.name())?;
+    }
     Ok(())
 }
 

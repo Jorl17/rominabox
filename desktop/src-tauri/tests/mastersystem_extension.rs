@@ -9,7 +9,7 @@ mod support;
 
 use rominabox_desktop::{
     controls::{self, Controls},
-    packaging, systems, themes,
+    packaging, systems,
 };
 use std::{
     collections::BTreeSet,

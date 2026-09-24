@@ -197,7 +197,8 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
 
     if !request.show_menu {
         let splash = manifest.fragment(&manifest.documents.splash)?;
-        let staged = document::staged_screens(&manifest.screens, None)?;
+        super::contract::validate_splash(&manifest, &splash)?;
+        let staged = document::staged_screens(&manifest.screens, None, request.discs)?;
         let cfg = declarations::write(&manifest, &staged, &[], &splash)?;
         let splash = parts(&mut composition, &manifest, &values, &splash)?;
         composition.put("menu.rml", Content::Text(splash));
@@ -224,7 +225,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         lists.push(crate::achievements::screen(&manifest)?);
     }
     let entries = entries(&manifest, request, &lists)?;
-    let staged = document::staged_screens(&manifest.screens, Some(&entries))?;
+    let staged = document::staged_screens(&manifest.screens, Some(&entries), request.discs)?;
 
     let scene = scene::compose(
         &request.artwork,
@@ -276,6 +277,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         menu = document::add_class(&menu, "actions", "no-options");
     }
     let (menu, installed) = crate::lists::install(&manifest, &menu, &staged, &lists)?;
+    super::contract::validate(&manifest, &menu, &staged.iter().collect::<Vec<_>>())?;
     let cfg = declarations::write(&manifest, &staged, &installed, &menu)?;
     let menu = parts(&mut composition, &manifest, &values, &menu)?;
 
@@ -482,6 +484,7 @@ mod tests {
 
         let both = compose(MenuRequest {
             menu_entries: entries(&["controls", "shaders"]),
+            shaders: one_shader(),
             ..request("native")
         });
         let both = both.text("menu.rml").unwrap();
@@ -512,6 +515,7 @@ mod tests {
         .unwrap();
         let templated = compose(MenuRequest {
             menu_entries: entries(&["shaders"]),
+            shaders: one_shader(),
             ..MenuRequest::new(
                 designs.join("disc"),
                 crate::repo::at("desktop/assets/controllers"),
@@ -522,6 +526,26 @@ mod tests {
             templated.contains("<button id=\"shaders\" class=\"menu-action option-entry list-row\" style=\"top: 0dp;\">FILTERS</button>"),
             "the design's entry template is what gets filled"
         );
+    }
+
+    fn one_shader() -> ShaderSelection {
+        ShaderSelection {
+            bundled: vec!["scanlines".into()],
+            ..ShaderSelection::default()
+        }
+    }
+
+    /// We refuse an entry for a screen that is not in the menu. For example,
+    /// Shaders with no bundled shader would be a button that opens nothing.
+    #[test]
+    fn an_entry_whose_screen_is_not_drawn_is_refused() {
+        let error = compose_menu(&MenuRequest {
+            menu_entries: entries(&["controls", "shaders"]),
+            ..request("native")
+        })
+        .unwrap_err();
+        assert!(error.contains("#shaders-panel"), "{error}");
+        assert!(error.contains("design 'native'"), "{error}");
     }
 
     fn copy(from: &Path, to: &Path) {
@@ -580,7 +604,8 @@ mod tests {
     fn an_enabled_entry_requires_the_base_options_screen() {
         let mut screens = crate::menu::declared_screens(&design("native")).unwrap();
         screens.retain(|screen| screen.id != "options");
-        let error = document::staged_screens(&screens, Some(&["controls".into()])).unwrap_err();
+        let error =
+            document::staged_screens(&screens, Some(&["controls".into()]), 1).unwrap_err();
         assert!(
             error.contains("Native base must declare an Options screen"),
             "{error}"

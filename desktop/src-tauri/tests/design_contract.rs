@@ -7,6 +7,7 @@
 
 mod support;
 
+use rominabox_desktop::menu;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
@@ -27,171 +28,120 @@ fn read(relative: &str) -> Option<String> {
     std::fs::read_to_string(repo_root().join(relative)).ok()
 }
 
-fn ids_in(document: &str) -> BTreeSet<String> {
-    let mut found = BTreeSet::new();
-    let mut rest = document;
-    while let Some(at) = rest.find("id=\"") {
-        rest = &rest[at + 4..];
-        if let Some(end) = rest.find('"') {
-            found.insert(rest[..end].to_string());
-            rest = &rest[end..];
-        }
-    }
-    found
-}
-
-fn classes_in(document: &str) -> BTreeSet<String> {
-    let mut found = BTreeSet::new();
-    let mut rest = document;
-    while let Some(at) = rest.find("class=\"") {
-        rest = &rest[at + 7..];
-        if let Some(end) = rest.find('"') {
-            found.extend(rest[..end].split_whitespace().map(str::to_string));
-            rest = &rest[end..];
-        }
-    }
-    found
-}
-
-struct ContractEntry {
-    name: String,
-    value: String,
-    scope: String,
-    presence: String,
-}
-
-fn contract_source() -> String {
-    read("vendor/retroarch/menu/drivers/rmlui/document_contract.inc")
-        .expect("vendor/retroarch is checked out with the document contract")
-}
-
-fn contract_entries(kind: &str) -> Vec<ContractEntry> {
-    let prefix = format!("RIB_{kind}(");
-    let entries: Vec<ContractEntry> = contract_source()
-        .lines()
-        .filter_map(|line| line.trim().strip_prefix(&prefix))
-        .map(|tail| {
-            let declaration = tail.strip_suffix(')').expect("closed contract declaration");
-            let fields: Vec<&str> = declaration.split(',').map(str::trim).collect();
-            assert_eq!(fields.len(), 4, "four contract fields: {declaration}");
-            ContractEntry {
-                name: fields[0].to_string(),
-                value: fields[1]
-                    .strip_prefix('"')
-                    .and_then(|value| value.strip_suffix('"'))
-                    .expect("quoted contract value")
-                    .to_string(),
-                scope: fields[2].to_string(),
-                presence: fields[3].to_string(),
-            }
-        })
-        .collect();
-    assert!(!entries.is_empty(), "no RIB_{kind} declarations were read");
-    entries
-}
-
-fn slot_count() -> usize {
-    let source = contract_source();
-    let line = source
-        .lines()
-        .find_map(|line| line.trim().strip_prefix("RIB_SLOT_COUNT("))
-        .expect("slot count declaration");
-    let count: usize = line
-        .strip_suffix(')')
-        .expect("closed slot count")
-        .parse()
-        .expect("numeric slot count");
-    assert_eq!(count, 6, "the current player contract has six slots");
-    count
-}
-
 #[test]
 fn built_in_document_contract_is_well_formed() {
-    for kind in ["ELEMENT", "CLASS"] {
-        let entries = contract_entries(kind);
-        let mut names = BTreeSet::new();
-        for entry in entries {
-            assert!(
-                names.insert(entry.name.clone()),
-                "duplicate {kind} name: {}",
-                entry.name
-            );
-            assert!(
-                !entry.value.is_empty(),
-                "empty {kind} value: {}",
-                entry.name
-            );
-            assert!(matches!(entry.presence.as_str(), "Required" | "Optional"));
-            assert!(matches!(
-                entry.scope.as_str(),
-                "Shared" | "Menu" | "Splash" | "Slots" | "Generated" | "State"
-            ));
-        }
+    let entries = menu::contract::entries().expect("the contract reads");
+    // Every name, for elements and classes alike, is in one C++ namespace.
+    let mut names = BTreeSet::new();
+    for entry in &entries {
+        assert!(names.insert(entry.name.clone()), "duplicate name: {}", entry.name);
     }
-    slot_count();
+    assert_eq!(
+        menu::contract::slot_count().unwrap(),
+        6,
+        "the current player contract has six slots"
+    );
 }
 
+/// Every Options entry a design offers, and a selection that bundles shaders.
+fn everything(
+    design: &std::path::Path,
+) -> (Vec<String>, rominabox_desktop::shaders::ShaderSelection) {
+    let entries: Vec<String> = menu::declared_screens(design)
+        .unwrap()
+        .into_iter()
+        .filter(|screen| screen.option_label.is_some())
+        .map(|screen| screen.id)
+        .collect();
+    let catalog = rominabox_desktop::shaders::catalog().unwrap();
+    let shaders = rominabox_desktop::shaders::ShaderSelection {
+        bundled: catalog.iter().map(|entry| entry.id.clone()).collect(),
+        custom: Vec::new(),
+        initial: None,
+    };
+    (entries, shaders)
+}
+
+/// We run the contract check from composition again on its output, for every
+/// design and capability combination. These are the default entries, none,
+/// everything with achievements and shaders, several discs, consoles with
+/// one pad, several pads and sticks, and the logo alone.
 #[test]
-fn the_shipped_designs_provide_every_required_menu_id_and_class() {
-    let elements = contract_entries("ELEMENT");
-    let classes = contract_entries("CLASS");
-    let slots = slot_count();
+fn every_design_satisfies_the_contract_with_every_capability() {
+    let mut checked = 0;
     for design in designs() {
-        let document = menu_document(&design);
-        let ids = ids_in(&document);
-        let styled = classes_in(&document);
-        for entry in elements.iter().filter(|entry| entry.presence == "Required") {
-            match entry.scope.as_str() {
-                "Shared" | "Menu" => assert!(
-                    ids.contains(&entry.value),
-                    "{} omits required id '{}'",
-                    design.display(),
-                    entry.value
-                ),
-                "Slots" => {
-                    for slot in 1..=slots {
-                        let id = format!("{}{slot}", entry.value);
+        let manifest = menu::Manifest::load(&design).unwrap();
+        let (all, shaders) = everything(&design);
+        for system in ["megadrive", "ps1", "gb"] {
+            let base = menu::MenuRequest {
+                system: system.into(),
+                ..menu::MenuRequest::new(&design, support::artwork())
+            };
+            let requests = [
+                base.clone(),
+                menu::MenuRequest {
+                    menu_entries: Some(Vec::new()),
+                    ..base.clone()
+                },
+                menu::MenuRequest {
+                    include_achievements: true,
+                    menu_entries: Some(all.clone()),
+                    shaders: shaders.clone(),
+                    discs: 3,
+                    ..base.clone()
+                },
+                menu::MenuRequest {
+                    discs: 2,
+                    ..base.clone()
+                },
+            ];
+            for request in requests {
+                let composed = menu::compose_menu(&request).unwrap_or_else(|error| {
+                    panic!("{} on {system}: {error}", design.display())
+                });
+                let document = composed.text("menu.rml").unwrap();
+                let cfg = composed.text("design.cfg").unwrap();
+                let shipped: Vec<&str> = cfg
+                    .lines()
+                    .find_map(|line| line.strip_prefix("screens = \""))
+                    .and_then(|rest| rest.strip_suffix('"'))
+                    .unwrap()
+                    .split_whitespace()
+                    .collect();
+                let screens: Vec<&menu::Screen> = manifest
+                    .screens
+                    .iter()
+                    .filter(|screen| shipped.contains(&screen.id.as_str()))
+                    .collect();
+                assert_eq!(screens.len(), shipped.len(), "{cfg}");
+                menu::contract::validate(&manifest, document, &screens)
+                    .unwrap_or_else(|error| panic!("{}: {error}", design.display()));
+                for screen in &screens {
+                    if let Some(role) = screen.role {
                         assert!(
-                            ids.contains(&id),
-                            "{} omits required slot id '{id}'",
-                            design.display()
+                            cfg.contains(&format!(
+                                "screen_role_{} = \"{}\"",
+                                screen.id,
+                                role.name()
+                            )),
+                            "{} declares no role for {}: {cfg}",
+                            design.display(),
+                            screen.id
                         );
                     }
                 }
-                _ => {}
+                checked += 1;
             }
         }
-        for entry in classes.iter().filter(|entry| entry.presence == "Required") {
-            if matches!(entry.scope.as_str(), "Shared" | "Menu" | "Slots") {
-                assert!(
-                    styled.contains(&entry.value),
-                    "{} omits required class '{}'",
-                    design.display(),
-                    entry.value
-                );
-            }
-        }
+        let splash = menu::compose_menu(&menu::MenuRequest {
+            show_menu: false,
+            splash: true,
+            ..menu::MenuRequest::new(&design, support::artwork())
+        })
+        .unwrap();
+        menu::contract::validate_splash(&manifest, splash.text("menu.rml").unwrap()).unwrap();
     }
-}
-
-#[test]
-fn the_shipped_designs_provide_every_required_splash_id() {
-    let elements = contract_entries("ELEMENT");
-    for design in designs() {
-        let document = std::fs::read_to_string(design.join("splash.rml"))
-            .expect("the design has a splash document");
-        let ids = ids_in(&document);
-        for entry in elements.iter().filter(|entry| entry.presence == "Required") {
-            if matches!(entry.scope.as_str(), "Shared" | "Splash") {
-                assert!(
-                    ids.contains(&entry.value),
-                    "{} omits required splash id '{}'",
-                    design.display(),
-                    entry.value
-                );
-            }
-        }
-    }
+    assert!(checked >= 24, "only {checked} menus were checked");
 }
 
 /// An overlay is part of the design, so the design must contain its element.

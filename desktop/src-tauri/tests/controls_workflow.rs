@@ -1,9 +1,6 @@
 mod support;
 
-use rominabox_desktop::{
-    controls::{self, Controls},
-    themes,
-};
+use rominabox_desktop::controls::{self, Controls};
 use std::{fs, path::PathBuf};
 
 fn workspace() -> rominabox_scratch::Scratch {
