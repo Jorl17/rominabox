@@ -54,13 +54,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .slot:active .slot-state { color: design(slot-label); }
 
 #actions { position: absolute; right: 24dp; top: 46dp; width: 176dp; height: 280dp; }
-#actions button { position: absolute; left: 0; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; }
-#resume { top: 0; }
-#save { top: 44dp; }
-#load { top: 88dp; }
-#disc { top: 132dp; }
-#actions #controls, #actions #options { top: 176dp; }
-#quit { top: 220dp; }
+/* One column with the buttons of the game, 44dp apart, so in a game with
+ * no Options entries the column closes up and leaves no gap. */
+#actions button { display: block; position: relative; margin-bottom: 6dp; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; }
 
 #status { position: absolute; left: 24dp; top: 544dp; width: 700dp; text-align: left; font-size: 13dp; color: design(muted); }
 #footer { position: absolute; left: 24dp; bottom: 8dp; width: 912dp; height: 20dp; font-size: 13dp; color: design(edge); }
