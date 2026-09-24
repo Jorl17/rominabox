@@ -14,9 +14,10 @@ fn every_list_action_can_be_hit_by_the_pointer() {
     let root = rominabox_scratch::Scratch::dir("rominabox-list-actions");
     let kit = kit(&root);
     let entries = vec!["controls".to_string(), "achievements".to_string()];
-    // A pointer sweep of the whole screen, every 6 pixels.
-    let grid: Vec<(i32, i32)> = (0..100)
-        .flat_map(|row| (0..160).map(move |column| (column * 6 + 3, row * 6 + 3)))
+    // Move the pointer over the whole screen every 12 pixels, which hits
+    // several points of every button, which is at least 36dp tall.
+    let grid: Vec<(i32, i32)> = (0..50)
+        .flat_map(|row| (0..80).map(move |column| (column * 12 + 6, row * 12 + 6)))
         .collect();
     for design in designs() {
         let destination = root.join(&design);
