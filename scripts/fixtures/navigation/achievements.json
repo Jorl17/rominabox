@@ -230,26 +230,6 @@
           "achievements-retry",
           "achievements-retry"
         ]
-      },
-      "red": {
-        "*": {
-          "bug": "RETRY order",
-          "reason": "RETRY is placed where TURN OFF was but comes after SIGN OUT in the document, so Down from the list, a tie between them, takes SIGN OUT",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievement-1",
-              "achievement-2",
-              "achievement-3",
-              "achievements-signout",
-              "achievements-back",
-              "achievements-back",
-              "achievements-signout",
-              "achievements-retry",
-              "achievements-retry"
-            ]
-          }
-        }
       }
     },
     {

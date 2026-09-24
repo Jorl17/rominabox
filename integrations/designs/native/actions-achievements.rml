@@ -1,5 +1,5 @@
 <div id="achievements-session-actions" class="account-session-actions" style="display:none;">
   <button id="achievements-enabled" class="menu-action list-control account-toggle">TURN OFF</button>
-  <button id="achievements-signout" class="menu-action list-control account-signout">SIGN OUT</button>
   <button id="achievements-retry" class="menu-action list-control account-retry" style="display:none;">RETRY</button>
+  <button id="achievements-signout" class="menu-action list-control account-signout">SIGN OUT</button>
 </div>
