@@ -81,6 +81,18 @@ static void release_arms_the_next_press(void)
    expect_due("press again", 1);
 }
 
+/* Down and up both happen between two samples. The press still counts,
+ * once, and we pass Return through to the game. */
+static void press_between_samples_toggles(void)
+{
+   alt_enter_reset();
+   alt_enter_note(ALT_ENTER_RETURN, 1, ALT_ENTER_ALT);
+   alt_enter_note(ALT_ENTER_RETURN, 0, ALT_ENTER_ALT);
+   expect_due("alt+enter between samples", 1);
+   expect_due("the sample after it", 0);
+   expect_mask("the sample after it", 0);
+}
+
 /* Numpad Enter is the same chord. Shift+Enter is not. */
 static void keypad_enter_counts_and_shift_enter_does_not(void)
 {
@@ -119,6 +131,7 @@ int main(void)
    alt_alone_does_not_toggle();
    repeat_does_not_toggle_again();
    release_arms_the_next_press();
+   press_between_samples_toggles();
    keypad_enter_counts_and_shift_enter_does_not();
    the_menu_recognises_the_chord();
    if (failures)
