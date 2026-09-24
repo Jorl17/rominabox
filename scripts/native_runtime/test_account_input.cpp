@@ -143,9 +143,49 @@ int main(int argc, char **argv) {
    check(focus && focus->GetId() == "achievement-username", "Opening sign in focuses the visible username field");
    password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
    password->SetValue("synthetic-password");
+   password->Focus();
+   password->SetSelectionRange(3, 3);
+   // The text of the field is in its #text children. After Show and Hide
+   // they must still be inside the field, not at the corner of the window.
+   auto text_inside_field = [&](const char *when) {
+      document.settle();
+      auto *field = document.root()->GetElementById("achievement-password");
+      const Rml::Vector2f at = field->GetAbsoluteOffset(Rml::BoxArea::Border);
+      const Rml::Vector2f size = field->GetBox().GetSize(Rml::BoxArea::Border);
+      int texts = 0;
+      bool inside = true;
+      for (int index = 0; index < field->GetNumChildren(true); ++index) {
+         auto *child = field->GetChild(index);
+         if (child->GetTagName() != "#text") continue;
+         ++texts;
+         const Rml::Vector2f offset = child->GetAbsoluteOffset(Rml::BoxArea::Border);
+         inside = inside && offset.x >= at.x && offset.y >= at.y
+               && offset.x <= at.x + size.x && offset.y <= at.y + size.y;
+      }
+      char message[160];
+      std::snprintf(message, sizeof(message), "the password's text lies inside its field after %s", when);
+      check(texts > 0 && inside, message);
+   };
+   text_inside_field("opening the form");
    achievements.handle(rib::Event::account_action(rib::AccountAction::RevealPassword));
+   password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
    check(password->GetAttribute<std::string>("type", "") == "text" && password->GetValue() == "synthetic-password", "Show password reveals the existing value");
+   text_inside_field("Show");
+   {
+      int start = -1, end = -1;
+      password->GetSelection(&start, &end, nullptr);
+      check(document.get_context()->GetFocusElement() == password && start == 3 && end == 3,
+            "Show keeps the field focused with its caret where it was");
+   }
+   achievements.handle(rib::Event::account_action(rib::AccountAction::RevealPassword));
+   password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
+   check(password->GetAttribute<std::string>("type", "") == "password" && password->GetValue() == "synthetic-password",
+         "Hide masks the existing value again");
+   text_inside_field("Hide");
+   check(document.get_context()->GetFocusElement() == password, "Hide keeps the field focused");
+   achievements.handle(rib::Event::account_action(rib::AccountAction::RevealPassword));
    achievements.leave_form();
+   password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
    check(password->GetAttribute<std::string>("type", "") == "password" && password->GetValue().empty(), "Closing the form clears and masks the password");
    achievements.handle(rib::Event::account_action(rib::AccountAction::Open));
    session.pending_upload = true;
