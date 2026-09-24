@@ -414,6 +414,15 @@ static Rml::Vector2f placed_at(Rml::Element *element)
    return element->GetAbsoluteOffset(Rml::BoxArea::Border);
 }
 
+static Box drawn_box(Rml::Element *element)
+{
+   const Rml::Vector2f at = placed_at(element);
+   const Rml::Vector2f size = element->GetBox().GetSize(Rml::BoxArea::Border);
+   return {(int)std::floor(at.x), (int)std::floor(at.y),
+         (int)std::ceil(at.x + size.x) - (int)std::floor(at.x),
+         (int)std::ceil(at.y + size.y) - (int)std::floor(at.y), true};
+}
+
 /* Where `scene_layout` puts the rings and leader runs of each stop on the
  * scene, in drawing order: the `.marks` file next to the scene, a line per
  * mark with the id, x and y of the stop, from the exporter's scene-geometry.
@@ -508,6 +517,18 @@ static void check_marks_belong_to_their_stop(const char *design, const char *pro
       std::vector<Rml::Vector2f> resting;
       for (Rml::Element *mark : marks)
          resting.push_back(placed_at(mark));
+      /* We paint the marks of a stop over its box, so a run on the box is
+       * drawn across its border. */
+      const Box stop_box = box_of(stop_id.c_str());
+      for (Rml::Element *mark : marks)
+      {
+         const Box mark_box = drawn_box(mark);
+         std::snprintf(message, sizeof(message),
+               "%s/%s: a mark of %s at %d,%d %dx%d is drawn over its box %d,%d %dx%d",
+               design, profile, stop_id.c_str(), mark_box.x, mark_box.y, mark_box.w, mark_box.h,
+               stop_box.x, stop_box.y, stop_box.w, stop_box.h);
+         CHECK(!boxes_overlap(mark_box, stop_box), message);
+      }
 
       std::snprintf(message, sizeof(message), "%s/%s: %s takes focus",
             design, profile, stop_id.c_str());
@@ -526,7 +547,6 @@ static void check_marks_belong_to_their_stop(const char *design, const char *pro
          CHECK(now == resting[index], message);
       }
 
-      const Box stop_box = box_of(stop_id.c_str());
       const Box ring_box = box_of(ring_id.c_str());
       if (!boxes_overlap(stop_box, ring_box))
          ++outside;
