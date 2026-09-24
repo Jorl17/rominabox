@@ -378,11 +378,8 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
     assert!(!menu.contains("achievement-mode"));
     assert!(menu.contains("class=\"menu-action list-back\" id=\"achievements-back\""));
     let css = fs::read_to_string(root.join("menu.rcss")).unwrap();
-    assert!(
-        css.contains(".list-actions { position: absolute; left: 466dp; top: 508dp; width: 476dp;")
-    );
-    assert!(css.contains(".list-actions .list-toggle { left: 0; width: 284dp;"));
-    assert!(css.contains(".list-actions .list-back { left: 300dp; width: 176dp;"));
+    // We measure the place of the list actions in Disc from element boxes in
+    // tests/disc_layout.rs.
     assert!(css.contains(".list-toggle-label") && css.contains(".list-toggle-state"));
 
     let document = menu
@@ -415,9 +412,11 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
             .filter(|line| !line.is_empty())
             .map(|line| serde_json::from_slice(line).unwrap())
             .collect();
+        // Left of BACK, with the signed-in actions hidden, there is nothing
+        // to press, because the pointer is over the field itself.
         assert_eq!(
             hits[0]["hover"],
-            "achievements-panel",
+            "screen",
             "hits: {hits:?}; stderr: {}",
             String::from_utf8_lossy(&output.stderr)
         );
@@ -427,49 +426,6 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
             "hits: {hits:?}; stderr: {}",
             String::from_utf8_lossy(&output.stderr)
         );
-    }
-    if let Ok(preview) = std::env::var("ROMINABOX_RML_PREVIEW") {
-        let start = css.find(".list-actions {").unwrap();
-        let end = css[start..].find(".list-status {").unwrap() + start;
-        let old_actions = concat!(
-            ".list-actions { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; }\n",
-            ".list-actions .menu-action { position: absolute; left: 0; width: 176dp; height: 36dp; font-family: Silkscreen; font-size: 14dp; line-height: 36dp; text-align: center; }\n",
-        );
-        let old_css = format!("{}{}{}", &css[..start], old_actions, &css[end..]);
-        let render = |name: &str, stylesheet: &str| {
-            let directory = root.join(name);
-            fs::create_dir_all(&directory).unwrap();
-            fs::write(directory.join("menu.rml"), &document).unwrap();
-            fs::write(directory.join("menu.rcss"), stylesheet).unwrap();
-            fs::copy(
-                root.join("Silkscreen-Regular.ttf"),
-                directory.join("Silkscreen-Regular.ttf"),
-            )
-            .unwrap();
-            let image = directory.join("capture.png");
-            let output = Command::new(&preview)
-                .args([directory.join("menu.rml"), image.clone()])
-                .args(["960", "600"])
-                .output()
-                .unwrap();
-            assert!(
-                output.status.success(),
-                "{}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-            image::open(image).unwrap().to_rgba8()
-        };
-        let old = render("old-back", &old_css);
-        let actual = render("new-back", &css);
-        for y in 508..544 {
-            for x in 766..942 {
-                assert_eq!(
-                    actual.get_pixel(x, y),
-                    old.get_pixel(x, y),
-                    "Disc Back pixel changed at ({x},{y})"
-                );
-            }
-        }
     }
 }
 
