@@ -11,6 +11,7 @@
 #include "../../vendor/retroarch/audio/volume_range.h"
 #include "rmlui/files.h"
 #include <sys/stat.h>
+#include <filesystem>
 
 #include <cmath>
 #include <cstdio>
@@ -120,6 +121,36 @@ void *open_menu()
    rib_menu_toggle(menu, true);
    frame(menu);
    return menu;
+}
+
+/* We stage every design next to the Native assets in the bridge script. */
+std::string design_assets(const char *native_assets, const char *design)
+{
+   return (std::filesystem::path(native_assets).parent_path() / (std::string("placement-") + design)).string();
+}
+
+/* When we first paint an empty status, the prompt from the Disc design stays. */
+void design_prompt_survives_an_empty_status(const char *native_assets, const char *data)
+{
+   const std::string assets = design_assets(native_assets, "disc");
+   check(std::filesystem::is_regular_file(assets + "/menu.rml"), "the Disc design is staged");
+   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+   void *menu = open_menu();
+   if (menu)
+   {
+      /* The earlier cases left a status in this process. Let it expire. */
+      inspect.advance(6.0);
+      frame(menu);
+      click_and_frame(menu, "slot-2");
+      check(std::string(inspect.text("status")) == "CHOOSE A BLOCK",
+            "Disc's prompt is shown while there is no status");
+      host.save_accepted = false;
+      click_and_frame(menu, "save");
+      check(std::string(inspect.text("status")) == "SAVE FAILED", "a status replaces the prompt");
+      rib_menu_destroy(menu);
+   }
+   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   (void)data;
 }
 
 /* On Windows, rename fails when the destination exists. */
@@ -372,6 +403,7 @@ int main(int argc, char **argv)
    }
 
    fixes::repeated_saves_replace_the_file(argv[2]);
+   fixes::design_prompt_survives_an_empty_status(argv[1], argv[2]);
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);
