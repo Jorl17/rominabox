@@ -159,6 +159,17 @@ static int capacity_case(const char *assets, const char *data)
       ring_lights_with_its_stop(menu, "control-group-l_stick", "control-hit-l3", "control-group-r_stick");
       ring_lights_with_its_stop(menu, "control-group-r_stick", "control-hit-r3", "control-group-l_stick");
       ring_lights_with_its_stop(menu, "control-l", "control-hit-l", "control-r");
+      /* A callout being captured pulses, and so does its ring. */
+      hover_and_frame(menu, "control-l");
+      rib_menu_key(menu, RIB_KEY_OK);
+      check(host.captured_id == "l"
+                  && std::string(inspect.property("control-hit-l", "animation")).find("capture-pulse")
+                        != std::string::npos,
+            "the ring of a callout being captured pulses with it");
+      rib_menu_key(menu, RIB_KEY_CANCEL);
+      check(std::string(inspect.property("control-hit-l", "animation")).find("capture-pulse")
+                  == std::string::npos,
+            "the ring stops pulsing when the capture ends");
       rib_menu_destroy(menu);
    }
    if (failures)
