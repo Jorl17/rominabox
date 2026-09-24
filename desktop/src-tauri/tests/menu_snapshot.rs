@@ -1,20 +1,19 @@
 //! Characterisation snapshot of the menu that we stage in an export.
 //!
-//! We export every design in the registry, with four menu configurations and
-//! two consoles, and compare the staged menu files byte for byte with
-//! `tests/fixtures/menu-snapshots/<case>/`, so any change to the composed
-//! menu appears as a difference.
+//! We compose every design in the registry, with four menu configurations
+//! and two consoles, with `themes::compose_menu`, and compare its menu files
+//! byte for byte with `tests/fixtures/menu-snapshots/<case>/`, so any change
+//! to the composed menu appears as a difference. On macOS we also export
+//! every case and check that the export stages exactly what `compose_menu`
+//! composed.
 //!
 //! Re-record with `ROMINABOX_RECORD_SNAPSHOT=1`.
-#![cfg(target_os = "macos")]
 
 use rominabox_desktop::packaging::{ExportRequest, ExportTarget};
 use std::{
     collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
-    process::Command,
-    sync::atomic::AtomicBool,
 };
 
 /// We put the product version into the footer. It changes with every release
@@ -98,11 +97,25 @@ fn copy_tree(from: &Path, to: &Path) {
     }
 }
 
-/// A kit with the actual designs, controller artwork and splash logo, and
-/// stand-ins for everything that is not the menu: a runtime that only
-/// returns, and cores of a few bytes.
-fn fixture_kit(root: &Path) -> PathBuf {
+/// What a kit contains for the menu: the actual designs and controller artwork.
+fn menu_kit(root: &Path) -> PathBuf {
     let kit = root.join("runtime-kit");
+    copy_tree(
+        &rominabox_desktop::repo::at("integrations/designs"),
+        &kit.join("designs"),
+    );
+    copy_tree(
+        &rominabox_desktop::repo::at("desktop/assets/controllers"),
+        &kit.join("menu-assets"),
+    );
+    kit
+}
+
+/// The menu kit plus the splash logo, and stand-ins for everything else in an
+/// export: a runtime that only returns, and cores of a few bytes.
+#[cfg(target_os = "macos")]
+fn export_kit(root: &Path) -> PathBuf {
+    let kit = menu_kit(root);
     for directory in [
         "bin",
         "cores",
@@ -119,7 +132,7 @@ fn fixture_kit(root: &Path) -> PathBuf {
         "int rarch_main(int c, char **v, void *d){(void)c;(void)v;(void)d;return 0;}\nint main(void){return rarch_main(0,0,0);}\n",
     )
     .unwrap();
-    let status = Command::new("cc")
+    let status = std::process::Command::new("cc")
         .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
         .arg(kit.join("bin/retroarch"))
         .arg(&source)
@@ -146,14 +159,6 @@ fn fixture_kit(root: &Path) -> PathBuf {
         r#"{"schema_version":1,"components":[{"name":"RetroArch","capabilities":{"achievements":true}},{"name":"RmlUi"}]}"#,
     )
     .unwrap();
-    copy_tree(
-        &rominabox_desktop::repo::at("integrations/designs"),
-        &kit.join("designs"),
-    );
-    copy_tree(
-        &rominabox_desktop::repo::at("desktop/assets/controllers"),
-        &kit.join("menu-assets"),
-    );
     fs::copy(
         rominabox_desktop::repo::at("desktop/assets/branding/logo.png"),
         kit.join("branding/logo.png"),
@@ -164,6 +169,7 @@ fn fixture_kit(root: &Path) -> PathBuf {
 
 /// Generated content: a few bytes named like a cartridge, or a one-track cue
 /// sheet and its image.
+#[cfg(target_os = "macos")]
 fn content(root: &Path, system: &str) -> PathBuf {
     let directory = root.join(format!("content-{system}"));
     fs::create_dir_all(&directory).unwrap();
@@ -184,10 +190,11 @@ fn content(root: &Path, system: &str) -> PathBuf {
     }
 }
 
+/// The export a case describes, without content, which we read only on export.
 fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
     let design = rominabox_desktop::themes::staged_design(kit, &case.design);
     let mut request = ExportRequest {
-        rom: content(root, case.system),
+        rom: PathBuf::new(),
         title: "Menu Snapshot".to_string(),
         system: case.system.to_string(),
         description: None,
@@ -240,6 +247,45 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
         }
     }
     request
+}
+
+/// The menu we stage in an export of `request`, composed without the export:
+/// the same two calls, with the same values, that we make in `export_macos`
+/// for its `menu-assets`.
+fn compose(request: &ExportRequest, destination: &Path) -> BTreeMap<String, String> {
+    fs::create_dir_all(destination).unwrap();
+    rominabox_desktop::themes::compose_menu(
+        &rominabox_desktop::themes::MenuRequest {
+            kit: &request.runtime_kit,
+            design: &request.theme,
+            palette: &request.palette,
+            background: request.background.as_deref(),
+            system: &request.system,
+            controls: &request.controls,
+            show_menu: request.show_menu,
+            splash: request.splash,
+            include_achievements: request.include_achievements,
+            menu_entries: request.menu_entries.as_deref(),
+            shaders: &request.shaders,
+        },
+        destination,
+    )
+    .unwrap_or_else(|error| panic!("{}: composition failed: {error}", request.theme));
+    rominabox_desktop::controls::write_defaults_config_with_advanced_access(
+        &request.system,
+        &request.controls,
+        &destination.join("controls-defaults.cfg"),
+        request.advanced_emulator_access,
+    )
+    .unwrap();
+    let staged = staged_menu(destination);
+    assert!(
+        staged.contains_key("menu.rml") && staged.contains_key("controls-defaults.cfg"),
+        "{}: nothing was staged: {:?}",
+        request.theme,
+        staged.keys().collect::<Vec<_>>()
+    );
+    staged
 }
 
 /// The staged files of a menu. We copy the artwork, fonts and shader sources
@@ -341,24 +387,15 @@ fn record(directory: &Path, staged: &BTreeMap<String, String>) {
 }
 
 #[test]
-fn the_staged_menu_matches_its_snapshot() {
+fn the_composed_menu_matches_its_snapshot() {
     let root = rominabox_scratch::Scratch::dir("rominabox-menu-snapshot");
-    let kit = fixture_kit(&root);
+    let kit = menu_kit(&root);
     let recording = std::env::var_os("ROMINABOX_RECORD_SNAPSHOT").is_some_and(|value| value == "1");
     let cases = cases();
     let mut failures = Vec::new();
     for case in &cases {
         let name = case.name();
-        let request = request(&root, &kit, case);
-        let result =
-            rominabox_desktop::packaging::export_game(&request, &AtomicBool::new(false), |_| {})
-                .unwrap_or_else(|error| panic!("{name}: export failed: {error:?}"));
-        let staged = staged_menu(&result.app_path.join("Contents/Resources/menu-assets"));
-        assert!(
-            staged.contains_key("menu.rml") && staged.contains_key("controls-defaults.cfg"),
-            "{name}: the export staged no menu: {:?}",
-            staged.keys().collect::<Vec<_>>()
-        );
+        let staged = compose(&request(&root, &kit, case), &root.join(&name));
         for (file, text) in &staged {
             assert!(
                 !text.contains(root.path().to_string_lossy().as_ref()),
@@ -388,6 +425,43 @@ fn the_staged_menu_matches_its_snapshot() {
         failures.join("\n")
     );
     eprintln!("compared {} menu snapshots", cases.len());
+}
+
+/// We trust the snapshot only as far as `compose` matches an export. So we
+/// export every case and check that the menu files of the export are the
+/// ones that `compose` wrote for the same request.
+#[cfg(target_os = "macos")]
+#[test]
+fn an_export_stages_exactly_the_composed_menu() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-menu-export");
+    let kit = export_kit(&root);
+    let cases = cases();
+    let mut failures = Vec::new();
+    for case in &cases {
+        let name = case.name();
+        let mut request = request(&root, &kit, case);
+        let composed = compose(&request, &root.join(format!("composed-{name}")));
+        request.rom = content(&root, case.system);
+        let result = rominabox_desktop::packaging::export_game(
+            &request,
+            &std::sync::atomic::AtomicBool::new(false),
+            |_| {},
+        )
+        .unwrap_or_else(|error| panic!("{name}: export failed: {error:?}"));
+        let exported = staged_menu(&result.app_path.join("Contents/Resources/menu-assets"));
+        let label = format!("{name} (compose_menu as the snapshot, the export as staged)");
+        if let Some(difference) = first_difference(&label, &composed, &exported) {
+            failures.push(difference);
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{} of {} exports stage a different menu from compose_menu:\n{}",
+        failures.len(),
+        cases.len(),
+        failures.join("\n")
+    );
+    eprintln!("exported {} menus", cases.len());
 }
 
 #[test]
