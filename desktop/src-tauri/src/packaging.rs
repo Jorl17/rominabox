@@ -718,7 +718,8 @@ where
             .background
             .as_ref()
             .map_or(0, |path| fs::metadata(path).map(|m| m.len()).unwrap_or(0));
-    crate::publish::put_in_place(&app, &final_app, staging.path(), request.replace)?;
+    check_cancelled(cancelled)?;
+    crate::publish::put_in_place(&app, &final_app, request.replace)?;
     staging.cleanup()?;
     emit(progress, ExportStage::Complete, 1.0, "Export complete");
     Ok(ExportResult {
@@ -1275,8 +1276,15 @@ fn stable_identity(
     system: &str,
     namespace: Option<&str>,
 ) -> Result<String, ExportError> {
-    let mut file =
-        fs::File::open(rom).map_err(|error| ExportError::io(ErrorStage::Configure, rom, error))?;
+    // The author's game file. When it is gone, we tell the author that.
+    let mut file = fs::File::open(rom).map_err(|error| {
+        let stage = if error.kind() == io::ErrorKind::NotFound {
+            ErrorStage::Missing
+        } else {
+            ErrorStage::Configure
+        };
+        ExportError::io(stage, rom, error)
+    })?;
     let mut hash = Sha256::new();
     hash.update(b"rominabox-game-v1\0");
     if let Some(namespace) = namespace.map(str::trim).filter(|value| !value.is_empty()) {
@@ -2438,12 +2446,8 @@ fn copy_file(source: &Path, destination: &Path) -> Result<(), ExportError> {
         fs::create_dir_all(parent)
             .map_err(|error| ExportError::io(ErrorStage::Stage, parent, error))?;
     }
-    fs::copy(source, destination).map_err(|error| {
-        ExportError::new(
-            ErrorStage::Stage,
-            format!("{} -> {}: {error}", source.display(), destination.display()),
-        )
-    })?;
+    fs::copy(source, destination)
+        .map_err(|error| ExportError::io(ErrorStage::Stage, destination, error))?;
     Ok(())
 }
 
@@ -3163,7 +3167,17 @@ mod tests {
             (dir, rom)
         }
 
-        #[test]
+        /// When a game file disappears while we read its identity, we do not
+    /// report a full save folder.
+    #[test]
+    fn a_game_file_that_has_gone_is_named() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-identity");
+        let error = stable_identity(&root.join("Sonic.md"), "megadrive", None).unwrap_err();
+        assert_eq!(error.stage, ErrorStage::Missing);
+        assert!(error.sentence().contains("\u{201c}Sonic.md\u{201d}"), "{}", error.sentence());
+    }
+
+    #[test]
         fn identity_is_stable_for_the_same_rom_and_system() {
             let (_dir, rom) = rom_with(b"rominabox-identity-fixture");
             let first = stable_identity(&rom, "megadrive", None).unwrap();

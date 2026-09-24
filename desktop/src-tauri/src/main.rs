@@ -63,7 +63,7 @@ async fn inspect_game(
 #[tauri::command]
 async fn image_preview(path: PathBuf) -> Result<Vec<u8>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let image = icons::read_image(&path).map_err(|e| e.to_string())?;
+        let image = icons::read_image(&path).map_err(|e| e.sentence())?;
         let mut png = Cursor::new(Vec::new());
         image
             .thumbnail(512, 512)

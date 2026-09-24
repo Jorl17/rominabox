@@ -46,15 +46,11 @@ pub(crate) fn refuse_existing(path: &Path) -> Result<(), ExportError> {
     }
 }
 
-/// Move the finished `app` to `destination`. We first move an app that is
-/// already there into `staging`, and put it back if the new one cannot replace
-/// it. Removing `staging` afterwards removes the old app.
-pub(crate) fn put_in_place(
-    app: &Path,
-    destination: &Path,
-    staging: &Path,
-    replace: bool,
-) -> Result<(), ExportError> {
+/// Move the finished `app` to `destination`. We first set aside an app
+/// already there, beside it and never in `staging`, which we remove
+/// afterwards. If we can neither put the new app in place nor move the old
+/// one back, we leave the old one aside and name its place in the error.
+pub(crate) fn put_in_place(app: &Path, destination: &Path, replace: bool) -> Result<(), ExportError> {
     let saving = |error: io::Error| ExportError::io(ErrorStage::Complete, destination, error);
     if !occupied(destination) {
         return fs::rename(app, destination).map_err(saving);
@@ -62,12 +58,54 @@ pub(crate) fn put_in_place(
     if !replace {
         return refuse_existing(destination);
     }
-    let previous = staging.join("previous");
-    fs::rename(destination, &previous).map_err(saving)?;
-    fs::rename(app, destination).map_err(|error| {
-        let _ = fs::rename(&previous, destination);
-        saving(error)
-    })
+    let aside = set_aside_name(destination);
+    fs::rename(destination, &aside).map_err(saving)?;
+    if let Err(error) = fs::rename(app, destination) {
+        return Err(put_back(&aside, destination, error));
+    }
+    remove_set_aside(&aside)
+}
+
+/// Move the old app back where it was. When something else is there by now,
+/// we leave the old app aside and name its place in the error.
+fn put_back(aside: &Path, destination: &Path, error: io::Error) -> ExportError {
+    match fs::rename(aside, destination) {
+        Ok(()) => ExportError::io(ErrorStage::Complete, destination, error),
+        Err(_) => ExportError::io(ErrorStage::Replace, aside, error),
+    }
+}
+
+/// A free name beside `destination`: `Game (replaced).app`, then
+/// `Game (replaced 2).app`, and so on.
+fn set_aside_name(destination: &Path) -> PathBuf {
+    let stem = destination
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Game".into());
+    let extension = destination
+        .extension()
+        .map(|extension| format!(".{}", extension.to_string_lossy()))
+        .unwrap_or_default();
+    (1..)
+        .map(|number| {
+            let suffix = if number == 1 { String::new() } else { format!(" {number}") };
+            destination.with_file_name(format!("{stem} (replaced{suffix}){extension}"))
+        })
+        .find(|candidate| !occupied(candidate))
+        .expect("an unused name exists")
+}
+
+/// Remove the replaced app by the exact path we just renamed it to. We remove
+/// a link itself and never follow it.
+fn remove_set_aside(aside: &Path) -> Result<(), ExportError> {
+    let metadata = fs::symlink_metadata(aside)
+        .map_err(|error| ExportError::io(ErrorStage::Cleanup, aside, error))?;
+    if metadata.is_dir() && !metadata.file_type().is_symlink() {
+        fs::remove_dir_all(aside)
+    } else {
+        fs::remove_file(aside)
+    }
+    .map_err(|error| ExportError::io(ErrorStage::Cleanup, aside, error))
 }
 
 /// Anything at `path`, including a link that points nowhere.
@@ -95,23 +133,58 @@ fn safe_filename(title: &str) -> String {
 mod tests {
     use super::*;
 
-    /// When the swap fails after we moved the old app aside, we put the old
-    /// app back.
+    /// When the swap itself fails after we set the old app aside, we put the
+    /// old app back.
     #[test]
     fn a_new_app_that_cannot_be_moved_in_puts_the_old_one_back() {
         let root = rominabox_scratch::Scratch::dir("rominabox-publish");
-        let staging = root.join("staging");
-        fs::create_dir_all(&staging).unwrap();
         let destination = root.join("Game.app");
         fs::create_dir_all(&destination).unwrap();
         fs::write(destination.join("old"), b"old").unwrap();
 
-        let error =
-            put_in_place(&staging.join("missing.app"), &destination, &staging, true).unwrap_err();
+        let error = put_in_place(&root.join("missing.app"), &destination, true).unwrap_err();
 
         assert_eq!(error.stage, ErrorStage::Complete);
         assert_eq!(fs::read(destination.join("old")).unwrap(), b"old");
-        assert!(!staging.join("previous").exists());
+        assert!(!root.join("Game (replaced).app").exists());
+    }
+
+    /// When we cannot move the old app back, we do not leave it in the staging
+    /// folder, where we would delete it. In this test, an app from another
+    /// export is already where the old one would go back.
+    #[test]
+    fn an_old_app_that_cannot_go_back_is_kept_beside_it() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-publish");
+        let destination = root.join("Game.app");
+        fs::create_dir_all(&destination).unwrap();
+        fs::write(destination.join("old"), b"old").unwrap();
+        let aside = set_aside_name(&destination);
+        fs::rename(&destination, &aside).unwrap();
+        fs::create_dir_all(destination.join("Contents")).unwrap();
+
+        let error = put_back(&aside, &destination, io::Error::other("the new app did not move"));
+
+        assert_eq!(error.stage, ErrorStage::Replace);
+        assert_eq!(error.path.as_deref(), Some(aside.as_path()));
+        assert!(error.sentence().contains("Game (replaced).app"), "{}", error.sentence());
+        assert_eq!(fs::read(aside.join("old")).unwrap(), b"old");
+    }
+
+    #[test]
+    fn a_replaced_app_is_gone_and_the_new_one_is_in_place() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-publish");
+        let app = root.join("new.app");
+        fs::create_dir_all(&app).unwrap();
+        fs::write(app.join("new"), b"new").unwrap();
+        let destination = root.join("Game.app");
+        fs::create_dir_all(&destination).unwrap();
+        fs::write(destination.join("old"), b"old").unwrap();
+
+        put_in_place(&app, &destination, true).unwrap();
+
+        assert_eq!(fs::read(destination.join("new")).unwrap(), b"new");
+        assert!(!destination.join("old").exists());
+        assert!(!root.join("Game (replaced).app").exists());
     }
 
     #[test]
@@ -124,7 +197,7 @@ mod tests {
         fs::create_dir_all(&destination).unwrap();
         fs::write(destination.join("old"), b"old").unwrap();
 
-        let error = put_in_place(&app, &destination, &staging, false).unwrap_err();
+        let error = put_in_place(&app, &destination, false).unwrap_err();
 
         assert_eq!(error.stage, ErrorStage::Exists);
         assert_eq!(error.path.as_deref(), Some(destination.as_path()));

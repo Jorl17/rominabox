@@ -283,7 +283,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
 
     let mut stylesheet = stylesheet;
     if let Some(image_path) = &request.background {
-        let image = crate::icons::read_image(image_path).map_err(|e| e.to_string())?;
+        let image = crate::icons::read_image(image_path).map_err(|e| e.sentence())?;
         let mut png = Vec::new();
         image
             .resize(1920, 1200, image::imageops::FilterType::Lanczos3)

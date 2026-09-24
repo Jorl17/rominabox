@@ -26,6 +26,9 @@ pub enum ErrorStage {
     Export,
     /// We could not download a required core. The message is for the author.
     Cores,
+    /// We could not put the new app in place of the old one, or move the old
+    /// one back. The path is where the old app is now.
+    Replace,
     Validate,
     Stage,
     Image,
@@ -45,6 +48,7 @@ impl ErrorStage {
     fn name(self) -> &'static str {
         match self {
             Self::Exists => "exists",
+            Self::Replace => "replace",
             Self::Missing => "missing",
             Self::Refused => "refused",
             Self::Export => "export",
@@ -79,6 +83,31 @@ pub struct ExportError {
     /// The file or folder the failure is about, when there is one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub path: Option<PathBuf>,
+    /// Why a file operation failed, when that changes what the author should
+    /// do. We use it before the stage.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cause: Option<Cause>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Cause {
+    /// The disk is full.
+    NoSpace,
+    /// ROM-in-a-Box had no permission to use the file or folder.
+    NotAllowed,
+}
+
+impl Cause {
+    fn of(error: &io::Error) -> Option<Self> {
+        match error.kind() {
+            io::ErrorKind::StorageFull | io::ErrorKind::QuotaExceeded => Some(Self::NoSpace),
+            io::ErrorKind::PermissionDenied | io::ErrorKind::ReadOnlyFilesystem => {
+                Some(Self::NotAllowed)
+            }
+            _ => None,
+        }
+    }
 }
 
 /// What we send to the builder: the stage, so that we can offer the controls
@@ -108,12 +137,14 @@ impl ExportError {
             stage,
             message: message.into(),
             path: None,
+            cause: None,
         }
     }
 
     pub(crate) fn io(stage: ErrorStage, path: &Path, error: io::Error) -> Self {
         Self {
             path: Some(path.to_path_buf()),
+            cause: Cause::of(&error),
             ..Self::new(stage, format!("{}: {error}", path.display()))
         }
     }
@@ -144,8 +175,25 @@ impl ExportError {
                 .map(name_of)
                 .unwrap_or_default()
         };
+        match self.cause {
+            Some(Cause::NoSpace) => {
+                return "There is not enough free space on the disk to create the app. Free some space, then try again.".into()
+            }
+            Some(Cause::NotAllowed) if self.stage != ErrorStage::Missing => {
+                return format!(
+                    "ROM-in-a-Box is not allowed to use \u{201c}{}\u{201d}. Choose a different folder for the app, or check the file's permissions, then try again.",
+                    file()
+                )
+            }
+            _ => {}
+        }
         match self.stage {
             ErrorStage::Refused | ErrorStage::Cores => self.message.clone(),
+            ErrorStage::Replace => format!(
+                "The new app could not replace the old one. The old app is still in {}, as \u{201c}{}\u{201d}.",
+                folder(),
+                file()
+            ),
             ErrorStage::Exists => {
                 format!("An app with this name already exists in {}.", folder())
             }
@@ -332,5 +380,32 @@ mod tests {
             ExportError::new(ErrorStage::Refused, words).sentence(),
             words
         );
+    }
+
+    /// We choose the sentence by the cause and not by the stage, so we give
+    /// the same advice for a full disk wherever it happens.
+    #[test]
+    fn a_full_disk_says_so_wherever_it_happens() {
+        for stage in [ErrorStage::Stage, ErrorStage::Dependencies, ErrorStage::Configure] {
+            let error = ExportError::io(
+                stage,
+                Path::new("/out/.rominabox-export-1-0/Game.app/Contents/Frameworks/libz.dylib"),
+                io::Error::from(io::ErrorKind::StorageFull),
+            );
+            let sentence = assert_sentence(&error);
+            assert!(sentence.contains("free space on the disk"), "{stage}: {sentence}");
+        }
+    }
+
+    #[test]
+    fn a_refused_permission_says_so() {
+        let error = ExportError::io(
+            ErrorStage::Complete,
+            Path::new("/Volumes/Games/Game.app"),
+            io::Error::from(io::ErrorKind::PermissionDenied),
+        );
+        let sentence = assert_sentence(&error);
+        assert!(sentence.contains("not allowed"), "{sentence}");
+        assert!(sentence.contains("Game.app"), "{sentence}");
     }
 }
