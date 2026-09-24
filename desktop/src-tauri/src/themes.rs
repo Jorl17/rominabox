@@ -1923,25 +1923,13 @@ fn scene_markup(
     // bind. Otherwise each of the eight analogue directions of the PlayStation
     // DualShock would need a callout, and both gutters are already full with
     // seven 54 dp callouts.
-    let grouped: Vec<&crate::controls::ControlDefinition> = profile
-        .controls
-        .iter()
-        .filter(|item| item.group.is_some())
-        .collect();
-    let mut group_names: Vec<&str> = grouped
-        .iter()
-        .filter_map(|item| item.group.as_deref())
-        .collect();
-    group_names.sort_unstable();
-    group_names.dedup();
+    let placed_scene = crate::scene_layout::layout(&profile.controls, metrics);
     markup.push_str(&control_group_markup(
-        &group_names,
-        &grouped,
+        &placed_scene.groups,
+        &profile.controls,
         controls,
         illustrated,
-        metrics,
     ));
-    let placed_scene = crate::scene_layout::layout(&profile.controls, metrics);
     let placements = &placed_scene.controls;
     for item in profile.controls.iter().filter(|item| item.group.is_none()) {
         let item = item.clone();
@@ -1972,26 +1960,7 @@ fn scene_markup(
                 .iter()
                 .find(|placement| placement.id == item.id)
                 .expect("every drawn control is placed");
-            for run in &placed.leader {
-                let orientation = if run.height == 0 {
-                    "horizontal"
-                } else {
-                    "vertical"
-                };
-                let extent = if run.height == 0 {
-                    format!("width:{}dp;", run.width)
-                } else {
-                    format!("height:{}dp;", run.height)
-                };
-                markup.push_str(&format!(
-                    "\n<div class=\"control-leader {orientation}\" style=\"left:{}dp;top:{}dp;{extent}\"/>",
-                    run.x, run.y
-                ));
-            }
-            markup.push_str(&format!(
-                "\n<button id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;\"/>\n",
-                placed.marker.x, placed.marker.y
-            ));
+            markup.push_str(&marker_markup(id, &placed.leader, placed.marker));
         }
         markup.push_str(&control_callout_markup(id, label, original, &key, cx, cy));
     }
@@ -2042,70 +2011,51 @@ fn controller_picker_markup(offered: &[crate::controls::ControlProfile], chosen:
     markup
 }
 
-/// Draw each group once, below the illustration.
-///
-/// We put the strip at the bottom of the scene because the side margins are
-/// full, with seven 54 dp callouts filling 378 of 380 dp. We take its geometry
-/// from the declaration in the design, so the layout is the same in
-/// `scripts/render_control_overlays.py` and in this markup.
-#[allow(non_snake_case)]
+/// The leader of a control and the ring over its button on the pad, at the
+/// positions from `scene_layout`.
+fn marker_markup(
+    id: &str,
+    leader: &[crate::scene_layout::Segment],
+    marker: crate::scene_layout::Rect,
+) -> String {
+    let mut markup = String::new();
+    for run in leader {
+        let (orientation, extent) = if run.height == 0 {
+            ("horizontal", format!("width:{}dp;", run.width))
+        } else {
+            ("vertical", format!("height:{}dp;", run.height))
+        };
+        markup.push_str(&format!(
+            "\n<div class=\"control-leader {orientation}\" style=\"left:{}dp;top:{}dp;{extent}\"/>",
+            run.x, run.y
+        ));
+    }
+    markup.push_str(&format!(
+        "\n<button id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;\"/>\n",
+        marker.x, marker.y
+    ));
+    markup
+}
+
+/// Draw each group once, beneath the illustration, in its strip from
+/// `scene_layout`, so that we place it in the same way in this markup, in the
+/// builder and in `scripts/render_control_overlays.py`.
 fn control_group_markup(
-    names: &[&str],
-    grouped: &[&crate::controls::ControlDefinition],
+    groups: &[crate::scene_layout::GroupPlacement],
+    all: &[crate::controls::ControlDefinition],
     controls: &crate::controls::Controls,
     illustrated: bool,
-    metrics: SceneMetrics,
 ) -> String {
-    let (WIDTH, HEIGHT, GAP, SCENE_WIDTH, SCENE_HEIGHT) = (
-        metrics.group_width,
-        metrics.group_height,
-        metrics.group_gap,
-        metrics.scene_width,
-        metrics.scene_height,
-    );
-
-    if names.is_empty() {
-        return String::new();
-    }
-    let count = names.len() as i32;
-    let total = count * WIDTH + (count - 1) * GAP;
-    let left_edge = (SCENE_WIDTH - total) / 2;
-    let top = SCENE_HEIGHT - HEIGHT - metrics.group_bottom_margin;
-
     let mut markup = String::new();
-    for (index, name) in names.iter().enumerate() {
-        let members: Vec<&&crate::controls::ControlDefinition> = grouped
-            .iter()
-            .filter(|item| item.group.as_deref() == Some(*name))
-            .collect();
-        let box_x = left_edge + index as i32 * (WIDTH + GAP);
-
-        // One member has the anchor for the whole group. We reject a group in
-        // the catalog without exactly one, so a missing anchor here would be a
-        // defect in the generated data, which we must not hide.
+    for group in groups {
+        let name = group.name.as_str();
         if illustrated {
-            if let Some(anchor) = members.iter().find(|item| item.x != 0 || item.y != 0) {
-                let centre = box_x + WIDTH / 2;
-                markup.push_str(&format!(
-                    r#"
-<div class="control-leader vertical" style="left:{}dp;top:{}dp;height:{}dp;"/>
-<div class="control-leader horizontal" style="left:{}dp;top:{top}dp;width:{}dp;"/>
-<button id="control-hit-{}" class="control-hit" style="left:{}dp;top:{}dp;"/>
-"#,
-                    anchor.x,
-                    anchor.y.min(top),
-                    (top - anchor.y).abs(),
-                    centre.min(anchor.x),
-                    (centre - anchor.x).abs(),
-                    anchor.id,
-                    anchor.x - 22,
-                    anchor.y - 22,
-                ));
+            if let (Some(anchor), Some(marker)) = (&group.anchor, group.marker) {
+                markup.push_str(&marker_markup(anchor, &group.leader, marker));
             }
         }
-
         let mut words = Vec::new();
-        for item in &members {
+        for item in all.iter().filter(|item| item.group.as_deref() == Some(name)) {
             let custom = controls.bindings.get(&item.id);
             words.extend(binding_words(
                 custom
@@ -2119,13 +2069,15 @@ fn control_group_markup(
         let title = name.replace('_', " ").to_uppercase();
         markup.push_str(&format!(
             r#"
-<button id="control-group-{name}" class="control-group" style="left:{box_x}dp;top:{top}dp;">
+<button id="control-group-{name}" class="control-group" style="left:{x}dp;top:{y}dp;">
 <div class="control-label">{}</div>
 <div id="control-group-binding-{name}" class="control-assignment">{}</div>
 </button>
 "#,
             rml_text(&title),
             rml_text(&callout_line(&words)),
+            x = group.strip.x,
+            y = group.strip.y,
         ));
     }
     markup
