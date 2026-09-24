@@ -308,9 +308,31 @@ fn staged_menu(menu_assets: &Path) -> BTreeMap<String, String> {
         }
         let text = fs::read_to_string(entry.path())
             .unwrap_or_else(|error| panic!("{name} is not text: {error}"));
-        files.insert(name, text.replace(version, VERSION_TOKEN));
+        files.insert(name, without_version(&text, version));
     }
     files
+}
+
+/// Return `text` with the product version replaced by a fixed token where it
+/// stands alone, so that we still compare a longer number that contains it
+/// (`10.1.0` for `0.1.0`).
+fn without_version(text: &str, version: &str) -> String {
+    let part_of_number = |c: char| c.is_ascii_digit() || c == '.';
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find(version) {
+        let before = rest[..at].chars().last().or_else(|| out.chars().last());
+        let after = rest[at + version.len()..].chars().next();
+        out.push_str(&rest[..at]);
+        if before.is_some_and(part_of_number) || after.is_some_and(part_of_number) {
+            out.push_str(version);
+        } else {
+            out.push_str(VERSION_TOKEN);
+        }
+        rest = &rest[at + version.len()..];
+    }
+    out.push_str(rest);
+    out
 }
 
 /// The first difference between two sets of files, named by case, file and
@@ -355,8 +377,30 @@ fn first_difference(
     None
 }
 
+fn snapshot_root() -> PathBuf {
+    rominabox_desktop::repo::at("desktop/src-tauri/tests/fixtures/menu-snapshots")
+}
+
 fn snapshot_directory(case: &str) -> PathBuf {
-    rominabox_desktop::repo::at("desktop/src-tauri/tests/fixtures/menu-snapshots").join(case)
+    snapshot_root().join(case)
+}
+
+/// Fixture directories that no case produces. When we remove a case, its old
+/// snapshot must not look covered.
+fn orphaned_snapshots(cases: &[Case]) -> Vec<String> {
+    let names: Vec<String> = cases.iter().map(Case::name).collect();
+    let mut orphans: Vec<String> = fs::read_dir(snapshot_root())
+        .map(|entries| {
+            entries
+                .filter_map(Result::ok)
+                .filter(|entry| entry.path().is_dir())
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .filter(|name| !names.contains(name))
+                .collect()
+        })
+        .unwrap_or_default();
+    orphans.sort();
+    orphans
 }
 
 fn recorded(directory: &Path) -> BTreeMap<String, String> {
@@ -417,6 +461,11 @@ fn the_composed_menu_matches_its_snapshot() {
             failures.push(difference);
         }
     }
+    for orphan in orphaned_snapshots(&cases) {
+        failures.push(format!(
+            "{orphan}: a snapshot directory no case produces; remove it by hand if the case was meant to go"
+        ));
+    }
     assert!(
         failures.is_empty(),
         "{} of {} menu snapshots differ (re-record with ROMINABOX_RECORD_SNAPSHOT=1 only for an intended change):\n{}",
@@ -462,6 +511,13 @@ fn an_export_stages_exactly_the_composed_menu() {
         failures.join("\n")
     );
     eprintln!("exported {} menus", cases.len());
+}
+
+#[test]
+fn only_the_version_on_its_own_is_normalised() {
+    assert_eq!(without_version("ROM-IN-A-BOX / 0.1.0", "0.1.0"), "ROM-IN-A-BOX / @VERSION@");
+    assert_eq!(without_version("10.1.0 and 0.1.01", "0.1.0"), "10.1.0 and 0.1.01");
+    assert_eq!(without_version("0.1.0<b>0.1.0</b>", "0.1.0"), "@VERSION@<b>@VERSION@</b>");
 }
 
 #[test]
