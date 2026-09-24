@@ -153,6 +153,96 @@ void design_prompt_survives_an_empty_status(const char *native_assets, const cha
    (void)data;
 }
 
+std::string read_file(const std::filesystem::path& path)
+{
+   std::ifstream in(path);
+   return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+}
+
+bool replace_once(std::string& text, const std::string& from, const std::string& to)
+{
+   const auto at = text.find(from);
+   if (at == std::string::npos) return false;
+   text.replace(at, from.size(), to);
+   return true;
+}
+
+/* The Native assets with the disc list we write in an export for a disc game:
+ * eight rows, five to a page, and a hidden DISC entry in Options. */
+std::string stage_disc_list(const char *native_assets, const char *data)
+{
+   namespace fs = std::filesystem;
+   const fs::path assets = fs::path(data) / "disc-list-assets";
+   fs::create_directories(assets);
+   for (const auto& entry : fs::directory_iterator(native_assets))
+      if (entry.is_regular_file())
+         fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   std::string rows[2];
+   for (int index = 0; index < 8; ++index)
+   {
+      const std::string id = "discs-" + std::to_string(index);
+      rows[index < 5 ? 0 : 1] += "<button id=\"" + id + "\" class=\"list-row line \"><div id=\"" + id
+            + "-title\" class=\"list-row-title\"></div><div id=\"" + id
+            + "-state\" class=\"list-row-state\"></div></button>\n";
+   }
+   const std::string panel =
+         "<div id=\"discs-panel\" class=\"screen-panel\" style=\"display:none;\"><div id=\"discs-list\" class=\"list\">"
+         "<div id=\"discs-page-1\" class=\"list-page\">" + rows[0] + "</div>"
+         "<div id=\"discs-page-2\" class=\"list-page\" style=\"display:none;\">" + rows[1] + "</div>"
+         "<div id=\"discs-pager\" class=\"list-pager\"><button id=\"discs-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button>"
+         "<div id=\"discs-page-count\" class=\"list-pager-count\">1/2</div>"
+         "<button id=\"discs-next\" class=\"menu-action list-pager-next\">&gt;</button></div></div>"
+         "<div class=\"list-actions\"><button class=\"menu-action list-back\" id=\"discs-back\">BACK</button></div>"
+         "<div id=\"discs-status\" class=\"list-status\"></div></div>";
+   std::string menu = read_file(assets / "menu.rml");
+   bool staged = replace_once(menu, "<div id=\"footer\">", panel + "<div id=\"footer\">")
+         && replace_once(menu, "<button class=\"menu-action options-back\"",
+               "<button class=\"menu-action option-entry\" id=\"discs\" disabled=\"disabled\" style=\"display: none; top: 120dp;\">DISC</button>"
+               "<button class=\"menu-action options-back\"");
+   std::string config = read_file(assets / "design.cfg");
+   staged = staged && replace_once(config, "screens = \"pause options controls fixture\"",
+               "screens = \"pause options controls fixture discs\"")
+         && replace_once(config, "screen_button_options = \"options fixture-back\"",
+               "screen_button_options = \"options fixture-back discs-back\"");
+   config += "\nscreen_panel_discs = \"discs-panel\"\nscreen_heading_discs = \"DISC\""
+             "\nscreen_footer_discs = \"ESC  BACK\"\nscreen_button_discs = \"discs\""
+             "\nscreen_images_discs = \"list\"\nscreen_mark_discs = \"IN\"\n";
+   check(staged, "the disc list fixture is staged into the Native assets");
+   std::ofstream(assets / "menu.rml") << menu;
+   std::ofstream(assets / "design.cfg") << config;
+   return assets.string();
+}
+
+/* The disc list stays on the chosen page across frames, so disc 6 and
+ * later can be chosen. */
+void disc_list_keeps_its_page(const char *native_assets, const char *data)
+{
+   const std::string assets = stage_disc_list(native_assets, data);
+   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+   host.disc_count = 7;
+   host.disc_index = 0;
+   void *menu = open_menu();
+   if (menu)
+   {
+      click_and_frame(menu, "options");
+      click_and_frame(menu, "discs");
+      check(std::string(inspect.text("heading")) == "DISC", "seven discs open the disc list");
+      click_and_frame(menu, "discs-next");
+      check(std::string(inspect.text("discs-page-count")) == "2/2", "the pager turns to the second page");
+      frame(menu);
+      frame(menu);
+      int x, y, w, h;
+      check(std::string(inspect.text("discs-page-count")) == "2/2" && inspect.box("discs-5", &x, &y, &w, &h),
+            "the second page stays open across frames");
+      click_and_frame(menu, "discs-5");
+      check(host.disc_index == 5, "disc 6 can be chosen");
+      rib_menu_destroy(menu);
+   }
+   host.disc_count = 0;
+   host.disc_index = 0;
+   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+}
+
 /* On Windows, rename fails when the destination exists. */
 int refusing_rename(const char *from, const char *to)
 {
@@ -404,6 +494,7 @@ int main(int argc, char **argv)
 
    fixes::repeated_saves_replace_the_file(argv[2]);
    fixes::design_prompt_survives_an_empty_status(argv[1], argv[2]);
+   fixes::disc_list_keeps_its_page(argv[1], argv[2]);
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);
