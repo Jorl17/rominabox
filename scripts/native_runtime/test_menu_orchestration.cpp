@@ -9,6 +9,8 @@
 #include "menu_host_fake.h"
 #include <file/config_file.h>
 #include "../../vendor/retroarch/audio/volume_range.h"
+#include "rmlui/files.h"
+#include <sys/stat.h>
 
 #include <cmath>
 #include <cstdio>
@@ -105,6 +107,50 @@ static int capacity_case(const char *assets, const char *data)
    if (failures)
       std::fprintf(stderr, "%d menu capacity failures\n", failures);
    return failures ? 1 : 0;
+}
+
+/* Each of these cases opens its own menu. */
+namespace fixes {
+void *open_menu()
+{
+   void *menu = rib_menu_create();
+   check(menu != nullptr, "create a menu for a fix case");
+   if (!menu) return nullptr;
+   frame(menu);
+   rib_menu_toggle(menu, true);
+   frame(menu);
+   return menu;
+}
+
+/* On Windows, rename fails when the destination exists. */
+int refusing_rename(const char *from, const char *to)
+{
+   struct stat existing;
+   if (stat(to, &existing) == 0) return -1;
+   return std::rename(from, to);
+}
+
+/* Every controls save after the first replaces the previous file. */
+void repeated_saves_replace_the_file(const char *data)
+{
+   void *menu = open_menu();
+   if (!menu) return;
+   rib_files_use_rename(refusing_rename, false);
+   click_and_frame(menu, "options");
+   click_and_frame(menu, "controls");
+   for (int attempt = 1; attempt <= 2; ++attempt)
+   {
+      click_and_frame(menu, "controls-reset");
+      check(std::string(inspect.text("controls-status")) == "DEFAULTS RESTORED",
+            attempt == 1 ? "the first controls save succeeds where rename refuses an existing file"
+                         : "a second controls save replaces the first where rename refuses an existing file");
+   }
+   const std::string volume = std::string(data) + "/b19-volume.cfg";
+   check(rib_write_menu_volume(volume.c_str(), -3.0f) && rib_write_menu_volume(volume.c_str(), -4.0f),
+         "the volume file is replaced where rename refuses an existing file");
+   rib_files_use_rename(nullptr, true);
+   rib_menu_destroy(menu);
+}
 }
 
 int main(int argc, char **argv)
@@ -324,6 +370,8 @@ int main(int argc, char **argv)
       check(view.document.has_element("save"), "context reset reloads the document");
       rib_menu_destroy(menu);
    }
+
+   fixes::repeated_saves_replace_the_file(argv[2]);
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);
