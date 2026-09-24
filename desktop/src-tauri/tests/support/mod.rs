@@ -153,6 +153,43 @@ pub fn hovered(document: &Path, points: &[(i32, i32)]) -> Vec<String> {
         .collect()
 }
 
+/// The position of each element laid out at `width`x`height`, as the border
+/// box x, y, width, height in document pixels, or None when it is absent.
+pub fn boxes(
+    document: &Path,
+    (width, height): (u32, u32),
+    ids: &[&str],
+) -> Vec<Option<[f64; 4]>> {
+    let mut command = Command::new(rml_probe());
+    command
+        .arg("--document")
+        .arg(document)
+        .args(["--size", &format!("{width}x{height}")]);
+    for id in ids {
+        command.args(["--step", &format!("box:{id}")]);
+    }
+    let output = command.args(["--step", "move:0,0"]).output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}: {}",
+        document.display(),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let step: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("one step of probe output");
+    ids.iter()
+        .map(|id| {
+            step["boxes"][id].as_array().map(|values| {
+                let mut found = [0.0; 4];
+                for (slot, value) in found.iter_mut().zip(values) {
+                    *slot = value.as_f64().unwrap();
+                }
+                found
+            })
+        })
+        .collect()
+}
+
 /// `menu` with one panel shown instead of Pause.
 pub fn showing(menu: &str, panel: &str) -> String {
     let hidden = format!("id=\"{panel}\" class=\"screen-panel\" style=\"display:none;\"");
