@@ -117,7 +117,7 @@ describe("the export's core pop-up", () => {
   it("stays open with the failure when a core could not be downloaded", () => {
     const failure = exportFailure({
       stage: "cores",
-      message: "The Dreamcast core could not be downloaded. Try again later.",
+      sentence: "The Dreamcast core could not be downloaded. Try again later.",
     });
     expect(failure).toBeInstanceOf(CoreDownloadFailed);
     expect(afterExport(failure)).toEqual({
@@ -127,7 +127,10 @@ describe("the export's core pop-up", () => {
   });
 
   it("leaves every other export error as the text it always was", () => {
-    const other = exportFailure({ stage: "stage", message: "disk full" });
+    const other = exportFailure({
+      stage: "stage",
+      sentence: "stage: disk full",
+    });
     expect(other).not.toBeInstanceOf(CoreDownloadFailed);
     expect((other as Error).message).toBe("stage: disk full");
     expect(exportFailure("Another export is already running.")).toBe(

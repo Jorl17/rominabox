@@ -220,6 +220,7 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
         include_achievements: false,
         output_dir: root.join(format!("out-{}", case.name())),
+        replace: false,
         target: ExportTarget::Macos,
         runtime_kit: kit.to_path_buf(),
         core: None,

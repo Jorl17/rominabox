@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::ffi::OsStr;
-use std::fmt;
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -19,6 +18,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::content;
 use crate::controls;
+pub use crate::export_error::{ErrorStage, ExportError};
 use crate::icons;
 
 /// Disc image containers whose support depends on how a core was built.
@@ -154,6 +154,10 @@ pub struct ExportRequest {
     #[serde(default = "crate::achievements::default_included")]
     pub include_achievements: bool,
     pub output_dir: PathBuf,
+    /// Replace an app already at the destination. Without it, when an app is
+    /// already there, we export nothing and say so.
+    #[serde(default)]
+    pub replace: bool,
     pub target: ExportTarget,
     /// A frozen, redistributable kit. It contains `bin/retroarch`,
     /// `designs/<id>/`, `menu-assets/`, `autoconfig/`, `licenses/` and
@@ -325,13 +329,6 @@ pub struct ExportResult {
     pub content_bytes: u64,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExportError {
-    pub stage: String,
-    pub message: String,
-}
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct NativeDependencyInventory {
@@ -344,35 +341,6 @@ struct NativeDependencyFile {
     name: String,
     sha256: String,
 }
-
-impl ExportError {
-    pub fn new(stage: impl Into<String>, message: impl Into<String>) -> Self {
-        Self {
-            stage: stage.into(),
-            message: message.into(),
-        }
-    }
-
-    pub(crate) fn io(stage: &str, path: &Path, error: io::Error) -> Self {
-        Self::new(stage, format!("{}: {error}", path.display()))
-    }
-
-    pub(crate) fn command(stage: &str, command: &str, output: &Output) -> Self {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Self::new(
-            stage,
-            format!("{command} failed ({}): {}", output.status, stderr.trim()),
-        )
-    }
-}
-
-impl fmt::Display for ExportError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}: {}", self.stage, self.message)
-    }
-}
-
-impl std::error::Error for ExportError {}
 
 struct OwnedStaging {
     path: PathBuf,
@@ -391,12 +359,12 @@ impl OwnedStaging {
             match fs::create_dir(&path) {
                 Ok(()) => return Ok(Self { path, active: true }),
                 Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
-                Err(error) => return Err(ExportError::io("stage", &path, error)),
+                Err(error) => return Err(ExportError::io(ErrorStage::Stage, &path, error)),
             }
         }
 
         Err(ExportError::new(
-            "stage",
+            ErrorStage::Stage,
             "could not create a unique export staging directory",
         ))
     }
@@ -424,7 +392,7 @@ fn remove_owned_staging(path: &Path) -> Result<(), ExportError> {
     let metadata = match fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(ExportError::io("cleanup", path, error)),
+        Err(error) => return Err(ExportError::io(ErrorStage::Cleanup, path, error)),
     };
     let result = if metadata.file_type().is_symlink() || !metadata.is_dir() {
         fs::remove_file(path)
@@ -433,7 +401,7 @@ fn remove_owned_staging(path: &Path) -> Result<(), ExportError> {
         // the root is the exact directory that we created atomically above.
         fs::remove_dir_all(path)
     };
-    result.map_err(|error| ExportError::io("cleanup", path, error))
+    result.map_err(|error| ExportError::io(ErrorStage::Cleanup, path, error))
 }
 
 pub fn export_game<F>(
@@ -476,7 +444,7 @@ where
             export_macos(request, resolved.as_ref(), cancelled, &mut progress)
         }
         ExportTarget::Windows => Err(ExportError::new(
-            "validate",
+            ErrorStage::Validate,
             "Windows export is not available from this build; a pinned Windows runtime kit and native packaging implementation are still required",
         )),
     }
@@ -518,19 +486,19 @@ where
 {
     if !cfg!(target_os = "macos") {
         return Err(ExportError::new(
-            "validate",
+            ErrorStage::Validate,
             "macOS export currently requires a macOS host",
         ));
     }
 
     if !Path::new("/usr/bin/codesign").is_file() {
-        return Err(ExportError::new("validate", "This version of macOS does not provide the signing service required by this build. No tools were installed and no app was exported."));
+        return Err(ExportError::new(ErrorStage::Validate, "This version of macOS does not provide the signing service required by this build. No tools were installed and no app was exported."));
     }
     let safe_title = safe_filename(&request.title);
     let final_app = request.output_dir.join(format!("{safe_title}.app"));
     refuse_existing(&final_app)?;
     fs::create_dir_all(&request.output_dir)
-        .map_err(|error| ExportError::io("stage", &request.output_dir, error))?;
+        .map_err(|error| ExportError::io(ErrorStage::Stage, &request.output_dir, error))?;
 
     let staging = OwnedStaging::create(&request.output_dir)?;
     let app = staging.path().join(format!("{safe_title}.app"));
@@ -540,7 +508,7 @@ where
     let frameworks = contents.join("Frameworks");
     for directory in [&macos, &resources, &frameworks] {
         fs::create_dir_all(directory)
-            .map_err(|error| ExportError::io("stage", directory, error))?;
+            .map_err(|error| ExportError::io(ErrorStage::Stage, directory, error))?;
     }
 
     emit(
@@ -556,7 +524,7 @@ where
 
     let system = crate::systems::find(&request.system).ok_or_else(|| {
         ExportError::new(
-            "validate",
+            ErrorStage::Validate,
             format!("unsupported system: {}", request.system),
         )
     })?;
@@ -564,7 +532,7 @@ where
         Some(export_core) => export_core.core,
         None => system.preferred_core().ok_or_else(|| {
             ExportError::new(
-                "validate",
+                ErrorStage::Validate,
                 format!("{} has no configured core", system.name),
             )
         })?,
@@ -574,7 +542,7 @@ where
     let core = resources.join(core_name);
     copy_file(&core_source, &core)?;
     let collected_content = content::collect_for(&request.rom, Some(&system.id))
-        .map_err(|message| ExportError::new("validate", message))?;
+        .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     let content_directory = resources.join("content");
     for file in &collected_content.files {
         copy_content_file(file, &content_directory)?;
@@ -582,10 +550,10 @@ where
     let rom_relative = Path::new("content").join(&collected_content.entrypoint);
     crate::menu::compose_menu(&menu_request(request, collected_content.discs))
         .and_then(|menu| menu.write(&resources.join("menu-assets")))
-        .map_err(|message| ExportError::new("stage", message))?;
+        .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     let controls_assets = resources.join("menu-assets");
     fs::create_dir_all(&controls_assets)
-        .map_err(|error| ExportError::io("stage", &controls_assets, error))?;
+        .map_err(|error| ExportError::io(ErrorStage::Stage, &controls_assets, error))?;
     let controls_defaults = controls_assets.join("controls-defaults.cfg");
     let controls_profile = controls::write_defaults_config_with_advanced_access(
         &request.system,
@@ -593,7 +561,7 @@ where
         &controls_defaults,
         request.advanced_emulator_access,
     )
-    .map_err(|message| ExportError::new("stage", message))?;
+    .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     stage_controller_remap(&controls_profile, selected_core, &resources.join("remaps"))?;
     stage_pixel_options(selected_core, &resources.join("core-options"))?;
     if request.show_menu {
@@ -602,7 +570,7 @@ where
             &resources.join("assets/sounds"),
             &request.menu_sounds,
         )
-        .map_err(|message| ExportError::new("stage", message))?;
+        .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     }
     stage_firmware(request, &resources.join("firmware"))?;
     stage_bundled_autoconfig(&request.runtime_kit, &resources.join("autoconfig"))?;
@@ -694,7 +662,7 @@ where
         resources.join("game.json"),
         serde_json::to_vec_pretty(&manifest).unwrap(),
     )
-    .map_err(|error| ExportError::io("configure", &resources.join("game.json"), error))?;
+    .map_err(|error| ExportError::io(ErrorStage::Configure, &resources.join("game.json"), error))?;
     let default_icon = icons::default_icon_path(&request.runtime_kit);
     if let Some(icon) = request.icon.as_deref().or(default_icon.as_deref()) {
         icons::create_macos_icon(icon, &resources.join("GameIcon.icns"), staging.path())?;
@@ -713,7 +681,7 @@ where
     emit(progress, ExportStage::Sign, 0.70, "Signing the local app");
     for object in mach_objects.iter().rev() {
         run_command_cancellable(
-            "sign",
+            ErrorStage::Sign,
             Command::new("/usr/bin/codesign")
                 .args(["--force", "--sign", "-"])
                 .arg(object),
@@ -728,9 +696,9 @@ where
             crate::achievements::included(request.include_achievements, request.show_menu),
         ),
     )
-    .map_err(|error| ExportError::io("sign", &entitlements, error))?;
+    .map_err(|error| ExportError::io(ErrorStage::Sign, &entitlements, error))?;
     run_command_cancellable(
-        "sign",
+        ErrorStage::Sign,
         Command::new("/usr/bin/codesign")
             .args(["--force", "--sign", "-", "--entitlements"])
             .arg(&entitlements)
@@ -751,7 +719,8 @@ where
             .background
             .as_ref()
             .map_or(0, |path| fs::metadata(path).map(|m| m.len()).unwrap_or(0));
-    fs::rename(&app, &final_app).map_err(|error| ExportError::io("complete", &final_app, error))?;
+    fs::rename(&app, &final_app)
+        .map_err(|error| ExportError::io(ErrorStage::Complete, &final_app, error))?;
     staging.cleanup()?;
     emit(progress, ExportStage::Complete, 1.0, "Export complete");
     Ok(ExportResult {
@@ -767,47 +736,47 @@ fn validate_request(
     resolved: Option<&ExportCore<'_>>,
 ) -> Result<(), ExportError> {
     if request.title.trim().is_empty() {
-        return Err(ExportError::new("validate", "title is required"));
+        return Err(ExportError::new(ErrorStage::Validate, "title is required"));
     }
     // A design is a directory, so we catch an unknown one when we resolve it.
     if let Err(message) = crate::themes::design_root(&request.theme) {
-        return Err(ExportError::new("validate", message));
+        return Err(ExportError::new(ErrorStage::Validate, message));
     }
     if request.start_at_menu && !request.show_menu {
         return Err(ExportError::new(
-            "validate",
+            ErrorStage::Validate,
             "startAtMenu requires showMenu",
         ));
     }
     crate::achievements::entries(
         &crate::themes::design_root(&request.theme)
-            .map_err(|message| ExportError::new("validate", message))?,
+            .map_err(|message| ExportError::new(ErrorStage::Validate, message))?,
         request.include_achievements,
         request.show_menu,
         request.menu_entries.as_deref(),
     )
-    .map_err(|message| ExportError::new("validate", message))?;
+    .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     controls::validate_for_system_with_advanced_access(
         &request.system,
         &request.controls,
         request.advanced_emulator_access,
     )
-    .map_err(|message| ExportError::new("validate", message))?;
+    .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     if !request.shaders.is_empty() && !request.show_menu {
         return Err(ExportError::new(
-            "validate",
+            ErrorStage::Validate,
             "Shaders need the in-game menu. Turn the menu on, or leave shaders unset.",
         ));
     }
     crate::shaders::resolve(&request.shaders)
-        .map_err(|message| ExportError::new("validate", message))?;
+        .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     for (label, path) in [
         ("ROM", &request.rom),
         ("runtime", &request.runtime_kit.join("bin/retroarch")),
     ] {
         if !path.is_file() {
             return Err(ExportError::new(
-                "validate",
+                ErrorStage::Validate,
                 format!("{label} file does not exist: {}", path.display()),
             ));
         }
@@ -816,36 +785,36 @@ fn validate_request(
         &request.runtime_kit,
         crate::achievements::included(request.include_achievements, request.show_menu),
     )
-    .map_err(|message| ExportError::new("validate", message))?;
+    .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     let system = crate::systems::find(&request.system).ok_or_else(|| {
         ExportError::new(
-            "validate",
+            ErrorStage::Validate,
             format!("unsupported system: {}", request.system),
         )
     })?;
     if system.preferred_core().is_none() {
         return Err(ExportError::new(
-            "validate",
+            ErrorStage::Validate,
             format!("{} has no configured core", system.name),
         ));
     }
     let core = shipped_core(request, resolved);
     if !core.is_file() {
         return Err(ExportError::new(
-            "validate",
+            ErrorStage::Validate,
             format!("core does not exist: {}", core.display()),
         ));
     }
     for path in request.icon.iter().chain(request.background.iter()) {
         if !path.is_file() {
             return Err(ExportError::new(
-                "validate",
+                ErrorStage::Validate,
                 format!("asset does not exist: {}", path.display()),
             ));
         }
     }
     content::collect_for(&request.rom, Some(&system.id))
-        .map_err(|message| ExportError::new("validate", message))?;
+        .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     // We reject a container format by the core that would have to read it,
     // not by the console name, because CHD support in an upstream project
     // does not show that the prepared artifact was compiled with it. We do
@@ -860,7 +829,7 @@ fn validate_request(
             && !core.supports(&extension)
         {
             return Err(ExportError::new(
-                "validate",
+                ErrorStage::Validate,
                 format!(
                     "{} export from a .{extension} image is unavailable because the prepared {} core was built without {} support. Use one of these instead: {}.",
                     system.name,
@@ -876,17 +845,13 @@ fn validate_request(
         let logo = request.runtime_kit.join("branding/logo.png");
         if !logo.is_file() {
             return Err(ExportError::new(
-                "validate",
+                ErrorStage::Validate,
                 format!("splash logo does not exist: {}", logo.display()),
             ));
         }
     }
     Ok(())
 }
-
-/// The stage in the error that stops the export when we cannot download a
-/// core. For this stage we show Go back and Retry in the builder.
-pub const CORES_STAGE: &str = "cores";
 
 fn prepare_core<F>(
     request: &ExportRequest,
@@ -920,7 +885,7 @@ where
     })
     .map_err(|_| {
         ExportError::new(
-            CORES_STAGE,
+            ErrorStage::Cores,
             format!(
                 "The {} core could not be downloaded. Try again later.",
                 resolved.system_name
@@ -950,7 +915,8 @@ fn stage_legal_materials(
     licence: &Path,
 ) -> Result<(), ExportError> {
     let licenses = destination.join("Licenses");
-    fs::create_dir_all(&licenses).map_err(|error| ExportError::io("stage", &licenses, error))?;
+    fs::create_dir_all(&licenses)
+        .map_err(|error| ExportError::io(ErrorStage::Stage, &licenses, error))?;
     copy_file(
         &runtime_kit.join("licenses/RetroArch.txt"),
         &licenses.join("RetroArch.txt"),
@@ -986,23 +952,28 @@ fn stage_legal_materials(
     fs::write(
         licenses.join("README.txt"),
         "Private ROM-in-a-Box solution-discovery export. Runtime, selected core, RmlUi, joypad autoconfig profiles, and native dependency notices are included here. Component revisions and source provenance are recorded in ../components.json. The native RetroArch fork revision and build inputs are recorded in ../Source-Provenance/native-rmlui. Historical patches are retained there only as prior-checkpoint records. Public distribution requires a separate license and source-completeness review.\n",
-    ).map_err(|error| ExportError::io("stage", &licenses.join("README.txt"), error))?;
+    ).map_err(|error| ExportError::io(ErrorStage::Stage, &licenses.join("README.txt"), error))?;
 
     let manifest_path = runtime_kit.join("manifest.json");
     let mut manifest: serde_json::Value = serde_json::from_slice(
         &fs::read(&manifest_path)
-            .map_err(|error| ExportError::io("stage", &manifest_path, error))?,
+            .map_err(|error| ExportError::io(ErrorStage::Stage, &manifest_path, error))?,
     )
     .map_err(|error| {
         ExportError::new(
-            "stage",
+            ErrorStage::Stage,
             format!("invalid {}: {error}", manifest_path.display()),
         )
     })?;
     let components = manifest
         .get_mut("components")
         .and_then(serde_json::Value::as_array_mut)
-        .ok_or_else(|| ExportError::new("stage", "runtime manifest has no components array"))?;
+        .ok_or_else(|| {
+            ExportError::new(
+                ErrorStage::Stage,
+                "runtime manifest has no components array",
+            )
+        })?;
     components.retain(|component| {
         component
             .get("name")
@@ -1018,7 +989,13 @@ fn stage_legal_materials(
         destination.join("components.json"),
         serde_json::to_vec_pretty(&manifest).unwrap(),
     )
-    .map_err(|error| ExportError::io("stage", &destination.join("components.json"), error))?;
+    .map_err(|error| {
+        ExportError::io(
+            ErrorStage::Stage,
+            &destination.join("components.json"),
+            error,
+        )
+    })?;
     Ok(())
 }
 
@@ -1075,17 +1052,17 @@ fn stage_frozen_dependencies(
 ) -> Result<(), ExportError> {
     let inventory_path = runtime_kit.join("runtime-dependencies.json");
     let inventory_bytes = fs::read(&inventory_path)
-        .map_err(|error| ExportError::io("dependencies", &inventory_path, error))?;
+        .map_err(|error| ExportError::io(ErrorStage::Dependencies, &inventory_path, error))?;
     let inventory: NativeDependencyInventory =
         serde_json::from_slice(&inventory_bytes).map_err(|error| {
             ExportError::new(
-                "dependencies",
+                ErrorStage::Dependencies,
                 format!("invalid {}: {error}", inventory_path.display()),
             )
         })?;
     if inventory.format_version != 1 {
         return Err(ExportError::new(
-            "dependencies",
+            ErrorStage::Dependencies,
             format!(
                 "unsupported runtime dependency inventory version: {}",
                 inventory.format_version
@@ -1100,13 +1077,13 @@ fn stage_frozen_dependencies(
         let dependency_path = Path::new(&dependency.name);
         if dependency_path.components().count() != 1 || dependency.name.starts_with('.') {
             return Err(ExportError::new(
-                "dependencies",
+                ErrorStage::Dependencies,
                 format!("invalid dependency filename: {}", dependency.name),
             ));
         }
         if !declared.insert(dependency.name.clone()) {
             return Err(ExportError::new(
-                "dependencies",
+                ErrorStage::Dependencies,
                 format!("duplicate dependency filename: {}", dependency.name),
             ));
         }
@@ -1120,7 +1097,7 @@ fn stage_frozen_dependencies(
         let actual = sha256_file(&source)?;
         if !actual.eq_ignore_ascii_case(&dependency.sha256) {
             return Err(ExportError::new(
-                "dependencies",
+                ErrorStage::Dependencies,
                 format!(
                     "checksum mismatch for {}: expected {}, got {actual}",
                     dependency.name, dependency.sha256
@@ -1132,19 +1109,19 @@ fn stage_frozen_dependencies(
         signed_objects.push(staged);
     }
     for entry in fs::read_dir(&source_directory)
-        .map_err(|error| ExportError::io("dependencies", &source_directory, error))?
+        .map_err(|error| ExportError::io(ErrorStage::Dependencies, &source_directory, error))?
     {
-        let entry =
-            entry.map_err(|error| ExportError::io("dependencies", &source_directory, error))?;
+        let entry = entry
+            .map_err(|error| ExportError::io(ErrorStage::Dependencies, &source_directory, error))?;
         let name = entry.file_name().to_string_lossy().into_owned();
         if entry
             .file_type()
-            .map_err(|error| ExportError::io("dependencies", &entry.path(), error))?
+            .map_err(|error| ExportError::io(ErrorStage::Dependencies, &entry.path(), error))?
             .is_file()
             && !declared.contains(&name)
         {
             return Err(ExportError::new(
-                "dependencies",
+                ErrorStage::Dependencies,
                 format!("undeclared file in frozen Frameworks: {name}"),
             ));
         }
@@ -1154,7 +1131,7 @@ fn stage_frozen_dependencies(
         missing.sort();
         if !missing.is_empty() {
             return Err(ExportError::new(
-                "dependencies",
+                ErrorStage::Dependencies,
                 format!(
                     "player links {} which the runtime dependency inventory does not list",
                     missing.join(", ")
@@ -1166,14 +1143,14 @@ fn stage_frozen_dependencies(
 }
 
 fn sha256_file(path: &Path) -> Result<String, ExportError> {
-    let mut file =
-        fs::File::open(path).map_err(|error| ExportError::io("dependencies", path, error))?;
+    let mut file = fs::File::open(path)
+        .map_err(|error| ExportError::io(ErrorStage::Dependencies, path, error))?;
     let mut hash = Sha256::new();
     let mut buffer = [0u8; 1024 * 128];
     loop {
         let count = file
             .read(&mut buffer)
-            .map_err(|error| ExportError::io("dependencies", path, error))?;
+            .map_err(|error| ExportError::io(ErrorStage::Dependencies, path, error))?;
         if count == 0 {
             break;
         }
@@ -1188,12 +1165,16 @@ fn copy_content_file(
 ) -> Result<(), ExportError> {
     let destination = destination_root.join(&file.relative);
     let parent = destination.parent().ok_or_else(|| {
-        ExportError::new("stage", "game content destination has no parent directory")
+        ExportError::new(
+            ErrorStage::Stage,
+            "game content destination has no parent directory",
+        )
     })?;
-    fs::create_dir_all(parent).map_err(|error| ExportError::io("stage", parent, error))?;
+    fs::create_dir_all(parent)
+        .map_err(|error| ExportError::io(ErrorStage::Stage, parent, error))?;
     if let Some(bytes) = &file.staged_bytes {
         fs::write(&destination, bytes)
-            .map_err(|error| ExportError::io("stage", &destination, error))
+            .map_err(|error| ExportError::io(ErrorStage::Stage, &destination, error))
     } else {
         copy_file(&file.source, &destination)
     }
@@ -1206,20 +1187,20 @@ fn validate_firmware(
     for path in &request.firmware {
         if !path.is_file() {
             return Err(ExportError::new(
-                "validate",
+                ErrorStage::Validate,
                 format!("firmware file does not exist: {}", path.display()),
             ));
         }
         if path.file_name().and_then(OsStr::to_str).is_none() {
             return Err(ExportError::new(
-                "validate",
+                ErrorStage::Validate,
                 format!("firmware has no usable filename: {}", path.display()),
             ));
         }
     }
     let assessment = crate::systems::assess_firmware(system, &request.firmware);
     if !assessment.can_continue {
-        return Err(ExportError::new("validate", assessment.refusal()));
+        return Err(ExportError::new(ErrorStage::Validate, assessment.refusal()));
     }
     Ok(())
 }
@@ -1237,14 +1218,17 @@ fn stage_bundled_autoconfig(runtime_kit: &Path, destination: &Path) -> Result<()
 
 fn stage_firmware(request: &ExportRequest, destination: &Path) -> Result<(), ExportError> {
     fs::create_dir_all(destination)
-        .map_err(|error| ExportError::io("stage", destination, error))?;
+        .map_err(|error| ExportError::io(ErrorStage::Stage, destination, error))?;
     let system = crate::systems::find(&request.system).ok_or_else(|| {
-        ExportError::new("stage", format!("unsupported system: {}", request.system))
+        ExportError::new(
+            ErrorStage::Stage,
+            format!("unsupported system: {}", request.system),
+        )
     })?;
     for source in &request.firmware {
         let name = firmware_destination_name(source, system).ok_or_else(|| {
             ExportError::new(
-                "stage",
+                ErrorStage::Stage,
                 format!("firmware has no filename: {}", source.display()),
             )
         })?;
@@ -1289,7 +1273,8 @@ fn stable_identity(
     system: &str,
     namespace: Option<&str>,
 ) -> Result<String, ExportError> {
-    let mut file = fs::File::open(rom).map_err(|error| ExportError::io("configure", rom, error))?;
+    let mut file =
+        fs::File::open(rom).map_err(|error| ExportError::io(ErrorStage::Configure, rom, error))?;
     let mut hash = Sha256::new();
     hash.update(b"rominabox-game-v1\0");
     if let Some(namespace) = namespace.map(str::trim).filter(|value| !value.is_empty()) {
@@ -1304,7 +1289,7 @@ fn stable_identity(
     loop {
         let count = file
             .read(&mut buffer)
-            .map_err(|error| ExportError::io("configure", rom, error))?;
+            .map_err(|error| ExportError::io(ErrorStage::Configure, rom, error))?;
         if count == 0 {
             break;
         }
@@ -1370,7 +1355,7 @@ fn stage_controller_remap(
     };
     let Some(library) = core.library_name.as_deref() else {
         return Err(ExportError::new(
-            "stage",
+            ErrorStage::Stage,
             format!(
                 "{} needs the emulated device {device}, but component '{}' does not declare its \
                  libraryName, so there is nowhere to write the remap RetroArch reads",
@@ -1379,10 +1364,11 @@ fn stage_controller_remap(
         ));
     };
     let directory = remaps.join(library);
-    fs::create_dir_all(&directory).map_err(|error| ExportError::io("stage", &directory, error))?;
+    fs::create_dir_all(&directory)
+        .map_err(|error| ExportError::io(ErrorStage::Stage, &directory, error))?;
     let path = directory.join(format!("{library}.rmp"));
     let contents = format!("input_libretro_device_p1 = \"{device}\"\n");
-    fs::write(&path, contents).map_err(|error| ExportError::io("stage", &path, error))?;
+    fs::write(&path, contents).map_err(|error| ExportError::io(ErrorStage::Stage, &path, error))?;
     Ok(())
 }
 
@@ -1399,7 +1385,7 @@ fn stage_pixel_options(core: &crate::systems::Core, destination: &Path) -> Resul
     }
     let Some(library) = core.library_name.as_deref() else {
         return Err(ExportError::new(
-            "stage",
+            ErrorStage::Stage,
             format!(
                 "component '{}' keeps its picture with core options, but does not declare its \
                  libraryName, so there is nowhere to write the options file RetroArch reads",
@@ -1417,7 +1403,7 @@ fn stage_pixel_options(core: &crate::systems::Core, destination: &Path) -> Resul
         })
     {
         return Err(ExportError::new(
-            "stage",
+            ErrorStage::Stage,
             format!(
                 "component '{}' has a picture option that cannot be written as a core options line",
                 core.component
@@ -1425,13 +1411,14 @@ fn stage_pixel_options(core: &crate::systems::Core, destination: &Path) -> Resul
         ));
     }
     let directory = destination.join(library);
-    fs::create_dir_all(&directory).map_err(|error| ExportError::io("stage", &directory, error))?;
+    fs::create_dir_all(&directory)
+        .map_err(|error| ExportError::io(ErrorStage::Stage, &directory, error))?;
     let path = directory.join(format!("{library}.opt"));
     let mut contents = String::new();
     for option in &core.pixels {
         contents.push_str(&format!("{} = \"{}\"\n", option.key, option.value));
     }
-    fs::write(&path, contents).map_err(|error| ExportError::io("stage", &path, error))?;
+    fs::write(&path, contents).map_err(|error| ExportError::io(ErrorStage::Stage, &path, error))?;
     Ok(())
 }
 
@@ -1950,7 +1937,8 @@ fn sandbox_entitlements(identity: &str, achievements: bool) -> String {
 
 fn compile_c(source: &Path, destination: &Path, extra: &[&str]) -> Result<(), ExportError> {
     if let Some(parent) = destination.parent() {
-        fs::create_dir_all(parent).map_err(|error| ExportError::io("configure", parent, error))?;
+        fs::create_dir_all(parent)
+            .map_err(|error| ExportError::io(ErrorStage::Configure, parent, error))?;
     }
     let current = match (fs::metadata(source), fs::metadata(destination)) {
         (Ok(source_meta), Ok(binary_meta)) => {
@@ -1962,9 +1950,12 @@ fn compile_c(source: &Path, destination: &Path, extra: &[&str]) -> Result<(), Ex
     if current {
         return Ok(());
     }
-    let parent = destination
-        .parent()
-        .ok_or_else(|| ExportError::new("configure", "compiled output needs a parent directory"))?;
+    let parent = destination.parent().ok_or_else(|| {
+        ExportError::new(
+            ErrorStage::Configure,
+            "compiled output needs a parent directory",
+        )
+    })?;
     let staging = OwnedStaging::create(parent)?;
     let temporary = staging.path().join("compiled");
     let status = Command::new("cc")
@@ -1975,18 +1966,18 @@ fn compile_c(source: &Path, destination: &Path, extra: &[&str]) -> Result<(), Ex
         .status()
         .map_err(|error| {
             ExportError::new(
-                "configure",
+                ErrorStage::Configure,
                 format!("could not compile the launcher: {error}"),
             )
         })?;
     if !status.success() {
         return Err(ExportError::new(
-            "configure",
+            ErrorStage::Configure,
             "the launcher failed to compile",
         ));
     }
     fs::rename(&temporary, destination)
-        .map_err(|error| ExportError::io("configure", destination, error))?;
+        .map_err(|error| ExportError::io(ErrorStage::Configure, destination, error))?;
     Ok(())
 }
 
@@ -2013,13 +2004,13 @@ fn install_launch_library(macos: &Path, retroarch: &Path) -> Result<(), ExportEr
         .status()
         .map_err(|error| {
             ExportError::new(
-                "configure",
+                ErrorStage::Configure,
                 format!("could not attach the launcher: {error}"),
             )
         })?;
     if !status.success() {
         return Err(ExportError::new(
-            "configure",
+            ErrorStage::Configure,
             "the runtime has no room for the launcher",
         ));
     }
@@ -2034,7 +2025,7 @@ fn write_launch_plan(
 ) -> Result<(), ExportError> {
     if identity.contains(['\n', '\t', '/']) {
         return Err(ExportError::new(
-            "configure",
+            ErrorStage::Configure,
             "the game identity cannot be written into the launch plan",
         ));
     }
@@ -2044,26 +2035,26 @@ fn write_launch_plan(
         || content.split('/').any(|part| part == "..")
     {
         return Err(ExportError::new(
-            "configure",
+            ErrorStage::Configure,
             "the game's content path cannot be launched",
         ));
     }
     if request.title.contains(['\n', '\t']) {
         return Err(ExportError::new(
-            "configure",
+            ErrorStage::Configure,
             "the game title cannot be written into the launch plan",
         ));
     }
     let shader_initial = if request.show_menu {
         crate::shaders::launch_preset(&request.shaders)
-            .map_err(|message| ExportError::new("configure", message))?
+            .map_err(|message| ExportError::new(ErrorStage::Configure, message))?
             .unwrap_or_default()
     } else {
         String::new()
     };
     if shader_initial.contains(['\n', '\t']) {
         return Err(ExportError::new(
-            "configure",
+            ErrorStage::Configure,
             "the starting shader cannot be written into the launch plan",
         ));
     }
@@ -2103,7 +2094,7 @@ fn write_launch_plan(
         shader = shader_initial,
         data_dir = game_data_template(identity),
     );
-    fs::write(path, plan).map_err(|error| ExportError::io("configure", path, error))
+    fs::write(path, plan).map_err(|error| ExportError::io(ErrorStage::Configure, path, error))
 }
 
 fn write_plist(
@@ -2139,7 +2130,7 @@ fn write_plist(
         xml_escape(title),
         icon
     );
-    fs::write(path, plist).map_err(|error| ExportError::io("configure", path, error))
+    fs::write(path, plist).map_err(|error| ExportError::io(ErrorStage::Configure, path, error))
 }
 
 fn bundle_dependencies(
@@ -2171,7 +2162,7 @@ fn bundle_dependencies(
             }
             let Some(source) = resolve_dependency_source(&dependency, &origin, search_dirs) else {
                 return Err(ExportError::new(
-                    "dependencies",
+                    ErrorStage::Dependencies,
                     format!(
                         "could not resolve native dependency {dependency} required by {}",
                         origin.display()
@@ -2180,17 +2171,17 @@ fn bundle_dependencies(
             };
             if !source.is_file() {
                 return Err(ExportError::new(
-                    "dependencies",
+                    ErrorStage::Dependencies,
                     format!("missing native dependency {dependency}"),
                 ));
             }
             let name = source.file_name().unwrap().to_string_lossy().into_owned();
             let canonical = fs::canonicalize(&source)
-                .map_err(|error| ExportError::io("dependencies", &source, error))?;
+                .map_err(|error| ExportError::io(ErrorStage::Dependencies, &source, error))?;
             if let Some(previous) = copied.get(&name) {
                 if fs::canonicalize(previous).ok().as_ref() != Some(&canonical) {
                     return Err(ExportError::new(
-                        "dependencies",
+                        ErrorStage::Dependencies,
                         format!("dependency filename collision: {name}"),
                     ));
                 }
@@ -2236,7 +2227,10 @@ fn relocate_dependencies(
                 continue;
             }
             let name = Path::new(&dependency).file_name().ok_or_else(|| {
-                ExportError::new("dependencies", format!("invalid dependency: {dependency}"))
+                ExportError::new(
+                    ErrorStage::Dependencies,
+                    format!("invalid dependency: {dependency}"),
+                )
             })?;
             let replacement = format!("{framework_prefix}/{}", name.to_string_lossy());
             let mut command = Command::new("/usr/bin/install_name_tool");
@@ -2244,9 +2238,9 @@ fn relocate_dependencies(
                 .args(["-change", &dependency, &replacement])
                 .arg(object);
             if let Some(cancelled) = cancelled {
-                run_command_cancellable("dependencies", &mut command, cancelled)?;
+                run_command_cancellable(ErrorStage::Dependencies, &mut command, cancelled)?;
             } else {
-                run_command("dependencies", &mut command)?;
+                run_command(ErrorStage::Dependencies, &mut command)?;
             }
         }
         if object.parent().and_then(Path::file_name) == Some(OsStr::new("Frameworks")) {
@@ -2254,9 +2248,9 @@ fn relocate_dependencies(
             let mut command = Command::new("/usr/bin/install_name_tool");
             command.args(["-id", &format!("@rpath/{name}")]).arg(object);
             if let Some(cancelled) = cancelled {
-                run_command_cancellable("dependencies", &mut command, cancelled)?;
+                run_command_cancellable(ErrorStage::Dependencies, &mut command, cancelled)?;
             } else {
-                run_command("dependencies", &mut command)?;
+                run_command(ErrorStage::Dependencies, &mut command)?;
             }
         }
     }
@@ -2270,20 +2264,21 @@ fn relocate_dependencies(
 pub fn freeze_macos_executable(source: &Path, destination: &Path) -> Result<u64, ExportError> {
     if !cfg!(target_os = "macos") {
         return Err(ExportError::new(
-            "freeze",
+            ErrorStage::Freeze,
             "macOS helper freezing requires a macOS host",
         ));
     }
     refuse_existing(destination)?;
     let parent = destination
         .parent()
-        .ok_or_else(|| ExportError::new("freeze", "helper destination has no parent"))?;
-    fs::create_dir_all(parent).map_err(|error| ExportError::io("freeze", parent, error))?;
+        .ok_or_else(|| ExportError::new(ErrorStage::Freeze, "helper destination has no parent"))?;
+    fs::create_dir_all(parent)
+        .map_err(|error| ExportError::io(ErrorStage::Freeze, parent, error))?;
     copy_file(source, destination)?;
     make_executable(destination)?;
     let frameworks = parent.join("Frameworks");
     fs::create_dir_all(&frameworks)
-        .map_err(|error| ExportError::io("freeze", &frameworks, error))?;
+        .map_err(|error| ExportError::io(ErrorStage::Freeze, &frameworks, error))?;
     let mut objects = vec![destination.to_path_buf()];
     let source_directory = source
         .parent()
@@ -2294,7 +2289,7 @@ pub fn freeze_macos_executable(source: &Path, destination: &Path) -> Result<u64,
     relocate_dependencies(&objects, "@executable_path/Frameworks", None)?;
     for object in objects.iter().rev() {
         run_command(
-            "freeze",
+            ErrorStage::Freeze,
             Command::new("/usr/bin/codesign")
                 .args(["--force", "--sign", "-"])
                 .arg(object),
@@ -2328,10 +2323,17 @@ fn macho_dependencies(path: &Path) -> Result<Vec<String>, ExportError> {
         .arg(path)
         .output()
         .map_err(|error| {
-            ExportError::new("dependencies", format!("could not run otool: {error}"))
+            ExportError::new(
+                ErrorStage::Dependencies,
+                format!("could not run otool: {error}"),
+            )
         })?;
     if !output.status.success() {
-        return Err(ExportError::command("dependencies", "otool", &output));
+        return Err(ExportError::command(
+            ErrorStage::Dependencies,
+            "otool",
+            &output,
+        ));
     }
     Ok(String::from_utf8_lossy(&output.stdout)
         .lines()
@@ -2345,7 +2347,7 @@ fn is_system_dependency(path: &str) -> bool {
     path.starts_with("/System/Library/") || path.starts_with("/usr/lib/")
 }
 
-fn run_command(stage: &str, command: &mut Command) -> Result<(), ExportError> {
+fn run_command(stage: ErrorStage, command: &mut Command) -> Result<(), ExportError> {
     let program = command.get_program().to_string_lossy().into_owned();
     let output = command
         .output()
@@ -2358,7 +2360,7 @@ fn run_command(stage: &str, command: &mut Command) -> Result<(), ExportError> {
 }
 
 fn run_command_cancellable(
-    stage: &str,
+    stage: ErrorStage,
     command: &mut Command,
     cancelled: &AtomicBool,
 ) -> Result<(), ExportError> {
@@ -2373,7 +2375,7 @@ fn run_command_cancellable(
             let _ = child.kill();
             let _ = child.wait();
             return Err(ExportError::new(
-                "cancelled",
+                ErrorStage::Cancelled,
                 format!("export cancelled while running {program}"),
             ));
         }
@@ -2404,20 +2406,21 @@ fn run_command_cancellable(
 }
 
 fn copy_file(source: &Path, destination: &Path) -> Result<(), ExportError> {
-    let source_metadata =
-        fs::symlink_metadata(source).map_err(|error| ExportError::io("stage", source, error))?;
+    let source_metadata = fs::symlink_metadata(source)
+        .map_err(|error| ExportError::io(ErrorStage::Stage, source, error))?;
     if source_metadata.file_type().is_symlink() || !source_metadata.is_file() {
         return Err(ExportError::new(
-            "stage",
+            ErrorStage::Stage,
             format!("refusing to stage non-regular file: {}", source.display()),
         ));
     }
     if let Some(parent) = destination.parent() {
-        fs::create_dir_all(parent).map_err(|error| ExportError::io("stage", parent, error))?;
+        fs::create_dir_all(parent)
+            .map_err(|error| ExportError::io(ErrorStage::Stage, parent, error))?;
     }
     fs::copy(source, destination).map_err(|error| {
         ExportError::new(
-            "stage",
+            ErrorStage::Stage,
             format!("{} -> {}: {error}", source.display(), destination.display()),
         )
     })?;
@@ -2425,11 +2428,11 @@ fn copy_file(source: &Path, destination: &Path) -> Result<(), ExportError> {
 }
 
 fn copy_optional_tree(source: &Path, destination: &Path) -> Result<(), ExportError> {
-    let source_metadata =
-        fs::symlink_metadata(source).map_err(|error| ExportError::io("stage", source, error))?;
+    let source_metadata = fs::symlink_metadata(source)
+        .map_err(|error| ExportError::io(ErrorStage::Stage, source, error))?;
     if source_metadata.file_type().is_symlink() {
         return Err(ExportError::new(
-            "stage",
+            ErrorStage::Stage,
             format!(
                 "refusing to stage symlinked directory: {}",
                 source.display()
@@ -2440,16 +2443,18 @@ fn copy_optional_tree(source: &Path, destination: &Path) -> Result<(), ExportErr
         return Ok(());
     }
     fs::create_dir_all(destination)
-        .map_err(|error| ExportError::io("stage", destination, error))?;
-    for entry in fs::read_dir(source).map_err(|error| ExportError::io("stage", source, error))? {
-        let entry = entry.map_err(|error| ExportError::io("stage", source, error))?;
+        .map_err(|error| ExportError::io(ErrorStage::Stage, destination, error))?;
+    for entry in
+        fs::read_dir(source).map_err(|error| ExportError::io(ErrorStage::Stage, source, error))?
+    {
+        let entry = entry.map_err(|error| ExportError::io(ErrorStage::Stage, source, error))?;
         let target = destination.join(entry.file_name());
         let file_type = entry
             .file_type()
-            .map_err(|error| ExportError::io("stage", &entry.path(), error))?;
+            .map_err(|error| ExportError::io(ErrorStage::Stage, &entry.path(), error))?;
         if file_type.is_symlink() {
             return Err(ExportError::new(
-                "stage",
+                ErrorStage::Stage,
                 format!("refusing to stage symlink: {}", entry.path().display()),
             ));
         }
@@ -2467,11 +2472,11 @@ fn make_executable(path: &Path) -> Result<(), ExportError> {
     {
         use std::os::unix::fs::PermissionsExt;
         let mut permissions = fs::metadata(path)
-            .map_err(|error| ExportError::io("stage", path, error))?
+            .map_err(|error| ExportError::io(ErrorStage::Stage, path, error))?
             .permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(path, permissions)
-            .map_err(|error| ExportError::io("stage", path, error))?;
+            .map_err(|error| ExportError::io(ErrorStage::Stage, path, error))?;
     }
     Ok(())
 }
@@ -2480,14 +2485,16 @@ fn tree_size(path: &Path) -> Result<u64, ExportError> {
     if !path.exists() {
         return Ok(0);
     }
-    let metadata =
-        fs::symlink_metadata(path).map_err(|error| ExportError::io("measure", path, error))?;
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|error| ExportError::io(ErrorStage::Measure, path, error))?;
     if metadata.is_file() {
         return Ok(metadata.len());
     }
     let mut total = 0;
-    for entry in fs::read_dir(path).map_err(|error| ExportError::io("measure", path, error))? {
-        let entry = entry.map_err(|error| ExportError::io("measure", path, error))?;
+    for entry in
+        fs::read_dir(path).map_err(|error| ExportError::io(ErrorStage::Measure, path, error))?
+    {
+        let entry = entry.map_err(|error| ExportError::io(ErrorStage::Measure, path, error))?;
         total += tree_size(&entry.path())?;
     }
     Ok(total)
@@ -2521,7 +2528,7 @@ fn xml_escape(value: &str) -> String {
 fn refuse_existing(path: &Path) -> Result<(), ExportError> {
     if path.exists() {
         Err(ExportError::new(
-            "validate",
+            ErrorStage::Validate,
             format!("refusing to overwrite existing export: {}", path.display()),
         ))
     } else {
@@ -2531,7 +2538,7 @@ fn refuse_existing(path: &Path) -> Result<(), ExportError> {
 
 fn check_cancelled(cancelled: &AtomicBool) -> Result<(), ExportError> {
     if cancelled.load(Ordering::Relaxed) {
-        Err(ExportError::new("cancelled", "export cancelled"))
+        Err(ExportError::new(ErrorStage::Cancelled, "export cancelled"))
     } else {
         Ok(())
     }
@@ -2578,6 +2585,7 @@ mod tests {
             shaders: crate::shaders::ShaderSelection::default(),
             include_achievements: false,
             output_dir: PathBuf::from("output"),
+            replace: false,
             target: ExportTarget::Macos,
             runtime_kit: PathBuf::from("runtime"),
             core: None,

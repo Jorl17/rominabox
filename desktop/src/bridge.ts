@@ -58,7 +58,7 @@ export type ExportProgress = {
 };
 /** A required core is not cached, and we could not download it. */
 export class CoreDownloadFailed extends Error {}
-/** The stage of that failure in the exporter (`packaging::CORES_STAGE`). */
+/** The stage of that failure in the exporter (`ErrorStage::Cores`). */
 const CORES_STAGE = "cores";
 export type ExportResult = {
   appPath: string;
@@ -208,18 +208,22 @@ export async function exportGame(
     throw exportFailure(reason);
   }
 }
-/** The `{stage, message}` from the exporter, as the text on the page. */
+/**
+ * The `{stage, sentence}` from the exporter (`export_error::AuthorError`). We
+ * write the sentence in the exporter, and here we only pick the failures that
+ * have separate controls in the builder.
+ */
 export function exportFailure(reason: unknown): unknown {
   if (
     typeof reason !== "object" ||
     reason === null ||
     !("stage" in reason) ||
-    !("message" in reason)
+    !("sentence" in reason)
   )
     return reason;
-  const { stage, message } = reason as { stage: string; message: string };
-  if (stage === CORES_STAGE) return new CoreDownloadFailed(message);
-  return new Error(`${stage}: ${message}`);
+  const { stage, sentence } = reason as { stage: string; sentence: string };
+  if (stage === CORES_STAGE) return new CoreDownloadFailed(sentence);
+  return new Error(sentence);
 }
 export function cancelExport(): Promise<void> {
   return invoke("cancel_export");
