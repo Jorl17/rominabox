@@ -283,6 +283,85 @@
       }
     },
     {
+      "name": "a press on the unsynced dialog's text keeps the arrows in it",
+      "setup": {
+        "achievements": "active",
+        "rows": 3,
+        "pending": 1
+      },
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-signout",
+        "key:right",
+        "press:achievements-confirmation",
+        "key:right",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievement-1",
+          "achievements-keep-session",
+          "achievements-end-session",
+          "achievements-keep-session",
+          "achievements-end-session",
+          "achievements-keep-session"
+        ]
+      },
+      "red": {
+        "*": {
+          "bug": "dialog press",
+          "reason": "the press focuses the dialog's text, and the screen's start is looked for in the panel the dialog shuts off, so focus falls to the document and the arrows do nothing",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievement-1",
+              "achievements-keep-session",
+              "achievements-end-session",
+              null,
+              null,
+              null
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a press on the startup dialog's status keeps its button",
+      "setup": {
+        "achievements": "startup"
+      },
+      "steps": [
+        "wait-ms:0",
+        "press:achievements-startup-status",
+        "key:left",
+        "key:ok"
+      ],
+      "focused": {
+        "*": [
+          "achievements-skip-startup",
+          "achievements-skip-startup",
+          "achievements-skip-startup",
+          "resume"
+        ]
+      },
+      "red": {
+        "*": {
+          "bug": "dialog press",
+          "reason": "the press focuses the status text, and focus falls to the document",
+          "now": {
+            "focused": [
+              "achievements-skip-startup",
+              null,
+              null,
+              "resume"
+            ]
+          }
+        }
+      }
+    },
+    {
       "name": "the startup dialog",
       "setup": {
         "achievements": "startup"
