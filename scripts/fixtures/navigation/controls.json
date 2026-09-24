@@ -199,12 +199,43 @@
         "*": [
           "volume-level",
           "control-up",
+          "control-up",
+          "control-up"
+        ]
+      },
+      "capturing": {
+        "*": [
+          null,
+          null,
           [
             "control-up",
             "controls-cancel"
           ],
-          "control-up"
+          null
         ]
+      },
+      "red": {
+        "*": {
+          "bug": "capture paints focus",
+          "reason": "Controls::refresh paints CANCEL focused while a binding is captured, a second writer of the highlight",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              [
+                "control-up",
+                "controls-cancel"
+              ],
+              "control-up"
+            ],
+            "capturing": [
+              null,
+              null,
+              "control-up",
+              null
+            ]
+          }
+        }
       },
       "sounds": {
         "*": [
