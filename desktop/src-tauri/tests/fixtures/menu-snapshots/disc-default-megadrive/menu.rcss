@@ -54,13 +54,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .slot:active .slot-state { color: #081433; }
 
 #actions { position: absolute; right: 24dp; top: 46dp; width: 176dp; height: 280dp; }
-#actions button { position: absolute; left: 0; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; }
-#resume { top: 0; }
-#save { top: 44dp; }
-#load { top: 88dp; }
-#disc { top: 132dp; }
-#actions #controls, #actions #options { top: 176dp; }
-#quit { top: 220dp; }
+/* One column with the buttons of the game, 44dp apart, so in a game with
+ * no Options entries the column closes up and leaves no gap. */
+#actions button { display: block; position: relative; margin-bottom: 6dp; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; }
 
 #status { position: absolute; left: 24dp; top: 544dp; width: 700dp; text-align: left; font-size: 13dp; color: #b4e6ff; }
 #footer { position: absolute; left: 24dp; bottom: 8dp; width: 912dp; height: 20dp; font-size: 13dp; color: #75b2e4; }
@@ -114,7 +110,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 
 .menu-action { color: #ffffff; background-color: #061a48; border-color: #476eab; }
 .menu-action:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
-.menu-action.focused { background-color: #061a48; color: #ffffff; border-left-width: 4dp; border-left-color: #fff13d; }
+.menu-action.focused, .menu-action.capturing { background-color: #061a48; color: #ffffff; border-left-width: 4dp; border-left-color: #fff13d; }
 .menu-action:active { background-color: #193e88; color: #fff13d; border-color: #ffffff; }
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 

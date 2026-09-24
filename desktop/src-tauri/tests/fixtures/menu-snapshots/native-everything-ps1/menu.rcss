@@ -68,11 +68,12 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .control-hit { position: absolute; width: 42dp; height: 42dp; background-color: transparent; border: 2dp transparent; border-radius: 21dp; }
 .control-hit:hover { border-color: #ffffff; z-index: 2; }
 .control-hit.focused { border-color: #fff13d; z-index: 2; }
-.control-callout { position: absolute; width: 196dp; height: 54dp; padding: 0; border: 2dp #75b2e4; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
+.control-callout { position: absolute; width: 196dp; height: 50dp; padding: 0; border: 2dp #75b2e4; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
 .control-callout:hover { border-color: #ffffff; z-index: 2; }
-/* Later controls are later siblings, so the box of a control covers the
- * bottom edge of the one before it. The focused control and the one under the
- * pointer are above their neighbours. The open list is at 60. */
+/* We draw a callout 54dp high with its border, the least distance between
+ * two callouts in any console layout, so neighbours touch and the arrow keys
+ * reach each in turn. The focused callout and the one under the pointer are
+ * above their neighbours. The open list is at 60. */
 .control-callout.focused { border-color: #fff13d; z-index: 2; }
 
 /* When closed, the picker is on the action row between RESET DEFAULTS and
@@ -137,7 +138,7 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .slot:active .slot-label { color: #fff13d; }
 
 .menu-action { color: #ffffff; background-color: #061a48; border-color: #75b2e4; }
-.menu-action:hover, .menu-action.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
+.menu-action:hover, .menu-action.focused, .menu-action.capturing { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
 .menu-action:active { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 
