@@ -5,7 +5,7 @@
 //! we route a leader line, change this file and nowhere else.
 
 use crate::controls::ControlDefinition;
-use crate::themes::SceneMetrics;
+use crate::menu::SceneMetrics;
 use serde::Serialize;
 
 /// A rectangle on the scene, in the scene's own coordinates.
@@ -45,6 +45,8 @@ pub struct Placement {
 pub struct GroupPlacement {
     pub name: String,
     pub strip: Rect,
+    /// The member that has the group's position on the pad, if one does.
+    pub anchor: Option<String>,
     /// Present when one member of the group has the anchor on the pad.
     pub marker: Option<Rect>,
     pub leader: Vec<Segment>,
@@ -157,6 +159,7 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
             let anchor = controls
                 .iter()
                 .find(|c| c.group.as_deref() == Some(*name) && (c.x != 0 || c.y != 0));
+            let anchor_id = anchor.map(|anchor| anchor.id.clone());
             let (marker, leader) = match anchor {
                 Some(anchor) => (
                     Some(Rect {
@@ -175,6 +178,7 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
             GroupPlacement {
                 name: (*name).to_string(),
                 strip,
+                anchor: anchor_id,
                 marker,
                 leader,
             }

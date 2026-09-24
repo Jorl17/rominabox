@@ -1,7 +1,7 @@
 <img id="controller-image" src="controller-ps1.png"/>
 <div class="control-leader vertical" style="left:405dp;top:226dp;height:80dp;"/>
 <div class="control-leader horizontal" style="left:354dp;top:306dp;width:51dp;"/>
-<button id="control-hit-l3" class="control-hit" style="left:383dp;top:204dp;"/>
+<button id="control-hit-l3" class="control-hit" style="left:384dp;top:205dp;"/>
 
 <button id="control-group-l_stick" class="control-group" style="left:236dp;top:306dp;">
 <div class="control-label">L STICK</div>
@@ -10,7 +10,7 @@
 
 <div class="control-leader vertical" style="left:547dp;top:226dp;height:80dp;"/>
 <div class="control-leader horizontal" style="left:547dp;top:306dp;width:59dp;"/>
-<button id="control-hit-r3" class="control-hit" style="left:525dp;top:204dp;"/>
+<button id="control-hit-r3" class="control-hit" style="left:526dp;top:205dp;"/>
 
 <button id="control-group-r_stick" class="control-group" style="left:488dp;top:306dp;">
 <div class="control-label">R STICK</div>

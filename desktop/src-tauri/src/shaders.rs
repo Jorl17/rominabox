@@ -94,6 +94,8 @@ pub struct StagedShaders {
     pub config: String,
     /// The preset to enable at launch, relative to the menu assets, if any.
     pub initial_relative: Option<String>,
+    /// The presets, sources and row pictures, relative to the menu assets.
+    pub files: Vec<(PathBuf, crate::menu::Content)>,
 }
 
 fn catalog_file() -> Result<CatalogFile, String> {
@@ -529,57 +531,33 @@ fn icon_png(id: &str) -> Result<Vec<u8>, String> {
     Ok(bytes.into_inner())
 }
 
-/// The shader screen as declared in the design, read with the same function
-/// as every other screen of a design.
-fn shader_screen(design: &Path) -> crate::themes::Screen {
-    crate::themes::declared_screens(design)
-        .ok()
-        .and_then(|screens| screens.into_iter().find(|screen| screen.id == "shaders"))
-        .unwrap_or_else(|| crate::themes::Screen {
-            id: "shaders".into(),
-            panel: "shaders-panel".into(),
-            heading: "SHADERS".into(),
-            footer: "ESC  BACK".into(),
-            button: "shaders".into(),
-            label: None,
-            back_label: None,
-            list_page_size: None,
-            place: crate::themes::ScreenPlace::Plain,
-            // Inside Options, not a separate button on the pause row. One
-            // Options screen contains controls, shaders and sound, and it is
-            // the only way to reach this screen with a pad. We move through the
-            // pause row as a fixed range of five actions, so a sixth button
-            // generated there could be clicked but never focused. We move
-            // through the Options entries as whatever the panel contains.
-            option_label: Some("SHADERS".into()),
-            option_default: false,
-            images: None,
-            mark: None,
-            toggle: None,
-        })
-}
-
-/// Copy presets into the menu assets and describe the screen for them.
+/// The presets bundled in a game, the files they require next to the menu,
+/// and the screen for them.
 ///
 /// We return the rows and do not write them, because all lists use one marker
 /// in the menu, so we fill it with all of them in one place.
 pub fn stage(
-    design: &Path,
-    menu_assets: &Path,
+    manifest: &crate::menu::Manifest,
     selection: &ShaderSelection,
 ) -> Result<StagedShaders, String> {
+    use crate::menu::Content;
     let resolved = resolve(selection)?;
     if resolved.is_empty() {
         return Ok(StagedShaders {
             list: None,
             config: String::new(),
             initial_relative: None,
+            files: Vec::new(),
         });
     }
 
-    let screen = shader_screen(design);
+    let screen = manifest
+        .screen(crate::menu::ScreenRole::Shaders)
+        .cloned()
+        .ok_or_else(|| "the design declares no shaders screen".to_string())?;
     let initial = starting(selection, &resolved)?.id.clone();
     let mut items = Vec::new();
+    let mut files: Vec<(PathBuf, Content)> = Vec::new();
     let mut config = format!("shader_ids = \"{}\"\n", {
         resolved
             .iter()
@@ -591,48 +569,36 @@ pub fn stage(
     config.push_str(&format!("shader_initial = \"{initial}\"\n"));
     let catalog = catalog_file()?;
     for item in &resolved {
-        let directory = menu_assets.join("shaders").join(&item.id);
-        if item.id != UNFILTERED_ID {
-            fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
-        }
+        let directory = Path::new("shaders").join(&item.id);
         if let Some(source_name) = &item.generated {
             if item.files.is_empty() {
                 let Some(preset) = catalog.presets.iter().find(|preset| preset.id == item.id)
                 else {
                     return Err(format!("shader '{}' has no source", item.id));
                 };
-                fs::write(
+                files.push((
                     directory.join(format!("{}.glsl", item.id)),
-                    glsl_source(&preset.fragment),
-                )
-                .map_err(|error| error.to_string())?;
-                fs::write(
+                    Content::Text(glsl_source(&preset.fragment)),
+                ));
+                files.push((
                     directory.join(format!("{}.glslp", item.id)),
-                    preset_text(&format!("{}.glsl", item.id)),
-                )
-                .map_err(|error| error.to_string())?;
+                    Content::Text(preset_text(&format!("{}.glsl", item.id))),
+                ));
             } else {
                 for (source, name) in &item.files {
-                    fs::copy(source, directory.join(name)).map_err(|error| {
-                        format!("could not bundle shader file {}: {error}", source.display())
-                    })?;
+                    files.push((directory.join(name), Content::Copy(source.clone())));
                 }
-                fs::write(
+                files.push((
                     directory.join(format!("{}.glslp", item.id)),
-                    preset_text(source_name),
-                )
-                .map_err(|error| error.to_string())?;
+                    Content::Text(preset_text(source_name)),
+                ));
             }
         } else {
             for (source, name) in &item.files {
-                fs::copy(source, directory.join(name)).map_err(|error| {
-                    format!("could not bundle shader file {}: {error}", source.display())
-                })?;
+                files.push((directory.join(name), Content::Copy(source.clone())));
             }
         }
-        fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
-        fs::write(directory.join("icon.png"), icon_png(&item.id)?)
-            .map_err(|error| error.to_string())?;
+        files.push((directory.join("icon.png"), Content::Bytes(icon_png(&item.id)?)));
         let selected = item.id == initial;
         items.push(crate::lists::ListItem {
             id: item.id.clone(),
@@ -650,7 +616,6 @@ pub fn stage(
             preset = item.relative_preset,
         ));
     }
-    fs::write(menu_assets.join("shaders.cfg"), &config).map_err(|error| error.to_string())?;
     let initial_relative = resolved
         .iter()
         .find(|item| item.id == initial)
@@ -668,6 +633,7 @@ pub fn stage(
         }),
         config,
         initial_relative,
+        files,
     })
 }
 
@@ -736,29 +702,22 @@ pub fn unpack_selection(mut selection: ShaderSelection, root: &Path) -> ShaderSe
 mod tests {
     use super::*;
 
-    fn staged_menu(name: &str) -> (PathBuf, rominabox_scratch::Scratch) {
-        let root = rominabox_scratch::Scratch::dir(&format!("rominabox-{name}"));
-        let design = crate::repo::at("integrations/designs/native");
-        fs::copy(design.join("menu.rml"), root.join("menu.rml")).unwrap();
-        // As in an export. Options must be here, because the shader screen is
-        // an entry inside it, and BACK in an entry returns to the screen that
-        // contains the entry.
-        fs::write(
-            root.join("design.cfg"),
-            "screens = \"pause options controls\"\n\
-             screen_panel_pause = \"pause-panel\"\nscreen_button_pause = \"options-back\"\n\
-             screen_panel_options = \"options-panel\"\nscreen_button_options = \"options\"\n",
-        )
-        .unwrap();
-        (design, root)
-    }
-
-    fn pause_and_controls() -> Vec<crate::themes::Screen> {
-        crate::themes::declared_screens(&crate::repo::at("integrations/designs/native"))
-            .unwrap()
-            .into_iter()
-            .filter(|screen| screen.option_label.is_none())
-            .collect()
+    /// The menu that we compose in an export with this shader selection.
+    fn composed(selection: ShaderSelection) -> crate::menu::Composition {
+        let entries = if selection.bundled.is_empty() && selection.custom.is_empty() {
+            vec!["controls".to_string()]
+        } else {
+            vec!["controls".to_string(), "shaders".to_string()]
+        };
+        crate::menu::compose_menu(&crate::menu::MenuRequest {
+            shaders: selection,
+            menu_entries: Some(entries),
+            ..crate::menu::MenuRequest::new(
+                crate::repo::at("integrations/designs/native"),
+                crate::repo::at("desktop/assets/controllers"),
+            )
+        })
+        .unwrap()
     }
 
     #[test]
@@ -789,47 +748,45 @@ mod tests {
 
     #[test]
     fn bundling_a_preset_uses_the_row_and_writes_glsl() {
-        let (design, root) = staged_menu("shader-stage");
-        let staged = stage(
-            &design,
-            &root,
-            &ShaderSelection {
-                bundled: vec!["scanlines".into(), "phosphor".into()],
-                initial: Some("phosphor".into()),
-                custom: Vec::new(),
-            },
-        )
-        .unwrap();
-        let lists: Vec<crate::lists::List> = staged.list.clone().into_iter().collect();
-        crate::lists::install(&design, &root, &pause_and_controls(), &lists).unwrap();
-        let document = fs::read_to_string(root.join("menu.rml")).unwrap();
-        assert_eq!(document.matches("class=\"list-row ").count(), 3);
+        let composed = composed(ShaderSelection {
+            bundled: vec!["scanlines".into(), "phosphor".into()],
+            initial: Some("phosphor".into()),
+            custom: Vec::new(),
+        });
+        let root = rominabox_scratch::Scratch::dir("rominabox-shader-stage");
+        composed.write(&root).unwrap();
+        let document = composed.text("menu.rml").unwrap();
+        let list_at = document.find("id=\"shaders-list\"").expect("the shader list");
+        let list = &document[list_at..document[list_at..].find("id=\"shaders-back\"").unwrap() + list_at];
+        assert_eq!(list.matches("class=\"list-row ").count(), 3, "{list}");
         assert!(document.contains("id=\"phosphor\""));
         // No button on the pause row. The shader screen is an entry inside
-        // Options, which contains controls, shaders and sound. That is also
-        // the only way to reach it with a pad, because we move through the
-        // pause row as a fixed range of five actions, so a sixth button there
-        // could be clicked but never focused. We generate the button of the
-        // entry with Options.
+        // Options, which contains controls, shaders and sound.
         assert!(
             !document.contains("class=\"menu-action screen-link\" id=\"shaders\""),
             "the shader screen must not add a button to the pause row"
         );
-        assert_eq!(
-            staged.list.as_ref().unwrap().screen.option_label.as_deref(),
-            Some("SHADERS")
-        );
+        assert!(document.contains(">SHADERS<"), "the Options entry");
         assert!(!document.contains(crate::lists::LINKS_SLOT));
-        assert!(staged
-            .config
-            .contains("shader_preset_scanlines = \"shaders/scanlines/scanlines.glslp\""));
-        assert!(staged.initial_relative.as_deref() == Some("shaders/phosphor/phosphor.glslp"));
+        let config = composed.text("shaders.cfg").unwrap();
+        assert!(config.contains("shader_preset_scanlines = \"shaders/scanlines/scanlines.glslp\""));
+        assert_eq!(
+            launch_preset(&ShaderSelection {
+                bundled: vec!["scanlines".into(), "phosphor".into()],
+                initial: Some("phosphor".into()),
+                custom: Vec::new(),
+            })
+            .unwrap()
+            .as_deref(),
+            Some("shaders/phosphor/phosphor.glslp")
+        );
         let preset = fs::read_to_string(root.join("shaders/scanlines/scanlines.glslp")).unwrap();
         assert!(preset.contains("shader0 = scanlines.glsl"));
         let source = fs::read_to_string(root.join("shaders/phosphor/phosphor.glsl")).unwrap();
         assert!(source.contains("#if defined(VERTEX)"));
         assert!(source.contains("#elif defined(FRAGMENT)"));
-        let declarations = fs::read_to_string(root.join("design.cfg")).unwrap();
+        assert!(root.join("shaders/phosphor/icon.png").is_file());
+        let declarations = composed.text("design.cfg").unwrap();
         assert!(declarations.contains("screens = \"pause options controls shaders\""));
         // BACK on the shader screen returns to the screen that contains it,
         // which is Options, not the pause row.
@@ -838,20 +795,19 @@ mod tests {
             "{declarations}"
         );
         assert!(declarations.contains("screen_button_pause = \"options-back\""));
-        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]
     fn an_ordinary_menu_gains_no_shader_screen() {
-        let (design, root) = staged_menu("shader-plain");
-        let staged = stage(&design, &root, &ShaderSelection::default()).unwrap();
-        assert!(staged.list.is_none());
-        crate::lists::install(&design, &root, &pause_and_controls(), &[]).unwrap();
-        let document = fs::read_to_string(root.join("menu.rml")).unwrap();
+        let composed = composed(ShaderSelection::default());
+        let document = composed.text("menu.rml").unwrap();
         assert!(!document.contains("id=\"shaders\""));
-        assert!(!document.contains("list-row"));
-        assert!(!root.join("shaders.cfg").exists());
+        assert!(!document.contains("id=\"shaders-panel\""));
+        assert!(composed.text("shaders.cfg").is_none());
+        assert!(!composed
+            .names()
+            .iter()
+            .any(|name| name.starts_with("shaders")));
         assert!(!document.contains("video_shader"));
-        let _ = fs::remove_dir_all(&root);
     }
 }

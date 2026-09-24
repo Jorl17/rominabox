@@ -1,7 +1,6 @@
-use rominabox_desktop::{
-    controls::{self, Controls},
-    themes,
-};
+mod support;
+
+use rominabox_desktop::controls::{self, Controls};
 use std::{fs, path::PathBuf};
 
 fn workspace() -> rominabox_scratch::Scratch {
@@ -60,7 +59,7 @@ fn six_button_authoring_configures_the_emulated_device_and_labels() {
 fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
     let root = workspace();
     let options = Controls::default();
-    themes::prepare_controls_assets(&assets(), &assets(), &root, "atari2600", &options, None)
+    support::stage_controls(&assets(), &assets(), &root, "atari2600", &options, None)
         .unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(!markup.contains("id=\"controller-image\""));
@@ -97,9 +96,13 @@ fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
         .collect();
     assert!(
-        written
-            .iter()
-            .all(|name| name.ends_with(".rml") || name == "design.cfg"),
+        written.iter().all(|name| {
+            name.ends_with(".rml")
+                || name.ends_with(".cfg")
+                || name.ends_with(".rcss")
+                || name.starts_with("Silkscreen")
+                || name == "parts"
+        }),
         "an asset-free console staged something that is not the menu: {written:?}"
     );
     controls::write_defaults_config("atari2600", &options, &root.join("controls.cfg")).unwrap();
@@ -113,7 +116,7 @@ fn custom_labels_are_escaped_without_changing_control_identity() {
     let options: Controls =
         serde_json::from_value(serde_json::json!({"bindings":{"a":{"label":"Jump <go> & fly"}}}))
             .unwrap();
-    themes::prepare_controls_assets(
+    support::stage_controls(
         &illustrated_assets(),
         &assets(),
         &root,
@@ -141,7 +144,7 @@ fn default_callout_labels_occur_once_and_custom_labels_keep_console_identity() {
         ("nes", illustrated_assets(), "A"),
     ] {
         let root = workspace();
-        themes::prepare_controls_assets(&source, &assets(), &root, system, &options, None).unwrap();
+        support::stage_controls(&source, &assets(), &root, system, &options, None).unwrap();
         let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
         for label in ["Up", "Down", "Left", "Start"] {
             assert_eq!(
@@ -180,13 +183,29 @@ fn a_three_button_profile_rejects_six_button_only_overrides() {
 #[test]
 fn splash_only_document_has_no_pause_controls_and_can_make_its_background_transparent() {
     let root = workspace();
-    themes::prepare_splash_assets(&assets(), &root, "blue").unwrap();
+    support::stage_splash(&assets(), &root, "blue").unwrap();
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("id=\"body\""));
     assert!(markup.contains("id=\"splash-logo\""));
     assert!(!markup.contains("pause-panel"));
     assert!(!markup.contains("controller-image"));
-    assert_eq!(fs::read_dir(&root).unwrap().count(), 5);
+    let mut written: Vec<String> = fs::read_dir(&root)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    written.sort();
+    assert_eq!(
+        written,
+        [
+            "Silkscreen-OFL.txt",
+            "Silkscreen-Regular.ttf",
+            "design.cfg",
+            "menu.rcss",
+            "menu.rml",
+            "parts"
+        ],
+        "the logo, its stylesheet and font, and nothing of the menu"
+    );
 }
 
 /// We give a game with a logo and no menu a stylesheet that RmlUi can read.
@@ -197,7 +216,7 @@ fn splash_only_document_has_no_pause_controls_and_can_make_its_background_transp
 #[test]
 fn a_logo_only_export_gets_the_palette_in_its_stylesheet() {
     let root = workspace();
-    themes::prepare_splash_assets(&assets(), &root, "blue").unwrap();
+    support::stage_splash(&assets(), &root, "blue").unwrap();
     let css = fs::read_to_string(root.join("menu.rcss")).unwrap();
     assert!(
         !css.contains("design("),
@@ -214,7 +233,7 @@ fn a_logo_only_export_gets_the_palette_in_its_stylesheet() {
 #[test]
 fn a_document_is_only_told_about_what_it_draws() {
     let full = workspace();
-    themes::prepare_theme_assets(&assets(), &full, "blue", None).unwrap();
+    support::stage_theme(&assets(), &full, "blue").unwrap();
     let declared = fs::read_to_string(full.join("design.cfg")).unwrap();
     assert!(
         declared.contains("overlays = \"splash notice\""),
@@ -236,7 +255,7 @@ fn a_document_is_only_told_about_what_it_draws() {
     );
 
     let logo_only = workspace();
-    themes::prepare_splash_assets(&assets(), &logo_only, "blue").unwrap();
+    support::stage_splash(&assets(), &logo_only, "blue").unwrap();
     let declared = fs::read_to_string(logo_only.join("design.cfg")).unwrap();
     assert!(declared.contains("overlays = \"splash\""), "{declared}");
     assert!(declared.contains("screens = \"\""), "{declared}");
@@ -249,8 +268,10 @@ fn a_document_is_only_told_about_what_it_draws() {
 /// for. Because of the order in which we declare them, that cannot happen.
 #[test]
 fn an_overlay_cannot_wait_for_one_that_comes_after_it() {
-    let design = workspace();
-    fs::copy(assets().join("menu.rml"), design.join("menu.rml")).unwrap();
+    let root = workspace();
+    support::copy_tree(&assets(), &root.join("native"));
+    let design = root.join("waits");
+    fs::create_dir_all(&design).unwrap();
     let mut declared: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(assets().join("design.json")).unwrap()).unwrap();
     declared["overlays"] = serde_json::json!([
@@ -262,7 +283,7 @@ fn an_overlay_cannot_wait_for_one_that_comes_after_it() {
         serde_json::to_string(&declared).unwrap(),
     )
     .unwrap();
-    let refusal = match themes::declared_overlays(&design) {
+    let refusal = match rominabox_desktop::menu::declared_overlays(&design) {
         Err(message) => message,
         Ok(_) => panic!("a wait with no end was accepted"),
     };
@@ -292,7 +313,7 @@ fn the_controller_picker_is_offered_only_when_there_is_a_choice() {
             }
         }
         fs::write(source.join("CONTROLLERS.txt"), []).unwrap();
-        rominabox_desktop::themes::prepare_controls_assets(
+        support::stage_controls(
             &source,
             &assets(),
             &destination,
@@ -371,7 +392,7 @@ fn each_offered_controller_carries_the_device_it_means() {
 fn every_bind_is_a_row_of_the_shared_list() {
     let root = workspace();
     let options = Controls::default();
-    themes::prepare_controls_assets(
+    support::stage_controls(
         &illustrated_assets(),
         &assets(),
         &root,
@@ -423,7 +444,7 @@ fn a_callout_names_every_binding_on_the_control() {
             ..Default::default()
         },
     );
-    themes::prepare_controls_assets(
+    support::stage_controls(
         &illustrated_assets(),
         &assets(),
         &root,

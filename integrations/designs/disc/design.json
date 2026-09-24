@@ -3,7 +3,6 @@
   "id": "disc",
   "name": "Disc",
   "description": "The memory-card browser of a late-90s disc console.",
-  "slots": 6,
   "documents": {
     "splash": "splash.rml",
     "style": "menu.rcss"
@@ -16,6 +15,9 @@
     }
   ],
   "metrics": {
+    "options": {
+      "entryStep": 60
+    },
     "scene": {
       "width": 960,
       "height": 380
@@ -42,6 +44,7 @@
   },
   "binds": {
     "afterMs": 1200,
+    "hoverAfterMs": 300,
     "width": 360
   },
   "overlays": [

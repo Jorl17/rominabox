@@ -470,6 +470,10 @@ fn included_achievements_export_an_account_screen_and_network_permission() {
         &request.runtime_kit.join("designs"),
     );
     copy_tree(
+        &rominabox_desktop::repo::at("integrations/parts"),
+        &request.runtime_kit.join("parts"),
+    );
+    copy_tree(
         &rominabox_desktop::repo::at("desktop/assets/controllers"),
         &request.runtime_kit.join("menu-assets"),
     );

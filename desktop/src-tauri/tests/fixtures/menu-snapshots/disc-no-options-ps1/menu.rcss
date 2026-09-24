@@ -223,18 +223,3 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #unlock-kicker { font-size: 11dp; color: #fff13d; }
 #unlock-title { font-size: 16dp; color: #ffffff; margin-top: 3dp; }
 #unlock-detail { font-size: 11dp; color: #b4e6ff; margin-top: 3dp; }
-
-/* part:slider */
-.slider { display: block; width: 100%; }
-.slider-readout { display: block; width: 100%; height: 36dp; font-family: Silkscreen; font-size: 28dp; text-align: center; }
-.slider-track { display: block; position: relative; width: 100%; height: 28dp; margin-top: 12dp; border-width: 4dp; }
-.slider-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0; }
-.slider-thumb { position: absolute; top: -8dp; width: 22dp; height: 44dp; border-width: 4dp; }
-.toggle { display: block; position: relative; width: 240dp; height: 48dp; margin-top: 28dp; font-family: Silkscreen; font-size: 18dp; line-height: 42dp; padding-left: 56dp; border-width: 3dp; }
-.toggle-knob { position: absolute; left: 8dp; top: 6dp; width: 28dp; height: 28dp; border-width: 3dp; }
-.toggle.on .toggle-knob { left: 196dp; }
-
-#resume { width: 260dp; }
-#save { left: 284dp; width: 168dp; }
-#load { left: 476dp; width: 168dp; }
-#quit { left: 668dp; width: 168dp; }

@@ -5,8 +5,20 @@
 
 use std::fs;
 
+mod support;
+
 fn scratch(name: &str) -> rominabox_scratch::Scratch {
     rominabox_scratch::Scratch::dir(name)
+}
+
+/// A design package with no parts of its own, in the place it has in a kit,
+/// beside the shared parts.
+fn bare_design(root: &std::path::Path) -> std::path::PathBuf {
+    support::copy_tree(&rominabox_desktop::repo::at("integrations/parts"), &root.join("parts"));
+    let design = root.join("designs/bare");
+    fs::create_dir_all(&design).unwrap();
+    fs::write(design.join("design.json"), "{}").unwrap();
+    design
 }
 
 #[test]
@@ -19,7 +31,7 @@ fn volume_is_built_from_the_designs_slider() {
     )
     .unwrap();
 
-    let markup = rominabox_desktop::themes::volume_control_markup(&design).unwrap();
+    let markup = rominabox_desktop::menu::volume_control_markup(&design).unwrap();
     assert!(
         markup.contains("owned-slider"),
         "a design's own slider has to be the one volume uses, got {markup}"
@@ -45,8 +57,9 @@ fn volume_is_built_from_the_designs_slider() {
 
 #[test]
 fn a_design_with_no_parts_still_gets_a_slider() {
-    let design = scratch("rominabox-volume-builtin");
-    let markup = rominabox_desktop::themes::volume_control_markup(&design).unwrap();
+    let root = scratch("rominabox-volume-builtin");
+    let design = bare_design(&root);
+    let markup = rominabox_desktop::menu::volume_control_markup(&design).unwrap();
     for class in ["slider", "slider-track", "slider-fill", "slider-thumb", "slider-readout", "volume-arrow"] {
         assert!(
             markup.contains(class),
@@ -64,7 +77,7 @@ fn a_part_that_cannot_be_found_is_refused() {
         r#"<div id="PART-ID" class="pretty"></div>"#,
     )
     .unwrap();
-    let error = rominabox_desktop::themes::volume_control_markup(&design)
+    let error = rominabox_desktop::menu::volume_control_markup(&design)
         .expect_err("a slider with none of the part's classes is not a slider");
     assert!(
         error.contains("slider"),
@@ -72,17 +85,29 @@ fn a_part_that_cannot_be_found_is_refused() {
     );
 }
 
+/// We draw a slider even for a design without a style for it, because we link
+/// the geometry of the shared part before the design's stylesheet. A design
+/// that styles the slider overrides it with ordinary rules of its own.
 #[test]
-fn the_builtin_slider_style_is_only_for_a_design_that_has_none() {
-    let bare = rominabox_desktop::themes::builtin_part_rules("body { color: #fff; }");
+fn the_slider_part_is_linked_before_the_designs_stylesheet() {
+    let root = scratch("rominabox-volume-part-sheet");
+    let composed = rominabox_desktop::menu::compose_menu(&rominabox_desktop::menu::MenuRequest::new(
+        rominabox_desktop::repo::at("integrations/designs/disc"),
+        support::artwork(),
+    ))
+    .unwrap();
+    composed.write(&root).unwrap();
+    let menu = composed.text("menu.rml").unwrap();
+    let part = menu
+        .find("href=\"parts/slider.rcss\"")
+        .expect("the slider part is linked");
+    let design = menu.find("href=\"menu.rcss\"").expect("the design's stylesheet");
+    assert!(part < design, "the part comes first, so the design can restyle it");
+    let sheet = fs::read_to_string(root.join("parts/slider.rcss")).unwrap();
+    assert!(sheet.contains(".slider-track"), "{sheet}");
     assert!(
-        bare.contains("part:slider"),
-        "a design that never styled a slider still has to be given one"
-    );
-    let styled = rominabox_desktop::themes::builtin_part_rules(".slider { height: 12dp; }");
-    assert!(
-        styled.is_empty(),
-        "a design that styled .slider must not have a second slider pasted after it"
+        !composed.text("menu.rcss").unwrap().contains("part:slider"),
+        "nothing is pasted after the design's own rules"
     );
 }
 
@@ -144,10 +169,10 @@ fn the_shipped_design_styles_the_slider_rather_than_volume() {
 
 #[test]
 fn volume_drops_into_options_and_does_not_open_a_screen() {
-    let design = scratch("rominabox-volume-in-options");
-    fs::write(design.join("design.json"), "{}").unwrap();
+    let root = scratch("rominabox-volume-in-options");
+    let design = bare_design(&root);
     let document = r#"<body><div id="options-panel" style="display:none;"><div id="options-entries"><button class="menu-action option-entry" id="controls">CONTROLS</button></div></div><div id="footer"></div></body>"#;
-    let installed = rominabox_desktop::themes::install_volume_control(document, &design).unwrap();
+    let installed = rominabox_desktop::menu::install_volume_control(document, &design).unwrap();
     let panel = installed.find("id=\"options-panel\"").expect("options panel");
     let control = installed.find("id=\"volume-control\"").expect("the control");
     let entries = installed.find("id=\"options-entries\"").expect("the links");
@@ -166,10 +191,10 @@ fn volume_drops_into_options_and_does_not_open_a_screen() {
 
 #[test]
 fn a_menu_with_no_options_screen_has_no_volume_control() {
-    let design = scratch("rominabox-volume-nowhere");
-    fs::write(design.join("design.json"), "{}").unwrap();
+    let root = scratch("rominabox-volume-nowhere");
+    let design = bare_design(&root);
     let document = r#"<body><button class="menu-action" id="quit">QUIT</button><div id="footer"></div></body>"#;
-    let installed = rominabox_desktop::themes::install_volume_control(document, &design).unwrap();
+    let installed = rominabox_desktop::menu::install_volume_control(document, &design).unwrap();
     assert!(
         !installed.contains("volume"),
         "volume lives in Options, so a menu without that screen does not grow one, got {installed}"

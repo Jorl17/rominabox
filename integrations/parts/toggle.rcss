@@ -1,0 +1,5 @@
+/* The geometry of the toggle part, for a design without toggle styles. The
+ * colours are in the design, whose stylesheet comes after this one. */
+.toggle { display: block; position: relative; width: 240dp; height: 48dp; margin-top: 28dp; font-family: Silkscreen; font-size: 18dp; line-height: 42dp; padding-left: 56dp; border-width: 3dp; }
+.toggle-knob { position: absolute; left: 8dp; top: 6dp; width: 28dp; height: 28dp; border-width: 3dp; }
+.toggle.on .toggle-knob { left: 196dp; }

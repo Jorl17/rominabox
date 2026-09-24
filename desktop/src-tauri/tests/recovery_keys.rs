@@ -81,6 +81,10 @@ fn fixture_kit(root: &Path) -> PathBuf {
     .unwrap();
     let design = rominabox_desktop::repo::at("integrations/designs/native");
     copy_tree(&design, &kit.join("designs/native"));
+    copy_tree(
+        &rominabox_desktop::repo::at("integrations/parts"),
+        &kit.join("parts"),
+    );
     fs::create_dir_all(kit.join("menu-assets")).unwrap();
     // We read the scene template for the controls from the kit's shared
     // menu-assets, not from the folder of the selected design.

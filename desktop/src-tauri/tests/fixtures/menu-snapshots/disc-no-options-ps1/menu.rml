@@ -1,12 +1,12 @@
-<rml><head><title>ROM-in-a-Box</title><link type="text/rcss" href="menu.rcss"/></head><body id="body">
+<rml><head><title>ROM-in-a-Box</title><link type="text/rcss" href="parts/slider.rcss"/><link type="text/rcss" href="parts/toggle.rcss"/><link type="text/rcss" href="menu.rcss"/></head><body id="body">
 <div id="screen"><div id="spine"></div><div id="splash"><img id="splash-logo" src="splash-logo.png"/></div><div id="notice" class="notice">PRESS ESC TO PAUSE</div><div id="heading">MEMORY CARD</div><div id="pause-panel"><div id="slots"><button id="slot-1" class="slot empty selected"><div id="slot-label-1" class="slot-label">SLOT 1</div><div class="slot-picture"><div id="slot-image-1" class="slot-image"/></div><div id="slot-state-1" class="slot-state">EMPTY</div></button>
 <button id="slot-2" class="slot empty "><div id="slot-label-2" class="slot-label">SLOT 2</div><div class="slot-picture"><div id="slot-image-2" class="slot-image"/></div><div id="slot-state-2" class="slot-state">EMPTY</div></button>
 <button id="slot-3" class="slot empty "><div id="slot-label-3" class="slot-label">SLOT 3</div><div class="slot-picture"><div id="slot-image-3" class="slot-image"/></div><div id="slot-state-3" class="slot-state">EMPTY</div></button>
 <button id="slot-4" class="slot empty "><div id="slot-label-4" class="slot-label">SLOT 4</div><div class="slot-picture"><div id="slot-image-4" class="slot-image"/></div><div id="slot-state-4" class="slot-state">EMPTY</div></button>
 <button id="slot-5" class="slot empty "><div id="slot-label-5" class="slot-label">SLOT 5</div><div class="slot-picture"><div id="slot-image-5" class="slot-image"/></div><div id="slot-state-5" class="slot-state">EMPTY</div></button>
 <button id="slot-6" class="slot empty "><div id="slot-label-6" class="slot-label">SLOT 6</div><div class="slot-picture"><div id="slot-image-6" class="slot-image"/></div><div id="slot-state-6" class="slot-state">EMPTY</div></button></div>
-<div id="actions"><button class="menu-action" id="resume">CONTINUE</button><button class="menu-action" id="save">SAVE</button><button id="load" class="menu-action disabled" disabled="disabled">LOAD</button><button class="menu-action" id="disc">DISC</button><button class="menu-action" id="quit">QUIT</button></div>
-<div id="status">CHOOSE A BLOCK</div><button class="menu-action screen-link" id="discs">DISC</button></div><div id="controls-panel" style="display:none;">
+<div id="actions" class="no-options"><button class="menu-action" id="resume">CONTINUE</button><button class="menu-action" id="save">SAVE</button><button id="load" class="menu-action disabled" disabled="disabled">LOAD</button><button class="menu-action" id="disc">DISC</button><button class="menu-action" id="quit">QUIT</button></div>
+<div id="status">CHOOSE A BLOCK</div></div><div id="controls-panel" class="screen-panel" style="display:none;">
 <div id="controls-device" class="control-picker">
 <div id="controls-device-label" class="control-picker-label">CONTROLLER</div>
 <button id="controls-device-current" class="control-picker-current">PLAYSTATION · DUALSHOCK</button>
@@ -18,7 +18,7 @@
 <div id="controller-scene"><img id="controller-image" src="controller-ps1.png"/>
 <div class="control-leader vertical" style="left:405dp;top:226dp;height:102dp;"/>
 <div class="control-leader horizontal" style="left:369dp;top:328dp;width:36dp;"/>
-<button id="control-hit-l3" class="control-hit" style="left:383dp;top:204dp;"/>
+<button id="control-hit-l3" class="control-hit" style="left:390dp;top:211dp;"/>
 
 <button id="control-group-l_stick" class="control-group" style="left:264dp;top:328dp;">
 <div class="control-label">L STICK</div>
@@ -27,7 +27,7 @@
 
 <div class="control-leader vertical" style="left:547dp;top:226dp;height:102dp;"/>
 <div class="control-leader horizontal" style="left:547dp;top:328dp;width:44dp;"/>
-<button id="control-hit-r3" class="control-hit" style="left:525dp;top:204dp;"/>
+<button id="control-hit-r3" class="control-hit" style="left:532dp;top:211dp;"/>
 
 <button id="control-group-r_stick" class="control-group" style="left:486dp;top:328dp;">
 <div class="control-label">R STICK</div>
@@ -109,13 +109,4 @@
 <button id="bind-18" class="list-row "><div id="bind-18-title" class="list-row-title"></div><div id="bind-18-detail" class="list-row-detail"></div><div id="bind-18-state" class="list-row-state"></div></button>
 <button id="bind-19" class="list-row "><div id="bind-19-title" class="list-row-title"></div><div id="bind-19-detail" class="list-row-detail"></div><div id="bind-19-state" class="list-row-state"></div></button>
 <button id="bind-20" class="list-row "><div id="bind-20-title" class="list-row-title"></div><div id="bind-20-detail" class="list-row-detail"></div><div id="bind-20-state" class="list-row-state"></div></button>
-</div><div id="binds-pager" class="list-pager"><button id="binds-prev" class="menu-action list-pager-prev disabled">&lt;</button><div id="binds-page-count" class="list-pager-count">1/4</div><button id="binds-next" class="menu-action list-pager-next">&gt;</button></div></div><div id="controls-actions"><button class="menu-action" id="controls-back">BACK</button><button class="menu-action" id="controls-reset">RESET DEFAULTS</button><button class="menu-action" id="controls-cancel" style="display:none;">CANCEL</button></div><div id="controls-status">SELECT A BUTTON</div></div><div id="options-panel" style="display:none;"><div id="volume-control"><div id="volume-level" class="slider"><div id="volume-level-readout" class="slider-readout"></div><div class="slider-track"><div id="volume-level-fill" class="slider-fill"></div><div id="volume-level-thumb" class="slider-thumb"></div></div></div>
-<button id="volume-down" class="menu-action volume-arrow arrow-down">&lt;</button><button id="volume-up" class="menu-action volume-arrow arrow-up">&gt;</button><div id="volume-low" class="volume-end">LOW</div><div id="volume-high" class="volume-end">HIGH</div><div class="volume-name">VOLUME</div></div><div id="options-entries" class="menu-index"><!--OPTIONS--></div><button class="menu-action options-back" id="options-back">BACK</button></div><div id="disc-panel" style="display:none;"><div id="disc-face"><div id="disc-hole"></div></div><button class="menu-action" id="disc-back">BACK</button></div><div id="discs-panel" class="screen-panel" style="display:none;"><div id="discs-list" class="list"><div id="discs-page-1" class="list-page"><button id="discs-0" class="list-row line "><div id="discs-0-title" class="list-row-title"></div><div id="discs-0-state" class="list-row-state"></div></button>
-<button id="discs-1" class="list-row line "><div id="discs-1-title" class="list-row-title"></div><div id="discs-1-state" class="list-row-state"></div></button>
-<button id="discs-2" class="list-row line "><div id="discs-2-title" class="list-row-title"></div><div id="discs-2-state" class="list-row-state"></div></button>
-<button id="discs-3" class="list-row line "><div id="discs-3-title" class="list-row-title"></div><div id="discs-3-state" class="list-row-state"></div></button>
-<button id="discs-4" class="list-row line "><div id="discs-4-title" class="list-row-title"></div><div id="discs-4-state" class="list-row-state"></div></button>
-</div><div id="discs-page-2" class="list-page" style="display:none;"><button id="discs-5" class="list-row line "><div id="discs-5-title" class="list-row-title"></div><div id="discs-5-state" class="list-row-state"></div></button>
-<button id="discs-6" class="list-row line "><div id="discs-6-title" class="list-row-title"></div><div id="discs-6-state" class="list-row-state"></div></button>
-<button id="discs-7" class="list-row line "><div id="discs-7-title" class="list-row-title"></div><div id="discs-7-state" class="list-row-state"></div></button>
-</div><div id="discs-pager" class="list-pager"><button id="discs-prev" class="menu-action list-pager-prev disabled">&lt;</button><div id="discs-page-count" class="list-pager-count">1/2</div><button id="discs-next" class="menu-action list-pager-next">&gt;</button></div></div><div class="list-actions"><button class="menu-action list-back" id="discs-back">BACK</button></div><div id="discs-status" class="list-status"></div></div><div id="unlock-row" style="display:none;"><div id="unlock"><img id="unlock-badge"/><div id="unlock-words"><div id="unlock-kicker">ACHIEVEMENT UNLOCKED</div><div id="unlock-title"></div><div id="unlock-detail"></div></div></div></div><div id="footer"><span id="footer-hint">ESC  CONTINUE</span></div></div></body></rml>
+</div><div id="binds-pager" class="list-pager"><button id="binds-prev" class="menu-action list-pager-prev disabled">&lt;</button><div id="binds-page-count" class="list-pager-count">1/4</div><button id="binds-next" class="menu-action list-pager-next">&gt;</button></div></div><div id="controls-actions"><button class="menu-action" id="controls-back">BACK</button><button class="menu-action" id="controls-reset">RESET DEFAULTS</button><button class="menu-action" id="controls-cancel" style="display:none;">CANCEL</button></div><div id="controls-status">SELECT A BUTTON</div></div><div id="disc-panel" class="screen-panel" style="display:none;"><div id="disc-face"><div id="disc-hole"></div></div><button class="menu-action" id="disc-back">BACK</button></div><div id="unlock-row" style="display:none;"><div id="unlock"><img id="unlock-badge"/><div id="unlock-words"><div id="unlock-kicker">ACHIEVEMENT UNLOCKED</div><div id="unlock-title"></div><div id="unlock-detail"></div></div></div></div><div id="footer"><span id="footer-hint">ESC  CONTINUE</span></div></div></body></rml>

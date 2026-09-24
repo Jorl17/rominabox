@@ -1,6 +1,6 @@
 //! The packaged achievement capability. We sign in and evaluate achievements
 //! with the RetroArch client in the player, never in the builder.
-use crate::{lists::List, themes};
+use crate::{lists::List, menu};
 use std::path::Path;
 
 pub const SCREEN: &str = "achievements";
@@ -26,6 +26,19 @@ pub fn entries(
     if !show_menu {
         return Ok(Vec::new());
     }
+    entries_in(&menu::declared_screens(design)?, requested, show_menu, explicit)
+}
+
+/// The same, over screens already read.
+pub fn entries_in(
+    screens: &[menu::Screen],
+    requested: bool,
+    show_menu: bool,
+    explicit: Option<&[String]>,
+) -> Result<Vec<String>, String> {
+    if !show_menu {
+        return Ok(Vec::new());
+    }
     if let Some(entries) = explicit {
         if entries.iter().any(|entry| entry == SCREEN) != requested {
             return Err(
@@ -35,8 +48,8 @@ pub fn entries(
         }
         return Ok(entries.to_vec());
     }
-    Ok(themes::declared_screens(design)?
-        .into_iter()
+    Ok(screens
+        .iter()
         .filter(|screen| {
             screen.option_label.is_some()
                 && if screen.id == SCREEN {
@@ -45,15 +58,15 @@ pub fn entries(
                     screen.option_default
                 }
         })
-        .map(|screen| screen.id)
+        .map(|screen| screen.id.clone())
         .collect())
 }
 
 /// The live screen may be empty, because sign-in comes before any rows.
-pub fn screen(design: &Path) -> Result<List, String> {
-    let screen = themes::declared_screens(design)?
-        .into_iter()
-        .find(|screen| screen.id == SCREEN)
+pub fn screen(manifest: &menu::Manifest) -> Result<List, String> {
+    let screen = manifest
+        .screen(menu::ScreenRole::Achievements)
+        .cloned()
         .ok_or_else(|| "The base design has no achievements screen".to_string())?;
     Ok(List {
         screen,
@@ -92,7 +105,7 @@ mod tests {
     use super::*;
     #[test]
     fn capability_and_explicit_entry_agree() {
-        let design = themes::design_root("native").unwrap();
+        let design = crate::themes::design_root("native").unwrap();
         assert!(entries(&design, true, true, None)
             .unwrap()
             .iter()

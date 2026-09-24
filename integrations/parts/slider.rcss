@@ -1,0 +1,7 @@
+/* The geometry of the slider part, for a design without slider styles. The
+ * colours are in the design, whose stylesheet comes after this one. */
+.slider { display: block; width: 100%; }
+.slider-readout { display: block; width: 100%; height: 36dp; font-family: Silkscreen; font-size: 28dp; text-align: center; }
+.slider-track { display: block; position: relative; width: 100%; height: 28dp; margin-top: 12dp; border-width: 4dp; }
+.slider-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0; }
+.slider-thumb { position: absolute; top: -8dp; width: 22dp; height: 44dp; border-width: 4dp; }

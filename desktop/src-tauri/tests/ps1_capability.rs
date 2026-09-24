@@ -9,6 +9,8 @@
 //! artifact, and where a fixture stands in for one, it is an empty file.
 //! Copying an empty file tests staging and nothing about emulation.
 
+mod support;
+
 use rominabox_desktop::{
     content,
     controls::{self, Controls},
@@ -447,7 +449,7 @@ fn the_playstation_scene_draws_each_stick_once() {
 }
 
 fn crate_themes_prepare(source: &Path, destination: &Path, system: &str, options: &Controls) {
-    rominabox_desktop::themes::prepare_controls_assets(
+    support::stage_controls(
         source,
         &rominabox_desktop::repo::at("integrations/designs/native"),
         destination,

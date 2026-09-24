@@ -5,9 +5,11 @@
 //! steps of an export (system lookup, controller defaults, theme staging and
 //! kit availability), so a package that only parses does not pass.
 
+mod support;
+
 use rominabox_desktop::{
     controls::{self, Controls},
-    packaging, systems, themes,
+    packaging, systems,
 };
 use std::{
     collections::BTreeSet,
@@ -176,7 +178,7 @@ fn an_author_can_pick_the_generic_retropad_and_get_an_asset_free_grid() {
         profile: Some("retropad".to_string()),
         ..Controls::default()
     };
-    themes::prepare_controls_assets(
+    support::stage_controls(
         &menu_assets(),
         &menu_assets(),
         &root,
@@ -193,6 +195,10 @@ fn an_author_can_pick_the_generic_retropad_and_get_an_asset_free_grid() {
         file_names(&root),
         BTreeSet::from([
             "menu.rml".to_string(),
+            "menu.rcss".to_string(),
+            "Silkscreen-Regular.ttf".to_string(),
+            "Silkscreen-OFL.txt".to_string(),
+            "parts".to_string(),
             "scene-retropad.rml".to_string(),
             // We stage the screen declarations with the menu.
             "design.cfg".to_string(),
@@ -273,7 +279,7 @@ fn export_stages_only_the_mastersystem_illustration() {
     );
 
     let destination = scratch();
-    themes::prepare_controls_assets(
+    support::stage_controls(
         &source,
         &menu_assets(),
         &destination,
@@ -300,6 +306,10 @@ fn export_stages_only_the_mastersystem_illustration() {
             profile.image.clone(),
             "CONTROLLERS.txt".to_string(),
             "menu.rml".to_string(),
+            "menu.rcss".to_string(),
+            "Silkscreen-Regular.ttf".to_string(),
+            "Silkscreen-OFL.txt".to_string(),
+            "parts".to_string(),
             // We stage the screen declarations with the menu.
             "design.cfg".to_string(),
             // The scene we read in the player when someone picks another pad.

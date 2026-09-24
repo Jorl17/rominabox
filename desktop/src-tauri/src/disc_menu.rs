@@ -8,20 +8,19 @@
 //! here and the count from the core. We keep no second cap.
 
 use crate::lists::{List, ListItem};
-use crate::themes::declared_screens;
-use std::path::Path;
+use crate::menu::Manifest;
 
 /// How many disc rows we write on export. In the player we fill as many rows
 /// as the document contains.
 pub const ROW_CAP: usize = 8;
 
-pub fn list(design: &Path) -> Result<Option<List>, String> {
-    let Some(screen) = declared_screens(design)?
-        .into_iter()
-        .find(|screen| screen.images.as_deref() == Some("list"))
-    else {
-        return Ok(None);
-    };
+/// The disc list, when the design declares one.
+pub fn list(manifest: &Manifest) -> Option<List> {
+    let screen = manifest
+        .screens
+        .iter()
+        .find(|screen| screen.is_disc_list())?
+        .clone();
     let items = (0..ROW_CAP)
         .map(|index| ListItem {
             id: format!("{}-{index}", screen.id),
@@ -34,25 +33,22 @@ pub fn list(design: &Path) -> Result<Option<List>, String> {
             line: true,
         })
         .collect();
-    Ok(Some(List {
+    Some(List {
         screen,
         content: crate::lists::ListContent::Static(items),
-    }))
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lists::install;
-    use crate::themes::{declared_screens, prepare_theme_assets};
-    use std::fs;
+    use crate::menu::{compose_menu, MenuRequest};
 
     #[test]
     fn both_designs_bake_a_disc_list_and_the_column_keeps_its_button() {
         for name in ["native", "disc"] {
             let design = crate::repo::at("integrations/designs").join(name);
-            let baked = list(&design)
-                .unwrap_or_else(|error| panic!("{name}: {error}"))
+            let baked = list(&Manifest::load(&design).unwrap())
                 .unwrap_or_else(|| panic!("{name} declares no disc list"));
             let crate::lists::ListContent::Static(items) = &baked.content else {
                 panic!("disc slots must be static")
@@ -61,14 +57,14 @@ mod tests {
             assert_eq!(items[0].id, "discs-0");
             assert_eq!(items[ROW_CAP - 1].id, format!("discs-{}", ROW_CAP - 1));
 
-            let dest =
-                std::env::temp_dir().join(format!("rominabox-discs-{name}-{}", std::process::id()));
-            let _ = fs::remove_dir_all(&dest);
-            prepare_theme_assets(&design, &dest, "blue", None).expect("staged");
-            let screens = declared_screens(&design).unwrap();
-            install(&design, &dest, &screens, std::slice::from_ref(&baked)).expect("installed");
-            let menu = fs::read_to_string(dest.join("menu.rml")).unwrap();
-            let cfg = fs::read_to_string(dest.join("design.cfg")).unwrap();
+            let composed = compose_menu(&MenuRequest {
+                system: "ps1".into(),
+                discs: 2,
+                ..MenuRequest::new(&design, crate::repo::at("desktop/assets/controllers"))
+            })
+            .expect("composed");
+            let menu = composed.text("menu.rml").unwrap();
+            let cfg = composed.text("design.cfg").unwrap();
             assert!(
                 menu.contains("id=\"discs-list\""),
                 "{name} menu has no disc list"
@@ -93,7 +89,6 @@ mod tests {
                     "the list must not steal the column button: {cfg}"
                 );
             }
-            let _ = fs::remove_dir_all(&dest);
         }
     }
 }

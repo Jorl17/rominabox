@@ -1,1 +1,1 @@
-<div id="disc-panel" style="display:none;"><div id="disc-face"><div id="disc-hole"></div></div><button class="menu-action" id="disc-back">BACK</button></div>
+<div id="disc-panel" class="screen-panel" style="display:none;"><div id="disc-face"><div id="disc-hole"></div></div><button class="menu-action" id="disc-back">BACK</button></div>

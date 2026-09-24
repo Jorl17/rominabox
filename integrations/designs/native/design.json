@@ -3,7 +3,6 @@
   "id": "native",
   "name": "Native",
   "description": "The cartridge-era pixel look the player ships with.",
-  "slots": 6,
   "documents": {
     "menu": "menu.rml",
     "splash": "splash.rml",
@@ -17,6 +16,9 @@
     }
   ],
   "metrics": {
+    "options": {
+      "entryStep": 74
+    },
     "scene": {
       "width": 960,
       "height": 380
@@ -43,6 +45,7 @@
   },
   "binds": {
     "afterMs": 1200,
+    "hoverAfterMs": 300,
     "width": 320
   },
   "overlays": [
@@ -64,6 +67,7 @@
   "screens": [
     {
       "id": "pause",
+      "role": "pause",
       "panel": "pause-panel",
       "heading": "GAME PAUSED",
       "footer": "ESC  CONTINUE",
@@ -71,6 +75,7 @@
     },
     {
       "id": "options",
+      "role": "options",
       "panel": "options-panel",
       "heading": "OPTIONS",
       "footer": "ESC  BACK",
@@ -81,6 +86,7 @@
     },
     {
       "id": "controls",
+      "role": "controls",
       "panel": "controls-panel",
       "heading": "CONTROLS",
       "footer": "ESC  BACK",
@@ -92,6 +98,7 @@
     },
     {
       "id": "shaders",
+      "role": "shaders",
       "panel": "shaders-panel",
       "heading": "SHADERS",
       "footer": "ESC  BACK",
@@ -104,6 +111,7 @@
     },
     {
       "id": "achievements",
+      "role": "achievements",
       "panel": "achievements-panel",
       "heading": "ACHIEVEMENTS",
       "footer": "ESC  BACK",
@@ -113,10 +121,12 @@
         "label": "ACHIEVEMENTS",
         "default": false
       },
-      "pageSize": 4
+      "pageSize": 4,
+      "dialogs": ["achievements-confirm", "achievements-startup"]
     },
     {
       "id": "discs",
+      "role": "discs",
       "panel": "discs-panel",
       "heading": "DISC",
       "footer": "ESC  BACK",
