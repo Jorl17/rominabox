@@ -133,6 +133,22 @@ fn screen_template(design: &Path, id: &str) -> Result<Option<String>, String> {
     Ok(Some(template))
 }
 
+/// The extra buttons on the action row of a screen, from `actions-<id>.rml`
+/// in the design or in Native, or none when neither has the file. We put them
+/// in the one generated strip, because a second strip in the same box would
+/// receive every pointer hit instead of the first.
+fn screen_actions(design: &Path, id: &str) -> Result<String, String> {
+    let name = format!("actions-{id}.rml");
+    for package in [design.to_path_buf(), crate::themes::base_design(design)?] {
+        let path = package.join(&name);
+        if path.is_file() {
+            return fs::read_to_string(&path)
+                .map_err(|error| format!("Could not read {}: {error}", path.display()));
+        }
+    }
+    Ok(String::new())
+}
+
 /// How many rows fit on one page, as declared in the design. When it is absent,
 /// we use four, which fit under the Native heading and above its back button.
 pub fn page_size(design: &Path) -> Result<usize, String> {
@@ -521,8 +537,9 @@ pub fn install(
             ));
         }
         let toggle = toggle_markup(&list.screen);
+        let own = screen_actions(design, &list.screen.id)?;
         let actions = format!(
-            "<div class=\"list-actions\"{up}>{toggle}<button class=\"menu-action list-back\" id=\"{id}-back\">{back}</button></div>",
+            "<div class=\"list-actions\"{up}>{toggle}{own}<button class=\"menu-action list-back\" id=\"{id}-back\">{back}</button></div>",
             id = list.screen.id,
             back = rml_text(&back),
         );
