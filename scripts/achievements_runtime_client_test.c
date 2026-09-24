@@ -280,6 +280,24 @@ static void badge_lifecycle(const char *directory)
    assert(badge_downloads == 3);
 }
 
+/* The colour badge requested at an unlock arrives, and we show it in its row.
+ * We remove the file again, so after later refreshes the row has no picture. */
+static void colour_badge_arrives(const char *directory)
+{
+   rib_achievement_row_t row;
+   char badge_path[512];
+   FILE *file;
+   snprintf(badge_path, sizeof(badge_path), "%s/achievements-badges/123.png", directory);
+   file = fopen(badge_path, "wb");
+   assert(file);
+   assert(fclose(file) == 0);
+   rib_achievements_badge_downloaded();
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_READY);
+   assert(strstr(row.badge_path, "123.png") != NULL);
+   assert(unlink(badge_path) == 0);
+}
+
 int main(void)
 {
    char directory[] = "/tmp/rib-achievements-runtime-XXXXXX";
@@ -296,6 +314,7 @@ int main(void)
    const rc_client_achievement_t *achievement;
    char badge_name[8];
    uint32_t revision;
+   unsigned requested;
 
    assert(mkdtemp(directory));
    assert(mkdtemp(second_directory));
@@ -391,16 +410,24 @@ int main(void)
    rc_client_do_frame(locals.client);
    assert(awards == 0); /* stale hit count must not carry across OFF time */
    defer_award = true;
+   requested = badge_downloads;
    rc_client_do_frame(locals.client);
    assert(awards == 1);
    assert(snapshot().pending_upload);
+   /* At an unlock we request the colour badge at once, not when we paint a
+    * row that may not be on screen. */
+   assert(badge_downloads == requested + 1);
    assert(rib_achievements_has_unlocks());
    assert(rib_achievements_take_unlock(&unlock));
    assert(unlock.id == 123 && unlock.points == 5);
    assert(strcmp(unlock.title, "First step") == 0);
+   assert(!unlock.badge_path[0]);
    assert(!rib_achievements_has_unlocks());
    assert(rib_achievements_get_row(0, &row));
    assert(row.state == RIB_ACHIEVEMENT_UNLOCKED);
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING);
+   assert(badge_downloads == requested + 1);
+   colour_badge_arrives(directory);
    {
       rc_api_server_response_t response = {0};
       response.body = award_json;
