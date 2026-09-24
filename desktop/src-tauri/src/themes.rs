@@ -1066,13 +1066,18 @@ fn binds_declarations(design: &Path) -> Result<String, String> {
         .get("afterMs")
         .and_then(|value| value.as_u64())
         .ok_or_else(|| "binds.afterMs must be a number of milliseconds".to_string())?;
+    // We respond sooner to a pointer resting on a control than to the keyboard.
+    let hover_after = binds
+        .get("hoverAfterMs")
+        .and_then(|value| value.as_u64())
+        .ok_or_else(|| "binds.hoverAfterMs must be a number of milliseconds".to_string())?;
     let width = binds
         .get("width")
         .and_then(|value| value.as_u64())
         .filter(|value| *value > 0)
         .ok_or_else(|| "binds.width must be a width in dp".to_string())?;
     Ok(format!(
-        "binds_after = \"{after}\"\nbinds_width = \"{width}\"\nbinds_list = \"control-binds\"\n"
+        "binds_after = \"{after}\"\nbinds_hover_after = \"{hover_after}\"\nbinds_width = \"{width}\"\nbinds_list = \"control-binds\"\n"
     ))
 }
 
