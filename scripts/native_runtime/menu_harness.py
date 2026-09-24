@@ -24,7 +24,6 @@ not changed.
 from __future__ import annotations
 
 import argparse
-import fcntl
 import hashlib
 import json
 import os
@@ -33,6 +32,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -128,13 +128,20 @@ def menu_sources(makefile: Path = MAKEFILE, base: Path = RETROARCH,
     return sources
 
 
+_memo_lock = threading.Lock()
+
+
 def _hash_file(path: Path, memo: dict[Path, str]) -> str | None:
-    if path not in memo:
-        try:
-            memo[path] = hashlib.sha256(path.read_bytes()).hexdigest()
-        except OSError:
-            memo[path] = None
-    return memo[path]
+    """Return the file's content hash, computed once per build, with `memo` shared by compile threads."""
+    with _memo_lock:
+        if path in memo:
+            return memo[path]
+    try:
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        digest = None
+    with _memo_lock:
+        return memo.setdefault(path, digest)
 
 
 def _digest(value) -> str:
@@ -142,7 +149,9 @@ def _digest(value) -> str:
 
 
 def _depfile_inputs(text: str) -> list[str]:
-    body = text.replace("\\\n", " ").split(":", 1)[1]
+    # The target ends at the first colon followed by whitespace. There is no
+    # whitespace after a Windows drive letter ("C:\\").
+    body = re.split(r":(?=\s)", text.replace("\\\n", " "), maxsplit=1)[1]
     return [token.replace("\\ ", " ") for token in re.findall(r"(?:\\ |\S)+", body)]
 
 
@@ -162,6 +171,11 @@ class Toolchain:
                 raise SystemExit(f"no {tool} on PATH")
             version = subprocess.run([resolved, "--version"], capture_output=True, text=True, check=True)
             found[tool] = [os.path.realpath(resolved), version.stdout]
+        # System headers are missing from the -MMD output, so we must rebuild
+        # after an SDK update even when the compiler version is the same.
+        if sys.platform == "darwin":
+            found["sdk"] = [subprocess.run(["xcrun", "--show-sdk-path"], capture_output=True, text=True).stdout,
+                            subprocess.run(["xcrun", "--show-sdk-version"], capture_output=True, text=True).stdout]
         return found
 
     def command(self, source: Path) -> list[str]:
@@ -295,7 +309,7 @@ def build(output: Path, sources: list[Path], defines: list[str], frameworks: lis
     menu = menu_sources()
     # When two harness builds run at once, the second waits until the first is done.
     with open(variant / "lock", "w") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+        _lock_exclusively(lock)
         menu_objects, menu_compiled = compile_objects(menu, toolchain, variant / "objects", identity)
         program_objects, program_compiled = compile_objects(sources, toolchain, variant / "objects", identity)
         archived = archive(menu_objects, variant / "libmenu.a")
@@ -305,6 +319,18 @@ def build(output: Path, sources: list[Path], defines: list[str], frameworks: lis
     return (f"menu harness: {output.name}: compiled {compiled} of {len(menu) + len(sources)} objects, "
             f"archive {'rebuilt' if archived else 'reused'}, {'linked' if linked else 'link reused'}, "
             f"{time.monotonic() - started:.1f}s")
+
+
+def _lock_exclusively(lock) -> None:
+    """Keep `lock` locked until it is closed, on every platform we build players for."""
+    if os.name == "nt":
+        import msvcrt
+
+        msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+    else:
+        import fcntl
+
+        fcntl.flock(lock, fcntl.LOCK_EX)
 
 
 def main() -> int:

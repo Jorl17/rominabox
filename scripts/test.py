@@ -223,7 +223,8 @@ SCOPES = [
         "the real menu and RmlUi document with a dummy renderer: actions, shared pointer/key focus, binding capacity, capture lifecycle, save/load failures and persistence",
         "physical input capture or audible sound; a fake RetroArch host controls the failure/capture boundary, and rendering appearance needs direct screenshot review",
         ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
-        prepare=RMLUI_PREPARE,
+        # We build bridge through the same cache, so we check the cache there too.
+        prepare=RMLUI_PREPARE + [["python3", str(ROOT / "scripts/native_runtime/test_menu_harness.py")]],
     ),
     Scope(
         "workflows",

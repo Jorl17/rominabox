@@ -145,8 +145,18 @@ def the_block_is_read_as_the_player_build_reads_it() -> None:
           "the real Makefile.common block reads, and every source it names exists")
 
 
+def depfiles_are_read_on_every_platform() -> None:
+    posix = "objects/a.o: /src/a.c /src/with\\ space.h \\\n  /src/b.h\n"
+    check(menu_harness._depfile_inputs(posix) == ["/src/a.c", "/src/with space.h", "/src/b.h"],
+          "a POSIX depfile lists every input, including an escaped space")
+    windows = "C:\\cache\\a.o: C:\\src\\a.c C:\\src\\a.h\n"
+    check(menu_harness._depfile_inputs(windows) == ["C:\\src\\a.c", "C:\\src\\a.h"],
+          "a Windows depfile is split after the target, not at the drive letter")
+
+
 def main() -> int:
-    for case in (compiling_reuses_only_what_is_unchanged, the_block_is_read_as_the_player_build_reads_it):
+    for case in (compiling_reuses_only_what_is_unchanged, the_block_is_read_as_the_player_build_reads_it,
+                 depfiles_are_read_on_every_platform):
         print(case.__name__)
         case()
     if FAILURES:
