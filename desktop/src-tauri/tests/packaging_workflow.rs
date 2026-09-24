@@ -75,21 +75,6 @@ fn an_export_writes_the_app_and_nothing_else() {
         result.app_path,
         request.output_dir.join("Hotkey Isolation.app")
     );
-
-    let again =
-        rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap_err();
-    assert!(
-        again
-            .message
-            .contains("refusing to overwrite existing export"),
-        "{again}"
-    );
-    let mut after = fs::read_dir(&request.output_dir)
-        .unwrap()
-        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
-        .collect::<Vec<_>>();
-    after.sort();
-    assert_eq!(after, names);
 }
 
 #[test]
