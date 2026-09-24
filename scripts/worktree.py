@@ -103,9 +103,18 @@ def common_dir() -> Path:
 
 def worktrees() -> list[dict]:
     """Return every checkout known to git, with its suffix and resources."""
+    entries = parse_worktree_list(git("worktree", "list", "--porcelain"))
+    for entry in entries:
+        config = entry["path"] / LOCAL_CONFIG
+        entry["local"] = json.loads(config.read_text()) if config.exists() else None
+    return entries
+
+
+def parse_worktree_list(porcelain: str) -> list[dict]:
+    """Return the paths and branches from `git worktree list --porcelain`."""
     entries: list[dict] = []
     current: dict = {}
-    for line in git("worktree", "list", "--porcelain").splitlines():
+    for line in porcelain.splitlines():
         if not line:
             if current:
                 entries.append(current)
@@ -115,14 +124,11 @@ def worktrees() -> list[dict]:
         if key == "worktree":
             current = {"path": Path(value)}
         elif key == "branch":
-            current["branch"] = value.rsplit("/", 1)[-1]
+            current["branch"] = value.removeprefix("refs/heads/")
         elif key == "detached":
             current["branch"] = "(detached)"
     if current:
         entries.append(current)
-    for entry in entries:
-        config = entry["path"] / LOCAL_CONFIG
-        entry["local"] = json.loads(config.read_text()) if config.exists() else None
     return entries
 
 

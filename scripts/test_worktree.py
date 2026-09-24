@@ -556,7 +556,23 @@ def a_rebuilt_rmlui_archive_invalidates_the_menu_probe() -> None:
         )
 
 
+def a_branch_with_a_slash_keeps_its_whole_name() -> None:
+    """Check that we read the branch name menu/nav back in remove(), and not nav."""
+    import worktree
+
+    listed = worktree.parse_worktree_list(
+        "worktree /src/rominabox\nHEAD abc\nbranch refs/heads/main\n\n"
+        "worktree /src/rominabox-menu-nav\nHEAD def\nbranch refs/heads/menu/nav\n\n"
+        "worktree /src/rominabox-old\nHEAD 123\ndetached\n"
+    )
+    check(
+        [entry.get("branch") for entry in listed] == ["main", "menu/nav", "(detached)"],
+        "a listed branch keeps its whole name, slashes included",
+    )
+
+
 ANYWHERE = [
+    a_branch_with_a_slash_keeps_its_whole_name,
     the_built_cli_follows_the_redirected_cargo_target,
     a_file_compiled_into_the_tool_counts_as_its_source,
     a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote,
