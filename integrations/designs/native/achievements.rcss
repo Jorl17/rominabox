@@ -28,3 +28,20 @@
 .account-password-row { position: relative; }
 .account-password-row .account-input { padding-right: 128dp; }
 .account-reveal { box-sizing: border-box; position: absolute; right: 8dp; top: 6dp; width: 104dp; height: 30dp; line-height: 26dp; border-width: 2dp; text-align: center; font-family: Silkscreen; font-size: 13dp; }
+
+/* A badge still downloading is a ring in the badge box whose lit side steps
+ * round clockwise (each keyframe stays, then jumps). A badge that we could
+ * not download is a plain empty frame, and we try again when the list opens
+ * next. Both have the colours and hard edges of the design. */
+.list-row.badge-loading .list-row-icon { box-sizing: border-box; border: 4dp design(rule); border-top-color: design(highlight); background-color: design(surface); animation: 0.8s linear infinite badge-steps; }
+.list-row.badge-failed .list-row-icon { box-sizing: border-box; border: 2dp design(muted); background-color: design(surface); }
+@keyframes badge-steps {
+   0% { border-top-color: design(highlight); border-right-color: design(rule); border-bottom-color: design(rule); border-left-color: design(rule); }
+   24.9% { border-top-color: design(highlight); border-right-color: design(rule); border-bottom-color: design(rule); border-left-color: design(rule); }
+   25% { border-top-color: design(rule); border-right-color: design(highlight); border-bottom-color: design(rule); border-left-color: design(rule); }
+   49.9% { border-top-color: design(rule); border-right-color: design(highlight); border-bottom-color: design(rule); border-left-color: design(rule); }
+   50% { border-top-color: design(rule); border-right-color: design(rule); border-bottom-color: design(highlight); border-left-color: design(rule); }
+   74.9% { border-top-color: design(rule); border-right-color: design(rule); border-bottom-color: design(highlight); border-left-color: design(rule); }
+   75% { border-top-color: design(rule); border-right-color: design(rule); border-bottom-color: design(rule); border-left-color: design(highlight); }
+   100% { border-top-color: design(rule); border-right-color: design(rule); border-bottom-color: design(rule); border-left-color: design(highlight); }
+}

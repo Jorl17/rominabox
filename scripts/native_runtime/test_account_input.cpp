@@ -301,6 +301,20 @@ int main(int argc, char **argv) {
       check(document.root()->GetElementById("achievement-3")
             && document.root()->GetElementById("achievement-3")->IsClassSet("badge-failed") && icon_shown("achievement-3"),
             "a badge that failed shows its mark");
+      {
+         // The design styles both, and only the placeholder is animated.
+         std::vector<Rml::Element*> loading, failed;
+         rib::collect(document.root()->GetElementById("achievement-2"), "list-row-icon", loading);
+         rib::collect(document.root()->GetElementById("achievement-3"), "list-row-icon", failed);
+         auto animated = [](Rml::Element *icon) {
+            const Rml::Property *property = icon ? icon->GetProperty("animation") : nullptr;
+            return property && property->ToString().find("badge-steps") != std::string::npos;
+         };
+         check(!loading.empty() && animated(loading[0]), "the design animates the placeholder");
+         check(!failed.empty() && !animated(failed[0])
+               && failed[0]->GetProperty<Rml::Colourb>("border-top-color") != Rml::Colourb(0, 0, 0, 0),
+               "the design draws the failed mark");
+      }
       check(document.root()->GetElementById("achievement-1")
             && !document.root()->GetElementById("achievement-1")->IsClassSet("badge-loading") && icon_shown("achievement-1"),
             "a downloaded badge shows its picture");
