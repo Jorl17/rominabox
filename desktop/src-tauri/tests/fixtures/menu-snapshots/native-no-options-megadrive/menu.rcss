@@ -304,3 +304,8 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #unlock-kicker { font-size: 12dp; color: #fff13d; }
 #unlock-title { font-size: 18dp; color: #ffffff; margin-top: 4dp; }
 #unlock-detail { font-size: 12dp; color: #b4e6ff; margin-top: 4dp; }
+
+#resume { width: 260dp; }
+#save { left: 284dp; width: 168dp; }
+#load { left: 476dp; width: 168dp; }
+#quit { left: 668dp; width: 168dp; }

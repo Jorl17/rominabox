@@ -40,7 +40,13 @@ struct Composed {
     cfg: String,
 }
 
-fn compose(kit: &Path, design: &str, entries: Option<&[String]>, destination: &Path) -> Composed {
+fn compose(
+    kit: &Path,
+    design: &str,
+    entries: Option<&[String]>,
+    discs: usize,
+    destination: &Path,
+) -> Composed {
     themes::compose_menu(
         &themes::MenuRequest {
             kit,
@@ -54,6 +60,7 @@ fn compose(kit: &Path, design: &str, entries: Option<&[String]>, destination: &P
             include_achievements: false,
             menu_entries: entries,
             shaders: &ShaderSelection::default(),
+            discs,
         },
         destination,
     )
@@ -90,7 +97,7 @@ fn an_empty_options_list_ships_no_options_screen() {
     let root = rominabox_scratch::Scratch::dir("rominabox-empty-options");
     let kit = kit(&root);
     for design in designs() {
-        let composed = compose(&kit, &design, Some(&[]), &root.join(&design));
+        let composed = compose(&kit, &design, Some(&[]), 1, &root.join(&design));
         let screens = declared_screens(&composed.cfg);
         assert!(
             !screens.iter().any(|id| id == "options"),
@@ -112,7 +119,7 @@ fn a_one_disc_game_has_no_disc_entry() {
     let root = rominabox_scratch::Scratch::dir("rominabox-one-disc");
     let kit = kit(&root);
     for design in designs() {
-        let composed = compose(&kit, &design, None, &root.join(&design));
+        let composed = compose(&kit, &design, None, 1, &root.join(&design));
         let screens = declared_screens(&composed.cfg);
         assert!(
             !screens.iter().any(|id| id == "discs"),
@@ -123,6 +130,33 @@ fn a_one_disc_game_has_no_disc_entry() {
                 !composed.menu.contains(&format!("id=\"{id}\"")),
                 "{design}: a one-disc game ships #{id}"
             );
+        }
+    }
+}
+
+/// A game of several discs has the disc list, whatever the author chose, and
+/// in Native the player reaches it from Options.
+#[test]
+fn a_game_of_several_discs_gets_the_disc_list() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-several-discs");
+    let kit = kit(&root);
+    for design in designs() {
+        for entries in [None, Some(Vec::new())] {
+            let destination = root.join(format!("{design}-{}", entries.is_some()));
+            let composed = compose(&kit, &design, entries.as_deref(), 3, &destination);
+            let screens = declared_screens(&composed.cfg);
+            assert!(
+                screens.iter().any(|id| id == "discs"),
+                "{design}: three discs and no disc list: {screens:?}"
+            );
+            assert!(composed.menu.contains("id=\"discs-panel\""), "{design}");
+            if design == "native" {
+                assert!(
+                    screens.iter().any(|id| id == "options"),
+                    "native reaches the disc list from Options: {screens:?}"
+                );
+                assert!(composed.menu.contains("id=\"discs\""), "the DISC entry");
+            }
         }
     }
 }

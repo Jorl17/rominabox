@@ -24,6 +24,8 @@ pub struct ContentFile {
 pub struct ContentSet {
     pub entrypoint: PathBuf,
     pub files: Vec<ContentFile>,
+    /// How many discs the game has: the entries of a playlist, or else one.
+    pub discs: usize,
 }
 
 /// Find every file referenced from `entrypoint`, without leaving its
@@ -84,9 +86,19 @@ pub fn collect_for(entrypoint: &Path, system_id: Option<&str>) -> Result<Content
         &mut files,
         &mut seen,
     )?;
+    // A playlist lists the discs of the game. Any other game is one disc.
+    let discs = match sheet_parser(&extension, &systems) {
+        Some(SheetParser::Playlist) => {
+            let text = fs::read_to_string(&entrypoint)
+                .map_err(|error| format!("read playlist {}: {error}", entrypoint.display()))?;
+            crate::discs::sheet_references(SheetParser::Playlist, &text)?.len()
+        }
+        _ => 1,
+    };
     Ok(ContentSet {
         entrypoint: entry_relative,
         files,
+        discs,
     })
 }
 
@@ -1301,6 +1313,12 @@ mod tests {
         assert_eq!(
             listed[2].2, listed[0].2,
             "disc 3's track collects different files"
+        );
+        assert_eq!(collect(&playlist).unwrap().discs, 3, "the playlist names three discs");
+        assert_eq!(
+            collect(&root.join("Final Fantasy VII (Disc 2).cue")).unwrap().discs,
+            1,
+            "one sheet on its own is one disc"
         );
         for name in [
             "Final Fantasy VII.m3u",

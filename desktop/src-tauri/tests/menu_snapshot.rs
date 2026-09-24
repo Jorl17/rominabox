@@ -267,6 +267,8 @@ fn compose(request: &ExportRequest, destination: &Path) -> BTreeMap<String, Stri
             include_achievements: request.include_achievements,
             menu_entries: request.menu_entries.as_deref(),
             shaders: &request.shaders,
+            // The content of every case is one cartridge or one disc sheet.
+            discs: 1,
         },
         destination,
     )

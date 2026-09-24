@@ -18,7 +18,7 @@ pub const ROW_CAP: usize = 8;
 pub fn list(design: &Path) -> Result<Option<List>, String> {
     let Some(screen) = declared_screens(design)?
         .into_iter()
-        .find(|screen| screen.images.as_deref() == Some("list"))
+        .find(crate::themes::Screen::is_disc_list)
     else {
         return Ok(None);
     };

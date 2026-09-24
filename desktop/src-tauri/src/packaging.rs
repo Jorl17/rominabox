@@ -596,6 +596,7 @@ where
             include_achievements: request.include_achievements,
             menu_entries: request.menu_entries.as_deref(),
             shaders: &request.shaders,
+            discs: collected_content.discs,
         },
         &resources.join("menu-assets"),
     )

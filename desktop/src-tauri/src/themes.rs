@@ -193,6 +193,13 @@ pub struct Toggle {
     pub guard_status: String,
 }
 
+impl Screen {
+    /// The list we fill with the discs from the core once the game has loaded.
+    pub fn is_disc_list(&self) -> bool {
+        self.images.as_deref() == Some("list")
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ToggleGuard {
     Nothing,
@@ -622,9 +629,11 @@ fn screens_for_export(
         .filter(|screen| screen.option_label.is_some())
         .collect();
     let included: BTreeSet<&str> = match chosen {
+        // Without a set, the game has one disc. The disc list is an entry
+        // only when the export has more than one disc (`compose_menu`).
         None => entries
             .iter()
-            .filter(|screen| screen.option_default)
+            .filter(|screen| screen.option_default && !screen.is_disc_list())
             .map(|screen| screen.id.as_str())
             .collect(),
         Some(ids) => {
@@ -727,7 +736,7 @@ fn entry_button(design: &Path, screen: &Screen, index: usize) -> Result<String, 
     // the entry must already be in the document. It starts hidden. A
     // display:none button is still a focus stop unless it is also disabled,
     // and the focus could then move onto an invisible button.
-    if screen.images.as_deref() == Some("list") {
+    if screen.is_disc_list() {
         button = button.replace(
             "style=\"top: ",
             "disabled=\"disabled\" style=\"display: none; top: ",
@@ -1346,7 +1355,7 @@ fn design_fragment(design: &Path, base: &Path, name: &str) -> Result<String, Str
 /// Compose the Native document with the selected screen and chrome fragments.
 /// The screen order is explicit. The small screen-order.rml of a design lists
 /// only the extra panels that go before the generated list screens.
-fn menu_document(design: &Path) -> Result<String, String> {
+fn menu_document(design: &Path, staged: &[Screen]) -> Result<String, String> {
     let base = base_design(design)?;
     let mut menu = fs::read_to_string(base.join("menu.rml"))
         .map_err(|e| format!("Could not read Native menu.rml: {e}"))?;
@@ -1399,11 +1408,15 @@ fn menu_document(design: &Path) -> Result<String, String> {
         if !placed.insert(id) {
             return Err(format!("Screen '{id}' occurs twice in {}", order.display()));
         }
-        expanded.push_str(&design_fragment(
-            design,
-            &base,
-            &format!("screen-{id}.rml"),
-        )?);
+        // We do not draw a screen that is not in this game. An export with no
+        // Options entries has no Options panel, not one that cannot be reached.
+        if staged.iter().any(|screen| screen.id == id) {
+            expanded.push_str(&design_fragment(
+                design,
+                &base,
+                &format!("screen-{id}.rml"),
+            )?);
+        }
         remaining = &after[end + "-->".len()..];
     }
     expanded.push_str(remaining);
@@ -1493,7 +1506,8 @@ pub fn prepare_theme_assets(
         fs::copy(&input, destination.join(name))
             .map_err(|e| format!("Could not prepare menu asset {name}: {e}"))?;
     }
-    fs::write(destination.join("menu.rml"), menu_document(source)?)
+    let defaults = screens_for_export(&declared_screens(source)?, None)?;
+    fs::write(destination.join("menu.rml"), menu_document(source, &defaults)?)
         .map_err(|e| format!("Could not prepare menu.rml: {e}"))?;
     let tokens = design_tokens(source, &palette)?;
     // The document too, not only the stylesheet. A design contains design(…)
@@ -1715,7 +1729,7 @@ pub fn prepare_controls_assets(
 
     // Use the same base-and-overrides composition as prepare_theme_assets.
     // If we read a raw design file again here, we would lose the resolved screens.
-    let template = menu_document(design)?;
+    let template = menu_document(design, &screens_for_export(&declared_screens(design)?, entries)?)?;
     // The picker is a sibling of the scene, not a child of it. Inside the
     // scene its coordinates would be scene coordinates, and the scene starts
     // 80 dp down the screen, so the picker would cover the first two
@@ -2209,6 +2223,9 @@ pub struct MenuRequest<'a> {
     pub include_achievements: bool,
     pub menu_entries: Option<&'a [String]>,
     pub shaders: &'a crate::shaders::ShaderSelection,
+    /// How many discs the game has. The disc list, and its Options entry,
+    /// exist only for more than one.
+    pub discs: usize,
 }
 
 /// Stage the menu an exported game shows into `destination`: the full menu
@@ -2219,8 +2236,9 @@ pub fn compose_menu(request: &MenuRequest, destination: &Path) -> Result<(), Str
         prepare_theme_assets(&design, destination, request.palette, request.background)?;
         // We compose the data lists and the live account screen with one function.
         let mut lists: Vec<crate::lists::List> = Vec::new();
-        if let Some(discs) = crate::disc_menu::list(&design)? {
-            lists.push(discs);
+        let several_discs = request.discs > 1;
+        if several_discs {
+            lists.extend(crate::disc_menu::list(&design)?);
         }
         let staged_shaders = crate::shaders::stage(&design, destination, request.shaders)?;
         lists.extend(staged_shaders.list);
@@ -2233,6 +2251,16 @@ pub fn compose_menu(request: &MenuRequest, destination: &Path) -> Result<(), Str
             request.show_menu,
             request.menu_entries,
         )?;
+        // The disc entry depends on the content, not on the author. It is
+        // present exactly when the game has more than one disc.
+        if !several_discs {
+            let disc_lists: Vec<String> = declared_screens(&design)?
+                .into_iter()
+                .filter(Screen::is_disc_list)
+                .map(|screen| screen.id)
+                .collect();
+            entries.retain(|entry| !disc_lists.contains(entry));
+        }
         for list in &lists {
             if list.screen.option_label.is_some() && !entries.contains(&list.screen.id) {
                 entries.push(list.screen.id.clone());
@@ -2403,13 +2431,13 @@ mod tests {
 
     fn native_menu() -> (PathBuf, String) {
         let design = crate::repo::at("integrations/designs/native");
-        let menu = menu_document(&design).expect("native menu");
+        let menu = menu_document(&design, &declared_screens(&design).unwrap()).expect("native menu");
         (design, menu)
     }
 
     fn design_menu(name: &str) -> (PathBuf, String) {
         let design = crate::repo::at("integrations/designs").join(name);
-        let menu = menu_document(&design).expect("design menu");
+        let menu = menu_document(&design, &declared_screens(&design).unwrap()).expect("design menu");
         (design, menu)
     }
 
@@ -2706,7 +2734,9 @@ mod tests {
             "the disc screen is the list the core fills"
         );
         assert_eq!(discs.mark.as_deref(), Some("IN"), "the current row's word");
-        let (staged, _) = apply_options(&native, &menu, None).expect("defaults");
+        // A game with several discs, for which the export lists the entry.
+        let several = ["controls".to_string(), "discs".to_string()];
+        let (staged, _) = apply_options(&native, &menu, Some(&several)).expect("several discs");
         let bounds = button_bounds(&staged, "discs").expect("the disc entry is in options");
         let button = &staged[bounds.0..bounds.1];
         assert!(
