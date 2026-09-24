@@ -1,0 +1,346 @@
+{
+  "designs": [
+    "native",
+    "disc",
+    "pause-column",
+    "sparse"
+  ],
+  "cases": [
+    {
+      "name": "opening the menu highlights CONTINUE",
+      "steps": [
+        "wait-ms:0"
+      ],
+      "focused": {
+        "*": [
+          "resume"
+        ]
+      }
+    },
+    {
+      "name": "down from the first slot",
+      "steps": [
+        "slot-1",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "slot-1",
+          "slot-4"
+        ],
+        "sparse": [
+          "slot-1",
+          "slot-4"
+        ],
+        "disc": [
+          "slot-1",
+          "slot-3"
+        ],
+        "pause-column": [
+          "slot-1",
+          "slot-2"
+        ]
+      }
+    },
+    {
+      "name": "right along the top slots stops at the edge",
+      "steps": [
+        "slot-1",
+        "key:right",
+        "key:right",
+        "key:right"
+      ],
+      "focused": {
+        "native": [
+          "slot-1",
+          "slot-2",
+          "slot-3",
+          "slot-3"
+        ],
+        "sparse": [
+          "slot-1",
+          "slot-2",
+          "slot-3",
+          "slot-3"
+        ],
+        "disc": [
+          "slot-1",
+          "slot-2",
+          "resume",
+          "resume"
+        ],
+        "pause-column": [
+          "slot-1",
+          "slot-1",
+          "slot-1",
+          "slot-1"
+        ]
+      }
+    },
+    {
+      "name": "down from a lower slot",
+      "steps": [
+        "slot-4",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "slot-4",
+          "resume",
+          "resume"
+        ],
+        "sparse": [
+          "slot-4",
+          "resume",
+          "options"
+        ],
+        "disc": [
+          "slot-4",
+          "slot-6",
+          "slot-6"
+        ],
+        "pause-column": [
+          "slot-4",
+          "slot-5",
+          "slot-6"
+        ]
+      }
+    },
+    {
+      "name": "right along the buttons",
+      "steps": [
+        "key:right",
+        "key:right",
+        "key:right",
+        "key:right"
+      ],
+      "focused": {
+        "native": [
+          "save",
+          "options",
+          "quit",
+          "quit"
+        ],
+        "disc": [
+          "resume",
+          "resume",
+          "resume",
+          "resume"
+        ],
+        "pause-column": [
+          "slot-1",
+          "slot-1",
+          "slot-1",
+          "slot-1"
+        ],
+        "sparse": [
+          "save",
+          "quit",
+          "quit",
+          "quit"
+        ]
+      }
+    },
+    {
+      "name": "down along the buttons",
+      "steps": [
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "resume",
+          "resume",
+          "resume",
+          "resume",
+          "resume"
+        ],
+        "disc": [
+          "save",
+          "disc",
+          "options",
+          "quit",
+          "quit"
+        ],
+        "pause-column": [
+          "save",
+          "options",
+          "quit",
+          "quit",
+          "quit"
+        ],
+        "sparse": [
+          "options",
+          "options",
+          "options",
+          "options",
+          "options"
+        ]
+      }
+    },
+    {
+      "name": "up from CONTINUE",
+      "steps": [
+        "key:up",
+        "key:up"
+      ],
+      "focused": {
+        "native": [
+          "slot-4",
+          "slot-1"
+        ],
+        "sparse": [
+          "slot-4",
+          "slot-1"
+        ],
+        "disc": [
+          "resume",
+          "resume"
+        ],
+        "pause-column": [
+          "resume",
+          "resume"
+        ]
+      }
+    },
+    {
+      "name": "left from the button column reaches the slots",
+      "steps": [
+        "key:down",
+        "key:left",
+        "key:left"
+      ],
+      "focused": {
+        "native": [
+          "resume",
+          "resume",
+          "resume"
+        ],
+        "disc": [
+          "save",
+          "slot-2",
+          "slot-1"
+        ],
+        "pause-column": [
+          "save",
+          "save",
+          "save"
+        ],
+        "sparse": [
+          "options",
+          "resume",
+          "resume"
+        ]
+      }
+    },
+    {
+      "name": "LOAD joins the row when slot 1 holds a state",
+      "setup": {
+        "load": 1
+      },
+      "steps": [
+        "key:right",
+        "key:right",
+        "key:right"
+      ],
+      "focused": {
+        "native": [
+          "save",
+          "load",
+          "options"
+        ],
+        "disc": [
+          "resume",
+          "resume",
+          "resume"
+        ],
+        "pause-column": [
+          "slot-1",
+          "slot-1",
+          "slot-1"
+        ],
+        "sparse": [
+          "save",
+          "quit",
+          "quit"
+        ]
+      }
+    },
+    {
+      "name": "back from Options returns to the button that opened it",
+      "steps": [
+        "options",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "options"
+        ]
+      },
+      "screen": {
+        "*": "pause-panel"
+      }
+    },
+    {
+      "name": "back from Options sounds like Back",
+      "steps": [
+        "options",
+        "key:cancel"
+      ],
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "cancel"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "the pointer focuses silently and a key continues from it",
+      "steps": [
+        "hover:slot-2",
+        "key:down",
+        "wait-ms:100"
+      ],
+      "focused": {
+        "native": [
+          "slot-2",
+          "slot-5",
+          "slot-5"
+        ],
+        "sparse": [
+          "slot-2",
+          "slot-5",
+          "slot-5"
+        ],
+        "disc": [
+          "slot-2",
+          "slot-4",
+          "slot-4"
+        ],
+        "pause-column": [
+          "slot-2",
+          "slot-3",
+          "slot-3"
+        ]
+      },
+      "sounds": {
+        "*": [
+          [],
+          [
+            "move"
+          ],
+          []
+        ]
+      }
+    }
+  ]
+}

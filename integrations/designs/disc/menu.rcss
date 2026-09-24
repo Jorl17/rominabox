@@ -225,3 +225,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #unlock-kicker { font-size: 11dp; color: design(highlight); }
 #unlock-title { font-size: 16dp; color: design(ink); margin-top: 3dp; }
 #unlock-detail { font-size: 11dp; color: design(muted); margin-top: 3dp; }
+
+/* Arrow moves that the layout alone would get wrong. BACK is right of the
+ * volume and the entries are nearer, so Up from it would skip the volume, and
+ * Down from QUIT, the last in the column, would go to the bottom block. */
+#options-back { nav-up: #volume-level; }
+#quit { nav-down: none; }

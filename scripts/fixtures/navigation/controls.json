@@ -1,0 +1,330 @@
+{
+  "designs": [
+    "native",
+    "disc"
+  ],
+  "cases": [
+    {
+      "name": "Controls opens on the first control",
+      "steps": [
+        "options",
+        "controls"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up"
+        ]
+      }
+    },
+    {
+      "name": "down the left column",
+      "steps": [
+        "options",
+        "controls",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "control-up",
+          "control-left",
+          "control-down",
+          "control-right",
+          "controls-back"
+        ],
+        "disc": [
+          "volume-level",
+          "control-up",
+          "control-left",
+          "control-down",
+          "control-right",
+          "controls-device-current"
+        ]
+      }
+    },
+    {
+      "name": "right crosses to the other column",
+      "steps": [
+        "options",
+        "controls",
+        "key:right",
+        "key:down",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-start",
+          "control-a",
+          "control-left"
+        ]
+      }
+    },
+    {
+      "name": "six-button pad",
+      "menu": "md6",
+      "steps": [
+        "options",
+        "controls",
+        "key:up",
+        "key:right",
+        "key:down"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-select",
+          "control-r",
+          "control-x"
+        ]
+      }
+    },
+    {
+      "name": "Game Boy pad",
+      "menu": "gb",
+      "steps": [
+        "options",
+        "controls",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:right"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-left",
+          "control-right",
+          "control-down",
+          "controls-back",
+          "controls-reset"
+        ]
+      }
+    },
+    {
+      "name": "an open controller picker keeps the arrows",
+      "steps": [
+        "options",
+        "controls",
+        "controls-device-current",
+        "key:up",
+        "key:left",
+        "key:down",
+        "key:right",
+        "key:ok"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "controls-device-option-megadrive",
+          "controls-device-option-megadrive",
+          "controls-device-option-megadrive",
+          "controls-device-option-megadrive6",
+          "controls-device-option-megadrive6",
+          "controls-device-current"
+        ]
+      }
+    },
+    {
+      "name": "a resting pointer does not undo a key",
+      "steps": [
+        "options",
+        "controls",
+        "hover:control-left",
+        "key:down",
+        "wait-ms:100"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-left",
+          "control-down",
+          "control-down"
+        ]
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [],
+          [
+            "move"
+          ],
+          []
+        ]
+      }
+    },
+    {
+      "name": "the pad's picture button focuses its callout",
+      "steps": [
+        "options",
+        "controls",
+        "hover:control-hit-a",
+        "hover:heading",
+        "key:up"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-a",
+          "control-a",
+          "control-start"
+        ]
+      }
+    },
+    {
+      "name": "OK on a control sounds like a click",
+      "steps": [
+        "options",
+        "controls",
+        "key:ok",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          [
+            "control-up",
+            "controls-cancel"
+          ],
+          "control-up"
+        ]
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "cancel"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "Back returns to Options, on CONTROLS",
+      "steps": [
+        "options",
+        "controls",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "controls"
+        ]
+      },
+      "screen": {
+        "*": "options-panel"
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "cancel"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "BACK returns to Options",
+      "steps": [
+        "options",
+        "controls",
+        "controls-back"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "controls"
+        ]
+      },
+      "screen": {
+        "*": "options-panel"
+      }
+    },
+    {
+      "name": "a stick is one stop",
+      "menu": "ps1-analog",
+      "steps": [
+        "options",
+        "controls",
+        "hover:control-group-l_stick",
+        "hover:heading",
+        "key:right",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-l",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-r_stick",
+          "control-group-l_stick"
+        ]
+      }
+    },
+    {
+      "name": "PS1 analog: down the left column",
+      "menu": "ps1-analog",
+      "steps": [
+        "options",
+        "controls",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-l",
+          "control-l2",
+          "control-up"
+        ]
+      },
+      "red": {
+        "native": {
+          "bug": "B22",
+          "reason": "the same overlap in Native's pad scene: seven callouts a side are 58dp tall every 54dp, so Down skips one",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-l",
+              "control-up",
+              "control-right"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

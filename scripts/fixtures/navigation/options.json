@@ -1,0 +1,250 @@
+{
+  "designs": [
+    "native",
+    "disc",
+    "options-columns"
+  ],
+  "cases": [
+    {
+      "name": "Options opens on the volume",
+      "steps": [
+        "options"
+      ],
+      "focused": {
+        "*": [
+          "volume-level"
+        ]
+      }
+    },
+    {
+      "name": "up from the volume",
+      "steps": [
+        "options",
+        "key:up",
+        "key:up"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "volume-level",
+          "volume-level"
+        ],
+        "options-columns": [
+          "volume-level",
+          "volume-level",
+          "volume-level"
+        ],
+        "disc": [
+          "volume-level",
+          "achievements",
+          "shaders"
+        ]
+      }
+    },
+    {
+      "name": "between the volume and the next stop below",
+      "steps": [
+        "options",
+        "key:down",
+        "key:up"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "volume-level"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "volume-level"
+        ],
+        "disc": [
+          "volume-level",
+          "options-back",
+          "volume-level"
+        ]
+      }
+    },
+    {
+      "name": "Left and Right move the volume, not the focus",
+      "steps": [
+        "options",
+        "key:right",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "volume-level",
+          "volume-level"
+        ]
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "move"
+          ],
+          [
+            "move"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "entries side by side",
+      "steps": [
+        "options",
+        "key:down",
+        "key:right",
+        "key:down",
+        "key:left"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "controls",
+          "shaders",
+          "shaders"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "achievements"
+        ],
+        "disc": [
+          "volume-level",
+          "options-back",
+          "options-back",
+          "options-back",
+          "volume-level"
+        ]
+      },
+      "red": {
+        "native": {
+          "bug": "B22",
+          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "controls",
+              "achievements",
+              "achievements"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "down to BACK stops there",
+      "steps": [
+        "options",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "options-back",
+          "options-back"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "achievements",
+          "options-back",
+          "options-back",
+          "options-back"
+        ],
+        "disc": [
+          "volume-level",
+          "options-back",
+          "options-back",
+          "options-back",
+          "options-back",
+          "options-back"
+        ]
+      },
+      "red": {
+        "native": {
+          "bug": "B22",
+          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "achievements",
+              "options-back",
+              "options-back",
+              "options-back"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a second disc adds the disc entry",
+      "setup": {
+        "discs": 2
+      },
+      "steps": [
+        "options",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "discs"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "achievements",
+          "options-back",
+          "options-back"
+        ],
+        "disc": [
+          "volume-level",
+          "options-back",
+          "options-back",
+          "options-back",
+          "options-back"
+        ]
+      },
+      "red": {
+        "native": {
+          "bug": "B22",
+          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "achievements",
+              "options-back",
+              "options-back"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

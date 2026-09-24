@@ -1,0 +1,49 @@
+/* The elements that a player can focus with arrow keys, a d-pad or a pointer,
+ * in every design. We link this before the design stylesheet, so a design can
+ * override a single move with `nav-up: #id` (or `nav-down`, `nav-left`,
+ * `nav-right`, `none` to stop there) and choose where a screen starts with
+ * the `autofocus` attribute. In RmlUi an arrow moves to the nearest stop in
+ * that direction in the laid-out document, and stops at the edges.
+ *
+ * In the menu we mark the focused stop `.focused`. Style that, not :focus,
+ * which also matches every ancestor. */
+
+/* The stops. */
+.menu-action, .slot, .list-row, .option-entry, .slider, .list-control,
+.list-pager-prev, .list-pager-next, .account-input, .control-callout,
+.control-group, .control-picker-current, .control-picker-option
+{
+	tab-index: auto;
+	nav: auto;
+}
+
+/* Pressing the label or picture of a stop focuses the stop. */
+.menu-action *, .slot *, .list-row *, .option-entry *, .slider *,
+.list-control *, .control-callout *, .control-group *,
+.control-picker-current *, .control-picker-option *
+{
+	focus: none;
+}
+
+/* Left and Right on a row turn the page of the list and never leave it. */
+.list-row
+{
+	nav-left: none;
+	nav-right: none;
+}
+
+/* Not stops: what the player cannot use now, what is only for the pointer
+ * (the volume arrows, the picture buttons of the pad), what is only
+ * information (the rows of the bindings popup), and the on-screen keyboard,
+ * for which we read the pad directly. */
+[disabled], .disabled, .volume-arrow, .control-hit, #control-binds .list-row,
+.text-key
+{
+	tab-index: none;
+}
+
+/* Everything outside an open dialog or controller picker. */
+.nav-outside
+{
+	focus: none;
+}

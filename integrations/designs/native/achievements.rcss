@@ -45,3 +45,7 @@
    75% { border-top-color: design(rule); border-right-color: design(rule); border-bottom-color: design(rule); border-left-color: design(highlight); }
    100% { border-top-color: design(rule); border-right-color: design(rule); border-bottom-color: design(rule); border-left-color: design(highlight); }
 }
+/* SHOW is inside the password field, so for the arrow keys neither is next to
+ * the other until we declare it here. */
+#achievement-password { nav-right: #achievements-password-visibility; }
+#achievements-password-visibility { nav-left: #achievement-password; }

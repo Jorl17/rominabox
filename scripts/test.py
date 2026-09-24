@@ -60,6 +60,19 @@ WORKFLOW_UNAVAILABLE = None if (
 ) else "requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player; name it after configuring both"
 
 
+# The headless navigation driver, built against the cached menu objects.
+NAVIGATION_DRIVER = ROOT / "work/navigation/menu_nav_driver"
+NAVIGATION_SOURCES = [
+    "scripts/native_runtime/menu_nav_driver.cpp",
+    "scripts/native_runtime/menu_host_fake.cpp",
+    "scripts/native_runtime/text_test_host.cpp",
+    *(f"vendor/retroarch/libretro-common/{name}" for name in (
+        "file/config_file.c", "file/file_path.c", "file/file_path_io.c",
+        "streams/file_stream.c", "string/stdstring.c", "vfs/vfs_implementation.c",
+        "encodings/encoding_utf.c", "time/rtime.c", "compat/compat_strl.c")),
+]
+
+
 class Scope:
     def __init__(
         self,
@@ -225,6 +238,16 @@ SCOPES = [
         ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
         # We build bridge through the same cache, so we check the cache there too.
         prepare=RMLUI_PREPARE + [["python3", str(ROOT / "scripts/native_runtime/test_menu_harness.py")]],
+    ),
+    Scope(
+        "navigation",
+        "arrow keys, pointer, focus and their sounds on every screen of every registered design and of the hypothetical layouts, driven through the real menu C++ on composed documents",
+        "physical keyboards, pads or mice, audible sound, or how a highlight looks; a fake RetroArch host stands in for the player and nothing is drawn",
+        ["env", f"ROMINABOX_NAVIGATION_DRIVER={NAVIGATION_DRIVER}",
+         "cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_navigation"],
+        prepare=RMLUI_PREPARE + [["python3", str(ROOT / "scripts/native_runtime/menu_harness.py"), "build",
+                                  str(NAVIGATION_DRIVER), "--define", "HAVE_AUDIOMIXER",
+                                  *(str(ROOT / path) for path in NAVIGATION_SOURCES)]],
     ),
     Scope(
         "workflows",

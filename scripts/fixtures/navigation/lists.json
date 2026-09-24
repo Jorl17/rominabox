@@ -1,0 +1,354 @@
+{
+  "designs": [
+    "native",
+    "disc"
+  ],
+  "cases": [
+    {
+      "name": "shaders: down the rows to BACK and stop",
+      "steps": [
+        "options",
+        "shaders",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "none",
+          "scanlines",
+          "phosphor",
+          "shaders-back",
+          "shaders-back"
+        ]
+      }
+    },
+    {
+      "name": "shaders: up from the first row stops",
+      "steps": [
+        "options",
+        "shaders",
+        "key:up"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "none",
+          "none"
+        ]
+      }
+    },
+    {
+      "name": "shaders: right on a row stays in the list",
+      "steps": [
+        "options",
+        "shaders",
+        "key:right",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "none",
+          "none",
+          "none"
+        ]
+      }
+    },
+    {
+      "name": "shaders: a resting pointer does not undo a key",
+      "steps": [
+        "options",
+        "shaders",
+        "hover:scanlines",
+        "key:down",
+        "wait-ms:100"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "none",
+          "scanlines",
+          "phosphor",
+          "phosphor"
+        ]
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [],
+          [
+            "move"
+          ],
+          []
+        ]
+      }
+    },
+    {
+      "name": "shaders: Back returns to Options, on SHADERS",
+      "steps": [
+        "options",
+        "shaders",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "none",
+          "shaders"
+        ]
+      },
+      "screen": {
+        "*": "options-panel"
+      }
+    },
+    {
+      "name": "shaders: Back sounds like Back",
+      "steps": [
+        "options",
+        "shaders",
+        "key:cancel"
+      ],
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "cancel"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "discs: seven discs, down to the pager and BACK",
+      "setup": {
+        "discs": 7
+      },
+      "steps": {
+        "native": [
+          "options",
+          "discs",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ],
+        "disc": [
+          "disc",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "discs-0",
+          "discs-1",
+          "discs-2",
+          "discs-3",
+          "discs-4",
+          "discs-next",
+          "discs-back"
+        ],
+        "disc": [
+          "discs-0",
+          "discs-1",
+          "discs-2",
+          "discs-3",
+          "discs-4",
+          "discs-next",
+          "discs-back"
+        ]
+      }
+    },
+    {
+      "name": "discs: Left and Right turn the page",
+      "setup": {
+        "discs": 7
+      },
+      "steps": {
+        "native": [
+          "options",
+          "discs",
+          "key:right",
+          "key:right",
+          "key:left"
+        ],
+        "disc": [
+          "disc",
+          "key:right",
+          "key:right",
+          "key:left"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "discs-0",
+          "discs-5",
+          "discs-5",
+          "discs-0"
+        ],
+        "disc": [
+          "discs-0",
+          "discs-5",
+          "discs-5",
+          "discs-0"
+        ]
+      },
+      "sounds": {
+        "native": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "move"
+          ],
+          [],
+          [
+            "move"
+          ]
+        ],
+        "disc": [
+          [
+            "confirm"
+          ],
+          [
+            "move"
+          ],
+          [],
+          [
+            "move"
+          ]
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B13",
+          "reason": "discs.sync() resets the list to page 1 every frame, so the turned page vanishes (fixed by stream F)",
+          "now": {
+            "focused": [
+              "discs-0",
+              "discs-0",
+              "discs-0",
+              "discs-0"
+            ],
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "move"
+              ],
+              [
+                "move"
+              ],
+              []
+            ]
+          }
+        },
+        "native": {
+          "bug": "B13",
+          "reason": "discs.sync() resets the list to page 1 every frame, so the turned page vanishes (fixed by stream F)",
+          "now": {
+            "focused": [
+              "volume-level",
+              "discs-0",
+              "discs-0",
+              "discs-0",
+              "discs-0"
+            ],
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [
+                "move"
+              ],
+              [
+                "move"
+              ],
+              []
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "discs: one disc",
+      "steps": {
+        "native": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ],
+        "disc": [
+          "disc",
+          "key:up",
+          "key:down",
+          "key:left",
+          "key:right"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "options-back",
+          "options-back"
+        ],
+        "disc": [
+          "disc-back",
+          "disc-back",
+          "disc-back",
+          "disc-back",
+          "disc-back"
+        ]
+      },
+      "red": {
+        "native": {
+          "bug": "B22",
+          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "achievements",
+              "options-back",
+              "options-back",
+              "options-back"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

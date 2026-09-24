@@ -1202,6 +1202,7 @@ pub fn scene_metrics(design: &Path) -> Result<SceneMetrics, String> {
 pub const VOLUME_SLOT: &str = "<!--VOLUME-->";
 
 const BUILTIN_SLIDER: &str = include_str!("../../../integrations/parts/slider.rml");
+const NAVIGATION_STYLESHEET: &str = include_str!("../../../integrations/parts/navigation.rcss");
 
 fn has_class(template: &str, class: &str) -> bool {
     template.split("class=\"").skip(1).any(|rest| {
@@ -1495,6 +1496,10 @@ pub fn prepare_theme_assets(
     }
     fs::write(destination.join("menu.rml"), menu_document(source)?)
         .map_err(|e| format!("Could not prepare menu.rml: {e}"))?;
+    // The elements between which the arrows move, for every design. We link it
+    // in menu.rml before the design stylesheet, which can then override moves.
+    fs::write(destination.join("navigation.rcss"), NAVIGATION_STYLESHEET)
+        .map_err(|e| format!("Could not prepare navigation.rcss: {e}"))?;
     let tokens = design_tokens(source, &palette)?;
     // The document too, not only the stylesheet. A design contains design(…)
     // where a value comes from outside the design, such as the version, and
