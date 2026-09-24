@@ -101,11 +101,27 @@ def main() -> int:
 
 
 DESIGNS = ROOT / "integrations/designs"
-KIT_DESIGNS = ROOT / "desktop/src-tauri/resources/runtime/designs"
+PARTS = ROOT / "integrations/parts"
+KIT = ROOT / "desktop/src-tauri/resources/runtime"
+
+
+def staged_copy_is_current(source: Path, staged: Path, name: str) -> list[str]:
+    """Return the files missing from the kit's copy of a directory, or older there."""
+    if not staged.is_dir():
+        return [f"{name}: not in the kit at all"]
+    stale: list[str] = []
+    for document in sorted(p for p in source.iterdir() if p.is_file()):
+        beside = staged / document.name
+        if not beside.exists():
+            stale.append(f"{name}/{document.name}: missing from the kit")
+        elif beside.read_bytes() != document.read_bytes():
+            stale.append(f"{name}/{document.name}: the kit's copy is older")
+    return stale
 
 
 def staged_designs_are_current() -> list[str]:
-    """Check that the kit's copy of each design matches the design we staged.
+    """Check that the kit's copy of each design, and of the shared parts of every
+    design, matches what we staged it from.
 
     The kit is build output and not a second copy that we maintain by hand, so
     this checks a cache for staleness. A kit staged before a design changed
@@ -114,16 +130,8 @@ def staged_designs_are_current() -> list[str]:
     """
     stale: list[str] = []
     for design in sorted(p for p in DESIGNS.iterdir() if p.is_dir()):
-        staged = KIT_DESIGNS / design.name
-        if not staged.is_dir():
-            stale.append(f"{design.name}: not in the kit at all")
-            continue
-        for document in sorted(p for p in design.iterdir() if p.is_file()):
-            beside = staged / document.name
-            if not beside.exists():
-                stale.append(f"{design.name}/{document.name}: missing from the kit")
-            elif beside.read_bytes() != document.read_bytes():
-                stale.append(f"{design.name}/{document.name}: the kit's copy is older")
+        stale += staged_copy_is_current(design, KIT / "designs" / design.name, design.name)
+    stale += staged_copy_is_current(PARTS, KIT / "parts", "parts")
     return stale
 
 
