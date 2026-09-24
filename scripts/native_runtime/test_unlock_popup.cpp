@@ -61,6 +61,22 @@ int main(int argc, char **argv) {
    achievements.update(); document.settle();
    check(popup && rib::hidden(popup), "A badge arriving after the popup has gone does not reopen it");
 
+   // While this popup waits behind another one, the colour badge can become
+   // ready before it opens, and we do not refresh the list after that. The
+   // popup must still open with the badge.
+   overlays.notify({"OTHER", "1 points", ""});
+   std::snprintf(service_rows[0].badge_path, sizeof(service_rows[0].badge_path), "%s", path.c_str());
+   service_rows[0].badge = RIB_ACHIEVEMENT_BADGE_READY;
+   ++session.revision;
+   achievements.update();
+   overlays.clear_notification();
+   pending_unlock = {}; pending_unlock.id = 123; pending_unlock.points = 5;
+   std::snprintf(pending_unlock.title, sizeof(pending_unlock.title), "FIRST STEP");
+   achievements.update(); document.settle();
+   check(popup && !rib::hidden(popup) && badge && !rib::hidden(badge) &&
+         badge->GetAttribute<Rml::String>("src", "") == path,
+         "A queued popup whose colour badge is already on disk opens with it");
+
    achievements.context_lost();
    document.shutdown();
    std::printf("unlock popup: %d failures\n", failures);
