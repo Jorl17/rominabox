@@ -23,10 +23,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scratch  # noqa: E402
+from core_source import core as local_core  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGES = ROOT / "integrations/consoles"
-CORE_DIR = ROOT / "desktop/src-tauri/resources/runtime/cores"
 HARNESS_SOURCE = ROOT / "scripts/native_runtime/frame_harness.c"
 LIBRETRO = ROOT / "vendor/retroarch/libretro-common/include"
 EXTENSION = "nes"
@@ -228,9 +228,7 @@ def main() -> int:
     artifact = component.get("artifacts", {}).get("macos-arm64")
     if not artifact:
         raise SystemExit(f"{component['id']} has no macos-arm64 artifact")
-    core = CORE_DIR / artifact
-    if not core.is_file():
-        raise SystemExit(f"the shipped core is not in the runtime kit: {core}")
+    core = local_core(artifact)
 
     overrides = component.get("pixels") or []
     with scratch.scratch("rominabox-picture-edges-") as temporary:

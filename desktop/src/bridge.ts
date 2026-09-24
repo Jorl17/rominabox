@@ -46,11 +46,20 @@ export type ExportRequest = {
   outputDir: string;
   target: string;
 };
+/** Our messages about cores in the export, when we fetch any or cannot. */
+export type CoreActivity =
+  | { kind: "fetching"; downloading: number; updating: number }
+  | { kind: "failed"; missing: number };
 export type ExportProgress = {
   stage: string;
   fraction: number;
   message: string;
+  cores?: CoreActivity;
 };
+/** A required core is not cached, and we could not download it. */
+export class CoreDownloadFailed extends Error {}
+/** The stage of that failure in the exporter (`packaging::CORES_STAGE`). */
+const CORES_STAGE = "cores";
 export type ExportResult = {
   appPath: string;
   installedBytes: number;
@@ -190,8 +199,27 @@ export async function menuPreview(
     new Blob([new Uint8Array(bytes)], { type: "image/png" }),
   );
 }
-export function exportGame(request: ExportRequest): Promise<ExportResult> {
-  return invoke("export_game", { request });
+export async function exportGame(
+  request: ExportRequest,
+): Promise<ExportResult> {
+  try {
+    return await invoke<ExportResult>("export_game", { request });
+  } catch (reason) {
+    throw exportFailure(reason);
+  }
+}
+/** The `{stage, message}` from the exporter, as the text on the page. */
+export function exportFailure(reason: unknown): unknown {
+  if (
+    typeof reason !== "object" ||
+    reason === null ||
+    !("stage" in reason) ||
+    !("message" in reason)
+  )
+    return reason;
+  const { stage, message } = reason as { stage: string; message: string };
+  if (stage === CORES_STAGE) return new CoreDownloadFailed(message);
+  return new Error(`${stage}: ${message}`);
 }
 export function cancelExport(): Promise<void> {
   return invoke("cancel_export");

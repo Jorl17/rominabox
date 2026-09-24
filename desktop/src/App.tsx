@@ -14,7 +14,13 @@ import {
 } from "lucide-react";
 import { SYSTEMS, formatBytes, inspectRom } from "./inspection";
 import * as bridge from "./bridge";
-import { canExport, downloadNotice, whyNot, willDownload } from "./consoles";
+import { canExport, whyNot } from "./consoles";
+import {
+  afterExport,
+  afterProgress,
+  CoreFetchNotice,
+  type CoreNotice,
+} from "./CoreFetchNotice";
 import designs from "../designs.json";
 import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
@@ -220,6 +226,10 @@ export function App() {
     null,
   );
   const [progress, setProgress] = useState<bridge.ExportProgress | null>(null);
+  const [coreNotice, setCoreNotice] = useState<CoreNotice | null>(null);
+  // Progress events arrive on a separate channel. One that arrives after the
+  // export has ended must not reopen the pop-up.
+  const exporting = useRef(false);
   const [result, setResult] = useState<bridge.ExportResult | null>(null);
   const [error, setError] = useState("");
   const [savedProject, setSavedProject] = useState("");
@@ -621,27 +631,23 @@ export function App() {
     if (!selection || busy || !bridge.native) return;
     setError("");
     setBusy("export");
+    setCoreNotice(null);
     setProgress({
       stage: "preparing",
       fraction: 0,
       message: "Preparing your game…",
     });
+    exporting.current = true;
     try {
       const value = await bridge.exportGame(exportRequest());
       setResult(value);
-      // The core is in the cache now. In a second export in this session we
-      // must not show that it will be downloaded.
-      if (systemId) {
-        setSupported((current) => {
-          if (current.size === 0) return current;
-          const next = new Set(current);
-          next.add(systemId);
-          return next;
-        });
-      }
+      setCoreNotice(afterExport());
     } catch (e) {
-      fail(e);
+      const notice = afterExport(e);
+      setCoreNotice(notice);
+      if (!notice) fail(e);
     } finally {
+      exporting.current = false;
       setBusy(null);
     }
   }
@@ -726,10 +732,18 @@ export function App() {
       )
       .then(save)
       .catch(fail);
-    bridge.onExportProgress(setProgress).then(save).catch(fail);
+    bridge
+      .onExportProgress((value) => {
+        if (!exporting.current) return;
+        // We show it in the pop-up and leave the progress line as it was.
+        if (value.cores)
+          setCoreNotice((current) => afterProgress(current, value));
+        else setProgress(value);
+      })
+      .then(save)
+      .catch(fail);
     bridge.defaultDestination().then(setDestination).catch(fail);
-    // Which cores are already on disk. We fetch only on Create app, after we
-    // have told the author on the export step.
+    // Which cores are already on disk.
     bridge
       .availableSystems()
       .then((ids) => {
@@ -854,13 +868,6 @@ export function App() {
       ),
   );
   const systemName = systemDefinition?.name || "Choose a console";
-  const systemId = systemDefinition?.id || draft.system;
-  const fetchingCore = willDownload(
-    supported,
-    systemId,
-    (systemDefinition?.cores.length ?? 0) > 0,
-  );
-  const coreNotice = downloadNotice(systemName, fetchingCore);
 
   const requirements = systemDefinition?.firmware || [];
   const asksFirmware = requirements.length > 0;
@@ -1669,7 +1676,6 @@ export function App() {
                       <span>Change</span>
                     </button>
                   </div>
-                  {coreNotice && <p className="note">{coreNotice}</p>}
                   {!bridge.native && (
                     <p className="note">
                       Export is available in the desktop app.
@@ -1769,6 +1775,16 @@ export function App() {
           )}
         </footer>
       </main>
+      {coreNotice && (
+        <CoreFetchNotice
+          notice={coreNotice}
+          onBack={() => setCoreNotice(null)}
+          onRetry={() => {
+            setCoreNotice(null);
+            packageGame();
+          }}
+        />
+      )}
       <input
         ref={gameInput}
         type="file"

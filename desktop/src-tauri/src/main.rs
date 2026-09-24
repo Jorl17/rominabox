@@ -158,19 +158,22 @@ fn cancel_export(state: tauri::State<'_, ExportControl>) -> Result<(), String> {
 }
 
 #[tauri::command]
+/// We keep the stage in the error, so that in the builder we can tell a core
+/// that could not be downloaded from any other failure.
 async fn export_game(
     app: tauri::AppHandle,
     state: tauri::State<'_, ExportControl>,
     mut request: packaging::ExportRequest,
-) -> Result<packaging::ExportResult, String> {
-    request.runtime_kit = resource(&app, "runtime")?;
+) -> Result<packaging::ExportResult, packaging::ExportError> {
+    let shell = |message: String| packaging::ExportError::new("export", message);
+    request.runtime_kit = resource(&app, "runtime").map_err(shell)?;
     request.core = None;
     request.core_cache = core_cache(&app, packaging::core_platform(&request.target)).ok();
     let cancelled = Arc::new(AtomicBool::new(false));
     {
-        let mut active = state.0.lock().map_err(|e| e.to_string())?;
+        let mut active = state.0.lock().map_err(|e| shell(e.to_string()))?;
         if active.is_some() {
-            return Err("Another export is already running.".into());
+            return Err(shell("Another export is already running.".into()));
         }
         *active = Some(cancelled.clone());
     }
@@ -179,11 +182,10 @@ async fn export_game(
         packaging::export_game(&request, &cancelled, |progress| {
             let _ = events.emit("export-progress", progress);
         })
-        .map_err(|e| e.to_string())
     })
     .await;
-    *state.0.lock().map_err(|e| e.to_string())? = None;
-    result.map_err(|e| e.to_string())?
+    *state.0.lock().map_err(|e| shell(e.to_string()))? = None;
+    result.map_err(|e| shell(e.to_string()))?
 }
 
 #[tauri::command]

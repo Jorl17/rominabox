@@ -44,6 +44,7 @@ from typing import Iterator
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import menu_shots  # noqa: E402
 import player_support  # noqa: E402
+from core_source import core as local_core  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CARTRIDGE = ROOT / "scripts/fixtures/test-game.gbc"
@@ -53,7 +54,6 @@ CARTRIDGE = ROOT / "scripts/fixtures/test-game.gbc"
 # number would not test that.
 STEM = "ROM in a Box (Europe) (En,Fr,De,Es,It,Nl,Pt,Sv,No,Da,Fi,Pl)"
 FIXTURE = ROOT / "work/i5-discs"
-CORES = ROOT / "desktop/src-tauri/resources/runtime/cores"
 HARNESS_SOURCE = ROOT / "scripts/native_runtime/frame_harness.c"
 LIBRETRO = ROOT / "vendor/retroarch/libretro-common/include"
 HARNESS = FIXTURE / "frame_harness"
@@ -162,10 +162,7 @@ def core_for(content: Path) -> Path:
         if content.suffix == ".gbc"
         else "pcsx_rearmed_libretro.dylib"
     )
-    path = CORES / name
-    if not path.is_file():
-        raise SystemExit(f"the shipped core is not in the runtime kit: {path}")
-    return path
+    return local_core(name)
 
 
 def phases_of(text: str) -> dict[str, dict]:

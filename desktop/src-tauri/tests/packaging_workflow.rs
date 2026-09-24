@@ -1,5 +1,7 @@
 #![cfg(target_os = "macos")]
 
+use rominabox_desktop::cores::{Response, Transport, Version};
+use rominabox_desktop::export_cores::CoreActivity;
 use rominabox_desktop::packaging::{
     isolated_hotkey_config, ExportRequest, ExportStage, ExportTarget, HOTKEY_BINDS,
     MANAGED_DATA_DIRECTORIES,
@@ -263,30 +265,90 @@ fn failed_export_removes_its_staging_directory() {
     assert_no_export_staging(&request.output_dir);
 }
 
-/// Write the Dreamcast core into the cache and count how often we request it.
-struct CountingFetch {
-    calls: Cell<usize>,
-    bytes: &'static [u8],
+/// A stand-in for the network that we answer from a table. A download is a
+/// URL that ends in one of the keys of `files`, and a check gets `heads`. We
+/// record every URL, so that a test can tell what an export fetched, and we
+/// fail any URL outside the table like an unreachable server.
+#[derive(Default)]
+struct Table {
+    files: std::cell::RefCell<Vec<(String, Vec<u8>)>>,
+    heads: std::cell::RefCell<Vec<(String, Version)>>,
+    served: std::cell::RefCell<Version>,
+    downloads: std::cell::RefCell<Vec<String>>,
+    checks: Cell<usize>,
 }
 
-impl rominabox_desktop::packaging::CoreFetch for CountingFetch {
-    fn fetch_component(&self, cache: &Path, component: &str, target: &str) -> Result<(), String> {
-        let _ = target;
-        assert_eq!(component, "flycast");
-        self.calls.set(self.calls.get() + 1);
-        let system = rominabox_desktop::systems::find("dreamcast").unwrap();
-        let core = system.preferred_core().unwrap();
-        let filename = core.artifact().unwrap();
-        fs::create_dir_all(cache.join("cores")).unwrap();
-        fs::create_dir_all(cache.join("licenses")).unwrap();
-        fs::write(cache.join("cores").join(filename), self.bytes).unwrap();
-        fs::write(
-            cache.join("licenses").join(&core.license_file),
-            b"flycast-licence",
-        )
-        .unwrap();
-        Ok(())
+impl Table {
+    /// A server that has the Dreamcast core as `bytes`, called `etag`.
+    fn flycast(core: &str, bytes: &[u8], etag: &str) -> Self {
+        let table = Table::default();
+        table.publish(core, bytes, etag);
+        table
     }
+
+    fn publish(&self, core: &str, bytes: &[u8], etag: &str) {
+        let version = Version {
+            etag: Some(etag.to_string()),
+            ..Version::default()
+        };
+        *self.files.borrow_mut() = vec![
+            (format!("/latest/{core}.zip"), zip_of(core, bytes)),
+            (
+                "/flyinghead/flycast/master/LICENSE".into(),
+                b"flycast-licence".to_vec(),
+            ),
+            (
+                "/flyinghead/flycast@master/LICENSE".into(),
+                b"flycast-licence".to_vec(),
+            ),
+        ];
+        *self.heads.borrow_mut() = vec![(format!("/latest/{core}.zip"), version.clone())];
+        *self.served.borrow_mut() = version;
+    }
+
+    fn unreachable(&self) {
+        self.files.borrow_mut().clear();
+        self.heads.borrow_mut().clear();
+    }
+}
+
+impl Transport for Table {
+    fn get(&self, url: &str) -> Result<Response, ()> {
+        self.downloads.borrow_mut().push(url.to_string());
+        let files = self.files.borrow();
+        let (_, body) = files
+            .iter()
+            .find(|(key, _)| url.ends_with(key.as_str()))
+            .ok_or(())?;
+        Ok(Response {
+            body: body.clone(),
+            version: self.served.borrow().clone(),
+        })
+    }
+
+    fn head(&self, url: &str) -> Result<Version, ()> {
+        self.checks.set(self.checks.get() + 1);
+        let heads = self.heads.borrow();
+        let (_, version) = heads
+            .iter()
+            .find(|(key, _)| url.ends_with(key.as_str()))
+            .ok_or(())?;
+        Ok(version.clone())
+    }
+}
+
+fn zip_of(name: &str, bytes: &[u8]) -> Vec<u8> {
+    use std::io::Write;
+    let mut cursor = std::io::Cursor::new(Vec::new());
+    {
+        let mut writer = zip::ZipWriter::new(&mut cursor);
+        writer
+            .start_file(name, zip::write::SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(bytes).unwrap();
+        writer.finish().unwrap();
+    }
+    cursor.into_inner()
 }
 
 fn dreamcast_request(root: &Path) -> rominabox_desktop::packaging::ExportRequest {
@@ -301,49 +363,125 @@ fn dreamcast_request(root: &Path) -> rominabox_desktop::packaging::ExportRequest
     request
 }
 
+/// Export once into a new directory beside the cache, and return the messages
+/// about cores and the core in the export.
+fn export_with(
+    request: &mut ExportRequest,
+    table: &Table,
+) -> (
+    Vec<CoreActivity>,
+    Result<Vec<u8>, rominabox_desktop::packaging::ExportError>,
+) {
+    let root = request.core_cache.as_ref().unwrap().parent().unwrap();
+    let exports = fs::read_dir(root).unwrap().count();
+    request.output_dir = root.join(format!("out-{exports}"));
+    let mut said = Vec::new();
+    let result = rominabox_desktop::packaging::export_game_fetching(
+        request,
+        &AtomicBool::new(false),
+        |progress| said.extend(progress.cores),
+        table,
+    );
+    let shipped = result
+        .map(|app| fs::read(app.app_path.join("Contents/Resources/game-core.dylib")).unwrap());
+    (said, shipped)
+}
+
 #[test]
-fn a_missing_core_is_fetched_before_the_game_is_built_and_not_again() {
+fn a_missing_core_is_downloaded_before_the_game_is_built_and_then_reused() {
     let root = workspace();
     let mut request = dreamcast_request(&root);
-    let fetch = CountingFetch {
-        calls: Cell::new(0),
-        bytes: b"flycast-bytes",
-    };
-    let cancelled = AtomicBool::new(false);
-    let first =
-        rominabox_desktop::packaging::export_game_fetching(&request, &cancelled, |_| {}, &fetch);
-    assert!(
-        fetch.calls.get() >= 1,
-        "export did not fetch the missing core before building: {first:?}"
-    );
-    let first = first.expect("the game is built after the core is fetched");
-    let embedded = fs::read(first.app_path.join("Contents/Resources/game-core.dylib")).unwrap();
-    assert_eq!(embedded, b"flycast-bytes");
-    let again = workspace();
-    request.output_dir = again.join("out");
-    let second =
-        rominabox_desktop::packaging::export_game_fetching(&request, &cancelled, |_| {}, &fetch);
-    assert!(second.is_ok(), "{second:?}");
+    let table = Table::flycast("flycast_libretro.dylib", b"flycast-bytes", "\"1\"");
+    let (said, shipped) = export_with(&mut request, &table);
     assert_eq!(
-        fetch.calls.get(),
-        1,
-        "the second export fetched a core that was already kept"
+        said,
+        [CoreActivity::Fetching {
+            downloading: 1,
+            updating: 0
+        }]
+    );
+    assert_eq!(
+        shipped.expect("the game is built after the download"),
+        b"flycast-bytes"
+    );
+    let fetched = table.downloads.borrow().len();
+
+    // Nothing changed on the server, so we show nothing and download nothing.
+    let (said, shipped) = export_with(&mut request, &table);
+    assert_eq!(
+        said,
+        [],
+        "an export with nothing to fetch showed the pop-up"
+    );
+    assert_eq!(shipped.unwrap(), b"flycast-bytes");
+    assert_eq!(
+        table.downloads.borrow().len(),
+        fetched,
+        "the cached core was downloaded again"
+    );
+    assert!(
+        table.checks.get() >= 1,
+        "the export did not ask whether the core changed"
     );
 }
 
-/// A Windows package contains the Windows core even when we run on a Mac.
-struct RecordingFetch {
-    calls: Cell<usize>,
-    target: std::cell::RefCell<String>,
+#[test]
+fn a_newer_nightly_replaces_the_cached_core() {
+    let root = workspace();
+    let mut request = dreamcast_request(&root);
+    let table = Table::flycast("flycast_libretro.dylib", b"monday", "\"1\"");
+    export_with(&mut request, &table).1.unwrap();
+    table.publish("flycast_libretro.dylib", b"tuesday", "\"2\"");
+    let (said, shipped) = export_with(&mut request, &table);
+    assert_eq!(
+        said,
+        [CoreActivity::Fetching {
+            downloading: 0,
+            updating: 1
+        }]
+    );
+    assert_eq!(shipped.unwrap(), b"tuesday");
 }
 
-impl rominabox_desktop::packaging::CoreFetch for RecordingFetch {
-    fn fetch_component(&self, _cache: &Path, component: &str, target: &str) -> Result<(), String> {
-        assert_eq!(component, "flycast");
-        self.calls.set(self.calls.get() + 1);
-        *self.target.borrow_mut() = target.to_string();
-        Ok(())
-    }
+#[test]
+fn a_cached_core_is_used_without_a_word_when_the_check_fails() {
+    let root = workspace();
+    let mut request = dreamcast_request(&root);
+    let table = Table::flycast("flycast_libretro.dylib", b"cached", "\"1\"");
+    export_with(&mut request, &table).1.unwrap();
+    table.unreachable();
+    let fetched = table.downloads.borrow().len();
+    let (said, shipped) = export_with(&mut request, &table);
+    assert_eq!(said, []);
+    assert_eq!(shipped.unwrap(), b"cached");
+    assert_eq!(table.downloads.borrow().len(), fetched);
+}
+
+#[test]
+fn a_missing_core_that_cannot_be_downloaded_stops_the_export_before_anything_is_built() {
+    let root = workspace();
+    let mut request = dreamcast_request(&root);
+    let table = Table::default();
+    let (said, shipped) = export_with(&mut request, &table);
+    assert_eq!(
+        said,
+        [
+            CoreActivity::Fetching {
+                downloading: 1,
+                updating: 0
+            },
+            CoreActivity::Failed { missing: 1 },
+        ]
+    );
+    let error = shipped.unwrap_err();
+    assert_eq!(error.stage, rominabox_desktop::packaging::CORES_STAGE);
+    assert_eq!(
+        error.message,
+        "The Dreamcast core could not be downloaded. Try again later."
+    );
+    assert!(
+        !request.output_dir.exists() || fs::read_dir(&request.output_dir).unwrap().next().is_none()
+    );
 }
 
 #[test]
@@ -351,22 +489,16 @@ fn a_windows_export_fetches_the_windows_core_not_this_machines() {
     let root = workspace();
     let mut request = dreamcast_request(&root);
     request.target = ExportTarget::Windows;
-    let fetch = RecordingFetch {
-        calls: Cell::new(0),
-        target: std::cell::RefCell::new(String::new()),
-    };
-    let _ = rominabox_desktop::packaging::export_game_fetching(
-        &request,
-        &AtomicBool::new(false),
-        |_| {},
-        &fetch,
+    let table = Table::default();
+    let _ = export_with(&mut request, &table);
+    let asked = table.downloads.borrow();
+    assert!(
+        asked
+            .iter()
+            .any(|url| url.contains("/windows/x86_64/latest/flycast_libretro.dll.zip")),
+        "the export requested the host's core: {asked:?}"
     );
-    assert_eq!(fetch.calls.get(), 1, "the missing core was not fetched");
-    assert_eq!(
-        fetch.target.borrow().as_str(),
-        "windows-x86_64",
-        "the export asked for the host platform's core"
-    );
+    assert!(!asked.iter().any(|url| url.contains("dylib")), "{asked:?}");
 }
 
 /// We find a Windows core that is already in the cache for a Windows export.
@@ -385,20 +517,12 @@ fn a_windows_export_with_the_windows_core_cached_does_not_ask_for_the_mac_file()
     fs::create_dir_all(cache.join("licenses")).unwrap();
     fs::write(cache.join("cores/flycast_libretro.dll"), b"flycast-windows").unwrap();
     fs::write(cache.join("licenses/flycast.txt"), b"flycast-licence").unwrap();
-    let fetch = RecordingFetch {
-        calls: Cell::new(0),
-        target: std::cell::RefCell::new(String::new()),
-    };
-    let error = rominabox_desktop::packaging::export_game_fetching(
-        &request,
-        &AtomicBool::new(false),
-        |_| {},
-        &fetch,
-    )
-    .expect_err("this build does not finish a windows package");
-    assert_eq!(
-        fetch.calls.get(),
-        0,
+    let table = Table::default();
+    let (said, shipped) = export_with(&mut request, &table);
+    let error = shipped.expect_err("this build does not finish a windows package");
+    assert_eq!(said, []);
+    assert!(
+        table.downloads.borrow().is_empty(),
         "the windows core was already cached; export fetched anyway"
     );
     assert!(
@@ -406,6 +530,39 @@ fn a_windows_export_with_the_windows_core_cached_does_not_ask_for_the_mac_file()
         "windows core was cached; export said: {}",
         error.message
     );
+}
+
+/// No test uses the network. We set the variable for every test scope in
+/// `scripts/test.py`, and we stop an export that would need the network
+/// instead of downloading.
+#[test]
+fn an_export_under_test_cannot_reach_the_network() {
+    let root = workspace();
+    let request = dreamcast_request(&root);
+    let output = Command::new(env!("CARGO_BIN_EXE_rominabox-cli"))
+        .arg("export")
+        .env(rominabox_desktop::cores::OFFLINE_VARIABLE, "1")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            use std::io::Write;
+            child
+                .stdin
+                .take()
+                .unwrap()
+                .write_all(&serde_json::to_vec(&request).unwrap())?;
+            child.wait_with_output()
+        })
+        .unwrap();
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("a core was asked of the network"),
+        "the export was not refused: {stderr}"
+    );
+    assert!(!root.join("core-cache/cores").exists());
 }
 
 #[test]

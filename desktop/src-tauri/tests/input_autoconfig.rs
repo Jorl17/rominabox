@@ -574,8 +574,9 @@ input_reset_btn = \"3\"
     }
 
     let revision = pinned_autoconfig_revision();
-    let archive = resources.join(format!(
-        "sources/retroarch-joypad-autoconfig-{revision}.tar.gz"
+    // We keep the downloaded upstream archive in work/downloads, never in the kit.
+    let archive = rominabox_desktop::repo::at(&format!(
+        "work/downloads/retroarch-joypad-autoconfig-{revision}.tar.gz"
     ));
     let upstream = archive_member(&archive, "hid/DualSense Wireless Controller (PS5).cfg");
     assert!(
@@ -632,16 +633,8 @@ fn joypad_autoconfig_licence_and_provenance_match_the_pin() {
     assert_eq!(component["revision"], revision);
     assert_eq!(component["license"], "MIT");
     assert_eq!(component["license_file"], "retroarch-joypad-autoconfig.txt");
-    assert_eq!(
-        component["source_archive"],
-        format!("retroarch-joypad-autoconfig-{revision}.tar.gz")
-    );
     let source_url = component["source_url"].as_str().unwrap();
     assert!(source_url.contains(&revision));
-    assert!(resources
-        .join("sources")
-        .join(format!("retroarch-joypad-autoconfig-{revision}.tar.gz"))
-        .is_file());
     let licensing =
         fs::read_to_string(repo_root().join("docs/dependencies-and-licensing.md")).unwrap();
     assert!(

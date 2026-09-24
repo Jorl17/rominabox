@@ -22,6 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import menu_shots  # noqa: E402
+from core_source import core_source  # noqa: E402
 
 EXPORT_DIR = ROOT / "work/quit-export"
 # Every directory that we write in an export of the quit tests, declared once.
@@ -263,7 +264,7 @@ def export_rom(rom: Path, title: str, system: str, workspace: Path) -> Path:
         "outputDir": str(workspace),
         "target": "macos",
         "runtimeKit": str(menu_shots.KIT),
-        "coreCache": str(ROOT / "work/core-cache/macos-arm64"),
+        "coreCache": str(core_source()),
     }
     result = subprocess.run(
         [str(cli()), "export"],

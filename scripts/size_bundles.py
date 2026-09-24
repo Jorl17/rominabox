@@ -1,9 +1,11 @@
 """Export a few games and refuse one that is over the size ceiling.
 
 The prepared runtime kit is ignored by Git, and we do not compile RetroArch.
-The ROM is a few bytes that we write in the work directory, so the size is
-that of the player and the one core the game uses. A real Game Boy Advance ROM
-adds its own size. We check the .app on disk against
+The kit contains no cores. As in the builder, we take the Mega Drive core from
+the local core source (scripts/core_source.py) as the export's core cache. The
+ROM is a few bytes that we write in the work directory, so the size is that of
+the player and the one core the game uses. A real Game Boy Advance ROM adds
+its own size. We check the .app on disk against
 scripts/fixtures/size-budgets.json. At export we write that app and nothing
 else.
 
@@ -26,6 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from built import cli  # noqa: E402
+from core_source import core  # noqa: E402
 
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 BUDGETS = ROOT / "scripts/fixtures/size-budgets.json"
@@ -63,7 +66,7 @@ def du(path: Path) -> int:
     return total
 
 
-def export(command: Path, name: str, kit: Path, rom: Path, extra: dict) -> Path:
+def export(command: Path, name: str, kit: Path, cache: Path, rom: Path, extra: dict) -> Path:
     out = WORK / name
     remove_owned(out)
     out.mkdir(parents=True)
@@ -82,6 +85,7 @@ def export(command: Path, name: str, kit: Path, rom: Path, extra: dict) -> Path:
         "outputDir": str(out),
         "target": "macos",
         "runtimeKit": str(kit),
+        "coreCache": str(cache),
     }
     request.update(extra)
     env = dict(os.environ, ROMINABOX_GAME_BUNDLE_PREFIX=f"size-{name}")
@@ -115,6 +119,7 @@ def main() -> int:
     kit = WORK / "kit"
     remove_owned(kit)
     shutil.copytree(KIT, kit, symlinks=True)
+    cache = core("genesis_plus_gx_libretro.dylib").parent.parent
     for document in DESIGN.iterdir():
         if document.is_file():
             shutil.copyfile(document, kit / "designs/native" / document.name)
@@ -127,7 +132,7 @@ def main() -> int:
     }
     failed = False
     for name, extra in bundles.items():
-        app = export(command, name, kit, rom, extra)
+        app = export(command, name, kit, cache, rom, extra)
         extras = sorted(
             entry.name
             for entry in app.parent.iterdir()

@@ -30,7 +30,10 @@ ROOT = Path(__file__).resolve().parent.parent
 SYSTEMS = ROOT / "desktop/systems.json"
 CONTROLS = ROOT / "desktop/controls.json"
 ARTWORK = ROOT / "desktop/assets/controllers"
-KIT_CORES = ROOT / "desktop/src-tauri/resources/runtime/cores"
+sys.path.insert(0, str(ROOT / "scripts"))
+from core_source import core_source  # noqa: E402
+
+KIT_CORES = core_source() / "cores"
 PACKAGES = ROOT / "integrations/consoles"
 TARGET = "macos-arm64"
 SCHEMA = 1

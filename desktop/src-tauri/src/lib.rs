@@ -6,6 +6,7 @@ pub mod controls;
 pub mod disc_menu;
 pub mod discs;
 pub mod dumps;
+pub mod export_cores;
 pub mod icons;
 pub mod lists;
 pub mod menu;
