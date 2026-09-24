@@ -779,7 +779,7 @@ static int check_placement(const char *assets, const char *scenes,
       std::stringstream buffer;
       buffer << in.rdbuf();
       const std::string markup = buffer.str();
-      if (!view.controls.set_scene(markup.c_str()))
+      if (!view.controls.set_scene(profile.c_str(), markup.c_str()))
       {
          char message[256];
          std::snprintf(message, sizeof(message),
@@ -1092,7 +1092,7 @@ int main(int argc, char **argv)
             "the player template has no generated control callouts");
       CHECK(!view.document.element_center("controller-image", &image_x, &image_y),
             "the player template has no controller illustration");
-      view.controls.wire_device_picker(fixture_controls);
+      view.controls.wire(fixture_controls);
       view.controls.set_device_picker(fixture_controls, true, "megadrive6");
       CHECK(std::string(inspect.text("controller-scene")) == scene,
             "naming another pad does not redraw the controls scene");
