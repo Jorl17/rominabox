@@ -7,7 +7,8 @@
 //! `ROMINABOX_NAVIGATION_DRIVER`). We load the document in the driver with a
 //! fake RetroArch host: no window, no GL, no sound. Then we press keys, move
 //! the pointer and record, after every step, the element the player sees
-//! highlighted, the screen and the sounds played.
+//! highlighted, what shows that a binding is being captured, the screen
+//! and the sounds played.
 //!
 //! The case tables, `scripts/fixtures/navigation/*.json`, list what each
 //! step should highlight, per design and from the picture a person sees.
@@ -232,9 +233,13 @@ fn named_ids(case: &Value, design: &str) -> BTreeSet<String> {
         }
     };
     add(for_design(&case["focused"], design));
+    add(for_design(&case["capturing"], design));
     for step in steps_for(case, design) {
         let step = step.as_str().unwrap();
-        if let Some(id) = step.strip_prefix("hover:") {
+        if let Some(id) = step
+            .strip_prefix("hover:")
+            .or_else(|| step.strip_prefix("press:"))
+        {
             ids.insert(id.to_owned());
         } else if !step.contains(':') {
             ids.insert(step.to_owned());
@@ -246,7 +251,7 @@ fn named_ids(case: &Value, design: &str) -> BTreeSet<String> {
 /// The step results expected in a case for a design, in the driver's format.
 fn expected(case: &Value, design: &str) -> Value {
     let mut out = serde_json::Map::new();
-    for field in ["focused", "screen", "sounds"] {
+    for field in ["focused", "capturing", "screen", "sounds"] {
         if let Some(value) = case.get(field).and_then(|value| for_design(value, design)) {
             out.insert(field.to_owned(), value.clone());
         }

@@ -9,7 +9,7 @@
  *   set KEY VALUE         host and service state before the menu opens:
  *                           discs N          disc images in the core
  *                           load 1           slot 1 contains a state
- *                           achievements S   signed-out | active | startup
+ *                           achievements S   signed-out | active | startup | failed
  *                           rows N           achievements in the list
  *                           pending 1        an earned achievement not uploaded
  *   ids ID...             ids of the case, reported when not in the document
@@ -18,14 +18,17 @@
  *                                      start toggle resume, and tab (the
  *                                      physical key, through the text path)
  *                           hover:ID   move the pointer to the element's centre
+ *                           press:ID   move the pointer there, then press and
+ *                                      release it, one frame each, like a click
  *                           wait-ms:N  advance the clock
  *                           ID         click the element, as in a menu script
  *   run                   run the case
  *
- * After every step, record what the player sees highlighted (visible
- * elements with the `focused` class, except the buttons of the controller
- * picture, which repeat their callout), the visible screen panel and the
- * requested sounds. Print one JSON line per case for the caller to judge.
+ * After every step, record what the player sees highlighted (visible elements
+ * with the `focused` class, except the controller picture's buttons, which
+ * repeat their callout), what is marked as capturing a binding (the
+ * `capturing` class, with the same exception), the visible screen panel and
+ * the requested sounds. Print one JSON line per case for the caller to judge.
  *
  * We record sounds in the fake host and play nothing. */
 #include "rmlui/menu_api.h"
@@ -148,21 +151,29 @@ void frame(void *menu)
    rib_menu_frame(menu, 960, 600);
 }
 
-std::string observe(const std::vector<std::string>& screen_panels, size_t& heard)
+/* The visible elements with a state class, as one id, a list, or null. */
+std::string marked(const char *state)
 {
-   std::string focused = "[";
+   std::string ids = "[";
    bool first = true;
    rib::walk(view.document.root(), [&](Rml::Element *element) {
       if (rib::display_none(element)) return rib::Walk::SkipChildren;
-      if (element->IsClassSet("focused") && !element->IsClassSet("control-hit")
+      if (element->IsClassSet(state) && !element->IsClassSet("control-hit")
             && !element->IsClassSet("text-key") && !element->GetId().empty())
       {
-         focused += (first ? "" : ",") + json(element->GetId());
+         ids += (first ? "" : ",") + json(element->GetId());
          first = false;
       }
       return rib::Walk::Continue;
    });
-   focused += "]";
+   ids += "]";
+   if (ids == "[]") return "null";
+   if (ids.find(',') == std::string::npos) return ids.substr(1, ids.size() - 2);
+   return ids;
+}
+
+std::string observe(const std::vector<std::string>& screen_panels, size_t& heard)
+{
    std::string screen;
    for (const std::string& panel : screen_panels)
       if (auto *element = view.document.root()->GetElementById(panel))
@@ -172,12 +183,8 @@ std::string observe(const std::vector<std::string>& screen_panels, size_t& heard
       sounds += (index > heard ? "," : "") + json(sound_name(host.sounds[index]));
    sounds += "]";
    heard = host.sounds.size();
-   /* An empty list for no focus, and the id alone for one focused id. */
-   if (focused == "[]") focused = "null";
-   else if (focused.find(',') == std::string::npos)
-      focused = focused.substr(1, focused.size() - 2);
-   return "{\"focused\":" + focused + ",\"screen\":" + json(screen)
-         + ",\"sounds\":" + sounds + "}";
+   return "{\"focused\":" + marked("focused") + ",\"capturing\":" + marked("capturing")
+         + ",\"screen\":" + json(screen) + ",\"sounds\":" + sounds + "}";
 }
 
 bool step(void *menu, const std::string& text)
@@ -210,6 +217,16 @@ bool step(void *menu, const std::string& text)
    {
       if (!view.document.element_center(text.substr(6).c_str(), &host.pointer.x, &host.pointer.y))
          return false;
+      frame(menu);
+      return true;
+   }
+   if (text.rfind("press:", 0) == 0)
+   {
+      if (!view.document.element_center(text.substr(6).c_str(), &host.pointer.x, &host.pointer.y))
+         return false;
+      host.pointer.pressed = true;
+      frame(menu);
+      host.pointer.pressed = false;
       frame(menu);
       return true;
    }
@@ -271,6 +288,11 @@ void reset_services(const Case& run)
          }
          else if (value == "startup")
             session.startup_waiting = true;
+         else if (value == "failed")
+         {
+            session.status = RIB_ACHIEVEMENTS_ERROR;
+            std::snprintf(session.account, sizeof(session.account), "player");
+         }
       }
       else if (key == "rows")
          for (int index = 0; index < std::atoi(value.c_str()); ++index)
