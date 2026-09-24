@@ -5645,305 +5645,6 @@
       1200
     ]
   },
-  "native/blue/achievement-mode": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n",
-      "toggle-achievement-mode": "1\n"
-    },
-    "picture": "4ec25aef9b7d62f7aa92661e0d517dc48ed77ee980f7bfa9a06039b7afbb4b63",
-    "reports": {
-      "final": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [
-          "achievements-prev"
-        ],
-        "focused": [
-          "achievement-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [
-          "achievement-mode"
-        ],
-        "profile": "megadrive",
-        "screen": "achievements",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "achievement-mode-state": "ON",
-          "achievements-page-count": "1/2",
-          "footer-hint": "ESC  BACK",
-          "heading": "ACHIEVEMENTS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "achievements",
-      "achievement-mode"
-    ],
-    "size": [
-      1920,
-      1200
-    ]
-  },
-  "native/blue/achievement-mode-pause": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n",
-      "toggle-achievement-mode": "1\n"
-    },
-    "picture": "fd15d36c65e91701123733e6c7adad07550dcb306ad178a7ccbd3be2e849990c",
-    "reports": {
-      "final": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [
-          "slot-1",
-          "slot-2",
-          "slot-3",
-          "slot-4",
-          "slot-5",
-          "slot-6",
-          "save",
-          "load"
-        ],
-        "focused": [],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "pause",
-        "selected": [
-          "slot-1"
-        ],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  CONTINUE",
-          "heading": "GAME PAUSED",
-          "status": "SAVE SLOTS ARE OFF WHILE ACHIEVEMENTS ARE ON"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "achievements",
-      "achievement-mode",
-      "achievements-back",
-      "options-back"
-    ],
-    "size": [
-      1920,
-      1200
-    ]
-  },
-  "native/blue/achievements": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "4730c1ed2ef2bac7b6492e6d2360a362bcb7fe0584204dd34143630dbe72b735",
-    "reports": {
-      "final": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [
-          "achievements-prev"
-        ],
-        "focused": [
-          "achievement-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "achievements",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "achievement-mode-state": "OFF",
-          "achievements-page-count": "1/2",
-          "footer-hint": "ESC  BACK",
-          "heading": "ACHIEVEMENTS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "achievements"
-    ],
-    "size": [
-      1920,
-      1200
-    ]
-  },
-  "native/blue/achievements-next": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "81bea3893aef604ca9ef2606ae7730afddf0e1ebd4ea6fd4c4eb591af9166e65",
-    "reports": {
-      "final": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [
-          "achievements-next"
-        ],
-        "focused": [
-          "achievement-6"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "achievements",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "achievement-mode-state": "OFF",
-          "achievements-page-count": "2/2",
-          "footer-hint": "ESC  BACK",
-          "heading": "ACHIEVEMENTS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "achievements",
-      "achievements-next"
-    ],
-    "size": [
-      1920,
-      1200
-    ]
-  },
   "native/blue/binds-c": {
     "files": {
       "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
@@ -8563,10 +8264,9 @@
     "files": {
       "controls.cfg": "controls_profile = \"megadrive6\"\ninput_player1_a = \"c\"\ninput_player1_a_axis = \"nul\"\ninput_player1_a_btn = \"nul\"\ninput_player1_a_mbtn = \"nul\"\ninput_player1_b = \"x\"\ninput_player1_b_axis = \"nul\"\ninput_player1_b_btn = \"nul\"\ninput_player1_b_mbtn = \"nul\"\ninput_player1_down = \"down\"\ninput_player1_down_axis = \"nul\"\ninput_player1_down_btn = \"nul\"\ninput_player1_down_mbtn = \"nul\"\ninput_player1_left = \"left\"\ninput_player1_left_axis = \"nul\"\ninput_player1_left_btn = \"nul\"\ninput_player1_left_mbtn = \"nul\"\ninput_player1_right = \"right\"\ninput_player1_right_axis = \"nul\"\ninput_player1_right_btn = \"nul\"\ninput_player1_right_mbtn = \"nul\"\ninput_player1_start = \"enter\"\ninput_player1_start_axis = \"nul\"\ninput_player1_start_btn = \"nul\"\ninput_player1_start_mbtn = \"nul\"\ninput_player1_up = \"up\"\ninput_player1_up_axis = \"nul\"\ninput_player1_up_btn = \"nul\"\ninput_player1_up_mbtn = \"nul\"\ninput_player1_y = \"z\"\ninput_player1_y_axis = \"nul\"\ninput_player1_y_btn = \"nul\"\ninput_player1_y_mbtn = \"nul\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n",
       "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"513\"\n",
-      "toggle-achievement-mode": "1\n",
       "volume.cfg": "audio_volume = \"-62.2\"\n"
     },
-    "picture": "4ec25aef9b7d62f7aa92661e0d517dc48ed77ee980f7bfa9a06039b7afbb4b63",
+    "picture": "fb3efad4a0c5d7cd1cc9f7d43741ce5167e76a59adc92bb05a0707b524f5f5ed",
     "reports": {
       "chosen": {
         "bindsBox": [],
@@ -8627,19 +8327,17 @@
         "captureActive": false,
         "capturing": [],
         "disabled": [
-          "achievements-prev"
+          "load"
         ],
-        "focused": [
-          "achievement-1"
-        ],
+        "focused": [],
         "leaving": [],
         "menuOpen": true,
-        "on": [
-          "achievement-mode"
-        ],
+        "on": [],
         "profile": "megadrive6",
-        "screen": "achievements",
-        "selected": [],
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
         "showing": [],
         "sliders": {
           "volume-level": 0.222222
@@ -8671,67 +8369,9 @@
           }
         ],
         "text": {
-          "achievement-mode-state": "ON",
-          "achievements-page-count": "1/2",
-          "footer-hint": "ESC  BACK",
-          "heading": "ACHIEVEMENTS"
-        },
-        "transferPending": false,
-        "volumeDb": -62.222221
-      },
-      "guard": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [
-          "achievements-prev"
-        ],
-        "focused": [
-          "achievement-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [
-          "achievement-mode"
-        ],
-        "profile": "megadrive6",
-        "screen": "achievements",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 0.222222
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "achievement-mode-state": "ON",
-          "achievements-page-count": "1/2",
-          "footer-hint": "ESC  BACK",
-          "heading": "ACHIEVEMENTS"
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": ""
         },
         "transferPending": false,
         "volumeDb": -62.222221
@@ -8744,10 +8384,7 @@
       "controls-device-current",
       "controls-device-option-megadrive6",
       "report:chosen",
-      "controls-back",
-      "achievements",
-      "achievement-mode",
-      "report:guard"
+      "controls-back"
     ],
     "size": [
       1920,
@@ -9212,10 +8849,9 @@
     "files": {
       "controls.cfg": "controls_profile = \"megadrive6\"\ninput_player1_a = \"c\"\ninput_player1_a_axis = \"nul\"\ninput_player1_a_btn = \"nul\"\ninput_player1_a_mbtn = \"nul\"\ninput_player1_b = \"x\"\ninput_player1_b_axis = \"nul\"\ninput_player1_b_btn = \"nul\"\ninput_player1_b_mbtn = \"nul\"\ninput_player1_down = \"down\"\ninput_player1_down_axis = \"nul\"\ninput_player1_down_btn = \"nul\"\ninput_player1_down_mbtn = \"nul\"\ninput_player1_left = \"left\"\ninput_player1_left_axis = \"nul\"\ninput_player1_left_btn = \"nul\"\ninput_player1_left_mbtn = \"nul\"\ninput_player1_right = \"right\"\ninput_player1_right_axis = \"nul\"\ninput_player1_right_btn = \"nul\"\ninput_player1_right_mbtn = \"nul\"\ninput_player1_start = \"enter\"\ninput_player1_start_axis = \"nul\"\ninput_player1_start_btn = \"nul\"\ninput_player1_start_mbtn = \"nul\"\ninput_player1_up = \"up\"\ninput_player1_up_axis = \"nul\"\ninput_player1_up_btn = \"nul\"\ninput_player1_up_mbtn = \"nul\"\ninput_player1_y = \"z\"\ninput_player1_y_axis = \"nul\"\ninput_player1_y_btn = \"nul\"\ninput_player1_y_mbtn = \"nul\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n",
       "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"513\"\n",
-      "toggle-achievement-mode": "1\n",
       "volume.cfg": "audio_volume = \"-62.2\"\n"
     },
-    "picture": "4ec25aef9b7d62f7aa92661e0d517dc48ed77ee980f7bfa9a06039b7afbb4b63",
+    "picture": "fb3efad4a0c5d7cd1cc9f7d43741ce5167e76a59adc92bb05a0707b524f5f5ed",
     "reports": {
       "controller": {
         "bindsBox": [],
@@ -9276,19 +8912,17 @@
         "captureActive": false,
         "capturing": [],
         "disabled": [
-          "achievements-prev"
+          "load"
         ],
-        "focused": [
-          "achievement-1"
-        ],
+        "focused": [],
         "leaving": [],
         "menuOpen": true,
-        "on": [
-          "achievement-mode"
-        ],
+        "on": [],
         "profile": "megadrive6",
-        "screen": "achievements",
-        "selected": [],
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
         "showing": [],
         "sliders": {
           "volume-level": 0.222222
@@ -9320,67 +8954,9 @@
           }
         ],
         "text": {
-          "achievement-mode-state": "ON",
-          "achievements-page-count": "1/2",
-          "footer-hint": "ESC  BACK",
-          "heading": "ACHIEVEMENTS"
-        },
-        "transferPending": false,
-        "volumeDb": -62.222221
-      },
-      "guard": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [
-          "achievements-prev"
-        ],
-        "focused": [
-          "achievement-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [
-          "achievement-mode"
-        ],
-        "profile": "megadrive6",
-        "screen": "achievements",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 0.222222
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "achievement-mode-state": "ON",
-          "achievements-page-count": "1/2",
-          "footer-hint": "ESC  BACK",
-          "heading": "ACHIEVEMENTS"
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": ""
         },
         "transferPending": false,
         "volumeDb": -62.222221
@@ -9442,9 +9018,7 @@
       "report:volume",
       "controls",
       "report:controller",
-      "controls-back",
-      "achievements",
-      "report:guard"
+      "controls-back"
     ],
     "size": [
       1920,
