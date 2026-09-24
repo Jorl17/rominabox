@@ -2194,6 +2194,73 @@ pub fn prepare_splash_assets(
     fs::write(destination.join("menu.rcss"), css).map_err(|e| e.to_string())
 }
 
+/// The options of an export for the in-game menu, borrowed from its request.
+pub struct MenuRequest<'a> {
+    /// The prepared kit: the design under `designs/<id>`, the shared
+    /// controller artwork under `menu-assets`.
+    pub kit: &'a Path,
+    pub design: &'a str,
+    pub palette: &'a str,
+    pub background: Option<&'a Path>,
+    pub system: &'a str,
+    pub controls: &'a crate::controls::Controls,
+    pub show_menu: bool,
+    pub splash: bool,
+    pub include_achievements: bool,
+    pub menu_entries: Option<&'a [String]>,
+    pub shaders: &'a crate::shaders::ShaderSelection,
+}
+
+/// Stage the menu an exported game shows into `destination`: the full menu
+/// when it has one, the splash alone when it has only that, nothing otherwise.
+pub fn compose_menu(request: &MenuRequest, destination: &Path) -> Result<(), String> {
+    let design = staged_design(request.kit, request.design);
+    if request.show_menu {
+        prepare_theme_assets(&design, destination, request.palette, request.background)?;
+        // We compose the data lists and the live account screen with one function.
+        let mut lists: Vec<crate::lists::List> = Vec::new();
+        if let Some(discs) = crate::disc_menu::list(&design)? {
+            lists.push(discs);
+        }
+        let staged_shaders = crate::shaders::stage(&design, destination, request.shaders)?;
+        lists.extend(staged_shaders.list);
+        if crate::achievements::included(request.include_achievements, request.show_menu) {
+            lists.push(crate::achievements::screen(&design)?);
+        }
+        let mut entries = crate::achievements::entries(
+            &design,
+            request.include_achievements,
+            request.show_menu,
+            request.menu_entries,
+        )?;
+        for list in &lists {
+            if list.screen.option_label.is_some() && !entries.contains(&list.screen.id) {
+                entries.push(list.screen.id.clone());
+            }
+        }
+        let screens = prepare_controls_assets(
+            // The controller artwork is the same for every design, because all
+            // designs show the same pads, so we keep it in the shared menu-assets.
+            &request.kit.join("menu-assets"),
+            // The frame in which we draw the pads comes from the design, and
+            // the generated coordinates must match the stylesheet of that
+            // design.
+            &design,
+            destination,
+            request.system,
+            request.controls,
+            Some(&entries),
+        )?;
+        crate::lists::install(&design, destination, &screens, &lists)?;
+        if crate::achievements::included(request.include_achievements, request.show_menu) {
+            append_component_style(&design, destination, request.palette, "achievements.rcss")?;
+        }
+    } else if request.splash {
+        prepare_splash_assets(&design, destination, request.palette)?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
