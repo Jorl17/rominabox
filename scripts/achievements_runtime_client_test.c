@@ -478,7 +478,17 @@ int main(void)
    rib_achievements_skip_startup();
    assert(rib_achievements_startup_ready());
    assert(snapshot().status == RIB_ACHIEVEMENTS_OFF);
-   assert(!snapshot().enabled_preference);
+   assert(snapshot().enabled_preference);
+   assert(!rib_achievements_evaluating());
+   file = fopen(session_path, "rb");
+   assert(file);
+   assert(fgets(file_data, sizeof(file_data), file));
+   assert(strcmp(file_data, "Other\n") == 0);
+   assert(fgets(file_data, sizeof(file_data), file));
+   assert(strcmp(file_data, "other-token\n") == 0);
+   assert(fgets(file_data, sizeof(file_data), file));
+   assert(strcmp(file_data, "1\n") == 0);
+   fclose(file);
    defer_login = false;
    {
       rc_api_server_response_t response = {0};
@@ -488,8 +498,15 @@ int main(void)
       deferred_callback(&response, deferred_data);
    }
    assert(snapshot().status == RIB_ACHIEVEMENTS_OFF);
+   assert(!rib_achievements_evaluating());
    rib_achievements_finish_startup_gate();
    assert(!snapshot().startup_waiting);
+   rib_achievements_content_unload();
+   rc_client_destroy(locals.client);
+   locals.client = NULL;
+   assert(rib_achievements_content_load(&info));
+   ready(); /* the saved ON choice still restores on the next launch */
+   assert(snapshot().enabled_preference);
    assert(setenv("ROMINABOX_DATA_DIR", invalid_directory, 1) == 0);
    rib_achievements_sign_out();
    assert(snapshot().status == RIB_ACHIEVEMENTS_ERROR);
