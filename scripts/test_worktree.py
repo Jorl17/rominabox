@@ -472,11 +472,12 @@ FROM_THE_CANONICAL_CHECKOUT = [
 
 # These checks give the same result anywhere, and are most useful in a worktree.
 def a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote() -> None:
-    """Check a compile of broken source over the stamped binary in prove_scopes.
+    """Check that we drop the stamp when we rebuild the binary in a failed run.
 
-    We do not stamp the failure, and the new binary often has the same size,
-    so after we restore the source, the next run would replay the broken
-    binary, and the identification tests would reject a valid cover.
+    We do not stamp the failure, and the new binary often has the same size.
+    If we kept the stamp, a run after the source returns to the stamped state
+    would replay the broken binary, and the identification tests would then
+    reject a valid cover.
     """
     import cargo_replay
 

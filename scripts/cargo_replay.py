@@ -148,11 +148,12 @@ def _load(plan: Plan, digest: str) -> list[dict] | None:
         file = Path(binary["path"])
         if not file.is_file():
             return None
-        # The filename is cargo's metadata hash. A rebuild from different
-        # sources has a different name, so a file that is still here with the
-        # same size is the binary we recorded in the stamp. We ignore mtime,
-        # because a later `cargo test` of one target rewrites the file in place,
-        # and we would discard the stamp on every run of the suite.
+        # The filename is cargo's metadata hash, which does not change with
+        # the source, so we tie the stamp to a tree with the source digest
+        # above. We take a file that is still here with the same size as the
+        # binary we recorded in the stamp. We ignore mtime, because a later
+        # `cargo test` of one target rewrites the file in place, and we would
+        # discard the stamp on every run of the suite.
         if file.stat().st_size != binary["size"]:
             return None
     if plan.lib_only:
@@ -239,9 +240,10 @@ def cargo_test(command: list[str], cwd: Path) -> subprocess.CompletedProcess:
     if ran.returncode == 0:
         _save(plan, digest, ran.stdout + ran.stderr)
     else:
-        # A build failure can still leave a new binary in place of the stamped
-        # one. We do not stamp a failure, and the new binary is often the same
-        # size, so the old stamp would still match and on the next run we would
-        # run the broken binary. So we drop the stamp.
+        # After a failed run the stamped binary may be rebuilt, under the same
+        # name, from different source. We do not stamp a failure, and the new
+        # binary is often the same size, so once the source is back to what we
+        # recorded (an edit undone, a branch switched back) the stamp would
+        # match again and we would run the wrong binary. So we drop it.
         _stamp_path(plan).unlink(missing_ok=True)
     return ran
