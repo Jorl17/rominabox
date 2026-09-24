@@ -162,7 +162,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .menu-index { position: absolute; left: 24dp; top: 56dp; width: 680dp; height: 420dp; }
 .option-entry { position: absolute; left: 0; width: 680dp; height: 52dp; line-height: 52dp; font-family: Silkscreen; font-size: 18dp; border-width: 0 0 1dp 0; border-color: #476eab; text-align: left; padding-left: 16dp; background-color: transparent; }
 .option-entry:hover { background-color: #193e88; color: #ffffff; border-color: #75b2e4; }
-.option-entry.focused { border-left-width: 6dp; border-left-color: #fff13d; background-color: transparent; color: #ffffff; }
+.option-entry.focused { border-color: #476eab; border-left-width: 6dp; border-left-color: #fff13d; background-color: transparent; color: #ffffff; }
 .option-entry:active { background-color: #fff13d; color: #081433; }
 .options-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
 

@@ -1034,6 +1034,11 @@ int main(int argc, char **argv)
    view.slots.focus_action(RIB_RMLUI_ACTION_SAVE);
    CHECK(view.document.root()->GetAttribute<Rml::String>("data-focus", "") == "save",
          "the document names the focused element");
+   view.document.root()->Focus();
+   view.focus.paint();
+   CHECK(!view.document.root()->HasAttribute("data-focus"),
+         "the name goes when nothing has focus");
+   view.slots.focus_action(RIB_RMLUI_ACTION_SAVE);
    CHECK(inspect.property("slot-4", "border-top-color") != plain_border,
          "SAVE shows the slot it saves to");
    move_to_id("quit");
