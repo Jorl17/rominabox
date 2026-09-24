@@ -581,11 +581,10 @@ def draw_state(design: str, system: str, palette: str, name: str, state: dict, s
     if needs and resolve(document, needs) is None:
         return key, None, f"  {name:<26}not offered by this console\n", ""
 
-    # An id ending in "?" is optional in the state. On an illustrated pad we put
-    # an invisible hit circle over each drawn button. A console without a
-    # drawing has a grid instead, where the box is the target and there is no
-    # circle. Both are correct, so for a state with a lit control we light the
-    # one that is there and do not refuse a console with only one of them.
+    # An id ending in "?" is optional in the state. A console whose pad has
+    # sticks has a box for each stick, and a console without sticks has none.
+    # Both are correct, so we do not refuse the state on a console without
+    # sticks.
     wanted = {i.rstrip("?"): (v, i.endswith("?")) for i, v in state["set"].items()}
     resolved = {i: resolve(document, i) for i in wanted}
     absent = [i for i, found in resolved.items() if found is None and not wanted[i][1]]

@@ -34,6 +34,7 @@
     "group": {
       "width": 236,
       "height": 62,
+      "border": 2,
       "gap": 16,
       "bottomMargin": 12
     }

@@ -24,8 +24,20 @@ fn placed(scene: &str, id: &str) -> Option<(i32, i32)> {
     Some((value("left")?, value("top")?))
 }
 
-/// The ring of a stick is where `scene_layout` places it, at the marker
-/// radius of the design, for any radius the design declares.
+/// The markup of a stop, from its opening tag to the end of the element,
+/// with the stop's ring and leader runs inside it.
+fn stop_markup<'a>(scene: &'a str, id: &str) -> Option<&'a str> {
+    let at = scene.find(&format!("id=\"{id}\""))?;
+    let end = at + scene[at..].find("</button>")?;
+    Some(&scene[at..end])
+}
+
+/// A stick's ring is where `scene_layout` puts it, at the marker radius of
+/// the design, in every design, including the 30dp ring in Disc.
+///
+/// We write the ring inside the stick's box, which takes the focus, so we
+/// place it from the padding edge of the box: the box's position and its
+/// declared border in from the scene coordinates.
 #[test]
 fn a_sticks_ring_is_where_the_scene_layout_puts_it() {
     let root = rominabox_scratch::Scratch::dir("rominabox-stick-rings");
@@ -49,17 +61,22 @@ fn a_sticks_ring_is_where_the_scene_layout_puts_it() {
                     })
                     .unwrap();
                 let id = format!("control-hit-{}", anchor.id);
-                assert_eq!(
-                    placed(&scene, &id),
-                    Some((marker.x, marker.y)),
-                    "{design}/{}: #{id} is not where the scene layout puts the ring",
-                    profile.id
-                );
                 let strip = format!("control-group-{}", group.name);
                 assert_eq!(
                     placed(&scene, &strip),
                     Some((group.strip.x, group.strip.y)),
                     "{design}/{}: #{strip}",
+                    profile.id
+                );
+                let inside = stop_markup(&scene, &strip)
+                    .unwrap_or_else(|| panic!("{design}/{}: no #{strip}", profile.id));
+                assert_eq!(
+                    placed(inside, &id),
+                    Some((
+                        marker.x - group.strip.x - metrics.group_border,
+                        marker.y - group.strip.y - metrics.group_border
+                    )),
+                    "{design}/{}: #{id} is not inside #{strip} where the scene layout puts the ring",
                     profile.id
                 );
                 checked += 1;

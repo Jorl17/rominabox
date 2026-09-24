@@ -68,14 +68,14 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .control-leader.horizontal { height: 1dp; }
 .control-leader.vertical { width: 1dp; }
 .control-hit { position: absolute; width: 30dp; height: 30dp; background-color: transparent; border: 1dp transparent; border-radius: 15dp; }
-.control-hit:hover { border-color: #75b2e4; border-width: 2dp; z-index: 2; }
-.control-hit.focused { border-color: #fff13d; border-width: 2dp; z-index: 2; }
+.control-callout:hover .control-hit, .control-group:hover .control-hit { border-color: #75b2e4; border-width: 2dp; }
+.control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: #fff13d; border-width: 2dp; }
 .control-callout { position: absolute; width: 188dp; height: 36dp; padding: 0; border-width: 1dp; border-color: #476eab; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
 .control-callout:hover { border-color: #75b2e4; z-index: 2; }
 /* Later controls are later siblings and would cover the focused edge of
  * the control before them, so we draw focus and the pointer above the
  * neighbours. The open list is at 60. */
-.control-callout.focused { border-color: #fff13d; border-left-width: 4dp; border-left-color: #fff13d; z-index: 2; }
+.control-callout.focused { border-color: #fff13d; border-left-width: 4dp; border-left-color: #fff13d; margin-left: -3dp; z-index: 2; }
 
 /* Below the scene, in the band without callouts. The list opens upward from
  * here and ends before the d-pad, so when a drag ends off the list, the
@@ -98,7 +98,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 
 .control-group { position: absolute; width: 210dp; height: 44dp; padding: 0; border-width: 1dp; border-color: #476eab; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
 .control-group:hover { border-color: #75b2e4; z-index: 2; }
-.control-group.focused { border-color: #fff13d; border-left-width: 4dp; border-left-color: #fff13d; z-index: 2; }
+.control-group.focused { border-color: #fff13d; border-left-width: 4dp; border-left-color: #fff13d; margin-left: -3dp; z-index: 2; }
 .control-label { margin-left: 8dp; margin-top: 2dp; height: 18dp; font-size: 13dp; overflow: hidden; white-space: nowrap; }
 .control-assignment { margin-left: 8dp; font-size: 12dp; color: #b4e6ff; white-space: nowrap; overflow: hidden; }
 .control-original { margin-right: 8dp; color: #fff13d; }
@@ -116,7 +116,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 
 @keyframes capture-pulse { from { border-color: #fff13d; } to { border-color: #476eab; } }
-.control-callout.capturing, .control-hit.capturing { animation: 0.55s capture-pulse infinite alternate; }
+.control-callout.capturing, .control-callout.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
 
 /* One list for every screen with a list. We write the rows when we bundle
  * the game, and no screen has a separate list style. */

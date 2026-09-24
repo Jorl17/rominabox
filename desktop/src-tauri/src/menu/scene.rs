@@ -183,10 +183,16 @@ fn scene_markup(
         &profile.controls,
         controls,
         illustrated,
+        metrics.group_border,
     ));
-    let placements = &placed_scene.controls;
     for item in profile.controls.iter().filter(|item| item.group.is_none()) {
-        let item = item.clone();
+        // We take the positions from the shared scene layout, as in the
+        // builder and the overlay renderer.
+        let placed = placed_scene
+            .controls
+            .iter()
+            .find(|placement| placement.id == item.id)
+            .expect("every drawn control is placed");
         let custom = controls.bindings.get(&item.id);
         let author_label = custom
             .and_then(|value| value.label.as_deref())
@@ -203,20 +209,26 @@ fn scene_markup(
         let original = author_label
             .filter(|value| value.trim() != item.label.trim())
             .map(|_| item.label.as_str());
-        let id = item.id.as_str();
-        let cx = item.callout_x;
-        let cy = item.callout_y;
-        if illustrated {
-            // We take the placement from the shared scene layout, so these
-            // are in the same place in the exporter, the builder and the
-            // overlay renderer.
-            let placed = placements
-                .iter()
-                .find(|placement| placement.id == item.id)
-                .expect("every drawn control is placed");
-            markup.push_str(&marker_markup(id, &placed.leader, placed.marker));
-        }
-        markup.push_str(&control_callout_markup(id, label, original, &key, cx, cy));
+        let marker = if illustrated {
+            marker_markup(
+                &item.id,
+                &placed.leader,
+                placed.marker,
+                placed.callout,
+                metrics.callout_border,
+            )
+        } else {
+            String::new()
+        };
+        markup.push('\n');
+        markup.push_str(&control_callout_markup(
+            &item.id,
+            label,
+            original,
+            &key,
+            placed.callout,
+            &marker,
+        ));
     }
     markup
 }
@@ -266,12 +278,21 @@ fn controller_picker_markup(offered: &[crate::controls::ControlProfile], chosen:
 }
 
 /// The leader of a control and the ring over its button on the pad, at the
-/// positions from `scene_layout`.
+/// positions from `scene_layout`, written inside the focus stop for the
+/// control. A design styles them by the state of that stop, and a pointer
+/// over either one is over the stop.
+///
+/// RmlUi places a child from the padding edge of its parent, which is
+/// `border` inside the box that `scene_layout` computed for the stop.
 fn marker_markup(
     id: &str,
     leader: &[crate::scene_layout::Segment],
     marker: crate::scene_layout::Rect,
+    stop: crate::scene_layout::Rect,
+    border: i32,
 ) -> String {
+    let left = |x: i32| x - stop.x - border;
+    let top = |y: i32| y - stop.y - border;
     let mut markup = String::new();
     for run in leader {
         let (orientation, extent) = if run.height == 0 {
@@ -280,13 +301,15 @@ fn marker_markup(
             ("vertical", format!("height:{}dp;", run.height))
         };
         markup.push_str(&format!(
-            "\n<div class=\"control-leader {orientation}\" style=\"left:{}dp;top:{}dp;{extent}\"/>",
-            run.x, run.y
+            "<div class=\"control-leader {orientation}\" style=\"left:{}dp;top:{}dp;{extent}\"/>",
+            left(run.x),
+            top(run.y)
         ));
     }
     markup.push_str(&format!(
-        "\n<button id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;\"/>\n",
-        marker.x, marker.y
+        "<div id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;\"/>",
+        left(marker.x),
+        top(marker.y)
     ));
     markup
 }
@@ -299,15 +322,17 @@ fn control_group_markup(
     all: &[crate::controls::ControlDefinition],
     controls: &crate::controls::Controls,
     illustrated: bool,
+    border: i32,
 ) -> String {
     let mut markup = String::new();
     for group in groups {
         let name = group.name.as_str();
-        if illustrated {
-            if let (Some(anchor), Some(marker)) = (&group.anchor, group.marker) {
-                markup.push_str(&marker_markup(anchor, &group.leader, marker));
+        let marker = match (&group.anchor, group.marker) {
+            (Some(anchor), Some(marker)) if illustrated => {
+                marker_markup(anchor, &group.leader, marker, group.strip, border)
             }
-        }
+            _ => String::new(),
+        };
         let mut words = Vec::new();
         for item in all
             .iter()
@@ -328,7 +353,7 @@ fn control_group_markup(
             r#"
 <button id="control-group-{name}" class="control-group" style="left:{x}dp;top:{y}dp;">
 <div class="control-label">{}</div>
-<div id="control-group-binding-{name}" class="control-assignment">{}</div>
+<div id="control-group-binding-{name}" class="control-assignment">{}</div>{marker}
 </button>
 "#,
             crate::lists::rml_text(&title),
@@ -385,8 +410,8 @@ fn control_callout_markup(
     label: &str,
     original: Option<&str>,
     key: &str,
-    cx: i32,
-    cy: i32,
+    callout: crate::scene_layout::Rect,
+    marker: &str,
 ) -> String {
     let label = crate::lists::rml_text(label);
     let key = crate::lists::rml_text(key);
@@ -399,7 +424,8 @@ fn control_callout_markup(
         })
         .unwrap_or_default();
     format!(
-        r#"<button id="control-{id}" class="control-callout" style="left:{cx}dp;top:{cy}dp;"><div id="control-label-{id}" class="control-label">{label}</div><div class="control-assignment">{original}<span id="control-binding-{id}">{key}</span></div></button>"#
+        r#"<button id="control-{id}" class="control-callout" style="left:{}dp;top:{}dp;"><div id="control-label-{id}" class="control-label">{label}</div><div class="control-assignment">{original}<span id="control-binding-{id}">{key}</span></div>{marker}</button>"#,
+        callout.x, callout.y
     )
 }
 

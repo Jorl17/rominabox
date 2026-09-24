@@ -209,7 +209,7 @@
         "controls-device-list>1": {
           "pseudo": "active"
         },
-        "control-hit-up?": {
+        "control-up": {
           "pseudo": "hover"
         }
       },
@@ -225,9 +225,6 @@
           "display": "block"
         },
         "control-up": {
-          "class": "focused"
-        },
-        "control-hit-up?": {
           "class": "focused"
         }
       }
@@ -248,9 +245,6 @@
           "text": "PRESS A KEY"
         },
         "control-up": {
-          "class": "focused"
-        },
-        "control-hit-up?": {
           "class": "focused"
         }
       }
@@ -547,9 +541,6 @@
           "display": "block"
         },
         "control-up": {
-          "class": "focused"
-        },
-        "control-hit-up?": {
           "class": "focused"
         },
         "control-binds": {

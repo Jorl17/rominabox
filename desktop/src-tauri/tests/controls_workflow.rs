@@ -72,15 +72,9 @@ fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
         .controls
         .iter()
         .map(|control| control.id.as_str())
-        // Either form is valid. In the player we listen on `control-<id>` and on
-        // `control-hit-<id>`, whichever the document contains. An illustrated
-        // pad has an invisible hit circle over the drawn button, and in the
-        // grid the box itself is the target. If we required both, we would
-        // reject the grid, which is valid.
-        .filter(|id| {
-            !markup.contains(&format!("id=\"control-{id}\""))
-                && !markup.contains(&format!("id=\"control-hit-{id}\""))
-        })
+        // In the player we listen on `control-<id>`. On an illustrated pad we
+        // draw the ring inside that box, and in the grid there is only the box.
+        .filter(|id| !markup.contains(&format!("id=\"control-{id}\"")))
         .collect();
     assert!(
         missing.is_empty(),

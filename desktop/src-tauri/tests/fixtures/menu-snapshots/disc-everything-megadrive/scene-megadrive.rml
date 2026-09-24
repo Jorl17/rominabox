@@ -1,33 +1,9 @@
 <img id="controller-image" src="controller-megadrive.png"/>
-<div class="control-leader horizontal" style="left:206dp;top:34dp;width:127dp;"/>
-<div class="control-leader vertical" style="left:333dp;top:34dp;height:126dp;"/>
-<button id="control-hit-up" class="control-hit" style="left:318dp;top:145dp;"/>
-<button id="control-up" class="control-callout" style="left:16dp;top:16dp;"><div id="control-label-up" class="control-label">Up</div><div class="control-assignment"><span id="control-binding-up">up</span></div></button>
-<div class="control-leader horizontal" style="left:206dp;top:118dp;width:106dp;"/>
-<div class="control-leader vertical" style="left:312dp;top:118dp;height:63dp;"/>
-<button id="control-hit-left" class="control-hit" style="left:297dp;top:166dp;"/>
-<button id="control-left" class="control-callout" style="left:16dp;top:100dp;"><div id="control-label-left" class="control-label">Left</div><div class="control-assignment"><span id="control-binding-left">left</span></div></button>
-<div class="control-leader horizontal" style="left:206dp;top:286dp;width:148dp;"/>
-<div class="control-leader vertical" style="left:354dp;top:181dp;height:105dp;"/>
-<button id="control-hit-right" class="control-hit" style="left:339dp;top:166dp;"/>
-<button id="control-right" class="control-callout" style="left:16dp;top:268dp;"><div id="control-label-right" class="control-label">Right</div><div class="control-assignment"><span id="control-binding-right">right</span></div></button>
-<div class="control-leader horizontal" style="left:206dp;top:202dp;width:127dp;"/>
-<div class="control-leader vertical" style="left:333dp;top:202dp;height:1dp;"/>
-<button id="control-hit-down" class="control-hit" style="left:318dp;top:188dp;"/>
-<button id="control-down" class="control-callout" style="left:16dp;top:184dp;"><div id="control-label-down" class="control-label">Down</div><div class="control-assignment"><span id="control-binding-down">down</span></div></button>
-<div class="control-leader horizontal" style="left:569dp;top:286dp;width:175dp;"/>
-<div class="control-leader vertical" style="left:569dp;top:213dp;height:73dp;"/>
-<button id="control-hit-y" class="control-hit" style="left:554dp;top:198dp;"/>
-<button id="control-y" class="control-callout" style="left:744dp;top:268dp;"><div id="control-label-y" class="control-label">A</div><div class="control-assignment"><span id="control-binding-y">z</span></div></button>
-<div class="control-leader horizontal" style="left:623dp;top:202dp;width:121dp;"/>
-<div class="control-leader vertical" style="left:623dp;top:186dp;height:16dp;"/>
-<button id="control-hit-b" class="control-hit" style="left:608dp;top:171dp;"/>
-<button id="control-b" class="control-callout" style="left:744dp;top:184dp;"><div id="control-label-b" class="control-label">B</div><div class="control-assignment"><span id="control-binding-b">x</span></div></button>
-<div class="control-leader horizontal" style="left:678dp;top:118dp;width:66dp;"/>
-<div class="control-leader vertical" style="left:678dp;top:118dp;height:46dp;"/>
-<button id="control-hit-a" class="control-hit" style="left:663dp;top:149dp;"/>
-<button id="control-a" class="control-callout" style="left:744dp;top:100dp;"><div id="control-label-a" class="control-label">C</div><div class="control-assignment"><span id="control-binding-a">c</span></div></button>
-<div class="control-leader horizontal" style="left:587dp;top:34dp;width:157dp;"/>
-<div class="control-leader vertical" style="left:587dp;top:34dp;height:77dp;"/>
-<button id="control-hit-start" class="control-hit" style="left:572dp;top:96dp;"/>
-<button id="control-start" class="control-callout" style="left:744dp;top:16dp;"><div id="control-label-start" class="control-label">Start</div><div class="control-assignment"><span id="control-binding-start">enter</span></div></button>
+<button id="control-up" class="control-callout" style="left:16dp;top:16dp;"><div id="control-label-up" class="control-label">Up</div><div class="control-assignment"><span id="control-binding-up">up</span></div><div class="control-leader horizontal" style="left:189dp;top:17dp;width:127dp;"/><div class="control-leader vertical" style="left:316dp;top:17dp;height:126dp;"/><div id="control-hit-up" class="control-hit" style="left:301dp;top:128dp;"/></button>
+<button id="control-left" class="control-callout" style="left:16dp;top:100dp;"><div id="control-label-left" class="control-label">Left</div><div class="control-assignment"><span id="control-binding-left">left</span></div><div class="control-leader horizontal" style="left:189dp;top:17dp;width:106dp;"/><div class="control-leader vertical" style="left:295dp;top:17dp;height:63dp;"/><div id="control-hit-left" class="control-hit" style="left:280dp;top:65dp;"/></button>
+<button id="control-right" class="control-callout" style="left:16dp;top:268dp;"><div id="control-label-right" class="control-label">Right</div><div class="control-assignment"><span id="control-binding-right">right</span></div><div class="control-leader horizontal" style="left:189dp;top:17dp;width:148dp;"/><div class="control-leader vertical" style="left:337dp;top:-88dp;height:105dp;"/><div id="control-hit-right" class="control-hit" style="left:322dp;top:-103dp;"/></button>
+<button id="control-down" class="control-callout" style="left:16dp;top:184dp;"><div id="control-label-down" class="control-label">Down</div><div class="control-assignment"><span id="control-binding-down">down</span></div><div class="control-leader horizontal" style="left:189dp;top:17dp;width:127dp;"/><div class="control-leader vertical" style="left:316dp;top:17dp;height:1dp;"/><div id="control-hit-down" class="control-hit" style="left:301dp;top:3dp;"/></button>
+<button id="control-y" class="control-callout" style="left:744dp;top:268dp;"><div id="control-label-y" class="control-label">A</div><div class="control-assignment"><span id="control-binding-y">z</span></div><div class="control-leader horizontal" style="left:-176dp;top:17dp;width:175dp;"/><div class="control-leader vertical" style="left:-176dp;top:-56dp;height:73dp;"/><div id="control-hit-y" class="control-hit" style="left:-191dp;top:-71dp;"/></button>
+<button id="control-b" class="control-callout" style="left:744dp;top:184dp;"><div id="control-label-b" class="control-label">B</div><div class="control-assignment"><span id="control-binding-b">x</span></div><div class="control-leader horizontal" style="left:-122dp;top:17dp;width:121dp;"/><div class="control-leader vertical" style="left:-122dp;top:1dp;height:16dp;"/><div id="control-hit-b" class="control-hit" style="left:-137dp;top:-14dp;"/></button>
+<button id="control-a" class="control-callout" style="left:744dp;top:100dp;"><div id="control-label-a" class="control-label">C</div><div class="control-assignment"><span id="control-binding-a">c</span></div><div class="control-leader horizontal" style="left:-67dp;top:17dp;width:66dp;"/><div class="control-leader vertical" style="left:-67dp;top:17dp;height:46dp;"/><div id="control-hit-a" class="control-hit" style="left:-82dp;top:48dp;"/></button>
+<button id="control-start" class="control-callout" style="left:744dp;top:16dp;"><div id="control-label-start" class="control-label">Start</div><div class="control-assignment"><span id="control-binding-start">enter</span></div><div class="control-leader horizontal" style="left:-158dp;top:17dp;width:157dp;"/><div class="control-leader vertical" style="left:-158dp;top:17dp;height:77dp;"/><div id="control-hit-start" class="control-hit" style="left:-173dp;top:79dp;"/></button>

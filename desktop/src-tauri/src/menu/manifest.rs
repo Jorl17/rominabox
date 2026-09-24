@@ -105,6 +105,7 @@ struct CalloutFile {
 struct GroupFile {
     width: Option<i32>,
     height: Option<i32>,
+    border: Option<i32>,
     gap: Option<i32>,
     bottom_margin: Option<i32>,
 }
@@ -362,6 +363,8 @@ pub struct SceneMetrics {
     pub marker: i32,
     pub group_width: i32,
     pub group_height: i32,
+    /// How far a stick's box is drawn beyond its declared size.
+    pub group_border: i32,
     pub group_gap: i32,
     pub group_bottom_margin: i32,
 }
@@ -504,6 +507,7 @@ impl Manifest {
             marker: metrics(&|m| m.marker.as_ref()?.diameter, "metrics.marker.diameter")?,
             group_width: metrics(&|m| m.group.as_ref()?.width, "metrics.group.width")?,
             group_height: metrics(&|m| m.group.as_ref()?.height, "metrics.group.height")?,
+            group_border: metrics(&|m| m.group.as_ref()?.border, "metrics.group.border")?,
             group_gap: metrics(&|m| m.group.as_ref()?.gap, "metrics.group.gap")?,
             group_bottom_margin: metrics(
                 &|m| m.group.as_ref()?.bottom_margin,

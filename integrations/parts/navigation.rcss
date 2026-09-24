@@ -33,11 +33,9 @@
 }
 
 /* Not stops: what the player cannot use now, what is only for the pointer
- * (the volume arrows, the picture buttons of the pad), what is only
- * information (the rows of the bindings popup), and the on-screen keyboard,
- * for which we read the pad directly. */
-[disabled], .disabled, .volume-arrow, .control-hit, #control-binds .list-row,
-.text-key
+ * (the volume arrows), what is only information (the rows of the bindings
+ * popup) and the on-screen keyboard, for which we read the pad directly. */
+[disabled], .disabled, .volume-arrow, #control-binds .list-row, .text-key
 {
 	tab-index: none;
 }

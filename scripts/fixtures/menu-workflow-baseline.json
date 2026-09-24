@@ -11,7 +11,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -148,7 +147,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -226,7 +224,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -288,7 +285,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -369,7 +365,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-start",
           "control-start"
         ],
         "leaving": [],
@@ -431,7 +426,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-start",
           "control-start"
         ],
         "leaving": [],
@@ -512,7 +506,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -574,7 +567,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -898,7 +890,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -950,12 +941,10 @@
         "bindsBox": [],
         "captureActive": true,
         "capturing": [
-          "control-hit-a",
           "control-a"
         ],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a",
           "controls-cancel"
         ],
@@ -1010,7 +999,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -1082,12 +1070,10 @@
         "bindsBox": [],
         "captureActive": true,
         "capturing": [
-          "control-hit-a",
           "control-a"
         ],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a",
           "controls-cancel"
         ],
@@ -1142,7 +1128,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -1196,7 +1181,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -1270,7 +1254,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -1341,7 +1324,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -1395,7 +1377,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -1449,7 +1430,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-right",
           "control-right"
         ],
         "leaving": [],
@@ -1503,7 +1483,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -1557,7 +1536,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -1635,7 +1613,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -1689,7 +1666,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -1743,7 +1719,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -1797,7 +1772,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -2233,7 +2207,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -2838,7 +2811,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -2968,7 +2940,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -3040,7 +3011,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -3094,12 +3064,10 @@
         "bindsBox": [],
         "captureActive": true,
         "capturing": [
-          "control-hit-left",
           "control-left"
         ],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left",
           "controls-cancel"
         ],
@@ -3156,7 +3124,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -3212,7 +3179,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -3268,7 +3234,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -3348,7 +3313,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -3423,7 +3387,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -4817,7 +4780,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -4954,7 +4916,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -5027,7 +4988,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -5164,7 +5124,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -5237,7 +5196,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -5374,7 +5332,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -5447,7 +5404,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -5584,7 +5540,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -5662,7 +5617,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -5724,7 +5678,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -5805,7 +5758,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-start",
           "control-start"
         ],
         "leaving": [],
@@ -5867,7 +5819,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-start",
           "control-start"
         ],
         "leaving": [],
@@ -5948,7 +5899,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -6010,7 +5960,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -6334,7 +6283,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -6386,12 +6334,10 @@
         "bindsBox": [],
         "captureActive": true,
         "capturing": [
-          "control-hit-a",
           "control-a"
         ],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a",
           "controls-cancel"
         ],
@@ -6446,7 +6392,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -6518,12 +6463,10 @@
         "bindsBox": [],
         "captureActive": true,
         "capturing": [
-          "control-hit-a",
           "control-a"
         ],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a",
           "controls-cancel"
         ],
@@ -6578,7 +6521,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -6632,7 +6574,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -6706,7 +6647,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -6777,7 +6717,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -6831,7 +6770,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -6885,7 +6823,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-right",
           "control-right"
         ],
         "leaving": [],
@@ -6939,7 +6876,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -6993,7 +6929,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -7071,7 +7006,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -7125,7 +7059,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -7179,7 +7112,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -7233,7 +7165,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-a",
           "control-a"
         ],
         "leaving": [],
@@ -7669,7 +7600,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -8274,7 +8204,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -8404,7 +8333,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -8476,7 +8404,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -8530,12 +8457,10 @@
         "bindsBox": [],
         "captureActive": true,
         "capturing": [
-          "control-hit-left",
           "control-left"
         ],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left",
           "controls-cancel"
         ],
@@ -8592,7 +8517,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -8648,7 +8572,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-left",
           "control-left"
         ],
         "leaving": [],
@@ -8704,7 +8627,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -8784,7 +8706,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -8859,7 +8780,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -10251,7 +10171,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -10388,7 +10307,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -10461,7 +10379,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -10598,7 +10515,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -10671,7 +10587,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],
@@ -10808,7 +10723,6 @@
         "capturing": [],
         "disabled": [],
         "focused": [
-          "control-hit-up",
           "control-up"
         ],
         "leaving": [],

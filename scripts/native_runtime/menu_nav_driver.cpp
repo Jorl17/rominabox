@@ -24,11 +24,10 @@
  *                           ID         click the element, as in a menu script
  *   run                   run the case
  *
- * After every step, record what the player sees highlighted (visible elements
- * with the `focused` class, except the controller picture's buttons, which
- * repeat their callout), what is marked as capturing a binding (the
- * `capturing` class, with the same exception), the visible screen panel and
- * the requested sounds. Print one JSON line per case for the caller to judge.
+ * After every step, record what the player sees highlighted (visible
+ * elements with the `focused` class), what is marked as capturing a binding
+ * (the `capturing` class), the visible screen panel and the requested
+ * sounds. Print one JSON line per case for the caller to judge.
  *
  * We record sounds in the fake host and play nothing. */
 #include "rmlui/menu_api.h"
@@ -158,8 +157,8 @@ std::string marked(const char *state)
    bool first = true;
    rib::walk(view.document.root(), [&](Rml::Element *element) {
       if (rib::display_none(element)) return rib::Walk::SkipChildren;
-      if (element->IsClassSet(state) && !element->IsClassSet("control-hit")
-            && !element->IsClassSet("text-key") && !element->GetId().empty())
+      if (element->IsClassSet(state) && !element->IsClassSet("text-key")
+            && !element->GetId().empty())
       {
          ids += (first ? "" : ",") + json(element->GetId());
          first = false;
