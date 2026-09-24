@@ -29,22 +29,55 @@
 .account-password-row .account-input { padding-right: 128dp; }
 .account-reveal { box-sizing: border-box; position: absolute; right: 8dp; top: 6dp; width: 104dp; height: 30dp; line-height: 26dp; border-width: 2dp; text-align: center; font-family: Silkscreen; font-size: 13dp; }
 
-/* A badge still downloading is a ring in the badge box whose lit side steps
- * round clockwise (each keyframe stays, then jumps). A badge that we could
- * not download is a plain empty frame, and we try again when the list opens
- * next. Both have the colours and hard edges of the design. */
-.list-row.badge-loading .list-row-icon { box-sizing: border-box; border: 4dp design(rule); border-top-color: design(highlight); background-color: design(surface); animation: 0.8s linear infinite badge-steps; }
-.list-row.badge-failed .list-row-icon { box-sizing: border-box; border: 2dp design(muted); background-color: design(surface); }
-@keyframes badge-steps {
-   0% { border-top-color: design(highlight); border-right-color: design(rule); border-bottom-color: design(rule); border-left-color: design(rule); }
-   24.9% { border-top-color: design(highlight); border-right-color: design(rule); border-bottom-color: design(rule); border-left-color: design(rule); }
-   25% { border-top-color: design(rule); border-right-color: design(highlight); border-bottom-color: design(rule); border-left-color: design(rule); }
-   49.9% { border-top-color: design(rule); border-right-color: design(highlight); border-bottom-color: design(rule); border-left-color: design(rule); }
-   50% { border-top-color: design(rule); border-right-color: design(rule); border-bottom-color: design(highlight); border-left-color: design(rule); }
-   74.9% { border-top-color: design(rule); border-right-color: design(rule); border-bottom-color: design(highlight); border-left-color: design(rule); }
-   75% { border-top-color: design(rule); border-right-color: design(rule); border-bottom-color: design(rule); border-left-color: design(highlight); }
-   100% { border-top-color: design(rule); border-right-color: design(rule); border-bottom-color: design(rule); border-left-color: design(highlight); }
+/* A badge still downloading is nine dim pixels in a square, with a lit pair
+ * that steps round the edge clockwise. A badge that we could not download is
+ * the same pixels as an X, and we try again when the list opens next. Each
+ * design puts .list-row-wait at the place of .list-row-icon. A cell is a
+ * quarter of it, with an eighth between, in hard edges and design colours. */
+.list-row-wait { display: none; }
+.list-row.badge-loading .list-row-wait, .list-row.badge-failed .list-row-wait { display: block; }
+.list-row-wait-cells { position: relative; width: 100%; height: 100%; }
+.list-row-wait-cells div { position: absolute; width: 25%; height: 25%; background-color: design(rule); }
+.list-row-wait-cells div:nth-child(3n+1) { left: 0; }
+.list-row-wait-cells div:nth-child(3n+2) { left: 37.5%; }
+.list-row-wait-cells div:nth-child(3n) { left: 75%; }
+.list-row-wait-cells div:nth-child(-n+3) { top: 0; }
+.list-row-wait-cells div:nth-child(n+4) { top: 37.5%; }
+.list-row-wait-cells div:nth-child(n+7) { top: 75%; }
+/* The edge in four pairs, clockwise from the top left, 1 2, 3 6, 9 8, 7 4.
+ * Each pair is lit for a quarter of the turn. The turn starts half a step in,
+ * so the first step comes 0.075 s after the list opens. A hold ends 0.1% before
+ * the next step, because RmlUi treats keyframes closer than 0.01% as one. */
+.list-row.badge-loading .list-row-wait-cells div:nth-child(1),
+.list-row.badge-loading .list-row-wait-cells div:nth-child(2) { animation: 0.6s linear infinite badge-edge-1; }
+.list-row.badge-loading .list-row-wait-cells div:nth-child(3),
+.list-row.badge-loading .list-row-wait-cells div:nth-child(6) { animation: 0.6s linear infinite badge-edge-2; }
+.list-row.badge-loading .list-row-wait-cells div:nth-child(9),
+.list-row.badge-loading .list-row-wait-cells div:nth-child(8) { animation: 0.6s linear infinite badge-edge-3; }
+.list-row.badge-loading .list-row-wait-cells div:nth-child(7),
+.list-row.badge-loading .list-row-wait-cells div:nth-child(4) { animation: 0.6s linear infinite badge-edge-4; }
+@keyframes badge-edge-1 {
+   0% { background-color: design(highlight); } 12.4% { background-color: design(highlight); }
+   12.5% { background-color: design(rule); } 87.4% { background-color: design(rule); }
+   87.5% { background-color: design(highlight); } 100% { background-color: design(highlight); }
 }
+@keyframes badge-edge-2 {
+   0% { background-color: design(rule); } 12.4% { background-color: design(rule); }
+   12.5% { background-color: design(highlight); } 37.4% { background-color: design(highlight); }
+   37.5% { background-color: design(rule); } 100% { background-color: design(rule); }
+}
+@keyframes badge-edge-3 {
+   0% { background-color: design(rule); } 37.4% { background-color: design(rule); }
+   37.5% { background-color: design(highlight); } 62.4% { background-color: design(highlight); }
+   62.5% { background-color: design(rule); } 100% { background-color: design(rule); }
+}
+@keyframes badge-edge-4 {
+   0% { background-color: design(rule); } 62.4% { background-color: design(rule); }
+   62.5% { background-color: design(highlight); } 87.4% { background-color: design(highlight); }
+   87.5% { background-color: design(rule); } 100% { background-color: design(rule); }
+}
+.list-row.badge-failed .list-row-wait-cells div { background-color: design(muted); }
+.list-row.badge-failed .list-row-wait-cells div:nth-child(even) { display: none; }
 /* SHOW is inside the password field, so for the arrow keys neither is next to
  * the other until we declare it here. */
 #achievement-password { nav-right: #achievements-password-visibility; }

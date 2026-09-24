@@ -73,7 +73,7 @@
       <div class="account-help">Create an account at retroachievements.org</div>
       <div id="achievements-error" class="account-error"></div>
     </div>
-    <div id="achievements-catalog" class="account-catalog" style="display:none;"><div id="achievements-list" class="list live-list" data-page-size="4"><div class="list-prototype" style="display:none;"><button id="achievements-prototype" class="list-row "><div id="achievements-prototype-title" class="list-row-title"></div><div id="achievements-prototype-detail" class="list-row-detail"></div><div id="achievements-prototype-state" class="list-row-state"></div></button>
+    <div id="achievements-catalog" class="account-catalog" style="display:none;"><div id="achievements-list" class="list live-list" data-page-size="4"><div class="list-prototype" style="display:none;"><button id="achievements-prototype" class="list-row "><div class="list-row-wait"><div class="list-row-wait-cells"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div><div id="achievements-prototype-title" class="list-row-title"></div><div id="achievements-prototype-detail" class="list-row-detail"></div><div id="achievements-prototype-state" class="list-row-state"></div></button>
 </div><div id="achievements-pager" class="list-pager" style="display:none;"><button id="achievements-prev" class="menu-action list-pager-prev disabled">&lt;</button><div id="achievements-page-count" class="list-pager-count">1/0</div><button id="achievements-next" class="menu-action list-pager-next">&gt;</button></div></div></div>
   </div>
   <div class="list-actions"><div id="achievements-session-actions" class="account-session-actions" style="display:none;">

@@ -255,11 +255,21 @@ fn pager(screen: &str, page_count: usize) -> String {
     format!("<div id=\"{screen}-pager\" class=\"list-pager\"{hidden}><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">1/{page_count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">&gt;</button></div>")
 }
 
+/// What we show in a live row while its picture is loading or has failed to
+/// load: nine cells arranged in the design, and drawn when we mark the row
+/// `badge-loading` or `badge-failed` in the player. Hidden otherwise.
+const WAITING: &str = concat!(
+    "<div class=\"list-row-wait\"><div class=\"list-row-wait-cells\">",
+    "<div></div><div></div><div></div><div></div><div></div>",
+    "<div></div><div></div><div></div><div></div>",
+    "</div></div>",
+);
+
 /// A live list contains a hidden prototype row from the same template as the
 /// static lists. We clone it in the native list component, so there is no
 /// second template and no layout specific to achievements.
 fn live_list(screen: &str, template: &str, page_size: usize) -> String {
-    let row = render_row(
+    let mut row = render_row(
         template,
         &ListItem {
             id: format!("{screen}-prototype"),
@@ -272,6 +282,10 @@ fn live_list(screen: &str, template: &str, page_size: usize) -> String {
             line: false,
         },
     );
+    // Inside the row element, positioned by the design like its picture.
+    if let Some(opened) = row.find('>') {
+        row.insert_str(opened + 1, WAITING);
+    }
     let pager = pager(screen, 0);
     format!("<div id=\"{screen}-list\" class=\"list live-list\" data-page-size=\"{page_size}\"><div class=\"list-prototype\" style=\"display:none;\">{row}</div>{pager}</div>")
 }

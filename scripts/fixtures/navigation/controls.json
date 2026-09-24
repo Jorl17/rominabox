@@ -106,6 +106,15 @@
           "control-down",
           "controls-back",
           "controls-reset"
+        ],
+        "disc": [
+          "volume-level",
+          "control-up",
+          "control-left",
+          "control-right",
+          "control-down",
+          "controls-reset",
+          "controls-back"
         ]
       }
     },

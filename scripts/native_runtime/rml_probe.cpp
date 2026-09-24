@@ -16,6 +16,7 @@
  *     --step key:NAME          press and release a key (up, down, left,
  *                              right, return, escape, tab)
  *     --step watch:ID          print element ID's state after every later step
+ *     --step box:ID            print element ID's border box after every later step
  *
  * Coordinates are document pixels. For each step we print one JSON object with
  * the step, the element under the pointer and the classes of every watched
@@ -154,7 +155,7 @@ int main(int argc, char** argv)
                 return 2;
             }
             Step step{spec.substr(0, colon), spec.substr(colon + 1), 0, 0};
-            if (step.verb != "key" && step.verb != "watch" &&
+            if (step.verb != "key" && step.verb != "watch" && step.verb != "box" &&
                 !parse_point(step.argument, step.x, step.y)) {
                 std::fprintf(stderr, "step '%s' wants X,Y\n", spec.c_str());
                 return 2;
@@ -205,12 +206,17 @@ int main(int argc, char** argv)
     context->Update();
 
     std::vector<std::string> watched;
+    std::vector<std::string> boxed;
     int pointer_x = -1;
     int pointer_y = -1;
 
     for (const Step& step : steps) {
         if (step.verb == "watch") {
             watched.push_back(step.argument);
+            continue;
+        }
+        if (step.verb == "box") {
+            boxed.push_back(step.argument);
             continue;
         }
         if (step.verb == "move") {
@@ -263,7 +269,25 @@ int main(int argc, char** argv)
                         element ? "true" : "false",
                         element ? escape(classes_of(element)).c_str() : "");
         }
-        std::printf("}}\n");
+        std::printf("}");
+        /* Where layout put each element: x, y, width, height in document
+         * pixels, or null when there is no such element. */
+        if (!boxed.empty()) {
+            std::printf(",\"boxes\":{");
+            for (size_t i = 0; i < boxed.size(); i++) {
+                Rml::Element* element = document->GetElementById(boxed[i]);
+                std::printf("%s\"%s\":", i ? "," : "", escape(boxed[i]).c_str());
+                if (!element) {
+                    std::printf("null");
+                    continue;
+                }
+                const Rml::Vector2f at = element->GetAbsoluteOffset(Rml::BoxArea::Border);
+                const Rml::Vector2f size = element->GetBox().GetSize(Rml::BoxArea::Border);
+                std::printf("[%g,%g,%g,%g]", at.x, at.y, size.x, size.y);
+            }
+            std::printf("}");
+        }
+        std::printf("}\n");
     }
 
     context->UnloadDocument(document);

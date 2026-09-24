@@ -297,6 +297,15 @@ fn run() -> Result<(), String> {
                 /// Options entries to stage, or the design's defaults when absent.
                 #[serde(default)]
                 menu_entries: Option<Vec<String>>,
+                /// The achievements screen, which we stage as in an export that includes it.
+                #[serde(default)]
+                include_achievements: bool,
+                /// Bundled shaders. With any of them we add the Filters screen.
+                #[serde(default)]
+                shaders: shaders::ShaderSelection,
+                /// How many discs the game has. With more than one we add the disc list.
+                #[serde(default)]
+                discs: Option<usize>,
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid {command} request: {error}"))?;
@@ -320,6 +329,9 @@ fn run() -> Result<(), String> {
                 system: request.system.unwrap_or(defaults.system.clone()),
                 controls: request.controls,
                 menu_entries: request.menu_entries,
+                include_achievements: request.include_achievements,
+                shaders: request.shaders,
+                discs: request.discs.unwrap_or(defaults.discs),
                 ..defaults
             })?
             .write(&request.destination)?;

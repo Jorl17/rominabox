@@ -272,6 +272,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/check_menu_edges.py")],
     ),
     Scope(
+        "pictures",
+        "that a badge still downloading draws a moving placeholder and a failed one a mark, in every design, and draws every Disc screen into work/feedback-pictures",
+        "that the player sets those classes or keeps redrawing: the rows are written the way its list writes them, and the second moment is RmlUi's 0.1 s step",
+        ["python3", str(ROOT / "scripts/menu_pictures.py")],
+    ),
+    Scope(
         "states",
         "that every declared menu state still renders in every palette from desktop/designs.json, with its artwork, and looks the same",
         "that the bridge sets those classes at the right moment; the bridge scope covers that",
