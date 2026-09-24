@@ -741,6 +741,30 @@ static int check_rstick_picture(const char *design, const char *profile, int wid
  * A list must not hide the labels of its neighbours or run off the window.
  * The list for UP leaves LEFT visible, and the list for A stays inside the
  * window once the clamp moves its left edge back. */
+/* Disc fills the window: its screen spans every width, and its button
+ * column keeps a 24dp margin from the right edge. The canvas is 960x600dp
+ * scaled to fit, so at these sizes one dp is one pixel. */
+static void check_disc_fills_the_window(const char *design)
+{
+   if (std::strcmp(design, "disc") != 0)
+      return;
+   view.screens.show_screen("pause");
+   for (const int width : {960, 1280})
+   {
+      char message[160];
+      view.render(width, 600);
+      const Box screen = box_of("screen");
+      const Box actions = box_of("actions");
+      std::snprintf(message, sizeof(message),
+            "disc %dx600: #screen spans the window (x %d, width %d)", width, screen.x, screen.w);
+      CHECK(screen.x == 0 && screen.w == width, message);
+      std::snprintf(message, sizeof(message),
+            "disc %dx600: #actions ends 24dp from the right edge (ends at %d)", width, actions.x + actions.w);
+      CHECK(actions.w > 0 && width - (actions.x + actions.w) == 24, message);
+   }
+   view.render(960, 600);
+}
+
 static int check_placement(const char *assets, const char *scenes,
       const char *design, int width)
 {
@@ -828,6 +852,7 @@ static int check_placement(const char *assets, const char *scenes,
       std::fprintf(stderr, "\n");
    }
    check_short_list(design, width);
+   check_disc_fills_the_window(design);
    {
       view.screens.show_screen("pause");
       view.slots.focus_element("save");
