@@ -70,6 +70,14 @@ bool status_is(const char *expected)
 
 static int capacity_case(const char *assets, const char *data)
 {
+   /* Without the shared part nothing in the document is a stop, and every
+    * check below fails for that one reason. */
+   if (!std::ifstream(std::string(assets) + "/navigation.rcss"))
+   {
+      std::fprintf(stderr, "FAIL menu capacity: %s has no navigation.rcss beside menu.rcss; "
+            "an export stages both, and the fixture has to copy it\n", assets);
+      return 1;
+   }
    setenv("ROMINABOX_RML_ASSETS", assets, 1);
    setenv("ROMINABOX_DATA_DIR", data, 1);
    unsetenv("ROMINABOX_MENU_SCRIPT");
