@@ -51,8 +51,8 @@ def compile_plan(directory: Path) -> Path:
     return binary
 
 
-def ship(app: Path, data: Path, options: str) -> None:
-    """Return the export, a launch plan and the options file we stage at packaging."""
+def ship_plan(app: Path, data: Path) -> None:
+    """Return the export's launch plan, with `data` as its data directory."""
     resources = app / "Contents" / "Resources"
     resources.mkdir(parents=True, exist_ok=True)
     (resources / "launch.plan").write_text(
@@ -65,7 +65,12 @@ def ship(app: Path, data: Path, options: str) -> None:
         "\n---config---\n"
         'audio_driver = "null"\n'
     )
-    shipped = resources / "core-options" / CORE
+
+
+def ship(app: Path, data: Path, options: str) -> None:
+    """Return the export, a launch plan and the options file we stage at packaging."""
+    ship_plan(app, data)
+    shipped = app / "Contents" / "Resources" / "core-options" / CORE
     shipped.mkdir(parents=True, exist_ok=True)
     (shipped / f"{CORE}.opt").write_text(options)
 
@@ -151,6 +156,28 @@ def run() -> list[str]:
         got = values(other_options)
         expect("option no longer shipped", got, FILTER, None)
         expect("option newly shipped", got, "nestopia_aspect", "4:3")
+
+        # With an export that has no options at all, every option set by an
+        # earlier export goes back to the core's default. We remove only the
+        # shipped file and its folders, each by name, never recursively.
+        resources = app / "Contents" / "Resources"
+        (resources / "core-options" / CORE / f"{CORE}.opt").unlink()
+        (resources / "core-options" / CORE).rmdir()
+        (resources / "core-options").rmdir()
+        launch(binary, home)
+        expect("no options shipped", values(other_options), "nestopia_aspect", None)
+
+        # We still copy a shipped file without assignments to a game that has
+        # no file, as with the copy it replaced.
+        probe = resources / "core-options" / "probe-core"
+        probe.mkdir(parents=True)
+        (probe / "copied.cfg").write_text("copied-from-kit\n")
+        plain = root / "plain"
+        ship_plan(app, plain)
+        launch(binary, home)
+        copied = plain / "config" / "probe-core" / "copied.cfg"
+        if not copied.is_file() or copied.read_text() != "copied-from-kit\n":
+            failures.append("a shipped file without assignments did not reach a fresh game")
     return failures
 
 
