@@ -384,14 +384,13 @@ static void check_drawn_above(const char *design)
 
    if (view.document.has_element("control-group-l_stick"))
    {
-      view.controls.focus_group("l_stick");
+      CHECK(view.focus.set("control-group-l_stick"), "the stick group takes focus");
       const std::string group_z = inspect.property(
             "control-group-l_stick", "z-index");
       std::snprintf(message, sizeof(message),
             "%s: focused stick group z-index is '%s'",
             design, group_z.c_str());
       CHECK(stacking_rank(group_z.c_str()) > 0, message);
-      view.controls.focus_group(nullptr);
    }
 
    view.pointer_move(1, 1);
