@@ -1,12 +1,12 @@
 <img id="controller-image" src="controller-ps1.png"/>
 <button id="control-group-l_stick" class="control-group" style="left:236dp;top:306dp;">
 <div class="control-label">L STICK</div>
-<div id="control-group-binding-l_stick" class="control-assignment">t, g, v, b, 1</div><div class="control-leader vertical" style="left:167dp;top:-82dp;height:80dp;"/><div class="control-leader horizontal" style="left:116dp;top:-2dp;width:51dp;"/><div id="control-hit-l3" class="control-hit" style="left:146dp;top:-103dp;"/>
+<div id="control-group-binding-l_stick" class="control-assignment">t, g, v, b, 1</div><div class="control-leader vertical" style="left:167dp;top:-82dp;height:80dp;"/><div id="control-hit-l3" class="control-hit" style="left:146dp;top:-103dp;"/>
 </button>
 
 <button id="control-group-r_stick" class="control-group" style="left:488dp;top:306dp;">
 <div class="control-label">R STICK</div>
-<div id="control-group-binding-r_stick" class="control-assignment">i, k, j, l, 2</div><div class="control-leader vertical" style="left:57dp;top:-82dp;height:80dp;"/><div class="control-leader horizontal" style="left:57dp;top:-2dp;width:59dp;"/><div id="control-hit-r3" class="control-hit" style="left:36dp;top:-103dp;"/>
+<div id="control-group-binding-r_stick" class="control-assignment">i, k, j, l, 2</div><div class="control-leader vertical" style="left:57dp;top:-82dp;height:80dp;"/><div id="control-hit-r3" class="control-hit" style="left:36dp;top:-103dp;"/>
 </button>
 
 <button id="control-l" class="control-callout" style="left:16dp;top:0dp;"><div id="control-label-l" class="control-label">L1</div><div class="control-assignment"><span id="control-binding-l">d</span></div><div class="control-leader horizontal" style="left:198dp;top:24dp;width:85dp;"/><div class="control-leader vertical" style="left:283dp;top:24dp;height:20dp;"/><div id="control-hit-l" class="control-hit" style="left:262dp;top:23dp;"/></button>

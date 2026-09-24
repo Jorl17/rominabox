@@ -107,6 +107,21 @@ fn leader(control: &ControlDefinition, metrics: SceneMetrics) -> Vec<Segment> {
     ]
 }
 
+/// The route from a stick to its box: down the stick's column to the top of
+/// the box, then along that edge to the box when the stick is beside it
+/// instead of above it. It stops where the box's painted edge begins. We draw
+/// the leader over the box, so a run along the box's border would cover that
+/// border.
+fn stick_leader(anchor: &ControlDefinition, strip: Rect, metrics: SceneMetrics) -> Vec<Segment> {
+    let mut route = vec![vertical(anchor.x, anchor.y, strip.y)];
+    let painted = strip.width + 2 * metrics.group_border;
+    let edge = anchor.x.clamp(strip.x, strip.x + painted);
+    if edge != anchor.x {
+        route.push(horizontal(strip.y, anchor.x, edge));
+    }
+    route
+}
+
 pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLayout {
     let radius = metrics.marker / 2;
     let drawn: Vec<&ControlDefinition> =
@@ -168,10 +183,7 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
                         width: metrics.marker,
                         height: metrics.marker,
                     }),
-                    vec![
-                        vertical(anchor.x, anchor.y, top),
-                        horizontal(top, anchor.x, left + metrics.group_width / 2),
-                    ],
+                    stick_leader(anchor, strip, metrics),
                 ),
                 None => (None, Vec::new()),
             };
@@ -194,5 +206,74 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
         },
         controls: placements,
         groups,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn metrics() -> SceneMetrics {
+        SceneMetrics {
+            scene_width: 960,
+            scene_height: 380,
+            callout_width: 196,
+            callout_height: 50,
+            callout_border: 2,
+            marker: 42,
+            group_width: 236,
+            group_height: 62,
+            group_border: 2,
+            group_gap: 16,
+            group_bottom_margin: 12,
+        }
+    }
+
+    fn stick(x: i32) -> Vec<ControlDefinition> {
+        let member = |id: &str, x: i32, y: i32| ControlDefinition {
+            id: id.to_string(),
+            label: id.to_string(),
+            key: String::new(),
+            group: Some("l_stick".to_string()),
+            x,
+            y,
+            callout_x: 0,
+            callout_y: 0,
+        };
+        vec![member("l_x_plus", 0, 0), member("l3", x, 200)]
+    }
+
+    /// The leader of a stick above its box goes straight down onto the box.
+    /// A run along the box's top border would cover that border.
+    #[test]
+    fn a_stick_above_its_box_drops_onto_it_and_runs_along_nothing() {
+        let layout = layout(&stick(420), metrics());
+        let group = &layout.groups[0];
+        assert!(group.strip.x < 420 && 420 < group.strip.x + group.strip.width);
+        assert_eq!(group.leader, vec![vertical(420, 200, group.strip.y)]);
+    }
+
+    /// For a stick beside its box, the leader turns along the box's top edge
+    /// and stops where the painted edge begins, on whichever side it is.
+    #[test]
+    fn a_stick_beside_its_box_turns_to_the_near_painted_edge() {
+        let metrics = metrics();
+        let left = layout(&stick(100), metrics).groups[0].clone();
+        assert_eq!(
+            left.leader,
+            vec![
+                vertical(100, 200, left.strip.y),
+                horizontal(left.strip.y, 100, left.strip.x),
+            ]
+        );
+        let right = layout(&stick(900), metrics).groups[0].clone();
+        let painted_right = right.strip.x + metrics.group_width + 2 * metrics.group_border;
+        assert_eq!(
+            right.leader,
+            vec![
+                vertical(900, 200, right.strip.y),
+                horizontal(right.strip.y, 900, painted_right),
+            ]
+        );
     }
 }
