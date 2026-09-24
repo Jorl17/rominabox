@@ -308,23 +308,6 @@
           "achievements-end-session",
           "achievements-keep-session"
         ]
-      },
-      "red": {
-        "*": {
-          "bug": "dialog press",
-          "reason": "the press focuses the dialog's text, and the screen's start is looked for in the panel the dialog shuts off, so focus falls to the document and the arrows do nothing",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievement-1",
-              "achievements-keep-session",
-              "achievements-end-session",
-              null,
-              null,
-              null
-            ]
-          }
-        }
       }
     },
     {
@@ -345,20 +328,6 @@
           "achievements-skip-startup",
           "resume"
         ]
-      },
-      "red": {
-        "*": {
-          "bug": "dialog press",
-          "reason": "the press focuses the status text, and focus falls to the document",
-          "now": {
-            "focused": [
-              "achievements-skip-startup",
-              null,
-              null,
-              "resume"
-            ]
-          }
-        }
       }
     },
     {
