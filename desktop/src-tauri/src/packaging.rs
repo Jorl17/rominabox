@@ -583,77 +583,23 @@ where
         copy_content_file(file, &content_directory)?;
     }
     let rom_relative = Path::new("content").join(&collected_content.entrypoint);
-    if request.show_menu {
-        crate::themes::prepare_theme_assets(
-            &crate::themes::staged_design(&request.runtime_kit, &request.theme),
-            &resources.join("menu-assets"),
-            &request.palette,
-            request.background.as_deref(),
-        )
-        .map_err(|message| ExportError::new("stage", message))?;
-        let design = crate::themes::staged_design(&request.runtime_kit, &request.theme);
-        let menu_assets = resources.join("menu-assets");
-        // We compose the data lists and the live account screen with one function.
-        let mut lists: Vec<crate::lists::List> = Vec::new();
-        if let Some(discs) =
-            crate::disc_menu::list(&design).map_err(|message| ExportError::new("stage", message))?
-        {
-            lists.push(discs);
-        }
-        let staged_shaders = crate::shaders::stage(&design, &menu_assets, &request.shaders)
-            .map_err(|message| ExportError::new("stage", message))?;
-        lists.extend(staged_shaders.list);
-        if crate::achievements::included(request.include_achievements, request.show_menu) {
-            lists.push(
-                crate::achievements::screen(&design)
-                    .map_err(|message| ExportError::new("stage", message))?,
-            );
-        }
-        let mut entries = crate::achievements::entries(
-            &design,
-            request.include_achievements,
-            request.show_menu,
-            request.menu_entries.as_deref(),
-        )
-        .map_err(|message| ExportError::new("stage", message))?;
-        for list in &lists {
-            if list.screen.option_label.is_some() && !entries.contains(&list.screen.id) {
-                entries.push(list.screen.id.clone());
-            }
-        }
-        let screens = crate::themes::prepare_controls_assets(
-            // The controller artwork is the same for every design, because all
-            // designs show the same pads, so we keep it in the shared menu-assets.
-            &request.runtime_kit.join("menu-assets"),
-            // The frame in which we draw the pads comes from the design, and
-            // the generated coordinates must match the stylesheet of that
-            // design.
-            &design,
-            &menu_assets,
-            &request.system,
-            &request.controls,
-            Some(&entries),
-        )
-        .map_err(|message| ExportError::new("stage", message))?;
-        crate::lists::install(&design, &menu_assets, &screens, &lists)
-            .map_err(|message| ExportError::new("stage", message))?;
-        if crate::achievements::included(request.include_achievements, request.show_menu) {
-            crate::themes::append_component_style(
-                &design,
-                &menu_assets,
-                &request.palette,
-                "achievements.rcss",
-            )
-            .map_err(|message| ExportError::new("stage", message))?;
-        }
-    } else if request.splash {
-        crate::themes::prepare_splash_assets(
-            &crate::themes::staged_design(&request.runtime_kit, &request.theme),
-            &resources.join("menu-assets"),
-            &request.palette,
-        )
-        .map_err(|message| ExportError::new("stage", message))?;
-    }
+    crate::themes::compose_menu(
+        &crate::themes::MenuRequest {
+            kit: &request.runtime_kit,
+            design: &request.theme,
+            palette: &request.palette,
+            background: request.background.as_deref(),
+            system: &request.system,
+            controls: &request.controls,
+            show_menu: request.show_menu,
+            splash: request.splash,
+            include_achievements: request.include_achievements,
+            menu_entries: request.menu_entries.as_deref(),
+            shaders: &request.shaders,
+        },
+        &resources.join("menu-assets"),
+    )
+    .map_err(|message| ExportError::new("stage", message))?;
     let controls_assets = resources.join("menu-assets");
     fs::create_dir_all(&controls_assets)
         .map_err(|error| ExportError::io("stage", &controls_assets, error))?;
