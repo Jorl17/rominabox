@@ -152,6 +152,8 @@ def depfiles_are_read_on_every_platform() -> None:
     windows = "C:\\cache\\a.o: C:\\src\\a.c C:\\src\\a.h\n"
     check(menu_harness._depfile_inputs(windows) == ["C:\\src\\a.c", "C:\\src\\a.h"],
           "a Windows depfile is split after the target, not at the drive letter")
+    check(menu_harness._depfile_inputs("objects/a.o:") == [],
+          "a depfile that ends right after its target lists no inputs")
 
 
 def main() -> int:

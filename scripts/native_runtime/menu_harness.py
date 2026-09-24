@@ -151,7 +151,7 @@ def _digest(value) -> str:
 def _depfile_inputs(text: str) -> list[str]:
     # The target ends at the first colon followed by whitespace. There is no
     # whitespace after a Windows drive letter ("C:\\").
-    body = re.split(r":(?=\s)", text.replace("\\\n", " "), maxsplit=1)[1]
+    body = re.split(r":(?=\s|$)", text.replace("\\\n", " "), maxsplit=1)[1]
     return [token.replace("\\ ", " ") for token in re.findall(r"(?:\\ |\S)+", body)]
 
 
@@ -174,8 +174,9 @@ class Toolchain:
         # System headers are missing from the -MMD output, so we must rebuild
         # after an SDK update even when the compiler version is the same.
         if sys.platform == "darwin":
-            found["sdk"] = [subprocess.run(["xcrun", "--show-sdk-path"], capture_output=True, text=True).stdout,
-                            subprocess.run(["xcrun", "--show-sdk-version"], capture_output=True, text=True).stdout]
+            found["sdk"] = [subprocess.run(["xcrun", "--sdk", "macosx", *query], capture_output=True,
+                                           text=True, check=True).stdout
+                            for query in (["--show-sdk-path"], ["--show-sdk-version"])]
         return found
 
     def command(self, source: Path) -> list[str]:
@@ -326,7 +327,13 @@ def _lock_exclusively(lock) -> None:
     if os.name == "nt":
         import msvcrt
 
-        msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+        # With LK_LOCK, waiting ends after about ten seconds. A build can take longer.
+        while True:
+            try:
+                msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+                return
+            except OSError:
+                continue
     else:
         import fcntl
 
