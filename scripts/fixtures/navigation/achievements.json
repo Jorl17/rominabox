@@ -101,21 +101,6 @@
           "achievements-login",
           "achievements-back"
         ]
-      },
-      "red": {
-        "*": {
-          "bug": "G2",
-          "reason": "closing the form blurs its field onto a container, so nothing is highlighted until a key recovers",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievements-login",
-              "achievement-username",
-              null,
-              "achievements-login"
-            ]
-          }
-        }
       }
     },
     {

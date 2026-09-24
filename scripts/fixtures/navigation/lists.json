@@ -249,7 +249,7 @@
           "now": {
             "focused": [
               "discs-0",
-              null,
+              "discs-0",
               "discs-0",
               "discs-0"
             ],
@@ -260,7 +260,9 @@
               [
                 "move"
               ],
-              [],
+              [
+                "move"
+              ],
               []
             ]
           }
@@ -272,7 +274,7 @@
             "focused": [
               "volume-level",
               "discs-0",
-              null,
+              "discs-0",
               "discs-0",
               "discs-0"
             ],
@@ -286,7 +288,9 @@
               [
                 "move"
               ],
-              [],
+              [
+                "move"
+              ],
               []
             ]
           }
