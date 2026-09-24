@@ -681,9 +681,43 @@ fn screens_for_export(
     Ok(staged)
 }
 
-/// The step between option entries. RmlUi does not stack children of an
-/// absolutely positioned parent, so we place each button.
-const OPTION_ENTRY_STEP: usize = 60;
+/// The step between option entries, from `metrics.options.entryStep` in the
+/// design, or from Native when the design declares none. We place each entry,
+/// because the entries of the design are absolutely positioned. With a step
+/// shorter than an entry, entries overlap.
+fn option_entry_step(design: &Path) -> Result<usize, String> {
+    let declared = |package: &Path| -> Result<Option<usize>, String> {
+        let path = package.join("design.json");
+        let Ok(text) = fs::read_to_string(&path) else {
+            return Ok(None);
+        };
+        let declared: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
+        match declared["metrics"]["options"].get("entryStep") {
+            None => Ok(None),
+            Some(value) => value
+                .as_u64()
+                .filter(|step| *step > 0)
+                .map(|step| Some(step as usize))
+                .ok_or_else(|| {
+                    format!(
+                        "metrics.options.entryStep in {} must be a positive number of dp",
+                        path.display()
+                    )
+                }),
+        }
+    };
+    if let Some(step) = declared(design)? {
+        return Ok(step);
+    }
+    let base = base_design(design)?;
+    declared(&base)?.ok_or_else(|| {
+        format!(
+            "{} declares no metrics.options.entryStep",
+            base.join("design.json").display()
+        )
+    })
+}
 
 const OPTIONS_LAYOUT_CSS: &str = r#"
 #options-entries { position: absolute; left: 56dp; top: 272dp; width: 840dp; height: 200dp; }
@@ -719,7 +753,7 @@ fn button_bounds(document: &str, id: &str) -> Option<(usize, usize)> {
 
 fn entry_button(design: &Path, screen: &Screen, index: usize) -> Result<String, String> {
     let label = screen.option_label.clone().unwrap_or_default();
-    let top = (index * OPTION_ENTRY_STEP).to_string();
+    let top = (index * option_entry_step(design)?).to_string();
     let template_path = design.join("option-entry.rml");
     let template = if template_path.exists() {
         fs::read_to_string(&template_path)
@@ -2754,7 +2788,7 @@ mod tests {
             "controls stays the first entry: {controls_button}"
         );
         assert!(
-            button.contains(&format!("top: {OPTION_ENTRY_STEP}dp")),
+            button.contains(&format!("top: {}dp", option_entry_step(&native).unwrap())),
             "the disc entry is the last slot, so hiding it leaves no hole: {button}"
         );
         let actions_at = staged.find("id=\"actions\"").expect("pause row");
