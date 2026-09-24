@@ -261,6 +261,62 @@ int main(int argc, char **argv) {
    check(overlays.drawing(), "A capture continues after the startup overlays finish");
    overlays.update(false);
    check(!overlays.drawing(), "Finished startup capture releases rendering");
+   {
+      // While a badge downloads we show a placeholder, and for a failed one
+      // a mark. When the download finishes while the list is closed, only
+      // the picture changes.
+      document.shutdown();
+      check(document.initialize(argv[1], 960, 600, false), "Badge document loads");
+      document.show(); document.settle();
+      achievements.context_lost();
+      achievements.bind();
+      auto row_of = [](uint32_t id, rib_achievement_badge_t badge, const char *path) {
+         rib_achievement_row_t row{};
+         row.id = id; row.points = 5; row.state = RIB_ACHIEVEMENT_LOCKED; row.badge = badge;
+         std::snprintf(row.title, sizeof(row.title), "BADGE %u", id);
+         std::snprintf(row.badge_path, sizeof(row.badge_path), "%s", path);
+         return row;
+      };
+      const std::string ready_path = document.asset_path("badge-1.png");
+      service_rows = {row_of(1, RIB_ACHIEVEMENT_BADGE_READY, ready_path.c_str()),
+                      row_of(2, RIB_ACHIEVEMENT_BADGE_LOADING, ""),
+                      row_of(3, RIB_ACHIEVEMENT_BADGE_FAILED, "")};
+      session = {}; session.status = RIB_ACHIEVEMENTS_ACTIVE; session.count = service_rows.size();
+      std::snprintf(session.account, sizeof(session.account), "fixture"); session.revision = 50;
+      document.set_shown("pause-panel", false);
+      document.set_shown("achievements-panel", true);
+      achievements.update();
+      list_shown_reports.clear();
+      achievements.update(); document.settle();
+      auto icon_shown = [&](const char *row) {
+         auto *element = document.root()->GetElementById(row);
+         std::vector<Rml::Element*> icons;
+         if (element) rib::collect(element, "list-row-icon", icons);
+         return !icons.empty() && !rib::hidden(icons[0])
+               && icons[0]->GetBox().GetSize(Rml::BoxArea::Border).x > 0;
+      };
+      check(document.root()->GetElementById("achievement-2")
+            && document.root()->GetElementById("achievement-2")->IsClassSet("badge-loading") && icon_shown("achievement-2"),
+            "a badge still downloading shows its placeholder");
+      check(document.root()->GetElementById("achievement-3")
+            && document.root()->GetElementById("achievement-3")->IsClassSet("badge-failed") && icon_shown("achievement-3"),
+            "a badge that failed shows its mark");
+      check(document.root()->GetElementById("achievement-1")
+            && !document.root()->GetElementById("achievement-1")->IsClassSet("badge-loading") && icon_shown("achievement-1"),
+            "a downloaded badge shows its picture");
+      document.set_shown("achievements-panel", false);
+      achievements.update();
+      service_rows[1] = row_of(2, RIB_ACHIEVEMENT_BADGE_READY, ready_path.c_str());
+      ++session.revision;
+      achievements.update();
+      document.set_shown("achievements-panel", true);
+      achievements.update(); document.settle();
+      auto *second = document.root()->GetElementById("achievement-2");
+      check(second && !second->IsClassSet("badge-loading") && icon_shown("achievement-2"),
+            "a badge that arrived while the list was closed is shown when it opens");
+      check(list_shown_reports == std::vector<bool>({true, false, true}),
+            "the menu reports when the list opens again, so a failed badge is retried");
+   }
    achievements.context_lost();
    document.shutdown();
    std::printf("account input: %d failures\n", failures);

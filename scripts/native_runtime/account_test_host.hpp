@@ -9,3 +9,7 @@ extern bool overlay_frames;
 extern int64_t host_time_us;
 
 extern rib_achievement_unlock_t pending_unlock;
+/* The service's rows, and each report of whether the list is on screen. */
+#include <vector>
+extern std::vector<rib_achievement_row_t> service_rows;
+extern std::vector<bool> list_shown_reports;
