@@ -277,33 +277,6 @@
           "discs-5",
           "discs-6"
         ]
-      },
-      "red": {
-        "native": {
-          "bug": "B13",
-          "reason": "choosing a disc refills the list and retarget_pages shows page 1, so the chosen row is hidden and focus falls to disc 1",
-          "now": {
-            "focused": [
-              "volume-level",
-              "discs-0",
-              "discs-5",
-              "discs-0",
-              "discs-1"
-            ]
-          }
-        },
-        "disc": {
-          "bug": "B13",
-          "reason": "choosing a disc refills the list and retarget_pages shows page 1, so the chosen row is hidden and focus falls to disc 1",
-          "now": {
-            "focused": [
-              "discs-0",
-              "discs-5",
-              "discs-0",
-              "discs-1"
-            ]
-          }
-        }
       }
     },
     {
