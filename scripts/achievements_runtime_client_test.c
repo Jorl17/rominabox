@@ -1,0 +1,516 @@
+/* Native managed-session integration: actual rc_client/runtime, synthetic
+ * HTTP. No request leaves this process, and we use no account or award. */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include "../vendor/retroarch/cheevos/rominabox.h"
+#include "../vendor/retroarch/cheevos/rominabox_internal.h"
+#include "../vendor/retroarch/cheevos/cheevos_locals.h"
+#include "../vendor/retroarch/configuration.h"
+
+static settings_t settings;
+static rcheevos_locals_t locals;
+static uint8_t memory_byte;
+static unsigned awards;
+static unsigned badge_downloads;
+static bool defer_login;
+static bool fail_login;
+static bool defer_award;
+static bool reject_award;
+static bool replace_account;
+static unsigned fail_award_attempts;
+static rc_client_server_callback_t deferred_callback;
+static void *deferred_data;
+static rc_client_server_callback_t deferred_award_callback;
+static void *deferred_award_data;
+static unsigned deferred_award_generation;
+static rc_clock_t fake_time;
+
+static const char login_json[] =
+   "{\"Success\":true,\"User\":\"Fixture\",\"Token\":\"fixture-token\"}";
+static const char login_error_json[] =
+   "{\"Success\":false,\"Error\":\"Synthetic network failure\"}";
+static const char replacement_login_json[] =
+   "{\"Success\":true,\"User\":\"Other\",\"Token\":\"other-token\"}";
+static const char game_json[] =
+   "{\"Success\":true,\"GameId\":1,\"Title\":\"Fixture Game\","
+   "\"ConsoleId\":1,\"ImageIconUrl\":\"/Images/1.png\","
+   "\"RichPresencePatch\":\"\",\"Sets\":[{\"AchievementSetId\":1,"
+   "\"GameId\":1,\"Title\":\"Fixture Game\",\"Type\":\"core\","
+   "\"ImageIconUrl\":\"/Images/1.png\",\"Achievements\":[{"
+   "\"ID\":123,\"Title\":\"First step\","
+   "\"Description\":\"Reach one\",\"Flags\":3,\"Points\":5,"
+   "\"MemAddr\":\"0xH0000=1.3.\",\"Author\":\"Fixture\","
+   "\"BadgeName\":\"123\",\"Created\":1,\"Modified\":1}],"
+   "\"Leaderboards\":[]}]}";
+static const char session_json[] =
+   "{\"Success\":true,\"Unlocks\":[],\"HardcoreUnlocks\":[]}";
+static const char award_json[] =
+   "{\"Success\":true,\"AchievementID\":123,\"Score\":0,"
+   "\"SoftcoreScore\":5,\"AchievementsRemaining\":0}";
+static const char reject_award_json[] =
+   "{\"Success\":false,\"Error\":\"Synthetic award rejection\"}";
+
+static rc_clock_t clock_millisecs(const rc_client_t *client)
+{
+   (void)client;
+   return fake_time;
+}
+
+static uint32_t read_memory(uint32_t address, uint8_t *buffer,
+      uint32_t bytes, rc_client_t *client)
+{
+   (void)client;
+   if (address != 0 || bytes != 1)
+      return 0;
+   buffer[0] = memory_byte;
+   return 1;
+}
+
+static void on_event(const rc_client_event_t *event, rc_client_t *client)
+{
+   (void)client;
+   rib_achievements_event(event);
+}
+
+static void server(const rc_api_request_t *request,
+      rc_client_server_callback_t callback, void *data, rc_client_t *client)
+{
+   rc_api_server_response_t response = {0};
+   const char *body = "{\"Success\":false,\"Error\":\"Unexpected request\"}";
+   const char *post = request->post_data ? request->post_data : "";
+   (void)client;
+   if (strstr(post, "r=login2"))
+   {
+      if (defer_login)
+      {
+         deferred_callback = callback;
+         deferred_data = data;
+         return;
+      }
+      body = fail_login ? login_error_json :
+            (replace_account ? replacement_login_json : login_json);
+   }
+   else if (strstr(post, "r=gameid"))
+      body = "{\"Success\":true,\"GameID\":1}";
+   else if (strstr(post, "r=achievementsets"))
+      body = game_json;
+   else if (strstr(post, "r=startsession"))
+      body = session_json;
+   else if (strstr(post, "r=awardachievement"))
+   {
+      unsigned generation = rib_achievements_award_request_started();
+      ++awards;
+      if (defer_award)
+      {
+         deferred_award_callback = callback;
+         deferred_award_data = data;
+         deferred_award_generation = generation;
+         return;
+      }
+      if (fail_award_attempts)
+      {
+         --fail_award_attempts;
+         response.http_status_code = 503;
+      }
+      body = response.http_status_code == 503 ? "" :
+            (reject_award ? reject_award_json : award_json);
+      response.body = body;
+      response.body_length = strlen(body);
+      if (response.http_status_code != 503)
+         response.http_status_code = 200;
+      callback(&response, data);
+      rib_achievements_award_request_finished(generation);
+      return;
+   }
+   else if (strstr(post, "r=ping"))
+      body = "{\"Success\":true}";
+   else
+   {
+      fprintf(stderr, "Unexpected synthetic request: %s\n", post);
+      abort();
+   }
+   response.body = body;
+   response.body_length = strlen(body);
+   response.http_status_code = 200;
+   callback(&response, data);
+}
+
+settings_t *config_get_ptr(void) { return &settings; }
+rcheevos_locals_t *get_rcheevos_locals(void) { return &locals; }
+
+bool path_is_directory(const char *path)
+{
+   struct stat st;
+   return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+bool path_is_absolute(const char *path)
+{
+   return path && path[0] == '/';
+}
+
+bool path_is_valid(const char *path)
+{
+   return access(path, F_OK) == 0;
+}
+
+bool rcheevos_client_download_badge_from_url(const char *url,
+      const char *badge_name)
+{
+   (void)url;
+   (void)badge_name;
+   ++badge_downloads;
+   return true;
+}
+
+rc_client_t *rcheevos_rib_prepare_client(void)
+{
+   if (locals.client)
+      rc_client_unload_game(locals.client);
+   else
+   {
+      locals.client = rc_client_create(read_memory, server);
+      assert(locals.client);
+      rc_client_set_event_handler(locals.client, on_event);
+      rc_client_set_get_time_millisecs_function(locals.client,
+            clock_millisecs);
+   }
+   return locals.client;
+}
+
+rc_client_async_handle_t *rcheevos_rib_begin_identify(
+      const struct retro_game_info *info, rc_client_callback_t callback,
+      void *userdata)
+{
+   (void)info;
+   return rc_client_begin_load_game(locals.client,
+         "0123456789abcdef0123456789abcdef", callback, userdata);
+}
+
+void rcheevos_rib_complete_game_load(int result, const char *error,
+      rc_client_t *client, void *userdata)
+{
+   (void)error;
+   (void)client;
+   (void)userdata;
+   assert(result == RC_OK);
+   locals.core_supports = true;
+}
+
+static rib_achievements_snapshot_t snapshot(void)
+{
+   rib_achievements_snapshot_t value;
+   rib_achievements_get_snapshot(&value);
+   return value;
+}
+
+static void ready(void)
+{
+   unsigned i;
+   for (i = 0; i < 8 && snapshot().status != RIB_ACHIEVEMENTS_ACTIVE; ++i)
+      rib_achievements_pump();
+   assert(snapshot().status == RIB_ACHIEVEMENTS_ACTIVE);
+}
+
+int main(void)
+{
+   char directory[] = "/tmp/rib-achievements-runtime-XXXXXX";
+   char second_directory[] = "/tmp/rib-achievements-other-XXXXXX";
+   char invalid_directory[512];
+   char session_path[512];
+   char file_data[256];
+   FILE *file;
+   struct retro_game_info info = {0};
+   rib_achievement_row_t row;
+   rib_achievement_unlock_t unlock;
+   uint8_t *progress;
+   size_t progress_size;
+   const rc_client_achievement_t *achievement;
+   char badge_name[8];
+   uint32_t revision;
+
+   assert(mkdtemp(directory));
+   assert(mkdtemp(second_directory));
+   snprintf(invalid_directory, sizeof(invalid_directory), "%s/missing", directory);
+   assert(setenv("ROMINABOX_DATA_DIR", "relative-store", 1) == 0);
+   assert(setenv("ROMINABOX_ACHIEVEMENTS", "1", 1) == 0);
+   info.path = "fixture.gbc";
+   info.data = "fixture";
+   info.size = 7;
+   assert(!rib_achievements_content_load(&info));
+   assert(snapshot().status == RIB_ACHIEVEMENTS_ERROR);
+   assert(setenv("ROMINABOX_DATA_DIR", directory, 1) == 0);
+   assert(rib_achievements_content_load(&info));
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
+
+   /* Cancel an actual pending rc_client login. Its late HTTP callback must not
+    * reactivate the session. */
+   defer_login = true;
+   assert(rib_achievements_sign_in("Fixture", "fixture-password"));
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNING_IN);
+   rib_achievements_cancel();
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
+   defer_login = false;
+   {
+      rc_api_server_response_t response = {0};
+      response.body = login_json;
+      response.body_length = strlen(login_json);
+      response.http_status_code = 200;
+      deferred_callback(&response, deferred_data);
+      assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
+   }
+
+   assert(rib_achievements_sign_in("Fixture", "fixture-password"));
+   ready();
+   assert(!rc_client_get_hardcore_enabled(locals.client));
+   assert(snapshot().count == 1);
+   achievement = rc_client_get_achievement_info(locals.client, 123);
+   assert(achievement);
+   strcpy(badge_name, achievement->badge_name);
+   strcpy(((rc_client_achievement_t*)achievement)->badge_name, "../bad");
+   assert(rib_achievements_get_row(0, &row));
+   assert(badge_downloads == 0);
+   strcpy(((rc_client_achievement_t*)achievement)->badge_name, badge_name);
+   assert(rib_achievements_get_row(0, &row));
+   assert(badge_downloads == 1);
+   assert(row.id == 123 && row.state == RIB_ACHIEVEMENT_LOCKED);
+
+   /* In the task callback we mark badges dirty. In the next main-thread
+    * snapshot we publish a revision and copied path without another get_row. */
+   revision = snapshot().revision;
+   {
+      char badge_dir[512];
+      char badge_path[512];
+      snprintf(badge_dir, sizeof(badge_dir), "%s/achievements-badges", directory);
+      assert(mkdir(badge_dir, 0700) == 0);
+      snprintf(badge_path, sizeof(badge_path), "%s/123_lock.png", badge_dir);
+      file = fopen(badge_path, "wb");
+      assert(file);
+      assert(fclose(file) == 0);
+   }
+   rib_achievements_badge_downloaded();
+   assert(snapshot().revision > revision);
+   assert(rib_achievements_get_row(0, &row));
+   assert(strstr(row.badge_path, "123_lock.png") != NULL);
+
+   /* The per-game file contains only username, token and ON/OFF preference. */
+   snprintf(session_path, sizeof(session_path), "%s/achievements.session", directory);
+   {
+      struct stat st;
+      assert(stat(session_path, &st) == 0);
+      assert((st.st_mode & 077) == 0);
+   }
+   file = fopen(session_path, "rb");
+   assert(file);
+   assert(fgets(file_data, sizeof(file_data), file));
+   assert(strcmp(file_data, "Fixture\n") == 0);
+   assert(fgets(file_data, sizeof(file_data), file));
+   assert(strcmp(file_data, "fixture-token\n") == 0);
+   assert(fgets(file_data, sizeof(file_data), file));
+   assert(strcmp(file_data, "1\n") == 0);
+   fclose(file);
+
+   assert(setenv("ROMINABOX_DATA_DIR", invalid_directory, 1) == 0);
+   assert(!rib_achievements_set_enabled(false));
+   assert(snapshot().status == RIB_ACHIEVEMENTS_ERROR);
+   assert(strstr(snapshot().error, "save") != NULL);
+   assert(setenv("ROMINABOX_DATA_DIR", directory, 1) == 0);
+   memory_byte = 1;
+   rc_client_do_frame(locals.client);
+   assert(awards == 0);
+   assert(rib_achievements_set_enabled(false));
+   assert(snapshot().status == RIB_ACHIEVEMENTS_OFF);
+   memory_byte = 1;
+   rc_client_idle(locals.client); /* exactly the managed OFF branch */
+   assert(awards == 0 && !rib_achievements_has_unlocks());
+
+   /* A state saved while earning is OFF still contains rc_client progress. */
+   progress_size = rc_client_progress_size(locals.client);
+   assert(progress_size > 0);
+   progress = (uint8_t*)malloc(progress_size);
+   assert(progress);
+   assert(rc_client_serialize_progress(locals.client, progress) == RC_OK);
+   assert(rc_client_deserialize_progress(locals.client, progress) == RC_OK);
+   free(progress);
+
+   assert(rib_achievements_set_enabled(true));
+   assert(snapshot().status == RIB_ACHIEVEMENTS_ACTIVE);
+   rc_client_do_frame(locals.client);
+   rc_client_do_frame(locals.client);
+   assert(awards == 0); /* stale hit count must not carry across OFF time */
+   defer_award = true;
+   rc_client_do_frame(locals.client);
+   assert(awards == 1);
+   assert(snapshot().pending_upload);
+   assert(rib_achievements_has_unlocks());
+   assert(rib_achievements_take_unlock(&unlock));
+   assert(unlock.id == 123 && unlock.points == 5);
+   assert(strcmp(unlock.title, "First step") == 0);
+   assert(!rib_achievements_has_unlocks());
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.state == RIB_ACHIEVEMENT_UNLOCKED);
+   {
+      rc_api_server_response_t response = {0};
+      response.body = award_json;
+      response.body_length = strlen(award_json);
+      response.http_status_code = 200;
+      defer_award = false;
+      deferred_award_callback(&response, deferred_award_data);
+      rib_achievements_award_request_finished(deferred_award_generation);
+   }
+   assert(!snapshot().pending_upload);
+   assert(rib_achievements_set_enabled(false));
+   assert(rib_achievements_set_enabled(true));
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.state == RIB_ACHIEVEMENT_UNLOCKED && awards == 1);
+
+   rib_achievements_content_unload();
+   rc_client_destroy(locals.client);
+   locals.client = NULL;
+   memory_byte = 0;
+   defer_login = true;
+   assert(rib_achievements_content_load(&info));
+   assert(rib_achievements_should_defer_restore());
+   rib_achievements_begin_startup_gate();
+   assert(snapshot().startup_waiting && !rib_achievements_startup_ready());
+   assert(!rc_client_is_game_loaded(locals.client));
+   /* A state load at this point would have no achievement progress target,
+    * so we queue core frames and the restore in the runloop gate until ready. */
+   defer_login = false;
+   {
+      rc_api_server_response_t response = {0};
+      response.body = login_json;
+      response.body_length = strlen(login_json);
+      response.http_status_code = 200;
+      deferred_callback(&response, deferred_data);
+   }
+   ready(); /* remembered token and ON preference */
+   assert(snapshot().status == RIB_ACHIEVEMENTS_ACTIVE);
+   assert(rib_achievements_startup_ready());
+   rib_achievements_finish_startup_gate();
+   assert(!snapshot().startup_waiting);
+
+   /* After two failed award responses, a retry is scheduled in rc_client. The
+    * managed status stays pending until the later acknowledgement. */
+   fail_award_attempts = 2;
+   memory_byte = 1;
+   rc_client_do_frame(locals.client);
+   rc_client_do_frame(locals.client);
+   rc_client_do_frame(locals.client);
+   rc_client_idle(locals.client);
+   assert(snapshot().pending_upload);
+   assert(rib_achievements_set_enabled(false));
+   assert(snapshot().pending_upload);
+   assert(rib_achievements_set_enabled(true));
+   assert(snapshot().pending_upload); /* rc_client_reset keeps the retry */
+   defer_award = true;
+   fake_time = 3000;
+   rc_client_idle(locals.client);
+   assert(snapshot().pending_upload);
+   {
+      rc_api_server_response_t response = {0};
+      response.body = award_json;
+      response.body_length = strlen(award_json);
+      response.http_status_code = 200;
+      defer_award = false;
+      deferred_award_callback(&response, deferred_award_data);
+      rib_achievements_award_request_finished(deferred_award_generation);
+   }
+   rc_client_idle(locals.client);
+   assert(!snapshot().pending_upload);
+   assert(!snapshot().upload_failed);
+   rc_client_do_frame(locals.client); /* dispatch pending mastery before unload */
+
+   rib_achievements_content_unload();
+   rc_client_destroy(locals.client);
+   locals.client = NULL;
+   fail_login = true;
+   assert(rib_achievements_content_load(&info));
+   rib_achievements_begin_startup_gate();
+   assert(snapshot().status == RIB_ACHIEVEMENTS_ERROR);
+   assert(snapshot().startup_waiting && !rib_achievements_startup_ready());
+   fail_login = false;
+   assert(rib_achievements_retry());
+   ready();
+   assert(rib_achievements_startup_ready());
+   rib_achievements_finish_startup_gate();
+   reject_award = true;
+   rc_client_do_frame(locals.client);
+   rc_client_do_frame(locals.client);
+   rc_client_do_frame(locals.client);
+   assert(snapshot().upload_failed);
+   assert(strstr(snapshot().error, "Synthetic award rejection") != NULL);
+   assert(!snapshot().pending_upload);
+   reject_award = false;
+   rib_achievements_sign_out();
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
+   assert(!snapshot().upload_failed && !snapshot().error[0]);
+   replace_account = true;
+   assert(rib_achievements_sign_in("Other", "replacement-password"));
+   ready();
+   assert(strcmp(snapshot().account, "Other") == 0);
+   assert(!snapshot().upload_failed && !snapshot().error[0]);
+   rib_achievements_content_unload();
+   revision = snapshot().revision;
+   rc_client_destroy(locals.client);
+   locals.client = NULL;
+   assert(setenv("ROMINABOX_DATA_DIR", second_directory, 1) == 0);
+   assert(rib_achievements_content_load(&info));
+   assert(snapshot().revision > revision);
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
+   assert(!snapshot().account[0] && !snapshot().enabled_preference);
+   assert(!snapshot().upload_failed && !snapshot().error[0]);
+   rib_achievements_content_unload();
+   rc_client_destroy(locals.client);
+   locals.client = NULL;
+   assert(setenv("ROMINABOX_DATA_DIR", directory, 1) == 0);
+   defer_login = true;
+   assert(rib_achievements_content_load(&info));
+   rib_achievements_begin_startup_gate();
+   assert(snapshot().startup_waiting && !rib_achievements_startup_ready());
+   rib_achievements_skip_startup();
+   assert(rib_achievements_startup_ready());
+   assert(snapshot().status == RIB_ACHIEVEMENTS_OFF);
+   assert(!snapshot().enabled_preference);
+   defer_login = false;
+   {
+      rc_api_server_response_t response = {0};
+      response.body = login_json;
+      response.body_length = strlen(login_json);
+      response.http_status_code = 200;
+      deferred_callback(&response, deferred_data);
+   }
+   assert(snapshot().status == RIB_ACHIEVEMENTS_OFF);
+   rib_achievements_finish_startup_gate();
+   assert(!snapshot().startup_waiting);
+   assert(setenv("ROMINABOX_DATA_DIR", invalid_directory, 1) == 0);
+   rib_achievements_sign_out();
+   assert(snapshot().status == RIB_ACHIEVEMENTS_ERROR);
+   assert(strstr(snapshot().error, "remove") != NULL);
+   assert(setenv("ROMINABOX_DATA_DIR", directory, 1) == 0);
+   rib_achievements_sign_out();
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
+   assert(access(session_path, F_OK) != 0);
+   rib_achievements_content_unload();
+   rc_client_destroy(locals.client);
+   locals.client = NULL;
+   {
+      char badge_path[512];
+      char badge_dir[512];
+      snprintf(badge_path, sizeof(badge_path), "%s/achievements-badges/123_lock.png", directory);
+      snprintf(badge_dir, sizeof(badge_dir), "%s/achievements-badges", directory);
+      assert(unlink(badge_path) == 0);
+      assert(rmdir(badge_dir) == 0);
+   }
+   assert(rmdir(directory) == 0);
+   assert(rmdir(second_directory) == 0);
+   puts("achievements runtime client integration passed");
+   return 0;
+}
