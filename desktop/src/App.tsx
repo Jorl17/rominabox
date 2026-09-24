@@ -25,6 +25,7 @@ import designs from "../designs.json";
 import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
+import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
 // The same pictures as in the exported game, rendered from the GLSL of each
 // shader with scripts/render_shader_previews.py. We read them as a directory
@@ -226,6 +227,7 @@ export function App() {
     null,
   );
   const [progress, setProgress] = useState<bridge.ExportProgress | null>(null);
+  const [replacing, setReplacing] = useState<bridge.AppExists | null>(null);
   const [coreNotice, setCoreNotice] = useState<CoreNotice | null>(null);
   // Progress events arrive on a separate channel. One that arrives after the
   // export has ended must not reopen the pop-up.
@@ -627,7 +629,7 @@ export function App() {
       setBusy(null);
     }
   }
-  async function packageGame() {
+  async function packageGame(replace = false) {
     if (!selection || busy || !bridge.native) return;
     setError("");
     setBusy("export");
@@ -639,10 +641,15 @@ export function App() {
     });
     exporting.current = true;
     try {
-      const value = await bridge.exportGame(exportRequest());
+      const value = await bridge.exportGame({ ...exportRequest(), replace });
       setResult(value);
       setCoreNotice(afterExport());
     } catch (e) {
+      // We did nothing. The author chooses, and on Replace we export again.
+      if (e instanceof bridge.AppExists) {
+        setReplacing(e);
+        return;
+      }
       const notice = afterExport(e);
       setCoreNotice(notice);
       if (!notice) fail(e);
@@ -1763,7 +1770,7 @@ export function App() {
               disabled={
                 !!busy || !bridge.native || !destination || firmwareBlocked
               }
-              onClick={packageGame}
+              onClick={() => packageGame()}
             >
               {busy === "export" ? (
                 <LoaderCircle className="spin" size={18} />
@@ -1775,6 +1782,16 @@ export function App() {
           )}
         </footer>
       </main>
+      {replacing && (
+        <ReplaceAppDialog
+          existing={replacing}
+          onCancel={() => setReplacing(null)}
+          onReplace={() => {
+            setReplacing(null);
+            packageGame(true);
+          }}
+        />
+      )}
       {coreNotice && (
         <CoreFetchNotice
           notice={coreNotice}

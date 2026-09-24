@@ -44,6 +44,9 @@ export type ExportRequest = {
   menuSounds: string;
   controls: Controls;
   outputDir: string;
+  /** Replace an app already at the destination. Without it we do nothing in
+   * the export and fail with `AppExists`. */
+  replace?: boolean;
   target: string;
 };
 /** Our messages about cores in the export, when we fetch any or cannot. */
@@ -60,6 +63,18 @@ export type ExportProgress = {
 export class CoreDownloadFailed extends Error {}
 /** The stage of that failure in the exporter (`ErrorStage::Cores`). */
 const CORES_STAGE = "cores";
+/** An app is already where this one would go. We did nothing. */
+export class AppExists extends Error {
+  constructor(
+    sentence: string,
+    readonly app: string,
+    readonly folder: string,
+  ) {
+    super(sentence);
+  }
+}
+/** `ErrorStage::Exists`. */
+const EXISTS_STAGE = "exists";
 export type ExportResult = {
   appPath: string;
   installedBytes: number;
@@ -221,8 +236,14 @@ export function exportFailure(reason: unknown): unknown {
     !("sentence" in reason)
   )
     return reason;
-  const { stage, sentence } = reason as { stage: string; sentence: string };
+  const { stage, sentence, existing } = reason as {
+    stage: string;
+    sentence: string;
+    existing?: { name: string; folder: string };
+  };
   if (stage === CORES_STAGE) return new CoreDownloadFailed(sentence);
+  if (stage === EXISTS_STAGE && existing)
+    return new AppExists(sentence, existing.name, existing.folder);
   return new Error(sentence);
 }
 export function cancelExport(): Promise<void> {

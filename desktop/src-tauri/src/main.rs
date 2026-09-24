@@ -186,7 +186,10 @@ async fn run_export(
     {
         let mut active = state.0.lock().map_err(|e| shell(e.to_string()))?;
         if active.is_some() {
-            return Err(shell("Another export is already running.".into()));
+            return Err(packaging::ExportError::new(
+                ErrorStage::Refused,
+                "Another export is already running.",
+            ));
         }
         *active = Some(cancelled.clone());
     }

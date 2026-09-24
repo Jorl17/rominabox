@@ -426,9 +426,11 @@ pub fn export_game_fetching<F>(
 where
     F: FnMut(ExportProgress),
 {
-    // This comes before we validate the file. Here we download or update the
-    // core in the cache, and we build the game with that file in it. We fix
-    // the platform here, and every later step uses `resolved`.
+    // Before we look for the file during validation. Here we bring the core
+    // into the cache, downloaded or updated, and build the game with it. We
+    // fix the platform here and read `resolved` in every later step.
+    // Before anything else, because the author decides about an app in the way.
+    crate::publish::refuse_unless_replacing(request)?;
     let resolved = export_core(request);
     prepare_core(request, resolved.as_ref(), &mut progress, transport)?;
     emit(
@@ -440,12 +442,10 @@ where
     validate_request(request, resolved.as_ref())?;
     check_cancelled(cancelled)?;
     match request.target {
-        ExportTarget::Macos => {
-            export_macos(request, resolved.as_ref(), cancelled, &mut progress)
-        }
+        ExportTarget::Macos => export_macos(request, resolved.as_ref(), cancelled, &mut progress),
         ExportTarget::Windows => Err(ExportError::new(
-            ErrorStage::Validate,
-            "Windows export is not available from this build; a pinned Windows runtime kit and native packaging implementation are still required",
+            ErrorStage::Refused,
+            "Windows apps cannot be made with this version of ROM-in-a-Box yet.",
         )),
     }
 }
@@ -486,22 +486,21 @@ where
 {
     if !cfg!(target_os = "macos") {
         return Err(ExportError::new(
-            ErrorStage::Validate,
-            "macOS export currently requires a macOS host",
+            ErrorStage::Refused,
+            "Mac apps can only be made on a Mac.",
         ));
     }
 
     if !Path::new("/usr/bin/codesign").is_file() {
-        return Err(ExportError::new(ErrorStage::Validate, "This version of macOS does not provide the signing service required by this build. No tools were installed and no app was exported."));
+        return Err(ExportError::new(ErrorStage::Refused, "This version of macOS does not provide the signing service required by this build. No tools were installed and no app was exported."));
     }
-    let safe_title = safe_filename(&request.title);
-    let final_app = request.output_dir.join(format!("{safe_title}.app"));
-    refuse_existing(&final_app)?;
+    let app_name = crate::publish::macos_app_name(&request.title);
+    let final_app = request.output_dir.join(&app_name);
     fs::create_dir_all(&request.output_dir)
         .map_err(|error| ExportError::io(ErrorStage::Stage, &request.output_dir, error))?;
 
     let staging = OwnedStaging::create(&request.output_dir)?;
-    let app = staging.path().join(format!("{safe_title}.app"));
+    let app = staging.path().join(&app_name);
     let contents = app.join("Contents");
     let macos = contents.join("MacOS");
     let resources = contents.join("Resources");
@@ -719,8 +718,7 @@ where
             .background
             .as_ref()
             .map_or(0, |path| fs::metadata(path).map(|m| m.len()).unwrap_or(0));
-    fs::rename(&app, &final_app)
-        .map_err(|error| ExportError::io(ErrorStage::Complete, &final_app, error))?;
+    crate::publish::put_in_place(&app, &final_app, staging.path(), request.replace)?;
     staging.cleanup()?;
     emit(progress, ExportStage::Complete, 1.0, "Export complete");
     Ok(ExportResult {
@@ -764,21 +762,23 @@ fn validate_request(
     .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     if !request.shaders.is_empty() && !request.show_menu {
         return Err(ExportError::new(
-            ErrorStage::Validate,
+            ErrorStage::Refused,
             "Shaders need the in-game menu. Turn the menu on, or leave shaders unset.",
         ));
     }
     crate::shaders::resolve(&request.shaders)
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
-    for (label, path) in [
-        ("ROM", &request.rom),
-        ("runtime", &request.runtime_kit.join("bin/retroarch")),
+    let runtime = request.runtime_kit.join("bin/retroarch");
+    for (stage, label, path) in [
+        (ErrorStage::Missing, "ROM", &request.rom),
+        (ErrorStage::Validate, "runtime", &runtime),
     ] {
         if !path.is_file() {
             return Err(ExportError::new(
-                ErrorStage::Validate,
+                stage,
                 format!("{label} file does not exist: {}", path.display()),
-            ));
+            )
+            .about(path));
         }
     }
     crate::achievements::validate_runtime(
@@ -808,9 +808,10 @@ fn validate_request(
     for path in request.icon.iter().chain(request.background.iter()) {
         if !path.is_file() {
             return Err(ExportError::new(
-                ErrorStage::Validate,
+                ErrorStage::Missing,
                 format!("asset does not exist: {}", path.display()),
-            ));
+            )
+            .about(path));
         }
     }
     content::collect_for(&request.rom, Some(&system.id))
@@ -829,7 +830,7 @@ fn validate_request(
             && !core.supports(&extension)
         {
             return Err(ExportError::new(
-                ErrorStage::Validate,
+                ErrorStage::Refused,
                 format!(
                     "{} export from a .{extension} image is unavailable because the prepared {} core was built without {} support. Use one of these instead: {}.",
                     system.name,
@@ -1187,9 +1188,10 @@ fn validate_firmware(
     for path in &request.firmware {
         if !path.is_file() {
             return Err(ExportError::new(
-                ErrorStage::Validate,
+                ErrorStage::Missing,
                 format!("firmware file does not exist: {}", path.display()),
-            ));
+            )
+            .about(path));
         }
         if path.file_name().and_then(OsStr::to_str).is_none() {
             return Err(ExportError::new(
@@ -1200,7 +1202,7 @@ fn validate_firmware(
     }
     let assessment = crate::systems::assess_firmware(system, &request.firmware);
     if !assessment.can_continue {
-        return Err(ExportError::new(ErrorStage::Validate, assessment.refusal()));
+        return Err(ExportError::new(ErrorStage::Refused, assessment.refusal()));
     }
     Ok(())
 }
@@ -2268,7 +2270,7 @@ pub fn freeze_macos_executable(source: &Path, destination: &Path) -> Result<u64,
             "macOS helper freezing requires a macOS host",
         ));
     }
-    refuse_existing(destination)?;
+    crate::publish::refuse_existing(destination)?;
     let parent = destination
         .parent()
         .ok_or_else(|| ExportError::new(ErrorStage::Freeze, "helper destination has no parent"))?;
@@ -2500,22 +2502,6 @@ fn tree_size(path: &Path) -> Result<u64, ExportError> {
     Ok(total)
 }
 
-fn safe_filename(title: &str) -> String {
-    let value: String = title
-        .trim()
-        .chars()
-        .map(|character| match character {
-            '/' | ':' | '\0' => '-',
-            _ => character,
-        })
-        .collect();
-    if value.is_empty() || value == "." || value == ".." {
-        "Game".to_string()
-    } else {
-        value
-    }
-}
-
 fn xml_escape(value: &str) -> String {
     value
         .replace('&', "&amp;")
@@ -2523,17 +2509,6 @@ fn xml_escape(value: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&apos;")
-}
-
-fn refuse_existing(path: &Path) -> Result<(), ExportError> {
-    if path.exists() {
-        Err(ExportError::new(
-            ErrorStage::Validate,
-            format!("refusing to overwrite existing export: {}", path.display()),
-        ))
-    } else {
-        Ok(())
-    }
 }
 
 fn check_cancelled(cancelled: &AtomicBool) -> Result<(), ExportError> {

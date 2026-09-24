@@ -14,6 +14,7 @@ pub mod menu;
 pub mod metadata;
 pub mod packaging;
 pub mod projects;
+mod publish;
 pub mod repo;
 pub mod shaders;
 pub mod scene_layout;

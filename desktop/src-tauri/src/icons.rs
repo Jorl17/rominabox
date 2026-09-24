@@ -16,7 +16,8 @@ pub fn read_image(source: &Path) -> Result<DynamicImage, ExportError> {
         return Err(ExportError::new(
             ErrorStage::Image,
             format!("{} is larger than the 32 MiB image limit", source.display()),
-        ));
+        )
+        .about(source));
     }
     let mut reader = ImageReader::open(source)
         .map_err(|error| {
@@ -24,6 +25,7 @@ pub fn read_image(source: &Path) -> Result<DynamicImage, ExportError> {
                 ErrorStage::Image,
                 format!("could not read {}: {error}", source.display()),
             )
+            .about(source)
         })?
         .with_guessed_format()
         .map_err(|error| {
@@ -31,6 +33,7 @@ pub fn read_image(source: &Path) -> Result<DynamicImage, ExportError> {
                 ErrorStage::Image,
                 format!("could not identify {}: {error}", source.display()),
             )
+            .about(source)
         })?;
     let mut limits = Limits::default();
     limits.max_image_width = Some(8192);
@@ -42,6 +45,7 @@ pub fn read_image(source: &Path) -> Result<DynamicImage, ExportError> {
             ErrorStage::Image,
             format!("could not decode {}: {error}", source.display()),
         )
+        .about(source)
     })
 }
 

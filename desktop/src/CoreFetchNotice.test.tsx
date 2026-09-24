@@ -38,7 +38,7 @@ function show(notice: CoreNotice, onBack = () => {}, onRetry = () => {}) {
       <CoreFetchNotice notice={notice} onBack={onBack} onRetry={onRetry} />,
     ),
   );
-  return container.querySelector(".core-fetch") as HTMLElement;
+  return container.querySelector(".pop-up") as HTMLElement;
 }
 
 const step = (message: string): ExportProgress => ({
@@ -126,15 +126,11 @@ describe("the export's core pop-up", () => {
     });
   });
 
-  it("leaves every other export error as the text it always was", () => {
-    const other = exportFailure({
-      stage: "stage",
-      sentence: "stage: disk full",
-    });
+  it("shows every other export error as the exporter's sentence", () => {
+    const sentence =
+      "The app could not be written to its folder. Check that there is free space, then try again.";
+    const other = exportFailure({ stage: "stage", sentence });
     expect(other).not.toBeInstanceOf(CoreDownloadFailed);
-    expect((other as Error).message).toBe("stage: disk full");
-    expect(exportFailure("Another export is already running.")).toBe(
-      "Another export is already running.",
-    );
+    expect((other as Error).message).toBe(sentence);
   });
 });
