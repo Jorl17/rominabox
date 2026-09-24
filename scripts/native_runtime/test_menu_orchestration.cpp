@@ -9,6 +9,9 @@
 #include "menu_host_fake.h"
 #include <file/config_file.h>
 #include "../../vendor/retroarch/audio/volume_range.h"
+#include "rmlui/files.h"
+#include <sys/stat.h>
+#include <filesystem>
 
 #include <cmath>
 #include <cstdio>
@@ -105,6 +108,313 @@ static int capacity_case(const char *assets, const char *data)
    if (failures)
       std::fprintf(stderr, "%d menu capacity failures\n", failures);
    return failures ? 1 : 0;
+}
+
+/* Each of these cases opens its own menu. */
+namespace fixes {
+void *open_menu()
+{
+   void *menu = rib_menu_create();
+   check(menu != nullptr, "create a menu for a fix case");
+   if (!menu) return nullptr;
+   frame(menu);
+   rib_menu_toggle(menu, true);
+   frame(menu);
+   return menu;
+}
+
+/* We stage every design next to the Native assets in the bridge script. */
+std::string design_assets(const char *native_assets, const char *design)
+{
+   return (std::filesystem::path(native_assets).parent_path() / (std::string("placement-") + design)).string();
+}
+
+/* When we first paint an empty status, the prompt from the Disc design stays. */
+void design_prompt_survives_an_empty_status(const char *native_assets, const char *data)
+{
+   const std::string assets = design_assets(native_assets, "disc");
+   check(std::filesystem::is_regular_file(assets + "/menu.rml"), "the Disc design is staged");
+   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+   void *menu = open_menu();
+   if (menu)
+   {
+      /* The earlier cases left a status in this process. Let it expire. */
+      inspect.advance(6.0);
+      frame(menu);
+      click_and_frame(menu, "slot-2");
+      check(std::string(inspect.text("status")) == "CHOOSE A BLOCK",
+            "Disc's prompt is shown while there is no status");
+      host.save_accepted = false;
+      click_and_frame(menu, "save");
+      check(std::string(inspect.text("status")) == "SAVE FAILED", "a status replaces the prompt");
+      rib_menu_destroy(menu);
+   }
+   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   (void)data;
+}
+
+std::string read_file(const std::filesystem::path& path)
+{
+   std::ifstream in(path);
+   return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+}
+
+bool replace_once(std::string& text, const std::string& from, const std::string& to)
+{
+   const auto at = text.find(from);
+   if (at == std::string::npos) return false;
+   text.replace(at, from.size(), to);
+   return true;
+}
+
+/* The Native assets with the disc list we write in an export for a disc game:
+ * eight rows, five to a page, and a hidden DISC entry in Options. */
+std::string stage_disc_list(const char *native_assets, const char *data)
+{
+   namespace fs = std::filesystem;
+   const fs::path assets = fs::path(data) / "disc-list-assets";
+   fs::create_directories(assets);
+   for (const auto& entry : fs::directory_iterator(native_assets))
+      if (entry.is_regular_file())
+         fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   std::string rows[2];
+   for (int index = 0; index < 8; ++index)
+   {
+      const std::string id = "discs-" + std::to_string(index);
+      rows[index < 5 ? 0 : 1] += "<button id=\"" + id + "\" class=\"list-row line \"><div id=\"" + id
+            + "-title\" class=\"list-row-title\"></div><div id=\"" + id
+            + "-state\" class=\"list-row-state\"></div></button>\n";
+   }
+   const std::string panel =
+         "<div id=\"discs-panel\" class=\"screen-panel\" style=\"display:none;\"><div id=\"discs-list\" class=\"list\">"
+         "<div id=\"discs-page-1\" class=\"list-page\">" + rows[0] + "</div>"
+         "<div id=\"discs-page-2\" class=\"list-page\" style=\"display:none;\">" + rows[1] + "</div>"
+         "<div id=\"discs-pager\" class=\"list-pager\"><button id=\"discs-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button>"
+         "<div id=\"discs-page-count\" class=\"list-pager-count\">1/2</div>"
+         "<button id=\"discs-next\" class=\"menu-action list-pager-next\">&gt;</button></div></div>"
+         "<div class=\"list-actions\"><button class=\"menu-action list-back\" id=\"discs-back\">BACK</button></div>"
+         "<div id=\"discs-status\" class=\"list-status\"></div></div>";
+   std::string menu = read_file(assets / "menu.rml");
+   bool staged = replace_once(menu, "<div id=\"footer\">", panel + "<div id=\"footer\">")
+         && replace_once(menu, "<button class=\"menu-action options-back\"",
+               "<button class=\"menu-action option-entry\" id=\"discs\" disabled=\"disabled\" style=\"display: none; top: 120dp;\">DISC</button>"
+               "<button class=\"menu-action options-back\"");
+   std::string config = read_file(assets / "design.cfg");
+   staged = staged && replace_once(config, "screens = \"pause options controls fixture\"",
+               "screens = \"pause options controls fixture discs\"")
+         && replace_once(config, "screen_button_options = \"options fixture-back\"",
+               "screen_button_options = \"options fixture-back discs-back\"");
+   config += "\nscreen_panel_discs = \"discs-panel\"\nscreen_heading_discs = \"DISC\""
+             "\nscreen_footer_discs = \"ESC  BACK\"\nscreen_button_discs = \"discs\""
+             "\nscreen_images_discs = \"list\"\nscreen_mark_discs = \"IN\"\n";
+   check(staged, "the disc list fixture is staged into the Native assets");
+   std::ofstream(assets / "menu.rml") << menu;
+   std::ofstream(assets / "design.cfg") << config;
+   return assets.string();
+}
+
+/* The disc list stays on the chosen page across frames, so disc 6 and
+ * later can be chosen. */
+void disc_list_keeps_its_page(const char *native_assets, const char *data)
+{
+   const std::string assets = stage_disc_list(native_assets, data);
+   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+   host.disc_count = 7;
+   host.disc_index = 0;
+   void *menu = open_menu();
+   if (menu)
+   {
+      click_and_frame(menu, "options");
+      click_and_frame(menu, "discs");
+      check(std::string(inspect.text("heading")) == "DISC", "seven discs open the disc list");
+      click_and_frame(menu, "discs-next");
+      check(std::string(inspect.text("discs-page-count")) == "2/2", "the pager turns to the second page");
+      frame(menu);
+      frame(menu);
+      int x, y, w, h;
+      check(std::string(inspect.text("discs-page-count")) == "2/2" && inspect.box("discs-5", &x, &y, &w, &h),
+            "the second page stays open across frames");
+      click_and_frame(menu, "discs-5");
+      check(host.disc_index == 5, "disc 6 can be chosen");
+      rib_menu_destroy(menu);
+   }
+   host.disc_count = 0;
+   host.disc_index = 0;
+   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+}
+
+/* When the pointer rests on a control, we open its bindings list after
+ * 300 ms, and after a keyboard move we wait the longer keyboard delay. */
+void binds_open_sooner_on_hover()
+{
+   void *menu = open_menu();
+   if (!menu) return;
+   int x = 0, y = 0;
+   click_and_frame(menu, "options");
+   click_and_frame(menu, "controls");
+   host.clock_us = 10000000;
+   /* Not the control the screen opened on, whose timer started long ago. */
+   hover_and_frame(menu, "control-down");
+   host.clock_us += 250000;
+   frame(menu);
+   check(!binds_visible(&x, &y), "the bindings list is still closed 250 ms after a hover");
+   host.clock_us += 100000;
+   frame(menu);
+   check(binds_visible(&x, &y), "the bindings list opens 350 ms after a hover");
+
+   host.pointer.x = 0;
+   host.pointer.y = 0;
+   frame(menu);
+   rib_menu_key(menu, RIB_KEY_DOWN);
+   frame(menu);
+   host.clock_us += 350000;
+   frame(menu);
+   check(!binds_visible(&x, &y), "a keyboard move waits longer than a hover");
+   host.clock_us += 900000;
+   frame(menu);
+   check(binds_visible(&x, &y), "a keyboard move opens the list after the declared delay");
+   rib_menu_destroy(menu);
+   host.clock_us = 0;
+}
+
+/* An exported Mega Drive game with the 3- and 6-button pads: the staged
+ * document and scenes, with the defaults that we write in an export. */
+std::string stage_pad_choice(const char *native_assets, const char *data)
+{
+   namespace fs = std::filesystem;
+   const fs::path native(native_assets);
+   const fs::path assets = fs::path(data) / "pad-choice-assets";
+   fs::create_directories(assets);
+   for (const auto& entry : fs::directory_iterator(native / "stage" / "megadrive"))
+      if (entry.is_regular_file())
+         fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   for (const char *support : {"menu.rcss", "Silkscreen-Regular.ttf"})
+      fs::copy_file(native / support, assets / support, fs::copy_options::overwrite_existing);
+   std::ofstream(assets / "controls-defaults.cfg") <<
+      "controls_profile = \"megadrive\"\n"
+      "controls_variants = \"megadrive megadrive6\"\n"
+      "controls_variant_name_megadrive = \"Mega Drive 3 buttons\"\n"
+      "controls_variant_device_megadrive = \"257\"\n"
+      "controls_variant_controls_megadrive = \"up left right down y b a start\"\n"
+      "controls_variant_name_megadrive6 = \"Mega Drive 6 buttons\"\n"
+      "controls_variant_device_megadrive6 = \"513\"\n"
+      "controls_variant_controls_megadrive6 = \"up down left right y b a start l x r select\"\n"
+      "rib_label_up = \"Up\"\ninput_player1_up = \"up\"\n"
+      "rib_label_left = \"Left\"\ninput_player1_left = \"left\"\n"
+      "rib_label_right = \"Right\"\ninput_player1_right = \"right\"\n"
+      "rib_label_down = \"Down\"\ninput_player1_down = \"down\"\n"
+      "rib_label_y = \"A\"\ninput_player1_y = \"z\"\n"
+      "rib_label_b = \"B\"\ninput_player1_b = \"x\"\n"
+      "rib_label_a = \"C\"\ninput_player1_a = \"c\"\n"
+      "rib_label_start = \"Start\"\ninput_player1_start = \"enter\"\n"
+      "rib_label_l = \"X\"\ninput_player1_l = \"a\"\n"
+      "rib_label_x = \"Y\"\ninput_player1_x = \"s\"\n"
+      "rib_label_r = \"Z\"\ninput_player1_r = \"d\"\n"
+      "rib_label_select = \"Mode\"\ninput_player1_select = \"rshift\"\n";
+   return assets.string();
+}
+
+bool picker_open()
+{
+   int x, y, w, h;
+   return inspect.box("controls-device-list", &x, &y, &w, &h);
+}
+
+/* One click on a control starts exactly one capture of that control. */
+void click_captures_once(void *menu, const char *control, const char *id, const char *message)
+{
+   const int before = host.captures_started;
+   click_and_frame(menu, control);
+   check(host.captures_started == before + 1 && host.captured_id == id, message);
+   rib_menu_key(menu, RIB_KEY_CANCEL);
+   frame(menu);
+}
+
+/* After a pad change the picker has one toggle listener and opens. Reset
+ * restores the 3-button labels together with the 3-button picture. */
+void pad_changes_and_reset_apply_together(const char *native_assets, const char *data)
+{
+   const std::string assets = stage_pad_choice(native_assets, data);
+   const std::string data_dir = std::string(data) + "/pad-choice-data";
+   std::filesystem::create_directories(data_dir);
+   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+   setenv("ROMINABOX_DATA_DIR", data_dir.c_str(), 1);
+   host.pointer = {};
+   void *menu = open_menu();
+   if (menu)
+   {
+      click_and_frame(menu, "options");
+      click_and_frame(menu, "controls");
+      click_captures_once(menu, "control-up", "up", "a control click starts one capture after startup");
+      click_and_frame(menu, "controls-device-current");
+      check(picker_open(), "B5: the picker opens");
+      click_and_frame(menu, "controls-device-option-megadrive6");
+      check(!picker_open() && view.document.has_element("control-x"),
+            "choosing the 6-button pad draws it");
+      check(std::string(inspect.text("controls-device-current")) == "Mega Drive 6 buttons",
+            "the picker names the 6-button pad");
+      click_and_frame(menu, "controls-device-current");
+      check(picker_open(), "the picker opens again after a pad change");
+      click_and_frame(menu, "controls-device-current");
+      check(!picker_open(), "the picker closes again");
+      click_captures_once(menu, "control-x", "x", "a 6-button control click starts one capture");
+      click_captures_once(menu, "control-up", "up", "a control click starts one capture after a pad change");
+
+      click_and_frame(menu, "controls-reset");
+      check(!view.document.has_element("control-x") && view.document.has_element("control-y"),
+            "Reset draws the 3-button pad again");
+      check(std::string(inspect.text("controls-device-current")) == "Mega Drive 3 buttons",
+            "Reset names the 3-button pad");
+      check(std::string(inspect.text("control-label-y")) == "A", "Reset restores the 3-button labels");
+      click_and_frame(menu, "controls-device-current");
+      check(picker_open(), "the picker opens after Reset");
+      click_and_frame(menu, "controls-device-current");
+      click_captures_once(menu, "control-up", "up", "a control click starts one capture after Reset");
+      click_and_frame(menu, "controls-device-current");
+      click_and_frame(menu, "controls-device-option-megadrive6");
+      rib_menu_destroy(menu);
+   }
+   /* At the next launch we show the pad the player chose, not the exported one. */
+   if ((menu = open_menu()))
+   {
+      check(view.document.has_element("control-x")
+            && std::string(inspect.text("controls-device-current")) == "Mega Drive 6 buttons",
+            "the next launch draws and names the pad the player chose");
+      rib_menu_destroy(menu);
+   }
+   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   setenv("ROMINABOX_DATA_DIR", data, 1);
+}
+
+/* On Windows, rename fails when the destination exists. */
+int refusing_rename(const char *from, const char *to)
+{
+   struct stat existing;
+   if (stat(to, &existing) == 0) return -1;
+   return std::rename(from, to);
+}
+
+/* Every controls save after the first replaces the previous file. */
+void repeated_saves_replace_the_file(const char *data)
+{
+   void *menu = open_menu();
+   if (!menu) return;
+   rib_files_use_rename(refusing_rename, false);
+   click_and_frame(menu, "options");
+   click_and_frame(menu, "controls");
+   for (int attempt = 1; attempt <= 2; ++attempt)
+   {
+      click_and_frame(menu, "controls-reset");
+      check(std::string(inspect.text("controls-status")) == "DEFAULTS RESTORED",
+            attempt == 1 ? "the first controls save succeeds where rename refuses an existing file"
+                         : "a second controls save replaces the first where rename refuses an existing file");
+   }
+   const std::string volume = std::string(data) + "/b19-volume.cfg";
+   check(rib_write_menu_volume(volume.c_str(), -3.0f) && rib_write_menu_volume(volume.c_str(), -4.0f),
+         "the volume file is replaced where rename refuses an existing file");
+   rib_files_use_rename(nullptr, true);
+   rib_menu_destroy(menu);
+}
 }
 
 int main(int argc, char **argv)
@@ -324,6 +634,12 @@ int main(int argc, char **argv)
       check(view.document.has_element("save"), "context reset reloads the document");
       rib_menu_destroy(menu);
    }
+
+   fixes::repeated_saves_replace_the_file(argv[2]);
+   fixes::design_prompt_survives_an_empty_status(argv[1], argv[2]);
+   fixes::disc_list_keeps_its_page(argv[1], argv[2]);
+   fixes::binds_open_sooner_on_hover();
+   fixes::pad_changes_and_reset_apply_together(argv[1], argv[2]);
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);

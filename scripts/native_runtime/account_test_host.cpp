@@ -8,9 +8,17 @@ rib_achievement_unlock_t pending_unlock{};
 int sign_ins, quits;
 bool overlay_frames;
 int64_t host_time_us = 1000000;
+std::vector<rib_achievement_row_t> service_rows;
+std::vector<bool> list_shown_reports;
 extern "C" {
 void rib_achievements_get_snapshot(rib_achievements_snapshot_t *out) { *out = session; }
-bool rib_achievements_get_row(size_t, rib_achievement_row_t*) { return false; }
+bool rib_achievements_get_row(size_t index, rib_achievement_row_t *out) {
+   if (index >= service_rows.size() || !out) return false;
+   *out = service_rows[index]; return true;
+}
+void rib_achievements_list_shown(bool shown) {
+   if (list_shown_reports.empty() || list_shown_reports.back() != shown) list_shown_reports.push_back(shown);
+}
 bool rib_achievements_has_unlocks() { return false; }
 bool rib_achievements_take_unlock(rib_achievement_unlock_t *out) {
    if (!pending_unlock.id) return false;

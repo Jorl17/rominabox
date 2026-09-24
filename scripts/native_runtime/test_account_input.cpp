@@ -82,6 +82,14 @@ int main(int argc, char **argv) {
    cancel_button->Focus();
    entry.physical(true, RETROK_RETURN, '\r', 0);
    check(cancel.count == 1 && submit.count == 0, "Enter activates the focused Cancel button");
+   // Alt+Enter is the fullscreen chord, never the form's Enter.
+   check(!entry.physical(true, RETROK_RETURN, '\r', RETROKMOD_ALT) && cancel.count == 1 && submit.count == 0,
+         "the sign-in form leaves Alt+Return to the fullscreen chord");
+   check(!entry.physical(false, RETROK_RETURN, 0, RETROKMOD_ALT),
+         "the sign-in form leaves the chord's release alone too");
+   submit_button->Focus();
+   check(!entry.physical(true, RETROK_KP_ENTER, '\r', RETROKMOD_ALT) && submit.count == 0,
+         "the keypad's Alt+Enter is not the form's either");
    entry.disable();
    check(!entry.physical(true, RETROK_a, 'a', 0), "Closed form releases keyboard routing");
    rib::EventQueue events;
@@ -143,9 +151,49 @@ int main(int argc, char **argv) {
    check(focus && focus->GetId() == "achievement-username", "Opening sign in focuses the visible username field");
    password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
    password->SetValue("synthetic-password");
+   password->Focus();
+   password->SetSelectionRange(3, 3);
+   // The text of the field is in its #text children. After Show and Hide
+   // they must still be inside the field, not at the corner of the window.
+   auto text_inside_field = [&](const char *when) {
+      document.settle();
+      auto *field = document.root()->GetElementById("achievement-password");
+      const Rml::Vector2f at = field->GetAbsoluteOffset(Rml::BoxArea::Border);
+      const Rml::Vector2f size = field->GetBox().GetSize(Rml::BoxArea::Border);
+      int texts = 0;
+      bool inside = true;
+      for (int index = 0; index < field->GetNumChildren(true); ++index) {
+         auto *child = field->GetChild(index);
+         if (child->GetTagName() != "#text") continue;
+         ++texts;
+         const Rml::Vector2f offset = child->GetAbsoluteOffset(Rml::BoxArea::Border);
+         inside = inside && offset.x >= at.x && offset.y >= at.y
+               && offset.x <= at.x + size.x && offset.y <= at.y + size.y;
+      }
+      char message[160];
+      std::snprintf(message, sizeof(message), "the password's text lies inside its field after %s", when);
+      check(texts > 0 && inside, message);
+   };
+   text_inside_field("opening the form");
    achievements.handle(rib::Event::account_action(rib::AccountAction::RevealPassword));
+   password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
    check(password->GetAttribute<std::string>("type", "") == "text" && password->GetValue() == "synthetic-password", "Show password reveals the existing value");
+   text_inside_field("Show");
+   {
+      int start = -1, end = -1;
+      password->GetSelection(&start, &end, nullptr);
+      check(document.get_context()->GetFocusElement() == password && start == 3 && end == 3,
+            "Show keeps the field focused with its caret where it was");
+   }
+   achievements.handle(rib::Event::account_action(rib::AccountAction::RevealPassword));
+   password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
+   check(password->GetAttribute<std::string>("type", "") == "password" && password->GetValue() == "synthetic-password",
+         "Hide masks the existing value again");
+   text_inside_field("Hide");
+   check(document.get_context()->GetFocusElement() == password, "Hide keeps the field focused");
+   achievements.handle(rib::Event::account_action(rib::AccountAction::RevealPassword));
    achievements.leave_form();
+   password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
    check(password->GetAttribute<std::string>("type", "") == "password" && password->GetValue().empty(), "Closing the form clears and masks the password");
    achievements.handle(rib::Event::account_action(rib::AccountAction::Open));
    session.pending_upload = true;
@@ -155,6 +203,8 @@ int main(int argc, char **argv) {
    username = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-username"));
    check(username->GetValue().empty(), "Modal text does not reach the underlying username");
    capture("confirmation");
+   check(!achievements.physical(true, RETROK_RETURN, '\r', RETROKMOD_ALT) && achievements.modal() && quits == 0,
+         "the confirmation leaves Alt+Return to the fullscreen chord");
    achievements.physical(true, RETROK_ESCAPE, 0, 0);
    check(!achievements.modal(), "Physical Escape cancels the pending-upload confirmation");
    check(document.get_context()->GetFocusElement() == username, "Escape restores the form's focused field");
@@ -211,6 +261,76 @@ int main(int argc, char **argv) {
    check(overlays.drawing(), "A capture continues after the startup overlays finish");
    overlays.update(false);
    check(!overlays.drawing(), "Finished startup capture releases rendering");
+   {
+      // While a badge downloads we show a placeholder, and for a failed one
+      // a mark. When the download finishes while the list is closed, only
+      // the picture changes.
+      document.shutdown();
+      check(document.initialize(argv[1], 960, 600, false), "Badge document loads");
+      document.show(); document.settle();
+      achievements.context_lost();
+      achievements.bind();
+      auto row_of = [](uint32_t id, rib_achievement_badge_t badge, const char *path) {
+         rib_achievement_row_t row{};
+         row.id = id; row.points = 5; row.state = RIB_ACHIEVEMENT_LOCKED; row.badge = badge;
+         std::snprintf(row.title, sizeof(row.title), "BADGE %u", id);
+         std::snprintf(row.badge_path, sizeof(row.badge_path), "%s", path);
+         return row;
+      };
+      const std::string ready_path = document.asset_path("badge-1.png");
+      service_rows = {row_of(1, RIB_ACHIEVEMENT_BADGE_READY, ready_path.c_str()),
+                      row_of(2, RIB_ACHIEVEMENT_BADGE_LOADING, ""),
+                      row_of(3, RIB_ACHIEVEMENT_BADGE_FAILED, "")};
+      session = {}; session.status = RIB_ACHIEVEMENTS_ACTIVE; session.count = service_rows.size();
+      std::snprintf(session.account, sizeof(session.account), "fixture"); session.revision = 50;
+      document.set_shown("pause-panel", false);
+      document.set_shown("achievements-panel", true);
+      achievements.update();
+      list_shown_reports.clear();
+      achievements.update(); document.settle();
+      auto icon_shown = [&](const char *row) {
+         auto *element = document.root()->GetElementById(row);
+         std::vector<Rml::Element*> icons;
+         if (element) rib::collect(element, "list-row-icon", icons);
+         return !icons.empty() && !rib::hidden(icons[0])
+               && icons[0]->GetBox().GetSize(Rml::BoxArea::Border).x > 0;
+      };
+      check(document.root()->GetElementById("achievement-2")
+            && document.root()->GetElementById("achievement-2")->IsClassSet("badge-loading") && icon_shown("achievement-2"),
+            "a badge still downloading shows its placeholder");
+      check(document.root()->GetElementById("achievement-3")
+            && document.root()->GetElementById("achievement-3")->IsClassSet("badge-failed") && icon_shown("achievement-3"),
+            "a badge that failed shows its mark");
+      {
+         // The design styles both, and only the placeholder is animated.
+         std::vector<Rml::Element*> loading, failed;
+         rib::collect(document.root()->GetElementById("achievement-2"), "list-row-icon", loading);
+         rib::collect(document.root()->GetElementById("achievement-3"), "list-row-icon", failed);
+         auto animated = [](Rml::Element *icon) {
+            const Rml::Property *property = icon ? icon->GetProperty("animation") : nullptr;
+            return property && property->ToString().find("badge-steps") != std::string::npos;
+         };
+         check(!loading.empty() && animated(loading[0]), "the design animates the placeholder");
+         check(!failed.empty() && !animated(failed[0])
+               && failed[0]->GetProperty<Rml::Colourb>("border-top-color") != Rml::Colourb(0, 0, 0, 0),
+               "the design draws the failed mark");
+      }
+      check(document.root()->GetElementById("achievement-1")
+            && !document.root()->GetElementById("achievement-1")->IsClassSet("badge-loading") && icon_shown("achievement-1"),
+            "a downloaded badge shows its picture");
+      document.set_shown("achievements-panel", false);
+      achievements.update();
+      service_rows[1] = row_of(2, RIB_ACHIEVEMENT_BADGE_READY, ready_path.c_str());
+      ++session.revision;
+      achievements.update();
+      document.set_shown("achievements-panel", true);
+      achievements.update(); document.settle();
+      auto *second = document.root()->GetElementById("achievement-2");
+      check(second && !second->IsClassSet("badge-loading") && icon_shown("achievement-2"),
+            "a badge that arrived while the list was closed is shown when it opens");
+      check(list_shown_reports == std::vector<bool>({true, false, true}),
+            "the menu reports when the list opens again, so a failed badge is retried");
+   }
    achievements.context_lost();
    document.shutdown();
    std::printf("account input: %d failures\n", failures);

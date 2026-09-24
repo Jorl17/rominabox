@@ -93,6 +93,25 @@ static void keypad_enter_counts_and_shift_enter_does_not(void)
    expect_mask("shift+enter", 0);
 }
 
+/* We check this in the menu text entry before using a Return for its form. */
+static void the_menu_recognises_the_chord(void)
+{
+   const struct { unsigned code, modifiers; int chord; const char *name; } cases[] = {
+      {ALT_ENTER_RETURN, ALT_ENTER_ALT, 1, "alt+return"},
+      {ALT_ENTER_KP_RETURN, ALT_ENTER_ALT | 0x01u, 1, "shift+alt+keypad enter"},
+      {ALT_ENTER_RETURN, 0, 0, "return"},
+      {'a', ALT_ENTER_ALT, 0, "alt+a"},
+   };
+   size_t index;
+   for (index = 0; index < sizeof(cases) / sizeof(cases[0]); ++index)
+      if (!alt_enter_is_chord(cases[index].code, cases[index].modifiers) != !cases[index].chord)
+      {
+         fprintf(stderr, "FAIL %s: %s the chord\n", cases[index].name,
+               cases[index].chord ? "not taken for" : "taken for");
+         failures++;
+      }
+}
+
 int main(void)
 {
    alt_enter_toggles();
@@ -101,6 +120,7 @@ int main(void)
    repeat_does_not_toggle_again();
    release_arms_the_next_press();
    keypad_enter_counts_and_shift_enter_does_not();
+   the_menu_recognises_the_chord();
    if (failures)
    {
       fprintf(stderr, "%d alt+enter check(s) failed\n", failures);
