@@ -101,11 +101,12 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .control-label { margin-left: 8dp; margin-top: 2dp; height: 18dp; font-size: 13dp; overflow: hidden; white-space: nowrap; }
 .control-assignment { margin-left: 8dp; font-size: 12dp; color: #b4e6ff; white-space: nowrap; overflow: hidden; }
 .control-original { margin-right: 8dp; color: #fff13d; }
-#controls-actions { position: absolute; left: 360dp; top: 508dp; width: 420dp; height: 36dp; }
-#controls-actions button { position: absolute; top: 0; height: 32dp; line-height: 32dp; font-family: Silkscreen; font-size: 13dp; border-width: 1dp; text-align: center; }
-#controls-back { left: 0; width: 100dp; }
-#controls-reset { left: 112dp; width: 180dp; }
-#controls-cancel { left: 304dp; width: 110dp; }
+/* BACK is in the same place as in Index, and the other two are to its left. */
+#controls-actions { position: absolute; left: 360dp; top: 508dp; width: 584dp; height: 38dp; }
+#controls-actions button { position: absolute; top: 0; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 13dp; border-width: 1dp; text-align: center; }
+#controls-back { left: 406dp; width: 176dp; font-size: 14dp; }
+#controls-reset { left: 0; width: 180dp; }
+#controls-cancel { left: 192dp; width: 110dp; }
 #controls-status { position: absolute; left: 24dp; top: 548dp; width: 700dp; font-size: 13dp; color: #b4e6ff; text-align: left; }
 
 .menu-action { color: #ffffff; background-color: #061a48; border-color: #476eab; }
@@ -149,17 +150,24 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .list-pager-next { left: 180dp; width: 64dp; }
 .list-pager-prev:hover, .list-pager-next:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
 .list-pager-prev.focused, .list-pager-next.focused { border-left-width: 4dp; border-left-color: #fff13d; }
-.list-actions { position: absolute; left: 466dp; top: 508dp; width: 476dp; height: 36dp; }
-.list-actions .menu-action { position: absolute; left: 0; width: 176dp; height: 36dp; font-family: Silkscreen; font-size: 14dp; line-height: 36dp; text-align: center; }
-.list-actions .list-back { left: 300dp; width: 176dp; }
-.list-actions .list-toggle { left: 0; width: 284dp; border-width: 1dp; line-height: 34dp; }
+/* BACK is in the same place as in Index on every screen, and the other
+ * actions are to its left in the same band. In a list shorter than a page the
+ * action row moves up by the missing rows (an inline margin), so the row is
+ * not a positioned box here, and we place each action on the field itself. */
+.list-actions { position: static; }
+.list-actions .menu-action { position: absolute; left: 578dp; top: 508dp; width: 176dp; height: 36dp; font-family: Silkscreen; font-size: 14dp; line-height: 36dp; text-align: center; border-width: 1dp; }
+.list-actions .list-back { left: 766dp; }
+.list-actions .list-toggle { left: 470dp; width: 284dp; line-height: 34dp; }
+#achievements-panel .list-actions .account-toggle, #achievements-panel .list-actions .account-retry { left: 390dp; width: 176dp; }
+#achievements-panel .list-actions .account-signout { left: 578dp; width: 176dp; }
+#achievements-panel #achievements-back { left: 766dp; right: auto; width: 176dp; }
 .list-toggle-label { position: absolute; left: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 13dp; }
 .list-toggle-state { position: absolute; right: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 13dp; color: #b4e6ff; }
 .list-toggle.on .list-toggle-state { color: #fff13d; }
 .list-toggle:hover .list-toggle-state, .list-toggle.focused .list-toggle-state { color: #081433; }
 .list-status { position: absolute; left: 24dp; top: 544dp; color: #b4e6ff; font-size: 13dp; }
 
-.menu-index { position: absolute; left: 24dp; top: 56dp; width: 680dp; height: 420dp; }
+.menu-index { position: absolute; left: 24dp; top: 56dp; width: 680dp; height: 384dp; }
 .option-entry { position: absolute; left: 0; width: 680dp; height: 52dp; line-height: 52dp; font-family: Silkscreen; font-size: 18dp; border-width: 0 0 1dp 0; border-color: #476eab; text-align: left; padding-left: 16dp; background-color: transparent; }
 .option-entry:hover { background-color: #193e88; color: #ffffff; border-color: #75b2e4; }
 .option-entry.focused { border-left-width: 6dp; border-left-color: #fff13d; background-color: transparent; color: #ffffff; }
@@ -167,15 +175,16 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .options-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
 
 /* We insert volume at the start of Options, in the band under the index,
- * with a rule and no frame, so the list still looks like a list. The track is
+ * with a rule and no frame, so the list still looks like a list, 24dp away
+ * from BACK above it and to its left. The track is
  * 456dp wide because the shared states set the fill and the thumb in pixels
  * for that length. Focus, a thumb being dragged and the pointer look
  * different, because otherwise a player cannot tell them apart. */
-#volume-control { position: absolute; left: 24dp; top: 480dp; width: 720dp; height: 32dp; }
+#volume-control { position: absolute; left: 24dp; top: 448dp; width: 712dp; height: 32dp; }
 .volume-name { position: absolute; left: 0; top: 0; width: 80dp; height: 32dp; line-height: 32dp; font-family: Silkscreen; font-size: 12dp; color: #b4e6ff; }
 .volume-end { position: absolute; top: 0; height: 32dp; line-height: 32dp; font-family: Silkscreen; font-size: 12dp; color: #ffffff; white-space: nowrap; overflow: hidden; }
 #volume-low { left: 80dp; width: 44dp; }
-#volume-high { left: 668dp; width: 52dp; }
+#volume-high { left: 668dp; width: 44dp; }
 .volume-arrow { position: absolute; top: 2dp; width: 28dp; height: 28dp; line-height: 24dp; font-family: Silkscreen; font-size: 13dp; text-align: center; border-width: 1dp; padding: 0; }
 #volume-down { left: 128dp; }
 #volume-up { left: 632dp; }
