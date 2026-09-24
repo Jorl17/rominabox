@@ -53,8 +53,8 @@ export function CoreFetchNotice({
 }) {
   if (notice.kind === "fetching")
     return (
-      <div className="core-fetch-layer">
-        <div className="core-fetch" role="status">
+      <div className="pop-up-layer">
+        <div className="pop-up" role="status">
           {fetchingLines(notice.downloading, notice.updating).map((line) => (
             <p key={line}>{line}</p>
           ))}
@@ -62,15 +62,15 @@ export function CoreFetchNotice({
       </div>
     );
   return (
-    <div className="core-fetch-layer">
+    <div className="pop-up-layer">
       <div
-        className="core-fetch"
+        className="pop-up"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="core-fetch-failed"
       >
         <p id="core-fetch-failed">{notice.message}</p>
-        <div className="core-fetch-actions">
+        <div className="pop-up-actions">
           <button className="secondary" onClick={onBack}>
             Go back
           </button>

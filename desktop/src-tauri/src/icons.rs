@@ -5,32 +5,35 @@ use std::fs;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
-use crate::packaging::ExportError;
+use crate::export_error::{ErrorStage, ExportError};
 
 /// Decode a common raster image with limits suitable for interactive authoring.
 pub fn read_image(source: &Path) -> Result<DynamicImage, ExportError> {
     let bytes = fs::metadata(source)
-        .map_err(|error| ExportError::io("image", source, error))?
+        .map_err(|error| ExportError::io(ErrorStage::Image, source, error))?
         .len();
     if bytes > 32 * 1024 * 1024 {
         return Err(ExportError::new(
-            "image",
+            ErrorStage::Image,
             format!("{} is larger than the 32 MiB image limit", source.display()),
-        ));
+        )
+        .about(source));
     }
     let mut reader = ImageReader::open(source)
         .map_err(|error| {
             ExportError::new(
-                "image",
+                ErrorStage::Image,
                 format!("could not read {}: {error}", source.display()),
             )
+            .about(source)
         })?
         .with_guessed_format()
         .map_err(|error| {
             ExportError::new(
-                "image",
+                ErrorStage::Image,
                 format!("could not identify {}: {error}", source.display()),
             )
+            .about(source)
         })?;
     let mut limits = Limits::default();
     limits.max_image_width = Some(8192);
@@ -39,9 +42,10 @@ pub fn read_image(source: &Path) -> Result<DynamicImage, ExportError> {
     reader.limits(limits);
     reader.decode().map_err(|error| {
         ExportError::new(
-            "image",
+            ErrorStage::Image,
             format!("could not decode {}: {error}", source.display()),
         )
+        .about(source)
     })
 }
 
@@ -83,20 +87,20 @@ pub fn create_macos_icon(
             size,
             square_icon(&source_image, size).into_raw(),
         )
-        .map_err(|e| ExportError::new("icon", e.to_string()))?;
+        .map_err(|e| ExportError::new(ErrorStage::Icon, e.to_string()))?;
         family
             .add_icon_with_type(&image, icon_type)
-            .map_err(|e| ExportError::new("icon", e.to_string()))?;
+            .map_err(|e| ExportError::new(ErrorStage::Icon, e.to_string()))?;
     }
-    let file =
-        fs::File::create(destination).map_err(|e| ExportError::io("icon", destination, e))?;
+    let file = fs::File::create(destination)
+        .map_err(|e| ExportError::io(ErrorStage::Icon, destination, e))?;
     let mut output = BufWriter::new(file);
     family
         .write(&mut output)
-        .map_err(|e| ExportError::new("icon", e.to_string()))?;
+        .map_err(|e| ExportError::new(ErrorStage::Icon, e.to_string()))?;
     output
         .flush()
-        .map_err(|e| ExportError::new("icon", e.to_string()))
+        .map_err(|e| ExportError::new(ErrorStage::Icon, e.to_string()))
 }
 
 /// Generate a Windows `.ico` icon without stretching the supplied artwork.
@@ -106,7 +110,7 @@ pub fn create_windows_icon(source: &Path, destination: &Path) -> Result<(), Expo
         .save_with_format(destination, ImageFormat::Ico)
         .map_err(|error| {
             ExportError::new(
-                "icon",
+                ErrorStage::Icon,
                 format!("could not write {}: {error}", destination.display()),
             )
         })

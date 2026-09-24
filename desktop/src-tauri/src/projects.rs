@@ -219,6 +219,7 @@ impl ProjectSettings {
             shaders: self.shaders,
             include_achievements: self.include_achievements,
             output_dir,
+            replace: false,
             target: self.target,
             runtime_kit,
             core,

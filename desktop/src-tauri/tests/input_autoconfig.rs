@@ -732,6 +732,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
         include_achievements: false,
         output_dir: root.join("out"),
+        replace: false,
         target: ExportTarget::Macos,
         runtime_kit: kit,
         core: None,

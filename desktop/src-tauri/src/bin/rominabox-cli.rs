@@ -83,7 +83,7 @@ fn run() -> Result<(), String> {
                 "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
-                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir", "target", "runtimeKit", "core?", "coreCache?"], "coreCache": "directory of downloaded cores; each needed core is downloaded or updated there first, and a progress event carrying cores {kind: fetching, downloading, updating} or {kind: failed, missing} says so", "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "events": ["progress", "result", "error"] },
+                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir", "replace?", "target", "runtimeKit", "core?", "coreCache?"], "coreCache": "directory of downloaded cores; each needed core is downloaded or updated there first, and a progress event carrying cores {kind: fetching, downloading, updating} or {kind: failed, missing} says so", "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "replace": "replace an app already at the destination; without it such an export does nothing and prints {type: exists, appPath}", "events": ["progress", "result", "exists", "error"] },
                 "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
                 "cores": { "request": ["cache", "target"], "target": "macos-arm64 | macos-x86_64 | windows-x86_64 | linux-x86_64", "result": "per-core present, installed, unreachable or notRecorded" },
                 "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
@@ -206,9 +206,26 @@ fn run() -> Result<(), String> {
             let cancelled = AtomicBool::new(false);
             let result = packaging::export_game(&request, &cancelled, |event| {
                 println!("{}", json!({ "type": "progress", "progress": event }));
-            })
-            .map_err(|error| error.to_string())?;
-            println!("{}", json!({ "type": "result", "result": result }));
+            });
+            match result {
+                Ok(result) => println!("{}", json!({ "type": "result", "result": result })),
+                // This is not a failure. We did nothing, and with `replace` in
+                // the request we go ahead.
+                Err(error) if error.stage == packaging::ErrorStage::Exists => {
+                    println!(
+                        "{}",
+                        json!({ "type": "exists", "appPath": error.path, "message": error.sentence() })
+                    );
+                    std::process::exit(1);
+                }
+                Err(error) => {
+                    println!(
+                        "{}",
+                        json!({ "type": "error", "message": error.to_string(), "error": error, "sentence": error.sentence() })
+                    );
+                    std::process::exit(1);
+                }
+            }
             Ok(())
         }
         "project-save" => {

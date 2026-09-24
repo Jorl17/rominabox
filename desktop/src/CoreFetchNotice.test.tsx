@@ -38,7 +38,7 @@ function show(notice: CoreNotice, onBack = () => {}, onRetry = () => {}) {
       <CoreFetchNotice notice={notice} onBack={onBack} onRetry={onRetry} />,
     ),
   );
-  return container.querySelector(".core-fetch") as HTMLElement;
+  return container.querySelector(".pop-up") as HTMLElement;
 }
 
 const step = (message: string): ExportProgress => ({
@@ -117,7 +117,7 @@ describe("the export's core pop-up", () => {
   it("stays open with the failure when a core could not be downloaded", () => {
     const failure = exportFailure({
       stage: "cores",
-      message: "The Dreamcast core could not be downloaded. Try again later.",
+      sentence: "The Dreamcast core could not be downloaded. Try again later.",
     });
     expect(failure).toBeInstanceOf(CoreDownloadFailed);
     expect(afterExport(failure)).toEqual({
@@ -126,12 +126,11 @@ describe("the export's core pop-up", () => {
     });
   });
 
-  it("leaves every other export error as the text it always was", () => {
-    const other = exportFailure({ stage: "stage", message: "disk full" });
+  it("shows every other export error as the exporter's sentence", () => {
+    const sentence =
+      "The app could not be written to its folder. Check that there is free space, then try again.";
+    const other = exportFailure({ stage: "stage", sentence });
     expect(other).not.toBeInstanceOf(CoreDownloadFailed);
-    expect((other as Error).message).toBe("stage: disk full");
-    expect(exportFailure("Another export is already running.")).toBe(
-      "Another export is already running.",
-    );
+    expect((other as Error).message).toBe(sentence);
   });
 });
