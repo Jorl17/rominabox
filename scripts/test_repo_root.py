@@ -118,7 +118,8 @@ DECLARATION_READERS = [
     Path("scripts/test_dcmenu.py"),
     Path("scripts/menu_interaction.py"),
     Path("scripts/prepare_rmlui.py"),
-    Path("scripts/native_runtime/test_rmlui_interaction.sh"),
+    # We build the bridge scripts through the harness, where we read it.
+    Path("scripts/native_runtime/menu_harness.py"),
 ]
 
 
