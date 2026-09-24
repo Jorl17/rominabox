@@ -370,6 +370,16 @@ void pad_changes_and_reset_apply_together(const char *native_assets, const char 
       check(picker_open(), "the picker opens after Reset");
       click_and_frame(menu, "controls-device-current");
       click_captures_once(menu, "control-up", "up", "a control click starts one capture after Reset");
+      click_and_frame(menu, "controls-device-current");
+      click_and_frame(menu, "controls-device-option-megadrive6");
+      rib_menu_destroy(menu);
+   }
+   /* At the next launch we show the pad the player chose, not the exported one. */
+   if ((menu = open_menu()))
+   {
+      check(view.document.has_element("control-x")
+            && std::string(inspect.text("controls-device-current")) == "Mega Drive 6 buttons",
+            "the next launch draws and names the pad the player chose");
       rib_menu_destroy(menu);
    }
    setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
