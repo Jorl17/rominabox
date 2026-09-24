@@ -291,6 +291,7 @@ FIXTURE
 libretro_common=$repo_root/vendor/retroarch/libretro-common
 harness "$build_dir/test_menu_orchestration" --define HAVE_AUDIOMIXER \
   "$script_dir/test_menu_orchestration.cpp" \
+  "$script_dir/menu_host_fake.cpp" \
   "$script_dir/text_test_host.cpp" \
   "$libretro_common/file/config_file.c" "$libretro_common/file/file_path.c" \
   "$libretro_common/file/file_path_io.c" "$libretro_common/streams/file_stream.c" \
