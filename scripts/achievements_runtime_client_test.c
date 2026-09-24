@@ -11,6 +11,7 @@
 
 #include "../vendor/retroarch/cheevos/rominabox.h"
 #include "../vendor/retroarch/cheevos/rominabox_internal.h"
+#include "../vendor/retroarch/cheevos/rominabox_catalog.h"
 #include "../vendor/retroarch/cheevos/cheevos_locals.h"
 #include "../vendor/retroarch/configuration.h"
 
@@ -219,6 +220,84 @@ static void ready(void)
    assert(snapshot().status == RIB_ACHIEVEMENTS_ACTIVE);
 }
 
+/* The badge of a row from request to picture. In the download callback we
+ * report a failure by name. A refresh of the rows keeps the badge state.
+ * When the list is shown again, we request again a badge that failed or got
+ * no answer. Leaves 123_lock.png downloaded. */
+static void badge_lifecycle(const char *directory)
+{
+   rib_achievement_row_t row;
+   uint32_t revision;
+   FILE *file;
+   char badge_dir[512];
+   char badge_path[512];
+
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING && badge_downloads == 1);
+
+   /* We repeat a request that got no answer when the list opens again. */
+   rib_achievements_list_shown(true);
+   rib_achievements_list_shown(false);
+   rib_achievements_list_shown(true);
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING);
+   assert(badge_downloads == 2);
+
+   rib_achievements_badge_failed("123_lock");
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_FAILED && badge_downloads == 2);
+   rib_catalog_mark_rows_dirty();
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_FAILED && badge_downloads == 2);
+
+   /* Still open: we do not ask again. Hidden and shown: we ask again, and a
+    * refresh while it is on its way does not cause a third request. */
+   rib_achievements_list_shown(true);
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_FAILED && badge_downloads == 2);
+   rib_achievements_list_shown(false);
+   rib_achievements_list_shown(true);
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING && badge_downloads == 3);
+   rib_catalog_mark_rows_dirty();
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING && badge_downloads == 3);
+
+   /* In the task callback we mark badges dirty. In the next main-thread
+    * snapshot we publish a revision and copied path without another get_row. */
+   revision = snapshot().revision;
+   snprintf(badge_dir, sizeof(badge_dir), "%s/achievements-badges", directory);
+   assert(mkdir(badge_dir, 0700) == 0);
+   snprintf(badge_path, sizeof(badge_path), "%s/123_lock.png", badge_dir);
+   file = fopen(badge_path, "wb");
+   assert(file);
+   assert(fclose(file) == 0);
+   rib_achievements_badge_downloaded();
+   assert(snapshot().revision > revision);
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_READY);
+   assert(strstr(row.badge_path, "123_lock.png") != NULL);
+   assert(badge_downloads == 3);
+}
+
+/* The colour badge requested at an unlock arrives, and we show it in its row.
+ * We remove the file again, so after later refreshes the row has no picture. */
+static void colour_badge_arrives(const char *directory)
+{
+   rib_achievement_row_t row;
+   char badge_path[512];
+   FILE *file;
+   snprintf(badge_path, sizeof(badge_path), "%s/achievements-badges/123.png", directory);
+   file = fopen(badge_path, "wb");
+   assert(file);
+   assert(fclose(file) == 0);
+   rib_achievements_badge_downloaded();
+   assert(rib_achievements_get_row(0, &row));
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_READY);
+   assert(strstr(row.badge_path, "123.png") != NULL);
+   assert(unlink(badge_path) == 0);
+}
+
 int main(void)
 {
    char directory[] = "/tmp/rib-achievements-runtime-XXXXXX";
@@ -235,6 +314,7 @@ int main(void)
    const rc_client_achievement_t *achievement;
    char badge_name[8];
    uint32_t revision;
+   unsigned requested;
 
    assert(mkdtemp(directory));
    assert(mkdtemp(second_directory));
@@ -282,23 +362,7 @@ int main(void)
    assert(badge_downloads == 1);
    assert(row.id == 123 && row.state == RIB_ACHIEVEMENT_LOCKED);
 
-   /* In the task callback we mark badges dirty. In the next main-thread
-    * snapshot we publish a revision and copied path without another get_row. */
-   revision = snapshot().revision;
-   {
-      char badge_dir[512];
-      char badge_path[512];
-      snprintf(badge_dir, sizeof(badge_dir), "%s/achievements-badges", directory);
-      assert(mkdir(badge_dir, 0700) == 0);
-      snprintf(badge_path, sizeof(badge_path), "%s/123_lock.png", badge_dir);
-      file = fopen(badge_path, "wb");
-      assert(file);
-      assert(fclose(file) == 0);
-   }
-   rib_achievements_badge_downloaded();
-   assert(snapshot().revision > revision);
-   assert(rib_achievements_get_row(0, &row));
-   assert(strstr(row.badge_path, "123_lock.png") != NULL);
+   badge_lifecycle(directory);
 
    /* The per-game file contains only username, token and ON/OFF preference. */
    snprintf(session_path, sizeof(session_path), "%s/achievements.session", directory);
@@ -346,16 +410,24 @@ int main(void)
    rc_client_do_frame(locals.client);
    assert(awards == 0); /* stale hit count must not carry across OFF time */
    defer_award = true;
+   requested = badge_downloads;
    rc_client_do_frame(locals.client);
    assert(awards == 1);
    assert(snapshot().pending_upload);
+   /* At an unlock we request the colour badge at once, not when we paint a
+    * row that may not be on screen. */
+   assert(badge_downloads == requested + 1);
    assert(rib_achievements_has_unlocks());
    assert(rib_achievements_take_unlock(&unlock));
    assert(unlock.id == 123 && unlock.points == 5);
    assert(strcmp(unlock.title, "First step") == 0);
+   assert(!unlock.badge_path[0]);
    assert(!rib_achievements_has_unlocks());
    assert(rib_achievements_get_row(0, &row));
    assert(row.state == RIB_ACHIEVEMENT_UNLOCKED);
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING);
+   assert(badge_downloads == requested + 1);
+   colour_badge_arrives(directory);
    {
       rc_api_server_response_t response = {0};
       response.body = award_json;

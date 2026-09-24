@@ -8,7 +8,8 @@ build="$root/work/account-input"
 harness() { python3 scripts/native_runtime/menu_harness.py build "$@"; }
 host="scripts/native_runtime/account_test_host.cpp"
 harness "$build/probe" scripts/native_runtime/test_account_input.cpp "$host" scripts/native_runtime/text_test_host.cpp
-probes="$build/probe"
+harness "$build/unlock-popup" scripts/native_runtime/test_unlock_popup.cpp "$host" scripts/native_runtime/text_test_host.cpp
+probes="$build/probe:$build/unlock-popup"
 if [ "$(uname -s)" = Darwin ]; then
   harness "$build/composition" --define HAVE_COCOA --framework AppKit \
     scripts/native_runtime/test_text_composition.mm "$host" scripts/native_runtime/text_test_host.cpp

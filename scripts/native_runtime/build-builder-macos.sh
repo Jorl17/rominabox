@@ -73,6 +73,13 @@ for design in "$designs_root"/*; do
   mkdir -p "$dest"
   cp -R "$design/." "$dest/"
 done
+# To compose a menu we link and fill in the parts shared by every design. We
+# look for them next to the designs, as in the repository (<kit>/parts next to
+# <kit>/designs), and without them we cannot compose a menu from the kit.
+parts_source="$root/integrations/parts"
+[ -d "$parts_source" ] || { echo "Missing shared menu parts: $parts_source" >&2; exit 1; }
+mkdir -p "$kit_root/parts"
+cp -R "$parts_source/." "$kit_root/parts/"
 # We put the pads in the kit's shared directory and not in one design, because
 # the pads are the same in every design and we read them from there at export.
 mkdir -p "$shared_assets"

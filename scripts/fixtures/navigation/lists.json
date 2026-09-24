@@ -244,6 +244,42 @@
       }
     },
     {
+      "name": "discs: choosing disc 6 keeps its page",
+      "setup": {
+        "discs": 7
+      },
+      "steps": {
+        "native": [
+          "options",
+          "discs",
+          "key:right",
+          "discs-5",
+          "key:down"
+        ],
+        "disc": [
+          "disc",
+          "key:right",
+          "discs-5",
+          "key:down"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "discs-0",
+          "discs-5",
+          "discs-5",
+          "discs-6"
+        ],
+        "disc": [
+          "discs-0",
+          "discs-5",
+          "discs-5",
+          "discs-6"
+        ]
+      }
+    },
+    {
       "name": "discs: one disc",
       "steps": {
         "native": [

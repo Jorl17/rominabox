@@ -178,6 +178,10 @@ void design_prompt_survives_an_empty_status(const char *native_assets, const cha
       host.save_accepted = false;
       click_and_frame(menu, "save");
       check(std::string(inspect.text("status")) == "SAVE FAILED", "a status replaces the prompt");
+      inspect.advance(6.0);
+      frame(menu);
+      check(std::string(inspect.text("status")) == "CHOOSE A BLOCK",
+            "Disc's prompt comes back when the status expires");
       rib_menu_destroy(menu);
    }
    setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
@@ -417,33 +421,33 @@ void pad_changes_and_reset_apply_together(const char *native_assets, const char 
    setenv("ROMINABOX_DATA_DIR", data, 1);
 }
 
-/* On Windows, rename fails when the destination exists. */
-int refusing_rename(const char *from, const char *to)
-{
-   struct stat existing;
-   if (stat(to, &existing) == 0) return -1;
-   return std::rename(from, to);
-}
+/* A move that fails at once, for example onto a file open in another program. */
+int failing_rename(const char *, const char *) { return -1; }
 
-/* Every controls save after the first replaces the previous file. */
+/* Every controls save after the first replaces the previous file, on every
+ * platform, Windows included. On each platform we replace the file in one
+ * step, and after a failed move the old file is still there. */
 void repeated_saves_replace_the_file(const char *data)
 {
    void *menu = open_menu();
    if (!menu) return;
-   rib_files_use_rename(refusing_rename, false);
    click_and_frame(menu, "options");
    click_and_frame(menu, "controls");
    for (int attempt = 1; attempt <= 2; ++attempt)
    {
       click_and_frame(menu, "controls-reset");
       check(std::string(inspect.text("controls-status")) == "DEFAULTS RESTORED",
-            attempt == 1 ? "the first controls save succeeds where rename refuses an existing file"
-                         : "a second controls save replaces the first where rename refuses an existing file");
+            attempt == 1 ? "the first controls save succeeds"
+                         : "a second controls save replaces the first");
    }
    const std::string volume = std::string(data) + "/b19-volume.cfg";
    check(rib_write_menu_volume(volume.c_str(), -3.0f) && rib_write_menu_volume(volume.c_str(), -4.0f),
-         "the volume file is replaced where rename refuses an existing file");
-   rib_files_use_rename(nullptr, true);
+         "the volume file is replaced");
+   rib_files_use_rename(failing_rename);
+   check(!rib_write_menu_volume(volume.c_str(), -5.0f) && read_file(volume).find("-4.0") != std::string::npos
+            && !std::ifstream(volume + ".tmp"),
+         "a replace that fails keeps the old file and leaves no temporary");
+   rib_files_use_rename(nullptr);
    rib_menu_destroy(menu);
 }
 }
