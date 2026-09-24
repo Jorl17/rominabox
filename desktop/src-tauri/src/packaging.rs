@@ -1948,17 +1948,21 @@ fn sandbox_entitlements(identity: &str, achievements: bool) -> String {
     )
 }
 
-fn compile_c(source: &Path, destination: &Path, extra: &[&str]) -> Result<(), ExportError> {
+/// Build `destination` from `inputs`, every file it is made from. We compile
+/// the `.c` files among them, and we also rebuild it after a header changes.
+fn compile_c(inputs: &[PathBuf], destination: &Path, extra: &[&str]) -> Result<(), ExportError> {
     if let Some(parent) = destination.parent() {
         fs::create_dir_all(parent).map_err(|error| ExportError::io("configure", parent, error))?;
     }
-    let current = match (fs::metadata(source), fs::metadata(destination)) {
-        (Ok(source_meta), Ok(binary_meta)) => {
-            binary_meta.modified().ok() >= source_meta.modified().ok()
-                && binary_meta.modified().ok().is_some()
-        }
-        _ => false,
-    };
+    let built = fs::metadata(destination)
+        .and_then(|meta| meta.modified())
+        .ok();
+    let current = built.is_some()
+        && inputs.iter().all(|input| {
+            fs::metadata(input)
+                .and_then(|meta| meta.modified())
+                .is_ok_and(|changed| Some(changed) <= built)
+        });
     if current {
         return Ok(());
     }
@@ -1971,7 +1975,11 @@ fn compile_c(source: &Path, destination: &Path, extra: &[&str]) -> Result<(), Ex
         .args(extra)
         .arg("-o")
         .arg(&temporary)
-        .arg(source)
+        .args(
+            inputs
+                .iter()
+                .filter(|input| input.extension() == Some(OsStr::new("c"))),
+        )
         .status()
         .map_err(|error| {
             ExportError::new(
@@ -1991,13 +1999,23 @@ fn compile_c(source: &Path, destination: &Path, extra: &[&str]) -> Result<(), Ex
 }
 
 fn install_launch_library(macos: &Path, retroarch: &Path) -> Result<(), ExportError> {
-    let library_source = crate::repo::at("desktop/src-tauri/launcher/main.c");
-    let injector_source = crate::repo::at("scripts/native_runtime/inject_dylib.c");
+    let launcher = crate::repo::at("desktop/src-tauri/launcher");
+    let mut library_sources = fs::read_dir(&launcher)
+        .and_then(|entries| {
+            entries
+                .map(|entry| entry.map(|entry| entry.path()))
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .map_err(|error| ExportError::io("configure", &launcher, error))?;
+    library_sources
+        .retain(|path| matches!(path.extension().and_then(OsStr::to_str), Some("c" | "h")));
+    library_sources.sort();
+    let injector_source = vec![crate::repo::at("scripts/native_runtime/inject_dylib.c")];
     let work = crate::repo::at("work");
     let library = work.join("librominabox-launch.dylib");
     let injector = work.join("inject-dylib");
     compile_c(
-        &library_source,
+        &library_sources,
         &library,
         &[
             "-Oz",
@@ -2597,7 +2615,7 @@ mod tests {
                 .map(|_| {
                     threads.spawn(|| {
                         barrier.wait();
-                        compile_c(&source, &output, &["-c"])
+                        compile_c(std::slice::from_ref(&source), &output, &["-c"])
                     })
                 })
                 .collect();
