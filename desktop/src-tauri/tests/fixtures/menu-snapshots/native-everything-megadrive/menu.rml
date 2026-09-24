@@ -1,0 +1,108 @@
+<rml><head><title>ROM-in-a-Box</title><link type="text/rcss" href="menu.rcss"/></head><body id="body">
+<div id="screen"><div id="splash"><img id="splash-logo" src="splash-logo.png"/></div><div id="notice" class="notice">PRESS ESC TO PAUSE</div><div id="heading">GAME PAUSED</div><div id="pause-panel"><div id="slots"><button id="slot-1" class="slot empty selected"><div id="slot-label-1" class="slot-label">SLOT 1</div><div class="slot-picture"><div id="slot-image-1" class="slot-image"/></div><div id="slot-state-1" class="slot-state">EMPTY</div></button>
+<button id="slot-2" class="slot empty "><div id="slot-label-2" class="slot-label">SLOT 2</div><div class="slot-picture"><div id="slot-image-2" class="slot-image"/></div><div id="slot-state-2" class="slot-state">EMPTY</div></button>
+<button id="slot-3" class="slot empty "><div id="slot-label-3" class="slot-label">SLOT 3</div><div class="slot-picture"><div id="slot-image-3" class="slot-image"/></div><div id="slot-state-3" class="slot-state">EMPTY</div></button>
+<button id="slot-4" class="slot empty "><div id="slot-label-4" class="slot-label">SLOT 4</div><div class="slot-picture"><div id="slot-image-4" class="slot-image"/></div><div id="slot-state-4" class="slot-state">EMPTY</div></button>
+<button id="slot-5" class="slot empty "><div id="slot-label-5" class="slot-label">SLOT 5</div><div class="slot-picture"><div id="slot-image-5" class="slot-image"/></div><div id="slot-state-5" class="slot-state">EMPTY</div></button>
+<button id="slot-6" class="slot empty "><div id="slot-label-6" class="slot-label">SLOT 6</div><div class="slot-picture"><div id="slot-image-6" class="slot-image"/></div><div id="slot-state-6" class="slot-state">EMPTY</div></button></div>
+<div id="actions"><button class="menu-action" id="resume">CONTINUE</button><button class="menu-action" id="save">SAVE</button><button id="load" class="menu-action disabled" disabled="disabled">LOAD</button><button class="menu-action" id="options">OPTIONS</button><button class="menu-action" id="quit">QUIT</button></div>
+<div id="status">CHOOSE A SLOT</div></div><div id="controls-panel" style="display:none;">
+<div id="controls-device" class="control-picker">
+<div id="controls-device-label" class="control-picker-label">CONTROLLER</div>
+<button id="controls-device-current" class="control-picker-current">MEGA DRIVE · 3 BUTTONS</button>
+<div id="controls-device-list" class="control-picker-list" style="display:none;">
+<button id="controls-device-option-megadrive" class="control-picker-option selected">MEGA DRIVE · 3 BUTTONS</button>
+<button id="controls-device-option-megadrive6" class="control-picker-option">MEGA DRIVE · 6 BUTTONS</button>
+</div>
+</div>
+<div id="controller-scene"><img id="controller-image" src="controller-megadrive.png"/>
+<div class="control-leader horizontal" style="left:216dp;top:44dp;width:117dp;"/>
+<div class="control-leader vertical" style="left:333dp;top:44dp;height:116dp;"/>
+<button id="control-hit-up" class="control-hit" style="left:312dp;top:139dp;"/>
+<button id="control-up" class="control-callout" style="left:16dp;top:16dp;"><div id="control-label-up" class="control-label">Up</div><div class="control-assignment"><span id="control-binding-up">up</span></div></button>
+<div class="control-leader horizontal" style="left:216dp;top:128dp;width:96dp;"/>
+<div class="control-leader vertical" style="left:312dp;top:128dp;height:53dp;"/>
+<button id="control-hit-left" class="control-hit" style="left:291dp;top:160dp;"/>
+<button id="control-left" class="control-callout" style="left:16dp;top:100dp;"><div id="control-label-left" class="control-label">Left</div><div class="control-assignment"><span id="control-binding-left">left</span></div></button>
+<div class="control-leader horizontal" style="left:216dp;top:296dp;width:138dp;"/>
+<div class="control-leader vertical" style="left:354dp;top:181dp;height:115dp;"/>
+<button id="control-hit-right" class="control-hit" style="left:333dp;top:160dp;"/>
+<button id="control-right" class="control-callout" style="left:16dp;top:268dp;"><div id="control-label-right" class="control-label">Right</div><div class="control-assignment"><span id="control-binding-right">right</span></div></button>
+<div class="control-leader horizontal" style="left:216dp;top:212dp;width:117dp;"/>
+<div class="control-leader vertical" style="left:333dp;top:203dp;height:9dp;"/>
+<button id="control-hit-down" class="control-hit" style="left:312dp;top:182dp;"/>
+<button id="control-down" class="control-callout" style="left:16dp;top:184dp;"><div id="control-label-down" class="control-label">Down</div><div class="control-assignment"><span id="control-binding-down">down</span></div></button>
+<div class="control-leader horizontal" style="left:569dp;top:296dp;width:175dp;"/>
+<div class="control-leader vertical" style="left:569dp;top:213dp;height:83dp;"/>
+<button id="control-hit-y" class="control-hit" style="left:548dp;top:192dp;"/>
+<button id="control-y" class="control-callout" style="left:744dp;top:268dp;"><div id="control-label-y" class="control-label">A</div><div class="control-assignment"><span id="control-binding-y">z</span></div></button>
+<div class="control-leader horizontal" style="left:623dp;top:212dp;width:121dp;"/>
+<div class="control-leader vertical" style="left:623dp;top:186dp;height:26dp;"/>
+<button id="control-hit-b" class="control-hit" style="left:602dp;top:165dp;"/>
+<button id="control-b" class="control-callout" style="left:744dp;top:184dp;"><div id="control-label-b" class="control-label">B</div><div class="control-assignment"><span id="control-binding-b">x</span></div></button>
+<div class="control-leader horizontal" style="left:678dp;top:128dp;width:66dp;"/>
+<div class="control-leader vertical" style="left:678dp;top:128dp;height:36dp;"/>
+<button id="control-hit-a" class="control-hit" style="left:657dp;top:143dp;"/>
+<button id="control-a" class="control-callout" style="left:744dp;top:100dp;"><div id="control-label-a" class="control-label">C</div><div class="control-assignment"><span id="control-binding-a">c</span></div></button>
+<div class="control-leader horizontal" style="left:587dp;top:44dp;width:157dp;"/>
+<div class="control-leader vertical" style="left:587dp;top:44dp;height:67dp;"/>
+<button id="control-hit-start" class="control-hit" style="left:566dp;top:90dp;"/>
+<button id="control-start" class="control-callout" style="left:744dp;top:16dp;"><div id="control-label-start" class="control-label">Start</div><div class="control-assignment"><span id="control-binding-start">enter</span></div></button></div><div id="control-binds" class="list" style="display:none;"><div id="binds-page-1" class="list-page"><button id="bind-1" class="list-row "><div id="bind-1-title" class="list-row-title"></div><div id="bind-1-detail" class="list-row-detail"></div><div id="bind-1-state" class="list-row-state"></div></button>
+<button id="bind-2" class="list-row "><div id="bind-2-title" class="list-row-title"></div><div id="bind-2-detail" class="list-row-detail"></div><div id="bind-2-state" class="list-row-state"></div></button>
+<button id="bind-3" class="list-row "><div id="bind-3-title" class="list-row-title"></div><div id="bind-3-detail" class="list-row-detail"></div><div id="bind-3-state" class="list-row-state"></div></button>
+<button id="bind-4" class="list-row "><div id="bind-4-title" class="list-row-title"></div><div id="bind-4-detail" class="list-row-detail"></div><div id="bind-4-state" class="list-row-state"></div></button>
+<button id="bind-5" class="list-row "><div id="bind-5-title" class="list-row-title"></div><div id="bind-5-detail" class="list-row-detail"></div><div id="bind-5-state" class="list-row-state"></div></button>
+</div><div id="binds-page-2" class="list-page" style="display:none;"><button id="bind-6" class="list-row "><div id="bind-6-title" class="list-row-title"></div><div id="bind-6-detail" class="list-row-detail"></div><div id="bind-6-state" class="list-row-state"></div></button>
+</div><div id="binds-pager" class="list-pager"><button id="binds-prev" class="menu-action list-pager-prev disabled">&lt;</button><div id="binds-page-count" class="list-pager-count">1/2</div><button id="binds-next" class="menu-action list-pager-next">&gt;</button></div></div><div id="controls-actions"><button class="menu-action" id="controls-back">BACK</button><button class="menu-action" id="controls-reset">RESET DEFAULTS</button><button class="menu-action" id="controls-cancel" style="display:none;">CANCEL</button></div><div id="controls-status">SELECT A BUTTON</div></div><div id="discs-panel" class="screen-panel" style="display:none;"><div id="discs-list" class="list"><div id="discs-page-1" class="list-page"><button id="discs-0" class="list-row line "><div id="discs-0-title" class="list-row-title"></div><div id="discs-0-state" class="list-row-state"></div></button>
+<button id="discs-1" class="list-row line "><div id="discs-1-title" class="list-row-title"></div><div id="discs-1-state" class="list-row-state"></div></button>
+<button id="discs-2" class="list-row line "><div id="discs-2-title" class="list-row-title"></div><div id="discs-2-state" class="list-row-state"></div></button>
+<button id="discs-3" class="list-row line "><div id="discs-3-title" class="list-row-title"></div><div id="discs-3-state" class="list-row-state"></div></button>
+<button id="discs-4" class="list-row line "><div id="discs-4-title" class="list-row-title"></div><div id="discs-4-state" class="list-row-state"></div></button>
+</div><div id="discs-page-2" class="list-page" style="display:none;"><button id="discs-5" class="list-row line "><div id="discs-5-title" class="list-row-title"></div><div id="discs-5-state" class="list-row-state"></div></button>
+<button id="discs-6" class="list-row line "><div id="discs-6-title" class="list-row-title"></div><div id="discs-6-state" class="list-row-state"></div></button>
+<button id="discs-7" class="list-row line "><div id="discs-7-title" class="list-row-title"></div><div id="discs-7-state" class="list-row-state"></div></button>
+</div><div id="discs-pager" class="list-pager"><button id="discs-prev" class="menu-action list-pager-prev disabled">&lt;</button><div id="discs-page-count" class="list-pager-count">1/2</div><button id="discs-next" class="menu-action list-pager-next">&gt;</button></div></div><div class="list-actions"><button class="menu-action list-back" id="discs-back">BACK</button></div><div id="discs-status" class="list-status"></div></div><div id="shaders-panel" class="screen-panel" style="display:none;"><div id="shaders-list" class="list"><div id="shaders-page-1" class="list-page"><button id="none" class="list-row "><img class="list-row-icon" src="shaders/none/icon.png"/><div id="none-title" class="list-row-title">UNFILTERED</div><div id="none-detail" class="list-row-detail">The picture as the console draws it</div><div id="none-state" class="list-row-state"></div></button>
+<button id="scanlines" class="list-row "><img class="list-row-icon" src="shaders/scanlines/icon.png"/><div id="scanlines-title" class="list-row-title">SCANLINES</div><div id="scanlines-detail" class="list-row-detail">Darkens every other line</div><div id="scanlines-state" class="list-row-state"></div></button>
+<button id="phosphor" class="list-row selected"><img class="list-row-icon" src="shaders/phosphor/icon.png"/><div id="phosphor-title" class="list-row-title">PHOSPHOR</div><div id="phosphor-detail" class="list-row-detail">A strong green tint</div><div id="phosphor-state" class="list-row-state">ON</div></button>
+</div></div><div class="list-actions" style="margin-top:-144dp;"><button class="menu-action list-back" id="shaders-back">BACK</button></div><div id="shaders-status" class="list-status" style="margin-top:-144dp;"></div></div><div id="achievements-panel" class="screen-panel" style="display:none;">
+  <div class="list account-screen">
+    <div class="account-summary"><span id="achievements-account">RETROACHIEVEMENTS</span><span id="achievements-state" class="account-state">OFF</span></div>
+    <div id="achievements-signed-out" class="account-empty">
+      <div>Sign in to earn achievements.</div>
+      <button id="achievements-login" class="menu-action account-action">SIGN IN TO ENABLE</button>
+    </div>
+    <div id="achievements-form" class="account-form" style="display:none;">
+      <label for="achievement-username">USERNAME</label>
+      <input id="achievement-username" type="text" maxlength="95" class="account-input"/>
+      <label for="achievement-password">PASSWORD</label>
+      <div class="account-password-row"><input id="achievement-password" type="password" class="account-input"/><button id="achievements-password-visibility" class="menu-action account-reveal">SHOW</button></div>
+      <div class="account-form-actions"><button id="achievements-submit" class="menu-action">SIGN IN</button><button id="achievements-cancel" class="menu-action">CANCEL</button></div>
+      <div class="account-help">Create an account at retroachievements.org</div>
+      <div id="achievements-error" class="account-error"></div>
+    </div>
+    <div id="achievements-catalog" class="account-catalog" style="display:none;"><div id="achievements-list" class="list live-list" data-page-size="4"><div class="list-prototype" style="display:none;"><button id="achievements-prototype" class="list-row "><div id="achievements-prototype-title" class="list-row-title"></div><div id="achievements-prototype-detail" class="list-row-detail"></div><div id="achievements-prototype-state" class="list-row-state"></div></button>
+</div><div id="achievements-pager" class="list-pager" style="display:none;"><button id="achievements-prev" class="menu-action list-pager-prev disabled">&lt;</button><div id="achievements-page-count" class="list-pager-count">1/0</div><button id="achievements-next" class="menu-action list-pager-next">&gt;</button></div></div></div>
+  </div>
+  <div id="achievements-session-actions" class="list-actions account-session-actions" style="display:none;">
+    <button id="achievements-enabled" class="menu-action list-control account-toggle">TURN OFF</button>
+    <button id="achievements-signout" class="menu-action list-control account-signout">SIGN OUT</button>
+    <button id="achievements-retry" class="menu-action list-control account-retry" style="display:none;">RETRY</button>
+  </div>
+  <div class="list-actions"><button class="menu-action list-back" id="achievements-back">BACK</button></div><div id="achievements-status" class="list-status"></div>
+</div>
+<div id="text-keyboard" class="text-keyboard" style="display:none;">
+  <div class="text-keyboard-heading">START: DONE &nbsp; B: DELETE &nbsp; L/R: CHANGE KEYS</div>
+  <div id="text-keyboard-grid"></div>
+</div>
+<div id="achievements-confirmation" class="session-dialog" style="display:none;">
+  <div class="session-dialog-title">ACHIEVEMENTS NOT SYNCED</div>
+  <div class="session-dialog-copy">Some earned achievements have not reached RetroAchievements. They may be lost if you end this session.</div>
+  <div class="session-dialog-actions"><button id="achievements-keep-session" class="menu-action">KEEP PLAYING</button><button id="achievements-end-session" class="menu-action">CONTINUE</button></div>
+</div>
+<div id="achievements-startup" class="session-dialog" style="display:none;">
+  <div class="session-dialog-title">RESUMING YOUR GAME</div>
+  <div id="achievements-startup-status" class="session-dialog-copy">Connecting to RetroAchievements...</div>
+  <div class="session-dialog-actions"><button id="achievements-startup-retry" class="menu-action" style="display:none;">RETRY</button><button id="achievements-skip-startup" class="menu-action">PLAY WITHOUT ACHIEVEMENTS</button></div>
+</div>
+<div id="unlock-row" style="display:none;"><div id="unlock"><img id="unlock-badge"/><div id="unlock-words"><div id="unlock-kicker">ACHIEVEMENT UNLOCKED</div><div id="unlock-title"></div><div id="unlock-detail"></div></div></div></div><div id="options-panel" class="screen-panel" style="display:none;"><div id="volume-control"><div id="volume-level" class="slider"><div id="volume-level-readout" class="slider-readout"></div><div class="slider-track"><div id="volume-level-fill" class="slider-fill"></div><div id="volume-level-thumb" class="slider-thumb"></div></div></div>
+<button id="volume-down" class="menu-action volume-arrow arrow-down">&lt;</button><button id="volume-up" class="menu-action volume-arrow arrow-up">&gt;</button><div id="volume-low" class="volume-end">LOW</div><div id="volume-high" class="volume-end">HIGH</div><div class="volume-name">VOLUME</div></div><div id="options-entries"><button class="menu-action option-entry" id="controls" style="top: 0dp;">CONTROLS</button><button class="menu-action option-entry" id="shaders" style="top: 60dp;">SHADERS</button><button class="menu-action option-entry" id="achievements" style="top: 120dp;">ACHIEVEMENTS</button><button class="menu-action option-entry" id="discs" disabled="disabled" style="display: none; top: 180dp;">DISC</button></div><button class="menu-action options-back" id="options-back">BACK</button></div><div id="footer"><span id="footer-hint">ESC CONTINUE</span><span id="version">ROM-IN-A-BOX / @VERSION@</span></div></div></body></rml>

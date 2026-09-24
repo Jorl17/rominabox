@@ -1,0 +1,266 @@
+div { display: block; }
+body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size: 16dp; color: #ffffff; background-color: #041738; }
+#screen { position: absolute; left: 0; top: 0; width: 960dp; height: 600dp; background-color: #1049c3; }
+#spine { position: absolute; left: 0; top: 0; width: 8dp; height: 600dp; background-color: #5296ef; z-index: 3; }
+
+/* An overlay is this design drawn over a running game. In the player we add
+ * `showing`, later `leaving`, and `overlay` on the body while the menu is
+ * closed. Its arrival, its exit and its position are defined here. */
+body.overlay { background-color: transparent; }
+body.overlay #screen { background-color: transparent; }
+body.overlay #spine, body.overlay #heading, body.overlay #footer,
+body.overlay #pause-panel, body.overlay #controls-panel,
+body.overlay #options-panel, body.overlay #disc-panel,
+body.overlay .screen-panel { display: none; }
+
+#splash { display: none; position: absolute; left: 0; top: 0; width: 960dp; height: 600dp; z-index: 100; background-color: #041738; opacity: 0; transition: opacity 0.1s linear-in-out; }
+#splash.showing { display: block; opacity: 1; }
+#splash.leaving { display: block; opacity: 0; transition: opacity 0.18s linear-in-out; }
+#splash-logo { position: absolute; right: 48dp; bottom: 36dp; width: 220dp; height: 220dp; }
+
+/* A thin strip along the top edge, like the short prompts of a disc console.
+ * It slides down into view and back up out of it. */
+.notice { position: absolute; right: 16dp; top: -44dp; width: 300dp; height: 32dp; z-index: 90; pointer-events: none; opacity: 0; line-height: 32dp; text-align: center; font-family: Silkscreen; font-size: 13dp; color: #ffffff; background-color: #061a48; border-bottom: 2dp #fff13d; transition: top opacity 0.2s cubic-out; }
+body.overlay .notice.showing { opacity: 1; top: 0; }
+body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0.28s cubic-in; }
+
+#heading { position: absolute; top: 10dp; left: 24dp; width: 700dp; height: 28dp; line-height: 28dp; text-align: left; font-size: 22dp; color: #ffffff; }
+
+/* Six blocks, two across and three down, with the picture next to the words.
+ * The picture area is 138dp tall because in the player we measure the game
+ * aspect, limit the height to 138 and write it on the parent of the picture.
+ * A shorter row would cut off the save picture. */
+#slots { position: absolute; left: 20dp; top: 46dp; width: 730dp; height: 492dp; }
+.slot { position: absolute; width: 360dp; height: 156dp; padding: 0; overflow: hidden; background-color: #061a48; color: #ffffff; border-width: 1dp; border-color: #476eab; font-family: Silkscreen; text-align: left; }
+#slot-1, #slot-3, #slot-5 { left: 0; }
+#slot-2, #slot-4, #slot-6 { left: 368dp; }
+#slot-1, #slot-2 { top: 0; }
+#slot-3, #slot-4 { top: 164dp; }
+#slot-5, #slot-6 { top: 328dp; }
+.slot:hover { border-color: #75b2e4; }
+.slot.focused { border-color: #ffffff; border-left-width: 6dp; border-left-color: #fff13d; }
+.slot.selected, .slot.selected:hover, .slot.selected.focused { background-color: #193e88; border-color: #fff13d; }
+.slot:active, .slot.selected:active { background-color: #fff13d; color: #081433; }
+.slot-label { position: absolute; left: 248dp; top: 36dp; height: 24dp; font-size: 16dp; color: #ffffff; }
+.slot.selected .slot-label { color: #fff13d; }
+.slot:active .slot-label, .slot.selected:active .slot-label { color: #081433; }
+.slot-picture { position: absolute; left: 8dp; top: 8dp; width: 176dp; height: 138dp; background-color: #0865bf; border-top: 1dp #020b27; border-left: 1dp #020b27; border-right: 1dp #9edaff; border-bottom: 1dp #9edaff; }
+.slot-image { width: 100%; height: 100%; }
+.slot.empty .slot-image { display: none; }
+.slot-state { position: absolute; left: 248dp; top: 78dp; height: 20dp; font-size: 13dp; color: #b4e6ff; }
+.slot.disabled .slot-state { right: 12dp; height: auto; font-size: 11dp; white-space: normal; }
+.slot:active .slot-state { color: #081433; }
+
+#actions { position: absolute; left: 766dp; top: 46dp; width: 176dp; height: 280dp; }
+#actions button { position: absolute; left: 0; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; }
+#resume { top: 0; }
+#save { top: 44dp; }
+#load { top: 88dp; }
+#disc { top: 132dp; }
+#actions #controls, #actions #options { top: 176dp; }
+#quit { top: 220dp; }
+
+#status { position: absolute; left: 24dp; top: 544dp; width: 700dp; text-align: left; font-size: 13dp; color: #b4e6ff; }
+#footer { position: absolute; left: 24dp; bottom: 8dp; width: 912dp; height: 20dp; font-size: 13dp; color: #75b2e4; }
+
+#controller-scene { position: absolute; left: 0; top: 44dp; width: 960dp; height: 380dp; }
+#controller-image { position: absolute; left: 0; top: 0; width: 960dp; height: 380dp; }
+.control-leader { position: absolute; background-color: #476eab; }
+.control-leader.horizontal { height: 1dp; }
+.control-leader.vertical { width: 1dp; }
+.control-hit { position: absolute; width: 30dp; height: 30dp; background-color: transparent; border: 1dp transparent; border-radius: 15dp; }
+.control-hit:hover { border-color: #75b2e4; border-width: 2dp; z-index: 2; }
+.control-hit.focused { border-color: #fff13d; border-width: 2dp; z-index: 2; }
+.control-callout { position: absolute; width: 188dp; height: 36dp; padding: 0; border-width: 1dp; border-color: #476eab; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
+.control-callout:hover { border-color: #75b2e4; z-index: 2; }
+/* Later controls are later siblings and would cover the focused edge of
+ * the control before them, so we draw focus and the pointer above the
+ * neighbours. The open list is at 60. */
+.control-callout.focused { border-color: #fff13d; border-left-width: 4dp; border-left-color: #fff13d; z-index: 2; }
+
+/* Below the scene, in the band without callouts. The list opens upward from
+ * here and ends before the d-pad, so when a drag ends off the list, the
+ * button under the pointer still shows the hover state. */
+.control-picker { position: absolute; left: 24dp; top: 508dp; width: 320dp; height: 36dp; z-index: 50; }
+.control-picker-label { position: absolute; left: 0; top: -16dp; font-size: 11dp; color: #b4e6ff; }
+.control-picker-current { position: absolute; left: 0; right: 0; top: 0; height: 32dp; font-family: Silkscreen; font-size: 13dp; line-height: 32dp; white-space: nowrap; text-align: left; padding-left: 10dp; border-width: 1dp; border-color: #476eab; background-color: #061a48; color: #ffffff; }
+.control-picker-current:hover { border-color: #75b2e4; color: #fff13d; }
+.control-picker-current.focused { border-left-width: 4dp; border-left-color: #fff13d; }
+.control-picker-current:active { background-color: #fff13d; color: #081433; border-color: #fff13d; }
+.control-picker-list { position: absolute; left: 0; right: 0; bottom: 100%; border-width: 1dp; border-color: #fff13d; background-color: #061a48; z-index: 50; display: block; }
+.control-picker-option { display: block; position: relative; height: 26dp; font-family: Silkscreen; font-size: 13dp; line-height: 26dp; white-space: nowrap; text-align: left; padding-left: 12dp; border-left: 4dp #061a48; background-color: #061a48; color: #b4e6ff; }
+.control-picker-option + .control-picker-option { border-top: 1dp #476eab; }
+.control-picker-option:hover { color: #ffffff; border-bottom: 2dp #75b2e4; }
+.control-picker-option.focused { color: #ffffff; background-color: #193e88; border-left-color: #fff13d; }
+.control-picker-option:active { background-color: #fff13d; color: #081433; border-left-color: #ffffff; }
+.control-picker-option.selected { color: #fff13d; }
+.control-picker-option.selected:hover, .control-picker-option.selected.focused { color: #fff13d; }
+.control-picker-option.selected:active { color: #081433; }
+
+.control-group { position: absolute; width: 210dp; height: 44dp; padding: 0; border-width: 1dp; border-color: #476eab; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
+.control-group:hover { border-color: #75b2e4; z-index: 2; }
+.control-group.focused { border-color: #fff13d; border-left-width: 4dp; border-left-color: #fff13d; z-index: 2; }
+.control-label { margin-left: 8dp; margin-top: 2dp; height: 18dp; font-size: 13dp; overflow: hidden; white-space: nowrap; }
+.control-assignment { margin-left: 8dp; font-size: 12dp; color: #b4e6ff; white-space: nowrap; overflow: hidden; }
+.control-original { margin-right: 8dp; color: #fff13d; }
+#controls-actions { position: absolute; left: 360dp; top: 508dp; width: 420dp; height: 36dp; }
+#controls-actions button { position: absolute; top: 0; height: 32dp; line-height: 32dp; font-family: Silkscreen; font-size: 13dp; border-width: 1dp; text-align: center; }
+#controls-back { left: 0; width: 100dp; }
+#controls-reset { left: 112dp; width: 180dp; }
+#controls-cancel { left: 304dp; width: 110dp; }
+#controls-status { position: absolute; left: 24dp; top: 548dp; width: 700dp; font-size: 13dp; color: #b4e6ff; text-align: left; }
+
+.menu-action { color: #ffffff; background-color: #061a48; border-color: #476eab; }
+.menu-action:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
+.menu-action.focused { background-color: #061a48; color: #ffffff; border-left-width: 4dp; border-left-color: #fff13d; }
+.menu-action:active { background-color: #193e88; color: #fff13d; border-color: #ffffff; }
+.menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
+
+@keyframes capture-pulse { from { border-color: #fff13d; } to { border-color: #476eab; } }
+.control-callout.capturing, .control-hit.capturing { animation: 0.55s capture-pulse infinite alternate; }
+
+/* One list for every screen with a list. We write the rows when we bundle
+ * the game, and no screen has a separate list style. */
+.screen-link { position: absolute; top: 10dp; right: 16dp; width: 140dp; height: 28dp; z-index: 2; font-family: Silkscreen; font-size: 12dp; line-height: 28dp; text-align: center; }
+.list { position: absolute; left: 24dp; top: 52dp; width: 700dp; }
+.list-row { display: block; position: relative; width: 100%; height: 48dp; margin: 0 0 4dp 0; padding: 0; background-color: #061a48; color: #ffffff; border-width: 0 0 1dp 0; border-color: #476eab; font-family: Silkscreen; text-align: left; }
+/* The pointer moves the same focus as the keys, so a border here would
+ * show a second selected row. We draw the left accent outside the row,
+ * because a left border alone shrinks the content box, and the name would
+ * start further right than the names above and below it. The same margin
+ * moves the row back. */
+.list-row:hover { }
+.list-row.focused { background-color: #193e88; border-left-width: 4dp; border-left-color: #fff13d; border-bottom-color: #fff13d; margin-left: -4dp; }
+.list-row:active { background-color: #fff13d; color: #081433; }
+.list-row-icon { position: absolute; left: 8dp; top: 8dp; width: 32dp; height: 32dp; }
+.list-row-title { position: absolute; left: 52dp; top: 6dp; font-size: 14dp; color: #ffffff; }
+/* A row with no picture and no second line. We set the right edge on this
+ * class, not on the disc list, because the bind list has the same title
+ * class, and a right edge there would cut off the end of a control name. */
+.list-row.line { height: 28dp; }
+.list-row.line .list-row-title { left: 12dp; right: 64dp; top: 0; height: 28dp; line-height: 28dp; white-space: nowrap; overflow: hidden; }
+.list-row.line .list-row-detail { display: none; }
+.list-row.line .list-row-state { top: 0; height: 28dp; line-height: 28dp; }
+.list-row-detail { position: absolute; left: 52dp; top: 26dp; font-size: 12dp; color: #b4e6ff; }
+.list-row-state { position: absolute; right: 12dp; top: 16dp; font-size: 12dp; color: #fff13d; }
+.list-pager { position: absolute; left: 0; top: 272dp; width: 100%; height: 32dp; }
+.list-pager-prev, .list-pager-next, .list-pager-count { position: absolute; top: 0; height: 32dp; line-height: 32dp; background-color: #061a48; color: #ffffff; border-width: 1dp; border-color: #476eab; font-family: Silkscreen; font-size: 13dp; text-align: center; }
+.list-pager-prev { left: 0; width: 64dp; }
+.list-pager-count { left: 72dp; width: 100dp; }
+.list-pager-next { left: 180dp; width: 64dp; }
+.list-pager-prev:hover, .list-pager-next:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
+.list-pager-prev.focused, .list-pager-next.focused { border-left-width: 4dp; border-left-color: #fff13d; }
+.list-actions { position: absolute; left: 466dp; top: 508dp; width: 476dp; height: 36dp; }
+.list-actions .menu-action { position: absolute; left: 0; width: 176dp; height: 36dp; font-family: Silkscreen; font-size: 14dp; line-height: 36dp; text-align: center; }
+.list-actions .list-back { left: 300dp; width: 176dp; }
+.list-actions .list-toggle { left: 0; width: 284dp; border-width: 1dp; line-height: 34dp; }
+.list-toggle-label { position: absolute; left: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 13dp; }
+.list-toggle-state { position: absolute; right: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 13dp; color: #b4e6ff; }
+.list-toggle.on .list-toggle-state { color: #fff13d; }
+.list-toggle:hover .list-toggle-state, .list-toggle.focused .list-toggle-state { color: #081433; }
+.list-status { position: absolute; left: 24dp; top: 544dp; color: #b4e6ff; font-size: 13dp; }
+
+.menu-index { position: absolute; left: 24dp; top: 56dp; width: 680dp; height: 420dp; }
+.option-entry { position: absolute; left: 0; width: 680dp; height: 52dp; line-height: 52dp; font-family: Silkscreen; font-size: 18dp; border-width: 0 0 1dp 0; border-color: #476eab; text-align: left; padding-left: 16dp; background-color: transparent; }
+.option-entry:hover { background-color: #193e88; color: #ffffff; border-color: #75b2e4; }
+.option-entry.focused { border-left-width: 6dp; border-left-color: #fff13d; background-color: transparent; color: #ffffff; }
+.option-entry:active { background-color: #fff13d; color: #081433; }
+.options-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
+
+/* We insert volume at the start of Options, in the band under the index,
+ * with a rule and no frame, so the list still looks like a list. The track is
+ * 456dp wide because the shared states set the fill and the thumb in pixels
+ * for that length. Focus, a thumb being dragged and the pointer look
+ * different, because otherwise a player cannot tell them apart. */
+#volume-control { position: absolute; left: 24dp; top: 480dp; width: 720dp; height: 32dp; }
+.volume-name { position: absolute; left: 0; top: 0; width: 80dp; height: 32dp; line-height: 32dp; font-family: Silkscreen; font-size: 12dp; color: #b4e6ff; }
+.volume-end { position: absolute; top: 0; height: 32dp; line-height: 32dp; font-family: Silkscreen; font-size: 12dp; color: #ffffff; white-space: nowrap; overflow: hidden; }
+#volume-low { left: 80dp; width: 44dp; }
+#volume-high { left: 668dp; width: 52dp; }
+.volume-arrow { position: absolute; top: 2dp; width: 28dp; height: 28dp; line-height: 24dp; font-family: Silkscreen; font-size: 13dp; text-align: center; border-width: 1dp; padding: 0; }
+#volume-down { left: 128dp; }
+#volume-up { left: 632dp; }
+#volume-level { position: absolute; left: 164dp; top: 0; width: 456dp; height: 28dp; }
+#volume-level-readout { display: none; }
+#volume-level > div:last-child { margin-top: 12dp; height: 4dp; background-color: #020b27; border-width: 0 0 1dp 0; border-color: #476eab; }
+#volume-level-fill { background-color: #fff13d; }
+#volume-level-thumb { top: -6dp; width: 8dp; height: 16dp; background-color: #ffffff; border-width: 1dp; border-color: #75b2e4; }
+#volume-level:hover #volume-level-thumb { background-color: #75b2e4; border-color: #fff13d; }
+#volume-level.focused #volume-level-thumb { background-color: #193e88; border-color: #fff13d; border-left-width: 3dp; }
+#volume-level.dragging #volume-level-thumb { background-color: #fff13d; border-color: #ffffff; }
+
+#disc-face { position: absolute; left: 250dp; top: 100dp; width: 280dp; height: 280dp; border-radius: 140dp; background-color: #75b2e4; border: 14dp #fff13d; }
+#disc-hole { position: absolute; left: 116dp; top: 116dp; width: 48dp; height: 48dp; border-radius: 24dp; background-color: #041738; }
+#disc-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
+
+/* The bind list, drawn over its control. The rows in Disc are the
+   full-width blocks used in the rest of this design, not the thin strips of
+   Native, with the same contract in the style of this design. */
+#control-binds { z-index: 60; width: 360dp; background-color: #061a48; border-width: 1dp 1dp 1dp 4dp; border-color: #fff13d; }
+/* As in Native, with border-box the accent of a focused row stays inside
+ * the list. The separator is the bottom border of the row. */
+#control-binds .list-row { box-sizing: border-box; height: 30dp; margin: 0; padding: 0; border-width: 0 0 1dp 0; border-color: #476eab; font-size: 13dp; }
+#control-binds .list-row-icon { display: none; }
+#control-binds .list-row-title { left: 12dp; right: 150dp; top: 0; height: 30dp; line-height: 30dp; font-size: 13dp; color: #ffffff; }
+#control-binds .list-row-detail { left: auto; right: 52dp; top: 0; width: 96dp; height: 30dp; line-height: 30dp; font-size: 12dp; text-align: right; color: #b4e6ff; }
+#control-binds .list-row-state { right: 10dp; top: 0; width: 38dp; height: 30dp; line-height: 30dp; font-size: 11dp; text-align: right; color: #fff13d; }
+#control-binds .list-row:hover { background-color: #193e88; border-color: #75b2e4; }
+#control-binds .list-row.focused { border-left-width: 4dp; border-left-color: #fff13d; background-color: #193e88; margin-left: -4dp; }
+#control-binds .list-row:active { background-color: #fff13d; color: #081433; }
+#control-binds .list-row:active .list-row-title, #control-binds .list-row:active .list-row-detail,
+#control-binds .list-row:active .list-row-state { color: #081433; }
+#control-binds .list-pager { box-sizing: border-box; position: relative; left: 0; top: 0; width: 100%; height: 28dp; }
+#control-binds .list-pager-prev, #control-binds .list-pager-next, #control-binds .list-pager-count { box-sizing: border-box; height: 28dp; line-height: 26dp; font-size: 12dp; top: 0; }
+#control-binds .list-pager-prev { left: 0; width: 72dp; }
+#control-binds .list-pager-count { left: 80dp; width: 110dp; }
+#control-binds .list-pager-next { left: 198dp; width: 72dp; }
+
+/* The inherited achievement notice, with the thin rules and compact type of this design. */
+#unlock-row { position: absolute; left: 0; top: 24dp; width: 100%; text-align: center; z-index: 90; }
+#unlock { display: inline-block; text-align: left; padding: 8dp; background-color: #061a48; border: 1dp #fff13d; }
+#unlock-badge { display: inline-block; vertical-align: top; width: 48dp; height: 48dp; border: 1dp #476eab; }
+#unlock-words { display: inline-block; vertical-align: top; margin-left: 12dp; max-width: 560dp; }
+#unlock-kicker { font-size: 11dp; color: #fff13d; }
+#unlock-title { font-size: 16dp; color: #ffffff; margin-top: 3dp; }
+#unlock-detail { font-size: 11dp; color: #b4e6ff; margin-top: 3dp; }
+
+/* part:slider */
+.slider { display: block; width: 100%; }
+.slider-readout { display: block; width: 100%; height: 36dp; font-family: Silkscreen; font-size: 28dp; text-align: center; }
+.slider-track { display: block; position: relative; width: 100%; height: 28dp; margin-top: 12dp; border-width: 4dp; }
+.slider-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0; }
+.slider-thumb { position: absolute; top: -8dp; width: 22dp; height: 44dp; border-width: 4dp; }
+.toggle { display: block; position: relative; width: 240dp; height: 48dp; margin-top: 28dp; font-family: Silkscreen; font-size: 18dp; line-height: 42dp; padding-left: 56dp; border-width: 3dp; }
+.toggle-knob { position: absolute; left: 8dp; top: 6dp; width: 28dp; height: 28dp; border-width: 3dp; }
+.toggle.on .toggle-knob { left: 196dp; }
+
+.account-screen .account-summary { height: 44dp; line-height: 32dp; font-size: 15dp; color: #fff13d; }
+.account-state { float: right; padding-right: 8dp; }
+.account-empty { padding: 44dp 24dp; color: #b4e6ff; }
+.account-action { display: block; text-align: center; line-height: 40dp; border-width: 2dp; width: 336dp; height: 44dp; margin-top: 24dp; font-family: Silkscreen; font-size: 17dp; }
+.account-form { width: 560dp; max-width: 100%; padding-top: 8dp; }
+.account-form label { display: block; margin: 0 0 8dp 0; font-size: 14dp; color: #b4e6ff; }
+.account-input { display: block; box-sizing: border-box; width: 100%; height: 42dp; padding: 8dp 12dp; margin: 0 0 20dp 0; font-family: Silkscreen; font-size: 17dp; color: #ffffff; background-color: #061a48; border: 2dp #75b2e4; }
+.account-input:hover, .account-input.focused, .account-input:focus { border-color: #fff13d; }
+.account-form-actions { height: 44dp; }
+.account-form-actions button { display: inline-block; box-sizing: border-box; text-align: center; line-height: 36dp; border-width: 2dp; width: 244dp; height: 40dp; margin-right: 16dp; font-family: Silkscreen; font-size: 16dp; }
+.account-help { margin-top: 16dp; font-size: 12dp; color: #b4e6ff; }
+.account-error { margin-top: 16dp; font-size: 13dp; color: #fff13d; }
+.account-catalog .list { position: relative; left: 0; top: 0; width: 100%; }
+.account-catalog .list-pager { position: relative; top: auto; margin-top: 12dp; }
+#achievements-panel .list-actions .list-back { left: auto; right: 0; width: 24%; }
+#achievements-panel .account-toggle { left: 0; width: 32%; }
+#achievements-panel .account-signout { left: 36%; width: 32%; }
+#achievements-panel .account-retry { left: 0; width: 32%; }
+.text-keyboard { position: absolute; left: 24dp; top: 302dp; width: 904dp; padding: 10dp 0; z-index: 110; background-color: #1049c3; border: 2dp #75b2e4; }
+.text-keyboard-heading { padding: 0 12dp 10dp; font-size: 12dp; color: #b4e6ff; }
+.text-key { display: inline-block; box-sizing: border-box; width: 8.8%; height: 40dp; margin: 0.14%; padding: 0; text-align: center; font-family: Silkscreen; font-size: 14dp; }
+.session-dialog { position: absolute; box-sizing: border-box; left: 0; top: 0; width: 100%; height: 100%; padding: 130dp 56dp; z-index: 120; background-color: #1049c3; }
+.session-dialog-title { font-size: 24dp; color: #fff13d; margin-bottom: 24dp; }
+.session-dialog-copy { font-size: 16dp; line-height: 28dp; max-width: 760dp; }
+.session-dialog-actions { margin-top: 40dp; }
+.session-dialog-actions button { display: inline-block; box-sizing: border-box; height: 48dp; padding: 0 18dp; margin-right: 20dp; border-width: 2dp; font-family: Silkscreen; font-size: 16dp; line-height: 44dp; text-align: center; }
+
+.account-password-row { position: relative; }
+.account-password-row .account-input { padding-right: 128dp; }
+.account-reveal { box-sizing: border-box; position: absolute; right: 8dp; top: 6dp; width: 104dp; height: 30dp; line-height: 26dp; border-width: 2dp; text-align: center; font-family: Silkscreen; font-size: 13dp; }
