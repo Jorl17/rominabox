@@ -425,6 +425,9 @@ int refusing_rename(const char *from, const char *to)
    return std::rename(from, to);
 }
 
+/* A move that fails at once, for example onto a file open in another program. */
+int failing_rename(const char *, const char *) { return -1; }
+
 /* Every controls save after the first replaces the previous file. */
 void repeated_saves_replace_the_file(const char *data)
 {
@@ -443,6 +446,10 @@ void repeated_saves_replace_the_file(const char *data)
    const std::string volume = std::string(data) + "/b19-volume.cfg";
    check(rib_write_menu_volume(volume.c_str(), -3.0f) && rib_write_menu_volume(volume.c_str(), -4.0f),
          "the volume file is replaced where rename refuses an existing file");
+   rib_files_use_rename(failing_rename, false);
+   check(!rib_write_menu_volume(volume.c_str(), -5.0f) && read_file(volume).find("-4.0") != std::string::npos
+            && !std::ifstream(volume + ".tmp"),
+         "a replace that fails keeps the old file and leaves no temporary");
    rib_files_use_rename(nullptr, true);
    rib_menu_destroy(menu);
 }
