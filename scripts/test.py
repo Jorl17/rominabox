@@ -214,15 +214,17 @@ SCOPES = [
         "real RmlUi account input, Unicode/composition, logical navigation, notification lifetime and both design/palette combinations",
         "physical dead keys, native IME candidate placement, controllers or live login",
         ["sh", str(ROOT / "scripts/achievements_input_test.sh")],
-        prepare=RMLUI_PREPARE,
+        # The checks of the harness build itself. With a stale object from the
+        # cache, bridge would compile against code that no longer exists.
+        prepare=RMLUI_PREPARE + [["python3", str(ROOT / "scripts/native_runtime/test_menu_harness.py")]],
     ),
     Scope(
         "bridge",
         "the real menu and RmlUi document with a dummy renderer: actions, shared pointer/key focus, binding capacity, capture lifecycle, save/load failures and persistence",
         "physical input capture or audible sound; a fake RetroArch host controls the failure/capture boundary, and rendering appearance needs direct screenshot review",
         ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
-        slow=True,
-        prepare=RMLUI_PREPARE,
+        # We build bridge through the same cache, so we check the cache there too.
+        prepare=RMLUI_PREPARE + [["python3", str(ROOT / "scripts/native_runtime/test_menu_harness.py")]],
     ),
     Scope(
         "workflows",
