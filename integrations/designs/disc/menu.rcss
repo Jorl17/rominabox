@@ -40,12 +40,13 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #slot-3, #slot-4 { top: 164dp; }
 #slot-5, #slot-6 { top: 328dp; }
 .slot:hover { border-color: design(edge); }
-.slot.focused { border-color: design(ink); border-left-width: 6dp; border-left-color: design(highlight); }
-.slot.selected, .slot.selected:hover, .slot.selected.focused { background-color: design(focus); border-color: design(highlight); }
-.slot:active, .slot.selected:active { background-color: design(highlight); color: design(slot-label); }
+/* The chosen slot is visible only while SAVE or LOAD has the focus. */
+[data-focus=save] .slot.selected, [data-focus=load] .slot.selected { border-color: design(highlight); }
+.slot.focused { background-color: design(focus); border-color: design(highlight); border-left-width: 6dp; }
+.slot:active { background-color: design(highlight); color: design(slot-label); }
 .slot-label { position: absolute; left: 248dp; top: 36dp; height: 24dp; font-size: 16dp; color: design(ink); }
-.slot.selected .slot-label { color: design(highlight); }
-.slot:active .slot-label, .slot.selected:active .slot-label { color: design(slot-label); }
+[data-focus=save] .slot.selected .slot-label, [data-focus=load] .slot.selected .slot-label, .slot.focused .slot-label { color: design(highlight); }
+.slot:active .slot-label { color: design(slot-label); }
 .slot-picture { position: absolute; left: 8dp; top: 8dp; width: 176dp; height: 138dp; background-color: design(picture); border-top: 1dp design(bevel-dark); border-left: 1dp design(bevel-dark); border-right: 1dp design(bevel-light); border-bottom: 1dp design(bevel-light); }
 .slot-image { width: 100%; height: 100%; }
 .slot.empty .slot-image { display: none; }
@@ -56,7 +57,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #actions { position: absolute; right: 24dp; top: 46dp; width: 176dp; height: 280dp; }
 /* One column with the buttons of the game, 44dp apart, so in a game with
  * no Options entries the column closes up and leaves no gap. */
-#actions button { display: block; position: relative; margin-bottom: 6dp; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; }
+#actions button { display: block; position: relative; margin-bottom: 6dp; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; }
 
 #status { position: absolute; left: 24dp; top: 544dp; width: 700dp; text-align: left; font-size: 13dp; color: design(muted); }
 #footer { position: absolute; left: 24dp; bottom: 8dp; width: 912dp; height: 20dp; font-size: 13dp; color: design(edge); }
@@ -108,9 +109,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #controls-cancel { left: 304dp; width: 110dp; }
 #controls-status { position: absolute; left: 24dp; top: 548dp; width: 700dp; font-size: 13dp; color: design(muted); text-align: left; }
 
-.menu-action { color: design(ink); background-color: design(surface); border-color: design(rule); }
+.menu-action { color: design(ink); background-color: design(surface); border-width: 1dp; border-color: design(rule); }
 .menu-action:hover { background-color: design(highlight); color: design(slot-label); border-color: design(highlight); }
-.menu-action.focused, .menu-action.capturing { background-color: design(surface); color: design(ink); border-left-width: 4dp; border-left-color: design(highlight); }
+.menu-action.focused, .menu-action.capturing { background-color: design(focus); color: design(ink); border-color: design(highlight); border-left-width: 4dp; }
 .menu-action:active { background-color: design(focus); color: design(highlight); border-color: design(ink); }
 .menu-action.disabled, .menu-action:disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
 

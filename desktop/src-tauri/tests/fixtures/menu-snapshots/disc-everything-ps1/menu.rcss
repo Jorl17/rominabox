@@ -40,12 +40,13 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #slot-3, #slot-4 { top: 164dp; }
 #slot-5, #slot-6 { top: 328dp; }
 .slot:hover { border-color: #75b2e4; }
-.slot.focused { border-color: #ffffff; border-left-width: 6dp; border-left-color: #fff13d; }
-.slot.selected, .slot.selected:hover, .slot.selected.focused { background-color: #193e88; border-color: #fff13d; }
-.slot:active, .slot.selected:active { background-color: #fff13d; color: #081433; }
+/* The chosen slot is visible only while SAVE or LOAD has the focus. */
+[data-focus=save] .slot.selected, [data-focus=load] .slot.selected { border-color: #fff13d; }
+.slot.focused { background-color: #193e88; border-color: #fff13d; border-left-width: 6dp; }
+.slot:active { background-color: #fff13d; color: #081433; }
 .slot-label { position: absolute; left: 248dp; top: 36dp; height: 24dp; font-size: 16dp; color: #ffffff; }
-.slot.selected .slot-label { color: #fff13d; }
-.slot:active .slot-label, .slot.selected:active .slot-label { color: #081433; }
+[data-focus=save] .slot.selected .slot-label, [data-focus=load] .slot.selected .slot-label, .slot.focused .slot-label { color: #fff13d; }
+.slot:active .slot-label { color: #081433; }
 .slot-picture { position: absolute; left: 8dp; top: 8dp; width: 176dp; height: 138dp; background-color: #0865bf; border-top: 1dp #020b27; border-left: 1dp #020b27; border-right: 1dp #9edaff; border-bottom: 1dp #9edaff; }
 .slot-image { width: 100%; height: 100%; }
 .slot.empty .slot-image { display: none; }
@@ -56,7 +57,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #actions { position: absolute; right: 24dp; top: 46dp; width: 176dp; height: 280dp; }
 /* One column with the buttons of the game, 44dp apart, so in a game with
  * no Options entries the column closes up and leaves no gap. */
-#actions button { display: block; position: relative; margin-bottom: 6dp; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; }
+#actions button { display: block; position: relative; margin-bottom: 6dp; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; }
 
 #status { position: absolute; left: 24dp; top: 544dp; width: 700dp; text-align: left; font-size: 13dp; color: #b4e6ff; }
 #footer { position: absolute; left: 24dp; bottom: 8dp; width: 912dp; height: 20dp; font-size: 13dp; color: #75b2e4; }
@@ -108,9 +109,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #controls-cancel { left: 304dp; width: 110dp; }
 #controls-status { position: absolute; left: 24dp; top: 548dp; width: 700dp; font-size: 13dp; color: #b4e6ff; text-align: left; }
 
-.menu-action { color: #ffffff; background-color: #061a48; border-color: #476eab; }
+.menu-action { color: #ffffff; background-color: #061a48; border-width: 1dp; border-color: #476eab; }
 .menu-action:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
-.menu-action.focused, .menu-action.capturing { background-color: #061a48; color: #ffffff; border-left-width: 4dp; border-left-color: #fff13d; }
+.menu-action.focused, .menu-action.capturing { background-color: #193e88; color: #ffffff; border-color: #fff13d; border-left-width: 4dp; }
 .menu-action:active { background-color: #193e88; color: #fff13d; border-color: #ffffff; }
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 
