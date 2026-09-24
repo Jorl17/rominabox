@@ -367,6 +367,84 @@ void click_captures_once(void *menu, const char *control, const char *id, const 
 
 /* After a pad change the picker has one toggle listener and opens. Reset
  * restores the 3-button labels together with the 3-button picture. */
+/* We mark the slot that SAVE and LOAD use only while one of them has focus.
+ * With the pointer over a slot we highlight it without choosing it. A click
+ * or an arrow key onto a slot chooses it. We check every registered design. */
+bool slot_marked(int slot, int unmarked)
+{
+   const std::string id = "slot-" + std::to_string(slot);
+   const std::string plain = "slot-" + std::to_string(unmarked);
+   return std::string(inspect.property(id.c_str(), "border-top-color"))
+         != inspect.property(plain.c_str(), "border-top-color");
+}
+
+void chosen_slot_shows_on_save_and_load(const char *native_assets)
+{
+   for (const char *design : {"native", "disc"})
+   {
+      const std::string assets = design_assets(native_assets, design);
+      check(std::filesystem::is_regular_file(assets + "/menu.rml"), "the design is staged");
+      setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+      host.slot_occupied = true;
+      void *menu = open_menu();
+      if (!menu) continue;
+      const std::string name = design;
+      const auto say = [&](const char *what) { return (name + ": " + what); };
+
+      check(focused("resume") && !slot_marked(1, 6),
+            say("the chosen slot is plain while CONTINUE has focus").c_str());
+      hover_and_frame(menu, "slot-5");
+      check(focused("slot-5") && slot_marked(5, 6) && !slot_marked(1, 6),
+            say("the pointer over a slot highlights that slot").c_str());
+      hover_and_frame(menu, "slot-2");
+      check(focused("slot-2") && slot_marked(2, 6) && !slot_marked(5, 6),
+            say("the highlight follows the pointer from slot to slot").c_str());
+      hover_and_frame(menu, "save");
+      check(slot_marked(1, 6) && !slot_marked(2, 6) && !slot_marked(5, 6),
+            say("SAVE shows the chosen slot; passing over others did not choose them").c_str());
+      click_and_frame(menu, "slot-3");
+      hover_and_frame(menu, "save");
+      check(slot_marked(3, 6) && !slot_marked(1, 6),
+            say("a clicked slot is the one SAVE shows").c_str());
+      hover_and_frame(menu, "quit");
+      check(!slot_marked(3, 6), say("leaving SAVE hides it again").c_str());
+      click_and_frame(menu, "slot-1");
+      hover_and_frame(menu, "load");
+      check(focused("load") && slot_marked(1, 6) && !slot_marked(3, 6),
+            say("LOAD shows the slot it loads").c_str());
+
+      /* Keys only: after every press we mark the chosen slot exactly when
+       * SAVE or LOAD has focus, and a slot reached by key is the chosen one. */
+      hover_and_frame(menu, "resume");
+      int chosen = 1;
+      bool slot_then_save = false;
+      bool on_slot = false;
+      for (const rib_key key : {RIB_KEY_UP, RIB_KEY_LEFT, RIB_KEY_DOWN, RIB_KEY_RIGHT,
+               RIB_KEY_UP, RIB_KEY_DOWN, RIB_KEY_RIGHT, RIB_KEY_DOWN})
+      {
+         rib_menu_key(menu, key);
+         frame(menu);
+         const std::string at = view.focus.current_id();
+         if (at.rfind("slot-", 0) == 0)
+         {
+            chosen = std::atoi(at.c_str() + 5);
+            on_slot = true;
+         }
+         const bool aiming = at == "save" || at == "load";
+         slot_then_save = slot_then_save || (on_slot && aiming);
+         const int unmarked = chosen == 6 ? 5 : 6;
+         for (int slot = 1; slot <= 6; ++slot)
+            if ("slot-" + std::to_string(slot) != at && slot != unmarked)
+               check(slot_marked(slot, unmarked) == (aiming && slot == chosen),
+                     say("by keys, only SAVE and LOAD show the chosen slot").c_str());
+      }
+      check(slot_then_save, say("the keys reached a slot and then SAVE or LOAD").c_str());
+      rib_menu_destroy(menu);
+   }
+   host.slot_occupied = false;
+   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+}
+
 void pad_changes_and_reset_apply_together(const char *native_assets, const char *data)
 {
    const std::string assets = stage_pad_choice(native_assets, data);
@@ -674,6 +752,7 @@ int main(int argc, char **argv)
    fixes::disc_list_keeps_its_page(argv[1], argv[2]);
    fixes::binds_open_sooner_on_hover();
    fixes::pad_changes_and_reset_apply_together(argv[1], argv[2]);
+   fixes::chosen_slot_shows_on_save_and_load(argv[1]);
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);
