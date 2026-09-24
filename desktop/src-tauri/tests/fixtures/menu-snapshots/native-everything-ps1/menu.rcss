@@ -337,3 +337,24 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .account-password-row { position: relative; }
 .account-password-row .account-input { padding-right: 128dp; }
 .account-reveal { box-sizing: border-box; position: absolute; right: 8dp; top: 6dp; width: 104dp; height: 30dp; line-height: 26dp; border-width: 2dp; text-align: center; font-family: Silkscreen; font-size: 13dp; }
+
+/* A badge still downloading is a ring in the badge box whose lit side steps
+ * round clockwise (each keyframe stays, then jumps). A badge that we could
+ * not download is a plain empty frame, and we try again when the list opens
+ * next. Both have the colours and hard edges of the design. */
+.list-row.badge-loading .list-row-icon { box-sizing: border-box; border: 4dp #476eab; border-top-color: #fff13d; background-color: #061a48; animation: 0.8s linear infinite badge-steps; }
+.list-row.badge-failed .list-row-icon { box-sizing: border-box; border: 2dp #b4e6ff; background-color: #061a48; }
+@keyframes badge-steps {
+   0% { border-top-color: #fff13d; border-right-color: #476eab; border-bottom-color: #476eab; border-left-color: #476eab; }
+   24.9% { border-top-color: #fff13d; border-right-color: #476eab; border-bottom-color: #476eab; border-left-color: #476eab; }
+   25% { border-top-color: #476eab; border-right-color: #fff13d; border-bottom-color: #476eab; border-left-color: #476eab; }
+   49.9% { border-top-color: #476eab; border-right-color: #fff13d; border-bottom-color: #476eab; border-left-color: #476eab; }
+   50% { border-top-color: #476eab; border-right-color: #476eab; border-bottom-color: #fff13d; border-left-color: #476eab; }
+   74.9% { border-top-color: #476eab; border-right-color: #476eab; border-bottom-color: #fff13d; border-left-color: #476eab; }
+   75% { border-top-color: #476eab; border-right-color: #476eab; border-bottom-color: #476eab; border-left-color: #fff13d; }
+   100% { border-top-color: #476eab; border-right-color: #476eab; border-bottom-color: #476eab; border-left-color: #fff13d; }
+}
+/* SHOW is inside the password field, so for the arrow keys neither is next to
+ * the other until we declare it here. */
+#achievement-password { nav-right: #achievements-password-visibility; }
+#achievements-password-visibility { nav-left: #achievement-password; }

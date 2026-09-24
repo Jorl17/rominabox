@@ -56,7 +56,9 @@ int main(int argc, char **argv) {
    entry.controller(RIB_KEY_UP);
    check(document.get_context()->GetFocusElement() == username, "Joypad Up returns to the previous field");
    entry.physical(true, RETROK_TAB, '\t', 0);
-   check(document.get_context()->GetFocusElement() == username, "Tab does not navigate the form");
+   check(document.get_context()->GetFocusElement() == password, "Tab moves from the username to the password");
+   entry.physical(true, RETROK_TAB, '\t', 0);
+   check(document.get_context()->GetFocusElement() == password, "Tab goes nowhere else");
    password->Focus();
    entry.physical(true, RETROK_p, 'p', 0);
    entry.physical(true, RETROK_UNKNOWN, 0xe9, 0);

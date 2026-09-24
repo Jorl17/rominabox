@@ -1,7 +1,9 @@
 div { display: block; }
 body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size: 16dp; color: #ffffff; background-color: #041738; }
-#screen { position: absolute; left: 0; top: 0; width: 960dp; height: 600dp; background-color: #1049c3; }
-#spine { position: absolute; left: 0; top: 0; width: 8dp; height: 600dp; background-color: #5296ef; z-index: 3; }
+/* The field fills the window at any aspect ratio. The slots stay at the left,
+ * and the button column stays at the right edge. */
+#screen { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: #1049c3; }
+#spine { position: absolute; left: 0; top: 0; width: 8dp; height: 100%; background-color: #5296ef; z-index: 3; }
 
 /* An overlay is this design drawn over a running game. In the player we add
  * `showing`, later `leaving`, and `overlay` on the body while the menu is
@@ -13,7 +15,7 @@ body.overlay #pause-panel, body.overlay #controls-panel,
 body.overlay #options-panel, body.overlay #disc-panel,
 body.overlay .screen-panel { display: none; }
 
-#splash { display: none; position: absolute; left: 0; top: 0; width: 960dp; height: 600dp; z-index: 100; background-color: #041738; opacity: 0; transition: opacity 0.1s linear-in-out; }
+#splash { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 100; background-color: #041738; opacity: 0; transition: opacity 0.1s linear-in-out; }
 #splash.showing { display: block; opacity: 1; }
 #splash.leaving { display: block; opacity: 0; transition: opacity 0.18s linear-in-out; }
 #splash-logo { position: absolute; right: 48dp; bottom: 36dp; width: 220dp; height: 220dp; }
@@ -51,7 +53,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .slot.disabled .slot-state { right: 12dp; height: auto; font-size: 11dp; white-space: normal; }
 .slot:active .slot-state { color: #081433; }
 
-#actions { position: absolute; left: 766dp; top: 46dp; width: 176dp; height: 280dp; }
+#actions { position: absolute; right: 24dp; top: 46dp; width: 176dp; height: 280dp; }
 #actions button { position: absolute; left: 0; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; }
 #resume { top: 0; }
 #save { top: 44dp; }
@@ -224,6 +226,12 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #unlock-title { font-size: 16dp; color: #ffffff; margin-top: 3dp; }
 #unlock-detail { font-size: 11dp; color: #b4e6ff; margin-top: 3dp; }
 
+/* Arrow moves that the layout alone would get wrong. BACK is right of the
+ * volume and the entries are nearer, so Up from it would skip the volume, and
+ * Down from QUIT, the last in the column, would go to the bottom block. */
+#options-back { nav-up: #volume-level; }
+#quit { nav-down: none; }
+
 .account-screen .account-summary { height: 44dp; line-height: 32dp; font-size: 15dp; color: #fff13d; }
 .account-state { float: right; padding-right: 8dp; }
 .account-empty { padding: 44dp 24dp; color: #b4e6ff; }
@@ -254,3 +262,24 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .account-password-row { position: relative; }
 .account-password-row .account-input { padding-right: 128dp; }
 .account-reveal { box-sizing: border-box; position: absolute; right: 8dp; top: 6dp; width: 104dp; height: 30dp; line-height: 26dp; border-width: 2dp; text-align: center; font-family: Silkscreen; font-size: 13dp; }
+
+/* A badge still downloading is a ring in the badge box whose lit side steps
+ * round clockwise (each keyframe stays, then jumps). A badge that we could
+ * not download is a plain empty frame, and we try again when the list opens
+ * next. Both have the colours and hard edges of the design. */
+.list-row.badge-loading .list-row-icon { box-sizing: border-box; border: 4dp #476eab; border-top-color: #fff13d; background-color: #061a48; animation: 0.8s linear infinite badge-steps; }
+.list-row.badge-failed .list-row-icon { box-sizing: border-box; border: 2dp #b4e6ff; background-color: #061a48; }
+@keyframes badge-steps {
+   0% { border-top-color: #fff13d; border-right-color: #476eab; border-bottom-color: #476eab; border-left-color: #476eab; }
+   24.9% { border-top-color: #fff13d; border-right-color: #476eab; border-bottom-color: #476eab; border-left-color: #476eab; }
+   25% { border-top-color: #476eab; border-right-color: #fff13d; border-bottom-color: #476eab; border-left-color: #476eab; }
+   49.9% { border-top-color: #476eab; border-right-color: #fff13d; border-bottom-color: #476eab; border-left-color: #476eab; }
+   50% { border-top-color: #476eab; border-right-color: #476eab; border-bottom-color: #fff13d; border-left-color: #476eab; }
+   74.9% { border-top-color: #476eab; border-right-color: #476eab; border-bottom-color: #fff13d; border-left-color: #476eab; }
+   75% { border-top-color: #476eab; border-right-color: #476eab; border-bottom-color: #476eab; border-left-color: #fff13d; }
+   100% { border-top-color: #476eab; border-right-color: #476eab; border-bottom-color: #476eab; border-left-color: #fff13d; }
+}
+/* SHOW is inside the password field, so for the arrow keys neither is next to
+ * the other until we declare it here. */
+#achievement-password { nav-right: #achievements-password-visibility; }
+#achievements-password-visibility { nav-left: #achievement-password; }

@@ -75,10 +75,10 @@ static int capacity_case(const char *assets, const char *data)
 {
    /* Without the shared part nothing in the document is a stop, and every
     * check below fails for that one reason. */
-   if (!std::ifstream(std::string(assets) + "/navigation.rcss"))
+   if (!std::ifstream(std::string(assets) + "/parts/navigation.rcss"))
    {
-      std::fprintf(stderr, "FAIL menu capacity: %s has no navigation.rcss beside menu.rcss; "
-            "an export stages both, and the fixture has to copy it\n", assets);
+      std::fprintf(stderr, "FAIL menu capacity: %s has no parts/navigation.rcss; "
+            "composition stages the shared parts beside menu.rcss\n", assets);
       return 1;
    }
    setenv("ROMINABOX_RML_ASSETS", assets, 1);

@@ -93,13 +93,14 @@ static void check_focus_leaves_the_name(void)
    /* The bind list sets the row border again. We must reserve space for a
     * focused accent there too, or the names in that list still move. */
    view.document.set_shown("fixture-panel", false);
+   view.document.set_shown("controls-panel", true);
    view.document.set_shown("control-binds", true);
    view.lists.focus_list_row(0);
    int focused_x = 0, focused_y = 0, focused_w = 0, focused_h = 0;
    int rest_x = 0, rest_y = 0, rest_w = 0, rest_h = 0;
-   CHECK(view.document.element_box("bind-one-title", &focused_x, &focused_y, &focused_w, &focused_h),
+   CHECK(view.document.element_box("bind-1-title", &focused_x, &focused_y, &focused_w, &focused_h),
          "the focused bind row's name has a box");
-   CHECK(view.document.element_box("bind-rest-title", &rest_x, &rest_y, &rest_w, &rest_h),
+   CHECK(view.document.element_box("bind-2-title", &rest_x, &rest_y, &rest_w, &rest_h),
          "the unfocused bind row's name has a box");
    char message[256];
    std::snprintf(message, sizeof(message),
@@ -107,6 +108,7 @@ static void check_focus_leaves_the_name(void)
          focused_x, rest_x);
    CHECK(std::abs(focused_x - rest_x) <= 1, message);
    view.document.set_shown("control-binds", false);
+   view.document.set_shown("controls-panel", false);
    view.document.set_shown("fixture-panel", true);
 }
 
@@ -1104,28 +1106,25 @@ int main(int argc, char **argv)
             "overwriting a thumbnail reloads the same file without reopening the menu");
    }
 
-   /* We write the controls scene into menu.rml in the builder. This template
-    * still has the placeholder, and nothing in the bridge replaces it. We
-    * write the remap behind the host boundary, which is not linked here, so
-    * this does not prove that a choice is saved or applied. */
+   /* We compose the controls scene into menu.rml in the builder, and in the
+    * bridge we draw what we receive. We write the remap behind the host
+    * boundary, which is not linked here, so this does not prove that a choice
+    * is saved or applied. */
    view.screens.show_screen("controls");
    {
       int image_x = 0;
       int image_y = 0;
       const std::string scene(inspect.text("controller-scene"));
-      CHECK(scene.find("control-") == std::string::npos,
-            "the player template has no generated control callouts");
-      CHECK(!view.document.element_center("controller-image", &image_x, &image_y),
-            "the player template has no controller illustration");
+      CHECK(scene.find("control-") != std::string::npos,
+            "the composed menu carries the generated control callouts");
+      CHECK(view.document.element_center("controller-image", &image_x, &image_y),
+            "the composed menu carries the controller illustration");
       view.controls.wire(fixture_controls);
       view.controls.set_device_picker(fixture_controls, true, "megadrive6");
       CHECK(std::string(inspect.text("controller-scene")) == scene,
             "naming another pad does not redraw the controls scene");
-      CHECK(!view.document.element_center("controller-image", &image_x, &image_y),
-            "naming another pad does not add an illustration");
-      CHECK(!view.document.element_center(
-            "controls-device-option-megadrive6", &image_x, &image_y),
-            "picker options are export markup, not created by the bridge");
+      CHECK(view.document.has_element("controls-device-option-megadrive6"),
+            "picker options are composed markup the bridge only shows");
    }
 
    CHECK(RIB_VOLUME_POSITIONS == 10,

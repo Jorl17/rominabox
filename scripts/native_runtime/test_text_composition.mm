@@ -59,6 +59,8 @@ int main(int argc, char **argv)
       password->Focus(); password->SetValue("páss"); document.settle(); password->SetSelectionRange(4, 4);
       for (int toggle = 0; toggle < 2; ++toggle) {
          achievements.handle(rib::Event::account_action(rib::AccountAction::RevealPassword));
+         // On Show/Hide we replace the field with a copy of the other type.
+         password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
          check(active_client && active_client->input, "Show/Hide keeps the focused native text context active");
          if (active_client && active_client->input)
             [active_client insertText:@"é" replacementRange:NSMakeRange(NSNotFound, 0)];

@@ -152,6 +152,9 @@ def stage(system: str, workspace: Path, variant: str | None = None,
                 "source": str(ARTWORK),
                 "design": str(package),
                 "destination": str(staged),
+                # With stage-controls we compose the whole menu, so it
+                # requires the palette, as stage-theme does.
+                "palette": palette,
                 # The pad an author or a player picked, staged as in the
                 # exporter and not by editing its markup.
                 "controls": {"profile": variant} if variant else {},

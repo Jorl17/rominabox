@@ -45,44 +45,10 @@ else
   exit 1
 fi
 
-# A generated list screen, in the same form that we write into <!--SCREENS-->
-# at export. We add it after staging the stylesheet, because staging copies the
-# menu.rml of the design over this one. Without it the bridge has no list, and
-# the checks of the rows and controls on a list screen cannot fail.
-python3 - "$assets/menu.rml" <<'FIXTURE'
-import sys, pathlib
-p = pathlib.Path(sys.argv[1])
-panel = (
-    '<div id="fixture-panel" class="screen-panel" style="display:none;">'
-    '<div class="list"><div id="fixture-page-1" class="list-page">'
-    '<button id="fixture-one" class="list-row line"><div id="fixture-one-title" class="list-row-title">ONE</div>'
-    '<div id="fixture-one-state" class="list-row-state"></div></button>'
-    '<button id="fixture-rest" class="list-row line"><div id="fixture-rest-title" class="list-row-title">REST</div>'
-    '<div id="fixture-rest-state" class="list-row-state"></div></button>'
-    '<button id="fixture-two" class="list-row "><div id="fixture-two-title" class="list-row-title">TWO</div>'
-    '<div id="fixture-two-detail" class="list-row-detail">detail</div>'
-    '<div id="fixture-two-state" class="list-row-state"></div></button>'
-    '<button id="fixture-pic" class="list-row "><div id="fixture-pic-title" class="list-row-title">PIC</div>'
-    '<div id="fixture-pic-detail" class="list-row-detail">detail</div>'
-    '<div id="fixture-pic-state" class="list-row-state"></div></button>'
-    '</div></div>'
-    '<div class="list-actions">'
-    '<button class="menu-action list-toggle" id="fixture-mode">'
-    '<span class="list-toggle-label">MODE</span>'
-    '<span id="fixture-mode-state" class="list-toggle-state">OFF</span></button>'
-    '<button class="menu-action list-back" id="fixture-back">BACK</button>'
-    '</div></div>'
-    '<div id="control-binds" class="list" style="display:none;">'
-    '<div class="list-page">'
-    '<button id="bind-one" class="list-row line"><div id="bind-one-title" class="list-row-title">ONE</div></button>'
-    '<button id="bind-rest" class="list-row line"><div id="bind-rest-title" class="list-row-title">REST</div></button>'
-    '</div></div>'
-)
-document = p.read_text()
-if "<!--SCREENS-->" not in document:
-    raise SystemExit("menu.rml has no <!--SCREENS--> slot for the list fixture")
-p.write_text(document.replace("<!--SCREENS-->", panel))
-FIXTURE
+# A generated list screen for the bridge (list_fixture.py). Without it the
+# bridge has no list, and the checks of the rows and controls on a list
+# screen cannot fail.
+python3 "$script_dir/list_fixture.py" "$assets/menu.rml" --actions
 
 "$out" "$assets" "$build_dir/thumbnail-test.png"
 
@@ -96,34 +62,7 @@ for edge_design in native disc; do
   printf '{"source":"%s","destination":"%s","palette":"blue"}' \
     "$repo_root/integrations/designs/$edge_design" "$edge_assets" \
     | "$cli" stage-theme >/dev/null
-  python3 - "$edge_assets/menu.rml" <<'FIXTURE'
-import sys, pathlib
-p = pathlib.Path(sys.argv[1])
-panel = (
-    '<div id="fixture-panel" class="screen-panel" style="display:none;">'
-    '<div class="list"><div id="fixture-page-1" class="list-page">'
-    '<button id="fixture-one" class="list-row line"><div id="fixture-one-title" class="list-row-title">ONE</div>'
-    '<div id="fixture-one-state" class="list-row-state"></div></button>'
-    '<button id="fixture-rest" class="list-row line"><div id="fixture-rest-title" class="list-row-title">REST</div>'
-    '<div id="fixture-rest-state" class="list-row-state"></div></button>'
-    '<button id="fixture-two" class="list-row "><div id="fixture-two-title" class="list-row-title">TWO</div>'
-    '<div id="fixture-two-detail" class="list-row-detail">detail</div>'
-    '<div id="fixture-two-state" class="list-row-state"></div></button>'
-    '<button id="fixture-pic" class="list-row "><div id="fixture-pic-title" class="list-row-title">PIC</div>'
-    '<div id="fixture-pic-detail" class="list-row-detail">detail</div>'
-    '<div id="fixture-pic-state" class="list-row-state"></div></button>'
-    '</div></div></div>'
-    '<div id="control-binds" class="list" style="display:none;">'
-    '<div class="list-page">'
-    '<button id="bind-one" class="list-row line"><div id="bind-one-title" class="list-row-title">ONE</div></button>'
-    '<button id="bind-rest" class="list-row line"><div id="bind-rest-title" class="list-row-title">REST</div></button>'
-    '</div></div>'
-)
-document = p.read_text()
-if "<!--SCREENS-->" not in document:
-    raise SystemExit("menu.rml has no <!--SCREENS--> slot for the list fixture")
-p.write_text(document.replace("<!--SCREENS-->", panel))
-FIXTURE
+  python3 "$script_dir/list_fixture.py" "$edge_assets/menu.rml"
   echo "row-edge $edge_design"
   "$out" "$edge_assets" row-edge || row_edge_failed=1
 done
@@ -236,17 +175,18 @@ import sys
 assets = pathlib.Path(sys.argv[1])
 menu = assets / "menu.rml"
 markup = menu.read_text()
-assert "<!--SCREENS-->" in markup
+anchor = '<div id="unlock-row"'
+assert anchor in markup
 assert '<button class="menu-action options-back"' in markup
 markup = markup.replace(
-    "<!--SCREENS-->",
+    anchor,
     '<div id="fixture-panel" class="screen-panel" '
     'style="display:none;position:absolute;left:100dp;top:100dp;width:600dp;height:300dp;">'
     '<div class="list" style="width:500dp;"><div class="list-page">'
     '<button id="fixture-one" class="list-row" style="width:400dp;height:42dp;">ONE</button>'
     '<button id="fixture-two" class="list-row" style="width:400dp;height:42dp;">TWO</button>'
     '</div></div><button id="fixture-back" class="menu-action list-back">BACK</button>'
-    '</div>',
+    '</div>' + anchor,
     1,
 )
 markup = markup.replace(

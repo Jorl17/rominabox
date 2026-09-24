@@ -301,6 +301,7 @@ fn run_driver(driver: &Path, script: &str) -> Vec<Value> {
 }
 
 #[test]
+#[ignore = "needs the headless driver: python3 scripts/test.py navigation"]
 fn arrows_pointer_and_focus_follow_every_composed_layout() {
     let driver = std::env::var_os("ROMINABOX_NAVIGATION_DRIVER")
         .map(PathBuf::from)

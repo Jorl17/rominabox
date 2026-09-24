@@ -244,7 +244,7 @@ SCOPES = [
         "arrow keys, pointer, focus and their sounds on every screen of every registered design and of the hypothetical layouts, driven through the real menu C++ on composed documents",
         "physical keyboards, pads or mice, audible sound, or how a highlight looks; a fake RetroArch host stands in for the player and nothing is drawn",
         ["env", f"ROMINABOX_NAVIGATION_DRIVER={NAVIGATION_DRIVER}",
-         "cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_navigation"],
+         "cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_navigation", "--", "--include-ignored"],
         prepare=RMLUI_PREPARE + [["python3", str(ROOT / "scripts/native_runtime/menu_harness.py"), "build",
                                   str(NAVIGATION_DRIVER), "--define", "HAVE_AUDIOMIXER",
                                   *(str(ROOT / path) for path in NAVIGATION_SOURCES)]],
