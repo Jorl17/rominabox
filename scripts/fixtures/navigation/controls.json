@@ -269,22 +269,6 @@
           ],
           null
         ]
-      },
-      "red": {
-        "*": {
-          "bug": "capture click",
-          "reason": "a press during capture reaches RmlUi, which focuses what is under it; after CANCEL hides, the screen starts over on its first control",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-a",
-              "controls-reset",
-              "control-b",
-              "control-up"
-            ]
-          }
-        }
       }
     },
     {
