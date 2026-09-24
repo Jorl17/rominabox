@@ -310,12 +310,10 @@ static int apply_file(
     size_t index;
     memset(&game, 0, sizeof game);
     memset(&applied, 0, sizeof applied);
+    /* No shipped file, so this export sets nothing here. Below we undo what
+     * an earlier export applied. */
     if (options_read(shipped_path, &shipped) != 0)
         goto done;
-    if (!shipped.raw) {
-        errno = ENOENT;
-        goto done;
-    }
     where = game_path;
     if (options_read(game_path, &game) != 0)
         goto done;
@@ -323,7 +321,16 @@ static int apply_file(
     if (options_read(applied_path, &applied) != 0)
         goto done;
 
-    for (index = 0; index < shipped.count; index++) {
+    /* For a game with no file of its own, we use the shipped one as it is. */
+    if (!game.raw && shipped.raw) {
+        where = game_dir;
+        if (make_directory(game_root) != 0 || make_directory(game_dir) != 0)
+            goto done;
+        where = game_path;
+        if (write_text(game_path, shipped.raw, strlen(shipped.raw)) != 0)
+            goto done;
+    }
+    else for (index = 0; index < shipped.count; index++) {
         const OptionLine *want = &shipped.lines[index];
         const char *have;
         const char *last;
@@ -361,7 +368,11 @@ static int apply_file(
         if (options_write(&game, game_path) != 0)
             goto done;
     }
-    if (!applied.raw || strcmp(applied.raw, shipped.raw) != 0) {
+    if (!shipped.raw) {
+        where = applied_path;
+        if (unlink(applied_path) != 0 && errno != ENOENT)
+            goto done;
+    } else if (!applied.raw || strcmp(applied.raw, shipped.raw) != 0) {
         where = applied_dir;
         if (make_directory(applied_root) != 0 || make_directory(applied_dir) != 0)
             goto done;
@@ -383,18 +394,26 @@ done:
     return result;
 }
 
-int rominabox_apply_core_options(
-    const char *shipped,
-    const char *game,
-    const char *applied,
-    char *failed,
-    size_t failed_cap) {
-    DIR *cores = opendir(shipped);
+/* The three roots, and whether we visit in a walk only the files that this
+ * export no longer ships. */
+typedef struct {
+    const char *shipped;
+    const char *game;
+    const char *applied;
+    int unshipped_only;
+    char *failed;
+    size_t failed_cap;
+} Roots;
+
+/* Apply every <core>/<file> under `walked`. */
+static int apply_tree(const char *walked, const Roots *roots) {
+    DIR *cores = opendir(walked);
     struct dirent *core;
     int result = 0;
     if (!cores)
-        return errno == ENOENT ? 0 : fail(shipped, failed, failed_cap);
+        return errno == ENOENT ? 0 : fail(walked, roots->failed, roots->failed_cap);
     while (result == 0 && (core = readdir(cores))) {
+        char walked_dir[OPTIONS_PATH_CAP];
         char shipped_dir[OPTIONS_PATH_CAP];
         char game_dir[OPTIONS_PATH_CAP];
         char applied_dir[OPTIONS_PATH_CAP];
@@ -403,36 +422,42 @@ int rominabox_apply_core_options(
         struct dirent *file;
         if (core->d_name[0] == '.')
             continue;
-        if (join(shipped_dir, sizeof shipped_dir, shipped, core->d_name) != 0
-            || join(game_dir, sizeof game_dir, game, core->d_name) != 0
-            || join(applied_dir, sizeof applied_dir, applied, core->d_name) != 0) {
-            result = fail(shipped, failed, failed_cap);
+        if (join(walked_dir, sizeof walked_dir, walked, core->d_name) != 0
+            || join(shipped_dir, sizeof shipped_dir, roots->shipped, core->d_name) != 0
+            || join(game_dir, sizeof game_dir, roots->game, core->d_name) != 0
+            || join(applied_dir, sizeof applied_dir, roots->applied, core->d_name) != 0) {
+            result = fail(walked, roots->failed, roots->failed_cap);
             break;
         }
-        if (lstat(shipped_dir, &info) != 0 || !S_ISDIR(info.st_mode))
+        if (lstat(walked_dir, &info) != 0 || !S_ISDIR(info.st_mode))
             continue;
-        files = opendir(shipped_dir);
+        files = opendir(walked_dir);
         if (!files) {
-            result = fail(shipped_dir, failed, failed_cap);
+            result = fail(walked_dir, roots->failed, roots->failed_cap);
             break;
         }
         while (result == 0 && (file = readdir(files))) {
+            char walked_path[OPTIONS_PATH_CAP];
             char shipped_path[OPTIONS_PATH_CAP];
             char game_path[OPTIONS_PATH_CAP];
             char applied_path[OPTIONS_PATH_CAP];
             if (file->d_name[0] == '.')
                 continue;
-            if (join(shipped_path, sizeof shipped_path, shipped_dir, file->d_name) != 0
+            if (join(walked_path, sizeof walked_path, walked_dir, file->d_name) != 0
+                || join(shipped_path, sizeof shipped_path, shipped_dir, file->d_name) != 0
                 || join(game_path, sizeof game_path, game_dir, file->d_name) != 0
                 || join(applied_path, sizeof applied_path, applied_dir, file->d_name) != 0) {
-                result = fail(shipped_dir, failed, failed_cap);
+                result = fail(walked_dir, roots->failed, roots->failed_cap);
                 break;
             }
-            if (lstat(shipped_path, &info) != 0 || !S_ISREG(info.st_mode))
+            if (lstat(walked_path, &info) != 0 || !S_ISREG(info.st_mode))
+                continue;
+            if (roots->unshipped_only && lstat(shipped_path, &info) == 0)
                 continue;
             result = apply_file(
-                shipped_path, game, game_dir, game_path,
-                applied, applied_dir, applied_path, failed, failed_cap);
+                shipped_path, roots->game, game_dir, game_path,
+                roots->applied, applied_dir, applied_path,
+                roots->failed, roots->failed_cap);
         }
         {
             int saved = errno;
@@ -446,4 +471,19 @@ int rominabox_apply_core_options(
         errno = saved;
     }
     return result;
+}
+
+int rominabox_apply_core_options(
+    const char *shipped,
+    const char *game,
+    const char *applied,
+    char *failed,
+    size_t failed_cap) {
+    Roots roots = {shipped, game, applied, 0, failed, failed_cap};
+    /* What this export ships, then what an earlier one applied and this one
+     * no longer ships at all. */
+    if (apply_tree(shipped, &roots) != 0)
+        return -1;
+    roots.unshipped_only = 1;
+    return apply_tree(applied, &roots);
 }
