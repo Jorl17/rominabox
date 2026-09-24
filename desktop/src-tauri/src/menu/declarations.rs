@@ -201,6 +201,9 @@ pub(crate) fn write(
     )?;
     line(&mut text, "binds_width", &binds.width.to_string())?;
     line(&mut text, "binds_list", "control-binds")?;
+    // The font files staged beside the document, which we load in the player.
+    let fonts: Vec<&str> = manifest.fonts.iter().map(|font| font.file.as_str()).collect();
+    line(&mut text, "fonts", &fonts.join(" "))?;
 
     for list in lists {
         if let Some(toggle) = &list.screen.toggle {
