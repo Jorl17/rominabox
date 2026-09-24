@@ -199,11 +199,19 @@
         "*": [
           "volume-level",
           "control-up",
+          "control-up",
+          "control-up"
+        ]
+      },
+      "capturing": {
+        "*": [
+          null,
+          null,
           [
             "control-up",
             "controls-cancel"
           ],
-          "control-up"
+          null
         ]
       },
       "sounds": {
@@ -220,6 +228,46 @@
           [
             "cancel"
           ]
+        ]
+      }
+    },
+    {
+      "name": "a click while capturing moves nothing; CANCEL cancels",
+      "steps": [
+        "options",
+        "controls",
+        "press:control-a",
+        "press:controls-reset",
+        "press:control-b",
+        "press:controls-cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-a",
+          "control-a",
+          "control-a",
+          "control-a"
+        ]
+      },
+      "capturing": {
+        "*": [
+          null,
+          null,
+          [
+            "control-a",
+            "controls-cancel"
+          ],
+          [
+            "control-a",
+            "controls-cancel"
+          ],
+          [
+            "control-a",
+            "controls-cancel"
+          ],
+          null
         ]
       }
     },

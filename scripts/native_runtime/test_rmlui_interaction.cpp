@@ -362,10 +362,9 @@ static void check_drawn_above(const char *design)
    }
    const std::string &focused = callouts[0];
    const std::string &neighbour = callouts[1];
-   const std::string focused_id = focused.substr(std::strlen("control-"));
-   const std::string neighbour_id = neighbour.substr(std::strlen("control-"));
-   view.controls.set_control_state(focused_id.c_str(), "A", "a", true, false);
-   view.controls.set_control_state(neighbour_id.c_str(), "B", "b", false, false);
+   /* We paint the focused callout as we paint every focused stop. */
+   std::snprintf(message, sizeof(message), "%s: %s takes focus", design, focused.c_str());
+   CHECK(view.focus.set(focused.c_str()), message);
    /* test_property uses one buffer, so we copy the value before the next
     * read. */
    const std::string focused_z = inspect.property(focused.c_str(), "z-index");
@@ -395,7 +394,6 @@ static void check_drawn_above(const char *design)
       view.controls.focus_group(nullptr);
    }
 
-   view.controls.set_control_state(focused_id.c_str(), "A", "a", false, false);
    view.pointer_move(1, 1);
 }
 
@@ -1051,7 +1049,7 @@ int main(int argc, char **argv)
       view.controls.set_control_state("up", "Up", "up", true, false);
       CHECK(std::string(inspect.property("control-up", "animation")).find("capture-pulse") == std::string::npos, "capture cue stops when capture ends");
    }
-   view.controls.set_controls_action_focus(false, false, true);
+   view.controls.set_capturing(true);
    int cancel_x = 0;
    int cancel_y = 0;
    CHECK(view.document.element_center("controls-cancel", &cancel_x, &cancel_y),
