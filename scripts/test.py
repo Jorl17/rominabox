@@ -118,6 +118,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/picture_edges.py")],
     ),
     Scope(
+        "coreoptions",
+        "that the core options an export ships replace an older value in the game's own options file on launch, and that a value the player changed afterwards stays",
+        "that RetroArch reads that file or that the core honours it; the picture scope covers the core",
+        ["python3", str(ROOT / "scripts/test_core_options.py")],
+    ),
+    Scope(
         "frontend",
         "the React builder UI: controls editor, sound preview, app flow, and that it typechecks",
         "anything about the exported player, which is a different codebase",

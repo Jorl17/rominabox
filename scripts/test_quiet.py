@@ -66,14 +66,17 @@ def forced_driver() -> str | None:
     return found.group(1) if found else None
 
 
+def launcher_sources() -> list[str]:
+    return sorted(str(path) for path in (ROOT / "desktop/src-tauri/launcher").glob("*.c"))
+
+
 def compile_plan(directory: Path) -> Path:
     binary = directory / "Plan.app" / "Contents" / "MacOS" / "plan"
     binary.parent.mkdir(parents=True)
     made = subprocess.run(
         [
             "cc", "-DROMINABOX_PLAN_MAIN", "-O2",
-            "-o", str(binary),
-            str(ROOT / "desktop/src-tauri/launcher/main.c"),
+            "-o", str(binary), *launcher_sources(),
         ],
         capture_output=True, text=True,
     )
@@ -264,8 +267,7 @@ def decision_check() -> list[str]:
         compiled = subprocess.run(
             [
                 "cc", "-DROMINABOX_DECISION_MAIN", "-O2",
-                "-o", str(binary),
-                str(ROOT / "desktop/src-tauri/launcher/main.c"),
+                "-o", str(binary), *launcher_sources(),
             ],
             capture_output=True, text=True,
         )

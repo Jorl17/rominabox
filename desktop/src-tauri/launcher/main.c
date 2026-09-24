@@ -12,6 +12,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "core_options.h"
+
 #define PATH_CAP 4096
 #define LINE_CAP 8192
 #define MANAGED_CAP 64
@@ -657,9 +659,15 @@ static void prepare(void) {
         join_path(from, sizeof from, resources, "autoconfig");
         join_path(to, sizeof to, data_dir, "autoconfig");
         seed_nested(from, to);
-        join_path(from, sizeof from, resources, "core-options");
-        join_path(to, sizeof to, data_dir, "config");
-        seed_nested(from, to);
+        {
+            char applied[PATH_CAP];
+            char failed[PATH_CAP];
+            join_path(from, sizeof from, resources, "core-options");
+            join_path(to, sizeof to, data_dir, "config");
+            join_path(applied, sizeof applied, data_dir, "applied-core-options");
+            if (rominabox_apply_core_options(from, to, applied, failed, sizeof failed) != 0)
+                die_errno(failed);
+        }
         join_path(from, sizeof from, resources, "firmware");
         join_path(to, sizeof to, data_dir, "system");
         seed_files(from, to);
