@@ -310,20 +310,6 @@
           "control-l2",
           "control-up"
         ]
-      },
-      "red": {
-        "native": {
-          "bug": "B22",
-          "reason": "the same overlap in Native's pad scene: seven callouts a side are 58dp tall every 54dp, so Down skips one",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-l",
-              "control-up",
-              "control-right"
-            ]
-          }
-        }
       }
     }
   ]
