@@ -1,7 +1,7 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
 use rominabox_desktop::{
-    controls, cores, metadata, packaging, projects, shaders, systems, themes, volume,
+    controls, cores, menu, metadata, packaging, projects, shaders, systems, volume,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -245,59 +245,36 @@ fn run() -> Result<(), String> {
             let mut options = controls::Controls::default();
             options.profile = request.profile.clone();
             let profile = controls::validate_for_system(&request.system, &options)?;
-            let metrics = themes::scene_metrics(&request.design)?;
+            let metrics = menu::scene_metrics(&request.design)?;
             let layout = rominabox_desktop::scene_layout::layout(&profile.controls, metrics);
             println!("{}", json!({ "type": "result", "result": layout }));
             Ok(())
         }
-        "stage-theme" => {
+        "stage-theme" | "stage-controls" => {
             let input = read_request()?;
-            // The stylesheet that we write in an export, on demand. To see it,
-            // for example in a screenshot harness or when checking a design,
-            // get it from the exporter. The design's own file contains tokens
-            // instead of colours, and is not what a player gets.
+            // We write the menu of an export on demand, with the one composer
+            // for the export, the builder's preview and both of these commands.
+            // When we need the menu elsewhere, such as in a screenshot harness
+            // or a design check, we make it here and never assemble another, so
+            // the menu is the same in every renderer.
+            //
+            // For stage-theme `source` is the design. For stage-controls
+            // `source` is the controller artwork and `design` is the design.
             #[derive(Deserialize)]
-            #[serde(rename_all = "camelCase")]
+            #[serde(rename_all = "camelCase", deny_unknown_fields)]
             struct Request {
                 source: PathBuf,
-                destination: PathBuf,
-                palette: String,
-                #[serde(default)]
-                background: Option<PathBuf>,
-            }
-            let request: Request = serde_json::from_str(&input)
-                .map_err(|error| format!("invalid stage-theme request: {error}"))?;
-            themes::prepare_theme_assets(
-                &request.source,
-                &request.destination,
-                &request.palette,
-                request.background.as_deref(),
-            )?;
-            println!(
-                "{}",
-                json!({ "type": "result", "result": {
-                    "stylesheet": request.destination.join("menu.rcss"),
-                }})
-            );
-            Ok(())
-        }
-        "stage-controls" => {
-            let input = read_request()?;
-            // We generate the controls scene in the exporter from a console
-            // package. To see that markup, for example in a screenshot harness or
-            // when checking a design, get it from the exporter instead of
-            // assembling a copy, because two copies would come to differ.
-            #[derive(Deserialize)]
-            #[serde(rename_all = "camelCase")]
-            struct Request {
-                system: String,
-                source: PathBuf,
-                /// The design for whose frame we generate the scene. The default
-                /// is the artwork directory, which is a design directory when
-                /// the two are the same place.
                 #[serde(default)]
                 design: Option<PathBuf>,
+                #[serde(default)]
+                artwork: Option<PathBuf>,
                 destination: PathBuf,
+                #[serde(default)]
+                palette: Option<String>,
+                #[serde(default)]
+                background: Option<PathBuf>,
+                #[serde(default)]
+                system: Option<String>,
                 #[serde(default)]
                 controls: controls::Controls,
                 /// Options entries to stage, or the design's defaults when absent.
@@ -305,18 +282,34 @@ fn run() -> Result<(), String> {
                 menu_entries: Option<Vec<String>>,
             }
             let request: Request = serde_json::from_str(&input)
-                .map_err(|error| format!("invalid stage-controls request: {error}"))?;
-            themes::prepare_controls_assets(
-                &request.source,
-                request.design.as_deref().unwrap_or(&request.source),
-                &request.destination,
-                &request.system,
-                &request.controls,
-                request.menu_entries.as_deref(),
-            )?;
+                .map_err(|error| format!("invalid {command} request: {error}"))?;
+            let (design, artwork) = if command == "stage-theme" {
+                let artwork = request
+                    .artwork
+                    .unwrap_or_else(|| rominabox_desktop::repo::at("desktop/assets/controllers"));
+                (request.design.unwrap_or(request.source), artwork)
+            } else {
+                // The artwork directory is a design directory when the two
+                // are the same place.
+                (
+                    request.design.unwrap_or_else(|| request.source.clone()),
+                    request.artwork.unwrap_or(request.source),
+                )
+            };
+            let defaults = menu::MenuRequest::new(design, artwork);
+            menu::compose_menu(&menu::MenuRequest {
+                palette: request.palette.unwrap_or(defaults.palette.clone()),
+                background: request.background,
+                system: request.system.unwrap_or(defaults.system.clone()),
+                controls: request.controls,
+                menu_entries: request.menu_entries,
+                ..defaults
+            })?
+            .write(&request.destination)?;
             println!(
                 "{}",
                 json!({ "type": "result", "result": {
+                    "stylesheet": request.destination.join("menu.rcss"),
                     "document": request.destination.join("menu.rml"),
                 }})
             );
@@ -324,9 +317,9 @@ fn run() -> Result<(), String> {
         }
         "preview" => {
             let input = read_request()?;
-            let request: themes::PreviewRequest = serde_json::from_str(&input)
+            let request: menu::PreviewRequest = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid preview request: {error}"))?;
-            let image_path = themes::render_preview(&request)?;
+            let image_path = menu::render_preview(&request)?;
             println!(
                 "{}",
                 json!({ "type": "result", "result": { "imagePath": image_path } })
@@ -370,7 +363,7 @@ fn run() -> Result<(), String> {
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid volume-markup request: {error}"))?;
-            let markup = themes::volume_control_markup(&request.design)?;
+            let markup = menu::volume_control_markup(&request.design)?;
             println!(
                 "{}",
                 json!({ "type": "result", "result": { "markup": markup } })

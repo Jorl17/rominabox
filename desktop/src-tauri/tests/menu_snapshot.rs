@@ -1,13 +1,14 @@
 //! Characterisation snapshot of the menu that we stage in an export.
 //!
-//! We compose every design in the registry, with four menu configurations
-//! and two consoles, with `themes::compose_menu`, and compare its menu files
-//! byte for byte with `tests/fixtures/menu-snapshots/<case>/`, so any change
-//! to the composed menu appears as a difference. On macOS we also export
-//! every case and check that the export stages exactly what `compose_menu`
-//! composed.
+//! We compose every design in the registry, with four menu configurations and
+//! two consoles, with `menu::compose_menu`, and compare its menu files byte
+//! for byte with `tests/fixtures/menu-snapshots/<case>/`. After a change to
+//! the composition the files are identical, or a new recording shows what
+//! changed. On macOS we also export every case and must stage exactly what
+//! `compose_menu` composed.
 //!
-//! Re-record with `ROMINABOX_RECORD_SNAPSHOT=1`.
+//! Record again with `ROMINABOX_RECORD_SNAPSHOT=1`, and say in the commit
+//! what changed and why.
 
 use rominabox_desktop::packaging::{ExportRequest, ExportTarget};
 use std::{
@@ -103,6 +104,10 @@ fn menu_kit(root: &Path) -> PathBuf {
     copy_tree(
         &rominabox_desktop::repo::at("integrations/designs"),
         &kit.join("designs"),
+    );
+    copy_tree(
+        &rominabox_desktop::repo::at("integrations/parts"),
+        &kit.join("parts"),
     );
     copy_tree(
         &rominabox_desktop::repo::at("desktop/assets/controllers"),
@@ -224,7 +229,7 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
         Menu::Default => {}
         Menu::NoOptions => request.menu_entries = Some(Vec::new()),
         Menu::Everything => {
-            let entries: Vec<String> = rominabox_desktop::themes::declared_screens(&design)
+            let entries: Vec<String> = rominabox_desktop::menu::declared_screens(&design)
                 .unwrap()
                 .into_iter()
                 .filter(|screen| screen.option_label.is_some())
@@ -250,29 +255,14 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
 }
 
 /// The menu we stage in an export of `request`, composed without the export:
-/// the same two calls, with the same values, that we make in `export_macos`
-/// for its `menu-assets`.
+/// the same request mapping and the same two writes as in `export_macos` for
+/// its `menu-assets`.
 fn compose(request: &ExportRequest, destination: &Path) -> BTreeMap<String, String> {
     fs::create_dir_all(destination).unwrap();
-    rominabox_desktop::themes::compose_menu(
-        &rominabox_desktop::themes::MenuRequest {
-            kit: &request.runtime_kit,
-            design: &request.theme,
-            palette: &request.palette,
-            background: request.background.as_deref(),
-            system: &request.system,
-            controls: &request.controls,
-            show_menu: request.show_menu,
-            splash: request.splash,
-            include_achievements: request.include_achievements,
-            menu_entries: request.menu_entries.as_deref(),
-            shaders: &request.shaders,
-            // The content of every case is one cartridge or one disc sheet.
-            discs: 1,
-        },
-        destination,
-    )
-    .unwrap_or_else(|error| panic!("{}: composition failed: {error}", request.theme));
+    // Every case's content is one cartridge or one disc sheet.
+    rominabox_desktop::menu::compose_menu(&rominabox_desktop::packaging::menu_request(request, 1))
+        .and_then(|menu| menu.write(destination))
+        .unwrap_or_else(|error| panic!("{}: composition failed: {error}", request.theme));
     rominabox_desktop::controls::write_defaults_config_with_advanced_access(
         &request.system,
         &request.controls,

@@ -10,6 +10,8 @@
 //! We check the file that we write in an export: it changes no style, and it
 //! contains no colour from a palette other than the chosen one.
 
+mod support;
+
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
 // We run the tests in parallel, and two of them export the same palette. With
@@ -27,7 +29,7 @@ fn scratch(name: &str) -> rominabox_scratch::Scratch {
 fn exported_stylesheet(palette: &str) -> String {
     let design = repo().join("integrations/designs/native");
     let out = scratch(palette);
-    rominabox_desktop::themes::prepare_theme_assets(&design, &out, palette, None)
+    support::stage_theme(&design, &out, palette)
         .unwrap_or_else(|e| panic!("staging the {palette} palette: {e}"));
     fs::read_to_string(out.join("menu.rcss")).unwrap()
 }

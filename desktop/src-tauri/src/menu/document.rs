@@ -1,0 +1,543 @@
+//! The menu document: the page skeleton of Native with the fragments of the
+//! design, the Options screen for this game, the volume control, the shared
+//! part stylesheets and the state classes for the design to style.
+//!
+//! We work on text here, and write nothing until the composition is
+//! complete.
+
+use super::manifest::{Manifest, Screen, ScreenPlace};
+use std::{
+    collections::BTreeSet,
+    fs,
+    path::{Path, PathBuf},
+};
+
+/// Which screens we put in a game.
+///
+/// `chosen` is the set for the export. Without it, each entry has its
+/// default. An empty set means a game with no Options button. We refuse an
+/// id that is not an entry in this design, instead of ignoring it.
+pub(crate) fn staged_screens(
+    screens: &[Screen],
+    chosen: Option<&[String]>,
+) -> Result<Vec<Screen>, String> {
+    let entries: Vec<&Screen> = screens
+        .iter()
+        .filter(|screen| screen.option_label.is_some())
+        .collect();
+    let included: BTreeSet<&str> = match chosen {
+        // Without a set, the game has one disc. The disc list is an entry
+        // only when the export has more than one disc (`compose_menu`).
+        None => entries
+            .iter()
+            .filter(|screen| screen.option_default && !screen.is_disc_list())
+            .map(|screen| screen.id.as_str())
+            .collect(),
+        Some(ids) => {
+            for id in ids {
+                if !entries.iter().any(|screen| screen.id == *id) {
+                    return Err(format!(
+                        "'{id}' is not an options entry this design declares"
+                    ));
+                }
+            }
+            ids.iter().map(String::as_str).collect()
+        }
+    };
+    let show_options = !included.is_empty();
+    let mut staged: Vec<Screen> = screens
+        .iter()
+        .filter(|screen| match screen.place {
+            ScreenPlace::Options => show_options,
+            ScreenPlace::Plain => {
+                screen.option_label.is_none() || included.contains(screen.id.as_str())
+            }
+        })
+        .cloned()
+        .collect();
+    if show_options
+        && !staged
+            .iter()
+            .any(|screen| screen.place == ScreenPlace::Options)
+    {
+        return Err("The Native base must declare an Options screen for enabled entries".into());
+    }
+    // When someone leaves Options, we show the screen behind it, the first
+    // screen that is not itself an entry. The generated back button is a
+    // button of that screen, because in the player we know only "the button
+    // that shows a screen".
+    if show_options {
+        if let Some(behind) = staged
+            .iter_mut()
+            .find(|screen| screen.place == ScreenPlace::Plain && screen.option_label.is_none())
+        {
+            behind.button = "options-back".to_string();
+        }
+    }
+    Ok(staged)
+}
+
+/// The page skeleton of Native with the chrome and screen fragments of the
+/// design. The extra panels are in the `screen-order.rml` of the design, and
+/// we draw only those for this game. An export with no Options entries has
+/// no Options panel, instead of one that nobody can reach.
+pub(crate) fn skeleton(manifest: &Manifest, staged: &[Screen]) -> Result<String, String> {
+    let skeleton = manifest.base.join(&manifest.documents.menu);
+    let mut menu = fs::read_to_string(&skeleton)
+        .map_err(|e| format!("Could not read {}: {e}", skeleton.display()))?;
+    for (slot, name) in [
+        ("<!--SPINE-->", "spine.rml"),
+        ("<!--HEADING-->", "heading.rml"),
+        ("<!--FOOTER-->", "footer.rml"),
+        ("<!--SCREEN:pause-->", "screen-pause.rml"),
+        ("<!--SCREEN:controls-->", "screen-controls.rml"),
+    ] {
+        let value = if manifest.has_fragment(name) {
+            manifest.fragment(name)?
+        } else {
+            String::new()
+        };
+        if !menu.contains(slot) {
+            return Err(format!("Native menu has no {slot} insertion point"));
+        }
+        menu = menu.replace(slot, &value);
+    }
+    let order = manifest.design.join("screen-order.rml");
+    let extra = if order.is_file() {
+        fs::read_to_string(&order)
+            .map_err(|e| format!("Could not read {}: {e}", order.display()))?
+    } else {
+        String::new()
+    };
+    let mut expanded = String::new();
+    let mut remaining = extra.as_str();
+    let mut placed = BTreeSet::new();
+    while let Some(start) = remaining.find("<!--SCREEN:") {
+        expanded.push_str(&remaining[..start]);
+        let after = &remaining[start + "<!--SCREEN:".len()..];
+        let end = after
+            .find("-->")
+            .ok_or_else(|| format!("Unclosed screen in {}", order.display()))?;
+        let id = &after[..end];
+        if !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') || id.is_empty() {
+            return Err(format!("Invalid screen id '{id}' in {}", order.display()));
+        }
+        if !manifest.screens.iter().any(|screen| screen.id == id) {
+            return Err(format!(
+                "Screen '{id}' in {} is not declared",
+                order.display()
+            ));
+        }
+        if !placed.insert(id) {
+            return Err(format!("Screen '{id}' occurs twice in {}", order.display()));
+        }
+        if staged.iter().any(|screen| screen.id == id) {
+            expanded.push_str(&manifest.fragment(&format!("screen-{id}.rml"))?);
+        }
+        remaining = &after[end + "-->".len()..];
+    }
+    expanded.push_str(remaining);
+    if !menu.contains("<!--EXTRA-SCREENS-->") {
+        return Err("Native menu has no extra-screen insertion point".into());
+    }
+    let slots = manifest.fragment("save-slots.rml")?;
+    Ok(menu
+        .replace("<!--EXTRA-SCREENS-->", &expanded)
+        .replace("<!--SAVE-SLOTS-->", &slots))
+}
+
+pub(crate) fn button_bounds(document: &str, id: &str) -> Option<(usize, usize)> {
+    let marker = format!("id=\"{id}\"");
+    let mut from = 0;
+    while let Some(found) = document[from..].find(&marker) {
+        let at = from + found;
+        let start = document[..at].rfind('<')?;
+        let tag = &document[start..at];
+        if !tag.contains("button") {
+            from = at + marker.len();
+            continue;
+        }
+        let close = document[at..].find("</button>")? + at + "</button>".len();
+        return Some((start, close));
+    }
+    None
+}
+
+fn entry_button(manifest: &Manifest, screen: &Screen, index: usize) -> Result<String, String> {
+    let label = screen.option_label.clone().unwrap_or_default();
+    let top = (index * manifest.option_entry_step).to_string();
+    let template_path = manifest.design.join("option-entry.rml");
+    let template = if template_path.exists() {
+        fs::read_to_string(&template_path)
+            .map_err(|e| format!("Could not read {}: {e}", template_path.display()))?
+    } else {
+        "<button class=\"menu-action option-entry\" id=\"BUTTON\" style=\"top: TOPdp;\">LABEL</button>"
+            .to_string()
+    };
+    let mut button = template
+        .replace("BUTTON", &screen.button)
+        .replace("TOP", &top)
+        .replace("LABEL", &crate::lists::rml_text(&label));
+    // We get the count from the core after the game has loaded, so the entry
+    // must be in the document already. It starts hidden. A display:none
+    // button can still get the focus unless it is disabled too.
+    if screen.is_disc_list() {
+        button = button.replace(
+            "style=\"top: ",
+            "disabled=\"disabled\" style=\"display: none; top: ",
+        );
+    }
+    Ok(button)
+}
+
+/// Rewrite the menu so that Options has exactly the entries for this game.
+///
+/// We cannot create elements in the player while it runs, so the buttons
+/// must be in the document. When a design has an options panel, we add the
+/// entries to it. Otherwise we add the built-in panel, with the button class
+/// of the design.
+pub(crate) fn apply_options(
+    manifest: &Manifest,
+    document: &str,
+    staged: &[Screen],
+) -> Result<String, String> {
+    let options = staged
+        .iter()
+        .find(|screen| screen.place == ScreenPlace::Options);
+    let included: Vec<&Screen> = staged
+        .iter()
+        .filter(|screen| screen.option_label.is_some())
+        .collect();
+    // Every entry in the design, so that we take a disabled one off the pause
+    // row instead of leaving it there as a separate button.
+    let declared_entries: Vec<&Screen> = manifest
+        .screens
+        .iter()
+        .filter(|screen| screen.option_label.is_some())
+        .collect();
+
+    let mut document = document.to_string();
+    let Some(options) = options else {
+        for entry in &declared_entries {
+            if let Some((start, end)) = button_bounds(&document, &entry.button) {
+                if !document[..start].contains("id=\"options-panel\"") {
+                    document.replace_range(start..end, "");
+                }
+            }
+        }
+        return Ok(document);
+    };
+    let opener_label = options
+        .label
+        .clone()
+        .unwrap_or_else(|| options.heading.clone());
+    let opener = format!(
+        "<button class=\"menu-action\" id=\"{}\">{}</button>",
+        options.button,
+        crate::lists::rml_text(&opener_label)
+    );
+    let mut placed_opener = document.contains(&format!("id=\"{}\"", options.button));
+    for entry in &declared_entries {
+        // A button already inside the options panel is the design's version
+        // of that entry. We move a top-level button on the pause row into the
+        // options panel.
+        let Some((start, end)) = button_bounds(&document, &entry.button) else {
+            continue;
+        };
+        if document[..start].contains("id=\"options-panel\"") {
+            continue;
+        }
+        if !placed_opener && included.iter().any(|screen| screen.id == entry.id) {
+            document.replace_range(start..end, &opener);
+            placed_opener = true;
+        } else {
+            document.replace_range(start..end, "");
+        }
+    }
+    if !placed_opener {
+        if let Some(quit) = button_bounds(&document, "quit") {
+            document.insert_str(quit.0, &opener);
+        }
+    }
+
+    let mut entries = String::new();
+    for (index, entry) in included.iter().enumerate() {
+        // We removed the pause-row button when we replaced the opener, so an id
+        // still in the document is the design's version of the entry.
+        if document.contains(&format!("id=\"{}\"", entry.button)) {
+            continue;
+        }
+        entries.push_str(&entry_button(manifest, entry, index)?);
+    }
+
+    let panel_id = format!("id=\"{}\"", options.panel);
+    if !document.contains(&panel_id) {
+        if options.id.is_empty()
+            || !options
+                .id
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
+            return Err(format!("Invalid Options screen id '{}'", options.id));
+        }
+        let name = format!("screen-{}.rml", options.id);
+        let shell = if manifest.has_fragment(&name) {
+            manifest.fragment(&name)?
+        } else {
+            let back = options.back_label.clone().unwrap_or_else(|| "BACK".into());
+            format!(
+                "<div {panel_id} class=\"screen-panel\" style=\"display:none;\"><div id=\"options-entries\"><!--OPTIONS--></div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
+                back = crate::lists::rml_text(&back),
+            )
+        };
+        if !shell.contains(&panel_id) {
+            return Err(format!("{name} must contain {panel_id}"));
+        }
+        if !shell.contains("<!--OPTIONS-->") && !shell.contains("id=\"options-entries\">") {
+            return Err(format!(
+                "{name} must contain <!--OPTIONS--> or #options-entries"
+            ));
+        }
+        let footer = "<div id=\"footer\">";
+        let Some(at) = document.find(footer) else {
+            return Err("menu.rml has no footer, so the options screen has nowhere to go".into());
+        };
+        document.insert_str(at, &shell);
+    }
+    if document.contains("<!--OPTIONS-->") {
+        document = document.replace("<!--OPTIONS-->", &entries);
+    } else if document.contains(&panel_id) {
+        document = document.replacen(
+            "id=\"options-entries\">",
+            &format!("id=\"options-entries\">{entries}"),
+            1,
+        );
+    }
+    Ok(document)
+}
+
+/// The marker a design puts where the volume control goes, when it goes
+/// somewhere other than the start of the Options panel.
+pub const VOLUME_SLOT: &str = "<!--VOLUME-->";
+
+/// Where the shared parts are: beside the `designs` directory, in the
+/// repository and in a runtime kit alike.
+pub(crate) fn parts_root(design: &Path) -> Result<PathBuf, String> {
+    let parts = design
+        .parent()
+        .and_then(Path::parent)
+        .map(|root| root.join("parts"))
+        .ok_or_else(|| format!("{} is not inside a designs directory", design.display()))?;
+    if !parts.is_dir() {
+        return Err(format!(
+            "the shared menu parts are missing at {}: they are staged beside the designs",
+            parts.display()
+        ));
+    }
+    Ok(parts)
+}
+
+fn has_class(template: &str, class: &str) -> bool {
+    template.split("class=\"").skip(1).any(|rest| {
+        rest.split('"')
+            .next()
+            .unwrap_or("")
+            .split_whitespace()
+            .any(|token| token == class)
+    })
+}
+
+/// A part's markup: the design's own `parts/<name>.rml`, or the shared one.
+fn part_template(design: &Path, name: &str) -> Result<String, String> {
+    let override_path = design.join("parts").join(format!("{name}.rml"));
+    let path = if override_path.is_file() {
+        override_path
+    } else {
+        parts_root(design)?.join(format!("{name}.rml"))
+    };
+    fs::read_to_string(&path).map_err(|e| format!("Could not read {}: {e}", path.display()))
+}
+
+fn require_classes(kind: &str, template: &str, classes: &[&str]) -> Result<(), String> {
+    for class in classes {
+        if !has_class(template, class) {
+            return Err(format!(
+                "the {kind} part must carry class `{class}`, so every design draws it and the control can find it"
+            ));
+        }
+    }
+    if !template.contains("PART-ID") {
+        return Err(format!(
+            "the {kind} part must contain PART-ID, so each use can name its own"
+        ));
+    }
+    Ok(())
+}
+
+/// The volume control, made of its name, the low end, an arrow, the slider
+/// from the design, an arrow and the high end.
+///
+/// The slider comes first in the document, so the keyboard focus goes to it
+/// first and the left and right keys move it. The design places the rest, so
+/// the order in the document is not the order on screen. There is no number
+/// and no mute button, because the quiet end is the quietest the volume goes.
+pub fn volume_control_markup(design: &Path) -> Result<String, String> {
+    let slider = part_template(design, "slider")?;
+    require_classes(
+        "slider",
+        &slider,
+        &[
+            "slider",
+            "slider-track",
+            "slider-fill",
+            "slider-thumb",
+            "slider-readout",
+        ],
+    )?;
+    Ok(format!(
+        "<div id=\"volume-control\">{slider}<button id=\"{down}\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{up}\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{low}\" class=\"volume-end\">LOW</div><div id=\"{high}\" class=\"volume-end\">HIGH</div><div class=\"volume-name\">VOLUME</div></div>",
+        slider = slider.replace("PART-ID", crate::volume::slider_id()).replace("LABEL", ""),
+        down = crate::volume::down_id(),
+        up = crate::volume::up_id(),
+        low = crate::volume::low_id(),
+        high = crate::volume::high_id(),
+    ))
+}
+
+/// Put the volume control in Options.
+///
+/// When the design contains `<!--VOLUME-->`, we put the control there.
+/// Otherwise we insert it at the start of the Options panel. A menu with no
+/// Options screen has no volume control either.
+pub fn install_volume_control(document: &str, design: &Path) -> Result<String, String> {
+    if document.contains("id=\"volume-control\"") {
+        return Ok(document.to_string());
+    }
+    let marker = "id=\"options-panel\"";
+    if !document.contains(VOLUME_SLOT) && !document.contains(marker) {
+        return Ok(document.to_string());
+    }
+    let markup = volume_control_markup(design)?;
+    if document.contains(VOLUME_SLOT) {
+        return Ok(document.replacen(VOLUME_SLOT, &markup, 1));
+    }
+    let at = document.find(marker).expect("checked above");
+    let tag_end = document[at..]
+        .find('>')
+        .map(|end| at + end + 1)
+        .ok_or_else(|| "the options panel tag is never closed".to_string())?;
+    let mut installed = String::with_capacity(document.len() + markup.len());
+    installed.push_str(&document[..tag_end]);
+    installed.push_str(&markup);
+    installed.push_str(&document[tag_end..]);
+    Ok(installed)
+}
+
+/// Every shared part stylesheet, by name, in name order. We link them into
+/// every composed document before the design's stylesheet, so a design can
+/// restyle a part with ordinary rules.
+pub(crate) fn part_sheets(design: &Path) -> Result<Vec<(String, String)>, String> {
+    let root = parts_root(design)?;
+    let mut sheets = Vec::new();
+    for entry in fs::read_dir(&root).map_err(|e| format!("{}: {e}", root.display()))? {
+        let path = entry.map_err(|e| e.to_string())?.path();
+        if path
+            .extension()
+            .is_some_and(|extension| extension == "rcss")
+            && path.is_file()
+        {
+            let name = path
+                .file_name()
+                .expect("a file has a name")
+                .to_string_lossy()
+                .into_owned();
+            let text = fs::read_to_string(&path)
+                .map_err(|e| format!("Could not read {}: {e}", path.display()))?;
+            sheets.push((name, text));
+        }
+    }
+    sheets.sort();
+    Ok(sheets)
+}
+
+/// The staged stylesheet every document links.
+pub(crate) const STYLESHEET: &str = "menu.rcss";
+
+/// Link each part stylesheet, under `parts/`, before the design stylesheet.
+pub(crate) fn link_parts(document: &str, names: &[String]) -> Result<String, String> {
+    let design_link = format!("<link type=\"text/rcss\" href=\"{STYLESHEET}\"/>");
+    let Some(at) = document.find(&design_link) else {
+        return Err(format!(
+            "the document does not link its stylesheet as {design_link}, so the shared parts \
+             have nothing to come before"
+        ));
+    };
+    let links: String = names
+        .iter()
+        .map(|name| format!("<link type=\"text/rcss\" href=\"parts/{name}\"/>"))
+        .collect();
+    let mut linked = document.to_string();
+    linked.insert_str(at, &links);
+    Ok(linked)
+}
+
+/// Add `class` to the element with `id`, when the document has one. How to
+/// draw a state is up to the stylesheet of the design, and here we only say
+/// which state applies.
+pub(crate) fn add_class(document: &str, id: &str, class: &str) -> String {
+    let marker = format!("id=\"{id}\"");
+    let Some(at) = document.find(&marker) else {
+        return document.to_string();
+    };
+    let Some(start) = document[..at].rfind('<') else {
+        return document.to_string();
+    };
+    let Some(end) = document[at..].find('>').map(|end| at + end) else {
+        return document.to_string();
+    };
+    let tag = &document[start..end];
+    let mut out = document.to_string();
+    if let Some(classes) = tag.find("class=\"") {
+        let value = start + classes + "class=\"".len();
+        out.insert_str(value, &format!("{class} "));
+    } else {
+        out.insert_str(at + marker.len(), &format!(" class=\"{class}\""));
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_state_class_joins_the_elements_own() {
+        assert_eq!(
+            add_class("<div id=\"actions\">", "actions", "no-options"),
+            "<div id=\"actions\" class=\"no-options\">"
+        );
+        assert_eq!(
+            add_class(
+                "<div class=\"row\" id=\"actions\">",
+                "actions",
+                "no-options"
+            ),
+            "<div class=\"no-options row\" id=\"actions\">"
+        );
+        assert_eq!(
+            add_class("<div id=\"other\">", "actions", "x"),
+            "<div id=\"other\">"
+        );
+    }
+
+    #[test]
+    fn parts_are_linked_before_the_designs_stylesheet() {
+        let document = "<head><link type=\"text/rcss\" href=\"menu.rcss\"/></head>";
+        let linked = link_parts(document, &["a.rcss".into(), "b.rcss".into()]).unwrap();
+        assert_eq!(
+            linked,
+            "<head><link type=\"text/rcss\" href=\"parts/a.rcss\"/><link type=\"text/rcss\" href=\"parts/b.rcss\"/><link type=\"text/rcss\" href=\"menu.rcss\"/></head>"
+        );
+        assert!(link_parts("<head></head>", &[]).is_err());
+    }
+}

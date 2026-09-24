@@ -8,6 +8,7 @@ pub mod discs;
 pub mod dumps;
 pub mod icons;
 pub mod lists;
+pub mod menu;
 pub mod metadata;
 pub mod packaging;
 pub mod projects;

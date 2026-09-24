@@ -5,12 +5,14 @@
 //! design cannot omit a built-in element and leave the C++ lookup returning
 //! null. We check presence, and not visibility, styling or event behaviour.
 
+mod support;
+
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 fn menu_document(design: &std::path::Path) -> String {
     let staged = rominabox_scratch::Scratch::dir("rominabox-design-contract");
-    rominabox_desktop::themes::prepare_theme_assets(design, &staged, "blue", None)
+    support::stage_theme(design, &staged, "blue")
         .expect("the design composes and stages");
     std::fs::read_to_string(staged.join("menu.rml")).unwrap()
 }
@@ -201,7 +203,7 @@ fn the_shipped_designs_provide_every_required_splash_id() {
 fn every_declared_overlay_has_an_element_in_the_design() {
     for design in designs() {
         let overlays =
-            rominabox_desktop::themes::declared_overlays(&design).expect("a design's overlays");
+            rominabox_desktop::menu::declared_overlays(&design).expect("a design's overlays");
         assert!(
             !overlays.is_empty(),
             "{} declares no overlays, so a player who chose it is never told \
@@ -247,13 +249,13 @@ fn designs() -> Vec<PathBuf> {
 #[test]
 fn no_overlay_is_also_a_screen() {
     for design in designs() {
-        let screens: Vec<String> = rominabox_desktop::themes::declared_screens(&design)
+        let screens: Vec<String> = rominabox_desktop::menu::declared_screens(&design)
             .expect("a design's screens")
             .into_iter()
             .map(|screen| screen.id)
             .collect();
         for overlay in
-            rominabox_desktop::themes::declared_overlays(&design).expect("a design's overlays")
+            rominabox_desktop::menu::declared_overlays(&design).expect("a design's overlays")
         {
             assert!(
                 !screens.contains(&overlay.id),
@@ -276,7 +278,7 @@ fn an_overlays_leaving_time_is_declared_once_and_read_by_both_consumers() {
     for design in designs() {
         let sheet = std::fs::read_to_string(design.join("menu.rcss")).expect("a stylesheet");
         for overlay in
-            rominabox_desktop::themes::declared_overlays(&design).expect("a design's overlays")
+            rominabox_desktop::menu::declared_overlays(&design).expect("a design's overlays")
         {
             let token = format!("design(overlay-leave-{})", overlay.id);
             assert!(
@@ -290,18 +292,23 @@ fn an_overlays_leaving_time_is_declared_once_and_read_by_both_consumers() {
     }
 }
 
-/// The controls placeholder is part of the contract too.
+/// The controller scene is also part of the contract.
 ///
-/// It is not an id, so the checks above would miss it, and without it there
-/// is no controller in the menu of a design.
+/// A design does not write its id, so the checks above would not notice that
+/// it is missing, and without it the design shows no controller at all.
 #[test]
-fn the_menu_document_has_somewhere_to_put_the_controls() {
-    let document = menu_document(&repo_root().join("integrations/designs/native"));
-    assert!(
-        document.contains("<!--CONTROLS-->"),
-        "menu.rml has no <!--CONTROLS--> placeholder; the generated controller \
-         scene has nowhere to go"
-    );
+fn the_menu_document_draws_the_controller_scene() {
+    for design in designs() {
+        let document = menu_document(&design);
+        let scene = document
+            .find("id=\"controller-scene\"")
+            .unwrap_or_else(|| panic!("{} has no #controller-scene", design.display()));
+        assert!(
+            document[scene..].contains("id=\"control-up\""),
+            "{}: the generated controller scene is not in #controller-scene",
+            design.display()
+        );
+    }
 }
 
 /// A design is a directory, and we reject an unknown one when we resolve it.

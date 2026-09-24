@@ -103,7 +103,11 @@ fn options_entries_do_not_overlap() {
                 *rows.entry(hover).or_default() += 1;
             }
         }
-        assert_eq!(rows.len(), entries.len(), "{design}: entries under the pointer: {rows:?}");
+        assert_eq!(
+            rows.len(),
+            entries.len(),
+            "{design}: entries under the pointer: {rows:?}"
+        );
         let heights: Vec<usize> = entries.iter().map(|entry| rows[entry]).collect();
         assert!(
             heights.iter().all(|height| *height == heights[0]),

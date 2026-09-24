@@ -3,7 +3,6 @@
   "id": "disc",
   "name": "Disc",
   "description": "The memory-card browser of a late-90s disc console.",
-  "slots": 6,
   "documents": {
     "splash": "splash.rml",
     "style": "menu.rcss"

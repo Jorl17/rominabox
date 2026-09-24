@@ -1,9 +1,15 @@
-use rominabox_desktop::{controls::Controls, lists, repo, themes};
+mod support;
+
+use rominabox_desktop::{controls::Controls, menu, repo, themes};
 use std::{fs, path::Path, process::Command};
 
 fn style_only_design(destination: &Path) {
     let base = repo::at("integrations/designs/native");
     let frozen_base = destination.parent().unwrap().join("native");
+    support::copy_tree(
+        &repo::at("integrations/parts"),
+        &destination.parent().unwrap().parent().unwrap().join("parts"),
+    );
     fs::create_dir_all(destination).unwrap();
     fs::create_dir_all(&frozen_base).unwrap();
     // The whole Native package, as it is in a kit beside every design.
@@ -34,19 +40,10 @@ fn style_only_design(destination: &Path) {
 #[test]
 fn a_style_only_design_stages_the_base_screens_with_its_styles() {
     let root = rominabox_scratch::Scratch::dir("rominabox-design-composition");
-    let design = root.join("style-only");
+    let design = root.join("designs/style-only");
     let staged = root.join("staged");
     style_only_design(&design);
-    themes::prepare_theme_assets(&design, &staged, "amber", None).unwrap();
-    themes::prepare_controls_assets(
-        &repo::at("desktop/assets/controllers"),
-        &design,
-        &staged,
-        "megadrive",
-        &Controls::default(),
-        None,
-    )
-    .unwrap();
+    support::stage_theme(&design, &staged, "amber").unwrap();
     let menu = fs::read_to_string(staged.join("menu.rml")).unwrap();
     for id in [
         "pause-panel",
@@ -66,7 +63,7 @@ fn a_style_only_design_stages_the_base_screens_with_its_styles() {
         "the requested Amber screen colour must be used"
     );
     let splash = root.join("splash");
-    themes::prepare_splash_assets(&design, &splash, "amber").unwrap();
+    support::stage_splash(&design, &splash, "amber").unwrap();
     assert!(fs::read_to_string(splash.join("menu.rml"))
         .unwrap()
         .contains("splash-logo"));
@@ -74,7 +71,7 @@ fn a_style_only_design_stages_the_base_screens_with_its_styles() {
 
 #[test]
 fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
-    let screens = themes::declared_screens(&repo::at("integrations/designs/disc")).unwrap();
+    let screens = rominabox_desktop::menu::declared_screens(&repo::at("integrations/designs/disc")).unwrap();
     assert_eq!(
         screens
             .iter()
@@ -111,9 +108,9 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
 #[test]
 fn one_screen_override_keeps_the_other_base_screens() {
     let root = rominabox_scratch::Scratch::dir("rominabox-one-screen-override");
-    let design = root.join("style-only");
+    let design = root.join("designs/style-only");
     style_only_design(&design);
-    let mut pause = fs::read_to_string(root.join("native/screen-pause.rml")).unwrap();
+    let mut pause = fs::read_to_string(root.join("designs/native/screen-pause.rml")).unwrap();
     pause = pause.replace("CHOOSE A SLOT", "CHOOSE A CARD");
     fs::write(design.join("screen-pause.rml"), pause).unwrap();
     let mut declaration: serde_json::Value =
@@ -126,8 +123,7 @@ fn one_screen_override_keeps_the_other_base_screens() {
     .unwrap();
 
     let staged = root.join("staged");
-    themes::prepare_theme_assets(&design, &staged, "blue", None).unwrap();
-    themes::prepare_controls_assets(
+    support::stage_controls(
         &repo::at("desktop/assets/controllers"),
         &design,
         &staged,
@@ -141,7 +137,7 @@ fn one_screen_override_keeps_the_other_base_screens() {
     assert!(!menu.contains("CHOOSE A SLOT"));
     assert!(menu.contains("id=\"controls-panel\""));
     assert!(menu.contains("id=\"options-panel\""));
-    let screens = themes::declared_screens(&design).unwrap();
+    let screens = rominabox_desktop::menu::declared_screens(&design).unwrap();
     assert_eq!(screens[0].heading, "CARD PAUSED");
     assert!(screens.iter().any(|screen| screen.id == "achievements"));
 }
@@ -149,7 +145,7 @@ fn one_screen_override_keeps_the_other_base_screens() {
 #[test]
 fn a_non_pause_override_keeps_native_screen_and_entry_order() {
     let root = rominabox_scratch::Scratch::dir("rominabox-screen-order");
-    let design = root.join("style-only");
+    let design = root.join("designs/style-only");
     style_only_design(&design);
     let mut declaration: serde_json::Value =
         serde_json::from_slice(&fs::read(design.join("design.json")).unwrap()).unwrap();
@@ -159,8 +155,8 @@ fn a_non_pause_override_keeps_native_screen_and_entry_order() {
         serde_json::to_vec(&declaration).unwrap(),
     )
     .unwrap();
-    let native = themes::declared_screens(&root.join("native")).unwrap();
-    let selected = themes::declared_screens(&design).unwrap();
+    let native = rominabox_desktop::menu::declared_screens(&root.join("designs/native")).unwrap();
+    let selected = rominabox_desktop::menu::declared_screens(&design).unwrap();
     assert_eq!(
         selected
             .iter()
@@ -177,7 +173,7 @@ fn a_non_pause_override_keeps_native_screen_and_entry_order() {
 #[test]
 fn explicit_screen_order_rejects_missing_and_repeated_ids() {
     let root = rominabox_scratch::Scratch::dir("rominabox-explicit-screen-order");
-    let design = root.join("style-only");
+    let design = root.join("designs/style-only");
     style_only_design(&design);
     let mut declaration: serde_json::Value =
         serde_json::from_slice(&fs::read(design.join("design.json")).unwrap()).unwrap();
@@ -197,7 +193,7 @@ fn explicit_screen_order_rejects_missing_and_repeated_ids() {
             serde_json::to_vec(&declaration).unwrap(),
         )
         .unwrap();
-        let error = themes::declared_screens(&design).unwrap_err();
+        let error = rominabox_desktop::menu::declared_screens(&design).unwrap_err();
         assert!(error.contains(expected), "{error}");
     }
 }
@@ -205,7 +201,7 @@ fn explicit_screen_order_rejects_missing_and_repeated_ids() {
 #[test]
 fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
     let root = rominabox_scratch::Scratch::dir("rominabox-list-screen-override");
-    let design = root.join("style-only");
+    let design = root.join("designs/style-only");
     let staged = root.join("staged");
     style_only_design(&design);
     fs::write(
@@ -213,8 +209,7 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
         "<div id=\"PANEL-ID\" class=\"screen-panel\" style=\"display:none;\"><div id=\"custom-achievements-chrome\">TROPHIES</div><!--ROWS--><!--ACTIONS--><!--STATUS--></div>",
     )
     .unwrap();
-    themes::prepare_theme_assets(&design, &staged, "blue", None).unwrap();
-    let screens = themes::prepare_controls_assets(
+    support::stage_controls(
         &repo::at("desktop/assets/controllers"),
         &design,
         &staged,
@@ -223,34 +218,11 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
         Some(&["achievements".into()]),
     )
     .unwrap();
-    let achievement = screens
-        .iter()
-        .find(|screen| screen.id == "achievements")
-        .unwrap();
-    lists::install(
-        &design,
-        &staged,
-        &screens,
-        &[lists::List {
-            screen: achievement.clone(),
-            content: lists::ListContent::Static(vec![lists::ListItem {
-                id: "earned-first".into(),
-                icon: "".into(),
-                title: "FIRST".into(),
-                detail: "".into(),
-                state: "LOCKED".into(),
-                selected: false,
-                accent: false,
-                line: false,
-            }]),
-        }],
-    )
-    .unwrap();
     let menu = fs::read_to_string(staged.join("menu.rml")).unwrap();
     assert_eq!(menu.matches("id=\"achievements-panel\"").count(), 1);
     for id in [
         "custom-achievements-chrome",
-        "earned-first",
+        "achievements-prototype",
         "achievements-back",
         "achievements-status",
     ] {
@@ -269,7 +241,7 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
 #[test]
 fn an_options_screen_override_needs_no_separate_order_file() {
     let root = rominabox_scratch::Scratch::dir("rominabox-options-screen-override");
-    let design = root.join("style-only");
+    let design = root.join("designs/style-only");
     let staged = root.join("staged");
     style_only_design(&design);
     fs::write(
@@ -277,8 +249,7 @@ fn an_options_screen_override_needs_no_separate_order_file() {
         "<div id=\"options-panel\" style=\"display:none;\"><div id=\"custom-options-chrome\">INDEX</div><div id=\"options-entries\"><!--OPTIONS--></div><button class=\"menu-action options-back\" id=\"options-back\">BACK</button></div>",
     )
     .unwrap();
-    themes::prepare_theme_assets(&design, &staged, "blue", None).unwrap();
-    themes::prepare_controls_assets(
+    support::stage_controls(
         &repo::at("desktop/assets/controllers"),
         &design,
         &staged,
@@ -296,14 +267,14 @@ fn an_options_screen_override_needs_no_separate_order_file() {
 #[test]
 fn a_missing_adjacent_native_package_is_not_read_from_the_repository() {
     let root = rominabox_scratch::Scratch::dir("rominabox-no-global-design-fallback");
-    let design = root.join("style-only");
+    let design = root.join("designs/style-only");
     fs::create_dir_all(&design).unwrap();
     fs::copy(
         repo::at("integrations/designs/native/menu.rcss"),
         design.join("menu.rcss"),
     )
     .unwrap();
-    let error = themes::declared_screens(&design).unwrap_err();
+    let error = rominabox_desktop::menu::declared_screens(&design).unwrap_err();
     assert!(
         error.contains("Native base design is missing beside"),
         "{error}"
@@ -314,8 +285,7 @@ fn a_missing_adjacent_native_package_is_not_read_from_the_repository() {
 fn disc_stages_its_chrome_and_inherited_achievement_controls() {
     let design = repo::at("integrations/designs/disc");
     let root = rominabox_scratch::Scratch::dir("rominabox-disc-composition");
-    themes::prepare_theme_assets(&design, &root, "blue", None).unwrap();
-    let screens = themes::prepare_controls_assets(
+    support::stage_controls(
         &repo::at("desktop/assets/controllers"),
         &design,
         &root,
@@ -327,7 +297,7 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
     let menu = fs::read_to_string(root.join("menu.rml")).unwrap();
     let option_at = menu.find("id=\"options-panel\"").unwrap();
     let disc_at = menu.find("id=\"disc-panel\"").unwrap();
-    let lists_at = menu.find("<!--SCREENS-->").unwrap();
+    let lists_at = menu.find("id=\"achievements-panel\"").unwrap();
     assert!(option_at < disc_at && disc_at < lists_at);
     assert!(menu.contains("id=\"spine\""));
     assert!(menu.contains("MEMORY CARD") && menu.contains("CHOOSE A BLOCK"));
@@ -337,37 +307,11 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
     let css = fs::read_to_string(root.join("menu.rcss")).unwrap();
     assert!(css.contains("#unlock-row") && css.contains("#unlock-badge"));
     assert!(!css.contains("design("));
-    assert!(screens
+    assert!(menu::declared_screens(&design)
+        .unwrap()
         .iter()
         .any(|screen| screen.id == "achievements" && screen.toggle.is_none()));
 
-    let achievement = screens
-        .iter()
-        .find(|screen| screen.id == "achievements")
-        .unwrap();
-    lists::install(
-        &design,
-        &root,
-        &screens,
-        &[lists::List {
-            screen: achievement.clone(),
-            content: lists::ListContent::Static(
-                (0..5)
-                    .map(|index| lists::ListItem {
-                        id: format!("achievement-{index}"),
-                        icon: "".into(),
-                        title: format!("ACHIEVEMENT {index}"),
-                        detail: "".into(),
-                        state: "LOCKED".into(),
-                        selected: false,
-                        accent: false,
-                        line: false,
-                    })
-                    .collect(),
-            ),
-        }],
-    )
-    .unwrap();
     let menu = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(!menu.contains("achievement-mode"));
     assert!(menu.contains("class=\"menu-action list-back\" id=\"achievements-back\""));
@@ -471,12 +415,7 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
 #[test]
 fn disc_guard_message_wraps_within_its_slot() {
     let root = rominabox_scratch::Scratch::dir("rominabox-disc-slot-guard");
-    themes::prepare_theme_assets(
-        &repo::at("integrations/designs/disc"),
-        &root,
-        "violet",
-        None,
-    )
+    support::stage_theme(&repo::at("integrations/designs/disc"), &root, "violet")
     .unwrap();
     let base = fs::read_to_string(root.join("menu.rml")).unwrap();
     let guarded = base
@@ -541,27 +480,16 @@ fn live_achievements_inherit_account_form_before_any_download() {
         for palette in themes::registry().unwrap().palettes {
             let design = repo::at(&format!("integrations/designs/{name}"));
             let root = rominabox_scratch::Scratch::dir("rominabox-live-achievements");
-            themes::prepare_theme_assets(&design, &root, &palette.id, None).unwrap();
             let entries =
                 rominabox_desktop::achievements::entries(&design, true, true, None).unwrap();
-            let screens = themes::prepare_controls_assets(
-                &repo::at("desktop/assets/controllers"),
-                &design,
-                &root,
-                "megadrive",
-                &Controls::default(),
-                Some(&entries),
-            )
+            menu::compose_menu(&menu::MenuRequest {
+                palette: palette.id.clone(),
+                include_achievements: true,
+                menu_entries: Some(entries),
+                ..menu::MenuRequest::new(&design, support::artwork())
+            })
+            .and_then(|composed| composed.write(&root))
             .unwrap();
-            lists::install(
-                &design,
-                &root,
-                &screens,
-                &[rominabox_desktop::achievements::screen(&design).unwrap()],
-            )
-            .unwrap();
-            themes::append_component_style(&design, &root, &palette.id, "achievements.rcss")
-                .unwrap();
             let menu = fs::read_to_string(root.join("menu.rml")).unwrap();
             for id in [
                 "achievements",
@@ -638,7 +566,7 @@ fn live_achievements_inherit_account_form_before_any_download() {
 #[test]
 fn a_design_customizes_account_controls_without_copying_the_screen() {
     let root = rominabox_scratch::Scratch::dir("rominabox-account-style");
-    let design = root.join("style-only");
+    let design = root.join("designs/style-only");
     let staged = root.join("staged");
     style_only_design(&design);
     fs::write(
@@ -646,8 +574,14 @@ fn a_design_customizes_account_controls_without_copying_the_screen() {
         ".account-reveal { width: 120dp; color: design(highlight); }",
     )
     .unwrap();
-    themes::prepare_theme_assets(&design, &staged, "violet", None).unwrap();
-    themes::append_component_style(&design, &staged, "violet", "achievements.rcss").unwrap();
+    menu::compose_menu(&menu::MenuRequest {
+        palette: "violet".into(),
+        include_achievements: true,
+        menu_entries: Some(vec!["controls".into(), "achievements".into()]),
+        ..menu::MenuRequest::new(&design, support::artwork())
+    })
+    .and_then(|composed| composed.write(&staged))
+    .unwrap();
     let css = fs::read_to_string(staged.join("menu.rcss")).unwrap();
     assert!(
         css.contains(".account-input"),

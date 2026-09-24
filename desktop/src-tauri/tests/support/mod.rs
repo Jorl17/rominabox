@@ -2,7 +2,7 @@
 //! RmlUi probe in which we lay them out.
 #![allow(dead_code)]
 
-use rominabox_desktop::{controls::Controls, shaders::ShaderSelection, themes};
+use rominabox_desktop::{menu, themes};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -27,6 +27,10 @@ pub fn kit(root: &Path) -> PathBuf {
     copy_tree(
         &rominabox_desktop::repo::at("integrations/designs"),
         &kit.join("designs"),
+    );
+    copy_tree(
+        &rominabox_desktop::repo::at("integrations/parts"),
+        &kit.join("parts"),
     );
     copy_tree(
         &rominabox_desktop::repo::at("desktop/assets/controllers"),
@@ -63,25 +67,19 @@ pub fn compose_with(
     discs: usize,
     destination: &Path,
 ) -> Composed {
-    themes::compose_menu(
-        &themes::MenuRequest {
-            kit,
-            design,
-            palette: "blue",
-            background: None,
-            system,
-            controls: &Controls::default(),
-            show_menu: true,
-            splash: false,
-            include_achievements: entries
-                .is_some_and(|entries| entries.iter().any(|entry| entry == "achievements")),
-            menu_entries: entries,
-            shaders: &ShaderSelection::default(),
-            discs,
-        },
-        destination,
-    )
+    let composition = menu::compose_menu(&menu::MenuRequest {
+        system: system.into(),
+        include_achievements: entries
+            .is_some_and(|entries| entries.iter().any(|entry| entry == "achievements")),
+        menu_entries: entries.map(<[String]>::to_vec),
+        discs,
+        ..menu::MenuRequest::new(
+            rominabox_desktop::themes::staged_design(kit, design),
+            kit.join("menu-assets"),
+        )
+    })
     .unwrap_or_else(|error| panic!("{design}: {error}"));
+    composition.write(destination).unwrap();
     Composed {
         menu: fs::read_to_string(destination.join("menu.rml")).unwrap(),
         cfg: fs::read_to_string(destination.join("design.cfg")).unwrap(),
@@ -127,11 +125,13 @@ pub fn rml_probe() -> PathBuf {
     PathBuf::from(String::from_utf8(output.stdout).unwrap().trim())
 }
 
-
 /// What is under the pointer at each point, laid out at 960x600.
 pub fn hovered(document: &Path, points: &[(i32, i32)]) -> Vec<String> {
     let mut command = Command::new(rml_probe());
-    command.arg("--document").arg(document).args(["--size", "960x600"]);
+    command
+        .arg("--document")
+        .arg(document)
+        .args(["--size", "960x600"]);
     for (x, y) in points {
         command.args(["--step", &format!("move:{x},{y}")]);
     }
@@ -162,8 +162,57 @@ pub fn showing(menu: &str, panel: &str) -> String {
             "<div id=\"pause-panel\" style=\"display:none;\">",
             1,
         )
-        .replacen(&hidden, &format!("id=\"{panel}\" class=\"screen-panel\""), 1)
+        .replacen(
+            &hidden,
+            &format!("id=\"{panel}\" class=\"screen-panel\""),
+            1,
+        )
         .replacen(&plain, &format!("id=\"{panel}\""), 1);
     assert_ne!(shown, menu, "{panel} could not be shown");
     shown
+}
+
+/// The artwork every design shares, in this checkout.
+pub fn artwork() -> PathBuf {
+    rominabox_desktop::repo::at("desktop/assets/controllers")
+}
+
+/// The menu we compose from `design` for `system`, written to `destination`.
+pub fn stage_controls(
+    artwork: &Path,
+    design: &Path,
+    destination: &Path,
+    system: &str,
+    controls: &rominabox_desktop::controls::Controls,
+    entries: Option<&[String]>,
+) -> Result<(), String> {
+    menu::compose_menu(&menu::MenuRequest {
+        system: system.into(),
+        controls: controls.clone(),
+        include_achievements: entries
+            .is_some_and(|entries| entries.iter().any(|entry| entry == "achievements")),
+        menu_entries: entries.map(<[String]>::to_vec),
+        ..menu::MenuRequest::new(design, artwork)
+    })?
+    .write(destination)
+}
+
+/// The default menu we compose from `design` in `palette`, written to `destination`.
+pub fn stage_theme(design: &Path, destination: &Path, palette: &str) -> Result<(), String> {
+    menu::compose_menu(&menu::MenuRequest {
+        palette: palette.into(),
+        ..menu::MenuRequest::new(design, artwork())
+    })?
+    .write(destination)
+}
+
+/// The logo-only document we compose from `design` in `palette`.
+pub fn stage_splash(design: &Path, destination: &Path, palette: &str) -> Result<(), String> {
+    menu::compose_menu(&menu::MenuRequest {
+        palette: palette.into(),
+        show_menu: false,
+        splash: true,
+        ..menu::MenuRequest::new(design, artwork())
+    })?
+    .write(destination)
 }

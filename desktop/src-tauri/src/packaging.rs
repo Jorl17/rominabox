@@ -510,6 +510,31 @@ where
     }
 }
 
+/// The in-game menu that we ship in an export of `request`, for a game with
+/// `discs` discs. We use this one mapping in the tests too, so that we test
+/// exactly what an export would stage.
+pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuRequest {
+    let kit = &request.runtime_kit;
+    crate::menu::MenuRequest {
+        palette: request.palette.clone(),
+        background: request.background.clone(),
+        system: request.system.clone(),
+        controls: request.controls.clone(),
+        show_menu: request.show_menu,
+        splash: request.splash,
+        include_achievements: request.include_achievements,
+        menu_entries: request.menu_entries.clone(),
+        shaders: request.shaders.clone(),
+        discs,
+        // Controller artwork is not part of a design. We show the same pads in
+        // every design, from the shared menu-assets in the kit.
+        ..crate::menu::MenuRequest::new(
+            crate::themes::staged_design(kit, &request.theme),
+            kit.join("menu-assets"),
+        )
+    }
+}
+
 fn export_macos<F>(
     request: &ExportRequest,
     resolved: Option<&ExportCore<'_>>,
@@ -583,24 +608,9 @@ where
         copy_content_file(file, &content_directory)?;
     }
     let rom_relative = Path::new("content").join(&collected_content.entrypoint);
-    crate::themes::compose_menu(
-        &crate::themes::MenuRequest {
-            kit: &request.runtime_kit,
-            design: &request.theme,
-            palette: &request.palette,
-            background: request.background.as_deref(),
-            system: &request.system,
-            controls: &request.controls,
-            show_menu: request.show_menu,
-            splash: request.splash,
-            include_achievements: request.include_achievements,
-            menu_entries: request.menu_entries.as_deref(),
-            shaders: &request.shaders,
-            discs: collected_content.discs,
-        },
-        &resources.join("menu-assets"),
-    )
-    .map_err(|message| ExportError::new("stage", message))?;
+    crate::menu::compose_menu(&menu_request(request, collected_content.discs))
+        .and_then(|menu| menu.write(&resources.join("menu-assets")))
+        .map_err(|message| ExportError::new("stage", message))?;
     let controls_assets = resources.join("menu-assets");
     fs::create_dir_all(&controls_assets)
         .map_err(|error| ExportError::io("stage", &controls_assets, error))?;

@@ -1,0 +1,34 @@
+//! The in-game menu we ship in an export, composed from a design in memory
+//! and written once.
+//!
+//! We build it with one function, `compose_menu`, for the export, the
+//! builder's preview and the CLI staging commands, so their menus are always
+//! the same. In `manifest` we read the design, in `document` we build the
+//! page, in `scene` the controller scene, in `tokens` we fill in values, in
+//! `declarations` we write `design.cfg`, and in `stage` we join the pieces.
+
+mod declarations;
+mod document;
+mod manifest;
+mod scene;
+mod stage;
+mod tokens;
+
+use std::path::PathBuf;
+
+pub use document::{install_volume_control, volume_control_markup, VOLUME_SLOT};
+pub use manifest::{
+    base_design, declared_overlays, declared_screens, scene_metrics, Binds, Documents, Font,
+    Manifest, Overlay, SceneMetrics, Screen, ScreenPlace, ScreenRole, Toggle, ToggleGuard,
+};
+pub use scene::SCENE_PREFIX;
+pub use stage::{compose_menu, render_preview, Composition, MenuRequest, PreviewRequest};
+
+/// One file of a composition.
+#[derive(Clone, Debug)]
+pub enum Content {
+    Text(String),
+    Bytes(Vec<u8>),
+    /// A file copied as it is, from here.
+    Copy(PathBuf),
+}

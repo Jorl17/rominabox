@@ -9,7 +9,7 @@
 //! marker. We replace each marker once, with every list at the same time,
 //! because the marker is gone after the first replacement.
 
-use crate::themes::{Screen, ScreenPlace};
+use crate::menu::{Manifest, Screen, ScreenPlace};
 use std::fs;
 use std::path::Path;
 
@@ -84,7 +84,7 @@ pub fn row_template(design: &Path) -> Result<String, String> {
 /// A selected screen may frame the shared list parts without replacing their
 /// rows, toggle, Back action, or status. The optional base wrapper is in
 /// Native, beside the selected package. Without it we use the built-in one.
-fn screen_template(design: &Path, id: &str) -> Result<Option<String>, String> {
+fn screen_template(manifest: &Manifest, id: &str) -> Result<Option<String>, String> {
     if id.is_empty()
         || !id
             .chars()
@@ -93,17 +93,11 @@ fn screen_template(design: &Path, id: &str) -> Result<Option<String>, String> {
         return Err(format!("Invalid list screen id '{id}'"));
     }
     let name = format!("screen-{id}.rml");
-    let selected = design.join(&name);
-    let base = crate::themes::base_design(design)?.join(&name);
-    let source = if selected.is_file() {
-        selected
-    } else if base.is_file() {
-        base
-    } else {
+    if !manifest.has_fragment(&name) {
         return Ok(None);
-    };
-    let template = fs::read_to_string(&source)
-        .map_err(|error| format!("Could not read {}: {error}", source.display()))?;
+    }
+    let source = manifest.fragment_path(&name);
+    let template = manifest.fragment(&name)?;
     for required in [
         "id=\"PANEL-ID\"",
         "class=\"screen-panel",
@@ -137,65 +131,13 @@ fn screen_template(design: &Path, id: &str) -> Result<Option<String>, String> {
 /// in the design or in Native, or none when neither has the file. We put them
 /// in the one generated strip, because a second strip in the same box would
 /// receive every pointer hit instead of the first.
-fn screen_actions(design: &Path, id: &str) -> Result<String, String> {
+fn screen_actions(manifest: &Manifest, id: &str) -> Result<String, String> {
     let name = format!("actions-{id}.rml");
-    for package in [design.to_path_buf(), crate::themes::base_design(design)?] {
-        let path = package.join(&name);
-        if path.is_file() {
-            return fs::read_to_string(&path)
-                .map_err(|error| format!("Could not read {}: {error}", path.display()));
-        }
+    if manifest.has_fragment(&name) {
+        manifest.fragment(&name)
+    } else {
+        Ok(String::new())
     }
-    Ok(String::new())
-}
-
-/// How many rows fit on one page, as declared in the design. When it is absent,
-/// we use four, which fit under the Native heading and above its back button.
-pub fn page_size(design: &Path) -> Result<usize, String> {
-    let path = design.join("design.json");
-    let Ok(text) = fs::read_to_string(&path) else {
-        return Ok(4);
-    };
-    let declared: serde_json::Value =
-        serde_json::from_str(&text).map_err(|error| format!("{}: {error}", path.display()))?;
-    match declared
-        .get("list")
-        .and_then(|list| list.get("pageSize"))
-        .and_then(|value| value.as_u64())
-    {
-        None => Ok(4),
-        Some(0) => Err("list.pageSize must be at least 1".into()),
-        Some(size) => Ok(size as usize),
-    }
-}
-
-/// The vertical space of one row, so that a list shorter than a page ends
-/// where its content does.
-///
-/// In the design, the actions and the status are placed for a full page. These
-/// two numbers are also in the design's stylesheet. We declare them here so
-/// that we can read them in the exporter without parsing CSS.
-pub fn row_step(design: &Path) -> Result<usize, String> {
-    let path = design.join("design.json");
-    let Ok(text) = fs::read_to_string(&path) else {
-        return Ok(0);
-    };
-    let declared: serde_json::Value =
-        serde_json::from_str(&text).map_err(|error| format!("{}: {error}", path.display()))?;
-    let at = |key: &str| {
-        declared
-            .get("list")
-            .and_then(|list| list.get(key))
-            .and_then(|value| value.as_u64())
-            .unwrap_or(0) as usize
-    };
-    // Both or neither, because with a height and no gap we would move the
-    // actions up by slightly too little each time, which looks like a mistake.
-    let (height, gap) = (at("rowHeight"), at("rowGap"));
-    if height == 0 {
-        return Ok(0);
-    }
-    Ok(height + gap)
 }
 
 pub fn rml_text(value: &str) -> String {
@@ -348,106 +290,6 @@ pub fn fill_slot(document: &str, slot: &str, body: &str) -> Result<String, Strin
     Ok(document.replace(slot, body))
 }
 
-fn declared_value(cfg: &str, key: &str) -> Option<(usize, usize)> {
-    let marker = format!("{key} = \"");
-    let start = cfg.find(&marker)?;
-    let value_at = start + marker.len();
-    let end = cfg[value_at..].find('"')?;
-    Some((value_at, value_at + end))
-}
-
-/// Append a screen that is not drawn in the design, and optionally a second
-/// button that opens a screen already declared (a list's BACK opens the screen
-/// the player came from).
-///
-/// A screen declared in the design is already in this file. Writing it again
-/// would leave two of every key, so we add only the missing parts.
-pub fn declare_screen(
-    cfg: &str,
-    screen: &Screen,
-    also_opens: Option<(&str, &str)>,
-) -> Result<String, String> {
-    let mut cfg = cfg.to_string();
-    let Some((value_at, value_end)) = declared_value(&cfg, "screens") else {
-        return Err("design.cfg has no screens list".into());
-    };
-    let existing = cfg[value_at..value_end].to_string();
-    if !existing.split_whitespace().any(|id| id == screen.id) {
-        let next = if existing.is_empty() {
-            screen.id.clone()
-        } else {
-            format!("{existing} {}", screen.id)
-        };
-        cfg.replace_range(value_at..value_end, &next);
-    }
-    // We also declare a switch on a generated screen here. We write the
-    // design's own declarations before this panel exists, and in main we
-    // filter out the markup of a screen whose panel is not yet in the
-    // document, so the switch's labels would be lost.
-    if let Some(toggle) = &screen.toggle {
-        if declared_value(&cfg, &format!("toggle_on_{}", toggle.id)).is_none() {
-            let declared = crate::themes::toggle_declarations(std::slice::from_ref(screen));
-            let (list_at, list_end) = declared_value(&cfg, "toggles")
-                .ok_or_else(|| "design.cfg has no toggles list".to_string())?;
-            let existing = cfg[list_at..list_end].to_string();
-            let ids = if existing.is_empty() {
-                toggle.id.clone()
-            } else {
-                format!("{existing} {}", toggle.id)
-            };
-            cfg.replace_range(list_at..list_end, &ids);
-            for line in declared
-                .lines()
-                .filter(|line| !line.starts_with("toggles = "))
-            {
-                cfg.push_str(line);
-                cfg.push('\n');
-            }
-        }
-    }
-    if declared_value(&cfg, &format!("screen_panel_{}", screen.id)).is_none() {
-        cfg.push_str(&format!(
-            "screen_panel_{id} = \"{panel}\"\nscreen_heading_{id} = \"{heading}\"\nscreen_footer_{id} = \"{footer}\"\nscreen_button_{id} = \"{button}\"\n",
-            id = screen.id,
-            panel = screen.panel,
-            heading = screen.heading,
-            footer = screen.footer,
-            button = screen.button,
-        ));
-    }
-    if let Some(images) = &screen.images {
-        let key = format!("screen_images_{}", screen.id);
-        if declared_value(&cfg, &key).is_none() {
-            cfg.push_str(&format!(
-                "screen_images_{id} = \"{images}\"\n",
-                id = screen.id
-            ));
-        }
-    }
-    if let Some(mark) = &screen.mark {
-        let key = format!("screen_mark_{}", screen.id);
-        if declared_value(&cfg, &key).is_none() {
-            cfg.push_str(&format!("screen_mark_{id} = \"{mark}\"\n", id = screen.id));
-        }
-    }
-    if let Some((host, button)) = also_opens {
-        let key = format!("screen_button_{host}");
-        let Some((value_at, value_end)) = declared_value(&cfg, &key) else {
-            return Err(format!("design.cfg has no button for screen {host}"));
-        };
-        let existing = cfg[value_at..value_end].to_string();
-        if !existing.split_whitespace().any(|id| id == button) {
-            let next = if existing.is_empty() {
-                button.to_string()
-            } else {
-                format!("{existing} {button}")
-            };
-            cfg.replace_range(value_at..value_end, &next);
-        }
-    }
-    Ok(cfg)
-}
-
 /// The screen to which BACK leads from a list: the one whose button opens it.
 ///
 /// From an entry inside Options, BACK leads to Options. From anything else it
@@ -476,32 +318,34 @@ fn toggle_markup(screen: &Screen) -> String {
     )
 }
 
-/// Write every generated list into the staged menu.
+/// A generated screen we wrote into the menu, and the screen to which its
+/// BACK leads.
+#[derive(Clone, Debug)]
+pub struct Installed {
+    pub screen: Screen,
+    /// The screen to which BACK on this one leads, and the id of that button.
+    pub host: Option<(String, String)>,
+}
+
+/// Write every generated list into the menu document.
 ///
-/// We fill both markers once, with the markup of every list, because each
-/// marker appears only once. We declare the screens where the player reads
-/// them, and add each list's BACK to the buttons of the screen it returns to.
+/// We fill each marker once, with the markup of every list, because the
+/// marker is gone after that. Return what we wrote, for the declarations.
 pub fn install(
-    design: &Path,
-    menu_assets: &Path,
+    manifest: &Manifest,
+    document: &str,
     staged_screens: &[Screen],
     lists: &[List],
-) -> Result<(), String> {
-    let document_path = menu_assets.join("menu.rml");
-    let config_path = menu_assets.join("design.cfg");
-    let document = fs::read_to_string(&document_path)
-        .map_err(|error| format!("could not read the staged menu: {error}"))?;
-    let mut design_cfg = fs::read_to_string(&config_path)
-        .map_err(|error| format!("could not read the staged screen list: {error}"))?;
-
-    let template = row_template(design)?;
-    let default_pages = page_size(design)?;
-    let step = row_step(design)?;
+) -> Result<(String, Vec<Installed>), String> {
+    let template = row_template(&manifest.design)?;
+    let default_pages = manifest.list_page_size;
+    let step = manifest.list_row_step;
     let mut screens = String::new();
     let mut links = String::new();
+    let mut installed = Vec::new();
     for list in lists {
         let pages = list.screen.list_page_size.unwrap_or(default_pages);
-        let wrapper = screen_template(design, &list.screen.id)?;
+        let wrapper = screen_template(manifest, &list.screen.id)?;
         let (rows, lift) = match &list.content {
             ListContent::Static(items) => {
                 if items.is_empty() {
@@ -519,10 +363,9 @@ pub fn install(
             .back_label
             .clone()
             .unwrap_or_else(|| "BACK".into());
-        // In the design, the actions are placed for a full page of rows. For a
-        // list with fewer rows, we move them up by the missing rows, so the
-        // screen ends where its content does. For a full list we do not move
-        // them.
+        // The design places the actions below a full page of rows. For a list
+        // with fewer rows we move the actions up by the missing rows, so the
+        // screen ends where its content ends.
         let up = if lift > 0 {
             format!(" style=\"margin-top:-{lift}dp;\"")
         } else {
@@ -537,7 +380,7 @@ pub fn install(
             ));
         }
         let toggle = toggle_markup(&list.screen);
-        let own = screen_actions(design, &list.screen.id)?;
+        let own = screen_actions(manifest, &list.screen.id)?;
         let actions = format!(
             "<div class=\"list-actions\"{up}>{toggle}{own}<button class=\"menu-action list-back\" id=\"{id}-back\">{back}</button></div>",
             id = list.screen.id,
@@ -561,14 +404,11 @@ pub fn install(
         };
         screens.push_str(&panel);
         for dialog in &list.screen.dialogs {
-            screens.push_str(&crate::themes::design_file(design, &format!("dialog-{dialog}.rml"))?);
+            screens.push_str(&manifest.fragment(&format!("dialog-{dialog}.rml"))?);
         }
-        // The player opens an entry inside Options from there, so it has no
-        // button on the pause row. We generate the Options entries separately.
         // The player opens an entry inside Options from there. A list whose
         // button is already drawn in the design, such as the disc column's
-        // DISC, gets no second one, and for a list without a button of its
-        // own we retarget that existing button.
+        // DISC, must not get a second one.
         if list.screen.option_label.is_none()
             && !list.screen.button.is_empty()
             && !document.contains(&format!("id=\"{}\"", list.screen.button))
@@ -579,19 +419,16 @@ pub fn install(
                 heading = rml_text(&list.screen.heading),
             ));
         }
-        let host = host_of(staged_screens, &list.screen).map(|screen| screen.id.clone());
-        let back_button = format!("{}-back", list.screen.id);
-        design_cfg = declare_screen(
-            &design_cfg,
-            &list.screen,
-            host.as_deref().map(|host| (host, back_button.as_str())),
-        )?;
+        installed.push(Installed {
+            screen: list.screen.clone(),
+            host: host_of(staged_screens, &list.screen)
+                .map(|host| (host.id.clone(), format!("{}-back", list.screen.id))),
+        });
     }
 
-    let document = fill_slot(&document, LINKS_SLOT, &links)?;
+    let document = fill_slot(document, LINKS_SLOT, &links)?;
     let document = fill_slot(&document, SCREENS_SLOT, &screens)?;
-    fs::write(&document_path, document).map_err(|error| error.to_string())?;
-    fs::write(&config_path, &design_cfg).map_err(|error| error.to_string())
+    Ok((document, installed))
 }
 
 #[cfg(test)]
@@ -705,88 +542,5 @@ mod tests {
         assert!(row.contains(">STATE OF THE ART<"), "{row}");
         assert!(row.contains(">TITLE FIGHT, WITH DETAIL<"), "{row}");
         assert_eq!(row.matches("LOCKED 5 PTS").count(), 1, "{row}");
-    }
-
-    #[test]
-    fn a_generated_screens_switch_is_declared_with_it() {
-        let mut screen = Screen {
-            id: "achievements".into(),
-            panel: "achievements-panel".into(),
-            heading: "ACHIEVEMENTS".into(),
-            footer: "ESC  BACK".into(),
-            button: "achievements".into(),
-            label: None,
-            back_label: None,
-            list_page_size: None,
-            place: ScreenPlace::Plain,
-            option_label: Some("ACHIEVEMENTS".into()),
-            option_default: false,
-            images: None,
-            mark: None,
-            toggle: None,
-            dialogs: Vec::new(),
-        };
-        screen.toggle = Some(crate::themes::Toggle {
-            id: "achievement-mode".into(),
-            label: "ACHIEVEMENT MODE".into(),
-            on: "ON".into(),
-            off: "OFF".into(),
-            default_on: false,
-            guard: crate::themes::ToggleGuard::Saves,
-            guard_label: "ACHIEVEMENTS ON".into(),
-            guard_status: "SAVE SLOTS ARE OFF WHILE ACHIEVEMENTS ARE ON".into(),
-        });
-        // The design's own declarations before this panel exists. We filter out
-        // the screen, and its switch with it.
-        let cfg = "screens = \"pause options controls\"\nscreen_panel_pause = \"pause-panel\"\nscreen_button_pause = \"options-back\"\ntoggles = \"\"\n";
-        let out = declare_screen(cfg, &screen, None).expect("declared");
-        assert!(out.contains("toggles = \"achievement-mode\""), "{out}");
-        assert!(out.contains("toggle_on_achievement-mode = \"ON\""), "{out}");
-        assert!(
-            out.contains("toggle_guard_achievement-mode = \"saves\""),
-            "{out}"
-        );
-        assert!(
-            out.contains("toggle_guard_status_achievement-mode = \"SAVE SLOTS ARE OFF WHILE ACHIEVEMENTS ARE ON\""),
-            "{out}"
-        );
-        // When we declare the same screen again, it must not appear twice.
-        let again = declare_screen(&out, &screen, None).expect("declared");
-        assert_eq!(
-            again.matches("toggle_on_achievement-mode = ").count(),
-            1,
-            "{again}"
-        );
-        assert_eq!(
-            again.matches("achievement-mode achievement-mode").count(),
-            0,
-            "{again}"
-        );
-    }
-
-    #[test]
-    fn declaring_a_screen_twice_leaves_one_of_each_key() {
-        let screen = Screen {
-            id: "achievements".into(),
-            panel: "achievements-panel".into(),
-            heading: "ACHIEVEMENTS".into(),
-            footer: "ESC  BACK".into(),
-            button: "achievements".into(),
-            label: None,
-            back_label: None,
-            list_page_size: None,
-            place: ScreenPlace::Plain,
-            option_label: Some("ACHIEVEMENTS".into()),
-            option_default: false,
-            images: None,
-            mark: None,
-            toggle: None,
-            dialogs: Vec::new(),
-        };
-        let cfg = "screens = \"pause achievements\"\nscreen_panel_achievements = \"achievements-panel\"\nscreen_heading_achievements = \"ACHIEVEMENTS\"\nscreen_footer_achievements = \"ESC  BACK\"\nscreen_button_achievements = \"achievements\"\nscreen_panel_pause = \"pause-panel\"\nscreen_button_pause = \"options-back\"\n";
-        let out =
-            declare_screen(cfg, &screen, Some(("pause", "achievements-back"))).expect("declared");
-        assert_eq!(out.matches("screen_panel_achievements = ").count(), 1);
-        assert!(out.contains("screen_button_pause = \"options-back achievements-back\""));
     }
 }

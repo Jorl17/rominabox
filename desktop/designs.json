@@ -2,13 +2,11 @@
   "designs": [
     {
       "id": "native",
-      "name": "Default menu",
-      "slots": 6
+      "name": "Default menu"
     },
     {
       "id": "disc",
-      "name": "Disc",
-      "slots": 6
+      "name": "Disc"
     }
   ],
   "palettes": [

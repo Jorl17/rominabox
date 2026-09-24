@@ -3,7 +3,6 @@
   "id": "native",
   "name": "Native",
   "description": "The cartridge-era pixel look the player ships with.",
-  "slots": 6,
   "documents": {
     "menu": "menu.rml",
     "splash": "splash.rml",
@@ -68,6 +67,7 @@
   "screens": [
     {
       "id": "pause",
+      "role": "pause",
       "panel": "pause-panel",
       "heading": "GAME PAUSED",
       "footer": "ESC  CONTINUE",
@@ -75,6 +75,7 @@
     },
     {
       "id": "options",
+      "role": "options",
       "panel": "options-panel",
       "heading": "OPTIONS",
       "footer": "ESC  BACK",
@@ -85,6 +86,7 @@
     },
     {
       "id": "controls",
+      "role": "controls",
       "panel": "controls-panel",
       "heading": "CONTROLS",
       "footer": "ESC  BACK",
@@ -96,6 +98,7 @@
     },
     {
       "id": "shaders",
+      "role": "shaders",
       "panel": "shaders-panel",
       "heading": "SHADERS",
       "footer": "ESC  BACK",
@@ -108,6 +111,7 @@
     },
     {
       "id": "achievements",
+      "role": "achievements",
       "panel": "achievements-panel",
       "heading": "ACHIEVEMENTS",
       "footer": "ESC  BACK",
@@ -122,6 +126,7 @@
     },
     {
       "id": "discs",
+      "role": "discs",
       "panel": "discs-panel",
       "heading": "DISC",
       "footer": "ESC  BACK",

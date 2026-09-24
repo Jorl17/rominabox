@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use rominabox_desktop::{cores, icons, metadata, packaging, projects, systems, themes, traveling};
+use rominabox_desktop::{cores, icons, menu, metadata, packaging, projects, systems, traveling};
 use std::{
     fs,
     io::Cursor,
@@ -94,7 +94,7 @@ async fn menu_preview(
         PREVIEW_SEQUENCE.fetch_add(1, Ordering::Relaxed)
     ));
     tauri::async_runtime::spawn_blocking(move || {
-        let output = themes::render_preview(&themes::PreviewRequest {
+        let output = menu::render_preview(&menu::PreviewRequest {
             design,
             assets,
             renderer,

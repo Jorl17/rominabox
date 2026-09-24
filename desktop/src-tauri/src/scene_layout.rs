@@ -5,7 +5,7 @@
 //! we route a leader line, change this file and nowhere else.
 
 use crate::controls::ControlDefinition;
-use crate::themes::SceneMetrics;
+use crate::menu::SceneMetrics;
 use serde::Serialize;
 
 /// A rectangle on the scene, in the scene's own coordinates.

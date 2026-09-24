@@ -3,7 +3,7 @@
 
 mod support;
 
-use rominabox_desktop::{controls, scene_layout, themes};
+use rominabox_desktop::{controls, menu, scene_layout, themes};
 use std::fs;
 use support::{designs, kit};
 
@@ -33,7 +33,7 @@ fn a_sticks_ring_is_where_the_scene_layout_puts_it() {
     for design in designs() {
         let destination = root.join(&design);
         support::compose_for(&kit, &design, "ps1", &destination);
-        let metrics = themes::scene_metrics(&themes::staged_design(&kit, &design)).unwrap();
+        let metrics = menu::scene_metrics(&themes::staged_design(&kit, &design)).unwrap();
         let mut checked = 0;
         for profile in controls::variants_for_system("ps1").unwrap() {
             let scene = fs::read_to_string(destination.join(format!("scene-{}.rml", profile.id)))
@@ -44,7 +44,9 @@ fn a_sticks_ring_is_where_the_scene_layout_puts_it() {
                 let anchor = profile
                     .controls
                     .iter()
-                    .find(|c| c.group.as_deref() == Some(group.name.as_str()) && (c.x != 0 || c.y != 0))
+                    .find(|c| {
+                        c.group.as_deref() == Some(group.name.as_str()) && (c.x != 0 || c.y != 0)
+                    })
                     .unwrap();
                 let id = format!("control-hit-{}", anchor.id);
                 assert_eq!(

@@ -34,7 +34,11 @@ fn every_list_action_can_be_hit_by_the_pointer() {
         let document = destination.join("achievements.rml");
         fs::write(&document, signed_in).unwrap();
         let hits = hovered(&document, &grid);
-        for id in ["achievements-enabled", "achievements-signout", "achievements-back"] {
+        for id in [
+            "achievements-enabled",
+            "achievements-signout",
+            "achievements-back",
+        ] {
             assert!(
                 hits.iter().any(|hit| hit == id),
                 "{design}: the pointer cannot reach #{id} anywhere on the screen; it hits {:?}",
