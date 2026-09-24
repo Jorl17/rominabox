@@ -243,6 +243,40 @@ void disc_list_keeps_its_page(const char *native_assets, const char *data)
    setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
 }
 
+/* When the pointer rests on a control, we open its bindings list after
+ * 300 ms, and after a keyboard move we wait the longer keyboard delay. */
+void binds_open_sooner_on_hover()
+{
+   void *menu = open_menu();
+   if (!menu) return;
+   int x = 0, y = 0;
+   click_and_frame(menu, "options");
+   click_and_frame(menu, "controls");
+   host.clock_us = 10000000;
+   /* Not the control the screen opened on, whose timer started long ago. */
+   hover_and_frame(menu, "control-down");
+   host.clock_us += 250000;
+   frame(menu);
+   check(!binds_visible(&x, &y), "the bindings list is still closed 250 ms after a hover");
+   host.clock_us += 100000;
+   frame(menu);
+   check(binds_visible(&x, &y), "the bindings list opens 350 ms after a hover");
+
+   host.pointer.x = 0;
+   host.pointer.y = 0;
+   frame(menu);
+   rib_menu_key(menu, RIB_KEY_DOWN);
+   frame(menu);
+   host.clock_us += 350000;
+   frame(menu);
+   check(!binds_visible(&x, &y), "a keyboard move waits longer than a hover");
+   host.clock_us += 900000;
+   frame(menu);
+   check(binds_visible(&x, &y), "a keyboard move opens the list after the declared delay");
+   rib_menu_destroy(menu);
+   host.clock_us = 0;
+}
+
 /* On Windows, rename fails when the destination exists. */
 int refusing_rename(const char *from, const char *to)
 {
@@ -495,6 +529,7 @@ int main(int argc, char **argv)
    fixes::repeated_saves_replace_the_file(argv[2]);
    fixes::design_prompt_survives_an_empty_status(argv[1], argv[2]);
    fixes::disc_list_keeps_its_page(argv[1], argv[2]);
+   fixes::binds_open_sooner_on_hover();
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);
