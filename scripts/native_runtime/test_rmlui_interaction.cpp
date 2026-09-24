@@ -963,8 +963,17 @@ int main(int argc, char **argv)
    CHECK(std::string(inspect.text("status")) == "SAVED", "status remains briefly");
    inspect.advance(2);
    view.render(960, 600);
-   CHECK(std::string(inspect.text("status")).empty(), "main status expires");
-   CHECK(std::string(inspect.text("controls-status")).empty(), "controls status expires");
+   {
+      /* When a status expires, we put back the prompt from the design. */
+      auto prompt = [&](const char *id) {
+         Rml::Element *line = view.document.root()->GetElementById(id);
+         return line ? line->GetAttribute<Rml::String>("data-prompt", "") : Rml::String();
+      };
+      CHECK(!prompt("status").empty(), "the design gives the status line a prompt");
+      CHECK(std::string(inspect.text("status")) == prompt("status"), "main status expires back to the design's prompt");
+      CHECK(std::string(inspect.text("controls-status")) == prompt("controls-status"),
+            "controls status expires back to its prompt");
+   }
    for (float aspect : {10.0f/9, 4.0f/3, 16.0f/9}) {
       view.slots.set_game_aspect(aspect);
       CHECK(std::abs(inspect.picture_aspect() - aspect) < 0.02f, "well follows live core aspect");
