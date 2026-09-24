@@ -47,13 +47,29 @@ pub fn compose(
     discs: usize,
     destination: &Path,
 ) -> Composed {
+    compose_with(kit, design, "megadrive", entries, discs, destination)
+}
+
+/// The default menu for a game on `system`.
+pub fn compose_for(kit: &Path, design: &str, system: &str, destination: &Path) -> Composed {
+    compose_with(kit, design, system, None, 1, destination)
+}
+
+pub fn compose_with(
+    kit: &Path,
+    design: &str,
+    system: &str,
+    entries: Option<&[String]>,
+    discs: usize,
+    destination: &Path,
+) -> Composed {
     themes::compose_menu(
         &themes::MenuRequest {
             kit,
             design,
             palette: "blue",
             background: None,
-            system: "megadrive",
+            system,
             controls: &Controls::default(),
             show_menu: true,
             splash: false,
