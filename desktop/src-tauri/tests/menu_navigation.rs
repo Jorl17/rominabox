@@ -1,7 +1,7 @@
 //! Arrow keys, pointer and focus on every composed menu screen, headless.
 //!
 //! We compose every design in the registry and every hypothetical design
-//! under `tests/fixtures/designs/` with `themes::compose_menu` for a few
+//! under `tests/fixtures/designs/` with `menu::compose_menu` for a few
 //! pads, and run the menu C++ on each composition in `menu_nav_driver`
 //! (built in the `navigation` scope, found through
 //! `ROMINABOX_NAVIGATION_DRIVER`). We load the document in the driver with a
@@ -80,6 +80,8 @@ fn all_designs() -> (Vec<String>, Vec<String>) {
 fn kit(root: &Path, hypothetical: &[String]) -> PathBuf {
     let kit = root.join("runtime-kit");
     copy_tree(&repo::at("integrations/designs"), &kit.join("designs"));
+    // Shared parts (navigation stops, slider) are beside the designs, as in a kit.
+    copy_tree(&repo::at("integrations/parts"), &kit.join("parts"));
     for name in hypothetical {
         let target = kit.join("designs").join(name);
         copy_tree(&fixture_designs().join(name), &target);
@@ -106,7 +108,7 @@ fn kit(root: &Path, hypothetical: &[String]) -> PathBuf {
 /// the design and the bundled shaders and achievements, as in a full export.
 fn compose(kit: &Path, design: &str, system: &str, profile: Option<&str>, to: &Path) {
     let staged = themes::staged_design(kit, design);
-    let entries: Vec<String> = themes::declared_screens(&staged)
+    let entries: Vec<String> = rominabox_desktop::menu::declared_screens(&staged)
         .unwrap()
         .into_iter()
         .filter(|screen| screen.option_label.is_some())
@@ -123,23 +125,21 @@ fn compose(kit: &Path, design: &str, system: &str, profile: Option<&str>, to: &P
         ..Controls::default()
     };
     fs::create_dir_all(to).unwrap();
-    themes::compose_menu(
-        &themes::MenuRequest {
-            kit,
-            design,
-            palette: "blue",
-            background: None,
-            system,
-            controls: &controls,
-            show_menu: true,
-            splash: false,
-            include_achievements: true,
-            menu_entries: Some(&entries),
-            shaders: &shaders,
-        },
-        to,
-    )
-    .unwrap_or_else(|error| panic!("{design}/{system}: composition failed: {error}"));
+    let request = rominabox_desktop::menu::MenuRequest {
+        palette: "blue".into(),
+        system: system.into(),
+        controls: controls.clone(),
+        include_achievements: true,
+        menu_entries: Some(entries),
+        shaders,
+        // We compose the disc list only for a game of several discs, and the
+        // fake host gives the number of discs of the running game, even one.
+        discs: 7,
+        ..rominabox_desktop::menu::MenuRequest::new(&staged, kit.join("menu-assets"))
+    };
+    rominabox_desktop::menu::compose_menu(&request)
+        .and_then(|menu| menu.write(to))
+        .unwrap_or_else(|error| panic!("{design}/{system}: composition failed: {error}"));
     rominabox_desktop::controls::write_defaults_config_with_advanced_access(
         system,
         &controls,

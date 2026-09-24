@@ -89,6 +89,7 @@ void rib_achievements_sign_out()
    touch();
 }
 void rib_achievements_skip_startup() { session.startup_waiting = false; session.startup_skipped = true; touch(); }
+void rib_achievements_list_shown(bool) {}
 }
 
 namespace {

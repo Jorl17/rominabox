@@ -3,7 +3,6 @@
   "id": "sparse",
   "name": "Sparse",
   "description": "Hypothetical, style only: pause buttons scattered so candidates nearly tie.",
-  "slots": 6,
   "documents": {
     "splash": "splash.rml",
     "style": "menu.rcss"
@@ -42,6 +41,7 @@
   },
   "binds": {
     "afterMs": 1200,
+    "hoverAfterMs": 300,
     "width": 320
   },
   "overlays": [

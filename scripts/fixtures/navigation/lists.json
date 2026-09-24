@@ -241,60 +241,6 @@
             "move"
           ]
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B13",
-          "reason": "discs.sync() resets the list to page 1 every frame, so the turned page vanishes (fixed by stream F)",
-          "now": {
-            "focused": [
-              "discs-0",
-              "discs-0",
-              "discs-0",
-              "discs-0"
-            ],
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "move"
-              ],
-              [
-                "move"
-              ],
-              []
-            ]
-          }
-        },
-        "native": {
-          "bug": "B13",
-          "reason": "discs.sync() resets the list to page 1 every frame, so the turned page vanishes (fixed by stream F)",
-          "now": {
-            "focused": [
-              "volume-level",
-              "discs-0",
-              "discs-0",
-              "discs-0",
-              "discs-0"
-            ],
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [
-                "move"
-              ],
-              [
-                "move"
-              ],
-              []
-            ]
-          }
-        }
       }
     },
     {
@@ -332,22 +278,6 @@
           "disc-back",
           "disc-back"
         ]
-      },
-      "red": {
-        "native": {
-          "bug": "B22",
-          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
-          "now": {
-            "focused": [
-              "volume-level",
-              "controls",
-              "achievements",
-              "options-back",
-              "options-back",
-              "options-back"
-            ]
-          }
-        }
       }
     }
   ]

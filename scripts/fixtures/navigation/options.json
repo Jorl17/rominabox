@@ -125,21 +125,6 @@
           "options-back",
           "volume-level"
         ]
-      },
-      "red": {
-        "native": {
-          "bug": "B22",
-          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
-          "now": {
-            "focused": [
-              "volume-level",
-              "controls",
-              "controls",
-              "achievements",
-              "achievements"
-            ]
-          }
-        }
       }
     },
     {
@@ -177,22 +162,6 @@
           "options-back",
           "options-back"
         ]
-      },
-      "red": {
-        "native": {
-          "bug": "B22",
-          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
-          "now": {
-            "focused": [
-              "volume-level",
-              "controls",
-              "achievements",
-              "options-back",
-              "options-back",
-              "options-back"
-            ]
-          }
-        }
       }
     },
     {
@@ -229,21 +198,6 @@
           "options-back",
           "options-back"
         ]
-      },
-      "red": {
-        "native": {
-          "bug": "B22",
-          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
-          "now": {
-            "focused": [
-              "volume-level",
-              "controls",
-              "achievements",
-              "options-back",
-              "options-back"
-            ]
-          }
-        }
       }
     }
   ]

@@ -3,7 +3,6 @@
   "id": "pause-column",
   "name": "Pause column",
   "description": "Hypothetical, style only: the six slots as one column, the buttons in a column on their left.",
-  "slots": 6,
   "documents": {
     "splash": "splash.rml",
     "style": "menu.rcss"
@@ -42,6 +41,7 @@
   },
   "binds": {
     "afterMs": 1200,
+    "hoverAfterMs": 300,
     "width": 320
   },
   "overlays": [
