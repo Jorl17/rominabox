@@ -28,3 +28,8 @@
 .account-password-row { position: relative; }
 .account-password-row .account-input { padding-right: 128dp; }
 .account-reveal { box-sizing: border-box; position: absolute; right: 8dp; top: 6dp; width: 104dp; height: 30dp; line-height: 26dp; border-width: 2dp; text-align: center; font-family: Silkscreen; font-size: 13dp; }
+
+/* SHOW is inside the password field, so for the arrow keys neither is next to
+ * the other until we declare it here. */
+#achievement-password { nav-right: #achievements-password-visibility; }
+#achievements-password-visibility { nav-left: #achievement-password; }

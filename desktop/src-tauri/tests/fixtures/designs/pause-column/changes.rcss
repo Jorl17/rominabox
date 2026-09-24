@@ -18,3 +18,6 @@
 #actions #load { top: 174dp; }
 #actions #options, #actions #controls { top: 254dp; }
 #actions #quit { top: 334dp; }
+/* Down from the last button would lead to the last slot, down and to the
+ * right. In this design the column ends there instead. */
+#actions #quit { nav-down: none; }

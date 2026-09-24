@@ -44,36 +44,6 @@
           "control-right",
           "controls-device-current"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B4",
-          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-left",
-              "control-right",
-              "control-down",
-              "control-y"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B4",
-          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-left",
-              "control-right",
-              "control-down",
-              "control-y"
-            ]
-          }
-        }
       }
     },
     {
@@ -93,34 +63,6 @@
           "control-a",
           "control-left"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B4",
-          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-left",
-              "control-right",
-              "control-left"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B4",
-          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-left",
-              "control-right",
-              "control-left"
-            ]
-          }
-        }
       }
     },
     {
@@ -141,34 +83,6 @@
           "control-r",
           "control-x"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B4",
-          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "controls-back",
-              "control-up",
-              "control-down"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B4",
-          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "controls-back",
-              "control-up",
-              "control-down"
-            ]
-          }
-        }
       }
     },
     {
@@ -193,38 +107,6 @@
           "controls-back",
           "controls-reset"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B4",
-          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-left",
-              "control-right",
-              "control-down",
-              "control-b",
-              "control-a"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B4",
-          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-left",
-              "control-right",
-              "control-down",
-              "control-b",
-              "control-a"
-            ]
-          }
-        }
       }
     },
     {
@@ -250,46 +132,6 @@
           "controls-device-option-megadrive6",
           "controls-device-current"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B4",
-          "reason": "the pad screen's arrows walk the declaration ring and never enter the open picker",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-up",
-              "controls-back",
-              "controls-reset",
-              "controls-back",
-              "control-up",
-              [
-                "control-up",
-                "controls-cancel"
-              ]
-            ]
-          }
-        },
-        "native": {
-          "bug": "B4",
-          "reason": "the pad screen's arrows walk the declaration ring and never enter the open picker",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-up",
-              "controls-back",
-              "controls-reset",
-              "controls-back",
-              "control-up",
-              [
-                "control-up",
-                "controls-cancel"
-              ]
-            ]
-          }
-        }
       }
     },
     {
@@ -324,60 +166,6 @@
           ],
           []
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B16",
-          "reason": "the hovered control is written back as the focus every frame",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-left",
-              "control-left",
-              "control-left"
-            ],
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [],
-              [
-                "move"
-              ],
-              []
-            ]
-          }
-        },
-        "native": {
-          "bug": "B16",
-          "reason": "the hovered control is written back as the focus every frame",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-left",
-              "control-left",
-              "control-left"
-            ],
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [],
-              [
-                "move"
-              ],
-              []
-            ]
-          }
-        }
       }
     },
     {
@@ -397,34 +185,6 @@
           "control-a",
           "control-start"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B4",
-          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-a",
-              "control-a",
-              "control-b"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B4",
-          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              "control-a",
-              "control-a",
-              "control-b"
-            ]
-          }
-        }
       }
     },
     {
@@ -461,62 +221,6 @@
             "cancel"
           ]
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B21",
-          "reason": "OK on a control starts capture silently; a click confirms",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              [
-                "control-up",
-                "controls-cancel"
-              ],
-              "control-up"
-            ],
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [],
-              [
-                "cancel"
-              ]
-            ]
-          }
-        },
-        "native": {
-          "bug": "B21",
-          "reason": "OK on a control starts capture silently; a click confirms",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              [
-                "control-up",
-                "controls-cancel"
-              ],
-              "control-up"
-            ],
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [],
-              [
-                "cancel"
-              ]
-            ]
-          }
-        }
       }
     },
     {
@@ -548,54 +252,6 @@
             "cancel"
           ]
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B15",
-          "reason": "keyboard Back on Controls falls through to CONTROLS_BACK, which shows Pause",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              null
-            ],
-            "screen": "pause-panel",
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [
-                "cancel"
-              ]
-            ]
-          }
-        },
-        "native": {
-          "bug": "B15",
-          "reason": "keyboard Back on Controls falls through to CONTROLS_BACK, which shows Pause",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              null
-            ],
-            "screen": "pause-panel",
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [
-                "cancel"
-              ]
-            ]
-          }
-        }
       }
     },
     {
@@ -614,32 +270,6 @@
       },
       "screen": {
         "*": "options-panel"
-      },
-      "red": {
-        "disc": {
-          "bug": "B15",
-          "reason": "Controls' BACK carries the built-in target pause",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              null
-            ],
-            "screen": "pause-panel"
-          }
-        },
-        "native": {
-          "bug": "B15",
-          "reason": "Controls' BACK carries the built-in target pause",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-up",
-              null
-            ],
-            "screen": "pause-panel"
-          }
-        }
       }
     },
     {
@@ -651,7 +281,6 @@
         "hover:control-group-l_stick",
         "hover:heading",
         "key:right",
-        "key:left",
         "key:left"
       ],
       "focused": {
@@ -661,38 +290,37 @@
           "control-group-l_stick",
           "control-group-l_stick",
           "control-group-r_stick",
-          "control-group-l_stick",
-          "control-select"
+          "control-group-l_stick"
+        ]
+      }
+    },
+    {
+      "name": "PS1 analog: down the left column",
+      "menu": "ps1-analog",
+      "steps": [
+        "options",
+        "controls",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-l",
+          "control-l2",
+          "control-up"
         ]
       },
       "red": {
-        "disc": {
-          "bug": "B20",
-          "reason": "a stick's directions are separate stops in declaration order",
-          "now": {
-            "focused": [
-              "volume-level",
-              "control-l",
-              "control-group-l_stick",
-              "control-group-l_stick",
-              "control-group-l_stick",
-              "control-group-l_stick",
-              "control-start"
-            ]
-          }
-        },
         "native": {
-          "bug": "B20",
-          "reason": "a stick's directions are separate stops in declaration order",
+          "bug": "B22",
+          "reason": "the same overlap in Native's pad scene: seven callouts a side are 58dp tall every 54dp, so Down skips one",
           "now": {
             "focused": [
               "volume-level",
               "control-l",
-              "control-group-l_stick",
-              "control-group-l_stick",
-              "control-group-l_stick",
-              "control-group-l_stick",
-              "control-start"
+              "control-up",
+              "control-right"
             ]
           }
         }

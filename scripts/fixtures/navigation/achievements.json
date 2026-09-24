@@ -19,32 +19,6 @@
           "achievements-back",
           "achievements-login"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B20",
-          "reason": "the screen opens with its highlight on the hidden TURN OFF",
-          "now": {
-            "focused": [
-              "volume-level",
-              null,
-              "achievements-back",
-              "achievements-login"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B20",
-          "reason": "the screen opens with its highlight on the hidden TURN OFF",
-          "now": {
-            "focused": [
-              "volume-level",
-              null,
-              "achievements-back",
-              "achievements-login"
-            ]
-          }
-        }
       }
     },
     {
@@ -68,38 +42,6 @@
           "achievements-cancel",
           "achievement-password"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B20",
-          "reason": "the screen opens highlighting the hidden TURN OFF, then the form walks document order through SHOW",
-          "now": {
-            "focused": [
-              "volume-level",
-              null,
-              "achievement-username",
-              "achievement-password",
-              "achievements-password-visibility",
-              "achievements-password-visibility",
-              "achievement-password"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B20",
-          "reason": "the screen opens highlighting the hidden TURN OFF, then the form walks document order through SHOW",
-          "now": {
-            "focused": [
-              "volume-level",
-              null,
-              "achievement-username",
-              "achievement-password",
-              "achievements-password-visibility",
-              "achievements-password-visibility",
-              "achievement-password"
-            ]
-          }
-        }
       }
     },
     {
@@ -121,36 +63,6 @@
           "achievements-password-visibility",
           "achievement-password"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B23",
-          "reason": "Right on the password does nothing, and the screen opens on the hidden TURN OFF",
-          "now": {
-            "focused": [
-              "volume-level",
-              null,
-              "achievement-username",
-              "achievement-password",
-              "achievement-password",
-              "achievement-password"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B23",
-          "reason": "Right on the password does nothing, and the screen opens on the hidden TURN OFF",
-          "now": {
-            "focused": [
-              "volume-level",
-              null,
-              "achievement-username",
-              "achievement-password",
-              "achievement-password",
-              "achievement-password"
-            ]
-          }
-        }
       }
     },
     {
@@ -170,34 +82,6 @@
           "achievement-password",
           "achievement-password"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "Tab",
-          "reason": "Tab is swallowed everywhere, and the screen opens on the hidden TURN OFF",
-          "now": {
-            "focused": [
-              "volume-level",
-              null,
-              "achievement-username",
-              "achievement-username",
-              "achievement-username"
-            ]
-          }
-        },
-        "native": {
-          "bug": "Tab",
-          "reason": "Tab is swallowed everywhere, and the screen opens on the hidden TURN OFF",
-          "now": {
-            "focused": [
-              "volume-level",
-              null,
-              "achievement-username",
-              "achievement-username",
-              "achievement-username"
-            ]
-          }
-        }
       }
     },
     {
@@ -234,38 +118,6 @@
           "achievements-next",
           "achievements-enabled"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B11",
-          "reason": "Down from the last row skips the pager",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievement-1",
-              "achievement-2",
-              "achievement-3",
-              "achievement-4",
-              "achievements-enabled",
-              "achievements-signout"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B11",
-          "reason": "Down from the last row skips the pager",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievement-1",
-              "achievement-2",
-              "achievement-3",
-              "achievement-4",
-              "achievements-enabled",
-              "achievements-signout"
-            ]
-          }
-        }
       }
     },
     {
@@ -293,38 +145,6 @@
           "achievements-signout",
           "achievements-back"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B11",
-          "reason": "Right on TURN OFF tries to turn the page",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievement-1",
-              "achievement-2",
-              "achievement-3",
-              "achievements-enabled",
-              "achievements-enabled",
-              "achievements-enabled"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B11",
-          "reason": "Right on TURN OFF tries to turn the page",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievement-1",
-              "achievement-2",
-              "achievement-3",
-              "achievements-enabled",
-              "achievements-enabled",
-              "achievements-enabled"
-            ]
-          }
-        }
       }
     },
     {
@@ -346,32 +166,6 @@
           "achievement-1",
           "achievement-1"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B20",
-          "reason": "the hidden RETRY is a stop in the list ring",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievement-1",
-              "achievements-back",
-              null
-            ]
-          }
-        },
-        "native": {
-          "bug": "B20",
-          "reason": "the hidden RETRY is a stop in the list ring",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievement-1",
-              "achievements-back",
-              null
-            ]
-          }
-        }
       }
     },
     {
@@ -402,70 +196,6 @@
           "achievements-keep-session",
           "achievement-1"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "G2",
-          "reason": "the dialog keeps its own counter: the row behind stays highlighted and the dialog's arrows wrap",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievement-1",
-              [
-                "achievement-1",
-                "achievements-keep-session"
-              ],
-              [
-                "achievement-1",
-                "achievements-end-session"
-              ],
-              [
-                "achievement-1",
-                "achievements-keep-session"
-              ],
-              [
-                "achievement-1",
-                "achievements-end-session"
-              ],
-              [
-                "achievement-1",
-                "achievements-keep-session"
-              ],
-              "achievement-1"
-            ]
-          }
-        },
-        "native": {
-          "bug": "G2",
-          "reason": "the dialog keeps its own counter: the row behind stays highlighted and the dialog's arrows wrap",
-          "now": {
-            "focused": [
-              "volume-level",
-              "achievement-1",
-              [
-                "achievement-1",
-                "achievements-keep-session"
-              ],
-              [
-                "achievement-1",
-                "achievements-end-session"
-              ],
-              [
-                "achievement-1",
-                "achievements-keep-session"
-              ],
-              [
-                "achievement-1",
-                "achievements-end-session"
-              ],
-              [
-                "achievement-1",
-                "achievements-keep-session"
-              ],
-              "achievement-1"
-            ]
-          }
-        }
       }
     },
     {
@@ -486,32 +216,6 @@
           "achievements-skip-startup",
           "resume"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "G2",
-          "reason": "the dialog is highlighted only after a key, and nothing after it closes",
-          "now": {
-            "focused": [
-              null,
-              "achievements-skip-startup",
-              "achievements-skip-startup",
-              null
-            ]
-          }
-        },
-        "native": {
-          "bug": "G2",
-          "reason": "the dialog is highlighted only after a key, and nothing after it closes",
-          "now": {
-            "focused": [
-              null,
-              "achievements-skip-startup",
-              "achievements-skip-startup",
-              null
-            ]
-          }
-        }
       }
     }
   ]

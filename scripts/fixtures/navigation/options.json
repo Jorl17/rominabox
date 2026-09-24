@@ -39,41 +39,6 @@
           "achievements",
           "shaders"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B3",
-          "reason": "Options walks document order, not the drawn layout",
-          "now": {
-            "focused": [
-              "volume-level",
-              "options-back",
-              "achievements"
-            ]
-          }
-        },
-        "native": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
-          "now": {
-            "focused": [
-              "volume-level",
-              "options-back",
-              "achievements"
-            ]
-          }
-        },
-        "options-columns": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
-          "now": {
-            "focused": [
-              "volume-level",
-              "options-back",
-              "achievements"
-            ]
-          }
-        }
       }
     },
     {
@@ -99,19 +64,6 @@
           "options-back",
           "volume-level"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B3",
-          "reason": "Options walks document order, not the drawn layout",
-          "now": {
-            "focused": [
-              "volume-level",
-              "controls",
-              "volume-level"
-            ]
-          }
-        }
       }
     },
     {
@@ -175,29 +127,16 @@
         ]
       },
       "red": {
-        "disc": {
-          "bug": "B3",
-          "reason": "Options walks document order, not the drawn layout",
+        "native": {
+          "bug": "B22",
+          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
           "now": {
             "focused": [
               "volume-level",
               "controls",
               "controls",
-              "shaders",
-              "shaders"
-            ]
-          }
-        },
-        "options-columns": {
-          "bug": "B3",
-          "reason": "Options walks document order, not the drawn layout",
-          "now": {
-            "focused": [
-              "volume-level",
-              "controls",
-              "controls",
-              "shaders",
-              "shaders"
+              "achievements",
+              "achievements"
             ]
           }
         }
@@ -240,45 +179,17 @@
         ]
       },
       "red": {
-        "disc": {
-          "bug": "B3",
-          "reason": "Options walks document order, not the drawn layout",
-          "now": {
-            "focused": [
-              "volume-level",
-              "controls",
-              "shaders",
-              "achievements",
-              "options-back",
-              "volume-level"
-            ]
-          }
-        },
         "native": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
+          "bug": "B22",
+          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
           "now": {
             "focused": [
               "volume-level",
               "controls",
-              "shaders",
               "achievements",
               "options-back",
-              "volume-level"
-            ]
-          }
-        },
-        "options-columns": {
-          "bug": "B3",
-          "reason": "Options walks document order, not the drawn layout",
-          "now": {
-            "focused": [
-              "volume-level",
-              "controls",
-              "shaders",
-              "achievements",
               "options-back",
-              "volume-level"
+              "options-back"
             ]
           }
         }
@@ -320,29 +231,16 @@
         ]
       },
       "red": {
-        "disc": {
-          "bug": "B3",
-          "reason": "Options walks document order, not the drawn layout",
+        "native": {
+          "bug": "B22",
+          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
           "now": {
             "focused": [
               "volume-level",
               "controls",
-              "shaders",
               "achievements",
+              "options-back",
               "options-back"
-            ]
-          }
-        },
-        "options-columns": {
-          "bug": "B3",
-          "reason": "Options walks document order, not the drawn layout",
-          "now": {
-            "focused": [
-              "volume-level",
-              "controls",
-              "shaders",
-              "achievements",
-              "discs"
             ]
           }
         }

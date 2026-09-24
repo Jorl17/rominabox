@@ -4,12 +4,14 @@
 #include "rmlui/host.h"
 #include "rmlui_bridge.h"
 #include "rmlui/view.hpp"
+#include "rmlui/elements.hpp"
 #include "rmlui/overlays.hpp"
 #include "menu_test_view.hpp"
 #include "menu_host_fake.h"
 #include <file/config_file.h>
 #include "../../vendor/retroarch/audio/volume_range.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -89,17 +91,38 @@ static int capacity_case(const char *assets, const char *data)
       click_and_frame(menu, "controls");
       check(view.document.has_element("control-group-l_stick"),
             "the staged 24-control document has its analogue direction group");
-      for (int index = 0; index < 24 && index < static_cast<int>(expected.size()); ++index)
+      /* Every stop in the scene captures the control it stands for: a callout
+       * captures its control, and the box of a stick (one stop for the stick)
+       * its first member. We reach each by pointer and press it by keyboard. */
+      std::vector<std::string> stops;
+      rib::walk(view.document.root()->GetElementById("controller-scene"), [&](Rml::Element *element) {
+         if (!element->IsClassSet("control-callout") && !element->IsClassSet("control-group"))
+            return rib::Walk::Continue;
+         stops.push_back(element->GetId());
+         return rib::Walk::SkipChildren;
+      });
+      check(stops.size() == 16, "the 24 declared controls are 14 callouts and 2 sticks");
+      std::vector<std::string> captured;
+      for (const std::string& stop : stops)
       {
-         if (index == 16)
-            check(focused("control-group-l_stick"),
-                  "keyboard focus reaches the seventeenth declared control's group");
+         hover_and_frame(menu, stop.c_str());
+         check(focused(stop.c_str()), ("the pointer focuses " + stop).c_str());
          rib_menu_key(menu, RIB_KEY_OK);
-         check(host.captured_id == expected[index],
-               ("keyboard capture addresses declared control " + expected[index]).c_str());
+         const bool callout = stop.rfind("control-group-", 0) != 0;
+         check(!callout || host.captured_id == stop.substr(std::strlen("control-")),
+               ("keyboard capture addresses the control " + stop + " draws").c_str());
+         check(std::find(expected.begin(), expected.begin() + 24, host.captured_id)
+                     != expected.begin() + 24
+               && std::find(captured.begin(), captured.end(), host.captured_id) == captured.end(),
+               ("each stop captures a different declared control; " + stop).c_str());
+         captured.push_back(host.captured_id);
          rib_menu_key(menu, RIB_KEY_CANCEL);
-         rib_menu_key(menu, RIB_KEY_DOWN);
       }
+      hover_and_frame(menu, "control-group-l_stick");
+      rib_menu_key(menu, RIB_KEY_OK);
+      check(host.captured_id == expected[14],
+            "the left stick's stop captures its first declared member");
+      rib_menu_key(menu, RIB_KEY_CANCEL);
       rib_menu_destroy(menu);
    }
    if (failures)
@@ -170,10 +193,10 @@ int main(int argc, char **argv)
       if (view.parts.part_is_slider(option_ids[index])) ++sliders;
    }
    check(sliders == 1, "volume has one logical keyboard/joypad stop");
-   bool reached_volume = false;
-   for (int index = 0; index <= option_count; ++index) {
-      rib_menu_key(menu, RIB_KEY_DOWN);
-      if (!focused(RIB_VOLUME_SLIDER_ID)) continue;
+   /* The slider is the first stop in the Options document, so we focus it
+    * when the screen opens. Left and Right then move the level, not the focus. */
+   check(focused(RIB_VOLUME_SLIDER_ID), "Options opens on the volume slider");
+   {
       const float before = host.volume_db;
       rib_menu_key(menu, RIB_KEY_RIGHT);
       frame(menu);
@@ -181,9 +204,7 @@ int main(int argc, char **argv)
       rib_menu_key(menu, RIB_KEY_LEFT);
       frame(menu);
       check(std::fabs(host.volume_db - before) < 0.06f && focused(RIB_VOLUME_SLIDER_ID), "Left restores volume without an arrow focus stop");
-      reached_volume = true; break;
    }
-   check(reached_volume, "logical navigation reaches the volume slider");
    check(view.parts.commit_slider(RIB_VOLUME_SLIDER_ID, 0.5f),
          "the staged Options screen exposes its volume slider");
    frame(menu);
@@ -195,11 +216,12 @@ int main(int argc, char **argv)
          "slider change persists through the real file/config layer");
    if (volume_file) config_file_free(volume_file);
    click_and_frame(menu, "controls");
-   hover_and_frame(menu, "control-right");
-   check(focused("control-right") && !focused("control-up"),
+   hover_and_frame(menu, "control-left");
+   check(focused("control-left") && !focused("control-up"),
          "pointer focus paints only the hovered control");
+   /* Down from LEFT is the callout drawn below it. */
    rib_menu_key(menu, RIB_KEY_DOWN);
-   check(focused("control-down") && !focused("control-right"),
+   check(focused("control-down") && !focused("control-left"),
          "the next key continues from the control reached by pointer");
 
    hover_and_frame(menu, "control-up");

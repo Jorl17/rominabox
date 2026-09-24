@@ -23,36 +23,6 @@
           "shaders-back",
           "shaders-back"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
-          "now": {
-            "focused": [
-              "volume-level",
-              "none",
-              "scanlines",
-              "phosphor",
-              "shaders-back",
-              "none"
-            ]
-          }
-        },
-        "native": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
-          "now": {
-            "focused": [
-              "volume-level",
-              "none",
-              "scanlines",
-              "phosphor",
-              "shaders-back",
-              "none"
-            ]
-          }
-        }
       }
     },
     {
@@ -68,30 +38,6 @@
           "none",
           "none"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
-          "now": {
-            "focused": [
-              "volume-level",
-              "none",
-              "shaders-back"
-            ]
-          }
-        },
-        "native": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
-          "now": {
-            "focused": [
-              "volume-level",
-              "none",
-              "shaders-back"
-            ]
-          }
-        }
       }
     },
     {
@@ -143,60 +89,6 @@
           ],
           []
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B16",
-          "reason": "the hovered row is written back as the focus every frame",
-          "now": {
-            "focused": [
-              "volume-level",
-              "none",
-              "scanlines",
-              "scanlines",
-              "scanlines"
-            ],
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [],
-              [
-                "move"
-              ],
-              []
-            ]
-          }
-        },
-        "native": {
-          "bug": "B16",
-          "reason": "the hovered row is written back as the focus every frame",
-          "now": {
-            "focused": [
-              "volume-level",
-              "none",
-              "scanlines",
-              "scanlines",
-              "scanlines"
-            ],
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [],
-              [
-                "move"
-              ],
-              []
-            ]
-          }
-        }
       }
     },
     {
@@ -215,32 +107,6 @@
       },
       "screen": {
         "*": "options-panel"
-      },
-      "red": {
-        "disc": {
-          "bug": "B14",
-          "reason": "returning to Options highlights the volume, not the entry that opened the list",
-          "now": {
-            "focused": [
-              "volume-level",
-              "none",
-              "volume-level"
-            ],
-            "screen": "options-panel"
-          }
-        },
-        "native": {
-          "bug": "B14",
-          "reason": "returning to Options highlights the volume, not the entry that opened the list",
-          "now": {
-            "focused": [
-              "volume-level",
-              "none",
-              "volume-level"
-            ],
-            "screen": "options-panel"
-          }
-        }
       }
     },
     {
@@ -262,42 +128,6 @@
             "cancel"
           ]
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B21",
-          "reason": "Back through the BACK link plays Confirm",
-          "now": {
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ]
-            ]
-          }
-        },
-        "native": {
-          "bug": "B21",
-          "reason": "Back through the BACK link plays Confirm",
-          "now": {
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ]
-            ]
-          }
-        }
       }
     },
     {
@@ -346,39 +176,6 @@
           "discs-next",
           "discs-back"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B11",
-          "reason": "the list's Down never counts the pager and wraps",
-          "now": {
-            "focused": [
-              "discs-0",
-              "discs-1",
-              "discs-2",
-              "discs-3",
-              "discs-4",
-              "discs-back",
-              "discs-0"
-            ]
-          }
-        },
-        "native": {
-          "bug": "B11",
-          "reason": "the list's Down never counts the pager and wraps",
-          "now": {
-            "focused": [
-              "volume-level",
-              "discs-0",
-              "discs-1",
-              "discs-2",
-              "discs-3",
-              "discs-4",
-              "discs-back",
-              "discs-0"
-            ]
-          }
-        }
       }
     },
     {
@@ -448,38 +245,36 @@
       "red": {
         "disc": {
           "bug": "B13",
-          "reason": "discs.sync() resets the list to page 1 every frame, so the turned page vanishes",
+          "reason": "discs.sync() resets the list to page 1 every frame, so the turned page vanishes (fixed by stream F)",
           "now": {
             "focused": [
               "discs-0",
               null,
-              null,
-              null
+              "discs-0",
+              "discs-0"
             ],
             "sounds": [
               [
                 "confirm"
               ],
               [
-                "confirm"
+                "move"
               ],
-              [
-                "confirm"
-              ],
+              [],
               []
             ]
           }
         },
         "native": {
           "bug": "B13",
-          "reason": "discs.sync() resets the list to page 1 every frame, so the turned page vanishes",
+          "reason": "discs.sync() resets the list to page 1 every frame, so the turned page vanishes (fixed by stream F)",
           "now": {
             "focused": [
               "volume-level",
               "discs-0",
               null,
-              null,
-              null
+              "discs-0",
+              "discs-0"
             ],
             "sounds": [
               [
@@ -489,11 +284,9 @@
                 "confirm"
               ],
               [
-                "confirm"
+                "move"
               ],
-              [
-                "confirm"
-              ],
+              [],
               []
             ]
           }
@@ -537,30 +330,17 @@
         ]
       },
       "red": {
-        "disc": {
-          "bug": "B15",
-          "reason": "Disc's disc screen has no .screen-panel, so nothing on it is highlighted on entry",
-          "now": {
-            "focused": [
-              null,
-              "disc-back",
-              "disc-back",
-              "disc-back",
-              "disc-back"
-            ]
-          }
-        },
         "native": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
+          "bug": "B22",
+          "reason": "Native's Options entries are 70dp tall every 60dp, so each overlaps the next and Down skips one (fixed by stream R)",
           "now": {
             "focused": [
               "volume-level",
               "controls",
-              "shaders",
               "achievements",
               "options-back",
-              "volume-level"
+              "options-back",
+              "options-back"
             ]
           }
         }

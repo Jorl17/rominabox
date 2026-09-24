@@ -15,44 +15,6 @@
         "*": [
           "resume"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B14",
-          "reason": "the menu opens with nothing highlighted",
-          "now": {
-            "focused": [
-              null
-            ]
-          }
-        },
-        "native": {
-          "bug": "B14",
-          "reason": "the menu opens with nothing highlighted",
-          "now": {
-            "focused": [
-              null
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "B14",
-          "reason": "the menu opens with nothing highlighted",
-          "now": {
-            "focused": [
-              null
-            ]
-          }
-        },
-        "sparse": {
-          "bug": "B14",
-          "reason": "the menu opens with nothing highlighted",
-          "now": {
-            "focused": [
-              null
-            ]
-          }
-        }
       }
     },
     {
@@ -78,28 +40,6 @@
           "slot-1",
           "slot-2"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-4"
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-4"
-            ]
-          }
-        }
       }
     },
     {
@@ -135,56 +75,6 @@
           "slot-1",
           "slot-1"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-2",
-              "slot-3",
-              "slot-1"
-            ]
-          }
-        },
-        "native": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-2",
-              "slot-3",
-              "slot-1"
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-2",
-              "slot-3",
-              "slot-1"
-            ]
-          }
-        },
-        "sparse": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-2",
-              "slot-3",
-              "slot-1"
-            ]
-          }
-        }
       }
     },
     {
@@ -215,52 +105,6 @@
           "slot-5",
           "slot-6"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-4",
-              "resume",
-              "slot-1"
-            ]
-          }
-        },
-        "native": {
-          "bug": "Q1",
-          "reason": "Down from the button row wraps round to the top slots",
-          "now": {
-            "focused": [
-              "slot-4",
-              "resume",
-              "slot-1"
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-4",
-              "resume",
-              "slot-1"
-            ]
-          }
-        },
-        "sparse": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-4",
-              "resume",
-              "slot-1"
-            ]
-          }
-        }
       }
     },
     {
@@ -296,56 +140,6 @@
           "quit",
           "quit"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "save",
-              "disc",
-              "options",
-              "quit"
-            ]
-          }
-        },
-        "native": {
-          "bug": "Q1",
-          "reason": "arrows wrap at the edge, and an edge is meant to stop",
-          "now": {
-            "focused": [
-              "save",
-              "options",
-              "quit",
-              "resume"
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "save",
-              "options",
-              "quit",
-              "resume"
-            ]
-          }
-        },
-        "sparse": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "save",
-              "options",
-              "quit",
-              "resume"
-            ]
-          }
-        }
       }
     },
     {
@@ -386,60 +180,6 @@
           "options",
           "options"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-4",
-              "resume",
-              "slot-1",
-              "slot-4"
-            ]
-          }
-        },
-        "native": {
-          "bug": "Q1",
-          "reason": "Down from the button row wraps round to the top slots",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-4",
-              "resume",
-              "slot-1",
-              "slot-4"
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-4",
-              "resume",
-              "slot-1",
-              "slot-4"
-            ]
-          }
-        },
-        "sparse": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-4",
-              "resume",
-              "slot-1",
-              "slot-4"
-            ]
-          }
-        }
       }
     },
     {
@@ -465,28 +205,6 @@
           "resume",
           "resume"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-4",
-              "slot-1"
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-4",
-              "slot-1"
-            ]
-          }
-        }
       }
     },
     {
@@ -517,52 +235,6 @@
           "resume",
           "resume"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-3",
-              "slot-2"
-            ]
-          }
-        },
-        "native": {
-          "bug": "Q1",
-          "reason": "Down from the button row wraps round to the slots, and Left wraps along them",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-3",
-              "slot-2"
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-3",
-              "slot-2"
-            ]
-          }
-        },
-        "sparse": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "slot-1",
-              "slot-3",
-              "slot-2"
-            ]
-          }
-        }
       }
     },
     {
@@ -596,41 +268,6 @@
           "quit",
           "quit"
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "save",
-              "load",
-              "disc"
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "save",
-              "load",
-              "options"
-            ]
-          }
-        },
-        "sparse": {
-          "bug": "B1",
-          "reason": "the pause arrows follow Native's 3x2 grid and horizontal button row, not this layout",
-          "now": {
-            "focused": [
-              "save",
-              "load",
-              "options"
-            ]
-          }
-        }
       }
     },
     {
@@ -647,52 +284,6 @@
       },
       "screen": {
         "*": "pause-panel"
-      },
-      "red": {
-        "disc": {
-          "bug": "B14",
-          "reason": "returning to Pause leaves nothing highlighted",
-          "now": {
-            "focused": [
-              "volume-level",
-              null
-            ],
-            "screen": "pause-panel"
-          }
-        },
-        "native": {
-          "bug": "B14",
-          "reason": "returning to Pause leaves nothing highlighted",
-          "now": {
-            "focused": [
-              "volume-level",
-              null
-            ],
-            "screen": "pause-panel"
-          }
-        },
-        "pause-column": {
-          "bug": "B14",
-          "reason": "returning to Pause leaves nothing highlighted",
-          "now": {
-            "focused": [
-              "volume-level",
-              null
-            ],
-            "screen": "pause-panel"
-          }
-        },
-        "sparse": {
-          "bug": "B14",
-          "reason": "returning to Pause leaves nothing highlighted",
-          "now": {
-            "focused": [
-              "volume-level",
-              null
-            ],
-            "screen": "pause-panel"
-          }
-        }
       }
     },
     {
@@ -710,50 +301,6 @@
             "cancel"
           ]
         ]
-      },
-      "red": {
-        "native": {
-          "bug": "B21",
-          "reason": "Back through the BACK link plays Confirm",
-          "now": {
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ]
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "B21",
-          "reason": "Back through the BACK link plays Confirm",
-          "now": {
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ]
-            ]
-          }
-        },
-        "sparse": {
-          "bug": "B21",
-          "reason": "Back through the BACK link plays Confirm",
-          "now": {
-            "sounds": [
-              [
-                "confirm"
-              ],
-              [
-                "confirm"
-              ]
-            ]
-          }
-        }
       }
     },
     {
@@ -793,80 +340,6 @@
           ],
           []
         ]
-      },
-      "red": {
-        "disc": {
-          "bug": "Q2",
-          "reason": "a pointer move does not focus anything on Pause, which also opens with nothing highlighted",
-          "now": {
-            "focused": [
-              null,
-              "slot-1",
-              "slot-1"
-            ],
-            "sounds": [
-              [],
-              [
-                "move"
-              ],
-              []
-            ]
-          }
-        },
-        "native": {
-          "bug": "Q2",
-          "reason": "a pointer move does not focus anything on Pause, which also opens with nothing highlighted",
-          "now": {
-            "focused": [
-              null,
-              "slot-1",
-              "slot-1"
-            ],
-            "sounds": [
-              [],
-              [
-                "move"
-              ],
-              []
-            ]
-          }
-        },
-        "pause-column": {
-          "bug": "Q2",
-          "reason": "a pointer move does not focus anything on Pause, which also opens with nothing highlighted",
-          "now": {
-            "focused": [
-              null,
-              "slot-1",
-              "slot-1"
-            ],
-            "sounds": [
-              [],
-              [
-                "move"
-              ],
-              []
-            ]
-          }
-        },
-        "sparse": {
-          "bug": "Q2",
-          "reason": "a pointer move does not focus anything on Pause, which also opens with nothing highlighted",
-          "now": {
-            "focused": [
-              null,
-              "slot-1",
-              "slot-1"
-            ],
-            "sounds": [
-              [],
-              [
-                "move"
-              ],
-              []
-            ]
-          }
-        }
       }
     }
   ]
