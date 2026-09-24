@@ -1,7 +1,9 @@
 div { display: block; }
 body { margin: 0; width: 100%; height: 100%; font-family: Silkscreen; font-size: 16dp; color: design(ink); background-color: design(background); }
-#screen { position: absolute; left: 0; top: 0; width: 960dp; height: 600dp; background-color: design(screen); }
-#spine { position: absolute; left: 0; top: 0; width: 8dp; height: 600dp; background-color: design(frame); z-index: 3; }
+/* The field fills the window at any aspect ratio. The slots stay at the left,
+ * and the button column stays at the right edge. */
+#screen { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: design(screen); }
+#spine { position: absolute; left: 0; top: 0; width: 8dp; height: 100%; background-color: design(frame); z-index: 3; }
 
 /* An overlay is this design drawn over a running game. In the player we add
  * `showing`, later `leaving`, and `overlay` on the body while the menu is
@@ -13,7 +15,7 @@ body.overlay #pause-panel, body.overlay #controls-panel,
 body.overlay #options-panel, body.overlay #disc-panel,
 body.overlay .screen-panel { display: none; }
 
-#splash { display: none; position: absolute; left: 0; top: 0; width: 960dp; height: 600dp; z-index: 100; background-color: design(background); opacity: 0; transition: opacity 0.1s linear-in-out; }
+#splash { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 100; background-color: design(background); opacity: 0; transition: opacity 0.1s linear-in-out; }
 #splash.showing { display: block; opacity: 1; }
 #splash.leaving { display: block; opacity: 0; transition: opacity design(overlay-leave-splash)s linear-in-out; }
 #splash-logo { position: absolute; right: 48dp; bottom: 36dp; width: 220dp; height: 220dp; }
@@ -51,7 +53,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .slot.disabled .slot-state { right: 12dp; height: auto; font-size: 11dp; white-space: normal; }
 .slot:active .slot-state { color: design(slot-label); }
 
-#actions { position: absolute; left: 766dp; top: 46dp; width: 176dp; height: 280dp; }
+#actions { position: absolute; right: 24dp; top: 46dp; width: 176dp; height: 280dp; }
 #actions button { position: absolute; left: 0; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; }
 #resume { top: 0; }
 #save { top: 44dp; }
