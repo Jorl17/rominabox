@@ -167,7 +167,7 @@
       }
     },
     {
-      "name": "a hidden RETRY is not a stop",
+      "name": "a hidden RETRY is not a stop along the actions",
       "setup": {
         "achievements": "active",
         "rows": 3
@@ -175,16 +175,81 @@
       "steps": [
         "options",
         "achievements",
-        "key:up",
-        "key:up"
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:right",
+        "key:right",
+        "key:left",
+        "key:left",
+        "key:left"
       ],
       "focused": {
         "*": [
           "volume-level",
           "achievement-1",
-          "achievement-1",
-          "achievement-1"
+          "achievement-2",
+          "achievement-3",
+          "achievements-enabled",
+          "achievements-signout",
+          "achievements-back",
+          "achievements-signout",
+          "achievements-enabled",
+          "achievements-enabled"
         ]
+      }
+    },
+    {
+      "name": "a shown RETRY takes TURN OFF's place along the actions",
+      "setup": {
+        "achievements": "failed",
+        "rows": 3
+      },
+      "steps": [
+        "options",
+        "achievements",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:right",
+        "key:right",
+        "key:left",
+        "key:left",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievement-1",
+          "achievement-2",
+          "achievement-3",
+          "achievements-retry",
+          "achievements-signout",
+          "achievements-back",
+          "achievements-signout",
+          "achievements-retry",
+          "achievements-retry"
+        ]
+      },
+      "red": {
+        "*": {
+          "bug": "RETRY order",
+          "reason": "RETRY is placed where TURN OFF was but comes after SIGN OUT in the document, so Down from the list, a tie between them, takes SIGN OUT",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievement-1",
+              "achievement-2",
+              "achievement-3",
+              "achievements-signout",
+              "achievements-back",
+              "achievements-back",
+              "achievements-signout",
+              "achievements-retry",
+              "achievements-retry"
+            ]
+          }
+        }
       }
     },
     {
