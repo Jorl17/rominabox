@@ -127,7 +127,7 @@ def main() -> int:
     command = cli()
     bundles = {
         "featured": {},
-        "no-options": {"menuEntries": []},
+        "no-options": {"menuEntries": [], "includeAchievements": False},
         "bare": {"showMenu": False, "splash": False, "startAtMenu": False, "shaders": {}},
     }
     failed = False
