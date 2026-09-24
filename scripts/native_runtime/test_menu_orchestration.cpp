@@ -178,6 +178,10 @@ void design_prompt_survives_an_empty_status(const char *native_assets, const cha
       host.save_accepted = false;
       click_and_frame(menu, "save");
       check(std::string(inspect.text("status")) == "SAVE FAILED", "a status replaces the prompt");
+      inspect.advance(6.0);
+      frame(menu);
+      check(std::string(inspect.text("status")) == "CHOOSE A BLOCK",
+            "Disc's prompt comes back when the status expires");
       rib_menu_destroy(menu);
    }
    setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
