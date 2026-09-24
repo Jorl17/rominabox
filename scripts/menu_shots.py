@@ -9,9 +9,9 @@ so the picture shows a state that we set and not the menu at work.
 Here we run the exported game unchanged, through its launcher, with two
 environment variables:
 
-  ROMINABOX_MENU_SCRIPT  element ids, comma separated, which we click one per
-                         frame through the listeners of the bridge, the same
-                         path as a click from a player
+  ROMINABOX_MENU_SCRIPT  comma-separated element ids and key: actions. We
+                         click element ids through the bridge's listeners
+                         and send key: actions as logical controller input
   ROMINABOX_MENU_SHOT    where to write the screenshot after the script
 
 When the menu has settled, we write the picture and quit the game, so
@@ -97,32 +97,8 @@ def require_palette(name: str) -> str:
     return name
 
 
-def achievement_request(directory: Path | None) -> dict:
-    """The achievement settings we pass to the export.
-
-    The list and its badges come from the service and are not in this
-    repository. Without a directory we export a game with no achievements
-    screen, and then we report the achievement shots as failed instead of
-    taking pictures of the pause menu.
-    """
-    if directory is None:
-        return {}
-    catalog = directory / "achievements.json"
-    if not catalog.is_file():
-        raise SystemExit(
-            f"{catalog} is not there. Fetch it first:\n"
-            "  rominabox-cli achievements <<< '{\"gameId\": N, \"into\": \"<dir>\"}'"
-        )
-    return {
-        "gameId": json.loads(catalog.read_text())["gameId"],
-        "bundle": True,
-        "catalog": str(catalog),
-        "badges": str(directory / "badges"),
-    }
-
-
 def declared_shots() -> dict[str, dict]:
-    """Each named shot, with what to click and the game to take it in.
+    """Each named shot, with its menu actions and the game to take it in.
 
     A shot is a list of steps, or an object with `script` and the export
     settings required for that shot. We can reach most states in the menu of
@@ -227,12 +203,17 @@ def take(app: Path, name: str, script: list[str], output: Path,
     # picker writes it to the per-game override, so without this step the shot
     # of the six-button pad would change the pictures of every later shot.
     data = data_dir_of(app)
+    if name.startswith("achievements-"):
+        if data is None:
+            return "account shots require managed per-game storage"
+        session = data / "achievements.session"
+        if session.exists() or session.is_symlink():
+            return "account shots require signed-out game storage; achievements.session is present"
     if data and reset_settings:
         (data / "controls.cfg").unlink(missing_ok=True)
         for remap in (data / "remaps").rglob("*.rmp"):
             remap.unlink()
-        # We save the position of each switch, so otherwise the shot that turns on
-        # achievement mode would change the pictures of every later shot.
+        # We save the positions of the menu switches in an export across runs.
         for switch in data.glob("toggle-*"):
             switch.unlink()
 
@@ -484,6 +465,9 @@ def _build_a_game(
         "menuSounds": "off",
         "splash": False,
         "advancedEmulatorAccess": False,
+        # An account shot has the account option set next to its script. The other
+        # visual baselines do not include the account menu entries.
+        "includeAchievements": False,
         "outputDir": str(out),
         "target": "macos",
         "runtimeKit": str(kit),
@@ -583,12 +567,6 @@ def main() -> int:
         "--only",
         help="comma-separated shot names to take, instead of every declared shot",
     )
-    parser.add_argument(
-        "--achievements",
-        type=Path,
-        help="a directory holding achievements.json and badges/, as written by "
-             "`rominabox-cli achievements`; without it the game has no achievements screen",
-    )
     parser.add_argument("output", type=Path, nargs="?", default=ROOT / "work/menu-shots")
     parser.add_argument("--record", action="store_true", help="record what each shot looks like")
     parser.add_argument("--check", action="store_true", help="fail if a shot changed")
@@ -607,9 +585,6 @@ def main() -> int:
         if arguments.every_palette
         else [require_palette(arguments.palette or "blue")]
     )
-    # This applies to the whole run and not to one shot. We fetch the data once
-    # and include it in every export of this game.
-    achievements = achievement_request(arguments.achievements)
     package = ROOT / "integrations/designs" / arguments.design
     if not package.is_dir():
         raise SystemExit(f"no design package at {package}")
@@ -653,8 +628,7 @@ def main() -> int:
             for name, shot in shots.items():
                 script = shot["script"]
                 config = shot.get("config")
-                # The palette and the achievement list are export settings, so we
-                # add them to the export key with the settings of the shot.
+                # We key the export of the shot by the palette and its capability setting.
                 settings = {
                     key: value
                     for key, value in shot.items()
@@ -664,8 +638,6 @@ def main() -> int:
                 }
                 settings["palette"] = palette
                 settings["theme"] = arguments.design
-                if achievements:
-                    settings["achievements"] = achievements
                 key = f"{palette}/{name}" if nested else name
                 problem = take(game_for(settings), name, script, destination, config)
                 if problem:
@@ -683,8 +655,7 @@ def main() -> int:
                 print(f"  {key:<28}{' -> '.join(script) or '(the menu as it opens)'}")
 
     # A shot we could not take and a shot that changed are two different
-    # results. We report both, so that in one run the shots we could not take
-    # do not hide the pictures that changed.
+    # results. Report every failed state as well as every changed picture.
     if failures:
         print(f"\n{len(failures)} shot(s) failed: {', '.join(failures)}", file=sys.stderr)
         if not arguments.check:
