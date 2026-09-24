@@ -69,6 +69,26 @@ bool status_is(const char *expected)
    const char *status = inspect.text("status");
    return status && std::strcmp(status, expected) == 0;
 }
+
+/* We draw the ring over a control on the pad lit while the stop for that
+ * control has focus, and not while `other` has it. The pointer focuses the
+ * stop and then moves to the heading, which is not a stop, so we measure
+ * focus and not hover. */
+void ring_lights_with_its_stop(void *menu, const char *stop, const char *ring, const char *other)
+{
+   check(view.document.has_element(ring), (std::string("the scene draws ") + ring).c_str());
+   hover_and_frame(menu, other);
+   hover_and_frame(menu, "heading");
+   check(focused(other), (std::string("the pointer focuses ") + other).c_str());
+   const std::string unlit = inspect.property(ring, "border-top-color");
+   hover_and_frame(menu, stop);
+   hover_and_frame(menu, "heading");
+   check(focused(stop), (std::string("the pointer focuses ") + stop).c_str());
+   const std::string lit = inspect.property(ring, "border-top-color");
+   check(!lit.empty() && lit != unlit,
+         (std::string(ring) + " is drawn lit while " + stop + " has focus; it is "
+          + lit + " then and " + unlit + " while " + other + " has it").c_str());
+}
 }
 
 static int capacity_case(const char *assets, const char *data)
@@ -134,6 +154,11 @@ static int capacity_case(const char *assets, const char *data)
       check(host.captured_id == expected[14],
             "the left stick's stop captures its first declared member");
       rib_menu_key(menu, RIB_KEY_CANCEL);
+      /* A stick's ring is over the member that has a place on the pad (L3,
+       * R3), which is not the member its box captures. */
+      ring_lights_with_its_stop(menu, "control-group-l_stick", "control-hit-l3", "control-group-r_stick");
+      ring_lights_with_its_stop(menu, "control-group-r_stick", "control-hit-r3", "control-group-l_stick");
+      ring_lights_with_its_stop(menu, "control-l", "control-hit-l", "control-r");
       rib_menu_destroy(menu);
    }
    if (failures)
