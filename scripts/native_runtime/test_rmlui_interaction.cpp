@@ -384,14 +384,13 @@ static void check_drawn_above(const char *design)
 
    if (view.document.has_element("control-group-l_stick"))
    {
-      view.controls.focus_group("l_stick");
+      CHECK(view.focus.set("control-group-l_stick"), "the stick group takes focus");
       const std::string group_z = inspect.property(
             "control-group-l_stick", "z-index");
       std::snprintf(message, sizeof(message),
             "%s: focused stick group z-index is '%s'",
             design, group_z.c_str());
       CHECK(stacking_rank(group_z.c_str()) > 0, message);
-      view.controls.focus_group(nullptr);
    }
 
    view.pointer_move(1, 1);
@@ -1022,16 +1021,41 @@ int main(int argc, char **argv)
    CHECK(view.hovered.kind == RIB_RMLUI_ACTION_RESUME,
          "hover is independent of keyboard focus");
 
+   /* The focused element is named in the document, and the design marks the
+    * slot that SAVE and LOAD use only while one of them has focus. Elsewhere
+    * it looks like any slot, so nobody can mistake it for the cursor. */
    view.slots.set_selected_slot(4);
    view.slots.focus_action(RIB_RMLUI_ACTION_RESUME);
    view.pointer_move(1, 1);
-   const std::string selected_border = inspect.property("slot-4", "border-top-color");
+   view.follow_pointer();
+   const std::string plain_border = inspect.property("slot-2", "border-top-color");
+   CHECK(inspect.property("slot-4", "border-top-color") == plain_border,
+         "the chosen slot looks like any other while CONTINUE has focus");
+   view.slots.focus_action(RIB_RMLUI_ACTION_SAVE);
+   CHECK(view.document.root()->GetAttribute<Rml::String>("data-focus", "") == "save",
+         "the document names the focused element");
+   view.document.root()->Focus();
+   view.focus.paint();
+   CHECK(!view.document.root()->HasAttribute("data-focus"),
+         "the name goes when nothing has focus");
+   view.slots.focus_action(RIB_RMLUI_ACTION_SAVE);
+   CHECK(inspect.property("slot-4", "border-top-color") != plain_border,
+         "SAVE shows the slot it saves to");
+   move_to_id("quit");
+   view.follow_pointer();
+   CHECK(view.document.root()->GetAttribute<Rml::String>("data-focus", "") == "quit"
+         && inspect.property("slot-4", "border-top-color") == plain_border,
+         "the pointer leaving SAVE for QUIT hides it again");
+   move_to_id("save");
+   view.follow_pointer();
+   CHECK(inspect.property("slot-4", "border-top-color") != plain_border,
+         "the pointer onto SAVE shows it");
    move_to_id("slot-4");
    view.slots.focus_action(rib::Event::select_slot(4));
-   CHECK(selected_border == inspect.property("slot-4", "border-top-color"),
-         "selected slot keeps its border across hover and keyboard focus");
+   const std::string focused_border = inspect.property("slot-4", "border-top-color");
+   CHECK(focused_border != plain_border, "a slot with focus shows it");
    view.pointer_button(true);
-   CHECK(selected_border != inspect.property("slot-4", "border-top-color"),
+   CHECK(focused_border != inspect.property("slot-4", "border-top-color"),
          "slot has pressed feedback while held");
    view.pointer_move(1, 1);
    view.pointer_button(false);
