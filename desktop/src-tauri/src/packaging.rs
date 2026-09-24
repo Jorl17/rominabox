@@ -1999,7 +1999,7 @@ fn install_launch_library(macos: &Path, retroarch: &Path) -> Result<(), ExportEr
                 .map(|entry| entry.map(|entry| entry.path()))
                 .collect::<Result<Vec<_>, _>>()
         })
-        .map_err(|error| ExportError::io("configure", &launcher, error))?;
+        .map_err(|error| ExportError::io(ErrorStage::Configure, &launcher, error))?;
     library_sources
         .retain(|path| matches!(path.extension().and_then(OsStr::to_str), Some("c" | "h")));
     library_sources.sort();
