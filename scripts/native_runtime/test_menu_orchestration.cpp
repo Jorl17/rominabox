@@ -277,6 +277,105 @@ void binds_open_sooner_on_hover()
    host.clock_us = 0;
 }
 
+/* An exported Mega Drive game with the 3- and 6-button pads: the staged
+ * document and scenes, with the defaults that we write in an export. */
+std::string stage_pad_choice(const char *native_assets, const char *data)
+{
+   namespace fs = std::filesystem;
+   const fs::path native(native_assets);
+   const fs::path assets = fs::path(data) / "pad-choice-assets";
+   fs::create_directories(assets);
+   for (const auto& entry : fs::directory_iterator(native / "stage" / "megadrive"))
+      if (entry.is_regular_file())
+         fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   for (const char *support : {"menu.rcss", "Silkscreen-Regular.ttf"})
+      fs::copy_file(native / support, assets / support, fs::copy_options::overwrite_existing);
+   std::ofstream(assets / "controls-defaults.cfg") <<
+      "controls_profile = \"megadrive\"\n"
+      "controls_variants = \"megadrive megadrive6\"\n"
+      "controls_variant_name_megadrive = \"Mega Drive 3 buttons\"\n"
+      "controls_variant_device_megadrive = \"257\"\n"
+      "controls_variant_controls_megadrive = \"up left right down y b a start\"\n"
+      "controls_variant_name_megadrive6 = \"Mega Drive 6 buttons\"\n"
+      "controls_variant_device_megadrive6 = \"513\"\n"
+      "controls_variant_controls_megadrive6 = \"up down left right y b a start l x r select\"\n"
+      "rib_label_up = \"Up\"\ninput_player1_up = \"up\"\n"
+      "rib_label_left = \"Left\"\ninput_player1_left = \"left\"\n"
+      "rib_label_right = \"Right\"\ninput_player1_right = \"right\"\n"
+      "rib_label_down = \"Down\"\ninput_player1_down = \"down\"\n"
+      "rib_label_y = \"A\"\ninput_player1_y = \"z\"\n"
+      "rib_label_b = \"B\"\ninput_player1_b = \"x\"\n"
+      "rib_label_a = \"C\"\ninput_player1_a = \"c\"\n"
+      "rib_label_start = \"Start\"\ninput_player1_start = \"enter\"\n"
+      "rib_label_l = \"X\"\ninput_player1_l = \"a\"\n"
+      "rib_label_x = \"Y\"\ninput_player1_x = \"s\"\n"
+      "rib_label_r = \"Z\"\ninput_player1_r = \"d\"\n"
+      "rib_label_select = \"Mode\"\ninput_player1_select = \"rshift\"\n";
+   return assets.string();
+}
+
+bool picker_open()
+{
+   int x, y, w, h;
+   return inspect.box("controls-device-list", &x, &y, &w, &h);
+}
+
+/* One click on a control starts exactly one capture of that control. */
+void click_captures_once(void *menu, const char *control, const char *id, const char *message)
+{
+   const int before = host.captures_started;
+   click_and_frame(menu, control);
+   check(host.captures_started == before + 1 && host.captured_id == id, message);
+   rib_menu_key(menu, RIB_KEY_CANCEL);
+   frame(menu);
+}
+
+/* After a pad change the picker has one toggle listener and opens. Reset
+ * restores the 3-button labels together with the 3-button picture. */
+void pad_changes_and_reset_apply_together(const char *native_assets, const char *data)
+{
+   const std::string assets = stage_pad_choice(native_assets, data);
+   const std::string data_dir = std::string(data) + "/pad-choice-data";
+   std::filesystem::create_directories(data_dir);
+   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+   setenv("ROMINABOX_DATA_DIR", data_dir.c_str(), 1);
+   host.pointer = {};
+   void *menu = open_menu();
+   if (menu)
+   {
+      click_and_frame(menu, "options");
+      click_and_frame(menu, "controls");
+      click_captures_once(menu, "control-up", "up", "a control click starts one capture after startup");
+      click_and_frame(menu, "controls-device-current");
+      check(picker_open(), "B5: the picker opens");
+      click_and_frame(menu, "controls-device-option-megadrive6");
+      check(!picker_open() && view.document.has_element("control-x"),
+            "choosing the 6-button pad draws it");
+      check(std::string(inspect.text("controls-device-current")) == "Mega Drive 6 buttons",
+            "the picker names the 6-button pad");
+      click_and_frame(menu, "controls-device-current");
+      check(picker_open(), "the picker opens again after a pad change");
+      click_and_frame(menu, "controls-device-current");
+      check(!picker_open(), "the picker closes again");
+      click_captures_once(menu, "control-x", "x", "a 6-button control click starts one capture");
+      click_captures_once(menu, "control-up", "up", "a control click starts one capture after a pad change");
+
+      click_and_frame(menu, "controls-reset");
+      check(!view.document.has_element("control-x") && view.document.has_element("control-y"),
+            "Reset draws the 3-button pad again");
+      check(std::string(inspect.text("controls-device-current")) == "Mega Drive 3 buttons",
+            "Reset names the 3-button pad");
+      check(std::string(inspect.text("control-label-y")) == "A", "Reset restores the 3-button labels");
+      click_and_frame(menu, "controls-device-current");
+      check(picker_open(), "the picker opens after Reset");
+      click_and_frame(menu, "controls-device-current");
+      click_captures_once(menu, "control-up", "up", "a control click starts one capture after Reset");
+      rib_menu_destroy(menu);
+   }
+   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   setenv("ROMINABOX_DATA_DIR", data, 1);
+}
+
 /* On Windows, rename fails when the destination exists. */
 int refusing_rename(const char *from, const char *to)
 {
@@ -530,6 +629,7 @@ int main(int argc, char **argv)
    fixes::design_prompt_survives_an_empty_status(argv[1], argv[2]);
    fixes::disc_list_keeps_its_page(argv[1], argv[2]);
    fixes::binds_open_sooner_on_hover();
+   fixes::pad_changes_and_reset_apply_together(argv[1], argv[2]);
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);
