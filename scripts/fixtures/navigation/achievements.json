@@ -66,11 +66,14 @@
       }
     },
     {
-      "name": "Tab goes from the username to the password and nowhere else",
+      "name": "Tab cycles through the sign-in form's fields and buttons",
       "steps": [
         "options",
         "achievements",
         "achievements-login",
+        "key:tab",
+        "key:tab",
+        "key:tab",
         "key:tab",
         "key:tab"
       ],
@@ -80,7 +83,10 @@
           "achievements-login",
           "achievement-username",
           "achievement-password",
-          "achievement-password"
+          "achievements-password-visibility",
+          "achievements-submit",
+          "achievements-cancel",
+          "achievement-username"
         ]
       }
     },

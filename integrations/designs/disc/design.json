@@ -92,10 +92,10 @@
     {
       "id": "options",
       "panel": "options-panel",
-      "heading": "INDEX",
+      "heading": "OPTIONS",
       "footer": "ESC  BACK",
       "button": "options",
-      "label": "INDEX",
+      "label": "OPTIONS",
       "back": "BACK",
       "place": "options"
     },

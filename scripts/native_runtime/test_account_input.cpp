@@ -55,10 +55,23 @@ int main(int argc, char **argv) {
    check(document.get_context()->GetFocusElement() == password, "Keyboard Down uses the same form navigation as the joypad");
    entry.controller(RIB_KEY_UP);
    check(document.get_context()->GetFocusElement() == username, "Joypad Up returns to the previous field");
-   entry.physical(true, RETROK_TAB, '\t', 0);
-   check(document.get_context()->GetFocusElement() == password, "Tab moves from the username to the password");
-   entry.physical(true, RETROK_TAB, '\t', 0);
-   check(document.get_context()->GetFocusElement() == password, "Tab goes nowhere else");
+   {
+      /* Tab moves through the fields and buttons of the form and wraps.
+       * Shift+Tab moves back. */
+      const char *order[] = {"achievement-password", "achievements-password-visibility",
+            "achievements-submit", "achievements-cancel", "achievement-username"};
+      bool forward = true;
+      for (const char *id : order) {
+         entry.physical(true, RETROK_TAB, '\t', 0);
+         auto *at = document.get_context()->GetFocusElement();
+         forward = forward && at && at->GetId() == id;
+      }
+      check(forward, "Tab cycles username, password, SHOW, SIGN IN, CANCEL and back to username");
+      entry.physical(true, RETROK_TAB, '\t', RETROKMOD_SHIFT);
+      auto *at = document.get_context()->GetFocusElement();
+      check(at && at->GetId() == "achievements-cancel", "Shift+Tab goes back from the username to CANCEL");
+      username->Focus();
+   }
    password->Focus();
    entry.physical(true, RETROK_p, 'p', 0);
    entry.physical(true, RETROK_UNKNOWN, 0xe9, 0);
