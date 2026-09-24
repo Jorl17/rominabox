@@ -16,9 +16,9 @@ we check the position of BACK from element boxes, not from these pictures.
 
 Each row is a copy of the prototype of the list, as in the player
 (`live_lists.cpp`). We rename its ids, set the badge state as a class, and
-append an icon image for any badge state. This check goes no further than
-that imitation. We check the classes in the player in the bridge tests, and
-here we check how they appear.
+append an icon image only for a badge that has arrived. This check goes no
+further than that imitation. We check the rows in the player in the
+account-input tests, and here we check how they appear.
 
 The second moment is 0.1 s after the first. We update `rml-preview` once,
 and one RmlUi update moves an animation forward by at most 0.1 s, so we
@@ -92,12 +92,9 @@ def live_row(template: str, screen: str, row_id: str, title: str, badge: str, ic
     if BADGE_CLASS[badge]:
         row = row.replace('class="list-row ', f'class="list-row {BADGE_CLASS[badge]} ', 1)
     row = re.sub(rf'(id="{row_id}-title"[^>]*>)(</)', rf"\g<1>{title}\2", row, count=1)
-    if badge != "none":
-        # A badge that is downloading or lost is an image with no source, so
-        # its box stays in the row.
-        source = f' src="{icon}"' if badge == "ready" else ""
+    if badge == "ready":
         closing = row.rindex("</")
-        row = row[:closing] + f'<img class="list-row-icon"{source}/>' + row[closing:]
+        row = row[:closing] + f'<img class="list-row-icon" src="{icon}"/>' + row[closing:]
     return row
 
 

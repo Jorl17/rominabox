@@ -130,7 +130,8 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .list-row:hover { }
 .list-row.focused { background-color: design(focus); border-left-width: 4dp; border-left-color: design(highlight); border-bottom-color: design(highlight); margin-left: -4dp; }
 .list-row:active { background-color: design(highlight); color: design(slot-label); }
-.list-row-icon { position: absolute; left: 8dp; top: 8dp; width: 32dp; height: 32dp; }
+.list-row-icon, .list-row-wait { position: absolute; left: 8dp; top: 8dp; width: 32dp; height: 32dp; }
+.list-row-wait { width: 24dp; height: 24dp; padding: 4dp; }
 .list-row-title { position: absolute; left: 52dp; top: 6dp; font-size: 14dp; color: design(ink); }
 /* A row with no picture and no second line. We set the right edge on this
  * class, not on the disc list, because the bind list has the same title
