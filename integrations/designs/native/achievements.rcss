@@ -1,0 +1,30 @@
+.account-screen .account-summary { height: 44dp; line-height: 32dp; font-size: 15dp; color: design(highlight); }
+.account-state { float: right; padding-right: 8dp; }
+.account-empty { padding: 44dp 24dp; color: design(muted); }
+.account-action { display: block; text-align: center; line-height: 40dp; border-width: 2dp; width: 336dp; height: 44dp; margin-top: 24dp; font-family: Silkscreen; font-size: 17dp; }
+.account-form { width: 560dp; max-width: 100%; padding-top: 8dp; }
+.account-form label { display: block; margin: 0 0 8dp 0; font-size: 14dp; color: design(muted); }
+.account-input { display: block; box-sizing: border-box; width: 100%; height: 42dp; padding: 8dp 12dp; margin: 0 0 20dp 0; font-family: Silkscreen; font-size: 17dp; color: design(ink); background-color: design(surface); border: 2dp design(edge); }
+.account-input:hover, .account-input.focused, .account-input:focus { border-color: design(highlight); }
+.account-form-actions { height: 44dp; }
+.account-form-actions button { display: inline-block; box-sizing: border-box; text-align: center; line-height: 36dp; border-width: 2dp; width: 244dp; height: 40dp; margin-right: 16dp; font-family: Silkscreen; font-size: 16dp; }
+.account-help { margin-top: 16dp; font-size: 12dp; color: design(muted); }
+.account-error { margin-top: 16dp; font-size: 13dp; color: design(highlight); }
+.account-catalog .list { position: relative; left: 0; top: 0; width: 100%; }
+.account-catalog .list-pager { position: relative; top: auto; margin-top: 12dp; }
+#achievements-panel .list-actions .list-back { left: auto; right: 0; width: 24%; }
+#achievements-panel .account-toggle { left: 0; width: 32%; }
+#achievements-panel .account-signout { left: 36%; width: 32%; }
+#achievements-panel .account-retry { left: 0; width: 32%; }
+.text-keyboard { position: absolute; left: 24dp; top: 302dp; width: 904dp; padding: 10dp 0; z-index: 110; background-color: design(screen); border: 2dp design(edge); }
+.text-keyboard-heading { padding: 0 12dp 10dp; font-size: 12dp; color: design(muted); }
+.text-key { display: inline-block; box-sizing: border-box; width: 8.8%; height: 40dp; margin: 0.14%; padding: 0; text-align: center; font-family: Silkscreen; font-size: 14dp; }
+.session-dialog { position: absolute; box-sizing: border-box; left: 0; top: 0; width: 100%; height: 100%; padding: 130dp 56dp; z-index: 120; background-color: design(screen); }
+.session-dialog-title { font-size: 24dp; color: design(highlight); margin-bottom: 24dp; }
+.session-dialog-copy { font-size: 16dp; line-height: 28dp; max-width: 760dp; }
+.session-dialog-actions { margin-top: 40dp; }
+.session-dialog-actions button { display: inline-block; box-sizing: border-box; height: 48dp; padding: 0 18dp; margin-right: 20dp; border-width: 2dp; font-family: Silkscreen; font-size: 16dp; line-height: 44dp; text-align: center; }
+
+.account-password-row { position: relative; }
+.account-password-row .account-input { padding-right: 128dp; }
+.account-reveal { box-sizing: border-box; position: absolute; right: 8dp; top: 6dp; width: 104dp; height: 30dp; line-height: 26dp; border-width: 2dp; text-align: center; font-family: Silkscreen; font-size: 13dp; }

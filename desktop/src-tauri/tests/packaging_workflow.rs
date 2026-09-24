@@ -86,7 +86,7 @@ fn export_request(root: &Path) -> ExportRequest {
         autosave_on_quit: false,
         menu_entries: None,
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
-        achievements: Default::default(),
+        include_achievements: false,
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: fixture_kit(root),
@@ -406,4 +406,92 @@ fn a_windows_export_with_the_windows_core_cached_does_not_ask_for_the_mac_file()
         "windows core was cached; export said: {}",
         error.message
     );
+}
+
+#[test]
+fn achievements_require_a_capable_artifact_before_export_staging() {
+    let root = workspace();
+    let mut request = export_request(&root);
+    request.show_menu = true;
+    request.include_achievements = true;
+    let error =
+        rominabox_desktop::packaging::export_game(&request, &AtomicBool::new(false), |_| {})
+            .unwrap_err();
+    assert!(
+        error.message.contains("verified achievements support"),
+        "{error}"
+    );
+    assert!(
+        !request.output_dir.exists(),
+        "preflight must not stage an incapable player"
+    );
+    request.show_menu = false;
+    let result =
+        rominabox_desktop::packaging::export_game(&request, &AtomicBool::new(false), |_| {})
+            .unwrap();
+    let resources = result.app_path.join("Contents/Resources");
+    assert!(!resources.join("menu-assets/menu.rml").exists());
+    let plan = fs::read_to_string(resources.join("launch.plan")).unwrap();
+    assert!(plan.contains("achievements\t0\n"));
+    let signed = Command::new("codesign")
+        .args(["-d", "--entitlements", "-"])
+        .arg(&result.app_path)
+        .output()
+        .unwrap();
+    let entitlements = String::from_utf8_lossy(&signed.stdout);
+    assert!(!entitlements.contains("com.apple.security.network.client"));
+}
+
+#[test]
+fn included_achievements_export_an_account_screen_and_network_permission() {
+    fn copy_tree(from: &Path, to: &Path) {
+        fs::create_dir_all(to).unwrap();
+        for entry in fs::read_dir(from).unwrap() {
+            let entry = entry.unwrap();
+            let dest = to.join(entry.file_name());
+            if entry.file_type().unwrap().is_dir() {
+                copy_tree(&entry.path(), &dest);
+            } else {
+                fs::copy(entry.path(), dest).unwrap();
+            }
+        }
+    }
+    let root = workspace();
+    let mut request = export_request(&root);
+    request.show_menu = true;
+    request.include_achievements = true;
+    let manifest = request.runtime_kit.join("manifest.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&fs::read(&manifest).unwrap()).unwrap();
+    value["components"][0]["capabilities"] = serde_json::json!({"achievements": true});
+    fs::write(manifest, serde_json::to_vec(&value).unwrap()).unwrap();
+    copy_tree(
+        &rominabox_desktop::repo::at("integrations/designs"),
+        &request.runtime_kit.join("designs"),
+    );
+    copy_tree(
+        &rominabox_desktop::repo::at("desktop/assets/controllers"),
+        &request.runtime_kit.join("menu-assets"),
+    );
+    let result =
+        rominabox_desktop::packaging::export_game(&request, &AtomicBool::new(false), |_| {})
+            .unwrap();
+    let resources = result.app_path.join("Contents/Resources");
+    let menu = fs::read_to_string(resources.join("menu-assets/menu.rml")).unwrap();
+    assert!(menu.contains("id=\"achievements\"") && menu.contains("id=\"achievement-password\""));
+    assert!(!menu.contains("achievement-mode"));
+    let plan = fs::read_to_string(resources.join("launch.plan")).unwrap();
+    assert!(plan.contains("achievements\t1\n"));
+    let config = embedded_runtime_config(&plan);
+    assert_eq!(
+        config_value(&config, "cheevos_hardcore_mode_enable"),
+        Some("false")
+    );
+    let signed = Command::new("codesign")
+        .args(["-d", "--entitlements", "-"])
+        .arg(&result.app_path)
+        .output()
+        .unwrap();
+    assert!(signed.status.success());
+    assert!(String::from_utf8_lossy(&signed.stdout).contains("com.apple.security.network.client"));
 }

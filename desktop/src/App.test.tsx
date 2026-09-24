@@ -814,6 +814,27 @@ describe("App workflow", () => {
     expect(checkbox("Startup logo").closest(".play-options")).not.toBeNull();
   });
 
+  it("keeps achievements as a main option and requires the game menu", async () => {
+    await openMenu();
+    const achievements = checkbox("Achievements");
+    expect(achievements.checked).toBe(true);
+    expect(achievements.disabled).toBe(false);
+    expect(achievements.closest("details")).toBeNull();
+    expect(achievements.closest(".menu-settings")).toBe(
+      checkbox("Startup logo").closest(".menu-settings"),
+    );
+
+    act(() => click(checkbox("Include game menu")));
+    expect(checkbox("Achievements").checked).toBe(false);
+    expect(checkbox("Achievements").disabled).toBe(true);
+    act(() => click(checkbox("Include game menu")));
+    expect(checkbox("Achievements").checked).toBe(true);
+    act(() => click(checkbox("Achievements")));
+    act(() => click(checkbox("Include game menu")));
+    act(() => click(checkbox("Include game menu")));
+    expect(checkbox("Achievements").checked).toBe(false);
+  });
+
   async function dropNamed(name: string) {
     const path = `/games/${name}`;
     const file = new File([new Uint8Array(32)], name) as File & {

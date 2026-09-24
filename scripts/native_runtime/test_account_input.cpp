@@ -1,0 +1,218 @@
+#include "rmlui/document.hpp"
+#include "rmlui/text_entry.hpp"
+#include "rmlui/text_host.h"
+#include "rmlui/screens.hpp"
+#include "rmlui/elements.hpp"
+#include "rmlui/achievements.hpp"
+#include <RmlUi/Core/Elements/ElementFormControlInput.h>
+#include <libretro.h>
+#include <cstdio>
+#include <string>
+#include <fstream>
+#include <cmath>
+#include "account_test_host.hpp"
+
+struct Clicks : Rml::EventListener {
+   int count = 0;
+   void ProcessEvent(Rml::Event&) override { ++count; }
+};
+int main(int argc, char **argv) {
+   if (argc < 2) return 2;
+   int failures = 0;
+   auto check = [&](bool passed, const char *message) {
+      if (!passed) { std::fprintf(stderr, "FAIL: %s\n", message); ++failures; }
+   };
+   rib::Document document;
+   if (!document.initialize(argv[1], 960, 600, false)) return 2;
+   document.set_shown("pause-panel", false);
+   document.set_shown("achievements-panel", true);
+   document.set_shown("achievements-signed-out", false);
+   document.set_shown("achievements-form", true);
+   document.show(); document.settle();
+   rib::TextEntry entry(document);
+   entry.bind(); entry.enable("achievements-form", "achievements-submit", "achievements-cancel");
+   int x, y, width, height;
+   document.element_box("achievements-submit", &x, &y, &width, &height);
+   check(width >= 200 && height >= 36, "Sign in is a full sized button");
+   document.element_box("achievements-cancel", &x, &y, &width, &height);
+   check(width >= 200 && height >= 36, "Cancel is a full sized button");
+   int py, ph, unused, ry, rh;
+   document.element_box("achievement-password", &unused, &py, &unused, &ph);
+   document.element_box("achievements-password-visibility", &unused, &ry, &unused, &rh);
+   check(std::abs((2 * ry + rh) - (2 * py + ph)) <= 2,
+         "Show button is vertically centered in the password field");
+   check(ry - py >= 4 && py + ph - ry - rh >= 4,
+         "Show button has inner padding above and below");
+   auto *username = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-username"));
+   auto *password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
+   check(username && password, "Fields are real RmlUi text controls");
+   if (!username || !password) return 1;
+   username->Focus();
+   entry.physical(true, RETROK_a, 'a', 0);
+   entry.physical(false, RETROK_a, 0, 0);
+   check(username->GetValue() == "a", "Physical keyboard types into username");
+   entry.physical(true, RETROK_DOWN, 0, 0);
+   check(document.get_context()->GetFocusElement() == password, "Keyboard Down uses the same form navigation as the joypad");
+   entry.controller(RIB_KEY_UP);
+   check(document.get_context()->GetFocusElement() == username, "Joypad Up returns to the previous field");
+   entry.physical(true, RETROK_TAB, '\t', 0);
+   check(document.get_context()->GetFocusElement() == username, "Tab does not navigate the form");
+   password->Focus();
+   entry.physical(true, RETROK_p, 'p', 0);
+   entry.physical(true, RETROK_UNKNOWN, 0xe9, 0);
+   check(password->GetValue() == "p\xc3\xa9", "Text entry retains Unicode password characters");
+   check(password->GetAttribute<std::string>("type", "") == "password", "Password uses masked control");
+   entry.physical(true, RETROK_a, 0x105, RETROKMOD_CTRL | RETROKMOD_ALT);
+   check(password->GetValue() == "p\xc3\xa9\xc4\x85", "Committed AltGr text is preserved without invoking Ctrl-A");
+   Rml::GetSystemInterface()->SetClipboardText("-paste");
+   entry.physical(true, RETROK_v, 0, RETROKMOD_META);
+   check(password->GetValue() == "p\xc3\xa9\xc4\x85-paste", "Command-V pastes through the clipboard boundary");
+   username->Focus();
+   entry.controller(RIB_KEY_OK);
+   check(keyboard_active && entry.keyboard_open(), "Controller opens RetroArch keyboard");
+   rib_host_keyboard_choose(0); entry.update();
+   check(username->GetValue() == "ax", "Controller keyboard updates the field");
+   entry.cancel_keyboard();
+   check(username->GetValue() == "a" && !keyboard_active, "Cancel restores original field and closes keyboard");
+   Clicks cancel, submit;
+   auto *cancel_button = document.root()->GetElementById("achievements-cancel");
+   auto *submit_button = document.root()->GetElementById("achievements-submit");
+   cancel_button->AddEventListener(Rml::EventId::Click, &cancel);
+   submit_button->AddEventListener(Rml::EventId::Click, &submit);
+   cancel_button->Focus();
+   entry.physical(true, RETROK_RETURN, '\r', 0);
+   check(cancel.count == 1 && submit.count == 0, "Enter activates the focused Cancel button");
+   entry.disable();
+   check(!entry.physical(true, RETROK_a, 'a', 0), "Closed form releases keyboard routing");
+   rib::EventQueue events;
+   rib::Event hovered;
+   rib::Screens screens(document, events, hovered);
+   screens.declare_screen("achievements", "achievements-panel", "ACHIEVEMENTS", "BACK", "achievements");
+   screens.declare_screen("achievements", "achievements-panel", "ACHIEVEMENTS", "BACK", "achievements");
+   document.root()->GetElementById("achievements")->Click();
+   check(events.take().kind == RIB_RMLUI_ACTION_SHOW_SCREEN, "Achievements entry opens before context recreation");
+   check(events.take().kind == RIB_RMLUI_ACTION_NONE, "Repeated declarations attach only one listener");
+   document.shutdown();
+   check(document.initialize(argv[1], 960, 600, false), "Replacement document loads");
+   screens.clear_screens();
+   screens.declare_screen("achievements", "achievements-panel", "ACHIEVEMENTS", "BACK", "achievements");
+   document.root()->GetElementById("achievements")->Click();
+   check(events.take().kind == RIB_RMLUI_ACTION_SHOW_SCREEN, "Achievements entry opens after context recreation");
+   document.shutdown();
+   check(document.initialize(argv[1], 960, 600, false), "Presenter document loads");
+   document.set_shown("pause-panel", false);
+   document.set_shown("achievements-panel", true);
+   document.show(); document.settle();
+   screens.clear_screens();
+   screens.declare_screen("pause", "pause-panel", "PAUSED", "ESC CONTINUE", "");
+   screens.declare_screen("achievements", "achievements-panel", "ACHIEVEMENTS", "ESC BACK", "achievements");
+   screens.show_screen("achievements");
+   auto capture = [&](const char *state) {
+      if (argc < 3) return;
+      document.settle();
+      std::ofstream out(document.asset_path((std::string("account-") + state + ".rml").c_str()));
+      out << "<rml><head><link type=\"text/rcss\" href=\"menu.rcss\"/></head><body>"
+          << document.root()->GetInnerRML() << "</body></rml>";
+   };
+   rib::Lists lists(document, events);
+   rib::Overlays overlays(document);
+   rib::Achievements achievements(document, lists, events, overlays);
+   session.status = RIB_ACHIEVEMENTS_SIGNED_OUT; session.revision = 1;
+   achievements.bind();
+   capture("signed-out");
+   document.set_shown("achievements-signed-out", false);
+   document.set_shown("achievements-catalog", true);
+   std::vector<rib::Lists::Row> rows = {{"test-row", "FIRST ACHIEVEMENT", "Earn this in the fixture", "5 PT / LOCKED", "", false}};
+   lists.replace_rows("achievements-list", rows);
+   auto *row = document.root()->GetElementById("test-row");
+   row->SetClass("focused", true);
+   Clicks row_click;
+   row->AddEventListener(Rml::EventId::Click, &row_click);
+   rows[0].state = "5 PT / EARNED";
+   lists.replace_rows("achievements-list", rows);
+   row = document.root()->GetElementById("test-row");
+   row->Click(); events.clear();
+   check(row->IsClassSet("focused") && row_click.count == 1,
+         "A live row state update retains its focus and attached interaction");
+   row->RemoveEventListener(Rml::EventId::Click, &row_click);
+   document.click_element("achievements-login");
+   achievements.handle(events.take()); document.settle();
+   achievements.update();
+   capture("sign-in");
+   auto *focus = document.get_context()->GetFocusElement();
+   check(focus && focus->GetId() == "achievement-username", "Opening sign in focuses the visible username field");
+   password = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-password"));
+   password->SetValue("synthetic-password");
+   achievements.handle(rib::Event::account_action(rib::AccountAction::RevealPassword));
+   check(password->GetAttribute<std::string>("type", "") == "text" && password->GetValue() == "synthetic-password", "Show password reveals the existing value");
+   achievements.leave_form();
+   check(password->GetAttribute<std::string>("type", "") == "password" && password->GetValue().empty(), "Closing the form clears and masks the password");
+   achievements.handle(rib::Event::account_action(rib::AccountAction::Open));
+   session.pending_upload = true;
+   check(achievements.request_exit(rib::Achievements::Exit::Quit), "Pending upload requires confirmation");
+   check(achievements.handle({RIB_RMLUI_ACTION_RESUME}), "Confirmation consumes underlying Resume action");
+   check(achievements.physical(true, RETROK_a, 'a', 0), "Confirmation consumes text without editing the form beneath it");
+   username = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-username"));
+   check(username->GetValue().empty(), "Modal text does not reach the underlying username");
+   capture("confirmation");
+   achievements.physical(true, RETROK_ESCAPE, 0, 0);
+   check(!achievements.modal(), "Physical Escape cancels the pending-upload confirmation");
+   check(document.get_context()->GetFocusElement() == username, "Escape restores the form's focused field");
+   achievements.physical(true, RETROK_UNKNOWN, 0xe9, 0);
+   check(username->GetValue() == "\xc3\xa9", "Typing after confirmation resumes in the same field");
+   password->Focus();
+   achievements.request_exit(rib::Achievements::Exit::Quit);
+   achievements.handle(rib::Event::account_action(rib::AccountAction::KeepSession));
+   check(!achievements.modal() && quits == 0, "Keeping session cancels quit");
+   check(document.get_context()->GetFocusElement() == password, "Keep Playing restores password focus");
+   achievements.key(RIB_KEY_UP);
+   check(document.get_context()->GetFocusElement() == username, "Joypad continues from the restored form control");
+   achievements.leave_form();
+   session.startup_waiting = true; session.status = RIB_ACHIEVEMENTS_LOADING; ++session.revision;
+   achievements.update();
+   capture("startup");
+   achievements.physical(true, RETROK_RETURN, '\r', 0);
+   achievements.handle(events.take());
+   check(session.startup_skipped, "Physical Enter activates Play without achievements");
+   session.startup_waiting = false; ++session.revision; achievements.update();
+   pending_unlock.id = 123; pending_unlock.points = 5; pending_unlock.pending_upload = true;
+   std::snprintf(pending_unlock.title, sizeof(pending_unlock.title), "EARNED");
+   achievements.update();
+   session.pending_upload = false; ++session.revision; achievements.update();
+   check(document.root()->GetElementById("unlock-detail")->GetInnerRML() == "5 points",
+         "Unlock toast does not retain a stale upload status after acknowledgement");
+   overlays.clear_notification();
+   overlays.notify({"A LONG ACHIEVEMENT TITLE", "5 points", ""});
+   capture("notification");
+   rib_design_data design{};
+   document.shutdown();
+   check(document.initialize(argv[1], 960, 600, false), "Notification document reloads");
+   overlays.load(design);
+   document.settle();
+   auto *notice = document.root()->GetElementById("unlock-row");
+   check(notice && !rib::hidden(notice),
+         "The active unlock notification survives a document rebuild");
+   overlays.stop();
+   check(!overlays.drawing(), "Stopping overlays clears the active notification");
+   overlays.update(false);
+   check(!overlay_frames, "Stopped overlays release closed-menu rendering on the next frame");
+   overlays.notify({"CLEAR", "5 points", ""});
+   overlays.clear_notification();
+   overlays.update(false);
+   check(!overlay_frames, "Cleared notification releases closed-menu rendering");
+   overlays.notify({"EXPIRES", "5 points", ""});
+   host_time_us += 5000000;
+   overlays.update(true);
+   check(overlays.drawing() && overlay_frames, "A pending script keeps the render callback active after notification expiry");
+   overlays.update(false);
+   check(!overlays.drawing() && !overlay_frames, "Finishing that script releases rendering");
+   overlays.begin();
+   overlays.update(true);
+   check(overlays.drawing(), "A capture continues after the startup overlays finish");
+   overlays.update(false);
+   check(!overlays.drawing(), "Finished startup capture releases rendering");
+   achievements.context_lost();
+   document.shutdown();
+   std::printf("account input: %d failures\n", failures);
+   return failures ? 1 : 0;
+}

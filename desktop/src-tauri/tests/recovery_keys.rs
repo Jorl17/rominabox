@@ -79,8 +79,7 @@ fn fixture_kit(root: &Path) -> PathBuf {
         r#"{"schema_version":1,"components":[{"name":"RetroArch"},{"name":"RmlUi"},{"name":"genesis_plus_gx"}]}"#,
     )
     .unwrap();
-    let design =
-        rominabox_desktop::repo::at("integrations/designs/native");
+    let design = rominabox_desktop::repo::at("integrations/designs/native");
     copy_tree(&design, &kit.join("designs/native"));
     fs::create_dir_all(kit.join("menu-assets")).unwrap();
     // We read the scene template for the controls from the kit's shared
@@ -121,7 +120,7 @@ fn export_request(root: &Path, advanced: bool) -> ExportRequest {
         autosave_on_quit: false,
         menu_entries: None,
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
-        achievements: Default::default(),
+        include_achievements: false,
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: fixture_kit(root),

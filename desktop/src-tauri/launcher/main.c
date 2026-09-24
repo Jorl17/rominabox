@@ -616,6 +616,8 @@ static void prepare(void) {
         title[0] = '\0';
     field(plan, "start_at_menu", start_at_menu, sizeof start_at_menu);
     field(plan, "advanced", advanced, sizeof advanced);
+    char achievements[8] = "0";
+    field(plan, "achievements", achievements, sizeof achievements);
     if (!field(plan, "volume_file", volume_file, sizeof volume_file))
         die("the launch plan has no volume file");
     field(plan, "shader_initial", shader_initial, sizeof shader_initial);
@@ -735,6 +737,7 @@ static void prepare(void) {
     if (getenv("ROMINABOX_PLAN_ONLY"))
         _exit(0);
 
+    setenv("ROMINABOX_ACHIEVEMENTS", strcmp(achievements, "1") == 0 ? "1" : "0", 1);
     setenv("ROMINABOX_DATA_DIR", data_dir, 1);
     setenv("ROMINABOX_TITLE", title, 1);
     join_path(assets, sizeof assets, resources, "menu-assets");

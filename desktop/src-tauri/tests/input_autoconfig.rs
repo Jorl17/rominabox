@@ -93,8 +93,7 @@ fn declared_gameplay_keys() -> BTreeSet<String> {
 }
 
 fn pinned_meta_bind_names() -> Vec<String> {
-    let path =
-        rominabox_desktop::repo::at("vendor/retroarch/configuration.c");
+    let path = rominabox_desktop::repo::at("vendor/retroarch/configuration.c");
     let text = fs::read_to_string(&path).unwrap_or_else(|_| {
         panic!(
             "pinned RetroArch configuration.c is required to check the allow-list: {}",
@@ -738,7 +737,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         autosave_on_quit: false,
         menu_entries: None,
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
-        achievements: Default::default(),
+        include_achievements: false,
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: kit,
@@ -750,7 +749,9 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
     let launcher = result.app_path.join("Contents/MacOS/retroarch");
     let plan = fs::read_to_string(result.app_path.join("Contents/Resources/launch.plan")).unwrap();
     let marker = "---config---\n";
-    let start = plan.find(marker).expect("launch plan contains the runtime config");
+    let start = plan
+        .find(marker)
+        .expect("launch plan contains the runtime config");
     let config = &plan[start + marker.len()..];
 
     assert_eq!(

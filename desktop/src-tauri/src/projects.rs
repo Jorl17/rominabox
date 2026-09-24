@@ -15,7 +15,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
-const FORMAT_VERSION: u32 = 1;
+const FORMAT_VERSION: u32 = 2;
 const MANIFEST_PATH: &str = "manifest.json";
 const ROM_PREFIX: &str = "assets/rom.";
 const CONTENT_PREFIX: &str = "content/";
@@ -70,8 +70,8 @@ pub struct ProjectSettings {
     /// Presets bundled into the game. Usually this is empty.
     #[serde(default)]
     pub shaders: crate::shaders::ShaderSelection,
-    #[serde(default)]
-    pub achievements: crate::achievements::AchievementSelection,
+    #[serde(default = "crate::achievements::default_included")]
+    pub include_achievements: bool,
     pub target: ExportTarget,
 }
 
@@ -141,8 +141,8 @@ struct StoredSettings {
     menu_entries: Option<Vec<String>>,
     #[serde(default)]
     shaders: crate::shaders::ShaderSelection,
-    #[serde(default)]
-    achievements: crate::achievements::AchievementSelection,
+    #[serde(default = "crate::achievements::default_included")]
+    include_achievements: bool,
     target: ExportTarget,
 }
 
@@ -183,7 +183,7 @@ impl From<&ExportRequest> for ProjectSettings {
             autosave_on_quit: request.autosave_on_quit,
             menu_entries: request.menu_entries.clone(),
             shaders: request.shaders.clone(),
-            achievements: request.achievements.clone(),
+            include_achievements: request.include_achievements,
             target: request.target.clone(),
         }
     }
@@ -217,7 +217,7 @@ impl ProjectSettings {
             autosave_on_quit: self.autosave_on_quit,
             menu_entries: self.menu_entries,
             shaders: self.shaders,
-            achievements: self.achievements,
+            include_achievements: self.include_achievements,
             output_dir,
             target: self.target,
             runtime_kit,
@@ -290,7 +290,7 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             autosave_on_quit: request.settings.autosave_on_quit,
             menu_entries: request.settings.menu_entries.clone(),
             shaders: stored_shaders,
-            achievements: request.settings.achievements.clone(),
+            include_achievements: request.settings.include_achievements,
             target: request.settings.target.clone(),
         },
         assets: assets.clone(),
@@ -425,7 +425,7 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
             manifest.settings.shaders,
             &request.extraction_dir,
         ),
-        achievements: manifest.settings.achievements,
+        include_achievements: manifest.settings.include_achievements,
         target: manifest.settings.target,
     };
     Ok(OpenProject {
@@ -565,7 +565,7 @@ fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
         autosave_on_quit: settings.autosave_on_quit,
         menu_entries: settings.menu_entries.clone(),
         shaders: settings.shaders.clone(),
-        achievements: settings.achievements.clone(),
+        include_achievements: settings.include_achievements,
         target: settings.target.clone(),
     })?;
     for (label, path) in [
@@ -658,6 +658,13 @@ fn validate_stored_settings(settings: &StoredSettings) -> Result<(), String> {
     if settings.theme.trim().is_empty() || settings.palette.trim().is_empty() {
         return Err("project theme and palette are required".to_string());
     }
+    let design = crate::themes::design_root(&settings.theme)?;
+    crate::achievements::entries(
+        &design,
+        settings.include_achievements,
+        settings.show_menu,
+        settings.menu_entries.as_deref(),
+    )?;
     controls::validate_for_system(&settings.system, &settings.controls)?;
     Ok(())
 }
@@ -933,7 +940,7 @@ mod tests {
                 autosave_on_quit: false,
                 menu_entries: None,
                 shaders: crate::shaders::ShaderSelection::default(),
-                achievements: Default::default(),
+                include_achievements: false,
                 target: ExportTarget::Macos,
             },
         })
@@ -999,7 +1006,7 @@ mod tests {
             autosave_on_quit: false,
             menu_entries: None,
             shaders: crate::shaders::ShaderSelection::default(),
-            achievements: Default::default(),
+            include_achievements: false,
             target: ExportTarget::Macos,
         }
     }
@@ -1031,8 +1038,8 @@ mod tests {
     }
 
     #[test]
-    fn legacy_project_defaults_advanced_emulator_access_off() {
-        let root = fixture("legacy-advanced-access");
+    fn current_project_defaults_omitted_capability_on() {
+        let root = fixture("current-defaults");
         let archive_path = root.join("game.rominabox");
         {
             let file = File::create(&archive_path).unwrap();
@@ -1040,9 +1047,9 @@ mod tests {
             let options =
                 SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
             let manifest = br#"{
-  "formatVersion": 1,
+  "formatVersion": 2,
   "settings": {
-    "title": "Legacy",
+    "title": "Current",
     "system": "megadrive",
     "showMenu": false,
     "startAtMenu": false,
@@ -1065,5 +1072,6 @@ mod tests {
         assert!(!opened.settings.advanced_emulator_access);
         assert!(!opened.settings.keep_playing_in_background);
         assert!(!opened.settings.autosave_on_quit);
+        assert!(opened.settings.include_achievements);
     }
 }

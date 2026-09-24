@@ -80,6 +80,7 @@ type Draft = {
   system: string;
   description: string;
   showMenu: boolean;
+  includeAchievements: boolean;
   startAtMenu: boolean;
   splash: boolean;
   keepPlayingInBackground: boolean;
@@ -91,6 +92,7 @@ const defaults: Draft = {
   system: "",
   description: "",
   showMenu: true,
+  includeAchievements: true,
   startAtMenu: false,
   splash: true,
   keepPlayingInBackground: false,
@@ -140,6 +142,17 @@ function StartupOptions({
         checked={draft.splash}
         onChange={(value) => update("splash", value)}
         help="Show a brief ROM-in-a-Box logo in the game window at startup."
+      />
+      <Checkbox
+        label="Achievements"
+        checked={draft.showMenu && draft.includeAchievements}
+        disabled={!draft.showMenu}
+        onChange={(value) => update("includeAchievements", value)}
+        help={
+          draft.showMenu
+            ? "Let the player sign in to RetroAchievements and earn achievements."
+            : "Requires game menu."
+        }
       />
       <Checkbox
         label="Keep playing in the background"
@@ -484,6 +497,7 @@ export function App() {
       icon: icon?.path || null,
       background: background?.path || null,
       showMenu: draft.showMenu,
+      includeAchievements: draft.includeAchievements,
       splash: draft.splash,
       keepPlayingInBackground: draft.keepPlayingInBackground,
       autosaveOnQuit: draft.autosaveOnQuit,
@@ -548,6 +562,7 @@ export function App() {
         system: settings.system,
         description: settings.description || "",
         showMenu: settings.showMenu,
+        includeAchievements: settings.includeAchievements,
         splash: settings.splash ?? false,
         keepPlayingInBackground: settings.keepPlayingInBackground ?? false,
         autosaveOnQuit: settings.autosaveOnQuit ?? false,

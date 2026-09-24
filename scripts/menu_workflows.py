@@ -77,7 +77,6 @@ WORKFLOWS = {
 ACCOUNT_SHOTS = (
     "achievements-signed-out",
     "achievements-sign-in",
-    "achievements-controller-keyboard",
     "achievements-cancelled-form",
 )
 
@@ -200,32 +199,30 @@ def account_composition_cases(rom: Path, output: Path) -> dict:
                         "shaders": {"bundled": ["scanlines"], "initial": "none"}}
             # With Click() we can activate a hidden element, so enter both screens
             # through the visible keyboard focus stops and verify each stop first.
-            entry = ["key:right", "key:right", "key:right", "report:pause-entry", "key:ok",
+            entry = [*["key:right"] * (3 if design == "disc" else 2), "report:pause-entry", "key:ok",
                      "key:down", "key:down", "key:down", "report:options-entry", "key:ok"]
             with shots.build_a_game(rom, output, settings=settings) as app:
                 for name in ACCOUNT_SHOTS:
                     declared_script = declared[name]["script"]
                     assert declared_script[:2] == ["options", "achievements"], declared_script
-                    result = capture(app, destination, name, entry + declared_script[2:])
+                    account_actions = ["key:ok" if action == "achievements-login" else action
+                                       for action in declared_script[2:]]
+                    result = capture(app, destination, name, entry + account_actions)
                     assert "options" in result["reports"]["pause-entry"]["focused"], result
                     assert "achievements" in result["reports"]["options-entry"]["focused"], result
                     final = result["reports"]["final"]
                     assert final["screen"] == "achievements", (name, final)
                     assert final["text"]["achievements-state"] == "OFF", (name, final)
-                    if name in ("achievements-sign-in", "achievements-controller-keyboard"):
+                    if name == "achievements-sign-in":
                         assert "achievement-username" in final["focused"], (name, final)
                     if name == "achievements-cancelled-form":
                         assert "achievement-username" not in final["focused"], final
                     results[f"{design}/{palette}/{name}"] = result
                     print(f"captured {design}/{palette}/{name}", flush=True)
-                # With a controller, open and dismiss the RetroArch keyboard,
-                # close the form, then follow Back to Options.
-                journey = [*entry, "achievements-login", "report:form", "key:ok", "report:keyboard",
-                           "key:cancel", "report:keyboard-closed", "key:cancel", "report:form-closed",
-                           "key:cancel", "report:options"]
+                journey = [*entry, "key:ok", "report:form",
+                           "key:cancel", "report:form-closed", "key:cancel", "report:options"]
                 returned = capture(app, destination, "achievements-return-options", journey)
                 assert returned["reports"]["form"]["screen"] == "achievements", returned
-                assert "achievement-username" in returned["reports"]["keyboard"]["focused"], returned
                 assert returned["reports"]["options"]["screen"] == "options", returned
                 results[f"{design}/{palette}/achievements-return-options"] = returned
                 print(f"captured {design}/{palette}/achievements-return-options", flush=True)
@@ -276,11 +273,10 @@ def main() -> int:
                     destination.mkdir(parents=True, exist_ok=True)
                     base = {"theme": design, "palette": palette,
                             "includeAchievements": design == "native"}
-                    cases = shots.declared_shots()
-                    if design == "disc":
-                        # We test the inherited account screen in the
-                        # composition run, and keep the other Disc comparisons here.
-                        cases = {name: case for name, case in cases.items() if name not in ACCOUNT_SHOTS}
+                    # We test account composition in a separate run, and we do not
+                    # test the on-screen keyboard in this run.
+                    cases = {name: case for name, case in shots.declared_shots().items()
+                             if not name.startswith("achievements-")}
                     if palette != "blue":
                         cases = {name: cases[name] for name in ("pause-menu", "controls", "picker-open")}
                     for name, case in cases.items():

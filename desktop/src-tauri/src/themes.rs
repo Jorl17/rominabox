@@ -151,6 +151,8 @@ pub struct Screen {
     /// The words on the back button of this screen. We use them only on the
     /// screen that contains the option entries.
     pub back_label: Option<String>,
+    /// Optional capacity for screens with content above their list.
+    pub list_page_size: Option<usize>,
     pub place: ScreenPlace,
     /// Set when this screen is an entry inside Options. The words are the
     /// design's, on the button that opens it.
@@ -173,7 +175,7 @@ pub struct Screen {
     pub toggle: Option<Toggle>,
 }
 
-/// A switch on a screen, such as achievement mode.
+/// An optional switch declared by a screen.
 ///
 /// Every word on it comes from the design. In the player we act only on
 /// `guard`, which is a closed set, so a design can choose only an effect that
@@ -471,6 +473,18 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
             button: entry["button"].as_str().unwrap_or_default().to_string(),
             label: entry["label"].as_str().map(str::to_string),
             back_label: entry["back"].as_str().map(str::to_string),
+            list_page_size: entry
+                .get("pageSize")
+                .map(|value| {
+                    value
+                        .as_u64()
+                        .filter(|size| *size > 0)
+                        .and_then(|size| usize::try_from(size).ok())
+                        .ok_or_else(|| {
+                            format!("screen {index} pageSize must be a positive integer")
+                        })
+                })
+                .transpose()?,
             place: screen_place(entry, index, &declaration)?,
             option_label,
             option_default,
@@ -1424,6 +1438,36 @@ fn write_declarations(
     );
     fs::write(destination.join("design.cfg"), text)
         .map_err(|e| format!("Could not write the design's declarations: {e}"))
+}
+
+/// Compose shared component rules followed by optional selected-design rules.
+/// Both use the selected design's metrics and palette, like the main sheet.
+pub fn append_component_style(
+    source: &Path,
+    destination: &Path,
+    palette: &str,
+    name: &str,
+) -> Result<(), String> {
+    let palette = registry()?
+        .palettes
+        .into_iter()
+        .find(|item| item.id == palette)
+        .ok_or_else(|| "Choose an available colour palette.".to_string())?;
+    let base = base_design(source)?;
+    let mut paths = vec![base.join(name)];
+    if source != base && source.join(name).is_file() {
+        paths.push(source.join(name));
+    }
+    let tokens = design_tokens(source, &palette)?;
+    let sheet = destination.join("menu.rcss");
+    let mut css = fs::read_to_string(&sheet).map_err(|error| error.to_string())?;
+    for path in paths {
+        let rules = fs::read_to_string(&path)
+            .map_err(|error| format!("Could not read {}: {error}", path.display()))?;
+        css.push('\n');
+        css.push_str(&substitute_tokens(&rules, &tokens)?);
+    }
+    fs::write(sheet, css).map_err(|error| error.to_string())
 }
 
 pub fn prepare_theme_assets(

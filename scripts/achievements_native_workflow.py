@@ -20,6 +20,7 @@ from pathlib import Path
 import re
 import threading
 import time
+import zlib
 from urllib.parse import parse_qs
 
 import menu_shots as shots
@@ -53,6 +54,7 @@ class FixtureService(ThreadingHTTPServer):
         self.lock = threading.Lock()
         self.login_delay = 0.0
         self.hash: str | None = None
+        self.earned = False
 
     def record(self, route: str) -> None:
         with self.lock:
@@ -120,18 +122,20 @@ class FixtureHandler(BaseHTTPRequestHandler):
                     "Type": "core", "ImageIconUrl": "/Images/1.png",
                     "Achievements": [{
                         "ID": 123, "Title": "Real memory", "Description": "Reach work RAM one",
-                        "Flags": 3, "Points": 5, "MemAddr": "0xH0000=1.300.",
+                        # In Genesis Plus GX, work RAM is in word-swapped bytes.
+                        "Flags": 3, "Points": 5, "MemAddr": "0xH0001=1.300.",
                         "Author": "Fixture", "BadgeName": "123", "Created": 1,
                         "Modified": 1,
                     }], "Leaderboards": [],
                 }],
             }
         elif route == "startsession":
-            answer = {"Success": True, "Unlocks": [], "HardcoreUnlocks": []}
+            answer = {"Success": True, "Unlocks": [{"ID": 123, "When": 1}] if self.server.earned else [], "HardcoreUnlocks": []}
         elif route == "awardachievement":
-            if fields.get("a") != ["123"]:
+            if fields.get("a") != ["123"] or fields.get("h") != ["0"]:
                 self.send_error(400)
                 return
+            self.server.earned = True
             answer = {"Success": True, "AchievementID": 123, "Score": 0,
                       "SoftcoreScore": 5, "AchievementsRemaining": 0}
         elif route == "ping":
@@ -196,8 +200,7 @@ def session(data: Path, enabled: bool) -> None:
 
 def run_case(app: Path, output: Path, name: str, script: list[str]) -> dict[str, dict]:
     output.mkdir(parents=True, exist_ok=True)
-    problem = shots.take(app, name, script, output,
-                         config={"menu_pause_libretro": "false"}, reset_settings=False)
+    problem = shots.take(app, name, script, output, reset_settings=False)
     if problem:
         raise AssertionError(f"{name}: {problem}")
     reports = {label: json.loads(value) for label, value in
@@ -207,7 +210,32 @@ def run_case(app: Path, output: Path, name: str, script: list[str]) -> dict[str,
     wanted = [step[7:] for step in script if step.startswith("report:")]
     if list(reports) != wanted or any("achievements" not in row for row in reports.values()):
         raise AssertionError(f"{name}: missing native achievement checkpoints {wanted}: {reports}")
+    if "playing" in reports:
+        assert not reports["playing"]["menuOpen"], "Continue reopened the startup menu"
     return {label: value["achievements"] for label, value in reports.items()}
+
+
+def state_blocks(path: Path) -> dict[bytes, bytes]:
+    """Read blocks from our generated RetroArch state, including RZIP compression."""
+    data = path.read_bytes()
+    if data.startswith(b"#RZIPv\x01#"):
+        size = int.from_bytes(data[12:20], "little")
+        offset, chunks = 20, []
+        while offset < len(data):
+            length = int.from_bytes(data[offset:offset + 4], "little")
+            offset += 4
+            chunks.append(zlib.decompress(data[offset:offset + length]))
+            offset += length
+        data = b"".join(chunks)
+        assert len(data) == size, "incomplete compressed state"
+    assert data[:8] == b"RASTATE\x01", "unexpected native save format"
+    blocks, offset = {}, 8
+    while offset < len(data):
+        name = data[offset:offset + 4]
+        length = int.from_bytes(data[offset + 4:offset + 8], "little")
+        blocks[name] = data[offset + 8:offset + 8 + length]
+        offset += 8 + ((length + 7) & ~7)
+    return blocks
 
 
 def one_row(report: dict, state: RowState) -> None:
@@ -250,20 +278,20 @@ def main() -> None:
             data = owned_storage(app, rom_bytes)
             session(data, True)
             first = run_case(app, output, "partial", [
-                "report:initial", "wait:150", "report:partial",
+                "report:initial", "wait-ms:250", "resume", "report:playing", "wait:150", "report:partial",
             ])
             one_row(first["partial"], RowState.LOCKED)
             if "awardachievement" in service.seen():
                 raise AssertionError("achievement awarded before saved hit count completed")
             states = list((data / "states").glob("*.state.auto"))
-            if len(states) != 1 or b"ACHV" not in states[0].read_bytes():
+            if len(states) != 1 or not state_blocks(states[0]).get(b"ACHV"):
                 raise AssertionError("quit autosave did not persist native achievement progress")
 
             service.clear()
             service.login_delay = 1.2
             restored = run_case(app, output, "restore", [
                 "report:connecting", "wait-ms:1800", "report:restored",
-                "wait:100", "report:before-award", "wait:180", "report:after-award",
+                "wait-ms:250", "resume", "report:playing", "wait:100", "report:before-award", "wait:180", "report:after-award",
             ])
             if not restored["connecting"]["startupWaiting"]:
                 raise AssertionError("autoload did not wait for the account session")
@@ -274,17 +302,27 @@ def main() -> None:
             if service.seen().count("awardachievement") != 1:
                 raise AssertionError(f"expected one native award after restore: {service.seen()}")
 
-            service.clear()
             service.login_delay = 0
+            active = run_case(app, output, "active", [
+                "wait-ms:500", "options", "achievements", "report:active",
+            ])
+            one_row(active["active"], RowState.UNLOCKED)
+            if service.seen().count("awardachievement") != 1:
+                raise AssertionError("reopening replayed an already earned award")
+
+            service.clear()
             session(data, False)
-            off = run_case(app, output, "off", ["report:off", "wait:400", "report:after"])
+            off = run_case(app, output, "off", ["report:off", "wait-ms:250", "resume", "report:playing", "wait:400", "report:after"])
             if off["after"]["status"] != Status.OFF or service.seen():
                 raise AssertionError(f"OFF evaluated or contacted the service: {off}, {service.seen()}")
+            run_case(app, output, "off-screen", ["options", "achievements", "report:off"])
+            if service.seen():
+                raise AssertionError("opening the OFF screen contacted the service")
 
         service.clear()
         with shots.build_a_game(rom, output, settings={"includeAchievements": False}) as excluded_app:
             excluded = run_case(excluded_app, output, "excluded", [
-                "report:excluded", "wait:400", "report:after",
+                "report:excluded", "resume", "wait:400", "report:after",
             ])
             if excluded["after"]["status"] != Status.EXCLUDED or service.seen():
                 raise AssertionError(f"excluded build contacted the service: {excluded}, {service.seen()}")

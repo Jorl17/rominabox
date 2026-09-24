@@ -14,6 +14,8 @@ fn style_only_design(destination: &Path) {
         "save-slots.rml",
         "screen-pause.rml",
         "screen-controls.rml",
+        "screen-achievements.rml",
+        "achievements.rcss",
         "footer.rml",
     ] {
         fs::copy(base.join(name), frozen_base.join(name)).unwrap();
@@ -101,7 +103,7 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
         .expect("Disc must inherit the base achievements screen");
     assert_eq!(achievements.button, "achievements");
     assert_eq!(achievements.option_label.as_deref(), Some("ACHIEVEMENTS"));
-    assert!(achievements.toggle.is_some());
+    assert!(achievements.toggle.is_none());
     let pause = screens.iter().find(|screen| screen.id == "pause").unwrap();
     assert_eq!(pause.heading, "MEMORY CARD");
     let disc = screens.iter().find(|screen| screen.id == "disc").unwrap();
@@ -238,7 +240,7 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
         &screens,
         &[lists::List {
             screen: achievement.clone(),
-            items: vec![lists::ListItem {
+            content: lists::ListContent::Static(vec![lists::ListItem {
                 id: "earned-first".into(),
                 icon: "".into(),
                 title: "FIRST".into(),
@@ -247,7 +249,7 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
                 selected: false,
                 accent: false,
                 line: false,
-            }],
+            }]),
         }],
     )
     .unwrap();
@@ -256,7 +258,6 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
     for id in [
         "custom-achievements-chrome",
         "earned-first",
-        "achievement-mode",
         "achievements-back",
         "achievements-status",
     ] {
@@ -345,7 +346,7 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
     assert!(!css.contains("design("));
     assert!(screens
         .iter()
-        .any(|screen| screen.id == "achievements" && screen.toggle.is_some()));
+        .any(|screen| screen.id == "achievements" && screen.toggle.is_none()));
 
     let achievement = screens
         .iter()
@@ -357,23 +358,25 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
         &screens,
         &[lists::List {
             screen: achievement.clone(),
-            items: (0..5)
-                .map(|index| lists::ListItem {
-                    id: format!("achievement-{index}"),
-                    icon: "".into(),
-                    title: format!("ACHIEVEMENT {index}"),
-                    detail: "".into(),
-                    state: "LOCKED".into(),
-                    selected: false,
-                    accent: false,
-                    line: false,
-                })
-                .collect(),
+            content: lists::ListContent::Static(
+                (0..5)
+                    .map(|index| lists::ListItem {
+                        id: format!("achievement-{index}"),
+                        icon: "".into(),
+                        title: format!("ACHIEVEMENT {index}"),
+                        detail: "".into(),
+                        state: "LOCKED".into(),
+                        selected: false,
+                        accent: false,
+                        line: false,
+                    })
+                    .collect(),
+            ),
         }],
     )
     .unwrap();
     let menu = fs::read_to_string(root.join("menu.rml")).unwrap();
-    assert!(menu.contains("class=\"menu-action list-toggle\" id=\"achievement-mode\""));
+    assert!(!menu.contains("achievement-mode"));
     assert!(menu.contains("class=\"menu-action list-back\" id=\"achievements-back\""));
     let css = fs::read_to_string(root.join("menu.rcss")).unwrap();
     assert!(
@@ -415,7 +418,7 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
             .collect();
         assert_eq!(
             hits[0]["hover"],
-            "achievement-mode",
+            "achievements-panel",
             "hits: {hits:?}; stderr: {}",
             String::from_utf8_lossy(&output.stderr)
         );
@@ -537,4 +540,132 @@ fn disc_guard_message_wraps_within_its_slot() {
         second_line_pixels > 0,
         "the guard state lost its second line"
     );
+}
+
+#[test]
+fn live_achievements_inherit_account_form_before_any_download() {
+    for name in ["native", "disc"] {
+        for palette in themes::registry().unwrap().palettes {
+            let design = repo::at(&format!("integrations/designs/{name}"));
+            let root = rominabox_scratch::Scratch::dir("rominabox-live-achievements");
+            themes::prepare_theme_assets(&design, &root, &palette.id, None).unwrap();
+            let entries =
+                rominabox_desktop::achievements::entries(&design, true, true, None).unwrap();
+            let screens = themes::prepare_controls_assets(
+                &repo::at("desktop/assets/controllers"),
+                &design,
+                &root,
+                "megadrive",
+                &Controls::default(),
+                Some(&entries),
+            )
+            .unwrap();
+            lists::install(
+                &design,
+                &root,
+                &screens,
+                &[rominabox_desktop::achievements::screen(&design).unwrap()],
+            )
+            .unwrap();
+            themes::append_component_style(&design, &root, &palette.id, "achievements.rcss")
+                .unwrap();
+            let menu = fs::read_to_string(root.join("menu.rml")).unwrap();
+            for id in [
+                "achievements",
+                "achievements-panel",
+                "achievements-login",
+                "achievement-username",
+                "achievement-password",
+                "achievements-list",
+                "achievements-prototype",
+                "achievements-back",
+            ] {
+                assert_eq!(
+                    menu.matches(&format!("id=\"{id}\"")).count(),
+                    1,
+                    "{name}: {id}"
+                );
+            }
+            assert!(menu.contains("type=\"password\""));
+            assert!(!menu.contains("achievement-mode"));
+            assert!(!fs::read_to_string(root.join("menu.rcss"))
+                .unwrap()
+                .contains("design("));
+            let captures = std::env::var("ROMINABOX_ACCOUNT_SHOTS").ok();
+            if let Some(probes) = std::env::var_os("ROMINABOX_INPUT_PROBE") {
+                for probe in std::env::split_paths(&probes) {
+                    let mut command = Command::new(probe);
+                    command.arg(root.path());
+                    if captures.is_some() {
+                        command.arg("--capture");
+                    }
+                    let output = command.output().unwrap();
+                    assert!(
+                        output.status.success(),
+                        "{name}/{}: {}{}",
+                        palette.id,
+                        String::from_utf8_lossy(&output.stdout),
+                        String::from_utf8_lossy(&output.stderr)
+                    );
+                }
+            }
+            if let Some(directory) = captures {
+                let directory = Path::new(&directory);
+                fs::create_dir_all(directory).unwrap();
+                for state in [
+                    "signed-out",
+                    "sign-in",
+                    "confirmation",
+                    "startup",
+                    "notification",
+                ] {
+                    let snapshot = root.join(format!("account-{state}.rml"));
+                    assert!(
+                        snapshot.is_file(),
+                        "Captures require the account input probe"
+                    );
+                    let output =
+                        Command::new(repo::at("desktop/src-tauri/resources/preview/rml-preview"))
+                            .arg(snapshot)
+                            .arg(directory.join(format!("{name}-{}-{state}.png", palette.id)))
+                            .args(["960", "600"])
+                            .output()
+                            .unwrap();
+                    assert!(
+                        output.status.success(),
+                        "{}",
+                        String::from_utf8_lossy(&output.stderr)
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn a_design_customizes_account_controls_without_copying_the_screen() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-account-style");
+    let design = root.join("style-only");
+    let staged = root.join("staged");
+    style_only_design(&design);
+    fs::write(
+        design.join("achievements.rcss"),
+        ".account-reveal { width: 120dp; color: design(highlight); }",
+    )
+    .unwrap();
+    themes::prepare_theme_assets(&design, &staged, "violet", None).unwrap();
+    themes::append_component_style(&design, &staged, "violet", "achievements.rcss").unwrap();
+    let css = fs::read_to_string(staged.join("menu.rcss")).unwrap();
+    assert!(
+        css.contains(".account-input"),
+        "the base controls remain styled"
+    );
+    let override_at = css
+        .find(".account-reveal { width: 120dp; color: #ff5c9a")
+        .expect("design override with its selected palette");
+    assert!(
+        override_at > css.find(".account-input").unwrap(),
+        "selected rules follow shared rules"
+    );
+    assert!(!design.join("screen-achievements.rml").exists());
 }

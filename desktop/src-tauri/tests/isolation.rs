@@ -157,7 +157,7 @@ fn request(
         autosave_on_quit: false,
         menu_entries: None,
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
-        achievements: Default::default(),
+        include_achievements: false,
         output_dir: root.join("out"),
         target: ExportTarget::Macos,
         runtime_kit: kit,

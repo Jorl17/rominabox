@@ -27,6 +27,7 @@ export type ExportRequest = {
   icon: string | null;
   background: string | null;
   showMenu: boolean;
+  includeAchievements: boolean;
   startAtMenu: boolean;
   splash: boolean;
   keepPlayingInBackground: boolean;

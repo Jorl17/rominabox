@@ -34,7 +34,10 @@ pub fn list(design: &Path) -> Result<Option<List>, String> {
             line: true,
         })
         .collect();
-    Ok(Some(List { screen, items }))
+    Ok(Some(List {
+        screen,
+        content: crate::lists::ListContent::Static(items),
+    }))
 }
 
 #[cfg(test)]
@@ -51,21 +54,25 @@ mod tests {
             let baked = list(&design)
                 .unwrap_or_else(|error| panic!("{name}: {error}"))
                 .unwrap_or_else(|| panic!("{name} declares no disc list"));
-            assert_eq!(baked.items.len(), ROW_CAP, "{name}");
-            assert_eq!(baked.items[0].id, "discs-0");
-            assert_eq!(baked.items[ROW_CAP - 1].id, format!("discs-{}", ROW_CAP - 1));
+            let crate::lists::ListContent::Static(items) = &baked.content else {
+                panic!("disc slots must be static")
+            };
+            assert_eq!(items.len(), ROW_CAP, "{name}");
+            assert_eq!(items[0].id, "discs-0");
+            assert_eq!(items[ROW_CAP - 1].id, format!("discs-{}", ROW_CAP - 1));
 
-            let dest = std::env::temp_dir().join(format!(
-                "rominabox-discs-{name}-{}",
-                std::process::id()
-            ));
+            let dest =
+                std::env::temp_dir().join(format!("rominabox-discs-{name}-{}", std::process::id()));
             let _ = fs::remove_dir_all(&dest);
             prepare_theme_assets(&design, &dest, "blue", None).expect("staged");
             let screens = declared_screens(&design).unwrap();
             install(&design, &dest, &screens, std::slice::from_ref(&baked)).expect("installed");
             let menu = fs::read_to_string(dest.join("menu.rml")).unwrap();
             let cfg = fs::read_to_string(dest.join("design.cfg")).unwrap();
-            assert!(menu.contains("id=\"discs-list\""), "{name} menu has no disc list");
+            assert!(
+                menu.contains("id=\"discs-list\""),
+                "{name} menu has no disc list"
+            );
             assert!(
                 menu.matches("id=\"discs-").count() >= ROW_CAP,
                 "{name} baked fewer than {ROW_CAP} rows"
@@ -73,7 +80,10 @@ mod tests {
             assert!(cfg.contains("screen_images_discs = \"list\""), "{cfg}");
             assert!(cfg.contains("screen_mark_discs = \"IN\""), "{cfg}");
             if name == "disc" {
-                assert!(menu.contains("id=\"disc-face\""), "the circle stays for one disc");
+                assert!(
+                    menu.contains("id=\"disc-face\""),
+                    "the circle stays for one disc"
+                );
                 assert!(
                     menu.contains("id=\"disc\""),
                     "the column keeps the DISC button"

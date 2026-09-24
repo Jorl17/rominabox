@@ -8,6 +8,8 @@ const root=path.resolve(import.meta.dirname,'../..');
 if(process.argv.length!==3){console.error('Usage: node scripts/native_runtime/freeze-runtime-kit.mjs BUILD_DIRECTORY');process.exit(2);}
 const build=path.resolve(process.argv[2]),kit=path.join(root,'desktop/src-tauri/resources/runtime');
 const info=JSON.parse(fs.readFileSync(path.join(build,'build-info.json'),'utf8'));
+if(info.testOnly)throw Error('A test-only achievements build must never be frozen into the distributable kit');
+if(info.capabilities?.achievements!==true)throw Error('Build info has no verified achievements capability');
 const source=path.join(root,'vendor/retroarch');
 const revision=execFileSync('git',['rev-parse',info.retroarchCommit+'^{commit}'],{cwd:source,encoding:'utf8'}).trim();
 const frozen=path.join(fs.mkdtempSync(path.join(build,'frozen-')),'retroarch');
@@ -31,7 +33,7 @@ execFileSync('git',['archive','--format=tar.gz','--prefix=RetroArch-'+revision+'
 const sha=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 const mf=path.join(kit,'manifest.json'),manifest=JSON.parse(fs.readFileSync(mf,'utf8'));
 const ra=manifest.components.find(c=>c.name==='RetroArch');
-Object.assign(ra,{revision,origin:'Built from the pinned ROM-in-a-Box RetroArch submodule; private development build.',source_url:'https://github.com/Jorl17/rominabox-retroarch/tree/'+revision,source_archive:archive,source_sha256:sha(path.join(kit,'sources',archive)),binary_sha256:sha(binary),integration_provenance:'provenance/native-rmlui/source.json'});
+Object.assign(ra,{capabilities:info.capabilities,revision,origin:'Built from the pinned ROM-in-a-Box RetroArch submodule; private development build.',source_url:'https://github.com/Jorl17/rominabox-retroarch/tree/'+revision,source_archive:archive,source_sha256:sha(path.join(kit,'sources',archive)),binary_sha256:sha(binary),integration_provenance:'provenance/native-rmlui/source.json'});
 delete ra.integration_patch_sha256;
 fs.writeFileSync(mf,JSON.stringify(manifest,null,2)+'\n');
 const provenance=path.join(kit,'provenance/native-rmlui');

@@ -8,8 +8,8 @@ from make_test_rom import make_megadrive_rom
 def make_achievement_rom() -> bytes:
     rom = bytearray(make_megadrive_rom())
     # Replace the original terminal BRA with a bounded busy loop, followed by
-    # a write to the first byte of work RAM ($FF0000), which is achievement
-    # address zero for Mega Drive in rcheevos.
+    # a write to the first byte of work RAM ($FF0000). In rcheevos, with the
+    # word-swapped RAM of the core, this is achievement address one.
     end = rom.rfind(b"\x60\xfe")
     if end < 0:
         raise ValueError("diagnostic cartridge has no terminal loop")

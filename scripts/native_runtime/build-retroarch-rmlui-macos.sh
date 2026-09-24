@@ -76,11 +76,22 @@ cmake --build "$destination/build-rmlui" --parallel "$jobs"
     --disable-ffmpeg \
     --disable-cg \
     --disable-langextra
-  make -j"$jobs" \
+  make -j"$jobs" RIB_ACHIEVEMENTS_TEST="${ROMINABOX_ACHIEVEMENTS_TEST_BUILD:-0}" \
     RMLUI_SOURCE_DIR=../vendor/RmlUi \
     RMLUI_BUILD_DIR=../build-rmlui
+  python3 - "$destination" "$retroarch_commit" "${ROMINABOX_ACHIEVEMENTS_TEST_BUILD:-0}" <<'CAPABILITY'
+import json, pathlib, subprocess, sys
+build = pathlib.Path(sys.argv[1])
+symbols = subprocess.check_output(["nm", "-g", "retroarch"], text=True)
+supports = any(line.endswith(" _rcheevos_rib_prepare_client") for line in symbols.splitlines())
+if not supports:
+    raise SystemExit("The built player is missing the required achievements client integration")
+(build / "build-info.json").write_text(json.dumps({
+    "retroarchCommit": sys.argv[2], "rmluiCommit": "ba95ffe8bfb6370efb2cdcca927eaad4710c5413",
+    "capabilities": {"achievements": supports}, "testOnly": sys.argv[3] == "1"
+}) + "\n")
+CAPABILITY
   strip retroarch
 )
 
-printf '{"retroarchCommit":"%s","rmluiCommit":"ba95ffe8bfb6370efb2cdcca927eaad4710c5413"}\n' "$retroarch_commit" > "$destination/build-info.json"
 echo "Built $destination/retroarch/retroarch from $retroarch_commit"

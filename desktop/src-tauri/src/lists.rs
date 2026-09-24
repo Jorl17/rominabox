@@ -1,14 +1,12 @@
 //! Generated lists of rows in the menu, such as the achievements list and
 //! the shader list.
 //!
-//! We make each row by filling in the row template of the menu design with
-//! the id, icon, title, detail and state of one item, when we bundle the
-//! game, because no elements can be created in the player while it runs. We
-//! use this code for every kind of list.
+//! We fill each list when we bundle the game, or live in the player. We make
+//! each row by filling in the row template of the menu design with one item.
+//! We use this code for every kind of list.
 //!
-//! A menu has one `<!--SCREENS-->` marker, where we put the list screens,
-//! and one `<!--SCREEN-LINKS-->` marker, where we put the buttons that open
-//! them. We replace each marker once, with every list at the same time,
+//! A menu has one `<!--SCREENS-->` marker and one `<!--SCREEN-LINKS-->`
+//! marker. We replace each marker once, with every list at the same time,
 //! because the marker is gone after the first replacement.
 
 use crate::themes::{Screen, ScreenPlace};
@@ -58,7 +56,14 @@ pub struct ListItem {
 #[derive(Clone, Debug)]
 pub struct List {
     pub screen: Screen,
-    pub items: Vec<ListItem>,
+    pub content: ListContent,
+}
+
+#[derive(Clone, Debug)]
+pub enum ListContent {
+    Static(Vec<ListItem>),
+    /// We clone this design's row template in the player for paged live data.
+    Live,
 }
 
 /// The row template of the design, or the built-in one. The markup in a
@@ -102,7 +107,6 @@ fn screen_template(design: &Path, id: &str) -> Result<Option<String>, String> {
     for required in [
         "id=\"PANEL-ID\"",
         "class=\"screen-panel",
-        "display:none",
         "<!--ROWS-->",
         "<!--ACTIONS-->",
         "<!--STATUS-->",
@@ -110,6 +114,21 @@ fn screen_template(design: &Path, id: &str) -> Result<Option<String>, String> {
         if template.matches(required).count() != 1 {
             return Err(format!("{} must contain one {required}", source.display()));
         }
+    }
+    let panel_at = template.find("id=\"PANEL-ID\"").unwrap();
+    let tag_at = template[..panel_at]
+        .rfind('<')
+        .ok_or("Panel id must belong to an element")?;
+    let tag_end = template[panel_at..]
+        .find('>')
+        .ok_or("Panel opening tag is incomplete")?
+        + panel_at;
+    let opening = &template[tag_at..tag_end];
+    if !opening.contains("display:none") {
+        return Err(format!(
+            "{} must hide the PANEL-ID element with display:none",
+            source.display()
+        ));
     }
     Ok(Some(template))
 }
@@ -263,12 +282,40 @@ pub fn render_list(screen: &str, template: &str, items: &[ListItem], page_size: 
         html.push_str("</div>");
     }
     if page_count > 1 {
-        html.push_str(&format!(
-            "<div id=\"{screen}-pager\" class=\"list-pager\"><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">1/{page_count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">&gt;</button></div>"
-        ));
+        html.push_str(&pager(screen, page_count));
     }
     html.push_str("</div>");
     html
+}
+
+fn pager(screen: &str, page_count: usize) -> String {
+    let hidden = if page_count < 2 {
+        " style=\"display:none;\""
+    } else {
+        ""
+    };
+    format!("<div id=\"{screen}-pager\" class=\"list-pager\"{hidden}><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">1/{page_count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">&gt;</button></div>")
+}
+
+/// A live list contains a hidden prototype row from the same template as the
+/// static lists. We clone it in the native list component, so there is no
+/// second template and no layout specific to achievements.
+fn live_list(screen: &str, template: &str, page_size: usize) -> String {
+    let row = render_row(
+        template,
+        &ListItem {
+            id: format!("{screen}-prototype"),
+            icon: String::new(),
+            title: String::new(),
+            detail: String::new(),
+            state: String::new(),
+            selected: false,
+            accent: false,
+            line: false,
+        },
+    );
+    let pager = pager(screen, 0);
+    format!("<div id=\"{screen}-list\" class=\"list live-list\" data-page-size=\"{page_size}\"><div class=\"list-prototype\" style=\"display:none;\">{row}</div>{pager}</div>")
 }
 
 pub fn fill_slot(document: &str, slot: &str, body: &str) -> Result<String, String> {
@@ -432,15 +479,25 @@ pub fn install(
         .map_err(|error| format!("could not read the staged screen list: {error}"))?;
 
     let template = row_template(design)?;
-    let pages = page_size(design)?;
+    let default_pages = page_size(design)?;
     let step = row_step(design)?;
     let mut screens = String::new();
     let mut links = String::new();
     for list in lists {
-        if list.items.is_empty() {
-            continue;
-        }
-        let rows = render_list(&list.screen.id, &template, &list.items, pages);
+        let pages = list.screen.list_page_size.unwrap_or(default_pages);
+        let wrapper = screen_template(design, &list.screen.id)?;
+        let (rows, lift) = match &list.content {
+            ListContent::Static(items) => {
+                if items.is_empty() {
+                    continue;
+                }
+                (
+                    render_list(&list.screen.id, &template, items, pages),
+                    pages.saturating_sub(items.len().min(pages)) * step,
+                )
+            }
+            ListContent::Live => (live_list(&list.screen.id, &template, pages), 0),
+        };
         let back = list
             .screen
             .back_label
@@ -450,8 +507,6 @@ pub fn install(
         // list with fewer rows, we move them up by the missing rows, so the
         // screen ends where its content does. For a full list we do not move
         // them.
-        let short = pages.saturating_sub(list.items.len().min(pages));
-        let lift = short * step;
         let up = if lift > 0 {
             format!(" style=\"margin-top:-{lift}dp;\"")
         } else {
@@ -475,7 +530,7 @@ pub fn install(
             "<div id=\"{}-status\" class=\"list-status\"{up}></div>",
             list.screen.id
         );
-        let panel = if let Some(template) = screen_template(design, &list.screen.id)? {
+        let panel = if let Some(template) = wrapper {
             template
                 .replace("PANEL-ID", &list.screen.panel)
                 .replace("<!--ROWS-->", &rows)
@@ -642,6 +697,7 @@ mod tests {
             button: "achievements".into(),
             label: None,
             back_label: None,
+            list_page_size: None,
             place: ScreenPlace::Plain,
             option_label: Some("ACHIEVEMENTS".into()),
             option_default: false,
@@ -697,6 +753,7 @@ mod tests {
             button: "achievements".into(),
             label: None,
             back_label: None,
+            list_page_size: None,
             place: ScreenPlace::Plain,
             option_label: Some("ACHIEVEMENTS".into()),
             option_default: false,

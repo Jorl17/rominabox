@@ -1,7 +1,7 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
 use rominabox_desktop::{
-    achievements, controls, cores, metadata, packaging, projects, shaders, systems, themes, volume,
+    controls, cores, metadata, packaging, projects, shaders, systems, themes, volume,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -58,7 +58,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume|volume-markup|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume|volume-markup|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     // The checkout from which we built this binary.
@@ -83,10 +83,10 @@ fn run() -> Result<(), String> {
                 "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
-                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "menuEntries": "option entry ids to offer; omit for the design's defaults; [] offers no Options button", "events": ["progress", "result", "error"] },
+                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir", "target", "runtimeKit", "core?"], "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "events": ["progress", "result", "error"] },
                 "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
                 "cores": { "request": ["cache", "target"], "target": "macos-arm64 | macos-x86_64 | windows-x86_64 | linux-x86_64", "result": "per-core present, installed, unreachable or notRecorded" },
-                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
+                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
                 "shaders": { "request": [], "result": "Catalog presets an author can bundle" },
                 "shaders-check": { "request": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "optional id" }, "result": "Resolved shaders, or an error" },
                 "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" },
@@ -416,59 +416,6 @@ fn run() -> Result<(), String> {
             println!(
                 "{}",
                 json!({ "type": "result", "result": { "shaders": presets } })
-            );
-            Ok(())
-        }
-        // Identify a ROM and fetch its list once, so that the person can repeat
-        // an export without the network and without the credentials.
-        "achievements" => {
-            let input = read_request()?;
-            #[derive(serde::Deserialize)]
-            #[serde(rename_all = "camelCase")]
-            struct Ask {
-                rom: Option<std::path::PathBuf>,
-                game_id: Option<u32>,
-                /// Where to write the list and its badges. Without it, we print
-                /// the list and download nothing.
-                into: Option<std::path::PathBuf>,
-            }
-            let ask: Ask = serde_json::from_str(&input)
-                .map_err(|error| format!("invalid achievements request: {error}"))?;
-            let game_id = match (ask.game_id, &ask.rom) {
-                (Some(id), _) => Some(id),
-                // Identifying works without an account, and fetching the list does not.
-                (None, Some(rom)) => achievements::identify(&achievements::rom_hash_of(rom)?)?,
-                (None, None) => return Err("give a rom or a gameId".into()),
-            };
-            let Some(game_id) = game_id else {
-                println!(
-                    "{}",
-                    json!({"type": "result", "result": {"gameId": null, "achievements": 0}})
-                );
-                return Ok(());
-            };
-            let account = achievements::Account::from_environment().ok_or_else(|| {
-                "fetching a list needs RA_USERNAME and RA_API_KEY in the environment".to_string()
-            })?;
-            let catalog = achievements::fetch_catalog(&account, game_id)?;
-            let mut badges = 0;
-            if let Some(into) = &ask.into {
-                std::fs::create_dir_all(into).map_err(|error| error.to_string())?;
-                std::fs::write(
-                    into.join("achievements.json"),
-                    serde_json::to_string_pretty(&catalog).map_err(|e| e.to_string())?,
-                )
-                .map_err(|error| error.to_string())?;
-                badges = achievements::download_badges(&catalog, &into.join("badges"))?;
-            }
-            println!(
-                "{}",
-                json!({"type": "result", "result": {
-                    "gameId": catalog.game_id,
-                    "title": catalog.title,
-                    "achievements": catalog.achievements.len(),
-                    "badges": badges,
-                }})
             );
             Ok(())
         }

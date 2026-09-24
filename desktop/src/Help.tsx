@@ -83,12 +83,14 @@ export function Help({
 export function Checkbox({
   label,
   checked,
+  disabled = false,
   onChange,
   help,
   className = "",
 }: {
   label: string;
   checked: boolean;
+  disabled?: boolean;
   onChange: (checked: boolean) => void;
   help?: ReactNode;
   className?: string;
@@ -99,6 +101,7 @@ export function Checkbox({
         <input
           type="checkbox"
           checked={checked}
+          disabled={disabled}
           onChange={(event) => onChange(event.target.checked)}
         />
         {label}

@@ -120,20 +120,17 @@ pub fn sources() -> Result<Vec<(CatalogEntry, String)>, String> {
         },
         glsl_source("FragColor = COMPAT_TEXTURE(Texture, TEX0.xy);"),
     )];
-    listed.extend(catalog_file()?
-        .presets
-        .into_iter()
-        .map(|preset| {
-            let glsl = glsl_source(&preset.fragment);
-            (
-                CatalogEntry {
-                    id: preset.id,
-                    name: preset.name,
-                    detail: preset.detail,
-                },
-                glsl,
-            )
-        }));
+    listed.extend(catalog_file()?.presets.into_iter().map(|preset| {
+        let glsl = glsl_source(&preset.fragment);
+        (
+            CatalogEntry {
+                id: preset.id,
+                name: preset.name,
+                detail: preset.detail,
+            },
+            glsl,
+        )
+    }));
     Ok(listed)
 }
 
@@ -160,9 +157,7 @@ fn require_id(id: &str) -> Result<(), String> {
     if ok {
         return Ok(());
     }
-    Err(format!(
-        "shader id '{id}' must be a short lowercase name"
-    ))
+    Err(format!("shader id '{id}' must be a short lowercase name"))
 }
 
 fn glsl_source(fragment_body: &str) -> String {
@@ -481,9 +476,7 @@ fn starting<'a>(
     resolved
         .iter()
         .find(|item| item.id == wanted || item.name == wanted)
-        .ok_or_else(|| {
-            format!("the starting shader '{wanted}' is not one of the bundled shaders")
-        })
+        .ok_or_else(|| format!("the starting shader '{wanted}' is not one of the bundled shaders"))
 }
 
 /// The picture next to a shader in the list, which is the test card with that
@@ -550,6 +543,7 @@ fn shader_screen(design: &Path) -> crate::themes::Screen {
             button: "shaders".into(),
             label: None,
             back_label: None,
+            list_page_size: None,
             place: crate::themes::ScreenPlace::Plain,
             // Inside Options, not a separate button on the pause row. One
             // Options screen contains controls, shaders and sound, and it is
@@ -564,7 +558,6 @@ fn shader_screen(design: &Path) -> crate::themes::Screen {
             toggle: None,
         })
 }
-
 
 /// Copy presets into the menu assets and describe the screen for them.
 ///
@@ -604,11 +597,15 @@ pub fn stage(
         }
         if let Some(source_name) = &item.generated {
             if item.files.is_empty() {
-                let Some(preset) = catalog.presets.iter().find(|preset| preset.id == item.id) else {
+                let Some(preset) = catalog.presets.iter().find(|preset| preset.id == item.id)
+                else {
                     return Err(format!("shader '{}' has no source", item.id));
                 };
-                fs::write(directory.join(format!("{}.glsl", item.id)), glsl_source(&preset.fragment))
-                    .map_err(|error| error.to_string())?;
+                fs::write(
+                    directory.join(format!("{}.glsl", item.id)),
+                    glsl_source(&preset.fragment),
+                )
+                .map_err(|error| error.to_string())?;
                 fs::write(
                     directory.join(format!("{}.glslp", item.id)),
                     preset_text(&format!("{}.glsl", item.id)),
@@ -620,8 +617,11 @@ pub fn stage(
                         format!("could not bundle shader file {}: {error}", source.display())
                     })?;
                 }
-                fs::write(directory.join(format!("{}.glslp", item.id)), preset_text(source_name))
-                    .map_err(|error| error.to_string())?;
+                fs::write(
+                    directory.join(format!("{}.glslp", item.id)),
+                    preset_text(source_name),
+                )
+                .map_err(|error| error.to_string())?;
             }
         } else {
             for (source, name) in &item.files {
@@ -662,7 +662,10 @@ pub fn stage(
             }
         });
     Ok(StagedShaders {
-        list: Some(crate::lists::List { screen, items }),
+        list: Some(crate::lists::List {
+            screen,
+            content: crate::lists::ListContent::Static(items),
+        }),
         config,
         initial_relative,
     })
@@ -735,8 +738,7 @@ mod tests {
 
     fn staged_menu(name: &str) -> (PathBuf, rominabox_scratch::Scratch) {
         let root = rominabox_scratch::Scratch::dir(&format!("rominabox-{name}"));
-        let design =
-            crate::repo::at("integrations/designs/native");
+        let design = crate::repo::at("integrations/designs/native");
         fs::copy(design.join("menu.rml"), root.join("menu.rml")).unwrap();
         // As in an export. Options must be here, because the shader screen is
         // an entry inside it, and BACK in an entry returns to the screen that
@@ -752,13 +754,11 @@ mod tests {
     }
 
     fn pause_and_controls() -> Vec<crate::themes::Screen> {
-        crate::themes::declared_screens(
-            &crate::repo::at("integrations/designs/native"),
-        )
-        .unwrap()
-        .into_iter()
-        .filter(|screen| screen.option_label.is_none())
-        .collect()
+        crate::themes::declared_screens(&crate::repo::at("integrations/designs/native"))
+            .unwrap()
+            .into_iter()
+            .filter(|screen| screen.option_label.is_none())
+            .collect()
     }
 
     #[test]
@@ -780,7 +780,10 @@ mod tests {
             ..ShaderSelection::default()
         })
         .expect_err("slang must not bundle");
-        assert!(error.contains("OpenGL") && error.contains("Metal"), "{error}");
+        assert!(
+            error.contains("OpenGL") && error.contains("Metal"),
+            "{error}"
+        );
         let _ = fs::remove_dir_all(&root);
     }
 

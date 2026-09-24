@@ -1,0 +1,39 @@
+<div id="PANEL-ID" class="screen-panel" style="display:none;">
+  <div class="list account-screen">
+    <div class="account-summary"><span id="achievements-account">RETROACHIEVEMENTS</span><span id="achievements-state" class="account-state">OFF</span></div>
+    <div id="achievements-signed-out" class="account-empty">
+      <div>Sign in to earn achievements.</div>
+      <button id="achievements-login" class="menu-action account-action">SIGN IN TO ENABLE</button>
+    </div>
+    <div id="achievements-form" class="account-form" style="display:none;">
+      <label for="achievement-username">USERNAME</label>
+      <input id="achievement-username" type="text" maxlength="95" class="account-input"/>
+      <label for="achievement-password">PASSWORD</label>
+      <div class="account-password-row"><input id="achievement-password" type="password" class="account-input"/><button id="achievements-password-visibility" class="menu-action account-reveal">SHOW</button></div>
+      <div class="account-form-actions"><button id="achievements-submit" class="menu-action">SIGN IN</button><button id="achievements-cancel" class="menu-action">CANCEL</button></div>
+      <div class="account-help">Create an account at retroachievements.org</div>
+      <div id="achievements-error" class="account-error"></div>
+    </div>
+    <div id="achievements-catalog" class="account-catalog" style="display:none;"><!--ROWS--></div>
+  </div>
+  <div id="achievements-session-actions" class="list-actions account-session-actions" style="display:none;">
+    <button id="achievements-enabled" class="menu-action list-control account-toggle">TURN OFF</button>
+    <button id="achievements-signout" class="menu-action list-control account-signout">SIGN OUT</button>
+    <button id="achievements-retry" class="menu-action list-control account-retry" style="display:none;">RETRY</button>
+  </div>
+  <!--ACTIONS--><!--STATUS-->
+</div>
+<div id="text-keyboard" class="text-keyboard" style="display:none;">
+  <div class="text-keyboard-heading">START: DONE &nbsp; B: DELETE &nbsp; L/R: CHANGE KEYS</div>
+  <div id="text-keyboard-grid"></div>
+</div>
+<div id="achievements-confirmation" class="session-dialog" style="display:none;">
+  <div class="session-dialog-title">ACHIEVEMENTS NOT SYNCED</div>
+  <div class="session-dialog-copy">Some earned achievements have not reached RetroAchievements. They may be lost if you end this session.</div>
+  <div class="session-dialog-actions"><button id="achievements-keep-session" class="menu-action">KEEP PLAYING</button><button id="achievements-end-session" class="menu-action">CONTINUE</button></div>
+</div>
+<div id="achievements-startup" class="session-dialog" style="display:none;">
+  <div class="session-dialog-title">RESUMING YOUR GAME</div>
+  <div id="achievements-startup-status" class="session-dialog-copy">Connecting to RetroAchievements...</div>
+  <div class="session-dialog-actions"><button id="achievements-startup-retry" class="menu-action" style="display:none;">RETRY</button><button id="achievements-skip-startup" class="menu-action">PLAY WITHOUT ACHIEVEMENTS</button></div>
+</div>

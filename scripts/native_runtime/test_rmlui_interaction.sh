@@ -325,6 +325,11 @@ c++ -std=c++17 -Werror=return-type -DRIB_RMLUI_HEADLESS -DHAVE_AUDIOMIXER \
   $rmlui_includes -I "$bridge_dir" -I "$libretro_common/include" $freetype_cflags \
   -o "$build_dir/test_menu_orchestration" \
   "$script_dir/test_menu_orchestration.cpp" \
+  "$script_dir/text_test_host.cpp" \
+  "$repo_root/vendor/retroarch/cheevos/rominabox_stub.c" \
+  "$bridge_dir/rmlui/achievements.cpp" \
+  "$bridge_dir/rmlui/text_entry.cpp" \
+  "$bridge_dir/rmlui/live_lists.cpp" \
   "$bridge_dir/rmlui/menu.cpp" \
   "$bridge_dir/rmlui/navigation.cpp" \
   "$bridge_dir/rmlui/slot_tasks.cpp" \

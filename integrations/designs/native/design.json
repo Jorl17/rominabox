@@ -113,16 +113,7 @@
         "label": "ACHIEVEMENTS",
         "default": false
       },
-      "toggle": {
-        "id": "achievement-mode",
-        "label": "ACHIEVEMENT MODE",
-        "on": "ON",
-        "off": "OFF",
-        "default": false,
-        "guard": "saves",
-        "guardLabel": "ACHIEVEMENTS ON",
-        "guardStatus": "SAVE SLOTS ARE OFF WHILE ACHIEVEMENTS ARE ON"
-      }
+      "pageSize": 4
     },
     {
       "id": "discs",

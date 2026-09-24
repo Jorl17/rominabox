@@ -88,6 +88,7 @@ bool status_is(const char *expected)
 /* The boundary to the driver host. We record the commands here, and the order
  * of document, focus, transfer, capture and configuration is the menu's own. */
 extern "C" bool rib_host_menu_open(void) { return true; }
+extern "C" void rib_host_open_menu(void) {}
 extern "C" void rib_host_overlay_frames(bool) {}
 extern "C" bool rib_host_has_settings(void) { return true; }
 extern "C" bool rib_host_bind_index(const char *id, unsigned *index)
@@ -288,6 +289,29 @@ int main(int argc, char **argv)
    check(status_is("SLOT 1 LOADED"), "matching load completion reports success");
 
    click_and_frame(menu, "options");
+   char option_ids[16][64];
+   const int option_count = view.document.focusables("options-panel", option_ids, 16);
+   int sliders = 0;
+   for (int index = 0; index < option_count; ++index) {
+      auto *element = view.document.root()->GetElementById(option_ids[index]);
+      check(!element->IsClassSet("volume-arrow"), "volume arrows are pointer-only targets");
+      if (view.parts.part_is_slider(option_ids[index])) ++sliders;
+   }
+   check(sliders == 1, "volume has one logical keyboard/joypad stop");
+   bool reached_volume = false;
+   for (int index = 0; index <= option_count; ++index) {
+      rib_menu_key(menu, RIB_KEY_DOWN);
+      if (!focused(RIB_VOLUME_SLIDER_ID)) continue;
+      const float before = volume_db;
+      rib_menu_key(menu, RIB_KEY_RIGHT);
+      frame(menu);
+      check(volume_db > before && focused(RIB_VOLUME_SLIDER_ID), "Right changes volume without leaving its control");
+      rib_menu_key(menu, RIB_KEY_LEFT);
+      frame(menu);
+      check(std::fabs(volume_db - before) < 0.06f && focused(RIB_VOLUME_SLIDER_ID), "Left restores volume without an arrow focus stop");
+      reached_volume = true; break;
+   }
+   check(reached_volume, "logical navigation reaches the volume slider");
    check(view.parts.commit_slider(RIB_VOLUME_SLIDER_ID, 0.5f),
          "the staged Options screen exposes its volume slider");
    frame(menu);
@@ -364,6 +388,15 @@ int main(int argc, char **argv)
    frame(menu);
    check(std::string(inspect.text("heading")) == "OPTIONS",
          "keyboard Back follows the declared destination through its listener");
+   click_and_frame(menu, "fixture");
+   view.document.set_shown("fixture-one", false);
+   view.document.set_shown("fixture-two", false);
+   rib_menu_key(menu, RIB_KEY_CANCEL);
+   frame(menu);
+   check(std::string(inspect.text("heading")) == "OPTIONS",
+         "An empty account/list screen also follows its declared Back destination");
+   view.document.set_shown("fixture-one", true);
+   view.document.set_shown("fixture-two", true);
    click_and_frame(menu, "controls");
    pointer_state.x = 0;
    pointer_state.y = 0;

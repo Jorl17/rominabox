@@ -150,10 +150,9 @@ pub struct ExportRequest {
     /// and then the game has no shader screen and no preset.
     #[serde(default)]
     pub shaders: crate::shaders::ShaderSelection,
-    /// The achievements in this game. Usually this is empty, and then there
-    /// is no achievements screen and we make no network request.
-    #[serde(default)]
-    pub achievements: crate::achievements::AchievementSelection,
+    /// Include player-authenticated Casual achievements, independently of data.
+    #[serde(default = "crate::achievements::default_included")]
+    pub include_achievements: bool,
     pub output_dir: PathBuf,
     pub target: ExportTarget,
     /// A frozen, redistributable kit. It contains `bin/retroarch`, `cores/`,
@@ -594,9 +593,7 @@ where
         .map_err(|message| ExportError::new("stage", message))?;
         let design = crate::themes::staged_design(&request.runtime_kit, &request.theme);
         let menu_assets = resources.join("menu-assets");
-        // We make the rows first, because the entries in Options depend on the
-        // lists in this game. An achievements entry in a game with no
-        // achievements would be a button that opens an empty screen.
+        // We compose the data lists and the live account screen with one function.
         let mut lists: Vec<crate::lists::List> = Vec::new();
         if let Some(discs) =
             crate::disc_menu::list(&design).map_err(|message| ExportError::new("stage", message))?
@@ -606,23 +603,19 @@ where
         let staged_shaders = crate::shaders::stage(&design, &menu_assets, &request.shaders)
             .map_err(|message| ExportError::new("stage", message))?;
         lists.extend(staged_shaders.list);
-        let catalog = crate::achievements::resolve(&request.achievements)
-            .map_err(|message| ExportError::new("stage", message))?;
-        lists.extend(
-            crate::achievements::stage(
-                &design,
-                &menu_assets,
-                catalog.as_ref(),
-                request.achievements.badges.as_deref(),
-            )
-            .map_err(|message| ExportError::new("stage", message))?
-            .list,
-        );
-        let mut entries = match request.menu_entries.clone() {
-            Some(named) => named,
-            None => crate::themes::default_entries(&design)
-                .map_err(|message| ExportError::new("stage", message))?,
-        };
+        if crate::achievements::included(request.include_achievements, request.show_menu) {
+            lists.push(
+                crate::achievements::screen(&design)
+                    .map_err(|message| ExportError::new("stage", message))?,
+            );
+        }
+        let mut entries = crate::achievements::entries(
+            &design,
+            request.include_achievements,
+            request.show_menu,
+            request.menu_entries.as_deref(),
+        )
+        .map_err(|message| ExportError::new("stage", message))?;
         for list in &lists {
             if list.screen.option_label.is_some() && !entries.contains(&list.screen.id) {
                 entries.push(list.screen.id.clone());
@@ -644,6 +637,15 @@ where
         .map_err(|message| ExportError::new("stage", message))?;
         crate::lists::install(&design, &menu_assets, &screens, &lists)
             .map_err(|message| ExportError::new("stage", message))?;
+        if crate::achievements::included(request.include_achievements, request.show_menu) {
+            crate::themes::append_component_style(
+                &design,
+                &menu_assets,
+                &request.palette,
+                "achievements.rcss",
+            )
+            .map_err(|message| ExportError::new("stage", message))?;
+        }
     } else if request.splash {
         crate::themes::prepare_splash_assets(
             &crate::themes::staged_design(&request.runtime_kit, &request.theme),
@@ -757,6 +759,7 @@ where
         "keepPlayingInBackground": request.keep_playing_in_background,
         "autosaveOnQuit": request.autosave_on_quit,
         "menuEntries": request.menu_entries,
+        "includeAchievements": crate::achievements::included(request.include_achievements, request.show_menu),
     });
     fs::write(
         resources.join("game.json"),
@@ -789,8 +792,14 @@ where
         )?;
     }
     let entitlements = staging.path().join("entitlements.plist");
-    fs::write(&entitlements, sandbox_entitlements(&identity))
-        .map_err(|error| ExportError::io("sign", &entitlements, error))?;
+    fs::write(
+        &entitlements,
+        sandbox_entitlements(
+            &identity,
+            crate::achievements::included(request.include_achievements, request.show_menu),
+        ),
+    )
+    .map_err(|error| ExportError::io("sign", &entitlements, error))?;
     run_command_cancellable(
         "sign",
         Command::new("/usr/bin/codesign")
@@ -841,6 +850,14 @@ fn validate_request(
             "startAtMenu requires showMenu",
         ));
     }
+    crate::achievements::entries(
+        &crate::themes::design_root(&request.theme)
+            .map_err(|message| ExportError::new("validate", message))?,
+        request.include_achievements,
+        request.show_menu,
+        request.menu_entries.as_deref(),
+    )
+    .map_err(|message| ExportError::new("validate", message))?;
     controls::validate_for_system_with_advanced_access(
         &request.system,
         &request.controls,
@@ -866,6 +883,11 @@ fn validate_request(
             ));
         }
     }
+    crate::achievements::validate_runtime(
+        &request.runtime_kit,
+        crate::achievements::included(request.include_achievements, request.show_menu),
+    )
+    .map_err(|message| ExportError::new("validate", message))?;
     let system = crate::systems::find(&request.system).ok_or_else(|| {
         ExportError::new(
             "validate",
@@ -1888,6 +1910,10 @@ audio_enable_menu_cancel = "{menu_audio}"
 audio_enable_menu_scroll = "{menu_audio}"
 audio_enable_menu_bgm = "false"
 audio_enable_menu_notice = "false"
+cheevos_enable = "false"
+cheevos_hardcore_mode_enable = "false"
+cheevos_test_unofficial = "false"
+cheevos_start_active = "false"
 cheevos_unlock_sound_enable = "false"
 input_joypad_driver = "hid"
 menu_driver = "{menu_driver}"
@@ -1968,12 +1994,18 @@ fn game_data_template(identity: &str) -> String {
     format!("$HOME/Library/Application Support/ROM-in-a-Box/Games/{identity}")
 }
 
-fn sandbox_entitlements(identity: &str) -> String {
+fn sandbox_entitlements(identity: &str, achievements: bool) -> String {
+    let network = if achievements {
+        "<key>com.apple.security.network.client</key><true/>"
+    } else {
+        ""
+    };
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>com.apple.security.app-sandbox</key><true/>
+{network}
 <key>com.apple.security.device.usb</key><true/>
 <key>com.apple.security.device.bluetooth</key><true/>
 <key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
@@ -1997,7 +2029,11 @@ fn compile_c(source: &Path, destination: &Path, extra: &[&str]) -> Result<(), Ex
     if current {
         return Ok(());
     }
-    let temporary = destination.with_extension(format!("tmp-{}", std::process::id()));
+    let parent = destination
+        .parent()
+        .ok_or_else(|| ExportError::new("configure", "compiled output needs a parent directory"))?;
+    let staging = OwnedStaging::create(parent)?;
+    let temporary = staging.path().join("compiled");
     let status = Command::new("cc")
         .args(extra)
         .arg("-o")
@@ -2110,6 +2146,7 @@ fn write_launch_plan(
          title\t{title}\n\
          start_at_menu\t{start}\n\
          advanced\t{advanced}\n\
+         achievements\t{achievements}\n\
          volume_file\t{volume}\n\
          shader_initial\t{shader}\n\
          data_dir\t{data_dir}\n\
@@ -2123,6 +2160,12 @@ fn write_launch_plan(
         } else {
             "0"
         },
+        achievements =
+            if crate::achievements::included(request.include_achievements, request.show_menu) {
+                "1"
+            } else {
+                "0"
+            },
         volume = crate::volume::file_name(),
         shader = shader_initial,
         data_dir = game_data_template(identity),
@@ -2599,13 +2642,38 @@ mod tests {
             autosave_on_quit: false,
             menu_entries: None,
             shaders: crate::shaders::ShaderSelection::default(),
-            achievements: Default::default(),
+            include_achievements: false,
             output_dir: PathBuf::from("output"),
             target: ExportTarget::Macos,
             runtime_kit: PathBuf::from("runtime"),
             core: None,
             core_cache: None,
         }
+    }
+
+    #[test]
+    fn concurrent_launcher_compiles_publish_without_sharing_temporary_files() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-compile-concurrency");
+        let source = root.join("fixture.c");
+        let output = root.join("fixture.o");
+        std::fs::write(&source, "int fixture(void) { return 42; }\n").unwrap();
+        let barrier = std::sync::Barrier::new(4);
+        std::thread::scope(|threads| {
+            let jobs: Vec<_> = (0..4)
+                .map(|_| {
+                    threads.spawn(|| {
+                        barrier.wait();
+                        compile_c(&source, &output, &["-c"])
+                    })
+                })
+                .collect();
+            for job in jobs {
+                job.join()
+                    .unwrap()
+                    .expect("each concurrent compile publishes safely");
+            }
+        });
+        assert!(output.is_file());
     }
 
     #[test]
