@@ -186,8 +186,8 @@ async function shot(page, file) {
 
 async function downloadNotice(page, out) {
   // A Mega Drive ROM is not a Dreamcast game. When someone chooses Dreamcast
-  // for it, we refuse and keep the console, so we read the sentence for a
-  // file valid for Dreamcast. Then we put the Mega Drive game back.
+  // for it, we refuse and keep the console, so we read the step for a file
+  // valid for Dreamcast, whose core is not on disk. Then we put the Mega Drive game back.
   const directory = path.join(ROOT, "work/test-output/builder-shots");
   fs.mkdirSync(directory, { recursive: true });
   const cdi = path.join(directory, "game.cdi");
@@ -211,14 +211,13 @@ async function downloadNotice(page, out) {
     return false;
   }
   if (out) await shot(page, path.join(out, "15-dreamcast-core.png"));
+  // We mention a download in the pop-up while the export runs, and only then.
   if (
     text.includes("no core yet") ||
     text.includes("does not include") ||
-    !text.includes("The Dreamcast core will be downloaded.")
+    text.includes("will be downloaded")
   ) {
-    console.error(
-      "the export step does not say the Dreamcast core will be downloaded",
-    );
+    console.error("the export step talks about the core before the export");
     return false;
   }
   await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });

@@ -155,18 +155,20 @@ pub struct ExportRequest {
     pub include_achievements: bool,
     pub output_dir: PathBuf,
     pub target: ExportTarget,
-    /// A frozen, redistributable kit. It contains `bin/retroarch`, `cores/`,
-    /// `designs/<id>/`, `menu-assets/`, `autoconfig/`, `licenses/`, `sources/`
-    /// and `manifest.json`. We put the documents of each design under its id
-    /// and share the controller artwork, because all designs show the same pads.
+    /// A frozen, redistributable kit. It contains `bin/retroarch`,
+    /// `designs/<id>/`, `menu-assets/`, `autoconfig/`, `licenses/` and
+    /// `manifest.json`, but no cores, which come from `core_cache`. The
+    /// documents of a design are under its name, and we share the controller
+    /// artwork between designs, because we show the same pads in every design.
     #[serde(default)]
     pub runtime_kit: PathBuf,
     /// Optional explicit core path for development and future custom kits.
     pub core: Option<PathBuf>,
-    /// Cores downloaded when we create an app, in the layout of a kit, `cores/`
-    /// and `licenses/`. At export we copy the core of the game from here, so
-    /// there is no download when the game opens. A later export for the same
-    /// console uses the file here and does not download it again.
+    /// The cores we fetch when someone makes an app, with the same layout as a
+    /// kit, `cores/` and `licenses/`. At export we copy the one core for the
+    /// game from here, so the player downloads nothing when the game opens. At
+    /// every export we check whether the cached nightly is still the newest.
+    /// When this is absent, we fetch nothing and the core must be in the kit.
     #[serde(default)]
     pub core_cache: Option<PathBuf>,
 }
@@ -220,9 +222,9 @@ pub fn system_availability_for(runtime_kit: &Path, target: &str) -> Vec<SystemAv
 
 /// Resolve availability, also looking in the cache of downloaded cores.
 ///
-/// We search the bundled kit first. The cache contains the cores downloaded
-/// when we create an app, in the same `cores/` and `licenses/` layout, and it
-/// is not a global RetroArch folder.
+/// We search the cache first. It contains the cores downloaded when we create
+/// an app, in the same `cores/` and `licenses/` layout, and it is not a
+/// global RetroArch folder.
 pub fn system_availability_in(
     runtime_kit: &Path,
     cache: Option<&Path>,
@@ -309,6 +311,9 @@ pub struct ExportProgress {
     pub stage: ExportStage,
     pub fraction: f32,
     pub message: String,
+    /// We set it only on the event for fetching cores or failing to fetch them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cores: Option<crate::export_cores::CoreActivity>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -431,12 +436,6 @@ fn remove_owned_staging(path: &Path) -> Result<(), ExportError> {
     result.map_err(|error| ExportError::io("cleanup", path, error))
 }
 
-/// Put one missing core into the cache. In production we download the
-/// recorded file, and in a test we count the calls and write the bytes.
-pub trait CoreFetch {
-    fn fetch_component(&self, cache: &Path, component: &str, target: &str) -> Result<(), String>;
-}
-
 pub fn export_game<F>(
     request: &ExportRequest,
     cancelled: &AtomicBool,
@@ -445,52 +444,25 @@ pub fn export_game<F>(
 where
     F: FnMut(ExportProgress),
 {
-    export_game_fetching(request, cancelled, progress, &LiveFetch)
+    export_game_fetching(request, cancelled, progress, &crate::cores::UreqTransport)
 }
 
-/// Download the recorded core. We discard the error text in the caller, so
-/// that no URL from a transport failure reaches the builder.
-pub struct LiveFetch;
-
-impl CoreFetch for LiveFetch {
-    fn fetch_component(&self, cache: &Path, component: &str, target: &str) -> Result<(), String> {
-        match crate::cores::install_component(
-            cache,
-            target,
-            component,
-            &crate::cores::UreqTransport,
-        ) {
-            Some(install)
-                if matches!(
-                    install.core,
-                    crate::cores::InstallOutcome::Present | crate::cores::InstallOutcome::Installed
-                ) && matches!(
-                    install.license,
-                    crate::cores::InstallOutcome::Present | crate::cores::InstallOutcome::Installed
-                ) =>
-            {
-                Ok(())
-            }
-            _ => Err(String::new()),
-        }
-    }
-}
-
+/// `export_game` with the network as an argument. In tests we pass a transport
+/// with answers from a table, and we count the requests.
 pub fn export_game_fetching<F>(
     request: &ExportRequest,
     cancelled: &AtomicBool,
     mut progress: F,
-    fetch: &dyn CoreFetch,
+    transport: &dyn crate::cores::Transport,
 ) -> Result<ExportResult, ExportError>
 where
     F: FnMut(ExportProgress),
 {
-    // This comes before we validate the file. Here we download into the cache
-    // a core that is declared but not in the kit, and we build the game with
-    // that file in it. A second export uses that file and downloads nothing.
-    // We fix the platform here, and every later step uses `resolved`.
+    // This comes before we validate the file. Here we download or update the
+    // core in the cache, and we build the game with that file in it. We fix
+    // the platform here, and every later step uses `resolved`.
     let resolved = export_core(request);
-    fetch_missing_core(request, resolved.as_ref(), &mut progress, fetch)?;
+    prepare_core(request, resolved.as_ref(), &mut progress, transport)?;
     emit(
         &mut progress,
         ExportStage::Validate,
@@ -912,58 +884,62 @@ fn validate_request(
     Ok(())
 }
 
-fn fetch_missing_core<F>(
+/// The stage in the error that stops the export when we cannot download a
+/// core. For this stage we show Go back and Retry in the builder.
+pub const CORES_STAGE: &str = "cores";
+
+fn prepare_core<F>(
     request: &ExportRequest,
     resolved: Option<&ExportCore<'_>>,
     progress: &mut F,
-    fetch: &dyn CoreFetch,
+    transport: &dyn crate::cores::Transport,
 ) -> Result<(), ExportError>
 where
     F: FnMut(ExportProgress),
 {
-    let Some(resolved) = resolved else {
+    let (Some(resolved), Some(cache)) = (resolved, request.core_cache.as_deref()) else {
         return Ok(());
     };
-    let Some(cache) = request.core_cache.as_deref() else {
-        return Ok(());
-    };
-    let artifact = resolve_cached(
-        &request.runtime_kit,
-        Some(cache),
-        &resolved.artifact_relative(),
-    );
-    let licence = resolve_cached(
-        &request.runtime_kit,
-        Some(cache),
-        &resolved.licence_relative(),
-    );
-    if artifact.is_file() && licence.is_file() {
-        return Ok(());
-    }
-    let message = format!("Downloading the {} core.", resolved.system_name);
-    emit(progress, ExportStage::Validate, 0.04, &message);
-    fetch
-        .fetch_component(cache, &resolved.core.component, resolved.platform)
-        .map_err(|_| {
-            ExportError::new(
-                "validate",
-                format!("The {} core could not be downloaded.", resolved.system_name),
-            )
+    let present = [resolved.artifact_relative(), resolved.licence_relative()]
+        .iter()
+        .all(|relative| resolve_cached(&request.runtime_kit, Some(cache), relative).is_file());
+    let wanted = [crate::export_cores::Wanted {
+        component: &resolved.core.component,
+        platform: resolved.platform,
+        present,
+    }];
+    // We write the words in the builder, and the event contains the facts for
+    // them. Neither contains a URL.
+    crate::export_cores::prepare(cache, &wanted, transport, |activity| {
+        progress(ExportProgress {
+            stage: ExportStage::Validate,
+            fraction: 0.04,
+            message: activity.message(),
+            cores: Some(activity.clone()),
         })
+    })
+    .map_err(|_| {
+        ExportError::new(
+            CORES_STAGE,
+            format!(
+                "The {} core could not be downloaded. Try again later.",
+                resolved.system_name
+            ),
+        )
+    })
 }
 
+/// A file that we ship in the export, from the cache or the kit. We look in
+/// the cache first, because it contains what this builder downloaded, and we
+/// put a newer nightly there, not in the kit.
 fn resolve_cached(kit: &Path, cache: Option<&Path>, relative: &Path) -> PathBuf {
-    let bundled = kit.join(relative);
-    if bundled.is_file() {
-        return bundled;
-    }
     if let Some(cache) = cache {
         let fetched = cache.join(relative);
         if fetched.is_file() {
             return fetched;
         }
     }
-    bundled
+    kit.join(relative)
 }
 
 fn stage_legal_materials(
@@ -2571,6 +2547,7 @@ fn emit<F: FnMut(ExportProgress)>(
         stage,
         fraction,
         message: message.to_string(),
+        cores: None,
     });
 }
 

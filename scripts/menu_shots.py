@@ -299,6 +299,7 @@ KIT = ROOT / "desktop/src-tauri/resources/runtime"
 # out of date or from another checkout. See scripts/built.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from built import cli as _cli  # noqa: E402
+from core_source import core_source  # noqa: E402
 
 
 def command() -> Path:
@@ -471,6 +472,9 @@ def _build_a_game(
         "outputDir": str(out),
         "target": "macos",
         "runtimeKit": str(kit),
+        # The kit contains no cores. In an export we take the core from the local
+        # core cache, as we do from the cache of the builder.
+        "coreCache": str(core_source()),
     }
     request.update(settings)
     result = subprocess.run(

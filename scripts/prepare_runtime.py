@@ -8,8 +8,12 @@ import subprocess
 import tarfile
 import urllib.parse
 import urllib.request
+import sys
 import zipfile
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from core_source import DOWNLOADS, host_target, seeded_cache  # noqa: E402
 
 # The provenance of each core is declared in the console package that
 # contains its component. We read it from the catalog here instead of keeping
@@ -105,16 +109,17 @@ def buildbot_base(target: str) -> str:
         ) from None
 
 
-def host_target() -> str:
-    """The default target for builds on this machine."""
-    machine = platform.machine()
-    system = platform.system()
-    architecture = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "x86_64", "AMD64": "x86_64"}
-    if system == "Darwin":
-        return f"macos-{architecture.get(machine, machine)}"
-    if system == "Windows":
-        return f"windows-{architecture.get(machine, machine)}"
-    return f"linux-{architecture.get(machine, machine)}"
+# The builder's kit. It contains no cores and no source archives, because we
+# download a core at export. We refuse to stage a core into this kit.
+BUNDLED_KIT = Path(__file__).resolve().parent.parent / "desktop/src-tauri/resources/runtime"
+
+
+def refuse_bundled_kit(root: Path) -> None:
+    if root == BUNDLED_KIT.resolve() or BUNDLED_KIT.resolve() in root.parents:
+        raise SystemExit(
+            f"{root} is the builder's runtime kit, which bundles no cores. "
+            "Use --seed-core-cache for a local core source."
+        )
 
 
 def download(url: str, path: Path) -> None:
@@ -152,10 +157,17 @@ def copy_license_from_source(archive: Path, candidates: tuple[str, ...], destina
     raise RuntimeError(f"No declared license {candidates!r} in {archive}")
 
 
-def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object], target: str) -> dict[str, object]:
-    """Stage one official buildbot core for a target, without executing it."""
+def prepare_prebuilt_core(
+    root: Path, component: str, spec: dict[str, object], target: str, downloads: Path | None = None
+) -> dict[str, object]:
+    """Stage one official buildbot core for a target, without executing it.
+
+    `downloads` is the folder where we keep the downloaded archives, and
+    `root/sources` when none is given.
+    """
+    downloads = downloads or root / "sources"
     binary_name = str(spec["binary"])
-    binary_archive = root / "sources" / f"buildbot-{binary_name}.zip"
+    binary_archive = downloads / f"buildbot-{binary_name}.zip"
     binary_url = f"{buildbot_base(target)}/{binary_name}.zip"
     download(binary_url, binary_archive)
     with zipfile.ZipFile(binary_archive) as package:
@@ -207,7 +219,7 @@ def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object], t
 
     repo = str(spec["repo"])
     revision = str(spec["revision"])
-    source_archive = root / "sources" / f"{component}-{revision}.tar.gz"
+    source_archive = downloads / f"{component}-{revision}.tar.gz"
     source_url = f"https://codeload.github.com/{repo}/tar.gz/{revision}"
     download(source_url, source_archive)
     license_member = copy_license_from_source(
@@ -231,6 +243,60 @@ def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object], t
         "source_archive": source_archive.name,
         "source_sha256": digest(source_archive),
     }
+
+
+def build_core(root: Path, name: str, spec: dict, downloads: Path) -> dict[str, object]:
+    """Compile one core from its pinned source into `root/cores`, with its licence."""
+    repo, revision = spec["repo"], spec["revision"]
+    license_file = spec["licenses"][0]
+    archive = downloads / f"{name}-{revision}.tar.gz"
+    url = f"https://codeload.github.com/{repo}/tar.gz/{revision}"
+    print(f"Preparing {name}", flush=True)
+    download(url, archive)
+    work = DOWNLOADS.parent
+    build_parent = work / "core-builds" / name
+    build_parent.mkdir(parents=True, exist_ok=True)
+    if not list(build_parent.iterdir()):
+        with tarfile.open(archive) as package:
+            package.extractall(build_parent, filter="data")
+    source = next(build_parent.iterdir())
+    # We take the recipe from the component. What the core can do depends on
+    # its build flags, so a component that requires CHD declares that flag
+    # itself, and we keep no constant for it in this file.
+    build = spec.get("build") or {}
+    recipe = [
+        "make",
+        "-f",
+        build.get("makefile", "Makefile.libretro"),
+        "-j4",
+        f"platform={build.get('platform', 'osx')}",
+        f"ARCHFLAGS=-arch {platform.machine()}",
+        *build.get("flags", []),
+        f"GIT_VERSION= {revision[:8]}",
+    ]
+    with (work / f"build-{name}.log").open("w") as log:
+        subprocess.run(recipe, cwd=source, stdout=log, stderr=subprocess.STDOUT, check=True)
+    binary = root / "cores" / f"{name}_libretro.dylib"
+    shutil.copy2(source / binary.name, binary)
+    subprocess.run(["codesign", "--force", "--sign", "-", str(binary)], check=True)
+    shutil.copy2(source / license_file, root / "licenses" / f"{name}.txt")
+    if (root / "info").is_dir():
+        (root / "info" / f"{name}_libretro.info").write_text(
+            f'display_name = "{name}"\nsavestate = "true"\nsavestate_features = "serialized"\n'
+        )
+    return (
+        {
+            "name": name,
+            "revision": revision,
+            "source_url": url,
+            "source_archive": archive.name,
+            "source_sha256": digest(archive),
+            "binary_sha256": digest(binary),
+            "build_command": recipe,
+            "architecture": platform.machine(),
+            "license": "GPL-2.0-or-later" if name == "gambatte" else "Genesis Plus GX non-commercial",
+        }
+    )
 
 
 # Pinned joypad profiles. We set input_joypad_driver = "hid" in every
@@ -411,13 +477,13 @@ def _record_joypad_component(root: Path, record: dict[str, object]) -> None:
 def stage_joypad_autoconfig(root: Path) -> dict[str, object]:
     """Download the pinned autoconfig repository and stage its hid profiles.
 
-    Keep the whole repository as a source archive. Stage only `hid/*.cfg` for
-    export, without the meta/hotkey assignment lines, and store `COPYING`
-    beside the other component licences.
+    Keep the downloaded archive in work/downloads. Stage only `hid/*.cfg`
+    for export, without the meta/hotkey assignment lines, and store
+    `COPYING` beside the other component licences.
     """
     revision = JOYPAD_AUTOCONFIG_REVISION
     names = set(meta_bind_names())
-    archive = root / "sources" / f"{JOYPAD_AUTOCONFIG_COMPONENT}-{revision}.tar.gz"
+    archive = DOWNLOADS / f"{JOYPAD_AUTOCONFIG_COMPONENT}-{revision}.tar.gz"
     source_url = f"https://codeload.github.com/{JOYPAD_AUTOCONFIG_REPO}/tar.gz/{revision}"
     download(source_url, archive)
     licence_member = None
@@ -488,8 +554,6 @@ def stage_joypad_autoconfig(root: Path) -> dict[str, object]:
         "name": JOYPAD_AUTOCONFIG_COMPONENT,
         "revision": revision,
         "source_url": f"https://github.com/{JOYPAD_AUTOCONFIG_REPO}/tree/{revision}",
-        "source_archive": archive.name,
-        "source_sha256": digest(archive),
         "license": "MIT",
         "license_file": JOYPAD_AUTOCONFIG_LICENSE_FILE,
         "license_source_member": licence_member,
@@ -530,6 +594,12 @@ def main() -> None:
         help="prepare only the additional official arm64 cores, licenses, sources, and components.json in a staging directory",
     )
     parser.add_argument(
+        "--seed-core-cache",
+        action="store_true",
+        help="compile or download this target's cores and their licences into work/core-cache/<target>, "
+        "the local core source tests read; nothing else is prepared",
+    )
+    parser.add_argument(
         "--joypad-autoconfig-only",
         action="store_true",
         help="stage the pinned hid joypad profiles, their COPYING, and the manifest record into --output",
@@ -544,11 +614,24 @@ def main() -> None:
         return
     if platform.system() != "Darwin":
         parser.error("This preparation recipe currently builds the macOS prototype kit.")
+    target = args.target or host_target()
+    if args.seed_core_cache:
+        root = seeded_cache(target)
+        for name in ("cores", "licenses"):
+            (root / name).mkdir(parents=True, exist_ok=True)
+        built_cores, prebuilt_cores = partitioned_components(target)
+        for name, spec in built_cores.items():
+            build_core(root, name, spec, DOWNLOADS)
+        for component, spec in prebuilt_cores.items():
+            print(f"Preparing {component} from the official buildbot", flush=True)
+            prepare_prebuilt_core(root, component, spec, target, DOWNLOADS)
+        print(f"Local core source ready: {root}", flush=True)
+        return
     root = args.output.resolve()
+    refuse_bundled_kit(root)
     for name in ("cores", "sources", "licenses", "catalogs", "info"):
         (root / name).mkdir(parents=True, exist_ok=True)
     entries = []
-    target = args.target or host_target()
     built_cores, prebuilt_cores = partitioned_components(target)
     if args.official_arm64_cores_only:
         for component, spec in prebuilt_cores.items():
@@ -568,54 +651,7 @@ def main() -> None:
         print(f"Additional core staging ready: {root}", flush=True)
         return
     for name, spec in built_cores.items():
-        repo, revision = spec["repo"], spec["revision"]
-        license_file = spec["licenses"][0]
-        archive = root / "sources" / f"{name}-{revision}.tar.gz"
-        url = f"https://codeload.github.com/{repo}/tar.gz/{revision}"
-        print(f"Preparing {name}", flush=True)
-        download(url, archive)
-        build_parent = root.parent / "core-builds" / name
-        build_parent.mkdir(parents=True, exist_ok=True)
-        if not list(build_parent.iterdir()):
-            with tarfile.open(archive) as package:
-                package.extractall(build_parent, filter="data")
-        source = next(build_parent.iterdir())
-        # We take the recipe from the component. What the core can do depends on
-        # its build flags, so a component that requires CHD declares that flag
-        # itself, and we keep no constant for it in this file.
-        build = spec.get("build") or {}
-        recipe = [
-            "make",
-            "-f",
-            build.get("makefile", "Makefile.libretro"),
-            "-j4",
-            f"platform={build.get('platform', 'osx')}",
-            f"ARCHFLAGS=-arch {platform.machine()}",
-            *build.get("flags", []),
-            f"GIT_VERSION= {revision[:8]}",
-        ]
-        with (root.parent / f"build-{name}.log").open("w") as log:
-            subprocess.run(recipe, cwd=source, stdout=log, stderr=subprocess.STDOUT, check=True)
-        binary = root / "cores" / f"{name}_libretro.dylib"
-        shutil.copy2(source / binary.name, binary)
-        subprocess.run(["codesign", "--force", "--sign", "-", str(binary)], check=True)
-        shutil.copy2(source / license_file, root / "licenses" / f"{name}.txt")
-        (root / "info" / f"{name}_libretro.info").write_text(
-            f'display_name = "{name}"\nsavestate = "true"\nsavestate_features = "serialized"\n'
-        )
-        entries.append(
-            {
-                "name": name,
-                "revision": revision,
-                "source_url": url,
-                "source_archive": archive.name,
-                "source_sha256": digest(archive),
-                "binary_sha256": digest(binary),
-                "build_command": recipe,
-                "architecture": platform.machine(),
-                "license": "GPL-2.0-or-later" if name == "gambatte" else "Genesis Plus GX non-commercial",
-            }
-        )
+        entries.append(build_core(root, name, spec, root / "sources"))
     if args.include_official_arm64_cores:
         for component, spec in prebuilt_cores.items():
             print(f"Preparing {component} from official arm64 buildbot", flush=True)

@@ -28,6 +28,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import core_source  # noqa: E402
 from cargo_replay import cargo_test  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
 from player_support import modifications as support_modifications  # noqa: E402
@@ -486,6 +487,10 @@ def main() -> int:
     # $TMPDIR also shows other processes, so only names with this stamp are ours.
     scratch_run = f"{os.getpid()}-{time.time_ns()}"
     os.environ["ROMINABOX_SCRATCH_RUN"] = scratch_run
+    # No test may use the network. While this is set, we refuse every download,
+    # and we read a real core for a test from the local core source.
+    os.environ["ROMINABOX_OFFLINE"] = "1"
+    os.environ.setdefault(core_source.VARIABLE, str(core_source.core_source()))
     support_before = support_snapshot()
     temp_before = temp_snapshot()
     recorded: dict[str, tuple[bool, float]] = {}

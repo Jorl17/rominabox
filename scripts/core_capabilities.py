@@ -11,7 +11,7 @@ with those extensions. In a compiled core, that string is the closest thing
 to a machine-readable list of capabilities.
 
     python3 scripts/core_capabilities.py CORE [CORE ...]
-    python3 scripts/core_capabilities.py --check      # every core in the kit
+    python3 scripts/core_capabilities.py --check      # every core in the local core source
 
 Reading a string is weaker evidence than loading the core and asking it, but
 it is far stronger than trusting a project's reputation, and we do not have
@@ -27,8 +27,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from core_source import core_source  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
-KIT_CORES = ROOT / "desktop/src-tauri/resources/runtime/cores"
+# We bundle no cores with the builder, so we use those in the local core source.
+KIT_CORES = core_source() / "cores"
 CATALOG_MANIFEST = ROOT / "desktop/crates/rominabox-catalog/Cargo.toml"
 
 # We declare only formats whose support differs between builds. Nobody needs

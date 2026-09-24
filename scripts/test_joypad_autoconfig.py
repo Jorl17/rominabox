@@ -47,11 +47,7 @@ def check(condition: bool, message: str) -> None:
 
 def pinned_hid_names() -> set[str]:
     revision = prepare_runtime.JOYPAD_AUTOCONFIG_REVISION
-    archive = (
-        ROOT
-        / "desktop/src-tauri/resources/runtime/sources"
-        / f"retroarch-joypad-autoconfig-{revision}.tar.gz"
-    )
+    archive = prepare_runtime.DOWNLOADS / f"retroarch-joypad-autoconfig-{revision}.tar.gz"
     names: set[str] = set()
     with tarfile.open(archive) as package:
         for member in package.getmembers():
