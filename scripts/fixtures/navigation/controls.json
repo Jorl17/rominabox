@@ -232,6 +232,62 @@
       }
     },
     {
+      "name": "a click while capturing moves nothing; CANCEL cancels",
+      "steps": [
+        "options",
+        "controls",
+        "press:control-a",
+        "press:controls-reset",
+        "press:control-b",
+        "press:controls-cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-a",
+          "control-a",
+          "control-a",
+          "control-a"
+        ]
+      },
+      "capturing": {
+        "*": [
+          null,
+          null,
+          [
+            "control-a",
+            "controls-cancel"
+          ],
+          [
+            "control-a",
+            "controls-cancel"
+          ],
+          [
+            "control-a",
+            "controls-cancel"
+          ],
+          null
+        ]
+      },
+      "red": {
+        "*": {
+          "bug": "capture click",
+          "reason": "a press during capture reaches RmlUi, which focuses what is under it; after CANCEL hides, the screen starts over on its first control",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-a",
+              "controls-reset",
+              "control-b",
+              "control-up"
+            ]
+          }
+        }
+      }
+    },
+    {
       "name": "Back returns to Options, on CONTROLS",
       "steps": [
         "options",
