@@ -85,6 +85,40 @@
       }
     },
     {
+      "name": "cancelling the form returns to SIGN IN",
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-login",
+        "key:cancel",
+        "key:down"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievements-login",
+          "achievement-username",
+          "achievements-login",
+          "achievements-back"
+        ]
+      },
+      "red": {
+        "*": {
+          "bug": "G2",
+          "reason": "closing the form blurs its field onto a container, so nothing is highlighted until a key recovers",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievements-login",
+              "achievement-username",
+              null,
+              "achievements-login"
+            ]
+          }
+        }
+      }
+    },
+    {
       "name": "two pages: down reaches the pager",
       "setup": {
         "achievements": "active",

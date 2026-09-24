@@ -450,7 +450,7 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
             }
             let expect = expected(case, design);
             let seen = observed(&steps, &expect);
-            let marker = case.get("red").and_then(|red| red.get(design));
+            let marker = case.get("red").and_then(|red| for_design(red, design));
             if seen != expect {
                 unmet.insert(format!("{name}|{design}"), seen.clone());
             }
