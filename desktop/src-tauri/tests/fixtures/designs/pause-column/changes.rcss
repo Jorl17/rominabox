@@ -1,0 +1,20 @@
+/* The slots form one column on the right, each 76dp tall and 80dp apart,
+ * and the buttons a column on the left, each beside a slot. We hide the
+ * pictures so the boxes are as the rules below say. */
+#slots { left: 380dp; top: 70dp; width: 320dp; height: 480dp; }
+.slot { width: 314dp; height: 70dp; }
+.slot .slot-picture, .slot .slot-state { display: none; }
+#slot-1, #slot-2, #slot-3, #slot-4, #slot-5, #slot-6 { left: 0; }
+#slot-1 { top: 0; }
+#slot-2 { top: 80dp; }
+#slot-3 { top: 160dp; }
+#slot-4 { top: 240dp; }
+#slot-5 { top: 320dp; }
+#slot-6 { top: 400dp; }
+#actions { left: 40dp; top: 70dp; width: 260dp; height: 480dp; }
+#actions #resume, #actions #save, #actions #load, #actions #options, #actions #controls, #actions #quit { left: 0; width: 254dp; }
+#actions #resume { top: 14dp; }
+#actions #save { top: 94dp; }
+#actions #load { top: 174dp; }
+#actions #options, #actions #controls { top: 254dp; }
+#actions #quit { top: 334dp; }

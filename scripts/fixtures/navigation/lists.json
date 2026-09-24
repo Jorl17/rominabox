@@ -1,0 +1,570 @@
+{
+  "designs": [
+    "native",
+    "disc"
+  ],
+  "cases": [
+    {
+      "name": "shaders: down the rows to BACK and stop",
+      "steps": [
+        "options",
+        "shaders",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "none",
+          "scanlines",
+          "phosphor",
+          "shaders-back",
+          "shaders-back"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "Q1",
+          "reason": "arrows wrap at the edge, and an edge is meant to stop",
+          "now": {
+            "focused": [
+              "volume-level",
+              "none",
+              "scanlines",
+              "phosphor",
+              "shaders-back",
+              "none"
+            ]
+          }
+        },
+        "native": {
+          "bug": "Q1",
+          "reason": "arrows wrap at the edge, and an edge is meant to stop",
+          "now": {
+            "focused": [
+              "volume-level",
+              "none",
+              "scanlines",
+              "phosphor",
+              "shaders-back",
+              "none"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "shaders: up from the first row stops",
+      "steps": [
+        "options",
+        "shaders",
+        "key:up"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "none",
+          "none"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "Q1",
+          "reason": "arrows wrap at the edge, and an edge is meant to stop",
+          "now": {
+            "focused": [
+              "volume-level",
+              "none",
+              "shaders-back"
+            ]
+          }
+        },
+        "native": {
+          "bug": "Q1",
+          "reason": "arrows wrap at the edge, and an edge is meant to stop",
+          "now": {
+            "focused": [
+              "volume-level",
+              "none",
+              "shaders-back"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "shaders: right on a row stays in the list",
+      "steps": [
+        "options",
+        "shaders",
+        "key:right",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "none",
+          "none",
+          "none"
+        ]
+      }
+    },
+    {
+      "name": "shaders: a resting pointer does not undo a key",
+      "steps": [
+        "options",
+        "shaders",
+        "hover:scanlines",
+        "key:down",
+        "wait-ms:100"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "none",
+          "scanlines",
+          "phosphor",
+          "phosphor"
+        ]
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [],
+          [
+            "move"
+          ],
+          []
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B16",
+          "reason": "the hovered row is written back as the focus every frame",
+          "now": {
+            "focused": [
+              "volume-level",
+              "none",
+              "scanlines",
+              "scanlines",
+              "scanlines"
+            ],
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [],
+              [
+                "move"
+              ],
+              []
+            ]
+          }
+        },
+        "native": {
+          "bug": "B16",
+          "reason": "the hovered row is written back as the focus every frame",
+          "now": {
+            "focused": [
+              "volume-level",
+              "none",
+              "scanlines",
+              "scanlines",
+              "scanlines"
+            ],
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [],
+              [
+                "move"
+              ],
+              []
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "shaders: Back returns to Options, on SHADERS",
+      "steps": [
+        "options",
+        "shaders",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "none",
+          "shaders"
+        ]
+      },
+      "screen": {
+        "*": "options-panel"
+      },
+      "red": {
+        "disc": {
+          "bug": "B14",
+          "reason": "returning to Options highlights the volume, not the entry that opened the list",
+          "now": {
+            "focused": [
+              "volume-level",
+              "none",
+              "volume-level"
+            ],
+            "screen": "options-panel"
+          }
+        },
+        "native": {
+          "bug": "B14",
+          "reason": "returning to Options highlights the volume, not the entry that opened the list",
+          "now": {
+            "focused": [
+              "volume-level",
+              "none",
+              "volume-level"
+            ],
+            "screen": "options-panel"
+          }
+        }
+      }
+    },
+    {
+      "name": "shaders: Back sounds like Back",
+      "steps": [
+        "options",
+        "shaders",
+        "key:cancel"
+      ],
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "cancel"
+          ]
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B21",
+          "reason": "Back through the BACK link plays Confirm",
+          "now": {
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ]
+            ]
+          }
+        },
+        "native": {
+          "bug": "B21",
+          "reason": "Back through the BACK link plays Confirm",
+          "now": {
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "discs: seven discs, down to the pager and BACK",
+      "setup": {
+        "discs": 7
+      },
+      "steps": {
+        "native": [
+          "options",
+          "discs",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ],
+        "disc": [
+          "disc",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "discs-0",
+          "discs-1",
+          "discs-2",
+          "discs-3",
+          "discs-4",
+          "discs-next",
+          "discs-back"
+        ],
+        "disc": [
+          "discs-0",
+          "discs-1",
+          "discs-2",
+          "discs-3",
+          "discs-4",
+          "discs-next",
+          "discs-back"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B11",
+          "reason": "the list's Down never counts the pager and wraps",
+          "now": {
+            "focused": [
+              "discs-0",
+              "discs-1",
+              "discs-2",
+              "discs-3",
+              "discs-4",
+              "discs-back",
+              "discs-0"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B11",
+          "reason": "the list's Down never counts the pager and wraps",
+          "now": {
+            "focused": [
+              "volume-level",
+              "discs-0",
+              "discs-1",
+              "discs-2",
+              "discs-3",
+              "discs-4",
+              "discs-back",
+              "discs-0"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "discs: Left and Right turn the page",
+      "setup": {
+        "discs": 7
+      },
+      "steps": {
+        "native": [
+          "options",
+          "discs",
+          "key:right",
+          "key:right",
+          "key:left"
+        ],
+        "disc": [
+          "disc",
+          "key:right",
+          "key:right",
+          "key:left"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "discs-0",
+          "discs-5",
+          "discs-5",
+          "discs-0"
+        ],
+        "disc": [
+          "discs-0",
+          "discs-5",
+          "discs-5",
+          "discs-0"
+        ]
+      },
+      "sounds": {
+        "native": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "move"
+          ],
+          [],
+          [
+            "move"
+          ]
+        ],
+        "disc": [
+          [
+            "confirm"
+          ],
+          [
+            "move"
+          ],
+          [],
+          [
+            "move"
+          ]
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B13",
+          "reason": "discs.sync() resets the list to page 1 every frame, so the turned page vanishes",
+          "now": {
+            "focused": [
+              "discs-0",
+              null,
+              null,
+              null
+            ],
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              []
+            ]
+          }
+        },
+        "native": {
+          "bug": "B13",
+          "reason": "discs.sync() resets the list to page 1 every frame, so the turned page vanishes",
+          "now": {
+            "focused": [
+              "volume-level",
+              "discs-0",
+              null,
+              null,
+              null
+            ],
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              []
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "discs: one disc",
+      "steps": {
+        "native": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ],
+        "disc": [
+          "disc",
+          "key:up",
+          "key:down",
+          "key:left",
+          "key:right"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "options-back",
+          "options-back"
+        ],
+        "disc": [
+          "disc-back",
+          "disc-back",
+          "disc-back",
+          "disc-back",
+          "disc-back"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B15",
+          "reason": "Disc's disc screen has no .screen-panel, so nothing on it is highlighted on entry",
+          "now": {
+            "focused": [
+              null,
+              "disc-back",
+              "disc-back",
+              "disc-back",
+              "disc-back"
+            ]
+          }
+        },
+        "native": {
+          "bug": "Q1",
+          "reason": "arrows wrap at the edge, and an edge is meant to stop",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "shaders",
+              "achievements",
+              "options-back",
+              "volume-level"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

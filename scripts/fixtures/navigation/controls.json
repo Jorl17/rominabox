@@ -1,0 +1,702 @@
+{
+  "designs": [
+    "native",
+    "disc"
+  ],
+  "cases": [
+    {
+      "name": "Controls opens on the first control",
+      "steps": [
+        "options",
+        "controls"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up"
+        ]
+      }
+    },
+    {
+      "name": "down the left column",
+      "steps": [
+        "options",
+        "controls",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "control-up",
+          "control-left",
+          "control-down",
+          "control-right",
+          "controls-back"
+        ],
+        "disc": [
+          "volume-level",
+          "control-up",
+          "control-left",
+          "control-down",
+          "control-right",
+          "controls-device-current"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B4",
+          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-left",
+              "control-right",
+              "control-down",
+              "control-y"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B4",
+          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-left",
+              "control-right",
+              "control-down",
+              "control-y"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "right crosses to the other column",
+      "steps": [
+        "options",
+        "controls",
+        "key:right",
+        "key:down",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-start",
+          "control-a",
+          "control-left"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B4",
+          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-left",
+              "control-right",
+              "control-left"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B4",
+          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-left",
+              "control-right",
+              "control-left"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "six-button pad",
+      "menu": "md6",
+      "steps": [
+        "options",
+        "controls",
+        "key:up",
+        "key:right",
+        "key:down"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-select",
+          "control-r",
+          "control-x"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B4",
+          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "controls-back",
+              "control-up",
+              "control-down"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B4",
+          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "controls-back",
+              "control-up",
+              "control-down"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Game Boy pad",
+      "menu": "gb",
+      "steps": [
+        "options",
+        "controls",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:right"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-left",
+          "control-right",
+          "control-down",
+          "controls-back",
+          "controls-reset"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B4",
+          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-left",
+              "control-right",
+              "control-down",
+              "control-b",
+              "control-a"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B4",
+          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-left",
+              "control-right",
+              "control-down",
+              "control-b",
+              "control-a"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an open controller picker keeps the arrows",
+      "steps": [
+        "options",
+        "controls",
+        "controls-device-current",
+        "key:up",
+        "key:left",
+        "key:down",
+        "key:right",
+        "key:ok"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "controls-device-option-megadrive",
+          "controls-device-option-megadrive",
+          "controls-device-option-megadrive",
+          "controls-device-option-megadrive6",
+          "controls-device-option-megadrive6",
+          "controls-device-current"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B4",
+          "reason": "the pad screen's arrows walk the declaration ring and never enter the open picker",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-up",
+              "controls-back",
+              "controls-reset",
+              "controls-back",
+              "control-up",
+              [
+                "control-up",
+                "controls-cancel"
+              ]
+            ]
+          }
+        },
+        "native": {
+          "bug": "B4",
+          "reason": "the pad screen's arrows walk the declaration ring and never enter the open picker",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-up",
+              "controls-back",
+              "controls-reset",
+              "controls-back",
+              "control-up",
+              [
+                "control-up",
+                "controls-cancel"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a resting pointer does not undo a key",
+      "steps": [
+        "options",
+        "controls",
+        "hover:control-left",
+        "key:down",
+        "wait-ms:100"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-left",
+          "control-down",
+          "control-down"
+        ]
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [],
+          [
+            "move"
+          ],
+          []
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B16",
+          "reason": "the hovered control is written back as the focus every frame",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-left",
+              "control-left",
+              "control-left"
+            ],
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [],
+              [
+                "move"
+              ],
+              []
+            ]
+          }
+        },
+        "native": {
+          "bug": "B16",
+          "reason": "the hovered control is written back as the focus every frame",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-left",
+              "control-left",
+              "control-left"
+            ],
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [],
+              [
+                "move"
+              ],
+              []
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "the pad's picture button focuses its callout",
+      "steps": [
+        "options",
+        "controls",
+        "hover:control-hit-a",
+        "hover:heading",
+        "key:up"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "control-a",
+          "control-a",
+          "control-start"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B4",
+          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-a",
+              "control-a",
+              "control-b"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B4",
+          "reason": "the pad screen walks the controls in declaration order, and Left/Right do what Up/Down do",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              "control-a",
+              "control-a",
+              "control-b"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "OK on a control sounds like a click",
+      "steps": [
+        "options",
+        "controls",
+        "key:ok",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          [
+            "control-up",
+            "controls-cancel"
+          ],
+          "control-up"
+        ]
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "cancel"
+          ]
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B21",
+          "reason": "OK on a control starts capture silently; a click confirms",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              [
+                "control-up",
+                "controls-cancel"
+              ],
+              "control-up"
+            ],
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [],
+              [
+                "cancel"
+              ]
+            ]
+          }
+        },
+        "native": {
+          "bug": "B21",
+          "reason": "OK on a control starts capture silently; a click confirms",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              [
+                "control-up",
+                "controls-cancel"
+              ],
+              "control-up"
+            ],
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [],
+              [
+                "cancel"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Back returns to Options, on CONTROLS",
+      "steps": [
+        "options",
+        "controls",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "controls"
+        ]
+      },
+      "screen": {
+        "*": "options-panel"
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "cancel"
+          ]
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B15",
+          "reason": "keyboard Back on Controls falls through to CONTROLS_BACK, which shows Pause",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              null
+            ],
+            "screen": "pause-panel",
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [
+                "cancel"
+              ]
+            ]
+          }
+        },
+        "native": {
+          "bug": "B15",
+          "reason": "keyboard Back on Controls falls through to CONTROLS_BACK, which shows Pause",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              null
+            ],
+            "screen": "pause-panel",
+            "sounds": [
+              [
+                "confirm"
+              ],
+              [
+                "confirm"
+              ],
+              [
+                "cancel"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "BACK returns to Options",
+      "steps": [
+        "options",
+        "controls",
+        "controls-back"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up",
+          "controls"
+        ]
+      },
+      "screen": {
+        "*": "options-panel"
+      },
+      "red": {
+        "disc": {
+          "bug": "B15",
+          "reason": "Controls' BACK carries the built-in target pause",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              null
+            ],
+            "screen": "pause-panel"
+          }
+        },
+        "native": {
+          "bug": "B15",
+          "reason": "Controls' BACK carries the built-in target pause",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-up",
+              null
+            ],
+            "screen": "pause-panel"
+          }
+        }
+      }
+    },
+    {
+      "name": "a stick is one stop",
+      "menu": "ps1-analog",
+      "steps": [
+        "options",
+        "controls",
+        "hover:control-group-l_stick",
+        "hover:heading",
+        "key:right",
+        "key:left",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-l",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-r_stick",
+          "control-group-l_stick",
+          "control-select"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B20",
+          "reason": "a stick's directions are separate stops in declaration order",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-l",
+              "control-group-l_stick",
+              "control-group-l_stick",
+              "control-group-l_stick",
+              "control-group-l_stick",
+              "control-start"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B20",
+          "reason": "a stick's directions are separate stops in declaration order",
+          "now": {
+            "focused": [
+              "volume-level",
+              "control-l",
+              "control-group-l_stick",
+              "control-group-l_stick",
+              "control-group-l_stick",
+              "control-group-l_stick",
+              "control-start"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

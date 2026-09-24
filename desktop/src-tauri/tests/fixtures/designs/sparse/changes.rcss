@@ -1,0 +1,10 @@
+/* The pause buttons spread out below the slots. From CONTINUE, SAVE is up
+ * and to the right with a 2dp gap, and OPTIONS down and to the right with a
+ * 3dp gap. QUIT is alone on the row of SAVE. Near ties must resolve the same
+ * way every time. Buttons are 48dp tall with their borders. */
+#actions { left: 56dp; top: 484dp; width: 840dp; height: 160dp; }
+#actions #resume { left: 0; top: 50dp; width: 200dp; }
+#actions #save { left: 300dp; top: 0; width: 160dp; }
+#actions #load { left: 300dp; top: 200dp; width: 160dp; }
+#actions #options, #actions #controls { left: 300dp; top: 101dp; width: 160dp; }
+#actions #quit { left: 640dp; top: 0; width: 160dp; }

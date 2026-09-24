@@ -1,0 +1,352 @@
+{
+  "designs": [
+    "native",
+    "disc",
+    "options-columns"
+  ],
+  "cases": [
+    {
+      "name": "Options opens on the volume",
+      "steps": [
+        "options"
+      ],
+      "focused": {
+        "*": [
+          "volume-level"
+        ]
+      }
+    },
+    {
+      "name": "up from the volume",
+      "steps": [
+        "options",
+        "key:up",
+        "key:up"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "volume-level",
+          "volume-level"
+        ],
+        "options-columns": [
+          "volume-level",
+          "volume-level",
+          "volume-level"
+        ],
+        "disc": [
+          "volume-level",
+          "achievements",
+          "shaders"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B3",
+          "reason": "Options walks document order, not the drawn layout",
+          "now": {
+            "focused": [
+              "volume-level",
+              "options-back",
+              "achievements"
+            ]
+          }
+        },
+        "native": {
+          "bug": "Q1",
+          "reason": "arrows wrap at the edge, and an edge is meant to stop",
+          "now": {
+            "focused": [
+              "volume-level",
+              "options-back",
+              "achievements"
+            ]
+          }
+        },
+        "options-columns": {
+          "bug": "Q1",
+          "reason": "arrows wrap at the edge, and an edge is meant to stop",
+          "now": {
+            "focused": [
+              "volume-level",
+              "options-back",
+              "achievements"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "between the volume and the next stop below",
+      "steps": [
+        "options",
+        "key:down",
+        "key:up"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "volume-level"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "volume-level"
+        ],
+        "disc": [
+          "volume-level",
+          "options-back",
+          "volume-level"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B3",
+          "reason": "Options walks document order, not the drawn layout",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "volume-level"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Left and Right move the volume, not the focus",
+      "steps": [
+        "options",
+        "key:right",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "volume-level",
+          "volume-level"
+        ]
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "move"
+          ],
+          [
+            "move"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "entries side by side",
+      "steps": [
+        "options",
+        "key:down",
+        "key:right",
+        "key:down",
+        "key:left"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "controls",
+          "shaders",
+          "shaders"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "achievements"
+        ],
+        "disc": [
+          "volume-level",
+          "options-back",
+          "options-back",
+          "options-back",
+          "volume-level"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B3",
+          "reason": "Options walks document order, not the drawn layout",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "controls",
+              "shaders",
+              "shaders"
+            ]
+          }
+        },
+        "options-columns": {
+          "bug": "B3",
+          "reason": "Options walks document order, not the drawn layout",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "controls",
+              "shaders",
+              "shaders"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "down to BACK stops there",
+      "steps": [
+        "options",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "options-back",
+          "options-back"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "achievements",
+          "options-back",
+          "options-back",
+          "options-back"
+        ],
+        "disc": [
+          "volume-level",
+          "options-back",
+          "options-back",
+          "options-back",
+          "options-back",
+          "options-back"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B3",
+          "reason": "Options walks document order, not the drawn layout",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "shaders",
+              "achievements",
+              "options-back",
+              "volume-level"
+            ]
+          }
+        },
+        "native": {
+          "bug": "Q1",
+          "reason": "arrows wrap at the edge, and an edge is meant to stop",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "shaders",
+              "achievements",
+              "options-back",
+              "volume-level"
+            ]
+          }
+        },
+        "options-columns": {
+          "bug": "B3",
+          "reason": "Options walks document order, not the drawn layout",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "shaders",
+              "achievements",
+              "options-back",
+              "volume-level"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a second disc adds the disc entry",
+      "setup": {
+        "discs": 2
+      },
+      "steps": [
+        "options",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "discs"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "achievements",
+          "options-back",
+          "options-back"
+        ],
+        "disc": [
+          "volume-level",
+          "options-back",
+          "options-back",
+          "options-back",
+          "options-back"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B3",
+          "reason": "Options walks document order, not the drawn layout",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "shaders",
+              "achievements",
+              "options-back"
+            ]
+          }
+        },
+        "options-columns": {
+          "bug": "B3",
+          "reason": "Options walks document order, not the drawn layout",
+          "now": {
+            "focused": [
+              "volume-level",
+              "controls",
+              "shaders",
+              "achievements",
+              "discs"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

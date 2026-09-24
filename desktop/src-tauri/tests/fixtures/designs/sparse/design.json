@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "id": "sparse",
+  "name": "Sparse",
+  "description": "Hypothetical, style only: pause buttons scattered so candidates nearly tie.",
+  "slots": 6,
+  "documents": {
+    "splash": "splash.rml",
+    "style": "menu.rcss"
+  },
+  "fonts": [
+    {
+      "file": "Silkscreen-Regular.ttf",
+      "license": "Silkscreen-OFL.txt",
+      "family": "Silkscreen"
+    }
+  ],
+  "metrics": {
+    "scene": {
+      "width": 960,
+      "height": 380
+    },
+    "marker": {
+      "diameter": 42
+    },
+    "callout": {
+      "width": 196,
+      "height": 54,
+      "border": 2
+    },
+    "group": {
+      "width": 236,
+      "height": 62,
+      "gap": 16,
+      "bottomMargin": 12
+    }
+  },
+  "list": {
+    "pageSize": 5,
+    "rowHeight": 68,
+    "rowGap": 4
+  },
+  "binds": {
+    "afterMs": 1200,
+    "width": 320
+  },
+  "overlays": [
+    {
+      "id": "splash",
+      "afterMs": 0,
+      "holdMs": 550,
+      "leaveMs": 250,
+      "needs": "splash-logo.png"
+    },
+    {
+      "id": "notice",
+      "follows": "splash",
+      "afterMs": 700,
+      "holdMs": 3600,
+      "leaveMs": 500
+    }
+  ],
+  "tokens": {
+    "ink": "#ffffff"
+  }
+}

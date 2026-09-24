@@ -1,0 +1,518 @@
+{
+  "designs": [
+    "native",
+    "disc"
+  ],
+  "cases": [
+    {
+      "name": "signed out",
+      "steps": [
+        "options",
+        "achievements",
+        "key:down",
+        "key:up"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievements-login",
+          "achievements-back",
+          "achievements-login"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B20",
+          "reason": "the screen opens with its highlight on the hidden TURN OFF",
+          "now": {
+            "focused": [
+              "volume-level",
+              null,
+              "achievements-back",
+              "achievements-login"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B20",
+          "reason": "the screen opens with its highlight on the hidden TURN OFF",
+          "now": {
+            "focused": [
+              "volume-level",
+              null,
+              "achievements-back",
+              "achievements-login"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "the sign-in form follows its layout",
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-login",
+        "key:down",
+        "key:down",
+        "key:right",
+        "key:up"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievements-login",
+          "achievement-username",
+          "achievement-password",
+          "achievements-submit",
+          "achievements-cancel",
+          "achievement-password"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B20",
+          "reason": "the screen opens highlighting the hidden TURN OFF, then the form walks document order through SHOW",
+          "now": {
+            "focused": [
+              "volume-level",
+              null,
+              "achievement-username",
+              "achievement-password",
+              "achievements-password-visibility",
+              "achievements-password-visibility",
+              "achievement-password"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B20",
+          "reason": "the screen opens highlighting the hidden TURN OFF, then the form walks document order through SHOW",
+          "now": {
+            "focused": [
+              "volume-level",
+              null,
+              "achievement-username",
+              "achievement-password",
+              "achievements-password-visibility",
+              "achievements-password-visibility",
+              "achievement-password"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "SHOW is reachable from the password",
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-login",
+        "key:down",
+        "key:right",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievements-login",
+          "achievement-username",
+          "achievement-password",
+          "achievements-password-visibility",
+          "achievement-password"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B23",
+          "reason": "Right on the password does nothing, and the screen opens on the hidden TURN OFF",
+          "now": {
+            "focused": [
+              "volume-level",
+              null,
+              "achievement-username",
+              "achievement-password",
+              "achievement-password",
+              "achievement-password"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B23",
+          "reason": "Right on the password does nothing, and the screen opens on the hidden TURN OFF",
+          "now": {
+            "focused": [
+              "volume-level",
+              null,
+              "achievement-username",
+              "achievement-password",
+              "achievement-password",
+              "achievement-password"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Tab goes from the username to the password and nowhere else",
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-login",
+        "key:tab",
+        "key:tab"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievements-login",
+          "achievement-username",
+          "achievement-password",
+          "achievement-password"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "Tab",
+          "reason": "Tab is swallowed everywhere, and the screen opens on the hidden TURN OFF",
+          "now": {
+            "focused": [
+              "volume-level",
+              null,
+              "achievement-username",
+              "achievement-username",
+              "achievement-username"
+            ]
+          }
+        },
+        "native": {
+          "bug": "Tab",
+          "reason": "Tab is swallowed everywhere, and the screen opens on the hidden TURN OFF",
+          "now": {
+            "focused": [
+              "volume-level",
+              null,
+              "achievement-username",
+              "achievement-username",
+              "achievement-username"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "two pages: down reaches the pager",
+      "setup": {
+        "achievements": "active",
+        "rows": 6
+      },
+      "steps": [
+        "options",
+        "achievements",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "achievement-1",
+          "achievement-2",
+          "achievement-3",
+          "achievement-4",
+          "achievements-next",
+          "achievements-signout"
+        ],
+        "disc": [
+          "volume-level",
+          "achievement-1",
+          "achievement-2",
+          "achievement-3",
+          "achievement-4",
+          "achievements-next",
+          "achievements-enabled"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B11",
+          "reason": "Down from the last row skips the pager",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievement-1",
+              "achievement-2",
+              "achievement-3",
+              "achievement-4",
+              "achievements-enabled",
+              "achievements-signout"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B11",
+          "reason": "Down from the last row skips the pager",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievement-1",
+              "achievement-2",
+              "achievement-3",
+              "achievement-4",
+              "achievements-enabled",
+              "achievements-signout"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Right from TURN OFF reaches SIGN OUT",
+      "setup": {
+        "achievements": "active",
+        "rows": 3
+      },
+      "steps": [
+        "options",
+        "achievements",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:right",
+        "key:right"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievement-1",
+          "achievement-2",
+          "achievement-3",
+          "achievements-enabled",
+          "achievements-signout",
+          "achievements-back"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B11",
+          "reason": "Right on TURN OFF tries to turn the page",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievement-1",
+              "achievement-2",
+              "achievement-3",
+              "achievements-enabled",
+              "achievements-enabled",
+              "achievements-enabled"
+            ]
+          }
+        },
+        "native": {
+          "bug": "B11",
+          "reason": "Right on TURN OFF tries to turn the page",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievement-1",
+              "achievement-2",
+              "achievement-3",
+              "achievements-enabled",
+              "achievements-enabled",
+              "achievements-enabled"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a hidden RETRY is not a stop",
+      "setup": {
+        "achievements": "active",
+        "rows": 3
+      },
+      "steps": [
+        "options",
+        "achievements",
+        "key:up",
+        "key:up"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievement-1",
+          "achievement-1",
+          "achievement-1"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "B20",
+          "reason": "the hidden RETRY is a stop in the list ring",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievement-1",
+              "achievements-back",
+              null
+            ]
+          }
+        },
+        "native": {
+          "bug": "B20",
+          "reason": "the hidden RETRY is a stop in the list ring",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievement-1",
+              "achievements-back",
+              null
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "the unsynced dialog keeps the arrows",
+      "setup": {
+        "achievements": "active",
+        "rows": 3,
+        "pending": 1
+      },
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-signout",
+        "key:right",
+        "key:down",
+        "key:left",
+        "key:up",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievement-1",
+          "achievements-keep-session",
+          "achievements-end-session",
+          "achievements-end-session",
+          "achievements-keep-session",
+          "achievements-keep-session",
+          "achievement-1"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "G2",
+          "reason": "the dialog keeps its own counter: the row behind stays highlighted and the dialog's arrows wrap",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievement-1",
+              [
+                "achievement-1",
+                "achievements-keep-session"
+              ],
+              [
+                "achievement-1",
+                "achievements-end-session"
+              ],
+              [
+                "achievement-1",
+                "achievements-keep-session"
+              ],
+              [
+                "achievement-1",
+                "achievements-end-session"
+              ],
+              [
+                "achievement-1",
+                "achievements-keep-session"
+              ],
+              "achievement-1"
+            ]
+          }
+        },
+        "native": {
+          "bug": "G2",
+          "reason": "the dialog keeps its own counter: the row behind stays highlighted and the dialog's arrows wrap",
+          "now": {
+            "focused": [
+              "volume-level",
+              "achievement-1",
+              [
+                "achievement-1",
+                "achievements-keep-session"
+              ],
+              [
+                "achievement-1",
+                "achievements-end-session"
+              ],
+              [
+                "achievement-1",
+                "achievements-keep-session"
+              ],
+              [
+                "achievement-1",
+                "achievements-end-session"
+              ],
+              [
+                "achievement-1",
+                "achievements-keep-session"
+              ],
+              "achievement-1"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "the startup dialog",
+      "setup": {
+        "achievements": "startup"
+      },
+      "steps": [
+        "wait-ms:0",
+        "key:left",
+        "key:down",
+        "key:ok"
+      ],
+      "focused": {
+        "*": [
+          "achievements-skip-startup",
+          "achievements-skip-startup",
+          "achievements-skip-startup",
+          "resume"
+        ]
+      },
+      "red": {
+        "disc": {
+          "bug": "G2",
+          "reason": "the dialog is highlighted only after a key, and nothing after it closes",
+          "now": {
+            "focused": [
+              null,
+              "achievements-skip-startup",
+              "achievements-skip-startup",
+              null
+            ]
+          }
+        },
+        "native": {
+          "bug": "G2",
+          "reason": "the dialog is highlighted only after a key, and nothing after it closes",
+          "now": {
+            "focused": [
+              null,
+              "achievements-skip-startup",
+              "achievements-skip-startup",
+              null
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
