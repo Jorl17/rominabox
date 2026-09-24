@@ -560,6 +560,9 @@ pub fn install(
             )
         };
         screens.push_str(&panel);
+        for dialog in &list.screen.dialogs {
+            screens.push_str(&crate::themes::design_file(design, &format!("dialog-{dialog}.rml"))?);
+        }
         // The player opens an entry inside Options from there, so it has no
         // button on the pause row. We generate the Options entries separately.
         // The player opens an entry inside Options from there. A list whose
@@ -721,6 +724,7 @@ mod tests {
             images: None,
             mark: None,
             toggle: None,
+            dialogs: Vec::new(),
         };
         screen.toggle = Some(crate::themes::Toggle {
             id: "achievement-mode".into(),
@@ -777,6 +781,7 @@ mod tests {
             images: None,
             mark: None,
             toggle: None,
+            dialogs: Vec::new(),
         };
         let cfg = "screens = \"pause achievements\"\nscreen_panel_achievements = \"achievements-panel\"\nscreen_heading_achievements = \"ACHIEVEMENTS\"\nscreen_footer_achievements = \"ESC  BACK\"\nscreen_button_achievements = \"achievements\"\nscreen_panel_pause = \"pause-panel\"\nscreen_button_pause = \"options-back\"\n";
         let out =

@@ -556,6 +556,7 @@ fn shader_screen(design: &Path) -> crate::themes::Screen {
             images: None,
             mark: None,
             toggle: None,
+            dialogs: Vec::new(),
         })
 }
 

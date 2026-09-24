@@ -173,6 +173,10 @@ pub struct Screen {
     /// A switch on this screen, with the words from the design and the value
     /// it has while it is on.
     pub toggle: Option<Toggle>,
+    /// Dialogs that open over the menu from this screen, each a
+    /// `dialog-<name>.rml` from the design or Native, composed next to the
+    /// screen so that a design can replace either without copying the other.
+    pub dialogs: Vec<String>,
 }
 
 /// An optional switch declared by a screen.
@@ -498,6 +502,23 @@ pub fn declared_screens(design: &Path) -> Result<Vec<Screen>, String> {
             images: entry["images"].as_str().map(str::to_string),
             mark: entry["mark"].as_str().map(str::to_string),
             toggle: screen_toggle(entry, index, &declaration)?,
+            dialogs: match entry.get("dialogs") {
+                None => Vec::new(),
+                Some(listed) => listed
+                    .as_array()
+                    .and_then(|names| {
+                        names
+                            .iter()
+                            .map(|name| name.as_str().map(str::to_string))
+                            .collect::<Option<Vec<_>>>()
+                    })
+                    .ok_or_else(|| {
+                        format!(
+                            "screen {index} in {} lists dialogs that are not names",
+                            declaration.display()
+                        )
+                    })?,
+            },
         });
     }
     Ok(screens)
@@ -1379,6 +1400,11 @@ pub fn builtin_part_rules(stylesheet: &str) -> &'static str {
 /// for the design id.
 pub fn staged_design(kit: &Path, design: &str) -> PathBuf {
     kit.join("designs").join(design)
+}
+
+/// A fragment from the design, or from Native when the design has none.
+pub(crate) fn design_file(design: &Path, name: &str) -> Result<String, String> {
+    design_fragment(design, &base_design(design)?, name)
 }
 
 fn design_fragment(design: &Path, base: &Path, name: &str) -> Result<String, String> {

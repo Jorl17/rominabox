@@ -6,7 +6,7 @@
 <button id="slot-5" class="slot empty "><div id="slot-label-5" class="slot-label">SLOT 5</div><div class="slot-picture"><div id="slot-image-5" class="slot-image"/></div><div id="slot-state-5" class="slot-state">EMPTY</div></button>
 <button id="slot-6" class="slot empty "><div id="slot-label-6" class="slot-label">SLOT 6</div><div class="slot-picture"><div id="slot-image-6" class="slot-image"/></div><div id="slot-state-6" class="slot-state">EMPTY</div></button></div>
 <div id="actions"><button class="menu-action" id="resume">CONTINUE</button><button class="menu-action" id="save">SAVE</button><button id="load" class="menu-action disabled" disabled="disabled">LOAD</button><button class="menu-action" id="options">OPTIONS</button><button class="menu-action" id="quit">QUIT</button></div>
-<div id="status">CHOOSE A SLOT</div></div><div id="controls-panel" style="display:none;">
+<div id="status">CHOOSE A SLOT</div></div><div id="controls-panel" class="screen-panel" style="display:none;">
 <div id="controls-device" class="control-picker">
 <div id="controls-device-label" class="control-picker-label">CONTROLLER</div>
 <button id="controls-device-current" class="control-picker-current">MEGA DRIVE · 3 BUTTONS</button>

@@ -6,19 +6,12 @@ fn style_only_design(destination: &Path) {
     let frozen_base = destination.parent().unwrap().join("native");
     fs::create_dir_all(destination).unwrap();
     fs::create_dir_all(&frozen_base).unwrap();
-    for name in [
-        "design.json",
-        "menu.rml",
-        "splash.rml",
-        "heading.rml",
-        "save-slots.rml",
-        "screen-pause.rml",
-        "screen-controls.rml",
-        "screen-achievements.rml",
-        "achievements.rcss",
-        "footer.rml",
-    ] {
-        fs::copy(base.join(name), frozen_base.join(name)).unwrap();
+    // The whole Native package, as it is in a kit beside every design.
+    for entry in fs::read_dir(&base).unwrap() {
+        let entry = entry.unwrap();
+        if entry.file_type().unwrap().is_file() {
+            fs::copy(entry.path(), frozen_base.join(entry.file_name())).unwrap();
+        }
     }
     for name in ["menu.rcss", "Silkscreen-Regular.ttf", "Silkscreen-OFL.txt"] {
         fs::copy(base.join(name), destination.join(name)).unwrap();

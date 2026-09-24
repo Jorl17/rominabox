@@ -22,13 +22,3 @@
   <div class="text-keyboard-heading">START: DONE &nbsp; B: DELETE &nbsp; L/R: CHANGE KEYS</div>
   <div id="text-keyboard-grid"></div>
 </div>
-<div id="achievements-confirmation" class="session-dialog" style="display:none;">
-  <div class="session-dialog-title">ACHIEVEMENTS NOT SYNCED</div>
-  <div class="session-dialog-copy">Some earned achievements have not reached RetroAchievements. They may be lost if you end this session.</div>
-  <div class="session-dialog-actions"><button id="achievements-keep-session" class="menu-action">KEEP PLAYING</button><button id="achievements-end-session" class="menu-action">CONTINUE</button></div>
-</div>
-<div id="achievements-startup" class="session-dialog" style="display:none;">
-  <div class="session-dialog-title">RESUMING YOUR GAME</div>
-  <div id="achievements-startup-status" class="session-dialog-copy">Connecting to RetroAchievements...</div>
-  <div class="session-dialog-actions"><button id="achievements-startup-retry" class="menu-action" style="display:none;">RETRY</button><button id="achievements-skip-startup" class="menu-action">PLAY WITHOUT ACHIEVEMENTS</button></div>
-</div>
