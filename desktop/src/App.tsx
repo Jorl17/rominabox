@@ -158,11 +158,13 @@ function StartupOptions({
         label="Keep playing in the background"
         checked={draft.keepPlayingInBackground}
         onChange={(value) => update("keepPlayingInBackground", value)}
+        help="Let the game keep running when its window is not in front. When off, it pauses until the player returns."
       />
       <Checkbox
         label="Autosave on quit"
         checked={draft.autosaveOnQuit}
         onChange={(value) => update("autosaveOnQuit", value)}
+        help="Save the game when the player quits, and continue from there at the next launch."
       />
       {startAtMenu && (
         <Checkbox

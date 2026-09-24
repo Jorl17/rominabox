@@ -791,14 +791,22 @@ describe("App workflow", () => {
     expect(logo.closest(".menu-settings")).toBe(
       playing.closest(".menu-settings"),
     );
-    expect(
-      container.querySelector(
-        '[aria-label="About keep playing in the background"]',
-      ),
-    ).toBeNull();
-    expect(
-      container.querySelector('[aria-label="About autosave on quit"]'),
-    ).toBeNull();
+    for (const [label, says] of [
+      ["About keep playing in the background", "keep running"],
+      ["About autosave on quit", "continue from there"],
+    ]) {
+      const help = container.querySelector(
+        `[aria-label="${label}"]`,
+      ) as HTMLButtonElement;
+      expect(help).not.toBeNull();
+      expect(help.closest("label")).toBeNull();
+      act(() => help.focus());
+      const tooltip = document.getElementById(
+        help.getAttribute("aria-describedby")!,
+      );
+      expect(tooltip?.textContent).toContain(says);
+      act(() => help.blur());
+    }
 
     act(() => click(playing));
     act(() => click(saving));
