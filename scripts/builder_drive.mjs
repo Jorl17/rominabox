@@ -1239,11 +1239,11 @@ async function main() {
           option.checked ||
           !option.inSettings ||
           option.inDisclosure ||
-          option.help,
+          !option.help,
       )
     ) {
       console.error(
-        "background play and autosave are not plain options beside the startup logo",
+        "background play and autosave are not options with help beside the startup logo",
       );
       code = 1;
       return;
