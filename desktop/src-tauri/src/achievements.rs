@@ -93,6 +93,19 @@ pub fn screen(manifest: &menu::Manifest) -> Result<List, String> {
     })
 }
 
+/// The list of saved accounts for QUICK SIGN IN, which we fill in the player.
+/// We add it with the achievements screen whenever the design declares it.
+/// Native declares it, so every design has it unless it replaces that part.
+pub fn accounts_screen(manifest: &menu::Manifest) -> Option<List> {
+    manifest
+        .screen(menu::ScreenRole::Accounts)
+        .cloned()
+        .map(|screen| List {
+            screen,
+            content: crate::lists::ListContent::Live,
+        })
+}
+
 /// The prepared artifact must state that the integration is compiled in.
 /// An export without achievements works with a player that does not support them.
 pub fn validate_runtime(kit: &Path, included: bool) -> Result<(), String> {

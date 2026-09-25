@@ -84,9 +84,18 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
             "options",
             "controls",
             "shaders",
-            "achievements"
+            "achievements",
+            "accounts"
         ]
     );
+    // The QUICK SIGN IN accounts also come from Native, and BACK leads to the
+    // achievements screen, from which the player opens them.
+    let accounts = screens
+        .iter()
+        .find(|screen| screen.id == "accounts")
+        .expect("Disc must inherit the saved accounts screen");
+    assert_eq!(accounts.button, "achievements-quick");
+    assert_eq!(accounts.opener.as_deref(), Some("achievements"));
     let achievements = screens
         .iter()
         .find(|screen| screen.id == "achievements")

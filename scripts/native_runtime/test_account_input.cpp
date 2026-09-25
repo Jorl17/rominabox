@@ -4,6 +4,8 @@
 #include "rmlui/screens.hpp"
 #include "rmlui/elements.hpp"
 #include "rmlui/achievements.hpp"
+#include "rmlui/saved_accounts.hpp"
+#include <cstring>
 #include <RmlUi/Core/Elements/ElementFormControlInput.h>
 #include <libretro.h>
 #include <cstdio>
@@ -373,6 +375,67 @@ int main(int argc, char **argv) {
             "a badge that arrived while the list was closed is shown when it opens");
       check(list_shown_reports == std::vector<bool>({true, false, true}),
             "the menu reports when the list opens again, so a failed badge is retried");
+   }
+   {
+      /* QUICK SIGN IN: we show the button while accounts are saved and list a
+       * row for each. Choosing a row signs in with it, and FORGET removes it. */
+      auto *root = document.root();
+      auto shown = [&](const char *id) {
+         auto *element = root->GetElementById(id);
+         return element && !rib::hidden(element);
+      };
+      auto text_of = [&](const char *id) {
+         auto *element = root->GetElementById(id);
+         return element ? std::string(element->GetInnerRML()) : std::string("(missing)");
+      };
+      achievements.leave_form();
+      session = {}; session.status = RIB_ACHIEVEMENTS_SIGNED_OUT; ++session.revision;
+      saved_accounts.clear();
+      achievements.update(); achievements.shown(); document.settle();
+      check(root->GetElementById("achievements-quick") && !shown("achievements-quick"),
+            "QUICK SIGN IN is not offered while no account is saved");
+      saved_accounts = {"JOAO", "KID"};
+      achievements.shown(); document.settle();
+      check(shown("achievements-quick"), "QUICK SIGN IN is offered once another game saved an account");
+
+      rib_screen_declaration declared{};
+      std::strcpy(declared.id, "accounts");
+      std::strcpy(declared.role, "accounts");
+      rib_design_data design{};
+      design.screens = &declared;
+      design.screen_count = 1;
+      rib::SavedAccounts accounts(document, lists, events);
+      accounts.configure(design);
+      accounts.bind();
+      document.set_shown("achievements-panel", false);
+      document.set_shown("accounts-panel", true);
+      accounts.shown(); document.settle();
+      check(text_of("account-0-title") == "JOAO" && text_of("account-1-title") == "KID",
+            "the accounts list has a row for each saved account, newest first");
+      check(accounts.choose("account-1") && quick_signed_in == "KID",
+            "choosing a row signs in with that account");
+      const char *next = accounts.leave_for();
+      check(next && !std::strcmp(next, "achievements"), "after choosing, the player goes back to Achievements");
+      session.status = RIB_ACHIEVEMENTS_SIGNED_OUT;
+
+      while (events.take().kind != RIB_RMLUI_ACTION_NONE) {}
+      root->GetElementById("accounts-forget")->Click();
+      const rib::Event pressed = events.take();
+      check(pressed.kind == RIB_RMLUI_ACTION_LIST_ACTION && pressed.id == "accounts-forget",
+            "FORGET is the accounts screen's own button");
+      check(accounts.act("accounts-forget") && root->GetElementById("accounts-forget")->IsClassSet("on")
+            && root->GetElementById("accounts-panel")->IsClassSet("on"),
+            "FORGET on is published as the on state, for the design to show");
+      quick_signed_in.clear();
+      check(accounts.choose("account-0") && forgotten == "JOAO" && quick_signed_in.empty(),
+            "with FORGET on, a row removes that account and signs nothing in");
+      document.settle();
+      check(text_of("account-0-title") == "KID" && !root->GetElementById("account-1"),
+            "the forgotten account leaves the list at once");
+      accounts.shown();
+      check(!root->GetElementById("accounts-forget")->IsClassSet("on"), "FORGET is off again when the screen is shown");
+      document.set_shown("accounts-panel", false);
+      document.set_shown("achievements-panel", true);
    }
    achievements.context_lost();
    document.shutdown();

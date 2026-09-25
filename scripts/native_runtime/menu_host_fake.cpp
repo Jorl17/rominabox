@@ -107,7 +107,11 @@ extern "C" void rib_host_scroll_sound(bool up) { host.sounds.push_back(up ? Soun
 extern "C" void rib_host_ok_sound(void) { host.sounds.push_back(Sound::Ok); }
 extern "C" void rib_host_cancel_sound(void) { host.sounds.push_back(Sound::Cancel); }
 extern "C" const char *rib_host_current_shader(void) { return ""; }
-extern "C" void rib_host_apply_shader(const char *, const char *) {}
+extern "C" void rib_host_apply_shader(const char *id, const char *preset)
+{
+   host.applied_shader = id ? id : "";
+   host.applied_preset = preset ? preset : "";
+}
 
 /* RetroArch's logging sink is outside the tested menu boundary. */
 extern "C" void RARCH_LOG(const char *, ...) {}

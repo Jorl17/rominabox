@@ -159,6 +159,7 @@ struct ScreenFile {
     #[serde(default, deserialize_with = "present")]
     toggle: Option<Option<ToggleFile>>,
     dialogs: Option<Vec<String>>,
+    from: Option<String>,
 }
 
 #[derive(Clone, Copy, Deserialize)]
@@ -203,7 +204,7 @@ impl ScreenFile {
         }
         take!(
             panel, heading, footer, button, label, back, page_size, place, option, images, mark,
-            toggle, dialogs
+            toggle, dialogs, from
         );
         self
     }
@@ -221,16 +222,19 @@ pub enum ScreenRole {
     Shaders,
     Achievements,
     Discs,
+    /// The accounts from other games, listed in QUICK SIGN IN.
+    Accounts,
 }
 
 impl ScreenRole {
-    pub const ALL: [ScreenRole; 6] = [
+    pub const ALL: [ScreenRole; 7] = [
         ScreenRole::Pause,
         ScreenRole::Options,
         ScreenRole::Controls,
         ScreenRole::Shaders,
         ScreenRole::Achievements,
         ScreenRole::Discs,
+        ScreenRole::Accounts,
     ];
 
     /// The word used in `design.cfg` and `document_contract.inc`.
@@ -242,6 +246,7 @@ impl ScreenRole {
             ScreenRole::Shaders => "shaders",
             ScreenRole::Achievements => "achievements",
             ScreenRole::Discs => "discs",
+            ScreenRole::Accounts => "accounts",
         }
     }
 }
@@ -285,6 +290,9 @@ pub struct Screen {
     /// `dialog-<name>.rml` in the design or Native. We compose them beside the
     /// screen, so a design can replace either without copying the other.
     pub dialogs: Vec<String>,
+    /// The screen whose button opens this one, when that is not Options or
+    /// Pause. BACK on this screen leads there.
+    pub opener: Option<String>,
 }
 
 impl Screen {
@@ -761,6 +769,7 @@ fn screens(
             mark: entry.mark,
             toggle,
             dialogs: entry.dialogs.unwrap_or_default(),
+            opener: entry.from,
         };
         if let Some(role) = screen.role {
             if let Some(other) = screens.iter().find(|other| other.role == Some(role)) {

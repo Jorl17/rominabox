@@ -37,6 +37,8 @@ struct FakeHost
    /* Discs, labelled "Disc 1".."Disc N". The chosen one becomes current. */
    unsigned disc_count = 0;
    unsigned disc_index = 0;
+   /* The last shader applied from the menu, and its preset. */
+   std::string applied_shader, applied_preset;
 
    float volume_db = -12.0f;
 

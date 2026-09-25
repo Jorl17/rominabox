@@ -257,6 +257,27 @@ harness "$build_dir/test_menu_orchestration" --define HAVE_AUDIOMIXER \
   "$libretro_common/string/stdstring.c" "$libretro_common/vfs/vfs_implementation.c" \
   "$libretro_common/encodings/encoding_utf.c" "$libretro_common/time/rtime.c" \
   "$libretro_common/compat/compat_strl.c"
+# A whole Native menu as in a game with filters and achievements, staged by
+# the exporter, for the cases that choose rows on generated list screens.
+python3 - "$build_dir/placement-everything" "$repo_root" <<'EVERYTHING'
+import json
+import pathlib
+import subprocess
+import sys
+assets = pathlib.Path(sys.argv[1])
+root = pathlib.Path(sys.argv[2])
+cli = subprocess.check_output(["python3", str(root / "scripts/built.py")], text=True).strip()
+design = root / "integrations/designs/native"
+assets.mkdir(parents=True, exist_ok=True)
+subprocess.run([cli, "stage-theme"], input=json.dumps(
+    {"source": str(design), "destination": str(assets), "palette": "blue"}),
+    text=True, check=True, stdout=subprocess.DEVNULL)
+subprocess.run([cli, "stage-controls"], input=json.dumps({
+    "system": "megadrive", "source": str(root / "desktop/assets/controllers"),
+    "design": str(design), "destination": str(assets), "palette": "blue",
+    "includeAchievements": True, "shaders": {"bundled": ["scanlines", "phosphor"]},
+}), text=True, check=True, stdout=subprocess.DEVNULL)
+EVERYTHING
 # A failing workflow may save a configuration before it reports the failure.
 # Use the project's scratch context so every run starts with fixed inputs.
 PYTHONPATH="$repo_root/scripts" python3 - "$build_dir" <<'ORCHESTRATION'

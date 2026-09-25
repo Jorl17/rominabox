@@ -126,6 +126,16 @@
       "dialogs": ["achievements-confirm", "achievements-startup"]
     },
     {
+      "id": "accounts",
+      "role": "accounts",
+      "panel": "accounts-panel",
+      "heading": "QUICK SIGN IN",
+      "footer": "ESC  BACK",
+      "button": "achievements-quick",
+      "back": "BACK",
+      "from": "achievements"
+    },
+    {
       "id": "discs",
       "role": "discs",
       "panel": "discs-panel",

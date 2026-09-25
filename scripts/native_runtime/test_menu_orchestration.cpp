@@ -224,6 +224,33 @@ void design_prompt_survives_an_empty_status(const char *native_assets, const cha
    (void)data;
 }
 
+/* Choosing a row on a list screen runs the action of that list. A row of the
+ * filter list applies its filter, and we do not call the list of another
+ * screen. We stage a whole Native menu, with filters, next to the others. */
+void a_filter_row_applies_its_filter(const char *native_assets)
+{
+   const std::string assets = design_assets(native_assets, "everything");
+   check(std::filesystem::is_regular_file(assets + "/shaders.cfg"), "the menu with filters is staged");
+   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+   host.applied_shader.clear();
+   host.applied_preset.clear();
+   void *menu = open_menu();
+   if (menu)
+   {
+      click_and_frame(menu, "options");
+      click_and_frame(menu, "shaders");
+      check(std::string(inspect.text("heading")) == "SHADERS", "SHADERS opens the filter list");
+      click_and_frame(menu, "scanlines");
+      check(host.applied_shader == "scanlines", "choosing a filter row applies that filter");
+      const std::string preset = "/shaders/scanlines/scanlines.glslp";
+      check(host.applied_preset.size() > preset.size() &&
+            host.applied_preset.compare(host.applied_preset.size() - preset.size(), preset.size(), preset) == 0,
+            "the filter is applied with the preset the export named");
+      rib_menu_destroy(menu);
+   }
+   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+}
+
 std::string read_file(const std::filesystem::path& path)
 {
    std::ifstream in(path);
@@ -277,7 +304,8 @@ std::string stage_disc_list(const char *native_assets, const char *data)
                "screen_button_options = \"options fixture-back discs-back\"");
    config += "\nscreen_panel_discs = \"discs-panel\"\nscreen_heading_discs = \"DISC\""
              "\nscreen_footer_discs = \"ESC  BACK\"\nscreen_button_discs = \"discs\""
-             "\nscreen_images_discs = \"list\"\nscreen_mark_discs = \"IN\"\n";
+             "\nscreen_images_discs = \"list\"\nscreen_mark_discs = \"IN\""
+             "\nscreen_role_discs = \"discs\"\n";
    check(staged, "the disc list fixture is staged into the Native assets");
    std::ofstream(assets / "menu.rml") << menu;
    std::ofstream(assets / "design.cfg") << config;
@@ -805,6 +833,7 @@ int main(int argc, char **argv)
    fixes::repeated_saves_replace_the_file(argv[2]);
    fixes::design_prompt_survives_an_empty_status(argv[1], argv[2]);
    fixes::disc_list_keeps_its_page(argv[1], argv[2]);
+   fixes::a_filter_row_applies_its_filter(argv[1]);
    fixes::binds_open_sooner_on_hover();
    fixes::pad_changes_and_reset_apply_together(argv[1], argv[2]);
    fixes::chosen_slot_shows_on_save_and_load(argv[1]);

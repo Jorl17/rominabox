@@ -4,6 +4,7 @@
     <div id="achievements-signed-out" class="account-empty">
       <div>Sign in to earn achievements.</div>
       <button id="achievements-login" class="menu-action account-action">SIGN IN TO ENABLE</button>
+      <button id="achievements-quick" class="menu-action account-action" style="display:none;">QUICK SIGN IN</button>
     </div>
     <div id="achievements-form" class="account-form" style="display:none;">
       <label for="achievement-username">USERNAME</label>

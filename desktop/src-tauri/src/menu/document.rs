@@ -5,7 +5,7 @@
 //! We work on text here, and write nothing until the composition is
 //! complete.
 
-use super::manifest::{Manifest, Screen, ScreenPlace};
+use super::manifest::{Manifest, Screen, ScreenPlace, ScreenRole};
 use std::{
     collections::BTreeSet,
     fs,
@@ -46,12 +46,17 @@ pub(crate) fn staged_screens(
         }
     };
     let show_options = !included.is_empty();
+    // QUICK SIGN IN's accounts come with the achievements screen.
+    let achievements_shipped = screens.iter().any(|screen| {
+        screen.role == Some(ScreenRole::Achievements) && included.contains(screen.id.as_str())
+    });
     let mut staged: Vec<Screen> = screens
         .iter()
         .filter(|screen| match screen.place {
             ScreenPlace::Options => show_options,
             // The disc list exists only for a game of several discs.
             ScreenPlace::Plain if screen.is_disc_list() && discs <= 1 => false,
+            ScreenPlace::Plain if screen.role == Some(ScreenRole::Accounts) => achievements_shipped,
             ScreenPlace::Plain => {
                 screen.option_label.is_none() || included.contains(screen.id.as_str())
             }

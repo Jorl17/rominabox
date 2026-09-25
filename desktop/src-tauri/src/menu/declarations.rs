@@ -116,15 +116,24 @@ pub(crate) fn write(
         .filter(|screen| !lists.iter().any(|list| list.screen.id == screen.id))
         .filter(|screen| markup.contains(&format!("id=\"{}\"", screen.panel)))
         .collect();
+    // Every declared screen, first the design's and then the lists, with the
+    // buttons that open it. We add a list's BACK to its host's buttons, and
+    // the host can be a list, for example the achievements screen.
+    let declared: Vec<&Screen> = drawn
+        .iter()
+        .copied()
+        .chain(lists.iter().map(|list| &list.screen))
+        .collect();
     let mut buttons: Vec<Vec<String>> = drawn
         .iter()
         .map(|screen| shown_by(screen, &drawn, markup))
+        .chain(lists.iter().map(|list| vec![list.screen.button.clone()]))
         .collect();
     for list in lists {
         let Some((host, back)) = &list.host else {
             continue;
         };
-        let Some(at) = drawn.iter().position(|screen| screen.id == *host) else {
+        let Some(at) = declared.iter().position(|screen| screen.id == *host) else {
             return Err(format!("design.cfg has no button for screen {host}"));
         };
         if !buttons[at].contains(back) {
@@ -139,7 +148,7 @@ pub(crate) fn write(
         .chain(lists.iter().map(|list| list.screen.id.as_str()))
         .collect();
     line(&mut text, "screens", &ids.join(" "))?;
-    for (screen, buttons) in drawn.iter().zip(&buttons) {
+    for (screen, buttons) in declared.iter().zip(&buttons).take(drawn.len()) {
         screen_lines(&mut text, screen, buttons)?;
     }
     let toggles: Vec<&Toggle> = drawn
@@ -205,11 +214,11 @@ pub(crate) fn write(
     let fonts: Vec<&str> = manifest.fonts.iter().map(|font| font.file.as_str()).collect();
     line(&mut text, "fonts", &fonts.join(" "))?;
 
-    for list in lists {
+    for (index, list) in lists.iter().enumerate() {
         if let Some(toggle) = &list.screen.toggle {
             toggle_lines(&mut text, toggle)?;
         }
-        screen_lines(&mut text, &list.screen, &[list.screen.button.clone()])?;
+        screen_lines(&mut text, &list.screen, &buttons[drawn.len() + index])?;
     }
     Ok(text)
 }

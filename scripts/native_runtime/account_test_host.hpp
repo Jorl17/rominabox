@@ -13,3 +13,6 @@ extern rib_achievement_unlock_t pending_unlock;
 #include <vector>
 extern std::vector<rib_achievement_row_t> service_rows;
 extern std::vector<bool> list_shown_reports;
+/* QUICK SIGN IN: accounts saved in other games, and requests from the menu. */
+extern std::vector<std::string> saved_accounts;
+extern std::string quick_signed_in, forgotten;

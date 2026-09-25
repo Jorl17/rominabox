@@ -83,6 +83,10 @@ bool rib_achievements_set_enabled(bool on)
 }
 bool rib_achievements_retry() { return true; }
 void rib_achievements_cancel() { session.status = RIB_ACHIEVEMENTS_SIGNED_OUT; touch(); }
+/* No other game has saved an account in these fixtures. */
+size_t rib_achievements_saved_accounts(rib_achievements_saved_account_t*, size_t) { return 0; }
+bool rib_achievements_quick_sign_in(const char*) { return false; }
+bool rib_achievements_forget_account(const char*) { return false; }
 void rib_achievements_sign_out()
 {
    session = {};

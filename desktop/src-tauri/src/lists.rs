@@ -310,6 +310,9 @@ pub fn fill_slot(document: &str, slot: &str, body: &str) -> Result<String, Strin
 /// leads to the screen behind every screen, the first declared screen that is
 /// not an entry.
 fn host_of<'a>(staged: &'a [Screen], list: &Screen) -> Option<&'a Screen> {
+    if let Some(opener) = &list.opener {
+        return staged.iter().find(|screen| &screen.id == opener);
+    }
     if list.option_label.is_some() {
         return staged
             .iter()
@@ -420,12 +423,15 @@ pub fn install(
         for dialog in &list.screen.dialogs {
             screens.push_str(&manifest.fragment(&format!("dialog-{dialog}.rml"))?);
         }
-        // The player opens an entry inside Options from there. A list whose
-        // button is already drawn in the design, such as the disc column's
-        // DISC, must not get a second one.
+        // We open an entry inside Options from there. When the button of a
+        // list is already in the menu, as DISC in the disc column or QUICK
+        // SIGN IN on the achievements screen composed just before, we add no
+        // second one.
+        let drawn = format!("id=\"{}\"", list.screen.button);
         if list.screen.option_label.is_none()
             && !list.screen.button.is_empty()
-            && !document.contains(&format!("id=\"{}\"", list.screen.button))
+            && !document.contains(&drawn)
+            && !screens.contains(&drawn)
         {
             links.push_str(&format!(
                 "<button class=\"menu-action screen-link\" id=\"{button}\">{heading}</button>",

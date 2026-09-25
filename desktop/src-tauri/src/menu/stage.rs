@@ -223,6 +223,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     let achievements = crate::achievements::included(request.include_achievements, true);
     if achievements {
         lists.push(crate::achievements::screen(&manifest)?);
+        lists.extend(crate::achievements::accounts_screen(&manifest));
     }
     let entries = entries(&manifest, request, &lists)?;
     let staged = document::staged_screens(&manifest.screens, Some(&entries), request.discs)?;
