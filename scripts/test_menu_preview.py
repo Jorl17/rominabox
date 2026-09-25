@@ -35,24 +35,25 @@ def palettes() -> list[str]:
     return [entry["id"] for entry in declared["palettes"]]
 
 
-def render(design: str, palette: str, into: Path) -> str:
+def render(design: str, palette: str, into: Path, background: Path | None = None) -> str:
     """Return an empty string when the drawing worked, otherwise the reason it failed."""
+    request = {
+        # We read them from the kit, as in the builder, and not from
+        # the source tree. A design missing from the kit is the
+        # failure that we check for here.
+        "design": str(KIT / "designs" / design),
+        "assets": str(KIT / "menu-assets"),
+        "renderer": str(RENDERER),
+        "outputDir": str(into),
+        "palette": palette,
+        "width": 960,
+        "height": 600,
+    }
+    if background is not None:
+        request["background"] = str(background)
     asked = subprocess.run(
         [str(_cli()), "preview"],
-        input=json.dumps(
-            {
-                # We read them from the kit, as in the builder, and not from
-                # the source tree. A design missing from the kit is the
-                # failure that we check for here.
-                "design": str(KIT / "designs" / design),
-                "assets": str(KIT / "menu-assets"),
-                "renderer": str(RENDERER),
-                "outputDir": str(into),
-                "palette": palette,
-                "width": 960,
-                "height": 600,
-            }
-        ),
+        input=json.dumps(request),
         capture_output=True,
         text=True,
         timeout=180,
@@ -68,6 +69,38 @@ def render(design: str, palette: str, into: Path) -> str:
     image = Path(result["result"]["imagePath"])
     if not image.is_file() or image.stat().st_size == 0:
         return f"{image} was not written"
+    return ""
+
+
+# A colour that no palette uses, so every pixel in it is from the author's picture.
+PICTURE = (255, 0, 255)
+
+
+def picture_share(image: Path) -> float:
+    from PIL import Image
+
+    pixels = list(Image.open(image).convert("RGB").getdata())
+    return sum(1 for pixel in pixels if pixel == PICTURE) / len(pixels)
+
+
+def background_problem(design: str, area: Path) -> str:
+    """Return an empty string when a game's background picture appears behind
+    this design's menu, and none appears for a game without one."""
+    from PIL import Image
+
+    picture = area / "background-source.png"
+    Image.new("RGB", (64, 40), PICTURE).save(picture)
+    shares = {}
+    for label, background in (("with", picture), ("without", None)):
+        into = area / f"{design}-background-{label}"
+        problem = render(design, palettes()[0], into, background)
+        if problem:
+            return f"{label} a background: {problem}"
+        shares[label] = picture_share(into / "preview.png")
+    if shares["without"] != 0:
+        return f"the picture shows in a game without one ({shares['without']:.1%})"
+    if shares["with"] < 0.05:
+        return f"only {shares['with']:.1%} of the menu shows the background picture"
     return ""
 
 
@@ -89,6 +122,12 @@ def main() -> int:
                     failures.append(f"{design}/{palette}")
                 else:
                     print(f"  ok   {design}/{palette}")
+            problem = background_problem(design, area)
+            if problem:
+                print(f"  FAIL {design} background: {problem}", file=sys.stderr)
+                failures.append(f"{design} background")
+            else:
+                print(f"  ok   {design} background")
 
     if failures:
         print(
