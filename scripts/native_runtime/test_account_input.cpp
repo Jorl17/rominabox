@@ -412,6 +412,8 @@ int main(int argc, char **argv) {
       accounts.shown(); document.settle();
       check(text_of("account-0-title") == "JOAO" && text_of("account-1-title") == "KID",
             "the accounts list has a row for each saved account, newest first");
+      check(root->GetElementById("account-0")->IsClassSet("line"),
+            "an account row says it has no picture and no second line, so the design sizes it as one");
       check(accounts.choose("account-1") && quick_signed_in == "KID",
             "choosing a row signs in with that account");
       check(accounts.leave_for() == rib::ScreenRole::Achievements,

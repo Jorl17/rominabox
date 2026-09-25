@@ -298,3 +298,9 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #unlock-kicker { font-size: 12dp; color: design(highlight); }
 #unlock-title { font-size: 18dp; color: design(ink); margin-top: 4dp; }
 #unlock-detail { font-size: 12dp; color: design(muted); margin-top: 4dp; }
+/* Accounts on QUICK SIGN IN: FORGET opposite BACK, lit while it is on. */
+#accounts-panel .list-actions .account-forget { left: auto; right: 0; width: 196dp; }
+.account-forget.on { background-color: design(highlight); color: design(surface); border-color: design(ink); }
+/* An account is one name to pick, in a large row with the name centred. */
+#accounts-list .list-row.line { height: 64dp; margin-bottom: 8dp; }
+#accounts-list .list-row.line .list-row-title { left: 0; right: 0; height: 64dp; line-height: 64dp; font-size: 24dp; text-align: center; }

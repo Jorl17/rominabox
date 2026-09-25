@@ -246,3 +246,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
  * Down from QUIT, the last in the column, would go to the bottom block. */
 #options-back { nav-up: #volume-level; }
 #quit { nav-down: none; }
+/* FORGET in QUICK SIGN IN, left of BACK, lit while it is on. */
+#accounts-panel .list-actions .account-forget { left: 578dp; width: 176dp; }
+.account-forget.on { background-color: design(highlight); color: design(slot-label); }
+/* An account is one name to pick, in a large row with the name centred. */
+#accounts-list .list-row.line { height: 56dp; margin-bottom: 6dp; }
+#accounts-list .list-row.line .list-row-title { left: 0; right: 0; height: 56dp; line-height: 56dp; font-size: 20dp; text-align: center; }
