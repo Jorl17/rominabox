@@ -226,7 +226,8 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 /* Four units above, below and to the left, so the picture is in the middle
  * of the row and not on its frame. The bevel is the same as on the save
  * slots, so a badge looks set into the row. */
-.list-row-icon { position: absolute; left: 4dp; top: 4dp; width: 56dp; height: 56dp; border-top: 2dp #041738; border-left: 2dp #041738; border-right: 2dp #75b2e4; border-bottom: 2dp #75b2e4; }
+.list-row-icon, .list-row-wait { position: absolute; left: 4dp; top: 4dp; width: 56dp; height: 56dp; border-top: 2dp #041738; border-left: 2dp #041738; border-right: 2dp #75b2e4; border-bottom: 2dp #75b2e4; }
+.list-row-wait { width: 40dp; height: 40dp; padding: 8dp; }
 /* Each of the three parts of a row has a column and stays in it. An
  * achievement description can be 149 characters long, and then it wraps to
  * two lines here instead of running under the state text. */

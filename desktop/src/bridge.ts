@@ -44,6 +44,9 @@ export type ExportRequest = {
   menuSounds: string;
   controls: Controls;
   outputDir: string;
+  /** Replace an app already at the destination. Without it we do nothing in
+   * the export and fail with `AppExists`. */
+  replace?: boolean;
   target: string;
 };
 /** Our messages about cores in the export, when we fetch any or cannot. */
@@ -58,8 +61,20 @@ export type ExportProgress = {
 };
 /** A required core is not cached, and we could not download it. */
 export class CoreDownloadFailed extends Error {}
-/** The stage of that failure in the exporter (`packaging::CORES_STAGE`). */
+/** The stage of that failure in the exporter (`ErrorStage::Cores`). */
 const CORES_STAGE = "cores";
+/** An app is already where this one would go. We did nothing. */
+export class AppExists extends Error {
+  constructor(
+    sentence: string,
+    readonly app: string,
+    readonly folder: string,
+  ) {
+    super(sentence);
+  }
+}
+/** `ErrorStage::Exists`. */
+const EXISTS_STAGE = "exists";
 export type ExportResult = {
   appPath: string;
   installedBytes: number;
@@ -208,18 +223,28 @@ export async function exportGame(
     throw exportFailure(reason);
   }
 }
-/** The `{stage, message}` from the exporter, as the text on the page. */
+/**
+ * The `{stage, sentence}` from the exporter (`export_error::AuthorError`). We
+ * write the sentence in the exporter, and here we only pick the failures that
+ * have separate controls in the builder.
+ */
 export function exportFailure(reason: unknown): unknown {
   if (
     typeof reason !== "object" ||
     reason === null ||
     !("stage" in reason) ||
-    !("message" in reason)
+    !("sentence" in reason)
   )
     return reason;
-  const { stage, message } = reason as { stage: string; message: string };
-  if (stage === CORES_STAGE) return new CoreDownloadFailed(message);
-  return new Error(`${stage}: ${message}`);
+  const { stage, sentence, existing } = reason as {
+    stage: string;
+    sentence: string;
+    existing?: { name: string; folder: string };
+  };
+  if (stage === CORES_STAGE) return new CoreDownloadFailed(sentence);
+  if (stage === EXISTS_STAGE && existing)
+    return new AppExists(sentence, existing.name, existing.folder);
+  return new Error(sentence);
 }
 export function cancelExport(): Promise<void> {
   return invoke("cancel_export");

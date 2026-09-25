@@ -707,8 +707,9 @@ progress::-webkit-progress-value {
 .export-progress > .text-button {
   margin-top: 14px;
 }
-/* The one pop-up about cores in the export. Small, over the export step. */
-.core-fetch-layer {
+/* The pop-ups of the export step: cores being fetched, an app in the way.
+   Small, over the export step. */
+.pop-up-layer {
   position: fixed;
   inset: 0;
   display: flex;
@@ -718,7 +719,7 @@ progress::-webkit-progress-value {
   background: rgb(21 27 48 / 0.28);
   z-index: 20;
 }
-.core-fetch {
+.pop-up {
   max-width: 360px;
   background: var(--paper);
   border: 3px solid var(--ink);
@@ -728,16 +729,21 @@ progress::-webkit-progress-value {
   font-weight: 700;
   line-height: 1.5;
 }
-.core-fetch p {
+.pop-up h2,
+.pop-up p {
   margin: 0;
 }
-.core-fetch-actions {
+.pop-up h2 {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+.pop-up-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 18px;
 }
-.core-fetch-actions .primary {
+.pop-up-actions .primary {
   min-width: 0;
 }
 .result {

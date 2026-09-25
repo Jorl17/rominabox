@@ -106,7 +106,8 @@ def mapped(items, function):
 
 
 def stage(system: str, workspace: Path, variant: str | None = None,
-          palette: str = "blue", design: str | None = None) -> Path:
+          palette: str = "blue", design: str | None = None,
+          menu: dict | None = None) -> Path:
     """Stage the design and the generated scene for a console, as in an export.
 
     Source and destination are separate directories because in the exporter we
@@ -158,6 +159,8 @@ def stage(system: str, workspace: Path, variant: str | None = None,
                 # The pad an author or a player picked, staged as in the
                 # exporter and not by editing its markup.
                 "controls": {"profile": variant} if variant else {},
+                # The other content in the game: achievements, shaders, discs.
+                **(menu or {}),
             }
         ),
         capture_output=True,

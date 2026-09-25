@@ -1,101 +1,22 @@
 #![cfg(target_os = "macos")]
 
+mod export_fixture;
+
+use export_fixture::{export_request, workspace};
+
 use rominabox_desktop::cores::{Response, Transport, Version};
 use rominabox_desktop::export_cores::CoreActivity;
 use rominabox_desktop::packaging::{
-    isolated_hotkey_config, ExportRequest, ExportStage, ExportTarget, HOTKEY_BINDS,
+    isolated_hotkey_config, ErrorStage, ExportRequest, ExportStage, ExportTarget, HOTKEY_BINDS,
     MANAGED_DATA_DIRECTORIES,
 };
 use std::{
     cell::Cell,
     fs,
-    path::{Path, PathBuf},
+    path::Path,
     process::Command,
     sync::atomic::{AtomicBool, Ordering},
 };
-
-fn write_runtime_stub(path: &Path) {
-    let source = path.with_extension("c");
-    fs::write(
-        &source,
-        "int rarch_main(int c, char **v, void *d){(void)c;(void)v;(void)d;return 0;}\nint main(void){return rarch_main(0,0,0);}\n",
-    )
-    .unwrap();
-    let status = Command::new("cc")
-        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
-        .arg(path)
-        .arg(&source)
-        .status()
-        .unwrap();
-    assert!(status.success(), "could not compile the runtime stub");
-}
-
-fn workspace() -> rominabox_scratch::Scratch {
-    rominabox_scratch::Scratch::dir("rominabox-packaging")
-}
-
-fn fixture_kit(root: &Path) -> PathBuf {
-    let kit = root.join("runtime-kit");
-    fs::create_dir_all(kit.join("bin")).unwrap();
-    fs::create_dir_all(kit.join("cores")).unwrap();
-    fs::create_dir_all(kit.join("Frameworks")).unwrap();
-    fs::create_dir_all(kit.join("licenses")).unwrap();
-    fs::create_dir_all(kit.join("licenses/native")).unwrap();
-    fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
-    write_runtime_stub(&kit.join("bin/retroarch"));
-    fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
-    for name in [
-        "RetroArch.txt",
-        "NATIVE-DEPENDENCIES.txt",
-        "RmlUi-MIT.txt",
-        "genesis_plus_gx.txt",
-    ] {
-        fs::write(kit.join("licenses").join(name), name).unwrap();
-    }
-    fs::write(
-        kit.join("runtime-dependencies.json"),
-        r#"{"formatVersion":1,"files":[]}"#,
-    )
-    .unwrap();
-    fs::write(
-        kit.join("manifest.json"),
-        r#"{"schema_version":1,"components":[{"name":"RetroArch"},{"name":"RmlUi"},{"name":"genesis_plus_gx"}]}"#,
-    )
-    .unwrap();
-    kit
-}
-
-fn export_request(root: &Path) -> ExportRequest {
-    let rom = root.join("sonic.bin");
-    fs::write(&rom, b"RIBtest").unwrap();
-    ExportRequest {
-        rom,
-        title: "Hotkey Isolation".to_string(),
-        system: "megadrive".to_string(),
-        description: None,
-        icon: None,
-        background: None,
-        show_menu: false,
-        start_at_menu: false,
-        theme: "native".to_string(),
-        palette: "blue".to_string(),
-        menu_sounds: "off".to_string(),
-        controls: rominabox_desktop::controls::Controls::default(),
-        firmware: Vec::new(),
-        splash: false,
-        advanced_emulator_access: false,
-        keep_playing_in_background: false,
-        autosave_on_quit: false,
-        menu_entries: None,
-        shaders: rominabox_desktop::shaders::ShaderSelection::default(),
-        include_achievements: false,
-        output_dir: root.join("out"),
-        target: ExportTarget::Macos,
-        runtime_kit: fixture_kit(root),
-        core: None,
-        core_cache: None,
-    }
-}
 
 fn embedded_runtime_config(plan: &str) -> String {
     let marker = "---config---\n";
@@ -154,21 +75,6 @@ fn an_export_writes_the_app_and_nothing_else() {
         result.app_path,
         request.output_dir.join("Hotkey Isolation.app")
     );
-
-    let again =
-        rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap_err();
-    assert!(
-        again
-            .message
-            .contains("refusing to overwrite existing export"),
-        "{again}"
-    );
-    let mut after = fs::read_dir(&request.output_dir)
-        .unwrap()
-        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
-        .collect::<Vec<_>>();
-    after.sort();
-    assert_eq!(after, names);
 }
 
 #[test]
@@ -243,7 +149,7 @@ fn cancelled_export_removes_its_staging_directory() {
     })
     .unwrap_err();
 
-    assert_eq!(error.stage, "cancelled");
+    assert_eq!(error.stage, ErrorStage::Cancelled);
     assert_no_export_staging(&request.output_dir);
 }
 
@@ -261,7 +167,7 @@ fn failed_export_removes_its_staging_directory() {
     })
     .unwrap_err();
 
-    assert_eq!(error.stage, "stage");
+    assert_eq!(error.stage, ErrorStage::Stage);
     assert_no_export_staging(&request.output_dir);
 }
 
@@ -474,7 +380,7 @@ fn a_missing_core_that_cannot_be_downloaded_stops_the_export_before_anything_is_
         ]
     );
     let error = shipped.unwrap_err();
-    assert_eq!(error.stage, rominabox_desktop::packaging::CORES_STAGE);
+    assert_eq!(error.stage, ErrorStage::Cores);
     assert_eq!(
         error.message,
         "The Dreamcast core could not be downloaded. Try again later."

@@ -118,6 +118,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/picture_edges.py")],
     ),
     Scope(
+        "shipped",
+        "that the core options, remaps, controller profiles and firmware an export ships replace what an earlier export or data location left in the game's data on every launch, that a setting the player changed afterwards stays, and that the launcher modules build for Windows",
+        "that RetroArch reads those files or that the core honours them (the picture scope covers the core), or that the Windows build runs",
+        ["python3", str(ROOT / "scripts/test_shipped.py")],
+    ),
+    Scope(
         "frontend",
         "the React builder UI: controls editor, sound preview, app flow, and that it typechecks",
         "anything about the exported player, which is a different codebase",
@@ -264,6 +270,12 @@ SCOPES = [
         "that a photographed open list and a photographed focused control have all four outline edges painted",
         "where the list was placed, or that the boxes in the bridge agree; it only reads the picture",
         ["python3", str(ROOT / "scripts/check_menu_edges.py")],
+    ),
+    Scope(
+        "pictures",
+        "that a badge still downloading draws a moving placeholder and a failed one a mark, in every design, and draws every Disc screen into work/feedback-pictures",
+        "that the player sets those classes or keeps redrawing: the rows are written the way its list writes them, and the second moment is RmlUi's 0.1 s step",
+        ["python3", str(ROOT / "scripts/menu_pictures.py")],
     ),
     Scope(
         "states",

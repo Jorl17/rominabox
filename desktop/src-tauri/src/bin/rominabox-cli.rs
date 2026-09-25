@@ -83,7 +83,7 @@ fn run() -> Result<(), String> {
                 "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
-                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir", "target", "runtimeKit", "core?", "coreCache?"], "coreCache": "directory of downloaded cores; each needed core is downloaded or updated there first, and a progress event carrying cores {kind: fetching, downloading, updating} or {kind: failed, missing} says so", "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "events": ["progress", "result", "error"] },
+                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir", "replace?", "target", "runtimeKit", "core?", "coreCache?"], "coreCache": "directory of downloaded cores; each needed core is downloaded or updated there first, and a progress event carrying cores {kind: fetching, downloading, updating} or {kind: failed, missing} says so", "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "button?", "axis?", "mouse?"] } }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "replace": "replace an app already at the destination; without it such an export does nothing and prints {type: exists, appPath}", "events": ["progress", "result", "exists", "error"] },
                 "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
                 "cores": { "request": ["cache", "target"], "target": "macos-arm64 | macos-x86_64 | windows-x86_64 | linux-x86_64", "result": "per-core present, installed, unreachable or notRecorded" },
                 "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
@@ -206,9 +206,26 @@ fn run() -> Result<(), String> {
             let cancelled = AtomicBool::new(false);
             let result = packaging::export_game(&request, &cancelled, |event| {
                 println!("{}", json!({ "type": "progress", "progress": event }));
-            })
-            .map_err(|error| error.to_string())?;
-            println!("{}", json!({ "type": "result", "result": result }));
+            });
+            match result {
+                Ok(result) => println!("{}", json!({ "type": "result", "result": result })),
+                // This is not a failure. We did nothing, and with `replace` in
+                // the request we go ahead.
+                Err(error) if error.stage == packaging::ErrorStage::Exists => {
+                    println!(
+                        "{}",
+                        json!({ "type": "exists", "appPath": error.path, "message": error.sentence() })
+                    );
+                    std::process::exit(1);
+                }
+                Err(error) => {
+                    println!(
+                        "{}",
+                        json!({ "type": "error", "message": error.to_string(), "error": error, "sentence": error.sentence() })
+                    );
+                    std::process::exit(1);
+                }
+            }
             Ok(())
         }
         "project-save" => {
@@ -280,6 +297,15 @@ fn run() -> Result<(), String> {
                 /// Options entries to stage, or the design's defaults when absent.
                 #[serde(default)]
                 menu_entries: Option<Vec<String>>,
+                /// The achievements screen, which we stage as in an export that includes it.
+                #[serde(default)]
+                include_achievements: bool,
+                /// Bundled shaders. With any of them we add the Filters screen.
+                #[serde(default)]
+                shaders: shaders::ShaderSelection,
+                /// How many discs the game has. With more than one we add the disc list.
+                #[serde(default)]
+                discs: Option<usize>,
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid {command} request: {error}"))?;
@@ -303,6 +329,9 @@ fn run() -> Result<(), String> {
                 system: request.system.unwrap_or(defaults.system.clone()),
                 controls: request.controls,
                 menu_entries: request.menu_entries,
+                include_achievements: request.include_achievements,
+                shaders: request.shaders,
+                discs: request.discs.unwrap_or(defaults.discs),
                 ..defaults
             })?
             .write(&request.destination)?;

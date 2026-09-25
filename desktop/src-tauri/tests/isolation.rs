@@ -159,6 +159,7 @@ fn request(
         shaders: rominabox_desktop::shaders::ShaderSelection::default(),
         include_achievements: false,
         output_dir: root.join("out"),
+        replace: false,
         target: ExportTarget::Macos,
         runtime_kit: kit,
         core: None,

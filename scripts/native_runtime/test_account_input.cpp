@@ -303,33 +303,39 @@ int main(int argc, char **argv) {
       achievements.update();
       list_shown_reports.clear();
       achievements.update(); document.settle();
-      auto icon_shown = [&](const char *row) {
+      // The first element of a class in a row, when it is drawn.
+      auto shown_part = [&](const char *row, const char *part) -> Rml::Element * {
          auto *element = document.root()->GetElementById(row);
-         std::vector<Rml::Element*> icons;
-         if (element) rib::collect(element, "list-row-icon", icons);
-         return !icons.empty() && !rib::hidden(icons[0])
-               && icons[0]->GetBox().GetSize(Rml::BoxArea::Border).x > 0;
+         std::vector<Rml::Element*> found;
+         if (element) rib::collect(element, part, found);
+         return !found.empty() && !rib::hidden(found[0])
+               && found[0]->GetBox().GetSize(Rml::BoxArea::Border).x > 0 ? found[0] : nullptr;
       };
+      auto icon_shown = [&](const char *row) { return shown_part(row, "list-row-icon") != nullptr; };
+      // The placeholder moves when something in it is animated.
+      auto animated = [](Rml::Element *placeholder) {
+         bool moving = false;
+         rib::walk(placeholder, [&](Rml::Element *element) {
+            const Rml::Property *property = element->GetProperty("animation");
+            moving = moving || (property && property->unit == Rml::Unit::ANIMATION
+                  && !property->value.GetReference<Rml::AnimationList>().empty());
+            return rib::Walk::Continue;
+         });
+         return moving;
+      };
+      auto *waiting = shown_part("achievement-2", "list-row-wait");
       check(document.root()->GetElementById("achievement-2")
-            && document.root()->GetElementById("achievement-2")->IsClassSet("badge-loading") && icon_shown("achievement-2"),
-            "a badge still downloading shows its placeholder");
+            && document.root()->GetElementById("achievement-2")->IsClassSet("badge-loading")
+            && waiting && !icon_shown("achievement-2"),
+            "a badge still downloading shows its placeholder, not an empty image");
+      auto *lost = shown_part("achievement-3", "list-row-wait");
       check(document.root()->GetElementById("achievement-3")
-            && document.root()->GetElementById("achievement-3")->IsClassSet("badge-failed") && icon_shown("achievement-3"),
-            "a badge that failed shows its mark");
-      {
-         // The design styles both, and only the placeholder is animated.
-         std::vector<Rml::Element*> loading, failed;
-         rib::collect(document.root()->GetElementById("achievement-2"), "list-row-icon", loading);
-         rib::collect(document.root()->GetElementById("achievement-3"), "list-row-icon", failed);
-         auto animated = [](Rml::Element *icon) {
-            const Rml::Property *property = icon ? icon->GetProperty("animation") : nullptr;
-            return property && property->ToString().find("badge-steps") != std::string::npos;
-         };
-         check(!loading.empty() && animated(loading[0]), "the design animates the placeholder");
-         check(!failed.empty() && !animated(failed[0])
-               && failed[0]->GetProperty<Rml::Colourb>("border-top-color") != Rml::Colourb(0, 0, 0, 0),
-               "the design draws the failed mark");
-      }
+            && document.root()->GetElementById("achievement-3")->IsClassSet("badge-failed")
+            && lost && !icon_shown("achievement-3"),
+            "a badge that failed shows its mark, not an empty image");
+      check(waiting && animated(waiting), "the design animates the placeholder");
+      check(lost && !animated(lost), "the failed mark stands still");
+      check(!shown_part("achievement-1", "list-row-wait"), "a downloaded badge has no placeholder");
       check(document.root()->GetElementById("achievement-1")
             && !document.root()->GetElementById("achievement-1")->IsClassSet("badge-loading") && icon_shown("achievement-1"),
             "a downloaded badge shows its picture");
@@ -341,7 +347,8 @@ int main(int argc, char **argv) {
       document.set_shown("achievements-panel", true);
       achievements.update(); document.settle();
       auto *second = document.root()->GetElementById("achievement-2");
-      check(second && !second->IsClassSet("badge-loading") && icon_shown("achievement-2"),
+      check(second && !second->IsClassSet("badge-loading") && icon_shown("achievement-2")
+            && !shown_part("achievement-2", "list-row-wait"),
             "a badge that arrived while the list was closed is shown when it opens");
       check(list_shown_reports == std::vector<bool>({true, false, true}),
             "the menu reports when the list opens again, so a failed badge is retried");

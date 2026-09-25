@@ -12,6 +12,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "shipped_files.h"
+#include "shipped_settings.h"
+
 #define PATH_CAP 4096
 #define LINE_CAP 8192
 #define MANAGED_CAP 64
@@ -139,48 +142,6 @@ static int copy_file_if_absent(const char *from, const char *to) {
         return -1;
     }
     return count < 0 ? -1 : 0;
-}
-
-static void seed_files(const char *from_dir, const char *to_dir) {
-    DIR *directory = opendir(from_dir);
-    struct dirent *entry;
-    if (!directory)
-        return;
-    mkdir_p(to_dir);
-    while ((entry = readdir(directory))) {
-        char from[PATH_CAP];
-        char to[PATH_CAP];
-        struct stat info;
-        if (entry->d_name[0] == '.')
-            continue;
-        join_path(from, sizeof from, from_dir, entry->d_name);
-        if (lstat(from, &info) != 0 || !S_ISREG(info.st_mode))
-            continue;
-        join_path(to, sizeof to, to_dir, entry->d_name);
-        if (copy_file_if_absent(from, to) != 0)
-            die_errno(from);
-    }
-    closedir(directory);
-}
-
-static void seed_nested(const char *from_dir, const char *to_dir) {
-    DIR *directory = opendir(from_dir);
-    struct dirent *entry;
-    if (!directory)
-        return;
-    while ((entry = readdir(directory))) {
-        char from[PATH_CAP];
-        char to[PATH_CAP];
-        struct stat info;
-        if (entry->d_name[0] == '.')
-            continue;
-        join_path(from, sizeof from, from_dir, entry->d_name);
-        if (lstat(from, &info) != 0 || !S_ISDIR(info.st_mode))
-            continue;
-        join_path(to, sizeof to, to_dir, entry->d_name);
-        seed_files(from, to);
-    }
-    closedir(directory);
 }
 
 static void copy_tree(const char *from_dir, const char *to_dir) {
@@ -648,21 +609,39 @@ static void prepare(void) {
         mkdir_p(directory);
     }
 
+    /* We apply what the export ships on every launch, and a file left in the
+     * game's data by an earlier export or location never overrides it. In
+     * applied/ we record what we applied, so we can tell a player's own later
+     * change from a stale value. */
     {
+        static const struct {
+            const char *shipped;
+            const char *game;
+        } settings[] = {
+            {"core-options", "config"},
+            {"remaps", "remaps"},
+            {"autoconfig", "autoconfig"},
+        };
         char from[PATH_CAP];
         char to[PATH_CAP];
-        join_path(from, sizeof from, resources, "remaps");
-        join_path(to, sizeof to, data_dir, "remaps");
-        seed_nested(from, to);
-        join_path(from, sizeof from, resources, "autoconfig");
-        join_path(to, sizeof to, data_dir, "autoconfig");
-        seed_nested(from, to);
-        join_path(from, sizeof from, resources, "core-options");
-        join_path(to, sizeof to, data_dir, "config");
-        seed_nested(from, to);
+        char applied_root[PATH_CAP];
+        char applied[PATH_CAP];
+        char failed[PATH_CAP];
+        size_t which;
+        join_path(applied_root, sizeof applied_root, data_dir, "applied");
+        mkdir_p(applied_root);
+        for (which = 0; which < sizeof settings / sizeof settings[0]; which++) {
+            join_path(from, sizeof from, resources, settings[which].shipped);
+            join_path(to, sizeof to, data_dir, settings[which].game);
+            join_path(applied, sizeof applied, applied_root, settings[which].game);
+            if (rominabox_apply_shipped_settings(from, to, applied, failed, sizeof failed) != 0)
+                die_errno(failed);
+        }
         join_path(from, sizeof from, resources, "firmware");
         join_path(to, sizeof to, data_dir, "system");
-        seed_files(from, to);
+        join_path(applied, sizeof applied, applied_root, "system.list");
+        if (rominabox_replace_shipped_files(from, to, applied, failed, sizeof failed) != 0)
+            die_errno(failed);
     }
 
     load_base(&lines, &line_count, &line_capacity, config_text, data_dir, bundle);

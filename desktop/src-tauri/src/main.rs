@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use rominabox_desktop::export_error::{AuthorError, ErrorStage};
 use rominabox_desktop::{cores, icons, menu, metadata, packaging, projects, systems, traveling};
 use std::{
     fs,
@@ -62,7 +63,7 @@ async fn inspect_game(
 #[tauri::command]
 async fn image_preview(path: PathBuf) -> Result<Vec<u8>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let image = icons::read_image(&path).map_err(|e| e.to_string())?;
+        let image = icons::read_image(&path).map_err(|e| e.sentence())?;
         let mut png = Cursor::new(Vec::new());
         image
             .thumbnail(512, 512)
@@ -158,14 +159,26 @@ fn cancel_export(state: tauri::State<'_, ExportControl>) -> Result<(), String> {
 }
 
 #[tauri::command]
-/// We keep the stage in the error, so that in the builder we can tell a core
-/// that could not be downloaded from any other failure.
+/// We pass the stage to the builder, so that we can tell a core that could not
+/// be downloaded from any other failure, and pass the sentence to show. We
+/// write the details of the failure to the log.
 async fn export_game(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ExportControl>,
+    request: packaging::ExportRequest,
+) -> Result<packaging::ExportResult, AuthorError> {
+    run_export(app, state, request).await.map_err(|error| {
+        eprintln!("export failed: {error}");
+        error.for_author()
+    })
+}
+
+async fn run_export(
     app: tauri::AppHandle,
     state: tauri::State<'_, ExportControl>,
     mut request: packaging::ExportRequest,
 ) -> Result<packaging::ExportResult, packaging::ExportError> {
-    let shell = |message: String| packaging::ExportError::new("export", message);
+    let shell = |message: String| packaging::ExportError::new(ErrorStage::Export, message);
     request.runtime_kit = resource(&app, "runtime").map_err(shell)?;
     request.core = None;
     request.core_cache = core_cache(&app, packaging::core_platform(&request.target)).ok();
@@ -173,7 +186,10 @@ async fn export_game(
     {
         let mut active = state.0.lock().map_err(|e| shell(e.to_string()))?;
         if active.is_some() {
-            return Err(shell("Another export is already running.".into()));
+            return Err(packaging::ExportError::new(
+                ErrorStage::Refused,
+                "Another export is already running.",
+            ));
         }
         *active = Some(cancelled.clone());
     }
