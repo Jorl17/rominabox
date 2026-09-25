@@ -48,23 +48,20 @@ CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog
 # uses it, or in a checkout where nobody has compiled it the scope fails.
 RMLUI_PREPARE = [["python3", str(ROOT / "scripts/prepare_rmlui.py")]]
 
-# For native workflow comparisons we select a committed player explicitly and
+# For the launched workflow cases we select a committed player explicitly and
 # use isolated storage, in a namespace apart from the other native scopes.
-WORKFLOW_PREFIX = os.environ.get("ROMINABOX_GAME_BUNDLE_PREFIX", "")
 WORKFLOW_COMMAND = [
-    "env", f"ROMINABOX_GAME_BUNDLE_PREFIX={WORKFLOW_PREFIX}.workflows",
+    "env", f"ROMINABOX_GAME_BUNDLE_PREFIX={os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.workflows",
     "python3", str(ROOT / "scripts/menu_workflows.py"),
 ]
-WORKFLOW_UNAVAILABLE = None if (
-    os.environ.get("ROMINABOX_TEST_BUILD")
-    and WORKFLOW_PREFIX.startswith("app.rominabox.game.wt-")
-) else "requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player; name it after configuring both"
 
 
-# The headless navigation driver, built against the cached menu objects.
-NAVIGATION_DRIVER = ROOT / "work/navigation/menu_nav_driver"
-NAVIGATION_SOURCES = [
-    "scripts/native_runtime/menu_nav_driver.cpp",
+# What we link into a headless menu driver beside the cached menu objects,
+# which is the fake RetroArch host, its keyboard and achievements stand-ins,
+# and the libretro-common files for reading the menu's files. We build every
+# driver the same way, so all of them run the same menu.
+HEADLESS_DEFINES = ["--define", "HAVE_AUDIOMIXER"]
+HEADLESS_SUPPORT = [
     "scripts/native_runtime/menu_host_fake.cpp",
     "scripts/native_runtime/text_test_host.cpp",
     "scripts/native_runtime/achievements_fake.cpp",
@@ -73,6 +70,18 @@ NAVIGATION_SOURCES = [
         "streams/file_stream.c", "string/stdstring.c", "vfs/vfs_implementation.c",
         "encodings/encoding_utf.c", "time/rtime.c", "compat/compat_strl.c")),
 ]
+
+
+def headless_driver(output: Path, source: str) -> list[str]:
+    """Return the harness helper's command to build one headless menu driver."""
+    return ["python3", str(ROOT / "scripts/native_runtime/menu_harness.py"), "build",
+            str(output), *HEADLESS_DEFINES,
+            *(str(ROOT / path) for path in [source, *HEADLESS_SUPPORT])]
+
+
+# The navigation driver, and the driver the workflow cases replay through.
+NAVIGATION_DRIVER = ROOT / "work/navigation/menu_nav_driver"
+WORKFLOW_DRIVER = ROOT / "work/workflows/menu_workflow_driver"
 
 
 class Scope:
@@ -194,7 +203,7 @@ SCOPES = [
     ),
     Scope(
         "reporoot",
-        "that nothing finds the repository by the path it was compiled in, that no test or script names one person's ROM directory, and that no script or test names the removed experiment tree",
+        "that nothing finds the repository by the path it was compiled in, that no test or script uses a place in one person's home, that every script building against RmlUi uses the declared one, and that no script or test names the removed experiment tree",
         "that the rule is right, or that a binary really came from elsewhere; it reads how each place asks",
         ["python3", str(ROOT / "scripts/test_repo_root.py")],
     ),
@@ -259,18 +268,23 @@ SCOPES = [
         "physical keyboards, pads or mice, audible sound, or how a highlight looks; a fake RetroArch host stands in for the player and nothing is drawn",
         ["env", f"ROMINABOX_NAVIGATION_DRIVER={NAVIGATION_DRIVER}",
          "cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_navigation", "--", "--include-ignored"],
-        prepare=RMLUI_PREPARE + [["python3", str(ROOT / "scripts/native_runtime/menu_harness.py"), "build",
-                                  str(NAVIGATION_DRIVER), "--define", "HAVE_AUDIOMIXER",
-                                  *(str(ROOT / path) for path in NAVIGATION_SOURCES)]],
+        prepare=RMLUI_PREPARE + [headless_driver(NAVIGATION_DRIVER, "scripts/native_runtime/menu_nav_driver.cpp")],
     ),
     Scope(
         "workflows",
-        "ordinary native screenshot/state/persistence cases and authenticated account screens across both designs and all palettes, in isolated workflow storage",
+        "every menu workflow case (keys, pointer, controls, capture, volume, shaders, saves, overlays, accounts) in both designs and every palette, replayed through the fork's own script driver and report on menus composed as an export composes them, compared checkpoint by checkpoint and file by file with what the launched player recorded",
+        "anything drawn, audible cues, RetroArch's bind descriptions and remap files, or physical input; the fake host stands in for RetroArch, and the workflows-native scope launches a few cases for real",
+        ["env", f"ROMINABOX_WORKFLOW_DRIVER={WORKFLOW_DRIVER}",
+         "cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_workflows", "--", "--include-ignored", "--nocapture"],
+        prepare=RMLUI_PREPARE + [headless_driver(WORKFLOW_DRIVER, "scripts/native_runtime/menu_workflow_driver.cpp")],
+    ),
+    Scope(
+        "workflows-native",
+        "the few workflow cases menu-workflows.json marks `launched`, in the exported player itself: one per design and a save and load through RetroArch's own state task, compared with the same baselines as the headless replay, and each picture",
         "audible cues, physical input or native focus/fullscreen; inspect the captured images directly too",
-        WORKFLOW_COMMAND + ["--composition", "--output", str(SCRATCH / "menu-composition")],
+        WORKFLOW_COMMAND + ["--output", str(SCRATCH / "menu-workflows")],
         slow=True,
-        prepare=[WORKFLOW_COMMAND + ["--output", str(SCRATCH / "menu-workflows")]],
-        skipped=WORKFLOW_UNAVAILABLE,
+        skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player",
     ),
     Scope(
         "edges",

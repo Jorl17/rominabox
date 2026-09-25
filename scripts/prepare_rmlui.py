@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import free_space  # noqa: E402
 from rmlui_paths import (  # noqa: E402
     BUILD_DIR,
     DEST,
@@ -83,17 +84,11 @@ def commands(recipe: str, source_present: bool) -> str:
     return "\n".join(kept) + "\n"
 
 
-def free_gigabytes() -> int:
-    listed = subprocess.check_output(["df", "-g", "/Users/mariowilde"], text=True)
-    return int(listed.splitlines()[1].split()[3])
-
-
 def produce() -> None:
     recipe = player_recipe()
     if ready(recipe):
         return
-    if free_gigabytes() < 20:
-        raise SystemExit("under 20 GB free on /Users/mariowilde; not building RmlUi")
+    free_space.require(20, DEST)
     DEST.mkdir(parents=True, exist_ok=True)
     SOURCE.parent.mkdir(parents=True, exist_ok=True)
     jobs = str(os.cpu_count() or 1)

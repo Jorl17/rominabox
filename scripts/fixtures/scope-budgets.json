@@ -25,6 +25,21 @@
     "isolation": 23.6,
     "overlays": 0.9,
     "shaderstate": 6.0,
-    "quit": 108.0
+    "quit": 108.0,
+    "shipped": 1.2,
+    "accounts": 1.2,
+    "padbinds": 0.2,
+    "glslcore": 0.2,
+    "dcmenu": 3.1,
+    "reporoot": 0.3,
+    "fixtures": 0.1,
+    "symlinks": 0.1,
+    "shotsign": 0.4,
+    "achievement-client": 1.0,
+    "workflows": 2.9,
+    "edges": 18.6,
+    "pictures": 2.5,
+    "fallback": 6.3,
+    "menupreview": 1.4
   }
 }

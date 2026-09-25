@@ -36,6 +36,10 @@ pub fn kit(root: &Path) -> PathBuf {
         &rominabox_desktop::repo::at("desktop/assets/controllers"),
         &kit.join("menu-assets"),
     );
+    copy_tree(
+        &rominabox_desktop::repo::at("desktop/assets/branding"),
+        &kit.join("branding"),
+    );
     kit
 }
 

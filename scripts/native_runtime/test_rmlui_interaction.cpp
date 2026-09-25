@@ -1658,7 +1658,7 @@ int main(int argc, char **argv)
           * The picture column is narrower, so we shorten the same string sooner
           * there. The one-line row uses the width that the picture left free. */
          const char *long_name =
-            "/Users/mariowilde/Games/Final Fantasy VII/Final Fantasy VII/"
+            "/Volumes/Library/Games/Final Fantasy VII/Final Fantasy VII/"
             "Final Fantasy VII/Final Fantasy VII (USA) (Disc 4).cue";
          view.lists.fit_row_title("fixture-one", long_name);
          const std::string fitted(inspect.text("fixture-one-title"));

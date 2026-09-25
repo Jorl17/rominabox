@@ -1,16 +1,15 @@
 {
   "disc/amber/achievements-cancelled-form": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "5c528833107349d6cac8bb2326da92a2b47f5342800a4a73d4b88fc626b29b71",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -56,7 +55,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -101,13 +100,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -157,44 +156,36 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
       "achievements-cancel"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/amber/achievements-return-options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "3a6437c9089f5361a7c43f30b7d6aa5dcfbcddc259fc2db63db5d62142eea27a",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -234,13 +225,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "form": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -292,11 +283,13 @@
         "volumeDb": 0.0
       },
       "form-closed": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -342,58 +335,7 @@
         "volumeDb": 0.0
       },
       "options": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "volume-level"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "options",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      },
-      "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -438,13 +380,64 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -494,21 +487,20 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -517,20 +509,13 @@
       "report:form-closed",
       "key:cancel",
       "report:options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/amber/achievements-sign-in": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "7cc1b36e4d3974c58d8053048eaf764589474256e5df647010ff65c25c9cdfc9",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -582,7 +567,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -627,13 +612,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -683,42 +668,36 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/amber/achievements-signed-out": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "5c528833107349d6cac8bb2326da92a2b47f5342800a4a73d4b88fc626b29b71",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -764,7 +743,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -809,13 +788,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -865,41 +844,35 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/achievements-cancelled-form": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "fd6e8273be83856d9dda61f6f0cb956f9b13ad698bb7ad41a2657b2a059fea84",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -945,7 +918,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -990,13 +963,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -1046,44 +1019,36 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
       "achievements-cancel"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/achievements-return-options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "4967deb9e196dd4cea39ceda36b5c7b545c629f628e62dfbb9040cdd4785be47",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -1123,13 +1088,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "form": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1181,11 +1146,13 @@
         "volumeDb": 0.0
       },
       "form-closed": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -1231,58 +1198,7 @@
         "volumeDb": 0.0
       },
       "options": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "volume-level"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "options",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      },
-      "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1327,13 +1243,64 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -1383,21 +1350,20 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -1406,20 +1372,13 @@
       "report:form-closed",
       "key:cancel",
       "report:options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/achievements-sign-in": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "1984c669c73b2c1f8d3ab8fae888c4c6e07a0d15614b8a507dd549e5d8e328e5",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1471,7 +1430,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1516,13 +1475,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -1572,42 +1531,36 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/achievements-signed-out": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "fd6e8273be83856d9dda61f6f0cb956f9b13ad698bb7ad41a2657b2a059fea84",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -1653,7 +1606,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1698,13 +1651,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -1754,41 +1707,35 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/carbon/achievements-cancelled-form": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "ebdbc0b83e9da18aa30894fb9220772f40952d0bdf31800e339f26d04082acd9",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -1834,7 +1781,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1879,13 +1826,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -1935,44 +1882,36 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
       "achievements-cancel"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/carbon/achievements-return-options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "5499b6a424badea4ab4a47d7c69f43073f2bbfef29546362b0c6be94eba937c9",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -2012,13 +1951,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "form": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -2070,11 +2009,13 @@
         "volumeDb": 0.0
       },
       "form-closed": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -2120,58 +2061,7 @@
         "volumeDb": 0.0
       },
       "options": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "volume-level"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "options",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      },
-      "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -2216,13 +2106,64 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -2272,21 +2213,20 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -2295,20 +2235,13 @@
       "report:form-closed",
       "key:cancel",
       "report:options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/carbon/achievements-sign-in": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "4e479d463888e26d40a9cf53b6189c9174cb2ac5b04a4112d979ab47726fd462",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -2360,7 +2293,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -2405,13 +2338,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -2461,42 +2394,36 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/carbon/achievements-signed-out": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "ebdbc0b83e9da18aa30894fb9220772f40952d0bdf31800e339f26d04082acd9",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -2542,7 +2469,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -2587,13 +2514,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -2643,41 +2570,35 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/green/achievements-cancelled-form": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "6ae27a085e8ff504266a5a643f1e2400fa9390402316eb63bc2280f1b174b216",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -2723,7 +2644,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -2768,13 +2689,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -2824,44 +2745,36 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
       "achievements-cancel"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/green/achievements-return-options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "f183bab474099e7ce945012b5ab93c2ca94b95776f200ed975e96870a1acb028",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -2901,13 +2814,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "form": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -2959,11 +2872,13 @@
         "volumeDb": 0.0
       },
       "form-closed": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -3009,58 +2924,7 @@
         "volumeDb": 0.0
       },
       "options": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "volume-level"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "options",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      },
-      "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -3105,13 +2969,64 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -3161,21 +3076,20 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -3184,20 +3098,13 @@
       "report:form-closed",
       "key:cancel",
       "report:options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/green/achievements-sign-in": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "c23c4a221944103aa03d1851ec372a30a4f9909d5a84cae5fe58a15cbbf44e51",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -3249,7 +3156,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -3294,13 +3201,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -3350,42 +3257,36 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/green/achievements-signed-out": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "6ae27a085e8ff504266a5a643f1e2400fa9390402316eb63bc2280f1b174b216",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -3431,7 +3332,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -3476,13 +3377,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -3532,41 +3433,35 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/violet/achievements-cancelled-form": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "9bebabcc8c325d996607faa2df5288aa6fa22fe64efc2c6e6d6fb245c2c83ca1",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -3612,7 +3507,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -3657,13 +3552,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -3713,44 +3608,36 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
       "achievements-cancel"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/violet/achievements-return-options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "93d27f0f78b6e0139044794cbddb753ff6a41d60cf1c7922fff51aa4aabf026a",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -3790,13 +3677,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "form": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -3848,11 +3735,13 @@
         "volumeDb": 0.0
       },
       "form-closed": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -3898,58 +3787,7 @@
         "volumeDb": 0.0
       },
       "options": {
-        "bindsBox": [],
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "volume-level"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "options",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      },
-      "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -3994,13 +3832,64 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -4050,21 +3939,20 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -4073,20 +3961,13 @@
       "report:form-closed",
       "key:cancel",
       "report:options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/violet/achievements-sign-in": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "37fd041a01c4ddb798503e85fa6b6e02ae50c414e1a2f734a9bda4d02d73f68f",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4138,7 +4019,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4183,13 +4064,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -4239,42 +4120,36 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/violet/achievements-signed-out": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "9bebabcc8c325d996607faa2df5288aa6fa22fe64efc2c6e6d6fb245c2c83ca1",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -4320,7 +4195,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4365,13 +4240,13 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "INDEX"
+          "heading": "OPTIONS"
         },
         "transferPending": false,
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -4421,41 +4296,35 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": ""
+          "status": "CHOOSE A BLOCK"
         },
         "transferPending": false,
         "volumeDb": 0.0
       }
     },
     "script": [
-      "key:right",
-      "key:right",
-      "key:right",
+      "key:down",
+      "key:down",
+      "key:down",
       "report:pause-entry",
       "key:ok",
-      "key:down",
-      "key:down",
-      "key:down",
+      "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/amber/achievements-cancelled-form": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "14ceeeb3d372c0717421b2d5c5a9b869c7164feaca6733ac2d2675461427915d",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -4501,7 +4370,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4552,7 +4421,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -4602,7 +4471,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -4620,25 +4489,18 @@
       "key:ok",
       "key:ok",
       "achievements-cancel"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/amber/achievements-return-options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "7cb9e3a89d337905d513115bf8bc3ceddd625e7243541c2ff745db19c3fca4d4",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -4684,7 +4546,7 @@
         "volumeDb": 0.0
       },
       "form": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4736,11 +4598,13 @@
         "volumeDb": 0.0
       },
       "form-closed": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -4786,12 +4650,12 @@
         "volumeDb": 0.0
       },
       "options": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -4837,7 +4701,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4888,7 +4752,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -4938,7 +4802,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -4960,20 +4824,13 @@
       "report:form-closed",
       "key:cancel",
       "report:options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/amber/achievements-sign-in": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "faf5af0d205214123cd563175720dac8c34954cac6182038420ea366b407dcfa",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5025,7 +4882,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5076,7 +4933,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -5126,7 +4983,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -5143,24 +5000,19 @@
       "report:options-entry",
       "key:ok",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/amber/achievements-signed-out": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "14ceeeb3d372c0717421b2d5c5a9b869c7164feaca6733ac2d2675461427915d",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -5206,7 +5058,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5257,7 +5109,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -5307,7 +5159,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -5323,24 +5175,19 @@
       "key:down",
       "report:options-entry",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/achievements-cancelled-form": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "c57e40eea0a59c907b97691886b1f44f790d37381e2f6191508d876e0ab63b10",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -5386,7 +5233,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5437,7 +5284,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -5487,7 +5334,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -5505,25 +5352,18 @@
       "key:ok",
       "key:ok",
       "achievements-cancel"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/achievements-return-options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "495561ab18766b35997ef4f6a373d60dced9b092407fa92f4534d80ac068d71c",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -5569,7 +5409,7 @@
         "volumeDb": 0.0
       },
       "form": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5621,11 +5461,13 @@
         "volumeDb": 0.0
       },
       "form-closed": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -5671,12 +5513,12 @@
         "volumeDb": 0.0
       },
       "options": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -5722,7 +5564,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5773,7 +5615,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -5823,7 +5665,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -5845,20 +5687,13 @@
       "report:form-closed",
       "key:cancel",
       "report:options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/achievements-sign-in": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "d041d90b1a75b0e2a96b40d7418bad291a5adb792deefb8fa76b24c4f2dd25e9",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5910,7 +5745,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5961,7 +5796,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -6011,7 +5846,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -6028,24 +5863,19 @@
       "report:options-entry",
       "key:ok",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/achievements-signed-out": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "c57e40eea0a59c907b97691886b1f44f790d37381e2f6191508d876e0ab63b10",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -6091,7 +5921,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -6142,7 +5972,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -6192,7 +6022,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -6208,24 +6038,19 @@
       "key:down",
       "report:options-entry",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/carbon/achievements-cancelled-form": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "7b88d77cc4d233be83ad02ea63504c96c1b490dde437635342fa88742152b2d0",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -6271,7 +6096,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -6322,7 +6147,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -6372,7 +6197,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -6390,25 +6215,18 @@
       "key:ok",
       "key:ok",
       "achievements-cancel"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/carbon/achievements-return-options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "1543464987d4e7430390291c2f27e371dcb33f5caab76fdc5c92b466cada2e75",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -6454,7 +6272,7 @@
         "volumeDb": 0.0
       },
       "form": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -6506,11 +6324,13 @@
         "volumeDb": 0.0
       },
       "form-closed": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -6556,12 +6376,12 @@
         "volumeDb": 0.0
       },
       "options": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -6607,7 +6427,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -6658,7 +6478,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -6708,7 +6528,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -6730,20 +6550,13 @@
       "report:form-closed",
       "key:cancel",
       "report:options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/carbon/achievements-sign-in": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "da0ff71f47562d6fc24dfc1f745544680dfb883e10a8ab2182a77dfd7e23ff06",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -6795,7 +6608,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -6846,7 +6659,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -6896,7 +6709,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -6913,24 +6726,19 @@
       "report:options-entry",
       "key:ok",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/carbon/achievements-signed-out": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "7b88d77cc4d233be83ad02ea63504c96c1b490dde437635342fa88742152b2d0",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -6976,7 +6784,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7027,7 +6835,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -7077,7 +6885,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -7093,24 +6901,19 @@
       "key:down",
       "report:options-entry",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/green/achievements-cancelled-form": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "4f38406d022c6a1a58d57a0c2200055a4f1d6a013f90e254a6da60c1b895191a",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -7156,7 +6959,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7207,7 +7010,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -7257,7 +7060,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -7275,25 +7078,18 @@
       "key:ok",
       "key:ok",
       "achievements-cancel"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/green/achievements-return-options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "617d07ba951563ca52df7adfd35b1a313a26ea75d12a6c85ef374ee91a21e365",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -7339,7 +7135,7 @@
         "volumeDb": 0.0
       },
       "form": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7391,11 +7187,13 @@
         "volumeDb": 0.0
       },
       "form-closed": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -7441,12 +7239,12 @@
         "volumeDb": 0.0
       },
       "options": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -7492,7 +7290,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7543,7 +7341,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -7593,7 +7391,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -7615,20 +7413,13 @@
       "report:form-closed",
       "key:cancel",
       "report:options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/green/achievements-sign-in": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "bdeff2e496c899a75021ebe7fb178bbe1b11ebd669a5bc0791238d4103b1e6e7",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7680,7 +7471,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7731,7 +7522,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -7781,7 +7572,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -7798,24 +7589,19 @@
       "report:options-entry",
       "key:ok",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/green/achievements-signed-out": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "4f38406d022c6a1a58d57a0c2200055a4f1d6a013f90e254a6da60c1b895191a",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -7861,7 +7647,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7912,7 +7698,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -7962,7 +7748,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -7978,24 +7764,19 @@
       "key:down",
       "report:options-entry",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/violet/achievements-cancelled-form": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "75deee198c1a67e25cb1e961f241e2788c7b1326f02d47b74892310f22c78858",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -8041,7 +7822,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -8092,7 +7873,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -8142,7 +7923,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -8160,25 +7941,18 @@
       "key:ok",
       "key:ok",
       "achievements-cancel"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/violet/achievements-return-options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "7f26c225c3fbe7555b2e92c71c29005d06655698c739875805fcc137508909f8",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -8224,7 +7998,7 @@
         "volumeDb": 0.0
       },
       "form": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -8276,11 +8050,13 @@
         "volumeDb": 0.0
       },
       "form-closed": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -8326,12 +8102,12 @@
         "volumeDb": 0.0
       },
       "options": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
         "focused": [
-          "volume-level"
+          "achievements"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -8377,7 +8153,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -8428,7 +8204,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -8478,7 +8254,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -8500,20 +8276,13 @@
       "report:form-closed",
       "key:cancel",
       "report:options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/violet/achievements-sign-in": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "686cfdddbb1db1ee615537b791434c1f395ae86cdf1119491ce842b0e32afe70",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -8565,7 +8334,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -8616,7 +8385,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -8666,7 +8435,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -8683,24 +8452,19 @@
       "report:options-entry",
       "key:ok",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/violet/achievements-signed-out": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "75deee198c1a67e25cb1e961f241e2788c7b1326f02d47b74892310f22c78858",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
-        "focused": [],
+        "focused": [
+          "achievements-login"
+        ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
@@ -8746,7 +8510,7 @@
         "volumeDb": 0.0
       },
       "options-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -8797,7 +8561,7 @@
         "volumeDb": 0.0
       },
       "pause-entry": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [
@@ -8847,7 +8611,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "GAME PAUSED",
-          "status": ""
+          "status": "CHOOSE A SLOT"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -8863,10 +8627,6 @@
       "key:down",
       "report:options-entry",
       "key:ok"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   }
 }

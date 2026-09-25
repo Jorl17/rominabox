@@ -42,8 +42,10 @@ from pathlib import Path
 from typing import Iterator
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import free_space  # noqa: E402
 import menu_shots  # noqa: E402
 import player_support  # noqa: E402
+import scratch  # noqa: E402
 from core_source import core as local_core  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -224,18 +226,19 @@ def run(content: Path, disc: int | None = None) -> dict[str, dict]:
 LOAD_FRAMES = 240
 PLAYER = ROOT / "work" / "discs-player"
 SHOTS = PLAYER / "shots"
-SWAPPED = "core image 1 of 2"
+# The line we write in the fork (runloop.c) after the tray has closed on the
+# chosen disc, when the second image is in and not only selected.
+SWAPPED = "tray closed, core image 1 of 2"
+# The tray closes a fixed number of frames after a swap in RetroArch. We
+# wait this long after the click before we end the run, and we print SWAPPED
+# in the player when the tray has closed in that time. So a longer delay
+# fails as a missing line, never as a wrong index.
+AFTER_SWAP_FRAMES = 240
 
 
-def free_gb() -> int:
-    line = subprocess.run(
-        ["df", "-g", "/Users/mariowilde"],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=15,
-    ).stdout.splitlines()[1]
-    return int(line.split()[3])
+def require_disk() -> None:
+    """The space we need for the exports in the temporary directory and for the shots."""
+    free_space.require(22, Path(tempfile.gettempdir()), PLAYER)
 
 
 def design_screens(design: str) -> list[dict]:
@@ -295,29 +298,31 @@ def one_disc_steps(design: str) -> list[str]:
     return [options["button"]]
 
 
-def tray_countdown() -> int:
-    """The number of frames between disk_control_set_index and the tray closing.
-
-    The script must not end during that wait. Otherwise the done line contains
-    the index while the tray is still open, and that is not the line we write
-    in the fork once the disc is in.
-    """
-    text = (ROOT / "vendor/retroarch/disk_control_interface.c").read_text()
-    found = re.search(r"pending_disk_control_insert\s*=\s*(\d+)", text)
-    if not found:
-        raise SystemExit("disk_control_set_index no longer waits before closing the tray")
-    return int(found.group(1))
-
-
 def index_extension() -> str:
-    text = (ROOT / "vendor/retroarch/file_path_special.h").read_text()
-    found = re.search(
-        r'#define FILE_PATH_DISK_CONTROL_INDEX_EXTENSION "([^"]+)"',
-        text,
+    """Return the file extension of a game's tray record in RetroArch.
+
+    We declare it in the fork in file_path_special.h, which is compiled into
+    RetroArch. We compile the same header here and print the value, so we use
+    the name from the player and not a copy of it.
+    """
+    probe_source = (
+        '#include "file_path_special.h"\n#include <stdio.h>\n'
+        "int main(void) { fputs(FILE_PATH_DISK_CONTROL_INDEX_EXTENSION, stdout); return 0; }\n"
     )
-    if not found:
-        raise SystemExit("the disc index record has no extension")
-    return found.group(1)
+    with scratch.scratch("rominabox-discs-index-") as made:
+        probe = Path(made) / "index-extension"
+        built = subprocess.run(
+            ["cc", "-x", "c", "-", "-o", str(probe),
+             "-I", str(ROOT / "vendor/retroarch"), "-I", str(LIBRETRO)],
+            input=probe_source, capture_output=True, text=True, timeout=60,
+        )
+        if built.returncode != 0:
+            raise SystemExit(f"could not compile file_path_special.h:\n{built.stderr[-600:]}")
+        extension = subprocess.run([str(probe)], capture_output=True, text=True,
+                                   check=True, timeout=15).stdout
+    if not extension.startswith("."):
+        raise SystemExit(f"the disc index record has no extension: {extension!r}")
+    return extension
 
 
 def script_of(steps: list[str], after: int | None = None) -> str:
@@ -509,8 +514,7 @@ def require_swap(design: str, written: str) -> str | None:
 
 @contextmanager
 def export_game(content: Path, design: str) -> Iterator[Path]:
-    if free_gb() < 22:
-        raise SystemExit(f"disk has {free_gb()} GB free, below 22; stopping")
+    require_disk()
     print(f"export {design} {content.name}", flush=True)
     with menu_shots.build_a_game(
         content,
@@ -699,8 +703,7 @@ def options_entry_visible(app: Path, shot: Path, button_id: str) -> bool:
 
 
 def exported_player(playlist: Path) -> list[str]:
-    if free_gb() < 22:
-        return [f"disk has {free_gb()} GB free, below 22; stopping"]
+    require_disk()
     fresh_player_dir()
     before = player_support.snapshot()
     found: list[str] = []
@@ -711,7 +714,7 @@ def exported_player(playlist: Path) -> list[str]:
                 exported_apps.append(app)
                 written = launch(
                     app,
-                    script_of(swap_steps(design), tray_countdown() + 40),
+                    script_of(swap_steps(design), AFTER_SWAP_FRAMES),
                     SHOTS / f"{design}-two-list.png",
                 )
                 problem = require_swap(design, written)
