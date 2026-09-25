@@ -31,6 +31,11 @@ pub struct MenuRequest {
     /// How many discs the game has. The disc list, and its Options entry,
     /// exist only for more than one.
     pub discs: usize,
+    /// The export's defaults for the settings the player changes in Options.
+    pub settings: crate::player_settings::Defaults,
+    /// The game has a menu sound pack, and we play its movement cue when the
+    /// volume changes. Without a pack we ship a tick for the volume.
+    pub sound_pack: bool,
 }
 
 impl MenuRequest {
@@ -49,6 +54,8 @@ impl MenuRequest {
             menu_entries: None,
             shaders: ShaderSelection::default(),
             discs: 1,
+            settings: crate::player_settings::Defaults::default(),
+            sound_pack: false,
         }
     }
 }
@@ -199,7 +206,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         let splash = manifest.fragment(&manifest.documents.splash)?;
         super::contract::validate_splash(&manifest, &splash)?;
         let staged = document::staged_screens(&manifest.screens, None, request.discs)?;
-        let cfg = declarations::write(&manifest, &staged, &[], &splash)?;
+        let cfg = declarations::write(&manifest, &staged, &[], &[], &splash)?;
         let splash = parts(&mut composition, &manifest, &values, &splash)?;
         composition.put("menu.rml", Content::Text(splash));
         composition.put("menu.rcss", Content::Text(stylesheet));
@@ -267,9 +274,11 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         .replace(scene::CONTROLS_SLOT, &scene.markup)
         .replace(scene::PICKER_SLOT, &scene.picker)
         .replace(scene::BINDS_SLOT, &scene.binds);
-    let menu = document::apply_options(&manifest, &menu, &staged)?;
-    // Volume is part of the Options screen that we just built.
-    let menu = document::install_volume_control(&menu, &manifest.design)?;
+    let settings = crate::player_settings::declared(request.settings);
+    let menu = document::apply_options(&manifest, &menu, &staged, &settings)?;
+    // The rest of the player's settings are parts of the Options screen that
+    // we just built.
+    let menu = document::install_settings(&menu, &manifest.design, &settings)?;
     let mut menu = tokens::substitute(&menu, &tokens::product())?;
     if !staged
         .iter()
@@ -279,7 +288,18 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     }
     let (menu, installed) = crate::lists::install(&manifest, &menu, &staged, &lists)?;
     super::contract::validate(&manifest, &menu, &staged.iter().collect::<Vec<_>>())?;
-    let cfg = declarations::write(&manifest, &staged, &installed, &menu)?;
+    let cfg = declarations::write(&manifest, &staged, &installed, &settings, &menu)?;
+    // We play a sound for a change of volume in every game with a volume
+    // control: the movement cue of the pack, or in a game without a pack the
+    // tick for the volume, which we ship only then.
+    let volume = crate::player_settings::volume();
+    if !request.sound_pack && menu.contains(&format!("id=\"{}\"", volume.control())) {
+        let tick = crate::volume::tick_file();
+        composition.put(
+            tick,
+            Content::Copy(document::parts_root(&manifest.design)?.join(tick)),
+        );
+    }
     let menu = parts(&mut composition, &manifest, &values, &menu)?;
 
     let mut stylesheet = stylesheet;
@@ -511,7 +531,7 @@ mod tests {
         copy(&crate::repo::at("integrations/parts"), &root.join("parts"));
         std::fs::write(
             designs.join("disc/option-entry.rml"),
-            "<button id=\"BUTTON\" class=\"menu-action option-entry list-row\" style=\"top: TOPdp;\">LABEL</button>",
+            "<button id=\"BUTTON\" class=\"menu-action option-entry list-row\">LABEL</button>",
         )
         .unwrap();
         let templated = compose(MenuRequest {
@@ -524,7 +544,7 @@ mod tests {
         });
         let templated = templated.text("menu.rml").unwrap();
         assert!(
-            templated.contains("<button id=\"shaders\" class=\"menu-action option-entry list-row\" style=\"top: 0dp;\">FILTERS</button>"),
+            templated.contains("<button id=\"shaders\" class=\"menu-action option-entry list-row\">FILTERS</button>"),
             "the design's entry template is what gets filled"
         );
     }
@@ -577,10 +597,10 @@ mod tests {
         let button = &staged[bounds.0..bounds.1];
         assert!(button.contains("display: none"), "{button}");
         assert!(button.contains("disabled"), "{button}");
+        // We place the entries with the design's stylesheet and write no
+        // position, so a hidden entry leaves no gap.
         let controls = button_bounds(staged, "controls").expect("controls");
-        assert!(staged[controls.0..controls.1].contains("top: 0dp"));
-        let step = Manifest::load(&design("native")).unwrap().option_entry_step;
-        assert!(button.contains(&format!("top: {step}dp")), "{button}");
+        assert!(!staged[controls.0..controls.1].contains("top:"));
         let actions_at = staged.find("id=\"actions\"").expect("pause row");
         let panel_at = staged.find("id=\"options-panel\"").expect("options");
         assert!(!staged[actions_at..panel_at].contains("id=\"discs\""));

@@ -172,7 +172,7 @@ fn volume_drops_into_options_and_does_not_open_a_screen() {
     let root = scratch("rominabox-volume-in-options");
     let design = bare_design(&root);
     let document = r#"<body><div id="options-panel" style="display:none;"><div id="options-entries"><button class="menu-action option-entry" id="controls">CONTROLS</button></div></div><div id="footer"></div></body>"#;
-    let installed = rominabox_desktop::menu::install_volume_control(document, &design).unwrap();
+    let installed = rominabox_desktop::menu::install_settings(document, &design, &[rominabox_desktop::player_settings::volume()]).unwrap();
     let panel = installed.find("id=\"options-panel\"").expect("options panel");
     let control = installed.find("id=\"volume-control\"").expect("the control");
     let entries = installed.find("id=\"options-entries\"").expect("the links");
@@ -194,7 +194,7 @@ fn a_menu_with_no_options_screen_has_no_volume_control() {
     let root = scratch("rominabox-volume-nowhere");
     let design = bare_design(&root);
     let document = r#"<body><button class="menu-action" id="quit">QUIT</button><div id="footer"></div></body>"#;
-    let installed = rominabox_desktop::menu::install_volume_control(document, &design).unwrap();
+    let installed = rominabox_desktop::menu::install_settings(document, &design, &[rominabox_desktop::player_settings::volume()]).unwrap();
     assert!(
         !installed.contains("volume"),
         "volume lives in Options, so a menu without that screen does not grow one, got {installed}"

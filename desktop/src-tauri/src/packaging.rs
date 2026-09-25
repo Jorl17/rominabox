@@ -451,6 +451,13 @@ where
     }
 }
 
+/// The defaults of the player's settings that the author chose in `request`.
+fn player_defaults(request: &ExportRequest) -> crate::player_settings::Defaults {
+    crate::player_settings::Defaults {
+        keep_playing_in_background: request.keep_playing_in_background,
+    }
+}
+
 /// The in-game menu that we ship in an export of `request`, for a game with
 /// `discs` discs. We use this one mapping in the tests too, so that we test
 /// exactly what an export would stage.
@@ -467,6 +474,8 @@ pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuR
         menu_entries: request.menu_entries.clone(),
         shaders: request.shaders.clone(),
         discs,
+        settings: player_defaults(request),
+        sound_pack: request.menu_sounds != "off",
         // Controller artwork is not part of a design. We show the same pads in
         // every design, from the shared menu-assets in the kit.
         ..crate::menu::MenuRequest::new(
@@ -1422,7 +1431,10 @@ fn isolated_runtime_config(request: &ExportRequest) -> String {
     } else {
         "null"
     };
-    let menu_audio = request.show_menu && request.menu_sounds != "off";
+    // We keep the game's audio running in the menu, so the player hears a
+    // change of volume, and play pack cues only when the export has a pack.
+    let menu_audio = request.show_menu;
+    let menu_sounds = request.show_menu && request.menu_sounds != "off";
     // We set both halves with one option. The file is `<savestate>.auto`, not
     // a numbered pause-menu slot, so Save and Load on that row are unchanged.
     let autosave = if request.autosave_on_quit {
@@ -1430,14 +1442,7 @@ fn isolated_runtime_config(request: &ExportRequest) -> String {
     } else {
         "false"
     };
-    // On means the game keeps running, so RetroArch must not pause. We put it
-    // in the frozen config, so a later player controls.cfg cannot replace it.
-    let pause_nonactive = if request.keep_playing_in_background {
-        "false"
-    } else {
-        "true"
-    };
-    let assets = if menu_audio {
+    let assets = if menu_sounds {
         "$bundle_dir/Resources/assets"
     } else {
         "$data_dir/assets"
@@ -1446,9 +1451,9 @@ fn isolated_runtime_config(request: &ExportRequest) -> String {
         r#"video_driver = "gl"
 audio_driver = "coreaudio"
 audio_enable_menu = "{menu_audio}"
-audio_enable_menu_ok = "{menu_audio}"
-audio_enable_menu_cancel = "{menu_audio}"
-audio_enable_menu_scroll = "{menu_audio}"
+audio_enable_menu_ok = "{menu_sounds}"
+audio_enable_menu_cancel = "{menu_sounds}"
+audio_enable_menu_scroll = "{menu_sounds}"
 audio_enable_menu_bgm = "false"
 audio_enable_menu_notice = "false"
 cheevos_enable = "false"
@@ -1475,7 +1480,6 @@ savefile_directory = "$data_dir/saves"
 savestate_directory = "$data_dir/states"
 savestate_auto_save = "{autosave}"
 savestate_auto_load = "{autosave}"
-pause_nonactive = "{pause_nonactive}"
 system_directory = "$data_dir/system"
 cache_directory = "$data_dir/cache"
 log_dir = "$data_dir/logs"
@@ -1729,7 +1733,7 @@ fn write_launch_plan(
          start_at_menu\t{start}\n\
          advanced\t{advanced}\n\
          achievements\t{achievements}\n\
-         volume_file\t{volume}\n\
+         {settings}\
          shader_initial\t{shader}\n\
          data_dir\t{data_dir}\n\
          {accounts}\
@@ -1749,7 +1753,10 @@ fn write_launch_plan(
             } else {
                 "0"
             },
-        volume = crate::volume::file_name(),
+        settings = crate::player_settings::declared(player_defaults(request))
+            .iter()
+            .map(crate::player_settings::PlayerSetting::launch_line)
+            .collect::<String>(),
         shader = shader_initial,
         data_dir = game_data_template(identity),
         accounts = accounts_folder(request)?
@@ -2315,28 +2322,64 @@ mod tests {
     #[test]
     fn export_records_background_play_and_quit_autosave() {
         let mut settings = request(false);
-        let off = embedded_runtime_config(&write_test_launcher(settings.clone()));
+        let plan = write_test_launcher(settings.clone());
+        let off = embedded_runtime_config(&plan);
         assert_eq!(
             config_value(&off, "savestate_auto_save"),
             Some("false"),
             "quit autosave is left at RetroArch's default instead of being written"
         );
         assert_eq!(config_value(&off, "savestate_auto_load"), Some("false"));
-        assert_eq!(
-            config_value(&off, "pause_nonactive"),
-            Some("true"),
-            "keeping the window in the background off still has to say so, where a player file cannot replace it"
+        // The player can change background play. The export contains only the
+        // default, which we apply at launch until the player chooses. In the
+        // frozen config, the choice of the player could not replace it.
+        assert_eq!(config_value(&off, "pause_nonactive"), None);
+        assert!(
+            plan.contains("player_setting\tbackground-play.cfg\tpause_nonactive\ttrue\n"),
+            "{plan}"
         );
 
         settings.keep_playing_in_background = true;
         settings.autosave_on_quit = true;
-        let on = embedded_runtime_config(&write_test_launcher(settings.clone()));
+        let plan = write_test_launcher(settings.clone());
+        let on = embedded_runtime_config(&plan);
         assert_eq!(config_value(&on, "savestate_auto_save"), Some("true"));
         assert_eq!(config_value(&on, "savestate_auto_load"), Some("true"));
+        assert_eq!(config_value(&on, "pause_nonactive"), None);
+        assert!(
+            plan.contains("player_setting\tbackground-play.cfg\tpause_nonactive\tfalse\n"),
+            "{plan}"
+        );
+    }
+
+    /// We keep the game audio running in the menu, so the player can hear a
+    /// change of volume. With menu sounds Off we play none of the cues of the
+    /// pack, and with a pack we play them all.
+    #[test]
+    fn the_menu_keeps_audio_for_the_volume_and_the_pack_decides_its_cues() {
+        let mut settings = request(false);
+        settings.show_menu = true;
+        let off = embedded_runtime_config(&write_test_launcher(settings.clone()));
+        assert_eq!(config_value(&off, "audio_enable_menu"), Some("true"));
+        for cue in ["ok", "cancel", "scroll"] {
+            assert_eq!(
+                config_value(&off, &format!("audio_enable_menu_{cue}")),
+                Some("false"),
+                "menu sounds Off plays no {cue} cue"
+            );
+        }
+        settings.menu_sounds = "blip".into();
+        let pack = embedded_runtime_config(&write_test_launcher(settings));
+        for cue in ["ok", "cancel", "scroll"] {
+            assert_eq!(
+                config_value(&pack, &format!("audio_enable_menu_{cue}")),
+                Some("true"),
+                "a pack plays its {cue} cue"
+            );
+        }
         assert_eq!(
-            config_value(&on, "pause_nonactive"),
-            Some("false"),
-            "keeping the window in the background on is the same frozen key, not a player default"
+            config_value(&pack, "assets_directory"),
+            Some("$bundle_dir/Resources/assets")
         );
     }
 

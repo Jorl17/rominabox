@@ -1,4 +1,5 @@
-"""Check that the core options in an export reach the game's options file.
+"""Check that the core options in an export reach the game's options file,
+and that the settings a player chose in the game's menu reach the next launch.
 
 The options of a core come from the game's data directory, not from the app,
 so in the launcher we put the export's values there before RetroArch starts.
@@ -6,6 +7,12 @@ A file already in the data directory must not hide the export's values,
 whether it is a copy from an older data location, a file from an earlier
 export of the same game, or a file that RetroArch rewrote with every option
 of the core. A value that the player changed after we last set it stays.
+
+For a player setting it is the other way round, and in the export we only
+set the default. On the next launch we give RetroArch the value that the
+player chose in the game's menu, from a separate file in the game's data,
+whatever the default in a later export. A player who never chose gets the
+default from the export.
 
 We compile the launcher as a plan tool, with which we prepare the data
 directory and exit before any core or window exists.
@@ -51,7 +58,15 @@ def compile_plan(directory: Path) -> Path:
     return binary
 
 
-def ship_plan(app: Path, data: Path) -> None:
+# The lines in which we declare the player settings in an export's plan, as
+# we write them in packaging: file, key, default.
+PLAYER_SETTINGS = (
+    "player_setting\tvolume.cfg\taudio_volume\t0.0\n"
+    "player_setting\tbackground-play.cfg\tpause_nonactive\t{pause}\n"
+)
+
+
+def ship_plan(app: Path, data: Path, pause_nonactive: str = "true") -> None:
     """Return the export's launch plan, with `data` as its data directory."""
     resources = app / "Contents" / "Resources"
     resources.mkdir(parents=True, exist_ok=True)
@@ -59,8 +74,8 @@ def ship_plan(app: Path, data: Path) -> None:
         "identity\tplan\n"
         "content\tcontent\n"
         "title\tPlan\n"
-        "volume_file\tvolume.cfg\n"
-        f"data_dir\t{data}\n"
+        + PLAYER_SETTINGS.format(pause=pause_nonactive)
+        + f"data_dir\t{data}\n"
         "managed\tlogs\n"
         "\n---config---\n"
         'audio_driver = "null"\n'
@@ -227,9 +242,63 @@ def run() -> list[str]:
     return failures
 
 
+def run_player_settings() -> list[str]:
+    """Return the value we give RetroArch for a setting the player changes in the menu."""
+    failures = []
+
+    def expect(label: str, data: Path, key: str, wanted: str | None) -> None:
+        got = values(data / "retroarch.cfg").get(key)
+        if got != wanted:
+            failures.append(f"{label}: {key} is {got!r}, expected {wanted!r}")
+
+    with scratch.scratch("rominabox-player-settings-") as made:
+        root = Path(made)
+        binary = compile_plan(root)
+        app = binary.parents[2]
+        home = root / "home"
+        home.mkdir()
+        data = root / "data"
+
+        # With nothing chosen, each setting has the export's default.
+        ship_plan(app, data, pause_nonactive="true")
+        launch(binary, home)
+        expect("no choice", data, "pause_nonactive", "true")
+        expect("no choice", data, "audio_volume", "0.0")
+        if (data / "background-play.cfg").exists():
+            failures.append("the export's default was written into the player's file")
+
+        # A player who never chose gets the new default from a new export.
+        ship_plan(app, data, pause_nonactive="false")
+        launch(binary, home)
+        expect("new default, no choice", data, "pause_nonactive", "false")
+
+        # The player chooses in the menu, and we write the setting's file.
+        (data / "background-play.cfg").write_text('pause_nonactive = "true"\n')
+        (data / "volume.cfg").write_text('audio_volume = "-35.6"\n')
+        launch(binary, home)
+        expect("the player's choice", data, "pause_nonactive", "true")
+        expect("the player's choice", data, "audio_volume", "-35.6")
+
+        # After a re-export with the other default, the player's choice stays.
+        ship_plan(app, data, pause_nonactive="false")
+        launch(binary, home)
+        expect("re-export after a choice", data, "pause_nonactive", "true")
+        if values(data / "background-play.cfg").get("pause_nonactive") != "true":
+            failures.append("a re-export changed the player's own file")
+
+        # Only the setting's key comes from its file.
+        (data / "background-play.cfg").write_text(
+            'pause_nonactive = "false"\nvideo_driver = "vulkan"\n')
+        launch(binary, home)
+        expect("a stray key in a setting's file", data, "video_driver", None)
+        expect("a stray key in a setting's file", data, "pause_nonactive", "false")
+    return failures
+
+
 # The modules we will share with a Windows launcher. We cannot run them on
 # Windows here, but we compile them for it, to catch any POSIX-only call.
-PORTABLE = ("shipped_settings.c", "shipped_files.c", "portable_fs.c", "accounts_folder.c")
+PORTABLE = ("shipped_settings.c", "shipped_files.c", "portable_fs.c", "accounts_folder.c",
+            "player_settings.c")
 
 
 def windows_build(directory: Path) -> list[str]:
@@ -250,7 +319,7 @@ def windows_build(directory: Path) -> list[str]:
 
 
 def main() -> int:
-    failures = run()
+    failures = run() + run_player_settings()
     with scratch.scratch("rominabox-core-options-windows-") as made:
         failures += windows_build(Path(made))
     for failure in failures:

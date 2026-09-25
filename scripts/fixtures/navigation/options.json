@@ -36,8 +36,8 @@
         ],
         "disc": [
           "volume-level",
-          "achievements",
-          "shaders"
+          "background-play",
+          "achievements"
         ]
       }
     },
@@ -86,10 +86,10 @@
             "confirm"
           ],
           [
-            "move"
+            "level"
           ],
           [
-            "move"
+            "level"
           ]
         ]
       }
@@ -115,7 +115,7 @@
           "volume-level",
           "controls",
           "shaders",
-          "achievements",
+          "background-play",
           "achievements"
         ],
         "disc": [
@@ -143,7 +143,7 @@
           "controls",
           "shaders",
           "achievements",
-          "options-back",
+          "background-play",
           "options-back"
         ],
         "options-columns": [
@@ -188,7 +188,7 @@
           "volume-level",
           "controls",
           "achievements",
-          "options-back",
+          "background-play",
           "options-back"
         ],
         "disc": [

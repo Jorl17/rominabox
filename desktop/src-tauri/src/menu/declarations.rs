@@ -7,6 +7,7 @@
 
 use super::manifest::{Manifest, Screen, ScreenPlace, Toggle};
 use crate::lists::Installed;
+use crate::player_settings::{Kind, PlayerSetting};
 
 /// One `key = "value"` line.
 fn line(text: &mut String, key: &str, value: &str) -> Result<(), String> {
@@ -98,6 +99,40 @@ fn toggle_lines(text: &mut String, toggle: &Toggle) -> Result<(), String> {
     )
 }
 
+fn setting_lines(text: &mut String, setting: &PlayerSetting) -> Result<(), String> {
+    let id = setting.id;
+    line(text, &format!("setting_control_{id}"), &setting.control())?;
+    line(text, &format!("setting_key_{id}"), setting.key.name())?;
+    line(text, &format!("setting_file_{id}"), &setting.file())?;
+    match setting.kind {
+        Kind::Level {
+            low,
+            high,
+            positions,
+            ..
+        } => {
+            line(text, &format!("setting_kind_{id}"), "level")?;
+            line(text, &format!("setting_low_{id}"), &low.to_string())?;
+            line(text, &format!("setting_high_{id}"), &high.to_string())?;
+            line(
+                text,
+                &format!("setting_positions_{id}"),
+                &positions.to_string(),
+            )
+        }
+        Kind::Switch { on, off, inverted } => {
+            line(text, &format!("setting_kind_{id}"), "switch")?;
+            line(text, &format!("setting_on_{id}"), on)?;
+            line(text, &format!("setting_off_{id}"), off)?;
+            line(
+                text,
+                &format!("setting_inverted_{id}"),
+                &inverted.to_string(),
+            )
+        }
+    }
+}
+
 /// The declarations for `markup`, the finished document.
 ///
 /// We declare a screen when the author left it on (`staged`) and the document
@@ -109,6 +144,7 @@ pub(crate) fn write(
     manifest: &Manifest,
     staged: &[Screen],
     lists: &[Installed],
+    settings: &[PlayerSetting],
     markup: &str,
 ) -> Result<String, String> {
     let drawn: Vec<&Screen> = staged
@@ -163,6 +199,18 @@ pub(crate) fn write(
         if let Some(toggle) = &screen.toggle {
             toggle_lines(&mut text, toggle)?;
         }
+    }
+
+    // The player's settings in this document, each with its element, its
+    // RetroArch key and the file in which we save it.
+    let drawn_settings: Vec<&PlayerSetting> = settings
+        .iter()
+        .filter(|setting| markup.contains(&format!("id=\"{}\"", setting.control())))
+        .collect();
+    let setting_ids: Vec<&str> = drawn_settings.iter().map(|setting| setting.id).collect();
+    line(&mut text, "settings", &setting_ids.join(" "))?;
+    for setting in drawn_settings {
+        setting_lines(&mut text, setting)?;
     }
 
     let overlays: Vec<_> = manifest

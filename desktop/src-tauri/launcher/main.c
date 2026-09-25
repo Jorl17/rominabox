@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "accounts_folder.h"
+#include "player_settings.h"
 #include "shipped_files.h"
 #include "shipped_settings.h"
 
@@ -184,12 +185,8 @@ static int allowed_player_key(const char *key) {
         return 1;
     if (starts_with(key, "controls_"))
         return 1;
-    if (strcmp(key, "audio_volume") == 0)
-        return 1;
-    if (strcmp(key, "audio_mute_enable") == 0)
-        return 1;
-    /* pause_nonactive is the author's frozen choice, and a player file does
-     * not replace it. In a screenshot run we set it after we apply the files. */
+    /* We read a player setting from its own file listed in the plan, never
+     * from a controls file. */
     return 0;
 }
 
@@ -404,6 +401,33 @@ static void collect_managed(const char *plan, char managed[][128], size_t *count
     }
 }
 
+/* Every setting that the player changes in the game's menu, with the value
+ * the player chose, or the default in the export until they choose one. */
+static void apply_player_settings(ConfigLine **lines, size_t *count, size_t *capacity,
+                                  const char *plan, const char *data_dir) {
+    const char *cursor = plan;
+    while (*cursor && strncmp(cursor, "---config---", 12) != 0) {
+        const char *end = strchr(cursor, '\n');
+        size_t length = end ? (size_t)(end - cursor) : strlen(cursor);
+        char plan_line[LINE_CAP];
+        char key[128];
+        char line[LINE_CAP];
+        int found;
+        if (length >= sizeof plan_line)
+            die("a launch plan line does not fit");
+        memcpy(plan_line, cursor, length);
+        plan_line[length] = '\0';
+        found = rominabox_player_setting(data_dir, plan_line, key, sizeof key, line, sizeof line);
+        if (found < 0)
+            die_errno("a player setting in the launch plan is malformed");
+        if (found > 0)
+            force_line(lines, count, capacity, key, line);
+        if (!end)
+            break;
+        cursor = end + 1;
+    }
+}
+
 static int path_has_dotdot(const char *path) {
     const char *cursor = path;
     if (path[0] == '/')
@@ -518,7 +542,6 @@ static void prepare(void) {
     char assets[PATH_CAP];
     char controls_defaults[PATH_CAP];
     char controls_override[PATH_CAP];
-    char volume_path[PATH_CAP];
     char shader_choice[PATH_CAP];
     char shader_preset[PATH_CAP];
     char identity[128];
@@ -526,7 +549,6 @@ static void prepare(void) {
     char title[PATH_CAP];
     char start_at_menu[8];
     char advanced[8];
-    char volume_file[128];
     char shader_initial[PATH_CAP];
     char data_template[PATH_CAP];
     char managed[MANAGED_CAP][128];
@@ -582,8 +604,6 @@ static void prepare(void) {
     field(plan, "achievements", achievements, sizeof achievements);
     char accounts_name[128] = "";
     field(plan, "accounts_dir", accounts_name, sizeof accounts_name);
-    if (!field(plan, "volume_file", volume_file, sizeof volume_file))
-        die("the launch plan has no volume file");
     field(plan, "shader_initial", shader_initial, sizeof shader_initial);
     if (!field(plan, "data_dir", data_template, sizeof data_template))
         die("the launch plan has no data directory");
@@ -650,14 +670,13 @@ static void prepare(void) {
     load_base(&lines, &line_count, &line_capacity, config_text, data_dir, bundle);
     join_path(controls_defaults, sizeof controls_defaults, resources, "menu-assets/controls-defaults.cfg");
     join_path(controls_override, sizeof controls_override, data_dir, "controls.cfg");
-    join_path(volume_path, sizeof volume_path, data_dir, volume_file);
     apply_player_file(&lines, &line_count, &line_capacity, controls_defaults);
     apply_player_file(&lines, &line_count, &line_capacity, controls_override);
-    apply_player_file(&lines, &line_count, &line_capacity, volume_path);
+    apply_player_settings(&lines, &line_count, &line_capacity, plan, data_dir);
     /* We take a screenshot with the window unfocused, where the console would
-     * pause and the picture would show a stopped game. The author's
-     * pause_nonactive is frozen, so we replace it here for this run instead of
-     * writing the player's controls.cfg. */
+     * pause and the picture would show a stopped game. We replace
+     * pause_nonactive here for this run, after the player's settings, instead
+     * of writing the player's file. */
     {
         const char *shot = getenv("ROMINABOX_MENU_SHOT");
         if (shot && shot[0])

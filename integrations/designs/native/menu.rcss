@@ -153,8 +153,10 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 /* Options lists what we bundled with this game. The positions are in the
  * design, and we append nothing afterwards that could override them. A long
  * label stays inside the button. */
-#options-entries { position: absolute; left: 56dp; top: 176dp; width: 840dp; height: 296dp; }
-.option-entry { position: absolute; left: 0; width: 840dp; height: 64dp; line-height: 58dp; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; text-align: center; white-space: nowrap; overflow: hidden; }
+/* The entries share the column above BACK: each is 64dp while they fit and
+ * all shrink alike when there are more. */
+#options-entries { position: absolute; left: 56dp; top: 176dp; width: 840dp; height: 290dp; display: flex; flex-direction: column; row-gap: 10dp; }
+.option-entry { position: relative; flex: 0 1 64dp; min-height: 34dp; width: 840dp; display: flex; align-items: center; justify-content: center; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; white-space: nowrap; overflow: hidden; }
 .options-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
 
 #volume-control .slider { position: absolute; left: 252dp; top: 14dp; width: 432dp; height: 36dp; }

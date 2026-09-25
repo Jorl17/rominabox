@@ -117,13 +117,13 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
         );
     }
     assert!(plan.contains("data_dir\t$HOME/Library/Application Support/ROM-in-a-Box/Games/"));
-    assert!(
-        plan.contains(&format!(
-            "volume_file\t{}\n",
-            rominabox_desktop::volume::file_name()
-        )),
-        "the launcher has to merge the per-game volume file, by the name the player writes"
-    );
+    for setting in rominabox_desktop::player_settings::declared(Default::default()) {
+        assert!(
+            plan.contains(&setting.launch_line()),
+            "the launcher has to apply the player's {} file, by the name the player writes",
+            setting.id
+        );
+    }
     assert!(!plan.contains("export HOME="));
     assert_eq!(
         HOTKEY_BINDS

@@ -103,7 +103,7 @@ def reset_fixture(app: Path) -> None:
     session = data / "achievements.session"
     if session.exists() or session.is_symlink():
         raise SystemExit(f"fixture account storage is not signed out; no reset performed: {session}")
-    for name in ("volume.cfg", "shader-choice"):
+    for name in ("volume.cfg", "background-play.cfg", "shader-choice"):
         path = data / name
         if path.is_symlink():
             raise SystemExit(f"refusing a symlink in fixture storage: {path}")
@@ -138,7 +138,8 @@ def claim_fixture(app: Path) -> None:
         if marker.read_text() != owner:
             raise SystemExit(f"fixture storage has a different owner: {data}")
         return
-    existing = [data / name for name in ("volume.cfg", "controls.cfg", "shader-choice", "achievements.session")]
+    existing = [data / name for name in ("volume.cfg", "background-play.cfg", "controls.cfg",
+                                         "shader-choice", "achievements.session")]
     existing += list(data.glob("toggle-*"))
     for name in ("states", "remaps"):
         directory = data / name
@@ -157,7 +158,8 @@ def claim_fixture(app: Path) -> None:
 def persisted(app: Path) -> dict[str, str]:
     data = shots.data_dir_of(app)
     assert data is not None
-    paths = [data / "volume.cfg", data / "controls.cfg", data / "shader-choice"]
+    paths = [data / "volume.cfg", data / "background-play.cfg", data / "controls.cfg",
+             data / "shader-choice"]
     paths += sorted(data.glob("toggle-*")) + sorted((data / "remaps").rglob("*.rmp"))
     # Each export has a separate temporary directory. Canonicalize only this
     # exact app prefix, and keep all filenames, relative paths and other bytes

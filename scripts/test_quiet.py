@@ -93,7 +93,6 @@ def write_plan(app: Path, data: Path, driver: str) -> None:
         "identity\tplan\n"
         "content\tcontent\n"
         "title\tPlan\n"
-        "volume_file\tvolume.cfg\n"
         f"data_dir\t{data}\n"
         "managed\tlogs\n"
         "\n---config---\n"

@@ -83,8 +83,8 @@ fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
         missing.len(),
         declared.controls.len()
     );
-    // Only the document and the scene that the player can switch to. For a
-    // console with no illustration, no artwork may go into the export.
+    // Only the document, the scene it can switch to and the menu sound. For a
+    // console with no illustration, we must not put artwork in the export.
     let written: Vec<String> = fs::read_dir(&root)
         .unwrap()
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
@@ -96,6 +96,7 @@ fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
                 || name.ends_with(".rcss")
                 || name.starts_with("Silkscreen")
                 || name == "parts"
+                || name == rominabox_desktop::volume::tick_file()
         }),
         "an asset-free console staged something that is not the menu: {written:?}"
     );

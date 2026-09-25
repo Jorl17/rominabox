@@ -66,17 +66,10 @@ pub struct Font {
 #[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct MetricsFile {
-    options: Option<OptionsMetricsFile>,
     scene: Option<SizeFile>,
     marker: Option<MarkerFile>,
     callout: Option<CalloutFile>,
     group: Option<GroupFile>,
-}
-
-#[derive(Default, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct OptionsMetricsFile {
-    entry_step: Option<u32>,
 }
 
 #[derive(Default, Deserialize)]
@@ -408,7 +401,7 @@ pub struct Manifest {
     pub fonts: Vec<Font>,
     pub scene: SceneMetrics,
     /// The step between Options entries, because we place each entry.
-    pub option_entry_step: usize,
+
     /// Rows on one page of a list.
     pub list_page_size: usize,
     /// The height of one row, so we can move up the actions of a short list.
@@ -521,13 +514,6 @@ impl Manifest {
                 "metrics.group.bottomMargin",
             )?,
         };
-        let option_entry_step = metrics(
-            &|m| m.options.as_ref()?.entry_step.map(|step| step as i32),
-            "metrics.options.entryStep",
-        )?;
-        if option_entry_step <= 0 {
-            return Err("metrics.options.entryStep must be a positive number of dp".into());
-        }
 
         let list = |pick: &dyn Fn(&ListFile) -> Option<usize>| {
             own.list
@@ -576,7 +562,6 @@ impl Manifest {
             documents,
             fonts,
             scene,
-            option_entry_step: option_entry_step as usize,
             list_page_size,
             list_row_step,
             binds,
@@ -843,7 +828,6 @@ mod tests {
         let native = Manifest::load(&root.join("native")).unwrap();
         assert_eq!(bare.scene.marker, 30);
         assert_eq!(bare.scene.scene_width, native.scene.scene_width);
-        assert_eq!(bare.option_entry_step, native.option_entry_step);
         assert_eq!(bare.binds.hover_after_ms, native.binds.hover_after_ms);
         assert_eq!(bare.screens.len(), native.screens.len());
         assert_eq!(bare.fonts.len(), native.fonts.len());

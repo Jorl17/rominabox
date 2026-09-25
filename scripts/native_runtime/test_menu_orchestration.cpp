@@ -9,7 +9,6 @@
 #include "menu_test_view.hpp"
 #include "menu_host_fake.h"
 #include <file/config_file.h>
-#include "../../vendor/retroarch/audio/volume_range.h"
 #include "rmlui/files.h"
 #include <sys/stat.h>
 #include <filesystem>
@@ -365,9 +364,8 @@ std::string stage_disc_list(const char *native_assets, const char *data)
          "<div id=\"discs-status\" class=\"list-status\"></div></div>";
    std::string menu = read_file(assets / "menu.rml");
    bool staged = replace_once(menu, "<div id=\"footer\">", panel + "<div id=\"footer\">")
-         && replace_once(menu, "<button class=\"menu-action options-back\"",
-               "<button class=\"menu-action option-entry\" id=\"discs\" disabled=\"disabled\" style=\"display: none; top: 120dp;\">DISC</button>"
-               "<button class=\"menu-action options-back\"");
+         && replace_once(menu, "<div id=\"options-entries\">",
+               "<div id=\"options-entries\"><button class=\"menu-action option-entry\" id=\"discs\" disabled=\"disabled\" style=\"display: none;\"><span class=\"option-label\">DISC</span></button>");
    std::string config = read_file(assets / "design.cfg");
    staged = staged && replace_once(config, "screens = \"pause options controls fixture\"",
                "screens = \"pause options controls fixture discs\"")
@@ -653,6 +651,132 @@ void pad_changes_and_reset_apply_together(const char *native_assets, const char 
    setenv("ROMINABOX_DATA_DIR", data, 1);
 }
 
+/* The player decides in the game's Options, in every design, whether the game
+ * keeps running while its window is in the background. We apply a change in
+ * RetroArch at once and write it to the player's file. The switch shows the
+ * current value in RetroArch, not the default from the export. */
+void background_play_is_the_players(const char *native_assets, const char *data)
+{
+   const std::string file = std::string(data) + "/background-play.cfg";
+   for (const char *design : {"native", "disc"})
+   {
+      const std::string assets = design_assets(native_assets, design);
+      const std::string name = std::string(design) + ": ";
+      setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+      std::remove(file.c_str());
+      host.settings["pause_nonactive"] = 1.0f;
+      void *menu = open_menu();
+      if (!menu) continue;
+      click_and_frame(menu, "options");
+      check(view.document.has_element("background-play")
+               && std::string(inspect.text("background-play-state")) == "OFF"
+               && !inspect.has_class("background-play", "on"),
+            (name + "Options offers PLAY IN BACKGROUND, off while RetroArch pauses in the background").c_str());
+      click_and_frame(menu, "background-play");
+      check(host.settings["pause_nonactive"] == 0.0f,
+            (name + "turning it on stops RetroArch pausing in the background, at once").c_str());
+      check(std::string(inspect.text("background-play-state")) == "ON"
+               && inspect.has_class("background-play", "on"),
+            (name + "the switch says ON and carries the fact `on`").c_str());
+      check(read_file(file) == "pause_nonactive = \"false\"\n",
+            (name + "the choice is written to the player's own file, as RetroArch reads it").c_str());
+      hover_and_frame(menu, "background-play");
+      rib_menu_key(menu, RIB_KEY_OK);
+      frame(menu);
+      check(focused("background-play") && host.settings["pause_nonactive"] == 1.0f
+               && read_file(file) == "pause_nonactive = \"true\"\n"
+               && std::string(inspect.text("background-play-state")) == "OFF",
+            (name + "OK on the focused switch turns it back off, and that is written too").c_str());
+      rib_menu_destroy(menu);
+      /* The next launch starts from what the launcher applied, and the
+       * shipped tests show that this is the player's file. */
+      host.settings["pause_nonactive"] = 0.0f;
+      if ((menu = open_menu()))
+      {
+         click_and_frame(menu, "options");
+         check(std::string(inspect.text("background-play-state")) == "ON"
+                  && inspect.has_class("background-play", "on"),
+               (name + "the switch shows what RetroArch holds, not the export's default").c_str());
+         rib_menu_destroy(menu);
+      }
+   }
+   std::remove(file.c_str());
+   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+}
+
+/* A change of volume plays a cue at the chosen level, once per step. */
+void volume_is_heard_at_its_level(const char *native_assets)
+{
+   /* The staged export has no sound pack, so it includes the tick. A game
+    * with a pack has the same menu without it. */
+   const std::string tick = std::string(native_assets) + "/volume-tick.wav";
+   const std::string aside = tick + ".aside";
+   check(std::ifstream(tick).good(), "an export with menu sounds off ships the volume tick");
+   for (const bool pack : {true, false})
+   {
+      const char *which = pack ? "with a sound pack: " : "with menu sounds off: ";
+      auto said = [&](const char *what) { return std::string(which) + what; };
+      if (pack)
+         std::rename(tick.c_str(), aside.c_str());
+      else
+         std::rename(aside.c_str(), tick.c_str());
+      host.level_cue.clear();
+      host.settings["audio_volume"] = 0.0f;
+      void *menu = open_menu();
+      if (!menu) continue;
+      check(pack ? host.level_cue.empty() : host.level_cue == tick,
+            said(pack ? "the pack's own cue plays, and no tick is loaded"
+                      : "the game's own tick is loaded as the cue").c_str());
+      click_and_frame(menu, "options");
+      int x = 0, y = 0, w = 0, h = 0;
+      check(view.document.element_box("volume-level", &x, &y, &w, &h) && w > 20,
+            "the volume slider has a width to drag across");
+
+      /* A drag from the top to the bottom, a pixel a frame. */
+      host.sounds.clear();
+      host.level_cue_db.clear();
+      host.pointer.x = x + w - 1;
+      host.pointer.y = y + h / 2;
+      host.pointer.pressed = true;
+      frame(menu);
+      for (int at = x + w - 1; at >= x - 4; --at)
+      {
+         host.pointer.x = at;
+         frame(menu);
+      }
+      host.pointer.pressed = false;
+      frame(menu);
+      bool falling = true;
+      for (size_t index = 1; index < host.level_cue_db.size(); ++index)
+         falling = falling && host.level_cue_db[index] < host.level_cue_db[index - 1];
+      char message[256];
+      std::snprintf(message, sizeof(message),
+            "%sa drag from the top to the bottom is heard once a step: %zu cues for 9 steps",
+            which, host.level_cue_db.size());
+      check(host.level_cue_db.size() == 9 && falling, message);
+      check(!host.level_cue_db.empty() && host.level_cue_db.back() == -80.0f
+               && host.settings["audio_volume"] == -80.0f,
+            said("each cue is asked for at the level just chosen, down to the bottom").c_str());
+      check(std::all_of(host.sounds.begin(), host.sounds.end(),
+                  [](rib::test::Sound sound) { return sound == rib::test::Sound::LevelDown; }),
+            said("a drag down plays the level cue alone, not the move cue as well").c_str());
+
+      /* An arrow: one cue, at the new level. Then the top, where it cannot move. */
+      host.level_cue_db.clear();
+      click_and_frame(menu, "volume-up");
+      check(host.level_cue_db.size() == 1 && host.level_cue_db[0] > -80.0f
+               && host.level_cue_db[0] == host.settings["audio_volume"],
+            said("an arrow click is heard once, at the level it chose").c_str());
+      for (int step = 0; step < 12; ++step)
+         click_and_frame(menu, "volume-up");
+      host.level_cue_db.clear();
+      click_and_frame(menu, "volume-up");
+      check(host.level_cue_db.empty() && host.settings["audio_volume"] == 0.0f,
+            said("at the top an arrow changes nothing and plays nothing").c_str());
+      rib_menu_destroy(menu);
+   }
+}
+
 /* A move that fails at once, for example onto a file open in another program. */
 int failing_rename(const char *, const char *) { return -1; }
 
@@ -673,10 +797,12 @@ void repeated_saves_replace_the_file(const char *data)
                          : "a second controls save replaces the first");
    }
    const std::string volume = std::string(data) + "/b19-volume.cfg";
-   check(rib_write_menu_volume(volume.c_str(), -3.0f) && rib_write_menu_volume(volume.c_str(), -4.0f),
+   check(rib_write_player_setting(volume.c_str(), "audio_volume", "-3.0")
+            && rib_write_player_setting(volume.c_str(), "audio_volume", "-4.0"),
          "the volume file is replaced");
    rib_files_use_rename(failing_rename);
-   check(!rib_write_menu_volume(volume.c_str(), -5.0f) && read_file(volume).find("-4.0") != std::string::npos
+   check(!rib_write_player_setting(volume.c_str(), "audio_volume", "-5.0")
+            && read_file(volume).find("-4.0") != std::string::npos
             && !std::ifstream(volume + ".tmp"),
          "a replace that fails keeps the old file and leaves no temporary");
    rib_files_use_rename(nullptr);
@@ -753,24 +879,24 @@ int main(int argc, char **argv)
    check(sliders == 1, "volume has one logical keyboard/joypad stop");
    /* The slider is the first stop in the Options document, so we focus it
     * when the screen opens. Left and Right then move the level, not the focus. */
-   check(focused(RIB_VOLUME_SLIDER_ID), "Options opens on the volume slider");
+   check(focused("volume-level"), "Options opens on the volume slider");
    {
-      const float before = host.volume_db;
+      const float before = host.settings["audio_volume"];
       rib_menu_key(menu, RIB_KEY_RIGHT);
       frame(menu);
-      check(host.volume_db > before && focused(RIB_VOLUME_SLIDER_ID), "Right changes volume without leaving its control");
+      check(host.settings["audio_volume"] > before && focused("volume-level"), "Right changes volume without leaving its control");
       rib_menu_key(menu, RIB_KEY_LEFT);
       frame(menu);
-      check(std::fabs(host.volume_db - before) < 0.06f && focused(RIB_VOLUME_SLIDER_ID), "Left restores volume without an arrow focus stop");
+      check(std::fabs(host.settings["audio_volume"] - before) < 0.06f && focused("volume-level"), "Left restores volume without an arrow focus stop");
    }
-   check(view.parts.commit_slider(RIB_VOLUME_SLIDER_ID, 0.5f),
+   check(view.parts.commit_slider("volume-level", 0.5f),
          "the staged Options screen exposes its volume slider");
    frame(menu);
-   const std::string volume_path = std::string(argv[2]) + "/" + RIB_VOLUME_FILE;
+   const std::string volume_path = std::string(argv[2]) + "/volume.cfg";
    config_file_t *volume_file = config_file_new_from_path_to_string(volume_path.c_str());
    float saved_volume = 0.0f;
-   check(volume_file && config_get_float(volume_file, RIB_VOLUME_KEY, &saved_volume)
-         && std::fabs(saved_volume - host.volume_db) < 0.06f,
+   check(volume_file && config_get_float(volume_file, "audio_volume", &saved_volume)
+         && std::fabs(saved_volume - host.settings["audio_volume"]) < 0.06f,
          "slider change persists through the real file/config layer");
    if (volume_file) config_file_free(volume_file);
    click_and_frame(menu, "controls");
@@ -906,6 +1032,8 @@ int main(int argc, char **argv)
    }
 
    fixes::repeated_saves_replace_the_file(argv[2]);
+   fixes::background_play_is_the_players(argv[1], argv[2]);
+   fixes::volume_is_heard_at_its_level(argv[1]);
    fixes::design_prompt_survives_an_empty_status(argv[1], argv[2]);
    fixes::disc_list_keeps_its_page(argv[1], argv[2]);
    fixes::a_filter_row_applies_its_filter(argv[1]);
