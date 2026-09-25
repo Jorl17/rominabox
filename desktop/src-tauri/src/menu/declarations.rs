@@ -79,6 +79,7 @@ fn setting_lines(text: &mut String, setting: &PlayerSetting) -> Result<(), Strin
     line(text, &format!("setting_control_{id}"), &setting.control())?;
     line(text, &format!("setting_key_{id}"), setting.key.name())?;
     line(text, &format!("setting_file_{id}"), &setting.file())?;
+    line(text, &format!("setting_kind_{id}"), setting.kind.word())?;
     match setting.kind {
         Kind::Level {
             low,
@@ -86,7 +87,6 @@ fn setting_lines(text: &mut String, setting: &PlayerSetting) -> Result<(), Strin
             positions,
             ..
         } => {
-            line(text, &format!("setting_kind_{id}"), "level")?;
             line(text, &format!("setting_low_{id}"), &low.to_string())?;
             line(text, &format!("setting_high_{id}"), &high.to_string())?;
             line(
@@ -95,14 +95,11 @@ fn setting_lines(text: &mut String, setting: &PlayerSetting) -> Result<(), Strin
                 &positions.to_string(),
             )
         }
-        Kind::Switch { inverted } => {
-            line(text, &format!("setting_kind_{id}"), "switch")?;
-            line(
-                text,
-                &format!("setting_inverted_{id}"),
-                &inverted.to_string(),
-            )
-        }
+        Kind::Switch { inverted } => line(
+            text,
+            &format!("setting_inverted_{id}"),
+            &inverted.to_string(),
+        ),
     }
 }
 

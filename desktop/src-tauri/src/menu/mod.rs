@@ -10,6 +10,7 @@
 pub mod contract;
 mod declarations;
 mod document;
+pub(crate) mod inc;
 mod manifest;
 mod scene;
 mod stage;

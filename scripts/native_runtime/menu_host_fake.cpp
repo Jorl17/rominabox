@@ -1,6 +1,7 @@
 /* The boundary to the driver host. We record the commands here, and the order
  * of document, focus, transfer, capture and configuration is the menu's own. */
 #include "menu_host_fake.h"
+#include "rmlui/declarations.h"
 #include <algorithm>
 #include <cstdarg>
 #include <cstdio>
@@ -115,16 +116,16 @@ extern "C" bool rib_host_load_state(void)
 }
 extern "C" void rib_host_resume(void) {}
 extern "C" void rib_host_quit(void) { host.quit = true; }
-extern "C" bool rib_host_setting(const char *key, float *value)
+extern "C" bool rib_host_setting(rib_setting_key key, float *value)
 {
-   const auto found = key ? host.settings.find(key) : host.settings.end();
+   const auto found = host.settings.find(rib::setting_key_name(key));
    if (found == host.settings.end() || !value) return false;
    *value = found->second;
    return true;
 }
-extern "C" bool rib_host_set_setting(const char *key, float value)
+extern "C" bool rib_host_set_setting(rib_setting_key key, float value)
 {
-   const auto found = key ? host.settings.find(key) : host.settings.end();
+   const auto found = host.settings.find(rib::setting_key_name(key));
    if (found == host.settings.end()) return false;
    found->second = value;
    return true;

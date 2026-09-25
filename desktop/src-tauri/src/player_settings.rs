@@ -14,9 +14,45 @@
 
 use std::fs;
 use std::path::Path;
+use std::sync::OnceLock;
+
+/// The player program's list of settable keys and of the kinds that show one.
+const SOURCE: &str =
+    include_str!("../../../vendor/retroarch/menu/drivers/rmlui/settings.inc");
+
+/// Every key and kind declared in the player, with its macro, name and word.
+fn declarations() -> &'static [(&'static str, String, String)] {
+    static DECLARED: OnceLock<Vec<(&'static str, String, String)>> = OnceLock::new();
+    DECLARED.get_or_init(|| {
+        ["RIB_SETTING_KEY", "RIB_SETTING_KIND"]
+            .into_iter()
+            .flat_map(|macro_name| {
+                crate::menu::inc::declarations(SOURCE, macro_name).map(move |fields| {
+                    match &fields[..] {
+                        [name, word] => (macro_name, name.clone(), word.clone()),
+                        _ => panic!("settings.inc: {macro_name}({}) is not (name, \"word\")", fields.join(", ")),
+                    }
+                })
+            })
+            .collect()
+    })
+}
+
+/// The word in a `macro_name(name, ...)` line of the player program. An
+/// undeclared word would have no effect, so we refuse to export with one.
+fn player_word(macro_name: &str, name: &str) -> &'static str {
+    declarations()
+        .iter()
+        .find(|(declared, declared_name, _)| *declared == macro_name && declared_name == name)
+        .map(|(_, _, word)| word.as_str())
+        .unwrap_or_else(|| {
+            panic!("settings.inc declares no {macro_name}({name}, ...), so the player could not apply it")
+        })
+}
 
 /// The RetroArch settings that a player setting can control. We apply each
-/// of these in the player while the game runs.
+/// of them while the game runs, and declare each one once, by the variant's
+/// name, in the player program's `settings.inc`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Key {
     AudioVolume,
@@ -24,11 +60,9 @@ pub enum Key {
 }
 
 impl Key {
+    /// Its RetroArch config key, as in the player program's declaration.
     pub fn name(self) -> &'static str {
-        match self {
-            Key::AudioVolume => "audio_volume",
-            Key::PauseNonactive => "pause_nonactive",
-        }
+        player_word("RIB_SETTING_KEY", &format!("{self:?}"))
     }
 }
 
@@ -42,6 +76,19 @@ pub enum Kind {
     /// On or off, which we show with the words `switch-on` and `switch-off`.
     /// `inverted` when on is the key's `false`.
     Switch { inverted: bool },
+}
+
+impl Kind {
+    /// This kind's word in design.cfg, from the player program's declaration.
+    pub fn word(&self) -> &'static str {
+        player_word(
+            "RIB_SETTING_KIND",
+            match self {
+                Kind::Level { .. } => "Level",
+                Kind::Switch { .. } => "Switch",
+            },
+        )
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -195,6 +242,15 @@ mod tests {
         .into_iter()
         .find(|setting| setting.key == Key::PauseNonactive)
         .unwrap()
+    }
+
+    #[test]
+    fn every_key_and_kind_is_the_players_own() {
+        for setting in declared(Defaults::default()) {
+            assert!(!setting.key.name().is_empty() && !setting.kind.word().is_empty());
+        }
+        assert_eq!(Key::AudioVolume.name(), "audio_volume");
+        assert_eq!(Key::PauseNonactive.name(), "pause_nonactive");
     }
 
     #[test]

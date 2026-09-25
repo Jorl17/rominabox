@@ -62,16 +62,7 @@ fn scope(word: &str) -> Result<Scope, String> {
 
 /// The quoted fields of every `<macro>(...)` declaration, in order.
 fn declarations(macro_name: &str) -> impl Iterator<Item = Vec<String>> + '_ {
-    let opening = format!("{macro_name}(");
-    SOURCE.lines().filter_map(move |line| {
-        let fields = line.trim().strip_prefix(&opening)?.strip_suffix(')')?;
-        Some(
-            fields
-                .split(',')
-                .map(|field| field.trim().trim_matches('"').to_string())
-                .collect(),
-        )
-    })
+    super::inc::declarations(SOURCE, macro_name)
 }
 
 /// The word for `role` in the contract, design.json and design.cfg. Every
