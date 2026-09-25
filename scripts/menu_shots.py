@@ -63,18 +63,15 @@ class PlayerTimeout(SystemExit):
 
 
 DATA_DIR = re.compile(r'^data_dir\t(.+)$', re.MULTILINE)
-# The switch is declared in the launcher, and we read its spelling from
-# there instead of keeping a second copy. We use the same variable in Cocoa.
-QUIET_ENV = re.compile(r'#define ROMINABOX_QUIET_ENV "([A-Z0-9_]+)"')
+# The switch for a quiet automated launch, and the opt-out that a person
+# testing by hand can set. We take the names from here in harnesses, and in
+# the quiet tests we check them against the launcher (test_quiet.plan_check).
+QUIET_ENV = "ROMINABOX_QUIET"
+SOUND_ENV = "ROMINABOX_SOUND"
 
 
 def quiet_env() -> str:
-    found = QUIET_ENV.search(
-        (ROOT / "desktop/src-tauri/launcher/main.c").read_text()
-    )
-    if not found:
-        raise SystemExit("launcher does not declare ROMINABOX_QUIET_ENV")
-    return found.group(1)
+    return QUIET_ENV
 
 
 def declared_palettes() -> list[str]:

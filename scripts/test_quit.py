@@ -15,12 +15,14 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+import free_space  # noqa: E402
 import menu_shots  # noqa: E402
 from core_source import core_source  # noqa: E402
 
@@ -30,17 +32,10 @@ OWN_WORKSPACES = (ROOT / "work/quit-gbc", EXPORT_DIR, ROOT / "work/quit-ps1")
 PREFIX = "app.rominabox.game.wt-quit"
 
 
-def free_gb() -> float:
-    line = subprocess.run(
-        ["df", "-k", "/Users/mariowilde"], capture_output=True, text=True, check=True
-    ).stdout.splitlines()[1]
-    return int(line.split()[3]) / 1024 / 1024
-
-
 def require_disk(floor: float) -> None:
-    free = free_gb()
-    if free < floor:
-        raise SystemExit(f"disk has {free:.2f} GB free, below {floor:.0f}; stopping")
+    """The places where we require free space: the temporary directory, for
+    the exports, and the directories of the quit tests."""
+    free_space.require(floor, Path(tempfile.gettempdir()), *OWN_WORKSPACES)
 
 
 def launched_player() -> Path:
