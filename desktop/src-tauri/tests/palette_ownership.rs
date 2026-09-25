@@ -197,7 +197,8 @@ fn no_colour_survives_every_palette() {
     }
 }
 
-/// Every hex colour in a stylesheet, lowercased.
+/// Every hex colour in a stylesheet, in lower case. A colour ends with its
+/// last digit, so `#accounts-panel` is a selector, not the colour `#acc`.
 fn hex_colours(css: &str) -> BTreeSet<String> {
     let bytes = css.as_bytes();
     let mut found = BTreeSet::new();
@@ -205,10 +206,12 @@ fn hex_colours(css: &str) -> BTreeSet<String> {
         let rest = &bytes[at + 1..];
         let len = rest
             .iter()
-            .take(8)
             .take_while(|byte| byte.is_ascii_hexdigit())
             .count();
-        if len == 3 || len == 6 || len == 8 {
+        let name_goes_on = rest
+            .get(len)
+            .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'-' || *byte == b'_');
+        if (len == 3 || len == 6 || len == 8) && !name_goes_on {
             found.insert(css[at..at + 1 + len].to_ascii_lowercase());
         }
     }

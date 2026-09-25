@@ -15,32 +15,29 @@ pub fn included(requested: bool, show_menu: bool) -> bool {
     requested && show_menu
 }
 
-/// The name of the folder for QUICK SIGN IN, common to every game with
-/// achievements, directly in the platform's per-user application data:
-/// Application Support in the real home on macOS, `%LOCALAPPDATA%` on Windows.
-/// It is not inside `ROM-in-a-Box/` because a sandboxed game cannot create a
+/// The QUICK SIGN IN folder, common to every game with achievements, by
+/// name, directly in the platform's per-user application data: Application
+/// Support outside the sandbox on macOS, `%LOCALAPPDATA%` on Windows. It is
+/// not inside `ROM-in-a-Box/` because a sandboxed game cannot create a
 /// missing parent of the folder in its entitlement.
 ///
-/// A namespaced export, such as a test build, uses the folder set in its
-/// environment, so we never read a player's accounts in it. We reject an
-/// export without such a folder instead of giving it the player's folder.
+/// We never give a namespaced export (from a worktree or a test) a player's
+/// accounts. It gets the folder named in its environment (we set one in
+/// `scripts/worktree.py`), or else its own folder, named after the namespace.
 pub fn accounts_folder(namespace: Option<&str>, named: Option<&str>) -> Result<String, String> {
     fn present(value: Option<&str>) -> Option<&str> {
         value.map(str::trim).filter(|value| !value.is_empty())
     }
-    match (present(namespace), present(named)) {
-        (_, Some(folder)) => {
-            if folder.starts_with('.') || folder.contains(['/', '\\', ':', '\n', '\t']) {
-                return Err(format!("'{folder}' is not a folder name for QUICK SIGN IN"));
-            }
-            Ok(folder.to_string())
-        }
-        (Some(_), None) => Err(
-            "a namespaced export needs ROMINABOX_ACCOUNTS_FOLDER; run eval \"$(python3 scripts/worktree.py env)\""
-                .into(),
-        ),
-        (None, None) => Ok("ROM-in-a-Box Accounts".to_string()),
+    const SHARED: &str = "ROM-in-a-Box Accounts";
+    let folder = match (present(namespace), present(named)) {
+        (_, Some(folder)) => folder.to_string(),
+        (Some(namespace), None) => format!("{SHARED}-{namespace}"),
+        (None, None) => return Ok(SHARED.to_string()),
+    };
+    if folder.starts_with('.') || folder.contains(['/', '\\', ':', '\n', '\t']) {
+        return Err(format!("'{folder}' is not a folder name for QUICK SIGN IN"));
     }
+    Ok(folder)
 }
 
 /// Resolve the capability and entry together. An explicit composition must
@@ -172,8 +169,13 @@ mod tests {
             accounts_folder(Some("app.rominabox.game.wt-x"), Some("ROM-in-a-Box Accounts-wt-x")).unwrap(),
             "ROM-in-a-Box Accounts-wt-x"
         );
-        // We never use the player's folder for a test build.
-        assert!(accounts_folder(Some("app.rominabox.game.wt-x"), None).is_err());
+        // For a test's namespace with no named folder, we use a folder of its
+        // own, never the player's.
+        assert_eq!(
+            accounts_folder(Some("size-featured"), None).unwrap(),
+            "ROM-in-a-Box Accounts-size-featured"
+        );
+        assert!(accounts_folder(Some("a/b"), None).is_err());
         // We accept a plain name here, never a path.
         assert!(accounts_folder(None, Some("../x")).is_err());
         assert!(accounts_folder(None, Some(".hidden")).is_err());
