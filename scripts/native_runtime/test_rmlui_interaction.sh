@@ -240,12 +240,19 @@ defaults = assets / "stage" / "ps1-analog" / "controls-defaults.cfg"
 for support in ("menu.rcss", "Silkscreen-Regular.ttf"):
     (defaults.parent / support).write_bytes((assets / support).read_bytes())
 groups = {control["id"]: control.get("group") for control in profile["controls"]}
-defaults.write_text(
-    'controls_profile = "ps1-analog"\n'
-    + 'controls_variant_controls_ps1-analog = "' + ' '.join(ids) + '"\n'
-    + ''.join(f'rib_label_{id} = "{id}"\ninput_player1_{id} = "a"\n' for id in ids)
-    + ''.join(f'rib_group_{id} = "{group}"\n' for id, group in groups.items() if group)
-)
+def pad_defaults(ids):
+    return (
+        'controls_profile = "ps1-analog"\n'
+        + 'controls_variant_controls_ps1-analog = "' + ' '.join(ids) + '"\n'
+        + ''.join(f'rib_label_{id} = "{id}"\ninput_player1_{id} = "a"\n' for id in ids)
+        + ''.join(f'rib_group_{id} = "{group}"\n' for id, group in groups.items() if group)
+    )
+defaults.write_text(pad_defaults(ids))
+# The same pad with only its 24 controls, in every other design, for the
+# cases that use an actual pad with sticks instead of an overfull one.
+for other in assets.parent.glob("placement-*/stage/ps1-analog"):
+    if other != defaults.parent:
+        (other / "controls-defaults.cfg").write_text(pad_defaults(ids[:24]))
 FIXTURE
 libretro_common=$repo_root/vendor/retroarch/libretro-common
 harness "$build_dir/test_menu_orchestration" --define HAVE_AUDIOMIXER \
@@ -292,6 +299,16 @@ with scratch("rominabox-menu-orchestration-") as data:
 with scratch("rominabox-menu-capacity-") as data:
     subprocess.run([str(build / "test_menu_orchestration"), "--capacity",
                     str(build / "placement-native/stage/ps1-analog"), data], check=True)
+# A stick waiting to be rebound, on the PlayStation analogue pad, in
+# every design.
+failed = []
+for staged in sorted(build.glob("placement-*/stage/ps1-analog")):
+    with scratch("rominabox-menu-stick-capture-") as data:
+        if subprocess.run([str(build / "test_menu_orchestration"), "--stick-capture",
+                           str(staged), data]).returncode != 0:
+            failed.append(staged.parent.parent.name)
+if failed:
+    sys.exit(f"stick capture failed in {', '.join(failed)}")
 ORCHESTRATION
 
 if [ "$row_edge_failed" -ne 0 ]; then

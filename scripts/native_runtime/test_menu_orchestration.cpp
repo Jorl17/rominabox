@@ -177,6 +177,77 @@ static int capacity_case(const char *assets, const char *data)
    return failures ? 1 : 0;
 }
 
+/* How we draw a stop and its ring right now: what a design can change to
+ * show "this is waiting for input". */
+static std::string look(const char *id)
+{
+   std::string drawn;
+   for (const char *name : {"animation", "border-top-color", "border-left-color",
+            "border-left-width", "background-color", "color"})
+      drawn += std::string(name) + "=" + inspect.property(id, name) + ";";
+   return drawn;
+}
+
+/* Every stick on an exported pad, in each design that we staged it in. While
+ * a stick waits to be rebound, its box and its ring look different from when
+ * it is only focused, and they change back when the capture ends. */
+static int stick_capture_case(const char *assets, const char *data)
+{
+   setenv("ROMINABOX_RML_ASSETS", assets, 1);
+   setenv("ROMINABOX_DATA_DIR", data, 1);
+   unsetenv("ROMINABOX_MENU_SCRIPT");
+   void *menu = rib_menu_create();
+   check(menu != nullptr, "create a menu for the stick capture case");
+   if (!menu)
+      return 1;
+   frame(menu);
+   rib_menu_toggle(menu, true);
+   frame(menu);
+   click_and_frame(menu, "options");
+   click_and_frame(menu, "controls");
+   std::vector<std::pair<std::string, std::string>> sticks;
+   rib::walk(view.document.root()->GetElementById("controller-scene"), [&](Rml::Element *element) {
+      if (!element->IsClassSet("control-group"))
+         return rib::Walk::Continue;
+      std::string ring;
+      rib::walk(element, [&](Rml::Element *child) {
+         if (child->IsClassSet("control-hit"))
+            ring = child->GetId();
+         return rib::Walk::Continue;
+      });
+      sticks.emplace_back(element->GetId(), ring);
+      return rib::Walk::SkipChildren;
+   });
+   check(sticks.size() == 2, (std::string(assets) + " draws both analogue sticks").c_str());
+   for (const auto& [stop, ring] : sticks)
+   {
+      check(!ring.empty(), (stop + " has a ring on the pad").c_str());
+      hover_and_frame(menu, stop.c_str());
+      hover_and_frame(menu, "heading");
+      check(focused(stop.c_str()), ("the pointer focuses " + stop).c_str());
+      const std::string box_focused = look(stop.c_str());
+      const std::string ring_focused = look(ring.c_str());
+      host.captured_id.clear();
+      rib_menu_key(menu, RIB_KEY_OK);
+      frame(menu);
+      check(!host.captured_id.empty(), ("OK on " + stop + " starts a capture").c_str());
+      check(look(stop.c_str()) != box_focused,
+            (stop + " shows it is waiting for input; it looks as it does focused: "
+             + box_focused).c_str());
+      check(look(ring.c_str()) != ring_focused,
+            (ring + " shows its stick is waiting for input; it looks as it does focused: "
+             + ring_focused).c_str());
+      rib_menu_key(menu, RIB_KEY_CANCEL);
+      frame(menu);
+      check(look(stop.c_str()) == box_focused && look(ring.c_str()) == ring_focused,
+            (stop + " and its ring look focused again once the capture ends").c_str());
+   }
+   rib_menu_destroy(menu);
+   if (failures)
+      std::fprintf(stderr, "%d stick capture failures in %s\n", failures, assets);
+   return failures ? 1 : 0;
+}
+
 /* Each of these cases opens its own menu. */
 namespace fixes {
 void *open_menu()
@@ -617,10 +688,14 @@ int main(int argc, char **argv)
 {
    if (argc == 4 && std::strcmp(argv[1], "--capacity") == 0)
       return capacity_case(argv[2], argv[3]);
+   if (argc == 4 && std::strcmp(argv[1], "--stick-capture") == 0)
+      return stick_capture_case(argv[2], argv[3]);
    if (argc != 3 || !argv[1][0] || !argv[2][0])
    {
       std::fprintf(stderr, "usage: %s staged-assets owned-data-dir\n"
-            "       %s --capacity staged-large-profile owned-data-dir\n", argv[0], argv[0]);
+            "       %s --capacity staged-large-profile owned-data-dir\n"
+            "       %s --stick-capture staged-pad-with-sticks owned-data-dir\n",
+            argv[0], argv[0], argv[0]);
       return 2;
    }
    setenv("ROMINABOX_RML_ASSETS", argv[1], 1);
