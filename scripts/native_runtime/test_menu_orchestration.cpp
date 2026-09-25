@@ -856,6 +856,46 @@ void a_save_over_a_picture_shows_the_new_one(const char *data)
    host.thumbnail.clear();
 }
 
+/* Replace the player's volume file and count each replacement. */
+int volume_writes;
+int counting_rename(const char *from, const char *to)
+{
+   const std::string target(to);
+   const std::string name = "/volume.cfg";
+   if (target.size() >= name.size()
+         && target.compare(target.size() - name.size(), name.size(), name) == 0)
+      ++volume_writes;
+   return std::rename(from, to);
+}
+
+/* The volume file has one decimal, so a level applied from it at launch
+ * is -44.4 where the position in the file is -44.44444. Loading the menu
+ * is not a change. We write nothing for a level at a position, and we move a
+ * level between two positions to the nearest one and store that. */
+void a_menu_load_writes_the_volume_only_off_a_position()
+{
+   rib_files_use_rename(counting_rename);
+   struct Load { float level; int writes; const char *what; };
+   for (const Load& load : {
+            Load{-44.4f, 0, "a level at a position, as its file holds it, is not written on a menu load"},
+            Load{-71.1f, 0, "nor is one a step above the bottom"},
+            Load{-50.0f, 1, "a level between positions is put on the nearest and written once"}})
+   {
+      host.settings["audio_volume"] = load.level;
+      volume_writes = 0;
+      void *menu = open_menu();
+      if (!menu) continue;
+      for (int settle = 0; settle < 3; ++settle)
+         frame(menu);
+      char message[256];
+      std::snprintf(message, sizeof(message), "%s: %d writes at %.1f dB",
+            load.what, volume_writes, load.level);
+      check(volume_writes == load.writes, message);
+      rib_menu_destroy(menu);
+   }
+   rib_files_use_rename(nullptr);
+}
+
 /* A move that fails at once, for example onto a file open in another program. */
 int failing_rename(const char *, const char *) { return -1; }
 
@@ -1118,6 +1158,7 @@ int main(int argc, char **argv)
    fixes::pad_changes_and_reset_apply_together(argv[1], argv[2]);
    fixes::chosen_slot_shows_on_save_and_load(argv[1]);
    fixes::a_save_over_a_picture_shows_the_new_one(argv[2]);
+   fixes::a_menu_load_writes_the_volume_only_off_a_position();
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);
