@@ -10,6 +10,8 @@
 //! Record again with `ROMINABOX_RECORD_SNAPSHOT=1`, and say in the commit
 //! what changed and why.
 
+mod support;
+
 use rominabox_desktop::packaging::{ExportRequest, ExportTarget};
 use std::{
     collections::BTreeMap,
@@ -85,47 +87,11 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-fn copy_tree(from: &Path, to: &Path) {
-    fs::create_dir_all(to).unwrap();
-    for entry in fs::read_dir(from).unwrap() {
-        let entry = entry.unwrap();
-        let destination = to.join(entry.file_name());
-        if entry.file_type().unwrap().is_dir() {
-            copy_tree(&entry.path(), &destination);
-        } else {
-            fs::copy(entry.path(), destination).unwrap();
-        }
-    }
-}
-
-/// What a kit contains for the menu: the actual designs, controller artwork
-/// and the splash logo.
-fn menu_kit(root: &Path) -> PathBuf {
-    let kit = root.join("runtime-kit");
-    copy_tree(
-        &rominabox_desktop::repo::at("integrations/designs"),
-        &kit.join("designs"),
-    );
-    copy_tree(
-        &rominabox_desktop::repo::at("integrations/parts"),
-        &kit.join("parts"),
-    );
-    copy_tree(
-        &rominabox_desktop::repo::at("desktop/assets/controllers"),
-        &kit.join("menu-assets"),
-    );
-    copy_tree(
-        &rominabox_desktop::repo::at("desktop/assets/branding"),
-        &kit.join("branding"),
-    );
-    kit
-}
-
 /// The menu kit plus stand-ins for everything else an
 /// export needs: a runtime that only returns, and cores that are a few bytes.
 #[cfg(target_os = "macos")]
 fn export_kit(root: &Path) -> PathBuf {
-    let kit = menu_kit(root);
+    let kit = support::kit(root);
     for directory in [
         "bin",
         "cores",
@@ -415,7 +381,7 @@ fn record(directory: &Path, staged: &BTreeMap<String, String>) {
 #[test]
 fn the_composed_menu_matches_its_snapshot() {
     let root = rominabox_scratch::Scratch::dir("rominabox-menu-snapshot");
-    let kit = menu_kit(&root);
+    let kit = support::kit(&root);
     let recording = std::env::var_os("ROMINABOX_RECORD_SNAPSHOT").is_some_and(|value| value == "1");
     let cases = cases();
     let mut failures = Vec::new();
