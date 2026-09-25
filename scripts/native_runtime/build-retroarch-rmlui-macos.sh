@@ -42,18 +42,14 @@ git -C "$destination/vendor/RmlUi" checkout ba95ffe8bfb6370efb2cdcca927eaad4710c
 
 cp "$script_dir/Makefile.local" "$destination/retroarch/Makefile.local"
 
-# ROM-in-a-Box's own code the player links: the shared accounts store for
-# QUICK SIGN IN, with the launcher's portable file layer it is built on.
-accounts_build=$destination/build-accounts
-mkdir -p "$accounts_build/include"
-for source in accounts/accounts.c accounts/sealed.c launcher/portable_fs.c; do
-  cc -O2 -Wall -Wextra -Werror -c "$repo_root/desktop/src-tauri/$source" \
-    -o "$accounts_build/$(basename "$source" .c).o"
-done
-ar rcs "$accounts_build/librominabox-accounts.a" \
-  "$accounts_build/accounts.o" "$accounts_build/sealed.o" "$accounts_build/portable_fs.o"
-cp "$repo_root/desktop/src-tauri/accounts/accounts.h" \
-  "$repo_root/desktop/src-tauri/launcher/portable_fs.h" "$accounts_build/include/"
+# ROM-in-a-Box's own code the player is built with: the shared accounts
+# store for QUICK SIGN IN and the launcher's portable file layer under it.
+# RetroArch's build compiles these sources itself (RIB_ACCOUNTS_DIR).
+accounts_build=$destination/rominabox-accounts
+mkdir -p "$accounts_build/accounts" "$accounts_build/launcher"
+cp "$repo_root"/desktop/src-tauri/accounts/accounts.[ch] \
+  "$repo_root"/desktop/src-tauri/accounts/sealed.[ch] "$accounts_build/accounts/"
+cp "$repo_root"/desktop/src-tauri/launcher/portable_fs.[ch] "$accounts_build/launcher/"
 
 cmake -S "$destination/vendor/RmlUi" -B "$destination/build-rmlui" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DRMLUI_SAMPLES=OFF \

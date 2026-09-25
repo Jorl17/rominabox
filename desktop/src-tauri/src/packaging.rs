@@ -690,7 +690,7 @@ where
     let entitlements = staging.path().join("entitlements.plist");
     fs::write(
         &entitlements,
-        sandbox_entitlements(&identity, accounts_folder(request).as_deref()),
+        sandbox_entitlements(&identity, accounts_folder(request)?.as_deref()),
     )
     .map_err(|error| ExportError::io(ErrorStage::Sign, &entitlements, error))?;
     run_command_cancellable(
@@ -1922,9 +1922,14 @@ fn game_data_template(identity: &str) -> String {
 }
 
 /// The shared QUICK SIGN IN folder for this export, when it has achievements.
-fn accounts_folder(request: &ExportRequest) -> Option<String> {
-    crate::achievements::included(request.include_achievements, request.show_menu)
-        .then(|| crate::achievements::accounts_folder(isolation_namespace().as_deref()))
+fn accounts_folder(request: &ExportRequest) -> Result<Option<String>, ExportError> {
+    if !crate::achievements::included(request.include_achievements, request.show_menu) {
+        return Ok(None);
+    }
+    let named = std::env::var("ROMINABOX_ACCOUNTS_FOLDER").ok();
+    crate::achievements::accounts_folder(isolation_namespace().as_deref(), named.as_deref())
+        .map(Some)
+        .map_err(|message| ExportError::new(ErrorStage::Configure, message))
 }
 
 /// `accounts` is the QUICK SIGN IN folder, present exactly when the game has
@@ -2133,7 +2138,7 @@ fn write_launch_plan(
         volume = crate::volume::file_name(),
         shader = shader_initial,
         data_dir = game_data_template(identity),
-        accounts = accounts_folder(request)
+        accounts = accounts_folder(request)?
             .map(|folder| format!("accounts_dir\t{folder}\n"))
             .unwrap_or_default(),
     );

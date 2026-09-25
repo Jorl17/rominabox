@@ -68,9 +68,6 @@ BASE_BUNDLE = "com.rominabox.desktop"
 LOCAL_CONFIG = "worktree.local.json"
 DATA_HOME = Path.home() / "Library/Application Support"
 CANONICAL_DATA = DATA_HOME / "ROM-in-a-Box"
-# The shared QUICK SIGN IN folder. For a namespaced export we add "." and the
-# bundle prefix to this name (desktop/src-tauri/src/achievements.rs).
-ACCOUNTS_NAME = "ROM-in-a-Box Accounts"
 
 # We allocate ports one offset at a time and store the offset in git's
 # per-worktree metadata, never in a committed file, because it is local state
@@ -248,6 +245,9 @@ def write_local(path: Path, suffix: str, offset: int) -> dict:
         "builderBundleId": f"{BASE_BUNDLE}.wt-{suffix}",
         "gameBundlePrefix": f"app.rominabox.game.wt-{suffix}",
         "dataRoot": str(DATA_HOME / f"ROM-in-a-Box-wt-{suffix}"),
+        # The shared QUICK SIGN IN folder for this worktree's exports, in
+        # Application Support like the player's folder. We use it in the exporter.
+        "accountsFolder": f"ROM-in-a-Box Accounts-wt-{suffix}",
     }
     (path / LOCAL_CONFIG).write_text(json.dumps(local, indent=2) + "\n")
     return local
@@ -395,6 +395,8 @@ def environment() -> int:
     print(f"export ROMINABOX_BUNDLE_ID={local['builderBundleId']}")
     print(f"export ROMINABOX_GAME_BUNDLE_PREFIX={local['gameBundlePrefix']}")
     print(f"export ROMINABOX_DATA_ROOT={json.dumps(local['dataRoot'])}")
+    if local.get("accountsFolder"):
+        print(f"export ROMINABOX_ACCOUNTS_FOLDER={json.dumps(local['accountsFolder'])}")
     # We share this on purpose. See the module docstring.
     print(f"export CARGO_TARGET_DIR={json.dumps(str(shared_target))}")
     return 0
@@ -423,9 +425,9 @@ def remove(suffix: str, keep_data: bool) -> int:
         if data_root.exists() and data_root != CANONICAL_DATA:
             shutil.rmtree(data_root)
             print(f"removed {data_root}")
-        prefix = local.get("gameBundlePrefix", "")
-        accounts = DATA_HOME / f"{ACCOUNTS_NAME}.{prefix}"
-        if prefix and "/" not in prefix and accounts.is_dir() and not accounts.is_symlink():
+        folder = local.get("accountsFolder", "")
+        accounts = DATA_HOME / folder
+        if folder and "/" not in folder and accounts.is_dir() and not accounts.is_symlink():
             shutil.rmtree(accounts)
             print(f"removed {accounts}")
     kept = keep_fork_commits(path, entry.get("branch"))

@@ -19,18 +19,27 @@ pub fn included(requested: bool, show_menu: bool) -> bool {
 /// achievements, directly in the platform's per-user application data:
 /// Application Support in the real home on macOS, `%LOCALAPPDATA%` on Windows.
 /// It is not inside `ROM-in-a-Box/` because a sandboxed game cannot create a
-/// missing parent of the folder in its entitlement. A namespaced export, such
-/// as a test build, has a folder of its own, so we never read a player's accounts in it.
-pub fn accounts_folder(namespace: Option<&str>) -> String {
-    match namespace.map(str::trim).filter(|value| !value.is_empty()) {
-        Some(namespace) => {
-            let plain: String = namespace
-                .chars()
-                .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' { c } else { '-' })
-                .collect();
-            format!("ROM-in-a-Box Accounts.{plain}")
+/// missing parent of the folder in its entitlement.
+///
+/// A namespaced export, such as a test build, uses the folder set in its
+/// environment, so we never read a player's accounts in it. We reject an
+/// export without such a folder instead of giving it the player's folder.
+pub fn accounts_folder(namespace: Option<&str>, named: Option<&str>) -> Result<String, String> {
+    fn present(value: Option<&str>) -> Option<&str> {
+        value.map(str::trim).filter(|value| !value.is_empty())
+    }
+    match (present(namespace), present(named)) {
+        (_, Some(folder)) => {
+            if folder.starts_with('.') || folder.contains(['/', '\\', ':', '\n', '\t']) {
+                return Err(format!("'{folder}' is not a folder name for QUICK SIGN IN"));
+            }
+            Ok(folder.to_string())
         }
-        None => "ROM-in-a-Box Accounts".to_string(),
+        (Some(_), None) => Err(
+            "a namespaced export needs ROMINABOX_ACCOUNTS_FOLDER; run eval \"$(python3 scripts/worktree.py env)\""
+                .into(),
+        ),
+        (None, None) => Ok("ROM-in-a-Box Accounts".to_string()),
     }
 }
 
@@ -157,16 +166,16 @@ mod tests {
 
     #[test]
     fn every_game_shares_one_accounts_folder_and_a_namespace_has_its_own() {
-        assert_eq!(accounts_folder(None), "ROM-in-a-Box Accounts");
-        assert_eq!(accounts_folder(Some("  ")), "ROM-in-a-Box Accounts");
+        assert_eq!(accounts_folder(None, None).unwrap(), "ROM-in-a-Box Accounts");
+        assert_eq!(accounts_folder(Some("  "), Some(" ")).unwrap(), "ROM-in-a-Box Accounts");
         assert_eq!(
-            accounts_folder(Some("app.rominabox.game.wt-shared-signin")),
-            "ROM-in-a-Box Accounts.app.rominabox.game.wt-shared-signin"
+            accounts_folder(Some("app.rominabox.game.wt-x"), Some("ROM-in-a-Box Accounts-wt-x")).unwrap(),
+            "ROM-in-a-Box Accounts-wt-x"
         );
-        // A namespace is a name, never a path.
-        assert_eq!(
-            accounts_folder(Some("../x/y")),
-            "ROM-in-a-Box Accounts...-x-y"
-        );
+        // We never use the player's folder for a test build.
+        assert!(accounts_folder(Some("app.rominabox.game.wt-x"), None).is_err());
+        // We accept a plain name here, never a path.
+        assert!(accounts_folder(None, Some("../x")).is_err());
+        assert!(accounts_folder(None, Some(".hidden")).is_err());
     }
 }
