@@ -275,7 +275,7 @@ SCOPES = [
         "every menu workflow case (keys, pointer, controls, capture, volume, shaders, saves, overlays, accounts) in both designs and every palette, replayed through the fork's own script driver and report on menus composed as an export composes them, compared checkpoint by checkpoint and file by file with what the launched player recorded",
         "anything drawn, audible cues, RetroArch's bind descriptions and remap files, or physical input; the fake host stands in for RetroArch, and the workflows-native scope launches a few cases for real",
         ["env", f"ROMINABOX_WORKFLOW_DRIVER={WORKFLOW_DRIVER}",
-         "cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_workflows", "--", "--include-ignored"],
+         "cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_workflows", "--", "--include-ignored", "--nocapture"],
         prepare=RMLUI_PREPARE + [headless_driver(WORKFLOW_DRIVER, "scripts/native_runtime/menu_workflow_driver.cpp")],
     ),
     Scope(

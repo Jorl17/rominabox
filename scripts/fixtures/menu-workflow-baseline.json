@@ -1,12 +1,9 @@
 {
   "disc/amber/controls": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "9ede839909fcf78b00a33b208455f8e701e9cf0f4944619bdaf3785cbffec9cb",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -62,10 +59,6 @@
     "script": [
       "options",
       "controls"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/amber/pause-menu": {
@@ -196,18 +189,10 @@
     ]
   },
   "disc/blue/binds-c": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "5d938fc950b6cb76c948aa02ad1ea229fab9f9b7dfe6629d53a589fe02127439",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [
-          1118,
-          288,
-          366,
-          124
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -253,7 +238,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">C</div><div class=\"list-row-detail\" id=\"bind-1-detail\">c</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">C</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Button 2</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -263,12 +248,7 @@
         "volumeDb": 0.0
       },
       "popup": {
-        "bindsBox": [
-          1118,
-          288,
-          366,
-          124
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -314,7 +294,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">C</div><div class=\"list-row-detail\" id=\"bind-1-detail\">c</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">C</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Button 2</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -330,25 +310,13 @@
       "hover:control-a",
       "wait-ms:1400",
       "report:popup"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/binds-start": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "71113d420726e2c3377a5fa32a9d25473b8d79164dada7eb5460a1a14ba96d4e",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [
-          1046,
-          120,
-          438,
-          124
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -394,7 +362,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">Start</div><div class=\"list-row-detail\" id=\"bind-1-detail\">enter</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">Start</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Button 9</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -404,12 +372,7 @@
         "volumeDb": 0.0
       },
       "popup": {
-        "bindsBox": [
-          1046,
-          120,
-          438,
-          124
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -455,7 +418,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">Start</div><div class=\"list-row-detail\" id=\"bind-1-detail\">enter</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">Start</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Button 9</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -471,25 +434,13 @@
       "hover:control-start",
       "wait-ms:1400",
       "report:popup"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/binds-up": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "a623d4dc0dc22b86873e3d910abe30625f95d924b29b9c2dc395c27b56170603",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [
-          422,
-          120,
-          386,
-          124
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -535,7 +486,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">Up</div><div class=\"list-row-detail\" id=\"bind-1-detail\">up</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">Up</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Hat #0 Up</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -545,12 +496,7 @@
         "volumeDb": 0.0
       },
       "popup": {
-        "bindsBox": [
-          422,
-          120,
-          386,
-          124
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -596,7 +542,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">Up</div><div class=\"list-row-detail\" id=\"bind-1-detail\">up</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">Up</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Hat #0 Up</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -612,20 +558,13 @@
       "hover:control-up",
       "wait-ms:1400",
       "report:popup"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/boot-1-logo": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "6b8b19cd2c3b89d338c58af4e5edde2bc6ea30289e87b3d47ace09cd2b70710f",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -675,20 +614,13 @@
     },
     "script": [
       "wait-ms:200"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/boot-2-game": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "b2e19a2a36d644ac2e858e2ac9cba58e176b9e465a48c4941614543cdffdf740",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -736,20 +668,13 @@
     },
     "script": [
       "wait-ms:650"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/boot-3-notice": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "c8e40876d8dce8c132dab28e5db5363b599692110c6212eb4f59f110093663e7",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -799,20 +724,13 @@
     },
     "script": [
       "wait-ms:2200"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/boot-4-gone": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "b2e19a2a36d644ac2e858e2ac9cba58e176b9e465a48c4941614543cdffdf740",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -860,10 +778,6 @@
     },
     "script": [
       "wait-ms:6500"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/capture-cancel": {
@@ -1217,13 +1131,10 @@
     ]
   },
   "disc/blue/controls": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "37832325ac5d9296bf3a522aa6a5cb2d18a370fb538e4e0f46d1a12f8c66b788",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1279,10 +1190,6 @@
     "script": [
       "options",
       "controls"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/controls-keys": {
@@ -1570,13 +1477,10 @@
     ]
   },
   "disc/blue/hover-then-key": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "86d2e28d40a9f8d9b9b90118cf2a0e0f7c8fa60d1af7a965507b75b951bd6d26",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1629,7 +1533,7 @@
         "volumeDb": 0.0
       },
       "hover": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1682,7 +1586,7 @@
         "volumeDb": 0.0
       },
       "key": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1735,7 +1639,7 @@
         "volumeDb": 0.0
       },
       "left": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1798,20 +1702,13 @@
       "hover:heading",
       "wait:2",
       "report:left"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/logo-without-notice": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "6b8b19cd2c3b89d338c58af4e5edde2bc6ea30289e87b3d47ace09cd2b70710f",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1859,20 +1756,13 @@
     },
     "script": [
       "wait-ms:200"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/notice-leaving": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": null,
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1922,20 +1812,13 @@
     },
     "script": [
       "wait-ms:3280"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/notice-without-logo": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "c8e40876d8dce8c132dab28e5db5363b599692110c6212eb4f59f110093663e7",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -1985,10 +1868,6 @@
     },
     "script": [
       "wait-ms:1700"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/options": {
@@ -3971,13 +3850,10 @@
     ]
   },
   "disc/blue/shaders": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "9c9aaadbd790a3dbf12a58d80a230faac761f089369f63b7d0c4743f5c34224b",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4033,21 +3909,15 @@
     "script": [
       "options",
       "shaders"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/shaders-phosphor": {
     "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n",
       "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/phosphor/phosphor.glslp\n"
     },
-    "picture": "a6e812ed5569fe86916bb866328136ebdfdbd9ac86cb32265ba3ca5f49815c8f",
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4104,21 +3974,15 @@
       "options",
       "shaders",
       "phosphor"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/shaders-scanlines": {
     "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n",
       "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/scanlines/scanlines.glslp\n"
     },
-    "picture": "48ced3f47ebfd3dd117d18a193a172301ed72d3bf53b8e6c7847baa856913726",
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4175,10 +4039,6 @@
       "options",
       "shaders",
       "scanlines"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/blue/volume-arrow": {
@@ -4641,13 +4501,10 @@
     ]
   },
   "disc/carbon/controls": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "e095d7112c7bb07b8cf23b7d5988e6038412159e777755e965d31f81eb76c52c",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4703,10 +4560,6 @@
     "script": [
       "options",
       "controls"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/carbon/pause-menu": {
@@ -4837,13 +4690,10 @@
     ]
   },
   "disc/green/controls": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "0acdba0bd1e0733c66704d23a162a0bad6895732303e1fd8fe4fbdf46c42f6d6",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -4899,10 +4749,6 @@
     "script": [
       "options",
       "controls"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/green/pause-menu": {
@@ -5033,13 +4879,10 @@
     ]
   },
   "disc/violet/controls": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "f73090e55bff80447362e5d9b774d68e6a02442c490d6e352acd46eae2b84be4",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5095,10 +4938,6 @@
     "script": [
       "options",
       "controls"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "disc/violet/pause-menu": {
@@ -5229,13 +5068,10 @@
     ]
   },
   "native/amber/controls": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "dcf44814a35c2b6d571ed7a965583eac42202561e2658d15bfa411c0bbfbde1b",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5291,10 +5127,6 @@
     "script": [
       "options",
       "controls"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/amber/pause-menu": {
@@ -5425,18 +5257,11 @@
     ]
   },
   "native/blue/binds-c": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
+    "files": {},
     "picture": "3307abe8ed0a3dacf489f365d6067d5a489bf55bf88c95bb370b6350cb3b1e30",
     "reports": {
       "final": {
-        "bindsBox": [
-          1168,
-          368,
-          316,
-          96
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5482,7 +5307,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">C</div><div class=\"list-row-detail\" id=\"bind-1-detail\">c</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">C</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Button 2</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -5492,12 +5317,7 @@
         "volumeDb": 0.0
       },
       "popup": {
-        "bindsBox": [
-          1168,
-          368,
-          316,
-          96
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5543,7 +5363,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">C</div><div class=\"list-row-detail\" id=\"bind-1-detail\">c</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">C</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Button 2</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -5566,18 +5386,10 @@
     ]
   },
   "native/blue/binds-start": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "28cd95ffce59d8a5b0bcd14c30776a16976df6f0c5a595aaa825ae45cb6a0dc5",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [
-          1096,
-          200,
-          388,
-          96
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5623,7 +5435,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">Start</div><div class=\"list-row-detail\" id=\"bind-1-detail\">enter</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">Start</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Button 9</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -5633,12 +5445,7 @@
         "volumeDb": 0.0
       },
       "popup": {
-        "bindsBox": [
-          1096,
-          200,
-          388,
-          96
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5684,7 +5491,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">Start</div><div class=\"list-row-detail\" id=\"bind-1-detail\">enter</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">Start</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Button 9</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -5700,25 +5507,13 @@
       "hover:control-start",
       "wait-ms:1400",
       "report:popup"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/binds-up": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "324729fa090e18df68cf5d39bc870153d433429ad3031709e509276253371ee3",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [
-          436,
-          200,
-          336,
-          96
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5764,7 +5559,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">Up</div><div class=\"list-row-detail\" id=\"bind-1-detail\">up</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">Up</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Hat #0 Up</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -5774,12 +5569,7 @@
         "volumeDb": 0.0
       },
       "popup": {
-        "bindsBox": [
-          436,
-          200,
-          336,
-          96
-        ],
+        "bindsBox": true,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5825,7 +5615,7 @@
           }
         ],
         "text": {
-          "control-binds": "<div class=\"list-page\" id=\"binds-page-1\"><button class=\"list-row \" id=\"bind-1\"><div class=\"list-row-title\" id=\"bind-1-title\">Up</div><div class=\"list-row-detail\" id=\"bind-1-detail\">up</div><div class=\"list-row-state\" id=\"bind-1-state\">KEY</div></button><button class=\"list-row \" id=\"bind-2\"><div class=\"list-row-title\" id=\"bind-2-title\">Up</div><div class=\"list-row-detail\" id=\"bind-2-detail\">Hat #0 Up</div><div class=\"list-row-state\" id=\"bind-2-state\">PAD</div></button><button class=\"list-row \" id=\"bind-3\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-3-title\" /><div class=\"list-row-detail\" id=\"bind-3-detail\" /><div class=\"list-row-state\" id=\"bind-3-state\" /></button><button class=\"list-row \" id=\"bind-4\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-4-title\" /><div class=\"list-row-detail\" id=\"bind-4-detail\" /><div class=\"list-row-state\" id=\"bind-4-state\" /></button><button class=\"list-row \" id=\"bind-5\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-5-title\" /><div class=\"list-row-detail\" id=\"bind-5-detail\" /><div class=\"list-row-state\" id=\"bind-5-state\" /></button></div><div class=\"list-page\" id=\"binds-page-2\" style=\"display: none;\"><button class=\"list-row \" id=\"bind-6\" style=\"display: none;\"><div class=\"list-row-title\" id=\"bind-6-title\" /><div class=\"list-row-detail\" id=\"bind-6-detail\" /><div class=\"list-row-state\" id=\"bind-6-state\" /></button></div><div class=\"list-pager\" id=\"binds-pager\" style=\"display: none;\"><button class=\"menu-action list-pager-prev disabled\" id=\"binds-prev\">&lt;</button><div class=\"list-pager-count\" id=\"binds-page-count\">1/2</div><button class=\"menu-action list-pager-next\" id=\"binds-next\">&gt;</button></div>",
+          "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "SELECT A CONTROL TO REBIND",
           "footer-hint": "ESC  BACK",
@@ -5841,20 +5631,13 @@
       "hover:control-up",
       "wait-ms:1400",
       "report:popup"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/boot-1-logo": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "59aa0982fdac8da0e71e37e2953a6963ac14c768e03bab17859a18ecf2af511b",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5904,20 +5687,13 @@
     },
     "script": [
       "wait-ms:200"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/boot-2-game": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "b2e19a2a36d644ac2e858e2ac9cba58e176b9e465a48c4941614543cdffdf740",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -5965,20 +5741,13 @@
     },
     "script": [
       "wait-ms:900"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/boot-3-notice": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "6c7122cfa104cd8185795d49d5654a5e5dc2bf171f5d893b1338e8b9a7559769",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -6028,20 +5797,13 @@
     },
     "script": [
       "wait-ms:2200"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/boot-4-gone": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "b2e19a2a36d644ac2e858e2ac9cba58e176b9e465a48c4941614543cdffdf740",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -6089,10 +5851,6 @@
     },
     "script": [
       "wait-ms:6500"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/capture-cancel": {
@@ -6446,13 +6204,10 @@
     ]
   },
   "native/blue/controls": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "7e32cb56561fb02b8580bd93b7114960704f27a51ed44baf5ae24a69b03383e9",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -6508,10 +6263,6 @@
     "script": [
       "options",
       "controls"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/controls-keys": {
@@ -7027,13 +6778,10 @@
     ]
   },
   "native/blue/logo-without-notice": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "59aa0982fdac8da0e71e37e2953a6963ac14c768e03bab17859a18ecf2af511b",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7081,20 +6829,13 @@
     },
     "script": [
       "wait-ms:200"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/notice-leaving": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": null,
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7144,20 +6885,13 @@
     },
     "script": [
       "wait-ms:4400"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/notice-without-logo": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "6c7122cfa104cd8185795d49d5654a5e5dc2bf171f5d893b1338e8b9a7559769",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7207,20 +6941,13 @@
     },
     "script": [
       "wait-ms:1700"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/options": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "748a3c82fe523dfb7cede7492476881413c450c7f3ab7f8c2b2d3659ac84b469",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -7273,10 +7000,6 @@
     },
     "script": [
       "options"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/options-keys": {
@@ -9190,13 +8913,10 @@
     ]
   },
   "native/blue/shaders": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "322c43d8c56540c6dfcb32485b1b41a70ae15e99af18e2e1b4c6a7f207ca5f07",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -9252,21 +8972,15 @@
     "script": [
       "options",
       "shaders"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/shaders-phosphor": {
     "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n",
       "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/phosphor/phosphor.glslp\n"
     },
-    "picture": "953e6bb32e94c039b78d7f067c2ce18fc6cf41dab217bf797384285c3ea789b6",
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -9323,21 +9037,15 @@
       "options",
       "shaders",
       "phosphor"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/shaders-scanlines": {
     "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n",
       "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/scanlines/scanlines.glslp\n"
     },
-    "picture": "ff55e70518dfd17aff10c93cae3a8535a7adbf760bb66f734b48c87c41610d6e",
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -9394,21 +9102,15 @@
       "options",
       "shaders",
       "scanlines"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/volume-arrow": {
     "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n",
       "volume.cfg": "audio_volume = \"-71.1\"\n"
     },
-    "picture": "9e3e68a8fc73055e9402d487e7d9e741351a9aefaed541c66a13f354b778202b",
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -9463,10 +9165,6 @@
       "options",
       "volume-level@0",
       "volume-up"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/volume-inputs": {
@@ -9743,13 +9441,11 @@
   },
   "native/blue/volume-low": {
     "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n",
       "volume.cfg": "audio_volume = \"-80.0\"\n"
     },
-    "picture": "3745aa4a3f54f5291318c2ad5313e30ad5c0cb328eb454e14dc4c840c3d49ca1",
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -9803,21 +9499,15 @@
     "script": [
       "options",
       "volume-level@0"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/volume-step": {
     "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n",
       "volume.cfg": "audio_volume = \"-8.9\"\n"
     },
-    "picture": "4bc85d2f0f7c52fb903268e55dae676a7e2367da4985e8173fcd864d76a7936d",
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -9871,20 +9561,13 @@
     "script": [
       "options",
       "volume-down"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/carbon/controls": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "0058b01667dc0280423b8c6279ecc37c26af97fd76b88c118db1a30fbf50fdcb",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -9940,10 +9623,6 @@
     "script": [
       "options",
       "controls"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/carbon/pause-menu": {
@@ -10074,13 +9753,10 @@
     ]
   },
   "native/green/controls": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "c391ae062823710015891765bac494b5eace80c0a12bd3f71511cba46f5ae4a3",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -10136,10 +9812,6 @@
     "script": [
       "options",
       "controls"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/green/pause-menu": {
@@ -10270,13 +9942,10 @@
     ]
   },
   "native/violet/controls": {
-    "files": {
-      "remaps/Genesis Plus GX/Genesis Plus GX.rmp": "input_libretro_device_p1 = \"257\"\n"
-    },
-    "picture": "12c07cc939dca6266e69a12df456f0013be33ad7f134d09b79b17e8d3d8ff897",
+    "files": {},
     "reports": {
       "final": {
-        "bindsBox": [],
+        "bindsBox": false,
         "captureActive": false,
         "capturing": [],
         "disabled": [],
@@ -10332,10 +10001,6 @@
     "script": [
       "options",
       "controls"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/violet/pause-menu": {

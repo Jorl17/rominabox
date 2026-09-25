@@ -259,7 +259,8 @@ def main() -> int:
             print(f"CHANGED {case['key']}: {', '.join(fields)}; inspect its log and picture in {output}")
     if arguments.record:
         for file, baseline in baselines.items():
-            (ROOT / file).write_text(json.dumps(baseline, indent=2, sort_keys=True) + "\n")
+            # We write these files in the headless runner too, in this form.
+            (ROOT / file).write_text(json.dumps(baseline, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
         print(f"recorded {len(results)} launched cases; inspect the pictures before accepting them")
         return 0
     if changed:
