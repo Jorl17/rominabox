@@ -46,8 +46,10 @@
 <div class="control-leader horizontal" style="left:206dp;top:288dp;width:117dp;"/>
 <div class="control-leader vertical" style="left:323dp;top:174dp;height:114dp;"/>
 <button id="control-down" class="control-callout" style="left:16dp;top:270dp;"><div id="control-label-down" class="control-label">Down</div><div class="control-assignment"><span id="control-binding-down">down</span></div><div id="control-hit-down" class="control-hit" style="left:291dp;top:-112dp;"/></button>
-<div class="control-leader horizontal" style="left:206dp;top:342dp;width:224dp;"/>
-<div class="control-leader vertical" style="left:430dp;top:156dp;height:186dp;"/>
+<div class="control-leader horizontal" style="left:206dp;top:342dp;width:29dp;"/>
+<div class="control-leader vertical" style="left:235dp;top:308dp;height:34dp;"/>
+<div class="control-leader horizontal" style="left:235dp;top:308dp;width:195dp;"/>
+<div class="control-leader vertical" style="left:430dp;top:156dp;height:152dp;"/>
 <button id="control-select" class="control-callout" style="left:16dp;top:324dp;"><div id="control-label-select" class="control-label">Select</div><div class="control-assignment"><span id="control-binding-select">rshift</span></div><div id="control-hit-select" class="control-hit" style="left:398dp;top:-184dp;"/></button>
 <div class="control-leader horizontal" style="left:652dp;top:18dp;width:92dp;"/>
 <div class="control-leader vertical" style="left:652dp;top:18dp;height:28dp;"/>
@@ -67,8 +69,10 @@
 <div class="control-leader horizontal" style="left:632dp;top:288dp;width:112dp;"/>
 <div class="control-leader vertical" style="left:632dp;top:186dp;height:102dp;"/>
 <button id="control-b" class="control-callout" style="left:744dp;top:270dp;"><div id="control-label-b" class="control-label">Cross</div><div class="control-assignment"><span id="control-binding-b">z</span></div><div id="control-hit-b" class="control-hit" style="left:-128dp;top:-100dp;"/></button>
-<div class="control-leader horizontal" style="left:520dp;top:342dp;width:224dp;"/>
-<div class="control-leader vertical" style="left:520dp;top:156dp;height:186dp;"/>
+<div class="control-leader horizontal" style="left:721dp;top:342dp;width:23dp;"/>
+<div class="control-leader vertical" style="left:721dp;top:308dp;height:34dp;"/>
+<div class="control-leader horizontal" style="left:520dp;top:308dp;width:201dp;"/>
+<div class="control-leader vertical" style="left:520dp;top:156dp;height:152dp;"/>
 <button id="control-start" class="control-callout" style="left:744dp;top:324dp;"><div id="control-label-start" class="control-label">Start</div><div class="control-assignment"><span id="control-binding-start">enter</span></div><div id="control-hit-start" class="control-hit" style="left:-240dp;top:-184dp;"/></button></div><div id="control-binds" class="list" style="display:none;"><div id="binds-page-1" class="list-page"><button id="bind-1" class="list-row "><div id="bind-1-title" class="list-row-title"></div><div id="bind-1-detail" class="list-row-detail"></div><div id="bind-1-state" class="list-row-state"></div></button>
 <button id="bind-2" class="list-row "><div id="bind-2-title" class="list-row-title"></div><div id="bind-2-detail" class="list-row-detail"></div><div id="bind-2-state" class="list-row-state"></div></button>
 <button id="bind-3" class="list-row "><div id="bind-3-title" class="list-row-title"></div><div id="bind-3-detail" class="list-row-detail"></div><div id="bind-3-state" class="list-row-state"></div></button>

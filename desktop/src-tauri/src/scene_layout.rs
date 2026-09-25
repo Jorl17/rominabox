@@ -100,10 +100,77 @@ fn vertical(at_x: i32, from_y: i32, to_y: i32) -> Segment {
 /// it is one edit.
 fn leader(control: &ControlDefinition, metrics: SceneMetrics) -> Vec<Segment> {
     let edge = inner_edge(control.callout_x, metrics);
-    let midline = control.callout_y + metrics.callout_height / 2 + metrics.callout_border / 2;
+    let midline = midline(control, metrics);
     vec![
         horizontal(midline, edge, control.x),
         vertical(control.x, midline, control.y),
+    ]
+}
+
+fn midline(control: &ControlDefinition, metrics: SceneMetrics) -> i32 {
+    control.callout_y + metrics.callout_height / 2 + metrics.callout_border / 2
+}
+
+/// Whether a run passes through the inside of a painted box. A run that ends
+/// on the box's edge meets it, and one that enters it crosses it.
+fn crosses(run: &Segment, painted: &Rect) -> bool {
+    let (left, top) = (painted.x, painted.y);
+    let (right, bottom) = (left + painted.width, top + painted.height);
+    if run.height == 0 {
+        top < run.y && run.y < bottom && run.x.max(left) < (run.x + run.width).min(right)
+    } else {
+        left < run.x && run.x < right && run.y.max(top) < (run.y + run.height).min(bottom)
+    }
+}
+
+/// The route from a callout to its button when the L would cross a stick's
+/// box: out along the midline to halfway between the callout and the box, up
+/// or down beside the box to clear it, across to the button's column, and on
+/// to the button.
+///
+/// It passes the box halfway between the box and the nearest thing on that
+/// side of it the run would otherwise crowd: another leader's run across the
+/// same span, or the button itself.
+fn around(
+    control: &ControlDefinition,
+    obstacle: &Rect,
+    others: &[Vec<Segment>],
+    metrics: SceneMetrics,
+) -> Vec<Segment> {
+    let edge = inner_edge(control.callout_x, metrics);
+    let near = if edge < obstacle.x { obstacle.x } else { obstacle.x + obstacle.width };
+    let beside = (edge + near) / 2;
+    let span = (beside.min(control.x), beside.max(control.x));
+    let across = |run: &&Segment| {
+        run.height == 0 && run.x < span.1 && span.0 < run.x + run.width
+    };
+    let above = control.y < obstacle.y;
+    let clear = if above {
+        let nearest = others
+            .iter()
+            .flatten()
+            .filter(across)
+            .map(|run| run.y)
+            .filter(|y| *y < obstacle.y)
+            .fold(control.y, i32::max);
+        (nearest + obstacle.y) / 2
+    } else {
+        let bottom = obstacle.y + obstacle.height;
+        let nearest = others
+            .iter()
+            .flatten()
+            .filter(across)
+            .map(|run| run.y)
+            .filter(|y| *y > bottom)
+            .fold(control.y, i32::min);
+        (nearest + bottom) / 2
+    };
+    let midline = midline(control, metrics);
+    vec![
+        horizontal(midline, edge, beside),
+        vertical(beside, midline, clear),
+        horizontal(clear, beside, control.x),
+        vertical(control.x, clear, control.y),
     ]
 }
 
@@ -122,30 +189,44 @@ fn stick_leader(anchor: &ControlDefinition, strip: Rect, metrics: SceneMetrics) 
     route
 }
 
-pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLayout {
+/// Where each stick's box goes: side by side, centred, along the bottom of
+/// the scene, in name order.
+fn strips(names: &[&str], metrics: SceneMetrics) -> Vec<Rect> {
+    let count = names.len() as i32;
+    let total = count * metrics.group_width + (count - 1) * metrics.group_gap;
+    let top = metrics.scene_height - metrics.group_height - metrics.group_bottom_margin;
+    (0..count)
+        .map(|index| Rect {
+            x: (metrics.scene_width - total) / 2 + index * (metrics.group_width + metrics.group_gap),
+            y: top,
+            width: metrics.group_width,
+            height: metrics.group_height,
+        })
+        .collect()
+}
+
+/// A box as we draw it, borders included.
+fn painted(strip: &Rect, border: i32) -> Rect {
+    Rect {
+        width: strip.width + 2 * border,
+        height: strip.height + 2 * border,
+        ..*strip
+    }
+}
+
+fn marker(x: i32, y: i32, metrics: SceneMetrics) -> Rect {
     let radius = metrics.marker / 2;
+    Rect {
+        x: x - radius,
+        y: y - radius,
+        width: metrics.marker,
+        height: metrics.marker,
+    }
+}
+
+pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLayout {
     let drawn: Vec<&ControlDefinition> =
         controls.iter().filter(|c| c.group.is_none()).collect();
-
-    let placements = drawn
-        .iter()
-        .map(|control| Placement {
-            id: control.id.clone(),
-            marker: Rect {
-                x: control.x - radius,
-                y: control.y - radius,
-                width: metrics.marker,
-                height: metrics.marker,
-            },
-            callout: Rect {
-                x: control.callout_x,
-                y: control.callout_y,
-                width: metrics.callout_width,
-                height: metrics.callout_height,
-            },
-            leader: leader(control, metrics),
-        })
-        .collect();
 
     let mut names: Vec<&str> = controls
         .iter()
@@ -153,46 +234,56 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
         .collect();
     names.sort_unstable();
     names.dedup();
+    let strips = strips(&names, metrics);
+    let boxes: Vec<Rect> = strips
+        .iter()
+        .map(|strip| painted(strip, metrics.group_border))
+        .collect();
 
-    let count = names.len() as i32;
+    // Every leader follows the L unless the L would cross a stick's box. Then
+    // it goes around the box, clear of the Ls beside it.
+    let direct: Vec<Vec<Segment>> = drawn.iter().map(|c| leader(c, metrics)).collect();
+    let placements = drawn
+        .iter()
+        .zip(&direct)
+        .map(|(control, route)| {
+            let obstacle = boxes
+                .iter()
+                .find(|obstacle| route.iter().any(|run| crosses(run, obstacle)));
+            Placement {
+                id: control.id.clone(),
+                marker: marker(control.x, control.y, metrics),
+                callout: Rect {
+                    x: control.callout_x,
+                    y: control.callout_y,
+                    width: metrics.callout_width,
+                    height: metrics.callout_height,
+                },
+                leader: match obstacle {
+                    Some(obstacle) => around(control, obstacle, &direct, metrics),
+                    None => route.clone(),
+                },
+            }
+        })
+        .collect();
+
     let groups = names
         .iter()
-        .enumerate()
-        .map(|(index, name)| {
-            let total = count * metrics.group_width + (count - 1) * metrics.group_gap;
-            let left = (metrics.scene_width - total) / 2
-                + index as i32 * (metrics.group_width + metrics.group_gap);
-            let top = metrics.scene_height - metrics.group_height - metrics.group_bottom_margin;
-            let strip = Rect {
-                x: left,
-                y: top,
-                width: metrics.group_width,
-                height: metrics.group_height,
-            };
+        .zip(strips)
+        .map(|(name, strip)| {
             // One anchor for the whole stick, on the member that has a position
             // on the pad.
             let anchor = controls
                 .iter()
                 .find(|c| c.group.as_deref() == Some(*name) && (c.x != 0 || c.y != 0));
-            let anchor_id = anchor.map(|anchor| anchor.id.clone());
-            let (marker, leader) = match anchor {
-                Some(anchor) => (
-                    Some(Rect {
-                        x: anchor.x - radius,
-                        y: anchor.y - radius,
-                        width: metrics.marker,
-                        height: metrics.marker,
-                    }),
-                    stick_leader(anchor, strip, metrics),
-                ),
-                None => (None, Vec::new()),
-            };
             GroupPlacement {
                 name: (*name).to_string(),
                 strip,
-                anchor: anchor_id,
-                marker,
-                leader,
+                anchor: anchor.map(|anchor| anchor.id.clone()),
+                marker: anchor.map(|anchor| marker(anchor.x, anchor.y, metrics)),
+                leader: anchor
+                    .map(|anchor| stick_leader(anchor, strip, metrics))
+                    .unwrap_or_default(),
             }
         })
         .collect();
@@ -273,6 +364,45 @@ mod tests {
             vec![
                 vertical(900, 200, right.strip.y),
                 horizontal(right.strip.y, 900, painted_right),
+            ]
+        );
+    }
+
+    /// A leader whose L would pass through a stick's box goes around it: it
+    /// leaves the callout the same way, turns up beside the box, crosses
+    /// halfway between the box and the leader above it, and meets the button
+    /// the same way.
+    #[test]
+    fn a_leader_that_would_cross_a_box_goes_around_it() {
+        let metrics = metrics();
+        let callout = |id: &str, x: i32, y: i32, callout_y: i32| ControlDefinition {
+            id: id.to_string(),
+            label: id.to_string(),
+            key: String::new(),
+            group: None,
+            x,
+            y,
+            callout_x: 16,
+            callout_y,
+        };
+        let mut controls = stick(420);
+        controls.push(callout("down", 323, 174, 270));
+        controls.push(callout("select", 430, 156, 324));
+        let layout = layout(&controls, metrics);
+        let strip = layout.groups[0].strip;
+        let down = &layout.controls[0];
+        let select = &layout.controls[1];
+        assert_eq!(down.leader, leader(&controls[2], metrics), "down's L is clear");
+        let edge = 16 + 196 + 2 * 2;
+        let beside = (edge + strip.x) / 2;
+        let clear = (down.leader[0].y + strip.y) / 2;
+        assert_eq!(
+            select.leader,
+            vec![
+                horizontal(350, edge, beside),
+                vertical(beside, 350, clear),
+                horizontal(clear, beside, 430),
+                vertical(430, clear, 156),
             ]
         );
     }

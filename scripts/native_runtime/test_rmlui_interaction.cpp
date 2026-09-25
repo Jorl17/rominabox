@@ -661,41 +661,6 @@ static void check_marks_belong_to_their_stop(const char *design, const char *pro
    view.pointer_move(1, 1);
 }
 
-/* The leader of a callout can cross the box of a stick on its way to the
- * button. A pointer there is on the leader, which is not a stop, so it does
- * not focus the callout of that leader. */
-static void check_a_leader_across_a_stick_takes_no_focus(const char *design, const char *profile)
-{
-   std::vector<std::string> sticks;
-   anchors("control-group", sticks);
-   char message[512];
-   view.document.set_shown("control-binds", false);
-   view.pointer_move(1, 1);
-   view.follow_pointer();
-   for (const std::string &stick_id : sticks)
-   {
-      const Box stick = box_of(stick_id.c_str());
-      for (Rml::Element *leader : scene_leaders())
-      {
-         const Box run = drawn_box(leader);
-         if (!boxes_overlap(run, stick))
-            continue;
-         const int x = (std::max(run.x, stick.x) + std::min(run.x + run.w, stick.x + stick.w)) / 2;
-         const int y = (std::max(run.y, stick.y) + std::min(run.y + run.h, stick.y + stick.h)) / 2;
-         CHECK(view.focus.set("controls-back"), "Back takes focus");
-         view.pointer_move(x, y);
-         view.follow_pointer();
-         const std::string now = view.focus.current_id();
-         std::snprintf(message, sizeof(message),
-               "%s/%s: the pointer at %d,%d, on a leader across %s, focuses %s",
-               design, profile, x, y, stick_id.c_str(), now.c_str());
-         CHECK(now == "controls-back" || now == stick_id, message);
-         view.pointer_move(1, 1);
-         view.follow_pointer();
-      }
-   }
-}
-
 static void collect_painted(const Box &list, std::vector<Box> &painted)
 {
    painted.clear();
@@ -1130,7 +1095,6 @@ static int check_placement(const char *assets, const char *scenes,
          check_drawn_above(design);
       check_marks_where_the_layout_puts_them(entry.path(), design, profile.c_str());
       check_marks_belong_to_their_stop(design, profile.c_str());
-      check_a_leader_across_a_stick_takes_no_focus(design, profile.c_str());
       for (const auto &size : sizes)
       {
          view.render(size[0], size[1]);
