@@ -450,7 +450,7 @@
           "font-size": "22dp"
         },
         "controls": {
-          "text": "CONTROLLER SETUP FOR THIS CONSOLE AND THEN SOME",
+          "text": "<span class=\"option-label\">CONTROLLER SETUP FOR THIS CONSOLE AND THEN SOME</span>",
           "font-size": "22dp"
         }
       }
