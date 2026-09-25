@@ -6,3 +6,10 @@
 {
 	decorator: image("../background.png" cover);
 }
+
+/* It is the background of the menu, never of the game. While the game runs
+ * we draw overlays from this document, with `overlay` on the body. */
+body.overlay #screen.with-background
+{
+	decorator: none;
+}
