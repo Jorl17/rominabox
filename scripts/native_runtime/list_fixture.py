@@ -2,10 +2,10 @@
 
 When we compose a menu, we make list screens only from actual data (shaders,
 discs, achievements). For the bridge checks we need a list we control: rows
-with and without a detail line, a one-line row, and optionally a switch and
-BACK. We put it before the unlock row, where we put our own list screens.
-The bind list is the one we compose, and we name two of its rows so that we
-can measure the row edge.
+with and without a detail line, a one-line row, and optionally BACK. We put
+it before the unlock row, where we put our own list screens. The bind list
+is the one we compose, and we name two of its rows so that we can measure
+the row edge.
 
     python3 scripts/native_runtime/list_fixture.py MENU_RML [--actions]
 """
@@ -32,9 +32,6 @@ def panel(actions: bool) -> str:
     rows = (row("one", "ONE", False, True) + row("rest", "REST", False, True)
             + row("two", "TWO", True, False) + row("pic", "PIC", True, False))
     strip = ('<div class="list-actions">'
-             '<button class="menu-action list-toggle" id="fixture-mode">'
-             '<span class="list-toggle-label">MODE</span>'
-             '<span id="fixture-mode-state" class="list-toggle-state">OFF</span></button>'
              '<button class="menu-action list-back" id="fixture-back">BACK</button></div>') if actions else ""
     return ('<div id="fixture-panel" class="screen-panel" style="display:none;">'
             f'<div class="list"><div id="fixture-page-1" class="list-page">{rows}</div></div>'

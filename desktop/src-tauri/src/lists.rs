@@ -81,9 +81,9 @@ pub fn row_template(design: &Path) -> Result<String, String> {
     Ok(text)
 }
 
-/// A selected screen may frame the shared list parts without replacing their
-/// rows, toggle, Back action, or status. The optional base wrapper is in
-/// Native, beside the selected package. Without it we use the built-in one.
+/// A design may frame the shared list parts of a screen without replacing
+/// their rows, Back action or status. The optional base wrapper is in Native,
+/// beside the design, and we use the built-in one when it is missing.
 fn screen_template(manifest: &Manifest, id: &str) -> Result<Option<String>, String> {
     if id.is_empty()
         || !id
@@ -323,18 +323,6 @@ fn host_of<'a>(staged: &'a [Screen], list: &Screen) -> Option<&'a Screen> {
         .find(|screen| screen.place == ScreenPlace::Plain && screen.option_label.is_none())
 }
 
-fn toggle_markup(screen: &Screen) -> String {
-    let Some(toggle) = &screen.toggle else {
-        return String::new();
-    };
-    format!(
-        "<button class=\"menu-action list-toggle\" id=\"{id}\"><span class=\"list-toggle-label\">{label}</span><span id=\"{id}-state\" class=\"list-toggle-state\">{word}</span></button>",
-        id = toggle.id,
-        label = rml_text(&toggle.label),
-        word = rml_text(if toggle.default_on { &toggle.on } else { &toggle.off }),
-    )
-}
-
 /// A generated screen we wrote into the menu, and the screen to which its
 /// BACK leads.
 #[derive(Clone, Debug)]
@@ -396,10 +384,9 @@ pub fn install(
                 list.screen.id
             ));
         }
-        let toggle = toggle_markup(&list.screen);
         let own = screen_actions(manifest, &list.screen.id)?;
         let actions = format!(
-            "<div class=\"list-actions\"{up}>{toggle}{own}<button class=\"menu-action list-back\" id=\"{id}-back\">{back}</button></div>",
+            "<div class=\"list-actions\"{up}>{own}<button class=\"menu-action list-back\" id=\"{id}-back\">{back}</button></div>",
             id = list.screen.id,
             back = rml_text(&back),
         );

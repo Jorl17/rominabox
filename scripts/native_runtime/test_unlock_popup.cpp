@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
       if (!passed) { std::fprintf(stderr, "FAIL: %s\n", message); ++failures; }
    };
    rib::Document document;
-   if (!document.initialize(argv[1], 960, 600, false)) return 2;
+   if (!document.initialize(argv[1], {"Silkscreen-Regular.ttf"}, 960, 600, false)) return 2;
    document.show(); document.settle();
    rib::EventQueue events;
    rib::Lists lists(document, events);

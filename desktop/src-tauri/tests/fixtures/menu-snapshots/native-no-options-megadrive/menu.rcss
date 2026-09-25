@@ -249,11 +249,6 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .list-back { left: 0; width: 196dp; }
 /* A switch is as wide as its words and no wider, in proportion to the
  * 200-unit BACK beside it. */
-.list-toggle { left: 212dp; width: 260dp; }
-.list-toggle-label { position: absolute; left: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 16dp; }
-.list-toggle-state { position: absolute; right: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 16dp; color: #b4e6ff; }
-.list-toggle.on .list-toggle-state { color: #fff13d; }
-.list-toggle:hover .list-toggle-state, .list-toggle.focused .list-toggle-state { color: #061a48; }
 .list-status { position: absolute; left: 36dp; top: 552dp; width: 880dp; text-align: center; color: #fff13d; font-size: 14dp; }
 
 /* The bind list uses the same row as every other list, drawn at the weight
@@ -270,10 +265,9 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #control-binds .list-row-detail { left: auto; right: 44dp; top: 0; width: 84dp; height: 22dp; line-height: 22dp; font-size: 13dp; text-align: right; color: #b4e6ff; }
 #control-binds .list-row-state { right: 6dp; top: 0; width: 36dp; height: 22dp; line-height: 22dp; font-size: 11dp; text-align: right; color: #b4e6ff; }
 #control-binds .list-row:hover { background-color: #193e88; color: #ffffff; border-left-color: #061a48; }
-#control-binds .list-row.focused { background-color: #193e88; color: #ffffff; border-color: #061a48; border-left-color: #fff13d; }
 #control-binds .list-row:active { background-color: #fff13d; color: #061a48; border-color: #fff13d; border-left-color: #ffffff; }
-#control-binds .list-row:hover .list-row-detail, #control-binds .list-row.focused .list-row-detail,
-#control-binds .list-row:hover .list-row-state, #control-binds .list-row.focused .list-row-state { color: #ffffff; }
+#control-binds .list-row:hover .list-row-detail,
+#control-binds .list-row:hover .list-row-state { color: #ffffff; }
 #control-binds .list-row:active .list-row-title, #control-binds .list-row:active .list-row-detail,
 #control-binds .list-row:active .list-row-state { color: #061a48; }
 #control-binds .list-pager { box-sizing: border-box; position: relative; left: 0; top: 0; width: 100%; height: 22dp; }

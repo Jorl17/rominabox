@@ -5,7 +5,7 @@
 //! escapes, so we refuse a value with a quote or a line break here instead of
 //! writing it as a different value.
 
-use super::manifest::{Manifest, Screen, ScreenPlace, Toggle};
+use super::manifest::{Manifest, Screen, ScreenPlace};
 use crate::lists::Installed;
 use crate::player_settings::{Kind, PlayerSetting};
 
@@ -75,28 +75,6 @@ fn screen_lines(text: &mut String, screen: &Screen, buttons: &[String]) -> Resul
         line(text, &format!("screen_role_{id}"), role.name())?;
     }
     Ok(())
-}
-
-fn toggle_lines(text: &mut String, toggle: &Toggle) -> Result<(), String> {
-    let id = &toggle.id;
-    line(text, &format!("toggle_on_{id}"), &toggle.on)?;
-    line(text, &format!("toggle_off_{id}"), &toggle.off)?;
-    line(
-        text,
-        &format!("toggle_default_{id}"),
-        if toggle.default_on { "true" } else { "false" },
-    )?;
-    line(text, &format!("toggle_guard_{id}"), toggle.guard.declared())?;
-    line(
-        text,
-        &format!("toggle_guard_label_{id}"),
-        &toggle.guard_label,
-    )?;
-    line(
-        text,
-        &format!("toggle_guard_status_{id}"),
-        &toggle.guard_status,
-    )
 }
 
 fn setting_lines(text: &mut String, setting: &PlayerSetting) -> Result<(), String> {
@@ -187,20 +165,6 @@ pub(crate) fn write(
     for (screen, buttons) in declared.iter().zip(&buttons).take(drawn.len()) {
         screen_lines(&mut text, screen, buttons)?;
     }
-    let toggles: Vec<&Toggle> = drawn
-        .iter()
-        .copied()
-        .chain(lists.iter().map(|list| &list.screen))
-        .filter_map(|screen| screen.toggle.as_ref())
-        .collect();
-    let toggle_ids: Vec<&str> = toggles.iter().map(|toggle| toggle.id.as_str()).collect();
-    line(&mut text, "toggles", &toggle_ids.join(" "))?;
-    for screen in &drawn {
-        if let Some(toggle) = &screen.toggle {
-            toggle_lines(&mut text, toggle)?;
-        }
-    }
-
     // The player's settings in this document, each with its element, its
     // RetroArch key and the file in which we save it.
     let drawn_settings: Vec<&PlayerSetting> = settings
@@ -263,9 +227,6 @@ pub(crate) fn write(
     line(&mut text, "fonts", &fonts.join(" "))?;
 
     for (index, list) in lists.iter().enumerate() {
-        if let Some(toggle) = &list.screen.toggle {
-            toggle_lines(&mut text, toggle)?;
-        }
         screen_lines(&mut text, &list.screen, &buttons[drawn.len() + index])?;
     }
     Ok(text)

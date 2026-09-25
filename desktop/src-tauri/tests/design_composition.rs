@@ -102,7 +102,6 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
         .expect("Disc must inherit the base achievements screen");
     assert_eq!(achievements.button, "achievements");
     assert_eq!(achievements.option_label.as_deref(), Some("ACHIEVEMENTS"));
-    assert!(achievements.toggle.is_none());
     let pause = screens.iter().find(|screen| screen.id == "pause").unwrap();
     assert_eq!(pause.heading, "MEMORY CARD");
     let disc = screens.iter().find(|screen| screen.id == "disc").unwrap();
@@ -381,15 +380,13 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
     assert!(menu::declared_screens(&design)
         .unwrap()
         .iter()
-        .any(|screen| screen.id == "achievements" && screen.toggle.is_none()));
+        .any(|screen| screen.id == "achievements"));
 
     let menu = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(!menu.contains("achievement-mode"));
     assert!(menu.contains("class=\"menu-action list-back\" id=\"achievements-back\""));
-    let css = fs::read_to_string(root.join("menu.rcss")).unwrap();
     // We measure the place of the list actions in Disc from element boxes in
     // tests/disc_layout.rs.
-    assert!(css.contains(".list-toggle-label") && css.contains(".list-toggle-state"));
 
     let document = menu
         .replace(

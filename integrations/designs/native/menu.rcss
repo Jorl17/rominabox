@@ -13,7 +13,7 @@ body.overlay #screen { background-color: transparent; border-color: transparent;
 body.overlay #heading, body.overlay #footer, body.overlay #pause-panel,
 body.overlay #controls-panel, body.overlay .screen-panel { display: none; }
 
-#splash { display: none; position: absolute; left: -4dp; top: -4dp; width: 960dp; height: 600dp; z-index: 100; background-color: design(background); opacity: 0; transition: opacity 0.12s linear-in-out; }
+#splash { display: none; position: absolute; left: -4dp; top: -4dp; width: design(canvas-width)dp; height: design(canvas-height)dp; z-index: 100; background-color: design(background); opacity: 0; transition: opacity 0.12s linear-in-out; }
 #splash.showing { display: block; opacity: 1; }
 #splash.leaving { display: block; opacity: 0; transition: opacity design(overlay-leave-splash)s linear-in-out; }
 #splash-logo { position: absolute; left: 320dp; top: 140dp; width: 320dp; height: 320dp; }
@@ -249,11 +249,6 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .list-back { left: 0; width: 196dp; }
 /* A switch is as wide as its words and no wider, in proportion to the
  * 200-unit BACK beside it. */
-.list-toggle { left: 212dp; width: 260dp; }
-.list-toggle-label { position: absolute; left: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 16dp; }
-.list-toggle-state { position: absolute; right: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 16dp; color: design(muted); }
-.list-toggle.on .list-toggle-state { color: design(highlight); }
-.list-toggle:hover .list-toggle-state, .list-toggle.focused .list-toggle-state { color: design(surface); }
 .list-status { position: absolute; left: 36dp; top: 552dp; width: 880dp; text-align: center; color: design(highlight); font-size: 14dp; }
 
 /* The bind list uses the same row as every other list, drawn at the weight
@@ -270,10 +265,9 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #control-binds .list-row-detail { left: auto; right: 44dp; top: 0; width: 84dp; height: 22dp; line-height: 22dp; font-size: 13dp; text-align: right; color: design(muted); }
 #control-binds .list-row-state { right: 6dp; top: 0; width: 36dp; height: 22dp; line-height: 22dp; font-size: 11dp; text-align: right; color: design(muted); }
 #control-binds .list-row:hover { background-color: design(focus); color: design(ink); border-left-color: design(surface); }
-#control-binds .list-row.focused { background-color: design(focus); color: design(ink); border-color: design(surface); border-left-color: design(highlight); }
 #control-binds .list-row:active { background-color: design(highlight); color: design(surface); border-color: design(highlight); border-left-color: design(ink); }
-#control-binds .list-row:hover .list-row-detail, #control-binds .list-row.focused .list-row-detail,
-#control-binds .list-row:hover .list-row-state, #control-binds .list-row.focused .list-row-state { color: design(ink); }
+#control-binds .list-row:hover .list-row-detail,
+#control-binds .list-row:hover .list-row-state { color: design(ink); }
 #control-binds .list-row:active .list-row-title, #control-binds .list-row:active .list-row-detail,
 #control-binds .list-row:active .list-row-state { color: design(surface); }
 #control-binds .list-pager { box-sizing: border-box; position: relative; left: 0; top: 0; width: 100%; height: 22dp; }

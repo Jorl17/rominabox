@@ -63,47 +63,48 @@ extern "C" void RARCH_ERR(const char *, ...) {}
 int test_menu_declarations()
 {
    values = {
-      {"screens", "pause skipped disc"}, {"screen_panel_pause", "pause-panel"},
-      {"screen_panel_skipped", std::string(128, 'p')},
+      {"screens", "pause skipped disc odd"}, {"screen_panel_pause", "pause-panel"},
+      {"screen_panel_skipped", ""},
       {"screen_panel_disc", "disc-panel"}, {"screen_role_disc", "discs"},
       {"screen_mark_disc", std::string(32, 'm')},
+      {"screen_panel_odd", "odd-panel"}, {"screen_role_odd", "nothing-known"},
       {"screen_heading_pause", std::string(128, 'h')},
       {"screen_footer_pause", std::string(128, 'f')},
-      {"screen_button_pause", std::string(128, 'b')},
+      {"screen_button_pause", " one  two "},
       {"screen_images_pause", std::string(64, 'i')},
       {"overlays", "logo"}, {"overlay_hold_logo", "1000"},
       {"overlay_follows_logo", std::string(64, 'f')},
-      {"overlay_needs_logo", std::string(128, 'n')},
       {"binds_list", std::string(64, 'b')},
-      {"toggles", "mode"}, {"toggle_on_mode", std::string(32, 't')},
+      {"fonts", "One.ttf Two.ttf"},
    };
    reads = 0;
-   auto *loaded = rib_load_design("fixture");
-   const auto *data = rib_design_get(loaded);
+   const rib::DesignDeclarations design = rib::load_design("fixture");
    int failures = 0;
    auto check = [&](bool ok, const char *what) {
       if (!ok) { std::fprintf(stderr, "FAIL declarations: %s\n", what); ++failures; }
    };
    check(reads == 1, "design.cfg is opened once");
-   check(data->screen_count == 2, "an oversized required panel omits that screen");
-   if (data->screen_count == 2)
+   check(design.screens.size() == 3, "a screen without a panel is left out");
+   if (design.screens.size() == 3)
    {
-      check(!data->screens[0].heading[0], "oversized heading is empty");
-      check(!data->screens[0].footer[0], "oversized footer is empty");
-      check(!data->screens[0].button[0], "oversized button is empty");
-      check(!data->screens[0].images[0], "oversized images redirect is empty");
-      check(!data->screens[1].mark[0], "oversized disc mark is empty");
+      const rib::ScreenDeclaration& pause = design.screens[0];
+      check(pause.heading == std::string(128, 'h') && pause.footer == std::string(128, 'f')
+            && pause.images == std::string(64, 'i'),
+            "a long heading, footer and redirect are kept whole");
+      check(pause.buttons == std::vector<std::string>{"one", "two"},
+            "a screen's buttons are read once, as a list");
+      check(pause.role == rib::ScreenRole::None, "a screen that declares no role has none");
+      check(design.screens[1].role == rib::ScreenRole::Discs
+            && design.screens[1].mark == std::string(32, 'm'),
+            "a role is read as the role it names, and a long mark is kept whole");
+      check(design.screens[2].role == rib::ScreenRole::None,
+            "a role this player does not know is no role");
    }
-   check(data->overlay_count == 1, "oversized optional needs does not omit the overlay");
-   if (data->overlay_count == 1)
-   {
-      check(!data->overlays[0].follows[0], "oversized follows is empty");
-      check(!data->overlays[0].needs[0], "oversized needs is empty");
-   }
-   check(!data->binds_list[0], "oversized binds list is empty");
-   check(data->toggle_count == 1 && std::strlen(data->toggles[0].on) == 31,
-         "toggle words retain their existing truncation policy");
-   rib_design_free(loaded);
+   check(design.overlays.size() == 1 && design.overlays[0].follows == std::string(64, 'f'),
+         "a long follows is kept whole");
+   check(design.binds.list == std::string(64, 'b'), "a long bind list id is kept whole");
+   check(design.fonts == std::vector<std::string>{"One.ttf", "Two.ttf"},
+         "the fonts are the files design.cfg lists, in order");
    values = {{"controls_profile", std::string(64, 'p')}};
    reads = 0;
    rib_controls_catalog controls{};

@@ -911,13 +911,10 @@ int main(int argc, char **argv)
    check(status_is("SLOT 1 LOADED"), "matching load completion reports success");
 
    click_and_frame(menu, "options");
-   char option_ids[16][64];
-   const int option_count = view.document.focusables("options-panel", option_ids, 16);
    int sliders = 0;
-   for (int index = 0; index < option_count; ++index) {
-      auto *element = view.document.root()->GetElementById(option_ids[index]);
-      check(!element->IsClassSet("volume-arrow"), "volume arrows are pointer-only targets");
-      if (view.parts.part_is_slider(option_ids[index])) ++sliders;
+   for (Rml::Element *stop : view.focus.stops(view.document.root()->GetElementById("options-panel"))) {
+      check(!stop->IsClassSet("volume-arrow"), "volume arrows are pointer-only targets");
+      if (view.parts.part_is_slider(stop->GetId().c_str())) ++sliders;
    }
    check(sliders == 1, "volume has one logical keyboard/joypad stop");
    /* The slider is the first stop in the Options document, so we focus it

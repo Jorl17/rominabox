@@ -28,6 +28,10 @@ pub fn design(manifest: &Manifest, palette: &Palette) -> Tokens {
     // The design's values first, so we can replace any with a palette value.
     let mut tokens = manifest.tokens.clone();
     tokens.extend(product());
+    // The canvas on which we lay out every design, from the player contract.
+    let (width, height) = super::contract::canvas();
+    tokens.insert("canvas-width".to_string(), width.to_string());
+    tokens.insert("canvas-height".to_string(), height.to_string());
     let m = manifest.scene;
     for (name, value) in [
         ("scene-width", m.scene_width),
