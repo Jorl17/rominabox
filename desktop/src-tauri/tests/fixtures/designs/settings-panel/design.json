@@ -3,7 +3,5 @@
   "id": "settings-panel",
   "name": "Settings panel",
   "description": "Hypothetical: its own Options screen, whose panel is #settings-panel rather than Native's #options-panel. Everything else is Native's.",
-  "screens": [
-    { "id": "options", "panel": "settings-panel" }
-  ]
+  "screens": [{ "id": "options", "panel": "settings-panel" }]
 }
