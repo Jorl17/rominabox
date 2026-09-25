@@ -28,8 +28,12 @@ reads the environment first.
 
 from __future__ import annotations
 
+import ast
+import io
 import re
+import subprocess
 import sys
+import tokenize
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -54,11 +58,22 @@ OVERRIDE = re.compile(r'env::var\(\s*"ROMINABOX_REPO"\s*\)')
 # package itself, and we do not check it.
 CLIMBS = re.compile(r'env!\("CARGO_MANIFEST_DIR"\)\s*\)?\s*\.?\s*\n?\s*\.join\("\.\.')
 
-# Split so that this file does not contain the directory name that we forbid.
-# A test that anyone can run must not use a folder in one person's home.
-COLLECTION = "roms-" + "to-test"
-SCANNED = [Path("desktop"), Path("scripts")]
-SKIPPED_PARTS = {"target", "node_modules", "dist", "work"}
+# A test that anyone can run must not use a folder in one person's home,
+# where that person keeps their games. We look for any place in a home
+# folder: /Users/<name>/, /home/<name>/,
+# C:\\Users\\<name>, or ~/, $HOME/ and Path.home() anywhere but Library,
+# where we keep the app's storage.
+HOME_PLACE = re.compile(
+    r"/Users/(?!Shared/)[^/\s\"'`]+/"
+    r"|/home/[^/\s\"'`]+/"
+    r"|\b[A-Za-z]:[\\/]+Users[\\/]+[^\\/\s\"'`]+"
+    r"|(?:~|\$\{?HOME\}?)/(?!Library\b)[A-Za-z]"
+    r"|Path\.home\(\)\s*/\s*[\"'](?!Library\b)"
+)
+# Tests and the scripts that run them, as they are in git. The source of a
+# crate is not a test, and a patch is a record that we keep.
+TESTS_AND_SCRIPTS = ["scripts", "desktop/src-tauri/tests", "desktop/crates", "desktop/src"]
+COMMENT_STARTS = ("//", "#", "/*", "*", "--", "<!--")
 
 # bridge, dcmenu and menu must not contain a directory that is not part of
 # a checkout, because we never create it. Split so that this file does not
@@ -67,27 +82,64 @@ EXPERIMENT_TREE = "work/" + "experiments"
 SCRIPT_SUFFIXES = {".py", ".sh", ".mjs", ".cpp", ".mm", ".h", ".c"}
 
 
-def collection_mentions() -> list[str]:
-    """Return the tests and scripts that contain one person's ROM directory."""
+def is_test_or_script(relative: str) -> bool:
+    if relative.endswith(".patch"):
+        return False
+    if relative.startswith("desktop/crates/"):
+        return "/tests/" in relative
+    if relative.startswith("desktop/src/"):
+        return ".test." in relative
+    return True
+
+
+def prose_lines(path: Path, text: str) -> set[int]:
+    """Return the comment and docstring lines, which describe places and do not use them."""
+    skipped: set[int] = set()
+    if path.suffix != ".py":
+        for number, line in enumerate(text.splitlines(), 1):
+            if line.strip().startswith(COMMENT_STARTS):
+                skipped.add(number)
+        return skipped
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return skipped
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) and node.body:
+            first = node.body[0]
+            if (isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant)
+                    and isinstance(first.value.value, str)):
+                skipped.update(range(first.lineno, first.end_lineno + 1))
+    for token in tokenize.generate_tokens(io.StringIO(text).readline):
+        if token.type == tokenize.COMMENT:
+            skipped.add(token.start[0])
+    return skipped
+
+
+def home_places() -> list[str]:
+    """Return the tests and scripts that use a place in one person's home."""
+    tracked = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-files", "-z", *TESTS_AND_SCRIPTS],
+        capture_output=True, text=True, check=True,
+    ).stdout.split("\0")
     found: list[str] = []
-    for relative in SCANNED:
-        directory = ROOT / relative
-        if not directory.is_dir():
+    for relative in sorted(filter(None, tracked)):
+        path = ROOT / relative
+        # This file contains the patterns that we look for.
+        if path.resolve() == Path(__file__).resolve():
             continue
-        for path in sorted(directory.rglob("*")):
-            if not path.is_file() or SKIPPED_PARTS.intersection(path.parts):
-                continue
-            if path.stat().st_size > 1_000_000:
-                continue
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
-                continue
-            if COLLECTION not in text:
-                continue
-            for number, line in enumerate(text.splitlines(), 1):
-                if COLLECTION in line:
-                    found.append(f"{path.relative_to(ROOT)}:{number}")
+        if not is_test_or_script(relative) or not path.is_file() or path.stat().st_size > 1_000_000:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        if not HOME_PLACE.search(text):
+            continue
+        prose = prose_lines(path, text)
+        for number, line in enumerate(text.splitlines(), 1):
+            if number not in prose and HOME_PLACE.search(line):
+                found.append(f"{relative}:{number}")
     return found
 
 
@@ -112,24 +164,32 @@ def experiment_tree_mentions() -> list[str]:
     return found
 
 
-# We pass the path from the module to the shell script. A copy of the path
-# written into either of them is the defect.
-DECLARATION_READERS = [
-    Path("scripts/test_dcmenu.py"),
-    Path("scripts/menu_interaction.py"),
-    Path("scripts/prepare_rmlui.py"),
-    # We build the bridge scripts through the harness, where we read it.
-    Path("scripts/native_runtime/menu_harness.py"),
-]
-
-
 def declaration_readers() -> list[str]:
-    missing: list[str] = []
-    for relative in DECLARATION_READERS:
-        text = (ROOT / relative).read_text(encoding="utf-8")
-        if "rmlui_paths" not in text:
-            missing.append(f"{relative} does not read the RmlUi declaration")
-    return missing
+    """Check that every script that compiles or links RmlUi uses the declared paths.
+
+    We run each script and read what it compiles with and links. A copy of a
+    path written into any of them appears as a value that differs from the
+    declaration.
+    """
+    import rmlui_paths
+    import prepare_rmlui
+    import menu_interaction
+    import test_dcmenu
+    sys.path.insert(0, str(ROOT / "scripts/native_runtime"))
+    import menu_harness
+
+    drifted: list[str] = []
+    for module in (menu_interaction, test_dcmenu):
+        if module.LIBRARY != rmlui_paths.LIBRARY or list(module.HEADER_DIRS) != list(rmlui_paths.HEADER_DIRS):
+            drifted.append(f"{module.__name__} links or includes RmlUi from somewhere else")
+    if prepare_rmlui.LIBRARY != rmlui_paths.LIBRARY or prepare_rmlui.HEADER != rmlui_paths.HEADER:
+        drifted.append("prepare_rmlui builds RmlUi somewhere the tests do not look")
+    compiled = menu_harness.headless([]).cxxflags
+    if any(f"-I{path}" not in compiled for path in rmlui_paths.HEADER_DIRS):
+        drifted.append("menu_harness compiles the menu against other RmlUi headers")
+    if menu_harness.rmlui_paths.LIBRARY != rmlui_paths.LIBRARY:
+        drifted.append("menu_harness links another RmlUi")
+    return drifted
 
 
 def copied_player_flags() -> list[str]:
@@ -199,10 +259,11 @@ def main() -> int:
             print(f"  FAIL {hit}", file=sys.stderr)
         return 1
 
-    named = collection_mentions()
+    named = home_places()
     if named:
         print(
-            f"{len(named)} test(s) or script(s) name one person's ROM directory:",
+            f"{len(named)} place(s) in a test or script are in one person's home, where "
+            "their games are; use generated or fetched content, or a path in no one's home:",
             file=sys.stderr,
         )
         for hit in named:
