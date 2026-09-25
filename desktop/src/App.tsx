@@ -765,9 +765,6 @@ export function App() {
   useEffect(() => {
     setSavedProject("");
   }, [draft, icon, background, palette, menuSounds, controls, firmware]);
-  const soundCharacter =
-    designs.soundPacks.find((pack) => pack.id === menuSounds)?.description ??
-    "";
   useEffect(
     () => () => {
       imageURLs.current.forEach((url) => URL.revokeObjectURL(url));
@@ -1391,34 +1388,19 @@ export function App() {
                         Customize
                       </summary>
                       <div className="sound-choice">
-                        <div className="sound-line">
-                          <label htmlFor="menu-sounds">Menu sounds</label>
-                          <select
-                            id="menu-sounds"
-                            value={menuSounds}
-                            onChange={(e) => setMenuSounds(e.target.value)}
-                          >
-                            {designs.soundPacks.map((pack) => (
-                              <option
-                                value={pack.id}
-                                key={pack.id}
-                                title={pack.description || undefined}
-                              >
-                                {pack.name}
-                              </option>
-                            ))}
-                          </select>
-                          <MenuSoundPreview pack={menuSounds} />
-                          <Help>
-                            Each pack is one complete set of navigation, confirm
-                            and back cues. Only the selected pack is bundled.
-                          </Help>
-                        </div>
-                        {soundCharacter ? (
-                          <span className="sound-character">
-                            {soundCharacter}
-                          </span>
-                        ) : null}
+                        <label htmlFor="menu-sounds">Menu sounds</label>
+                        <select
+                          id="menu-sounds"
+                          value={menuSounds}
+                          onChange={(e) => setMenuSounds(e.target.value)}
+                        >
+                          {designs.soundPacks.map((pack) => (
+                            <option value={pack.id} key={pack.id}>
+                              {pack.name}
+                            </option>
+                          ))}
+                        </select>
+                        <MenuSoundPreview pack={menuSounds} />
                       </div>
 
                       <div className="customize-row">

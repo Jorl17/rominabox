@@ -779,6 +779,36 @@ describe("App workflow", () => {
     expect(also.textContent).toBe("Also importing 6 files");
   });
 
+  it("offers menu sounds as a picker and a preview, with nothing to read", async () => {
+    await openMenu();
+    const picker = container.querySelector("#menu-sounds") as HTMLSelectElement;
+    const field = picker.closest(".sound-choice") as HTMLElement;
+    expect(field.querySelector("label")?.textContent).toBe("Menu sounds");
+    expect(field.querySelector(".menu-sound-preview button")).not.toBeNull();
+    expect(field.querySelector(".help-button")).toBeNull();
+    for (const pack of [...picker.options].map((option) => option.value)) {
+      act(() => {
+        picker.value = pack;
+        picker.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      expect(picker.value).toBe(pack);
+      // Only the label remains to read beside the pack names and the preview.
+      const words = [...field.childNodes]
+        .filter((node) => node !== picker)
+        .map((node) =>
+          node instanceof HTMLElement && node.matches(".menu-sound-preview")
+            ? ""
+            : node.textContent,
+        )
+        .join("");
+      expect(words, pack).toBe("Menu sounds");
+      expect(
+        [...picker.options].every((option) => !option.title),
+        pack,
+      ).toBe(true);
+    }
+  });
+
   it("puts background play and autosave next to the startup logo", async () => {
     await openMenu();
     const logo = checkbox("Startup logo");

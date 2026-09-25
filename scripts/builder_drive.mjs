@@ -1286,13 +1286,6 @@ async function main() {
       await page.keyboard.press("Escape");
 
       await page.locator(".menu-settings details.advanced summary").click();
-      const character = await page.evaluate(
-        () =>
-          (document.querySelector(".sound-character")?.textContent || "")
-            .replace(/\s+/g, " ")
-            .trim(),
-      );
-      console.log(`VISIBLE sound: ${character}`);
       await shot(page, path.join(out, "08-menu-customize.png"));
       await page.locator(".menu-settings .sound-choice").screenshot({
         path: path.join(out, "08-menu-sounds.png"),
@@ -1312,35 +1305,30 @@ async function main() {
     }
     const sounds = await page.evaluate(() => {
       const choice = document.querySelector(".menu-settings .sound-choice");
-      const help = choice?.querySelector(".help-button");
+      const preview = choice?.querySelector(".menu-sound-preview button");
       const select = choice?.querySelector("select");
-      if (!choice || !help || !select) return { found: false };
-      const helpBox = help.getBoundingClientRect();
+      if (!choice || !preview || !select) return { found: false };
+      const previewBox = preview.getBoundingClientRect();
       const selectBox = select.getBoundingClientRect();
-      const text = (choice.textContent || "").replace(/\s+/g, " ");
       return {
         found: true,
         sameLine:
-          helpBox.height > 0 &&
-          helpBox.top < selectBox.bottom - 1 &&
-          helpBox.bottom > selectBox.top + 1,
-        helpTop: Math.round(helpBox.top),
+          previewBox.height > 0 &&
+          previewBox.top < selectBox.bottom - 1 &&
+          previewBox.bottom > selectBox.top + 1,
+        previewTop: Math.round(previewBox.top),
         selectTop: Math.round(selectBox.top),
         selectBottom: Math.round(selectBox.bottom),
-        restatesOff: text.includes("No menu audio"),
+        help: Boolean(choice.querySelector(".help-button")),
       };
     });
     console.log(`MENU SOUNDS ${JSON.stringify(sounds)}`);
     if (!sounds.found || !sounds.sameLine) {
-      console.error(
-        "the menu sounds help icon is on its own line, below the control",
-      );
+      console.error("the menu sounds preview is on its own line, below the picker");
       code = 1;
     }
-    if (sounds.found && sounds.restatesOff) {
-      console.error(
-        "No menu audio is bundled or enabled. is shown under a control that already says Off",
-      );
+    if (sounds.help) {
+      console.error("the menu sounds field has help text again");
       code = 1;
     }
 
