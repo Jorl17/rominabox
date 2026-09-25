@@ -300,9 +300,9 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
             Content::Copy(document::parts_root(&manifest.design)?.join(tick)),
         );
     }
-    let menu = parts(&mut composition, &manifest, &values, &menu)?;
-
-    let mut stylesheet = stylesheet;
+    let mut menu = parts(&mut composition, &manifest, &values, &menu)?;
+    // The author picks the picture and the design places it (by default
+    // behind #screen, with the shared part, unless the design restyles it).
     if let Some(image_path) = &request.background {
         let image = crate::icons::read_image(image_path).map_err(|e| e.sentence())?;
         let mut png = Vec::new();
@@ -311,8 +311,10 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
             .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
             .map_err(|e| e.to_string())?;
         composition.put("background.png", Content::Bytes(png));
-        stylesheet.push_str("\n#screen { decorator: image(\"background.png\" cover); }\n");
+        menu = document::add_class(&menu, "screen", "with-background");
     }
+
+    let mut stylesheet = stylesheet;
     if achievements {
         // The account screen's rules: Native's, then the design's own.
         let mut sheets = vec![manifest.base.join("achievements.rcss")];

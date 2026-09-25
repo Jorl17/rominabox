@@ -359,8 +359,6 @@ pub struct Manifest {
     pub documents: Documents,
     pub fonts: Vec<Font>,
     pub scene: SceneMetrics,
-    /// The step between Options entries, because we place each entry.
-
     /// Rows on one page of a list.
     pub list_page_size: usize,
     /// The height of one row, so we can move up the actions of a short list.
