@@ -166,11 +166,6 @@ export function ControlsEditor({
         setMessage("Choose a letter, number, arrow or modifier key.");
         return;
       }
-      // Keep the player's menu, fullscreen and quit shortcuts out of game defaults.
-      if (["q", "f"].includes(key)) {
-        setMessage("That key is reserved for player shortcuts.");
-        return;
-      }
       const id = state.current.selected;
       if (!id) return;
       const conflicts = profile.controls

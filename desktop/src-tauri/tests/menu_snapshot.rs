@@ -264,11 +264,10 @@ fn compose(request: &ExportRequest, destination: &Path) -> BTreeMap<String, Stri
     rominabox_desktop::menu::compose_menu(&rominabox_desktop::packaging::menu_request(request, 1))
         .and_then(|menu| menu.write(destination))
         .unwrap_or_else(|error| panic!("{}: composition failed: {error}", request.theme));
-    rominabox_desktop::controls::write_defaults_config_with_advanced_access(
+    rominabox_desktop::controls::write_defaults_config(
         &request.system,
         &request.controls,
         &destination.join("controls-defaults.cfg"),
-        request.advanced_emulator_access,
     )
     .unwrap();
     let staged = staged_menu(destination);

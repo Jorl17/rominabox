@@ -16,6 +16,10 @@
 /// profiles at staging. `input_player1_*` gameplay keys are not declared
 /// here. They come from the player's controls file, which we merge in the launcher.
 ///
+/// We reserve only Escape in a game, for the menu, which has Quit. Quit and
+/// fullscreen have no key in any mode, so `q` and `f` stay gameplay keys.
+/// The fork's Alt+Enter is the fullscreen chord.
+///
 /// `advanced_key` is a second keyboard tier. We write it only when the
 /// author set `advancedEmulatorAccess`, and it never replaces the button,
 /// axis or mouse `nul`. In a normal export we write `keyboard`, which is
@@ -49,10 +53,7 @@ pub const HOTKEY_BINDS: &[HotkeyBind] = &[
     HotkeyBind {
         name: "exit_emulator",
         keyboard: HotkeyKeyboard::Neutral,
-        // In a shipped game the player quits from the in-game menu (Escape,
-        // then Quit). Q is easy to press by accident during play, so we ship
-        // the key only with advanced emulator access.
-        advanced_key: Some("q"),
+        advanced_key: None,
     },
     HotkeyBind {
         name: "close_content",
@@ -259,10 +260,7 @@ pub const HOTKEY_BINDS: &[HotkeyBind] = &[
     HotkeyBind {
         name: "toggle_fullscreen",
         keyboard: HotkeyKeyboard::Neutral,
-        // Fullscreen works like quit. If f stayed bound while q and f are
-        // ordinary gameplay keys, one press would trigger the hotkey and the
-        // bind together. The macOS window menu has a Full Screen item.
-        advanced_key: Some("f"),
+        advanced_key: None,
     },
     HotkeyBind {
         name: "desktop_menu_toggle",
@@ -358,8 +356,8 @@ impl HotkeyBind {
 
 /// Render the exported hotkey policy. Callers must not keep a second list.
 ///
-/// With `advanced` we write `advanced_key` for the binds that have one:
-/// fast-forward, quit and fullscreen. We do not change button, axis or
+/// With `advanced` we write `advanced_key` for the binds that have one, the
+/// two fast-forward keys. We do not change button, axis or
 /// mouse. When it is false, those keys stay `nul`, and we still write Escape
 /// for the menu toggle when the menu is on.
 pub fn isolated_hotkey_config(show_menu: bool, advanced: bool) -> String {

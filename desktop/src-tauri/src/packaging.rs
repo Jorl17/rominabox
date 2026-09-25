@@ -18,8 +18,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::content;
 use crate::controls;
-use crate::hotkeys::isolated_hotkey_config;
 pub use crate::export_error::{ErrorStage, ExportError};
+use crate::hotkeys::isolated_hotkey_config;
 use crate::icons;
 
 /// Disc image containers whose support depends on how a core was built.
@@ -555,13 +555,9 @@ where
     fs::create_dir_all(&controls_assets)
         .map_err(|error| ExportError::io(ErrorStage::Stage, &controls_assets, error))?;
     let controls_defaults = controls_assets.join("controls-defaults.cfg");
-    let controls_profile = controls::write_defaults_config_with_advanced_access(
-        &request.system,
-        &request.controls,
-        &controls_defaults,
-        request.advanced_emulator_access,
-    )
-    .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
+    let controls_profile =
+        controls::write_defaults_config(&request.system, &request.controls, &controls_defaults)
+            .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     stage_controller_remap(&controls_profile, selected_core, &resources.join("remaps"))?;
     stage_pixel_options(selected_core, &resources.join("core-options"))?;
     if request.show_menu {
@@ -753,12 +749,8 @@ fn validate_request(
         request.menu_entries.as_deref(),
     )
     .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
-    controls::validate_for_system_with_advanced_access(
-        &request.system,
-        &request.controls,
-        request.advanced_emulator_access,
-    )
-    .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
+    controls::validate_for_system(&request.system, &request.controls)
+        .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     if !request.shaders.is_empty() && !request.show_menu {
         return Err(ExportError::new(
             ErrorStage::Refused,

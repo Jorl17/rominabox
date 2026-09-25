@@ -141,11 +141,10 @@ fn compose(kit: &Path, design: &str, system: &str, profile: Option<&str>, to: &P
     rominabox_desktop::menu::compose_menu(&request)
         .and_then(|menu| menu.write(to))
         .unwrap_or_else(|error| panic!("{design}/{system}: composition failed: {error}"));
-    rominabox_desktop::controls::write_defaults_config_with_advanced_access(
+    rominabox_desktop::controls::write_defaults_config(
         system,
         &controls,
         &to.join("controls-defaults.cfg"),
-        false,
     )
     .unwrap();
 }

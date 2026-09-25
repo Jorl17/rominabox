@@ -256,9 +256,8 @@ fn q_and_f_are_gameplay_keys_and_no_hotkey_in_every_mode() {
     }
 }
 
-/// Escape toggles the menu whether or not advanced access is on. We reject it
-/// as a gameplay binding in both modes for the same reason: it is the only way
-/// into that menu.
+/// Escape toggles the menu whether or not advanced access is on, and it is
+/// never a gameplay binding, because it is the only way into that menu.
 ///
 /// The keyboard lines come from the hotkey policy in the launcher. This does
 /// not prove that a keypress opens the menu. In the export tests above we read
@@ -272,15 +271,8 @@ fn escape_toggles_the_menu_in_both_modes_and_is_never_a_gameplay_key() {
             Some("escape"),
             "advanced={advanced}"
         );
-        let error = controls::validate_for_system_with_advanced_access(
-            "megadrive",
-            &binding("escape"),
-            advanced,
-        )
-        .expect_err("escape stays reserved");
-        assert!(
-            error.contains("toggles the menu"),
-            "advanced={advanced}: {error}"
-        );
     }
+    let error = controls::validate_for_system("megadrive", &binding("escape"))
+        .expect_err("escape stays reserved");
+    assert!(error.contains("toggles the menu"), "{error}");
 }
