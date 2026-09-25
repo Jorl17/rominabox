@@ -704,7 +704,9 @@ void background_play_is_the_players(const char *native_assets, const char *data)
    setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
 }
 
-/* A change of volume plays a cue at the chosen level, once per step. */
+/* A change of volume plays a cue at the chosen level, once per step. The
+ * bottom step is silence, so we request no cue there, whichever host plays
+ * the cues. */
 void volume_is_heard_at_its_level(const char *native_assets)
 {
    /* The staged export has no sound pack, so it includes the tick. A game
@@ -751,12 +753,12 @@ void volume_is_heard_at_its_level(const char *native_assets)
          falling = falling && host.level_cue_db[index] < host.level_cue_db[index - 1];
       char message[256];
       std::snprintf(message, sizeof(message),
-            "%sa drag from the top to the bottom is heard once a step: %zu cues for 9 steps",
-            which, host.level_cue_db.size());
-      check(host.level_cue_db.size() == 9 && falling, message);
-      check(!host.level_cue_db.empty() && host.level_cue_db.back() == -80.0f
+            "%sa drag from the top to the bottom is heard once a step but the silent last: "
+            "%zu cues for 9 steps", which, host.level_cue_db.size());
+      check(host.level_cue_db.size() == 8 && falling, message);
+      check(!host.level_cue_db.empty() && host.level_cue_db.back() > -80.0f
                && host.settings["audio_volume"] == -80.0f,
-            said("each cue is asked for at the level just chosen, down to the bottom").c_str());
+            said("each cue is asked for at the level just chosen, and none at the bottom").c_str());
       check(std::all_of(host.sounds.begin(), host.sounds.end(),
                   [](rib::test::Sound sound) { return sound == rib::test::Sound::LevelDown; }),
             said("a drag down plays the level cue alone, not the move cue as well").c_str());
