@@ -124,6 +124,12 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/test_shipped.py")],
     ),
     Scope(
+        "accounts",
+        "the shared RetroAchievements accounts store on real files: who is listed, when an account leaves, private modes, unsafe names, several games changing it at once, and that it builds for Windows",
+        "that a game calls it, that the sandbox lets a game reach the folder (the isolation scope), or that the Windows build runs",
+        ["python3", str(ROOT / "scripts/test_accounts_store.py")],
+    ),
+    Scope(
         "frontend",
         "the React builder UI: controls editor, sound preview, app flow, and that it typechecks",
         "anything about the exported player, which is a different codebase",

@@ -31,4 +31,23 @@ int fs_replace(const char *from, const char *to);
 int fs_remove(const char *path);
 FILE *fs_open(const char *path, const char *mode);
 
+/* Only this user may enter it: 0700, or on Windows the access list a folder
+ * under %LOCALAPPDATA% inherits. Succeeds when it already exists. */
+int fs_make_private_directory(const char *path);
+/* An empty directory. Succeeds when there is nothing to remove. */
+int fs_remove_directory(const char *path);
+/* Seconds since 1970 of the last write, or -1 when absent. */
+long long fs_modified(const char *path);
+/* `size` bytes as the whole of `path`, readable by this user only. We write
+ * beside it and swap it in, so a reader finds the old file or the new one. */
+int fs_write_file(const char *path, const void *data, size_t size);
+
+/* An exclusive lock on the file at `path`, created if needed. Wait until no
+ * other process has the lock. */
+typedef struct fs_lock {
+    long long handle;
+} fs_lock;
+int fs_lock_acquire(const char *path, fs_lock *lock);
+void fs_lock_release(fs_lock *lock);
+
 #endif

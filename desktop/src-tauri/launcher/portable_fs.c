@@ -199,9 +199,133 @@ FILE *fs_open(const char *path, const char *mode) {
     return stream;
 }
 
+int fs_make_private_directory(const char *path) {
+    return fs_make_directory(path);
+}
+
+int fs_remove_directory(const char *path) {
+    wchar_t *name = wide(path);
+    BOOL removed;
+    if (!name)
+        return -1;
+    removed = RemoveDirectoryW(name);
+    free(name);
+    if (!removed) {
+        DWORD error = GetLastError();
+        if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND)
+            return 0;
+        set_errno_from_windows();
+        return -1;
+    }
+    return 0;
+}
+
+long long fs_modified(const char *path) {
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    wchar_t *name = wide(path);
+    ULARGE_INTEGER time;
+    BOOL found;
+    if (!name)
+        return -1;
+    found = GetFileAttributesExW(name, GetFileExInfoStandard, &data);
+    free(name);
+    if (!found)
+        return -1;
+    time.LowPart = data.ftLastWriteTime.dwLowDateTime;
+    time.HighPart = data.ftLastWriteTime.dwHighDateTime;
+    /* 100 ns steps since 1601, as seconds since 1970. */
+    return (long long)(time.QuadPart / 10000000ULL) - 11644473600LL;
+}
+
+int fs_write_file(const char *path, const void *data, size_t size) {
+    static LONG counter;
+    size_t capacity = strlen(path) + 48;
+    char *temporary;
+    wchar_t *name;
+    HANDLE file;
+    DWORD wrote = 0;
+    BOOL written;
+    int attempt;
+    if (size > MAXDWORD) {
+        errno = EFBIG;
+        return -1;
+    }
+    temporary = malloc(capacity);
+    if (!temporary) {
+        errno = ENOMEM;
+        return -1;
+    }
+    snprintf(temporary, capacity, "%s.%lu-%ld.rominabox-new", path,
+             (unsigned long)GetCurrentProcessId(), (long)InterlockedIncrement(&counter));
+    name = wide(temporary);
+    if (!name) {
+        free(temporary);
+        return -1;
+    }
+    file = CreateFileW(name, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+    free(name);
+    if (file == INVALID_HANDLE_VALUE) {
+        set_errno_from_windows();
+        free(temporary);
+        return -1;
+    }
+    written = WriteFile(file, data, (DWORD)size, &wrote, NULL) && wrote == size
+        && FlushFileBuffers(file);
+    if (!written)
+        set_errno_from_windows();
+    CloseHandle(file);
+    /* A virus scanner can keep the old file open for a moment. */
+    for (attempt = 0; written && attempt < 50; ++attempt) {
+        if (fs_replace(temporary, path) == 0) {
+            free(temporary);
+            return 0;
+        }
+        Sleep(10);
+    }
+    fs_remove(temporary);
+    free(temporary);
+    return -1;
+}
+
+int fs_lock_acquire(const char *path, fs_lock *lock) {
+    OVERLAPPED whole;
+    wchar_t *name = wide(path);
+    HANDLE file;
+    if (!name)
+        return -1;
+    file = CreateFileW(name, GENERIC_READ | GENERIC_WRITE,
+                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+                       OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    free(name);
+    if (file == INVALID_HANDLE_VALUE) {
+        set_errno_from_windows();
+        return -1;
+    }
+    memset(&whole, 0, sizeof whole);
+    if (!LockFileEx(file, LOCKFILE_EXCLUSIVE_LOCK, 0, MAXDWORD, MAXDWORD, &whole)) {
+        set_errno_from_windows();
+        CloseHandle(file);
+        return -1;
+    }
+    lock->handle = (long long)(intptr_t)file;
+    return 0;
+}
+
+void fs_lock_release(fs_lock *lock) {
+    OVERLAPPED whole;
+    if (!lock->handle)
+        return;
+    memset(&whole, 0, sizeof whole);
+    UnlockFileEx((HANDLE)(intptr_t)lock->handle, 0, MAXDWORD, MAXDWORD, &whole);
+    CloseHandle((HANDLE)(intptr_t)lock->handle);
+    lock->handle = 0;
+}
+
 #else
 
 #include <dirent.h>
+#include <fcntl.h>
+#include <sys/file.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -264,6 +388,91 @@ int fs_remove(const char *path) {
 
 FILE *fs_open(const char *path, const char *mode) {
     return fopen(path, mode);
+}
+
+int fs_make_private_directory(const char *path) {
+    if (mkdir(path, 0700) == 0)
+        return 0;
+    if (errno == EEXIST && fs_is_directory(path))
+        return 0;
+    return -1;
+}
+
+int fs_remove_directory(const char *path) {
+    return rmdir(path) == 0 || errno == ENOENT ? 0 : -1;
+}
+
+long long fs_modified(const char *path) {
+    struct stat info;
+    return lstat(path, &info) == 0 ? (long long)info.st_mtime : -1;
+}
+
+int fs_write_file(const char *path, const void *data, size_t size) {
+    size_t capacity = strlen(path) + 32;
+    char *temporary = malloc(capacity);
+    const char *bytes = data;
+    size_t done = 0;
+    int descriptor;
+    if (!temporary) {
+        errno = ENOMEM;
+        return -1;
+    }
+    snprintf(temporary, capacity, "%s.XXXXXX", path);
+    /* mkstemp creates it 0600 and never over an existing file. */
+    descriptor = mkstemp(temporary);
+    if (descriptor < 0) {
+        free(temporary);
+        return -1;
+    }
+    while (done < size) {
+        ssize_t wrote = write(descriptor, bytes + done, size - done);
+        if (wrote < 0 && errno == EINTR)
+            continue;
+        if (wrote <= 0)
+            break;
+        done += (size_t)wrote;
+    }
+    if (done == size && fsync(descriptor) == 0 && close(descriptor) == 0) {
+        descriptor = -1;
+        if (rename(temporary, path) == 0) {
+            free(temporary);
+            return 0;
+        }
+    }
+    {
+        int saved = errno;
+        if (descriptor >= 0)
+            close(descriptor);
+        unlink(temporary);
+        free(temporary);
+        errno = saved;
+    }
+    return -1;
+}
+
+int fs_lock_acquire(const char *path, fs_lock *lock) {
+    int descriptor = open(path, O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW, 0600);
+    if (descriptor < 0)
+        return -1;
+    while (flock(descriptor, LOCK_EX) != 0) {
+        if (errno != EINTR) {
+            int saved = errno;
+            close(descriptor);
+            errno = saved;
+            return -1;
+        }
+    }
+    /* One more than the descriptor, so that a zeroed lock is empty. */
+    lock->handle = (long long)descriptor + 1;
+    return 0;
+}
+
+void fs_lock_release(fs_lock *lock) {
+    if (!lock->handle)
+        return;
+    flock((int)(lock->handle - 1), LOCK_UN);
+    close((int)(lock->handle - 1));
+    lock->handle = 0;
 }
 
 #endif
