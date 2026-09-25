@@ -67,9 +67,12 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .control-leader { position: absolute; background-color: #476eab; }
 .control-leader.horizontal { height: 1dp; }
 .control-leader.vertical { width: 1dp; }
-.control-hit { position: absolute; width: 30dp; height: 30dp; background-color: transparent; border: 1dp transparent; border-radius: 15dp; }
+.control-hit { position: absolute; box-sizing: border-box; width: 30dp; height: 30dp; background-color: transparent; border: 1dp transparent; border-radius: 15dp; }
 .control-callout:hover .control-hit, .control-group:hover .control-hit { border-color: #75b2e4; border-width: 2dp; }
 .control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: #fff13d; border-width: 2dp; margin-left: -3dp; }
+/* The thicker left edge of the focused box moves its content to the right.
+ * The ring and the area for the pointer stay on the button. */
+.control-callout.focused .control-reach, .control-group.focused .control-reach { margin-left: -3dp; }
 .control-callout { position: absolute; width: 188dp; height: 36dp; padding: 0; border-width: 1dp; border-color: #476eab; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
 .control-callout:hover { border-color: #75b2e4; z-index: 2; }
 /* Later controls are later siblings and would cover the focused edge of

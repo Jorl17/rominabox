@@ -55,7 +55,7 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .control-leader { position: absolute; background-color: design(muted); }
 .control-leader.horizontal { height: 1dp; }
 .control-leader.vertical { width: 1dp; }
-.control-hit { position: absolute; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 2dp transparent; border-radius: design(marker-radius)dp; }
+.control-hit { position: absolute; box-sizing: border-box; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 2dp transparent; border-radius: design(marker-radius)dp; }
 .control-callout:hover .control-hit, .control-group:hover .control-hit { border-color: design(ink); }
 .control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: design(highlight); }
 .control-callout { position: absolute; width: design(callout-width)dp; height: design(callout-height)dp; padding: 0; border: 2dp design(edge); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }

@@ -34,6 +34,8 @@ pub struct Placement {
     pub id: String,
     /// The ring over the button on the artwork.
     pub marker: Rect,
+    /// Where the pointer reaches the control on the artwork; see [`reach`].
+    pub reach: Rect,
     /// The label box in a gutter.
     pub callout: Rect,
     /// The line joining them.
@@ -49,6 +51,8 @@ pub struct GroupPlacement {
     pub anchor: Option<String>,
     /// Present when one member of the group has the anchor on the pad.
     pub marker: Option<Rect>,
+    /// Where the pointer reaches the stick on the artwork, with the marker.
+    pub reach: Option<Rect>,
     pub leader: Vec<Segment>,
 }
 
@@ -224,6 +228,33 @@ fn marker(x: i32, y: i32, metrics: SceneMetrics) -> Rect {
     }
 }
 
+/// Where the pointer reaches a control on the pad: the largest square,
+/// centred on its button, that lies inside the ring we draw over it and
+/// nearer its button than any other.
+///
+/// The ring cannot be that area itself. In RmlUi the pointer area of an
+/// element is its whole square box, and a ring is wider than the space
+/// between neighbouring buttons (a D-pad's arrows are closer together than
+/// one ring's diameter), so neighbouring rings would overlap as squares and
+/// a pointer nearer Up would reach Left.
+fn reach(button: usize, buttons: &[(i32, i32)], metrics: SceneMetrics) -> Rect {
+    let (x, y) = buttons[button];
+    let nearest = buttons
+        .iter()
+        .enumerate()
+        .filter(|(other, _)| *other != button)
+        .map(|(_, (ox, oy))| f64::from(ox - x).hypot(f64::from(oy - y)))
+        .fold(f64::INFINITY, f64::min);
+    let limit = (f64::from(metrics.marker) / 2.0).min(nearest / 2.0);
+    let half = (limit / std::f64::consts::SQRT_2).floor() as i32;
+    Rect {
+        x: x - half,
+        y: y - half,
+        width: 2 * half,
+        height: 2 * half,
+    }
+}
+
 pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLayout {
     let drawn: Vec<&ControlDefinition> =
         controls.iter().filter(|c| c.group.is_none()).collect();
@@ -240,6 +271,26 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
         .map(|strip| painted(strip, metrics.group_border))
         .collect();
 
+    // Every button on the pad, each stick once, for the pointer areas: the
+    // controls we draw, in order, then each stick's anchor.
+    let anchors: Vec<Option<&ControlDefinition>> = names
+        .iter()
+        .map(|name| {
+            // One anchor for the whole stick, on whichever member has a position
+            // on the pad.
+            controls
+                .iter()
+                .find(|c| c.group.as_deref() == Some(*name) && (c.x != 0 || c.y != 0))
+        })
+        .collect();
+    let buttons: Vec<(i32, i32)> = drawn
+        .iter()
+        .copied()
+        .chain(anchors.iter().flatten().copied())
+        .map(|control| (control.x, control.y))
+        .collect();
+    let mut reaches = (0..buttons.len()).map(|button| reach(button, &buttons, metrics));
+
     // Every leader follows the L unless the L would cross a stick's box. Then
     // it goes around the box, clear of the Ls beside it.
     let direct: Vec<Vec<Segment>> = drawn.iter().map(|c| leader(c, metrics)).collect();
@@ -253,6 +304,7 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
             Placement {
                 id: control.id.clone(),
                 marker: marker(control.x, control.y, metrics),
+                reach: reaches.next().expect("a reach for every drawn control"),
                 callout: Rect {
                     x: control.callout_x,
                     y: control.callout_y,
@@ -270,17 +322,15 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
     let groups = names
         .iter()
         .zip(strips)
-        .map(|(name, strip)| {
-            // One anchor for the whole stick, on the member that has a position
-            // on the pad.
-            let anchor = controls
-                .iter()
-                .find(|c| c.group.as_deref() == Some(*name) && (c.x != 0 || c.y != 0));
+        .zip(anchors)
+        .map(|((name, strip), anchor)| {
+            let reach = anchor.map(|_| reaches.next().expect("a reach for every stick's anchor"));
             GroupPlacement {
                 name: (*name).to_string(),
                 strip,
                 anchor: anchor.map(|anchor| anchor.id.clone()),
                 marker: anchor.map(|anchor| marker(anchor.x, anchor.y, metrics)),
+                reach,
                 leader: anchor
                     .map(|anchor| stick_leader(anchor, strip, metrics))
                     .unwrap_or_default(),
