@@ -485,14 +485,15 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
    char message[512];
    std::snprintf(message, sizeof(message), "%s/%s: no %s", design, profile, path.string().c_str());
    CHECK(in.good(), message);
-   std::vector<std::pair<std::string, Rml::Vector2f>> expected;
+   struct Mark { std::string stop; Rml::Vector2f at, size; };
+   std::vector<Mark> expected;
    for (std::string row; std::getline(in, row); )
    {
       std::stringstream fields(row);
       std::string stop;
-      float x = 0.f, y = 0.f;
-      if (std::getline(fields, stop, '\t') && fields >> x >> y)
-         expected.push_back({stop, {x, y}});
+      float x = 0.f, y = 0.f, w = 0.f, h = 0.f;
+      if (std::getline(fields, stop, '\t') && fields >> x >> y >> w >> h)
+         expected.push_back({stop, {x, y}, {w, h}});
    }
    Rml::Element *scene_element = view.document.root()->GetElementById("controller-scene");
    settle();
@@ -500,8 +501,8 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
    size_t at = 0;
    std::vector<std::string> stops;
    for (const auto &mark : expected)
-      if (stops.empty() || stops.back() != mark.first)
-         stops.push_back(mark.first);
+      if (stops.empty() || stops.back() != mark.stop)
+         stops.push_back(mark.stop);
    for (const std::string &stop_id : stops)
    {
       Rml::Element *stop = view.document.root()->GetElementById(stop_id);
@@ -510,7 +511,7 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
       const std::vector<Rml::Element*> marks = stop ? marks_of(stop) : std::vector<Rml::Element*>{};
       for (Rml::Element *mark : marks)
       {
-         if (at >= expected.size() || expected[at].first != stop_id)
+         if (at >= expected.size() || expected[at].stop != stop_id)
          {
             std::snprintf(message, sizeof(message), "%s/%s: %s draws more marks than the layout gives it",
                   design, profile, stop_id.c_str());
@@ -521,11 +522,23 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
          std::snprintf(message, sizeof(message),
                "%s/%s: a mark of %s is drawn at %.1f,%.1f on the scene; the layout puts it at %.1f,%.1f",
                design, profile, stop_id.c_str(), drawn.x, drawn.y,
-               expected[at].second.x, expected[at].second.y);
-         CHECK(drawn == expected[at].second, message);
+               expected[at].at.x, expected[at].at.y);
+         CHECK(drawn == expected[at].at, message);
+         /* We draw a ring at the size from the layout, so it is centred on its
+          * button. A border drawn outside that size would move the centre. The
+          * thickness of a leader run comes from the design. */
+         if (mark->IsClassSet("control-hit"))
+         {
+            const Rml::Vector2f size = mark->GetBox().GetSize(Rml::BoxArea::Border);
+            std::snprintf(message, sizeof(message),
+                  "%s/%s: the ring of %s is drawn %.1fx%.1f; the layout gives it %.1fx%.1f",
+                  design, profile, stop_id.c_str(), size.x, size.y,
+                  expected[at].size.x, expected[at].size.y);
+            CHECK(size == expected[at].size, message);
+         }
          ++at;
       }
-      while (at < expected.size() && expected[at].first == stop_id)
+      while (at < expected.size() && expected[at].stop == stop_id)
       {
          std::snprintf(message, sizeof(message), "%s/%s: %s draws fewer marks than the layout gives it",
                design, profile, stop_id.c_str());
@@ -540,7 +553,7 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
  * stop. The leader is outside the stop and ends at its outer edge. We draw a
  * focused stop over every leader, its own included, so no leader shows in
  * its box. We draw the ring outside the box of the stop, and a pointer at
- * its centre is on the ring, so on the stop. */
+ * its centre, on the pad, is on the stop. */
 static void check_marks_belong_to_their_stop(const char *design, const char *profile)
 {
    std::vector<std::string> stops;
@@ -645,14 +658,10 @@ static void check_marks_belong_to_their_stop(const char *design, const char *pro
       view.pointer_move(ring_box.x + ring_box.w / 2, ring_box.y + ring_box.h / 2);
       Rml::Element *found = view.document.get_context()->GetHoverElement();
       std::snprintf(message, sizeof(message),
-            "%s/%s: the pointer at #%s's centre finds %s, not the ring",
+            "%s/%s: the pointer at #%s's centre finds %s, which is not on %s",
             design, profile, ring_id.c_str(),
-            found ? found->GetAddress(false, false).c_str() : "nothing");
-      CHECK(found == ring, message);
-      std::snprintf(message, sizeof(message),
-            "%s/%s: the pointer on #%s is not on %s", design, profile,
-            ring_id.c_str(), stop_id.c_str());
-      CHECK(view.focus.stop_at(found) == stop, message);
+            found ? found->GetAddress(false, false).c_str() : "nothing", stop_id.c_str());
+      CHECK(found && found != stop && view.focus.stop_at(found) == stop, message);
    }
    std::snprintf(message, sizeof(message),
          "%s/%s: no ring is drawn outside its stop, so none of this reached one",

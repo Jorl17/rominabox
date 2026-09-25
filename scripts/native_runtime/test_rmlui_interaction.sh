@@ -120,9 +120,9 @@ for design in designs:
             failed = True
             continue
         (scenes / f"{profile['id']}.rml").write_text(scene.read_text())
-        # Where the exporter's layout puts every leader run and ring, by the
-        # stop they belong to, in the order of scene-geometry. A pad with no
-        # drawing has none.
+        # Where the exporter's layout puts every leader run and ring, and their
+        # size, by stop, in the order of scene-geometry. A pad with no drawing
+        # has none.
         marks = []
         if profile.get("image"):
             asked = subprocess.run(
@@ -133,11 +133,11 @@ for design in designs:
             layout = json.loads(asked.stdout)["result"]
             for placed in layout["controls"]:
                 for mark in [*placed["leader"], placed["marker"]]:
-                    marks.append(f"control-{placed['id']}\t{mark['x']}\t{mark['y']}")
+                    marks.append(f"control-{placed['id']}\t{mark['x']}\t{mark['y']}\t{mark['width']}\t{mark['height']}")
             for group in layout["groups"]:
                 if group["marker"]:
                     for mark in [*group["leader"], group["marker"]]:
-                        marks.append(f"control-group-{group['name']}\t{mark['x']}\t{mark['y']}")
+                        marks.append(f"control-group-{group['name']}\t{mark['x']}\t{mark['y']}\t{mark['width']}\t{mark['height']}")
         (scenes / f"{profile['id']}.marks").write_text("".join(line + "\n" for line in marks))
         lines = []
         for control in profile["controls"]:
