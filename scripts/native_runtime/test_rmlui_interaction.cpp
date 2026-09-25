@@ -485,14 +485,15 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
    char message[512];
    std::snprintf(message, sizeof(message), "%s/%s: no %s", design, profile, path.string().c_str());
    CHECK(in.good(), message);
-   std::vector<std::pair<std::string, Rml::Vector2f>> expected;
+   struct Mark { std::string stop; Rml::Vector2f at, size; };
+   std::vector<Mark> expected;
    for (std::string row; std::getline(in, row); )
    {
       std::stringstream fields(row);
       std::string stop;
-      float x = 0.f, y = 0.f;
-      if (std::getline(fields, stop, '\t') && fields >> x >> y)
-         expected.push_back({stop, {x, y}});
+      float x = 0.f, y = 0.f, w = 0.f, h = 0.f;
+      if (std::getline(fields, stop, '\t') && fields >> x >> y >> w >> h)
+         expected.push_back({stop, {x, y}, {w, h}});
    }
    Rml::Element *scene_element = view.document.root()->GetElementById("controller-scene");
    settle();
@@ -500,8 +501,8 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
    size_t at = 0;
    std::vector<std::string> stops;
    for (const auto &mark : expected)
-      if (stops.empty() || stops.back() != mark.first)
-         stops.push_back(mark.first);
+      if (stops.empty() || stops.back() != mark.stop)
+         stops.push_back(mark.stop);
    for (const std::string &stop_id : stops)
    {
       Rml::Element *stop = view.document.root()->GetElementById(stop_id);
@@ -510,7 +511,7 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
       const std::vector<Rml::Element*> marks = stop ? marks_of(stop) : std::vector<Rml::Element*>{};
       for (Rml::Element *mark : marks)
       {
-         if (at >= expected.size() || expected[at].first != stop_id)
+         if (at >= expected.size() || expected[at].stop != stop_id)
          {
             std::snprintf(message, sizeof(message), "%s/%s: %s draws more marks than the layout gives it",
                   design, profile, stop_id.c_str());
@@ -521,11 +522,23 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
          std::snprintf(message, sizeof(message),
                "%s/%s: a mark of %s is drawn at %.1f,%.1f on the scene; the layout puts it at %.1f,%.1f",
                design, profile, stop_id.c_str(), drawn.x, drawn.y,
-               expected[at].second.x, expected[at].second.y);
-         CHECK(drawn == expected[at].second, message);
+               expected[at].at.x, expected[at].at.y);
+         CHECK(drawn == expected[at].at, message);
+         /* We draw a ring at the size from the layout, so it is centred on its
+          * button. A border drawn outside that size would move the centre. The
+          * thickness of a leader run comes from the design. */
+         if (mark->IsClassSet("control-hit"))
+         {
+            const Rml::Vector2f size = mark->GetBox().GetSize(Rml::BoxArea::Border);
+            std::snprintf(message, sizeof(message),
+                  "%s/%s: the ring of %s is drawn %.1fx%.1f; the layout gives it %.1fx%.1f",
+                  design, profile, stop_id.c_str(), size.x, size.y,
+                  expected[at].size.x, expected[at].size.y);
+            CHECK(size == expected[at].size, message);
+         }
          ++at;
       }
-      while (at < expected.size() && expected[at].first == stop_id)
+      while (at < expected.size() && expected[at].stop == stop_id)
       {
          std::snprintf(message, sizeof(message), "%s/%s: %s draws fewer marks than the layout gives it",
                design, profile, stop_id.c_str());
@@ -540,7 +553,7 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
  * stop. The leader is outside the stop and ends at its outer edge. We draw a
  * focused stop over every leader, its own included, so no leader shows in
  * its box. We draw the ring outside the box of the stop, and a pointer at
- * its centre is on the ring, so on the stop. */
+ * its centre, on the pad, is on the stop. */
 static void check_marks_belong_to_their_stop(const char *design, const char *profile)
 {
    std::vector<std::string> stops;
@@ -645,14 +658,10 @@ static void check_marks_belong_to_their_stop(const char *design, const char *pro
       view.pointer_move(ring_box.x + ring_box.w / 2, ring_box.y + ring_box.h / 2);
       Rml::Element *found = view.document.get_context()->GetHoverElement();
       std::snprintf(message, sizeof(message),
-            "%s/%s: the pointer at #%s's centre finds %s, not the ring",
+            "%s/%s: the pointer at #%s's centre finds %s, which is not on %s",
             design, profile, ring_id.c_str(),
-            found ? found->GetAddress(false, false).c_str() : "nothing");
-      CHECK(found == ring, message);
-      std::snprintf(message, sizeof(message),
-            "%s/%s: the pointer on #%s is not on %s", design, profile,
-            ring_id.c_str(), stop_id.c_str());
-      CHECK(view.focus.stop_at(found) == stop, message);
+            found ? found->GetAddress(false, false).c_str() : "nothing", stop_id.c_str());
+      CHECK(found && found != stop && view.focus.stop_at(found) == stop, message);
    }
    std::snprintf(message, sizeof(message),
          "%s/%s: no ring is drawn outside its stop, so none of this reached one",
@@ -661,39 +670,85 @@ static void check_marks_belong_to_their_stop(const char *design, const char *pro
    view.pointer_move(1, 1);
 }
 
-/* The leader of a callout can cross the box of a stick on its way to the
- * button. A pointer there is on the leader, which is not a stop, so it does
- * not focus the callout of that leader. */
-static void check_a_leader_across_a_stick_takes_no_focus(const char *design, const char *profile)
+/* On the pad, the pointer reaches a control only inside the ring drawn over
+ * its button, and never where the ring of another button is nearer. Rings
+ * are square boxes with round corners drawn inside, so neighbouring rings
+ * overlap as squares. A pointer between Up and Left on the Mega Drive pad,
+ * nearer Up, must reach Up. We do not check points on a callout or on the
+ * box of a stick, because they belong to the box. */
+static void check_pointer_reaches_a_control_only_on_its_ring(const char *design, const char *profile)
 {
-   std::vector<std::string> sticks;
-   anchors("control-group", sticks);
-   char message[512];
+   std::vector<std::string> stops;
+   anchors("control-callout", stops);
+   anchors("control-group", stops);
+   struct Ring { Rml::Element *stop; float x, y, radius; Box box; };
+   std::vector<Ring> rings;
+   std::vector<Box> boxes;
    view.document.set_shown("control-binds", false);
    view.pointer_move(1, 1);
-   view.follow_pointer();
-   for (const std::string &stick_id : sticks)
+   settle();
+   for (const std::string &stop_id : stops)
    {
-      const Box stick = box_of(stick_id.c_str());
-      for (Rml::Element *leader : scene_leaders())
+      Rml::Element *stop = view.document.root()->GetElementById(stop_id);
+      boxes.push_back(drawn_box(stop));
+      if (Rml::Element *ring = ring_of(stop))
       {
-         const Box run = drawn_box(leader);
-         if (!boxes_overlap(run, stick))
-            continue;
-         const int x = (std::max(run.x, stick.x) + std::min(run.x + run.w, stick.x + stick.w)) / 2;
-         const int y = (std::max(run.y, stick.y) + std::min(run.y + run.h, stick.y + stick.h)) / 2;
-         CHECK(view.focus.set("controls-back"), "Back takes focus");
-         view.pointer_move(x, y);
-         view.follow_pointer();
-         const std::string now = view.focus.current_id();
-         std::snprintf(message, sizeof(message),
-               "%s/%s: the pointer at %d,%d, on a leader across %s, focuses %s",
-               design, profile, x, y, stick_id.c_str(), now.c_str());
-         CHECK(now == "controls-back" || now == stick_id, message);
-         view.pointer_move(1, 1);
-         view.follow_pointer();
+         const Box drawn = drawn_box(ring);
+         rings.push_back({stop, drawn.x + drawn.w / 2.f, drawn.y + drawn.h / 2.f, drawn.w / 2.f, drawn});
       }
    }
+   char message[512];
+   int wrong = 0;
+   for (const Ring &ring : rings)
+      for (int y = ring.box.y; y < ring.box.y + ring.box.h; y += 3)
+         for (int x = ring.box.x; x < ring.box.x + ring.box.w; x += 3)
+         {
+            const float px = x + 0.5f, py = y + 0.5f;
+            bool on_a_box = false;
+            for (const Box &box : boxes)
+               on_a_box = on_a_box || (x >= box.x && x < box.x + box.w && y >= box.y && y < box.y + box.h);
+            if (on_a_box)
+               continue;
+            Rml::Element *reached = view.focus.stop_at(
+                  view.document.get_context()->GetElementAtPoint({px, py}));
+            if (!reached)
+               continue;
+            const Ring *own = nullptr;
+            const Ring *nearest = nullptr;
+            float nearest_distance = 0.f;
+            for (const Ring &other : rings)
+            {
+               const float distance = std::hypot(px - other.x, py - other.y);
+               if (other.stop == reached)
+                  own = &other;
+               if (!nearest || distance < nearest_distance)
+               {
+                  nearest = &other;
+                  nearest_distance = distance;
+               }
+            }
+            const float own_distance = own ? std::hypot(px - own->x, py - own->y) : 1e9f;
+            const bool inside = own && own_distance <= own->radius;
+            const bool closest = own && own_distance <= nearest_distance + 1.f;
+            if (inside && closest)
+               continue;
+            if (!wrong++)
+            {
+               std::snprintf(message, sizeof(message),
+                     "%s/%s: the pointer at %d,%d reaches %s, %s",
+                     design, profile, x, y, reached->GetId().c_str(),
+                     !inside ? "outside the ring drawn over its button"
+                             : ("nearer " + nearest->stop->GetId() + "'s ring").c_str());
+               CHECK(false, message);
+            }
+         }
+   if (wrong > 1)
+   {
+      std::snprintf(message, sizeof(message), "%s/%s: and %d more such points on the pad",
+            design, profile, wrong - 1);
+      CHECK(false, message);
+   }
+   view.pointer_move(1, 1);
 }
 
 static void collect_painted(const Box &list, std::vector<Box> &painted)
@@ -1130,7 +1185,7 @@ static int check_placement(const char *assets, const char *scenes,
          check_drawn_above(design);
       check_marks_where_the_layout_puts_them(entry.path(), design, profile.c_str());
       check_marks_belong_to_their_stop(design, profile.c_str());
-      check_a_leader_across_a_stick_takes_no_focus(design, profile.c_str());
+      check_pointer_reaches_a_control_only_on_its_ring(design, profile.c_str());
       for (const auto &size : sizes)
       {
          view.render(size[0], size[1]);
@@ -1374,7 +1429,7 @@ int main(int argc, char **argv)
    view.screens.show_screen("controls");
    int control_x = 0, control_y = 0;
    if (view.document.element_center("control-up", &control_x, &control_y)) {
-      view.controls.set_control_state("up", "Up", "up", true);
+      view.controls.set_control_state("control-up", "up", "Up", "up", true);
       const std::string animation = inspect.property("control-up", "animation");
       CHECK(animation.find("capture-pulse") != std::string::npos, "capture animates the control itself");
       view.render(960, 600);
@@ -1382,7 +1437,7 @@ int main(int argc, char **argv)
       inspect.advance(0.3);
       view.render(960, 600);
       CHECK(border != inspect.property("control-up", "border-top-color"), "capture border changes over time");
-      view.controls.set_control_state("up", "Up", "up", false);
+      view.controls.set_control_state("control-up", "up", "Up", "up", false);
       CHECK(std::string(inspect.property("control-up", "animation")).find("capture-pulse") == std::string::npos, "capture cue stops when capture ends");
    }
    view.controls.set_capturing(true);

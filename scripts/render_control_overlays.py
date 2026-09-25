@@ -1,18 +1,11 @@
 """Render each illustrated controller profile as the player draws it.
 
 This is a tool for visual regression. We read the same declarations as the
-exporter and reproduce the RmlUi overlay geometry exactly, so a change that
-moves a button anchor, a callout or an illustration changes the image.
-
-We copied this geometry from the shipped code.
-  - the scene is 960x380 dp and the illustration fills it
-    (integrations/designs/native/menu.rcss #controller-scene / #controller-image)
-  - a control's (x, y) is the button centre, and the hit marker is a 42 dp
-    circle (.control-hit is border-radius 21dp)
-  - a callout is 196x54 dp at (calloutX, calloutY)
-  - the leader is an L, horizontal at calloutY+28 from the callout's inner
-    edge across to the button's x, then vertical to the button's y
-    (desktop/src-tauri/src/themes.rs prepare_controls_assets)
+exporter, and we get the place of every callout, ring, leader and stick box
+from the exporter (`rominabox-cli scene-geometry`, computed in
+`scene_layout.rs`), so a change that moves a button anchor, a callout, a route
+or an illustration changes the image. We compute no placement here, and the
+size of the scene comes from the design.
 
 The pictures are at 2x, the scale of the shipped ones.
 
@@ -48,9 +41,6 @@ def metrics() -> dict:
 
 _METRICS = metrics()
 SCENE = (_METRICS["scene"]["width"], _METRICS["scene"]["height"])
-MARKER_RADIUS = _METRICS["marker"]["diameter"] // 2
-CALLOUT = (_METRICS["callout"]["width"], _METRICS["callout"]["height"])
-GROUP = _METRICS["group"]
 SCALE = 2
 MARKER = (255, 255, 255, 255)
 STAGE = (32, 36, 44, 255)
@@ -151,88 +141,56 @@ def render(profile: dict, destination: Path, colours: dict) -> Path:
     def s(value: float) -> int:
         return round(value * SCALE)
 
-    # A group is one object on the pad. We draw one marker for its members,
-    # at the anchored member, and list them together in a strip under the
-    # illustration instead of giving each a place in a gutter. Seven 54 dp
-    # callouts fill each gutter, so four directions per stick would cover
-    # the callouts of other buttons.
-    groups: dict[str, list[dict]] = {}
-    for control in profile["controls"]:
-        if control.get("group"):
-            groups.setdefault(control["group"], []).append(control)
-    ungrouped = [c for c in profile["controls"] if not c.get("group")]
-
     def horizontal(at_y: float, x0: float, x1: float) -> None:
         draw.rectangle([s(min(x0, x1)), s(at_y) - 1, s(max(x0, x1)), s(at_y) + 1], fill=leader)
 
     def vertical(at_x: float, y0: float, y1: float) -> None:
         draw.rectangle([s(at_x) - 1, s(min(y0, y1)), s(at_x) + 1, s(max(y0, y1))], fill=leader)
 
-    # We take every position from the exporter, which we use to make the
-    # shipped game, so the renders, the builder and the exported game show
-    # the same positions.
-    for placement in scene_geometry(profile["id"])["controls"]:
-        for run in placement["leader"]:
+    def route(runs: list[dict]) -> None:
+        for run in runs:
             if run["height"] == 0:
                 horizontal(run["y"], run["x"], run["x"] + run["width"])
             else:
                 vertical(run["x"], run["y"], run["y"] + run["height"])
-        ring = placement["marker"]
+
+    def ring(marker: dict) -> None:
         draw.ellipse(
-            [s(ring["x"]), s(ring["y"]),
-             s(ring["x"] + ring["width"]), s(ring["y"] + ring["height"])],
+            [s(marker["x"]), s(marker["y"]),
+             s(marker["x"] + marker["width"]), s(marker["y"] + marker["height"])],
             outline=MARKER, width=3)
 
-    for control in ungrouped:
-        callout_x, callout_y = control["calloutX"], control["calloutY"]
+    def box(rect: dict, title: str, detail: str) -> None:
         draw.rectangle(
-            [s(callout_x), s(callout_y),
-             s(callout_x + CALLOUT[0]), s(callout_y + CALLOUT[1])],
+            [s(rect["x"]), s(rect["y"]), s(rect["x"] + rect["width"]), s(rect["y"] + rect["height"])],
             fill=callout_fill,
             outline=callout_edge,
             width=3,
         )
-        draw.text((s(callout_x + 10), s(callout_y + 5)), control["label"], font=_font(s(18)), fill=MARKER)
-        draw.text((s(callout_x + 10), s(callout_y + 30)), control["key"], font=_font(s(14)), fill=assignment)
+        draw.text((s(rect["x"] + 10), s(rect["y"] + 5)), title, font=_font(s(18)), fill=MARKER)
+        draw.text((s(rect["x"] + 10), s(rect["y"] + 30)), detail, font=_font(s(14)), fill=assignment)
 
-    # One ring on the drawn stick, and one entry in the strip with its directions.
-    if groups:
-        strip_w, strip_h, gap = GROUP["width"], GROUP["height"], GROUP["gap"]
-        total = len(groups) * strip_w + (len(groups) - 1) * gap
-        left = (SCENE[0] - total) // 2
-        top = SCENE[1] - strip_h - GROUP["bottomMargin"]
-        for index, (name, members) in enumerate(sorted(groups.items())):
-            anchor = next((m for m in members if m["x"] or m["y"]), None)
-            box_x = left + index * (strip_w + gap)
-            if anchor:
-                ax, ay = anchor["x"], anchor["y"]
-                draw.ellipse(
-                    [s(ax - MARKER_RADIUS), s(ay - MARKER_RADIUS),
-                     s(ax + MARKER_RADIUS), s(ay + MARKER_RADIUS)],
-                    outline=MARKER,
-                    width=3,
-                )
-                draw.rectangle(
-                    [s(ax) - 1, s(ay), s(ax) + 1, s(top)],
-                    fill=leader,
-                )
-                draw.rectangle(
-                    [s(min(ax, box_x + strip_w // 2)), s(top) - 1,
-                     s(max(ax, box_x + strip_w // 2)), s(top) + 1],
-                    fill=leader,
-                )
-            draw.rectangle(
-                [s(box_x), s(top), s(box_x + strip_w), s(top + strip_h)],
-                fill=callout_fill,
-                outline=callout_edge,
-                width=3,
-            )
-            # The stick's name, then every binding on one line, in the same
-            # words as the callout. On hover we open the vertical list.
-            title = name.replace("_", " ").upper()
-            directions = ", ".join(m["key"] for m in members)
-            draw.text((s(box_x + 12), s(top + 8)), title, font=_font(s(18)), fill=MARKER)
-            draw.text((s(box_x + 12), s(top + 34)), directions, font=_font(s(14)), fill=assignment)
+    # We take the position of every callout, ring, leader and stick box from
+    # the exporter, which we use to make the shipped game. We compute none of
+    # them here.
+    geometry = scene_geometry(profile["id"])
+    declared = {control["id"]: control for control in profile["controls"]}
+    for placement in geometry["controls"]:
+        route(placement["leader"])
+        ring(placement["marker"])
+    for placement in geometry["controls"]:
+        control = declared[placement["id"]]
+        box(placement["callout"], control["label"], control["key"])
+
+    # A stick is one object on the pad, with one ring at the member placed on
+    # the pad and one box with the binding of every direction.
+    for group in geometry["groups"]:
+        route(group["leader"])
+        if group["marker"]:
+            ring(group["marker"])
+        members = [c for c in profile["controls"] if c.get("group") == group["name"]]
+        box(group["strip"], group["name"].replace("_", " ").upper(),
+            ", ".join(m["key"] for m in members))
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     canvas.convert("RGB").save(destination)

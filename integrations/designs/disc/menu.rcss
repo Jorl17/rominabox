@@ -67,9 +67,12 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .control-leader { position: absolute; background-color: design(rule); }
 .control-leader.horizontal { height: 1dp; }
 .control-leader.vertical { width: 1dp; }
-.control-hit { position: absolute; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 1dp transparent; border-radius: design(marker-radius)dp; }
+.control-hit { position: absolute; box-sizing: border-box; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 1dp transparent; border-radius: design(marker-radius)dp; }
 .control-callout:hover .control-hit, .control-group:hover .control-hit { border-color: design(edge); border-width: 2dp; }
 .control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: design(highlight); border-width: 2dp; margin-left: -3dp; }
+/* The thicker left edge of the focused box moves its content to the right.
+ * The ring and the area for the pointer stay on the button. */
+.control-callout.focused .control-reach, .control-group.focused .control-reach { margin-left: -3dp; }
 .control-callout { position: absolute; width: design(callout-width)dp; height: design(callout-height)dp; padding: 0; border-width: 1dp; border-color: design(rule); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
 .control-callout:hover { border-color: design(edge); z-index: 2; }
 /* Later controls are later siblings and would cover the focused edge of
@@ -117,7 +120,8 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .menu-action.disabled, .menu-action:disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
 
 @keyframes capture-pulse { from { border-color: design(highlight); } to { border-color: design(rule); } }
-.control-callout.capturing, .control-callout.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
+.control-callout.capturing, .control-callout.capturing .control-hit,
+.control-group.capturing, .control-group.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
 
 /* One list for every screen with a list. We write the rows when we bundle
  * the game, and no screen has a separate list style. */

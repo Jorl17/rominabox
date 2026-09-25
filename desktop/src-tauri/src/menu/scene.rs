@@ -211,7 +211,13 @@ fn scene_markup(
             .map(|_| item.label.as_str());
         let ring = if illustrated {
             markup.push_str(&leader_markup(&placed.leader));
-            ring_markup(&item.id, placed.marker, placed.callout, metrics.callout_border)
+            ring_markup(
+                &item.id,
+                placed.marker,
+                placed.reach,
+                placed.callout,
+                metrics.callout_border,
+            )
         } else {
             String::new()
         };
@@ -293,20 +299,29 @@ fn leader_markup(leader: &[crate::scene_layout::Segment]) -> String {
 
 /// The ring over the button of a control on the pad, at the position from
 /// `scene_layout`, written inside the focus stop for the control. A design
-/// lights it by the state of that stop, and a pointer on it is on the stop.
+/// lights it by the state of that stop. The pointer reaches the stop through
+/// the hit area of the control, never through the ring, because the square
+/// box of a ring is wider than the space between neighbouring buttons.
 ///
 /// RmlUi places a child from the padding edge of its parent, which is
 /// `border` inside the box that `scene_layout` computed for the stop.
 fn ring_markup(
     id: &str,
     marker: crate::scene_layout::Rect,
+    reach: crate::scene_layout::Rect,
     stop: crate::scene_layout::Rect,
     border: i32,
 ) -> String {
+    let (left, top) = (stop.x + border, stop.y + border);
     format!(
-        "<div id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;\"/>",
-        marker.x - stop.x - border,
-        marker.y - stop.y - border
+        "<div id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;pointer-events:none;\"/>\
+         <div id=\"control-reach-{id}\" class=\"control-reach\" style=\"position:absolute;left:{}dp;top:{}dp;width:{}dp;height:{}dp;\"/>",
+        marker.x - left,
+        marker.y - top,
+        reach.x - left,
+        reach.y - top,
+        reach.width,
+        reach.height,
     )
 }
 
@@ -323,10 +338,10 @@ fn control_group_markup(
     let mut markup = String::new();
     for group in groups {
         let name = group.name.as_str();
-        let ring = match (&group.anchor, group.marker) {
-            (Some(anchor), Some(marker)) if illustrated => {
+        let ring = match (&group.anchor, group.marker, group.reach) {
+            (Some(anchor), Some(marker), Some(reach)) if illustrated => {
                 markup.push_str(&leader_markup(&group.leader));
-                ring_markup(anchor, marker, group.strip, border)
+                ring_markup(anchor, marker, reach, group.strip, border)
             }
             _ => String::new(),
         };
