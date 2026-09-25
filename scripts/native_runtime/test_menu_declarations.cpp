@@ -1,6 +1,7 @@
-/* The production loader, with only the libretro config reader replaced.
- * config_get_array writes a truncated value AND returns false. Keep the
- * separate handling of optional screen fields and toggle words. */
+/* The production loader, with only the libretro config reader replaced. We
+ * read every value whole, through config_get_entry. config_get_array, which
+ * writes a truncated value AND returns false, is here for any code that
+ * still reads a line into a buffer. */
 #include "rmlui/declarations.h"
 #include <file/config_file.h>
 #include <map>
@@ -105,13 +106,20 @@ int test_menu_declarations()
    values = {{"controls_profile", std::string(64, 'p')}};
    reads = 0;
    rib_controls_catalog controls{};
-   char profile[32] = "megadrive";
+   std::string profile = "megadrive";
    bool profile_present = false;
    auto *config = rib_open_controls("fixture", false, profile, &controls,
          &profile_present, [](const char *, unsigned *) { return false; });
    check(config && reads == 1, "a controls override is opened once");
-   check(std::strcmp(profile, "megadrive") == 0 && profile_present,
-         "a truncated override keeps the profile but still repaints the picker");
+   check(profile == std::string(64, 'p') && profile_present,
+         "a long profile an override names is kept whole");
+   config_file_free(config);
+   values.clear();
+   profile = "megadrive";
+   config = rib_open_controls("fixture", false, profile, &controls,
+         &profile_present, [](const char *, unsigned *) { return false; });
+   check(config && profile == "megadrive" && !profile_present,
+         "a file that names no pad leaves the pad as it was");
    config_file_free(config);
 
    /* Lists and ids longer than any buffer a line could be read into: a long
@@ -162,7 +170,7 @@ int test_menu_declarations()
       }
       values["controls_variants"] = devices;
       rib_controls_catalog pad{};
-      char named[32] = "";
+      std::string named;
       bool present = false;
       config_file_t *defaults = rib_open_controls("fixture", true, named, &pad, &present,
             [](const char *, unsigned *index) { *index = 0; return true; });

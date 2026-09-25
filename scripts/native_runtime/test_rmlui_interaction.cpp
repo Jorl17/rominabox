@@ -73,12 +73,10 @@ static rib_controls_catalog fixture_controls = [] {
       "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus"
    };
    for (const char *id : ids)
-      std::snprintf(catalog.entries[catalog.count++].id, 32, "%s", id);
+      catalog.entries[catalog.count++].id = id;
    catalog.device_count = 2;
-   std::snprintf(catalog.devices[0].id, 32, "megadrive");
-   std::snprintf(catalog.devices[0].name, NAME_MAX_LENGTH, "Mega Drive");
-   std::snprintf(catalog.devices[1].id, 32, "megadrive6");
-   std::snprintf(catalog.devices[1].name, NAME_MAX_LENGTH, "Mega Drive six-button");
+   catalog.devices[0] = {"megadrive", "Mega Drive", 0};
+   catalog.devices[1] = {"megadrive6", "Mega Drive six-button", 0};
    return catalog;
 }();
 
