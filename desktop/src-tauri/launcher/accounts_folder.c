@@ -8,8 +8,10 @@
 
 int rominabox_accounts_folder(const char *app_data, const char *name, char *out, size_t capacity) {
     int wrote;
+    /* We look only at the accounts folder. Inside the sandbox only that
+     * folder can be opened, so even a query about its parent can fail. */
     if (!app_data || !app_data[0] || !name || !name[0] || name[0] == '.'
-        || strpbrk(name, "/\\:\t\n") || !fs_is_directory(app_data)) {
+        || strpbrk(name, "/\\:\t\n")) {
         errno = EINVAL;
         return -1;
     }

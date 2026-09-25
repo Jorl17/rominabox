@@ -7,6 +7,7 @@
 #include "../launcher/accounts_folder.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <dirent.h>
 #include <errno.h>
 #include <ftw.h>
@@ -292,18 +293,45 @@ static void game_of(int writer, char game[25])
 static void writer(int index)
 {
    char game[25];
-   char token[32];
+   char token[64];
    int round;
    game_of(index, game);
    for (round = 0; round < ROUNDS; ++round)
    {
-      snprintf(token, sizeof token, "token-%d-%d", index, round);
+      /* The token contains its length, so part of one and part of another
+       * cannot pass for a token. */
+      {
+         int length = 12 + (index * 7 + round) % 40, at;
+         at = snprintf(token, sizeof token, "t%02d.", length);
+         for (; at < length - 1; ++at)
+            token[at] = (char)('a' + (index + round + at) % 26);
+         token[at++] = '#';
+         token[at] = '\0';
+      }
       if (!rib_accounts_remember(names[index % 4], names[index % 4], token, game))
          _exit(10);
       if ((round < ROUNDS - 1 || index % 2 == 0) && !rib_accounts_forget(names[index % 4], game))
          _exit(11);
    }
    _exit(0);
+}
+
+/* A session file exactly as a writer finished it: the name twice and a token
+ * as long as its stated length. */
+static bool whole_session(const char *text, const char *name)
+{
+   char expected[64];
+   const char *token;
+   const char *end;
+   int length;
+   snprintf(expected, sizeof expected, "%s\n%s\n", name, name);
+   if (strncmp(text, expected, strlen(expected)))
+      return false;
+   token = text + strlen(expected);
+   end = strchr(token, '\n');
+   if (!end || end[1] || sscanf(token, "t%2d.", &length) != 1)
+      return false;
+   return end - token == length && end[-1] == '#';
 }
 
 /* Read every session directly from disk while the writers run. A file that
@@ -324,7 +352,7 @@ static void reader(void)
          size = fread(text, 1, sizeof text - 1, file);
          fclose(file);
          text[size] = '\0';
-         if (size == 0 || text[size - 1] != '\n' || strncmp(text, names[key], strlen(names[key])))
+         if (!whole_session(text, names[key]))
             _exit(20);
       }
    _exit(0);
