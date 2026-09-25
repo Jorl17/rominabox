@@ -176,7 +176,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .list-status { position: absolute; left: 24dp; top: 544dp; color: #b4e6ff; font-size: 13dp; }
 
 .menu-index { position: absolute; left: 24dp; top: 56dp; width: 680dp; height: 384dp; }
-.option-entry { position: relative; display: block; margin-bottom: 8dp; width: 680dp; height: 52dp; line-height: 52dp; font-family: Silkscreen; font-size: 18dp; border-width: 0 0 1dp 0; border-color: #476eab; text-align: left; padding-left: 16dp; background-color: transparent; }
+.option-entry { position: relative; display: block; margin-bottom: 8dp; width: 680dp; min-height: 26dp; padding-top: 13dp; padding-bottom: 13dp; line-height: 26dp; font-family: Silkscreen; font-size: 18dp; border-width: 0 0 1dp 0; border-color: #476eab; text-align: left; padding-left: 16dp; background-color: transparent; }
 .option-entry:hover { background-color: #193e88; color: #ffffff; border-color: #75b2e4; }
 .option-entry.focused { border-color: #476eab; border-left-width: 6dp; border-left-color: #fff13d; background-color: transparent; color: #ffffff; }
 .option-entry:active { background-color: #fff13d; color: #081433; }
