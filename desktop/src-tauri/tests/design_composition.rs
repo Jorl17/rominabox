@@ -514,6 +514,38 @@ fn a_designs_words_name_the_settings_and_mark_the_lists() {
     }
 }
 
+/// The Options entry of the disc list starts hidden and disabled, which we
+/// write at composition on the design's entry template. When the template
+/// has a style, we keep it and add the hiding to it, because an element with
+/// two style attributes gets only one of them.
+#[test]
+fn a_hidden_entry_joins_the_style_its_template_has() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-design-styled-entry");
+    let kit = support::kit(&root);
+    let design = kit.join("designs/styled-entries");
+    fs::create_dir_all(&design).unwrap();
+    fs::write(
+        design.join("design.json"),
+        r#"{"schemaVersion": 1, "id": "styled-entries"}"#,
+    )
+    .unwrap();
+    fs::write(
+        design.join("option-entry.rml"),
+        r#"<button class="menu-action option-entry" id="BUTTON" style="text-align: left;"><span class="option-label">LABEL</span></button>"#,
+    )
+    .unwrap();
+    let composed = support::compose(&kit, "styled-entries", None, 2, &root.join("composed"));
+    let at = composed.menu.find("id=\"discs\"").expect("the disc list has its entry");
+    let start = composed.menu[..at].rfind('<').unwrap();
+    let end = at + composed.menu[at..].find('>').unwrap();
+    let tag = &composed.menu[start..end];
+    assert_eq!(tag.matches("style=").count(), 1, "{tag}");
+    assert!(
+        tag.contains("text-align: left;") && tag.contains("display: none;"),
+        "{tag}"
+    );
+}
+
 /// The Pause heading comes from its `screens` entry, which we write in the
 /// player when Pause opens. When a design words `paused-heading`, the player
 /// sees that word there, or we refuse it at export, because a word we accept
