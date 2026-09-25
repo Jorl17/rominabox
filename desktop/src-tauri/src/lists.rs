@@ -218,7 +218,13 @@ pub fn render_row(template: &str, item: &ListItem) -> String {
 /// items do not fit on one page. On page one the back arrow is disabled,
 /// and we move that mark in the player as the page turns. Page and arrow ids
 /// are `{screen}-page-N`, `{screen}-prev`, `{screen}-next` and `{screen}-page-count`.
-pub fn render_list(screen: &str, template: &str, items: &[ListItem], page_size: usize) -> String {
+pub fn render_list(
+    screen: &str,
+    template: &str,
+    items: &[ListItem],
+    page_size: usize,
+    words: &std::collections::BTreeMap<String, String>,
+) -> String {
     if items.is_empty() || page_size == 0 {
         return String::new();
     }
@@ -240,19 +246,26 @@ pub fn render_list(screen: &str, template: &str, items: &[ListItem], page_size: 
         html.push_str("</div>");
     }
     if page_count > 1 {
-        html.push_str(&pager(screen, page_count));
+        html.push_str(&pager(screen, page_count, words));
     }
     html.push_str("</div>");
     html
 }
 
-fn pager(screen: &str, page_count: usize) -> String {
+/// A list's pager, with its count in the design's words for `page-count`,
+/// written as we write it in the player when the page turns.
+fn pager(screen: &str, page_count: usize, words: &std::collections::BTreeMap<String, String>) -> String {
     let hidden = if page_count < 2 {
         " style=\"display:none;\""
     } else {
         ""
     };
-    format!("<div id=\"{screen}-pager\" class=\"list-pager\"{hidden}><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">1/{page_count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">&gt;</button></div>")
+    let count = rml_text(&crate::menu::words::say(
+        words,
+        "page-count",
+        &[("page", "1"), ("pages", &page_count.to_string())],
+    ));
+    format!("<div id=\"{screen}-pager\" class=\"list-pager\"{hidden}><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">{count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">&gt;</button></div>")
 }
 
 /// What we show in a live row while its picture loads: nine cells, laid out
@@ -268,7 +281,12 @@ const WAITING: &str = concat!(
 /// A live list contains a hidden prototype row from the same template as the
 /// static lists. We clone it in the native list component, so there is no
 /// second template and no layout specific to achievements.
-fn live_list(screen: &str, template: &str, page_size: usize) -> String {
+fn live_list(
+    screen: &str,
+    template: &str,
+    page_size: usize,
+    words: &std::collections::BTreeMap<String, String>,
+) -> String {
     let mut row = render_row(
         template,
         &ListItem {
@@ -286,7 +304,7 @@ fn live_list(screen: &str, template: &str, page_size: usize) -> String {
     if let Some(opened) = row.find('>') {
         row.insert_str(opened + 1, WAITING);
     }
-    let pager = pager(screen, 0);
+    let pager = pager(screen, 0, words);
     format!("<div id=\"{screen}-list\" class=\"list live-list\" data-page-size=\"{page_size}\"><div class=\"list-prototype\" style=\"display:none;\">{row}</div>{pager}</div>")
 }
 
@@ -357,11 +375,14 @@ pub fn install(
                     continue;
                 }
                 (
-                    render_list(&list.screen.id, &template, items, pages),
+                    render_list(&list.screen.id, &template, items, pages, &manifest.words),
                     pages.saturating_sub(items.len().min(pages)) * step,
                 )
             }
-            ListContent::Live => (live_list(&list.screen.id, &template, pages), 0),
+            ListContent::Live => (
+                live_list(&list.screen.id, &template, pages, &manifest.words),
+                0,
+            ),
         };
         let back = list
             .screen
@@ -506,12 +527,14 @@ mod tests {
     #[test]
     fn a_list_is_the_one_row_template_however_many_items_it_has() {
         let template = row_template(Path::new("/nonexistent")).expect("built-in row");
-        let rows = render_list("shaders", &template, &[item("a", "A"), item("b", "B")], 8);
+        let english = std::collections::BTreeMap::new();
+        let rows = render_list("shaders", &template, &[item("a", "A"), item("b", "B")], 8, &english);
         let other = render_list(
             "achievements",
             &template,
             &[item("a", "A"), item("b", "B"), item("c", "C")],
             8,
+            &english,
         );
         assert_eq!(rows.matches("class=\"list-row ").count(), 2);
         assert_eq!(other.matches("class=\"list-row ").count(), 3);
@@ -520,10 +543,11 @@ mod tests {
     #[test]
     fn more_rows_than_fit_page_with_a_visible_count() {
         let template = row_template(Path::new("/nonexistent")).expect("built-in row");
-        let paged = render_list("x", &template, &[item("a", "A"), item("b", "B")], 1);
+        let english = std::collections::BTreeMap::new();
+        let paged = render_list("x", &template, &[item("a", "A"), item("b", "B")], 1, &english);
         assert!(paged.contains("x-page-2"));
         assert!(paged.contains("1/2"));
-        let single = render_list("x", &template, &[item("a", "A")], 4);
+        let single = render_list("x", &template, &[item("a", "A")], 4, &english);
         assert!(
             !single.contains("list-pager"),
             "one page does not grow arrows"

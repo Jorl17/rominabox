@@ -122,7 +122,7 @@ fn bind_list_markup(
     // Without it, no bind list has a box, and the placement check fails for
     // every one of them.
     Ok(
-        crate::lists::render_list("binds", &template, &items, page_size).replacen(
+        crate::lists::render_list("binds", &template, &items, page_size, &manifest.words).replacen(
             "<div id=\"binds-list\" class=\"list\">",
             "<div id=\"control-binds\" class=\"list\" style=\"display:none;\">",
             1,

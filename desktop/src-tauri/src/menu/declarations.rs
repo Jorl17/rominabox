@@ -225,6 +225,10 @@ pub(crate) fn write(
     // The font files staged beside the document, which we load in the player.
     let fonts: Vec<&str> = manifest.fonts.iter().map(|font| font.file.as_str()).collect();
     line(&mut text, "fonts", &fonts.join(" "))?;
+    // The design's wording for the words we write in the player, or English.
+    for (id, words) in &manifest.words {
+        line(&mut text, &format!("word_{id}"), words)?;
+    }
 
     for (index, list) in lists.iter().enumerate() {
         screen_lines(&mut text, &list.screen, &buttons[drawn.len() + index])?;

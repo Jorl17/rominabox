@@ -14,6 +14,7 @@ mod manifest;
 mod scene;
 mod stage;
 mod tokens;
+pub mod words;
 
 use std::path::PathBuf;
 

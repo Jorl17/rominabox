@@ -1,0 +1,130 @@
+{
+  "designs": [
+    "native",
+    "disc",
+    "wording"
+  ],
+  "cases": [
+    {
+      "name": "the slots in the design's words",
+      "steps": [
+        "wait-ms:0"
+      ],
+      "text": {
+        "*": [
+          {
+            "slot-label-1": "SLOT 1",
+            "slot-state-1": "EMPTY"
+          }
+        ],
+        "wording": [
+          {
+            "slot-label-1": "BLOCK 1",
+            "slot-state-1": "FREE"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a save that fails says so in the design's words",
+      "steps": [
+        "save"
+      ],
+      "text": {
+        "*": [
+          {
+            "status": "SAVE FAILED"
+          }
+        ],
+        "wording": [
+          {
+            "status": "COULD NOT SAVE"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the pad screen's prompt, and a capture, in the design's words",
+      "steps": [
+        "options",
+        "controls",
+        "key:ok",
+        "key:cancel"
+      ],
+      "text": {
+        "*": [
+          {
+            "controls-status": "SELECT A BUTTON",
+            "footer-hint": "ESC  BACK"
+          },
+          {
+            "controls-status": "SELECT A CONTROL TO REBIND",
+            "footer-hint": "ESC  BACK"
+          },
+          {
+            "controls-status": "Up: PRESS AN INPUT (9)",
+            "footer-hint": "ESC  CANCEL"
+          },
+          {
+            "controls-status": "BINDING UNCHANGED",
+            "footer-hint": "ESC  BACK"
+          }
+        ],
+        "wording": [
+          {
+            "controls-status": "SELECT A BUTTON",
+            "footer-hint": "ESC  BACK"
+          },
+          {
+            "controls-status": "PICK A BUTTON",
+            "footer-hint": "ESC  BACK"
+          },
+          {
+            "controls-status": "PRESS FOR Up (9)",
+            "footer-hint": "B  STOP"
+          },
+          {
+            "controls-status": "KEPT AS IT WAS",
+            "footer-hint": "ESC  BACK"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a list's pager counts in the design's words",
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-next"
+      ],
+      "text": {
+        "*": [
+          {
+            "achievements-page-count": "1/2"
+          },
+          {
+            "achievements-page-count": "1/2"
+          },
+          {
+            "achievements-page-count": "2/2"
+          }
+        ],
+        "wording": [
+          {
+            "achievements-page-count": "PAGE 1 OF 2"
+          },
+          {
+            "achievements-page-count": "PAGE 1 OF 2"
+          },
+          {
+            "achievements-page-count": "PAGE 2 OF 2"
+          }
+        ]
+      },
+      "setup": {
+        "achievements": "active",
+        "rows": 8
+      }
+    }
+  ]
+}

@@ -44,6 +44,9 @@ struct File {
     screen_order: Vec<String>,
     #[serde(default)]
     tokens: BTreeMap<String, String>,
+    /// The design's wording for the words we write in the player, by id.
+    #[serde(default)]
+    words: BTreeMap<String, String>,
 }
 
 #[derive(Default, Deserialize)]
@@ -367,6 +370,9 @@ pub struct Manifest {
     pub screens: Vec<Screen>,
     /// The design's own named values, which a palette may override.
     pub tokens: BTreeMap<String, String>,
+    /// The words we write in the player, in this design's wording, by id:
+    /// Native's, then the design's over them, or else the English word.
+    pub words: BTreeMap<String, String>,
 }
 
 /// The base must come from the same source tree or frozen kit as the design.
@@ -510,6 +516,10 @@ impl Manifest {
         let mut tokens = native.tokens.clone();
         tokens.extend(own.tokens.clone());
 
+        let mut words = native.words.clone();
+        words.extend(own.words.clone());
+        super::words::check(&id, &words)?;
+
         let screens = screens(design, &base, native.screens, own.screens, own.screen_order)?;
         Ok(Manifest {
             design: design.to_path_buf(),
@@ -524,6 +534,7 @@ impl Manifest {
             overlays,
             screens,
             tokens,
+            words,
         })
     }
 
@@ -795,6 +806,17 @@ mod tests {
             .unwrap();
         assert_eq!(discs.option_label, None);
         assert_eq!(discs.role, Some(ScreenRole::Discs), "the role is inherited");
+    }
+
+    #[test]
+    fn a_design_words_only_what_the_player_writes() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-manifest-words");
+        with_native(&root);
+        let worded = package(&root, "worded", r#"{"words": {"slot": "BLOCK {slot}"}}"#);
+        assert_eq!(Manifest::load(&worded).unwrap().words["slot"], "BLOCK {slot}");
+        let misworded = package(&root, "misworded", r#"{"words": {"slots": "BLOCK"}}"#);
+        let error = Manifest::load(&misworded).unwrap_err();
+        assert!(error.contains("'slots'") && error.contains("misworded"), "{error}");
     }
 
     #[test]

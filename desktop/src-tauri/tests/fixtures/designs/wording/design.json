@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "wording",
+  "name": "Wording",
+  "description": "Hypothetical, style only: Native in its own words for what the menu writes itself.",
+  "words": {
+    "slot": "BLOCK {slot}",
+    "empty": "FREE",
+    "save-failed": "COULD NOT SAVE",
+    "choose-control": "PICK A BUTTON",
+    "capture-countdown": "PRESS FOR {control} ({seconds})",
+    "cancel-hint": "B  STOP",
+    "binding-unchanged": "KEPT AS IT WAS",
+    "page-count": "PAGE {page} OF {pages}"
+  }
+}
