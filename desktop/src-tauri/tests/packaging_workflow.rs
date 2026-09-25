@@ -6,9 +6,9 @@ use export_fixture::{export_request, workspace};
 
 use rominabox_desktop::cores::{Response, Transport, Version};
 use rominabox_desktop::export_cores::CoreActivity;
+use rominabox_desktop::hotkeys::{isolated_hotkey_config, HOTKEY_BINDS};
 use rominabox_desktop::packaging::{
-    isolated_hotkey_config, ErrorStage, ExportRequest, ExportStage, ExportTarget, HOTKEY_BINDS,
-    MANAGED_DATA_DIRECTORIES,
+    ErrorStage, ExportRequest, ExportStage, ExportTarget, MANAGED_DATA_DIRECTORIES,
 };
 use std::{
     cell::Cell,

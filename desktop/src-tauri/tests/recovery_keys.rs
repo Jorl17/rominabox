@@ -10,7 +10,8 @@
 
 use rominabox_desktop::{
     controls::{self, Controls},
-    packaging::{isolated_hotkey_config, ExportRequest, ExportTarget},
+    hotkeys::isolated_hotkey_config,
+    packaging::{ExportRequest, ExportTarget},
 };
 use std::{
     fs,

@@ -8,9 +8,8 @@
 
 use rominabox_desktop::{
     controls::{self, Controls},
-    packaging::{
-        isolated_hotkey_config, ExportRequest, ExportTarget, HOTKEY_BINDS, MANAGED_DATA_DIRECTORIES,
-    },
+    hotkeys::{isolated_hotkey_config, HOTKEY_BINDS},
+    packaging::{ExportRequest, ExportTarget, MANAGED_DATA_DIRECTORIES},
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
