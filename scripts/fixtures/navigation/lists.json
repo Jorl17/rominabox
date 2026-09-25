@@ -131,7 +131,7 @@
       }
     },
     {
-      "name": "discs: seven discs, down to the pager and BACK",
+      "name": "discs: seven discs, to the pager and BACK",
       "setup": {
         "discs": 7
       },
@@ -153,7 +153,8 @@
           "key:down",
           "key:down",
           "key:down",
-          "key:down"
+          "key:down",
+          "key:right"
         ]
       },
       "focused": {
@@ -173,6 +174,7 @@
           "discs-2",
           "discs-3",
           "discs-4",
+          "discs-next",
           "discs-next",
           "discs-back"
         ]

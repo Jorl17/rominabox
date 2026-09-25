@@ -122,7 +122,8 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 /* One list for every screen with a list. We write the rows when we bundle
  * the game, and no screen has a separate list style. */
 .screen-link { position: absolute; top: 10dp; right: 16dp; width: 140dp; height: 28dp; z-index: 2; font-family: Silkscreen; font-size: 12dp; line-height: 28dp; text-align: center; }
-.list { position: absolute; left: 24dp; top: 52dp; width: 700dp; }
+/* As wide as the screen's content, to BACK's right edge. */
+.list { position: absolute; left: 24dp; top: 52dp; width: 920dp; }
 .list-row { display: block; position: relative; width: 100%; height: 48dp; margin: 0 0 4dp 0; padding: 0; background-color: #061a48; color: #ffffff; border-width: 0 0 1dp 0; border-color: #476eab; font-family: Silkscreen; text-align: left; }
 /* The pointer moves the same focus as the keys, so a border here would
  * show a second selected row. We draw the left accent outside the row,
@@ -144,7 +145,14 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .list-row.line .list-row-state { top: 0; height: 28dp; line-height: 28dp; }
 .list-row-detail { position: absolute; left: 52dp; top: 26dp; font-size: 12dp; color: #b4e6ff; }
 .list-row-state { position: absolute; right: 12dp; top: 16dp; font-size: 12dp; color: #fff13d; }
-.list-pager { position: absolute; left: 0; top: 272dp; width: 100%; height: 32dp; }
+/* The pager is at the left of the button row, 508dp down the screen. A list
+ * starts 52dp down, so that is 456dp into it. The achievements list is in the
+ * list box of the account screen, at the same place, so we place its pager
+ * against that box and it is on the same row. The shared achievements
+ * stylesheet comes after this one, so we add the extra class. */
+.list-pager { position: absolute; left: 0; top: 456dp; width: 100%; height: 32dp; }
+.account-screen .account-catalog .list { position: static; }
+.account-screen .account-catalog .list-pager { position: absolute; top: 456dp; margin-top: 0; }
 .list-pager-prev, .list-pager-next, .list-pager-count { position: absolute; top: 0; height: 32dp; line-height: 32dp; background-color: #061a48; color: #ffffff; border-width: 1dp; border-color: #476eab; font-family: Silkscreen; font-size: 13dp; text-align: center; }
 .list-pager-prev { left: 0; width: 64dp; }
 .list-pager-count { left: 72dp; width: 100dp; }

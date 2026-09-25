@@ -20,6 +20,15 @@ static rcheevos_locals_t locals;
 static uint8_t memory_byte;
 static unsigned awards;
 static unsigned badge_downloads;
+/* While the menu is open, every badge is fetched in the RetroArch queue,
+ * and a second download of a file already being fetched is rejected. */
+static bool badge_already_downloading;
+static int64_t now_usec = 1000000;
+
+int64_t cpu_features_get_time_usec(void)
+{
+   return now_usec;
+}
 static bool defer_login;
 static bool fail_login;
 static bool defer_award;
@@ -177,6 +186,8 @@ bool rcheevos_client_download_badge_from_url(const char *url,
 {
    (void)url;
    (void)badge_name;
+   if (badge_already_downloading)
+      return false;
    ++badge_downloads;
    return true;
 }
@@ -253,25 +264,31 @@ static void badge_lifecycle(const char *directory)
    assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING);
    assert(badge_downloads == 2);
 
+   /* The player sees a badge downloading or shown, never "not fetched". We
+    * treat a failed download as still on its way, and request it again after
+    * a pause, while the menu runs. */
    rib_achievements_badge_failed("123_lock");
    assert(rib_achievements_get_row(0, &row));
-   assert(row.badge == RIB_ACHIEVEMENT_BADGE_FAILED && badge_downloads == 2);
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING && badge_downloads == 2);
    rib_catalog_mark_rows_dirty();
    assert(rib_achievements_get_row(0, &row));
-   assert(row.badge == RIB_ACHIEVEMENT_BADGE_FAILED && badge_downloads == 2);
-
-   /* Still open: we do not ask again. Hidden and shown: we ask again, and a
-    * refresh while it is on its way does not cause a third request. */
-   rib_achievements_list_shown(true);
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING && badge_downloads == 2);
+   snapshot();
+   assert(badge_downloads == 2);
+   now_usec += 10 * 1000000;
+   snapshot();
    assert(rib_achievements_get_row(0, &row));
-   assert(row.badge == RIB_ACHIEVEMENT_BADGE_FAILED && badge_downloads == 2);
+   assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING && badge_downloads == 3);
+
+   /* The menu opens while the RetroArch queue is already fetching the badge,
+    * so the request for the row is rejected. We show the badge as on its way
+    * until the picture from the queue arrives. */
+   badge_already_downloading = true;
    rib_achievements_list_shown(false);
    rib_achievements_list_shown(true);
    assert(rib_achievements_get_row(0, &row));
    assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING && badge_downloads == 3);
-   rib_catalog_mark_rows_dirty();
-   assert(rib_achievements_get_row(0, &row));
-   assert(row.badge == RIB_ACHIEVEMENT_BADGE_LOADING && badge_downloads == 3);
+   badge_already_downloading = false;
 
    /* In the task callback we mark badges dirty. In the next main-thread
     * snapshot we publish a revision and copied path without another get_row. */

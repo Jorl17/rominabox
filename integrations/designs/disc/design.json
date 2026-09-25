@@ -122,6 +122,10 @@
         "label": "FILTERS",
         "default": false
       }
+    },
+    {
+      "id": "achievements",
+      "pageSize": 7
     }
   ],
   "screenOrder": ["pause", "disc", "discs", "options", "controls", "shaders"],

@@ -3,12 +3,13 @@ what the pictures themselves must show.
 
     python3 scripts/menu_pictures.py          # draw into work/feedback-pictures and check
 
-Badges. A downloading badge must appear as an animated placeholder, and a
-badge we could not fetch as a mark. A row can have the right classes and
-still show a blank square, so only a picture shows the difference. We draw
-every design's achievements list with a downloaded badge, one downloading
-and one failed, at two moments of the animation. The middle of each waiting
-badge's box must not be one flat colour, and the two moments must differ.
+Badges. A badge is either downloading or shown, and a player never sees
+"not fetched". A downloading badge must appear as an animated placeholder.
+A row can have the right class and still show a blank square, so only a
+picture shows the difference. We draw every design's achievements list
+with a downloaded badge and one downloading, at two moments of the
+animation. The middle of the waiting badge's box must not be one flat
+colour, and the two moments must differ.
 
 Disc. We draw every Disc screen that has BACK at the two window widths a
 player is likely to see, for a person to look at. In `tests/menu_layout.rs`
@@ -79,7 +80,7 @@ def showing(panel: str) -> dict[str, str]:
 
 # ---- badges ---------------------------------------------------------------
 
-BADGE_CLASS = {"loading": "badge-loading", "failed": "badge-failed", "ready": "", "none": ""}
+BADGE_CLASS = {"loading": "badge-loading", "ready": "", "none": ""}
 PROTOTYPE = re.compile(
     r'<div class="list-prototype"[^>]*>(?P<row>.*?)</div>(?=<div id="(?P<screen>[a-z-]+)-pager")',
     re.S,
@@ -150,8 +151,7 @@ def badges(design: str, staging: Path) -> list[str]:
     stylesheet = (staging / "menu.rcss").read_text()
     shown = {**showing("achievements-panel"), "achievements-catalog": "display=block",
              "achievements-signed-out": "display=none", "heading": "text=ACHIEVEMENTS"}
-    rows = [("achievement-1", "DOWNLOADED", "ready"), ("achievement-2", "DOWNLOADING", "loading"),
-            ("achievement-3", "NOT FETCHED", "failed")]
+    rows = [("achievement-1", "DOWNLOADED", "ready"), ("achievement-2", "DOWNLOADING", "loading")]
 
     def drawn(name: str, markup: str, folder: Path) -> Path:
         source = staging / f"badges-{name}.rml"

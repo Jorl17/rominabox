@@ -277,9 +277,9 @@ int main(int argc, char **argv) {
    overlays.update(false);
    check(!overlays.drawing(), "Finished startup capture releases rendering");
    {
-      // While a badge downloads we show a placeholder, and for a failed one
-      // a mark. When the download finishes while the list is closed, only
-      // the picture changes.
+      // While a badge downloads we show a moving placeholder. When the
+      // download finishes while the list is closed, only the picture
+      // changes.
       document.shutdown();
       check(document.initialize(argv[1], 960, 600, false), "Badge document loads");
       document.show(); document.settle();
@@ -294,8 +294,7 @@ int main(int argc, char **argv) {
       };
       const std::string ready_path = document.asset_path("badge-1.png");
       service_rows = {row_of(1, RIB_ACHIEVEMENT_BADGE_READY, ready_path.c_str()),
-                      row_of(2, RIB_ACHIEVEMENT_BADGE_LOADING, ""),
-                      row_of(3, RIB_ACHIEVEMENT_BADGE_FAILED, "")};
+                      row_of(2, RIB_ACHIEVEMENT_BADGE_LOADING, "")};
       session = {}; session.status = RIB_ACHIEVEMENTS_ACTIVE; session.count = service_rows.size();
       std::snprintf(session.account, sizeof(session.account), "fixture"); session.revision = 50;
       document.set_shown("pause-panel", false);
@@ -328,13 +327,35 @@ int main(int argc, char **argv) {
             && document.root()->GetElementById("achievement-2")->IsClassSet("badge-loading")
             && waiting && !icon_shown("achievement-2"),
             "a badge still downloading shows its placeholder, not an empty image");
-      auto *lost = shown_part("achievement-3", "list-row-wait");
-      check(document.root()->GetElementById("achievement-3")
-            && document.root()->GetElementById("achievement-3")->IsClassSet("badge-failed")
-            && lost && !icon_shown("achievement-3"),
-            "a badge that failed shows its mark, not an empty image");
       check(waiting && animated(waiting), "the design animates the placeholder");
-      check(lost && !animated(lost), "the failed mark stands still");
+      // A declared animation does not prove that anything moves. Run the
+      // list as in the menu, a frame at a time with the clock running, while
+      // other badges arrive, and watch which cells are lit.
+      {
+         auto lit = [&]() {
+            std::string pattern;
+            std::vector<Rml::Element*> cells;
+            if (waiting) rib::collect(waiting, "list-row-wait-cells", cells);
+            if (!cells.empty())
+               for (int index = 0; index < cells[0]->GetNumChildren(); ++index)
+                  pattern += cells[0]->GetChild(index)->GetProperty("background-color")->ToString() + "|";
+            return pattern;
+         };
+         std::vector<std::string> seen;
+         for (int frame = 0; frame < 40; ++frame) {
+            document.advance(1.0 / 60.0);
+            if (frame % 10 == 9) {
+               service_rows.push_back(row_of(100 + frame, RIB_ACHIEVEMENT_BADGE_READY, ready_path.c_str()));
+               session.count = service_rows.size();
+               ++session.revision;
+            }
+            achievements.update();
+            document.settle();
+            const std::string now = lit();
+            if (seen.empty() || seen.back() != now) seen.push_back(now);
+         }
+         check(seen.size() >= 3, "the waiting placeholder steps round while the menu runs and badges arrive");
+      }
       check(!shown_part("achievement-1", "list-row-wait"), "a downloaded badge has no placeholder");
       check(document.root()->GetElementById("achievement-1")
             && !document.root()->GetElementById("achievement-1")->IsClassSet("badge-loading") && icon_shown("achievement-1"),

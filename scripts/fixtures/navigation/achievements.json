@@ -110,10 +110,10 @@
       }
     },
     {
-      "name": "two pages: down reaches the pager",
+      "name": "two pages: down reaches the pager, right the buttons",
       "setup": {
         "achievements": "active",
-        "rows": 6
+        "rows": 8
       },
       "steps": [
         "options",
@@ -122,7 +122,12 @@
         "key:down",
         "key:down",
         "key:down",
-        "key:down"
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:right"
       ],
       "focused": {
         "native": [
@@ -132,7 +137,12 @@
           "achievement-3",
           "achievement-4",
           "achievements-next",
-          "achievements-signout"
+          "achievements-signout",
+          "achievements-signout",
+          "achievements-signout",
+          "achievements-signout",
+          "achievements-signout",
+          "achievements-back"
         ],
         "disc": [
           "volume-level",
@@ -140,6 +150,11 @@
           "achievement-2",
           "achievement-3",
           "achievement-4",
+          "achievement-5",
+          "achievement-6",
+          "achievement-7",
+          "achievements-next",
+          "achievements-next",
           "achievements-next",
           "achievements-enabled"
         ]
