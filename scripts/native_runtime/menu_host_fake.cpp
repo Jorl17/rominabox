@@ -10,7 +10,7 @@ rib::test::FakeHost rib::test::host;
 using rib::test::host;
 using rib::test::Sound;
 
-extern "C" bool rib_host_menu_open(void) { return true; }
+extern "C" bool rib_host_menu_open(void) { return host.menu_open; }
 extern "C" void rib_host_open_menu(void) {}
 extern "C" void rib_host_overlay_frames(bool) {}
 extern "C" bool rib_host_has_settings(void) { return true; }
@@ -42,10 +42,16 @@ extern "C" void rib_host_bind_lines(unsigned index, char details[][64], char kin
    std::strcpy(details[*lines], "Key A");
    std::strcpy(kinds[(*lines)++], "KEY");
 }
-extern "C" bool rib_host_capture_start(unsigned index, unsigned)
+extern "C" bool rib_host_capture_start(unsigned index, unsigned seconds)
 {
    if (!host.capture_start_accepted) return false;
    host.captured_id = index < host.bind_ids.size() ? host.bind_ids[index] : "";
+   host.capture_seconds = seconds;
+   if (host.timed_capture)
+   {
+      host.capture_began_us = host.clock_us;
+      host.capture_result = RIB_CAPTURE_PENDING;
+   }
    ++host.captures_started;
    return true;
 }
@@ -53,6 +59,13 @@ extern "C" void rib_host_capture_cancel(void) { ++host.captures_cancelled; }
 extern "C" rib_capture_result rib_host_capture_poll(bool accept_pointer, float *remaining)
 {
    host.capture_accepts_pointer = accept_pointer;
+   if (host.timed_capture)
+   {
+      const float left = (float)host.capture_seconds
+            - (float)(host.clock_us - host.capture_began_us) / 1e6f;
+      host.capture_remaining = left > 0.0f ? left : 0.0f;
+      if (left <= 0.0f) host.capture_result = RIB_CAPTURE_TIMED_OUT;
+   }
    if (remaining) *remaining = host.capture_remaining;
    return host.capture_result;
 }
@@ -82,9 +95,11 @@ extern "C" bool rib_host_state_path(int slot, char *out, size_t length)
    return true;
 }
 extern "C" bool rib_host_slot_occupied(int slot) { return slot == 1 && host.slot_occupied; }
-extern "C" void rib_host_thumbnail(int, char *out, size_t length)
+extern "C" void rib_host_thumbnail(int slot, char *out, size_t length)
 {
    if (out && length) out[0] = '\0';
+   if (out && slot == 1 && host.slot_occupied && host.thumbnail.size() < length)
+      std::strcpy(out, host.thumbnail.c_str());
 }
 extern "C" float rib_host_game_aspect(void) { return 4.0f / 3.0f; }
 extern "C" void rib_host_select_state_slot(int slot) { host.selected_slot = slot; }
@@ -123,11 +138,12 @@ extern "C" void rib_host_load_level_cue(const char *path) { host.level_cue = pat
 extern "C" void rib_host_scroll_sound(bool up) { host.sounds.push_back(up ? Sound::ScrollUp : Sound::ScrollDown); }
 extern "C" void rib_host_ok_sound(void) { host.sounds.push_back(Sound::Ok); }
 extern "C" void rib_host_cancel_sound(void) { host.sounds.push_back(Sound::Cancel); }
-extern "C" const char *rib_host_current_shader(void) { return ""; }
+extern "C" const char *rib_host_current_shader(void) { return host.current_shader.c_str(); }
 extern "C" void rib_host_apply_shader(const char *id, const char *preset)
 {
    host.applied_shader = id ? id : "";
    host.applied_preset = preset ? preset : "";
+   host.current_shader = host.applied_preset;
 }
 
 /* RetroArch's logging sink is outside the tested menu boundary. */

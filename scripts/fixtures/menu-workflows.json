@@ -1,0 +1,128 @@
+{
+  "comment": [
+    "The menu workflow cases: scripts in the player's menu script grammar, the export each runs in, and the baseline that records what it reported.",
+    "",
+    "A case runs once for every design in desktop/designs.json and every palette it names (\"*\" is every palette desktop/designs.json declares). Its result is keyed design/palette/name in its group's baseline.",
+    "A case takes `palettes` from its group unless it names its own. Its export is `export`, then the design's own `export`, then its group's `export`, then the settings of the menu shot it names (scripts/fixtures/menu-shots.json), then its own `export`.",
+    "Its script is its own `script`, or its shot's; a script given per design is looked up by design. A step \"@name\" is that design's sequence of the name. `end` is appended to every script.",
+    "A case that `continues` another starts from the game data that case left, as the next launch of the same game does; every other case starts from none.",
+    "",
+    "`python3 scripts/test.py workflows` replays every case headlessly (desktop/src-tauri/tests/menu_workflows.rs). `python3 scripts/test.py workflows-native` launches the exported player for the `launched` cases only.",
+    "`frame` is the drawable the launched player recorded these at: a 960x600 window on a display of two pixels per point. `game` is the generated Mega Drive cartridge every case exports.",
+    "`persisted` names the files in the game's data that are recorded, as patterns under that directory; a path into the menu is written as it is inside the app, under `menuAssets`.",
+    "`headless` says what only a launched player knows, and why; both runners compare, and the headless one records, those fields reduced to whether they are there. A picture is the launched runner's alone.",
+    "`launched` cases are the ones workflows-native launches: RetroArch's own bind list, capture timer and state task. A scripted launch keeps the console moving (the launcher writes pause_nonactive false for any run with ROMINABOX_MENU_SHOT), so PLAY IN BACKGROUND reads ON there: a launched case takes no checkpoint on a screen that shows it."
+  ],
+  "frame": {"width": 1920, "height": 1200},
+  "end": ["report:final"],
+  "game": {"discs": 1},
+  "menuAssets": "Contents/Resources/menu-assets",
+  "persisted": ["volume.cfg", "background-play.cfg", "controls.cfg", "shader-choice", "toggle-*", "remaps/**/*.rmp"],
+  "export": {
+    "title": "Shot Subject",
+    "system": "megadrive",
+    "showMenu": true,
+    "startAtMenu": true,
+    "menuSounds": "off",
+    "splash": false,
+    "advancedEmulatorAccess": false,
+    "includeAchievements": false
+  },
+  "designs": {
+    "native": {"export": {"includeAchievements": true}},
+    "disc": {"export": {}}
+  },
+  "sequences": {
+    "account-entry": {
+      "native": ["key:right", "key:right", "report:pause-entry", "key:ok",
+                 "key:down", "key:down", "key:down", "report:options-entry", "key:ok"],
+      "disc": ["key:down", "key:down", "key:down", "report:pause-entry", "key:ok",
+               "key:up", "key:up", "report:options-entry", "key:ok"]
+    }
+  },
+  "headless": {
+    "picture": "nothing is drawn; the launched cases and the states scope photograph the menu",
+    "reports": {
+      "text.control-binds": "RetroArch describes each bind from its own bind table; the fake host describes every bind as a button and a key, so only whether the list is shown is compared",
+      "bindsBox": "the list is sized by those descriptions, so only whether it has a box is compared"
+    },
+    "files": {
+      "remaps/": "the remap is shipped by the exporter and rewritten by RetroArch when a pad is applied, not by the menu",
+      "controls.cfg": {
+        "lines": "input_player1_",
+        "why": "RetroArch writes the bind lines from its own bind table; the menu writes the profile and the labels"
+      }
+    }
+  },
+  "launched": [
+    {"design": "native", "palette": "blue", "case": "binds-c"},
+    {"design": "disc", "palette": "blue", "case": "capture-timeout"},
+    {"design": "native", "palette": "blue", "case": "save-load"}
+  ],
+  "groups": [
+    {
+      "baseline": "scripts/fixtures/menu-workflow-baseline.json",
+      "palettes": ["blue"],
+      "cases": [
+        {"name": "pause-menu", "shot": "pause-menu", "palettes": "*"},
+        {"name": "options", "shot": "options"},
+        {"name": "controls", "shot": "controls", "palettes": "*"},
+        {"name": "picker-open", "shot": "picker-open", "palettes": "*"},
+        {"name": "picker-chosen", "shot": "picker-chosen"},
+        {"name": "volume-low", "shot": "volume-low"},
+        {"name": "volume-step", "shot": "volume-step"},
+        {"name": "volume-arrow", "shot": "volume-arrow"},
+        {"name": "shaders", "shot": "shaders"},
+        {"name": "shaders-phosphor", "shot": "shaders-phosphor"},
+        {"name": "shaders-scanlines", "shot": "shaders-scanlines"},
+        {"name": "boot-1-logo", "shot": "boot-1-logo",
+         "script": {"native": ["wait-ms:200"], "disc": ["wait-ms:200"]}},
+        {"name": "boot-2-game", "shot": "boot-2-game",
+         "script": {"native": ["wait-ms:900"], "disc": ["wait-ms:650"]}},
+        {"name": "boot-3-notice", "shot": "boot-3-notice",
+         "script": {"native": ["wait-ms:2200"], "disc": ["wait-ms:2200"]}},
+        {"name": "boot-4-gone", "shot": "boot-4-gone",
+         "script": {"native": ["wait-ms:6500"], "disc": ["wait-ms:6500"]}},
+        {"name": "notice-without-logo", "shot": "notice-without-logo",
+         "script": {"native": ["wait-ms:1700"], "disc": ["wait-ms:1700"]}},
+        {"name": "notice-leaving", "shot": "notice-leaving",
+         "script": {"native": ["wait-ms:4400"], "disc": ["wait-ms:3280"]}},
+        {"name": "logo-without-notice", "shot": "logo-without-notice",
+         "script": {"native": ["wait-ms:200"], "disc": ["wait-ms:200"]}}
+      ]
+    },
+    {
+      "baseline": "scripts/fixtures/menu-workflow-baseline.json",
+      "palettes": ["blue"],
+      "export": {"shaders": {"bundled": ["scanlines", "phosphor"], "initial": "phosphor"}},
+      "cases": [
+        {"name": "pause-keys", "script": ["report:opened", "key:up", "report:grid", "key:right", "report:right", "key:down", "report:row", "key:left", "report:left"]},
+        {"name": "options-keys", "script": ["options", "report:options", "key:left", "report:volume", "key:down", "report:entry", "key:ok", "report:opened", "key:cancel"]},
+        {"name": "controls-keys", "script": ["options", "controls", "report:first", "key:down", "key:right", "report:moved", "key:up", "report:previous", "key:start", "report:reset"]},
+        {"name": "hover-then-key", "script": ["options", "controls", "hover:control-a", "report:hover", "key:left", "report:key", "hover:heading", "wait:2", "report:left"]},
+        {"name": "binds-c", "script": ["options", "controls", "hover:control-a", "wait-ms:1400", "report:popup"]},
+        {"name": "binds-up", "script": ["options", "controls", "hover:control-up", "wait-ms:1400", "report:popup"]},
+        {"name": "binds-start", "script": ["options", "controls", "hover:control-start", "wait-ms:1400", "report:popup"]},
+        {"name": "picker-key-fallthrough", "script": ["options", "controls", "controls-device-current", "report:picker", "key:down", "report:control", "key:ok", "report:capturing", "key:cancel", "report:cancelled"]},
+        {"name": "capture-cancel", "script": ["options", "controls", "control-a", "report:capturing", "key:cancel", "report:cancelled"]},
+        {"name": "capture-timeout", "script": ["options", "controls", "control-a", "report:capturing", "wait-ms:10500", "report:timed-out"]},
+        {"name": "volume-inputs", "script": ["options", "report:before", "key:left", "report:key", "volume-up", "report:arrow", "volume-level@0.375", "report:fraction"]},
+        {"name": "shader-keys", "script": ["options", "shaders", "report:opened", "key:down", "report:row", "key:ok", "report:chosen", "key:cancel", "report:back"]},
+        {"name": "save-load", "script": ["report:empty", "key:start", "wait-ms:500", "report:saved", "load", "wait-ms:500", "report:loaded"]},
+        {"name": "persist", "script": ["options", "volume-level@0.25", "controls", "controls-device-current", "controls-device-option-megadrive6", "report:chosen", "controls-back"]},
+        {"name": "reopen", "continues": "persist", "script": ["options", "report:volume", "controls", "report:controller", "controls-back"]}
+      ]
+    },
+    {
+      "baseline": "scripts/fixtures/menu-composition-baseline.json",
+      "palettes": "*",
+      "export": {"includeAchievements": true, "shaders": {"bundled": ["scanlines"], "initial": "none"}},
+      "cases": [
+        {"name": "achievements-signed-out", "script": ["@account-entry"]},
+        {"name": "achievements-sign-in", "script": ["@account-entry", "key:ok"]},
+        {"name": "achievements-cancelled-form", "script": ["@account-entry", "key:ok", "achievements-cancel"]},
+        {"name": "achievements-return-options", "script": ["@account-entry", "key:ok", "report:form", "key:cancel", "report:form-closed", "key:cancel", "report:options"]}
+      ]
+    }
+  ]
+}

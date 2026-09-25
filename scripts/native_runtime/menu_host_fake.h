@@ -55,6 +55,22 @@ struct FakeHost
    bool quit = false;
    bool script_finished = false;
    std::string error_log;
+
+   /* Whether RetroArch's menu is open. When a game does not start at the
+    * menu, the menu is closed and we draw only its overlays. */
+   bool menu_open = true;
+   /* The thumbnail beside an occupied slot 1 in RetroArch, or empty. */
+   std::string thumbnail;
+   /* The preset in use in the running game. Applying a preset makes it the
+    * one in use, as in RetroArch. */
+   std::string current_shader;
+   /* The time requested from the menu for the last capture. */
+   unsigned capture_seconds = 0;
+   /* A capture with a countdown on the clock from the given seconds, then a
+    * timeout, as in RetroArch. When this is off, capture_result and
+    * capture_remaining keep the values set in a test. */
+   bool timed_capture = false;
+   int64_t capture_began_us = 0;
 };
 
 extern FakeHost host;
