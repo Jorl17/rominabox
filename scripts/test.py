@@ -67,6 +67,7 @@ NAVIGATION_SOURCES = [
     "scripts/native_runtime/menu_nav_driver.cpp",
     "scripts/native_runtime/menu_host_fake.cpp",
     "scripts/native_runtime/text_test_host.cpp",
+    "scripts/native_runtime/achievements_fake.cpp",
     *(f"vendor/retroarch/libretro-common/{name}" for name in (
         "file/config_file.c", "file/file_path.c", "file/file_path_io.c",
         "streams/file_stream.c", "string/stdstring.c", "vfs/vfs_implementation.c",

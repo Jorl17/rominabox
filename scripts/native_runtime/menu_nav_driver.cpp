@@ -38,6 +38,7 @@
 #include "menu_host_fake.h"
 #include "../../vendor/retroarch/cheevos/rominabox.h"
 #include <libretro.h>
+#include "achievements_fake.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -51,51 +52,6 @@
 namespace {
 using rib::test::host;
 
-/* The achievements service, as it appears on the account screens. */
-rib_achievements_snapshot_t session{};
-std::vector<rib_achievement_row_t> achievement_rows;
-
-void touch() { ++session.revision; }
-}
-
-extern "C" {
-void rib_achievements_get_snapshot(rib_achievements_snapshot_t *out) { *out = session; }
-bool rib_achievements_get_row(size_t index, rib_achievement_row_t *out)
-{
-   if (index >= achievement_rows.size()) return false;
-   *out = achievement_rows[index];
-   return true;
-}
-bool rib_achievements_has_unlocks() { return false; }
-bool rib_achievements_take_unlock(rib_achievement_unlock_t*) { return false; }
-bool rib_achievements_has_pending_uploads() { return session.pending_upload; }
-bool rib_achievements_sign_in(const char*, const char*)
-{
-   session.status = RIB_ACHIEVEMENTS_SIGNING_IN;
-   touch();
-   return true;
-}
-bool rib_achievements_set_enabled(bool on)
-{
-   session.status = on ? RIB_ACHIEVEMENTS_ACTIVE : RIB_ACHIEVEMENTS_OFF;
-   touch();
-   return true;
-}
-bool rib_achievements_retry() { return true; }
-void rib_achievements_cancel() { session.status = RIB_ACHIEVEMENTS_SIGNED_OUT; touch(); }
-/* No other game has saved an account in these fixtures. */
-size_t rib_achievements_saved_accounts(rib_achievements_saved_account_t*, size_t) { return 0; }
-bool rib_achievements_quick_sign_in(const char*) { return false; }
-bool rib_achievements_forget_account(const char*) { return false; }
-void rib_achievements_sign_out()
-{
-   session = {};
-   session.status = RIB_ACHIEVEMENTS_SIGNED_OUT;
-   achievement_rows.clear();
-   touch();
-}
-void rib_achievements_skip_startup() { session.startup_waiting = false; session.startup_skipped = true; touch(); }
-void rib_achievements_list_shown(bool) {}
 }
 
 namespace {
@@ -276,7 +232,7 @@ void reset_services(const Case& run)
    host.clock_us = 1000000;
    session = {};
    session.status = RIB_ACHIEVEMENTS_SIGNED_OUT;
-   achievement_rows.clear();
+   service_rows.clear();
    for (const auto& [key, value] : run.setup)
    {
       if (key == "discs") host.disc_count = (unsigned)std::atoi(value.c_str());
@@ -305,7 +261,7 @@ void reset_services(const Case& run)
             row.points = 5;
             std::snprintf(row.title, sizeof(row.title), "Achievement %d", index + 1);
             std::snprintf(row.description, sizeof(row.description), "Do thing %d", index + 1);
-            achievement_rows.push_back(row);
+            service_rows.push_back(row);
          }
       else
       {
@@ -313,8 +269,8 @@ void reset_services(const Case& run)
          std::exit(2);
       }
    }
-   session.count = achievement_rows.size();
-   touch();
+   session.count = service_rows.size();
+   ++session.revision;
 }
 
 void run_case(const Case& run)
