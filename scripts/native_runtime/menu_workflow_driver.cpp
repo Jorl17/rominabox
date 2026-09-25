@@ -28,7 +28,8 @@
  *
  * Here, and only here, we stand in for RetroArch. A game starts, its overlays
  * begin, and the menu opens if the game starts at the menu. A save or load
- * from the menu completes on the next frame, with its thumbnail written. A
+ * from the menu completes on the next frame. We write the picture of a save a
+ * few frames after we report the save, in the same order as RetroArch. A
  * binding capture counts down on the clock (the fake host's timed capture). */
 #include "rmlui/menu_api.h"
 #include "rmlui/host.h"
@@ -37,6 +38,7 @@
 #include "menu_host_fake.h"
 #include "achievements_fake.hpp"
 
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -86,18 +88,36 @@ std::string json(const std::string& text)
 }
 
 /* The RetroArch state task: a save or load from the menu finishes on the
- * next frame, and after a save the slot is occupied and has its thumbnail. */
+ * next frame. We report a save once its state is written (save_state_cb) and
+ * before the screenshot, so the new picture appears a few frames after the
+ * report, over the picture of the previous save if there was one. */
 struct StateTasks
 {
+   /* Frames between the report of a save and its picture. */
+   static constexpr int kPictureFrames = 3;
    int saves = 0, loads = 0;
+   /* Frames until we write the picture of a reported save, 0 if none is due. */
+   int picture_in = 0;
 
    void finish(const std::string& data)
    {
+      if (picture_in && --picture_in == 0)
+      {
+         const std::string picture = data + "/states/slot-1.png";
+         mkdir((data + "/states").c_str(), 0755);
+         /* Each save's picture differs from the one before it. */
+         if (std::FILE *file = std::fopen(picture.c_str(), "wb"))
+         {
+            std::fprintf(file, "picture of save %d", saves);
+            std::fclose(file);
+         }
+         host.thumbnail = picture;
+      }
       for (; saves < host.saves_started; ++saves)
       {
          host.slot_occupied = true;
-         host.thumbnail = data + "/states/slot-1.png";
          rib_rmlui_notify_state_task(host.state_path.c_str(), 1, true, true);
+         picture_in = kPictureFrames;
       }
       for (; loads < host.loads_started; ++loads)
          rib_rmlui_notify_state_task(host.state_path.c_str(), 1, false, true);

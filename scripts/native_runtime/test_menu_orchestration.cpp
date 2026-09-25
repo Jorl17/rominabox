@@ -823,6 +823,40 @@ void an_idle_menu_builds_nothing(const char *native_assets)
    host.slot_occupied = false;
 }
 
+/* A save over a slot that already has a picture. RetroArch reports the save
+ * (save_state_cb) before it writes the new screenshot, so at the report the
+ * slot still has the picture of the previous save, and the new one arrives a
+ * few frames later. We show it in the open menu once it is there. */
+void a_save_over_a_picture_shows_the_new_one(const char *data)
+{
+   const std::string picture = std::string(data) + "/resave-slot-1.png";
+   std::ofstream(picture, std::ios::binary) << "the first save's picture";
+   host.slot_occupied = true;
+   host.thumbnail = picture;
+   host.save_accepted = true;
+   void *menu = open_menu();
+   if (!menu) return;
+   for (int settle = 0; settle < 3; ++settle)
+      frame(menu);
+   check(view.slots.has_thumbnail(1), "the occupied slot shows its picture");
+   const unsigned before = inspect.texture_loads();
+   click_and_frame(menu, "save");
+   rib_rmlui_notify_state_task(host.state_path.c_str(), 1, true, true);
+   for (int waiting = 0; waiting < 3; ++waiting)
+      frame(menu);
+   std::ofstream(picture, std::ios::binary | std::ios::trunc)
+         << "the second save's picture, written after the report";
+   for (int after = 0; after < 3; ++after)
+      frame(menu);
+   check(inspect.texture_loads() > before,
+         "a save over a slot with a picture shows the new picture once RetroArch has "
+         "written it, without the menu being reopened");
+   rib_menu_destroy(menu);
+   std::remove(picture.c_str());
+   host.slot_occupied = false;
+   host.thumbnail.clear();
+}
+
 /* A move that fails at once, for example onto a file open in another program. */
 int failing_rename(const char *, const char *) { return -1; }
 
@@ -1084,6 +1118,7 @@ int main(int argc, char **argv)
    fixes::binds_open_sooner_on_hover();
    fixes::pad_changes_and_reset_apply_together(argv[1], argv[2]);
    fixes::chosen_slot_shows_on_save_and_load(argv[1]);
+   fixes::a_save_over_a_picture_shows_the_new_one(argv[2]);
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);
