@@ -813,6 +813,18 @@ mod tests {
         assert!(error.contains("'slots'") && error.contains("misworded"), "{error}");
     }
 
+    /// We draw every word in the player with the fonts in a design, and do not
+    /// start a menu without fonts. An export of such a design would contain a
+    /// game with no menu at all.
+    #[test]
+    fn a_design_that_lists_no_font_is_refused() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-manifest-fontless");
+        with_native(&root);
+        let design = package(&root, "fontless", r#"{"fonts": []}"#);
+        let error = Manifest::load(&design).expect_err("a design with no font was accepted");
+        assert!(error.contains("fontless") && error.contains("font"), "{error}");
+    }
+
     #[test]
     fn only_native_assigns_roles() {
         let root = rominabox_scratch::Scratch::dir("rominabox-manifest-role");
