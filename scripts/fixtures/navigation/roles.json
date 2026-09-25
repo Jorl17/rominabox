@@ -1,0 +1,86 @@
+{
+  "designs": [
+    "native",
+    "disc",
+    "pause-column",
+    "sparse",
+    "options-columns",
+    "own-screens"
+  ],
+  "cases": [
+    {
+      "name": "the menu opens on Pause, on CONTINUE, whatever order the design declares",
+      "steps": [
+        "wait-ms:0"
+      ],
+      "focused": {
+        "*": [
+          "resume"
+        ]
+      },
+      "screen": {
+        "*": "pause-panel"
+      }
+    },
+    {
+      "name": "Back on Pause leaves the menu",
+      "steps": [
+        "key:cancel"
+      ],
+      "sounds": {
+        "*": [
+          [
+            "cancel"
+          ]
+        ]
+      },
+      "screen": {
+        "*": "pause-panel"
+      }
+    },
+    {
+      "name": "Start on Pause saves",
+      "steps": [
+        "key:start"
+      ],
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "Back from Options is Pause again, on the button that opened it",
+      "steps": [
+        "options",
+        "key:cancel",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "options",
+          "options"
+        ]
+      },
+      "sounds": {
+        "*": [
+          [
+            "confirm"
+          ],
+          [
+            "cancel"
+          ],
+          [
+            "cancel"
+          ]
+        ]
+      },
+      "screen": {
+        "*": "pause-panel"
+      }
+    }
+  ]
+}
