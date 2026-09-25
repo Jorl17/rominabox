@@ -265,7 +265,8 @@ fn named_ids(expected: &Value, script: &[String]) -> BTreeSet<String> {
     for step in script {
         if let Some(id) = step.strip_prefix("hover:") {
             ids.insert(id.to_owned());
-        } else if !step.contains(':') {
+        } else if !step.contains(':') && step != "toggle" {
+            // Every other bare step clicks an element, or sets a slider (id@fraction).
             ids.insert(step.split('@').next().unwrap().to_owned());
         }
     }
@@ -434,13 +435,13 @@ fn run_driver(driver: &Path, script: &str) -> Vec<Value> {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap_or_else(|error| panic!("could not start {}: {error}", driver.display()));
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(script.as_bytes())
-        .unwrap();
+    // Write while we read, so that the driver never waits on a full pipe when
+    // it answers before it has read every case.
+    let mut input = child.stdin.take().unwrap();
+    let script = script.to_owned();
+    let writer = std::thread::spawn(move || input.write_all(script.as_bytes()));
     let output = child.wait_with_output().unwrap();
+    writer.join().unwrap().unwrap();
     assert!(
         output.status.success(),
         "the driver failed\n{}{}",
