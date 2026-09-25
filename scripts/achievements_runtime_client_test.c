@@ -402,6 +402,28 @@ static void shared_accounts(const struct retro_game_info *info,
    assert(saved_accounts(saved) == 1);
    unload();
 
+   /* When the player backs out of QUICK SIGN IN before the service answers,
+    * we keep nothing: no session in this game, and turning achievements on
+    * does not sign in with that account. */
+   play(second, GAME_B, info);
+   defer_login = true;
+   assert(rib_achievements_quick_sign_in("Fixture"));
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNING_IN);
+   rib_achievements_cancel();
+   snprintf(path, sizeof(path), "%s/achievements.session", second);
+   assert(access(path, F_OK) != 0);
+   defer_login = false;
+   {
+      rc_api_server_response_t response = {0};
+      response.body = login_json;
+      response.body_length = strlen(login_json);
+      response.http_status_code = 200;
+      deferred_callback(&response, deferred_data);
+   }
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
+   assert(!rib_achievements_set_enabled(true));
+   unload();
+
    /* Choosing FORGET removes it from the list. A signs in by itself at its
     * next launch, which is not a new choice, so the account stays forgotten. */
    assert(rib_achievements_forget_account("Fixture"));
