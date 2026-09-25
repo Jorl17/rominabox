@@ -816,6 +816,9 @@ void an_idle_menu_builds_nothing(const char *native_assets)
    idle("options, with the volume slider", [] {});
    click_and_frame(menu, "controls");
    idle("controls", [] {});
+   click_and_frame(menu, "controls-back");
+   click_and_frame(menu, "fixture");
+   idle("a list screen", [] {});
    rib_menu_destroy(menu);
    host.slot_occupied = false;
 }
