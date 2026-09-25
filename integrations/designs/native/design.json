@@ -140,7 +140,6 @@
       "footer": "ESC  BACK",
       "button": "discs",
       "back": "BACK",
-      "mark": "IN",
       "option": {
         "label": "DISC",
         "default": true

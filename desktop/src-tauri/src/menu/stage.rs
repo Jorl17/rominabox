@@ -278,7 +278,14 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     let menu = document::apply_options(&manifest, &menu, &staged, &settings)?;
     // The rest of the player's settings are parts of the Options screen that
     // we just built.
-    let menu = document::install_settings(&menu, &manifest.design, &settings)?;
+    let menu = document::install_settings(
+        &menu,
+        &document::SettingsPlace {
+            design: &manifest.design,
+            words: &manifest.words,
+        },
+        &settings,
+    )?;
     let mut menu = tokens::substitute(&menu, &tokens::product())?;
     if !staged
         .iter()

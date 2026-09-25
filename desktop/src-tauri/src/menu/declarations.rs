@@ -66,9 +66,6 @@ fn screen_lines(text: &mut String, screen: &Screen, buttons: &[String]) -> Resul
     if let Some(images) = &screen.images {
         line(text, &format!("screen_images_{id}"), images)?;
     }
-    if let Some(mark) = &screen.mark {
-        line(text, &format!("screen_mark_{id}"), mark)?;
-    }
     // The role of the screen, so that we find Pause or the achievements
     // screen in the player by role, not by a literal id.
     if let Some(role) = screen.role {
@@ -98,10 +95,8 @@ fn setting_lines(text: &mut String, setting: &PlayerSetting) -> Result<(), Strin
                 &positions.to_string(),
             )
         }
-        Kind::Switch { on, off, inverted } => {
+        Kind::Switch { inverted } => {
             line(text, &format!("setting_kind_{id}"), "switch")?;
-            line(text, &format!("setting_on_{id}"), on)?;
-            line(text, &format!("setting_off_{id}"), off)?;
             line(
                 text,
                 &format!("setting_inverted_{id}"),

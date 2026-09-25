@@ -18,7 +18,9 @@ pub mod words;
 
 use std::path::PathBuf;
 
-pub use document::{install_settings, level_markup, setting_slot, volume_control_markup};
+pub use document::{
+    install_settings, level_markup, setting_slot, volume_control_markup, SettingsPlace,
+};
 pub use manifest::{
     base_design, declared_overlays, declared_screens, scene_metrics, Binds, Documents, Font,
     Manifest, Overlay, SceneMetrics, Screen, ScreenPlace, ScreenRole,

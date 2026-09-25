@@ -151,7 +151,6 @@ struct ScreenFile {
     #[serde(default, deserialize_with = "present")]
     option: Option<Option<OptionFile>>,
     images: Option<String>,
-    mark: Option<String>,
     dialogs: Option<Vec<String>>,
     from: Option<String>,
 }
@@ -181,7 +180,7 @@ impl ScreenFile {
             )*};
         }
         take!(
-            panel, heading, footer, button, label, back, page_size, place, option, images, mark,
+            panel, heading, footer, button, label, back, page_size, place, option, images,
             dialogs, from
         );
         self
@@ -266,8 +265,6 @@ pub struct Screen {
     /// The screen to open instead of this one when the game has more than one
     /// disc, as the disc list opens instead of the disc column.
     pub images: Option<String>,
-    /// The word on the row of the disc that is in the tray.
-    pub mark: Option<String>,
     /// Dialogs that open over the menu from this screen, each from
     /// `dialog-<name>.rml` in the design or Native. We compose them beside the
     /// screen, so a design can replace either without copying the other.
@@ -705,7 +702,6 @@ fn screens(
             option_label: option.as_ref().map(|option| option.label.clone()),
             option_default: option.is_some_and(|option| option.default),
             images: entry.images,
-            mark: entry.mark,
             dialogs: entry.dialogs.unwrap_or_default(),
             opener: entry.from,
         };

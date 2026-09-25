@@ -399,7 +399,8 @@ fn run() -> Result<(), String> {
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid volume-markup request: {error}"))?;
-            let markup = menu::volume_control_markup(&request.design)?;
+            let words = menu::Manifest::load(&request.design)?.words;
+            let markup = menu::volume_control_markup(&request.design, &words)?;
             println!(
                 "{}",
                 json!({ "type": "result", "result": { "markup": markup } })

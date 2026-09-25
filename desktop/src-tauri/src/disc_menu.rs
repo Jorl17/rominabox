@@ -74,7 +74,6 @@ mod tests {
                 "{name} baked fewer than {ROW_CAP} rows"
             );
             assert!(cfg.contains("screen_role_discs = \"discs\""), "{cfg}");
-            assert!(cfg.contains("screen_mark_discs = \"IN\""), "{cfg}");
             if name == "disc" {
                 assert!(
                     menu.contains("id=\"disc-face\""),

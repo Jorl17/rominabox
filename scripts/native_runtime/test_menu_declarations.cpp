@@ -65,7 +65,6 @@ int test_menu_declarations()
       {"screens", "pause skipped disc odd"}, {"screen_panel_pause", "pause-panel"},
       {"screen_panel_skipped", ""},
       {"screen_panel_disc", "disc-panel"}, {"screen_role_disc", "discs"},
-      {"screen_mark_disc", std::string(32, 'm')},
       {"screen_panel_odd", "odd-panel"}, {"screen_role_odd", "nothing-known"},
       {"screen_heading_pause", std::string(128, 'h')},
       {"screen_footer_pause", std::string(128, 'f')},
@@ -93,9 +92,8 @@ int test_menu_declarations()
       check(pause.buttons == std::vector<std::string>{"one", "two"},
             "a screen's buttons are read once, as a list");
       check(pause.role == rib::ScreenRole::None, "a screen that declares no role has none");
-      check(design.screens[1].role == rib::ScreenRole::Discs
-            && design.screens[1].mark == std::string(32, 'm'),
-            "a role is read as the role it names, and a long mark is kept whole");
+      check(design.screens[1].role == rib::ScreenRole::Discs,
+            "a role is read as the role it names");
       check(design.screens[2].role == rib::ScreenRole::None,
             "a role this player does not know is no role");
    }

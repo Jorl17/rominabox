@@ -565,7 +565,6 @@ pub fn stage(
             .collect::<Vec<_>>()
             .join(" ")
     });
-    config.push_str("shader_state_on = \"ON\"\nshader_state_off = \"\"\n");
     config.push_str(&format!("shader_initial = \"{initial}\"\n"));
     let catalog = catalog_file()?;
     for item in &resolved {
@@ -605,7 +604,12 @@ pub fn stage(
             icon: format!("shaders/{}/icon.png", item.id),
             title: item.name.to_uppercase(),
             detail: item.detail.clone(),
-            state: if selected { "ON".into() } else { String::new() },
+            // The mark that we move to whichever filter is running.
+            state: if selected {
+                crate::menu::words::say(&manifest.words, "shader-mark", &[])
+            } else {
+                String::new()
+            },
             selected,
             accent: false,
             line: false,

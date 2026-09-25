@@ -1,16 +1,16 @@
-//! Settings that the player changes in the Options of the game.
+//! Settings the player changes in the game's own Options.
 //!
-//! We declare each one once here, with what the player sees, the RetroArch
-//! key it controls and the default for an export. We draw every declared
-//! setting in the Options of every design (`menu::document`) and list it in
-//! `design.cfg` for the player program. In the menu, a change applies at once
-//! and we write the file of the setting in the game's data folder. At the next
-//! launch we apply that file (`launcher/player_settings.c`), from the list in
-//! the launch plan.
+//! We declare each setting once here, with its word, the RetroArch key it controls and the
+//! export's default. Its words are in the player program's `words.inc`, so every design words
+//! them like its other text. When we compose a menu, we draw every declared setting in the
+//! design's Options (`menu::document`) and list it for the player program in `design.cfg`. In
+//! the menu we apply a change at once and write the setting's file in the game's data. At the
+//! next launch, we apply that file from the list in the launch plan
+//! (`launcher/player_settings.c`).
 //!
-//! The export default is only a default. We never write it into the file of
-//! the player, so an export with another default does not replace a choice
-//! the player made, and the default applies only until the player chooses.
+//! The export's default is only a default. We never write it into the player's file, so a new
+//! default in a later export does not replace a choice the player already made, and applies
+//! only to a player who has not.
 
 use std::fs;
 use std::path::Path;
@@ -36,25 +36,18 @@ impl Key {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Kind {
     /// A slider of `positions` evenly spaced values, `low` to `high` in the
-    /// key's own units, both ends included, with a word at each end.
-    Level {
-        low: f32,
-        high: f32,
-        positions: i32,
-        low_word: &'static str,
-        high_word: &'static str,
-    },
-    /// On or off. `inverted` when on is the key's `false`.
-    Switch {
-        on: &'static str,
-        off: &'static str,
-        inverted: bool,
-    },
+    /// key's own units, both ends included. Its ends are the words
+    /// `level-low` and `level-high`.
+    Level { low: f32, high: f32, positions: i32 },
+    /// On or off, which we show with the words `switch-on` and `switch-off`.
+    /// `inverted` when on is the key's `false`.
+    Switch { inverted: bool },
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PlayerSetting {
     pub id: &'static str,
+    /// The word that names it, by its id in `words.inc`.
     pub label: &'static str,
     pub key: Key,
     pub kind: Kind,
@@ -160,26 +153,20 @@ pub fn declared(defaults: Defaults) -> Vec<PlayerSetting> {
     vec![
         PlayerSetting {
             id: "volume",
-            label: "VOLUME",
+            label: "volume",
             key: Key::AudioVolume,
             kind: Kind::Level {
                 low: crate::volume::min_db(),
                 high: crate::volume::max_db(),
                 positions: crate::volume::position_count(),
-                low_word: "LOW",
-                high_word: "HIGH",
             },
             default: crate::volume::default_db(),
         },
         PlayerSetting {
             id: "background-play",
-            label: "PLAY IN BACKGROUND",
+            label: "play-in-background",
             key: Key::PauseNonactive,
-            kind: Kind::Switch {
-                on: "ON",
-                off: "OFF",
-                inverted: true,
-            },
+            kind: Kind::Switch { inverted: true },
             default: if defaults.keep_playing_in_background {
                 0.0
             } else {

@@ -6,9 +6,10 @@
 //! complete.
 
 use super::manifest::{Manifest, Screen, ScreenPlace, ScreenRole};
+use super::words;
 use crate::player_settings::{Kind, PlayerSetting};
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -210,8 +211,8 @@ fn switch_entry(manifest: &Manifest, setting: &PlayerSetting) -> Result<String, 
     let control = setting.control();
     let label = format!(
         "{} <span id=\"{control}-state\" class=\"setting-state\">{}</span>",
-        crate::lists::rml_text(setting.label),
-        crate::lists::rml_text(state_word(setting, setting.default)),
+        crate::lists::rml_text(&words::say(&manifest.words, setting.label, &[])),
+        crate::lists::rml_text(&state_word(&manifest.words, setting, setting.default)),
     );
     Ok(add_class(
         &entry_markup(manifest, &control, &label)?,
@@ -220,16 +221,19 @@ fn switch_entry(manifest: &Manifest, setting: &PlayerSetting) -> Result<String, 
     ))
 }
 
-fn state_word(setting: &PlayerSetting, value: f32) -> &'static str {
+/// The word that the design uses for the state of a switch at run time.
+fn state_word(given: &BTreeMap<String, String>, setting: &PlayerSetting, value: f32) -> String {
     match setting.kind {
-        Kind::Switch { on, off, .. } => {
+        Kind::Switch { .. } => words::say(
+            given,
             if setting.is_on(value) {
-                on
+                "switch-on"
             } else {
-                off
-            }
-        }
-        Kind::Level { .. } => "",
+                "switch-off"
+            },
+            &[],
+        ),
+        Kind::Level { .. } => String::new(),
     }
 }
 
@@ -431,19 +435,19 @@ fn require_classes(kind: &str, template: &str, classes: &[&str]) -> Result<(), S
     Ok(())
 }
 
-/// A level control, made of its name, the low end, an arrow, the slider, an
-/// arrow and the high end.
+/// A level: its name, low, an arrow, the design's slider, an arrow, high, in
+/// the design's words `given`.
 ///
-/// The slider comes first in the document, so the keyboard focus goes to it
-/// first and the left and right keys move it. The design places the rest, so
-/// the order in the document is not the order on screen. There is no number.
-pub fn level_markup(design: &Path, setting: &PlayerSetting) -> Result<String, String> {
-    let Kind::Level {
-        low_word,
-        high_word,
-        ..
-    } = setting.kind
-    else {
+/// The slider is first in the document, so the keyboard focus goes to it and
+/// the left and right keys move it. We place the name, the arrows and the
+/// ends as set in the design, so the order in the document is not the order
+/// a person sees. There is no number, because the ends say what they are.
+pub fn level_markup(
+    design: &Path,
+    given: &BTreeMap<String, String>,
+    setting: &PlayerSetting,
+) -> Result<String, String> {
+    let Kind::Level { .. } = setting.kind else {
         return Err(format!("{} is not a level", setting.id));
     };
     let slider = part_template(design, "slider")?;
@@ -462,24 +466,40 @@ pub fn level_markup(design: &Path, setting: &PlayerSetting) -> Result<String, St
     Ok(format!(
         "<div id=\"{id}-control\">{slider}<button id=\"{id}-down\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{id}-up\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{id}-low\" class=\"volume-end\">{low}</div><div id=\"{id}-high\" class=\"volume-end\">{high}</div><div class=\"volume-name\">{name}</div></div>",
         slider = slider.replace("PART-ID", &setting.control()).replace("LABEL", ""),
-        low = crate::lists::rml_text(low_word),
-        high = crate::lists::rml_text(high_word),
-        name = crate::lists::rml_text(setting.label),
+        low = crate::lists::rml_text(&words::say(given, "level-low", &[])),
+        high = crate::lists::rml_text(&words::say(given, "level-high", &[])),
+        name = crate::lists::rml_text(&words::say(given, setting.label, &[])),
     ))
 }
 
-/// The volume control, as every design draws it.
-pub fn volume_control_markup(design: &Path) -> Result<String, String> {
-    level_markup(design, &crate::player_settings::volume())
+/// The volume control, the same in every design, in the design's words
+/// `given`.
+pub fn volume_control_markup(
+    design: &Path,
+    given: &BTreeMap<String, String>,
+) -> Result<String, String> {
+    level_markup(design, given, &crate::player_settings::volume())
 }
 
 /// A switch at a marker in the design, drawn with the design's toggle part.
-fn switch_markup(design: &Path, setting: &PlayerSetting) -> Result<String, String> {
+fn switch_markup(
+    design: &Path,
+    given: &BTreeMap<String, String>,
+    setting: &PlayerSetting,
+) -> Result<String, String> {
     let toggle = part_template(design, "toggle")?;
     require_classes("toggle", &toggle, &["toggle"])?;
-    Ok(toggle
-        .replace("PART-ID", &setting.control())
-        .replace("LABEL", &crate::lists::rml_text(setting.label)))
+    Ok(toggle.replace("PART-ID", &setting.control()).replace(
+        "LABEL",
+        &crate::lists::rml_text(&words::say(given, setting.label, &[])),
+    ))
+}
+
+/// The design whose parts we draw the player settings with, and the words
+/// of that design.
+pub struct SettingsPlace<'a> {
+    pub design: &'a Path,
+    pub words: &'a BTreeMap<String, String>,
 }
 
 /// Put in Options the player's settings that `apply_options` did not add.
@@ -490,9 +510,10 @@ fn switch_markup(design: &Path, setting: &PlayerSetting) -> Result<String, Strin
 /// for them, so we leave them out, as we leave out the screen itself.
 pub fn install_settings(
     document: &str,
-    design: &Path,
+    place: &SettingsPlace,
     settings: &[PlayerSetting],
 ) -> Result<String, String> {
+    let SettingsPlace { design, words } = *place;
     let mut document = document.to_string();
     let marker = "id=\"options-panel\"";
     for setting in settings {
@@ -507,8 +528,8 @@ pub fn install_settings(
         }
         if document.contains(&slot) {
             let markup = match setting.kind {
-                Kind::Level { .. } => level_markup(design, setting)?,
-                Kind::Switch { .. } => switch_markup(design, setting)?,
+                Kind::Level { .. } => level_markup(design, words, setting)?,
+                Kind::Switch { .. } => switch_markup(design, words, setting)?,
             };
             document = document.replacen(&slot, &markup, 1);
             continue;
@@ -516,7 +537,7 @@ pub fn install_settings(
         if !matches!(setting.kind, Kind::Level { .. }) || !document.contains(marker) {
             continue;
         }
-        let markup = level_markup(design, setting)?;
+        let markup = level_markup(design, words, setting)?;
         let at = document.find(marker).expect("checked above");
         let tag_end = document[at..]
             .find('>')
