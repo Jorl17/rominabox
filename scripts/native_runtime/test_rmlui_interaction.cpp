@@ -661,6 +661,87 @@ static void check_marks_belong_to_their_stop(const char *design, const char *pro
    view.pointer_move(1, 1);
 }
 
+/* On the pad, the pointer reaches a control only inside the ring drawn over
+ * its button, and never where the ring of another button is nearer. Rings
+ * are square boxes with round corners drawn inside, so neighbouring rings
+ * overlap as squares. A pointer between Up and Left on the Mega Drive pad,
+ * nearer Up, must reach Up. We do not check points on a callout or on the
+ * box of a stick, because they belong to the box. */
+static void check_pointer_reaches_a_control_only_on_its_ring(const char *design, const char *profile)
+{
+   std::vector<std::string> stops;
+   anchors("control-callout", stops);
+   anchors("control-group", stops);
+   struct Ring { Rml::Element *stop; float x, y, radius; Box box; };
+   std::vector<Ring> rings;
+   std::vector<Box> boxes;
+   view.document.set_shown("control-binds", false);
+   view.pointer_move(1, 1);
+   settle();
+   for (const std::string &stop_id : stops)
+   {
+      Rml::Element *stop = view.document.root()->GetElementById(stop_id);
+      boxes.push_back(drawn_box(stop));
+      if (Rml::Element *ring = ring_of(stop))
+      {
+         const Box drawn = drawn_box(ring);
+         rings.push_back({stop, drawn.x + drawn.w / 2.f, drawn.y + drawn.h / 2.f, drawn.w / 2.f, drawn});
+      }
+   }
+   char message[512];
+   int wrong = 0;
+   for (const Ring &ring : rings)
+      for (int y = ring.box.y; y < ring.box.y + ring.box.h; y += 3)
+         for (int x = ring.box.x; x < ring.box.x + ring.box.w; x += 3)
+         {
+            const float px = x + 0.5f, py = y + 0.5f;
+            bool on_a_box = false;
+            for (const Box &box : boxes)
+               on_a_box = on_a_box || (x >= box.x && x < box.x + box.w && y >= box.y && y < box.y + box.h);
+            if (on_a_box)
+               continue;
+            Rml::Element *reached = view.focus.stop_at(
+                  view.document.get_context()->GetElementAtPoint({px, py}));
+            if (!reached)
+               continue;
+            const Ring *own = nullptr;
+            const Ring *nearest = nullptr;
+            float nearest_distance = 0.f;
+            for (const Ring &other : rings)
+            {
+               const float distance = std::hypot(px - other.x, py - other.y);
+               if (other.stop == reached)
+                  own = &other;
+               if (!nearest || distance < nearest_distance)
+               {
+                  nearest = &other;
+                  nearest_distance = distance;
+               }
+            }
+            const float own_distance = own ? std::hypot(px - own->x, py - own->y) : 1e9f;
+            const bool inside = own && own_distance <= own->radius;
+            const bool closest = own && own_distance <= nearest_distance + 1.f;
+            if (inside && closest)
+               continue;
+            if (!wrong++)
+            {
+               std::snprintf(message, sizeof(message),
+                     "%s/%s: the pointer at %d,%d reaches %s, %s",
+                     design, profile, x, y, reached->GetId().c_str(),
+                     !inside ? "outside the ring drawn over its button"
+                             : ("nearer " + nearest->stop->GetId() + "'s ring").c_str());
+               CHECK(false, message);
+            }
+         }
+   if (wrong > 1)
+   {
+      std::snprintf(message, sizeof(message), "%s/%s: and %d more such points on the pad",
+            design, profile, wrong - 1);
+      CHECK(false, message);
+   }
+   view.pointer_move(1, 1);
+}
+
 static void collect_painted(const Box &list, std::vector<Box> &painted)
 {
    painted.clear();
@@ -1095,6 +1176,7 @@ static int check_placement(const char *assets, const char *scenes,
          check_drawn_above(design);
       check_marks_where_the_layout_puts_them(entry.path(), design, profile.c_str());
       check_marks_belong_to_their_stop(design, profile.c_str());
+      check_pointer_reaches_a_control_only_on_its_ring(design, profile.c_str());
       for (const auto &size : sizes)
       {
          view.render(size[0], size[1]);
