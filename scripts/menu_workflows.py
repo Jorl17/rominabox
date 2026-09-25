@@ -99,7 +99,6 @@ def claim_fixture(app: Path) -> None:
         return
     existing = [data / name for name in ("volume.cfg", "background-play.cfg", "controls.cfg",
                                          "shader-choice", "achievements.session")]
-    existing += list(data.glob("toggle-*"))
     for name in ("states", "remaps"):
         directory = data / name
         if directory.is_symlink():

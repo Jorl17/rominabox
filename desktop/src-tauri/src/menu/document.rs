@@ -197,7 +197,11 @@ fn entry_button(manifest: &Manifest, screen: &Screen) -> Result<String, String> 
     // must be in the document already. It starts hidden. A display:none
     // button can still get the focus unless it is disabled too.
     Ok(if screen.is_disc_list() {
-        add_attributes(&button, &screen.button, "disabled=\"disabled\" style=\"display: none;\"")
+        add_attributes(
+            &button,
+            &screen.button,
+            &[("disabled", "disabled"), ("style", "display: none;")],
+        )
     } else {
         button
     })
@@ -619,18 +623,49 @@ pub(crate) fn link_parts(document: &str, names: &[String]) -> Result<String, Str
     Ok(linked)
 }
 
-/// Add `class` to the element with `id`, when the document contains one. We
-/// only mark the state here. How it looks is up to the design stylesheet.
-/// Write `attributes` into the element with `id`, just after the id.
-pub(crate) fn add_attributes(document: &str, id: &str, attributes: &str) -> String {
+/// Set each of `attributes` on the element with `id`, when the document has
+/// one. We add a style after the style the element already has, so that its
+/// declarations take effect. We leave any other attribute that the element
+/// already has as it is.
+pub(crate) fn add_attributes(document: &str, id: &str, attributes: &[(&str, &str)]) -> String {
     let marker = format!("id=\"{id}\"");
     let mut out = document.to_string();
-    if let Some(at) = document.find(&marker) {
-        out.insert_str(at + marker.len(), &format!(" {attributes}"));
+    let Some(at) = out.find(&marker) else {
+        return out;
+    };
+    let (Some(start), Some(mut end)) = (out[..at].rfind('<'), out[at..].find('>').map(|end| at + end))
+    else {
+        return out;
+    };
+    // The attributes the element lacks, in order, written after its id.
+    let mut added = String::new();
+    for (name, value) in attributes {
+        let opening = format!(" {name}=\"");
+        match out[start..end].find(&opening) {
+            Some(existing) if *name == "style" => {
+                let from = start + existing + opening.len();
+                let close = from + out[from..end].find('"').unwrap_or(end - from);
+                let declarations = out[from..close].trim_end().to_string();
+                let joined = if declarations.is_empty() || declarations.ends_with(';') {
+                    format!("{declarations} {value}")
+                } else {
+                    format!("{declarations}; {value}")
+                };
+                let joined = joined.trim_start();
+                end = end + joined.len() - (close - from);
+                out.replace_range(from..close, joined);
+            }
+            Some(_) => {}
+            None => added.push_str(&format!(" {name}=\"{value}\"")),
+        }
     }
+    out.insert_str(at + marker.len(), &added);
     out
 }
 
+/// Add `class` to the element with `id`, when the document has one. How to
+/// draw a state is up to the stylesheet of the design, and here we only say
+/// which state applies.
 pub(crate) fn add_class(document: &str, id: &str, class: &str) -> String {
     let marker = format!("id=\"{id}\"");
     let Some(at) = document.find(&marker) else {
