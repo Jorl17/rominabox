@@ -5,7 +5,13 @@
   "description": "Hypothetical: its own Pause and Options screens, declared with Options before Pause, their headings and footers in its own words. Everything else is Native's.",
   "screens": [
     { "id": "pause", "heading": "PAUSE", "footer": "B  RESUME" },
-    { "id": "options", "heading": "SETTINGS", "footer": "B  RETURN", "label": "SETTINGS", "back": "RETURN" }
+    {
+      "id": "options",
+      "heading": "SETTINGS",
+      "footer": "B  RETURN",
+      "label": "SETTINGS",
+      "back": "RETURN"
+    }
   ],
   "screenOrder": ["options", "pause"]
 }
