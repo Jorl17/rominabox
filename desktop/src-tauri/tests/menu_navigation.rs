@@ -7,8 +7,9 @@
 //! `ROMINABOX_NAVIGATION_DRIVER`). We load the document in the driver with a
 //! fake RetroArch host: no window, no GL, no sound. Then we press keys, move
 //! the pointer and record, after every step, the element the player sees
-//! highlighted, what shows that a binding is being captured, the screen
-//! and the sounds played.
+//! highlighted, what shows that a binding is being captured, the screen,
+//! the sounds played and, for the elements a case lists under `text`, the
+//! words on them.
 //!
 //! The case tables, `scripts/fixtures/navigation/*.json`, list what each
 //! step should highlight, per design and from the picture a person sees.
@@ -182,6 +183,7 @@ fn named_ids(case: &Value, design: &str) -> BTreeSet<String> {
     };
     add(for_design(&case["focused"], design));
     add(for_design(&case["capturing"], design));
+    ids.extend(text_ids(case, design));
     for step in steps_for(case, design) {
         let step = step.as_str().unwrap();
         if let Some(id) = step
@@ -196,10 +198,21 @@ fn named_ids(case: &Value, design: &str) -> BTreeSet<String> {
     ids
 }
 
+/// The elements whose words we check in a case for a design: the keys of its
+/// `text` expectation, with the same elements at every step.
+fn text_ids(case: &Value, design: &str) -> Vec<String> {
+    for_design(&case["text"], design)
+        .and_then(Value::as_array)
+        .and_then(|steps| steps.first())
+        .and_then(Value::as_object)
+        .map(|words| words.keys().cloned().collect())
+        .unwrap_or_default()
+}
+
 /// The step results expected in a case for a design, in the driver's format.
 fn expected(case: &Value, design: &str) -> Value {
     let mut out = serde_json::Map::new();
-    for field in ["focused", "capturing", "screen", "sounds"] {
+    for field in ["focused", "capturing", "screen", "sounds", "text"] {
         if let Some(value) = case.get(field).and_then(|value| for_design(value, design)) {
             out.insert(field.to_owned(), value.clone());
         }
@@ -360,6 +373,10 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
                 let ids: Vec<String> = named_ids(case, design).into_iter().collect();
                 if !ids.is_empty() {
                     script.push_str(&format!("ids {}\n", ids.join(" ")));
+                }
+                let text = text_ids(case, design);
+                if !text.is_empty() {
+                    script.push_str(&format!("text {}\n", text.join(" ")));
                 }
                 for step in steps_for(case, design) {
                     script.push_str(&format!("step {}\n", step.as_str().unwrap()));

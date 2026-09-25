@@ -44,6 +44,9 @@ struct File {
     screen_order: Vec<String>,
     #[serde(default)]
     tokens: BTreeMap<String, String>,
+    /// The design's wording for the words we write in the player, by id.
+    #[serde(default)]
+    words: BTreeMap<String, String>,
 }
 
 #[derive(Default, Deserialize)]
@@ -149,8 +152,6 @@ struct ScreenFile {
     option: Option<Option<OptionFile>>,
     images: Option<String>,
     mark: Option<String>,
-    #[serde(default, deserialize_with = "present")]
-    toggle: Option<Option<ToggleFile>>,
     dialogs: Option<Vec<String>>,
     from: Option<String>,
 }
@@ -169,22 +170,6 @@ struct OptionFile {
     default: bool,
 }
 
-#[derive(Clone, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ToggleFile {
-    id: String,
-    label: String,
-    on: String,
-    off: String,
-    #[serde(default)]
-    default: bool,
-    guard: Option<ToggleGuard>,
-    #[serde(default)]
-    guard_label: String,
-    #[serde(default)]
-    guard_status: String,
-}
-
 impl ScreenFile {
     /// This entry with every field declared in `over` laid over it.
     fn merged(mut self, over: &ScreenFile) -> ScreenFile {
@@ -197,17 +182,17 @@ impl ScreenFile {
         }
         take!(
             panel, heading, footer, button, label, back, page_size, place, option, images, mark,
-            toggle, dialogs, from
+            dialogs, from
         );
         self
     }
 }
 
-/// The role of a screen at run time. Only the screens with special handling
-/// have one, and only the Native design assigns roles. When a design replaces
-/// a screen by its id, the new screen has the same role.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-#[serde(rename_all = "lowercase")]
+/// The role of a screen. Only the screens that we handle specially in the
+/// player have one, and only the screens in Native have roles. A design
+/// replaces a screen by its id and keeps the role. The player's contract
+/// contains the roles and their words (`RIB_ROLE` in `document_contract.inc`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ScreenRole {
     Pause,
     Options,
@@ -215,7 +200,6 @@ pub enum ScreenRole {
     Shaders,
     Achievements,
     Discs,
-    /// The accounts from other games, listed in QUICK SIGN IN.
     Accounts,
 }
 
@@ -230,17 +214,25 @@ impl ScreenRole {
         ScreenRole::Accounts,
     ];
 
-    /// The word used in `design.cfg` and `document_contract.inc`.
+    /// The word in `design.json` and `design.cfg`, as in the contract.
     pub fn name(self) -> &'static str {
-        match self {
-            ScreenRole::Pause => "pause",
-            ScreenRole::Options => "options",
-            ScreenRole::Controls => "controls",
-            ScreenRole::Shaders => "shaders",
-            ScreenRole::Achievements => "achievements",
-            ScreenRole::Discs => "discs",
-            ScreenRole::Accounts => "accounts",
-        }
+        super::contract::role_word(self)
+    }
+}
+
+impl<'de> Deserialize<'de> for ScreenRole {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let word = String::deserialize(deserializer)?;
+        ScreenRole::ALL
+            .into_iter()
+            .find(|role| role.name() == word)
+            .ok_or_else(|| {
+                let known: Vec<&str> = ScreenRole::ALL.iter().map(|role| role.name()).collect();
+                serde::de::Error::custom(format!(
+                    "unknown role '{word}'; the roles are {}",
+                    known.join(", ")
+                ))
+            })
     }
 }
 
@@ -276,8 +268,6 @@ pub struct Screen {
     pub images: Option<String>,
     /// The word on the row of the disc that is in the tray.
     pub mark: Option<String>,
-    /// A switch on this screen.
-    pub toggle: Option<Toggle>,
     /// Dialogs that open over the menu from this screen, each from
     /// `dialog-<name>.rml` in the design or Native. We compose them beside the
     /// screen, so a design can replace either without copying the other.
@@ -291,37 +281,6 @@ impl Screen {
     /// The list we fill with the discs from the core once the game has loaded.
     pub fn is_disc_list(&self) -> bool {
         self.role == Some(ScreenRole::Discs)
-    }
-}
-
-/// An optional switch declared by a screen. In the player we act only on
-/// `guard`, which is a closed set, so a design can choose only an effect
-/// that we implement.
-#[derive(Clone, Debug)]
-pub struct Toggle {
-    pub id: String,
-    pub label: String,
-    pub on: String,
-    pub off: String,
-    pub default_on: bool,
-    pub guard: ToggleGuard,
-    pub guard_label: String,
-    pub guard_status: String,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum ToggleGuard {
-    Nothing,
-    Saves,
-}
-
-impl ToggleGuard {
-    pub(crate) fn declared(self) -> &'static str {
-        match self {
-            ToggleGuard::Nothing => "",
-            ToggleGuard::Saves => "saves",
-        }
     }
 }
 
@@ -411,6 +370,9 @@ pub struct Manifest {
     pub screens: Vec<Screen>,
     /// The design's own named values, which a palette may override.
     pub tokens: BTreeMap<String, String>,
+    /// The words we write in the player, in this design's wording, by id:
+    /// Native's, then the design's over them, or else the English word.
+    pub words: BTreeMap<String, String>,
 }
 
 /// The base must come from the same source tree or frozen kit as the design.
@@ -554,6 +516,10 @@ impl Manifest {
         let mut tokens = native.tokens.clone();
         tokens.extend(own.tokens.clone());
 
+        let mut words = native.words.clone();
+        words.extend(own.words.clone());
+        super::words::check(&id, &words)?;
+
         let screens = screens(design, &base, native.screens, own.screens, own.screen_order)?;
         Ok(Manifest {
             design: design.to_path_buf(),
@@ -568,6 +534,7 @@ impl Manifest {
             overlays,
             screens,
             tokens,
+            words,
         })
     }
 
@@ -722,16 +689,6 @@ fn screens(
                 "screen {index} pageSize must be a positive integer"
             ));
         }
-        let toggle = entry.toggle.flatten().map(|toggle| Toggle {
-            id: toggle.id,
-            label: toggle.label,
-            on: toggle.on,
-            off: toggle.off,
-            default_on: toggle.default,
-            guard: toggle.guard.unwrap_or(ToggleGuard::Nothing),
-            guard_label: toggle.guard_label,
-            guard_status: toggle.guard_status,
-        });
         let screen = Screen {
             id: at(entry.id, "id")?,
             role: entry.role,
@@ -751,7 +708,6 @@ fn screens(
             option_default: option.is_some_and(|option| option.default),
             images: entry.images,
             mark: entry.mark,
-            toggle,
             dialogs: entry.dialogs.unwrap_or_default(),
             opener: entry.from,
         };
@@ -850,6 +806,17 @@ mod tests {
             .unwrap();
         assert_eq!(discs.option_label, None);
         assert_eq!(discs.role, Some(ScreenRole::Discs), "the role is inherited");
+    }
+
+    #[test]
+    fn a_design_words_only_what_the_player_writes() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-manifest-words");
+        with_native(&root);
+        let worded = package(&root, "worded", r#"{"words": {"slot": "BLOCK {slot}"}}"#);
+        assert_eq!(Manifest::load(&worded).unwrap().words["slot"], "BLOCK {slot}");
+        let misworded = package(&root, "misworded", r#"{"words": {"slots": "BLOCK"}}"#);
+        let error = Manifest::load(&misworded).unwrap_err();
+        assert!(error.contains("'slots'") && error.contains("misworded"), "{error}");
     }
 
     #[test]

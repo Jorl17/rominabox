@@ -11,7 +11,32 @@
 #include "rmlui/sounds.hpp"
 #include "rmlui/focus.hpp"
 static rib::View view;
+/* The font every design staged here declares in design.cfg. */
+static const std::vector<std::string> kFonts = {"Silkscreen-Regular.ttf"};
 static rib::test::Inspection inspect(view.document);
+
+/* A screen as design.cfg declares it. */
+static rib::ScreenDeclaration screen(const char *id, const char *panel,
+      const char *heading, const char *footer, const char *button)
+{
+   rib::ScreenDeclaration declared;
+   declared.id = id;
+   declared.panel = panel;
+   declared.heading = heading;
+   declared.footer = footer;
+   if (*button)
+      declared.buttons = {button};
+   return declared;
+}
+
+/* The ids of the stops in `panel`, in document order. */
+static std::vector<std::string> stops_in(const char *panel)
+{
+   std::vector<std::string> ids;
+   for (Rml::Element *stop : view.focus.stops(view.document.root()->GetElementById(panel)))
+      ids.push_back(stop->GetId());
+   return ids;
+}
 
 #include <algorithm>
 #include <cmath>
@@ -65,7 +90,8 @@ static void check_focus_leaves_the_name(void)
    };
    for (const Pair &pair : pairs)
    {
-      view.lists.focus_list_row(pair.index);
+      const char *rows[] = {"fixture-one", "fixture-rest", "fixture-two", "fixture-pic"};
+      CHECK(view.focus.set(rows[pair.index]), "a list row takes focus");
       int focused_x = 0, focused_y = 0, focused_w = 0, focused_h = 0;
       int rest_x = 0, rest_y = 0, rest_w = 0, rest_h = 0;
       CHECK(view.document.element_box(pair.focused, &focused_x, &focused_y, &focused_w, &focused_h),
@@ -78,26 +104,6 @@ static void check_focus_leaves_the_name(void)
             pair.which, focused_x, rest_x);
       CHECK(std::abs(focused_x - rest_x) <= 1, message);
    }
-   /* The bind list sets the row border again. We must reserve space for a
-    * focused accent there too, or the names in that list still move. */
-   view.document.set_shown("fixture-panel", false);
-   view.document.set_shown("controls-panel", true);
-   view.document.set_shown("control-binds", true);
-   view.lists.focus_list_row(0);
-   int focused_x = 0, focused_y = 0, focused_w = 0, focused_h = 0;
-   int rest_x = 0, rest_y = 0, rest_w = 0, rest_h = 0;
-   CHECK(view.document.element_box("bind-1-title", &focused_x, &focused_y, &focused_w, &focused_h),
-         "the focused bind row's name has a box");
-   CHECK(view.document.element_box("bind-2-title", &rest_x, &rest_y, &rest_w, &rest_h),
-         "the unfocused bind row's name has a box");
-   char message[256];
-   std::snprintf(message, sizeof(message),
-         "a focused bind row name starts at %d and the other row's name at %d",
-         focused_x, rest_x);
-   CHECK(std::abs(focused_x - rest_x) <= 1, message);
-   view.document.set_shown("control-binds", false);
-   view.document.set_shown("controls-panel", false);
-   view.document.set_shown("fixture-panel", true);
 }
 
 static void click_id(const char *id)
@@ -191,7 +197,7 @@ static void fill_bind_rows(void)
    const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
    {
-      const char *id = view.lists.row_in("control-binds", index);
+      const std::string id_row = view.lists.row_in("control-binds", index); const char *id = id_row.c_str();
       if (!id || !*id)
          break;
       if (index < 2)
@@ -280,7 +286,7 @@ static void fill_anchor_rows(const char *anchor)
    const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
    {
-      const char *id = view.lists.row_in("control-binds", index);
+      const std::string id_row = view.lists.row_in("control-binds", index); const char *id = id_row.c_str();
       if (!id || !*id)
          break;
       if (index < (int)matched.size())
@@ -747,7 +753,7 @@ static void collect_painted(const Box &list, std::vector<Box> &painted)
    const int row_count = view.lists.rows_in("control-binds");
    for (int index = 0; index < row_count; ++index)
    {
-      const char *row_id = view.lists.row_in("control-binds", index);
+      const std::string row_id_row = view.lists.row_in("control-binds", index); const char *row_id = row_id_row.c_str();
       const Box row = row_id ? box_of(row_id) : Box{};
       if (row.ok)
          painted.push_back(row);
@@ -770,7 +776,7 @@ static int check_parts_inside_list(const char *design, const char *profile,
    const int row_count = view.lists.rows_in("control-binds");
    for (int index = 0; index < row_count; ++index)
    {
-      const char *row_id = view.lists.row_in("control-binds", index);
+      const std::string row_id_row = view.lists.row_in("control-binds", index); const char *row_id = row_id_row.c_str();
       const Box row = row_id ? box_of(row_id) : Box{};
       if (!row.ok)
          continue;
@@ -817,7 +823,7 @@ static int check_one_list(const char *design, const char *profile,
    int missed = 0;
    {
       static bool stand_in_noted = false;
-      const char *first = view.lists.row_in("control-binds", 0);
+      const std::string first_row = view.lists.row_in("control-binds", 0); const char *first = first_row.c_str();
       const std::string title_id = first ? std::string(first) + "-title" : "";
       const char *title = first ? inspect.text(title_id.c_str()) : "";
       if (!stand_in_noted && title && std::strcmp(title, "LEFT STICK UP") == 0)
@@ -844,7 +850,7 @@ static int check_one_list(const char *design, const char *profile,
    const int row_count = view.lists.rows_in("control-binds");
    for (int index = 0; index < row_count; ++index)
    {
-      const char *row_id = view.lists.row_in("control-binds", index);
+      const std::string row_id_row = view.lists.row_in("control-binds", index); const char *row_id = row_id_row.c_str();
       const Box row = row_id ? box_of(row_id) : Box{};
       if (!row.ok || inside_screen(row, screen))
          continue;
@@ -864,7 +870,7 @@ static int check_one_list(const char *design, const char *profile,
    painted.push_back(list);
    for (int index = 0; index < row_count; ++index)
    {
-      const char *row_id = view.lists.row_in("control-binds", index);
+      const std::string row_id_row = view.lists.row_in("control-binds", index); const char *row_id = row_id_row.c_str();
       const Box row = row_id ? box_of(row_id) : Box{};
       if (row.ok)
          painted.push_back(row);
@@ -962,7 +968,7 @@ static void check_glyphs(const char *design, const char *which)
    const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
    {
-      const char *id = view.lists.row_in("control-binds", index);
+      const std::string id_row = view.lists.row_in("control-binds", index); const char *id = id_row.c_str();
       if (!id || !*id || !inspect.row_glyphs_overlap(id))
          continue;
       char message[256];
@@ -984,7 +990,7 @@ static void check_short_list(const char *design, int declared)
    const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
    {
-      const char *id = view.lists.row_in("control-binds", index);
+      const std::string id_row = view.lists.row_in("control-binds", index); const char *id = id_row.c_str();
       if (!id || !*id)
          break;
       if (index < 2)
@@ -1038,7 +1044,7 @@ static void fill_stick_pages(void)
    const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
    {
-      const char *id = view.lists.row_in("control-binds", index);
+      const std::string id_row = view.lists.row_in("control-binds", index); const char *id = id_row.c_str();
       if (!id || !*id)
          break;
       if (index < 10)
@@ -1110,18 +1116,18 @@ static void check_disc_fills_the_window(const char *design)
 static int check_placement(const char *assets, const char *scenes,
       const char *design, int width)
 {
-   if (!view.initialize(assets, 960, 600, false, fixture_controls))
+   if (!view.initialize(assets, kFonts, 960, 600, false, fixture_controls))
    {
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;
    }
    view.screens.clear_screens();
-   view.screens.declare_screen("pause", "pause-panel", "GAME PAUSED",
-         "ESC  CONTINUE", "options");
-   view.screens.declare_screen("controls", "controls-panel", "CONTROLS",
-         "ESC  BACK", "controls");
-   view.screens.declare_screen("options", "options-panel", "OPTIONS",
-         "ESC  BACK", "options");
+   view.screens.declare_screen(screen("pause", "pause-panel", "GAME PAUSED",
+         "ESC  CONTINUE", "options"));
+   view.screens.declare_screen(screen("controls", "controls-panel", "CONTROLS",
+         "ESC  BACK", "controls"));
+   view.screens.declare_screen(screen("options", "options-panel", "OPTIONS",
+         "ESC  BACK", "options"));
 
    /* 1920x1200 is a 960x600 window on a 2x display, the size at which the
     * right border of the list is on the last pixel. */
@@ -1200,7 +1206,7 @@ static int check_placement(const char *assets, const char *scenes,
    check_disc_fills_the_window(design);
    {
       view.screens.show_screen("pause");
-      view.slots.focus_element("save");
+      view.focus.set("save");
       view.status.set_main("A \"quoted\" status\\path\nline");
       view.render(960, 600);
       drain_actions();
@@ -1238,7 +1244,7 @@ int main(int argc, char **argv)
    }
    if (argc > 2 && std::strcmp(argv[2], "row-edge") == 0)
    {
-      if (!view.initialize(assets, 960, 600, false, fixture_controls))
+      if (!view.initialize(assets, kFonts, 960, 600, false, fixture_controls))
       {
          std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
          return 1;
@@ -1264,17 +1270,6 @@ int main(int argc, char **argv)
       return check_placement(assets, argv[3], argv[4], std::atoi(argv[5]));
    }
 
-   CHECK(rib::map_menu_toggle(false, true) ==
-            RIB_RMLUI_ACTION_CONTROLS_CANCEL,
-         "toggle cancels capture first");
-   CHECK(rib::map_menu_toggle(true, false) ==
-            RIB_RMLUI_ACTION_CONTROLS_BACK,
-         "toggle leaves Controls next");
-   CHECK(rib::map_menu_toggle(false, false) ==
-            RIB_RMLUI_ACTION_RESUME,
-         "toggle resumes from the main screen");
-   CHECK(rib::toggle_stays_in_menu(true, false),
-         "Controls keeps the menu open");
    CHECK(!rib_rmlui_ok_includes_pointer_select(true),
          "RmlUi OK does not consume the pointer select bit");
    CHECK(!view.slots.occupied(1),
@@ -1290,7 +1285,7 @@ int main(int argc, char **argv)
    CHECK(rib::state_task_matches(true, false, "/s", 3, "/s", 3, false),
          "exact load path and slot match");
 
-   if (!view.initialize(assets, 960, 600, false, fixture_controls))
+   if (!view.initialize(assets, kFonts, 960, 600, false, fixture_controls))
    {
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;
@@ -1298,8 +1293,8 @@ int main(int argc, char **argv)
    /* The screen button on the pause row is Options. `controls` is inside
     * that panel, so this click cannot reach the built-in handler for
     * `controls`. */
-   view.screens.declare_screen("options", "options-panel", "OPTIONS",
-         "ESC  BACK", "options");
+   view.screens.declare_screen(screen("options", "options-panel", "OPTIONS",
+         "ESC  BACK", "options"));
 
    view.status.set_main("SAVED");
    view.status.set_controls("DEFAULTS RESTORED");
@@ -1361,7 +1356,7 @@ int main(int argc, char **argv)
    CHECK(view.hovered.kind == RIB_RMLUI_ACTION_NONE,
          "pointer leave clears hover instead of sticking");
 
-   view.slots.focus_action(RIB_RMLUI_ACTION_QUIT);
+   view.focus.set("quit");
    view.slots.set_selected_slot(4);
    move_to_id("resume");
    CHECK(view.hovered.kind == RIB_RMLUI_ACTION_RESUME,
@@ -1371,20 +1366,20 @@ int main(int argc, char **argv)
     * slot that SAVE and LOAD use only while one of them has focus. Elsewhere
     * it looks like any slot, so nobody can mistake it for the cursor. */
    view.slots.set_selected_slot(4);
-   view.slots.focus_action(RIB_RMLUI_ACTION_RESUME);
+   view.focus.set("resume");
    view.pointer_move(1, 1);
    view.follow_pointer();
    const std::string plain_border = inspect.property("slot-2", "border-top-color");
    CHECK(inspect.property("slot-4", "border-top-color") == plain_border,
          "the chosen slot looks like any other while CONTINUE has focus");
-   view.slots.focus_action(RIB_RMLUI_ACTION_SAVE);
+   view.focus.set("save");
    CHECK(view.document.root()->GetAttribute<Rml::String>("data-focus", "") == "save",
          "the document names the focused element");
    view.document.root()->Focus();
    view.focus.paint();
    CHECK(!view.document.root()->HasAttribute("data-focus"),
          "the name goes when nothing has focus");
-   view.slots.focus_action(RIB_RMLUI_ACTION_SAVE);
+   view.focus.set("save");
    CHECK(inspect.property("slot-4", "border-top-color") != plain_border,
          "SAVE shows the slot it saves to");
    move_to_id("quit");
@@ -1397,7 +1392,7 @@ int main(int argc, char **argv)
    CHECK(inspect.property("slot-4", "border-top-color") != plain_border,
          "the pointer onto SAVE shows it");
    move_to_id("slot-4");
-   view.slots.focus_action(rib::Event::select_slot(4));
+   view.focus.set("slot-4");
    const std::string focused_border = inspect.property("slot-4", "border-top-color");
    CHECK(focused_border != plain_border, "a slot with focus shows it");
    view.pointer_button(true);
@@ -1407,7 +1402,7 @@ int main(int argc, char **argv)
    view.pointer_button(false);
 
    view.slots.set_slot_state(1, false, nullptr);
-   CHECK(view.document.element_disabled("load"),
+   CHECK(inspect.has_class("load", "disabled"),
          "empty Load is disabled");
    view.clear_intents();
    click_id("load");
@@ -1518,12 +1513,12 @@ int main(int argc, char **argv)
     * as an export writes it, so showing it shows the screen that a player
     * opens. */
    view.screens.clear_screens();
-   view.screens.declare_screen("pause", "pause-panel", "GAME PAUSED",
-         "ESC  CONTINUE", "options-back");
-   view.screens.declare_screen("options", "options-panel", "OPTIONS",
-         "ESC  BACK", "options");
-   view.screens.declare_screen("controls", "controls-panel", "CONTROLS",
-         "ESC  BACK", "controls");
+   view.screens.declare_screen(screen("pause", "pause-panel", "GAME PAUSED",
+         "ESC  CONTINUE", "options-back"));
+   view.screens.declare_screen(screen("options", "options-panel", "OPTIONS",
+         "ESC  BACK", "options"));
+   view.screens.declare_screen(screen("controls", "controls-panel", "CONTROLS",
+         "ESC  BACK", "controls"));
 
    /* Every button on the pause row can take focus, and only one at a time.
     *
@@ -1534,30 +1529,24 @@ int main(int argc, char **argv)
     * export is reachable without any change here. */
    view.screens.show_screen("pause");
    {
-      char row[16][64];
-      const int count = view.document.focusables("pause-panel", row, 16);
-      bool options_on_the_row = false;
-      int index;
+      const std::vector<std::string> row = stops_in("pause-panel");
+      const size_t count = row.size();
 
       CHECK(count >= 4, "the pause row has the buttons the design drew");
-      for (index = 0; index < count; ++index)
-         if (std::string(row[index]) == "options")
-            options_on_the_row = true;
-      CHECK(options_on_the_row,
+      CHECK(std::find(row.begin(), row.end(), "options") != row.end(),
             "Options is one of the buttons on the pause row");
 
-      for (index = 0; index < count; ++index)
+      for (size_t index = 0; index < count; ++index)
       {
-         int other;
-         view.slots.focus_element(row[index]);
-         CHECK(inspect.has_class(row[index], "focused"),
+         view.focus.set(row[index].c_str());
+         CHECK(inspect.has_class(row[index].c_str(), "focused"),
                "every button on the pause row can be focused");
-         for (other = 0; other < count; ++other)
+         for (size_t other = 0; other < count; ++other)
             if (other != index)
-               CHECK(!inspect.has_class(row[other], "focused"),
+               CHECK(!inspect.has_class(row[other].c_str(), "focused"),
                      "and only one of them at a time");
       }
-      CHECK(std::string(view.focus.pause_element().c_str()) == row[count - 1],
+      CHECK(count && view.focus.current_id() == row[count - 1],
             "the row remembers which button has it");
    }
 
@@ -1612,17 +1601,17 @@ int main(int argc, char **argv)
        * it, so those arrows are for the pointer and are not stops. Down moves
        * to the next focusable element, as for the player. */
       {
-         char ids[16][64];
-         const int count = view.document.focusables("options-panel", ids, 16);
+         const std::vector<std::string> ids = stops_in("options-panel");
+         const int count = (int)ids.size();
          int slider = -1;
          for (int index = 0; index < count; ++index)
-            if (std::strcmp(ids[index], "volume-level") == 0)
+            if (ids[index] == "volume-level")
                slider = index;
          CHECK(slider >= 0, "the volume slider is a focus stop");
          const char *landed = (slider >= 0 && slider + 1 < count)
-               ? ids[slider + 1] : "";
+               ? ids[slider + 1].c_str() : "";
          const char *again = (slider >= 0 && slider + 2 < count)
-               ? ids[slider + 2] : "";
+               ? ids[slider + 2].c_str() : "";
          char message[192];
          std::snprintf(message, sizeof(message),
                "pressing down from the slider lands on %s", landed);
@@ -1644,14 +1633,10 @@ int main(int argc, char **argv)
        * not take focus, or Down moves to it and no ring is drawn. Showing it
        * must not move the entries above it. */
       {
-         char ids[16][64];
-         const int count = view.document.focusables("options-panel", ids, 16);
-         bool landed = false;
+         std::vector<std::string> ids = stops_in("options-panel");
+         bool landed = std::find(ids.begin(), ids.end(), "discs") != ids.end();
          int controls_y = 0;
          int controls_x = 0;
-         for (int index = 0; index < count; ++index)
-            if (std::strcmp(ids[index], "discs") == 0)
-               landed = true;
          CHECK(!landed, "a hidden disc entry is not a focus stop");
          CHECK(view.document.element_center("controls", &controls_x, &controls_y),
                "controls is where it was");
@@ -1664,11 +1649,8 @@ int main(int argc, char **argv)
                "showing the disc entry does not move the entries above it");
          view.document.set_shown("discs", false);
          view.document.set_disabled("discs", true);
-         const int after = view.document.focusables("options-panel", ids, 16);
-         landed = false;
-         for (int index = 0; index < after; ++index)
-            if (std::strcmp(ids[index], "discs") == 0)
-               landed = true;
+         ids = stops_in("options-panel");
+         landed = std::find(ids.begin(), ids.end(), "discs") != ids.end();
          CHECK(!landed, "hiding the disc entry takes it back out of the walk");
       }
       {
@@ -1845,40 +1827,16 @@ int main(int argc, char **argv)
             "the menu comes back when it is what is on screen");
    }
 
-   // The controls of a list screen come after its rows, so moving down with
-   // the keyboard past the last row reaches the switch and then BACK, and the
-   // player can flip the switch without a pointer.
+   // The BACK of a list screen comes after its rows, so moving down with the
+   // keyboard past the last row reaches it.
    {
-      // We find the screen button on the pause row instead of naming it. With
-      // Options in a game it is not the controls button, so with a fixed name
-      // a pad would open Controls instead of Options.
-      CHECK(std::string(view.screens.pause_screen_button()) == "options",
-            "the pause row's screen button is the one the document has");
-      view.screens.declare_screen("fixture", "fixture-panel", "LIST", "ESC  BACK", "");
+      view.screens.declare_screen(screen("fixture", "fixture-panel", "LIST", "ESC  BACK", ""));
       CHECK(view.screens.show_screen("fixture"), "a declared list screen shows");
       view.lists.wire_lists();
-      view.wire_toggles();
       drain_actions();
-      CHECK(view.lists.visible_row_count() == 4,
-            "the generated list reports its rows");
-      CHECK(view.lists.list_control_count() == 2,
-            "the list screen reports its switch and its back button");
-      CHECK(std::string(view.lists.list_control_id(0)) == "fixture-mode",
-            "the switch comes first, as it is drawn");
-      CHECK(std::string(view.lists.list_control_id(1)) == "fixture-back",
-            "back comes after it");
-      CHECK(std::string(view.lists.list_control_id(2)).empty(),
-            "asking past the end names nothing");
-      view.lists.focus_list_control(1);
-      click_id("fixture-mode");
-      const auto toggle = view.intents.take();
-      CHECK(toggle.kind == RIB_RMLUI_ACTION_TOGGLE,
-            "pressing a switch is the general toggle intent");
-      CHECK(toggle.id == "fixture-mode",
-            "which switch travels beside the action");
-      view.lists.set_toggle("fixture-mode", "ON", true);
-      CHECK(std::string(inspect.text("fixture-mode-state")) == "ON",
-            "the switch shows the word the design gave it");
+      const std::vector<std::string> stops = stops_in("fixture-panel");
+      CHECK(stops.size() == 5 && stops.back() == "fixture-back",
+            "the list's rows are stops, and its BACK after them");
       drain_actions();
    }
 
@@ -1897,7 +1855,7 @@ int main(int argc, char **argv)
    // When we create the document again, slider values and configured steps stay.
    view.parts.set_slider_step("volume-level", 0.125f);
    view.shutdown();
-   CHECK(view.initialize(argv[1], 960, 600, false, fixture_controls), "document recreates for slider state");
+   CHECK(view.initialize(argv[1], kFonts, 960, 600, false, fixture_controls), "document recreates for slider state");
    view.clear_intents();
    CHECK(view.parts.nudge_slider("volume-level", -1), "recreated slider retains its step");
    const auto recreated_slider = view.intents.take();

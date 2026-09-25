@@ -85,20 +85,27 @@ cmake --build "$destination/build-rmlui" --parallel "$jobs"
     --disable-ffmpeg \
     --disable-cg \
     --disable-langextra
+  # A player the launched tests drive carries the menu's script driver
+  # (ROMINABOX_MENU_SCRIPT_BUILD=1); a player that ships does not. Either
+  # test switch marks the build test-only, which is never frozen into a kit.
   make -j"$jobs" RIB_ACHIEVEMENTS_TEST="${ROMINABOX_ACHIEVEMENTS_TEST_BUILD:-0}" \
+    RIB_MENU_SCRIPT="${ROMINABOX_MENU_SCRIPT_BUILD:-0}" \
     RMLUI_SOURCE_DIR=../vendor/RmlUi \
     RMLUI_BUILD_DIR=../build-rmlui \
     RIB_ACCOUNTS_DIR="$accounts_build"
-  python3 - "$destination" "$retroarch_commit" "${ROMINABOX_ACHIEVEMENTS_TEST_BUILD:-0}" <<'CAPABILITY'
+  python3 - "$destination" "$retroarch_commit" "${ROMINABOX_ACHIEVEMENTS_TEST_BUILD:-0}" \
+    "${ROMINABOX_MENU_SCRIPT_BUILD:-0}" <<'CAPABILITY'
 import json, pathlib, subprocess, sys
 build = pathlib.Path(sys.argv[1])
 symbols = subprocess.check_output(["nm", "-g", "retroarch"], text=True)
 supports = any(line.endswith(" _rcheevos_rib_prepare_client") for line in symbols.splitlines())
 if not supports:
     raise SystemExit("The built player is missing the required achievements client integration")
+menu_script = sys.argv[4] == "1"
 (build / "build-info.json").write_text(json.dumps({
     "retroarchCommit": sys.argv[2], "rmluiCommit": "ba95ffe8bfb6370efb2cdcca927eaad4710c5413",
-    "capabilities": {"achievements": supports}, "testOnly": sys.argv[3] == "1"
+    "capabilities": {"achievements": supports, "menuScript": menu_script},
+    "testOnly": sys.argv[3] == "1" or menu_script
 }) + "\n")
 CAPABILITY
   strip retroarch

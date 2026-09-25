@@ -170,14 +170,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .list-actions { position: static; }
 .list-actions .menu-action { position: absolute; left: 578dp; top: 508dp; width: 176dp; height: 36dp; font-family: Silkscreen; font-size: 14dp; line-height: 36dp; text-align: center; border-width: 1dp; }
 .list-actions .list-back { left: 766dp; }
-.list-actions .list-toggle { left: 470dp; width: 284dp; line-height: 34dp; }
 #achievements-panel .list-actions .account-toggle, #achievements-panel .list-actions .account-retry { left: 390dp; width: 176dp; }
 #achievements-panel .list-actions .account-signout { left: 578dp; width: 176dp; }
 #achievements-panel #achievements-back { left: 766dp; right: auto; width: 176dp; }
-.list-toggle-label { position: absolute; left: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 13dp; }
-.list-toggle-state { position: absolute; right: 12dp; top: 0; height: 36dp; line-height: 34dp; font-size: 13dp; color: #b4e6ff; }
-.list-toggle.on .list-toggle-state { color: #fff13d; }
-.list-toggle:hover .list-toggle-state, .list-toggle.focused .list-toggle-state { color: #081433; }
 .list-status { position: absolute; left: 24dp; top: 544dp; color: #b4e6ff; font-size: 13dp; }
 
 .menu-index { position: absolute; left: 24dp; top: 56dp; width: 680dp; height: 384dp; }
@@ -226,7 +221,6 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #control-binds .list-row-detail { left: auto; right: 52dp; top: 0; width: 96dp; height: 30dp; line-height: 30dp; font-size: 12dp; text-align: right; color: #b4e6ff; }
 #control-binds .list-row-state { right: 10dp; top: 0; width: 38dp; height: 30dp; line-height: 30dp; font-size: 11dp; text-align: right; color: #fff13d; }
 #control-binds .list-row:hover { background-color: #193e88; border-color: #75b2e4; }
-#control-binds .list-row.focused { border-left-width: 4dp; border-left-color: #fff13d; background-color: #193e88; margin-left: -4dp; }
 #control-binds .list-row:active { background-color: #fff13d; color: #081433; }
 #control-binds .list-row:active .list-row-title, #control-binds .list-row:active .list-row-detail,
 #control-binds .list-row:active .list-row-state { color: #081433; }

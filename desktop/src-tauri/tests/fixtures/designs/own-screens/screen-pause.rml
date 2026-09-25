@@ -1,0 +1,2 @@
+<div id="pause-panel"><div id="actions"><button class="menu-action" id="resume">RESUME</button><button class="menu-action" id="save">SAVE <span data-fact="chosen-slot">1</span></button><button id="load" class="menu-action disabled" disabled="disabled">LOAD <span data-fact="chosen-slot">1</span></button><button class="menu-action" id="controls">PAD</button><button class="menu-action" id="quit">EXIT</button></div><!--SAVE-SLOTS-->
+<div id="status">PICK A SLOT</div><!--SCREEN-LINKS--></div>

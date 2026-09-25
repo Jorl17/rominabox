@@ -17,7 +17,7 @@ int main(int argc, char **argv)
             "UTF-16 and Unicode codepoint ranges agree across surrogate pairs");
       check(character_offset(@"😀é", 1) == 0, "A replacement cannot split a surrogate pair");
       rib::Document document;
-      if (!document.initialize(argv[1], 960, 600, false)) return 2;
+      if (!document.initialize(argv[1], {"Silkscreen-Regular.ttf"}, 960, 600, false)) return 2;
       document.set_shown("pause-panel", false);
       document.set_shown("achievements-panel", true);
       document.set_shown("achievements-form", true);

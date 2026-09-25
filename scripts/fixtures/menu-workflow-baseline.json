@@ -1717,7 +1717,7 @@
         "menuOpen": false,
         "on": [],
         "profile": "megadrive",
-        "screen": "pause",
+        "screen": "",
         "selected": [],
         "showing": [
           "splash"
@@ -6790,7 +6790,7 @@
         "menuOpen": false,
         "on": [],
         "profile": "megadrive",
-        "screen": "pause",
+        "screen": "",
         "selected": [],
         "showing": [
           "splash"

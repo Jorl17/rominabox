@@ -1,0 +1,22 @@
+/* A different Pause, with the buttons first in the document and in a
+ * column on the left, and the slots in a column on the right. We hide the
+ * pictures so the boxes are as the rules below say. Options keeps the
+ * Native places, with RETURN first in the document. */
+#slots { left: 380dp; top: 70dp; width: 320dp; height: 480dp; }
+.slot { width: 314dp; height: 70dp; }
+.slot .slot-picture, .slot .slot-state { display: none; }
+#slot-1, #slot-2, #slot-3, #slot-4, #slot-5, #slot-6 { left: 0; }
+#slot-1 { top: 0; }
+#slot-2 { top: 80dp; }
+#slot-3 { top: 160dp; }
+#slot-4 { top: 240dp; }
+#slot-5 { top: 320dp; }
+#slot-6 { top: 400dp; }
+#actions { left: 40dp; top: 70dp; width: 260dp; display: block; height: 480dp; }
+#actions button { position: absolute; }
+#actions #resume, #actions #save, #actions #load, #actions #options, #actions #controls, #actions #quit { left: 0; width: 254dp; }
+#actions #resume { top: 14dp; }
+#actions #save { top: 94dp; }
+#actions #load { top: 174dp; }
+#actions #options, #actions #controls { top: 254dp; }
+#actions #quit { top: 334dp; nav-down: none; }

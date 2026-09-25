@@ -14,13 +14,14 @@ mod manifest;
 mod scene;
 mod stage;
 mod tokens;
+pub mod words;
 
 use std::path::PathBuf;
 
 pub use document::{install_settings, level_markup, setting_slot, volume_control_markup};
 pub use manifest::{
     base_design, declared_overlays, declared_screens, scene_metrics, Binds, Documents, Font,
-    Manifest, Overlay, SceneMetrics, Screen, ScreenPlace, ScreenRole, Toggle, ToggleGuard,
+    Manifest, Overlay, SceneMetrics, Screen, ScreenPlace, ScreenRole,
 };
 pub use scene::SCENE_PREFIX;
 pub use stage::{compose_menu, render_preview, Composition, MenuRequest, PreviewRequest};

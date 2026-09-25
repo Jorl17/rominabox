@@ -13,6 +13,7 @@
  *                           rows N           achievements in the list
  *                           pending 1        an earned achievement not uploaded
  *   ids ID...             ids of the case, reported when not in the document
+ *   text ID...            ids whose words we report after every step
  *   step STEP             in the menu script grammar:
  *                           key:NAME   up down left right ok select cancel
  *                                      start toggle resume, and tab (the
@@ -59,7 +60,7 @@ struct Case
 {
    std::string name, assets, data;
    std::vector<std::pair<std::string, std::string>> setup;
-   std::vector<std::string> ids, steps;
+   std::vector<std::string> ids, steps, text;
 };
 
 std::string json(const std::string& text)
@@ -133,7 +134,21 @@ std::string marked(const char *state)
    return ids;
 }
 
-std::string observe(const std::vector<std::string>& screen_panels, size_t& heard)
+/* The words in each of `ids`, as markup, or null for one not in the document. */
+std::string words(const std::vector<std::string>& ids)
+{
+   std::string out = "{";
+   for (const std::string& id : ids)
+   {
+      Rml::Element *element = view.document.root()->GetElementById(id);
+      out += (out.size() > 1 ? "," : "") + json(id) + ":"
+            + (element ? json(element->GetInnerRML()) : std::string("null"));
+   }
+   return out + "}";
+}
+
+std::string observe(const std::vector<std::string>& screen_panels,
+      const std::vector<std::string>& text, size_t& heard)
 {
    std::string screen;
    for (const std::string& panel : screen_panels)
@@ -145,7 +160,8 @@ std::string observe(const std::vector<std::string>& screen_panels, size_t& heard
    sounds += "]";
    heard = host.sounds.size();
    return "{\"focused\":" + marked("focused") + ",\"capturing\":" + marked("capturing")
-         + ",\"screen\":" + json(screen) + ",\"sounds\":" + sounds + "}";
+         + ",\"screen\":" + json(screen) + ",\"sounds\":" + sounds
+         + ",\"text\":" + words(text) + "}";
 }
 
 bool step(void *menu, const std::string& text)
@@ -311,7 +327,7 @@ void run_case(const Case& run)
             std::fprintf(stderr, "%s: cannot run step '%s'\n", run.name.c_str(), text.c_str());
             std::exit(1);
          }
-         steps += (steps.size() > 1 ? "," : "") + observe(screen_panels, heard);
+         steps += (steps.size() > 1 ? "," : "") + observe(screen_panels, run.text, heard);
       }
    steps += "]";
    if (getenv("ROMINABOX_NAVIGATION_DUMP")) dump(run.name);
@@ -345,6 +361,11 @@ int main()
       {
          std::istringstream words(rest);
          for (std::string id; words >> id; ) current.ids.push_back(id);
+      }
+      else if (word == "text")
+      {
+         std::istringstream words(rest);
+         for (std::string id; words >> id; ) current.text.push_back(id);
       }
       else if (word == "step") current.steps.push_back(rest);
       else if (word == "run") { run_case(current); ++cases; }

@@ -8,6 +8,9 @@
 #include <cstring>
 #include <RmlUi/Core/Elements/ElementFormControlInput.h>
 #include <libretro.h>
+
+/* The font the staged designs declare in design.cfg. */
+static const std::vector<std::string> kFonts = {"Silkscreen-Regular.ttf"};
 #include <cstdio>
 #include <string>
 #include <fstream>
@@ -25,7 +28,7 @@ int main(int argc, char **argv) {
       if (!passed) { std::fprintf(stderr, "FAIL: %s\n", message); ++failures; }
    };
    rib::Document document;
-   if (!document.initialize(argv[1], 960, 600, false)) return 2;
+   if (!document.initialize(argv[1], kFonts, 960, 600, false)) return 2;
    document.set_shown("pause-panel", false);
    document.set_shown("achievements-panel", true);
    document.set_shown("achievements-signed-out", false);
@@ -112,25 +115,35 @@ int main(int argc, char **argv) {
    rib::EventQueue events;
    rib::Event hovered;
    rib::Screens screens(document, events, hovered);
-   screens.declare_screen("achievements", "achievements-panel", "ACHIEVEMENTS", "BACK", "achievements");
-   screens.declare_screen("achievements", "achievements-panel", "ACHIEVEMENTS", "BACK", "achievements");
+   const auto declared = [](const char *id, const char *panel, const char *heading,
+         const char *footer, const char *button) {
+      rib::ScreenDeclaration screen;
+      screen.id = id;
+      screen.panel = panel;
+      screen.heading = heading;
+      screen.footer = footer;
+      if (*button) screen.buttons = {button};
+      return screen;
+   };
+   screens.declare_screen(declared("achievements", "achievements-panel", "ACHIEVEMENTS", "BACK", "achievements"));
+   screens.declare_screen(declared("achievements", "achievements-panel", "ACHIEVEMENTS", "BACK", "achievements"));
    document.root()->GetElementById("achievements")->Click();
    check(events.take().kind == RIB_RMLUI_ACTION_SHOW_SCREEN, "Achievements entry opens before context recreation");
    check(events.take().kind == RIB_RMLUI_ACTION_NONE, "Repeated declarations attach only one listener");
    document.shutdown();
-   check(document.initialize(argv[1], 960, 600, false), "Replacement document loads");
+   check(document.initialize(argv[1], kFonts, 960, 600, false), "Replacement document loads");
    screens.clear_screens();
-   screens.declare_screen("achievements", "achievements-panel", "ACHIEVEMENTS", "BACK", "achievements");
+   screens.declare_screen(declared("achievements", "achievements-panel", "ACHIEVEMENTS", "BACK", "achievements"));
    document.root()->GetElementById("achievements")->Click();
    check(events.take().kind == RIB_RMLUI_ACTION_SHOW_SCREEN, "Achievements entry opens after context recreation");
    document.shutdown();
-   check(document.initialize(argv[1], 960, 600, false), "Presenter document loads");
+   check(document.initialize(argv[1], kFonts, 960, 600, false), "Presenter document loads");
    document.set_shown("pause-panel", false);
    document.set_shown("achievements-panel", true);
    document.show(); document.settle();
    screens.clear_screens();
-   screens.declare_screen("pause", "pause-panel", "PAUSED", "ESC CONTINUE", "");
-   screens.declare_screen("achievements", "achievements-panel", "ACHIEVEMENTS", "ESC BACK", "achievements");
+   screens.declare_screen(declared("pause", "pause-panel", "PAUSED", "ESC CONTINUE", ""));
+   screens.declare_screen(declared("achievements", "achievements-panel", "ACHIEVEMENTS", "ESC BACK", "achievements"));
    screens.show_screen("achievements");
    auto capture = [&](const char *state) {
       if (argc < 3) return;
@@ -251,9 +264,9 @@ int main(int argc, char **argv) {
    overlays.clear_notification();
    overlays.notify({"A LONG ACHIEVEMENT TITLE", "5 points", ""});
    capture("notification");
-   rib_design_data design{};
+   rib::DesignDeclarations design;
    document.shutdown();
-   check(document.initialize(argv[1], 960, 600, false), "Notification document reloads");
+   check(document.initialize(argv[1], kFonts, 960, 600, false), "Notification document reloads");
    overlays.load(design);
    document.settle();
    auto *notice = document.root()->GetElementById("unlock-row");
@@ -283,7 +296,7 @@ int main(int argc, char **argv) {
       // download finishes while the list is closed, only the picture
       // changes.
       document.shutdown();
-      check(document.initialize(argv[1], 960, 600, false), "Badge document loads");
+      check(document.initialize(argv[1], kFonts, 960, 600, false), "Badge document loads");
       document.show(); document.settle();
       achievements.context_lost();
       achievements.bind();
@@ -391,19 +404,16 @@ int main(int argc, char **argv) {
       achievements.leave_form();
       session = {}; session.status = RIB_ACHIEVEMENTS_SIGNED_OUT; ++session.revision;
       saved_accounts.clear();
-      achievements.update(); achievements.shown(); document.settle();
+      achievements.update(); achievements.screen_shown(true); document.settle();
       check(root->GetElementById("achievements-quick") && !shown("achievements-quick"),
             "QUICK SIGN IN is not offered while no account is saved");
       saved_accounts = {"JOAO", "KID"};
-      achievements.shown(); document.settle();
+      achievements.screen_shown(true); document.settle();
       check(shown("achievements-quick"), "QUICK SIGN IN is offered once another game saved an account");
 
-      rib_screen_declaration declared{};
-      std::strcpy(declared.id, "accounts");
-      std::strcpy(declared.role, "accounts");
-      rib_design_data design{};
-      design.screens = &declared;
-      design.screen_count = 1;
+      rib::DesignDeclarations design;
+      design.screens.push_back(declared("accounts", "accounts-panel", "QUICK SIGN IN", "ESC BACK", ""));
+      design.screens.back().role = rib::ScreenRole::Accounts;
       rib::SavedAccounts accounts(document, lists, events);
       accounts.configure(design);
       accounts.bind();

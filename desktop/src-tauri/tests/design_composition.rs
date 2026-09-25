@@ -102,7 +102,6 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
         .expect("Disc must inherit the base achievements screen");
     assert_eq!(achievements.button, "achievements");
     assert_eq!(achievements.option_label.as_deref(), Some("ACHIEVEMENTS"));
-    assert!(achievements.toggle.is_none());
     let pause = screens.iter().find(|screen| screen.id == "pause").unwrap();
     assert_eq!(pause.heading, "MEMORY CARD");
     let disc = screens.iter().find(|screen| screen.id == "disc").unwrap();
@@ -381,15 +380,13 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
     assert!(menu::declared_screens(&design)
         .unwrap()
         .iter()
-        .any(|screen| screen.id == "achievements" && screen.toggle.is_none()));
+        .any(|screen| screen.id == "achievements"));
 
     let menu = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(!menu.contains("achievement-mode"));
     assert!(menu.contains("class=\"menu-action list-back\" id=\"achievements-back\""));
-    let css = fs::read_to_string(root.join("menu.rcss")).unwrap();
     // We measure the place of the list actions in Disc from element boxes in
     // tests/disc_layout.rs.
-    assert!(css.contains(".list-toggle-label") && css.contains(".list-toggle-state"));
 
     let document = menu
         .replace(
@@ -439,65 +436,38 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
 }
 
 #[cfg(target_os = "macos")]
+/// We put the design's words for the text we write in the player into
+/// design.cfg. When a design gives none, we keep the English. We refuse at
+/// export, by name, a word that we do not write in the player.
 #[test]
-fn disc_guard_message_wraps_within_its_slot() {
-    let root = rominabox_scratch::Scratch::dir("rominabox-disc-slot-guard");
-    support::stage_theme(&repo::at("integrations/designs/disc"), &root, "violet")
-    .unwrap();
-    let base = fs::read_to_string(root.join("menu.rml")).unwrap();
-    let guarded = base
-        .replace(
-            "id=\"slot-2\" class=\"slot empty \">",
-            "id=\"slot-2\" class=\"slot empty disabled\">",
-        )
-        .replace(
-            "id=\"slot-state-2\" class=\"slot-state\">EMPTY",
-            "id=\"slot-state-2\" class=\"slot-state\">ACHIEVEMENTS ON",
-        );
-    assert_ne!(guarded, base, "the staged slot must accept the guard state");
-    assert!(guarded.contains("id=\"slot-2\" class=\"slot empty disabled\""));
-    assert!(guarded.contains("class=\"slot-state\">ACHIEVEMENTS ON"));
-    let preview = repo::at("desktop/src-tauri/resources/preview/rml-preview");
-    let render = |name: &str, markup: &str| {
-        let document = root.join(format!("{name}.rml"));
-        fs::write(&document, markup).unwrap();
-        let picture = root.join(format!("{name}.png"));
-        let result = Command::new(&preview)
-            .args([document.as_path(), picture.as_path()])
-            .args(["960", "600"])
-            .output()
-            .unwrap();
-        assert!(
-            result.status.success(),
-            "{}",
-            String::from_utf8_lossy(&result.stderr)
-        );
-        image::open(picture).unwrap().to_rgba8()
-    };
-    let original = render("original", &base);
-    let guard = render("guard", &guarded);
-
-    // Keep the last glyph out of the 12dp inner inset of the slot and out of
-    // the gap before the action column. A word inside the border still looks
-    // crowded when it reaches into this inset.
-    for y in 120..170 {
-        for x in 737..766 {
-            assert_eq!(
-                guard.get_pixel(x, y),
-                original.get_pixel(x, y),
-                "guard text crowded the inner edge of slot 2 at ({x}, {y})"
-            );
-        }
-    }
-    // "ON" must appear on a second line. Clipping the long label also keeps
-    // the gap clear, but hides the state that the player must read.
-    let second_line_pixels = (142..170)
-        .flat_map(|y| (600..748).map(move |x| (x, y)))
-        .filter(|&(x, y)| guard.get_pixel(x, y) != original.get_pixel(x, y))
-        .count();
+fn a_designs_words_reach_the_player_and_an_unknown_one_is_refused() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-design-words");
+    let kit = support::kit_with_hypothetical(&root);
+    let worded = support::compose(&kit, "wording", None, 1, &root.join("wording"));
     assert!(
-        second_line_pixels > 0,
-        "the guard state lost its second line"
+        worded.cfg.contains("word_slot = \"BLOCK {slot}\"")
+            && worded.cfg.contains("word_page-count = \"PAGE {page} OF {pages}\""),
+        "{}",
+        worded.cfg
+    );
+    let native = support::compose(&kit, "native", None, 1, &root.join("native"));
+    assert!(!native.cfg.contains("word_"), "{}", native.cfg);
+
+    let misworded = kit.join("designs/misworded");
+    fs::create_dir_all(&misworded).unwrap();
+    fs::write(
+        misworded.join("design.json"),
+        r#"{"schemaVersion": 1, "id": "misworded", "words": {"slots": "BLOCK"}}"#,
+    )
+    .unwrap();
+    let error = menu::compose_menu(&menu::MenuRequest::new(
+        &misworded,
+        kit.join("menu-assets"),
+    ))
+    .unwrap_err();
+    assert!(
+        error.contains("'slots'") && error.contains("design 'misworded'"),
+        "{error}"
     );
 }
 

@@ -54,10 +54,54 @@ fn scope(word: &str) -> Result<Scope, String> {
         other => Scope::Screen(
             ScreenRole::ALL
                 .into_iter()
-                .find(|role| role.name().eq_ignore_ascii_case(other))
+                .find(|role| format!("{role:?}") == other)
                 .ok_or_else(|| format!("document_contract.inc names an unknown scope '{other}'"))?,
         ),
     })
+}
+
+/// The quoted fields of every `<macro>(...)` declaration, in order.
+fn declarations(macro_name: &str) -> impl Iterator<Item = Vec<String>> + '_ {
+    let opening = format!("{macro_name}(");
+    SOURCE.lines().filter_map(move |line| {
+        let fields = line.trim().strip_prefix(&opening)?.strip_suffix(')')?;
+        Some(
+            fields
+                .split(',')
+                .map(|field| field.trim().trim_matches('"').to_string())
+                .collect(),
+        )
+    })
+}
+
+/// The word for `role` in the contract, design.json and design.cfg. Every
+/// role with special handling in the exporter has a declaration in the player.
+pub fn role_word(role: ScreenRole) -> &'static str {
+    static WORDS: std::sync::OnceLock<Vec<(String, String)>> = std::sync::OnceLock::new();
+    let words = WORDS.get_or_init(|| {
+        declarations("RIB_ROLE")
+            .filter_map(|fields| match &fields[..] {
+                [name, word] => Some((name.clone(), word.clone())),
+                _ => None,
+            })
+            .collect()
+    });
+    let name = format!("{role:?}");
+    words
+        .iter()
+        .find(|(declared, _)| *declared == name)
+        .map(|(_, word)| word.as_str())
+        .unwrap_or_else(|| panic!("document_contract.inc declares no RIB_ROLE({name}, ...)"))
+}
+
+/// The reference canvas every design is laid out on, in dp: width, height.
+pub fn canvas() -> (u32, u32) {
+    declarations("RIB_CANVAS")
+        .find_map(|fields| match &fields[..] {
+            [width, height] => Some((width.parse().ok()?, height.parse().ok()?)),
+            _ => None,
+        })
+        .expect("document_contract.inc declares the canvas as RIB_CANVAS(width, height)")
 }
 
 /// Every declaration in the contract.
@@ -326,5 +370,11 @@ mod tests {
             assert!(names.insert(entry.name.clone()), "{} is declared twice", entry.name);
         }
         assert_eq!(slot_count().unwrap(), 6);
+    }
+
+    #[test]
+    fn a_role_goes_by_its_declared_word_and_the_canvas_has_its_size() {
+        assert_eq!(ScreenRole::Achievements.name(), "achievements");
+        assert_eq!(canvas(), (960, 600));
     }
 }
