@@ -414,8 +414,8 @@ int main(int argc, char **argv) {
             "the accounts list has a row for each saved account, newest first");
       check(accounts.choose("account-1") && quick_signed_in == "KID",
             "choosing a row signs in with that account");
-      const char *next = accounts.leave_for();
-      check(next && !std::strcmp(next, "achievements"), "after choosing, the player goes back to Achievements");
+      check(accounts.leave_for() == rib::ScreenRole::Achievements,
+            "after choosing, the player goes back to Achievements");
       session.status = RIB_ACHIEVEMENTS_SIGNED_OUT;
 
       while (events.take().kind != RIB_RMLUI_ACTION_NONE) {}

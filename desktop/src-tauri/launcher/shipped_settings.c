@@ -218,34 +218,6 @@ static void options_remove(OptionFile *file, const char *key) {
     file->count = to;
 }
 
-/* We write beside the file and rename over it, so that if the player is
- * stopped halfway, the file is never half written. */
-static int write_text(const char *path, const char *text, size_t length) {
-    char temporary[OPTIONS_PATH_CAP];
-    FILE *stream;
-    int wrote = snprintf(temporary, sizeof temporary, "%s.rominabox-new", path);
-    if (wrote < 0 || (size_t)wrote >= sizeof temporary) {
-        errno = ENAMETOOLONG;
-        return -1;
-    }
-    stream = fs_open(temporary, "wb");
-    if (!stream)
-        return -1;
-    if (fwrite(text, 1, length, stream) != length) {
-        fclose(stream);
-        fs_remove(temporary);
-        errno = EIO;
-        return -1;
-    }
-    if (fclose(stream) != 0 || fs_replace(temporary, path) != 0) {
-        int saved = errno;
-        fs_remove(temporary);
-        errno = saved;
-        return -1;
-    }
-    return 0;
-}
-
 static int options_write(const OptionFile *file, const char *path) {
     size_t length = 0;
     size_t index;
@@ -264,7 +236,7 @@ static int options_write(const OptionFile *file, const char *path) {
         cursor += line_length;
         *cursor++ = '\n';
     }
-    result = write_text(path, text, length);
+    result = fs_write_file(path, text, length);
     free(text);
     return result;
 }
@@ -326,7 +298,7 @@ static int apply_file(
         if (make_directory(game_root) != 0 || make_directory(game_dir) != 0)
             goto done;
         where = game_path;
-        if (write_text(game_path, shipped.raw, strlen(shipped.raw)) != 0)
+        if (fs_write_file(game_path, shipped.raw, strlen(shipped.raw)) != 0)
             goto done;
     }
     else for (index = 0; index < shipped.count; index++) {
@@ -376,7 +348,7 @@ static int apply_file(
         if (make_directory(applied_root) != 0 || make_directory(applied_dir) != 0)
             goto done;
         where = applied_path;
-        if (write_text(applied_path, shipped.raw, strlen(shipped.raw)) != 0)
+        if (fs_write_file(applied_path, shipped.raw, strlen(shipped.raw)) != 0)
             goto done;
     }
     result = 0;

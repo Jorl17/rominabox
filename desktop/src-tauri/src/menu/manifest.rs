@@ -278,9 +278,8 @@ pub struct Screen {
     pub option_label: Option<String>,
     /// We ship the entry in a game that does not name a set.
     pub option_default: bool,
-    /// What happens on this screen once the core has loaded more than one
-    /// disc. `list` means the disc list, and any other value is the screen
-    /// to open instead of this one.
+    /// The screen to open instead of this one when the game has more than one
+    /// disc, as the disc list opens instead of the disc column.
     pub images: Option<String>,
     /// The word on the row of the disc that is in the tray.
     pub mark: Option<String>,
@@ -298,7 +297,7 @@ pub struct Screen {
 impl Screen {
     /// The list we fill with the discs from the core once the game has loaded.
     pub fn is_disc_list(&self) -> bool {
-        self.images.as_deref() == Some("list")
+        self.role == Some(ScreenRole::Discs)
     }
 }
 

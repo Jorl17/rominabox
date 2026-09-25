@@ -209,32 +209,27 @@ static int bring_one(const char *name, void *context) {
     return 0;
 }
 
+/* One name a line, replaced whole. */
 static int write_record(const char *path, const Names *names) {
-    char temporary[FILES_PATH_CAP];
-    FILE *stream;
-    size_t index;
-    int wrote = snprintf(temporary, sizeof temporary, "%s.rominabox-new", path);
-    if (wrote < 0 || (size_t)wrote >= sizeof temporary) {
-        errno = ENAMETOOLONG;
-        return -1;
-    }
-    stream = fs_open(temporary, "wb");
-    if (!stream)
-        return -1;
+    size_t length = 0, at = 0, index;
+    char *text;
+    int result;
     for (index = 0; index < names->count; index++)
-        if (fprintf(stream, "%s\n", names->names[index]) < 0) {
-            fclose(stream);
-            fs_remove(temporary);
-            errno = EIO;
-            return -1;
-        }
-    if (fclose(stream) != 0 || fs_replace(temporary, path) != 0) {
-        int saved = errno;
-        fs_remove(temporary);
-        errno = saved;
+        length += strlen(names->names[index]) + 1;
+    text = malloc(length + 1);
+    if (!text) {
+        errno = ENOMEM;
         return -1;
     }
-    return 0;
+    for (index = 0; index < names->count; index++) {
+        size_t size = strlen(names->names[index]);
+        memcpy(text + at, names->names[index], size);
+        at += size;
+        text[at++] = '\n';
+    }
+    result = fs_write_file(path, text, at);
+    free(text);
+    return result;
 }
 
 int rominabox_replace_shipped_files(

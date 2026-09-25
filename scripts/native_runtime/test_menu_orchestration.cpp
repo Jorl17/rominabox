@@ -304,7 +304,7 @@ std::string stage_disc_list(const char *native_assets, const char *data)
                "screen_button_options = \"options fixture-back discs-back\"");
    config += "\nscreen_panel_discs = \"discs-panel\"\nscreen_heading_discs = \"DISC\""
              "\nscreen_footer_discs = \"ESC  BACK\"\nscreen_button_discs = \"discs\""
-             "\nscreen_images_discs = \"list\"\nscreen_mark_discs = \"IN\""
+             "\nscreen_mark_discs = \"IN\""
              "\nscreen_role_discs = \"discs\"\n";
    check(staged, "the disc list fixture is staged into the Native assets");
    std::ofstream(assets / "menu.rml") << menu;

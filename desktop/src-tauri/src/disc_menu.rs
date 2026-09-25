@@ -73,7 +73,7 @@ mod tests {
                 menu.matches("id=\"discs-").count() >= ROW_CAP,
                 "{name} baked fewer than {ROW_CAP} rows"
             );
-            assert!(cfg.contains("screen_images_discs = \"list\""), "{cfg}");
+            assert!(cfg.contains("screen_role_discs = \"discs\""), "{cfg}");
             assert!(cfg.contains("screen_mark_discs = \"IN\""), "{cfg}");
             if name == "disc" {
                 assert!(

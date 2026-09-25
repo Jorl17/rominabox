@@ -65,7 +65,7 @@ int test_menu_declarations()
    values = {
       {"screens", "pause skipped disc"}, {"screen_panel_pause", "pause-panel"},
       {"screen_panel_skipped", std::string(128, 'p')},
-      {"screen_panel_disc", "disc-panel"}, {"screen_images_disc", "list"},
+      {"screen_panel_disc", "disc-panel"}, {"screen_role_disc", "discs"},
       {"screen_mark_disc", std::string(32, 'm')},
       {"screen_heading_pause", std::string(128, 'h')},
       {"screen_footer_pause", std::string(128, 'f')},

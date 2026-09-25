@@ -243,13 +243,19 @@ def design_screens(design: str) -> list[dict]:
     return json.loads(path.read_text())["screens"]
 
 
+def disc_list_id() -> str:
+    """Return the screen id of the disc list. In Native that screen has the discs
+    role, and a design that restyles it declares the same id."""
+    return next(screen["id"] for screen in design_screens("native") if screen.get("role") == "discs")
+
+
 def disc_designs() -> list[str]:
     """Return the designs with a disc list, in their order in designs.json."""
     declared = json.loads((ROOT / "desktop/designs.json").read_text())["designs"]
     found = []
     for entry in declared:
         screens = design_screens(entry["id"])
-        if any(screen.get("images") == "list" for screen in screens):
+        if any(screen.get("id") == disc_list_id() for screen in screens):
             found.append(entry["id"])
     if not found:
         raise SystemExit("no design declares a disc list")
@@ -257,7 +263,7 @@ def disc_designs() -> list[str]:
 
 
 def listing_of(screens: list[dict]) -> dict:
-    return next(screen for screen in screens if screen.get("images") == "list")
+    return next(screen for screen in screens if screen.get("id") == disc_list_id())
 
 
 def redirect_of(screens: list[dict], listing_id: str) -> dict | None:
