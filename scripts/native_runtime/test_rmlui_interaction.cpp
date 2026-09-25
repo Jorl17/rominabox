@@ -1320,9 +1320,41 @@ int main(int argc, char **argv)
       CHECK(std::string(inspect.text("controls-status")) == prompt("controls-status"),
             "controls status expires back to its prompt");
    }
-   for (float aspect : {10.0f/9, 4.0f/3, 16.0f/9}) {
-      view.slots.set_game_aspect(aspect);
-      CHECK(std::abs(inspect.picture_aspect() - aspect) < 0.02f, "well follows live core aspect");
+   {
+      /* The design sets the size of the box for a slot picture. In the player
+       * we keep the aspect ratio of the game inside it, as large as fits and
+       * centred, and size nothing else. */
+      Rml::Element *image = view.document.root()->GetElementById("slot-image-1");
+      Rml::Element *box = image ? image->GetParentNode() : nullptr;
+      CHECK(box, "slot 1 draws its picture in a box");
+      view.slots.set_slot_state(1, true, nullptr);
+      Rml::Vector2f designed;
+      for (float aspect : {4.0f/3, 10.0f/9, 16.0f/9, 3.0f/4})
+      {
+         if (!box) break;
+         view.slots.set_game_aspect(aspect);
+         view.render(960, 600);
+         const Rml::Vector2f box_at = box->GetAbsoluteOffset(Rml::BoxArea::Content);
+         const Rml::Vector2f room = box->GetBox().GetSize(Rml::BoxArea::Content);
+         const Rml::Vector2f at = image->GetAbsoluteOffset(Rml::BoxArea::Border);
+         const Rml::Vector2f size = image->GetBox().GetSize(Rml::BoxArea::Border);
+         if (aspect == 4.0f/3)
+            designed = room;
+         char shape[160];
+         std::snprintf(shape, sizeof(shape), "at %.3f: box %.1fx%.1f, picture %.1fx%.1f at %.1f,%.1f in %.1f,%.1f",
+               aspect, room.x, room.y, size.x, size.y, at.x, at.y, box_at.x, box_at.y);
+         CHECK(std::abs(room.x - designed.x) < 0.5f && std::abs(room.y - designed.y) < 0.5f,
+               (std::string("the picture's box is the design's, whatever the game's shape; ") + shape).c_str());
+         CHECK(size.y > 0.0f && std::abs(size.x / size.y - aspect) < 0.02f,
+               (std::string("the picture keeps the game's shape; ") + shape).c_str());
+         CHECK((std::abs(size.x - room.x) < 0.5f || std::abs(size.y - room.y) < 0.5f)
+                  && size.x <= room.x + 0.5f && size.y <= room.y + 0.5f,
+               (std::string("the picture is as large as the box allows; ") + shape).c_str());
+         CHECK(std::abs((at.x - box_at.x) - (box_at.x + room.x - at.x - size.x)) < 1.0f
+                  && std::abs((at.y - box_at.y) - (box_at.y + room.y - at.y - size.y)) < 1.0f,
+               (std::string("the picture is centred in its box; ") + shape).c_str());
+      }
+      view.slots.set_slot_state(1, false, nullptr);
    }
    view.lists.place_list("fixture-panel", nullptr, 0);
    CHECK(std::string(inspect.property("fixture-panel", "display")) != "none",

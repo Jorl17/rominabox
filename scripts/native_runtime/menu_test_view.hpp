@@ -131,8 +131,5 @@ bool has_class(const char *id, const char *name) {
    return element && name && element->IsClassSet(name);
 }
 
-float picture_aspect() {
-   document.get_context()->Update(); auto size = document.root()->GetElementById("slot-image-1")->GetParentNode()->GetBox().GetSize(Rml::BoxArea::Content); return size.x / size.y;
-}
 };
 }
