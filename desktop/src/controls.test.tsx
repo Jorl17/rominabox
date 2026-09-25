@@ -112,6 +112,22 @@ describe("controller authoring", () => {
     }
   });
 
+  // Only Escape is reserved: it cancels here and opens the game's menu.
+  it("binds Q and F like any other key", () => {
+    const { container, cleanup } = renderEditor();
+    try {
+      click(bindingButton(container, "L2"));
+      press("KeyQ", "q");
+      expect(bindingButton(container, "L2").textContent).toContain("Q");
+      click(bindingButton(container, "R2"));
+      press("KeyF", "f");
+      expect(bindingButton(container, "R2").textContent).toContain("F");
+      expect(container.textContent).not.toContain("reserved");
+    } finally {
+      cleanup();
+    }
+  });
+
   it("leaves the original binding unchanged when capture is cancelled", () => {
     const { container, cleanup } = renderEditor();
     try {

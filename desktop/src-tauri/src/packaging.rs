@@ -2390,18 +2390,16 @@ mod tests {
             .filter(|bind| bind.advanced_key.is_some())
             .map(|bind| (bind.name, bind.advanced_key.unwrap(), bind.keyboard))
             .collect();
-        // Quit and fullscreen are in this tier, so q and f stay free for
-        // gameplay and Q cannot quit a shipped game. The base keyboard stays
-        // Neutral, so a default export contains nul for each of them.
+        // Quit and fullscreen are not in this tier, because q and f are
+        // gameplay keys in every mode. The base keyboard stays Neutral, so a
+        // default export contains nul for both fast-forward keys.
         assert_eq!(
             advanced_tier,
             vec![
-                ("exit_emulator", "q", HotkeyKeyboard::Neutral),
                 ("toggle_fast_forward", "space", HotkeyKeyboard::Neutral),
                 ("hold_fast_forward", "l", HotkeyKeyboard::Neutral),
-                ("toggle_fullscreen", "f", HotkeyKeyboard::Neutral),
             ],
-            "the advanced tier is fast-forward, quit and fullscreen; a default export writes nul for all four"
+            "the advanced tier is fast-forward; a default export writes nul for both"
         );
 
         let mut ordinary = request(false);
@@ -2419,8 +2417,8 @@ mod tests {
             !ordinary_config.contains(" = \"space\""),
             "a normal export must not write the advanced Space binding"
         );
-        // The player quits a shipped game from the menu, and we handle f like
-        // q so that no gameplay bind is also a hotkey. Keep this default.
+        // The player quits from the menu and switches to fullscreen with
+        // Alt+Enter, so q and f stay gameplay keys.
         assert_eq!(
             config_value(&ordinary_config, "input_exit_emulator"),
             Some("nul")
@@ -2456,10 +2454,12 @@ mod tests {
             }
         }
         assert_eq!(config_value(&config, "input_menu_toggle"), Some("escape"));
-        // q and f when advanced access is on. The default export above
-        // contains nul.
-        assert_eq!(config_value(&config, "input_exit_emulator"), Some("q"));
-        assert_eq!(config_value(&config, "input_toggle_fullscreen"), Some("f"));
+        // Advanced access does not bind q or f either.
+        assert_eq!(config_value(&config, "input_exit_emulator"), Some("nul"));
+        assert_eq!(
+            config_value(&config, "input_toggle_fullscreen"),
+            Some("nul")
+        );
         assert_eq!(config_value(&config, "input_rewind"), Some("nul"));
         assert_eq!(
             config_value(&config, "input_menu_toggle_gamepad_combo"),
@@ -2470,11 +2470,10 @@ mod tests {
     }
 
     /// The player still opens the menu with Escape and quits a game from it.
-    /// Quit and fullscreen are advanced-access keys, so this default export
-    /// contains nul for both. So Q cannot quit in the middle of a game, and f
-    /// stays free for gameplay.
+    /// Quit and fullscreen have no key, so Q cannot quit in the middle of a
+    /// game, and q and f stay free for gameplay.
     #[test]
-    fn escape_stays_the_menu_toggle_and_quit_and_fullscreen_are_advanced_only() {
+    fn escape_stays_the_menu_toggle_and_quit_and_fullscreen_have_no_key() {
         let mut with_menu = request(false);
         with_menu.show_menu = true;
         let menu_config = embedded_runtime_config(&write_test_launcher(with_menu));
@@ -2482,14 +2481,10 @@ mod tests {
             config_value(&menu_config, "input_menu_toggle"),
             Some("escape")
         );
-        // We handle fullscreen like quit, so that a gameplay bind on f does
-        // not also toggle fullscreen. The macOS window menu has a Full Screen item.
         assert_eq!(
             config_value(&menu_config, "input_toggle_fullscreen"),
             Some("nul")
         );
-        // A default export has no exit key. The player quits from the menu
-        // that Escape opens, not with a hidden keyboard shortcut.
         assert_eq!(
             config_value(&menu_config, "input_exit_emulator"),
             Some("nul")
@@ -2519,8 +2514,6 @@ mod tests {
             config_value(&splash_config, "input_menu_toggle"),
             Some("nul")
         );
-        // A splash export is still a default export, so f is nul unless
-        // advanced access is on.
         assert_eq!(
             config_value(&splash_config, "input_toggle_fullscreen"),
             Some("nul")

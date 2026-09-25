@@ -1,8 +1,7 @@
-//! We ship quit and fullscreen keys only with advanced emulator access.
+//! Only Escape is reserved. Q and F are ordinary gameplay keys in every mode.
 //!
-//! The quit binding and the fullscreen key are part of the same opt-in as the
-//! stock RetroArch menus. Escape is the menu toggle in both modes, because
-//! the player quits a shipped game through the menu.
+//! Neither Q nor F is a hotkey, because the menu opened with Escape has Quit,
+//! and Alt+Enter is the fullscreen chord.
 //!
 //! In these tests we read generated config and call the authoring validator.
 //! We do not launch a player or open a window, and we do not prove that
@@ -10,7 +9,7 @@
 
 use rominabox_desktop::{
     controls::{self, Controls},
-    hotkeys::isolated_hotkey_config,
+    hotkeys::{isolated_hotkey_config, HOTKEY_BINDS},
     packaging::{ExportRequest, ExportTarget},
 };
 use std::{
@@ -102,7 +101,7 @@ fn fixture_kit(root: &Path) -> PathBuf {
     kit
 }
 
-fn export_request(root: &Path, advanced: bool) -> ExportRequest {
+fn export_request(root: &Path, advanced: bool, controls: Controls) -> ExportRequest {
     let rom = root.join("sonic.bin");
     fs::write(&rom, b"RIBtest").unwrap();
     ExportRequest {
@@ -117,7 +116,7 @@ fn export_request(root: &Path, advanced: bool) -> ExportRequest {
         theme: "native".to_string(),
         palette: "blue".to_string(),
         menu_sounds: "off".to_string(),
-        controls: Controls::default(),
+        controls,
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: advanced,
@@ -150,13 +149,21 @@ fn config_value<'a>(config: &'a str, key: &str) -> Option<&'a str> {
     })
 }
 
-fn exported_config(advanced: bool) -> String {
+/// The runtime config and the default controls that we write in an export.
+fn export(advanced: bool, controls: Controls) -> (String, String) {
     let root = workspace();
-    let request = export_request(&root, advanced);
+    let request = export_request(&root, advanced, controls);
     let cancelled = AtomicBool::new(false);
-    let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
-    let plan = result.app_path.join("Contents/Resources/launch.plan");
-    embedded_runtime_config(&fs::read_to_string(&plan).unwrap())
+    let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {})
+        .unwrap_or_else(|error| panic!("advanced={advanced}: export refused: {error:?}"));
+    let resources = result.app_path.join("Contents/Resources");
+    let plan = fs::read_to_string(resources.join("launch.plan")).unwrap();
+    let defaults = fs::read_to_string(resources.join("menu-assets/controls-defaults.cfg")).unwrap();
+    (embedded_runtime_config(&plan), defaults)
+}
+
+fn exported_config(advanced: bool) -> String {
+    export(advanced, Controls::default()).0
 }
 
 fn binding(key: &str) -> Controls {
@@ -164,6 +171,23 @@ fn binding(key: &str) -> Controls {
         "bindings": {"a": {"key": key}}
     }))
     .unwrap()
+}
+
+/// A on Q and B on F.
+fn q_and_f() -> Controls {
+    serde_json::from_value(serde_json::json!({
+        "bindings": {"a": {"key": "q"}, "b": {"key": "f"}}
+    }))
+    .unwrap()
+}
+
+/// Every RetroArch hotkey whose keyboard key is `key`.
+fn hotkeys_on<'a>(config: &'a str, key: &str) -> Vec<&'static str> {
+    HOTKEY_BINDS
+        .iter()
+        .map(|bind| bind.name)
+        .filter(|name| config_value(config, &format!("input_{name}")) == Some(key))
+        .collect()
 }
 
 /// In a default export we do not bind Q to quit, because a player could press
@@ -187,40 +211,49 @@ fn a_default_export_binds_no_exit_key() {
     );
 }
 
-/// Advanced emulator access is the opt-in for stock menus and the advanced
-/// hotkey tier. Quit is part of it, and not of every shipped game.
+/// Q and F are gameplay keys in every mode. With advanced emulator access on
+/// or off, we accept an export with A on Q and B on F, its controls contain
+/// both keys, and no RetroArch hotkey is bound to either, so pressing either
+/// key only acts in the game.
 ///
-/// We read the launcher. This does not prove that RetroArch quits on Q.
+/// If we bound Q to quit and F to fullscreen with advanced access, a player of
+/// an advanced export could not use them, or would quit the game mid-play.
+///
+/// We read what an export writes. This does not prove that RetroArch passes a
+/// keypress to the core.
 #[test]
 #[cfg(target_os = "macos")]
-fn an_advanced_export_binds_quit() {
-    let config = exported_config(true);
-    assert_eq!(config_value(&config, "input_exit_emulator"), Some("q"));
-    assert_eq!(
-        config_value(&config, "input_menu_toggle"),
-        Some("escape"),
-        "advanced access does not take Escape away from the menu"
-    );
-}
-
-/// F goes with Q. With `input_toggle_fullscreen = f` while f is a legal
-/// gameplay key, one press would trigger the hotkey and the bind together. The
-/// macOS window menu still has Full Screen, so a default export has nul.
-///
-/// We read the launcher. This does not prove that the window menu item exists.
-#[test]
-#[cfg(target_os = "macos")]
-fn fullscreen_moves_with_quit() {
-    let ordinary = exported_config(false);
-    let advanced = exported_config(true);
-    assert_eq!(
-        config_value(&ordinary, "input_toggle_fullscreen"),
-        Some("nul")
-    );
-    assert_eq!(
-        config_value(&advanced, "input_toggle_fullscreen"),
-        Some("f")
-    );
+fn q_and_f_are_gameplay_keys_and_no_hotkey_in_every_mode() {
+    for advanced in [false, true] {
+        let (config, defaults) = export(advanced, q_and_f());
+        assert_eq!(
+            config_value(&defaults, "input_player1_a"),
+            Some("q"),
+            "advanced={advanced}"
+        );
+        assert_eq!(
+            config_value(&defaults, "input_player1_b"),
+            Some("f"),
+            "advanced={advanced}"
+        );
+        for key in ["q", "f"] {
+            assert_eq!(
+                hotkeys_on(&config, key),
+                Vec::<&str>::new(),
+                "advanced={advanced}: {key} is a gameplay key and no hotkey"
+            );
+        }
+        assert_eq!(config_value(&config, "input_exit_emulator"), Some("nul"));
+        assert_eq!(
+            config_value(&config, "input_toggle_fullscreen"),
+            Some("nul")
+        );
+        assert_eq!(
+            config_value(&config, "input_menu_toggle"),
+            Some("escape"),
+            "advanced={advanced}: Escape opens the menu, which has Quit"
+        );
+    }
 }
 
 /// Escape toggles the menu whether or not advanced access is on. We reject it
@@ -249,28 +282,5 @@ fn escape_toggles_the_menu_in_both_modes_and_is_never_a_gameplay_key() {
             error.contains("toggles the menu"),
             "advanced={advanced}: {error}"
         );
-    }
-}
-
-/// Q and F are reserved only while recovery hotkeys are on. With them off,
-/// both are ordinary gameplay keys, so a stick can use f again.
-///
-/// We call the authoring validator. This does not prove that the capture UI of
-/// the builder accepts the key, because that UI reserves keys separately.
-#[test]
-fn a_gameplay_binding_to_q_or_f_follows_advanced_access() {
-    for key in ["q", "f"] {
-        let reserved =
-            controls::validate_for_system_with_advanced_access("megadrive", &binding(key), true)
-                .expect_err("recovery on reserves the hotkey");
-        assert!(
-            reserved.contains("reserved for player recovery"),
-            "{key}: {reserved}"
-        );
-        controls::validate_for_system_with_advanced_access("megadrive", &binding(key), false)
-            .unwrap_or_else(|error| panic!("{key} must be bindable when recovery is off: {error}"));
-        controls::validate_for_system("megadrive", &binding(key)).unwrap_or_else(|error| {
-            panic!("the shipped-game validator must accept {key}: {error}")
-        });
     }
 }

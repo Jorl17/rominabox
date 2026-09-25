@@ -102,9 +102,7 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
         Some("nul")
     );
     assert_eq!(config_value(&config, "input_menu_toggle"), Some("nul"));
-    // Fullscreen and quit require advanced emulator access, so in a default
-    // export f is free for gameplay. The macOS window menu still has Full
-    // Screen. This assertion checks that default.
+    // Fullscreen is Alt+Enter, so f stays a gameplay key.
     assert_eq!(
         config_value(&config, "input_toggle_fullscreen"),
         Some("nul")

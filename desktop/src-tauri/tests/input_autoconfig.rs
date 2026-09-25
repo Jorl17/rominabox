@@ -299,19 +299,16 @@ fn walk_files(root: &Path, found: &mut Vec<PathBuf>) {
     }
 }
 
-/// A normal export has no fast-forward, quit or fullscreen key. With
-/// advanced access we bind Space, `l`, `q` and `f`, on the keyboard only.
+/// A normal export has no fast-forward key. With advanced access, we restore
+/// Space and `l` for fast-forward, on the keyboard only, and nothing else.
+/// Quit and fullscreen are `nul` in both, so `q` and `f` stay gameplay keys.
 ///
-/// Quit and fullscreen are in this tier so that a shipped game does not quit
-/// on Q and `f` can be a gameplay key. Turning on advanced access changes
-/// those four keyboard keys and no other setting.
-///
-/// This does not prove that RetroArch treats those keys as the named actions
-/// at runtime. It checks the config we write. `l` is also a declared stick
-/// key. We record that overlap here and leave open whether hold should
-/// move. We do not check author overrides that reuse Space.
+/// We check only the config we write, so this does not prove that those keys
+/// do the named actions at runtime. `l` is also a declared stick key. We
+/// record that overlap and do not decide whether hold should move. We do not
+/// check author overrides that reuse Space.
 #[test]
-fn advanced_access_reaches_fast_forward_quit_and_fullscreen_on_the_keyboard_only() {
+fn advanced_access_reaches_fast_forward_on_the_keyboard_only() {
     let ordinary = isolated_hotkey_config(true, false);
     let advanced = isolated_hotkey_config(true, true);
 
@@ -346,21 +343,19 @@ fn advanced_access_reaches_fast_forward_quit_and_fullscreen_on_the_keyboard_only
         Some("nul")
     );
     assert_eq!(ordinary_keys.remove("input_hold_fast_forward"), Some("nul"));
-    // Quit and fullscreen differ between the two maps. In a default export
-    // they must be nul, so Q does not quit and f stays a gameplay key.
-    assert_eq!(ordinary_keys.remove("input_exit_emulator"), Some("nul"));
-    assert_eq!(ordinary_keys.remove("input_toggle_fullscreen"), Some("nul"));
     assert_eq!(
         advanced_keys.remove("input_toggle_fast_forward"),
         Some("space")
     );
     assert_eq!(advanced_keys.remove("input_hold_fast_forward"), Some("l"));
-    assert_eq!(advanced_keys.remove("input_exit_emulator"), Some("q"));
-    assert_eq!(advanced_keys.remove("input_toggle_fullscreen"), Some("f"));
     assert_eq!(
         ordinary_keys, advanced_keys,
-        "advanced access may change only the fast-forward, quit and fullscreen keyboard keys"
+        "advanced access may change only the fast-forward keyboard keys"
     );
+    for keys in [&ordinary_keys, &advanced_keys] {
+        assert_eq!(keys.get("input_exit_emulator"), Some(&"nul"));
+        assert_eq!(keys.get("input_toggle_fullscreen"), Some(&"nul"));
+    }
 
     let gameplay = declared_gameplay_keys();
     assert!(
@@ -377,15 +372,11 @@ fn advanced_access_reaches_fast_forward_quit_and_fullscreen_on_the_keyboard_only
         .filter(|bind| bind.advanced_key.is_some())
         .map(|bind| (bind.name, bind.advanced_key))
         .collect();
-    // Quit and fullscreen are in this list because we bind neither q nor f
-    // in a shipped game.
     assert_eq!(
         advanced_entries,
         vec![
-            ("exit_emulator", Some("q")),
             ("toggle_fast_forward", Some("space")),
             ("hold_fast_forward", Some("l")),
-            ("toggle_fullscreen", Some("f")),
         ]
     );
 }
