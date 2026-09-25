@@ -1,13 +1,13 @@
 //! Whether a full page of the achievements list fills the screen.
 //!
 //! On a signed-in achievements screen with a full page of rows, the list
-//! reaches as far right as BACK, and the space between the pager and the
-//! buttons below it is less than one more row.
+//! reaches as far right as BACK, and the space between the last row and the
+//! buttons below it, without the pager, is less than one more row.
 //!
-//! We clone and rename the prototype row of the list as in the player
-//! (`live_lists.cpp`). The boxes come from the RmlUi layout through the
-//! windowless probe. This does NOT prove how the screen looks. We draw it in
-//! the pictures tests.
+//! We clone and rename the list's prototype to make the rows, as in the
+//! player (`live_lists.cpp`). The boxes come from the RmlUi layout through
+//! the windowless probe. We do not check how the screen looks here. We draw
+//! it in the picture tests.
 
 mod support;
 
@@ -118,7 +118,8 @@ fn a_full_page_of_achievements_uses_the_screen() {
             });
             let [bx, by, bw, _] = back;
             let [fx, _, fw, fh] = first;
-            let [_, py, _, ph] = pager;
+            let [_, _, _, ph] = pager;
+            let last_bottom = last_row[1] + last_row[3];
             let row = last_row[1] + last_row[3] - first[1];
             let row_step = row / page_size as f64;
             if fx + fw + 1.0 < bx + bw {
@@ -129,10 +130,14 @@ fn a_full_page_of_achievements_uses_the_screen() {
                     bx + bw - (fx + fw)
                 ));
             }
-            let unused = by - (py + ph);
+            // Count the pager against the space only where it is between the
+            // rows and the buttons, not beside the buttons.
+            let [_, py, _, _] = pager;
+            let between = py >= last_bottom && py + ph <= by;
+            let unused = by - last_bottom - if between { ph } else { 0.0 };
             if unused >= row_step {
                 problems.push(format!(
-                    "{design} {size:?}: {unused}dp between the pager and the buttons, room for {} more row(s) of {row_step}dp; a page is {page_size} of {fh}dp",
+                    "{design} {size:?}: {unused}dp unused between the last row and the buttons (pager aside), room for {} more row(s) of {row_step}dp; a page is {page_size} of {fh}dp",
                     (unused / row_step).floor()
                 ));
             }
