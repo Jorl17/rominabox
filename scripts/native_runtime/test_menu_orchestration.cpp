@@ -896,6 +896,63 @@ void a_menu_load_writes_the_volume_only_off_a_position()
    rib_files_use_rename(nullptr);
 }
 
+/* A drag that the player is still making when the menu closes, as with
+ * Escape or the menu button of a pad during the drag. We applied each step
+ * as the drag passed it, and we keep the level it reached as for a released
+ * drag, so the next launch starts from it. */
+void a_drag_cut_short_by_closing_is_kept(const char *data)
+{
+   const std::string file = std::string(data) + "/volume.cfg";
+   std::remove(file.c_str());
+   host.settings["audio_volume"] = 0.0f;
+   host.pointer = {};
+   void *menu = open_menu();
+   if (!menu) return;
+   click_and_frame(menu, "options");
+   int x = 0, y = 0, w = 0, h = 0;
+   check(view.document.element_box("volume-level", &x, &y, &w, &h) && w > 20,
+         "the volume slider has a width to drag across");
+   host.pointer.x = x + w - 1;
+   host.pointer.y = y + h / 2;
+   host.pointer.pressed = true;
+   frame(menu);
+   for (int at = x + w - 1; at >= x + w / 2; at -= 4)
+   {
+      host.pointer.x = at;
+      frame(menu);
+   }
+   const float dragged = host.settings["audio_volume"];
+   check(dragged < 0.0f && dragged > -80.0f, "the drag moved the level part of the way");
+   /* The menu closes with the button still held. */
+   rib_menu_toggle(menu, false);
+   host.menu_open = false;
+   frame(menu);
+   frame(menu);
+   rib_menu_destroy(menu);
+
+   /* The next launch: the launcher applies the player's file. */
+   config_file_t *saved = config_file_new_from_path_to_string(file.c_str());
+   float level = 1.0f;
+   check(saved && config_get_float(saved, "audio_volume", &level)
+            && std::fabs(level - dragged) < 0.06f,
+         "a drag cut short by closing the menu is written to the player's file");
+   if (saved) config_file_free(saved);
+   host.settings["audio_volume"] = level;
+   host.menu_open = true;
+   host.pointer = {};
+   if ((menu = open_menu()))
+   {
+      click_and_frame(menu, "options");
+      const auto& fractions = view.parts.fractions();
+      const auto shown = fractions.find("volume-level");
+      check(level != 1.0f && shown != fractions.end() && shown->second > 0.0f
+               && shown->second < 1.0f,
+            "the relaunched menu shows the level the cut-short drag reached");
+      rib_menu_destroy(menu);
+   }
+   std::remove(file.c_str());
+}
+
 /* A move that fails at once, for example onto a file open in another program. */
 int failing_rename(const char *, const char *) { return -1; }
 
@@ -1159,6 +1216,7 @@ int main(int argc, char **argv)
    fixes::chosen_slot_shows_on_save_and_load(argv[1]);
    fixes::a_save_over_a_picture_shows_the_new_one(argv[2]);
    fixes::a_menu_load_writes_the_volume_only_off_a_position();
+   fixes::a_drag_cut_short_by_closing_is_kept(argv[2]);
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);
