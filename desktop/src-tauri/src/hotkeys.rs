@@ -3,7 +3,8 @@
 /// RetroArch meta-bind policy for exported games.
 ///
 /// This is the only bind list, and it covers every `DECLARE_META_BIND` in
-/// the pinned RetroArch `configuration.c`. The desktop defaults in
+/// the pinned RetroArch `configuration.c`, which we compile and read in its
+/// test (`scripts/native_runtime/meta_binds.c`). The desktop defaults in
 /// `config.def.keybinds.h` and `retroarch.cfg` bind Space to
 /// `toggle_fast_forward`, Escape to quit and F1 to the stock menu, so we
 /// write every meta bind in an export to keep those defaults out.
@@ -380,40 +381,78 @@ pub fn isolated_hotkey_config(show_menu: bool, advanced: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
+    use std::{fs, process::Command};
+
+    /// Every meta bind declared in the fork's RetroArch, in its table's order,
+    /// with its default key. We compile `scripts/native_runtime/meta_binds.c`
+    /// against the fork's own configuration.c, config.def.keybinds.h and key
+    /// names, and run it, without starting any of RetroArch.
+    fn retroarch_meta_binds() -> Vec<(String, String)> {
+        let scratch = rominabox_scratch::Scratch::dir("rominabox-meta-binds");
+        let retroarch = crate::repo::at("vendor/retroarch");
+        // input_driver.h includes "../config.h", written by RetroArch's
+        // configure script. These tables do not depend on it, so we use an
+        // empty one, one directory above an include path of its own.
+        let configured = scratch.join("configured");
+        fs::create_dir_all(configured.join("include")).unwrap();
+        fs::write(configured.join("config.h"), "").unwrap();
+        let probe = scratch.join("meta_binds");
+        // In the probe we read two tables, and leave the rest of
+        // configuration.c out of the program instead of adding its dependencies.
+        let unused = if cfg!(target_os = "macos") {
+            "-Wl,-dead_strip"
+        } else {
+            "-Wl,--gc-sections"
+        };
+        let built = Command::new("cc")
+            .args(["-std=gnu99", "-w", "-ffunction-sections", "-fdata-sections", unused])
+            .arg(format!("-I{}", configured.join("include").display()))
+            .arg(format!("-I{}", retroarch.display()))
+            .arg(format!("-I{}", retroarch.join("libretro-common/include").display()))
+            .arg(format!("-I{}", retroarch.join("deps").display()))
+            .arg(crate::repo::at("scripts/native_runtime/meta_binds.c"))
+            .arg(retroarch.join("configuration.c"))
+            .arg(retroarch.join("input/input_keymaps.c"))
+            .arg("-o")
+            .arg(&probe)
+            .output()
+            .expect("cc runs");
+        assert!(
+            built.status.success(),
+            "the meta bind probe did not build:\n{}",
+            String::from_utf8_lossy(&built.stderr)
+        );
+        let printed = Command::new(&probe).output().expect("the probe runs");
+        assert!(printed.status.success(), "the meta bind probe failed");
+        String::from_utf8(printed.stdout)
+            .unwrap()
+            .lines()
+            .map(|line| {
+                let (name, key) = line.split_once(' ').expect("a bind and its key");
+                (name.to_string(), key.to_string())
+            })
+            .collect()
+    }
 
     #[test]
     fn hotkey_policy_matches_pinned_retroarch_meta_binds() {
-        // Read the fork's own source. A copy elsewhere can be missing, and then
-        // this test would return early and pass without checking anything.
-        let source = crate::repo::at("vendor/retroarch/configuration.c");
-        assert!(source.is_file(), "missing {}", source.display());
-        let text = fs::read_to_string(&source).unwrap();
-        let mut pinned = Vec::new();
-        for line in text.lines() {
-            let Some(rest) = line.trim().strip_prefix("DECLARE_META_BIND(") else {
-                continue;
-            };
-            let name = rest
-                .split(',')
-                .nth(1)
-                .map(str::trim)
-                .expect("DECLARE_META_BIND has a bind name");
-            if !pinned.iter().any(|existing| existing == name) {
-                pinned.push(name.to_string());
-            }
-        }
+        let declared = retroarch_meta_binds();
         let policy: Vec<&str> = HOTKEY_BINDS.iter().map(|bind| bind.name).collect();
         assert_eq!(
             policy,
-            pinned.iter().map(String::as_str).collect::<Vec<_>>(),
-            "HOTKEY_BINDS must stay exhaustive against pinned DECLARE_META_BIND"
+            declared.iter().map(|(name, _)| name.as_str()).collect::<Vec<_>>(),
+            "HOTKEY_BINDS must list every meta bind the fork's RetroArch declares, in its order"
         );
-
-        let commented_defaults =
-            fs::read_to_string(source.parent().unwrap().join("retroarch.cfg")).unwrap();
-        assert!(commented_defaults.contains("input_toggle_fast_forward = space"));
-        assert!(commented_defaults.contains("input_exit_emulator = escape"));
-        assert!(commented_defaults.contains("input_menu_toggle = f1"));
+        // We write every one because RetroArch has defaults for these, and a
+        // game would get those defaults for any bind we left out.
+        let default = |name: &str| {
+            declared
+                .iter()
+                .find(|(declared, _)| declared == name)
+                .map(|(_, key)| key.as_str())
+        };
+        assert_eq!(default("toggle_fast_forward"), Some("space"));
+        assert_eq!(default("exit_emulator"), Some("escape"));
+        assert_eq!(default("menu_toggle"), Some("f1"));
     }
 }
