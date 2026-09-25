@@ -187,7 +187,8 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .toggle-label { font-family: Silkscreen; }
 
 @keyframes capture-pulse { from { border-color: #fff13d; } to { border-color: transparent; } }
-.control-callout.capturing, .control-callout.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
+.control-callout.capturing, .control-callout.capturing .control-hit,
+.control-group.capturing, .control-group.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
 
 /* The rules for every list screen. The achievement list, the shader list and
  * any later list in Options have the same parts: rows we write when we
@@ -298,6 +299,12 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #unlock-kicker { font-size: 12dp; color: #fff13d; }
 #unlock-title { font-size: 18dp; color: #ffffff; margin-top: 4dp; }
 #unlock-detail { font-size: 12dp; color: #b4e6ff; margin-top: 4dp; }
+/* Accounts on QUICK SIGN IN: FORGET opposite BACK, lit while it is on. */
+#accounts-panel .list-actions .account-forget { left: auto; right: 0; width: 196dp; }
+.account-forget.on { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
+/* An account is one name to pick, in a large row with the name centred. */
+#accounts-list .list-row.line { height: 64dp; margin-bottom: 8dp; }
+#accounts-list .list-row.line .list-row-title { left: 0; right: 0; height: 64dp; line-height: 64dp; font-size: 24dp; text-align: center; }
 
 .account-screen .account-summary { height: 44dp; line-height: 32dp; font-size: 15dp; color: #fff13d; }
 .account-state { float: right; padding-right: 8dp; }

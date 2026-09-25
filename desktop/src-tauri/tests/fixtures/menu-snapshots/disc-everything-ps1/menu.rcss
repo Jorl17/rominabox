@@ -117,7 +117,8 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 
 @keyframes capture-pulse { from { border-color: #fff13d; } to { border-color: #476eab; } }
-.control-callout.capturing, .control-callout.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
+.control-callout.capturing, .control-callout.capturing .control-hit,
+.control-group.capturing, .control-group.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
 
 /* One list for every screen with a list. We write the rows when we bundle
  * the game, and no screen has a separate list style. */
@@ -246,6 +247,12 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
  * Down from QUIT, the last in the column, would go to the bottom block. */
 #options-back { nav-up: #volume-level; }
 #quit { nav-down: none; }
+/* FORGET in QUICK SIGN IN, left of BACK, lit while it is on. */
+#accounts-panel .list-actions .account-forget { left: 578dp; width: 176dp; }
+.account-forget.on { background-color: #fff13d; color: #081433; }
+/* An account is one name to pick, in a large row with the name centred. */
+#accounts-list .list-row.line { height: 56dp; margin-bottom: 6dp; }
+#accounts-list .list-row.line .list-row-title { left: 0; right: 0; height: 56dp; line-height: 56dp; font-size: 20dp; text-align: center; }
 
 .account-screen .account-summary { height: 44dp; line-height: 32dp; font-size: 15dp; color: #fff13d; }
 .account-state { float: right; padding-right: 8dp; }

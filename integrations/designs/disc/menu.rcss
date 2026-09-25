@@ -117,7 +117,8 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .menu-action.disabled, .menu-action:disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
 
 @keyframes capture-pulse { from { border-color: design(highlight); } to { border-color: design(rule); } }
-.control-callout.capturing, .control-callout.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
+.control-callout.capturing, .control-callout.capturing .control-hit,
+.control-group.capturing, .control-group.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
 
 /* One list for every screen with a list. We write the rows when we bundle
  * the game, and no screen has a separate list style. */

@@ -55,6 +55,7 @@
     <div id="achievements-signed-out" class="account-empty">
       <div>Sign in to earn achievements.</div>
       <button id="achievements-login" class="menu-action account-action">SIGN IN TO ENABLE</button>
+      <button id="achievements-quick" class="menu-action account-action" style="display:none;">QUICK SIGN IN</button>
     </div>
     <div id="achievements-form" class="account-form" style="display:none;">
       <label for="achievement-username">USERNAME</label>
@@ -88,4 +89,6 @@
   <div id="achievements-startup-status" class="session-dialog-copy">Connecting to RetroAchievements...</div>
   <div class="session-dialog-actions"><button id="achievements-startup-retry" class="menu-action" style="display:none;">RETRY</button><button id="achievements-skip-startup" class="menu-action">PLAY WITHOUT ACHIEVEMENTS</button></div>
 </div>
-<div id="unlock-row" style="display:none;"><div id="unlock"><img id="unlock-badge"/><div id="unlock-words"><div id="unlock-kicker">ACHIEVEMENT UNLOCKED</div><div id="unlock-title"></div><div id="unlock-detail"></div></div></div></div><div id="footer"><span id="footer-hint">ESC  CONTINUE</span></div></div></body></rml>
+<div id="accounts-panel" class="screen-panel" style="display:none;"><div id="accounts-list" class="list live-list" data-page-size="5"><div class="list-prototype" style="display:none;"><button id="accounts-prototype" class="list-row "><div class="list-row-wait"><div class="list-row-wait-cells"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div><div id="accounts-prototype-title" class="list-row-title"></div><div id="accounts-prototype-detail" class="list-row-detail"></div><div id="accounts-prototype-state" class="list-row-state"></div></button>
+</div><div id="accounts-pager" class="list-pager" style="display:none;"><button id="accounts-prev" class="menu-action list-pager-prev disabled">&lt;</button><div id="accounts-page-count" class="list-pager-count">1/0</div><button id="accounts-next" class="menu-action list-pager-next">&gt;</button></div></div><div class="list-actions"><button id="accounts-forget" class="menu-action list-control account-forget">FORGET</button>
+<button class="menu-action list-back" id="accounts-back">BACK</button></div><div id="accounts-status" class="list-status"></div></div><div id="unlock-row" style="display:none;"><div id="unlock"><img id="unlock-badge"/><div id="unlock-words"><div id="unlock-kicker">ACHIEVEMENT UNLOCKED</div><div id="unlock-title"></div><div id="unlock-detail"></div></div></div></div><div id="footer"><span id="footer-hint">ESC  CONTINUE</span></div></div></body></rml>

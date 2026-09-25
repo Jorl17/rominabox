@@ -1374,7 +1374,7 @@ int main(int argc, char **argv)
    view.screens.show_screen("controls");
    int control_x = 0, control_y = 0;
    if (view.document.element_center("control-up", &control_x, &control_y)) {
-      view.controls.set_control_state("up", "Up", "up", true);
+      view.controls.set_control_state("control-up", "up", "Up", "up", true);
       const std::string animation = inspect.property("control-up", "animation");
       CHECK(animation.find("capture-pulse") != std::string::npos, "capture animates the control itself");
       view.render(960, 600);
@@ -1382,7 +1382,7 @@ int main(int argc, char **argv)
       inspect.advance(0.3);
       view.render(960, 600);
       CHECK(border != inspect.property("control-up", "border-top-color"), "capture border changes over time");
-      view.controls.set_control_state("up", "Up", "up", false);
+      view.controls.set_control_state("control-up", "up", "Up", "up", false);
       CHECK(std::string(inspect.property("control-up", "animation")).find("capture-pulse") == std::string::npos, "capture cue stops when capture ends");
    }
    view.controls.set_capturing(true);

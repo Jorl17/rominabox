@@ -187,7 +187,8 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .toggle-label { font-family: Silkscreen; }
 
 @keyframes capture-pulse { from { border-color: design(highlight); } to { border-color: transparent; } }
-.control-callout.capturing, .control-callout.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
+.control-callout.capturing, .control-callout.capturing .control-hit,
+.control-group.capturing, .control-group.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
 
 /* The rules for every list screen. The achievement list, the shader list and
  * any later list in Options have the same parts: rows we write when we
