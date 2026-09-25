@@ -25,6 +25,8 @@ static bool fail_login;
 static bool defer_award;
 static bool reject_award;
 static bool replace_account;
+static bool expire_token;
+static bool refuse_password;
 static unsigned fail_award_attempts;
 static rc_client_server_callback_t deferred_callback;
 static void *deferred_data;
@@ -37,6 +39,10 @@ static const char login_json[] =
    "{\"Success\":true,\"User\":\"Fixture\",\"Token\":\"fixture-token\"}";
 static const char login_error_json[] =
    "{\"Success\":false,\"Error\":\"Synthetic network failure\"}";
+static const char expired_login_json[] =
+   "{\"Success\":false,\"Error\":\"The token has expired.\",\"Code\":\"expired_token\"}";
+static const char refused_login_json[] =
+   "{\"Success\":false,\"Error\":\"Wrong password.\",\"Code\":\"invalid_credentials\"}";
 static const char replacement_login_json[] =
    "{\"Success\":true,\"User\":\"Other\",\"Token\":\"other-token\"}";
 static const char game_json[] =
@@ -97,6 +103,10 @@ static void server(const rc_api_request_t *request,
       }
       body = fail_login ? login_error_json :
             (replace_account ? replacement_login_json : login_json);
+      if (expire_token && strstr(post, "t="))
+         body = expired_login_json;
+      if (refuse_password && strstr(post, "p="))
+         body = refused_login_json;
    }
    else if (strstr(post, "r=gameid"))
       body = "{\"Success\":true,\"GameID\":1}";
@@ -296,6 +306,158 @@ static void colour_badge_arrives(const char *directory)
    assert(row.badge == RIB_ACHIEVEMENT_BADGE_READY);
    assert(strstr(row.badge_path, "123.png") != NULL);
    assert(unlink(badge_path) == 0);
+}
+
+static void unload(void)
+{
+   rib_achievements_content_unload();
+   rc_client_destroy(locals.client);
+   locals.client = NULL;
+}
+
+/* Pumps until the login in progress has an answer. */
+static void answered(void)
+{
+   unsigned i;
+   for (i = 0; i < 8 && snapshot().status == RIB_ACHIEVEMENTS_SIGNING_IN; ++i)
+      rib_achievements_pump();
+   assert(snapshot().status != RIB_ACHIEVEMENTS_SIGNING_IN);
+}
+
+static size_t saved_accounts(rib_achievements_saved_account_t *saved)
+{
+   return rib_achievements_saved_accounts(saved, 4);
+}
+
+static void play(const char *directory, const char *game, const struct retro_game_info *info)
+{
+   assert(setenv("ROMINABOX_DATA_DIR", directory, 1) == 0);
+   assert(setenv("ROMINABOX_GAME_IDENTITY", game, 1) == 0);
+   assert(rib_achievements_content_load(info));
+}
+
+#define GAME_A "aaaaaaaaaaaaaaaaaaaaaaaa"
+#define GAME_B "bbbbbbbbbbbbbbbbbbbbbbbb"
+
+/* QUICK SIGN IN between two games that share one accounts folder, each with
+ * separate storage. We test the rules of the store in the accounts tests.
+ * Here we test when we save, use, drop and forget an account in the session. */
+static void shared_accounts(const struct retro_game_info *info,
+      const char *first, const char *second)
+{
+   char accounts[] = "/tmp/rib-achievements-accounts-XXXXXX";
+   char path[512];
+   char line[256];
+   rib_achievements_saved_account_t saved[4];
+   FILE *file;
+   assert(mkdtemp(accounts));
+   assert(setenv("ROMINABOX_ACCOUNTS_DIR", accounts, 1) == 0);
+   replace_account = false;
+
+   /* Game A: after a password sign-in we save the account for the others. */
+   play(first, GAME_A, info);
+   assert(saved_accounts(saved) == 0);
+   assert(rib_achievements_sign_in("Fixture", "fixture-password"));
+   ready();
+   assert(saved_accounts(saved) == 1);
+   assert(!strcmp(saved[0].username, "Fixture") && !strcmp(saved[0].display_name, "Fixture"));
+   unload();
+
+   /* Game B: QUICK SIGN IN with it. No password, and B has a separate copy. */
+   play(second, GAME_B, info);
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
+   assert(!rib_achievements_quick_sign_in("Nobody"));
+   assert(rib_achievements_quick_sign_in("Fixture"));
+   ready();
+   assert(!strcmp(snapshot().account, "Fixture"));
+   assert(!rib_achievements_quick_sign_in("Fixture")); /* already signed in */
+   snprintf(path, sizeof(path), "%s/achievements.session", second);
+   assert((file = fopen(path, "rb")));
+   assert(fgets(line, sizeof(line), file) && !strcmp(line, "Fixture\n"));
+   assert(fgets(line, sizeof(line), file) && !strcmp(line, "fixture-token\n"));
+   fclose(file);
+   snprintf(path, sizeof(path), "%s/66697874757265/games/" GAME_B, accounts);
+   assert(access(path, F_OK) == 0);
+
+   /* B signs out. A still uses the account, so it stays listed. */
+   rib_achievements_sign_out();
+   assert(access(path, F_OK) != 0);
+   assert(saved_accounts(saved) == 1);
+   unload();
+
+   /* Choosing FORGET removes it from the list. A signs in by itself at its
+    * next launch, which is not a new choice, so the account stays forgotten. */
+   assert(rib_achievements_forget_account("Fixture"));
+   assert(saved_accounts(saved) == 0);
+   play(first, GAME_A, info);
+   ready();
+   assert(saved_accounts(saved) == 0);
+   rib_achievements_sign_out();
+   unload();
+
+   /* When RetroAchievements rejects a session, we remove it from the list. */
+   play(second, GAME_B, info);
+   assert(rib_achievements_sign_in("Fixture", "fixture-password"));
+   ready();
+   assert(saved_accounts(saved) == 1);
+   unload();
+   expire_token = true;
+   play(second, GAME_B, info);
+   answered();
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
+   assert(saved_accounts(saved) == 0);
+   expire_token = false;
+   unload();
+
+   /* A mistyped password in another game changes nothing on the list. */
+   play(first, GAME_A, info);
+   assert(rib_achievements_sign_in("Fixture", "fixture-password"));
+   ready();
+   unload();
+   refuse_password = true;
+   play(second, GAME_B, info);
+   assert(rib_achievements_sign_in("Fixture", "wrong-password"));
+   answered();
+   assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
+   assert(saved_accounts(saved) == 1);
+   refuse_password = false;
+   unload();
+   play(first, GAME_A, info);
+   ready();
+   rib_achievements_sign_out(); /* the last game using it */
+   assert(saved_accounts(saved) == 0);
+   unload();
+
+   /* With achievements excluded, we list no saved accounts and use none. */
+   play(first, GAME_A, info);
+   assert(rib_achievements_sign_in("Fixture", "fixture-password"));
+   ready();
+   unload();
+   assert(setenv("ROMINABOX_ACHIEVEMENTS", "0", 1) == 0);
+   assert(saved_accounts(saved) == 0);
+   assert(!rib_achievements_quick_sign_in("Fixture"));
+   assert(!rib_achievements_forget_account("Fixture"));
+   assert(setenv("ROMINABOX_ACHIEVEMENTS", "1", 1) == 0);
+   play(first, GAME_A, info);
+   ready();
+   rib_achievements_sign_out();
+   unload();
+
+   /* Without the folder, a game signs in as before and we list nothing. */
+   assert(unsetenv("ROMINABOX_ACCOUNTS_DIR") == 0);
+   play(second, GAME_B, info);
+   assert(rib_achievements_sign_in("Fixture", "fixture-password"));
+   ready();
+   assert(saved_accounts(saved) == 0);
+   rib_achievements_sign_out();
+   unload();
+
+   /* Everything left the list, so only the lock remains. */
+   snprintf(path, sizeof(path), "%s/lock", accounts);
+   assert(unlink(path) == 0);
+   assert(rmdir(accounts) == 0);
+   assert(unsetenv("ROMINABOX_GAME_IDENTITY") == 0);
+   assert(setenv("ROMINABOX_DATA_DIR", first, 1) == 0);
 }
 
 int main(void)
@@ -590,6 +752,7 @@ int main(void)
    rib_achievements_content_unload();
    rc_client_destroy(locals.client);
    locals.client = NULL;
+   shared_accounts(&info, directory, second_directory);
    {
       char badge_path[512];
       char badge_dir[512];

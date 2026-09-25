@@ -13,10 +13,15 @@ clang -std=gnu99 -O0 -g -Wno-deprecated-declarations -DRC_NO_THREADS \
   -I"$retroarch" -I"$retroarch/deps" \
   -I"$retroarch/libretro-common/include" \
   -I"$retroarch/deps/rcheevos/include" \
+  -I"$repo_root/desktop/src-tauri/accounts" \
+  -I"$repo_root/desktop/src-tauri/launcher" \
   "$repo_root/scripts/achievements_runtime_client_test.c" \
   "$retroarch/cheevos/rominabox.c" \
   "$retroarch/cheevos/rominabox_catalog.c" \
   "$retroarch/cheevos/rominabox_storage.c" \
+  "$repo_root/desktop/src-tauri/accounts/accounts.c" \
+  "$repo_root/desktop/src-tauri/accounts/sealed.c" \
+  "$repo_root/desktop/src-tauri/launcher/portable_fs.c" \
   "$retroarch/deps/rcheevos/src/rc_client.c" \
   "$retroarch/deps/rcheevos/src/rc_compat.c" \
   "$retroarch/deps/rcheevos/src/rc_util.c" \
