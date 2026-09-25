@@ -16,13 +16,15 @@ fn english() -> std::collections::BTreeMap<String, String> {
     std::collections::BTreeMap::new()
 }
 
-/// Where we draw the settings in a bare design, in English.
+/// Where we draw the settings of a bare design, in English, in the Options
+/// panel of Native.
 fn place(design: &std::path::Path) -> rominabox_desktop::menu::SettingsPlace<'_> {
     static ENGLISH: std::sync::OnceLock<std::collections::BTreeMap<String, String>> =
         std::sync::OnceLock::new();
     rominabox_desktop::menu::SettingsPlace {
         design,
         words: ENGLISH.get_or_init(english),
+        options_panel: Some("options-panel"),
     }
 }
 
@@ -209,7 +211,11 @@ fn a_menu_with_no_options_screen_has_no_volume_control() {
     let root = scratch("rominabox-volume-nowhere");
     let design = bare_design(&root);
     let document = r#"<body><button class="menu-action" id="quit">QUIT</button><div id="footer"></div></body>"#;
-    let installed = rominabox_desktop::menu::install_settings(document, &place(&design), &[rominabox_desktop::player_settings::volume()]).unwrap();
+    let nowhere = rominabox_desktop::menu::SettingsPlace {
+        options_panel: None,
+        ..place(&design)
+    };
+    let installed = rominabox_desktop::menu::install_settings(document, &nowhere, &[rominabox_desktop::player_settings::volume()]).unwrap();
     assert!(
         !installed.contains("volume"),
         "volume lives in Options, so a menu without that screen does not grow one, got {installed}"

@@ -283,6 +283,10 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         &document::SettingsPlace {
             design: &manifest.design,
             words: &manifest.words,
+            options_panel: staged
+                .iter()
+                .find(|screen| screen.place == ScreenPlace::Options)
+                .map(|screen| screen.panel.as_str()),
         },
         &settings,
     )?;

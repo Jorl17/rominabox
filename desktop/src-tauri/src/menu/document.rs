@@ -263,12 +263,21 @@ pub(crate) fn apply_options(
         .iter()
         .filter(|screen| screen.option_label.is_some())
         .collect();
+    // The panel in the design for Options, which contains the design's
+    // version of an entry.
+    let panel_id = manifest
+        .screens
+        .iter()
+        .find(|screen| screen.place == ScreenPlace::Options)
+        .map(|screen| format!("id=\"{}\"", screen.panel));
+    let in_options =
+        |document: &str, at: usize| panel_id.as_ref().is_some_and(|id| document[..at].contains(id));
 
     let mut document = document.to_string();
     let Some(options) = options else {
         for entry in &declared_entries {
             if let Some((start, end)) = button_bounds(&document, &entry.button) {
-                if !document[..start].contains("id=\"options-panel\"") {
+                if !in_options(&document, start) {
                     document.replace_range(start..end, "");
                 }
             }
@@ -292,7 +301,7 @@ pub(crate) fn apply_options(
         let Some((start, end)) = button_bounds(&document, &entry.button) else {
             continue;
         };
-        if document[..start].contains("id=\"options-panel\"") {
+        if in_options(&document, start) {
             continue;
         }
         if !placed_opener && included.iter().any(|screen| screen.id == entry.id) {
@@ -495,11 +504,13 @@ fn switch_markup(
     ))
 }
 
-/// The design whose parts we draw the player settings with, and the words
-/// of that design.
+/// What we draw the player's settings with and where: the design with the
+/// parts for them, its words, and the panel of the game's Options screen, if
+/// the game has one.
 pub struct SettingsPlace<'a> {
     pub design: &'a Path,
     pub words: &'a BTreeMap<String, String>,
+    pub options_panel: Option<&'a str>,
 }
 
 /// Put in Options the player's settings that `apply_options` did not add.
@@ -513,9 +524,13 @@ pub fn install_settings(
     place: &SettingsPlace,
     settings: &[PlayerSetting],
 ) -> Result<String, String> {
-    let SettingsPlace { design, words } = *place;
+    let SettingsPlace {
+        design,
+        words,
+        options_panel,
+    } = *place;
     let mut document = document.to_string();
-    let marker = "id=\"options-panel\"";
+    let marker = options_panel.map(|panel| format!("id=\"{panel}\""));
     for setting in settings {
         let slot = setting_slot(setting);
         let placed = match setting.kind {
@@ -534,11 +549,13 @@ pub fn install_settings(
             document = document.replacen(&slot, &markup, 1);
             continue;
         }
-        if !matches!(setting.kind, Kind::Level { .. }) || !document.contains(marker) {
+        let Some(at) = marker.as_deref().and_then(|marker| document.find(marker)) else {
+            continue;
+        };
+        if !matches!(setting.kind, Kind::Level { .. }) {
             continue;
         }
         let markup = level_markup(design, words, setting)?;
-        let at = document.find(marker).expect("checked above");
         let tag_end = document[at..]
             .find('>')
             .map(|end| at + end + 1)
