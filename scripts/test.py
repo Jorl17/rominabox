@@ -118,10 +118,10 @@ SCOPES = [
         ["python3", str(ROOT / "scripts/picture_edges.py")],
     ),
     Scope(
-        "coreoptions",
-        "that the core options an export ships replace an older value in the game's own options file on launch, and that a value the player changed afterwards stays",
-        "that RetroArch reads that file or that the core honours it; the picture scope covers the core",
-        ["python3", str(ROOT / "scripts/test_core_options.py")],
+        "shipped",
+        "that the core options, remaps, controller profiles and firmware an export ships replace what an earlier export or data location left in the game's data on every launch, that a setting the player changed afterwards stays, and that the launcher modules build for Windows",
+        "that RetroArch reads those files or that the core honours them (the picture scope covers the core), or that the Windows build runs",
+        ["python3", str(ROOT / "scripts/test_shipped.py")],
     ),
     Scope(
         "frontend",

@@ -1,17 +1,16 @@
-"""Check that the core options in an export reach the game's own options file.
+"""Check that the core options in an export reach the game's options file.
 
-In RetroArch, a core's options come from the game's data directory, not from
-the app, so in the launcher we write the export's values there before
-RetroArch starts. A file already in the data directory must not hide the
-export's values, whether we copied it from an older data location, wrote it
-in an earlier export of the same game, or it is a RetroArch rewrite with
-every option of the core. When the player changed a value after we last
-applied one in the launcher, we keep the player's value.
+The options of a core come from the game's data directory, not from the app,
+so in the launcher we put the export's values there before RetroArch starts.
+A file already in the data directory must not hide the export's values,
+whether it is a copy from an older data location, a file from an earlier
+export of the same game, or a file that RetroArch rewrote with every option
+of the core. A value that the player changed after we last set it stays.
 
-We compile the real launcher as its plan tool, in which we prepare the data
+We compile the launcher as a plan tool, with which we prepare the data
 directory and exit before any core or window exists.
 
-    python3 scripts/test_core_options.py
+    python3 scripts/test_shipped.py
 """
 
 from __future__ import annotations
@@ -179,12 +178,58 @@ def run() -> list[str]:
         copied = plain / "config" / "probe-core" / "copied.cfg"
         if not copied.is_file() or copied.read_text() != "copied-from-kit\n":
             failures.append("a shipped file without assignments did not reach a fresh game")
+        (probe / "copied.cfg").unlink()
+        probe.rmdir()
+        (resources / "core-options").rmdir()
+
+        # The same rule as for core options applies to remaps and controller
+        # profiles. A file left by an earlier export does not replace the new app.
+        pads = root / "pads"
+        remap = pads / "remaps" / "Genesis Plus GX" / "Genesis Plus GX.rmp"
+        profile = pads / "autoconfig" / "hid" / "Pad.cfg"
+        for leftover, text in ((remap, 'input_libretro_device_p1 = "1"\n'),
+                               (profile, 'input_b_btn = "1"\n')):
+            leftover.parent.mkdir(parents=True)
+            leftover.write_text(text)
+        ship_plan(app, pads)
+        shipped_remap = resources / "remaps" / "Genesis Plus GX" / "Genesis Plus GX.rmp"
+        shipped_profile = resources / "autoconfig" / "hid" / "Pad.cfg"
+        for shipped, text in ((shipped_remap, 'input_libretro_device_p1 = "513"\n'),
+                              (shipped_profile, 'input_b_btn = "2"\n')):
+            shipped.parent.mkdir(parents=True)
+            shipped.write_text(text)
+        launch(binary, home)
+        expect("remap from an earlier export", values(remap), "input_libretro_device_p1", "513")
+        expect("controller profile from an earlier export", values(profile), "input_b_btn", "2")
+
+        # The person who builds the game chooses the firmware, never the player.
+        # We replace a different file with the shipped one, and remove a file
+        # from an earlier export when this one has none. A file from a core stays.
+        bios = root / "bios"
+        system = bios / "system"
+        system.mkdir(parents=True)
+        (system / "core-made.dat").write_bytes(b"core")
+        ship_plan(app, bios)
+        firmware = resources / "firmware"
+        firmware.mkdir()
+        (firmware / "scph1001.bin").write_bytes(b"first")
+        launch(binary, home)
+        (firmware / "scph1001.bin").unlink()
+        (firmware / "scph5501.bin").write_bytes(b"second")
+        (system / "scph5501.bin").write_bytes(b"left over")
+        launch(binary, home)
+        if (system / "scph5501.bin").read_bytes() != b"second":
+            failures.append("firmware: a different file in the game was not replaced")
+        if (system / "scph1001.bin").exists():
+            failures.append("firmware: a file the earlier export shipped was left behind")
+        if (system / "core-made.dat").read_bytes() != b"core":
+            failures.append("firmware: a file the core wrote was touched")
     return failures
 
 
 # The modules we will share with a Windows launcher. We cannot run them on
 # Windows here, but we compile them for it, to catch any POSIX-only call.
-PORTABLE = ("core_options.c", "portable_fs.c")
+PORTABLE = ("shipped_settings.c", "shipped_files.c", "portable_fs.c")
 
 
 def windows_build(directory: Path) -> list[str]:

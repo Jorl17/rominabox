@@ -1,4 +1,4 @@
-#include "core_options.h"
+#include "shipped_settings.h"
 
 #include "portable_fs.h"
 
@@ -476,7 +476,7 @@ static int apply_tree(const char *walked, Roots *roots) {
     return record(roots, walked);
 }
 
-int rominabox_apply_core_options(
+int rominabox_apply_shipped_settings(
     const char *shipped,
     const char *game,
     const char *applied,
