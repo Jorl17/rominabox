@@ -1,6 +1,6 @@
-/* The production loader, with only the RetroArch file and config boundary
- * replaced. config_get_array writes a truncated value AND returns false.
- * Keep the separate handling of optional screen fields and toggle words. */
+/* The production loader, with only the libretro config reader replaced.
+ * config_get_array writes a truncated value AND returns false. Keep the
+ * separate handling of optional screen fields and toggle words. */
 #include "rmlui/declarations.h"
 #include <file/config_file.h>
 #include <map>
@@ -55,7 +55,6 @@ extern "C" bool config_get_int(config_file_t *, const char *key, int *out)
    *out = std::atoi(found->second.c_str());
    return true;
 }
-extern "C" bool path_is_valid(const char *) { return false; }
 extern "C" void RARCH_LOG(const char *, ...) {}
 extern "C" void RARCH_WARN(const char *, ...) {}
 extern "C" void RARCH_ERR(const char *, ...) {}

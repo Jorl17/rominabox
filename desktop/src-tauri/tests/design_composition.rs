@@ -471,6 +471,52 @@ fn a_designs_words_reach_the_player_and_an_unknown_one_is_refused() {
     );
 }
 
+/// The Pause heading comes from its `screens` entry, which we write in the
+/// player when Pause opens. When a design words `paused-heading`, the player
+/// sees that word there, or we refuse it at export, because a word we accept
+/// and never show is of no use to its author.
+#[test]
+fn a_design_that_words_the_pause_heading_sees_it_or_is_refused() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-design-pause-word");
+    let kit = support::kit_with_hypothetical(&root);
+    let design = kit.join("designs/pause-worded");
+    fs::create_dir_all(&design).unwrap();
+    fs::write(
+        design.join("design.json"),
+        r#"{"schemaVersion": 1, "id": "pause-worded", "words": {"paused-heading": "HALTED"}}"#,
+    )
+    .unwrap();
+    match menu::compose_menu(&menu::MenuRequest::new(&design, kit.join("menu-assets"))) {
+        Err(error) => assert!(
+            error.contains("'paused-heading'") && error.contains("design 'pause-worded'"),
+            "{error}"
+        ),
+        Ok(composition) => {
+            let composed = root.join("composed");
+            composition.write(&composed).unwrap();
+            let cfg = fs::read_to_string(composed.join("design.cfg")).unwrap();
+            let value = |key: &str| {
+                cfg.lines()
+                    .find_map(|line| line.strip_prefix(&format!("{key} = \"")))
+                    .and_then(|rest| rest.strip_suffix('"'))
+                    .map(str::to_owned)
+            };
+            let pause = cfg
+                .lines()
+                .find_map(|line| {
+                    line.strip_prefix("screen_role_")
+                        .and_then(|rest| rest.strip_suffix(" = \"pause\""))
+                })
+                .expect("the composed menu declares Pause");
+            let heading = value(&format!("screen_heading_{pause}")).unwrap_or_default();
+            assert_eq!(
+                heading, "HALTED",
+                "the export accepted paused-heading = HALTED, and the menu shows Pause's heading, {heading}"
+            );
+        }
+    }
+}
+
 #[test]
 fn live_achievements_inherit_account_form_before_any_download() {
     for name in ["native", "disc"] {
