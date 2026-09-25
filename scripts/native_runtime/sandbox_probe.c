@@ -42,6 +42,25 @@ int rarch_main(int argc, char **argv, void *data) {
     access_attempt("ROMINABOX_PROBE_READ", "READ", 0);
     access_attempt("ROMINABOX_PROBE_WRITE", "WRITE", 1);
     access_attempt("ROMINABOX_PROBE_OTHER", "OTHER", 0);
+    /* The QUICK SIGN IN folder, whose path comes from the launcher, and a file
+     * next to it, which must stay out of reach of the opened folder. */
+    {
+        const char *accounts = getenv("ROMINABOX_ACCOUNTS_DIR");
+        char path[4096];
+        int fd;
+        if (!accounts || !accounts[0]) {
+            printf("ACCOUNTS_UNSET\n");
+        } else {
+            snprintf(path, sizeof path, "%s/probe-file", accounts);
+            fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+            printf(fd >= 0 ? "ACCOUNTS_ALLOWED\n" : "ACCOUNTS_DENIED\n");
+            if (fd >= 0) {
+                close(fd);
+                unlink(path);
+            }
+        }
+    }
+    access_attempt("ROMINABOX_PROBE_BESIDE", "BESIDE", 0);
 
     shared = shm_open("/rominabox-isolation-probe", O_CREAT | O_RDWR, 0600);
     if (shared < 0) {

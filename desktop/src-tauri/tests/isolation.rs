@@ -529,6 +529,103 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     assert_eq!(fs::read(&previous).unwrap(), b"migrated-from-host\n");
 }
 
+fn copy_tree(from: &Path, to: &Path) {
+    fs::create_dir_all(to).unwrap();
+    for entry in fs::read_dir(from).unwrap() {
+        let entry = entry.unwrap();
+        let dest = to.join(entry.file_name());
+        if entry.file_type().unwrap().is_dir() {
+            copy_tree(&entry.path(), &dest);
+        } else {
+            fs::copy(entry.path(), dest).unwrap();
+        }
+    }
+}
+
+/// QUICK SIGN IN: a signed export with achievements can create and use its
+/// accounts folder in the actual Application Support, and nothing beside it.
+/// The container of another game stays closed. The folder is only for this
+/// test, named as in `scripts/worktree.py` for a checkout, so we never touch
+/// the accounts of a player.
+#[test]
+#[ignore = "launches a signed probe that exits; the isolation scope runs it"]
+fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it() {
+    const FOLDER: &str = "ROM-in-a-Box Accounts-isolation-test";
+    let accounts = home().join("Library/Application Support").join(FOLDER);
+    let beside = home()
+        .join("Library/Application Support")
+        .join(format!("{FOLDER}.beside"));
+    assert!(
+        !accounts.exists() && !beside.exists(),
+        "{} or its neighbour is left over from an earlier run",
+        accounts.display()
+    );
+    std::env::set_var("ROMINABOX_ACCOUNTS_FOLDER", FOLDER);
+
+    let root = scratch();
+    let kit = fixture_kit(&root);
+    let status = Command::new("cc")
+        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
+        .arg(kit.join("bin/retroarch"))
+        .arg(repo_at("scripts/native_runtime/sandbox_probe.c"))
+        .status()
+        .unwrap();
+    assert!(status.success(), "the sandbox probe failed to compile");
+    let manifest = kit.join("manifest.json");
+    let mut value: serde_json::Value = serde_json::from_slice(&fs::read(&manifest).unwrap()).unwrap();
+    value["components"][0]["capabilities"] = serde_json::json!({"achievements": true});
+    fs::write(&manifest, serde_json::to_vec(&value).unwrap()).unwrap();
+    copy_tree(&repo_at("integrations/designs"), &kit.join("designs"));
+    copy_tree(&repo_at("integrations/parts"), &kit.join("parts"));
+    copy_tree(&repo_at("desktop/assets/controllers"), &kit.join("menu-assets"));
+    let mut settings = request(&root, b"rominabox-isolation-accounts-v1", "Accounts Probe", kit, "megadrive");
+    settings.show_menu = true;
+    settings.include_achievements = true;
+    let app = export(&settings);
+    let other = export(&request(
+        &root.join("other"),
+        b"rominabox-isolation-accounts-other-v1",
+        "Other Game",
+        fixture_kit(&root.join("other")),
+        "megadrive",
+    ));
+    fs::create_dir_all(root.join("other")).unwrap();
+    let identity = identity_of(&app);
+    let other_identity = identity_of(&other);
+    let _container = RemoveDir(container_for(&identity));
+    let _other_container = RemoveDir(container_for(&other_identity));
+    let other_secret = data_dir_for(&other_identity).join("secret.txt");
+    fs::create_dir_all(other_secret.parent().unwrap()).unwrap();
+    fs::write(&other_secret, "isolation-secret-marker").unwrap();
+    fs::write(&beside, b"beside").unwrap();
+
+    let signed = codesign_text(&app);
+    assert!(
+        signed.contains(&format!("/Library/Application Support/{FOLDER}/")),
+        "the export does not name its accounts folder\n{signed}"
+    );
+
+    let mut command = Command::new(app.join("Contents/MacOS/retroarch"));
+    stay_quiet(&mut command);
+    command
+        .env("ROMINABOX_PROBE_OTHER", &other_secret)
+        .env("ROMINABOX_PROBE_BESIDE", &beside);
+    let status = run_until(&mut command, Duration::from_secs(20));
+    let log = fs::read_to_string(data_dir_for(&identity).join("logs/launch.log")).unwrap_or_default();
+
+    // Remove only what this test made, after checking its name.
+    fs::remove_file(&beside).ok();
+    if accounts.is_dir() && accounts.file_name().and_then(|name| name.to_str()) == Some(FOLDER) {
+        fs::remove_dir_all(&accounts).unwrap();
+    }
+    std::env::remove_var("ROMINABOX_ACCOUNTS_FOLDER");
+
+    assert!(status.success(), "probe launch failed\n{log}");
+    assert!(log.contains("ACCOUNTS_ALLOWED"), "the accounts folder was not usable\n{log}");
+    assert!(log.contains("BESIDE_DENIED"), "a file beside the accounts folder was readable\n{log}");
+    assert!(log.contains("OTHER_DENIED"), "another game's container was readable\n{log}");
+}
+
 /// The author left background play off, and an earlier export of the same game
 /// left `pause_nonactive = "false"` in its controls.cfg. For a screenshot run
 /// the console must keep running, and we must set that at launch, not by
