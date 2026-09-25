@@ -85,3 +85,81 @@ fn a_sticks_ring_is_where_the_scene_layout_puts_it() {
         assert!(checked > 0, "{design}: no stick was checked");
     }
 }
+
+/// Every pad we draw, as `desktop/controls.json` declares it.
+fn illustrated_profiles() -> Vec<controls::ControlProfile> {
+    #[derive(serde::Deserialize)]
+    struct Registry {
+        profiles: Vec<controls::ControlProfile>,
+    }
+    let declared = fs::read_to_string(rominabox_desktop::repo::at("desktop/controls.json")).unwrap();
+    let registry: Registry = serde_json::from_str(&declared).unwrap();
+    registry
+        .profiles
+        .into_iter()
+        .filter(|profile| !profile.image.is_empty())
+        .collect()
+}
+
+/// Every design's scene geometry, from the design itself.
+fn design_metrics() -> Vec<(String, menu::SceneMetrics)> {
+    designs()
+        .into_iter()
+        .map(|design| {
+            let package = rominabox_desktop::repo::at("integrations/designs").join(&design);
+            (design, menu::scene_metrics(&package).unwrap())
+        })
+        .collect()
+}
+
+/// Return whether a leader run passes through the inside of a painted box. A
+/// run that ends on the box's edge meets it, and one that enters it crosses it.
+fn crosses(run: &scene_layout::Segment, left: i32, top: i32, right: i32, bottom: i32) -> bool {
+    let (x0, x1) = (run.x, run.x + run.width);
+    let (y0, y1) = (run.y, run.y + run.height);
+    x0.max(left) < x1.min(right) && y0 > top && y0 < bottom
+        || y0.max(top) < y1.min(bottom) && x0 > left && x0 < right
+}
+
+/// No leader runs across a stick's box. On the PlayStation pad, Select and
+/// Start leaders drawn along their callouts' midlines would cross both
+/// boxes, over the bindings written in them.
+#[test]
+fn no_leader_crosses_a_stick_box_on_any_pad() {
+    let mut crossings = Vec::new();
+    let mut boxes = 0;
+    for (design, metrics) in design_metrics() {
+        for profile in illustrated_profiles() {
+            let layout = scene_layout::layout(&profile.controls, metrics);
+            let runs = layout
+                .controls
+                .iter()
+                .map(|placed| (format!("control-{}", placed.id), &placed.leader))
+                .chain(
+                    layout
+                        .groups
+                        .iter()
+                        .map(|group| (format!("control-group-{}", group.name), &group.leader)),
+                );
+            let runs: Vec<_> = runs.collect();
+            for group in &layout.groups {
+                boxes += 1;
+                let painted = 2 * metrics.group_border;
+                let (left, top) = (group.strip.x, group.strip.y);
+                let (right, bottom) = (left + group.strip.width + painted, top + group.strip.height + painted);
+                for (owner, leader) in &runs {
+                    for run in leader.iter() {
+                        if crosses(run, left, top, right, bottom) {
+                            crossings.push(format!(
+                                "{design}/{}: a leader run of {owner} at {},{} {}x{} crosses the {} box {left},{top}..{right},{bottom}",
+                                profile.id, run.x, run.y, run.width, run.height, group.name
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert!(boxes > 0, "no pad with a stick was checked");
+    assert!(crossings.is_empty(), "{}", crossings.join("\n"));
+}
