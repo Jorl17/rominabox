@@ -29,6 +29,20 @@ static rib::ScreenDeclaration screen(const char *id, const char *panel,
    return declared;
 }
 
+/* Pause, Options and Controls declared as in a Native export, through the
+ * menu declaration. We read no design.cfg in this program, and its
+ * declarations test stands in for the libretro config reader. */
+static void declare_native_screens()
+{
+   view.screens.clear_screens();
+   view.screens.declare_screen(screen("pause", "pause-panel", "GAME PAUSED",
+         "ESC  CONTINUE", "options-back"));
+   view.screens.declare_screen(screen("options", "options-panel", "OPTIONS",
+         "ESC  BACK", "options"));
+   view.screens.declare_screen(screen("controls", "controls-panel", "CONTROLS",
+         "ESC  BACK", "controls"));
+}
+
 /* The ids of the stops in `panel`, in document order. */
 static std::vector<std::string> stops_in(const char *panel)
 {
@@ -1121,13 +1135,7 @@ static int check_placement(const char *assets, const char *scenes,
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;
    }
-   view.screens.clear_screens();
-   view.screens.declare_screen(screen("pause", "pause-panel", "GAME PAUSED",
-         "ESC  CONTINUE", "options"));
-   view.screens.declare_screen(screen("controls", "controls-panel", "CONTROLS",
-         "ESC  BACK", "controls"));
-   view.screens.declare_screen(screen("options", "options-panel", "OPTIONS",
-         "ESC  BACK", "options"));
+   declare_native_screens();
 
    /* 1920x1200 is a 960x600 window on a 2x display, the size at which the
     * right border of the list is on the last pixel. */
@@ -1290,11 +1298,9 @@ int main(int argc, char **argv)
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);
       return 1;
    }
-   /* The screen button on the pause row is Options. `controls` is inside
-    * that panel, so this click cannot reach the built-in handler for
-    * `controls`. */
-   view.screens.declare_screen(screen("options", "options-panel", "OPTIONS",
-         "ESC  BACK", "options"));
+   /* The screen button on the pause row is Options, and `controls` is inside
+    * that panel. */
+   declare_native_screens();
 
    view.status.set_main("SAVED");
    view.status.set_controls("DEFAULTS RESTORED");
@@ -1508,17 +1514,6 @@ int main(int argc, char **argv)
    CHECK(AUDIO_VOLUME_STEP_DB * (RIB_VOLUME_POSITIONS - 1)
                == AUDIO_VOLUME_MAX_DB - AUDIO_VOLUME_MIN_DB,
          "the positions are equal steps from quiet to normal");
-
-   /* We do not read design.cfg in the interaction harness. We declare Options
-    * as an export writes it, so showing it shows the screen that a player
-    * opens. */
-   view.screens.clear_screens();
-   view.screens.declare_screen(screen("pause", "pause-panel", "GAME PAUSED",
-         "ESC  CONTINUE", "options-back"));
-   view.screens.declare_screen(screen("options", "options-panel", "OPTIONS",
-         "ESC  BACK", "options"));
-   view.screens.declare_screen(screen("controls", "controls-panel", "CONTROLS",
-         "ESC  BACK", "controls"));
 
    /* Every button on the pause row can take focus, and only one at a time.
     *
