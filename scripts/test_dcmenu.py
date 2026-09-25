@@ -21,6 +21,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 # We take the headers and the archive from the player build, because a
 # literal path here could point to a folder that no script creates.
 from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
+sys.path.insert(0, str(ROOT / "scripts/native_runtime"))
+# We read the renderer's pictures through libretro's file layer.
+import menu_harness  # noqa: E402
 
 DRIVERS = ROOT / "vendor/retroarch/menu/drivers"
 PROBE = ROOT / "work/dcmenu-probe"
@@ -136,10 +139,15 @@ def check_menu_draw() -> bool:
         ["pkg-config", "--cflags", "--libs", "freetype2"],
         capture_output=True, text=True, check=True,
     ).stdout.split()
+    file_layer, _ = menu_harness.compile_objects(
+        menu_harness.FILE_LAYER,
+        menu_harness.Toolchain("cc", "c++", ("-I", str(menu_harness.LIBRETRO_INCLUDE)), ()),
+        PROBE / "file-layer")
     command = [
         "c++", "-std=c++17", "-fobjc-arc",
         *[f"-I{path}" for path in HEADER_DIRS],
         f"-I{DRIVERS}",
+        f"-I{menu_harness.LIBRETRO_INCLUDE}",
         "-Wno-deprecated-declarations",
         "-framework", "OpenGL",
         "-framework", "Cocoa",
@@ -148,6 +156,7 @@ def check_menu_draw() -> bool:
         str(DRIVERS / "rmlui/render/rmlui_gl.cpp"),
         str(DRIVERS / "rmlui/render/rmlui_gl3.cpp"),
         str(DRIVERS / "third_party/lodepng.cpp"),
+        *map(str, file_layer),
         str(LIBRARY),
         *flags,
     ]
@@ -156,8 +165,10 @@ def check_menu_draw() -> bool:
         print(compiled.stderr[-4000:])
         print("FAIL menu draw check did not compile")
         return False
+    picture = PROBE / "João" / "slot-1.png"
+    picture.parent.mkdir(parents=True, exist_ok=True)
     ran = subprocess.run(
-        [str(binary)],
+        [str(binary), str(picture)],
         capture_output=True, text=True, timeout=60,
     )
     sys.stdout.write(ran.stdout)

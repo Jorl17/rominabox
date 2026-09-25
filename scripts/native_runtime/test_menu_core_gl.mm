@@ -1,15 +1,18 @@
 /* Draw one rectangle with the menu's renderer into a core profile and
- * into a legacy context. A core profile has no client arrays, so with the
- * GL2 backend the framebuffer stays clear. We never order the window front.
- * GL3 composites onto the default framebuffer, and a context with no
- * drawable has no framebuffer to read. */
+ * into a legacy context, and load one picture in each. A core profile has
+ * no client arrays, so with the GL2 backend the framebuffer stays clear. We
+ * never order the window front. GL3 composites onto the default
+ * framebuffer, and a context with no drawable has none to read. */
 
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/gl.h>
 
 #include "rmlui/render/rmlui_gl.h"
+#include "third_party/lodepng.h"
 
 #include <cstdio>
+#include <string>
+#include <vector>
 
 extern "C" void glGenVertexArrays(GLsizei n, GLuint *arrays);
 extern "C" void glDeleteVertexArrays(GLsizei n, const GLuint *arrays);
@@ -96,7 +99,20 @@ static bool draw_is_red(bool core, unsigned char rgba[4], bool *state_restored)
    return pixels[0] > 200 && pixels[1] < 40 && pixels[2] < 40;
 }
 
-static int check(bool core, const char *name)
+/* Read a picture that the menu shows, such as a slot picture, through
+ * libretro's file layer, decode it from memory and return its size. The
+ * folder name is like a game's data folder under a non-ASCII home folder. */
+static bool loads_picture(bool core, const std::string& path)
+{
+   auto renderer = rib_menu_renderer(core);
+   Rml::Vector2i dimensions;
+   const Rml::TextureHandle texture = renderer->LoadTexture(dimensions, path);
+   if (texture)
+      renderer->ReleaseTexture(texture);
+   return texture && dimensions.x == 3 && dimensions.y == 2;
+}
+
+static int check(bool core, const char *name, const std::string& picture)
 {
    NSWindow *window = nil;
    NSOpenGLContext *context = make_context(core, &window);
@@ -108,6 +124,12 @@ static int check(bool core, const char *name)
    unsigned char rgba[4] = {};
    bool state_restored = true;
    const bool red = draw_is_red(core, rgba, &state_restored);
+   if (!loads_picture(core, picture))
+   {
+      std::printf("FAIL %s context could not load %s as a 3x2 picture\n", name, picture.c_str());
+      [NSOpenGLContext clearCurrentContext];
+      return 1;
+   }
    if (core && !state_restored)
    {
       std::printf("FAIL core context menu draw did not restore the VAO\n");
@@ -125,15 +147,30 @@ static int check(bool core, const char *name)
    return 1;
 }
 
-int main()
+int main(int argc, char **argv)
 {
+   if (argc != 2)
+   {
+      std::printf("usage: menu_core_gl PICTURE\n");
+      return 2;
+   }
+   /* Three by two opaque pixels, written at the location the caller passes. */
+   std::vector<unsigned char> encoded;
+   const std::vector<unsigned char> pixels(3 * 2 * 4, 255);
+   FILE *file = lodepng::encode(encoded, pixels, 3, 2) == 0 ? std::fopen(argv[1], "wb") : nullptr;
+   if (!file || std::fwrite(encoded.data(), 1, encoded.size(), file) != encoded.size())
+   {
+      std::printf("FAIL could not write %s\n", argv[1]);
+      return 1;
+   }
+   std::fclose(file);
    @autoreleasepool
    {
       NSApplication *app = [NSApplication sharedApplication];
       [app setActivationPolicy:NSApplicationActivationPolicyProhibited];
       int failed = 0;
-      failed += check(true, "core");
-      failed += check(false, "legacy");
+      failed += check(true, "core", argv[1]);
+      failed += check(false, "legacy", argv[1]);
       return failed == 0 ? 0 : 1;
    }
 }

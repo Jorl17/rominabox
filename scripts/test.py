@@ -58,24 +58,21 @@ WORKFLOW_COMMAND = [
 
 # What we link into a headless menu driver beside the cached menu objects,
 # which is the fake RetroArch host, its keyboard and achievements stand-ins,
-# and the libretro-common files for reading the menu's files. We build every
+# libretro's config reader and its file layer (--file-layer). We build every
 # driver the same way, so all of them run the same menu.
-HEADLESS_DEFINES = ["--define", "HAVE_AUDIOMIXER"]
+HEADLESS_FLAGS = ["--define", "HAVE_AUDIOMIXER", "--file-layer"]
 HEADLESS_SUPPORT = [
     "scripts/native_runtime/menu_host_fake.cpp",
     "scripts/native_runtime/text_test_host.cpp",
     "scripts/native_runtime/achievements_fake.cpp",
-    *(f"vendor/retroarch/libretro-common/{name}" for name in (
-        "file/config_file.c", "file/file_path.c", "file/file_path_io.c",
-        "streams/file_stream.c", "string/stdstring.c", "vfs/vfs_implementation.c",
-        "encodings/encoding_utf.c", "time/rtime.c", "compat/compat_strl.c")),
+    "vendor/retroarch/libretro-common/file/config_file.c",
 ]
 
 
 def headless_driver(output: Path, source: str) -> list[str]:
     """Return the harness helper's command to build one headless menu driver."""
     return ["python3", str(ROOT / "scripts/native_runtime/menu_harness.py"), "build",
-            str(output), *HEADLESS_DEFINES,
+            str(output), *HEADLESS_FLAGS,
             *(str(ROOT / path) for path in [source, *HEADLESS_SUPPORT])]
 
 
@@ -190,8 +187,8 @@ SCOPES = [
     ),
     Scope(
         "dcmenu",
-        "that a core-profile context draws the menu and a legacy context still does, and that a log line reaches the file before the process exits",
-        "that a Dreamcast disc boots, or where the menu sits; the pictures are a separate run",
+        "that a core-profile context draws the menu and a legacy context still does, that each loads a picture from a folder with a non-ASCII name through libretro's file layer, and that a log line reaches the file before the process exits",
+        "that a Dreamcast disc boots, where the menu sits, or that a Windows path is read; the pictures are a separate run",
         ["python3", str(ROOT / "scripts/test_dcmenu.py")],
         prepare=RMLUI_PREPARE,
     ),

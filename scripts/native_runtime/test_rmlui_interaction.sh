@@ -23,7 +23,7 @@ if [ ! -f "$bridge_dir/rmlui/view.cpp" ]; then
 fi
 
 mkdir -p "$build_dir"
-harness "$out" --define HAVE_AUDIOMIXER \
+harness "$out" --define HAVE_AUDIOMIXER --file-layer \
   "$script_dir/test_rmlui_interaction.cpp" "$script_dir/test_menu_declarations.cpp"
 
 "$out" declarations
@@ -50,7 +50,10 @@ fi
 # screen cannot fail.
 python3 "$script_dir/list_fixture.py" "$assets/menu.rml" --actions
 
-"$out" "$assets" "$build_dir/thumbnail-test.png"
+# A slot's picture in a folder with a non-ASCII name, like a player's data folder,
+# which we read in the menu through the libretro file layer.
+mkdir -p "$build_dir/João"
+"$out" "$assets" "$build_dir/João/thumbnail-test.png"
 
 # The same rows under every design's stylesheet. Native keeps a constant
 # border, and the disc accent is present on every row, so focus does not
@@ -254,16 +257,11 @@ for other in assets.parent.glob("placement-*/stage/ps1-analog"):
     if other != defaults.parent:
         (other / "controls-defaults.cfg").write_text(pad_defaults(ids[:24]))
 FIXTURE
-libretro_common=$repo_root/vendor/retroarch/libretro-common
-harness "$build_dir/test_menu_orchestration" --define HAVE_AUDIOMIXER \
+harness "$build_dir/test_menu_orchestration" --define HAVE_AUDIOMIXER --file-layer \
   "$script_dir/test_menu_orchestration.cpp" \
   "$script_dir/menu_host_fake.cpp" \
   "$script_dir/text_test_host.cpp" \
-  "$libretro_common/file/config_file.c" "$libretro_common/file/file_path.c" \
-  "$libretro_common/file/file_path_io.c" "$libretro_common/streams/file_stream.c" \
-  "$libretro_common/string/stdstring.c" "$libretro_common/vfs/vfs_implementation.c" \
-  "$libretro_common/encodings/encoding_utf.c" "$libretro_common/time/rtime.c" \
-  "$libretro_common/compat/compat_strl.c"
+  "$repo_root/vendor/retroarch/libretro-common/file/config_file.c"
 # A whole Native menu as in a game with filters and achievements, staged by
 # the exporter, for the cases that choose rows on generated list screens.
 python3 - "$build_dir/placement-everything" "$repo_root" <<'EVERYTHING'
