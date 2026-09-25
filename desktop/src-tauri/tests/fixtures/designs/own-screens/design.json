@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "own-screens",
   "name": "Own screens",
-  "description": "Hypothetical: its own Pause and Options screens, declared with Options before Pause, their headings and footers in its own words. Everything else is Native's.",
+  "description": "Hypothetical: its own Pause and Options screens, declared with Options before Pause, their headings and footers in its own words, and Pause starting on SAVE. Everything else is Native's.",
   "screens": [
     { "id": "pause", "heading": "PAUSE", "footer": "B  RESUME" },
     {

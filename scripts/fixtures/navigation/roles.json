@@ -9,13 +9,16 @@
   ],
   "cases": [
     {
-      "name": "the menu opens on Pause, on CONTINUE, whatever order the design declares",
+      "name": "the menu opens on Pause, where the design starts it, whatever order it declares",
       "steps": [
         "wait-ms:0"
       ],
       "focused": {
         "*": [
           "resume"
+        ],
+        "own-screens": [
+          "save"
         ]
       },
       "screen": {
