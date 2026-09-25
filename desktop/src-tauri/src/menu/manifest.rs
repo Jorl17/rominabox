@@ -447,6 +447,15 @@ impl Manifest {
             .clone()
             .or_else(|| native.fonts.clone())
             .ok_or_else(|| missing(&base, "fonts"))?;
+        // We draw every word with these in the player, and start no menu
+        // without one.
+        if fonts.is_empty() {
+            return Err(format!(
+                "design '{id}' lists no fonts. The menu writes every word in the fonts a design \
+                 lists, and a game whose design lists none would have no menu; list at least \
+                 one in design.json \"fonts\", or leave \"fonts\" out to use Native's"
+            ));
+        }
 
         let metrics = |pick: &dyn Fn(&MetricsFile) -> Option<i32>, what: &str| {
             own.metrics
