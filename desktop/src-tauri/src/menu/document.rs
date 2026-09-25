@@ -6,6 +6,7 @@
 //! complete.
 
 use super::manifest::{Manifest, Screen, ScreenPlace, ScreenRole};
+use crate::player_settings::{Kind, PlayerSetting};
 use std::{
     collections::BTreeSet,
     fs,
@@ -171,8 +172,14 @@ pub(crate) fn button_bounds(document: &str, id: &str) -> Option<(usize, usize)> 
     None
 }
 
-fn entry_button(manifest: &Manifest, screen: &Screen, index: usize) -> Result<String, String> {
-    let label = screen.option_label.clone().unwrap_or_default();
+/// One Options entry, made from the entry template of the design and placed
+/// at its position in the column. `label` is markup.
+fn entry_markup(
+    manifest: &Manifest,
+    button: &str,
+    label: &str,
+    index: usize,
+) -> Result<String, String> {
     let top = (index * manifest.option_entry_step).to_string();
     let template_path = manifest.design.join("option-entry.rml");
     let template = if template_path.exists() {
@@ -182,10 +189,20 @@ fn entry_button(manifest: &Manifest, screen: &Screen, index: usize) -> Result<St
         "<button class=\"menu-action option-entry\" id=\"BUTTON\" style=\"top: TOPdp;\">LABEL</button>"
             .to_string()
     };
-    let mut button = template
-        .replace("BUTTON", &screen.button)
+    Ok(template
+        .replace("BUTTON", button)
         .replace("TOP", &top)
-        .replace("LABEL", &crate::lists::rml_text(&label));
+        .replace("LABEL", label))
+}
+
+fn entry_button(manifest: &Manifest, screen: &Screen, index: usize) -> Result<String, String> {
+    let label = screen.option_label.clone().unwrap_or_default();
+    let mut button = entry_markup(
+        manifest,
+        &screen.button,
+        &crate::lists::rml_text(&label),
+        index,
+    )?;
     // We get the count from the core after the game has loaded, so the entry
     // must be in the document already. It starts hidden. A display:none
     // button can still get the focus unless it is disabled too.
@@ -198,6 +215,41 @@ fn entry_button(manifest: &Manifest, screen: &Screen, index: usize) -> Result<St
     Ok(button)
 }
 
+/// When the design does not place a switch, we add it as one more Options
+/// entry, drawn like the others with its name and then its state. At run time
+/// we write the state into `<control>-state`, and we handle a press on any
+/// element with the class `switch`.
+fn switch_entry(
+    manifest: &Manifest,
+    setting: &PlayerSetting,
+    index: usize,
+) -> Result<String, String> {
+    let control = setting.control();
+    let label = format!(
+        "{} <span id=\"{control}-state\" class=\"setting-state\">{}</span>",
+        crate::lists::rml_text(setting.label),
+        crate::lists::rml_text(state_word(setting, setting.default)),
+    );
+    Ok(add_class(
+        &entry_markup(manifest, &control, &label, index)?,
+        &control,
+        "switch",
+    ))
+}
+
+fn state_word(setting: &PlayerSetting, value: f32) -> &'static str {
+    match setting.kind {
+        Kind::Switch { on, off, .. } => {
+            if setting.is_on(value) {
+                on
+            } else {
+                off
+            }
+        }
+        Kind::Level { .. } => "",
+    }
+}
+
 /// Rewrite the menu so that Options has exactly the entries for this game.
 ///
 /// We cannot create elements in the player while it runs, so the buttons
@@ -208,6 +260,7 @@ pub(crate) fn apply_options(
     manifest: &Manifest,
     document: &str,
     staged: &[Screen],
+    settings: &[PlayerSetting],
 ) -> Result<String, String> {
     let options = staged
         .iter()
@@ -312,6 +365,19 @@ pub(crate) fn apply_options(
         };
         document.insert_str(at, &shell);
     }
+    // After the screens, in the same column, the switches that the design
+    // does not place with a marker in the panel.
+    let mut index = included.len();
+    for setting in settings {
+        if !matches!(setting.kind, Kind::Switch { .. })
+            || document.contains(&setting_slot(setting))
+            || document.contains(&format!("id=\"{}\"", setting.control()))
+        {
+            continue;
+        }
+        entries.push_str(&switch_entry(manifest, setting, index)?);
+        index += 1;
+    }
     if document.contains("<!--OPTIONS-->") {
         document = document.replace("<!--OPTIONS-->", &entries);
     } else if document.contains(&panel_id) {
@@ -324,9 +390,11 @@ pub(crate) fn apply_options(
     Ok(document)
 }
 
-/// The marker a design puts where the volume control goes, when it goes
-/// somewhere other than the start of the Options panel.
-pub const VOLUME_SLOT: &str = "<!--VOLUME-->";
+/// The marker in a design for a player setting, instead of its place in
+/// Options.
+pub fn setting_slot(setting: &PlayerSetting) -> String {
+    format!("<!--SETTING:{}-->", setting.id)
+}
 
 /// Where the shared parts are: beside the `designs` directory, in the
 /// repository and in a runtime kit alike.
@@ -382,14 +450,21 @@ fn require_classes(kind: &str, template: &str, classes: &[&str]) -> Result<(), S
     Ok(())
 }
 
-/// The volume control, made of its name, the low end, an arrow, the slider
-/// from the design, an arrow and the high end.
+/// A level control, made of its name, the low end, an arrow, the slider, an
+/// arrow and the high end.
 ///
 /// The slider comes first in the document, so the keyboard focus goes to it
 /// first and the left and right keys move it. The design places the rest, so
-/// the order in the document is not the order on screen. There is no number
-/// and no mute button, because the quiet end is the quietest the volume goes.
-pub fn volume_control_markup(design: &Path) -> Result<String, String> {
+/// the order in the document is not the order on screen. There is no number.
+pub fn level_markup(design: &Path, setting: &PlayerSetting) -> Result<String, String> {
+    let Kind::Level {
+        low_word,
+        high_word,
+        ..
+    } = setting.kind
+    else {
+        return Err(format!("{} is not a level", setting.id));
+    };
     let slider = part_template(design, "slider")?;
     require_classes(
         "slider",
@@ -402,43 +477,79 @@ pub fn volume_control_markup(design: &Path) -> Result<String, String> {
             "slider-readout",
         ],
     )?;
+    let id = setting.id;
     Ok(format!(
-        "<div id=\"volume-control\">{slider}<button id=\"{down}\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{up}\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{low}\" class=\"volume-end\">LOW</div><div id=\"{high}\" class=\"volume-end\">HIGH</div><div class=\"volume-name\">VOLUME</div></div>",
-        slider = slider.replace("PART-ID", crate::volume::slider_id()).replace("LABEL", ""),
-        down = crate::volume::down_id(),
-        up = crate::volume::up_id(),
-        low = crate::volume::low_id(),
-        high = crate::volume::high_id(),
+        "<div id=\"{id}-control\">{slider}<button id=\"{id}-down\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{id}-up\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{id}-low\" class=\"volume-end\">{low}</div><div id=\"{id}-high\" class=\"volume-end\">{high}</div><div class=\"volume-name\">{name}</div></div>",
+        slider = slider.replace("PART-ID", &setting.control()).replace("LABEL", ""),
+        low = crate::lists::rml_text(low_word),
+        high = crate::lists::rml_text(high_word),
+        name = crate::lists::rml_text(setting.label),
     ))
 }
 
-/// Put the volume control in Options.
+/// The volume control, as every design draws it.
+pub fn volume_control_markup(design: &Path) -> Result<String, String> {
+    level_markup(design, &crate::player_settings::volume())
+}
+
+/// A switch at a marker in the design, drawn with the design's toggle part.
+fn switch_markup(design: &Path, setting: &PlayerSetting) -> Result<String, String> {
+    let toggle = part_template(design, "toggle")?;
+    require_classes("toggle", &toggle, &["toggle"])?;
+    Ok(toggle
+        .replace("PART-ID", &setting.control())
+        .replace("LABEL", &crate::lists::rml_text(setting.label)))
+}
+
+/// Put in Options the player's settings that `apply_options` did not add.
 ///
-/// When the design contains `<!--VOLUME-->`, we put the control there.
-/// Otherwise we insert it at the start of the Options panel. A menu with no
-/// Options screen has no volume control either.
-pub fn install_volume_control(document: &str, design: &Path) -> Result<String, String> {
-    if document.contains("id=\"volume-control\"") {
-        return Ok(document.to_string());
-    }
+/// Where a design has `<!--SETTING:id-->`, we put a level's slider or a
+/// switch's toggle from the design there. Otherwise we put a level at the
+/// start of the Options panel. A menu with no Options screen has no place
+/// for them, so we leave them out, as we leave out the screen itself.
+pub fn install_settings(
+    document: &str,
+    design: &Path,
+    settings: &[PlayerSetting],
+) -> Result<String, String> {
+    let mut document = document.to_string();
     let marker = "id=\"options-panel\"";
-    if !document.contains(VOLUME_SLOT) && !document.contains(marker) {
-        return Ok(document.to_string());
+    for setting in settings {
+        let slot = setting_slot(setting);
+        let placed = match setting.kind {
+            Kind::Level { .. } => format!("id=\"{}-control\"", setting.id),
+            Kind::Switch { .. } => format!("id=\"{}\"", setting.control()),
+        };
+        if document.contains(&placed) {
+            document = document.replace(&slot, "");
+            continue;
+        }
+        if document.contains(&slot) {
+            let markup = match setting.kind {
+                Kind::Level { .. } => level_markup(design, setting)?,
+                Kind::Switch { .. } => switch_markup(design, setting)?,
+            };
+            document = document.replacen(&slot, &markup, 1);
+            continue;
+        }
+        if !matches!(setting.kind, Kind::Level { .. }) || !document.contains(marker) {
+            continue;
+        }
+        let markup = level_markup(design, setting)?;
+        let at = document.find(marker).expect("checked above");
+        let tag_end = document[at..]
+            .find('>')
+            .map(|end| at + end + 1)
+            .ok_or_else(|| "the options panel tag is never closed".to_string())?;
+        document.insert_str(tag_end, &markup);
     }
-    let markup = volume_control_markup(design)?;
-    if document.contains(VOLUME_SLOT) {
-        return Ok(document.replacen(VOLUME_SLOT, &markup, 1));
+    // We mark a switch that starts on with the class `on` from the start.
+    for setting in settings {
+        if setting.is_on(setting.default) {
+            document = add_class(&document, &setting.control(), "on");
+        }
     }
-    let at = document.find(marker).expect("checked above");
-    let tag_end = document[at..]
-        .find('>')
-        .map(|end| at + end + 1)
-        .ok_or_else(|| "the options panel tag is never closed".to_string())?;
-    let mut installed = String::with_capacity(document.len() + markup.len());
-    installed.push_str(&document[..tag_end]);
-    installed.push_str(&markup);
-    installed.push_str(&document[tag_end..]);
-    Ok(installed)
+    Ok(document)
 }
 
 /// Every shared part stylesheet, by name, in name order. We link them into

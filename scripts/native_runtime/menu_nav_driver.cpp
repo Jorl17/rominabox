@@ -82,6 +82,8 @@ const char *sound_name(rib::test::Sound sound)
       case rib::test::Sound::ScrollDown: return "move";
       case rib::test::Sound::Ok: return "confirm";
       case rib::test::Sound::Cancel: return "cancel";
+      case rib::test::Sound::LevelUp: return "level";
+      case rib::test::Sound::LevelDown: return "level";
    }
    return "?";
 }

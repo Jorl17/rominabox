@@ -306,6 +306,10 @@ fn run() -> Result<(), String> {
                 /// How many discs the game has. With more than one we add the disc list.
                 #[serde(default)]
                 discs: Option<usize>,
+                /// The author's default for playing on in the background, which
+                /// the player can change in Options.
+                #[serde(default)]
+                keep_playing_in_background: bool,
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid {command} request: {error}"))?;
@@ -332,6 +336,9 @@ fn run() -> Result<(), String> {
                 include_achievements: request.include_achievements,
                 shaders: request.shaders,
                 discs: request.discs.unwrap_or(defaults.discs),
+                settings: rominabox_desktop::player_settings::Defaults {
+                    keep_playing_in_background: request.keep_playing_in_background,
+                },
                 ..defaults
             })?
             .write(&request.destination)?;
@@ -379,7 +386,7 @@ fn run() -> Result<(), String> {
                 json!({ "type": "result", "result": {
                     "position": volume::position_for_db(level.decibels),
                     "positions": volume::position_count(),
-                    "path": request.data_dir.join(volume::file_name()),
+                    "path": request.data_dir.join(rominabox_desktop::player_settings::volume().file()),
                 }})
             );
             Ok(())

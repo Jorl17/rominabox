@@ -1,0 +1,4 @@
+volume-tick.wav: an original ROM-in-a-Box cue, synthesised by scripts/native_runtime/generate-menu-sounds.mjs
+from scripts/native_runtime/menu-sound-synthesis.mjs (dmg-blip + soft scroll, up).
+No game recordings and no third-party audio. 44100 Hz, 16-bit, mono.
+

@@ -13,6 +13,7 @@ pub mod lists;
 pub mod menu;
 pub mod metadata;
 pub mod packaging;
+pub mod player_settings;
 pub mod projects;
 mod publish;
 pub mod repo;

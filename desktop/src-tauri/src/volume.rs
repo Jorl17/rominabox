@@ -1,11 +1,12 @@
-//! The names of the in-game volume control, and the per-game file for its level.
+//! The range of the volume, and the file with the level that the player chose.
 //!
-//! The names are in `vendor/retroarch/audio/volume_range.h`. We read that file
-//! in the player, the launcher and this command, so a renamed part or a new
-//! decibel limit applies to all three at once.
+//! The range is in `vendor/retroarch/audio/volume_range.h`, which we also read
+//! for the RetroArch volume hotkeys, so both have the same maximum. The volume
+//! is a player setting (`player_settings`), and its file, key and control come
+//! from its declaration there.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use crate::player_settings;
+use std::path::Path;
 
 const RANGE_HEADER: &str = include_str!("../../../vendor/retroarch/audio/volume_range.h");
 
@@ -36,36 +37,10 @@ fn defined_float(name: &str) -> f32 {
         .unwrap_or_else(|_| panic!("{name} is not a number in volume_range.h"))
 }
 
-pub fn slider_id() -> &'static str {
-    defined_string("RIB_VOLUME_SLIDER_ID")
-}
-
-pub fn down_id() -> &'static str {
-    defined_string("RIB_VOLUME_DOWN_ID")
-}
-
-pub fn up_id() -> &'static str {
-    defined_string("RIB_VOLUME_UP_ID")
-}
-
-pub fn low_id() -> &'static str {
-    defined_string("RIB_VOLUME_LOW_ID")
-}
-
-pub fn high_id() -> &'static str {
-    defined_string("RIB_VOLUME_HIGH_ID")
-}
-
-pub fn file_name() -> &'static str {
-    defined_string("RIB_VOLUME_FILE")
-}
-
-pub fn volume_key() -> &'static str {
-    defined_string("RIB_VOLUME_KEY")
-}
-
-pub fn mute_key() -> &'static str {
-    defined_string("RIB_VOLUME_MUTE_KEY")
+/// The cue we play for a change of volume in a game with no menu sound pack,
+/// by the name it has beside the menu.
+pub fn tick_file() -> &'static str {
+    defined_string("RIB_VOLUME_TICK_FILE")
 }
 
 pub fn min_db() -> f32 {
@@ -128,53 +103,15 @@ impl Level {
     }
 }
 
-fn path_in(data_dir: &Path) -> PathBuf {
-    data_dir.join(file_name())
-}
-
-/// `key = "value"` lines, the config format that RetroArch already reads.
-fn parse(text: &str) -> Level {
-    let mut level = Level::default();
-    let mut muted = false;
-    for line in text.lines() {
-        let Some((key, value)) = line.split_once('=') else {
-            continue;
-        };
-        let key = key.trim();
-        let value = value.trim().trim_matches('"');
-        if key == volume_key() {
-            if let Ok(decibels) = value.parse() {
-                level.decibels = decibels;
-            }
-        } else if key == mute_key() {
-            // An older file format stored muting as a button. Map it to the quiet end.
-            muted = value == "true";
-        }
-    }
-    if muted {
-        level.decibels = min_db();
-    }
-    level.clamp()
-}
-
-fn render(level: Level) -> String {
-    let level = level.clamp();
-    format!("{} = \"{:.1}\"\n", volume_key(), level.decibels)
-}
-
 pub fn read(data_dir: &Path) -> Level {
-    fs::read_to_string(path_in(data_dir))
-        .map(|text| parse(&text))
+    player_settings::volume()
+        .chosen(data_dir)
+        .map(|decibels| Level { decibels })
         .unwrap_or_default()
 }
 
 pub fn write(data_dir: &Path, level: Level) -> Result<(), String> {
-    fs::create_dir_all(data_dir).map_err(|e| e.to_string())?;
-    let destination = path_in(data_dir);
-    let temporary = destination.with_extension("cfg.tmp");
-    fs::write(&temporary, render(level)).map_err(|e| e.to_string())?;
-    fs::rename(&temporary, &destination).map_err(|e| e.to_string())?;
-    Ok(())
+    player_settings::volume().choose(data_dir, level.clamp().decibels)
 }
 
 #[cfg(test)]
@@ -218,29 +155,9 @@ mod tests {
         let dir = rominabox_scratch::Scratch::dir("rominabox-volume-roundtrip");
         write(&dir, Level { decibels: -40.0 }).unwrap();
         assert_eq!(read(&dir), Level { decibels: -40.0 });
-        let written = fs::read_to_string(path_in(&dir)).unwrap();
-        assert!(
-            !written.contains(mute_key()),
-            "the file must not bring mute back, got {written}"
-        );
         write(&dir, Level { decibels: 40.0 }).unwrap();
         assert_eq!(read(&dir).decibels, max_db());
         write(&dir, Level { decibels: -200.0 }).unwrap();
-        assert_eq!(read(&dir).decibels, min_db());
-    }
-
-    #[test]
-    fn an_old_mute_is_the_quiet_end() {
-        let dir = rominabox_scratch::Scratch::dir("rominabox-volume-old-mute");
-        fs::write(
-            path_in(&dir),
-            format!(
-                "{} = \"0.0\"\n{} = \"true\"\n",
-                volume_key(),
-                mute_key()
-            ),
-        )
-        .unwrap();
         assert_eq!(read(&dir).decibels, min_db());
     }
 }

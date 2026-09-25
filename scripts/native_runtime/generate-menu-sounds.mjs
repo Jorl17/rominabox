@@ -12,8 +12,9 @@
 // a voice with no scroll shape, `own` means its own up/down at that level.
 //
 // Write desktop/assets/menu-sounds/<id>/{up,down,ok,cancel}.wav, update the
-// soundPacks registry in desktop/designs.json, and delete packs that we no
-// longer ship. Run after changing PACKS:
+// soundPacks registry in desktop/designs.json, delete packs that we no
+// longer ship, and write the volume tick into the shared menu parts.
+// Run after changing PACKS or VOLUME_TICK:
 //   node scripts/native_runtime/generate-menu-sounds.mjs
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -86,12 +87,22 @@ const PACKS = [
   },
 ];
 
+/**
+ * The cue we play when the player changes the volume in a game exported with
+ * menu sounds Off. It is the movement cue of the Blip pack, a plain handheld
+ * pulse. In a game with a pack we play the pack's movement cue instead. The
+ * cue belongs to the volume control, so we keep it with the shared menu parts
+ * and include it only in a game without a pack.
+ */
+const VOLUME_TICK = { voice: 'dmg-blip', cue: 'up', scroll: 'soft' };
+
 /** Not an asset directory. At export we write audio_enable_menu=false.
  * The word Off is already in the dropdown, so we show no line under it. */
 const OFF = { id: 'off', name: 'Off', description: '' };
 
 const SOUNDS = fileURLToPath(new URL('../../desktop/assets/menu-sounds/', import.meta.url));
 const REGISTRY = fileURLToPath(new URL('../../desktop/designs.json', import.meta.url));
+const PARTS = fileURLToPath(new URL('../../integrations/parts/', import.meta.url));
 
 const SCROLL_CUES = new Set(['up', 'down']);
 const milliseconds = (samples) => Math.round((samples.length / SR) * 1000);
@@ -137,6 +148,22 @@ await writeFile(
     'Project licensing remains to be selected.',
   ].join('\n') + '\n'
 );
+
+{
+  const tick = scrollCue(VOLUME_TICK.voice, VOLUME_TICK.cue, VOLUME_TICK.scroll);
+  await writeFile(path.join(PARTS, 'volume-tick.wav'), wav(tick));
+  await writeFile(
+    path.join(PARTS, 'PROVENANCE.txt'),
+    [
+      'volume-tick.wav: an original ROM-in-a-Box cue, synthesised by scripts/native_runtime/generate-menu-sounds.mjs',
+      `from scripts/native_runtime/menu-sound-synthesis.mjs (${VOLUME_TICK.voice} + ${VOLUME_TICK.scroll} scroll, ${VOLUME_TICK.cue}).`,
+      'No game recordings and no third-party audio. 44100 Hz, 16-bit, mono.',
+      '',
+      'Project licensing remains to be selected.',
+    ].join('\n') + '\n'
+  );
+  console.log(`volume tick ${milliseconds(tick)}ms -> ${PARTS}`);
+}
 
 const registry = JSON.parse(await readFile(REGISTRY, 'utf8'));
 registry.soundPacks = [

@@ -43,18 +43,6 @@ static rib_controls_catalog fixture_controls = [] {
    return catalog;
 }();
 
-/* The cue that we requested from the sound pack for a move. Empty until a
- * step changes a level. The player has the production function, and this
- * one only records the call. */
-static std::string move_sound_log;
-extern "C" void rib_host_scroll_sound(bool up)
-{
-   if (!move_sound_log.empty())
-      move_sound_log.push_back(' ');
-   move_sound_log += up ? "up" : "down";
-}
-
-
 static int failures = 0;
 
 #define CHECK(cond, msg) \
@@ -968,12 +956,12 @@ static void check_volume_ends(const char *design, int window_w, int window_h)
 {
    char message[384];
    const struct { float fraction; const char *end; const char *arrow; } ends[] = {
-      {0.f, "quiet", RIB_VOLUME_DOWN_ID},
-      {1.f, "normal", RIB_VOLUME_UP_ID},
+      {0.f, "quiet", "volume-down"},
+      {1.f, "normal", "volume-up"},
    };
    for (const auto &end : ends)
    {
-      view.parts.set_slider(RIB_VOLUME_SLIDER_ID, end.fraction, nullptr);
+      view.parts.set_slider("volume-level", end.fraction, nullptr);
       const Box thumb = box_of("volume-level-thumb");
       const Box arrow = box_of(end.arrow);
       const int gap = (thumb.ok && arrow.ok) ? horizontal_gap(thumb, arrow) : -1;
@@ -1470,18 +1458,6 @@ int main(int argc, char **argv)
    CHECK(AUDIO_VOLUME_STEP_DB * (RIB_VOLUME_POSITIONS - 1)
                == AUDIO_VOLUME_MAX_DB - AUDIO_VOLUME_MIN_DB,
          "the positions are equal steps from quiet to normal");
-   CHECK(rib_volume_db_from_fraction(0.0f) == AUDIO_VOLUME_MIN_DB,
-         "the left end of the slider is the quietest it goes");
-   CHECK(rib_volume_db_from_fraction(1.0f) == AUDIO_VOLUME_MAX_DB,
-         "the right end of the slider is normal");
-   CHECK(rib_volume_db_from_fraction(rib_volume_fraction_from_db(0.0f)) == 0.0f,
-         "normal, the default, round-trips through the slider");
-   CHECK(rib_volume_db_from_fraction(-1.0f) == AUDIO_VOLUME_MIN_DB,
-         "a drag past the left end stops at the end");
-   CHECK(rib_volume_db_from_fraction(2.0f) == AUDIO_VOLUME_MAX_DB,
-         "a drag past the right end stops at normal");
-   CHECK(rib_volume_quantize_db(-4.0f) == 0.0f,
-         "a level near the top snaps to a position, not to the nearest decibel");
 
    /* We do not read design.cfg in the interaction harness. We declare Options
     * as an export writes it, so showing it shows the screen that a player
@@ -1585,7 +1561,7 @@ int main(int argc, char **argv)
          const int count = view.document.focusables("options-panel", ids, 16);
          int slider = -1;
          for (int index = 0; index < count; ++index)
-            if (std::strcmp(ids[index], RIB_VOLUME_SLIDER_ID) == 0)
+            if (std::strcmp(ids[index], "volume-level") == 0)
                slider = index;
          CHECK(slider >= 0, "the volume slider is a focus stop");
          const char *landed = (slider >= 0 && slider + 1 < count)
@@ -1598,12 +1574,12 @@ int main(int argc, char **argv)
          CHECK(std::strcmp(landed, "controls") == 0, message);
          std::snprintf(message, sizeof(message),
                "pressing down again lands on %s", again);
-         CHECK(std::strcmp(again, RIB_VOLUME_UP_ID) != 0, message);
+         CHECK(std::strcmp(again, "volume-up") != 0, message);
          int arrow_x = 0;
          int arrow_y = 0;
-         CHECK(view.document.element_center(RIB_VOLUME_DOWN_ID, &arrow_x, &arrow_y),
+         CHECK(view.document.element_center("volume-down", &arrow_x, &arrow_y),
                "the left arrow is still there for a pointer");
-         CHECK(view.document.element_center(RIB_VOLUME_UP_ID, &arrow_x, &arrow_y),
+         CHECK(view.document.element_center("volume-up", &arrow_x, &arrow_y),
                "the right arrow is still there for a pointer");
       }
 
@@ -1707,24 +1683,6 @@ int main(int argc, char **argv)
          view.document.set_shown("fixture-panel", false);
       }
 
-      /* One move cue per step that changes the level, and none at an end
-       * where it does not move. The words come from the pack: up and down. */
-      view.parts.set_slider(RIB_VOLUME_SLIDER_ID, 1.0f, nullptr);
-      view.parts.set_slider_step(RIB_VOLUME_SLIDER_ID,
-            AUDIO_VOLUME_STEP_DB / (AUDIO_VOLUME_MAX_DB - AUDIO_VOLUME_MIN_DB));
-      move_sound_log.clear();
-      view.parts.nudge_slider(RIB_VOLUME_SLIDER_ID, 1);
-      view.parts.nudge_slider(RIB_VOLUME_SLIDER_ID, -1);
-      view.parts.nudge_slider(RIB_VOLUME_SLIDER_ID, 1);
-      view.parts.set_slider(RIB_VOLUME_SLIDER_ID, 0.0f, nullptr);
-      view.parts.nudge_slider(RIB_VOLUME_SLIDER_ID, -1);
-      {
-         char message[256];
-         std::snprintf(message, sizeof(message),
-               "volume steps play the move sound once each and not at the ends: heard '%s'",
-               move_sound_log.c_str());
-         CHECK(move_sound_log == "down up", message);
-      }
       drain_actions();
    }
 

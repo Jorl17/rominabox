@@ -100,9 +100,26 @@ extern "C" bool rib_host_load_state(void)
 }
 extern "C" void rib_host_resume(void) {}
 extern "C" void rib_host_quit(void) { host.quit = true; }
-extern "C" float rib_host_volume(void) { return host.volume_db; }
-extern "C" bool rib_host_muted(void) { return false; }
-extern "C" void rib_host_set_volume(float db) { host.volume_db = db; }
+extern "C" bool rib_host_setting(const char *key, float *value)
+{
+   const auto found = key ? host.settings.find(key) : host.settings.end();
+   if (found == host.settings.end() || !value) return false;
+   *value = found->second;
+   return true;
+}
+extern "C" bool rib_host_set_setting(const char *key, float value)
+{
+   const auto found = key ? host.settings.find(key) : host.settings.end();
+   if (found == host.settings.end()) return false;
+   found->second = value;
+   return true;
+}
+extern "C" void rib_host_level_sound(bool up)
+{
+   host.sounds.push_back(up ? Sound::LevelUp : Sound::LevelDown);
+   host.level_cue_db.push_back(host.settings["audio_volume"]);
+}
+extern "C" void rib_host_load_level_cue(const char *path) { host.level_cue = path ? path : ""; }
 extern "C" void rib_host_scroll_sound(bool up) { host.sounds.push_back(up ? Sound::ScrollUp : Sound::ScrollDown); }
 extern "C" void rib_host_ok_sound(void) { host.sounds.push_back(Sound::Ok); }
 extern "C" void rib_host_cancel_sound(void) { host.sounds.push_back(Sound::Cancel); }

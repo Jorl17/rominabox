@@ -39,6 +39,47 @@ pub fn kit(root: &Path) -> PathBuf {
     kit
 }
 
+/// The hypothetical designs under `tests/fixtures/designs`, by name. They have
+/// layouts that no shipped design has, and we must still compose them.
+pub fn hypothetical_designs() -> Vec<String> {
+    let mut names: Vec<String> = fs::read_dir(fixture_designs())
+        .unwrap()
+        .map(|entry| entry.unwrap())
+        .filter(|entry| entry.file_type().unwrap().is_dir())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+    names.sort();
+    names
+}
+
+fn fixture_designs() -> PathBuf {
+    rominabox_desktop::repo::at("desktop/src-tauri/tests/fixtures/designs")
+}
+
+/// A kit with the hypothetical designs beside the real ones, where we look
+/// for Native when we compose. A style-only fixture contains only its changes
+/// to Native's stylesheet, and we ship the whole sheet in the design it stands
+/// for.
+pub fn kit_with_hypothetical(root: &Path) -> PathBuf {
+    let kit = kit(root);
+    for name in hypothetical_designs() {
+        let target = kit.join("designs").join(&name);
+        copy_tree(&fixture_designs().join(&name), &target);
+        let changes = target.join("changes.rcss");
+        if changes.is_file() {
+            let mut sheet = fs::read_to_string(rominabox_desktop::repo::at(
+                "integrations/designs/native/menu.rcss",
+            ))
+            .unwrap();
+            sheet.push_str("\n/* The hypothetical design's own rules. */\n");
+            sheet.push_str(&fs::read_to_string(&changes).unwrap());
+            fs::write(target.join("menu.rcss"), sheet).unwrap();
+            fs::remove_file(changes).unwrap();
+        }
+    }
+    kit
+}
+
 pub struct Composed {
     pub menu: String,
     pub cfg: String,
@@ -155,11 +196,7 @@ pub fn hovered(document: &Path, points: &[(i32, i32)]) -> Vec<String> {
 
 /// The position of each element laid out at `width`x`height`, as the border
 /// box x, y, width, height in document pixels, or None when it is absent.
-pub fn boxes(
-    document: &Path,
-    (width, height): (u32, u32),
-    ids: &[&str],
-) -> Vec<Option<[f64; 4]>> {
+pub fn boxes(document: &Path, (width, height): (u32, u32), ids: &[&str]) -> Vec<Option<[f64; 4]>> {
     let mut command = Command::new(rml_probe());
     command
         .arg("--document")

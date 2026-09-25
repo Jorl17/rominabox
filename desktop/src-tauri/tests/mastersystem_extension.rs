@@ -190,7 +190,8 @@ fn an_author_can_pick_the_generic_retropad_and_get_an_asset_free_grid() {
     let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
     assert!(markup.contains("id=\"control-r3\""));
     assert!(!markup.contains("id=\"controller-image\""));
-    // The document and its one alternative scene, with no artwork.
+    // The document, its one alternative scene and the menu sounds, with no
+    // artwork.
     assert_eq!(
         file_names(&root),
         BTreeSet::from([
@@ -198,6 +199,7 @@ fn an_author_can_pick_the_generic_retropad_and_get_an_asset_free_grid() {
             "menu.rcss".to_string(),
             "Silkscreen-Regular.ttf".to_string(),
             "Silkscreen-OFL.txt".to_string(),
+            rominabox_desktop::volume::tick_file().to_string(),
             "parts".to_string(),
             "scene-retropad.rml".to_string(),
             // We stage the screen declarations with the menu.
@@ -309,6 +311,7 @@ fn export_stages_only_the_mastersystem_illustration() {
             "menu.rcss".to_string(),
             "Silkscreen-Regular.ttf".to_string(),
             "Silkscreen-OFL.txt".to_string(),
+            rominabox_desktop::volume::tick_file().to_string(),
             "parts".to_string(),
             // We stage the screen declarations with the menu.
             "design.cfg".to_string(),

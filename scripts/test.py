@@ -120,7 +120,7 @@ SCOPES = [
     ),
     Scope(
         "shipped",
-        "that the core options, remaps, controller profiles and firmware an export ships replace what an earlier export or data location left in the game's data on every launch, that a setting the player changed afterwards stays, and that the launcher modules build for Windows",
+        "that the core options, remaps, controller profiles and firmware an export ships replace what an earlier export or data location left in the game's data on every launch, that a setting the player changed afterwards stays, that a player setting chosen in the game's menu reaches the next launch whatever default a later export carries, and that the launcher modules build for Windows",
         "that RetroArch reads those files or that the core honours them (the picture scope covers the core), or that the Windows build runs",
         ["python3", str(ROOT / "scripts/test_shipped.py")],
     ),

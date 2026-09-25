@@ -433,7 +433,8 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     fs::write(
         data.join("volume.cfg"),
         "savefile_directory = \"/tmp/rominabox-isolation-pwned\"\n\
-         audio_mute_enable = \"true\"\n",
+         audio_mute_enable = \"true\"\n\
+         audio_volume = \"-17.8\"\n",
     )
     .unwrap();
     let resources = app.join("Contents/Resources/core-options/probe-core");
@@ -506,14 +507,16 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
         "a player file moved the save directory: {saves}"
     );
     assert_eq!(config_value(&config, "network_cmd_enable"), Some("false"));
-    assert_eq!(config_value(&config, "audio_volume"), Some("0.25"));
+    // We read the volume the player set from its own file only. The controls
+    // file contains no volume, and the volume file contains nothing else.
+    assert_eq!(config_value(&config, "audio_volume"), Some("-17.8"));
     assert_eq!(
         config_value(&config, "pause_nonactive"),
         Some("true"),
         "an older controls.cfg must not turn background play on when the author left it off"
     );
     assert_eq!(config_value(&config, "input_player1_a"), Some("x"));
-    assert_eq!(config_value(&config, "audio_mute_enable"), Some("true"));
+    assert_eq!(config_value(&config, "audio_mute_enable"), None);
     assert_eq!(
         fs::read(data.join("config/probe-core/kept.cfg")).unwrap(),
         b"player-copy\n"

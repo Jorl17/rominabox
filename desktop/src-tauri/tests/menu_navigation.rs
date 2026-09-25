@@ -22,6 +22,8 @@
 //!
 //! Without the driver variable we fail the test: it runs only the driver.
 
+mod support;
+
 use rominabox_desktop::{controls::Controls, repo, shaders::ShaderSelection, themes};
 use serde_json::Value;
 use std::{
@@ -41,23 +43,6 @@ const MENUS: [(&str, &str, Option<&str>); 4] = [
     ("ps1-analog", "ps1", Some("ps1-analog")),
 ];
 
-fn copy_tree(from: &Path, to: &Path) {
-    fs::create_dir_all(to).unwrap();
-    for entry in fs::read_dir(from).unwrap() {
-        let entry = entry.unwrap();
-        let destination = to.join(entry.file_name());
-        if entry.file_type().unwrap().is_dir() {
-            copy_tree(&entry.path(), &destination);
-        } else {
-            fs::copy(entry.path(), destination).unwrap();
-        }
-    }
-}
-
-fn fixture_designs() -> PathBuf {
-    repo::at("desktop/src-tauri/tests/fixtures/designs")
-}
-
 /// The designs a table must cover: registered ones, then hypothetical ones.
 fn all_designs() -> (Vec<String>, Vec<String>) {
     let registered = themes::registry()
@@ -66,43 +51,7 @@ fn all_designs() -> (Vec<String>, Vec<String>) {
         .into_iter()
         .map(|design| design.id)
         .collect();
-    let mut hypothetical: Vec<String> = fs::read_dir(fixture_designs())
-        .unwrap()
-        .map(|entry| entry.unwrap())
-        .filter(|entry| entry.file_type().unwrap().is_dir())
-        .map(|entry| entry.file_name().to_string_lossy().into_owned())
-        .collect();
-    hypothetical.sort();
-    (registered, hypothetical)
-}
-
-/// A kit as an export uses it. We look for Native beside the design when we
-/// compose, so we copy a hypothetical design next to the actual ones.
-fn kit(root: &Path, hypothetical: &[String]) -> PathBuf {
-    let kit = root.join("runtime-kit");
-    copy_tree(&repo::at("integrations/designs"), &kit.join("designs"));
-    // Shared parts (navigation stops, slider) are beside the designs, as in a kit.
-    copy_tree(&repo::at("integrations/parts"), &kit.join("parts"));
-    for name in hypothetical {
-        let target = kit.join("designs").join(name);
-        copy_tree(&fixture_designs().join(name), &target);
-        // A style-only fixture contains only its changes to the Native
-        // stylesheet. The design it represents has the whole sheet.
-        let changes = target.join("changes.rcss");
-        if changes.is_file() {
-            let mut sheet =
-                fs::read_to_string(repo::at("integrations/designs/native/menu.rcss")).unwrap();
-            sheet.push_str("\n/* The hypothetical design's own rules. */\n");
-            sheet.push_str(&fs::read_to_string(&changes).unwrap());
-            fs::write(target.join("menu.rcss"), sheet).unwrap();
-            fs::remove_file(changes).unwrap();
-        }
-    }
-    copy_tree(
-        &repo::at("desktop/assets/controllers"),
-        &kit.join("menu-assets"),
-    );
-    kit
+    (registered, support::hypothetical_designs())
 }
 
 /// The menu composed from one design and pad, with every Options entry in
@@ -341,7 +290,7 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
     let scratch = rominabox_scratch::Scratch::dir("rominabox-navigation");
     let keep = std::env::var_os("ROMINABOX_NAVIGATION_KEEP").map(PathBuf::from);
     let root = keep.clone().unwrap_or_else(|| scratch.to_path_buf());
-    let kit = kit(&root, &hypothetical);
+    let kit = support::kit_with_hypothetical(&root);
 
     // Compose only what the tables ask for.
     let mut wanted: BTreeSet<(String, String)> = BTreeSet::new();

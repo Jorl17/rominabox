@@ -4,11 +4,12 @@
  * achievements service are separate boundaries with their own fakes. */
 #pragma once
 #include "rmlui/host.h"
+#include <map>
 #include <string>
 #include <vector>
 
 namespace rib::test {
-enum class Sound { ScrollUp, ScrollDown, Ok, Cancel };
+enum class Sound { ScrollUp, ScrollDown, Ok, Cancel, LevelUp, LevelDown };
 
 struct FakeHost
 {
@@ -40,7 +41,14 @@ struct FakeHost
    /* The last shader applied from the menu, and its preset. */
    std::string applied_shader, applied_preset;
 
-   float volume_db = -12.0f;
+   /* The RetroArch settings behind each player setting, by config key, with
+    * their values in the running game. We cannot apply a key that is missing
+    * here. */
+   std::map<std::string, float> settings{{"audio_volume", -12.0f}, {"pause_nonactive", 1.0f}};
+   /* The game volume at each request for a level cue, in order. */
+   std::vector<float> level_cue_db;
+   /* The level cue file requested for a game with no sound pack. */
+   std::string level_cue;
 
    /* The commands from the menu to the host. */
    std::vector<Sound> sounds;
