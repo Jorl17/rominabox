@@ -485,6 +485,34 @@ pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuR
     }
 }
 
+/// Write everything for the menu into `menu_assets`: the composed design,
+/// the control defaults, and the logo of the splash when there is a splash.
+/// Returns the controller profile we wrote the defaults for.
+pub fn stage_menu(
+    request: &ExportRequest,
+    discs: usize,
+    menu_assets: &Path,
+) -> Result<controls::ControlProfile, ExportError> {
+    crate::menu::compose_menu(&menu_request(request, discs))
+        .and_then(|menu| menu.write(menu_assets))
+        .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
+    fs::create_dir_all(menu_assets)
+        .map_err(|error| ExportError::io(ErrorStage::Stage, menu_assets, error))?;
+    let profile = controls::write_defaults_config(
+        &request.system,
+        &request.controls,
+        &menu_assets.join("controls-defaults.cfg"),
+    )
+    .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
+    if request.splash {
+        copy_file(
+            &request.runtime_kit.join("branding/logo.png"),
+            &menu_assets.join("splash-logo.png"),
+        )?;
+    }
+    Ok(profile)
+}
+
 fn export_macos<F>(
     request: &ExportRequest,
     resolved: Option<&ExportCore<'_>>,
@@ -557,16 +585,11 @@ where
         copy_content_file(file, &content_directory)?;
     }
     let rom_relative = Path::new("content").join(&collected_content.entrypoint);
-    crate::menu::compose_menu(&menu_request(request, collected_content.discs))
-        .and_then(|menu| menu.write(&resources.join("menu-assets")))
-        .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
-    let controls_assets = resources.join("menu-assets");
-    fs::create_dir_all(&controls_assets)
-        .map_err(|error| ExportError::io(ErrorStage::Stage, &controls_assets, error))?;
-    let controls_defaults = controls_assets.join("controls-defaults.cfg");
-    let controls_profile =
-        controls::write_defaults_config(&request.system, &request.controls, &controls_defaults)
-            .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
+    let controls_profile = stage_menu(
+        request,
+        collected_content.discs,
+        &resources.join("menu-assets"),
+    )?;
     stage_controller_remap(&controls_profile, selected_core, &resources.join("remaps"))?;
     stage_pixel_options(selected_core, &resources.join("core-options"))?;
     if request.show_menu {
@@ -579,12 +602,6 @@ where
     }
     stage_firmware(request, &resources.join("firmware"))?;
     stage_bundled_autoconfig(&request.runtime_kit, &resources.join("autoconfig"))?;
-    if request.splash {
-        copy_file(
-            &request.runtime_kit.join("branding/logo.png"),
-            &resources.join("menu-assets/splash-logo.png"),
-        )?;
-    }
     let licence = resolved
         .map(ExportCore::licence_relative)
         .unwrap_or_else(|| Path::new("licenses").join(&selected_core.license_file));

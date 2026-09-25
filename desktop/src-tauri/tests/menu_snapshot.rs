@@ -98,7 +98,8 @@ fn copy_tree(from: &Path, to: &Path) {
     }
 }
 
-/// What a kit contains for the menu: the actual designs and controller artwork.
+/// What a kit contains for the menu: the actual designs, controller artwork
+/// and the splash logo.
 fn menu_kit(root: &Path) -> PathBuf {
     let kit = root.join("runtime-kit");
     copy_tree(
@@ -113,11 +114,15 @@ fn menu_kit(root: &Path) -> PathBuf {
         &rominabox_desktop::repo::at("desktop/assets/controllers"),
         &kit.join("menu-assets"),
     );
+    copy_tree(
+        &rominabox_desktop::repo::at("desktop/assets/branding"),
+        &kit.join("branding"),
+    );
     kit
 }
 
-/// The menu kit plus the splash logo, and stand-ins for everything else in an
-/// export: a runtime that only returns, and cores of a few bytes.
+/// The menu kit plus stand-ins for everything else an
+/// export needs: a runtime that only returns, and cores that are a few bytes.
 #[cfg(target_os = "macos")]
 fn export_kit(root: &Path) -> PathBuf {
     let kit = menu_kit(root);
@@ -127,7 +132,6 @@ fn export_kit(root: &Path) -> PathBuf {
         "Frameworks",
         "licenses/native",
         "provenance/native-rmlui",
-        "branding",
     ] {
         fs::create_dir_all(kit.join(directory)).unwrap();
     }
@@ -162,11 +166,6 @@ fn export_kit(root: &Path) -> PathBuf {
     fs::write(
         kit.join("manifest.json"),
         r#"{"schema_version":1,"components":[{"name":"RetroArch","capabilities":{"achievements":true}},{"name":"RmlUi"}]}"#,
-    )
-    .unwrap();
-    fs::copy(
-        rominabox_desktop::repo::at("desktop/assets/branding/logo.png"),
-        kit.join("branding/logo.png"),
     )
     .unwrap();
     kit
@@ -255,21 +254,12 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
     request
 }
 
-/// The menu we stage in an export of `request`, composed without the export:
-/// the same request mapping and the same two writes as in `export_macos` for
-/// its `menu-assets`.
+/// The menu that an export of `request` puts in its `menu-assets`, which we
+/// stage with the export step alone, without the rest of the export.
 fn compose(request: &ExportRequest, destination: &Path) -> BTreeMap<String, String> {
-    fs::create_dir_all(destination).unwrap();
     // Every case's content is one cartridge or one disc sheet.
-    rominabox_desktop::menu::compose_menu(&rominabox_desktop::packaging::menu_request(request, 1))
-        .and_then(|menu| menu.write(destination))
-        .unwrap_or_else(|error| panic!("{}: composition failed: {error}", request.theme));
-    rominabox_desktop::controls::write_defaults_config(
-        &request.system,
-        &request.controls,
-        &destination.join("controls-defaults.cfg"),
-    )
-    .unwrap();
+    rominabox_desktop::packaging::stage_menu(request, 1, destination)
+        .unwrap_or_else(|error| panic!("{}: staging the menu failed: {error}", request.theme));
     let staged = staged_menu(destination);
     assert!(
         staged.contains_key("menu.rml") && staged.contains_key("controls-defaults.cfg"),

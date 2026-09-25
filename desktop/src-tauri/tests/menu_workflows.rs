@@ -1,31 +1,32 @@
 //! The menu workflow cases, replayed headlessly.
 //!
 //! Each case in `scripts/fixtures/menu-workflows.json` is a script in the
-//! menu script grammar of the player, and the export to run it in. The
-//! baseline of a case is the checkpoints and menu files we recorded from a
-//! launched player, one launch per case. Here we compose the menu of the
-//! export with the mapping of the export (`packaging::menu_request`), and run
-//! the script through the script driver and report code of the fork in the
-//! menu C++, with the fake RetroArch host and a fake clock
-//! (`menu_workflow_driver`, built in the `workflows` scope and found through
-//! `ROMINABOX_WORKFLOW_DRIVER`). No window, no GL, no sound. We run every
+//! menu script grammar of the player, and the export it runs in. The baseline
+//! of a case is the checkpoints and files that the launched player wrote when
+//! we ran the case, one launch each. Here we compose the menu of the export
+//! with the export staging (`packaging::stage_menu`), and run the script
+//! through the script driver and report code of the fork in the menu C++,
+//! with the fake RetroArch host and a fake clock (`menu_workflow_driver`,
+//! which we build in the `workflows` tests and name in
+//! `ROMINABOX_WORKFLOW_DRIVER`). We use no window, GL or sound, and run every
 //! case in one process.
 //!
 //! We compare every checkpoint and every file with the baseline, except what
-//! the `headless` section of the table lists as beyond the fake host, with
-//! the reason. We fail a declared case that did not run, a script that did
-//! not reach its end, a missing or extra checkpoint, an id in the baseline
-//! that is not in the composed document, a baseline entry that no case
-//! declares, and an open menu with nothing focused unless the case allows it.
+//! the `headless` section of the table lists as unknown to the fake host,
+//! with the reason. No case can pass without testing anything: a declared
+//! case that did not run, a script that did not reach its end, a missing or
+//! extra checkpoint, an id in the baseline that the composed document does
+//! not have, a baseline entry that no case declares, or an open menu with
+//! nothing focused where the case does not allow it, all fail.
 //!
-//! With `ROMINABOX_WORKFLOW_OBSERVED=<file>` we write the results of every
-//! case to a file in the baseline format. With
+//! With `ROMINABOX_WORKFLOW_OBSERVED=<file>` we write what we observed in
+//! every case, in the format of the baseline. With
 //! `ROMINABOX_WORKFLOW_RECORD=<key>,<key>` we replace the baseline entries of
-//! those cases with their results.
+//! those cases with what we observed. Name each one, and why, in the commit.
 
 mod support;
 
-use rominabox_desktop::{controls, menu, packaging, player_settings, repo, shaders, themes};
+use rominabox_desktop::{packaging, player_settings, repo, shaders, themes};
 use serde_json::{json, Map, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -192,20 +193,8 @@ fn compose(kit: &Path, table: &Value, export: &Value, to: &Path) -> packaging::E
     let request: packaging::ExportRequest = serde_json::from_value(request)
         .unwrap_or_else(|error| panic!("{export}: not an export request: {error}"));
     let discs = table["game"]["discs"].as_u64().expect("game.discs") as usize;
-    menu::compose_menu(&packaging::menu_request(&request, discs))
-        .and_then(|menu| menu.write(to))
-        .unwrap_or_else(|error| panic!("{export}: composition failed: {error}"));
-    // What we stage beside the composition in export_macos: the control
-    // defaults, and the logo, which we need to draw the splash overlay.
-    controls::write_defaults_config(
-        &request.system,
-        &request.controls,
-        &to.join("controls-defaults.cfg"),
-    )
-    .unwrap_or_else(|error| panic!("{export}: {error}"));
-    if request.splash {
-        fs::copy(kit.join("branding/logo.png"), to.join("splash-logo.png")).unwrap();
-    }
+    packaging::stage_menu(&request, discs, to)
+        .unwrap_or_else(|error| panic!("{export}: staging the menu failed: {error}"));
     request
 }
 
@@ -535,7 +524,6 @@ fn every_workflow_case_reports_what_the_launched_player_recorded() {
     let keep = std::env::var_os("ROMINABOX_WORKFLOW_KEEP").map(PathBuf::from);
     let root = keep.unwrap_or_else(|| scratch.to_path_buf());
     let kit = support::kit(&root);
-    support::copy_tree(&repo::at("desktop/assets/branding"), &kit.join("branding"));
     let end = strings(&table["end"]);
     let frame = &table["frame"];
     let staged_at = table["menuAssets"].as_str().expect("menuAssets");
