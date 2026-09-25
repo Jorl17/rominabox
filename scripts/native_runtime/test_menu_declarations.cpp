@@ -113,6 +113,77 @@ int test_menu_declarations()
    check(std::strcmp(profile, "megadrive") == 0 && profile_present,
          "a truncated override keeps the profile but still repaints the picker");
    config_file_free(config);
+
+   /* Lists and ids longer than any buffer a line could be read into: a long
+    * shader list must not read as no shaders at all, and a long list of one
+    * pad's controls must not read as every control belonging to every pad. */
+   {
+      values.clear();
+      std::string shader_ids;
+      std::vector<std::string> shader_names;
+      for (int index = 0; index < RIB_SHADER_MAX; ++index)
+      {
+         const std::string id = "a-shader-whose-id-is-longer-than-any-id-buffer-the-menu-had-number-"
+               + std::to_string(index);
+         shader_names.push_back(id);
+         shader_ids += (index ? " " : "") + id;
+         values["shader_preset_" + id] = "shaders/" + id + "/" + id + ".glslp";
+      }
+      values["shader_ids"] = shader_ids;
+      rib_shader_catalog shaders{};
+      rib_load_shaders("fixture", &shaders);
+      check(shader_ids.size() > 1024 && shaders.count == RIB_SHADER_MAX,
+            "a long list of shaders is read whole");
+      check(shaders.count > 0 && std::string(shaders.entries[0].id) == shader_names[0]
+               && std::string(shaders.entries[0].preset) == values["shader_preset_" + shader_names[0]],
+            "a long shader id is kept whole, with its preset");
+   }
+   {
+      values.clear();
+      const std::string long_control = "a_control_whose_id_is_longer_than_thirty_two";
+      values["controls_profile"] = "pad";
+      values["rib_label_up"] = "UP";
+      values["rib_label_x"] = "X";
+      values["rib_label_" + long_control] = "LONG";
+      values["rib_group_" + long_control] = "a_stick_group_whose_name_is_longer_than_thirty_two";
+      std::string belonging = "up " + long_control;
+      for (int index = 0; index < 100; ++index)
+         belonging += " a_control_only_the_other_pads_have_" + std::to_string(index);
+      values["controls_variant_controls_pad"] = belonging;
+      std::string devices;
+      std::vector<std::string> device_ids;
+      for (int index = 0; index < RIB_DEVICE_MAX; ++index)
+      {
+         const std::string id = "a-controller-whose-id-is-longer-than-any-id-buffer-the-menu-had-"
+               + std::to_string(index);
+         device_ids.push_back(id);
+         devices += (index ? " " : "") + id;
+         values["controls_variant_name_" + id] = "Controller " + std::to_string(index);
+      }
+      values["controls_variants"] = devices;
+      rib_controls_catalog pad{};
+      char named[32] = "";
+      bool present = false;
+      config_file_t *defaults = rib_open_controls("fixture", true, named, &pad, &present,
+            [](const char *, unsigned *index) { *index = 0; return true; });
+      bool up = false, other = false, long_one = false, long_group = false;
+      for (int index = 0; index < pad.count; ++index)
+      {
+         const std::string id(pad.entries[index].id);
+         up = up || id == "up";
+         other = other || id == "x";
+         long_one = long_one || id == long_control;
+         long_group = long_group || std::string(pad.entries[index].group)
+               == values["rib_group_" + long_control];
+      }
+      check(belonging.size() > 1024 && up && long_one && !other,
+            "a long list of one pad's controls is read whole: its own controls, and not another pad's");
+      check(long_group, "a long stick group name is kept whole");
+      check(devices.size() > 512 && pad.device_count == RIB_DEVICE_MAX
+               && std::string(pad.devices[0].id) == device_ids[0],
+            "a long list of controllers with long ids is read whole");
+      config_file_free(defaults);
+   }
    if (!failures) std::puts("declaration load and existing field limits pass");
    return failures ? 1 : 0;
 }
