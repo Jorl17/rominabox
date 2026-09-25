@@ -103,7 +103,7 @@
         {"name": "binds-c", "script": ["options", "controls", "hover:control-a", "wait-ms:1400", "report:popup"]},
         {"name": "binds-up", "script": ["options", "controls", "hover:control-up", "wait-ms:1400", "report:popup"]},
         {"name": "binds-start", "script": ["options", "controls", "hover:control-start", "wait-ms:1400", "report:popup"]},
-        {"name": "picker-key-fallthrough", "script": ["options", "controls", "controls-device-current", "report:picker", "key:down", "report:control", "key:ok", "report:capturing", "key:cancel", "report:cancelled"]},
+        {"name": "picker-keys", "script": ["options", "controls", "controls-device-current", "report:picker", "key:down", "report:control", "key:ok", "report:capturing", "key:cancel", "report:cancelled"]},
         {"name": "capture-cancel", "script": ["options", "controls", "control-a", "report:capturing", "key:cancel", "report:cancelled"]},
         {"name": "capture-timeout", "script": ["options", "controls", "control-a", "report:capturing", "wait-ms:10500", "report:timed-out"]},
         {"name": "volume-inputs", "script": ["options", "report:before", "key:left", "report:key", "volume-up", "report:arrow", "volume-level@0.375", "report:fraction"]},
