@@ -255,9 +255,9 @@ fn pager(screen: &str, page_count: usize) -> String {
     format!("<div id=\"{screen}-pager\" class=\"list-pager\"{hidden}><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">1/{page_count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">&gt;</button></div>")
 }
 
-/// What we show in a live row while its picture is loading or has failed to
-/// load: nine cells arranged in the design, and drawn when we mark the row
-/// `badge-loading` or `badge-failed` in the player. Hidden otherwise.
+/// What we show in a live row while its picture loads: nine cells, laid out
+/// as set in the design, which we show while the row has the class
+/// `badge-loading` and hide otherwise.
 const WAITING: &str = concat!(
     "<div class=\"list-row-wait\"><div class=\"list-row-wait-cells\">",
     "<div></div><div></div><div></div><div></div><div></div>",
