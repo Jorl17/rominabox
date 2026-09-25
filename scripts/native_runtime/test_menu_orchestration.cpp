@@ -20,6 +20,7 @@
 #include <cstring>
 #include <string>
 #include <fstream>
+#include <functional>
 #include <vector>
 
 
@@ -777,6 +778,48 @@ void volume_is_heard_at_its_level(const char *native_assets)
    }
 }
 
+/* While nobody touches an open menu, we build no new geometry. RmlUi builds
+ * geometry only for what a change makes it lay out or draw again. We add a
+ * save state without telling the menu, which never happens in the player
+ * (we announce a save when it finishes, and look again when the menu opens),
+ * to show whether we keep requesting the slot files. */
+void an_idle_menu_builds_nothing(const char *native_assets)
+{
+   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   host.slot_occupied = false;
+   host.pointer = {};
+   host.clock_us = 1000000;
+   void *menu = open_menu();
+   if (!menu) return;
+   const auto idle = [&](const char *where, const std::function<void()>& meanwhile) {
+      for (int settle = 0; settle < 3; ++settle)
+         frame(menu);
+      const unsigned before = view.document.geometry_compiled();
+      meanwhile();
+      for (int count = 0; count < 20; ++count)
+         frame(menu);
+      const unsigned built = view.document.geometry_compiled() - before;
+      char message[256];
+      std::snprintf(message, sizeof(message),
+            "%s: 20 frames nobody touched built %u pieces of geometry", where, built);
+      check(built == 0, message);
+   };
+   idle("pause", [] {});
+   idle("pause, while a state file appears unannounced", [] { host.slot_occupied = true; });
+   check(!inspect.has_class("slot-1", "occupied"),
+         "a menu nobody touches does not keep looking at the slots' files");
+   rib_menu_toggle(menu, false);
+   rib_menu_toggle(menu, true);
+   frame(menu);
+   check(inspect.has_class("slot-1", "occupied"), "opening the menu looks at the slots");
+   click_and_frame(menu, "options");
+   idle("options, with the volume slider", [] {});
+   click_and_frame(menu, "controls");
+   idle("controls", [] {});
+   rib_menu_destroy(menu);
+   host.slot_occupied = false;
+}
+
 /* A move that fails at once, for example onto a file open in another program. */
 int failing_rename(const char *, const char *) { return -1; }
 
@@ -1031,6 +1074,7 @@ int main(int argc, char **argv)
       rib_menu_destroy(menu);
    }
 
+   fixes::an_idle_menu_builds_nothing(argv[1]);
    fixes::repeated_saves_replace_the_file(argv[2]);
    fixes::background_play_is_the_players(argv[1], argv[2]);
    fixes::volume_is_heard_at_its_level(argv[1]);
