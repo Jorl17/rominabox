@@ -208,7 +208,6 @@ def main() -> int:
     if not os.environ.get("ROMINABOX_GAME_BUNDLE_PREFIX", "").startswith("app.rominabox.game.wt-"):
         raise SystemExit("load scripts/worktree.py env before running the generated fixture")
     player = shots.built_player()  # validates build-info against this fork's HEAD
-    assert player is not None
     dirty = subprocess.check_output(["git", "-C", str(ROOT / "vendor/retroarch"),
                                      "status", "--porcelain", "--untracked-files=no"], text=True)
     if dirty:

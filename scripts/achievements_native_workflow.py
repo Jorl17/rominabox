@@ -258,7 +258,7 @@ def main() -> None:
     if build_info.get("testOnly") is not True:
         parser.error("the selected build is not marked testOnly")
     player = shots.built_player()
-    if not player or TEST_MARKER not in player.read_bytes():
+    if TEST_MARKER not in player.read_bytes():
         parser.error("ROMINABOX_TEST_BUILD must name the exact test-guarded RetroArch build")
 
     output = args.output.resolve()

@@ -373,14 +373,28 @@ def resign_replaced_player(app: Path, entitlements: Path) -> None:
     )
 
 
-def built_player() -> Path | None:
-    """The most recent player built in this checkout, if there is one.
+def _runs_scripts(build: Path) -> bool:
+    info = build / "build-info.json"
+    return info.is_file() and json.loads(info.read_text()).get("capabilities", {}).get(
+        "menuScript"
+    ) is True
+
+
+def built_player() -> Path:
+    """The player for a launched test: one built in this checkout with the
+    script driver of the menu.
 
     A shot must show the fork as it is now, not as it was when we froze the
     kit, and after a change to the player we build it in this checkout. Each
     checkout has a separate build directory, so in a worktree where we built
-    the player, the shots show that player.
+    the player, the shots show that player. We drive the menu with a script
+    in every launched test, and only a test build has the driver, so we never
+    fall back to the player in the kit, which is the one we ship in games.
     """
+    how = (
+        "build one with ROMINABOX_MENU_SCRIPT_BUILD=1 sh "
+        "scripts/native_runtime/build-retroarch-rmlui-macos.sh <absolute dir>"
+    )
     selected = os.environ.get("ROMINABOX_TEST_BUILD")
     if selected:
         build = Path(selected).resolve()
@@ -391,15 +405,23 @@ def built_player() -> Path | None:
         ).strip()
         if info.get("retroarchCommit") != revision:
             raise SystemExit(f"{build} was not built from the current fork commit {revision}")
+        if not _runs_scripts(build):
+            raise SystemExit(f"{build} has no menu script driver; {how}")
         player = build / "retroarch/retroarch"
         if not player.is_file():
             raise SystemExit(f"the selected build contains no player: {player}")
         return player
     builds = sorted(
-        (ROOT / "work").glob("fork-build-*/retroarch/retroarch"),
+        (
+            player
+            for player in (ROOT / "work").glob("fork-build-*/retroarch/retroarch")
+            if _runs_scripts(player.parent.parent)
+        ),
         key=lambda entry: entry.stat().st_mtime,
     )
-    return builds[-1] if builds else None
+    if not builds:
+        raise SystemExit(f"no player that runs menu scripts in work/fork-build-*; {how}")
+    return builds[-1]
 
 
 def _build_a_game(
@@ -445,10 +467,8 @@ def _build_a_game(
                 shutil.copyfile(document, staged_design / document.name)
                 if package_name == "native":
                     shutil.copyfile(document, kit / "menu-assets" / document.name)
-    player = built_player()
-    if player:
-        shutil.copyfile(player, kit / "bin/retroarch")
-        (kit / "bin/retroarch").chmod(0o755)
+    shutil.copyfile(built_player(), kit / "bin/retroarch")
+    (kit / "bin/retroarch").chmod(0o755)
 
     out = run_dir / "exported"
     out.mkdir(parents=True)

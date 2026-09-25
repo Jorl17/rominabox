@@ -39,16 +39,9 @@ def require_disk(floor: float) -> None:
 
 
 def launched_player() -> Path:
-    """Return the binary for the quit tests.
-
-    menu_shots.built_player contains the path of the checkout's build. With
-    no fresh build, we keep in the export the retroarch copied from the
-    runtime kit, which is the player in a packaged game.
-    """
-    found = menu_shots.built_player()
-    if found is not None:
-        return found
-    return menu_shots.KIT / "bin/retroarch"
+    """Return the binary for the quit tests: the checkout's test build, the only
+    player that can run the menu script of these tests."""
+    return menu_shots.built_player()
 
 
 def use_checkout_player(app: Path, workspace: Path) -> None:
@@ -57,11 +50,7 @@ def use_checkout_player(app: Path, workspace: Path) -> None:
         raise SystemExit(f"exported game has no player at {retroarch}")
     # For the pause row we edit launch.plan, and to sign again we need the
     # entitlements from the export. After a replacement there is nothing to read.
-    binary = menu_shots.built_player()
-    if binary is None:
-        menu_shots.capture_export_entitlements(app, workspace / "entitlements.plist")
-        return
-    install_player(app, binary, workspace)
+    install_player(app, menu_shots.built_player(), workspace)
 
 
 def install_player(app: Path, binary: Path, workspace: Path = EXPORT_DIR) -> None:
