@@ -125,6 +125,98 @@
         "achievements": "active",
         "rows": 8
       }
+    },
+    {
+      "name": "a switch's state in the design's words",
+      "steps": [
+        "options",
+        "background-play"
+      ],
+      "text": {
+        "*": [
+          {
+            "background-play-state": "OFF"
+          },
+          {
+            "background-play-state": "ON"
+          }
+        ],
+        "wording": [
+          {
+            "background-play-state": "NO"
+          },
+          {
+            "background-play-state": "YES"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the running filter's mark in the design's words",
+      "steps": [
+        "options",
+        "shaders"
+      ],
+      "text": {
+        "*": [
+          {
+            "none-state": "ON"
+          },
+          {
+            "none-state": "ON"
+          }
+        ],
+        "wording": [
+          {
+            "none-state": "LIT"
+          },
+          {
+            "none-state": "LIT"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the disc in the tray in the design's words",
+      "setup": {
+        "discs": 7
+      },
+      "steps": {
+        "native": [
+          "options",
+          "discs"
+        ],
+        "disc": [
+          "disc"
+        ],
+        "wording": [
+          "options",
+          "discs"
+        ]
+      },
+      "text": {
+        "native": [
+          {
+            "discs-0-state": "IN"
+          },
+          {
+            "discs-0-state": "IN"
+          }
+        ],
+        "disc": [
+          {
+            "discs-0-state": "IN"
+          }
+        ],
+        "wording": [
+          {
+            "discs-0-state": "HERE"
+          },
+          {
+            "discs-0-state": "HERE"
+          }
+        ]
+      }
     }
   ]
 }

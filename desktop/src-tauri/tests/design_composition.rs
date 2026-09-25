@@ -471,6 +471,49 @@ fn a_designs_words_reach_the_player_and_an_unknown_one_is_refused() {
     );
 }
 
+/// A design can also word the text that we write at composition, which is a
+/// player setting's name, the ends of a level, the state of a switch and the
+/// mark on the running filter. The words of a design appear in the composed
+/// menu and in design.cfg, where we keep them current in the player. Without
+/// them we use the English.
+#[test]
+fn a_designs_words_name_the_settings_and_mark_the_lists() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-design-setting-words");
+    let kit = support::kit_with_hypothetical(&root);
+    let entries = vec!["controls".to_string(), "shaders".to_string()];
+    let worded = support::compose(&kit, "wording", Some(&entries), 2, &root.join("wording"));
+    let native = support::compose(&kit, "native", Some(&entries), 2, &root.join("native"));
+    for (menu, words) in [
+        (
+            &worded,
+            ["LOUDNESS", "SOFT", "LOUD", "KEEP PLAYING", "NO", "LIT"],
+        ),
+        (
+            &native,
+            ["VOLUME", "LOW", "HIGH", "PLAY IN BACKGROUND", "OFF", "ON"],
+        ),
+    ] {
+        let [name, low, high, background, off, mark] = words;
+        for (what, text) in [
+            ("the volume's name", format!("class=\"volume-name\">{name}<")),
+            ("the volume's low end", format!("id=\"volume-low\" class=\"volume-end\">{low}<")),
+            ("the volume's high end", format!("id=\"volume-high\" class=\"volume-end\">{high}<")),
+            ("PLAY IN BACKGROUND's name", format!(">{background} <span")),
+            ("the switch's state", format!("id=\"background-play-state\" class=\"setting-state\">{off}<")),
+            ("the running filter's mark", format!("class=\"list-row-state\">{mark}<")),
+        ] {
+            assert!(menu.menu.contains(&text), "{what}: no {text} in\n{}", menu.menu);
+        }
+    }
+    for word in ["switch-on", "switch-off", "shader-mark", "disc-mark"] {
+        assert!(
+            worded.cfg.contains(&format!("word_{word} = ")),
+            "the player keeps {word} current, in the design's words: {}",
+            worded.cfg
+        );
+    }
+}
+
 /// The Pause heading comes from its `screens` entry, which we write in the
 /// player when Pause opens. When a design words `paused-heading`, the player
 /// sees that word there, or we refuse it at export, because a word we accept
