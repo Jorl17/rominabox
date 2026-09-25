@@ -11,7 +11,9 @@
 #slot-4 { top: 240dp; }
 #slot-5 { top: 320dp; }
 #slot-6 { top: 400dp; }
-#actions { left: 40dp; top: 70dp; width: 260dp; height: 480dp; }
+#actions { left: 40dp; top: 70dp; width: 260dp; display: block; height: 480dp; }
+/* This layout places each button itself, not in Native's row. */
+#actions button { position: absolute; }
 #actions #resume, #actions #save, #actions #load, #actions #options, #actions #controls, #actions #quit { left: 0; width: 254dp; }
 #actions #resume { top: 14dp; }
 #actions #save { top: 94dp; }

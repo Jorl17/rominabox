@@ -414,6 +414,21 @@ bool slot_marked(int slot, int unmarked)
          != inspect.property(plain.c_str(), "border-top-color");
 }
 
+/* The text of a button for a fact that the design placed in it. */
+std::string fact_in(const char *button, const char *fact)
+{
+   Rml::Element *element = view.document.root()->GetElementById(button);
+   Rml::Element *shown = element
+         ? element->QuerySelector(std::string("[data-fact=") + fact + "]") : nullptr;
+   return shown ? shown->GetInnerRML() : std::string();
+}
+
+bool buttons_name_slot(int slot)
+{
+   const std::string wanted = std::to_string(slot);
+   return fact_in("save", "chosen-slot") == wanted && fact_in("load", "chosen-slot") == wanted;
+}
+
 void chosen_slot_shows_on_save_and_load(const char *native_assets)
 {
    for (const char *design : {"native", "disc"})
@@ -429,6 +444,7 @@ void chosen_slot_shows_on_save_and_load(const char *native_assets)
 
       check(focused("resume") && !slot_marked(1, 6),
             say("the chosen slot is plain while CONTINUE has focus").c_str());
+      check(buttons_name_slot(1), say("SAVE and LOAD name the chosen slot").c_str());
       hover_and_frame(menu, "slot-5");
       check(focused("slot-5") && slot_marked(5, 6) && !slot_marked(1, 6),
             say("the pointer over a slot highlights that slot").c_str());
@@ -438,10 +454,12 @@ void chosen_slot_shows_on_save_and_load(const char *native_assets)
       hover_and_frame(menu, "save");
       check(slot_marked(1, 6) && !slot_marked(2, 6) && !slot_marked(5, 6),
             say("SAVE shows the chosen slot; passing over others did not choose them").c_str());
+      check(buttons_name_slot(1), say("passing over slots does not change what SAVE and LOAD name").c_str());
       click_and_frame(menu, "slot-3");
       hover_and_frame(menu, "save");
       check(slot_marked(3, 6) && !slot_marked(1, 6),
             say("a clicked slot is the one SAVE shows").c_str());
+      check(buttons_name_slot(3), say("SAVE and LOAD name a clicked slot").c_str());
       hover_and_frame(menu, "quit");
       check(!slot_marked(3, 6), say("leaving SAVE hides it again").c_str());
       click_and_frame(menu, "slot-1");
@@ -466,6 +484,7 @@ void chosen_slot_shows_on_save_and_load(const char *native_assets)
             chosen = std::atoi(at.c_str() + 5);
             on_slot = true;
          }
+         check(buttons_name_slot(chosen), say("SAVE and LOAD name a slot reached by key").c_str());
          const bool aiming = at == "save" || at == "load";
          slot_then_save = slot_then_save || (on_slot && aiming);
          const int unmarked = chosen == 6 ? 5 : 6;

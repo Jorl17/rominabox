@@ -3,7 +3,9 @@
  * 3dp gap. QUIT is alone on SAVE's row. We must choose between near ties in
  * the same way every time. Buttons are 48dp tall with their borders and are
  * 2dp below the slots, so no button touches the corner of a slot. */
-#actions { left: 56dp; top: 486dp; width: 840dp; height: 160dp; }
+#actions { left: 56dp; top: 486dp; width: 840dp; display: block; height: 160dp; }
+/* This layout places each button itself, not in Native's row. */
+#actions button { position: absolute; }
 #actions #resume { left: 0; top: 50dp; width: 200dp; }
 #actions #save { left: 300dp; top: 0; width: 160dp; }
 #actions #load { left: 300dp; top: 200dp; width: 160dp; }

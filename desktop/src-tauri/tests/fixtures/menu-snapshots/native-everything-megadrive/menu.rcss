@@ -43,23 +43,13 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .slot-image { width: 100%; height: 100%; }
 .slot.empty .slot-image { display: none; }
 .slot-state { height: 20dp; font-size: 14dp; color: #b4e6ff; padding-top: 2dp; }
-#actions { position: absolute; left: 56dp; top: 494dp; width: 840dp; height: 48dp; }
-#actions button { text-align: center; line-height: 42dp; position: absolute; height: 42dp; top: 0; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; }
+#actions { position: absolute; left: 56dp; top: 494dp; width: 840dp; height: 48dp; display: flex; column-gap: 16dp; }
+/* Each button is as wide as its label, and they share the rest of the row. */
+#actions button { flex: 1 1 auto; text-align: center; line-height: 42dp; height: 42dp; padding: 0 10dp; font-family: Silkscreen; font-size: 17dp; border-width: 3dp; white-space: nowrap; }
 #status { position: absolute; top: 547dp; width: 100%; text-align: center; font-size: 16dp; color: #fff13d; }
 #footer { position: absolute; left: 24dp; bottom: 10dp; width: 904dp; font-size: 16dp; color: #ffffff; }
 #version { position: absolute; right: 0; top: 0; }
 
-/* Continue / Save / Load / Options / Quit. */
-#resume { left: 0; width: 216dp; }
-#save { left: 240dp; width: 124dp; }
-#load { left: 388dp; width: 124dp; }
-#actions #controls, #actions #options { left: 536dp; width: 164dp; }
-#quit { left: 724dp; width: 112dp; }
-/* A game with no Options screen: Continue / Save / Load / Quit. */
-#actions.no-options #resume { width: 260dp; }
-#actions.no-options #save { left: 284dp; width: 168dp; }
-#actions.no-options #load { left: 476dp; width: 168dp; }
-#actions.no-options #quit { left: 668dp; width: 168dp; }
 #controller-scene { position: absolute; left: -4dp; top: 80dp; width: 960dp; height: 380dp; }
 #controller-image { position: absolute; left: 0; top: 0; width: 960dp; height: 380dp; }
 .control-leader { position: absolute; background-color: #b4e6ff; }
