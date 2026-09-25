@@ -231,6 +231,26 @@ pub fn boxes(document: &Path, (width, height): (u32, u32), ids: &[&str]) -> Vec<
         .collect()
 }
 
+/// The panel declared in `cfg` for the screen with the role `role`. Each
+/// design file lists its own panels.
+pub fn panel_with_role(cfg: &str, role: &str) -> String {
+    let value = |key: &str| {
+        cfg.lines()
+            .find_map(|line| line.strip_prefix(&format!("{key} = \"")))
+            .and_then(|rest| rest.strip_suffix('"'))
+            .map(str::to_owned)
+    };
+    let screen = cfg
+        .lines()
+        .find_map(|line| {
+            line.strip_prefix("screen_role_")
+                .and_then(|rest| rest.strip_suffix(&format!(" = \"{role}\"")))
+        })
+        .unwrap_or_else(|| panic!("design.cfg declares no {role} screen:\n{cfg}"));
+    value(&format!("screen_panel_{screen}"))
+        .unwrap_or_else(|| panic!("design.cfg declares no panel for {screen}:\n{cfg}"))
+}
+
 /// `menu` with one panel shown instead of Pause.
 pub fn showing(menu: &str, panel: &str) -> String {
     let hidden = format!("id=\"{panel}\" class=\"screen-panel\" style=\"display:none;\"");

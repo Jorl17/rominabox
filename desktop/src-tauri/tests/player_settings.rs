@@ -76,7 +76,8 @@ fn every_design_offers_every_player_setting() {
         let destination = root.join(&design);
         let composed = compose(&kit, &design, |_| {}, &destination);
         let document = destination.join("options.rml");
-        fs::write(&document, showing(&composed.menu, "options-panel")).unwrap();
+        let panel = support::panel_with_role(&composed.cfg, "options");
+        fs::write(&document, showing(&composed.menu, &panel)).unwrap();
         let controls: Vec<String> = settings.iter().map(PlayerSetting::control).collect();
         let ids: Vec<&str> = controls.iter().map(String::as_str).collect();
         for (control, laid_out) in ids.iter().zip(boxes(&document, (960, 600), &ids)) {
