@@ -10,7 +10,9 @@ preview could not be rendered." for every design, for example with this error:
 
 We render here and do not compare pictures. We check the appearance of a menu
 in the states tests. Here we check that we can draw in the builder the design
-that the author picked at all.
+that the author picked at all, and that the author's background picture
+appears behind the menu and nowhere else, and not over the running game,
+where we draw the overlays with the same document.
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 RENDERER = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
 DESIGNS = ROOT / "integrations/designs"
+ARTWORK = ROOT / "desktop/assets/controllers"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scratch  # noqa: E402
@@ -35,14 +38,17 @@ def palettes() -> list[str]:
     return [entry["id"] for entry in declared["palettes"]]
 
 
-def render(design: str, palette: str, into: Path, background: Path | None = None) -> str:
-    """Return an empty string when the drawing worked, otherwise the reason it failed."""
+def render(design: str, palette: str, into: Path, background: Path | None = None,
+           source: bool = False) -> str:
+    """Return an empty string when the drawing worked, otherwise the reason.
+
+    We draw from the kit, as the builder does, because a design missing from
+    the kit is the failure we check for here. With `source` we compose from
+    the repository's designs and shared parts instead, to check a change to
+    them that a kit staged before the change does not show."""
     request = {
-        # We read them from the kit, as in the builder, and not from
-        # the source tree. A design missing from the kit is the
-        # failure that we check for here.
-        "design": str(KIT / "designs" / design),
-        "assets": str(KIT / "menu-assets"),
+        "design": str((DESIGNS if source else KIT / "designs") / design),
+        "assets": str(ARTWORK if source else KIT / "menu-assets"),
         "renderer": str(RENDERER),
         "outputDir": str(into),
         "palette": palette,
@@ -83,13 +89,48 @@ def picture_share(image: Path) -> float:
     return sum(1 for pixel in pixels if pixel == PICTURE) / len(pixels)
 
 
-def background_problem(design: str, area: Path) -> str:
-    """Return an empty string when a game's background picture appears behind
-    this design's menu, and none appears for a game without one."""
+def background_picture(area: Path) -> Path:
+    """Return the author's picture, with every pixel in the colour that no palette uses."""
     from PIL import Image
 
     picture = area / "background-source.png"
-    Image.new("RGB", (64, 40), PICTURE).save(picture)
+    if not picture.is_file():
+        Image.new("RGB", (64, 40), PICTURE).save(picture)
+    return picture
+
+
+def overlay_problem(design: str, area: Path) -> str:
+    """Return an empty string when none of a game's background picture appears
+    while the game runs. In the player we draw the same document over the
+    game, with `overlay` on the body, for the splash, the notice and an
+    unlock, and the background belongs only to the menu, never to the game."""
+    into = area / f"{design}-overlay"
+    problem = render(design, palettes()[0], into, background_picture(area), source=True)
+    if problem:
+        return problem
+    menu = (into / "menu.rml").read_text()
+    body = '<body id="body">'
+    if menu.count(body) != 1:
+        return f"the composed menu has no single {body} to mark overlay"
+    running = into / "overlay.rml"
+    running.write_text(menu.replace(body, '<body id="body" class="overlay">'))
+    drawn = into / "overlay.png"
+    completed = subprocess.run(
+        [str(RENDERER), str(running), str(drawn), "960", "600"],
+        capture_output=True, text=True, timeout=180,
+    )
+    if completed.returncode != 0 or not drawn.is_file():
+        return f"the overlay did not draw: {completed.stderr.strip()}"
+    share = picture_share(drawn)
+    if share:
+        return f"{share:.1%} of the running game is covered by the menu's background picture"
+    return ""
+
+
+def background_problem(design: str, area: Path) -> str:
+    """Return an empty string when a game's background picture appears behind
+    this design's menu, and none appears for a game without one."""
+    picture = background_picture(area)
     shares = {}
     for label, background in (("with", picture), ("without", None)):
         into = area / f"{design}-background-{label}"
@@ -128,6 +169,12 @@ def main() -> int:
                 failures.append(f"{design} background")
             else:
                 print(f"  ok   {design} background")
+            problem = overlay_problem(design, area)
+            if problem:
+                print(f"  FAIL {design} over the game: {problem}", file=sys.stderr)
+                failures.append(f"{design} over the game")
+            else:
+                print(f"  ok   {design} over the game")
 
     if failures:
         print(
