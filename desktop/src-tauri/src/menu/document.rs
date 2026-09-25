@@ -172,58 +172,41 @@ pub(crate) fn button_bounds(document: &str, id: &str) -> Option<(usize, usize)> 
     None
 }
 
-/// One Options entry, made from the entry template of the design and placed
-/// at its position in the column. `label` is markup.
-fn entry_markup(
-    manifest: &Manifest,
-    button: &str,
-    label: &str,
-    index: usize,
-) -> Result<String, String> {
-    let top = (index * manifest.option_entry_step).to_string();
+/// One Options entry in the design's entry template. We place the entries
+/// with the design's stylesheet and write no positions. `label` is markup.
+fn entry_markup(manifest: &Manifest, button: &str, label: &str) -> Result<String, String> {
     let template_path = manifest.design.join("option-entry.rml");
     let template = if template_path.exists() {
         fs::read_to_string(&template_path)
             .map_err(|e| format!("Could not read {}: {e}", template_path.display()))?
     } else {
-        "<button class=\"menu-action option-entry\" id=\"BUTTON\" style=\"top: TOPdp;\">LABEL</button>"
+        "<button class=\"menu-action option-entry\" id=\"BUTTON\"><span class=\"option-label\">LABEL</span></button>"
             .to_string()
     };
     Ok(template
         .replace("BUTTON", button)
-        .replace("TOP", &top)
         .replace("LABEL", label))
 }
 
-fn entry_button(manifest: &Manifest, screen: &Screen, index: usize) -> Result<String, String> {
+/// A screen's Options entry.
+fn entry_button(manifest: &Manifest, screen: &Screen) -> Result<String, String> {
     let label = screen.option_label.clone().unwrap_or_default();
-    let mut button = entry_markup(
-        manifest,
-        &screen.button,
-        &crate::lists::rml_text(&label),
-        index,
-    )?;
+    let button = entry_markup(manifest, &screen.button, &crate::lists::rml_text(&label))?;
     // We get the count from the core after the game has loaded, so the entry
     // must be in the document already. It starts hidden. A display:none
     // button can still get the focus unless it is disabled too.
-    if screen.is_disc_list() {
-        button = button.replace(
-            "style=\"top: ",
-            "disabled=\"disabled\" style=\"display: none; top: ",
-        );
-    }
-    Ok(button)
+    Ok(if screen.is_disc_list() {
+        add_attributes(&button, &screen.button, "disabled=\"disabled\" style=\"display: none;\"")
+    } else {
+        button
+    })
 }
 
 /// When the design does not place a switch, we add it as one more Options
 /// entry, drawn like the others with its name and then its state. At run time
 /// we write the state into `<control>-state`, and we handle a press on any
 /// element with the class `switch`.
-fn switch_entry(
-    manifest: &Manifest,
-    setting: &PlayerSetting,
-    index: usize,
-) -> Result<String, String> {
+fn switch_entry(manifest: &Manifest, setting: &PlayerSetting) -> Result<String, String> {
     let control = setting.control();
     let label = format!(
         "{} <span id=\"{control}-state\" class=\"setting-state\">{}</span>",
@@ -231,7 +214,7 @@ fn switch_entry(
         crate::lists::rml_text(state_word(setting, setting.default)),
     );
     Ok(add_class(
-        &entry_markup(manifest, &control, &label, index)?,
+        &entry_markup(manifest, &control, &label)?,
         &control,
         "switch",
     ))
@@ -322,13 +305,13 @@ pub(crate) fn apply_options(
     }
 
     let mut entries = String::new();
-    for (index, entry) in included.iter().enumerate() {
+    for entry in &included {
         // We removed the pause-row button when we replaced the opener, so an id
         // still in the document is the design's version of the entry.
         if document.contains(&format!("id=\"{}\"", entry.button)) {
             continue;
         }
-        entries.push_str(&entry_button(manifest, entry, index)?);
+        entries.push_str(&entry_button(manifest, entry)?);
     }
 
     let panel_id = format!("id=\"{}\"", options.panel);
@@ -367,7 +350,6 @@ pub(crate) fn apply_options(
     }
     // After the screens, in the same column, the switches that the design
     // does not place with a marker in the panel.
-    let mut index = included.len();
     for setting in settings {
         if !matches!(setting.kind, Kind::Switch { .. })
             || document.contains(&setting_slot(setting))
@@ -375,8 +357,7 @@ pub(crate) fn apply_options(
         {
             continue;
         }
-        entries.push_str(&switch_entry(manifest, setting, index)?);
-        index += 1;
+        entries.push_str(&switch_entry(manifest, setting)?);
     }
     if document.contains("<!--OPTIONS-->") {
         document = document.replace("<!--OPTIONS-->", &entries);
@@ -600,9 +581,18 @@ pub(crate) fn link_parts(document: &str, names: &[String]) -> Result<String, Str
     Ok(linked)
 }
 
-/// Add `class` to the element with `id`, when the document has one. How to
-/// draw a state is up to the stylesheet of the design, and here we only say
-/// which state applies.
+/// Add `class` to the element with `id`, when the document contains one. We
+/// only mark the state here. How it looks is up to the design stylesheet.
+/// Write `attributes` into the element with `id`, just after the id.
+pub(crate) fn add_attributes(document: &str, id: &str, attributes: &str) -> String {
+    let marker = format!("id=\"{id}\"");
+    let mut out = document.to_string();
+    if let Some(at) = document.find(&marker) {
+        out.insert_str(at + marker.len(), &format!(" {attributes}"));
+    }
+    out
+}
+
 pub(crate) fn add_class(document: &str, id: &str, class: &str) -> String {
     let marker = format!("id=\"{id}\"");
     let Some(at) = document.find(&marker) else {

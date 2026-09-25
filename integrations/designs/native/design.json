@@ -16,9 +16,6 @@
     }
   ],
   "metrics": {
-    "options": {
-      "entryStep": 74
-    },
     "scene": {
       "width": 960,
       "height": 380

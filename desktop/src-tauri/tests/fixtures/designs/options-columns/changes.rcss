@@ -1,5 +1,5 @@
 /* Two columns of entries, filled left to right, with CONTROLS and SHADERS
- * on the first row and ACHIEVEMENTS below CONTROLS. The generated `top` has no
- * effect on an entry that is not positioned. */
-#options-entries { position: absolute; left: 56dp; top: 190dp; width: 840dp; height: 240dp; }
-#options-entries .option-entry { position: static; float: left; width: 390dp; height: 64dp; margin: 0 20dp 16dp 0; }
+ * on the first row and ACHIEVEMENTS below CONTROLS. The entries float in
+ * this layout, so here an ordinary block replaces the Native column. */
+#options-entries { position: absolute; left: 56dp; top: 190dp; width: 840dp; height: 240dp; display: block; }
+#options-entries .option-entry { position: static; display: block; float: left; width: 390dp; height: 64dp; line-height: 58dp; margin: 0 20dp 16dp 0; }

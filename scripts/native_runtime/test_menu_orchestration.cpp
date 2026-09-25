@@ -293,9 +293,8 @@ std::string stage_disc_list(const char *native_assets, const char *data)
          "<div id=\"discs-status\" class=\"list-status\"></div></div>";
    std::string menu = read_file(assets / "menu.rml");
    bool staged = replace_once(menu, "<div id=\"footer\">", panel + "<div id=\"footer\">")
-         && replace_once(menu, "<button class=\"menu-action options-back\"",
-               "<button class=\"menu-action option-entry\" id=\"discs\" disabled=\"disabled\" style=\"display: none; top: 120dp;\">DISC</button>"
-               "<button class=\"menu-action options-back\"");
+         && replace_once(menu, "<div id=\"options-entries\">",
+               "<div id=\"options-entries\"><button class=\"menu-action option-entry\" id=\"discs\" disabled=\"disabled\" style=\"display: none;\"><span class=\"option-label\">DISC</span></button>");
    std::string config = read_file(assets / "design.cfg");
    staged = staged && replace_once(config, "screens = \"pause options controls fixture\"",
                "screens = \"pause options controls fixture discs\"")

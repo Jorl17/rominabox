@@ -316,22 +316,6 @@
           "disc-back",
           "disc-back"
         ]
-      },
-      "red": {
-        "native": {
-          "bug": "Native's Options column holds four entries",
-          "reason": "with every screen entry the fifth, PLAY IN BACKGROUND, is drawn over BACK, so Down from it finds nothing below",
-          "now": {
-            "focused": [
-              "volume-level",
-              "controls",
-              "shaders",
-              "achievements",
-              "background-play",
-              "background-play"
-            ]
-          }
-        }
       }
     }
   ]

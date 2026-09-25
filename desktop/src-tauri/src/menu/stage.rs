@@ -531,7 +531,7 @@ mod tests {
         copy(&crate::repo::at("integrations/parts"), &root.join("parts"));
         std::fs::write(
             designs.join("disc/option-entry.rml"),
-            "<button id=\"BUTTON\" class=\"menu-action option-entry list-row\" style=\"top: TOPdp;\">LABEL</button>",
+            "<button id=\"BUTTON\" class=\"menu-action option-entry list-row\">LABEL</button>",
         )
         .unwrap();
         let templated = compose(MenuRequest {
@@ -544,7 +544,7 @@ mod tests {
         });
         let templated = templated.text("menu.rml").unwrap();
         assert!(
-            templated.contains("<button id=\"shaders\" class=\"menu-action option-entry list-row\" style=\"top: 0dp;\">FILTERS</button>"),
+            templated.contains("<button id=\"shaders\" class=\"menu-action option-entry list-row\">FILTERS</button>"),
             "the design's entry template is what gets filled"
         );
     }
@@ -597,10 +597,10 @@ mod tests {
         let button = &staged[bounds.0..bounds.1];
         assert!(button.contains("display: none"), "{button}");
         assert!(button.contains("disabled"), "{button}");
+        // We place the entries with the design's stylesheet and write no
+        // position, so a hidden entry leaves no gap.
         let controls = button_bounds(staged, "controls").expect("controls");
-        assert!(staged[controls.0..controls.1].contains("top: 0dp"));
-        let step = Manifest::load(&design("native")).unwrap().option_entry_step;
-        assert!(button.contains(&format!("top: {step}dp")), "{button}");
+        assert!(!staged[controls.0..controls.1].contains("top:"));
         let actions_at = staged.find("id=\"actions\"").expect("pause row");
         let panel_at = staged.find("id=\"options-panel\"").expect("options");
         assert!(!staged[actions_at..panel_at].contains("id=\"discs\""));
