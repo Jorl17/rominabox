@@ -4,6 +4,7 @@
  * In the last case we run several processes against one folder at once and
  * then check that nothing was lost and nothing was left half-written. */
 #include "accounts.h"
+#include "../launcher/accounts_folder.h"
 
 #include <assert.h>
 #include <dirent.h>
@@ -247,6 +248,32 @@ static void a_damaged_session_is_not_listed(void)
    assert(listed(accounts, 4) == 1);
 }
 
+/* The launcher part: we make only the folder with exactly the name from the
+ * export, private inside the application-data folder. */
+static void the_launcher_makes_exactly_the_named_folder(void)
+{
+   char app_data[1200], out[1400], expected[1400];
+   reset();
+   snprintf(app_data, sizeof app_data, "%s/Application Support", folder);
+   assert(mkdir(app_data, 0755) == 0);
+   assert(rominabox_accounts_folder(app_data, "ROM-in-a-Box Accounts", out, sizeof out) == 0);
+   snprintf(expected, sizeof expected, "%s/ROM-in-a-Box Accounts", app_data);
+   assert(!strcmp(out, expected));
+   {
+      struct stat info;
+      assert(stat(out, &info) == 0 && S_ISDIR(info.st_mode) && (info.st_mode & 0777) == 0700);
+   }
+   /* At the second launch the folder is already there. */
+   assert(rominabox_accounts_folder(app_data, "ROM-in-a-Box Accounts", out, sizeof out) == 0);
+   assert(rominabox_accounts_folder(app_data, "../escape", out, sizeof out) != 0);
+   assert(rominabox_accounts_folder(app_data, "a/b", out, sizeof out) != 0);
+   assert(rominabox_accounts_folder(app_data, ".hidden", out, sizeof out) != 0);
+   assert(rominabox_accounts_folder(app_data, "", out, sizeof out) != 0);
+   assert(rominabox_accounts_folder("/nonexistent/app-data", "ROM-in-a-Box Accounts", out, sizeof out) != 0);
+   assert(rominabox_accounts_folder(app_data, "ROM-in-a-Box Accounts", out, 8) != 0);
+   assert(entries(app_data) == 1);
+}
+
 /* ---- games at the same time ---------------------------------------------- */
 
 #define WRITERS 8
@@ -359,9 +386,10 @@ int main(int argc, char **argv)
    forget_removes_it_for_every_game();
    a_name_never_becomes_a_path();
    a_damaged_session_is_not_listed();
+   the_launcher_makes_exactly_the_named_folder();
    games_at_the_same_time_lose_nothing();
 
    remove_run_folder();
-   puts("accounts store: 10 cases passed");
+   puts("accounts store: 11 cases passed");
    return 0;
 }

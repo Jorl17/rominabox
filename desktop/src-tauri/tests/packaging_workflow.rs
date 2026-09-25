@@ -496,6 +496,7 @@ fn achievements_require_a_capable_artifact_before_export_staging() {
     assert!(!resources.join("menu-assets/menu.rml").exists());
     let plan = fs::read_to_string(resources.join("launch.plan")).unwrap();
     assert!(plan.contains("achievements\t0\n"));
+    assert!(!plan.contains("accounts_dir"), "a game without achievements names no accounts folder");
     let signed = Command::new("codesign")
         .args(["-d", "--entitlements", "-"])
         .arg(&result.app_path)
@@ -503,6 +504,8 @@ fn achievements_require_a_capable_artifact_before_export_staging() {
         .unwrap();
     let entitlements = String::from_utf8_lossy(&signed.stdout);
     assert!(!entitlements.contains("com.apple.security.network.client"));
+    assert!(!entitlements.contains("read-write"));
+    assert!(!entitlements.contains("Accounts"));
 }
 
 #[test]
@@ -560,5 +563,17 @@ fn included_achievements_export_an_account_screen_and_network_permission() {
         .output()
         .unwrap();
     assert!(signed.status.success());
-    assert!(String::from_utf8_lossy(&signed.stdout).contains("com.apple.security.network.client"));
+    let entitlements = String::from_utf8_lossy(&signed.stdout);
+    assert!(entitlements.contains("com.apple.security.network.client"));
+    // The only folder we open in the sandbox is the launcher's folder.
+    let folder = plan
+        .lines()
+        .find_map(|line| line.strip_prefix("accounts_dir\t"))
+        .expect("a game with achievements names its accounts folder");
+    assert!(folder.starts_with("ROM-in-a-Box Accounts"), "{folder}");
+    assert!(
+        entitlements.contains(&format!("/Library/Application Support/{folder}/")),
+        "{entitlements}"
+    );
+    assert_eq!(entitlements.matches("read-write").count(), 1, "{entitlements}");
 }

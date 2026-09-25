@@ -229,7 +229,7 @@ def run() -> list[str]:
 
 # The modules we will share with a Windows launcher. We cannot run them on
 # Windows here, but we compile them for it, to catch any POSIX-only call.
-PORTABLE = ("shipped_settings.c", "shipped_files.c", "portable_fs.c")
+PORTABLE = ("shipped_settings.c", "shipped_files.c", "portable_fs.c", "accounts_folder.c")
 
 
 def windows_build(directory: Path) -> list[str]:

@@ -565,7 +565,7 @@ def main() -> int:
     modified = support_modifications(support_before, support_after)
     if created:
         print(
-            "\nA test run created paths under ~/Library/Application Support/ROM-in-a-Box:"
+            "\nA test run created paths under the player's ROM-in-a-Box folders in ~/Library/Application Support:"
         )
         for path in created[:20]:
             print(f"  {path}")
@@ -573,7 +573,7 @@ def main() -> int:
             print(f"  … and {len(created) - 20} more")
     if modified:
         print(
-            "\nA test run modified paths under ~/Library/Application Support/ROM-in-a-Box:"
+            "\nA test run modified paths under the player's ROM-in-a-Box folders in ~/Library/Application Support:"
         )
         for path in modified[:20]:
             print(f"  {path}")

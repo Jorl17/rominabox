@@ -68,6 +68,9 @@ BASE_BUNDLE = "com.rominabox.desktop"
 LOCAL_CONFIG = "worktree.local.json"
 DATA_HOME = Path.home() / "Library/Application Support"
 CANONICAL_DATA = DATA_HOME / "ROM-in-a-Box"
+# The shared QUICK SIGN IN folder. For a namespaced export we add "." and the
+# bundle prefix to this name (desktop/src-tauri/src/achievements.rs).
+ACCOUNTS_NAME = "ROM-in-a-Box Accounts"
 
 # We allocate ports one offset at a time and store the offset in git's
 # per-worktree metadata, never in a committed file, because it is local state
@@ -420,6 +423,11 @@ def remove(suffix: str, keep_data: bool) -> int:
         if data_root.exists() and data_root != CANONICAL_DATA:
             shutil.rmtree(data_root)
             print(f"removed {data_root}")
+        prefix = local.get("gameBundlePrefix", "")
+        accounts = DATA_HOME / f"{ACCOUNTS_NAME}.{prefix}"
+        if prefix and "/" not in prefix and accounts.is_dir() and not accounts.is_symlink():
+            shutil.rmtree(accounts)
+            print(f"removed {accounts}")
     kept = keep_fork_commits(path, entry.get("branch"))
     # A shared kit is a symlink into the canonical checkout. When we remove the
     # worktree we must unlink it and never follow it.

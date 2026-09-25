@@ -1,4 +1,5 @@
-"""Paths that a run added or rewrote in the account's ROM-in-a-Box directory.
+"""Paths that a run added or rewrote in the account's ROM-in-a-Box folders:
+the data of the games and the accounts that QUICK SIGN IN shares.
 
 A shot run without the sandbox writes a game folder here, next to the
 player's folders. We compare this tree before and after the tests. On a
@@ -10,23 +11,31 @@ from __future__ import annotations
 
 from pathlib import Path
 
-REAL_SUPPORT = Path.home() / "Library/Application Support/ROM-in-a-Box"
+APPLICATION_SUPPORT = Path.home() / "Library/Application Support"
+REAL_SUPPORT = APPLICATION_SUPPORT / "ROM-in-a-Box"
+# Where installed exports keep the QUICK SIGN IN accounts. A test must never
+# reach it, and the exports of a worktree use a separate namespaced folder.
+REAL_ACCOUNTS = APPLICATION_SUPPORT / "ROM-in-a-Box Accounts"
+WATCHED = (REAL_SUPPORT, REAL_ACCOUNTS)
 
 # A file is (size, mtime_ns). A directory is None. Only a file can be rewritten.
 Stamp = tuple[int, int] | None
 
 
 def snapshot() -> dict[str, Stamp]:
-    if not REAL_SUPPORT.is_dir():
-        return {}
+    """Every path in the watched folders, relative to Application Support."""
     found: dict[str, Stamp] = {}
-    for path in REAL_SUPPORT.rglob("*"):
-        relative = str(path.relative_to(REAL_SUPPORT))
-        if path.is_file():
-            info = path.stat()
-            found[relative] = (info.st_size, info.st_mtime_ns)
-        else:
-            found[relative] = None
+    for root in WATCHED:
+        if not root.is_dir():
+            continue
+        found[root.name] = None
+        for path in root.rglob("*"):
+            relative = str(path.relative_to(APPLICATION_SUPPORT))
+            if path.is_file():
+                info = path.stat()
+                found[relative] = (info.st_size, info.st_mtime_ns)
+            else:
+                found[relative] = None
     return found
 
 

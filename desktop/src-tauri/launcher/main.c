@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "accounts_folder.h"
 #include "shipped_files.h"
 #include "shipped_settings.h"
 
@@ -579,6 +580,8 @@ static void prepare(void) {
     field(plan, "advanced", advanced, sizeof advanced);
     char achievements[8] = "0";
     field(plan, "achievements", achievements, sizeof achievements);
+    char accounts_name[128] = "";
+    field(plan, "accounts_dir", accounts_name, sizeof accounts_name);
     if (!field(plan, "volume_file", volume_file, sizeof volume_file))
         die("the launch plan has no volume file");
     field(plan, "shader_initial", shader_initial, sizeof shader_initial);
@@ -718,6 +721,23 @@ static void prepare(void) {
 
     setenv("ROMINABOX_ACHIEVEMENTS", strcmp(achievements, "1") == 0 ? "1" : "0", 1);
     setenv("ROMINABOX_DATA_DIR", data_dir, 1);
+    setenv("ROMINABOX_GAME_IDENTITY", identity, 1);
+    /* The folder for QUICK SIGN IN, only when the export lists one. It is in
+     * the real home, not in the sandbox's HOME. When a game cannot reach it,
+     * the player plays on without QUICK SIGN IN. */
+    unsetenv("ROMINABOX_ACCOUNTS_DIR");
+    if (strcmp(achievements, "1") == 0 && accounts_name[0]) {
+        struct passwd *user = getpwuid(getuid());
+        char app_data[PATH_CAP];
+        char accounts[PATH_CAP];
+        int wrote = user && user->pw_dir && user->pw_dir[0] == '/'
+            ? snprintf(app_data, sizeof app_data, "%s/Library/Application Support", user->pw_dir) : -1;
+        if (wrote > 0 && (size_t)wrote < sizeof app_data
+            && rominabox_accounts_folder(app_data, accounts_name, accounts, sizeof accounts) == 0)
+            setenv("ROMINABOX_ACCOUNTS_DIR", accounts, 1);
+        else
+            fprintf(stderr, "ROM-in-a-Box: QUICK SIGN IN is unavailable: %s\n", strerror(errno));
+    }
     setenv("ROMINABOX_TITLE", title, 1);
     join_path(assets, sizeof assets, resources, "menu-assets");
     setenv("ROMINABOX_RML_ASSETS", assets, 1);

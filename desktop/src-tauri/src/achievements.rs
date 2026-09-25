@@ -15,6 +15,25 @@ pub fn included(requested: bool, show_menu: bool) -> bool {
     requested && show_menu
 }
 
+/// The name of the folder for QUICK SIGN IN, common to every game with
+/// achievements, directly in the platform's per-user application data:
+/// Application Support in the real home on macOS, `%LOCALAPPDATA%` on Windows.
+/// It is not inside `ROM-in-a-Box/` because a sandboxed game cannot create a
+/// missing parent of the folder in its entitlement. A namespaced export, such
+/// as a test build, has a folder of its own, so we never read a player's accounts in it.
+pub fn accounts_folder(namespace: Option<&str>) -> String {
+    match namespace.map(str::trim).filter(|value| !value.is_empty()) {
+        Some(namespace) => {
+            let plain: String = namespace
+                .chars()
+                .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' { c } else { '-' })
+                .collect();
+            format!("ROM-in-a-Box Accounts.{plain}")
+        }
+        None => "ROM-in-a-Box Accounts".to_string(),
+    }
+}
+
 /// Resolve the capability and entry together. An explicit composition must
 /// match the selected features, and reachability never depends on the data.
 pub fn entries(
@@ -120,6 +139,21 @@ mod tests {
         assert_eq!(
             entries(&design, true, true, Some(&[SCREEN.into()])).unwrap(),
             vec![SCREEN]
+        );
+    }
+
+    #[test]
+    fn every_game_shares_one_accounts_folder_and_a_namespace_has_its_own() {
+        assert_eq!(accounts_folder(None), "ROM-in-a-Box Accounts");
+        assert_eq!(accounts_folder(Some("  ")), "ROM-in-a-Box Accounts");
+        assert_eq!(
+            accounts_folder(Some("app.rominabox.game.wt-shared-signin")),
+            "ROM-in-a-Box Accounts.app.rominabox.game.wt-shared-signin"
+        );
+        // A namespace is a name, never a path.
+        assert_eq!(
+            accounts_folder(Some("../x/y")),
+            "ROM-in-a-Box Accounts...-x-y"
         );
     }
 }

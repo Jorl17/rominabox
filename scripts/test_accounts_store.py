@@ -4,9 +4,9 @@
 
 We compile `desktop/src-tauri/accounts` with the launcher's `portable_fs` and
 run `scripts/accounts_store_test.c` in a new folder under work/test-output, to
-test the store's rules, private file modes, unsafe names, and several
-processes changing one folder at once. We also compile the store for Windows
-with zig, which shows only that the Windows code compiles.
+test the store's rules, private file modes, unsafe names, the launcher's
+folder, and several processes changing one folder at once. We also compile
+the store for Windows with zig, which shows only that the Windows code compiles.
 """
 
 from __future__ import annotations
@@ -20,7 +20,8 @@ ROOT = Path(__file__).resolve().parent.parent
 ACCOUNTS = ROOT / "desktop/src-tauri/accounts"
 PORTABLE = ROOT / "desktop/src-tauri/launcher/portable_fs.c"
 OUTPUT = ROOT / "work/test-output"
-SOURCES = [ACCOUNTS / "accounts.c", ACCOUNTS / "sealed.c", PORTABLE]
+SOURCES = [ACCOUNTS / "accounts.c", ACCOUNTS / "sealed.c", PORTABLE,
+           PORTABLE.parent / "accounts_folder.c"]
 WARNINGS = ["-Wall", "-Wextra", "-Werror"]
 
 

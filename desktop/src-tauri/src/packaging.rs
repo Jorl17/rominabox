@@ -690,10 +690,7 @@ where
     let entitlements = staging.path().join("entitlements.plist");
     fs::write(
         &entitlements,
-        sandbox_entitlements(
-            &identity,
-            crate::achievements::included(request.include_achievements, request.show_menu),
-        ),
+        sandbox_entitlements(&identity, accounts_folder(request).as_deref()),
     )
     .map_err(|error| ExportError::io(ErrorStage::Sign, &entitlements, error))?;
     run_command_cancellable(
@@ -1924,11 +1921,24 @@ fn game_data_template(identity: &str) -> String {
     format!("$HOME/Library/Application Support/ROM-in-a-Box/Games/{identity}")
 }
 
-fn sandbox_entitlements(identity: &str, achievements: bool) -> String {
-    let network = if achievements {
-        "<key>com.apple.security.network.client</key><true/>"
-    } else {
-        ""
+/// The shared QUICK SIGN IN folder for this export, when it has achievements.
+fn accounts_folder(request: &ExportRequest) -> Option<String> {
+    crate::achievements::included(request.include_achievements, request.show_menu)
+        .then(|| crate::achievements::accounts_folder(isolation_namespace().as_deref()))
+}
+
+/// `accounts` is the QUICK SIGN IN folder, present exactly when the game has
+/// achievements. We grant the network and that folder together.
+fn sandbox_entitlements(identity: &str, accounts: Option<&str>) -> String {
+    let (network, shared) = match accounts {
+        Some(folder) => (
+            "<key>com.apple.security.network.client</key><true/>".to_string(),
+            format!(
+                "<key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>\n\
+                 <array><string>/Library/Application Support/{folder}/</string></array>"
+            ),
+        ),
+        None => (String::new(), String::new()),
     };
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1940,6 +1950,7 @@ fn sandbox_entitlements(identity: &str, achievements: bool) -> String {
 <key>com.apple.security.device.bluetooth</key><true/>
 <key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
 <array><string>/Library/Application Support/ROM-in-a-Box/Games/{identity}/</string></array>
+{shared}
 </dict></plist>
 "#
     )
@@ -2102,6 +2113,7 @@ fn write_launch_plan(
          volume_file\t{volume}\n\
          shader_initial\t{shader}\n\
          data_dir\t{data_dir}\n\
+         {accounts}\
          {managed}\
          ---config---\n\
          {runtime_config}",
@@ -2121,6 +2133,9 @@ fn write_launch_plan(
         volume = crate::volume::file_name(),
         shader = shader_initial,
         data_dir = game_data_template(identity),
+        accounts = accounts_folder(request)
+            .map(|folder| format!("accounts_dir\t{folder}\n"))
+            .unwrap_or_default(),
     );
     fs::write(path, plan).map_err(|error| ExportError::io(ErrorStage::Configure, path, error))
 }
