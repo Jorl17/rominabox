@@ -209,14 +209,9 @@ fn scene_markup(
         let original = author_label
             .filter(|value| value.trim() != item.label.trim())
             .map(|_| item.label.as_str());
-        let marker = if illustrated {
-            marker_markup(
-                &item.id,
-                &placed.leader,
-                placed.marker,
-                placed.callout,
-                metrics.callout_border,
-            )
+        let ring = if illustrated {
+            markup.push_str(&leader_markup(&placed.leader));
+            ring_markup(&item.id, placed.marker, placed.callout, metrics.callout_border)
         } else {
             String::new()
         };
@@ -227,7 +222,7 @@ fn scene_markup(
             original,
             &key,
             placed.callout,
-            &marker,
+            &ring,
         ));
     }
     markup
@@ -277,22 +272,10 @@ fn controller_picker_markup(offered: &[crate::controls::ControlProfile], chosen:
     markup
 }
 
-/// The leader of a control and the ring over its button on the pad, at the
-/// positions from `scene_layout`, written inside the focus stop for the
-/// control. A design styles them by the state of that stop, and a pointer
-/// over either one is over the stop.
-///
-/// RmlUi places a child from the padding edge of its parent, which is
-/// `border` inside the box that `scene_layout` computed for the stop.
-fn marker_markup(
-    id: &str,
-    leader: &[crate::scene_layout::Segment],
-    marker: crate::scene_layout::Rect,
-    stop: crate::scene_layout::Rect,
-    border: i32,
-) -> String {
-    let left = |x: i32| x - stop.x - border;
-    let top = |y: i32| y - stop.y - border;
+/// A control's leader, at its place from `scene_layout`, written into the
+/// scene just before the stop it leads to. We draw the stop after it, so the
+/// stop covers its end, and a pointer on the leader is on no stop.
+fn leader_markup(leader: &[crate::scene_layout::Segment]) -> String {
     let mut markup = String::new();
     for run in leader {
         let (orientation, extent) = if run.height == 0 {
@@ -301,17 +284,30 @@ fn marker_markup(
             ("vertical", format!("height:{}dp;", run.height))
         };
         markup.push_str(&format!(
-            "<div class=\"control-leader {orientation}\" style=\"left:{}dp;top:{}dp;{extent}\"/>",
-            left(run.x),
-            top(run.y)
+            "\n<div class=\"control-leader {orientation}\" style=\"left:{}dp;top:{}dp;{extent}\"/>",
+            run.x, run.y
         ));
     }
-    markup.push_str(&format!(
-        "<div id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;\"/>",
-        left(marker.x),
-        top(marker.y)
-    ));
     markup
+}
+
+/// The ring over the button of a control on the pad, at the position from
+/// `scene_layout`, written inside the focus stop for the control. A design
+/// lights it by the state of that stop, and a pointer on it is on the stop.
+///
+/// RmlUi places a child from the padding edge of its parent, which is
+/// `border` inside the box that `scene_layout` computed for the stop.
+fn ring_markup(
+    id: &str,
+    marker: crate::scene_layout::Rect,
+    stop: crate::scene_layout::Rect,
+    border: i32,
+) -> String {
+    format!(
+        "<div id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;\"/>",
+        marker.x - stop.x - border,
+        marker.y - stop.y - border
+    )
 }
 
 /// Draw each group once, beneath the illustration, in its strip from
@@ -327,9 +323,10 @@ fn control_group_markup(
     let mut markup = String::new();
     for group in groups {
         let name = group.name.as_str();
-        let marker = match (&group.anchor, group.marker) {
+        let ring = match (&group.anchor, group.marker) {
             (Some(anchor), Some(marker)) if illustrated => {
-                marker_markup(anchor, &group.leader, marker, group.strip, border)
+                markup.push_str(&leader_markup(&group.leader));
+                ring_markup(anchor, marker, group.strip, border)
             }
             _ => String::new(),
         };
@@ -353,7 +350,7 @@ fn control_group_markup(
             r#"
 <button id="control-group-{name}" class="control-group" style="left:{x}dp;top:{y}dp;">
 <div class="control-label">{}</div>
-<div id="control-group-binding-{name}" class="control-assignment">{}</div>{marker}
+<div id="control-group-binding-{name}" class="control-assignment">{}</div>{ring}
 </button>
 "#,
             crate::lists::rml_text(&title),
@@ -411,7 +408,7 @@ fn control_callout_markup(
     original: Option<&str>,
     key: &str,
     callout: crate::scene_layout::Rect,
-    marker: &str,
+    ring: &str,
 ) -> String {
     let label = crate::lists::rml_text(label);
     let key = crate::lists::rml_text(key);
@@ -424,7 +421,7 @@ fn control_callout_markup(
         })
         .unwrap_or_default();
     format!(
-        r#"<button id="control-{id}" class="control-callout" style="left:{}dp;top:{}dp;"><div id="control-label-{id}" class="control-label">{label}</div><div class="control-assignment">{original}<span id="control-binding-{id}">{key}</span></div>{marker}</button>"#,
+        r#"<button id="control-{id}" class="control-callout" style="left:{}dp;top:{}dp;"><div id="control-label-{id}" class="control-label">{label}</div><div class="control-assignment">{original}<span id="control-binding-{id}">{key}</span></div>{ring}</button>"#,
         callout.x, callout.y
     )
 }

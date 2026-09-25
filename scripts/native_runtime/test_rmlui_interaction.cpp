@@ -430,10 +430,16 @@ static std::vector<Rml::Element*> marks_of(Rml::Element *stop)
    return marks;
 }
 
+/* Where the element is drawn in the layout as it stands: call settle()
+ * after anything that changes it. */
 static Rml::Vector2f placed_at(Rml::Element *element)
 {
-   view.document.get_context()->Update();
    return element->GetAbsoluteOffset(Rml::BoxArea::Border);
+}
+
+static void settle()
+{
+   view.document.get_context()->Update();
 }
 
 static Box drawn_box(Rml::Element *element)
@@ -489,6 +495,7 @@ static void check_marks_where_the_layout_puts_them(const std::filesystem::path &
          expected.push_back({stop, {x, y}});
    }
    Rml::Element *scene_element = view.document.root()->GetElementById("controller-scene");
+   settle();
    const Rml::Vector2f origin = placed_at(scene_element);
    size_t at = 0;
    std::vector<std::string> stops;
@@ -542,9 +549,12 @@ static void check_marks_belong_to_their_stop(const char *design, const char *pro
    char message[512];
    int rings = 0;
    int outside = 0;
-   const std::vector<Rml::Element*> every_leader = scene_leaders();
    /* A list left open by an earlier check is above the scene. */
    view.document.set_shown("control-binds", false);
+   settle();
+   std::vector<Box> every_run;
+   for (Rml::Element *leader : scene_leaders())
+      every_run.push_back(drawn_box(leader));
    for (const std::string &stop_id : stops)
    {
       Rml::Element *stop = view.document.root()->GetElementById(stop_id);
@@ -610,9 +620,8 @@ static void check_marks_belong_to_their_stop(const char *design, const char *pro
       const Box focused_box = box_of(stop_id.c_str());
       int shown = 0;
       Box where{};
-      for (Rml::Element *leader : every_leader)
+      for (const Box &run : every_run)
       {
-         const Box run = drawn_box(leader);
          for (int y = std::max(run.y, focused_box.y); y < std::min(run.y + run.h, focused_box.y + focused_box.h); ++y)
             for (int x = std::max(run.x, focused_box.x); x < std::min(run.x + run.w, focused_box.x + focused_box.w); ++x)
             {

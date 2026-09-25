@@ -120,8 +120,9 @@ for design in designs:
             failed = True
             continue
         (scenes / f"{profile['id']}.rml").write_text(scene.read_text())
-        # Where the exporter's layout puts every ring and leader run, by stop
-        # and in drawing order. A pad with no drawing has none.
+        # Where the exporter's layout puts every leader run and ring, by the
+        # stop they belong to, in the order of scene-geometry. A pad with no
+        # drawing has none.
         marks = []
         if profile.get("image"):
             asked = subprocess.run(

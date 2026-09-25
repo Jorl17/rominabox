@@ -69,13 +69,13 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .control-leader.vertical { width: 1dp; }
 .control-hit { position: absolute; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 1dp transparent; border-radius: design(marker-radius)dp; }
 .control-callout:hover .control-hit, .control-group:hover .control-hit { border-color: design(edge); border-width: 2dp; }
-.control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: design(highlight); border-width: 2dp; }
+.control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: design(highlight); border-width: 2dp; margin-left: -3dp; }
 .control-callout { position: absolute; width: design(callout-width)dp; height: design(callout-height)dp; padding: 0; border-width: 1dp; border-color: design(rule); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
 .control-callout:hover { border-color: design(edge); z-index: 2; }
 /* Later controls are later siblings and would cover the focused edge of
  * the control before them, so we draw focus and the pointer above the
  * neighbours. The open list is at 60. */
-.control-callout.focused { border-color: design(highlight); border-left-width: 4dp; border-left-color: design(highlight); margin-left: -3dp; z-index: 2; }
+.control-callout.focused { border-color: design(highlight); border-left-width: 4dp; border-left-color: design(highlight); z-index: 2; }
 
 /* Below the scene, in the band without callouts. The list opens upward from
  * here and ends before the d-pad, so when a drag ends off the list, the
@@ -98,7 +98,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 
 .control-group { position: absolute; width: design(group-width)dp; height: design(group-height)dp; padding: 0; border-width: 1dp; border-color: design(rule); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
 .control-group:hover { border-color: design(edge); z-index: 2; }
-.control-group.focused { border-color: design(highlight); border-left-width: 4dp; border-left-color: design(highlight); margin-left: -3dp; z-index: 2; }
+.control-group.focused { border-color: design(highlight); border-left-width: 4dp; border-left-color: design(highlight); z-index: 2; }
 .control-label { margin-left: 8dp; margin-top: 2dp; height: 18dp; font-size: 13dp; overflow: hidden; white-space: nowrap; }
 .control-assignment { margin-left: 8dp; font-size: 12dp; color: design(muted); white-space: nowrap; overflow: hidden; }
 .control-original { margin-right: 8dp; color: design(highlight); }
