@@ -47,7 +47,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .slot-label { position: absolute; left: 248dp; top: 36dp; height: 24dp; font-size: 16dp; color: #ffffff; }
 [data-focus=save] .slot.selected .slot-label, [data-focus=load] .slot.selected .slot-label, .slot.focused .slot-label { color: #fff13d; }
 .slot:active .slot-label { color: #081433; }
-.slot-picture { position: absolute; left: 8dp; top: 8dp; width: 176dp; height: 138dp; background-color: #0865bf; border-top: 1dp #020b27; border-left: 1dp #020b27; border-right: 1dp #9edaff; border-bottom: 1dp #9edaff; }
+.slot-picture { position: absolute; left: 8dp; top: 8dp; width: 184dp; height: 138dp; background-color: #0865bf; border-top: 1dp #020b27; border-left: 1dp #020b27; border-right: 1dp #9edaff; border-bottom: 1dp #9edaff; }
 .slot-image { width: 100%; height: 100%; }
 .slot.empty .slot-image { display: none; }
 .slot-state { position: absolute; left: 248dp; top: 78dp; height: 20dp; font-size: 13dp; color: #b4e6ff; }
