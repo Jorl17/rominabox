@@ -73,12 +73,10 @@ static rib_controls_catalog fixture_controls = [] {
       "r_x_plus", "r_x_minus", "r_y_plus", "r_y_minus"
    };
    for (const char *id : ids)
-      std::snprintf(catalog.entries[catalog.count++].id, 32, "%s", id);
+      catalog.entries[catalog.count++].id = id;
    catalog.device_count = 2;
-   std::snprintf(catalog.devices[0].id, 32, "megadrive");
-   std::snprintf(catalog.devices[0].name, NAME_MAX_LENGTH, "Mega Drive");
-   std::snprintf(catalog.devices[1].id, 32, "megadrive6");
-   std::snprintf(catalog.devices[1].name, NAME_MAX_LENGTH, "Mega Drive six-button");
+   catalog.devices[0] = {"megadrive", "Mega Drive", 0};
+   catalog.devices[1] = {"megadrive6", "Mega Drive six-button", 0};
    return catalog;
 }();
 
@@ -1320,15 +1318,47 @@ int main(int argc, char **argv)
       CHECK(std::string(inspect.text("controls-status")) == prompt("controls-status"),
             "controls status expires back to its prompt");
    }
-   for (float aspect : {10.0f/9, 4.0f/3, 16.0f/9}) {
-      view.slots.set_game_aspect(aspect);
-      CHECK(std::abs(inspect.picture_aspect() - aspect) < 0.02f, "well follows live core aspect");
+   {
+      /* The document contains the aspect ratio of the game, and we give a
+       * marked element that ratio within the largest size in its stylesheet.
+       * An element with no largest size keeps its box, and a value that is not
+       * a ratio changes nothing. The navigation tests check where the slot
+       * picture of each design goes, for every game. */
+      Rml::Element *root = view.document.root();
+      Rml::Element *picture = root->QuerySelector("#slot-1 .slot-picture");
+      Rml::Element *status = root->GetElementById("status");
+      CHECK(picture && picture->HasAttribute("data-game-shaped"),
+            "Native marks its slot picture to take the game's shape");
+      auto shape = [&] { return root->GetAttribute<Rml::String>("data-game-shape", ""); };
+      auto content = [&](Rml::Element *element) {
+         view.render(960, 600);
+         return element ? element->GetBox().GetSize(Rml::BoxArea::Content) : Rml::Vector2f();
+      };
+      const Rml::Vector2f unmarked = content(status);
+      status->SetAttribute("data-game-shaped", Rml::String());
+      view.document.show_game_shape(16.0f/9);
+      CHECK(shape() == "1.778", ("the document states 16:9 as 1.778, not " + shape()).c_str());
+      const Rml::Vector2f wide = content(picture);
+      CHECK(std::abs(wide.x - 230.0f) < 0.5f && std::abs(wide.y - 129.375f) < 0.5f,
+            "a 16:9 picture is as wide as its largest size allows");
+      const Rml::Vector2f kept = content(status);
+      CHECK(kept.x == unmarked.x && kept.y == unmarked.y,
+            "a marked element with no largest size keeps its box");
+      for (float nothing : {0.0f, -1.0f, std::nanf(""), 1000.0f})
+         view.document.show_game_shape(nothing);
+      CHECK(shape() == "1.778", "no shape at all leaves the one shown");
+      view.document.show_game_shape(10.0f/9);
+      const Rml::Vector2f tall = content(picture);
+      CHECK(shape() == "1.111" && std::abs(tall.x - 153.333f) < 0.5f
+               && std::abs(tall.y - 138.0f) < 0.5f,
+            "a 10:9 picture is as tall as its largest size allows");
+      status->RemoveAttribute("data-game-shaped");
+      view.document.show_game_shape(4.0f/3);
    }
    view.lists.place_list("fixture-panel", nullptr, 0);
    CHECK(std::string(inspect.property("fixture-panel", "display")) != "none",
          "popup placement accepts its declared element without requiring a list class");
    view.document.set_shown("fixture-panel", false);
-   view.slots.set_game_aspect(4.0f/3);
    click_id("save");
    click_id("options");
    const auto first = view.intents.take();
