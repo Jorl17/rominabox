@@ -177,6 +177,60 @@ mod tests {
         }
     }
 
+    /// The loudest 30 ms of a 16-bit mono WAV, as RMS in dBFS. This is how loud
+    /// a short cue seems, and we level every generated cue by it.
+    fn loudest_30ms_db(bytes: &[u8]) -> f64 {
+        let data = bytes
+            .windows(4)
+            .position(|chunk| chunk == b"data")
+            .expect("a data chunk")
+            + 8;
+        let samples: Vec<f64> = bytes[data..]
+            .chunks_exact(2)
+            .map(|pair| f64::from(i16::from_le_bytes([pair[0], pair[1]])) / 32768.0)
+            .collect();
+        let window = (44_100 * 30 / 1000).min(samples.len());
+        let mut sum: f64 = samples[..window].iter().map(|v| v * v).sum();
+        let mut loudest = sum;
+        for i in window..samples.len() {
+            sum += samples[i] * samples[i] - samples[i - window] * samples[i - window];
+            loudest = loudest.max(sum);
+        }
+        20.0 * (loudest / window as f64).sqrt().log10()
+    }
+
+    /// The sounds for moving, confirming and going back are equally loud in
+    /// every pack, so a click is as loud as a move and never louder.
+    #[test]
+    fn every_cue_in_a_pack_is_equally_loud() {
+        let source = sound_source();
+        for pack in registry().unwrap().sound_packs {
+            if pack.id == "off" {
+                continue;
+            }
+            let levels: Vec<(String, f64)> = SOUND_CUES
+                .iter()
+                .map(|cue| {
+                    let path = source.join(&pack.id).join(cue);
+                    let bytes = fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+                    (cue.to_string(), loudest_30ms_db(&bytes))
+                })
+                .collect();
+            let loudest = levels.iter().map(|(_, db)| *db).fold(f64::MIN, f64::max);
+            let quietest = levels.iter().map(|(_, db)| *db).fold(f64::MAX, f64::min);
+            assert!(
+                loudest - quietest <= 1.5,
+                "{}: its cues are {:.1} dB apart: {:?}",
+                pack.id,
+                loudest - quietest,
+                levels
+                    .iter()
+                    .map(|(cue, db)| format!("{cue} {db:.1} dBFS"))
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
+
     /// The Off choice is already labelled Off, so we add no sentence under it.
     #[test]
     fn off_pack_does_not_restate_that_audio_is_off() {
