@@ -16,6 +16,8 @@
  *                           pending 1        an earned achievement not uploaded
  *                           aspect X         the game's aspect ratio, width
  *                                            over height (4:3 unless set)
+ *                           key NAME         the key bound to every control,
+ *                                            by its name in a RetroArch config
  *   ids ID...             ids of the case, reported when not in the document
  *   text ID...            ids whose words we report after every step
  *   box SELECTOR          the first element matching an RCSS selector. We
@@ -331,6 +333,7 @@ void reset_services(const Case& run)
       else if (key == "accept") host.save_accepted = host.load_accepted = value == "1";
       else if (key == "pending") session.pending_upload = value == "1";
       else if (key == "aspect") host.game_aspect = std::strtof(value.c_str(), nullptr);
+      else if (key == "key") host.bound_key = value;
       else if (key == "achievements")
       {
          if (value == "active")

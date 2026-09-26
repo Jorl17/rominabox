@@ -6,6 +6,26 @@
   ],
   "cases": [
     {
+      "name": "a bound key in the menu's words",
+      "setup": {
+        "key": "num1"
+      },
+      "steps": [
+        "options",
+        "controls"
+      ],
+      "text": {
+        "*": [
+          {
+            "control-binding-up": "Button 0, 1"
+          },
+          {
+            "control-binding-up": "Button 0, 1"
+          }
+        ]
+      }
+    },
+    {
       "name": "the slots in the design's words",
       "steps": [
         "wait-ms:0"

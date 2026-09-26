@@ -18,6 +18,9 @@ struct FakeHost
 
    /* Bindings and capture. */
    std::vector<std::string> bind_ids, loaded_ids;
+   /* The key bound to every control, by its name in a RetroArch config
+    * (input_key_names.inc). */
+   std::string bound_key = "a";
    std::string captured_id;
    bool capture_start_accepted = true;
    rib_capture_result capture_result = RIB_CAPTURE_PENDING;

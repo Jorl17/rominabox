@@ -40,7 +40,7 @@ extern "C" void rib_host_bind_lines(unsigned index, char details[][64], char kin
    if (!details || !kinds || !lines || *lines + 2 > RIB_HOST_BIND_LINE_MAX) return;
    std::snprintf(details[*lines], 64, "Button %u", index);
    std::strcpy(kinds[(*lines)++], "PAD");
-   std::strcpy(details[*lines], "Key A");
+   std::snprintf(details[*lines], 64, "%s", host.bound_key.c_str());
    std::strcpy(kinds[(*lines)++], "KEY");
 }
 extern "C" bool rib_host_capture_start(unsigned index, unsigned seconds)
