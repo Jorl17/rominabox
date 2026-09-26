@@ -15,23 +15,23 @@ use crate::player_settings::{Kind, PlayerSetting};
 const SOURCE: &str =
     include_str!("../../../../vendor/retroarch/menu/drivers/rmlui/declarations.inc");
 
-/// The quoted field `field` of `declarations.inc`'s `MACRO(name, ...)`, for
-/// any of `macros`. Read through `key!` and `file_name!`.
+/// Field `field` of the `MACRO(name, ...)` in `declarations.inc`, for any of
+/// `macros`. We read it through `key!` and `file_name!`.
 pub(crate) const fn declared(macros: &[&str], name: &str, field: usize) -> &'static str {
-    super::inc::quoted(SOURCE, macros, name, field)
+    super::inc::declared(SOURCE, macros, name, field)
 }
 
 /// `key!(Name)`: a key declared with `RIB_KEY` in `declarations.inc`.
 /// `key!(Name, id)`: the key declared for `id` in a `RIB_KEYS`. Read at
-/// compile time, so the build fails for a key that we do not read in the player.
+/// compile time, so the build fails for a key that the player does not declare.
 macro_rules! key {
     ($name:ident) => {
-        const { $crate::menu::declarations::declared(&["RIB_KEY"], stringify!($name), 0) }
+        const { $crate::menu::declarations::declared(&["RIB_KEY"], stringify!($name), 1) }
     };
     ($name:ident, $id:expr) => {
         format!(
             "{}{}",
-            const { $crate::menu::declarations::declared(&["RIB_KEYS"], stringify!($name), 0) },
+            const { $crate::menu::declarations::declared(&["RIB_KEYS"], stringify!($name), 1) },
             $id
         )
     };
@@ -42,14 +42,14 @@ pub(crate) use key;
 /// `file_name!(Name, id)`: the file a `RIB_FILES` declares for `id`.
 macro_rules! file_name {
     ($name:ident) => {
-        const { $crate::menu::declarations::declared(&["RIB_FILE"], stringify!($name), 0) }
+        const { $crate::menu::declarations::declared(&["RIB_FILE"], stringify!($name), 1) }
     };
     ($name:ident, $id:expr) => {
         format!(
             "{}{}{}",
-            const { $crate::menu::declarations::declared(&["RIB_FILES"], stringify!($name), 0) },
-            $id,
             const { $crate::menu::declarations::declared(&["RIB_FILES"], stringify!($name), 1) },
+            $id,
+            const { $crate::menu::declarations::declared(&["RIB_FILES"], stringify!($name), 2) },
         )
     };
 }

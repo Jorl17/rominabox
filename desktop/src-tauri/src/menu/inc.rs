@@ -1,14 +1,188 @@
 //! The declaration files of the player, the `*.inc` next to the menu C++,
 //! read with one `MACRO(field, ...)` per line, as the compiler reads them.
+//!
+//! We use the same code for every lookup. It is made of `const fn`s, so we
+//! read a name in a `const` block (`key!`, `file_name!`, `contract!`) when
+//! the exporter compiles, and the build fails on a name that the file does
+//! not declare, as the build of the player does. The same functions go
+//! through the declarations while the exporter runs.
 
-/// Whether `bytes` contains `prefix` at `at`.
-const fn holds(bytes: &[u8], at: usize, prefix: &[u8]) -> bool {
-    if at + prefix.len() > bytes.len() {
+/// One `MACRO(field, ...)` line.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Declaration {
+    macro_name: &'static str,
+    /// The text between the parentheses.
+    fields: &'static str,
+}
+
+impl Declaration {
+    pub(crate) const fn macro_name(&self) -> &'static str {
+        self.macro_name
+    }
+
+    /// Field `index`, trimmed and without its quotes, or `None` past the last.
+    /// A comma inside quotes is part of its field, as in the compiler.
+    pub(crate) const fn field(&self, index: usize) -> Option<&'static str> {
+        let mut rest = self.fields.as_bytes();
+        let mut at = 0;
+        loop {
+            let mut end = 0;
+            let mut quoted = false;
+            while end < rest.len() && (quoted || rest[end] != b',') {
+                if rest[end] == b'"' {
+                    quoted = !quoted;
+                }
+                end += 1;
+            }
+            let (field, tail) = rest.split_at(end);
+            if at == index {
+                return Some(text(unquoted(field)));
+            }
+            if tail.is_empty() {
+                return None;
+            }
+            rest = tail.split_at(1).1;
+            at += 1;
+        }
+    }
+
+    /// Every field, in order.
+    pub(crate) fn fields(&self) -> Vec<&'static str> {
+        (0..).map_while(|index| self.field(index)).collect()
+    }
+
+    const fn is_any_of(&self, macros: &[&str]) -> bool {
+        let mut which = 0;
+        while which < macros.len() {
+            if same(self.macro_name.as_bytes(), macros[which].as_bytes()) {
+                return true;
+            }
+            which += 1;
+        }
+        false
+    }
+}
+
+/// Every declaration in a file, in order.
+#[derive(Clone, Debug)]
+pub(crate) struct Declarations {
+    rest: &'static [u8],
+}
+
+/// The declarations of `source`.
+pub(crate) const fn declarations(source: &'static str) -> Declarations {
+    Declarations {
+        rest: source.as_bytes(),
+    }
+}
+
+impl Declarations {
+    const fn next_declaration(&mut self) -> Option<Declaration> {
+        while !self.rest.is_empty() {
+            let mut end = 0;
+            while end < self.rest.len() && self.rest[end] != b'\n' {
+                end += 1;
+            }
+            let (line, rest) = self.rest.split_at(end);
+            self.rest = if rest.is_empty() {
+                rest
+            } else {
+                rest.split_at(1).1
+            };
+            if let Some(declaration) = parse(line) {
+                return Some(declaration);
+            }
+        }
+        None
+    }
+}
+
+impl Iterator for Declarations {
+    type Item = Declaration;
+
+    fn next(&mut self) -> Option<Declaration> {
+        self.next_declaration()
+    }
+}
+
+/// The declaration `MACRO(name, ...)` in `source`, for any of `macros`.
+pub(crate) const fn find(source: &'static str, macros: &[&str], name: &str) -> Option<Declaration> {
+    let mut all = declarations(source);
+    while let Some(declaration) = all.next_declaration() {
+        if declaration.is_any_of(macros) {
+            if let Some(declared) = declaration.field(0) {
+                if same(declared.as_bytes(), name.as_bytes()) {
+                    return Some(declaration);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Field `field` of the declaration from `find`. In a `const` block, the
+/// build fails on a name that `source` does not declare.
+pub(crate) const fn declared(
+    source: &'static str,
+    macros: &[&str],
+    name: &str,
+    field: usize,
+) -> &'static str {
+    match find(source, macros, name) {
+        Some(declaration) => match declaration.field(field) {
+            Some(value) => value,
+            None => panic!("the declaration has fewer fields than asked for"),
+        },
+        None => panic!("the player's declarations do not declare this name"),
+    }
+}
+
+/// `line` as a declaration, when it is one: a macro's name and its
+/// parenthesised fields, alone on the line. Comments, `#` directives and
+/// blank lines are not declarations.
+const fn parse(line: &'static [u8]) -> Option<Declaration> {
+    let line = line.trim_ascii();
+    let mut open = 0;
+    while open < line.len()
+        && (line[open] == b'_'
+            || line[open].is_ascii_alphabetic()
+            || (open > 0 && line[open].is_ascii_digit()))
+    {
+        open += 1;
+    }
+    if open == 0 || open == line.len() || line[open] != b'(' {
+        return None;
+    }
+    if line[line.len() - 1] != b')' {
+        panic!("a declaration is not alone on its line");
+    }
+    let (macro_name, call) = line.split_at(open);
+    let (call, _) = call.split_at(call.len() - 1);
+    let (_, fields) = call.split_at(1);
+    Some(Declaration {
+        macro_name: text(macro_name),
+        fields: text(fields),
+    })
+}
+
+/// `field` trimmed, without the quotes around it.
+const fn unquoted(field: &'static [u8]) -> &'static [u8] {
+    let field = field.trim_ascii();
+    if field.len() >= 2 && field[0] == b'"' && field[field.len() - 1] == b'"' {
+        let (inner, _) = field.split_at(field.len() - 1);
+        inner.split_at(1).1
+    } else {
+        field
+    }
+}
+
+const fn same(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() {
         return false;
     }
     let mut index = 0;
-    while index < prefix.len() {
-        if bytes[at + index] != prefix[index] {
+    while index < left.len() {
+        if left[index] != right[index] {
             return false;
         }
         index += 1;
@@ -16,89 +190,12 @@ const fn holds(bytes: &[u8], at: usize, prefix: &[u8]) -> bool {
     true
 }
 
-/// The quoted field number `field` of the line `MACRO(name, ...)` in
-/// `source`, for any of `macros`, as the compiler of the player reads it.
-///
-/// This is a `const fn`, so we read a name in a `const` block when the
-/// exporter compiles, and the build fails on a name that `source` does not
-/// declare, as the build of the player does.
-pub(crate) const fn quoted(
-    source: &'static str,
-    macros: &[&str],
-    name: &str,
-    field: usize,
-) -> &'static str {
-    let bytes = source.as_bytes();
-    let mut line = 0;
-    while line < bytes.len() {
-        let mut at = line;
-        while at < bytes.len() && (bytes[at] == b' ' || bytes[at] == b'\t') {
-            at += 1;
-        }
-        let mut which = 0;
-        while which < macros.len() {
-            let opening = macros[which].as_bytes();
-            let named = at + opening.len() + 1;
-            if holds(bytes, at, opening)
-                && holds(bytes, at + opening.len(), b"(")
-                && holds(bytes, named, name.as_bytes())
-                && holds(bytes, named + name.len(), b",")
-            {
-                let mut cursor = named + name.len();
-                let mut skipped = 0;
-                loop {
-                    while cursor < bytes.len() && bytes[cursor] != b'"' {
-                        if bytes[cursor] == b')' || bytes[cursor] == b'\n' {
-                            panic!("the declaration has fewer quoted fields than asked for");
-                        }
-                        cursor += 1;
-                    }
-                    let start = cursor + 1;
-                    let mut end = start;
-                    while end < bytes.len() && bytes[end] != b'"' {
-                        if bytes[end] == b'\n' {
-                            panic!("a quoted field is never closed");
-                        }
-                        end += 1;
-                    }
-                    if skipped == field {
-                        let (_, rest) = bytes.split_at(start);
-                        let (value, _) = rest.split_at(end - start);
-                        return match core::str::from_utf8(value) {
-                            Ok(value) => value,
-                            Err(_) => panic!("a quoted field is not UTF-8"),
-                        };
-                    }
-                    skipped += 1;
-                    cursor = end + 1;
-                }
-            }
-            which += 1;
-        }
-        while line < bytes.len() && bytes[line] != b'\n' {
-            line += 1;
-        }
-        line += 1;
+/// Bytes cut from a `str` at ASCII bytes, which are still a valid `str`.
+const fn text(bytes: &'static [u8]) -> &'static str {
+    match core::str::from_utf8(bytes) {
+        Ok(text) => text,
+        Err(_) => panic!("a declaration is not UTF-8"),
     }
-    panic!("the player's declarations do not declare this name")
-}
-
-/// The fields of every `macro_name(...)` line in `source`, in order, each
-/// trimmed and without its quotes. A field cannot contain a comma.
-pub(crate) fn declarations<'a>(
-    source: &'a str,
-    macro_name: &str,
-) -> impl Iterator<Item = Vec<String>> + 'a {
-    let opening = format!("{macro_name}(");
-    source.lines().filter_map(move |line| {
-        let fields = line.trim().strip_prefix(&opening)?.strip_suffix(')')?;
-        Some(
-            fields
-                .split(',')
-                .map(|field| field.trim().trim_matches('"').to_string())
-                .collect(),
-        )
-    })
 }
 
 #[cfg(test)]
@@ -109,22 +206,56 @@ mod tests {
                           #define RIB_KEY(name, key)\n\
                           RIB_KEY(Screens, \"screens\")\n\
                           RIB_KEYS(Screen, \"screen_\")\n  \
-                          RIB_FILES(Scene, \"scene-\", \".rml\")\n";
+                          RIB_FILES(Scene, \"scene-\", \".rml\")\n\
+                          RIB_WORD(Pair, \"pair\", \"A, B\")\n\
+                          RIB_COUNT(6)";
+
+    #[test]
+    fn every_declaration_is_read_in_order_with_its_fields() {
+        let read: Vec<(&str, Vec<&str>)> = declarations(SOURCE)
+            .map(|declaration| (declaration.macro_name(), declaration.fields()))
+            .collect();
+        assert_eq!(
+            read,
+            [
+                ("RIB_KEY", vec!["Screens", "screens"]),
+                ("RIB_KEYS", vec!["Screen", "screen_"]),
+                ("RIB_FILES", vec!["Scene", "scene-", ".rml"]),
+                ("RIB_WORD", vec!["Pair", "pair", "A, B"]),
+                ("RIB_COUNT", vec!["6"]),
+            ]
+        );
+    }
 
     #[test]
     fn a_name_reads_its_own_declaration_and_field() {
-        assert_eq!(quoted(SOURCE, &["RIB_KEY"], "Screens", 0), "screens");
+        assert_eq!(declared(SOURCE, &["RIB_KEY"], "Screens", 1), "screens");
         // RIB_KEY is not RIB_KEYS, and Screen is not Screens.
-        assert_eq!(quoted(SOURCE, &["RIB_KEYS"], "Screen", 0), "screen_");
+        assert_eq!(declared(SOURCE, &["RIB_KEYS"], "Screen", 1), "screen_");
+        assert!(find(SOURCE, &["RIB_KEY"], "Screen").is_none());
         assert_eq!(
-            quoted(SOURCE, &["RIB_KEY", "RIB_FILES"], "Scene", 1),
+            declared(SOURCE, &["RIB_KEY", "RIB_FILES"], "Scene", 2),
             ".rml"
         );
+        const READ_WHEN_COMPILED: &str = declared(SOURCE, &["RIB_WORD"], "Pair", 2);
+        assert_eq!(READ_WHEN_COMPILED, "A, B");
     }
 
     #[test]
     #[should_panic(expected = "do not declare this name")]
     fn a_name_only_a_comment_mentions_is_not_declared() {
-        quoted(SOURCE, &["RIB_KEY"], "Old", 0);
+        declared(SOURCE, &["RIB_KEY"], "Old", 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "fewer fields")]
+    fn a_field_past_the_last_is_not_declared() {
+        declared(SOURCE, &["RIB_KEYS"], "Screen", 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "not alone on its line")]
+    fn a_declaration_sharing_its_line_is_refused() {
+        declarations("RIB_KEY(Screens, \"screens\") /* the list */\n").count();
     }
 }
