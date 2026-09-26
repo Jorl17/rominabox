@@ -295,8 +295,51 @@ def run_player_settings() -> list[str]:
     return failures
 
 
-# The modules we will share with a Windows launcher. We cannot run them on
-# Windows here, but we compile them for it, to catch any POSIX-only call.
+# The modules that a Windows launcher will share. We cannot run them on
+def run_menu_sounds() -> list[str]:
+    """Check that the menu sounds are in the folder that we give RetroArch in an
+    exported game.
+
+    When the game starts, the menu's OK, Cancel and movement sounds come from
+    `assets_directory/sounds`, and no other sound plays. We prepare an export
+    with a sound pack with the launcher, in which we write the game's config
+    and stop before RetroArch. The folder in the config must be the folder
+    where we put the pack in the export.
+    """
+    import size_bundles  # noqa: E402
+
+    with scratch.scratch("rominabox-menu-sounds-") as made:
+        root = Path(made)
+        rom = root / "stand-in.bin"
+        rom.write_bytes(b"RIBsounds")
+        app = size_bundles.export(
+            size_bundles.cli(), "shipped-menu-sounds", size_bundles.KIT,
+            size_bundles.core("genesis_plus_gx_libretro.dylib").parent.parent, rom,
+            {"menuSounds": "blip"},
+        )
+        shipped = app / "Contents" / "Resources" / "assets" / "sounds"
+        if not (shipped / "ok.wav").is_file():
+            return [f"the export shipped no pack at {shipped}"]
+        binary = compile_plan(root)
+        shutil.copytree(app / "Contents" / "Resources", binary.parents[1] / "Resources",
+                        dirs_exist_ok=True)
+        home = root / "home"
+        home.mkdir()
+        launch(binary, home)
+        written = next(home.glob("Library/Application Support/ROM-in-a-Box/Games/*/retroarch.cfg"),
+                       None)
+        if written is None:
+            return ["the launcher wrote no retroarch.cfg"]
+        assets = values(written).get("assets_directory", "")
+        told = Path(assets) / "sounds" / "ok.wav"
+        size_bundles.remove_owned(app.parent)
+        if not told.is_file():
+            return [f"menu sounds: RetroArch is told they are in {assets}/sounds, which does not "
+                    f"hold the pack (it is in {binary.parents[1] / 'Resources/assets/sounds'})"]
+    return []
+
+
+# Windows here, but we check that they compile, so no POSIX-only call slips in.
 PORTABLE = ("shipped_settings.c", "shipped_files.c", "portable_fs.c", "accounts_folder.c",
             "player_settings.c")
 
@@ -319,7 +362,7 @@ def windows_build(directory: Path) -> list[str]:
 
 
 def main() -> int:
-    failures = run() + run_player_settings()
+    failures = run() + run_player_settings() + run_menu_sounds()
     with scratch.scratch("rominabox-core-options-windows-") as made:
         failures += windows_build(Path(made))
     for failure in failures:
