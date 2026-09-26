@@ -9,6 +9,8 @@
  *   set KEY VALUE         host and service state before the menu opens:
  *                           discs N          disc images in the core
  *                           load 1           slot 1 contains a state
+ *                           accept 1         requested saves and loads start and
+ *                                            never finish
  *                           achievements S   signed-out | active | startup | failed
  *                           rows N           achievements in the list
  *                           pending 1        an earned achievement not uploaded
@@ -259,6 +261,7 @@ void reset_services(const Case& run)
    {
       if (key == "discs") host.disc_count = (unsigned)std::atoi(value.c_str());
       else if (key == "load") host.slot_occupied = value == "1";
+      else if (key == "accept") host.save_accepted = host.load_accepted = value == "1";
       else if (key == "pending") session.pending_upload = value == "1";
       else if (key == "achievements")
       {

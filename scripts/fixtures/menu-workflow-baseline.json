@@ -3442,7 +3442,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": "SLOT 1 LOADED"
+          "status": "BLOCK 1 LOADED"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -3498,7 +3498,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": "SLOT 1 LOADED"
+          "status": "BLOCK 1 LOADED"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -3554,7 +3554,7 @@
         "text": {
           "footer-hint": "ESC  CONTINUE",
           "heading": "MEMORY CARD",
-          "status": "SLOT 1 SAVED"
+          "status": "BLOCK 1 SAVED"
         },
         "transferPending": false,
         "volumeDb": 0.0

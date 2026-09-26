@@ -17,10 +17,59 @@
             "slot-state-1": "EMPTY"
           }
         ],
+        "disc": [
+          {
+            "slot-label-1": "BLOCK 1",
+            "slot-state-1": "EMPTY"
+          }
+        ],
         "wording": [
           {
             "slot-label-1": "BLOCK 1",
             "slot-state-1": "FREE"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a save under way says so in the design's words",
+      "setup": {
+        "accept": 1
+      },
+      "steps": [
+        "save"
+      ],
+      "text": {
+        "*": [
+          {
+            "status": "SAVING SLOT 1..."
+          }
+        ],
+        "disc": [
+          {
+            "status": "SAVING BLOCK 1..."
+          }
+        ]
+      }
+    },
+    {
+      "name": "a load under way says so in the design's words",
+      "setup": {
+        "load": 1,
+        "accept": 1
+      },
+      "steps": [
+        "load"
+      ],
+      "text": {
+        "*": [
+          {
+            "status": "LOADING SLOT 1..."
+          }
+        ],
+        "disc": [
+          {
+            "status": "LOADING BLOCK 1..."
           }
         ]
       }
