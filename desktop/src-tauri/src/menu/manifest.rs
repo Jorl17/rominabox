@@ -151,7 +151,6 @@ struct ScreenFile {
     #[serde(default, deserialize_with = "present")]
     option: Option<Option<OptionFile>>,
     images: Option<String>,
-    mark: Option<String>,
     dialogs: Option<Vec<String>>,
     from: Option<String>,
 }
@@ -181,7 +180,7 @@ impl ScreenFile {
             )*};
         }
         take!(
-            panel, heading, footer, button, label, back, page_size, place, option, images, mark,
+            panel, heading, footer, button, label, back, page_size, place, option, images,
             dialogs, from
         );
         self
@@ -266,8 +265,6 @@ pub struct Screen {
     /// The screen to open instead of this one when the game has more than one
     /// disc, as the disc list opens instead of the disc column.
     pub images: Option<String>,
-    /// The word on the row of the disc that is in the tray.
-    pub mark: Option<String>,
     /// Dialogs that open over the menu from this screen, each from
     /// `dialog-<name>.rml` in the design or Native. We compose them beside the
     /// screen, so a design can replace either without copying the other.
@@ -281,6 +278,12 @@ impl Screen {
     /// The list we fill with the discs from the core once the game has loaded.
     pub fn is_disc_list(&self) -> bool {
         self.role == Some(ScreenRole::Discs)
+    }
+
+    /// The id of BACK on this screen, when the screen has a separate one, as
+    /// on a generated list or on a screen that only the design has.
+    pub fn back_button(&self) -> String {
+        format!("{}-back", self.id)
     }
 }
 
@@ -450,6 +453,15 @@ impl Manifest {
             .clone()
             .or_else(|| native.fonts.clone())
             .ok_or_else(|| missing(&base, "fonts"))?;
+        // We draw every word with these in the player, and start no menu
+        // without one.
+        if fonts.is_empty() {
+            return Err(format!(
+                "design '{id}' lists no fonts. The menu writes every word in the fonts a design \
+                 lists, and a game whose design lists none would have no menu; list at least \
+                 one in design.json \"fonts\", or leave \"fonts\" out to use Native's"
+            ));
+        }
 
         let metrics = |pick: &dyn Fn(&MetricsFile) -> Option<i32>, what: &str| {
             own.metrics
@@ -705,7 +717,6 @@ fn screens(
             option_label: option.as_ref().map(|option| option.label.clone()),
             option_default: option.is_some_and(|option| option.default),
             images: entry.images,
-            mark: entry.mark,
             dialogs: entry.dialogs.unwrap_or_default(),
             opener: entry.from,
         };
@@ -815,6 +826,18 @@ mod tests {
         let misworded = package(&root, "misworded", r#"{"words": {"slots": "BLOCK"}}"#);
         let error = Manifest::load(&misworded).unwrap_err();
         assert!(error.contains("'slots'") && error.contains("misworded"), "{error}");
+    }
+
+    /// We draw every word in the player with the fonts in a design, and do not
+    /// start a menu without fonts. An export of such a design would contain a
+    /// game with no menu at all.
+    #[test]
+    fn a_design_that_lists_no_font_is_refused() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-manifest-fontless");
+        with_native(&root);
+        let design = package(&root, "fontless", r#"{"fonts": []}"#);
+        let error = Manifest::load(&design).expect_err("a design with no font was accepted");
+        assert!(error.contains("fontless") && error.contains("font"), "{error}");
     }
 
     #[test]

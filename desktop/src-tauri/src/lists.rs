@@ -9,7 +9,7 @@
 //! marker. We replace each marker once, with every list at the same time,
 //! because the marker is gone after the first replacement.
 
-use crate::menu::{Manifest, Screen, ScreenPlace};
+use crate::menu::{contract, Manifest, Screen, ScreenPlace};
 use std::fs;
 use std::path::Path;
 
@@ -19,20 +19,30 @@ use std::path::Path;
 pub const SCREENS_SLOT: &str = "<!--SCREENS-->";
 pub const LINKS_SLOT: &str = "<!--SCREEN-LINKS-->";
 
-/// The row template for a design without its own `row.rml`.
+/// The row template we use when a design has no `row.rml`.
 ///
-/// The holes are the contract: `ROW-ID`, `ICON`, `TITLE`, `DETAIL`, `STATE`,
-/// `SELECTED`. The class stays `list-row`, and the id of the state element is
-/// `ROW-ID-state`, so we can mark the active item in the player whatever the
-/// design of the row.
-const BUILT_IN_ROW: &str = concat!(
-    "<button id=\"ROW-ID\" class=\"list-row SELECTED\">",
-    "<img class=\"list-row-icon\" src=\"ICON\"/>",
-    "<div id=\"ROW-ID-title\" class=\"list-row-title\">TITLE</div>",
-    "<div id=\"ROW-ID-detail\" class=\"list-row-detail\">DETAIL</div>",
-    "<div id=\"ROW-ID-state\" class=\"list-row-state\">STATE</div>",
-    "</button>\n",
-);
+/// The placeholders `ROW-ID`, `ICON`, `TITLE`, `DETAIL`, `STATE` and
+/// `SELECTED`, the row class and the state suffix are in the contract. The
+/// id of the state element is the row id with that suffix, so we can mark
+/// the active item in the player without knowing how the design draws rows.
+fn built_in_row() -> String {
+    format!(
+        "<button id=\"ROW-ID\" class=\"{row} SELECTED\">\
+         <img class=\"{icon}\" src=\"ICON\"/>\
+         <div id=\"ROW-ID{title_id}\" class=\"{title}\">TITLE</div>\
+         <div id=\"ROW-ID{detail_id}\" class=\"{detail}\">DETAIL</div>\
+         <div id=\"ROW-ID{state_id}\" class=\"{state}\">STATE</div>\
+         </button>\n",
+        row = contract!(ListRow),
+        icon = contract!(ListRowIcon),
+        title_id = contract!(TitleSuffix),
+        title = contract!(ListRowTitle),
+        detail_id = contract!(DetailSuffix),
+        detail = contract!(ListRowDetail),
+        state_id = contract!(StateSuffix),
+        state = contract!(ListRowState),
+    )
+}
 
 /// One row, for example for a shader or for an achievement.
 #[derive(Clone, Debug)]
@@ -71,12 +81,15 @@ pub enum ListContent {
 pub fn row_template(design: &Path) -> Result<String, String> {
     let path = design.join("row.rml");
     if !path.is_file() {
-        return Ok(BUILT_IN_ROW.to_string());
+        return Ok(built_in_row());
     }
     let text = fs::read_to_string(&path)
         .map_err(|error| format!("could not read the row template: {error}"))?;
-    if !text.contains("ROW-ID") || !text.contains("list-row") {
-        return Err("a row template must keep the ROW-ID hole and the list-row class".into());
+    if !text.contains("ROW-ID") || !text.contains(contract!(ListRow)) {
+        return Err(format!(
+            "a row template must keep the ROW-ID hole and the {} class",
+            contract!(ListRow)
+        ));
     }
     Ok(text)
 }
@@ -98,9 +111,10 @@ fn screen_template(manifest: &Manifest, id: &str) -> Result<Option<String>, Stri
     }
     let source = manifest.fragment_path(&name);
     let template = manifest.fragment(&name)?;
+    let panel_class = format!("class=\"{}", contract!(ScreenPanel));
     for required in [
         "id=\"PANEL-ID\"",
-        "class=\"screen-panel",
+        panel_class.as_str(),
         "<!--ROWS-->",
         "<!--ACTIONS-->",
         "<!--STATUS-->",
@@ -157,7 +171,7 @@ pub fn rml_text(value: &str) -> String {
 pub fn render_row(template: &str, item: &ListItem) -> String {
     let mut marks: Vec<&str> = Vec::new();
     if item.selected {
-        marks.push("selected");
+        marks.push(contract!(Selected));
     }
     if item.accent {
         marks.push("accent");
@@ -197,17 +211,23 @@ pub fn render_row(template: &str, item: &ListItem) -> String {
     if item.line {
         // The same code for every list. According to the caller, this row has no
         // picture and no second line, so we do not name the disc list here.
-        out = out.replacen("class=\"list-row", "class=\"list-row line", 1);
+        let row = format!("class=\"{}", contract!(ListRow));
+        out = out.replacen(&row, &format!("{row} {}", contract!(Line)), 1);
     }
     if item.icon.is_empty() {
         // A row with no picture. We remove the img, because loading a missing
         // texture in RmlUi makes the render fail.
-        out = out.replace("<img class=\"list-row-icon\" src=\"\"/>", "");
+        out = out.replace(
+            &format!("<img class=\"{}\" src=\"\"/>", contract!(ListRowIcon)),
+            "",
+        );
     }
     if item.line && item.detail.is_empty() {
         let detail = format!(
-            "<div id=\"{}-detail\" class=\"list-row-detail\"></div>",
-            item.id
+            "<div id=\"{}{}\" class=\"{}\"></div>",
+            item.id,
+            contract!(DetailSuffix),
+            contract!(ListRowDetail)
         );
         out = out.replace(&detail, "");
     }
@@ -216,9 +236,26 @@ pub fn render_row(template: &str, item: &ListItem) -> String {
 
 /// One list, with the same template on every page, and a pager only when the
 /// items do not fit on one page. On page one the back arrow is disabled,
-/// and we move that mark in the player as the page turns. Page and arrow ids
-/// are `{screen}-page-N`, `{screen}-prev`, `{screen}-next` and `{screen}-page-count`.
+/// because there is nothing before it, and we move that mark in the player as
+/// the page turns. The list id is the screen id with the contract's list
+/// suffix. Page and arrow ids are `{screen}-page-N`, `{screen}-prev`,
+/// `{screen}-next` and the screen id with the contract's page-count suffix.
 pub fn render_list(
+    screen: &str,
+    template: &str,
+    items: &[ListItem],
+    page_size: usize,
+    words: &std::collections::BTreeMap<String, String>,
+) -> String {
+    let id = format!("{screen}{}", contract!(ListSuffix));
+    render_list_in(&id, "", screen, template, items, page_size, words)
+}
+
+/// `render_list`, in the list element `id` with `attributes` after its class,
+/// for a list that we look up by another id in the player.
+pub fn render_list_in(
+    id: &str,
+    attributes: &str,
     screen: &str,
     template: &str,
     items: &[ListItem],
@@ -229,7 +266,10 @@ pub fn render_list(
         return String::new();
     }
     let page_count = items.len().div_ceil(page_size);
-    let mut html = format!("<div id=\"{screen}-list\" class=\"list\">");
+    let mut html = format!(
+        "<div id=\"{id}\" class=\"{}\"{attributes}>",
+        contract!(List)
+    );
     for (index, chunk) in items.chunks(page_size).enumerate() {
         let hidden = if index == 0 {
             ""
@@ -237,8 +277,9 @@ pub fn render_list(
             " style=\"display:none;\""
         };
         html.push_str(&format!(
-            "<div id=\"{screen}-page-{}\" class=\"list-page\"{hidden}>",
-            index + 1
+            "<div id=\"{screen}-page-{}\" class=\"{}\"{hidden}>",
+            index + 1,
+            contract!(ListPage)
         ));
         for item in chunk {
             html.push_str(&render_row(template, item));
@@ -265,7 +306,19 @@ fn pager(screen: &str, page_count: usize, words: &std::collections::BTreeMap<Str
         "page-count",
         &[("page", "1"), ("pages", &page_count.to_string())],
     ));
-    format!("<div id=\"{screen}-pager\" class=\"list-pager\"{hidden}><button id=\"{screen}-prev\" class=\"menu-action list-pager-prev disabled\">&lt;</button><div id=\"{screen}-page-count\" class=\"list-pager-count\">{count}</div><button id=\"{screen}-next\" class=\"menu-action list-pager-next\">&gt;</button></div>")
+    format!(
+        "<div id=\"{screen}-pager\" class=\"{pager}\"{hidden}>\
+         <button id=\"{screen}-prev\" class=\"{action} {previous} {disabled}\">&lt;</button>\
+         <div id=\"{screen}{count_id}\" class=\"{count_class}\">{count}</div>\
+         <button id=\"{screen}-next\" class=\"{action} {next}\">&gt;</button></div>",
+        pager = contract!(ListPager),
+        action = contract!(MenuAction),
+        previous = contract!(ListPagerPrev),
+        disabled = contract!(Disabled),
+        count_id = contract!(PageCountSuffix),
+        count_class = contract!(ListPagerCount),
+        next = contract!(ListPagerNext),
+    )
 }
 
 /// What we show in a live row while its picture loads: nine cells, laid out
@@ -305,7 +358,14 @@ fn live_list(
         row.insert_str(opened + 1, WAITING);
     }
     let pager = pager(screen, 0, words);
-    format!("<div id=\"{screen}-list\" class=\"list live-list\" data-page-size=\"{page_size}\"><div class=\"list-prototype\" style=\"display:none;\">{row}</div>{pager}</div>")
+    format!(
+        "<div id=\"{screen}{list_id}\" class=\"{list} live-list\" {page_size_attribute}=\"{page_size}\">\
+         <div class=\"{prototype}\" style=\"display:none;\">{row}</div>{pager}</div>",
+        list_id = contract!(ListSuffix),
+        list = contract!(List),
+        page_size_attribute = contract!(PageSizeAttribute),
+        prototype = contract!(ListPrototype),
+    )
 }
 
 pub fn fill_slot(document: &str, slot: &str, body: &str) -> Result<String, String> {
@@ -407,13 +467,16 @@ pub fn install(
         }
         let own = screen_actions(manifest, &list.screen.id)?;
         let actions = format!(
-            "<div class=\"list-actions\"{up}>{own}<button class=\"menu-action list-back\" id=\"{id}-back\">{back}</button></div>",
-            id = list.screen.id,
+            "<div class=\"list-actions\"{up}>{own}<button class=\"{action} {list_back}\" id=\"{id}\">{back}</button></div>",
+            action = contract!(MenuAction),
+            list_back = contract!(ListBack),
+            id = list.screen.back_button(),
             back = rml_text(&back),
         );
         let status = format!(
-            "<div id=\"{}-status\" class=\"list-status\"{up}></div>",
-            list.screen.id
+            "<div id=\"{}{}\" class=\"list-status\"{up}></div>",
+            list.screen.id,
+            contract!(StatusSuffix)
         );
         let panel = if let Some(template) = wrapper {
             template
@@ -423,8 +486,9 @@ pub fn install(
                 .replace("<!--STATUS-->", &status)
         } else {
             format!(
-                "<div id=\"{panel}\" class=\"screen-panel\" style=\"display:none;\">{rows}{actions}{status}</div>",
+                "<div id=\"{panel}\" class=\"{panel_class}\" style=\"display:none;\">{rows}{actions}{status}</div>",
                 panel = list.screen.panel,
+                panel_class = contract!(ScreenPanel),
             )
         };
         screens.push_str(&panel);
@@ -442,7 +506,8 @@ pub fn install(
             && !screens.contains(&drawn)
         {
             links.push_str(&format!(
-                "<button class=\"menu-action screen-link\" id=\"{button}\">{heading}</button>",
+                "<button class=\"{action} screen-link\" id=\"{button}\">{heading}</button>",
+                action = contract!(MenuAction),
                 button = list.screen.button,
                 heading = rml_text(&list.screen.heading),
             ));
@@ -450,7 +515,7 @@ pub fn install(
         installed.push(Installed {
             screen: list.screen.clone(),
             host: host_of(staged_screens, &list.screen)
-                .map(|host| (host.id.clone(), format!("{}-back", list.screen.id))),
+                .map(|host| (host.id.clone(), list.screen.back_button())),
         });
     }
 

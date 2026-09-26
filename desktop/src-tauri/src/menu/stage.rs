@@ -1,6 +1,9 @@
 //! Composing a whole menu and writing it.
 
-use super::{declarations, document, manifest::Manifest, scene, tokens, Content, ScreenPlace};
+use super::{
+    contract, declarations, document, file_name, manifest::Manifest, scene, tokens, Content,
+    ScreenPlace,
+};
 use crate::controls::Controls;
 use crate::shaders::ShaderSelection;
 use serde::{Deserialize, Serialize};
@@ -8,6 +11,9 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
+
+/// The page we write in a composition and open in the player.
+pub const DOCUMENT: &str = file_name!(Menu);
 
 /// The settings for the in-game menu of a game.
 #[derive(Clone, Debug)]
@@ -73,7 +79,7 @@ impl Composition {
         self.files.push((name, content));
     }
 
-    /// A composed text file, such as `menu.rml` or `design.cfg`.
+    /// A composed text file, such as `DOCUMENT` or `design.cfg`.
     pub fn text(&self, name: &str) -> Option<&str> {
         self.files.iter().find_map(|(path, content)| match content {
             Content::Text(text) if path == Path::new(name) => Some(text.as_str()),
@@ -151,7 +157,7 @@ fn parts(
     let mut names = Vec::new();
     for (name, text) in sheets {
         composition.put(
-            Path::new("parts").join(&name),
+            Path::new(document::PARTS).join(&name),
             Content::Text(tokens::substitute(&text, values)?),
         );
         names.push(name);
@@ -208,9 +214,9 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         let staged = document::staged_screens(&manifest.screens, None, request.discs)?;
         let cfg = declarations::write(&manifest, &staged, &[], &[], &splash)?;
         let splash = parts(&mut composition, &manifest, &values, &splash)?;
-        composition.put("menu.rml", Content::Text(splash));
-        composition.put("menu.rcss", Content::Text(stylesheet));
-        composition.put("design.cfg", Content::Text(cfg));
+        composition.put(DOCUMENT, Content::Text(splash));
+        composition.put(document::STYLESHEET, Content::Text(stylesheet));
+        composition.put(file_name!(Design), Content::Text(cfg));
         return Ok(composition);
     }
 
@@ -224,7 +230,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         composition.put(name, content);
     }
     if !shaders.config.is_empty() {
-        composition.put("shaders.cfg", Content::Text(shaders.config));
+        composition.put(file_name!(Shaders), Content::Text(shaders.config));
     }
     lists.extend(shaders.list);
     let achievements = crate::achievements::included(request.include_achievements, true);
@@ -322,7 +328,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
             .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
             .map_err(|e| e.to_string())?;
         composition.put("background.png", Content::Bytes(png));
-        menu = document::add_class(&menu, "screen", "with-background");
+        menu = document::add_class(&menu, contract!(Screen), "with-background");
     }
 
     let mut stylesheet = stylesheet;
@@ -341,9 +347,9 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         }
     }
 
-    composition.put("menu.rml", Content::Text(menu));
-    composition.put("menu.rcss", Content::Text(stylesheet));
-    composition.put("design.cfg", Content::Text(cfg));
+    composition.put(DOCUMENT, Content::Text(menu));
+    composition.put(document::STYLESHEET, Content::Text(stylesheet));
+    composition.put(file_name!(Design), Content::Text(cfg));
     Ok(composition)
 }
 
@@ -387,7 +393,7 @@ pub fn render_preview(request: &PreviewRequest) -> Result<PathBuf, String> {
     .write(&request.output_dir)?;
     let output = request.output_dir.join("preview.png");
     let run = std::process::Command::new(&request.renderer)
-        .arg(request.output_dir.join("menu.rml"))
+        .arg(request.output_dir.join(DOCUMENT))
         .arg(&output)
         .arg(request.width.to_string())
         .arg(request.height.to_string())

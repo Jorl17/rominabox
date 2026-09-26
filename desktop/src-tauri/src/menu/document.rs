@@ -6,13 +6,17 @@
 //! complete.
 
 use super::manifest::{Manifest, Screen, ScreenPlace, ScreenRole};
-use super::words;
+use super::{contract, words};
 use crate::player_settings::{Kind, PlayerSetting};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
 };
+
+/// The id of BACK on the built-in Options screen, which we make a button of
+/// the screen behind Options.
+const OPTIONS_BACK: &str = "options-back";
 
 /// Which screens we put in a game.
 ///
@@ -81,7 +85,7 @@ pub(crate) fn staged_screens(
             .iter_mut()
             .find(|screen| screen.place == ScreenPlace::Plain && screen.option_label.is_none())
         {
-            behind.button = "options-back".to_string();
+            behind.button = OPTIONS_BACK.to_string();
         }
     }
     Ok(staged)
@@ -167,20 +171,11 @@ pub(crate) fn opening_screen(manifest: &Manifest, document: &str) -> Result<Stri
             manifest.id
         )
     })?;
-    let document = set_text(document, &contract_id("Heading")?, &pause.heading)?;
+    let document = set_text(document, contract!(Heading), &pause.heading)?;
     if pause.footer.is_empty() {
         return Ok(document);
     }
-    set_text(&document, &contract_id("FooterHint")?, &pause.footer)
-}
-
-/// The id declared under `name` in the document contract of the player.
-fn contract_id(name: &str) -> Result<String, String> {
-    super::contract::entries()?
-        .into_iter()
-        .find(|entry| entry.name == name)
-        .map(|entry| entry.value)
-        .ok_or_else(|| format!("document_contract.inc declares no {name}"))
+    set_text(&document, contract!(FooterHint), &pause.footer)
 }
 
 /// `document` with everything inside the element `id` replaced by `text`,
@@ -260,8 +255,11 @@ fn entry_markup(manifest: &Manifest, button: &str, label: &str) -> Result<String
         fs::read_to_string(&template_path)
             .map_err(|e| format!("Could not read {}: {e}", template_path.display()))?
     } else {
-        "<button class=\"menu-action option-entry\" id=\"BUTTON\"><span class=\"option-label\">LABEL</span></button>"
-            .to_string()
+        format!(
+            "<button class=\"{} {}\" id=\"BUTTON\"><span class=\"option-label\">LABEL</span></button>",
+            contract!(MenuAction),
+            contract!(OptionEntry)
+        )
     };
     Ok(template
         .replace("BUTTON", button)
@@ -288,19 +286,21 @@ fn entry_button(manifest: &Manifest, screen: &Screen) -> Result<String, String> 
 
 /// When the design does not place a switch, we add it as one more Options
 /// entry, drawn like the others with its name and then its state. At run time
-/// we write the state into `<control>-state`, and we handle a press on any
-/// element with the class `switch`.
+/// we write the state into the element whose id is the control id followed by
+/// the state suffix from the contract, and we handle a press on any element
+/// with the switch class from the contract.
 fn switch_entry(manifest: &Manifest, setting: &PlayerSetting) -> Result<String, String> {
     let control = setting.control();
     let label = format!(
-        "{} <span id=\"{control}-state\" class=\"setting-state\">{}</span>",
+        "{} <span id=\"{control}{}\" class=\"setting-state\">{}</span>",
         crate::lists::rml_text(&words::say(&manifest.words, setting.label, &[])),
+        contract!(StateSuffix),
         crate::lists::rml_text(&state_word(&manifest.words, setting, setting.default)),
     );
     Ok(add_class(
         &entry_markup(manifest, &control, &label)?,
         &control,
-        "switch",
+        contract!(Switch),
     ))
 }
 
@@ -372,7 +372,8 @@ pub(crate) fn apply_options(
         .clone()
         .unwrap_or_else(|| options.heading.clone());
     let opener = format!(
-        "<button class=\"menu-action\" id=\"{}\">{}</button>",
+        "<button class=\"{}\" id=\"{}\">{}</button>",
+        contract!(MenuAction),
         options.button,
         crate::lists::rml_text(&opener_label)
     );
@@ -395,7 +396,7 @@ pub(crate) fn apply_options(
         }
     }
     if !placed_opener {
-        if let Some(quit) = button_bounds(&document, "quit") {
+        if let Some(quit) = button_bounds(&document, contract!(Quit)) {
             document.insert_str(quit.0, &opener);
         }
     }
@@ -426,7 +427,10 @@ pub(crate) fn apply_options(
         } else {
             let back = options.back_label.clone().unwrap_or_else(|| "BACK".into());
             format!(
-                "<div {panel_id} class=\"screen-panel\" style=\"display:none;\"><div id=\"options-entries\"><!--OPTIONS--></div><button class=\"menu-action options-back\" id=\"options-back\">{back}</button></div>",
+                "<div {panel_id} class=\"{panel_class}\" style=\"display:none;\"><div id=\"options-entries\"><!--OPTIONS--></div><button class=\"{action} {options_back}\" id=\"{OPTIONS_BACK}\">{back}</button></div>",
+                panel_class = contract!(ScreenPanel),
+                action = contract!(MenuAction),
+                options_back = contract!(OptionsBack),
                 back = crate::lists::rml_text(&back),
             )
         };
@@ -438,8 +442,8 @@ pub(crate) fn apply_options(
                 "{name} must contain <!--OPTIONS--> or #options-entries"
             ));
         }
-        let footer = "<div id=\"footer\">";
-        let Some(at) = document.find(footer) else {
+        let footer = format!("<div id=\"{}\">", contract!(Footer));
+        let Some(at) = document.find(&footer) else {
             return Err("menu.rml has no footer, so the options screen has nowhere to go".into());
         };
         document.insert_str(at, &shell);
@@ -465,6 +469,11 @@ pub(crate) fn apply_options(
         );
     }
     Ok(document)
+}
+
+/// The element that contains a level's slider, arrows, ends and name.
+fn level_holder(setting: &PlayerSetting) -> String {
+    format!("{}-control", setting.id)
 }
 
 /// The marker in a design for a player setting, instead of its place in
@@ -547,16 +556,21 @@ pub fn level_markup(
         "slider",
         &slider,
         &[
-            "slider",
-            "slider-track",
-            "slider-fill",
-            "slider-thumb",
-            "slider-readout",
+            contract!(Slider),
+            contract!(SliderTrack),
+            contract!(SliderFill),
+            contract!(SliderThumb),
+            contract!(SliderReadout),
         ],
     )?;
     let id = setting.id;
     Ok(format!(
-        "<div id=\"{id}-control\">{slider}<button id=\"{id}-down\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{id}-up\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{id}-low\" class=\"volume-end\">{low}</div><div id=\"{id}-high\" class=\"volume-end\">{high}</div><div class=\"volume-name\">{name}</div></div>",
+        "<div id=\"{holder}\">{slider}<button id=\"{id}-down\" class=\"{action} {arrow} {down}\">&lt;</button><button id=\"{id}-up\" class=\"{action} {arrow} {up}\">&gt;</button><div id=\"{id}-low\" class=\"volume-end\">{low}</div><div id=\"{id}-high\" class=\"volume-end\">{high}</div><div class=\"volume-name\">{name}</div></div>",
+        holder = level_holder(setting),
+        action = contract!(MenuAction),
+        arrow = contract!(VolumeArrow),
+        down = contract!(ArrowDown),
+        up = contract!(ArrowUp),
         slider = slider.replace("PART-ID", &setting.control()).replace("LABEL", ""),
         low = crate::lists::rml_text(&words::say(given, "level-low", &[])),
         high = crate::lists::rml_text(&words::say(given, "level-high", &[])),
@@ -580,7 +594,7 @@ fn switch_markup(
     setting: &PlayerSetting,
 ) -> Result<String, String> {
     let toggle = part_template(design, "toggle")?;
-    require_classes("toggle", &toggle, &["toggle"])?;
+    require_classes("toggle", &toggle, &[contract!(Toggle)])?;
     Ok(toggle.replace("PART-ID", &setting.control()).replace(
         "LABEL",
         &crate::lists::rml_text(&words::say(given, setting.label, &[])),
@@ -617,7 +631,7 @@ pub fn install_settings(
     for setting in settings {
         let slot = setting_slot(setting);
         let placed = match setting.kind {
-            Kind::Level { .. } => format!("id=\"{}-control\"", setting.id),
+            Kind::Level { .. } => format!("id=\"{}\"", level_holder(setting)),
             Kind::Switch { .. } => format!("id=\"{}\"", setting.control()),
         };
         if document.contains(&placed) {
@@ -648,7 +662,7 @@ pub fn install_settings(
     // We mark a switch that starts on with the class `on` from the start.
     for setting in settings {
         if setting.is_on(setting.default) {
-            document = add_class(&document, &setting.control(), "on");
+            document = add_class(&document, &setting.control(), contract!(On));
         }
     }
     Ok(document)
@@ -682,9 +696,12 @@ pub(crate) fn part_sheets(design: &Path) -> Result<Vec<(String, String)>, String
 }
 
 /// The staged stylesheet every document links.
-pub(crate) const STYLESHEET: &str = "menu.rcss";
+pub const STYLESHEET: &str = "menu.rcss";
 
-/// Link each part stylesheet, under `parts/`, before the design stylesheet.
+/// Where the part stylesheets are staged, beside the document.
+pub(crate) const PARTS: &str = "parts";
+
+/// Link each part stylesheet, under `PARTS`, before the design's own.
 pub(crate) fn link_parts(document: &str, names: &[String]) -> Result<String, String> {
     let design_link = format!("<link type=\"text/rcss\" href=\"{STYLESHEET}\"/>");
     let Some(at) = document.find(&design_link) else {
@@ -695,7 +712,7 @@ pub(crate) fn link_parts(document: &str, names: &[String]) -> Result<String, Str
     };
     let links: String = names
         .iter()
-        .map(|name| format!("<link type=\"text/rcss\" href=\"parts/{name}\"/>"))
+        .map(|name| format!("<link type=\"text/rcss\" href=\"{PARTS}/{name}\"/>"))
         .collect();
     let mut linked = document.to_string();
     linked.insert_str(at, &links);

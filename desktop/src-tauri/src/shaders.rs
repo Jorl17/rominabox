@@ -558,15 +558,17 @@ pub fn stage(
     let initial = starting(selection, &resolved)?.id.clone();
     let mut items = Vec::new();
     let mut files: Vec<(PathBuf, Content)> = Vec::new();
-    let mut config = format!("shader_ids = \"{}\"\n", {
+    let mut config = format!("{} = \"{}\"\n", crate::menu::key!(ShaderIds), {
         resolved
             .iter()
             .map(|item| item.id.as_str())
             .collect::<Vec<_>>()
             .join(" ")
     });
-    config.push_str("shader_state_on = \"ON\"\nshader_state_off = \"\"\n");
-    config.push_str(&format!("shader_initial = \"{initial}\"\n"));
+    config.push_str(&format!(
+        "{} = \"{initial}\"\n",
+        crate::menu::key!(ShaderInitial)
+    ));
     let catalog = catalog_file()?;
     for item in &resolved {
         let directory = Path::new("shaders").join(&item.id);
@@ -605,14 +607,19 @@ pub fn stage(
             icon: format!("shaders/{}/icon.png", item.id),
             title: item.name.to_uppercase(),
             detail: item.detail.clone(),
-            state: if selected { "ON".into() } else { String::new() },
+            // The mark that we move to whichever filter is running.
+            state: if selected {
+                crate::menu::words::say(&manifest.words, "shader-mark", &[])
+            } else {
+                String::new()
+            },
             selected,
             accent: false,
             line: false,
         });
         config.push_str(&format!(
-            "shader_preset_{id} = \"{preset}\"\n",
-            id = item.id,
+            "{key} = \"{preset}\"\n",
+            key = crate::menu::key!(ShaderPreset, item.id),
             preset = item.relative_preset,
         ));
     }

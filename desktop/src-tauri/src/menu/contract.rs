@@ -62,17 +62,31 @@ fn scope(word: &str) -> Result<Scope, String> {
 
 /// The quoted fields of every `<macro>(...)` declaration, in order.
 fn declarations(macro_name: &str) -> impl Iterator<Item = Vec<String>> + '_ {
-    let opening = format!("{macro_name}(");
-    SOURCE.lines().filter_map(move |line| {
-        let fields = line.trim().strip_prefix(&opening)?.strip_suffix(')')?;
-        Some(
-            fields
-                .split(',')
-                .map(|field| field.trim().trim_matches('"').to_string())
-                .collect(),
-        )
-    })
+    super::inc::declarations(SOURCE, macro_name)
 }
+
+/// The id, class or attribute declared in the contract under `name`: the first
+/// field of the element, class, attribute or fact, as in the player's
+/// `document_contract::<name>`. Read it with `contract!(Name)`, at compile
+/// time of the exporter.
+pub const fn value(name: &str) -> &'static str {
+    super::inc::quoted(
+        SOURCE,
+        &["RIB_ELEMENT", "RIB_CLASS", "RIB_ATTRIBUTE", "RIB_FACT"],
+        name,
+        0,
+    )
+}
+
+/// `contract!(Name)`: the value declared under `Name` in
+/// `document_contract.inc`, the same name we use in the C++ of the player.
+/// The build fails on a name that the contract does not declare.
+macro_rules! contract {
+    ($name:ident) => {
+        const { $crate::menu::contract::value(stringify!($name)) }
+    };
+}
+pub(crate) use contract;
 
 /// The word for `role` in the contract, design.json and design.cfg. Every
 /// role with special handling in the exporter has a declaration in the player.
@@ -319,11 +333,11 @@ pub fn validate(manifest: &Manifest, document: &str, shipped: &[&Screen]) -> Res
         if screen.role == Some(ScreenRole::Pause) {
             continue;
         }
-        if !has_class(tag, "screen-panel") {
+        if !has_class(tag, contract!(ScreenPanel)) {
             return Err(missing(
                 manifest,
                 screen,
-                &format!("class .screen-panel on #{}", screen.panel),
+                &format!("class .{} on #{}", contract!(ScreenPanel), screen.panel),
             ));
         }
         if !tag.replace(' ', "").contains("display:none") {
@@ -370,6 +384,21 @@ mod tests {
             assert!(names.insert(entry.name.clone()), "{} is declared twice", entry.name);
         }
         assert_eq!(slot_count().unwrap(), 6);
+    }
+
+    /// What we write by a name when we compose is what we look up by it in the
+    /// player. Every element, class, attribute and fact has the same value by
+    /// its name as in the line that declares it.
+    #[test]
+    fn every_declaration_reads_by_its_name() {
+        let mut read = 0;
+        for macro_name in ["RIB_ELEMENT", "RIB_CLASS", "RIB_ATTRIBUTE", "RIB_FACT"] {
+            for fields in declarations(macro_name) {
+                assert_eq!(value(&fields[0]), fields[1], "{macro_name}({})", fields[0]);
+                read += 1;
+            }
+        }
+        assert!(read > entries().unwrap().len(), "attributes and facts were read too");
     }
 
     #[test]

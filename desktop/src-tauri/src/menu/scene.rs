@@ -5,7 +5,7 @@
 //! builder and the overlay renderer, and write them here as markup.
 
 use super::manifest::{Manifest, SceneMetrics};
-use super::Content;
+use super::{contract, file_name, Content};
 use std::path::{Path, PathBuf};
 
 /// The scene for one game, and the files it needs beside the menu.
@@ -57,7 +57,7 @@ pub(crate) fn compose(
     // cannot generate markup there.
     for entry in &offered {
         files.push((
-            PathBuf::from(format!("{SCENE_PREFIX}{}.rml", entry.id)),
+            PathBuf::from(file_name!(Scene, entry.id)),
             Content::Text(scene_markup(entry, controls, metrics)),
         ));
     }
@@ -69,12 +69,15 @@ pub(crate) fn compose(
     })
 }
 
-/// The place of the bind list. It is a sibling of the scene, like the picker,
-/// because switching pads replaces the scene and the list must stay.
-/// The place of the scene of the chosen pad, inside `#controller-scene`.
+/// Where the chosen pad's scene goes, inside `#controller-scene`.
 pub(crate) const CONTROLS_SLOT: &str = "<!--CONTROLS-->";
 
+/// Where the bind list goes, as a sibling of the scene like the picker, so
+/// it stays when we replace the scene after someone swaps pads.
 pub(crate) const BINDS_SLOT: &str = "<!--BINDS-->";
+
+/// The element of the bind list, which we name in design.cfg for the player.
+pub(crate) const BIND_LIST: &str = "control-binds";
 
 /// One row for each input that the bundled pads can bind to a single control.
 ///
@@ -116,18 +119,16 @@ fn bind_list_markup(
             line: false,
         })
         .collect();
-    // We name the wrapper after the screen in render_list (discs-list). In the
-    // player we look this one up as control-binds, the id stored in binds_list
-    // in design.cfg, so we replace the tag of this wrapper with that id.
-    // Without it, no bind list has a box, and the placement check fails for
-    // every one of them.
-    Ok(
-        crate::lists::render_list("binds", &template, &items, page_size, &manifest.words).replacen(
-            "<div id=\"binds-list\" class=\"list\">",
-            "<div id=\"control-binds\" class=\"list\" style=\"display:none;\">",
-            1,
-        ),
-    )
+    // Hidden until someone chooses a control, with the id named in design.cfg.
+    Ok(crate::lists::render_list_in(
+        BIND_LIST,
+        " style=\"display:none;\"",
+        "binds",
+        &template,
+        &items,
+        page_size,
+        &manifest.words,
+    ))
 }
 
 /// The pads in an export: every pad in the picker.
@@ -153,10 +154,6 @@ fn carried(
 /// The marker for the controller picker in a design. It is separate from the
 /// marker for the scene, because the picker is not part of the scene.
 pub(crate) const PICKER_SLOT: &str = "<!--CONTROLLER-PICKER-->";
-
-/// The scene of each offered pad, next to the menu, in a file named after the
-/// pad id. We load one in the player when someone picks another controller.
-pub const SCENE_PREFIX: &str = "scene-";
 
 /// One controller's scene: its illustration, hit regions, callouts and groups.
 ///
@@ -253,19 +250,31 @@ fn controller_picker_markup(offered: &[crate::controls::ControlProfile], chosen:
         .find(|entry| entry.id == chosen)
         .map(|entry| crate::lists::rml_text(&entry.name.to_uppercase()))
         .unwrap_or_default();
+    let (picker, label, current, list) = (
+        contract!(ControlsDevice),
+        contract!(ControlPickerLabel),
+        contract!(ControlsDeviceCurrent),
+        contract!(ControlsDeviceList),
+    );
     let mut markup = format!(
         r#"
-<div id="controls-device" class="control-picker">
-<div id="controls-device-label" class="control-picker-label">CONTROLLER</div>
-<button id="controls-device-current" class="control-picker-current">{chosen_name}</button>
-<div id="controls-device-list" class="control-picker-list" style="display:none;">
+<div id="{picker}" class="control-picker">
+<div id="controls-device-label" class="{label}">CONTROLLER</div>
+<button id="{current}" class="{picker_current}">{chosen_name}</button>
+<div id="{list}" class="control-picker-list" style="display:none;">
 "#,
+        picker_current = contract!(ControlPickerCurrent),
     );
     for entry in offered {
-        let selected = if entry.id == chosen { " selected" } else { "" };
+        let selected = if entry.id == chosen {
+            format!(" {}", contract!(Selected))
+        } else {
+            String::new()
+        };
         markup.push_str(&format!(
-            r#"<button id="controls-device-option-{}" class="control-picker-option{selected}">{}</button>
+            r#"<button id="{}{}" class="control-picker-option{selected}">{}</button>
 "#,
+            contract!(ControlsDeviceOptionPrefix),
             entry.id,
             crate::lists::rml_text(&entry.name.to_uppercase()),
         ));
@@ -363,13 +372,16 @@ fn control_group_markup(
         let title = name.replace('_', " ").to_uppercase();
         markup.push_str(&format!(
             r#"
-<button id="control-group-{name}" class="control-group" style="left:{x}dp;top:{y}dp;">
+<button id="{group_id}{name}" class="{group_class}" style="left:{x}dp;top:{y}dp;">
 <div class="control-label">{}</div>
-<div id="control-group-binding-{name}" class="control-assignment">{}</div>{ring}
+<div id="{binding_id}{name}" class="control-assignment">{}</div>{ring}
 </button>
 "#,
             crate::lists::rml_text(&title),
             crate::lists::rml_text(&callout_line(&words)),
+            group_id = contract!(ControlGroupPrefix),
+            group_class = contract!(ControlGroup),
+            binding_id = contract!(ControlGroupBindingPrefix),
             x = group.strip.x,
             y = group.strip.y,
         ));
@@ -436,8 +448,13 @@ fn control_callout_markup(
         })
         .unwrap_or_default();
     format!(
-        r#"<button id="control-{id}" class="control-callout" style="left:{}dp;top:{}dp;"><div id="control-label-{id}" class="control-label">{label}</div><div class="control-assignment">{original}<span id="control-binding-{id}">{key}</span></div>{ring}</button>"#,
-        callout.x, callout.y
+        r#"<button id="{stop}{id}" class="{class}" style="left:{}dp;top:{}dp;"><div id="{label_id}{id}" class="control-label">{label}</div><div class="control-assignment">{original}<span id="{binding_id}{id}">{key}</span></div>{ring}</button>"#,
+        callout.x,
+        callout.y,
+        stop = contract!(ControlPrefix),
+        class = contract!(ControlCallout),
+        label_id = contract!(ControlLabelPrefix),
+        binding_id = contract!(ControlBindingPrefix),
     )
 }
 

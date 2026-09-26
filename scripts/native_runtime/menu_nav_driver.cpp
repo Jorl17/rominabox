@@ -48,6 +48,8 @@
 #include "rmlui/host.h"
 #include "rmlui_bridge.h"
 #include "rmlui/view.hpp"
+#include "rmlui/declarations.h"
+#include "rmlui/document_contract.hpp"
 #include "rmlui/elements.hpp"
 #include "menu_host_fake.h"
 #include "../../vendor/retroarch/cheevos/rominabox.h"
@@ -105,11 +107,13 @@ const char *sound_name(rib::test::Sound sound)
 /* The screen panels declared in the design's design.cfg. */
 std::vector<std::string> panels(const std::string& assets)
 {
-   std::vector<std::string> found = {"pause-panel", "controls-panel"};
-   std::ifstream cfg(assets + "/design.cfg");
+   std::vector<std::string> found = {rib::document_contract::PausePanel,
+         rib::document_contract::ControlsPanel};
+   std::ifstream cfg(assets + "/" + rib::files::Design);
+   const std::string panel = rib::keys::ScreenPanel("");
    for (std::string line; std::getline(cfg, line); )
    {
-      if (line.rfind("screen_panel_", 0) != 0) continue;
+      if (line.rfind(panel, 0) != 0) continue;
       const auto open = line.find('"');
       const auto close = line.rfind('"');
       if (open != std::string::npos && close > open)
