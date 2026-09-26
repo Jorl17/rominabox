@@ -37,6 +37,10 @@
  *                           menu:close, menu:open
  *                                      close or open the menu in RetroArch
  *                           aspect:X   change the game's aspect ratio
+ *                           capture:input
+ *                                      give an input to the binding being
+ *                                      captured, so that the pending capture
+ *                                      has the result captured, once
  *   run                   run the case
  *
  * After every step, record what the player sees highlighted (visible
@@ -283,6 +287,14 @@ bool step(void *menu, const std::string& text)
    if (text.rfind("aspect:", 0) == 0)
    {
       host.game_aspect = std::strtof(text.c_str() + 7, nullptr);
+      frame(menu);
+      return true;
+   }
+   if (text == "capture:input")
+   {
+      /* The poll in this frame gets the input. A later capture from the menu
+       * is pending again (rib_host_capture_start in the fake host). */
+      host.capture_result = RIB_CAPTURE_CAPTURED;
       frame(menu);
       return true;
    }

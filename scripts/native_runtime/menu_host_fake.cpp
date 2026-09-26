@@ -48,11 +48,10 @@ extern "C" bool rib_host_capture_start(unsigned index, unsigned seconds)
    if (!host.capture_start_accepted) return false;
    host.captured_id = index < host.bind_ids.size() ? host.bind_ids[index] : "";
    host.capture_seconds = seconds;
+   /* A new capture is pending until there is an input for it. */
+   host.capture_result = RIB_CAPTURE_PENDING;
    if (host.timed_capture)
-   {
       host.capture_began_us = host.clock_us;
-      host.capture_result = RIB_CAPTURE_PENDING;
-   }
    ++host.captures_started;
    return true;
 }
