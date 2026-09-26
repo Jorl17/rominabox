@@ -608,6 +608,37 @@ mod tests {
         );
     }
 
+    // Some keys have more than one name in RetroArch, and each name works.
+    #[test]
+    fn the_exporter_accepts_every_name_retroarch_reads_for_a_key() {
+        let aliases = [
+            "add",
+            "kp_plus",
+            "subtract",
+            "kp_minus",
+            "tilde",
+            "backquote",
+        ];
+        assert_eq!(
+            retroarch_reads(&aliases),
+            vec!["add", "add", "subtract", "subtract", "tilde", "tilde"],
+            "RetroArch reads each pair as one key"
+        );
+        let refused: Vec<String> = aliases
+            .into_iter()
+            .filter_map(|name| {
+                validate_for_system("megadrive", &binding(name).1)
+                    .err()
+                    .map(|error| format!("{name}: {error}"))
+            })
+            .collect();
+        assert!(
+            refused.is_empty(),
+            "the exporter refuses names RetroArch reads as a key:\n{}",
+            refused.join("\n")
+        );
+    }
+
     // Pressing Escape in the builder cancels a capture, so we never store it.
     #[test]
     fn the_exporter_accepts_every_key_the_builder_captures() {
