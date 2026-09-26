@@ -197,6 +197,19 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .control-callout.capturing, .control-callout.capturing .control-hit,
 .control-group.capturing, .control-group.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
 
+/* The marks of a stick, visible while we capture the stick, with the member
+ * being captured blinking. Each arrow is a triangle made of one coloured
+ * border, 3dp outside the ring on its side, and the click is a central dot. */
+@keyframes mark-blink { from { opacity: 1; } to { opacity: 0.15; } }
+.control-direction { position: absolute; display: none; width: 0dp; height: 0dp; border-width: 0dp; border-color: transparent; pointer-events: none; }
+.control-group.capturing .control-direction { display: block; opacity: 0.3; }
+.control-group.capturing .control-direction.capturing { opacity: 1; animation: 0.55s mark-blink infinite alternate; }
+.direction-up { margin-left: -7dp; margin-top: -11dp; border-left-width: 7dp; border-right-width: 7dp; border-bottom-width: 8dp; border-bottom-color: #fff13d; }
+.direction-down { margin-left: -7dp; margin-top: 3dp; border-left-width: 7dp; border-right-width: 7dp; border-top-width: 8dp; border-top-color: #fff13d; }
+.direction-left { margin-top: -7dp; margin-left: -11dp; border-top-width: 7dp; border-bottom-width: 7dp; border-right-width: 8dp; border-right-color: #fff13d; }
+.direction-right { margin-top: -7dp; margin-left: 3dp; border-top-width: 7dp; border-bottom-width: 7dp; border-left-width: 8dp; border-left-color: #fff13d; }
+.direction-press { width: 6dp; height: 6dp; margin-left: -3dp; margin-top: -3dp; background-color: #fff13d; }
+
 /* The rules for every list screen. The achievement list, the shader list and
  * any later list in Options have the same parts: rows we write when we
  * bundle the game, a pager, and a state on the right. They use these rules,

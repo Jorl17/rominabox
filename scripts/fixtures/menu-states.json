@@ -950,7 +950,7 @@
         "control-group-l_stick": {
           "class": "capturing"
         },
-        "control-direction-l3": {
+        "control-direction-l3?": {
           "class": "capturing"
         }
       }

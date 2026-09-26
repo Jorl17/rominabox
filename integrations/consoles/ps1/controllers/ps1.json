@@ -168,8 +168,8 @@
       "key": "num1",
       "group": "l_stick",
       "direction": "press",
-      "x": 405,
-      "y": 226
+      "x": 402,
+      "y": 228
     },
     {
       "id": "r_y_minus",
@@ -205,8 +205,8 @@
       "key": "num2",
       "group": "r_stick",
       "direction": "press",
-      "x": 547,
-      "y": 226
+      "x": 553,
+      "y": 228
     }
   ],
   "presentationOrder": 8

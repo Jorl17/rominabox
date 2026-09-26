@@ -408,22 +408,27 @@
           null,
           [
             "control-group-l_stick",
+            "control-direction-l_y_minus",
             "controls-cancel"
           ],
           [
             "control-group-l_stick",
+            "control-direction-l_x_plus",
             "controls-cancel"
           ],
           [
             "control-group-l_stick",
+            "control-direction-l_y_plus",
             "controls-cancel"
           ],
           [
             "control-group-l_stick",
+            "control-direction-l_x_minus",
             "controls-cancel"
           ],
           [
             "control-group-l_stick",
+            "control-direction-l3",
             "controls-cancel"
           ],
           null
@@ -499,19 +504,23 @@
           null,
           [
             "control-group-l_stick",
+            "control-direction-l_y_minus",
             "controls-cancel"
           ],
           [
             "control-group-l_stick",
+            "control-direction-l_x_plus",
             "controls-cancel"
           ],
           [
             "control-group-l_stick",
+            "control-direction-l_y_plus",
             "controls-cancel"
           ],
           null,
           [
             "control-group-l_stick",
+            "control-direction-l_y_minus",
             "controls-cancel"
           ]
         ]

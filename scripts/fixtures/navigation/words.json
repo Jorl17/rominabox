@@ -6,6 +6,31 @@
   ],
   "cases": [
     {
+      "name": "each screen shows its own heading",
+      "steps": [
+        "options",
+        "controls"
+      ],
+      "text": {
+        "*": [
+          {
+            "heading": "OPTIONS"
+          },
+          {
+            "heading": "CONTROLS"
+          }
+        ],
+        "disc": [
+          {
+            "heading": "OPTIONS"
+          },
+          {
+            "heading": "PAD"
+          }
+        ]
+      }
+    },
+    {
       "name": "a bound key in the menu's words",
       "setup": {
         "key": "num1"
