@@ -304,7 +304,7 @@
       }
     },
     {
-      "name": "the pointer focuses silently and a key continues from it",
+      "name": "the pointer focuses with the move sound and a key continues from it",
       "steps": [
         "hover:slot-2",
         "key:down",
@@ -334,7 +334,9 @@
       },
       "sounds": {
         "*": [
-          [],
+          [
+            "move"
+          ],
           [
             "move"
           ],
