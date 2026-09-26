@@ -65,12 +65,13 @@
       }
     },
     {
-      "name": "the pad screen's prompt, and a capture, in the design's words",
+      "name": "a capture on the pad screen says so in the design's words, then the prompt returns",
       "steps": [
         "options",
         "controls",
         "key:ok",
-        "key:cancel"
+        "key:cancel",
+        "wait-ms:6000"
       ],
       "text": {
         "*": [
@@ -79,7 +80,7 @@
             "footer-hint": "ESC  BACK"
           },
           {
-            "controls-status": "SELECT A CONTROL TO REBIND",
+            "controls-status": "CHOOSE A CONTROL",
             "footer-hint": "ESC  BACK"
           },
           {
@@ -89,6 +90,10 @@
           {
             "controls-status": "BINDING UNCHANGED",
             "footer-hint": "ESC  BACK"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL",
+            "footer-hint": "ESC  BACK"
           }
         ],
         "wording": [
@@ -97,7 +102,7 @@
             "footer-hint": "ESC  BACK"
           },
           {
-            "controls-status": "PICK A BUTTON",
+            "controls-status": "CHOOSE A CONTROL",
             "footer-hint": "ESC  BACK"
           },
           {
@@ -106,6 +111,10 @@
           },
           {
             "controls-status": "KEPT AS IT WAS",
+            "footer-hint": "ESC  BACK"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL",
             "footer-hint": "ESC  BACK"
           }
         ]

@@ -48,7 +48,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -174,7 +174,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -240,7 +240,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -296,7 +296,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -364,7 +364,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -420,7 +420,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -488,7 +488,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -544,7 +544,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -1179,7 +1179,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -1296,7 +1296,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -1349,7 +1349,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -1402,7 +1402,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -1525,7 +1525,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -1578,7 +1578,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -1631,7 +1631,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -1684,7 +1684,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -2678,7 +2678,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -2798,7 +2798,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -2915,7 +2915,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -2970,7 +2970,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -3076,7 +3076,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -3148,7 +3148,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -3214,12 +3214,12 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
-        "volumeDb": -62.222221
+        "volumeDb": -62.200001
       },
       "final": {
         "bindsBox": false,
@@ -3270,7 +3270,7 @@
           "heading": "OPTIONS"
         },
         "transferPending": false,
-        "volumeDb": -62.222221
+        "volumeDb": -62.200001
       },
       "volume": {
         "bindsBox": false,
@@ -3321,7 +3321,7 @@
           "heading": "OPTIONS"
         },
         "transferPending": false,
-        "volumeDb": -62.222221
+        "volumeDb": -62.200001
       }
     },
     "script": [
@@ -4549,7 +4549,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -4675,7 +4675,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -4738,7 +4738,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -4864,7 +4864,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -4927,7 +4927,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -5053,7 +5053,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "PAD"
         },
@@ -5116,7 +5116,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -5242,7 +5242,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -5309,7 +5309,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -5365,7 +5365,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -5437,7 +5437,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -5493,7 +5493,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -5561,7 +5561,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -5617,7 +5617,7 @@
         "text": {
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -6252,7 +6252,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -6369,7 +6369,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -6422,7 +6422,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -6475,7 +6475,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -6598,7 +6598,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -6651,7 +6651,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -6704,7 +6704,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -6757,7 +6757,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -7155,7 +7155,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -7743,7 +7743,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -7863,7 +7863,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -7980,7 +7980,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -8035,7 +8035,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -8141,7 +8141,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -8213,7 +8213,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -8279,12 +8279,12 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
-        "volumeDb": -62.222221
+        "volumeDb": -62.200001
       },
       "final": {
         "bindsBox": false,
@@ -8335,7 +8335,7 @@
           "heading": "OPTIONS"
         },
         "transferPending": false,
-        "volumeDb": -62.222221
+        "volumeDb": -62.200001
       },
       "volume": {
         "bindsBox": false,
@@ -8386,7 +8386,7 @@
           "heading": "OPTIONS"
         },
         "transferPending": false,
-        "volumeDb": -62.222221
+        "volumeDb": -62.200001
       }
     },
     "script": [
@@ -9612,7 +9612,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -9738,7 +9738,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -9801,7 +9801,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -9927,7 +9927,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -9990,7 +9990,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
@@ -10116,7 +10116,7 @@
         ],
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
-          "controls-status": "SELECT A CONTROL TO REBIND",
+          "controls-status": "CHOOSE A CONTROL",
           "footer-hint": "ESC  BACK",
           "heading": "CONTROLS"
         },
