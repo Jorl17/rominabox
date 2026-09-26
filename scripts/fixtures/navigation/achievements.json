@@ -161,6 +161,71 @@
       }
     },
     {
+      "name": "a page arrow keeps focus as it turns the page, and hands it to the other arrow when it goes dead",
+      "setup": {
+        "achievements": "active",
+        "rows": 15
+      },
+      "steps": {
+        "native": [
+          "options",
+          "achievements",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:ok",
+          "key:ok",
+          "key:ok",
+          "key:ok"
+        ],
+        "disc": [
+          "options",
+          "achievements",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:ok",
+          "key:ok",
+          "key:ok",
+          "key:ok"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "achievement-1",
+          "achievement-2",
+          "achievement-3",
+          "achievement-4",
+          "achievements-next",
+          "achievements-next",
+          "achievements-next",
+          "achievements-prev",
+          "achievements-prev"
+        ],
+        "disc": [
+          "volume-level",
+          "achievement-1",
+          "achievement-2",
+          "achievement-3",
+          "achievement-4",
+          "achievement-5",
+          "achievement-6",
+          "achievement-7",
+          "achievements-next",
+          "achievements-next",
+          "achievements-prev",
+          "achievements-prev",
+          "achievements-next"
+        ]
+      }
+    },
+    {
       "name": "Right from TURN OFF reaches SIGN OUT",
       "setup": {
         "achievements": "active",
