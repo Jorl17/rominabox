@@ -9,6 +9,8 @@
  *   set KEY VALUE         host and service state before the menu opens:
  *                           discs N          disc images in the core
  *                           load 1           slot 1 contains a state
+ *                           accept 1         requested saves and loads start and
+ *                                            never finish
  *                           achievements S   signed-out | active | startup | failed
  *                           rows N           achievements in the list
  *                           pending 1        an earned achievement not uploaded
@@ -26,7 +28,7 @@
  *                           hover:ID   move the pointer to the element's centre
  *                           press:ID   move the pointer there, then press and
  *                                      release it, one frame each, like a click
- *                           wait-ms:N  advance the clock
+ *                           wait-ms:N  advance the RetroArch and RmlUi clocks
  *                           ID         click the element, as in a menu script
  *                         and, from the RetroArch side of the host instead
  *                         of the script side:
@@ -257,7 +259,11 @@ bool step(void *menu, const std::string& text)
    }
    if (text.rfind("wait-ms:", 0) == 0)
    {
-      host.clock_us += std::atoll(text.c_str() + 8) * 1000;
+      /* Advance the time for the whole menu: the RetroArch clock, for its
+       * timers, and the RmlUi clock, for the expiry of a status line. */
+      const long long ms = std::atoll(text.c_str() + 8);
+      host.clock_us += ms * 1000;
+      view.document.advance(ms / 1000.0);
       frame(menu);
       return true;
    }
@@ -316,6 +322,7 @@ void reset_services(const Case& run)
    {
       if (key == "discs") host.disc_count = (unsigned)std::atoi(value.c_str());
       else if (key == "load") host.slot_occupied = value == "1";
+      else if (key == "accept") host.save_accepted = host.load_accepted = value == "1";
       else if (key == "pending") session.pending_upload = value == "1";
       else if (key == "aspect") host.game_aspect = std::strtof(value.c_str(), nullptr);
       else if (key == "achievements")

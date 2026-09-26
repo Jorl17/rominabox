@@ -17,10 +17,59 @@
             "slot-state-1": "EMPTY"
           }
         ],
+        "disc": [
+          {
+            "slot-label-1": "BLOCK 1",
+            "slot-state-1": "EMPTY"
+          }
+        ],
         "wording": [
           {
             "slot-label-1": "BLOCK 1",
             "slot-state-1": "FREE"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a save under way says so in the design's words",
+      "setup": {
+        "accept": 1
+      },
+      "steps": [
+        "save"
+      ],
+      "text": {
+        "*": [
+          {
+            "status": "SAVING SLOT 1..."
+          }
+        ],
+        "disc": [
+          {
+            "status": "SAVING BLOCK 1..."
+          }
+        ]
+      }
+    },
+    {
+      "name": "a load under way says so in the design's words",
+      "setup": {
+        "load": 1,
+        "accept": 1
+      },
+      "steps": [
+        "load"
+      ],
+      "text": {
+        "*": [
+          {
+            "status": "LOADING SLOT 1..."
+          }
+        ],
+        "disc": [
+          {
+            "status": "LOADING BLOCK 1..."
           }
         ]
       }
@@ -44,21 +93,43 @@
       }
     },
     {
-      "name": "the pad screen's prompt, and a capture, in the design's words",
+      "name": "the pad screen opens on its design's prompt and stays there",
       "steps": [
         "options",
         "controls",
-        "key:ok",
-        "key:cancel"
+        "wait-ms:6000"
       ],
       "text": {
         "*": [
           {
-            "controls-status": "SELECT A BUTTON",
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a capture on the pad screen says so in the design's words, then the prompt returns",
+      "steps": [
+        "options",
+        "controls",
+        "key:ok",
+        "key:cancel",
+        "wait-ms:6000"
+      ],
+      "text": {
+        "*": [
+          {
+            "controls-status": "CHOOSE A CONTROL",
             "footer-hint": "ESC  BACK"
           },
           {
-            "controls-status": "SELECT A CONTROL TO REBIND",
+            "controls-status": "CHOOSE A CONTROL",
             "footer-hint": "ESC  BACK"
           },
           {
@@ -68,15 +139,19 @@
           {
             "controls-status": "BINDING UNCHANGED",
             "footer-hint": "ESC  BACK"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL",
+            "footer-hint": "ESC  BACK"
           }
         ],
         "wording": [
           {
-            "controls-status": "SELECT A BUTTON",
+            "controls-status": "CHOOSE A CONTROL",
             "footer-hint": "ESC  BACK"
           },
           {
-            "controls-status": "PICK A BUTTON",
+            "controls-status": "CHOOSE A CONTROL",
             "footer-hint": "ESC  BACK"
           },
           {
@@ -85,6 +160,10 @@
           },
           {
             "controls-status": "KEPT AS IT WAS",
+            "footer-hint": "ESC  BACK"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL",
             "footer-hint": "ESC  BACK"
           }
         ]
@@ -124,6 +203,98 @@
       "setup": {
         "achievements": "active",
         "rows": 8
+      }
+    },
+    {
+      "name": "a switch's state in the design's words",
+      "steps": [
+        "options",
+        "background-play"
+      ],
+      "text": {
+        "*": [
+          {
+            "background-play-state": "OFF"
+          },
+          {
+            "background-play-state": "ON"
+          }
+        ],
+        "wording": [
+          {
+            "background-play-state": "NO"
+          },
+          {
+            "background-play-state": "YES"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the running filter's mark in the design's words",
+      "steps": [
+        "options",
+        "shaders"
+      ],
+      "text": {
+        "*": [
+          {
+            "none-state": "ON"
+          },
+          {
+            "none-state": "ON"
+          }
+        ],
+        "wording": [
+          {
+            "none-state": "LIT"
+          },
+          {
+            "none-state": "LIT"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the disc in the tray in the design's words",
+      "setup": {
+        "discs": 7
+      },
+      "steps": {
+        "native": [
+          "options",
+          "discs"
+        ],
+        "disc": [
+          "disc"
+        ],
+        "wording": [
+          "options",
+          "discs"
+        ]
+      },
+      "text": {
+        "native": [
+          {
+            "discs-0-state": "IN"
+          },
+          {
+            "discs-0-state": "IN"
+          }
+        ],
+        "disc": [
+          {
+            "discs-0-state": "IN"
+          }
+        ],
+        "wording": [
+          {
+            "discs-0-state": "HERE"
+          },
+          {
+            "discs-0-state": "HERE"
+          }
+        ]
       }
     }
   ]

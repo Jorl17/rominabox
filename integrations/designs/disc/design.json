@@ -83,7 +83,6 @@
       "heading": "DISC",
       "footer": "ESC  BACK",
       "back": "BACK",
-      "mark": "IN",
       "option": null
     },
     {
@@ -125,6 +124,13 @@
     }
   ],
   "screenOrder": ["pause", "disc", "discs", "options", "controls", "shaders"],
+  "words": {
+    "slot": "BLOCK {slot}",
+    "saving-slot": "SAVING BLOCK {slot}...",
+    "loading-slot": "LOADING BLOCK {slot}...",
+    "saved-slot": "BLOCK {slot} SAVED",
+    "loaded-slot": "BLOCK {slot} LOADED"
+  },
   "tokens": {
     "ink": "#ffffff"
   }
