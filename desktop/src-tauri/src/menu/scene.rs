@@ -300,14 +300,14 @@ fn leader_markup(leader: &[crate::scene_layout::Segment]) -> String {
     markup
 }
 
-/// The ring over the button of a control on the pad, at the position from
-/// `scene_layout`, written inside the focus stop for the control. A design
-/// lights it by the state of that stop. The pointer reaches the stop through
-/// the hit area of the control, never through the ring, because the square
-/// box of a ring is wider than the space between neighbouring buttons.
+/// The ring over a control's button on the pad, at its place from
+/// `scene_layout`, inside the stop for the control, so a design can light it
+/// from the state of that stop. The square box of a ring is wider than the
+/// space between neighbouring buttons, so the ring takes no pointer, and the
+/// pointer reaches the stop through the control's reach instead.
 ///
-/// RmlUi places a child from the padding edge of its parent, which is
-/// `border` inside the box that `scene_layout` computed for the stop.
+/// In RmlUi a child is placed from the padding edge of its parent, which is
+/// `border` inside the box from `scene_layout` for the stop. See [`origin`].
 fn ring_markup(
     id: &str,
     marker: crate::scene_layout::Rect,
@@ -315,7 +315,7 @@ fn ring_markup(
     stop: crate::scene_layout::Rect,
     border: i32,
 ) -> String {
-    let (left, top) = (stop.x + border, stop.y + border);
+    let (left, top) = origin(stop, border);
     format!(
         "<div id=\"control-hit-{id}\" class=\"control-hit\" style=\"left:{}dp;top:{}dp;pointer-events:none;\"/>\
          <div id=\"control-reach-{id}\" class=\"control-reach\" style=\"position:absolute;left:{}dp;top:{}dp;width:{}dp;height:{}dp;\"/>",
@@ -326,6 +326,51 @@ fn ring_markup(
         reach.width,
         reach.height,
     )
+}
+
+/// The origin on the scene for the children of a stop. In RmlUi a child is
+/// placed from the padding edge of its parent, `border` inside the box from
+/// `scene_layout` for the stop.
+fn origin(stop: crate::scene_layout::Rect, border: i32) -> (i32, i32) {
+    (stop.x + border, stop.y + border)
+}
+
+/// The mark of each stick member, at its place from `scene_layout`, inside
+/// the stick's stop beside its ring. The markup contains only where each mark
+/// is and which way it points. The design draws it, and in the menu we mark
+/// the one being captured.
+fn marks_markup(
+    marks: &[crate::scene_layout::Mark],
+    stop: crate::scene_layout::Rect,
+    border: i32,
+) -> String {
+    let (left, top) = origin(stop, border);
+    marks
+        .iter()
+        .map(|mark| {
+            format!(
+                "<div id=\"{prefix}{id}\" class=\"{class} {direction}\" style=\"position:absolute;left:{x}dp;top:{y}dp;pointer-events:none;\"/>",
+                prefix = contract!(ControlDirectionPrefix),
+                id = mark.id,
+                class = contract!(ControlDirection),
+                direction = direction_class(mark.direction),
+                x = mark.x - left,
+                y = mark.y - top,
+            )
+        })
+        .collect()
+}
+
+/// The contract's class for the way a stick member points.
+fn direction_class(direction: crate::controls::StickDirection) -> &'static str {
+    use crate::controls::StickDirection::*;
+    match direction {
+        Up => contract!(DirectionUp),
+        Right => contract!(DirectionRight),
+        Down => contract!(DirectionDown),
+        Left => contract!(DirectionLeft),
+        Press => contract!(DirectionPress),
+    }
 }
 
 /// Draw each group once, beneath the illustration, in its strip from
@@ -344,6 +389,7 @@ fn control_group_markup(
             (Some(anchor), Some(marker), Some(reach)) if illustrated => {
                 markup.push_str(&leader_markup(&group.leader));
                 ring_markup(anchor, marker, reach, group.strip, border)
+                    + &marks_markup(&group.marks, group.strip, border)
             }
             _ => String::new(),
         };

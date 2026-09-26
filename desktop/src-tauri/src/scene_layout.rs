@@ -4,7 +4,7 @@
 //! and request it from the builder and the overlay renderer. To change how
 //! we route a leader line, change this file and nowhere else.
 
-use crate::controls::ControlDefinition;
+use crate::controls::{ControlDefinition, StickDirection};
 use crate::menu::SceneMetrics;
 use serde::Serialize;
 
@@ -54,6 +54,20 @@ pub struct GroupPlacement {
     /// Where the pointer reaches the stick on the artwork, with the marker.
     pub reach: Option<Rect>,
     pub leader: Vec<Segment>,
+    /// One per member, on the marker; none without one.
+    pub marks: Vec<Mark>,
+}
+
+/// Where we mark a stick member on the pad: an arrow on the side of the
+/// marker its direction points to, or the marker's centre for the click.
+/// The size and form of the mark come from the design.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct Mark {
+    /// The member's control id.
+    pub id: String,
+    pub direction: StickDirection,
+    pub x: i32,
+    pub y: i32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -228,6 +242,32 @@ fn marker(x: i32, y: i32, metrics: SceneMetrics) -> Rect {
     }
 }
 
+/// Each member's mark on a stick's marker, in the members' order: a member the
+/// stick does not have has no mark.
+fn marks<'a>(members: impl Iterator<Item = &'a ControlDefinition>, marker: Rect) -> Vec<Mark> {
+    let (left, top) = (marker.x, marker.y);
+    let (right, bottom) = (left + marker.width, top + marker.height);
+    let (centre_x, centre_y) = (left + marker.width / 2, top + marker.height / 2);
+    members
+        .filter_map(|member| {
+            let direction = member.direction?;
+            let (x, y) = match direction {
+                StickDirection::Up => (centre_x, top),
+                StickDirection::Right => (right, centre_y),
+                StickDirection::Down => (centre_x, bottom),
+                StickDirection::Left => (left, centre_y),
+                StickDirection::Press => (centre_x, centre_y),
+            };
+            Some(Mark {
+                id: member.id.clone(),
+                direction,
+                x,
+                y,
+            })
+        })
+        .collect()
+}
+
 /// Where the pointer reaches a control on the pad: the largest square,
 /// centred on its button, that lies inside the ring we draw over it and
 /// nearer its button than any other.
@@ -325,15 +365,20 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
         .zip(anchors)
         .map(|((name, strip), anchor)| {
             let reach = anchor.map(|_| reaches.next().expect("a reach for every stick's anchor"));
+            let ring = anchor.map(|anchor| marker(anchor.x, anchor.y, metrics));
+            let members = controls
+                .iter()
+                .filter(|control| control.group.as_deref() == Some(*name));
             GroupPlacement {
                 name: (*name).to_string(),
                 strip,
                 anchor: anchor.map(|anchor| anchor.id.clone()),
-                marker: anchor.map(|anchor| marker(anchor.x, anchor.y, metrics)),
+                marker: ring,
                 reach,
                 leader: anchor
                     .map(|anchor| stick_leader(anchor, strip, metrics))
                     .unwrap_or_default(),
+                marks: ring.map(|ring| marks(members, ring)).unwrap_or_default(),
             }
         })
         .collect();
@@ -387,6 +432,84 @@ mod tests {
             callout_y: 0,
         };
         vec![member("l_x_plus", 0, 0), member("l3", x, 200)]
+    }
+
+    /// A stick's members, in the order given, all on the pad at `at` or
+    /// all off it.
+    fn members(at: Option<(i32, i32)>, directions: &[(&str, StickDirection)]) -> Vec<ControlDefinition> {
+        let (x, y) = at.unwrap_or((0, 0));
+        directions
+            .iter()
+            .map(|(id, direction)| ControlDefinition {
+                id: id.to_string(),
+                label: id.to_string(),
+                key: String::new(),
+                group: Some("l_stick".to_string()),
+                direction: Some(*direction),
+                x,
+                y,
+                callout_x: 0,
+                callout_y: 0,
+            })
+            .collect()
+    }
+
+    fn mark(id: &str, direction: StickDirection, x: i32, y: i32) -> Mark {
+        Mark {
+            id: id.to_string(),
+            direction,
+            x,
+            y,
+        }
+    }
+
+    /// We mark every member of a stick on its ring: each direction on the
+    /// side of the ring it points to, and the click in the middle, in the
+    /// members' order.
+    #[test]
+    fn every_member_of_a_stick_is_marked_on_its_ring() {
+        use StickDirection::*;
+        let stick = members(
+            Some((420, 200)),
+            &[("up", Up), ("right", Right), ("down", Down), ("left", Left), ("press", Press)],
+        );
+        let group = layout(&stick, metrics()).groups[0].clone();
+        assert_eq!(group.marker, Some(Rect { x: 399, y: 179, width: 42, height: 42 }));
+        assert_eq!(
+            group.marks,
+            vec![
+                mark("up", Up, 420, 179),
+                mark("right", Right, 441, 200),
+                mark("down", Down, 420, 221),
+                mark("left", Left, 399, 200),
+                mark("press", Press, 420, 200),
+            ]
+        );
+    }
+
+    /// A stick without a click has no mark in the middle.
+    #[test]
+    fn a_stick_without_a_click_has_no_press_mark() {
+        use StickDirection::*;
+        let stick = members(
+            Some((420, 200)),
+            &[("up", Up), ("right", Right), ("down", Down), ("left", Left)],
+        );
+        let marks = layout(&stick, metrics()).groups[0].marks.clone();
+        assert_eq!(
+            marks.iter().map(|mark| mark.direction).collect::<Vec<_>>(),
+            vec![Up, Right, Down, Left]
+        );
+    }
+
+    /// A stick with no place on the pad has no ring to mark.
+    #[test]
+    fn a_stick_off_the_pad_has_no_marks() {
+        use StickDirection::*;
+        let stick = members(None, &[("up", Up), ("right", Right), ("press", Press)]);
+        let group = layout(&stick, metrics()).groups[0].clone();
+        assert_eq!(group.marker, None);
+        assert!(group.marks.is_empty());
     }
 
     /// The leader of a stick above its box goes straight down onto the box.
