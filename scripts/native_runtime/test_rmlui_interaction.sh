@@ -24,7 +24,8 @@ fi
 
 mkdir -p "$build_dir"
 harness "$out" --define HAVE_AUDIOMIXER --file-layer \
-  "$script_dir/test_rmlui_interaction.cpp" "$script_dir/test_menu_declarations.cpp"
+  "$script_dir/test_rmlui_interaction.cpp" "$script_dir/test_menu_declarations.cpp" \
+  "$script_dir/menu_host_fake.cpp"
 
 "$out" declarations
 
