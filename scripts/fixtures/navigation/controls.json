@@ -370,6 +370,183 @@
           "control-up"
         ]
       }
+    },
+    {
+      "name": "a stick captures each of its members in turn",
+      "menu": "ps1-analog",
+      "steps": [
+        "options",
+        "controls",
+        "hover:control-group-l_stick",
+        "hover:heading",
+        "key:ok",
+        "capture:input",
+        "capture:input",
+        "capture:input",
+        "capture:input",
+        "capture:input"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-l",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick"
+        ]
+      },
+      "capturing": {
+        "*": [
+          null,
+          null,
+          null,
+          null,
+          [
+            "control-group-l_stick",
+            "controls-cancel"
+          ],
+          [
+            "control-group-l_stick",
+            "controls-cancel"
+          ],
+          [
+            "control-group-l_stick",
+            "controls-cancel"
+          ],
+          [
+            "control-group-l_stick",
+            "controls-cancel"
+          ],
+          [
+            "control-group-l_stick",
+            "controls-cancel"
+          ],
+          null
+        ]
+      },
+      "text": {
+        "*": [
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "Left stick up: PRESS AN INPUT (9)"
+          },
+          {
+            "controls-status": "Left stick right: PRESS AN INPUT (10)"
+          },
+          {
+            "controls-status": "Left stick down: PRESS AN INPUT (10)"
+          },
+          {
+            "controls-status": "Left stick left: PRESS AN INPUT (10)"
+          },
+          {
+            "controls-status": "Left stick press: PRESS AN INPUT (10)"
+          },
+          {
+            "controls-status": "BINDING SAVED"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CANCEL stops a stick's capture where it is; OK starts it again at up",
+      "menu": "ps1-analog",
+      "steps": [
+        "options",
+        "controls",
+        "hover:control-group-l_stick",
+        "hover:heading",
+        "key:ok",
+        "capture:input",
+        "capture:input",
+        "key:cancel",
+        "key:ok"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-l",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick",
+          "control-group-l_stick"
+        ]
+      },
+      "capturing": {
+        "*": [
+          null,
+          null,
+          null,
+          null,
+          [
+            "control-group-l_stick",
+            "controls-cancel"
+          ],
+          [
+            "control-group-l_stick",
+            "controls-cancel"
+          ],
+          [
+            "control-group-l_stick",
+            "controls-cancel"
+          ],
+          null,
+          [
+            "control-group-l_stick",
+            "controls-cancel"
+          ]
+        ]
+      },
+      "text": {
+        "*": [
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "Left stick up: PRESS AN INPUT (9)"
+          },
+          {
+            "controls-status": "Left stick right: PRESS AN INPUT (10)"
+          },
+          {
+            "controls-status": "Left stick down: PRESS AN INPUT (10)"
+          },
+          {
+            "controls-status": "BINDING UNCHANGED"
+          },
+          {
+            "controls-status": "Left stick up: PRESS AN INPUT (9)"
+          }
+        ]
+      }
     }
   ]
 }

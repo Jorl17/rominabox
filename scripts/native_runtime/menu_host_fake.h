@@ -23,6 +23,7 @@ struct FakeHost
    std::string bound_key = "a";
    std::string captured_id;
    bool capture_start_accepted = true;
+   /* The answer to a poll. Each new capture starts as pending. */
    rib_capture_result capture_result = RIB_CAPTURE_PENDING;
    float capture_remaining = 9.0f;
    bool capture_accepts_pointer = false;
