@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { keyName } from "./keys";
 
 /**
  * Structural, not imported: in the editor we infer the types from the
@@ -160,7 +161,7 @@ export function ControllerScene({
             control={control}
             placed={placed}
             label={bindings[control.id]?.label || control.label}
-            binding={bindings[control.id]?.key || control.key}
+            binding={keyName(bindings[control.id]?.key || control.key)}
             active={selected === control.id}
             onSelect={onSelect}
           />
@@ -251,7 +252,7 @@ function StickStrip({
 }) {
   const keys = members
     .filter((control) => /_(plus|minus)$/.test(control.id))
-    .map((control) => (bindings[control.id]?.key || control.key).toUpperCase())
+    .map((control) => keyName(bindings[control.id]?.key || control.key))
     .join(" ");
 
   return (

@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::Path;
+use std::sync::OnceLock;
 
 const MAX_LABEL_BYTES: usize = 80;
-const MAX_KEY_BYTES: usize = 32;
 const MAX_BUTTON_BYTES: usize = 3;
 const MAX_AXIS_BYTES: usize = 4;
 const MAX_MOUSE_BUTTON: u32 = 5;
@@ -364,12 +364,12 @@ fn validate_label(id: &str, value: &str) -> Result<(), String> {
 }
 
 fn validate_key(id: &str, value: &str) -> Result<(), String> {
-    if value.len() > MAX_KEY_BYTES || !retroarch_keys().contains(value) {
+    let Some(key) = retroarch_key(value) else {
         return Err(format!("key for {id} is not an allowed RetroArch key"));
-    }
+    };
     // The player opens the menu, where Quit is, with Escape, so Escape is
-    // never a gameplay binding. We reserve no other key.
-    if value == "escape" {
+    // never a gameplay binding, by any name. We reserve no other key.
+    if Some(key) == retroarch_key("escape") {
         return Err(format!(
             "key for {id} toggles the menu and cannot be a gameplay binding"
         ));
@@ -412,112 +412,249 @@ fn validate_axis(id: &str, value: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn retroarch_keys() -> &'static HashSet<&'static str> {
-    static KEYS: std::sync::OnceLock<HashSet<&'static str>> = std::sync::OnceLock::new();
-    KEYS.get_or_init(|| {
-        [
-            "a",
-            "b",
-            "c",
-            "d",
-            "e",
-            "f",
-            "g",
-            "h",
-            "i",
-            "j",
-            "k",
-            "l",
-            "m",
-            "n",
-            "o",
-            "p",
-            "q",
-            "r",
-            "s",
-            "t",
-            "u",
-            "v",
-            "w",
-            "x",
-            "y",
-            "z",
-            "nul",
-            "0",
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "up",
-            "down",
-            "left",
-            "right",
-            "enter",
-            "space",
-            "tab",
-            "backspace",
-            "escape",
-            "insert",
-            "delete",
-            "home",
-            "end",
-            "pageup",
-            "pagedown",
-            "lshift",
-            "rshift",
-            "lctrl",
-            "rctrl",
-            "lalt",
-            "ralt",
-            "comma",
-            "period",
-            "slash",
-            "semicolon",
-            "quote",
-            "leftbracket",
-            "rightbracket",
-            "minus",
-            "equals",
-            "backquote",
-            "kp0",
-            "kp1",
-            "kp2",
-            "kp3",
-            "kp4",
-            "kp5",
-            "kp6",
-            "kp7",
-            "kp8",
-            "kp9",
-            "kp_period",
-            "kp_divide",
-            "kp_multiply",
-            "kp_minus",
-            "kp_plus",
-            "kp_enter",
-            "f1",
-            "f2",
-            "f3",
-            "f4",
-            "f5",
-            "f6",
-            "f7",
-            "f8",
-            "f9",
-            "f10",
-            "f11",
-            "f12",
-        ]
-        .into_iter()
-        .collect()
+/// The table of key names for the config parser in RetroArch.
+const KEY_NAMES: &str = include_str!("../../../vendor/retroarch/input/input_key_names.inc");
+
+/// Every `RIB_KEY_NAME("name", RETROK_key)` declaration in the fork, in order.
+fn key_names() -> &'static [(String, String)] {
+    static NAMES: OnceLock<Vec<(String, String)>> = OnceLock::new();
+    NAMES.get_or_init(|| {
+        let names: Vec<(String, String)> =
+            crate::menu::inc::declarations(KEY_NAMES, "RIB_KEY_NAME")
+                .map(|fields| match &fields[..] {
+                    [name, key] => (name.clone(), key.clone()),
+                    _ => panic!(
+                        "input_key_names.inc: RIB_KEY_NAME({}) is not (\"name\", RETROK_key)",
+                        fields.join(", ")
+                    ),
+                })
+                .collect();
+        assert!(!names.is_empty(), "input_key_names.inc declares no keys");
+        names
     })
+}
+
+/// The `RETROK_` name of the key for `name` in RetroArch, or `None` for a
+/// name that is no key. We follow `input_config_translate_str_to_rk`. A
+/// single letter is the key for that letter, and we look up any other name
+/// in the key table, ignoring case. There `nul` means no key.
+fn retroarch_key(name: &str) -> Option<String> {
+    if let [letter] = name.as_bytes() {
+        if letter.is_ascii_alphabetic() {
+            return Some(format!("RETROK_{}", letter.to_ascii_lowercase() as char));
+        }
+    }
+    key_names()
+        .iter()
+        .find(|(known, _)| known.eq_ignore_ascii_case(name))
+        .map(|(_, key)| key.clone())
+        .filter(|key| key != "RETROK_UNKNOWN")
 }
 
 fn escape_config_value(value: &str) -> String {
     value.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::retroarch_probe::Probe;
+
+    fn key_names_probe() -> Probe {
+        Probe::build(
+            "key_names",
+            &[
+                "input/input_keymaps.c",
+                "input/input_driver.c",
+                "libretro-common/string/stdstring.c",
+            ],
+        )
+    }
+
+    /// The key that `input_config_translate_str_to_rk`, the config parser in
+    /// RetroArch, returns for each name, or `nul` for a name that is no key.
+    /// We get it from `scripts/native_runtime/key_names.c`, compiled against
+    /// the fork.
+    fn retroarch_reads(names: &[&str]) -> Vec<String> {
+        let read = key_names_probe().lines(names);
+        assert_eq!(read.len(), names.len(), "one reading per name");
+        read
+    }
+
+    /// The builder's key declaration: the name for each browser key that we
+    /// capture, and the names that have words in the builder.
+    fn builder_keyboard() -> (Vec<(String, String)>, Vec<String>) {
+        let text = fs::read_to_string(crate::repo::at("desktop/keyboard.json"))
+            .expect("desktop/keyboard.json is readable");
+        let keyboard: serde_json::Value =
+            serde_json::from_str(&text).expect("desktop/keyboard.json is JSON");
+        let capture = keyboard["capture"]
+            .as_object()
+            .expect("keyboard.json declares capture")
+            .iter()
+            .map(|(code, name)| (code.clone(), name.as_str().unwrap().to_string()))
+            .collect();
+        let labelled = keyboard["labels"]
+            .as_object()
+            .expect("keyboard.json declares labels")
+            .keys()
+            .cloned()
+            .collect();
+        (capture, labelled)
+    }
+
+    fn binding(key: &str) -> (String, Controls) {
+        let control = profile_for_system("megadrive").unwrap().controls[0]
+            .id
+            .clone();
+        let controls = serde_json::from_value(serde_json::json!({
+            "bindings": { &control: { "key": key } }
+        }))
+        .unwrap();
+        (control, controls)
+    }
+
+    // We store a key in the builder as it is written in the game's config. A
+    // name that is no key in RetroArch exports without error and has no effect.
+    #[test]
+    fn the_builder_captures_each_key_by_a_name_retroarch_reads_as_that_key() {
+        let (capture, labelled) = builder_keyboard();
+        let names: Vec<&str> = capture.iter().map(|(_, name)| name.as_str()).collect();
+        let mut wrong: Vec<String> = capture
+            .iter()
+            .zip(retroarch_reads(&names))
+            .filter(|((_, name), read)| name != read)
+            .map(|((code, name), read)| {
+                format!("{code} is captured as {name}, which RetroArch reads as {read}")
+            })
+            .collect();
+        let labelled_names: Vec<&str> = labelled.iter().map(String::as_str).collect();
+        wrong.extend(
+            labelled
+                .iter()
+                .zip(retroarch_reads(&labelled_names))
+                .filter(|(name, read)| *name != read)
+                .map(|(name, read)| {
+                    format!("the label for {name} names what RetroArch reads as {read}")
+                }),
+        );
+        assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+    }
+
+    #[test]
+    fn every_controller_default_is_a_name_retroarch_reads_as_that_key() {
+        let profiles = registry().unwrap().profiles;
+        let defaults: Vec<(String, &str)> = profiles
+            .iter()
+            .flat_map(|profile| {
+                profile.controls.iter().map(move |control| {
+                    (
+                        format!("{} {}", profile.id, control.id),
+                        control.key.as_str(),
+                    )
+                })
+            })
+            .collect();
+        let names: Vec<&str> = defaults.iter().map(|(_, key)| *key).collect();
+        let wrong: Vec<String> = defaults
+            .iter()
+            .zip(retroarch_reads(&names))
+            .filter(|((_, key), read)| key != read)
+            .map(|((control, key), read)| {
+                format!("{control} defaults to {key}, which RetroArch reads as {read}")
+            })
+            .collect();
+        assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+    }
+
+    #[test]
+    fn the_exporter_refuses_a_name_retroarch_reads_as_no_key() {
+        let unknown = [
+            "lshift",
+            "lctrl",
+            "lalt",
+            "0",
+            "9",
+            "kp0",
+            "kp_divide",
+            "kp_multiply",
+            "delete",
+        ];
+        assert_eq!(
+            retroarch_reads(&unknown),
+            vec!["nul"; unknown.len()],
+            "RetroArch reads none of these as a key"
+        );
+        let accepted: Vec<&str> = unknown
+            .into_iter()
+            .filter(|name| validate_for_system("megadrive", &binding(name).1).is_ok())
+            .collect();
+        assert!(
+            accepted.is_empty(),
+            "the exporter accepts names RetroArch reads as no key: {}",
+            accepted.join(", ")
+        );
+    }
+
+    // Some keys have more than one name in RetroArch, and each name works.
+    #[test]
+    fn the_exporter_accepts_every_name_retroarch_reads_for_a_key() {
+        let aliases = [
+            "add",
+            "kp_plus",
+            "subtract",
+            "kp_minus",
+            "tilde",
+            "backquote",
+        ];
+        assert_eq!(
+            retroarch_reads(&aliases),
+            vec!["add", "add", "subtract", "subtract", "tilde", "tilde"],
+            "RetroArch reads each pair as one key"
+        );
+        let refused: Vec<String> = aliases
+            .into_iter()
+            .filter_map(|name| {
+                validate_for_system("megadrive", &binding(name).1)
+                    .err()
+                    .map(|error| format!("{name}: {error}"))
+            })
+            .collect();
+        assert!(
+            refused.is_empty(),
+            "the exporter refuses names RetroArch reads as a key:\n{}",
+            refused.join("\n")
+        );
+    }
+
+    // In RetroArch a name works in any case, and one letter is that letter's
+    // key. nul is no key, and Escape stays reserved for the menu in any spelling.
+    #[test]
+    fn the_exporter_reads_a_name_as_retroarch_does() {
+        let names = ["Shift", "KP_PLUS", "Q", "q", "NUL", "Escape"];
+        assert_eq!(
+            retroarch_reads(&names),
+            vec!["shift", "add", "q", "q", "nul", "escape"]
+        );
+        let accepted: Vec<&str> = names
+            .into_iter()
+            .filter(|name| validate_for_system("megadrive", &binding(name).1).is_ok())
+            .collect();
+        assert_eq!(accepted, vec!["Shift", "KP_PLUS", "Q", "q"]);
+    }
+
+    // Pressing Escape in the builder cancels a capture, so we never store it.
+    #[test]
+    fn the_exporter_accepts_every_key_the_builder_captures() {
+        let (capture, _) = builder_keyboard();
+        let refused: Vec<String> = capture
+            .iter()
+            .filter_map(|(code, name)| {
+                validate_for_system("megadrive", &binding(name).1)
+                    .err()
+                    .map(|error| format!("{code} is captured as {name}: {error}"))
+            })
+            .collect();
+        assert!(refused.is_empty(), "{}", refused.join("\n"));
+    }
 }

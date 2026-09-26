@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import registry from "../controls.json";
 import { ControllerScene } from "./ControllerScene";
+import { capturedKey, keyName } from "./keys";
 import systemRegistry from "../systems.json";
 import "./controls.css";
 
@@ -16,53 +17,6 @@ export type Controls = {
   bindings: Record<string, ControlOverride>;
 };
 export const emptyControls = (): Controls => ({ bindings: {} });
-
-const keyNames: Record<string, string> = {
-  up: "↑",
-  down: "↓",
-  left: "←",
-  right: "→",
-  enter: "Enter",
-  space: "Space",
-  rshift: "Right Shift",
-  lshift: "Left Shift",
-  backspace: "Backspace",
-  tab: "Tab",
-  del: "Delete",
-  escape: "Esc",
-  lctrl: "Left Ctrl",
-  rctrl: "Right Ctrl",
-  lalt: "Left Alt",
-  ralt: "Right Alt",
-};
-function keyName(key: string) {
-  return keyNames[key] || key.toUpperCase();
-}
-function capturedKey(event: KeyboardEvent): string | null {
-  if (/^Key[A-Z]$/.test(event.code)) return event.code.slice(3).toLowerCase();
-  if (/^Digit[0-9]$/.test(event.code)) return event.code.slice(5);
-  return (
-    (
-      {
-        ArrowUp: "up",
-        ArrowDown: "down",
-        ArrowLeft: "left",
-        ArrowRight: "right",
-        Enter: "enter",
-        Space: "space",
-        ShiftLeft: "lshift",
-        ShiftRight: "rshift",
-        ControlLeft: "lctrl",
-        ControlRight: "rctrl",
-        AltLeft: "lalt",
-        AltRight: "ralt",
-        Backspace: "backspace",
-        Tab: "tab",
-        Delete: "del",
-      } as Record<string, string>
-    )[event.code] || null
-  );
-}
 
 /** Author defaults. Physical controller bindings remain device-specific player settings. */
 export function ControlsEditor({

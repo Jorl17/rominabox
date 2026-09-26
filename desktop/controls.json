@@ -914,7 +914,7 @@
         {
           "id": "l3",
           "label": "Left stick press",
-          "key": "1",
+          "key": "num1",
           "x": 405,
           "y": 226,
           "calloutX": 0,
@@ -964,7 +964,7 @@
         {
           "id": "r3",
           "label": "Right stick press",
-          "key": "2",
+          "key": "num2",
           "x": 547,
           "y": 226,
           "calloutX": 0,
@@ -1066,7 +1066,7 @@
         {
           "id": "r3",
           "label": "C-Right",
-          "key": "2",
+          "key": "num2",
           "x": 625,
           "y": 97,
           "calloutX": 744,
@@ -1075,7 +1075,7 @@
         {
           "id": "l3",
           "label": "C-Down",
-          "key": "1",
+          "key": "num1",
           "x": 604,
           "y": 118,
           "calloutX": 744,
@@ -1514,7 +1514,7 @@
         {
           "id": "l3",
           "label": "Left stick press",
-          "key": "1",
+          "key": "num1",
           "x": 405,
           "y": 226,
           "calloutX": 0,
@@ -1564,7 +1564,7 @@
         {
           "id": "r3",
           "label": "Right stick press",
-          "key": "2",
+          "key": "num2",
           "x": 547,
           "y": 226,
           "calloutX": 0,
@@ -1709,7 +1709,7 @@
         {
           "id": "l3",
           "label": "L3",
-          "key": "1",
+          "key": "num1",
           "x": 0,
           "y": 0,
           "calloutX": 496,
@@ -1718,7 +1718,7 @@
         {
           "id": "r3",
           "label": "R3",
-          "key": "2",
+          "key": "num2",
           "x": 0,
           "y": 0,
           "calloutX": 728,

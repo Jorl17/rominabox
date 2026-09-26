@@ -300,8 +300,8 @@ impl Catalog {
             ("r2", "R2", "e"),
             ("select", "Select", "rshift"),
             ("start", "Start", "enter"),
-            ("l3", "L3", "1"),
-            ("r3", "R3", "2"),
+            ("l3", "L3", "num1"),
+            ("r3", "R3", "num2"),
         ];
         let profile = ControllerProfile {
             schema_version: SCHEMA_VERSION,

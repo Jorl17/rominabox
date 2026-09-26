@@ -5,8 +5,10 @@ import { ControllerScene } from "./ControllerScene";
 import registry from "../controls.json";
 import megadrivePlacement from "../assets/controllers/controller-megadrive.json";
 import ps1Placement from "../assets/controllers/controller-ps1.json";
+import n64Placement from "../assets/controllers/controller-n64.json";
 import megadriveLayout from "../public/controllers/controller-megadrive-layout.json";
 import ps1Layout from "../public/controllers/controller-ps1-layout.json";
+import n64Layout from "../public/controllers/controller-n64-layout.json";
 
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
@@ -55,15 +57,21 @@ describe("the builder's controller scene", () => {
   beforeEach(() => {
     // Serve the same files as for the app, so a test cannot pass against data
     // the app never receives.
+    const staged = {
+      ps1: [ps1Placement, ps1Layout],
+      n64: [n64Placement, n64Layout],
+      megadrive: [megadrivePlacement, megadriveLayout],
+    };
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => ({
         ok: true,
         json: async () => {
-          const ps1 = url.includes("ps1");
-          if (url.endsWith("-layout.json"))
-            return ps1 ? ps1Layout : megadriveLayout;
-          return ps1 ? ps1Placement : megadrivePlacement;
+          const [placement, layout] =
+            Object.entries(staged).find(([stem]) =>
+              url.includes(`controller-${stem}`),
+            )?.[1] ?? staged.megadrive;
+          return url.endsWith("-layout.json") ? layout : placement;
         },
       })),
     );
@@ -155,6 +163,24 @@ describe("the builder's controller scene", () => {
         `${control.id} must not get a callout of its own`,
       ).toBe(false);
     }
+  });
+
+  // The stored name is the RetroArch one (num2). In the picture we word it
+  // as in the controls table.
+  it("words each bound key as the controls table does", async () => {
+    const container = draw(profileNamed("n64"));
+    await act(async () => {});
+
+    const marker = [...container.querySelectorAll(".controller-marker")].find(
+      (node) =>
+        node.querySelector(".controller-callout-label")?.textContent ===
+        "C-Right",
+    );
+    expect(marker, "the N64 scene has a C-Right callout").toBeTruthy();
+    expect(marker!.querySelector(".controller-callout-key")?.textContent).toBe(
+      "2",
+    );
+    expect(marker!.getAttribute("aria-label")).toBe("C-Right, bound to 2");
   });
 
   it("draws nothing rather than guessing when the geometry is not staged", async () => {

@@ -128,6 +128,25 @@ describe("controller authoring", () => {
     }
   });
 
+  // We store RetroArch names (shift, num7), and show the author the key.
+  it("words a captured modifier and number as the keys that were pressed", () => {
+    const { container, cleanup } = renderEditor();
+    const shown = (button: string) =>
+      bindingButton(container, button).querySelector(".binding-key")
+        ?.textContent;
+    try {
+      expect(shown("L3")).toBe("1");
+      click(bindingButton(container, "L2"));
+      press("ShiftLeft", "Shift");
+      expect(shown("L2")).toBe("Left Shift");
+      click(bindingButton(container, "R2"));
+      press("Digit7", "7");
+      expect(shown("R2")).toBe("7");
+    } finally {
+      cleanup();
+    }
+  });
+
   it("leaves the original binding unchanged when capture is cancelled", () => {
     const { container, cleanup } = renderEditor();
     try {
