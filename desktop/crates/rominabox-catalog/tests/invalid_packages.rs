@@ -300,6 +300,52 @@ fn the_same_control_id_cannot_be_declared_twice_in_one_profile() {
     assert_sole(&root, "control.duplicate_id", "pce", "pce.controls");
 }
 
+fn stick_member(id: &str, direction: Option<&str>) -> Value {
+    let mut member = json!({ "id": id, "label": id, "key": "a", "group": "l_stick" });
+    if let Some(direction) = direction {
+        member["direction"] = json!(direction);
+    }
+    member
+}
+
+#[test]
+fn a_stick_member_without_a_direction_is_rejected() {
+    let (root, package) = one("pad");
+    write_console(&package, &offering("pad", "pad"));
+    write_profile(
+        &package,
+        &generic(
+            "pad",
+            vec![stick_member("l_y_minus", Some("up")), stick_member("l_x_plus", None)],
+        ),
+    );
+    assert_sole(&root, "control.stick_direction_missing", "pad", "pad.controls[group=l_stick]");
+}
+
+#[test]
+fn a_stick_declares_its_directions_once_in_capture_order() {
+    let (root, package) = one("pad");
+    write_console(&package, &offering("pad", "pad"));
+    write_profile(
+        &package,
+        &generic(
+            "pad",
+            vec![stick_member("l_y_plus", Some("down")), stick_member("l_y_minus", Some("up"))],
+        ),
+    );
+    assert_sole(&root, "control.stick_direction_order", "pad", "pad.controls[group=l_stick]");
+}
+
+#[test]
+fn only_a_stick_member_has_a_direction() {
+    let (root, package) = one("pad");
+    write_console(&package, &offering("pad", "pad"));
+    let mut lone = button("up");
+    lone["direction"] = json!("up");
+    write_profile(&package, &generic("pad", vec![lone]));
+    assert_sole(&root, "control.direction_outside_stick", "pad", "pad.controls.up");
+}
+
 #[test]
 fn a_console_declaring_no_content_extensions_is_rejected() {
     let (root, package) = one("empty");

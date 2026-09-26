@@ -99,6 +99,18 @@ pub struct FirmwareGroup {
     pub help: String,
 }
 
+/// Which way a stick member points, or its click. A stick declares its
+/// members in this order, the order in which we capture them in the menu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum StickDirection {
+    Up,
+    Right,
+    Down,
+    Left,
+    Press,
+}
+
 /// One bindable control on a pad.
 ///
 /// `x`/`y` are the button centre and `calloutX`/`calloutY` the label box, both
@@ -116,6 +128,9 @@ pub struct Control {
     /// per gutter do not fit a 380 dp frame.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
+    /// A stick member's direction, and only a stick member's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direction: Option<StickDirection>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub x: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

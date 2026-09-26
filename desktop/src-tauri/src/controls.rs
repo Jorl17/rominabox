@@ -54,6 +54,19 @@ pub struct ControlProfile {
     pub controls: Vec<ControlDefinition>,
 }
 
+/// The direction of a stick member, or its click, as we declare and check it
+/// in the catalog and write it to `controls.json`. We list a stick's members
+/// in this order, the order in which the player binds them in the menu.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum StickDirection {
+    Up,
+    Right,
+    Down,
+    Left,
+    Press,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ControlDefinition {
@@ -63,6 +76,9 @@ pub struct ControlDefinition {
     /// We draw grouped controls as one marker (the catalog's Control::group).
     #[serde(default)]
     pub group: Option<String>,
+    /// The direction of a stick member, or `None` for any other control.
+    #[serde(default)]
+    pub direction: Option<StickDirection>,
     pub x: i32,
     pub y: i32,
     pub callout_x: i32,

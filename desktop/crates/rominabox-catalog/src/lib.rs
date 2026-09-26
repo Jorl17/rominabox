@@ -12,8 +12,8 @@
 pub mod model;
 
 use model::{
-    Console, ControllerProfile, CoreComponent, Presentation, SheetParser, CONTROL_IDS,
-    SCHEMA_VERSION,
+    Console, Control, ControllerProfile, CoreComponent, Presentation, SheetParser, StickDirection,
+    CONTROL_IDS, SCHEMA_VERSION,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -317,6 +317,7 @@ impl Catalog {
                     label: (*label).to_string(),
                     key: (*key).to_string(),
                     group: None,
+                    direction: None,
                     x: None,
                     y: None,
                     callout_x: None,
@@ -578,6 +579,41 @@ impl Catalog {
                         &package,
                         format!("{id}.controls"),
                         format!("control '{}' is declared twice", control.id),
+                    ));
+                }
+                if control.group.is_none() && control.direction.is_some() {
+                    problems.push(Diagnostic::new(
+                        "control.direction_outside_stick",
+                        &package,
+                        format!("{id}.controls.{}", control.id),
+                        "only a member of a stick has a direction",
+                    ));
+                }
+            }
+            // Each member of a stick points one way, once, in the order in
+            // which we capture them in the menu.
+            let mut sticks: BTreeMap<&str, Vec<&Control>> = BTreeMap::new();
+            for control in &profile.controls {
+                if let Some(group) = &control.group {
+                    sticks.entry(group.as_str()).or_default().push(control);
+                }
+            }
+            for (stick, members) in &sticks {
+                let directions: Vec<StickDirection> =
+                    members.iter().filter_map(|member| member.direction).collect();
+                if directions.len() != members.len() {
+                    problems.push(Diagnostic::new(
+                        "control.stick_direction_missing",
+                        &package,
+                        format!("{id}.controls[group={stick}]"),
+                        "every member of a stick has a direction: up, right, down, left or press",
+                    ));
+                } else if directions.windows(2).any(|pair| pair[0] >= pair[1]) {
+                    problems.push(Diagnostic::new(
+                        "control.stick_direction_order",
+                        &package,
+                        format!("{id}.controls[group={stick}]"),
+                        "a stick declares each direction once, in the order up, right, down, left, press",
                     ));
                 }
             }
@@ -993,6 +1029,9 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
                 // entry of a profile without groups has no group field.
                 if let Some(group) = &control.group {
                     rendered["group"] = json!(group);
+                }
+                if let Some(direction) = control.direction {
+                    rendered["direction"] = json!(direction);
                 }
                 rendered
             })

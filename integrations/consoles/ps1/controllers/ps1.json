@@ -138,31 +138,36 @@
       "id": "l_y_minus",
       "label": "Left stick up",
       "key": "t",
-      "group": "l_stick"
-    },
-    {
-      "id": "l_y_plus",
-      "label": "Left stick down",
-      "key": "g",
-      "group": "l_stick"
-    },
-    {
-      "id": "l_x_minus",
-      "label": "Left stick left",
-      "key": "v",
-      "group": "l_stick"
+      "group": "l_stick",
+      "direction": "up"
     },
     {
       "id": "l_x_plus",
       "label": "Left stick right",
       "key": "b",
-      "group": "l_stick"
+      "group": "l_stick",
+      "direction": "right"
+    },
+    {
+      "id": "l_y_plus",
+      "label": "Left stick down",
+      "key": "g",
+      "group": "l_stick",
+      "direction": "down"
+    },
+    {
+      "id": "l_x_minus",
+      "label": "Left stick left",
+      "key": "v",
+      "group": "l_stick",
+      "direction": "left"
     },
     {
       "id": "l3",
       "label": "Left stick press",
       "key": "num1",
       "group": "l_stick",
+      "direction": "press",
       "x": 405,
       "y": 226
     },
@@ -170,31 +175,36 @@
       "id": "r_y_minus",
       "label": "Right stick up",
       "key": "i",
-      "group": "r_stick"
-    },
-    {
-      "id": "r_y_plus",
-      "label": "Right stick down",
-      "key": "k",
-      "group": "r_stick"
-    },
-    {
-      "id": "r_x_minus",
-      "label": "Right stick left",
-      "key": "j",
-      "group": "r_stick"
+      "group": "r_stick",
+      "direction": "up"
     },
     {
       "id": "r_x_plus",
       "label": "Right stick right",
       "key": "l",
-      "group": "r_stick"
+      "group": "r_stick",
+      "direction": "right"
+    },
+    {
+      "id": "r_y_plus",
+      "label": "Right stick down",
+      "key": "k",
+      "group": "r_stick",
+      "direction": "down"
+    },
+    {
+      "id": "r_x_minus",
+      "label": "Right stick left",
+      "key": "j",
+      "group": "r_stick",
+      "direction": "left"
     },
     {
       "id": "r3",
       "label": "Right stick press",
       "key": "num2",
       "group": "r_stick",
+      "direction": "press",
       "x": 547,
       "y": 226
     }

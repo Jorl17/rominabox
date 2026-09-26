@@ -376,6 +376,11 @@ mod tests {
             label: id.to_string(),
             key: String::new(),
             group: Some("l_stick".to_string()),
+            direction: Some(if id == "l3" {
+                crate::controls::StickDirection::Press
+            } else {
+                crate::controls::StickDirection::Right
+            }),
             x,
             y,
             callout_x: 0,
@@ -430,6 +435,7 @@ mod tests {
             label: id.to_string(),
             key: String::new(),
             group: None,
+            direction: None,
             x,
             y,
             callout_x: 16,
