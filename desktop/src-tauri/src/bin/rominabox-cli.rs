@@ -261,7 +261,11 @@ fn run() -> Result<(), String> {
             let profile = controls::validate_for_system(&request.system, &options)?;
             let metrics = menu::scene_metrics(&request.design)?;
             let layout = rominabox_desktop::scene_layout::layout(&profile.controls, metrics);
-            println!("{}", json!({ "type": "result", "result": layout }));
+            // And the text of each callout, which is also in the composed menu.
+            let mut result = serde_json::to_value(layout).map_err(|error| error.to_string())?;
+            result["words"] = serde_json::to_value(menu::scene_words(&request.design, &profile, &options)?)
+                .map_err(|error| error.to_string())?;
+            println!("{}", json!({ "type": "result", "result": result }));
             Ok(())
         }
         "stage-theme" | "stage-controls" => {

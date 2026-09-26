@@ -10,9 +10,14 @@ export default defineConfig({
   clearScreen: false,
   server: {
     fs: {
-      // The shader catalog is one file, shared with the exporter. We list it
-      // here so that this import is among the files Vite will read.
-      allow: [".", "../integrations/shaders"],
+      // The shader catalog and the key words are shared with the exporter
+      // and the game. We list them here so that those imports are among the
+      // files Vite will read.
+      allow: [
+        ".",
+        "../integrations/shaders",
+        "../vendor/retroarch/menu/drivers/rmlui",
+      ],
     },
     host: "127.0.0.1",
     // We set this in a worktree so two checkouts can run at once. Unset, it

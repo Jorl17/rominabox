@@ -39,6 +39,36 @@ pub fn known() -> &'static [Word] {
     })
 }
 
+const KEY_WORDS: &str =
+    include_str!("../../../../vendor/retroarch/menu/drivers/rmlui/key_words.inc");
+
+/// Each key that has a word in `key_words.inc`, by its name in the
+/// RetroArch config, and its word.
+pub fn key_words() -> &'static [(String, String)] {
+    static WORDS: OnceLock<Vec<(String, String)>> = OnceLock::new();
+    WORDS.get_or_init(|| {
+        super::inc::declarations(KEY_WORDS)
+            .filter(|declaration| declaration.macro_name() == "RIB_KEY_WORD")
+            .map(|declaration| match declaration.fields()[..] {
+                [name, word] => (name.to_string(), word.to_string()),
+                ref fields => panic!(
+                    "key_words.inc: RIB_KEY_WORD({}) is not RIB_KEY_WORD(\"name\", \"Word\")",
+                    fields.join(", ")
+                ),
+            })
+            .collect()
+    })
+}
+
+/// The word for the key called `name` in the RetroArch config, as we show
+/// it in the game, which is its entry in `key_words.inc` or else the name.
+pub fn key_word(name: &str) -> &str {
+    key_words()
+        .iter()
+        .find(|(key, _)| key == name)
+        .map_or(name, |(_, word)| word.as_str())
+}
+
 /// The text for `id` in `given`, the wording of the design, or else the
 /// English text, with each hole filled in with the value we show there.
 pub fn say(given: &BTreeMap<String, String>, id: &str, values: &[(&str, &str)]) -> String {

@@ -143,7 +143,9 @@ fn default_callout_labels_occur_once_and_custom_labels_keep_console_identity() {
         let markup = fs::read_to_string(root.join("menu.rml")).unwrap();
         for label in ["Up", "Down", "Left", "Start"] {
             assert_eq!(
-                markup.matches(&format!(">{label}<")).count(),
+                markup
+                    .matches(&format!(r#"class="control-label">{label}<"#))
+                    .count(),
                 1,
                 "{system} default label {label} should appear once"
             );
@@ -454,7 +456,7 @@ fn a_callout_names_every_binding_on_the_control() {
         .nth(1)
         .and_then(|rest| rest.split('<').next())
         .unwrap_or("");
-    assert_eq!(binding, "up, Button 0, Axis +0");
+    assert_eq!(binding, "Up, Button 0, Axis +0");
     assert!(
         !binding.contains("bind"),
         "a count is not a binding: {binding}"

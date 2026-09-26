@@ -170,9 +170,9 @@ def render(profile: dict, destination: Path, colours: dict) -> Path:
         draw.text((s(rect["x"] + 10), s(rect["y"] + 5)), title, font=_font(s(18)), fill=MARKER)
         draw.text((s(rect["x"] + 10), s(rect["y"] + 30)), detail, font=_font(s(14)), fill=assignment)
 
-    # We take the position of every callout, ring, leader and stick box from
-    # the exporter, which we use to make the shipped game. We compute none of
-    # them here.
+    # We take the position of every callout, ring, leader and stick box, and
+    # the text of every callout, from the exporter, which we use to make the
+    # shipped game. We compute none of them here.
     geometry = scene_geometry(profile["id"])
     declared = {control["id"]: control for control in profile["controls"]}
     for placement in geometry["controls"]:
@@ -180,7 +180,7 @@ def render(profile: dict, destination: Path, colours: dict) -> Path:
         ring(placement["marker"])
     for placement in geometry["controls"]:
         control = declared[placement["id"]]
-        box(placement["callout"], control["label"], control["key"])
+        box(placement["callout"], control["label"], geometry["words"]["controls"][placement["id"]])
 
     # A stick is one object on the pad, with one ring at the member placed on
     # the pad and one box with the binding of every direction.
@@ -188,9 +188,8 @@ def render(profile: dict, destination: Path, colours: dict) -> Path:
         route(group["leader"])
         if group["marker"]:
             ring(group["marker"])
-        members = [c for c in profile["controls"] if c.get("group") == group["name"]]
-        box(group["strip"], group["name"].replace("_", " ").upper(),
-            ", ".join(m["key"] for m in members))
+        words = geometry["words"]["groups"][group["name"]]
+        box(group["strip"], words["title"], words["bindings"])
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     canvas.convert("RGB").save(destination)

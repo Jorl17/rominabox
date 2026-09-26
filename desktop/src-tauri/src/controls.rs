@@ -481,26 +481,26 @@ mod tests {
         read
     }
 
-    /// The builder's key declaration: the name for each browser key that we
-    /// capture, and the names that have words in the builder.
-    fn builder_keyboard() -> (Vec<(String, String)>, Vec<String>) {
+    /// The name we store for each browser key captured in the builder.
+    fn builder_capture() -> Vec<(String, String)> {
         let text = fs::read_to_string(crate::repo::at("desktop/keyboard.json"))
             .expect("desktop/keyboard.json is readable");
         let keyboard: serde_json::Value =
             serde_json::from_str(&text).expect("desktop/keyboard.json is JSON");
-        let capture = keyboard["capture"]
+        keyboard["capture"]
             .as_object()
             .expect("keyboard.json declares capture")
             .iter()
             .map(|(code, name)| (code.clone(), name.as_str().unwrap().to_string()))
-            .collect();
-        let labelled = keyboard["labels"]
-            .as_object()
-            .expect("keyboard.json declares labels")
-            .keys()
-            .cloned()
-            .collect();
-        (capture, labelled)
+            .collect()
+    }
+
+    /// The names given words in key_words.inc, for the game and the builder.
+    fn worded_keys() -> Vec<String> {
+        crate::menu::words::key_words()
+            .iter()
+            .map(|(name, _)| name.clone())
+            .collect()
     }
 
     fn binding(key: &str) -> (String, Controls) {
@@ -514,11 +514,13 @@ mod tests {
         (control, controls)
     }
 
-    // We store a key in the builder as it is written in the game's config. A
-    // name that is no key in RetroArch exports without error and has no effect.
+    // In the builder we store a key in the same form as the game's config, and
+    // a word is for a key that the config can name. A name that is no key in
+    // RetroArch exports without error and has no effect.
     #[test]
-    fn the_builder_captures_each_key_by_a_name_retroarch_reads_as_that_key() {
-        let (capture, labelled) = builder_keyboard();
+    fn every_key_the_builder_captures_or_words_is_a_name_retroarch_reads_as_that_key() {
+        let capture = builder_capture();
+        let worded = worded_keys();
         let names: Vec<&str> = capture.iter().map(|(_, name)| name.as_str()).collect();
         let mut wrong: Vec<String> = capture
             .iter()
@@ -528,14 +530,14 @@ mod tests {
                 format!("{code} is captured as {name}, which RetroArch reads as {read}")
             })
             .collect();
-        let labelled_names: Vec<&str> = labelled.iter().map(String::as_str).collect();
+        let worded_names: Vec<&str> = worded.iter().map(String::as_str).collect();
         wrong.extend(
-            labelled
+            worded
                 .iter()
-                .zip(retroarch_reads(&labelled_names))
+                .zip(retroarch_reads(&worded_names))
                 .filter(|(name, read)| *name != read)
                 .map(|(name, read)| {
-                    format!("the label for {name} names what RetroArch reads as {read}")
+                    format!("key_words.inc words {name}, which RetroArch reads as {read}")
                 }),
         );
         assert!(wrong.is_empty(), "{}", wrong.join("\n"));
@@ -646,7 +648,7 @@ mod tests {
     // Pressing Escape in the builder cancels a capture, so we never store it.
     #[test]
     fn the_exporter_accepts_every_key_the_builder_captures() {
-        let (capture, _) = builder_keyboard();
+        let capture = builder_capture();
         let refused: Vec<String> = capture
             .iter()
             .filter_map(|(code, name)| {
