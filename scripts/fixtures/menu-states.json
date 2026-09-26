@@ -834,6 +834,126 @@
           "text": "1/2"
         }
       }
+    },
+    "stick-up": {
+      "describes": "a stick being captured, its up mark blinking",
+      "needs": "control-group-l_stick",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-cancel": {
+          "display": "block"
+        },
+        "controls-status": {
+          "text": "LEFT STICK UP: PRESS AN INPUT (5)"
+        },
+        "control-group-l_stick": {
+          "class": "capturing"
+        },
+        "control-direction-l_y_minus": {
+          "class": "capturing"
+        }
+      }
+    },
+    "stick-right": {
+      "describes": "a stick being captured, its right mark blinking",
+      "needs": "control-group-l_stick",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-cancel": {
+          "display": "block"
+        },
+        "controls-status": {
+          "text": "LEFT STICK RIGHT: PRESS AN INPUT (5)"
+        },
+        "control-group-l_stick": {
+          "class": "capturing"
+        },
+        "control-direction-l_x_plus": {
+          "class": "capturing"
+        }
+      }
+    },
+    "stick-down": {
+      "describes": "a stick being captured, its down mark blinking",
+      "needs": "control-group-l_stick",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-cancel": {
+          "display": "block"
+        },
+        "controls-status": {
+          "text": "LEFT STICK DOWN: PRESS AN INPUT (5)"
+        },
+        "control-group-l_stick": {
+          "class": "capturing"
+        },
+        "control-direction-l_y_plus": {
+          "class": "capturing"
+        }
+      }
+    },
+    "stick-left": {
+      "describes": "a stick being captured, its left mark blinking",
+      "needs": "control-group-l_stick",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-cancel": {
+          "display": "block"
+        },
+        "controls-status": {
+          "text": "LEFT STICK LEFT: PRESS AN INPUT (5)"
+        },
+        "control-group-l_stick": {
+          "class": "capturing"
+        },
+        "control-direction-l_x_minus": {
+          "class": "capturing"
+        }
+      }
+    },
+    "stick-press": {
+      "describes": "a stick being captured, its press mark blinking",
+      "needs": "control-group-l_stick",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "block"
+        },
+        "controls-cancel": {
+          "display": "block"
+        },
+        "controls-status": {
+          "text": "LEFT STICK PRESS: PRESS AN INPUT (5)"
+        },
+        "control-group-l_stick": {
+          "class": "capturing"
+        },
+        "control-direction-l3": {
+          "class": "capturing"
+        }
+      }
     }
   }
 }

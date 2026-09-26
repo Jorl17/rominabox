@@ -128,6 +128,19 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .control-callout.capturing, .control-callout.capturing .control-hit,
 .control-group.capturing, .control-group.capturing .control-hit { animation: 0.55s capture-pulse infinite alternate; }
 
+/* The marks of a stick, visible while we capture it, with a blink on the
+ * member being captured. Each arrow is one 2dp pixel and its crisp shadows,
+ * a stepped triangle 3dp outside the ring. The click is a dot in the middle. */
+@keyframes mark-blink { from { opacity: 1; } to { opacity: 0.15; } }
+.control-direction { position: absolute; display: none; width: 2dp; height: 2dp; background-color: design(highlight); pointer-events: none; }
+.control-group.capturing .control-direction { display: block; opacity: 0.3; }
+.control-group.capturing .control-direction.capturing { opacity: 1; animation: 0.55s mark-blink infinite alternate; }
+.direction-up { margin-left: -1dp; margin-top: -11dp; box-shadow: design(highlight) -2dp 2dp, design(highlight) 0dp 2dp, design(highlight) 2dp 2dp, design(highlight) -4dp 4dp, design(highlight) -2dp 4dp, design(highlight) 0dp 4dp, design(highlight) 2dp 4dp, design(highlight) 4dp 4dp, design(highlight) -6dp 6dp, design(highlight) -4dp 6dp, design(highlight) -2dp 6dp, design(highlight) 0dp 6dp, design(highlight) 2dp 6dp, design(highlight) 4dp 6dp, design(highlight) 6dp 6dp; }
+.direction-down { margin-left: -1dp; margin-top: 9dp; box-shadow: design(highlight) -2dp -2dp, design(highlight) 0dp -2dp, design(highlight) 2dp -2dp, design(highlight) -4dp -4dp, design(highlight) -2dp -4dp, design(highlight) 0dp -4dp, design(highlight) 2dp -4dp, design(highlight) 4dp -4dp, design(highlight) -6dp -6dp, design(highlight) -4dp -6dp, design(highlight) -2dp -6dp, design(highlight) 0dp -6dp, design(highlight) 2dp -6dp, design(highlight) 4dp -6dp, design(highlight) 6dp -6dp; }
+.direction-left { margin-left: -11dp; margin-top: -1dp; box-shadow: design(highlight) 2dp -2dp, design(highlight) 2dp 0dp, design(highlight) 2dp 2dp, design(highlight) 4dp -4dp, design(highlight) 4dp -2dp, design(highlight) 4dp 0dp, design(highlight) 4dp 2dp, design(highlight) 4dp 4dp, design(highlight) 6dp -6dp, design(highlight) 6dp -4dp, design(highlight) 6dp -2dp, design(highlight) 6dp 0dp, design(highlight) 6dp 2dp, design(highlight) 6dp 4dp, design(highlight) 6dp 6dp; }
+.direction-right { margin-left: 9dp; margin-top: -1dp; box-shadow: design(highlight) -2dp -2dp, design(highlight) -2dp 0dp, design(highlight) -2dp 2dp, design(highlight) -4dp -4dp, design(highlight) -4dp -2dp, design(highlight) -4dp 0dp, design(highlight) -4dp 2dp, design(highlight) -4dp 4dp, design(highlight) -6dp -6dp, design(highlight) -6dp -4dp, design(highlight) -6dp -2dp, design(highlight) -6dp 0dp, design(highlight) -6dp 2dp, design(highlight) -6dp 4dp, design(highlight) -6dp 6dp; }
+.direction-press { width: 6dp; height: 6dp; margin-left: -3dp; margin-top: -3dp; }
+
 /* One list for every screen with a list. We write the rows when we bundle
  * the game, and no screen has a separate list style. */
 .screen-link { position: absolute; top: 10dp; right: 16dp; width: 140dp; height: 28dp; z-index: 2; font-family: Silkscreen; font-size: 12dp; line-height: 28dp; text-align: center; }
