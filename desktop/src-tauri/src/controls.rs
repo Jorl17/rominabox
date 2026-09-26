@@ -419,16 +419,16 @@ const KEY_NAMES: &str = include_str!("../../../vendor/retroarch/input/input_key_
 fn key_names() -> &'static [(String, String)] {
     static NAMES: OnceLock<Vec<(String, String)>> = OnceLock::new();
     NAMES.get_or_init(|| {
-        let names: Vec<(String, String)> =
-            crate::menu::inc::declarations(KEY_NAMES, "RIB_KEY_NAME")
-                .map(|fields| match &fields[..] {
-                    [name, key] => (name.clone(), key.clone()),
-                    _ => panic!(
-                        "input_key_names.inc: RIB_KEY_NAME({}) is not (\"name\", RETROK_key)",
-                        fields.join(", ")
-                    ),
-                })
-                .collect();
+        let names: Vec<(String, String)> = crate::menu::inc::declarations(KEY_NAMES)
+            .filter(|line| line.macro_name() == "RIB_KEY_NAME")
+            .map(|line| match line.fields()[..] {
+                [name, key] => (name.to_string(), key.to_string()),
+                ref other => panic!(
+                    "input_key_names.inc: RIB_KEY_NAME({}) is not (\"name\", RETROK_key)",
+                    other.join(", ")
+                ),
+            })
+            .collect();
         assert!(!names.is_empty(), "input_key_names.inc declares no keys");
         names
     })

@@ -1,13 +1,59 @@
-//! `design.cfg`: the design's facts about itself, which we read in the player.
+//! `design.cfg`: facts about the design, which we read in the player.
 //!
-//! We write that file only here. We write every value quoted, and in
-//! RetroArch's config reader a quoted value ends at the next `"`, with no
-//! escapes, so we refuse a value with a quote or a line break here instead of
-//! writing it as a different value.
+//! We write that file only here. We put every value in quotes, and in a
+//! RetroArch config file a quoted value ends at the next `"`, with no escapes.
+//! So we refuse a value with a quote or a line break, instead of writing it
+//! as a different value.
+//!
+//! The keys, and the names of the files we open in the player, are in the
+//! player's `declarations.inc`, which we read with `key!` and `file_name!`.
 
 use super::manifest::{Manifest, Screen, ScreenPlace};
 use crate::lists::Installed;
 use crate::player_settings::{Kind, PlayerSetting};
+
+const SOURCE: &str =
+    include_str!("../../../../vendor/retroarch/menu/drivers/rmlui/declarations.inc");
+
+/// Field `field` of the `MACRO(name, ...)` in `declarations.inc`, for any of
+/// `macros`. We read it through `key!` and `file_name!`.
+pub(crate) const fn declared(macros: &[&str], name: &str, field: usize) -> &'static str {
+    super::inc::declared(SOURCE, macros, name, field)
+}
+
+/// `key!(Name)`: a key declared with `RIB_KEY` in `declarations.inc`.
+/// `key!(Name, id)`: the key declared for `id` in a `RIB_KEYS`. Read at
+/// compile time, so the build fails for a key that the player does not declare.
+macro_rules! key {
+    ($name:ident) => {
+        const { $crate::menu::declarations::declared(&["RIB_KEY"], stringify!($name), 1) }
+    };
+    ($name:ident, $id:expr) => {
+        format!(
+            "{}{}",
+            const { $crate::menu::declarations::declared(&["RIB_KEYS"], stringify!($name), 1) },
+            $id
+        )
+    };
+}
+pub(crate) use key;
+
+/// `file_name!(Name)`: a file `declarations.inc` declares with `RIB_FILE`.
+/// `file_name!(Name, id)`: the file a `RIB_FILES` declares for `id`.
+macro_rules! file_name {
+    ($name:ident) => {
+        const { $crate::menu::declarations::declared(&["RIB_FILE"], stringify!($name), 1) }
+    };
+    ($name:ident, $id:expr) => {
+        format!(
+            "{}{}{}",
+            const { $crate::menu::declarations::declared(&["RIB_FILES"], stringify!($name), 1) },
+            $id,
+            const { $crate::menu::declarations::declared(&["RIB_FILES"], stringify!($name), 2) },
+        )
+    };
+}
+pub(crate) use file_name;
 
 /// One `key = "value"` line.
 fn line(text: &mut String, key: &str, value: &str) -> Result<(), String> {
@@ -49,7 +95,7 @@ fn shown_by(screen: &Screen, screens: &[&Screen], markup: &str) -> Vec<String> {
         {
             continue;
         }
-        let back = format!("{}-back", other.id);
+        let back = other.back_button();
         if markup.contains(&format!("id=\"{back}\"")) && !buttons.contains(&back) {
             buttons.push(back);
         }
@@ -59,55 +105,33 @@ fn shown_by(screen: &Screen, screens: &[&Screen], markup: &str) -> Vec<String> {
 
 fn screen_lines(text: &mut String, screen: &Screen, buttons: &[String]) -> Result<(), String> {
     let id = &screen.id;
-    line(text, &format!("screen_panel_{id}"), &screen.panel)?;
-    line(text, &format!("screen_heading_{id}"), &screen.heading)?;
-    line(text, &format!("screen_footer_{id}"), &screen.footer)?;
-    line(text, &format!("screen_button_{id}"), &buttons.join(" "))?;
+    line(text, &key!(ScreenPanel, id), &screen.panel)?;
+    line(text, &key!(ScreenHeading, id), &screen.heading)?;
+    line(text, &key!(ScreenFooter, id), &screen.footer)?;
+    line(text, &key!(ScreenButton, id), &buttons.join(" "))?;
     if let Some(images) = &screen.images {
-        line(text, &format!("screen_images_{id}"), images)?;
-    }
-    if let Some(mark) = &screen.mark {
-        line(text, &format!("screen_mark_{id}"), mark)?;
+        line(text, &key!(ScreenImages, id), images)?;
     }
     // The role of the screen, so that we find Pause or the achievements
     // screen in the player by role, not by a literal id.
     if let Some(role) = screen.role {
-        line(text, &format!("screen_role_{id}"), role.name())?;
+        line(text, &key!(ScreenRole, id), role.name())?;
     }
     Ok(())
 }
 
 fn setting_lines(text: &mut String, setting: &PlayerSetting) -> Result<(), String> {
     let id = setting.id;
-    line(text, &format!("setting_control_{id}"), &setting.control())?;
-    line(text, &format!("setting_key_{id}"), setting.key.name())?;
-    line(text, &format!("setting_file_{id}"), &setting.file())?;
+    line(text, &key!(SettingControl, id), &setting.control())?;
+    line(text, &key!(SettingKey, id), setting.key.name())?;
+    line(text, &key!(SettingFile, id), &setting.file())?;
+    line(text, &key!(SettingKind, id), setting.kind.word())?;
     match setting.kind {
-        Kind::Level {
-            low,
-            high,
-            positions,
-            ..
-        } => {
-            line(text, &format!("setting_kind_{id}"), "level")?;
-            line(text, &format!("setting_low_{id}"), &low.to_string())?;
-            line(text, &format!("setting_high_{id}"), &high.to_string())?;
-            line(
-                text,
-                &format!("setting_positions_{id}"),
-                &positions.to_string(),
-            )
+        Kind::Level { values } => {
+            let values: Vec<String> = values.iter().map(|value| setting.text(*value)).collect();
+            line(text, &key!(SettingValues, id), &values.join(" "))
         }
-        Kind::Switch { on, off, inverted } => {
-            line(text, &format!("setting_kind_{id}"), "switch")?;
-            line(text, &format!("setting_on_{id}"), on)?;
-            line(text, &format!("setting_off_{id}"), off)?;
-            line(
-                text,
-                &format!("setting_inverted_{id}"),
-                &inverted.to_string(),
-            )
-        }
+        Kind::Switch { inverted } => line(text, &key!(SettingInverted, id), &inverted.to_string()),
     }
 }
 
@@ -161,7 +185,7 @@ pub(crate) fn write(
         .map(|screen| screen.id.as_str())
         .chain(lists.iter().map(|list| list.screen.id.as_str()))
         .collect();
-    line(&mut text, "screens", &ids.join(" "))?;
+    line(&mut text, key!(Screens), &ids.join(" "))?;
     for (screen, buttons) in declared.iter().zip(&buttons).take(drawn.len()) {
         screen_lines(&mut text, screen, buttons)?;
     }
@@ -172,7 +196,7 @@ pub(crate) fn write(
         .filter(|setting| markup.contains(&format!("id=\"{}\"", setting.control())))
         .collect();
     let setting_ids: Vec<&str> = drawn_settings.iter().map(|setting| setting.id).collect();
-    line(&mut text, "settings", &setting_ids.join(" "))?;
+    line(&mut text, key!(Settings), &setting_ids.join(" "))?;
     for setting in drawn_settings {
         setting_lines(&mut text, setting)?;
     }
@@ -183,7 +207,7 @@ pub(crate) fn write(
         .filter(|overlay| markup.contains(&format!("id=\"{}\"", overlay.id)))
         .collect();
     let overlay_ids: Vec<&str> = overlays.iter().map(|overlay| overlay.id.as_str()).collect();
-    line(&mut text, "overlays", &overlay_ids.join(" "))?;
+    line(&mut text, key!(Overlays), &overlay_ids.join(" "))?;
     for overlay in &overlays {
         let id = &overlay.id;
         // When the overlay before this one is not in the document, we wait for
@@ -194,40 +218,40 @@ pub(crate) fn write(
         } else {
             ""
         };
-        line(&mut text, &format!("overlay_follows_{id}"), follows)?;
+        line(&mut text, &key!(OverlayFollows, id), follows)?;
         line(
             &mut text,
-            &format!("overlay_after_{id}"),
+            &key!(OverlayAfter, id),
             &overlay.after_ms.to_string(),
         )?;
         line(
             &mut text,
-            &format!("overlay_hold_{id}"),
+            &key!(OverlayHold, id),
             &overlay.hold_ms.to_string(),
         )?;
         line(
             &mut text,
-            &format!("overlay_leave_{id}"),
+            &key!(OverlayLeave, id),
             &overlay.leave_ms.to_string(),
         )?;
-        line(&mut text, &format!("overlay_needs_{id}"), &overlay.needs)?;
+        line(&mut text, &key!(OverlayNeeds, id), &overlay.needs)?;
     }
 
     let binds = manifest.binds;
-    line(&mut text, "binds_after", &binds.after_ms.to_string())?;
+    line(&mut text, key!(BindsAfter), &binds.after_ms.to_string())?;
     line(
         &mut text,
-        "binds_hover_after",
+        key!(BindsHoverAfter),
         &binds.hover_after_ms.to_string(),
     )?;
-    line(&mut text, "binds_width", &binds.width.to_string())?;
-    line(&mut text, "binds_list", "control-binds")?;
+    line(&mut text, key!(BindsWidth), &binds.width.to_string())?;
+    line(&mut text, key!(BindsList), super::scene::BIND_LIST)?;
     // The font files staged beside the document, which we load in the player.
     let fonts: Vec<&str> = manifest.fonts.iter().map(|font| font.file.as_str()).collect();
-    line(&mut text, "fonts", &fonts.join(" "))?;
+    line(&mut text, key!(Fonts), &fonts.join(" "))?;
     // The design's wording for the words we write in the player, or English.
     for (id, words) in &manifest.words {
-        line(&mut text, &format!("word_{id}"), words)?;
+        line(&mut text, &key!(Word, id), words)?;
     }
 
     for (index, list) in lists.iter().enumerate() {

@@ -17,29 +17,21 @@ pub struct Word {
     pub english: String,
 }
 
-/// The quoted strings of one declaration line, in order.
-fn quoted(line: &str) -> Vec<String> {
-    line.split('"')
-        .skip(1)
-        .step_by(2)
-        .map(str::to_string)
-        .collect()
-}
-
 /// Every word that we write in the player, in the order of `words.inc`.
 pub fn known() -> &'static [Word] {
     static WORDS: OnceLock<Vec<Word>> = OnceLock::new();
     WORDS.get_or_init(|| {
-        let words: Vec<Word> = SOURCE
-            .lines()
-            .map(str::trim)
-            .filter(|line| line.starts_with("RIB_WORD("))
-            .map(|line| match &quoted(line)[..] {
-                [id, english] => Word {
-                    id: id.clone(),
-                    english: english.clone(),
+        let words: Vec<Word> = super::inc::declarations(SOURCE)
+            .filter(|declaration| declaration.macro_name() == "RIB_WORD")
+            .map(|declaration| match declaration.fields()[..] {
+                [_, id, english] => Word {
+                    id: id.to_string(),
+                    english: english.to_string(),
                 },
-                _ => panic!("words.inc: {line} is not RIB_WORD(name, \"id\", \"English\")"),
+                ref fields => panic!(
+                    "words.inc: RIB_WORD({}) is not RIB_WORD(name, \"id\", \"English\")",
+                    fields.join(", ")
+                ),
             })
             .collect();
         assert!(!words.is_empty(), "words.inc declares no words");

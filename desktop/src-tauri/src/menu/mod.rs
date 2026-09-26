@@ -8,8 +8,9 @@
 //! `declarations` we write `design.cfg`, and in `stage` we join the pieces.
 
 pub mod contract;
-mod declarations;
+pub(crate) mod declarations;
 mod document;
+pub(crate) mod inc;
 mod manifest;
 mod scene;
 mod stage;
@@ -18,13 +19,16 @@ pub mod words;
 
 use std::path::PathBuf;
 
-pub use document::{install_settings, level_markup, setting_slot, volume_control_markup};
+pub(crate) use contract::contract;
+pub(crate) use declarations::{file_name, key};
+pub use document::{
+    install_settings, level_markup, setting_slot, volume_control_markup, SettingsPlace, STYLESHEET,
+};
 pub use manifest::{
     base_design, declared_overlays, declared_screens, scene_metrics, Binds, Documents, Font,
     Manifest, Overlay, SceneMetrics, Screen, ScreenPlace, ScreenRole,
 };
-pub use scene::SCENE_PREFIX;
-pub use stage::{compose_menu, render_preview, Composition, MenuRequest, PreviewRequest};
+pub use stage::{compose_menu, render_preview, Composition, MenuRequest, PreviewRequest, DOCUMENT};
 
 /// One file of a composition.
 #[derive(Clone, Debug)]

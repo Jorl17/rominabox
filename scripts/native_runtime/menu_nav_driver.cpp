@@ -48,6 +48,8 @@
 #include "rmlui/host.h"
 #include "rmlui_bridge.h"
 #include "rmlui/view.hpp"
+#include "rmlui/declarations.h"
+#include "rmlui/document_contract.hpp"
 #include "rmlui/elements.hpp"
 #include "menu_host_fake.h"
 #include "../../vendor/retroarch/cheevos/rominabox.h"
@@ -105,11 +107,13 @@ const char *sound_name(rib::test::Sound sound)
 /* The screen panels declared in the design's design.cfg. */
 std::vector<std::string> panels(const std::string& assets)
 {
-   std::vector<std::string> found = {"pause-panel", "controls-panel"};
-   std::ifstream cfg(assets + "/design.cfg");
+   std::vector<std::string> found = {rib::document_contract::PausePanel,
+         rib::document_contract::ControlsPanel};
+   std::ifstream cfg(assets + "/" + rib::files::Design);
+   const std::string panel = rib::keys::ScreenPanel("");
    for (std::string line; std::getline(cfg, line); )
    {
-      if (line.rfind("screen_panel_", 0) != 0) continue;
+      if (line.rfind(panel, 0) != 0) continue;
       const auto open = line.find('"');
       const auto close = line.rfind('"');
       if (open != std::string::npos && close > open)
@@ -133,7 +137,7 @@ std::string marked(const char *state)
    bool first = true;
    rib::walk(view.document.root(), [&](Rml::Element *element) {
       if (rib::display_none(element)) return rib::Walk::SkipChildren;
-      if (element->IsClassSet(state) && !element->IsClassSet("text-key")
+      if (element->IsClassSet(state) && !element->IsClassSet(rib::document_contract::TextKey)
             && !element->GetId().empty())
       {
          ids += (first ? "" : ",") + json(element->GetId());
@@ -208,7 +212,7 @@ std::string observe(const std::vector<std::string>& screen_panels,
       sounds += (index > heard ? "," : "") + json(sound_name(host.sounds[index]));
    sounds += "]";
    heard = host.sounds.size();
-   return "{\"focused\":" + marked("focused") + ",\"capturing\":" + marked("capturing")
+   return "{\"focused\":" + marked(rib::document_contract::Focused) + ",\"capturing\":" + marked(rib::document_contract::Capturing)
          + ",\"screen\":" + json(screen) + ",\"sounds\":" + sounds
          + ",\"text\":" + words(text) + ",\"document\":" + document_attributes()
          + ",\"boxes\":" + boxes(selectors) + "}";
@@ -290,9 +294,11 @@ bool step(void *menu, const std::string& text)
  * to, with its box, after the last step of the case. */
 void dump(const std::string& name)
 {
-   static const char *classes[] = {"menu-action", "slot", "list-row", "option-entry",
-      "slider", "control-callout", "control-group", "control-picker-current",
-      "control-picker-option", "account-input", "list-pager-prev", "list-pager-next"};
+   namespace contract = rib::document_contract;
+   static const char *classes[] = {contract::MenuAction, contract::SlotClass,
+      contract::ListRow, contract::OptionEntry, contract::Slider, contract::ControlCallout,
+      contract::ControlGroup, contract::ControlPickerCurrent, "control-picker-option",
+      "account-input", contract::ListPagerPrev, contract::ListPagerNext};
    std::fprintf(stderr, "== %s\n", name.c_str());
    rib::walk(view.document.root(), [&](Rml::Element *element) {
       if (rib::display_none(element)) return rib::Walk::SkipChildren;

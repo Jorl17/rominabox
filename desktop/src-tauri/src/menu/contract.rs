@@ -60,44 +60,48 @@ fn scope(word: &str) -> Result<Scope, String> {
     })
 }
 
-/// The quoted fields of every `<macro>(...)` declaration, in order.
-fn declarations(macro_name: &str) -> impl Iterator<Item = Vec<String>> + '_ {
-    let opening = format!("{macro_name}(");
-    SOURCE.lines().filter_map(move |line| {
-        let fields = line.trim().strip_prefix(&opening)?.strip_suffix(')')?;
-        Some(
-            fields
-                .split(',')
-                .map(|field| field.trim().trim_matches('"').to_string())
-                .collect(),
-        )
-    })
+/// Every `macro_name(...)` declaration in the contract, in order.
+fn declarations(macro_name: &'static str) -> impl Iterator<Item = super::inc::Declaration> {
+    super::inc::declarations(SOURCE)
+        .filter(move |declaration| declaration.macro_name() == macro_name)
 }
+
+/// The id, class or attribute declared under `name` in the contract: the
+/// value of the element, class, attribute or fact, as in
+/// `document_contract::<name>` in the player. Read it with `contract!(Name)`,
+/// so that we read it when the exporter compiles.
+pub const fn value(name: &str) -> &'static str {
+    super::inc::declared(
+        SOURCE,
+        &["RIB_ELEMENT", "RIB_CLASS", "RIB_ATTRIBUTE", "RIB_FACT"],
+        name,
+        1,
+    )
+}
+
+/// `contract!(Name)`: the value declared under `Name` in
+/// `document_contract.inc`, the same name we use in the C++ of the player.
+/// The build fails on a name that the contract does not declare.
+macro_rules! contract {
+    ($name:ident) => {
+        const { $crate::menu::contract::value(stringify!($name)) }
+    };
+}
+pub(crate) use contract;
 
 /// The word for `role` in the contract, design.json and design.cfg. Every
 /// role with special handling in the exporter has a declaration in the player.
 pub fn role_word(role: ScreenRole) -> &'static str {
-    static WORDS: std::sync::OnceLock<Vec<(String, String)>> = std::sync::OnceLock::new();
-    let words = WORDS.get_or_init(|| {
-        declarations("RIB_ROLE")
-            .filter_map(|fields| match &fields[..] {
-                [name, word] => Some((name.clone(), word.clone())),
-                _ => None,
-            })
-            .collect()
-    });
     let name = format!("{role:?}");
-    words
-        .iter()
-        .find(|(declared, _)| *declared == name)
-        .map(|(_, word)| word.as_str())
+    super::inc::find(SOURCE, &["RIB_ROLE"], &name)
+        .and_then(|declaration| declaration.field(1))
         .unwrap_or_else(|| panic!("document_contract.inc declares no RIB_ROLE({name}, ...)"))
 }
 
 /// The reference canvas every design is laid out on, in dp: width, height.
 pub fn canvas() -> (u32, u32) {
     declarations("RIB_CANVAS")
-        .find_map(|fields| match &fields[..] {
+        .find_map(|declaration| match declaration.fields()[..] {
             [width, height] => Some((width.parse().ok()?, height.parse().ok()?)),
             _ => None,
         })
@@ -107,30 +111,27 @@ pub fn canvas() -> (u32, u32) {
 /// Every declaration in the contract.
 pub fn entries() -> Result<Vec<Entry>, String> {
     let mut entries = Vec::new();
-    for line in SOURCE.lines().map(str::trim) {
-        let (kind, tail) = if let Some(tail) = line.strip_prefix("RIB_ELEMENT(") {
-            (Kind::Element, tail)
-        } else if let Some(tail) = line.strip_prefix("RIB_CLASS(") {
-            (Kind::Class, tail)
-        } else {
-            continue;
+    for declaration in super::inc::declarations(SOURCE) {
+        let kind = match declaration.macro_name() {
+            "RIB_ELEMENT" => Kind::Element,
+            "RIB_CLASS" => Kind::Class,
+            _ => continue,
         };
-        let declaration = tail
-            .strip_suffix(')')
-            .ok_or_else(|| format!("an unclosed contract declaration: {line}"))?;
-        let fields: Vec<&str> = declaration.split(',').map(str::trim).collect();
+        let fields = declaration.fields();
         let [name, value, scope_word, presence] = fields[..] else {
-            return Err(format!("a contract declaration needs four fields: {line}"));
+            return Err(format!(
+                "a contract declaration needs four fields: {}({})",
+                declaration.macro_name(),
+                fields.join(", ")
+            ));
         };
-        let value = value
-            .strip_prefix('"')
-            .and_then(|value| value.strip_suffix('"'))
-            .filter(|value| !value.is_empty())
-            .ok_or_else(|| format!("a contract value must be a quoted id: {line}"))?;
+        if value.is_empty() {
+            return Err(format!("the contract declares {name} with no id"));
+        }
         let required = match presence {
             "Required" => true,
             "Optional" => false,
-            other => return Err(format!("'{other}' is neither Required nor Optional: {line}")),
+            other => return Err(format!("'{other}' is neither Required nor Optional: {name}")),
         };
         entries.push(Entry {
             kind,
@@ -148,11 +149,8 @@ pub fn entries() -> Result<Vec<Entry>, String> {
 
 /// The number of save slots in the player.
 pub fn slot_count() -> Result<usize, String> {
-    SOURCE
-        .lines()
-        .find_map(|line| line.trim().strip_prefix("RIB_SLOT_COUNT("))
-        .and_then(|rest| rest.strip_suffix(')'))
-        .and_then(|count| count.parse().ok())
+    declarations("RIB_SLOT_COUNT")
+        .find_map(|declaration| declaration.field(0)?.parse().ok())
         .ok_or_else(|| "document_contract.inc declares no slot count".to_string())
 }
 
@@ -319,11 +317,11 @@ pub fn validate(manifest: &Manifest, document: &str, shipped: &[&Screen]) -> Res
         if screen.role == Some(ScreenRole::Pause) {
             continue;
         }
-        if !has_class(tag, "screen-panel") {
+        if !has_class(tag, contract!(ScreenPanel)) {
             return Err(missing(
                 manifest,
                 screen,
-                &format!("class .screen-panel on #{}", screen.panel),
+                &format!("class .{} on #{}", contract!(ScreenPanel), screen.panel),
             ));
         }
         if !tag.replace(' ', "").contains("display:none") {
