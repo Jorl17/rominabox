@@ -4,6 +4,7 @@
 //! separate override file for each game, so exporting again or relaunching
 //! never discards the player's bindings or labels.
 
+use crate::menu::key;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
@@ -143,12 +144,13 @@ pub fn write_defaults_config(
 ) -> Result<ControlProfile, String> {
     let profile = validate_for_system(system, controls)?;
     let values = effective_controls(&profile, controls);
-    let mut config = format!("controls_profile = \"{}\"\n", profile.id);
+    let mut config = format!("{} = \"{}\"\n", key!(ControlsProfile), profile.id);
     // The controllers that we offer in the picker in the game. We separate
     // the ids with spaces, because a controller id never contains one.
     let offered = variants_for_system(system)?;
     config.push_str(&format!(
-        "controls_variants = \"{}\"\n",
+        "{} = \"{}\"\n",
+        key!(ControlsVariants),
         offered
             .iter()
             .map(|entry| entry.id.as_str())
@@ -157,8 +159,8 @@ pub fn write_defaults_config(
     ));
     for entry in &offered {
         config.push_str(&format!(
-            "controls_variant_name_{} = \"{}\"\n",
-            entry.id,
+            "{} = \"{}\"\n",
+            key!(ControlsVariantName, &entry.id),
             escape_config_value(&entry.name)
         ));
         // The emulated device for each variant, so that when the player picks
@@ -166,8 +168,8 @@ pub fn write_defaults_config(
         // core's default, which is most of them.
         if let Some(device) = entry.core_device {
             config.push_str(&format!(
-                "controls_variant_device_{} = \"{device}\"\n",
-                entry.id
+                "{} = \"{device}\"\n",
+                key!(ControlsVariantDevice, &entry.id)
             ));
         }
         // Which controls belong to this pad. In the game we find the controls
@@ -175,8 +177,8 @@ pub fn write_defaults_config(
         // could focus the extra buttons of a six-button pad on a three-button
         // pad, whose scene has no element for them.
         config.push_str(&format!(
-            "controls_variant_controls_{} = \"{}\"\n",
-            entry.id,
+            "{} = \"{}\"\n",
+            key!(ControlsVariantControls, &entry.id),
             entry
                 .controls
                 .iter()
@@ -212,16 +214,16 @@ pub fn write_defaults_config(
         };
         let value = values.get(&control.id).unwrap_or(&fallback);
         config.push_str(&format!(
-            "rib_label_{} = \"{}\"\ninput_player1_{} = \"{}\"\n",
-            control.id,
+            "{} = \"{}\"\ninput_player1_{} = \"{}\"\n",
+            key!(ControlLabel, &control.id),
             escape_config_value(&value.label),
             control.id,
             escape_config_value(&value.key),
         ));
         if let Some(group) = &control.group {
             config.push_str(&format!(
-                "rib_group_{} = \"{}\"\n",
-                control.id,
+                "{} = \"{}\"\n",
+                key!(ControlGroup, &control.id),
                 escape_config_value(group),
             ));
         }

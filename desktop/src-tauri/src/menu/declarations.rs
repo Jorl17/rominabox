@@ -21,17 +21,30 @@ pub(crate) const fn declared(macros: &[&str], name: &str, field: usize) -> &'sta
     super::inc::declared(SOURCE, macros, name, field)
 }
 
-/// `key!(Name)`: a key declared with `RIB_KEY` in `declarations.inc`.
-/// `key!(Name, id)`: the key declared for `id` in a `RIB_KEYS`. Read at
-/// compile time, so the build fails for a key that the player does not declare.
+/// `key!(Name)`: a key `declarations.inc` declares with `RIB_KEY` or
+/// `RIB_CONTROLS_KEY`. `key!(Name, id)`: the key a `RIB_KEYS` or
+/// `RIB_CONTROLS_KEYS` declares for `id`. We read it when the exporter
+/// compiles, so the build fails on a key not declared in the player.
 macro_rules! key {
     ($name:ident) => {
-        const { $crate::menu::declarations::declared(&["RIB_KEY"], stringify!($name), 1) }
+        const {
+            $crate::menu::declarations::declared(
+                &["RIB_KEY", "RIB_CONTROLS_KEY"],
+                stringify!($name),
+                1,
+            )
+        }
     };
     ($name:ident, $id:expr) => {
         format!(
             "{}{}",
-            const { $crate::menu::declarations::declared(&["RIB_KEYS"], stringify!($name), 1) },
+            const {
+                $crate::menu::declarations::declared(
+                    &["RIB_KEYS", "RIB_CONTROLS_KEYS"],
+                    stringify!($name),
+                    1,
+                )
+            },
             $id
         )
     };

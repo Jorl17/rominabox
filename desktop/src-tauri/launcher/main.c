@@ -197,15 +197,19 @@ typedef struct {
     int frozen;
 } ConfigLine;
 
+/* The lines allowed in a controls file: RetroArch's own bindings and the keys
+ * for controls files in the player's declarations.inc. We read a player
+ * setting from its own file listed in the plan, never from a controls file. */
 static int allowed_player_key(const char *key) {
     if (starts_with(key, "input_player"))
         return 1;
-    if (starts_with(key, "rib_label_"))
+#define RIB_CONTROLS_KEY(name, controls_key) \
+    if (strcmp(key, controls_key) == 0)      \
         return 1;
-    if (starts_with(key, "controls_"))
+#define RIB_CONTROLS_KEYS(name, prefix) \
+    if (starts_with(key, prefix))       \
         return 1;
-    /* We read a player setting from its own file listed in the plan, never
-     * from a controls file. */
+#include "../../../vendor/retroarch/menu/drivers/rmlui/declarations.inc"
     return 0;
 }
 
