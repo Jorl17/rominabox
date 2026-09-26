@@ -21,7 +21,11 @@
 //! remove the red marker"), so we report a red case that goes wrong for
 //! another reason instead of hiding it.
 //!
-//! Without the driver variable we fail the test: it runs only the driver.
+//! With the same driver we also open Pause in each design for a 4:3, a 16:9
+//! and a 10:9 game and measure the picture of the first save slot, where a
+//! design can give an element the aspect ratio of the running game.
+//!
+//! Without the driver variable we fail the tests: they run only the driver.
 
 mod support;
 
@@ -467,4 +471,211 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
     }
     assert!(ran > 0, "no case ran");
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// The aspect ratios we check a game's picture in: a 4:3 console, a 16:9 one
+/// and the Game Boy's 10:9, as width over height, as the document states each.
+const SHAPES: [(&str, f64, &str); 3] = [
+    ("4:3", 4.0 / 3.0, "1.333"),
+    ("16:9", 16.0 / 9.0, "1.778"),
+    ("10:9", 10.0 / 9.0, "1.111"),
+];
+
+/// Where Native and Disc draw the picture of a slot when we size it in the
+/// player, as intended: the game's aspect ratio, as large as 230 × 138 dp
+/// allows, centred vertically in that space. In Native it is centred across
+/// the 252 dp slot, inside its 3 dp edge and below its 26 dp label, in a 2 dp
+/// bevel. In Disc its left edge is 8 dp inside the 1 dp edge of the slot, in
+/// a 1 dp bevel. Each is the content box, as [x, y, width, height] in dp from
+/// the corner of the slot's border box.
+fn picture_as_before(design: &str, aspect: f64) -> [f64; 4] {
+    let width = (138.0 * aspect).min(230.0);
+    let height = (230.0 / aspect).min(138.0);
+    let down = (138.0 - height) / 2.0;
+    match design {
+        "native" => [
+            3.0 + (252.0 - (width + 4.0)) / 2.0 + 2.0,
+            3.0 + 26.0 + 2.0 + down,
+            width,
+            height,
+        ],
+        "disc" => [1.0 + 8.0 + 1.0, 1.0 + 8.0 + 1.0 + down, width, height],
+        other => panic!("{other} drew no slot picture before"),
+    }
+}
+
+/// The picture box of the unmarked fixture, the same for every game.
+const UNSHAPED_BOX: (f64, f64) = (200.0, 100.0);
+
+fn rect(value: &Value) -> Option<[f64; 4]> {
+    let numbers: Vec<f64> = value.as_array()?.iter().filter_map(Value::as_f64).collect();
+    numbers.try_into().ok()
+}
+
+fn near(a: [f64; 4], b: [f64; 4]) -> bool {
+    a.iter().zip(b).all(|(x, y)| (x - y).abs() <= 1.0)
+}
+
+fn show(found: Option<[f64; 4]>) -> String {
+    found
+        .map(|[x, y, w, h]| format!("{w:.1}x{h:.1} at {x:.1},{y:.1}"))
+        .unwrap_or_else(|| "not laid out".into())
+}
+
+/// What we observe of the first slot: the aspect ratio in the document, the
+/// content box of the picture and the box of the drawn image, both from the
+/// slot's corner.
+struct SlotSeen {
+    shape: Option<String>,
+    frame: Option<[f64; 4]>,
+    drawn: Option<[f64; 4]>,
+}
+
+const SLOT: &str = "#slot-1";
+const PICTURE: &str = "#slot-1 .slot-picture";
+const IMAGE: &str = "#slot-image-1";
+
+fn slot_seen(step: &Value) -> SlotSeen {
+    let boxes = &step["boxes"];
+    let slot = rect(&boxes[SLOT]["border"]);
+    let from_slot = |found: Option<[f64; 4]>| {
+        found
+            .zip(slot)
+            .map(|(b, s)| [b[0] - s[0], b[1] - s[1], b[2], b[3]])
+    };
+    SlotSeen {
+        shape: step["document"]["data-game-shape"]
+            .as_str()
+            .map(str::to_owned),
+        frame: from_slot(rect(&boxes[PICTURE]["content"])),
+        drawn: from_slot(rect(&boxes[IMAGE]["border"])),
+    }
+}
+
+/// Return what is wrong with the first slot's picture in `design` for a game
+/// of `aspect`. In a marked design it has the game's aspect ratio where the
+/// design puts it, filled by the image. The unmarked fixture has a fixed box.
+fn picture_problems(design: &str, label: &str, aspect: f64, seen: &SlotSeen) -> Vec<String> {
+    let mut problems = Vec::new();
+    if design == "unshaped" {
+        let kept = seen.frame.is_some_and(|[_, _, w, h]| {
+            (w - UNSHAPED_BOX.0).abs() <= 1.0 && (h - UNSHAPED_BOX.1).abs() <= 1.0
+        });
+        if !kept {
+            problems.push(format!(
+                "{design} {label}: it marks nothing, so its picture keeps its own {}x{} box; it is {}",
+                UNSHAPED_BOX.0,
+                UNSHAPED_BOX.1,
+                show(seen.frame)
+            ));
+        }
+        return problems;
+    }
+    let before = picture_as_before(design, aspect);
+    if !seen.frame.is_some_and(|frame| near(frame, before)) {
+        problems.push(format!(
+            "{design} {label}: the picture is {}; in the game's shape, as it was before, it is {}",
+            show(seen.frame),
+            show(Some(before))
+        ));
+    }
+    if !seen
+        .drawn
+        .zip(seen.frame)
+        .is_some_and(|(drawn, frame)| near(drawn, frame))
+    {
+        problems.push(format!(
+            "{design} {label}: the image is {} in a picture of {}, so it has bars",
+            show(seen.drawn),
+            show(seen.frame)
+        ));
+    }
+    problems
+}
+
+/// The picture of every save slot has the aspect ratio of the running game
+/// where the design marks it, so there are never bars, and we follow a game
+/// that changes ratio when the menu opens again. The document contains the
+/// ratio. In a design without marks, the box is the one from its stylesheet.
+#[test]
+#[ignore = "needs the headless driver: python3 scripts/test.py navigation"]
+fn a_slot_picture_takes_the_games_shape_where_the_design_marks_it() {
+    let driver = std::env::var_os("ROMINABOX_NAVIGATION_DRIVER")
+        .map(PathBuf::from)
+        .expect("ROMINABOX_NAVIGATION_DRIVER names the driver; run `python3 scripts/test.py navigation`");
+    let scratch = rominabox_scratch::Scratch::dir("rominabox-game-shape");
+    let root = scratch.to_path_buf();
+    let kit = support::kit_with_hypothetical(&root);
+    let (_, system, profile) = MENUS[0];
+    let (four_three, wide) = (SHAPES[0], SHAPES[1]);
+    let mut failures = Vec::new();
+    for design in ["native", "disc", "unshaped"] {
+        let assets = root.join("composed").join(design);
+        compose(&kit, design, system, profile, &assets);
+        let mut script = String::new();
+        let mut case = |name: &str, aspect: f64, steps: &[String]| {
+            let data = root.join("data").join(design).join(name.replace(':', "x"));
+            fs::create_dir_all(&data).unwrap();
+            script.push_str(&format!(
+                "case {name}\nassets {}\ndata {}\nset load 1\nset aspect {aspect}\n",
+                assets.display(),
+                data.display()
+            ));
+            for selector in [SLOT, PICTURE, IMAGE] {
+                script.push_str(&format!("box {selector}\n"));
+            }
+            for step in steps {
+                script.push_str(&format!("step {step}\n"));
+            }
+            script.push_str("run\n");
+        };
+        for (name, aspect, _) in SHAPES {
+            case(name, aspect, &["wait-ms:16".to_owned()]);
+        }
+        // Open the menu on a 4:3 picture. Then the game turns 16:9 as it runs.
+        let reshaped = [
+            "wait-ms:16",
+            "menu:close",
+            &format!("aspect:{}", wide.1),
+            "menu:open",
+        ]
+        .map(str::to_owned);
+        case("reshaped", four_three.1, &reshaped);
+        let results = run_driver(&driver, &script);
+        assert_eq!(results.len(), SHAPES.len() + 1, "{design}: {results:?}");
+
+        for ((name, aspect, stated), result) in SHAPES.into_iter().zip(&results) {
+            let seen = slot_seen(&result["steps"][0]);
+            if seen.shape.as_deref() != Some(stated) {
+                failures.push(format!(
+                    "{design} {name}: the document states the game's shape as {:?}, not {stated}",
+                    seen.shape
+                ));
+            }
+            failures.extend(picture_problems(design, name, aspect, &seen));
+        }
+
+        let steps: Vec<SlotSeen> = results[SHAPES.len()]["steps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(slot_seen)
+            .collect();
+        let stated: Vec<Option<&str>> = steps.iter().map(|seen| seen.shape.as_deref()).collect();
+        // We read the ratio when the menu opens, not while it is closed.
+        let expected = [four_three.2, four_three.2, four_three.2, wide.2].map(Some);
+        if stated != expected {
+            failures.push(format!(
+                "{design}: a game that turns 16:9 while the menu is closed is stated as {stated:?} \
+                 through opening, closing, the change and opening again, not {expected:?}"
+            ));
+        }
+        failures.extend(picture_problems(
+            design,
+            "turned 16:9 and reopened",
+            wide.1,
+            &steps[3],
+        ));
+    }
+    assert!(failures.is_empty(), "\n{}", failures.join("\n"));
 }

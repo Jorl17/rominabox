@@ -261,7 +261,7 @@ SCOPES = [
     ),
     Scope(
         "navigation",
-        "arrow keys, pointer, focus and their sounds on every screen of every registered design and of the hypothetical layouts, driven through the real menu C++ on composed documents",
+        "arrow keys, pointer, focus and their sounds on every screen of every registered design and of the hypothetical layouts, driven through the real menu C++ on composed documents, and that a save slot's picture takes the game's shape where a design marks it",
         "physical keyboards, pads or mice, audible sound, or how a highlight looks; a fake RetroArch host stands in for the player and nothing is drawn",
         ["env", f"ROMINABOX_NAVIGATION_DRIVER={NAVIGATION_DRIVER}",
          "cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_navigation", "--", "--include-ignored"],

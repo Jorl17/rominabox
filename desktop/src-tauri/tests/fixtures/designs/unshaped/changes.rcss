@@ -1,0 +1,3 @@
+/* A picture box in proportions no game has. Its slots here ignore the
+ * game's proportions, so the box is this size for every game. */
+.slot-picture { width: 200dp; height: 100dp; }
