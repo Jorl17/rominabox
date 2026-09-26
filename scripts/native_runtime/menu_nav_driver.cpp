@@ -137,7 +137,7 @@ std::string marked(const char *state)
    bool first = true;
    rib::walk(view.document.root(), [&](Rml::Element *element) {
       if (rib::display_none(element)) return rib::Walk::SkipChildren;
-      if (element->IsClassSet(state) && !element->IsClassSet("text-key")
+      if (element->IsClassSet(state) && !element->IsClassSet(rib::document_contract::TextKey)
             && !element->GetId().empty())
       {
          ids += (first ? "" : ",") + json(element->GetId());
@@ -294,9 +294,11 @@ bool step(void *menu, const std::string& text)
  * to, with its box, after the last step of the case. */
 void dump(const std::string& name)
 {
-   static const char *classes[] = {"menu-action", "slot", "list-row", "option-entry",
-      "slider", "control-callout", "control-group", "control-picker-current",
-      "control-picker-option", "account-input", "list-pager-prev", "list-pager-next"};
+   namespace contract = rib::document_contract;
+   static const char *classes[] = {contract::MenuAction, contract::SlotClass,
+      contract::ListRow, contract::OptionEntry, contract::Slider, contract::ControlCallout,
+      contract::ControlGroup, contract::ControlPickerCurrent, "control-picker-option",
+      "account-input", contract::ListPagerPrev, contract::ListPagerNext};
    std::fprintf(stderr, "== %s\n", name.c_str());
    rib::walk(view.document.root(), [&](Rml::Element *element) {
       if (rib::display_none(element)) return rib::Walk::SkipChildren;
