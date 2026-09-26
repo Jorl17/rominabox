@@ -6,7 +6,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SETTING_PREFIX "player_setting\t"
+/* Its plan line, as declared in launch_contract.inc. */
+#define RIB_PLAN_FIELD(name, field) static const char plan_##name[] = field;
+#include "launch_contract.inc"
 #define SETTING_FIELD_CAP 256
 #define SETTING_FILE_CAP 4096
 
@@ -115,9 +117,10 @@ int rominabox_player_setting(
     const char *value;
     int wrote;
 
-    if (strncmp(plan_line, SETTING_PREFIX, strlen(SETTING_PREFIX)) != 0)
+    if (strncmp(plan_line, plan_PlayerSetting, strlen(plan_PlayerSetting)) != 0
+        || plan_line[strlen(plan_PlayerSetting)] != '\t')
         return 0;
-    cursor += strlen(SETTING_PREFIX);
+    cursor += strlen(plan_PlayerSetting) + 1;
     if (take_field(&cursor, file, sizeof file) != 0 || take_field(&cursor, key, key_cap) != 0
         || take_field(&cursor, fallback, sizeof fallback) != 0 || *cursor != '\0'
         || !plain_file_name(file) || !plain_key(key) || !plain_value(fallback, strlen(fallback))) {

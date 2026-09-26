@@ -6,3 +6,6 @@ src-tauri/resources/
 controls.json
 systems.json
 designs.json
+
+# C declarations (X-macro .inc files), which prettier would read as HTML.
+*.inc

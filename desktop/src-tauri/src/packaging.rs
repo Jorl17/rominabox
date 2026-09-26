@@ -3,6 +3,8 @@
 //! Export is blocking on purpose. Desktop callers should run it with
 //! `tauri::async_runtime::spawn_blocking` and use the callback for progress.
 
+use crate::launch_contract::{app_file, plan_field, plan_mark, shipped, token};
+use crate::menu::file_name;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -501,7 +503,7 @@ pub fn stage_menu(
     let profile = controls::write_defaults_config(
         &request.system,
         &request.controls,
-        &menu_assets.join("controls-defaults.cfg"),
+        &menu_assets.join(file_name!(ControlsDefaults)),
     )
     .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     if request.splash {
@@ -575,7 +577,7 @@ where
         })?,
     };
     let core_source = shipped_core(request, resolved);
-    let core_name = OsStr::new("game-core.dylib");
+    let core_name = OsStr::new(app_file!(Core));
     let core = resources.join(core_name);
     copy_file(&core_source, &core)?;
     let collected_content = content::collect_for(&request.rom, Some(&system.id))
@@ -588,10 +590,14 @@ where
     let controls_profile = stage_menu(
         request,
         collected_content.discs,
-        &resources.join("menu-assets"),
+        &resources.join(app_file!(MenuAssets)),
     )?;
-    stage_controller_remap(&controls_profile, selected_core, &resources.join("remaps"))?;
-    stage_pixel_options(selected_core, &resources.join("core-options"))?;
+    stage_controller_remap(
+        &controls_profile,
+        selected_core,
+        &resources.join(shipped!(Remaps).0),
+    )?;
+    stage_pixel_options(selected_core, &resources.join(shipped!(CoreOptions).0))?;
     if request.show_menu {
         crate::themes::prepare_sound_assets(
             &request.runtime_kit.join("sound-packs"),
@@ -600,8 +606,11 @@ where
         )
         .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     }
-    stage_firmware(request, &resources.join("firmware"))?;
-    stage_bundled_autoconfig(&request.runtime_kit, &resources.join("autoconfig"))?;
+    stage_firmware(request, &resources.join(shipped!(Firmware).0))?;
+    stage_bundled_autoconfig(
+        &request.runtime_kit,
+        &resources.join(shipped!(Autoconfig).0),
+    )?;
     let licence = resolved
         .map(ExportCore::licence_relative)
         .unwrap_or_else(|| Path::new("licenses").join(&selected_core.license_file));
@@ -643,7 +652,7 @@ where
     install_launch_library(&macos, &runtime)?;
     mach_objects.push(macos.join("librominabox-launch.dylib"));
     write_launch_plan(
-        &resources.join("launch.plan"),
+        &resources.join(app_file!(Plan)),
         &identity,
         rom_relative.as_os_str(),
         request,
@@ -668,7 +677,7 @@ where
         "showMenu": request.show_menu,
         "startAtMenu": request.start_at_menu,
         "runtime": "RetroArch",
-        "core": "game-core.dylib",
+        "core": app_file!(Core),
         "coreSource": resolved.map(|export_core| export_core.artifact_name).unwrap_or(""),
         "content": collected_content.files.iter().map(|file| file.relative.to_string_lossy()).collect::<Vec<_>>(),
         "rom": rom_relative.to_string_lossy(),
@@ -730,10 +739,10 @@ where
     let runtime_bytes = tree_size(&runtime)?
         + tree_size(&core)?
         + tree_size(&frameworks)?
-        + tree_size(&resources.join("menu-assets"))?
-        + tree_size(&resources.join("autoconfig"))?;
+        + tree_size(&resources.join(app_file!(MenuAssets)))?
+        + tree_size(&resources.join(shipped!(Autoconfig).0))?;
     let content_bytes = tree_size(&content_directory)?
-        + tree_size(&resources.join("firmware"))?
+        + tree_size(&resources.join(shipped!(Firmware).0))?
         + request
             .background
             .as_ref()
@@ -1417,19 +1426,19 @@ fn stage_pixel_options(core: &crate::systems::Core, destination: &Path) -> Resul
 pub const MANAGED_DATA_DIRECTORIES: &[&str] = &[
     "saves",
     "states",
-    "system",
+    shipped!(Firmware).1,
     "cache",
     "logs",
     "info",
     "playlists",
     "screenshots",
-    "remaps",
-    "config",
+    shipped!(Remaps).1,
+    shipped!(CoreOptions).1,
     "shaders",
     "runtime-logs",
     "recordings",
     "recording-config",
-    "autoconfig",
+    shipped!(Autoconfig).1,
     "assets",
     "downloads",
     "thumbnails",
@@ -1459,10 +1468,11 @@ fn isolated_runtime_config(request: &ExportRequest) -> String {
     } else {
         "false"
     };
+    let (data, resources) = (token!(DataDir), token!(ResourcesDir));
     let assets = if menu_sounds {
-        "$resources_dir/assets"
+        format!("{resources}/assets")
     } else {
-        "$data_dir/assets"
+        format!("{data}/assets")
     };
     format!(
         r#"video_driver = "gl"
@@ -1493,42 +1503,42 @@ video_window_custom_size_enable = "true"
 video_windowed_position_width = "960"
 video_windowed_position_height = "600"
 {}config_save_on_exit = "false"
-savefile_directory = "$data_dir/saves"
-savestate_directory = "$data_dir/states"
+savefile_directory = "{data}/saves"
+savestate_directory = "{data}/states"
 savestate_auto_save = "{autosave}"
 savestate_auto_load = "{autosave}"
-system_directory = "$data_dir/system"
-cache_directory = "$data_dir/cache"
-log_dir = "$data_dir/logs"
-libretro_info_path = "$data_dir/info"
-playlist_directory = "$data_dir/playlists"
-screenshot_directory = "$data_dir/screenshots"
-core_options_path = "$data_dir/core-options.cfg"
+system_directory = "{data}/{firmware}"
+cache_directory = "{data}/cache"
+log_dir = "{data}/logs"
+libretro_info_path = "{data}/info"
+playlist_directory = "{data}/playlists"
+screenshot_directory = "{data}/screenshots"
+core_options_path = "{data}/core-options.cfg"
 auto_remaps_enable = "true"
 network_cmd_enable = "false"
 input_remap_sort_by_controller_enable = "false"
-content_history_path = "$data_dir/playlists/content_history.lpl"
-content_music_history_path = "$data_dir/playlists/content_music_history.lpl"
-content_image_history_path = "$data_dir/playlists/content_image_history.lpl"
-content_video_history_path = "$data_dir/playlists/content_video_history.lpl"
-input_remapping_directory = "$data_dir/remaps"
-rgui_config_directory = "$data_dir/config"
-video_shader_dir = "$data_dir/shaders"
-runtime_log_directory = "$data_dir/runtime-logs"
-recording_output_directory = "$data_dir/recordings"
-recording_config_directory = "$data_dir/recording-config"
+content_history_path = "{data}/playlists/content_history.lpl"
+content_music_history_path = "{data}/playlists/content_music_history.lpl"
+content_image_history_path = "{data}/playlists/content_image_history.lpl"
+content_video_history_path = "{data}/playlists/content_video_history.lpl"
+input_remapping_directory = "{data}/{remaps}"
+rgui_config_directory = "{data}/{core_options}"
+video_shader_dir = "{data}/shaders"
+runtime_log_directory = "{data}/runtime-logs"
+recording_output_directory = "{data}/recordings"
+recording_config_directory = "{data}/recording-config"
 # Seeded from Resources/autoconfig on launch, the same way remaps are seeded.
-joypad_autoconfig_dir = "$data_dir/autoconfig"
+joypad_autoconfig_dir = "{data}/{autoconfig}"
 assets_directory = "{assets}"
-core_assets_directory = "$data_dir/downloads"
-thumbnails_directory = "$data_dir/thumbnails"
-content_database_path = "$data_dir/database"
-cheat_database_path = "$data_dir/cheats"
-overlay_directory = "$data_dir/overlays"
-osk_overlay_directory = "$data_dir/overlays/keyboards"
-libretro_directory = "$data_dir/cores"
-video_filter_dir = "$data_dir/filters/video"
-audio_filter_dir = "$data_dir/filters/audio"
+core_assets_directory = "{data}/downloads"
+thumbnails_directory = "{data}/thumbnails"
+content_database_path = "{data}/database"
+cheat_database_path = "{data}/cheats"
+overlay_directory = "{data}/overlays"
+osk_overlay_directory = "{data}/overlays/keyboards"
+libretro_directory = "{data}/cores"
+video_filter_dir = "{data}/filters/video"
+audio_filter_dir = "{data}/filters/audio"
 history_list_enable = "false"
 core_info_cache_enable = "false"
 auto_overrides_enable = "false"
@@ -1548,12 +1558,19 @@ notification_show_remap_load = "false"
 notification_show_config_override_load = "false"
 savestate_thumbnail_enable = "true"
 "#,
-        isolated_hotkey_config(request.show_menu, request.advanced_emulator_access)
+        isolated_hotkey_config(request.show_menu, request.advanced_emulator_access),
+        firmware = shipped!(Firmware).1,
+        remaps = shipped!(Remaps).1,
+        core_options = shipped!(CoreOptions).1,
+        autoconfig = shipped!(Autoconfig).1,
     )
 }
 
 fn game_data_template(identity: &str) -> String {
-    format!("$HOME/Library/Application Support/ROM-in-a-Box/Games/{identity}")
+    format!(
+        "{}/Library/Application Support/ROM-in-a-Box/Games/{identity}",
+        token!(Home)
+    )
 }
 
 /// The shared QUICK SIGN IN folder for this export, when it has achievements.
@@ -1596,8 +1613,35 @@ fn sandbox_entitlements(identity: &str, accounts: Option<&str>) -> String {
     )
 }
 
+/// Every file that the `.c` files among `inputs` include, with the paths from
+/// the compiler, or `None` when that list is not available. The launcher
+/// includes declarations from the player tree, and we must rebuild it after a
+/// change there as after a change next to it.
+fn included_files(inputs: &[PathBuf]) -> Option<Vec<PathBuf>> {
+    let sources = inputs
+        .iter()
+        .filter(|input| input.extension() == Some(OsStr::new("c")));
+    let listed = Command::new("cc").arg("-MM").args(sources).output().ok()?;
+    if !listed.status.success() {
+        return None;
+    }
+    // Make rules, `object: source header ...`. A line that ends in a backslash
+    // continues on the next, and a space in a path has a backslash before it.
+    let text = String::from_utf8_lossy(&listed.stdout)
+        .replace("\\\n", " ")
+        .replace("\\ ", "\0");
+    Some(
+        text.lines()
+            .filter_map(|rule| rule.split_once(": "))
+            .flat_map(|(_, files)| files.split_whitespace())
+            .map(|file| PathBuf::from(file.replace('\0', " ")))
+            .collect(),
+    )
+}
+
 /// Build `destination` from `inputs`, every file it is made from. We compile
-/// the `.c` files among them, and we also rebuild it after a header changes.
+/// the `.c` files among them, and we rebuild it after a change to any header
+/// it includes, wherever that header is.
 fn compile_c(inputs: &[PathBuf], destination: &Path, extra: &[&str]) -> Result<(), ExportError> {
     if let Some(parent) = destination.parent() {
         fs::create_dir_all(parent)
@@ -1606,12 +1650,14 @@ fn compile_c(inputs: &[PathBuf], destination: &Path, extra: &[&str]) -> Result<(
     let built = fs::metadata(destination)
         .and_then(|meta| meta.modified())
         .ok();
+    let unchanged = |input: &PathBuf| {
+        fs::metadata(input)
+            .and_then(|meta| meta.modified())
+            .is_ok_and(|changed| Some(changed) <= built)
+    };
     let current = built.is_some()
-        && inputs.iter().all(|input| {
-            fs::metadata(input)
-                .and_then(|meta| meta.modified())
-                .is_ok_and(|changed| Some(changed) <= built)
-        });
+        && inputs.iter().all(unchanged)
+        && included_files(inputs).is_some_and(|included| included.iter().all(unchanged));
     if current {
         return Ok(());
     }
@@ -1737,49 +1783,35 @@ fn write_launch_plan(
             "the starting shader cannot be written into the launch plan",
         ));
     }
-    let managed = MANAGED_DATA_DIRECTORIES
-        .iter()
-        .map(|name| format!("managed\t{name}\n"))
-        .collect::<String>();
-    let runtime_config = isolated_runtime_config(request);
-    let plan = format!(
-        "rominabox-launch\t1\n\
-         identity\t{identity}\n\
-         content\t{content}\n\
-         title\t{title}\n\
-         start_at_menu\t{start}\n\
-         advanced\t{advanced}\n\
-         achievements\t{achievements}\n\
-         {settings}\
-         shader_initial\t{shader}\n\
-         data_dir\t{data_dir}\n\
-         {accounts}\
-         {managed}\
-         ---config---\n\
-         {runtime_config}",
-        title = request.title,
-        start = if request.start_at_menu { "1" } else { "0" },
-        advanced = if request.advanced_emulator_access {
-            "1"
-        } else {
-            "0"
-        },
-        achievements =
-            if crate::achievements::included(request.include_achievements, request.show_menu) {
-                "1"
-            } else {
-                "0"
-            },
-        settings = crate::player_settings::declared(player_defaults(request))
-            .iter()
-            .map(crate::player_settings::PlayerSetting::launch_line)
-            .collect::<String>(),
-        shader = shader_initial,
-        data_dir = game_data_template(identity),
-        accounts = accounts_folder(request)?
-            .map(|folder| format!("accounts_dir\t{folder}\n"))
-            .unwrap_or_default(),
+    // On each line, a field name from the launcher, a tab and the value.
+    let line = |field: &str, value: &str| format!("{field}\t{value}\n");
+    let flag = |on: bool| if on { "1" } else { "0" };
+    let achievements =
+        crate::achievements::included(request.include_achievements, request.show_menu);
+    let mut plan = String::from("rominabox-launch\t1\n");
+    plan += &line(plan_field!(Identity), identity);
+    plan += &line(plan_field!(Content), &content);
+    plan += &line(plan_field!(Title), &request.title);
+    plan += &line(plan_field!(StartAtMenu), flag(request.start_at_menu));
+    plan += &line(
+        plan_field!(Advanced),
+        flag(request.advanced_emulator_access),
     );
+    plan += &line(plan_field!(Achievements), flag(achievements));
+    for setting in crate::player_settings::declared(player_defaults(request)).iter() {
+        plan += &setting.launch_line();
+    }
+    plan += &line(plan_field!(ShaderInitial), &shader_initial);
+    plan += &line(plan_field!(DataDir), &game_data_template(identity));
+    if let Some(folder) = accounts_folder(request)? {
+        plan += &line(plan_field!(AccountsDir), &folder);
+    }
+    for name in MANAGED_DATA_DIRECTORIES {
+        plan += &line(plan_field!(Managed), name);
+    }
+    plan += plan_mark!(Config);
+    plan += "\n";
+    plan += &isolated_runtime_config(request);
     fs::write(path, plan).map_err(|error| ExportError::io(ErrorStage::Configure, path, error))
 }
 
@@ -2272,6 +2304,42 @@ mod tests {
             }
         });
         assert!(output.is_file());
+    }
+
+    /// The launcher includes declarations from the player tree. We rebuild it
+    /// after a change to one of them, though that file is not among its inputs.
+    #[test]
+    fn a_header_outside_the_inputs_rebuilds_what_includes_it() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-compile-includes");
+        let (folder, shared) = (root.join("launcher"), root.join("shared"));
+        fs::create_dir_all(&folder).unwrap();
+        fs::create_dir_all(&shared).unwrap();
+        let (source, header) = (folder.join("fixture.c"), shared.join("value.h"));
+        let output = root.join("fixture.o");
+        fs::write(&header, "#define VALUE 1\n").unwrap();
+        fs::write(
+            &source,
+            "#include \"../shared/value.h\"\nint fixture(void) { return VALUE; }\n",
+        )
+        .unwrap();
+        compile_c(std::slice::from_ref(&source), &output, &["-c"]).unwrap();
+        let first = fs::read(&output).unwrap();
+
+        fs::write(&header, "#define VALUE 2\n").unwrap();
+        let later =
+            fs::metadata(&output).unwrap().modified().unwrap() + std::time::Duration::from_secs(2);
+        fs::File::options()
+            .write(true)
+            .open(&header)
+            .unwrap()
+            .set_modified(later)
+            .unwrap();
+        compile_c(std::slice::from_ref(&source), &output, &["-c"]).unwrap();
+        assert_ne!(
+            fs::read(&output).unwrap(),
+            first,
+            "the object holds the new value"
+        );
     }
 
     #[test]

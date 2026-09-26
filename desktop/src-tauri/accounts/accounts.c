@@ -4,6 +4,7 @@
 #include "accounts.h"
 #include "sealed.h"
 #include "../launcher/portable_fs.h"
+#include "../../../vendor/retroarch/rominabox_launch.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +24,7 @@ static bool absolute(const char *path) {
 }
 
 static const char *folder(void) {
-    const char *path = getenv("ROMINABOX_ACCOUNTS_DIR");
+    const char *path = getenv(RIB_ENV_ACCOUNTS_DIR);
     if (!path || !*path || !absolute(path) || !fs_is_directory(path))
         return NULL;
     return path;

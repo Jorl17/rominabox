@@ -16,8 +16,7 @@ use std::fs;
 use std::path::Path;
 
 /// The player program's list of settable keys and of the kinds that show one.
-const SOURCE: &str =
-    include_str!("../../../vendor/retroarch/menu/drivers/rmlui/settings.inc");
+const SOURCE: &str = include_str!("../../../vendor/retroarch/menu/drivers/rmlui/settings.inc");
 
 /// The word in a `macro_name(name, ...)` line of the player program. An
 /// undeclared word would have no effect, so we refuse to export with one.
@@ -150,7 +149,8 @@ impl PlayerSetting {
     /// which we use while the player has chosen nothing.
     pub fn launch_line(&self) -> String {
         format!(
-            "player_setting\t{}\t{}\t{}\n",
+            "{}\t{}\t{}\t{}\n",
+            crate::launch_contract::plan_field!(PlayerSetting),
             self.file(),
             self.key.name(),
             self.text(self.default)

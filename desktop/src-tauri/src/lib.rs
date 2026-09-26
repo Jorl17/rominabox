@@ -10,6 +10,7 @@ pub mod export_cores;
 pub mod export_error;
 pub mod hotkeys;
 pub mod icons;
+pub(crate) mod launch_contract;
 pub mod lists;
 pub mod menu;
 pub mod metadata;

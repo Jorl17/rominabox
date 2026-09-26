@@ -16,15 +16,34 @@
 #include "player_settings.h"
 #include "shipped_files.h"
 #include "shipped_settings.h"
+#include "../../../vendor/retroarch/rominabox_launch.h"
+
+/* The fields of the plan, the app's files and the places a config line can
+ * refer to, as declared in launch_contract.inc, and the menu's files, as
+ * declared in the player's declarations.inc. */
+#define RIB_APP_FILE(name, path) static const char app_##name[] = path;
+#define RIB_PLAN_FIELD(name, field) static const char plan_##name[] = field;
+#define RIB_PLAN_MARK(name, line) static const char plan_mark_##name[] = line;
+#define RIB_TOKEN(name, token) static const char token_##name[] = token;
+#include "launch_contract.inc"
+#define RIB_FILE(name, file) static const char menu_##name[] = file;
+#define RIB_DATA_FILE(name, file) static const char menu_data_##name[] = file;
+#include "../../../vendor/retroarch/menu/drivers/rmlui/declarations.inc"
+
+/* A folder that we ship in the app, and its counterpart in the game's data. */
+typedef struct {
+    const char *app;
+    const char *data;
+} Shipped;
 
 #define PATH_CAP 4096
 #define LINE_CAP 8192
 #define MANAGED_CAP 64
 
-/* One switch for an automated run, and a person who opens the game does not
- * set it. Without it, a screenshot run would open an output device and play
- * sound. We read the same variable in the Cocoa code. */
-#define ROMINABOX_QUIET_ENV "ROMINABOX_QUIET"
+/* RIB_ENV_QUIET is one switch for an automated run, and a person who opens
+ * the game does not set it. Without it, a screenshot run would open an output
+ * device and play sound. ROMINABOX_SOUND turns sound on in any case, and we
+ * read it only in the launcher. */
 #define ROMINABOX_SOUND_ENV "ROMINABOX_SOUND"
 
 /* stdout is fully buffered when it is not a terminal. In the launcher we
@@ -263,8 +282,8 @@ static void load_base(ConfigLine **lines, size_t *count, size_t *capacity, const
             die("a config line does not fit");
         memcpy(line, cursor, length);
         line[length] = '\0';
-        replace_token(line, "$resources_dir", resources_dir);
-        replace_token(line, "$data_dir", data_dir);
+        replace_token(line, token_ResourcesDir, resources_dir);
+        replace_token(line, token_DataDir, data_dir);
         key = config_key(line);
         add_line(lines, count, capacity, key, line, 1);
         if (!end)
@@ -361,6 +380,11 @@ static void force_line(ConfigLine **lines, size_t *count, size_t *capacity, cons
     append_setting(lines, count, capacity, text);
 }
 
+/* Whether `line` is the mark after the plan's fields. */
+static int at_config(const char *line) {
+    return strncmp(line, plan_mark_Config, strlen(plan_mark_Config)) == 0;
+}
+
 static const char *field(const char *plan, const char *name, char *out, size_t out_cap) {
     size_t name_len = strlen(name);
     const char *cursor = plan;
@@ -386,14 +410,16 @@ static const char *field(const char *plan, const char *name, char *out, size_t o
 static void collect_managed(const char *plan, char managed[][128], size_t *count) {
     const char *cursor = plan;
     *count = 0;
-    while (*cursor && strncmp(cursor, "---config---", 12) != 0) {
+    while (*cursor && !at_config(cursor)) {
         const char *end = strchr(cursor, '\n');
         size_t length = end ? (size_t)(end - cursor) : strlen(cursor);
-        if (length > 8 && strncmp(cursor, "managed\t", 8) == 0) {
-            size_t name_len = length - 8;
+        size_t field_len = strlen(plan_Managed);
+        if (length > field_len + 1 && strncmp(cursor, plan_Managed, field_len) == 0
+            && cursor[field_len] == '\t') {
+            size_t name_len = length - field_len - 1;
             if (*count >= MANAGED_CAP || name_len >= 128)
                 die("too many managed directories");
-            memcpy(managed[*count], cursor + 8, name_len);
+            memcpy(managed[*count], cursor + field_len + 1, name_len);
             managed[*count][name_len] = '\0';
             (*count)++;
         }
@@ -408,7 +434,7 @@ static void collect_managed(const char *plan, char managed[][128], size_t *count
 static void apply_player_settings(ConfigLine **lines, size_t *count, size_t *capacity,
                                   const char *plan, const char *data_dir) {
     const char *cursor = plan;
-    while (*cursor && strncmp(cursor, "---config---", 12) != 0) {
+    while (*cursor && !at_config(cursor)) {
         const char *end = strchr(cursor, '\n');
         size_t length = end ? (size_t)(end - cursor) : strlen(cursor);
         char plan_line[LINE_CAP];
@@ -585,37 +611,41 @@ static void prepare(void) {
     }
     join_path(resources, sizeof resources, bundle, "Contents/Resources");
     join_path(macos, sizeof macos, bundle, "Contents/MacOS");
-    join_path(plan_path, sizeof plan_path, resources, "launch.plan");
+    join_path(plan_path, sizeof plan_path, resources, app_Plan);
     plan = read_file(plan_path, NULL);
     if (!plan)
         die("the game is missing its launch plan");
-    config_text = strstr(plan, "\n---config---\n");
-    if (!config_text)
-        die("the launch plan has no config");
-    config_text += strlen("\n---config---\n");
+    {
+        char mark[64];
+        snprintf(mark, sizeof mark, "\n%s\n", plan_mark_Config);
+        config_text = strstr(plan, mark);
+        if (!config_text)
+            die("the launch plan has no config");
+        config_text += strlen(mark);
+    }
 
-    if (!field(plan, "identity", identity, sizeof identity) || strchr(identity, '/') || identity[0] == '\0')
+    if (!field(plan, plan_Identity, identity, sizeof identity) || strchr(identity, '/') || identity[0] == '\0')
         die("the launch plan has no identity");
-    if (!field(plan, "content", content, sizeof content) || path_has_dotdot(content))
+    if (!field(plan, plan_Content, content, sizeof content) || path_has_dotdot(content))
         die("the launch plan has no content path");
-    if (!field(plan, "title", title, sizeof title))
+    if (!field(plan, plan_Title, title, sizeof title))
         title[0] = '\0';
-    field(plan, "start_at_menu", start_at_menu, sizeof start_at_menu);
-    field(plan, "advanced", advanced, sizeof advanced);
+    field(plan, plan_StartAtMenu, start_at_menu, sizeof start_at_menu);
+    field(plan, plan_Advanced, advanced, sizeof advanced);
     char achievements[8] = "0";
-    field(plan, "achievements", achievements, sizeof achievements);
+    field(plan, plan_Achievements, achievements, sizeof achievements);
     char accounts_name[128] = "";
-    field(plan, "accounts_dir", accounts_name, sizeof accounts_name);
-    field(plan, "shader_initial", shader_initial, sizeof shader_initial);
-    if (!field(plan, "data_dir", data_template, sizeof data_template))
+    field(plan, plan_AccountsDir, accounts_name, sizeof accounts_name);
+    field(plan, plan_ShaderInitial, shader_initial, sizeof shader_initial);
+    if (!field(plan, plan_DataDir, data_template, sizeof data_template))
         die("the launch plan has no data directory");
     collect_managed(plan, managed, &managed_count);
 
     home = getenv("HOME");
     if (!home || home[0] != '/')
         die("HOME is not an absolute path, so there is nowhere safe to keep this game's files");
-    if (starts_with(data_template, "$HOME")) {
-        int wrote = snprintf(data_dir, sizeof data_dir, "%s%s", home, data_template + strlen("$HOME"));
+    if (starts_with(data_template, token_Home)) {
+        int wrote = snprintf(data_dir, sizeof data_dir, "%s%s", home, data_template + strlen(token_Home));
         if (wrote < 0 || (size_t)wrote >= sizeof data_dir)
             die("the data directory does not fit");
     } else if (data_template[0] == '/') {
@@ -639,39 +669,45 @@ static void prepare(void) {
      * applied/ we record what we applied, so we can tell a player's own later
      * change from a stale value. */
     {
-        static const struct {
-            const char *shipped;
-            const char *game;
-        } settings[] = {
-            {"core-options", "config"},
-            {"remaps", "remaps"},
-            {"autoconfig", "autoconfig"},
+        static const Shipped settings[] = {
+#define RIB_SHIPPED_SETTINGS(name, app, data) {app, data},
+#include "launch_contract.inc"
+        };
+        static const Shipped files[] = {
+#define RIB_SHIPPED_FILES(name, app, data) {app, data},
+#include "launch_contract.inc"
         };
         char from[PATH_CAP];
         char to[PATH_CAP];
         char applied_root[PATH_CAP];
         char applied[PATH_CAP];
+        char listed[PATH_CAP];
         char failed[PATH_CAP];
         size_t which;
         join_path(applied_root, sizeof applied_root, data_dir, "applied");
         mkdir_p(applied_root);
         for (which = 0; which < sizeof settings / sizeof settings[0]; which++) {
-            join_path(from, sizeof from, resources, settings[which].shipped);
-            join_path(to, sizeof to, data_dir, settings[which].game);
-            join_path(applied, sizeof applied, applied_root, settings[which].game);
+            join_path(from, sizeof from, resources, settings[which].app);
+            join_path(to, sizeof to, data_dir, settings[which].data);
+            join_path(applied, sizeof applied, applied_root, settings[which].data);
             if (rominabox_apply_shipped_settings(from, to, applied, failed, sizeof failed) != 0)
                 die_errno(failed);
         }
-        join_path(from, sizeof from, resources, "firmware");
-        join_path(to, sizeof to, data_dir, "system");
-        join_path(applied, sizeof applied, applied_root, "system.list");
-        if (rominabox_replace_shipped_files(from, to, applied, failed, sizeof failed) != 0)
-            die_errno(failed);
+        for (which = 0; which < sizeof files / sizeof files[0]; which++) {
+            join_path(from, sizeof from, resources, files[which].app);
+            join_path(to, sizeof to, data_dir, files[which].data);
+            if (snprintf(listed, sizeof listed, "%s.list", files[which].data) >= (int)sizeof listed)
+                die("a path does not fit");
+            join_path(applied, sizeof applied, applied_root, listed);
+            if (rominabox_replace_shipped_files(from, to, applied, failed, sizeof failed) != 0)
+                die_errno(failed);
+        }
     }
 
     load_base(&lines, &line_count, &line_capacity, config_text, data_dir, resources);
-    join_path(controls_defaults, sizeof controls_defaults, resources, "menu-assets/controls-defaults.cfg");
-    join_path(controls_override, sizeof controls_override, data_dir, "controls.cfg");
+    join_path(assets, sizeof assets, resources, app_MenuAssets);
+    join_path(controls_defaults, sizeof controls_defaults, assets, menu_ControlsDefaults);
+    join_path(controls_override, sizeof controls_override, data_dir, menu_data_Controls);
     apply_player_file(&lines, &line_count, &line_capacity, controls_defaults);
     apply_player_file(&lines, &line_count, &line_capacity, controls_override);
     apply_player_settings(&lines, &line_count, &line_capacity, plan, data_dir);
@@ -680,7 +716,7 @@ static void prepare(void) {
      * pause_nonactive here for this run, after the player's settings, instead
      * of writing the player's file. */
     {
-        const char *shot = getenv("ROMINABOX_MENU_SHOT");
+        const char *shot = getenv(RIB_ENV_MENU_SHOT);
         if (shot && shot[0])
             force_line(
                 &lines,
@@ -697,10 +733,10 @@ static void prepare(void) {
      * Quiet is opt-out, and we publish ROMINABOX_QUIET so that we apply the
      * same choice in the fork. */
     if (rominabox_launch_is_quiet(
-            getppid(), getenv(ROMINABOX_QUIET_ENV), getenv(ROMINABOX_SOUND_ENV)))
-        setenv(ROMINABOX_QUIET_ENV, "1", 1);
+            getppid(), getenv(RIB_ENV_QUIET), getenv(ROMINABOX_SOUND_ENV)))
+        setenv(RIB_ENV_QUIET, "1", 1);
     {
-        const char *quiet = getenv(ROMINABOX_QUIET_ENV);
+        const char *quiet = getenv(RIB_ENV_QUIET);
         if (quiet && quiet[0]) {
             force_line(&lines, &line_count, &line_capacity,
                 "audio_driver", "audio_driver = \"null\"");
@@ -722,13 +758,11 @@ static void prepare(void) {
     }
 
     shader_preset[0] = '\0';
-    join_path(shader_choice, sizeof shader_choice, data_dir, "shader-choice");
+    join_path(shader_choice, sizeof shader_choice, data_dir, menu_data_ShaderChoice);
     if (access(shader_choice, F_OK) == 0)
         first_line(shader_choice, shader_preset, sizeof shader_preset);
-    else if (shader_initial[0]) {
-        join_path(assets, sizeof assets, resources, "menu-assets");
+    else if (shader_initial[0])
         join_path(shader_preset, sizeof shader_preset, assets, shader_initial);
-    }
     if (shader_preset[0])
         append_setting(&lines, &line_count, &line_capacity, "video_shader_enable = \"true\"");
 
@@ -740,13 +774,13 @@ static void prepare(void) {
     if (getenv("ROMINABOX_PLAN_ONLY"))
         _exit(0);
 
-    setenv("ROMINABOX_ACHIEVEMENTS", strcmp(achievements, "1") == 0 ? "1" : "0", 1);
-    setenv("ROMINABOX_DATA_DIR", data_dir, 1);
-    setenv("ROMINABOX_GAME_IDENTITY", identity, 1);
+    setenv(RIB_ENV_ACHIEVEMENTS, strcmp(achievements, "1") == 0 ? "1" : "0", 1);
+    setenv(RIB_ENV_DATA_DIR, data_dir, 1);
+    setenv(RIB_ENV_GAME_IDENTITY, identity, 1);
     /* The folder for QUICK SIGN IN, only when the export lists one. It is in
      * the real home, not in the sandbox's HOME. When a game cannot reach it,
      * the player plays on without QUICK SIGN IN. */
-    unsetenv("ROMINABOX_ACCOUNTS_DIR");
+    unsetenv(RIB_ENV_ACCOUNTS_DIR);
     if (strcmp(achievements, "1") == 0 && accounts_name[0]) {
         struct passwd *user = getpwuid(getuid());
         char app_data[PATH_CAP];
@@ -755,18 +789,17 @@ static void prepare(void) {
             ? snprintf(app_data, sizeof app_data, "%s/Library/Application Support", user->pw_dir) : -1;
         if (wrote > 0 && (size_t)wrote < sizeof app_data
             && rominabox_accounts_folder(app_data, accounts_name, accounts, sizeof accounts) == 0)
-            setenv("ROMINABOX_ACCOUNTS_DIR", accounts, 1);
+            setenv(RIB_ENV_ACCOUNTS_DIR, accounts, 1);
         else
             fprintf(stderr, "ROM-in-a-Box: QUICK SIGN IN is unavailable: %s\n", strerror(errno));
     }
-    setenv("ROMINABOX_TITLE", title, 1);
-    join_path(assets, sizeof assets, resources, "menu-assets");
-    setenv("ROMINABOX_RML_ASSETS", assets, 1);
-    setenv("ROMINABOX_ADVANCED_ACCESS", strcmp(advanced, "1") == 0 ? "1" : "0", 1);
+    setenv(RIB_ENV_TITLE, title, 1);
+    setenv(RIB_ENV_RML_ASSETS, assets, 1);
+    setenv(RIB_ENV_ADVANCED_ACCESS, strcmp(advanced, "1") == 0 ? "1" : "0", 1);
     if (strcmp(start_at_menu, "1") == 0)
-        setenv("ROMINABOX_START_AT_MENU", "1", 1);
+        setenv(RIB_ENV_START_AT_MENU, "1", 1);
     else
-        unsetenv("ROMINABOX_START_AT_MENU");
+        unsetenv(RIB_ENV_START_AT_MENU);
     unsetenv("LIBRETRO_SYSTEM_DIRECTORY");
     unsetenv("LIBRETRO_DIRECTORY");
     unsetenv("LIBRETRO_ASSETS_DIRECTORY");
@@ -786,7 +819,7 @@ static void prepare(void) {
         rominabox_line_buffer_stdio();
     }
     {
-        const char *quiet = getenv(ROMINABOX_QUIET_ENV);
+        const char *quiet = getenv(RIB_ENV_QUIET);
         if (quiet && quiet[0]) {
             fprintf(stdout, "[RIB] quiet: audio driver null, output disabled\n");
             fflush(stdout);
@@ -795,7 +828,7 @@ static void prepare(void) {
     if (chdir(data_dir) != 0)
         die_errno(data_dir);
 
-    join_path(core_path, sizeof core_path, resources, "game-core.dylib");
+    join_path(core_path, sizeof core_path, resources, app_Core);
     join_path(content_path, sizeof content_path, resources, content);
     {
         const char *frames = getenv("ROMINABOX_MAX_FRAMES");
