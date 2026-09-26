@@ -475,4 +475,13 @@ mod tests {
         assert_eq!(callout_line(&binding_words("c", None, None, None)), "c");
         assert_eq!(callout_line(&[]), "---");
     }
+
+    /// The player sees the composed callout before we fill it in the menu, and
+    /// it appears in the builder preview, so we word a key as in the game.
+    #[test]
+    fn a_callout_words_a_key_as_the_game_does() {
+        assert_eq!(callout_line(&binding_words("num1", None, None, None)), "1");
+        assert_eq!(callout_line(&binding_words("rshift", None, None, None)), "Right Shift");
+        assert_eq!(callout_line(&binding_words("c", None, None, None)), "c");
+    }
 }
