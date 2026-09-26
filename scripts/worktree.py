@@ -6,7 +6,7 @@ Application Support, and a cargo target. None of those collisions produces
 an error. Each one produces a plausible wrong answer, the worst being a
 screenshot of a build from the other checkout.
 
-    python3 scripts/worktree.py create feature-x     # make one
+    python3 scripts/worktree.py create feature-x     # make one, in ../rominabox-worktrees/
     python3 scripts/worktree.py adopt               # from inside an existing one
     python3 scripts/worktree.py list                # what exists, and its resources
     python3 scripts/worktree.py remove feature-x    # and clean up after it
@@ -74,6 +74,13 @@ CANONICAL_DATA = DATA_HOME / "ROM-in-a-Box"
 # and `git worktree remove` deletes it with everything else.
 OFFSET_FILE = "rominabox_port_offset"
 LOCK_NAME = "rominabox-worktree-lock"
+
+
+def worktree_path(suffix: str) -> Path:
+    """Return the path of the worktree for `suffix`. We keep every worktree in
+    one folder beside the checkout, listed in .claude/settings.json as an
+    additional working directory."""
+    return ROOT.parent / f"{ROOT.name}-worktrees" / suffix
 MAX_OFFSET = 200
 
 
@@ -325,10 +332,11 @@ def branch_exists(name: str) -> bool:
 
 
 def create(suffix: str, branch: str | None, own_runtime: bool) -> int:
-    path = ROOT.parent / f"{ROOT.name}-{suffix}"
+    path = worktree_path(suffix)
     if path.exists():
         raise SystemExit(f"{path} already exists; use adopt, or pick another suffix")
-    name = branch or path.name
+    path.parent.mkdir(exist_ok=True)
+    name = branch or f"{ROOT.name}-{suffix}"
     # With `git worktree add <path>` and no -b, git checks out the branch named
     # after the directory when one exists. The worktree can then be at an old
     # commit that looks like a fresh checkout of HEAD.
@@ -376,7 +384,8 @@ def adopt() -> int:
         raise SystemExit(f"{here} is not a git worktree of this repository")
     if here == canonical_checkout():
         raise SystemExit("this is the canonical checkout; it is never suffixed")
-    suffix = here.name.removeprefix(f"{ROOT.name}-") or here.name
+    suffix = (here.name if here.parent == worktree_path(here.name).parent
+              else here.name.removeprefix(f"{ROOT.name}-") or here.name)
     existing = known[here].get("local") or {}
     with Lock(common_dir() / LOCK_NAME):
         offset = allocate_offset(existing.get("portOffset"))
@@ -412,7 +421,7 @@ def show() -> int:
 
 
 def remove(suffix: str, keep_data: bool) -> int:
-    path = ROOT.parent / f"{ROOT.name}-{suffix}"
+    path = worktree_path(suffix)
     entry = next((e for e in worktrees() if e["path"].resolve() == path.resolve()), None)
     if entry is None:
         raise SystemExit(f"no worktree at {path}")

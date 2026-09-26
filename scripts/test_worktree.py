@@ -405,8 +405,8 @@ def create_refuses_an_existing_branch_instead_of_checking_it_out() -> None:
     we must refuse, report that the branch already exists, and not check it out.
     """
     suffix = "shotsignold"
-    path = worktree.ROOT.parent / f"{worktree.ROOT.name}-{suffix}"
-    name = path.name
+    path = worktree.worktree_path(suffix)
+    name = f"{worktree.ROOT.name}-{suffix}"
     if path.exists():
         check(False, f"{path} is already there, so this check cannot start")
         return
