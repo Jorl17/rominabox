@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::Path;
+use std::sync::OnceLock;
 
 const MAX_LABEL_BYTES: usize = 80;
 const MAX_BUTTON_BYTES: usize = 3;
@@ -363,12 +364,12 @@ fn validate_label(id: &str, value: &str) -> Result<(), String> {
 }
 
 fn validate_key(id: &str, value: &str) -> Result<(), String> {
-    if !retroarch_keys().contains(value) {
+    let Some(key) = retroarch_key(value) else {
         return Err(format!("key for {id} is not an allowed RetroArch key"));
-    }
+    };
     // The player opens the menu, where Quit is, with Escape, so Escape is
-    // never a gameplay binding. We reserve no other key.
-    if value == "escape" {
+    // never a gameplay binding, by any name. We reserve no other key.
+    if Some(key) == retroarch_key("escape") {
         return Err(format!(
             "key for {id} toggles the menu and cannot be a gameplay binding"
         ));
@@ -411,24 +412,43 @@ fn validate_axis(id: &str, value: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Every name for a keyboard key in RetroArch, one per key, in RetroArch's own
-/// spelling. We generate it with `scripts/native_runtime/key_names.c` from the
-/// fork's own key table and parser. See
-/// `tests::the_checked_in_key_names_are_what_the_fork_reads`.
-fn retroarch_keys() -> &'static HashSet<String> {
-    static KEYS: std::sync::OnceLock<HashSet<String>> = std::sync::OnceLock::new();
-    KEYS.get_or_init(|| {
-        serde_json::from_str::<RetroArchKeys>(include_str!("../../retroarch-keys.json"))
-            .expect("desktop/retroarch-keys.json must be valid")
-            .keys
-            .into_iter()
-            .collect()
+/// The table of key names for the config parser in RetroArch.
+const KEY_NAMES: &str = include_str!("../../../vendor/retroarch/input/input_key_names.inc");
+
+/// Every `RIB_KEY_NAME("name", RETROK_key)` declaration in the fork, in order.
+fn key_names() -> &'static [(String, String)] {
+    static NAMES: OnceLock<Vec<(String, String)>> = OnceLock::new();
+    NAMES.get_or_init(|| {
+        let names: Vec<(String, String)> =
+            crate::menu::inc::declarations(KEY_NAMES, "RIB_KEY_NAME")
+                .map(|fields| match &fields[..] {
+                    [name, key] => (name.clone(), key.clone()),
+                    _ => panic!(
+                        "input_key_names.inc: RIB_KEY_NAME({}) is not (\"name\", RETROK_key)",
+                        fields.join(", ")
+                    ),
+                })
+                .collect();
+        assert!(!names.is_empty(), "input_key_names.inc declares no keys");
+        names
     })
 }
 
-#[derive(Deserialize, Serialize)]
-struct RetroArchKeys {
-    keys: Vec<String>,
+/// The `RETROK_` name of the key for `name` in RetroArch, or `None` for a
+/// name that is no key. We follow `input_config_translate_str_to_rk`. A
+/// single letter is the key for that letter, and we look up any other name
+/// in the key table, ignoring case. There `nul` means no key.
+fn retroarch_key(name: &str) -> Option<String> {
+    if let [letter] = name.as_bytes() {
+        if letter.is_ascii_alphabetic() {
+            return Some(format!("RETROK_{}", letter.to_ascii_lowercase() as char));
+        }
+    }
+    key_names()
+        .iter()
+        .find(|(known, _)| known.eq_ignore_ascii_case(name))
+        .map(|(_, key)| key.clone())
+        .filter(|key| key != "RETROK_UNKNOWN")
 }
 
 fn escape_config_value(value: &str) -> String {
@@ -449,38 +469,6 @@ mod tests {
                 "libretro-common/string/stdstring.c",
             ],
         )
-    }
-
-    /// `desktop/retroarch-keys.json` from the fork's key table and parser.
-    fn generated_key_names() -> String {
-        let keys = RetroArchKeys {
-            keys: key_names_probe().lines(&[]),
-        };
-        serde_json::to_string_pretty(&keys).unwrap() + "\n"
-    }
-
-    const KEY_NAMES: &str = "desktop/retroarch-keys.json";
-
-    /// The check against drift. If it fails, the fork's key names changed. Run
-    ///
-    ///     cargo test --manifest-path desktop/src-tauri/Cargo.toml --lib \
-    ///         controls::tests::write_retroarch_key_names -- --ignored
-    ///
-    /// and commit the written file.
-    #[test]
-    fn the_checked_in_key_names_are_what_the_fork_reads() {
-        let checked_in = fs::read_to_string(crate::repo::at(KEY_NAMES)).expect("readable");
-        assert_eq!(
-            checked_in,
-            generated_key_names(),
-            "{KEY_NAMES} is not what the fork's RetroArch reads; regenerate it with write_retroarch_key_names"
-        );
-    }
-
-    #[test]
-    #[ignore = "writes desktop/retroarch-keys.json from the fork; run it when the fork's key names change"]
-    fn write_retroarch_key_names() {
-        fs::write(crate::repo::at(KEY_NAMES), generated_key_names()).expect("writable");
     }
 
     /// The key that `input_config_translate_str_to_rk`, the config parser in
@@ -637,6 +625,22 @@ mod tests {
             "the exporter refuses names RetroArch reads as a key:\n{}",
             refused.join("\n")
         );
+    }
+
+    // In RetroArch a name works in any case, and one letter is that letter's
+    // key. nul is no key, and Escape stays reserved for the menu in any spelling.
+    #[test]
+    fn the_exporter_reads_a_name_as_retroarch_does() {
+        let names = ["Shift", "KP_PLUS", "Q", "q", "NUL", "Escape"];
+        assert_eq!(
+            retroarch_reads(&names),
+            vec!["shift", "add", "q", "q", "nul", "escape"]
+        );
+        let accepted: Vec<&str> = names
+            .into_iter()
+            .filter(|name| validate_for_system("megadrive", &binding(name).1).is_ok())
+            .collect();
+        assert_eq!(accepted, vec!["Shift", "KP_PLUS", "Q", "q"]);
     }
 
     // Pressing Escape in the builder cancels a capture, so we never store it.

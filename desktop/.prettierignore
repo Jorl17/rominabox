@@ -6,6 +6,3 @@ src-tauri/resources/
 controls.json
 systems.json
 designs.json
-
-# Generated from the fork's key names; see controls.rs.
-retroarch-keys.json
