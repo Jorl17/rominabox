@@ -69,7 +69,7 @@ fn with_full_page(menu: &str) -> (String, usize) {
                 .replacen("class=\"list-row ", "class=\"list-row badge-loading ", 1)
         })
         .collect();
-    let page = format!("<div id=\"achievements-page-1\" class=\"list-page\">{rows}</div>");
+    let page = format!("<div class=\"list-page\">{rows}</div>");
     let insert_at = end + "</div>".len();
     let mut full = menu.to_string();
     full.insert_str(insert_at, &page);

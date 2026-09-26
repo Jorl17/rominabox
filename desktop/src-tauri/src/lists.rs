@@ -238,7 +238,8 @@ pub fn render_row(template: &str, item: &ListItem) -> String {
 /// items do not fit on one page. On page one the back arrow is disabled,
 /// because there is nothing before it, and we move that mark in the player as
 /// the page turns. The list id is the screen id with the contract's list
-/// suffix. Page and arrow ids are `{screen}-page-N`, `{screen}-prev`,
+/// suffix. A page has no id, because in the player we find pages by their
+/// class, and make more of them the same way. Arrow ids are `{screen}-prev`,
 /// `{screen}-next` and the screen id with the contract's page-count suffix.
 pub fn render_list(
     screen: &str,
@@ -276,11 +277,7 @@ pub fn render_list_in(
         } else {
             " style=\"display:none;\""
         };
-        html.push_str(&format!(
-            "<div id=\"{screen}-page-{}\" class=\"{}\"{hidden}>",
-            index + 1,
-            contract!(ListPage)
-        ));
+        html.push_str(&format!("<div class=\"{}\"{hidden}>", contract!(ListPage)));
         for item in chunk {
             html.push_str(&render_row(template, item));
         }
@@ -610,7 +607,7 @@ mod tests {
         let template = row_template(Path::new("/nonexistent")).expect("built-in row");
         let english = std::collections::BTreeMap::new();
         let paged = render_list("x", &template, &[item("a", "A"), item("b", "B")], 1, &english);
-        assert!(paged.contains("x-page-2"));
+        assert_eq!(paged.matches("class=\"list-page\"").count(), 2);
         assert!(paged.contains("1/2"));
         let single = render_list("x", &template, &[item("a", "A")], 4, &english);
         assert!(
