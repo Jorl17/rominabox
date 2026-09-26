@@ -1235,6 +1235,94 @@
           "y": 146,
           "calloutX": 744,
           "calloutY": 315
+        },
+        {
+          "id": "l_y_minus",
+          "label": "Control stick up",
+          "key": "t",
+          "x": 332,
+          "y": 118,
+          "calloutX": 0,
+          "calloutY": 0,
+          "group": "l_stick",
+          "direction": "up"
+        },
+        {
+          "id": "l_x_plus",
+          "label": "Control stick right",
+          "key": "b",
+          "x": 0,
+          "y": 0,
+          "calloutX": 0,
+          "calloutY": 0,
+          "group": "l_stick",
+          "direction": "right"
+        },
+        {
+          "id": "l_y_plus",
+          "label": "Control stick down",
+          "key": "g",
+          "x": 0,
+          "y": 0,
+          "calloutX": 0,
+          "calloutY": 0,
+          "group": "l_stick",
+          "direction": "down"
+        },
+        {
+          "id": "l_x_minus",
+          "label": "Control stick left",
+          "key": "v",
+          "x": 0,
+          "y": 0,
+          "calloutX": 0,
+          "calloutY": 0,
+          "group": "l_stick",
+          "direction": "left"
+        },
+        {
+          "id": "r_y_minus",
+          "label": "C-stick up",
+          "key": "i",
+          "x": 557,
+          "y": 226,
+          "calloutX": 0,
+          "calloutY": 0,
+          "group": "r_stick",
+          "direction": "up"
+        },
+        {
+          "id": "r_x_plus",
+          "label": "C-stick right",
+          "key": "l",
+          "x": 0,
+          "y": 0,
+          "calloutX": 0,
+          "calloutY": 0,
+          "group": "r_stick",
+          "direction": "right"
+        },
+        {
+          "id": "r_y_plus",
+          "label": "C-stick down",
+          "key": "k",
+          "x": 0,
+          "y": 0,
+          "calloutX": 0,
+          "calloutY": 0,
+          "group": "r_stick",
+          "direction": "down"
+        },
+        {
+          "id": "r_x_minus",
+          "label": "C-stick left",
+          "key": "j",
+          "x": 0,
+          "y": 0,
+          "calloutX": 0,
+          "calloutY": 0,
+          "group": "r_stick",
+          "direction": "left"
         }
       ]
     },
