@@ -39,7 +39,12 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .slot:active { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
 .slot.focused .slot-label, [data-focus=save] .slot.selected .slot-label, [data-focus=load] .slot.selected .slot-label { color: #fff13d; }
 .slot-label { height: 24dp; font-size: 17dp; padding-top: 2dp; background-color: #081433; color: #ffffff; }
-.slot-picture { width: 184dp; height: 138dp; margin: 0 auto; background-color: #0865bf; border-top: 2dp #020b27; border-left: 2dp #020b27; border-right: 2dp #9edaff; border-bottom: 2dp #9edaff; text-align: center; }
+/* The picture has the aspect ratio of the game, as large as its max-width and
+ * max-height allow. Its width and height are those of a 4:3 game, as in a
+ * preview. Its frame has room for the largest picture inside its bevel, and
+ * the picture is centred in it. */
+.slot-frame { height: 142dp; display: flex; justify-content: center; align-items: center; }
+.slot-picture { width: 184dp; height: 138dp; max-width: 230dp; max-height: 138dp; background-color: #0865bf; border-top: 2dp #020b27; border-left: 2dp #020b27; border-right: 2dp #9edaff; border-bottom: 2dp #9edaff; }
 .slot-image { width: 100%; height: 100%; }
 .slot.empty .slot-image { display: none; }
 .slot-state { height: 20dp; font-size: 14dp; color: #b4e6ff; padding-top: 2dp; }

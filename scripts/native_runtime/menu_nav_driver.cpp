@@ -12,8 +12,13 @@
  *                           achievements S   signed-out | active | startup | failed
  *                           rows N           achievements in the list
  *                           pending 1        an earned achievement not uploaded
+ *                           aspect X         the game's aspect ratio, width
+ *                                            over height (4:3 unless set)
  *   ids ID...             ids of the case, reported when not in the document
  *   text ID...            ids whose words we report after every step
+ *   box SELECTOR          the first element matching an RCSS selector. We
+ *                         report its border and content boxes in dp after
+ *                         every step, one line each
  *   step STEP             in the menu script grammar:
  *                           key:NAME   up down left right ok select cancel
  *                                      start toggle resume, and tab (the
@@ -23,12 +28,18 @@
  *                                      release it, one frame each, like a click
  *                           wait-ms:N  advance the clock
  *                           ID         click the element, as in a menu script
+ *                         and, from the RetroArch side of the host instead
+ *                         of the script side:
+ *                           menu:close, menu:open
+ *                                      close or open the menu in RetroArch
+ *                           aspect:X   change the game's aspect ratio
  *   run                   run the case
  *
  * After every step, record what the player sees highlighted (visible
  * elements with the `focused` class), what is marked as capturing a binding
- * (the `capturing` class), the visible screen panel and the requested
- * sounds. Print one JSON line per case for the caller to judge.
+ * (the `capturing` class), the visible screen panel, the requested sounds,
+ * the attributes on the document and the boxes requested in the case. Print
+ * one JSON line per case for the caller to judge.
  *
  * We record sounds in the fake host and play nothing. */
 #include "rmlui/menu_api.h"
@@ -60,7 +71,7 @@ struct Case
 {
    std::string name, assets, data;
    std::vector<std::pair<std::string, std::string>> setup;
-   std::vector<std::string> ids, steps, text;
+   std::vector<std::string> ids, steps, text, boxes;
 };
 
 std::string json(const std::string& text)
@@ -147,8 +158,44 @@ std::string words(const std::vector<std::string>& ids)
    return out + "}";
 }
 
+/* The border and content boxes of each selector's first match, [x, y,
+ * width, height] in dp, or null for a selector with no match. */
+std::string boxes(const std::vector<std::string>& selectors)
+{
+   Rml::Context *context = view.document.get_context();
+   context->Update();
+   const float dp = context->GetDensityIndependentPixelRatio();
+   const auto area = [&](Rml::Element *element, Rml::BoxArea which) {
+      const Rml::Vector2f at = element->GetAbsoluteOffset(which) / dp;
+      const Rml::Vector2f size = element->GetBox().GetSize(which) / dp;
+      char out[96];
+      std::snprintf(out, sizeof(out), "[%.3f,%.3f,%.3f,%.3f]", at.x, at.y, size.x, size.y);
+      return std::string(out);
+   };
+   std::string out = "{";
+   for (const std::string& selector : selectors)
+   {
+      Rml::Element *element = view.document.root()->QuerySelector(selector);
+      out += (out.size() > 1 ? "," : "") + json(selector) + ":"
+            + (element ? "{\"border\":" + area(element, Rml::BoxArea::Border)
+                  + ",\"content\":" + area(element, Rml::BoxArea::Content) + "}"
+               : std::string("null"));
+   }
+   return out + "}";
+}
+
+/* Every attribute on the document, by name. */
+std::string document_attributes()
+{
+   std::string out = "{";
+   for (const auto& [name, value] : view.document.root()->GetAttributes())
+      out += (out.size() > 1 ? "," : "") + json(name) + ":" + json(value.Get<Rml::String>());
+   return out + "}";
+}
+
 std::string observe(const std::vector<std::string>& screen_panels,
-      const std::vector<std::string>& text, size_t& heard)
+      const std::vector<std::string>& text, const std::vector<std::string>& selectors,
+      size_t& heard)
 {
    std::string screen;
    for (const std::string& panel : screen_panels)
@@ -161,7 +208,8 @@ std::string observe(const std::vector<std::string>& screen_panels,
    heard = host.sounds.size();
    return "{\"focused\":" + marked("focused") + ",\"capturing\":" + marked("capturing")
          + ",\"screen\":" + json(screen) + ",\"sounds\":" + sounds
-         + ",\"text\":" + words(text) + "}";
+         + ",\"text\":" + words(text) + ",\"document\":" + document_attributes()
+         + ",\"boxes\":" + boxes(selectors) + "}";
 }
 
 bool step(void *menu, const std::string& text)
@@ -213,6 +261,19 @@ bool step(void *menu, const std::string& text)
       frame(menu);
       return true;
    }
+   if (text == "menu:close" || text == "menu:open")
+   {
+      host.menu_open = text == "menu:open";
+      rib_menu_toggle(menu, host.menu_open);
+      frame(menu);
+      return true;
+   }
+   if (text.rfind("aspect:", 0) == 0)
+   {
+      host.game_aspect = std::strtof(text.c_str() + 7, nullptr);
+      frame(menu);
+      return true;
+   }
    if (text.find(':') != std::string::npos || !view.document.click_element(text.c_str()))
       return false;
    frame(menu);
@@ -256,6 +317,7 @@ void reset_services(const Case& run)
       if (key == "discs") host.disc_count = (unsigned)std::atoi(value.c_str());
       else if (key == "load") host.slot_occupied = value == "1";
       else if (key == "pending") session.pending_upload = value == "1";
+      else if (key == "aspect") host.game_aspect = std::strtof(value.c_str(), nullptr);
       else if (key == "achievements")
       {
          if (value == "active")
@@ -327,7 +389,7 @@ void run_case(const Case& run)
             std::fprintf(stderr, "%s: cannot run step '%s'\n", run.name.c_str(), text.c_str());
             std::exit(1);
          }
-         steps += (steps.size() > 1 ? "," : "") + observe(screen_panels, run.text, heard);
+         steps += (steps.size() > 1 ? "," : "") + observe(screen_panels, run.text, run.boxes, heard);
       }
    steps += "]";
    if (getenv("ROMINABOX_NAVIGATION_DUMP")) dump(run.name);
@@ -367,6 +429,7 @@ int main()
          std::istringstream words(rest);
          for (std::string id; words >> id; ) current.text.push_back(id);
       }
+      else if (word == "box") current.boxes.push_back(rest);
       else if (word == "step") current.steps.push_back(rest);
       else if (word == "run") { run_case(current); ++cases; }
       else

@@ -41,9 +41,9 @@ struct FakeHost
    /* The last shader applied from the menu, and its preset. */
    std::string applied_shader, applied_preset;
 
-   /* The RetroArch settings behind each player setting, by config key, with
-    * their values in the running game. We cannot apply a key that is missing
-    * here. */
+   /* The RetroArch settings behind each player setting, by config key (its
+    * name in settings.inc), with their values in the running game. We cannot
+    * apply a key that is missing here. */
    std::map<std::string, float> settings{{"audio_volume", -12.0f}, {"pause_nonactive", 1.0f}};
    /* The game volume at each request for a level cue, in order. */
    std::vector<float> level_cue_db;
@@ -61,6 +61,9 @@ struct FakeHost
    bool menu_open = true;
    /* The thumbnail beside an occupied slot 1 in RetroArch, or empty. */
    std::string thumbnail;
+   /* The aspect ratio of the running game, width over height, as reported
+    * by RetroArch for the core. It can change while the game runs. */
+   float game_aspect = 4.0f / 3.0f;
    /* The preset in use in the running game. Applying a preset makes it the
     * one in use, as in RetroArch. */
    std::string current_shader;
