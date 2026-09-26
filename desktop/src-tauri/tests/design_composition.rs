@@ -471,6 +471,81 @@ fn a_designs_words_reach_the_player_and_an_unknown_one_is_refused() {
     );
 }
 
+/// A design can also word the text that we write at composition, which is a
+/// player setting's name, the ends of a level, the state of a switch and the
+/// mark on the running filter. The words of a design appear in the composed
+/// menu and in design.cfg, where we keep them current in the player. Without
+/// them we use the English.
+#[test]
+fn a_designs_words_name_the_settings_and_mark_the_lists() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-design-setting-words");
+    let kit = support::kit_with_hypothetical(&root);
+    let entries = vec!["controls".to_string(), "shaders".to_string()];
+    let worded = support::compose(&kit, "wording", Some(&entries), 2, &root.join("wording"));
+    let native = support::compose(&kit, "native", Some(&entries), 2, &root.join("native"));
+    for (menu, words) in [
+        (
+            &worded,
+            ["LOUDNESS", "SOFT", "LOUD", "KEEP PLAYING", "NO", "LIT"],
+        ),
+        (
+            &native,
+            ["VOLUME", "LOW", "HIGH", "PLAY IN BACKGROUND", "OFF", "ON"],
+        ),
+    ] {
+        let [name, low, high, background, off, mark] = words;
+        for (what, text) in [
+            ("the volume's name", format!("class=\"volume-name\">{name}<")),
+            ("the volume's low end", format!("id=\"volume-low\" class=\"volume-end\">{low}<")),
+            ("the volume's high end", format!("id=\"volume-high\" class=\"volume-end\">{high}<")),
+            ("PLAY IN BACKGROUND's name", format!(">{background} <span")),
+            ("the switch's state", format!("id=\"background-play-state\" class=\"setting-state\">{off}<")),
+            ("the running filter's mark", format!("class=\"list-row-state\">{mark}<")),
+        ] {
+            assert!(menu.menu.contains(&text), "{what}: no {text} in\n{}", menu.menu);
+        }
+    }
+    for word in ["switch-on", "switch-off", "shader-mark", "disc-mark"] {
+        assert!(
+            worded.cfg.contains(&format!("word_{word} = ")),
+            "the player keeps {word} current, in the design's words: {}",
+            worded.cfg
+        );
+    }
+}
+
+/// The Options entry of the disc list starts hidden and disabled, which we
+/// write at composition on the design's entry template. When the template
+/// has a style, we keep it and add the hiding to it, because an element with
+/// two style attributes gets only one of them.
+#[test]
+fn a_hidden_entry_joins_the_style_its_template_has() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-design-styled-entry");
+    let kit = support::kit(&root);
+    let design = kit.join("designs/styled-entries");
+    fs::create_dir_all(&design).unwrap();
+    fs::write(
+        design.join("design.json"),
+        r#"{"schemaVersion": 1, "id": "styled-entries"}"#,
+    )
+    .unwrap();
+    fs::write(
+        design.join("option-entry.rml"),
+        r#"<button class="menu-action option-entry" id="BUTTON" style="text-align: left;"><span class="option-label">LABEL</span></button>"#,
+    )
+    .unwrap();
+    let composed = support::compose(&kit, "styled-entries", None, 2, &root.join("composed"));
+    let at = composed.menu.find("id=\"discs\"").expect("the disc list has its entry");
+    let start = composed.menu[..at].rfind('<').unwrap();
+    let end = at + composed.menu[at..].find('>').unwrap();
+    let tag = &composed.menu[start..end];
+    assert_eq!(tag.matches("style=").count(), 1, "{tag}");
+    assert!(
+        tag.contains("text-align: left;") && tag.contains("display: none;"),
+        "{tag}"
+    );
+}
+
 /// The Pause heading comes from its `screens` entry, which we write in the
 /// player when Pause opens. When a design words `paused-heading`, the player
 /// sees that word there, or we refuse it at export, because a word we accept
@@ -515,6 +590,61 @@ fn a_design_that_words_the_pause_heading_sees_it_or_is_refused() {
             );
         }
     }
+}
+
+/// The menu opens on Pause, and in the player we write the declared Pause
+/// heading and footer into the chrome when it opens. The composed file has
+/// the same text, so a preview or an offscreen picture matches what the game
+/// opens on, in every design, the hypothetical ones included.
+#[test]
+fn the_composed_menu_reads_the_heading_and_footer_the_game_opens_on() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-opening-words");
+    let kit = support::kit_with_hypothetical(&root);
+    // The words an element shows, up to its first child.
+    let text = |menu: &str, id: &str| -> String {
+        let at = menu
+            .find(&format!("id=\"{id}\""))
+            .unwrap_or_else(|| panic!("no #{id}"));
+        let open = at + menu[at..].find('>').unwrap() + 1;
+        menu[open..open + menu[open..].find('<').unwrap()].to_owned()
+    };
+    let mut wrong = Vec::new();
+    for design in support::designs()
+        .into_iter()
+        .chain(support::hypothetical_designs())
+    {
+        let composed = support::compose(&kit, &design, None, 1, &root.join(&design));
+        let pause = composed
+            .cfg
+            .lines()
+            .find_map(|line| {
+                line.strip_prefix("screen_role_")
+                    .and_then(|rest| rest.strip_suffix(" = \"pause\""))
+            })
+            .expect("the composed menu declares Pause")
+            .to_owned();
+        let declared = |key: &str| {
+            composed
+                .cfg
+                .lines()
+                .find_map(|line| line.strip_prefix(&format!("{key}_{pause} = \"")))
+                .and_then(|rest| rest.strip_suffix('"'))
+                .unwrap_or_default()
+                .to_owned()
+        };
+        for (id, key) in [
+            ("heading", "screen_heading"),
+            ("footer-hint", "screen_footer"),
+        ] {
+            let (shown, opens_on) = (text(&composed.menu, id), declared(key));
+            if shown != opens_on {
+                wrong.push(format!(
+                    "{design}: #{id} reads \"{shown}\"; the game opens on \"{opens_on}\""
+                ));
+            }
+        }
+    }
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
 
 #[test]
