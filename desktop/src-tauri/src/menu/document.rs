@@ -6,9 +6,10 @@
 //! complete.
 
 use super::manifest::{Manifest, Screen, ScreenPlace, ScreenRole};
+use super::words;
 use crate::player_settings::{Kind, PlayerSetting};
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -96,7 +97,6 @@ pub(crate) fn skeleton(manifest: &Manifest, staged: &[Screen]) -> Result<String,
         .map_err(|e| format!("Could not read {}: {e}", skeleton.display()))?;
     for (slot, name) in [
         ("<!--SPINE-->", "spine.rml"),
-        ("<!--HEADING-->", "heading.rml"),
         ("<!--FOOTER-->", "footer.rml"),
         ("<!--SCREEN:pause-->", "screen-pause.rml"),
         ("<!--SCREEN:controls-->", "screen-controls.rml"),
@@ -155,6 +155,86 @@ pub(crate) fn skeleton(manifest: &Manifest, staged: &[Screen]) -> Result<String,
         .replace("<!--SAVE-SLOTS-->", &slots))
 }
 
+/// The page as it appears when the menu opens on Pause. We write the heading
+/// declared for Pause into the heading, and its footer, when it has one, into
+/// the footer hint, as we do at run time when Pause appears. A preview, an
+/// offscreen picture and the first screen of the game then show the same
+/// words, from one declaration.
+pub(crate) fn opening_screen(manifest: &Manifest, document: &str) -> Result<String, String> {
+    let pause = manifest.screen(ScreenRole::Pause).ok_or_else(|| {
+        format!(
+            "design '{}' declares no Pause screen to open on",
+            manifest.id
+        )
+    })?;
+    let document = set_text(document, &contract_id("Heading")?, &pause.heading)?;
+    if pause.footer.is_empty() {
+        return Ok(document);
+    }
+    set_text(&document, &contract_id("FooterHint")?, &pause.footer)
+}
+
+/// The id declared under `name` in the document contract of the player.
+fn contract_id(name: &str) -> Result<String, String> {
+    super::contract::entries()?
+        .into_iter()
+        .find(|entry| entry.name == name)
+        .map(|entry| entry.value)
+        .ok_or_else(|| format!("document_contract.inc declares no {name}"))
+}
+
+/// `document` with everything inside the element `id` replaced by `text`,
+/// as we write words into an element in the player.
+fn set_text(document: &str, id: &str, text: &str) -> Result<String, String> {
+    let missing = || format!("the menu has no element #{id} to write \"{text}\" into");
+    let at = document.find(&format!("id=\"{id}\"")).ok_or_else(missing)?;
+    let start = document[..at].rfind('<').ok_or_else(missing)?;
+    let end = at + document[at..].find('>').ok_or_else(missing)?;
+    let name: String = document[start + 1..]
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric())
+        .collect();
+    let text = crate::lists::rml_text(text);
+    let mut out = document.to_string();
+    if document[..end].ends_with('/') {
+        out.replace_range(end - 1..=end, &format!(">{text}</{name}>"));
+        return Ok(out);
+    }
+    // Its matching closing tag, since it may contain elements of the same name.
+    let (opening, closing) = (format!("<{name}"), format!("</{name}>"));
+    let mut depth = 1;
+    let mut cursor = end + 1;
+    let close = loop {
+        let next_close = cursor
+            + document[cursor..]
+                .find(&closing)
+                .ok_or_else(|| format!("#{id} is never closed"))?;
+        let next_open = document[cursor..next_close]
+            .match_indices(&opening)
+            .map(|(index, _)| cursor + index)
+            .find(|&index| {
+                document[index + opening.len()..]
+                    .starts_with(|c: char| c == '>' || c == '/' || c.is_whitespace())
+            });
+        match next_open {
+            Some(open) => {
+                let tag_end = open + document[open..].find('>').ok_or_else(missing)?;
+                if !document[..tag_end].ends_with('/') {
+                    depth += 1;
+                }
+                cursor = tag_end + 1;
+            }
+            None if depth == 1 => break next_close,
+            None => {
+                depth -= 1;
+                cursor = next_close + closing.len();
+            }
+        }
+    };
+    out.replace_range(end + 1..close, &text);
+    Ok(out)
+}
+
 pub(crate) fn button_bounds(document: &str, id: &str) -> Option<(usize, usize)> {
     let marker = format!("id=\"{id}\"");
     let mut from = 0;
@@ -196,7 +276,11 @@ fn entry_button(manifest: &Manifest, screen: &Screen) -> Result<String, String> 
     // must be in the document already. It starts hidden. A display:none
     // button can still get the focus unless it is disabled too.
     Ok(if screen.is_disc_list() {
-        add_attributes(&button, &screen.button, "disabled=\"disabled\" style=\"display: none;\"")
+        add_attributes(
+            &button,
+            &screen.button,
+            &[("disabled", "disabled"), ("style", "display: none;")],
+        )
     } else {
         button
     })
@@ -210,8 +294,8 @@ fn switch_entry(manifest: &Manifest, setting: &PlayerSetting) -> Result<String, 
     let control = setting.control();
     let label = format!(
         "{} <span id=\"{control}-state\" class=\"setting-state\">{}</span>",
-        crate::lists::rml_text(setting.label),
-        crate::lists::rml_text(state_word(setting, setting.default)),
+        crate::lists::rml_text(&words::say(&manifest.words, setting.label, &[])),
+        crate::lists::rml_text(&state_word(&manifest.words, setting, setting.default)),
     );
     Ok(add_class(
         &entry_markup(manifest, &control, &label)?,
@@ -220,16 +304,19 @@ fn switch_entry(manifest: &Manifest, setting: &PlayerSetting) -> Result<String, 
     ))
 }
 
-fn state_word(setting: &PlayerSetting, value: f32) -> &'static str {
+/// The word that the design uses for the state of a switch at run time.
+fn state_word(given: &BTreeMap<String, String>, setting: &PlayerSetting, value: f32) -> String {
     match setting.kind {
-        Kind::Switch { on, off, .. } => {
+        Kind::Switch { .. } => words::say(
+            given,
             if setting.is_on(value) {
-                on
+                "switch-on"
             } else {
-                off
-            }
-        }
-        Kind::Level { .. } => "",
+                "switch-off"
+            },
+            &[],
+        ),
+        Kind::Level { .. } => String::new(),
     }
 }
 
@@ -259,12 +346,21 @@ pub(crate) fn apply_options(
         .iter()
         .filter(|screen| screen.option_label.is_some())
         .collect();
+    // The panel in the design for Options, which contains the design's
+    // version of an entry.
+    let panel_id = manifest
+        .screens
+        .iter()
+        .find(|screen| screen.place == ScreenPlace::Options)
+        .map(|screen| format!("id=\"{}\"", screen.panel));
+    let in_options =
+        |document: &str, at: usize| panel_id.as_ref().is_some_and(|id| document[..at].contains(id));
 
     let mut document = document.to_string();
     let Some(options) = options else {
         for entry in &declared_entries {
             if let Some((start, end)) = button_bounds(&document, &entry.button) {
-                if !document[..start].contains("id=\"options-panel\"") {
+                if !in_options(&document, start) {
                     document.replace_range(start..end, "");
                 }
             }
@@ -288,7 +384,7 @@ pub(crate) fn apply_options(
         let Some((start, end)) = button_bounds(&document, &entry.button) else {
             continue;
         };
-        if document[..start].contains("id=\"options-panel\"") {
+        if in_options(&document, start) {
             continue;
         }
         if !placed_opener && included.iter().any(|screen| screen.id == entry.id) {
@@ -431,19 +527,19 @@ fn require_classes(kind: &str, template: &str, classes: &[&str]) -> Result<(), S
     Ok(())
 }
 
-/// A level control, made of its name, the low end, an arrow, the slider, an
-/// arrow and the high end.
+/// A level: its name, low, an arrow, the design's slider, an arrow, high, in
+/// the design's words `given`.
 ///
-/// The slider comes first in the document, so the keyboard focus goes to it
-/// first and the left and right keys move it. The design places the rest, so
-/// the order in the document is not the order on screen. There is no number.
-pub fn level_markup(design: &Path, setting: &PlayerSetting) -> Result<String, String> {
-    let Kind::Level {
-        low_word,
-        high_word,
-        ..
-    } = setting.kind
-    else {
+/// The slider is first in the document, so the keyboard focus goes to it and
+/// the left and right keys move it. We place the name, the arrows and the
+/// ends as set in the design, so the order in the document is not the order
+/// a person sees. There is no number, because the ends say what they are.
+pub fn level_markup(
+    design: &Path,
+    given: &BTreeMap<String, String>,
+    setting: &PlayerSetting,
+) -> Result<String, String> {
+    let Kind::Level { .. } = setting.kind else {
         return Err(format!("{} is not a level", setting.id));
     };
     let slider = part_template(design, "slider")?;
@@ -462,24 +558,42 @@ pub fn level_markup(design: &Path, setting: &PlayerSetting) -> Result<String, St
     Ok(format!(
         "<div id=\"{id}-control\">{slider}<button id=\"{id}-down\" class=\"menu-action volume-arrow arrow-down\">&lt;</button><button id=\"{id}-up\" class=\"menu-action volume-arrow arrow-up\">&gt;</button><div id=\"{id}-low\" class=\"volume-end\">{low}</div><div id=\"{id}-high\" class=\"volume-end\">{high}</div><div class=\"volume-name\">{name}</div></div>",
         slider = slider.replace("PART-ID", &setting.control()).replace("LABEL", ""),
-        low = crate::lists::rml_text(low_word),
-        high = crate::lists::rml_text(high_word),
-        name = crate::lists::rml_text(setting.label),
+        low = crate::lists::rml_text(&words::say(given, "level-low", &[])),
+        high = crate::lists::rml_text(&words::say(given, "level-high", &[])),
+        name = crate::lists::rml_text(&words::say(given, setting.label, &[])),
     ))
 }
 
-/// The volume control, as every design draws it.
-pub fn volume_control_markup(design: &Path) -> Result<String, String> {
-    level_markup(design, &crate::player_settings::volume())
+/// The volume control, the same in every design, in the design's words
+/// `given`.
+pub fn volume_control_markup(
+    design: &Path,
+    given: &BTreeMap<String, String>,
+) -> Result<String, String> {
+    level_markup(design, given, &crate::player_settings::volume())
 }
 
 /// A switch at a marker in the design, drawn with the design's toggle part.
-fn switch_markup(design: &Path, setting: &PlayerSetting) -> Result<String, String> {
+fn switch_markup(
+    design: &Path,
+    given: &BTreeMap<String, String>,
+    setting: &PlayerSetting,
+) -> Result<String, String> {
     let toggle = part_template(design, "toggle")?;
     require_classes("toggle", &toggle, &["toggle"])?;
-    Ok(toggle
-        .replace("PART-ID", &setting.control())
-        .replace("LABEL", &crate::lists::rml_text(setting.label)))
+    Ok(toggle.replace("PART-ID", &setting.control()).replace(
+        "LABEL",
+        &crate::lists::rml_text(&words::say(given, setting.label, &[])),
+    ))
+}
+
+/// What we draw the player's settings with and where: the design with the
+/// parts for them, its words, and the panel of the game's Options screen, if
+/// the game has one.
+pub struct SettingsPlace<'a> {
+    pub design: &'a Path,
+    pub words: &'a BTreeMap<String, String>,
+    pub options_panel: Option<&'a str>,
 }
 
 /// Put in Options the player's settings that `apply_options` did not add.
@@ -490,11 +604,16 @@ fn switch_markup(design: &Path, setting: &PlayerSetting) -> Result<String, Strin
 /// for them, so we leave them out, as we leave out the screen itself.
 pub fn install_settings(
     document: &str,
-    design: &Path,
+    place: &SettingsPlace,
     settings: &[PlayerSetting],
 ) -> Result<String, String> {
+    let SettingsPlace {
+        design,
+        words,
+        options_panel,
+    } = *place;
     let mut document = document.to_string();
-    let marker = "id=\"options-panel\"";
+    let marker = options_panel.map(|panel| format!("id=\"{panel}\""));
     for setting in settings {
         let slot = setting_slot(setting);
         let placed = match setting.kind {
@@ -507,17 +626,19 @@ pub fn install_settings(
         }
         if document.contains(&slot) {
             let markup = match setting.kind {
-                Kind::Level { .. } => level_markup(design, setting)?,
-                Kind::Switch { .. } => switch_markup(design, setting)?,
+                Kind::Level { .. } => level_markup(design, words, setting)?,
+                Kind::Switch { .. } => switch_markup(design, words, setting)?,
             };
             document = document.replacen(&slot, &markup, 1);
             continue;
         }
-        if !matches!(setting.kind, Kind::Level { .. }) || !document.contains(marker) {
+        let Some(at) = marker.as_deref().and_then(|marker| document.find(marker)) else {
+            continue;
+        };
+        if !matches!(setting.kind, Kind::Level { .. }) {
             continue;
         }
-        let markup = level_markup(design, setting)?;
-        let at = document.find(marker).expect("checked above");
+        let markup = level_markup(design, words, setting)?;
         let tag_end = document[at..]
             .find('>')
             .map(|end| at + end + 1)
@@ -581,18 +702,49 @@ pub(crate) fn link_parts(document: &str, names: &[String]) -> Result<String, Str
     Ok(linked)
 }
 
-/// Add `class` to the element with `id`, when the document contains one. We
-/// only mark the state here. How it looks is up to the design stylesheet.
-/// Write `attributes` into the element with `id`, just after the id.
-pub(crate) fn add_attributes(document: &str, id: &str, attributes: &str) -> String {
+/// Set each of `attributes` on the element with `id`, when the document has
+/// one. We add a style after the style the element already has, so that its
+/// declarations take effect. We leave any other attribute that the element
+/// already has as it is.
+pub(crate) fn add_attributes(document: &str, id: &str, attributes: &[(&str, &str)]) -> String {
     let marker = format!("id=\"{id}\"");
     let mut out = document.to_string();
-    if let Some(at) = document.find(&marker) {
-        out.insert_str(at + marker.len(), &format!(" {attributes}"));
+    let Some(at) = out.find(&marker) else {
+        return out;
+    };
+    let (Some(start), Some(mut end)) = (out[..at].rfind('<'), out[at..].find('>').map(|end| at + end))
+    else {
+        return out;
+    };
+    // The attributes the element lacks, in order, written after its id.
+    let mut added = String::new();
+    for (name, value) in attributes {
+        let opening = format!(" {name}=\"");
+        match out[start..end].find(&opening) {
+            Some(existing) if *name == "style" => {
+                let from = start + existing + opening.len();
+                let close = from + out[from..end].find('"').unwrap_or(end - from);
+                let declarations = out[from..close].trim_end().to_string();
+                let joined = if declarations.is_empty() || declarations.ends_with(';') {
+                    format!("{declarations} {value}")
+                } else {
+                    format!("{declarations}; {value}")
+                };
+                let joined = joined.trim_start();
+                end = end + joined.len() - (close - from);
+                out.replace_range(from..close, joined);
+            }
+            Some(_) => {}
+            None => added.push_str(&format!(" {name}=\"{value}\"")),
+        }
     }
+    out.insert_str(at + marker.len(), &added);
     out
 }
 
+/// Add `class` to the element with `id`, when the document has one. How to
+/// draw a state is up to the stylesheet of the design, and here we only say
+/// which state applies.
 pub(crate) fn add_class(document: &str, id: &str, class: &str) -> String {
     let marker = format!("id=\"{id}\"");
     let Some(at) = document.find(&marker) else {
@@ -618,6 +770,33 @@ pub(crate) fn add_class(document: &str, id: &str, class: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn words_replace_everything_inside_the_element_and_nothing_else() {
+        assert_eq!(
+            set_text("<div id=\"a\">OLD</div><div>B</div>", "a", "NEW").unwrap(),
+            "<div id=\"a\">NEW</div><div>B</div>"
+        );
+        assert_eq!(
+            set_text(
+                "<span id=\"a\"><span class=\"k\">ESC</span><br/> GO</span><span>B</span>",
+                "a",
+                "ESC  BACK"
+            )
+            .unwrap(),
+            "<span id=\"a\">ESC  BACK</span><span>B</span>"
+        );
+        assert_eq!(
+            set_text("<div id=\"a\"></div>", "a", "A & <B>").unwrap(),
+            "<div id=\"a\">A &amp; &lt;B&gt;</div>"
+        );
+        assert_eq!(
+            set_text("<div id=\"a\"/><p/>", "a", "NEW").unwrap(),
+            "<div id=\"a\">NEW</div><p/>"
+        );
+        assert!(set_text("<div id=\"b\">X</div>", "a", "NEW").is_err());
+        assert!(set_text("<div id=\"a\">X", "a", "NEW").is_err());
+    }
 
     #[test]
     fn a_state_class_joins_the_elements_own() {

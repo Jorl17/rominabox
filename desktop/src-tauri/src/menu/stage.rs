@@ -244,7 +244,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     for (name, content) in scene.files {
         composition.put(name, content);
     }
-    let menu = document::skeleton(&manifest, &staged)?;
+    let menu = document::opening_screen(&manifest, &document::skeleton(&manifest, &staged)?)?;
     // The picker and the bind list are siblings of the scene, not children,
     // because we replace the scene when someone swaps pads and they must stay.
     // We refuse a design with no place for them, instead of exporting it
@@ -278,7 +278,18 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     let menu = document::apply_options(&manifest, &menu, &staged, &settings)?;
     // The rest of the player's settings are parts of the Options screen that
     // we just built.
-    let menu = document::install_settings(&menu, &manifest.design, &settings)?;
+    let menu = document::install_settings(
+        &menu,
+        &document::SettingsPlace {
+            design: &manifest.design,
+            words: &manifest.words,
+            options_panel: staged
+                .iter()
+                .find(|screen| screen.place == ScreenPlace::Options)
+                .map(|screen| screen.panel.as_str()),
+        },
+        &settings,
+    )?;
     let mut menu = tokens::substitute(&menu, &tokens::product())?;
     if !staged
         .iter()
