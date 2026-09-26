@@ -1460,7 +1460,7 @@ fn isolated_runtime_config(request: &ExportRequest) -> String {
         "false"
     };
     let assets = if menu_sounds {
-        "$bundle_dir/Resources/assets"
+        "$resources_dir/assets"
     } else {
         "$data_dir/assets"
     };
@@ -2396,7 +2396,7 @@ mod tests {
         }
         assert_eq!(
             config_value(&pack, "assets_directory"),
-            Some("$bundle_dir/Resources/assets")
+            Some("$resources_dir/assets")
         );
     }
 

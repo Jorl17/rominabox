@@ -248,7 +248,9 @@ static void replace_token(char *line, const char *token, const char *value) {
     }
 }
 
-static void load_base(ConfigLine **lines, size_t *count, size_t *capacity, const char *text, const char *data_dir, const char *bundle_dir) {
+/* In a config line, `$resources_dir` stands for the game's own files in the
+ * app's Contents/Resources, and `$data_dir` for its data. */
+static void load_base(ConfigLine **lines, size_t *count, size_t *capacity, const char *text, const char *data_dir, const char *resources_dir) {
     const char *cursor = text;
     while (*cursor) {
         const char *end = strchr(cursor, '\n');
@@ -261,7 +263,7 @@ static void load_base(ConfigLine **lines, size_t *count, size_t *capacity, const
             die("a config line does not fit");
         memcpy(line, cursor, length);
         line[length] = '\0';
-        replace_token(line, "$bundle_dir", bundle_dir);
+        replace_token(line, "$resources_dir", resources_dir);
         replace_token(line, "$data_dir", data_dir);
         key = config_key(line);
         add_line(lines, count, capacity, key, line, 1);
@@ -667,7 +669,7 @@ static void prepare(void) {
             die_errno(failed);
     }
 
-    load_base(&lines, &line_count, &line_capacity, config_text, data_dir, bundle);
+    load_base(&lines, &line_count, &line_capacity, config_text, data_dir, resources);
     join_path(controls_defaults, sizeof controls_defaults, resources, "menu-assets/controls-defaults.cfg");
     join_path(controls_override, sizeof controls_override, data_dir, "controls.cfg");
     apply_player_file(&lines, &line_count, &line_capacity, controls_defaults);
