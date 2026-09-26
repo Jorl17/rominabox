@@ -10,7 +10,6 @@ use std::fs;
 use std::path::Path;
 
 const MAX_LABEL_BYTES: usize = 80;
-const MAX_KEY_BYTES: usize = 32;
 const MAX_BUTTON_BYTES: usize = 3;
 const MAX_AXIS_BYTES: usize = 4;
 const MAX_MOUSE_BUTTON: u32 = 5;
@@ -364,7 +363,7 @@ fn validate_label(id: &str, value: &str) -> Result<(), String> {
 }
 
 fn validate_key(id: &str, value: &str) -> Result<(), String> {
-    if value.len() > MAX_KEY_BYTES || !retroarch_keys().contains(value) {
+    if !retroarch_keys().contains(value) {
         return Err(format!("key for {id} is not an allowed RetroArch key"));
     }
     // The player opens the menu, where Quit is, with Escape, so Escape is
@@ -412,110 +411,24 @@ fn validate_axis(id: &str, value: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn retroarch_keys() -> &'static HashSet<&'static str> {
-    static KEYS: std::sync::OnceLock<HashSet<&'static str>> = std::sync::OnceLock::new();
+/// Every name for a keyboard key in RetroArch, one per key, in RetroArch's own
+/// spelling. We generate it with `scripts/native_runtime/key_names.c` from the
+/// fork's own key table and parser. See
+/// `tests::the_checked_in_key_names_are_what_the_fork_reads`.
+fn retroarch_keys() -> &'static HashSet<String> {
+    static KEYS: std::sync::OnceLock<HashSet<String>> = std::sync::OnceLock::new();
     KEYS.get_or_init(|| {
-        [
-            "a",
-            "b",
-            "c",
-            "d",
-            "e",
-            "f",
-            "g",
-            "h",
-            "i",
-            "j",
-            "k",
-            "l",
-            "m",
-            "n",
-            "o",
-            "p",
-            "q",
-            "r",
-            "s",
-            "t",
-            "u",
-            "v",
-            "w",
-            "x",
-            "y",
-            "z",
-            "nul",
-            "0",
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "up",
-            "down",
-            "left",
-            "right",
-            "enter",
-            "space",
-            "tab",
-            "backspace",
-            "escape",
-            "insert",
-            "delete",
-            "home",
-            "end",
-            "pageup",
-            "pagedown",
-            "lshift",
-            "rshift",
-            "lctrl",
-            "rctrl",
-            "lalt",
-            "ralt",
-            "comma",
-            "period",
-            "slash",
-            "semicolon",
-            "quote",
-            "leftbracket",
-            "rightbracket",
-            "minus",
-            "equals",
-            "backquote",
-            "kp0",
-            "kp1",
-            "kp2",
-            "kp3",
-            "kp4",
-            "kp5",
-            "kp6",
-            "kp7",
-            "kp8",
-            "kp9",
-            "kp_period",
-            "kp_divide",
-            "kp_multiply",
-            "kp_minus",
-            "kp_plus",
-            "kp_enter",
-            "f1",
-            "f2",
-            "f3",
-            "f4",
-            "f5",
-            "f6",
-            "f7",
-            "f8",
-            "f9",
-            "f10",
-            "f11",
-            "f12",
-        ]
-        .into_iter()
-        .collect()
+        serde_json::from_str::<RetroArchKeys>(include_str!("../../retroarch-keys.json"))
+            .expect("desktop/retroarch-keys.json must be valid")
+            .keys
+            .into_iter()
+            .collect()
     })
+}
+
+#[derive(Deserialize, Serialize)]
+struct RetroArchKeys {
+    keys: Vec<String>,
 }
 
 fn escape_config_value(value: &str) -> String {
@@ -527,12 +440,8 @@ mod tests {
     use super::*;
     use crate::retroarch_probe::Probe;
 
-    /// The key that `input_config_translate_str_to_rk`, the config parser in
-    /// RetroArch, returns for each name, or `nul` for a name that is no key.
-    /// We get it from `scripts/native_runtime/key_names.c`, compiled against
-    /// the fork.
-    fn retroarch_reads(names: &[&str]) -> Vec<String> {
-        let read = Probe::build(
+    fn key_names_probe() -> Probe {
+        Probe::build(
             "key_names",
             &[
                 "input/input_keymaps.c",
@@ -540,7 +449,46 @@ mod tests {
                 "libretro-common/string/stdstring.c",
             ],
         )
-        .lines(names);
+    }
+
+    /// `desktop/retroarch-keys.json` from the fork's key table and parser.
+    fn generated_key_names() -> String {
+        let keys = RetroArchKeys {
+            keys: key_names_probe().lines(&[]),
+        };
+        serde_json::to_string_pretty(&keys).unwrap() + "\n"
+    }
+
+    const KEY_NAMES: &str = "desktop/retroarch-keys.json";
+
+    /// The check against drift. If it fails, the fork's key names changed. Run
+    ///
+    ///     cargo test --manifest-path desktop/src-tauri/Cargo.toml --lib \
+    ///         controls::tests::write_retroarch_key_names -- --ignored
+    ///
+    /// and commit the written file.
+    #[test]
+    fn the_checked_in_key_names_are_what_the_fork_reads() {
+        let checked_in = fs::read_to_string(crate::repo::at(KEY_NAMES)).expect("readable");
+        assert_eq!(
+            checked_in,
+            generated_key_names(),
+            "{KEY_NAMES} is not what the fork's RetroArch reads; regenerate it with write_retroarch_key_names"
+        );
+    }
+
+    #[test]
+    #[ignore = "writes desktop/retroarch-keys.json from the fork; run it when the fork's key names change"]
+    fn write_retroarch_key_names() {
+        fs::write(crate::repo::at(KEY_NAMES), generated_key_names()).expect("writable");
+    }
+
+    /// The key that `input_config_translate_str_to_rk`, the config parser in
+    /// RetroArch, returns for each name, or `nul` for a name that is no key.
+    /// We get it from `scripts/native_runtime/key_names.c`, compiled against
+    /// the fork.
+    fn retroarch_reads(names: &[&str]) -> Vec<String> {
+        let read = key_names_probe().lines(names);
         assert_eq!(read.len(), names.len(), "one reading per name");
         read
     }

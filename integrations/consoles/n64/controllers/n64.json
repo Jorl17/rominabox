@@ -91,7 +91,7 @@
     {
       "id": "r3",
       "label": "C-Right",
-      "key": "2",
+      "key": "num2",
       "x": 625,
       "y": 97,
       "calloutX": 744,
@@ -100,7 +100,7 @@
     {
       "id": "l3",
       "label": "C-Down",
-      "key": "1",
+      "key": "num1",
       "x": 604,
       "y": 118,
       "calloutX": 744,

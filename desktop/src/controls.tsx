@@ -18,8 +18,8 @@ export type Controls = {
 };
 export const emptyControls = (): Controls => ({ bindings: {} });
 
-// The keys we capture in the builder, by KeyboardEvent.code, and how we
-// word a key.
+// The keys we capture in the builder (KeyboardEvent.code) and how we word a
+// key. We check every name here with the RetroArch parser in exporter tests.
 const capture: Record<string, string> = keyboard.capture;
 const labels: Record<string, string> = keyboard.labels;
 function keyName(key: string) {

@@ -161,7 +161,7 @@
     {
       "id": "l3",
       "label": "Left stick press",
-      "key": "1",
+      "key": "num1",
       "group": "l_stick",
       "x": 405,
       "y": 226
@@ -193,7 +193,7 @@
     {
       "id": "r3",
       "label": "Right stick press",
-      "key": "2",
+      "key": "num2",
       "group": "r_stick",
       "x": 547,
       "y": 226
