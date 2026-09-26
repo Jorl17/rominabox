@@ -44,6 +44,27 @@
       }
     },
     {
+      "name": "the pad screen opens on its design's prompt and stays there",
+      "steps": [
+        "options",
+        "controls",
+        "wait-ms:6000"
+      ],
+      "text": {
+        "*": [
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          },
+          {
+            "controls-status": "CHOOSE A CONTROL"
+          }
+        ]
+      }
+    },
+    {
       "name": "the pad screen's prompt, and a capture, in the design's words",
       "steps": [
         "options",

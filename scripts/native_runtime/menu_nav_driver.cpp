@@ -21,8 +21,8 @@
  *                           hover:ID   move the pointer to the element's centre
  *                           press:ID   move the pointer there, then press and
  *                                      release it, one frame each, like a click
- *                           wait-ms:N  advance the clock
- *                           ID         click the element, as in a menu script
+ *                           wait-ms:N  advance the RetroArch and RmlUi clocks
+ *                           ID        click the element, as in a menu script
  *   run                   run the case
  *
  * After every step, record what the player sees highlighted (visible
@@ -209,7 +209,11 @@ bool step(void *menu, const std::string& text)
    }
    if (text.rfind("wait-ms:", 0) == 0)
    {
-      host.clock_us += std::atoll(text.c_str() + 8) * 1000;
+      /* Advance the time for the whole menu: the RetroArch clock, for its
+       * timers, and the RmlUi clock, for the expiry of a status line. */
+      const long long ms = std::atoll(text.c_str() + 8);
+      host.clock_us += ms * 1000;
+      view.document.advance(ms / 1000.0);
       frame(menu);
       return true;
    }
