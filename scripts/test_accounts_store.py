@@ -18,6 +18,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ACCOUNTS = ROOT / "desktop/src-tauri/accounts"
+# The player's root, which contains rominabox_launch.h, as in the player build.
+PLAYER = ROOT / "vendor/retroarch"
 PORTABLE = ROOT / "desktop/src-tauri/launcher/portable_fs.c"
 OUTPUT = ROOT / "work/test-output"
 SOURCES = [ACCOUNTS / "accounts.c", ACCOUNTS / "sealed.c", PORTABLE,
@@ -29,7 +31,7 @@ def main() -> int:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     binary = OUTPUT / "accounts-store-test"
     subprocess.run(
-        ["clang", "-std=gnu99", "-O1", "-g", *WARNINGS, f"-I{ACCOUNTS}",
+        ["clang", "-std=gnu99", "-O1", "-g", *WARNINGS, f"-I{ACCOUNTS}", f"-I{PLAYER}",
          str(ROOT / "scripts/accounts_store_test.c"), *map(str, SOURCES), "-o", str(binary)],
         check=True,
     )
@@ -40,7 +42,7 @@ def main() -> int:
         return 0
     for source in SOURCES:
         subprocess.run(
-            [zig, "cc", "-target", "x86_64-windows-gnu", "-std=c99", *WARNINGS,
+            [zig, "cc", "-target", "x86_64-windows-gnu", "-std=c99", *WARNINGS, f"-I{PLAYER}",
              "-c", str(source), "-o", str(OUTPUT / f"{source.stem}-windows.o")],
             check=True,
         )

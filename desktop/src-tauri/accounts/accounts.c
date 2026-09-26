@@ -4,7 +4,9 @@
 #include "accounts.h"
 #include "sealed.h"
 #include "../launcher/portable_fs.h"
-#include "../../../vendor/retroarch/rominabox_launch.h"
+/* The player's root, on the include path of every build. We compile a copy
+ * of this file in the player build, so a path relative to it would break. */
+#include "rominabox_launch.h"
 
 #include <stdio.h>
 #include <stdlib.h>
