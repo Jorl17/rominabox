@@ -7,9 +7,8 @@
 // for its movement cues (up/down). That pair is the pack, and the person
 // making a game sees only the pack.
 //
-// We build movement cues at the scroll level, about 10 dB below the confirm
-// cues, because we play one in rmlui.c on every focus change and hover. For
-// a voice with no scroll shape, `own` means its own up/down at that level.
+// We master every cue to one level (CUE_RMS), so a click is as loud as a move.
+// For a voice with no separate scroll shape, `own` means its own up/down.
 //
 // Write desktop/assets/menu-sounds/<id>/{up,down,ok,cancel}.wav, update the
 // soundPacks registry in desktop/designs.json, delete packs that we no
@@ -140,8 +139,7 @@ await writeFile(
     'from scripts/native_runtime/menu-sound-synthesis.mjs. No game recordings and no third-party audio.',
     'Console voices are modelled from published hardware behaviour, not sampled. 44100 Hz, 16-bit, mono.',
     '',
-    'One pack is one complete set of up, down, ok and cancel. Movement cues are mixed about 10 dB under',
-    'the confirm cues because the menu plays one on every focus change and pointer hover.',
+    'One pack is one complete set of up, down, ok and cancel, all mastered to one level.',
     '',
     ...PACKS.map((pack) => `${pack.id.padEnd(9)} ${pack.name.padEnd(9)} ${pack.voice} + ${pack.scroll} scroll — ${pack.description}`),
     '',

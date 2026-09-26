@@ -11,12 +11,11 @@
 export const SR = 44100;
 
 /**
- * The player hears a confirm cue once per decision, and a scroll cue on every
- * focus change, including pointer hover, so scroll cues are about 10 dB below
- * confirm cues. This applies to every pack.
+ * We master every cue in a pack, for moving, confirming or going back, to this
+ * one level, so a click is never louder than a move. It is the level of the
+ * movement cues, which we play on every focus change.
  */
-export const CONFIRM_RMS = 0.2;
-export const SCROLL_RMS = 0.065;
+export const CUE_RMS = 0.065;
 
 // ---------------------------------------------------------------- primitives
 
@@ -215,7 +214,7 @@ export function mix(...parts) {
  * window, which is closer to how loud a short sound seems, and we soft-limit
  * the result instead of clipping it.
  */
-export function master(samples, targetRms = CONFIRM_RMS, ceiling = 0.85) {
+export function master(samples, targetRms = CUE_RMS, ceiling = 0.85) {
   const mean = samples.reduce((sum, v) => sum + v, 0) / samples.length;
   for (let i = 0; i < samples.length; i++) samples[i] -= mean;
 
@@ -409,8 +408,8 @@ export const VOICES = {
 /**
  * Scroll cues require a different design from confirm cues. In rmlui.c we play
  * one on every focus change, including pointer hover, so the player hears them
- * hundreds of times for each confirm cue. They are well below the confirm
- * level, decay instead of stopping, and are never in the piercing register.
+ * hundreds of times for each confirm cue. They decay instead of stopping,
+ * and are never in the piercing register.
  *
  * In each entry the timbre of a voice is one set of knobs for a scroll shape.
  */
@@ -436,22 +435,21 @@ export const scrollShapes = {
 };
 
 /**
- * Build one scroll cue for a voice at the scroll level.
- * `shape` is a key in `scrollShapes`. With `own` we bring the voice's own cue
- * to the scroll level, so it is still 10 dB below the confirm cues.
+ * Build one scroll cue for a voice at the common cue level.
+ * `shape` is a key in `scrollShapes`, and `own` means the voice's own cue.
  */
 export function scrollCue(voiceId, cue, shape) {
-  if (shape === 'own') return master(VOICES[voiceId].cues[cue](), SCROLL_RMS);
+  if (shape === 'own') return master(VOICES[voiceId].cues[cue](), CUE_RMS);
   const bend = scrollShapes[shape];
   const voice = scrollVoices[voiceId];
   if (!bend) throw new Error(`Unknown scroll shape: ${shape}`);
   if (!voice) throw new Error(`No scroll voice for ${voiceId}; use 'own'.`);
-  return master(lowpass(voice(bend[cue], bend.ms, bend.curve, bend.index), bend.cutoff), SCROLL_RMS);
+  return master(lowpass(voice(bend[cue], bend.ms, bend.curve, bend.index), bend.cutoff), CUE_RMS);
 }
 
-/** Build one confirm cue for a voice at the confirm level. */
+/** Build one confirm cue for a voice at the common cue level. */
 export function confirmCue(voiceId, cue) {
-  return master(VOICES[voiceId].cues[cue](), CONFIRM_RMS);
+  return master(VOICES[voiceId].cues[cue](), CUE_RMS);
 }
 
 export const CUES = ['up', 'down', 'ok', 'cancel'];

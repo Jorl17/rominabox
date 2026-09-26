@@ -2,8 +2,7 @@ Original ROM-in-a-Box menu cues, synthesised by scripts/native_runtime/generate-
 from scripts/native_runtime/menu-sound-synthesis.mjs. No game recordings and no third-party audio.
 Console voices are modelled from published hardware behaviour, not sampled. 44100 Hz, 16-bit, mono.
 
-One pack is one complete set of up, down, ok and cancel. Movement cues are mixed about 10 dB under
-the confirm cues because the menu plays one on every focus change and pointer hover.
+One pack is one complete set of up, down, ok and cancel, all mastered to one level.
 
 blip      Blip      dmg-blip + soft scroll — Plain 4-bit handheld pulse. The unadorned menu tick.
 arpeggio  Arpeggio  dmg-arp + soft scroll — Quick note runs on confirm. The busiest, most chiptune set.
