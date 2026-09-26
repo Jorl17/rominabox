@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import registry from "../controls.json";
-import keyboard from "../keyboard.json";
 import { ControllerScene } from "./ControllerScene";
+import { capturedKey, keyName } from "./keys";
 import systemRegistry from "../systems.json";
 import "./controls.css";
 
@@ -17,17 +17,6 @@ export type Controls = {
   bindings: Record<string, ControlOverride>;
 };
 export const emptyControls = (): Controls => ({ bindings: {} });
-
-// The keys we capture in the builder (KeyboardEvent.code) and how we word a
-// key. We check every name here with the RetroArch parser in exporter tests.
-const capture: Record<string, string> = keyboard.capture;
-const labels: Record<string, string> = keyboard.labels;
-function keyName(key: string) {
-  return labels[key] || key.toUpperCase();
-}
-function capturedKey(event: KeyboardEvent): string | null {
-  return capture[event.code] || null;
-}
 
 /** Author defaults. Physical controller bindings remain device-specific player settings. */
 export function ControlsEditor({
