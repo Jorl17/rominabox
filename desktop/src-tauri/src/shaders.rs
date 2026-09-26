@@ -565,10 +565,6 @@ pub fn stage(
             .collect::<Vec<_>>()
             .join(" ")
     });
-    config.push_str(&format!(
-        "{} = \"{initial}\"\n",
-        crate::menu::key!(ShaderInitial)
-    ));
     let catalog = catalog_file()?;
     for item in &resolved {
         let directory = Path::new("shaders").join(&item.id);
