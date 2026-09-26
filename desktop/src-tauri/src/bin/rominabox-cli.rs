@@ -1,8 +1,6 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
-use rominabox_desktop::{
-    controls, cores, menu, metadata, packaging, projects, shaders, systems, volume,
-};
+use rominabox_desktop::{controls, cores, menu, metadata, packaging, projects, shaders, systems};
 use serde::Deserialize;
 use serde_json::json;
 use std::io::{self, Read};
@@ -58,7 +56,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume|volume-markup|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume-markup|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     // The checkout from which we built this binary.
@@ -90,7 +88,6 @@ fn run() -> Result<(), String> {
                 "shaders": { "request": [], "result": "Catalog presets an author can bundle" },
                 "shaders-check": { "request": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "optional id" }, "result": "Resolved shaders, or an error" },
                 "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" },
-                "volume": { "request": ["dataDir", "position?"], "result": { "position": "0 is low, the last position is normal", "positions": "how many there are", "path": "volume.cfg" } },
                 "volume-markup": { "request": ["design"], "result": { "markup": "the volume control, in the design's slider, with an arrow either side" } }
             })
         );
@@ -362,35 +359,6 @@ fn run() -> Result<(), String> {
             );
             Ok(())
         }
-        "volume" => {
-            let input = read_request()?;
-            #[derive(Deserialize)]
-            #[serde(rename_all = "camelCase")]
-            struct Request {
-                data_dir: PathBuf,
-                /// 0 is the quietest position. The last position is normal
-                /// volume, and there is nothing above it.
-                #[serde(default)]
-                position: Option<i32>,
-            }
-            let request: Request = serde_json::from_str(&input)
-                .map_err(|error| format!("invalid volume request: {error}"))?;
-            let mut level = volume::read(&request.data_dir);
-            if let Some(position) = request.position {
-                level.decibels = volume::db_for_position(position);
-                level = level.clamp();
-                volume::write(&request.data_dir, level)?;
-            }
-            println!(
-                "{}",
-                json!({ "type": "result", "result": {
-                    "position": volume::position_for_db(level.decibels),
-                    "positions": volume::position_count(),
-                    "path": request.data_dir.join(rominabox_desktop::player_settings::volume().file()),
-                }})
-            );
-            Ok(())
-        }
         "volume-markup" => {
             let input = read_request()?;
             #[derive(Deserialize)]
@@ -399,7 +367,8 @@ fn run() -> Result<(), String> {
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid volume-markup request: {error}"))?;
-            let markup = menu::volume_control_markup(&request.design)?;
+            let words = menu::Manifest::load(&request.design)?.words;
+            let markup = menu::volume_control_markup(&request.design, &words)?;
             println!(
                 "{}",
                 json!({ "type": "result", "result": { "markup": markup } })

@@ -870,18 +870,19 @@ int counting_rename(const char *from, const char *to)
    return std::rename(from, to);
 }
 
-/* The volume file has one decimal, so a level applied from it at launch
- * is -44.4 where the position in the file is -44.44444. Loading the menu
- * is not a change. We write nothing for a level at a position, and we move a
- * level between two positions to the nearest one and store that. */
+/* Loading the menu is not a change. We write nothing for a level at a
+ * position, as applied at launch from the one decimal in the file, and we
+ * move a level between two positions, from a hotkey or a file written with
+ * other steps, to the nearest one and store that. */
 void a_menu_load_writes_the_volume_only_off_a_position()
 {
    rib_files_use_rename(counting_rename);
-   struct Load { float level; int writes; const char *what; };
+   struct Load { float level; int writes; float lands; const char *what; };
    for (const Load& load : {
-            Load{-44.4f, 0, "a level at a position, as its file holds it, is not written on a menu load"},
-            Load{-71.1f, 0, "nor is one a step above the bottom"},
-            Load{-50.0f, 1, "a level between positions is put on the nearest and written once"}})
+            Load{-26.1f, 0, -26.1f, "a level at a position, as its file holds it, is not written on a menu load"},
+            Load{-38.2f, 0, -38.2f, "nor is one a step above the bottom"},
+            Load{-44.4f, 1, -38.2f, "a level between positions is put on the nearest and written once"},
+            Load{-8.9f, 1, -10.2f, "the nearest is by decibels, not by the old even steps"}})
    {
       host.settings["audio_volume"] = load.level;
       volume_writes = 0;
@@ -890,9 +891,10 @@ void a_menu_load_writes_the_volume_only_off_a_position()
       for (int settle = 0; settle < 3; ++settle)
          frame(menu);
       char message[256];
-      std::snprintf(message, sizeof(message), "%s: %d writes at %.1f dB",
-            load.what, volume_writes, load.level);
-      check(volume_writes == load.writes, message);
+      std::snprintf(message, sizeof(message), "%s: %d writes at %.1f dB, now %.1f dB",
+            load.what, volume_writes, load.level, host.settings["audio_volume"]);
+      check(volume_writes == load.writes && host.settings["audio_volume"] == load.lands,
+            message);
       rib_menu_destroy(menu);
    }
    rib_files_use_rename(nullptr);

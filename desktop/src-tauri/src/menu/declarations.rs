@@ -66,9 +66,6 @@ fn screen_lines(text: &mut String, screen: &Screen, buttons: &[String]) -> Resul
     if let Some(images) = &screen.images {
         line(text, &format!("screen_images_{id}"), images)?;
     }
-    if let Some(mark) = &screen.mark {
-        line(text, &format!("screen_mark_{id}"), mark)?;
-    }
     // The role of the screen, so that we find Pause or the achievements
     // screen in the player by role, not by a literal id.
     if let Some(role) = screen.role {
@@ -82,32 +79,17 @@ fn setting_lines(text: &mut String, setting: &PlayerSetting) -> Result<(), Strin
     line(text, &format!("setting_control_{id}"), &setting.control())?;
     line(text, &format!("setting_key_{id}"), setting.key.name())?;
     line(text, &format!("setting_file_{id}"), &setting.file())?;
+    line(text, &format!("setting_kind_{id}"), setting.kind.word())?;
     match setting.kind {
-        Kind::Level {
-            low,
-            high,
-            positions,
-            ..
-        } => {
-            line(text, &format!("setting_kind_{id}"), "level")?;
-            line(text, &format!("setting_low_{id}"), &low.to_string())?;
-            line(text, &format!("setting_high_{id}"), &high.to_string())?;
-            line(
-                text,
-                &format!("setting_positions_{id}"),
-                &positions.to_string(),
-            )
+        Kind::Level { values } => {
+            let values: Vec<String> = values.iter().map(|value| setting.text(*value)).collect();
+            line(text, &format!("setting_values_{id}"), &values.join(" "))
         }
-        Kind::Switch { on, off, inverted } => {
-            line(text, &format!("setting_kind_{id}"), "switch")?;
-            line(text, &format!("setting_on_{id}"), on)?;
-            line(text, &format!("setting_off_{id}"), off)?;
-            line(
-                text,
-                &format!("setting_inverted_{id}"),
-                &inverted.to_string(),
-            )
-        }
+        Kind::Switch { inverted } => line(
+            text,
+            &format!("setting_inverted_{id}"),
+            &inverted.to_string(),
+        ),
     }
 }
 
