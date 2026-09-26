@@ -521,3 +521,157 @@ fn retroarch_keys() -> &'static HashSet<&'static str> {
 fn escape_config_value(value: &str) -> String {
     value.replace('\\', "\\\\").replace('"', "\\\"")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::retroarch_probe::Probe;
+
+    /// The key that `input_config_translate_str_to_rk`, the config parser in
+    /// RetroArch, returns for each name, or `nul` for a name that is no key.
+    /// We get it from `scripts/native_runtime/key_names.c`, compiled against
+    /// the fork.
+    fn retroarch_reads(names: &[&str]) -> Vec<String> {
+        let read = Probe::build(
+            "key_names",
+            &[
+                "input/input_keymaps.c",
+                "input/input_driver.c",
+                "libretro-common/string/stdstring.c",
+            ],
+        )
+        .lines(names);
+        assert_eq!(read.len(), names.len(), "one reading per name");
+        read
+    }
+
+    /// The builder's key declaration: the name for each browser key that we
+    /// capture, and the names that have words in the builder.
+    fn builder_keyboard() -> (Vec<(String, String)>, Vec<String>) {
+        let text = fs::read_to_string(crate::repo::at("desktop/keyboard.json"))
+            .expect("desktop/keyboard.json is readable");
+        let keyboard: serde_json::Value =
+            serde_json::from_str(&text).expect("desktop/keyboard.json is JSON");
+        let capture = keyboard["capture"]
+            .as_object()
+            .expect("keyboard.json declares capture")
+            .iter()
+            .map(|(code, name)| (code.clone(), name.as_str().unwrap().to_string()))
+            .collect();
+        let labelled = keyboard["labels"]
+            .as_object()
+            .expect("keyboard.json declares labels")
+            .keys()
+            .cloned()
+            .collect();
+        (capture, labelled)
+    }
+
+    fn binding(key: &str) -> (String, Controls) {
+        let control = profile_for_system("megadrive").unwrap().controls[0]
+            .id
+            .clone();
+        let controls = serde_json::from_value(serde_json::json!({
+            "bindings": { &control: { "key": key } }
+        }))
+        .unwrap();
+        (control, controls)
+    }
+
+    // We store a key in the builder as it is written in the game's config. A
+    // name that is no key in RetroArch exports without error and has no effect.
+    #[test]
+    fn the_builder_captures_each_key_by_a_name_retroarch_reads_as_that_key() {
+        let (capture, labelled) = builder_keyboard();
+        let names: Vec<&str> = capture.iter().map(|(_, name)| name.as_str()).collect();
+        let mut wrong: Vec<String> = capture
+            .iter()
+            .zip(retroarch_reads(&names))
+            .filter(|((_, name), read)| name != read)
+            .map(|((code, name), read)| {
+                format!("{code} is captured as {name}, which RetroArch reads as {read}")
+            })
+            .collect();
+        let labelled_names: Vec<&str> = labelled.iter().map(String::as_str).collect();
+        wrong.extend(
+            labelled
+                .iter()
+                .zip(retroarch_reads(&labelled_names))
+                .filter(|(name, read)| *name != read)
+                .map(|(name, read)| {
+                    format!("the label for {name} names what RetroArch reads as {read}")
+                }),
+        );
+        assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+    }
+
+    #[test]
+    fn every_controller_default_is_a_name_retroarch_reads_as_that_key() {
+        let profiles = registry().unwrap().profiles;
+        let defaults: Vec<(String, &str)> = profiles
+            .iter()
+            .flat_map(|profile| {
+                profile.controls.iter().map(move |control| {
+                    (
+                        format!("{} {}", profile.id, control.id),
+                        control.key.as_str(),
+                    )
+                })
+            })
+            .collect();
+        let names: Vec<&str> = defaults.iter().map(|(_, key)| *key).collect();
+        let wrong: Vec<String> = defaults
+            .iter()
+            .zip(retroarch_reads(&names))
+            .filter(|((_, key), read)| key != read)
+            .map(|((control, key), read)| {
+                format!("{control} defaults to {key}, which RetroArch reads as {read}")
+            })
+            .collect();
+        assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+    }
+
+    #[test]
+    fn the_exporter_refuses_a_name_retroarch_reads_as_no_key() {
+        let unknown = [
+            "lshift",
+            "lctrl",
+            "lalt",
+            "0",
+            "9",
+            "kp0",
+            "kp_divide",
+            "kp_multiply",
+            "delete",
+        ];
+        assert_eq!(
+            retroarch_reads(&unknown),
+            vec!["nul"; unknown.len()],
+            "RetroArch reads none of these as a key"
+        );
+        let accepted: Vec<&str> = unknown
+            .into_iter()
+            .filter(|name| validate_for_system("megadrive", &binding(name).1).is_ok())
+            .collect();
+        assert!(
+            accepted.is_empty(),
+            "the exporter accepts names RetroArch reads as no key: {}",
+            accepted.join(", ")
+        );
+    }
+
+    // Pressing Escape in the builder cancels a capture, so we never store it.
+    #[test]
+    fn the_exporter_accepts_every_key_the_builder_captures() {
+        let (capture, _) = builder_keyboard();
+        let refused: Vec<String> = capture
+            .iter()
+            .filter_map(|(code, name)| {
+                validate_for_system("megadrive", &binding(name).1)
+                    .err()
+                    .map(|error| format!("{code} is captured as {name}: {error}"))
+            })
+            .collect();
+        assert!(refused.is_empty(), "{}", refused.join("\n"));
+    }
+}

@@ -18,6 +18,8 @@ pub mod player_settings;
 pub mod projects;
 mod publish;
 pub mod repo;
+#[cfg(test)]
+mod retroarch_probe;
 pub mod shaders;
 pub mod scene_layout;
 pub mod systems;
