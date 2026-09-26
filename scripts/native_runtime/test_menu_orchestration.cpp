@@ -374,7 +374,6 @@ std::string stage_disc_list(const char *native_assets, const char *data)
                "screen_button_options = \"options fixture-back discs-back\"");
    config += "\nscreen_panel_discs = \"discs-panel\"\nscreen_heading_discs = \"DISC\""
              "\nscreen_footer_discs = \"ESC  BACK\"\nscreen_button_discs = \"discs\""
-             "\nscreen_mark_discs = \"IN\""
              "\nscreen_role_discs = \"discs\"\n";
    check(staged, "the disc list fixture is staged into the Native assets");
    std::ofstream(assets / "menu.rml") << menu;
@@ -705,7 +704,9 @@ void background_play_is_the_players(const char *native_assets, const char *data)
    setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
 }
 
-/* A change of volume plays a cue at the chosen level, once per step. */
+/* A change of volume plays a cue at the chosen level, once per step. The
+ * bottom step is silence, so we request no cue there, whichever host plays
+ * the cues. */
 void volume_is_heard_at_its_level(const char *native_assets)
 {
    /* The staged export has no sound pack, so it includes the tick. A game
@@ -752,12 +753,12 @@ void volume_is_heard_at_its_level(const char *native_assets)
          falling = falling && host.level_cue_db[index] < host.level_cue_db[index - 1];
       char message[256];
       std::snprintf(message, sizeof(message),
-            "%sa drag from the top to the bottom is heard once a step: %zu cues for 9 steps",
-            which, host.level_cue_db.size());
-      check(host.level_cue_db.size() == 9 && falling, message);
-      check(!host.level_cue_db.empty() && host.level_cue_db.back() == -80.0f
+            "%sa drag from the top to the bottom is heard once a step but the silent last: "
+            "%zu cues for 9 steps", which, host.level_cue_db.size());
+      check(host.level_cue_db.size() == 8 && falling, message);
+      check(!host.level_cue_db.empty() && host.level_cue_db.back() > -80.0f
                && host.settings["audio_volume"] == -80.0f,
-            said("each cue is asked for at the level just chosen, down to the bottom").c_str());
+            said("each cue is asked for at the level just chosen, and none at the bottom").c_str());
       check(std::all_of(host.sounds.begin(), host.sounds.end(),
                   [](rib::test::Sound sound) { return sound == rib::test::Sound::LevelDown; }),
             said("a drag down plays the level cue alone, not the move cue as well").c_str());
@@ -821,6 +822,157 @@ void an_idle_menu_builds_nothing(const char *native_assets)
    idle("a list screen", [] {});
    rib_menu_destroy(menu);
    host.slot_occupied = false;
+}
+
+/* A save over a slot that already has a picture. RetroArch reports the save
+ * (save_state_cb) before it writes the new screenshot, so at the report the
+ * slot still has the picture of the previous save, and the new one arrives a
+ * few frames later. We show it in the open menu once it is there. */
+void a_save_over_a_picture_shows_the_new_one(const char *data)
+{
+   const std::string picture = std::string(data) + "/resave-slot-1.png";
+   std::ofstream(picture, std::ios::binary) << "the first save's picture";
+   host.slot_occupied = true;
+   host.thumbnail = picture;
+   host.save_accepted = true;
+   void *menu = open_menu();
+   if (!menu) return;
+   for (int settle = 0; settle < 3; ++settle)
+      frame(menu);
+   check(view.slots.has_thumbnail(1), "the occupied slot shows its picture");
+   const unsigned before = inspect.texture_loads();
+   click_and_frame(menu, "save");
+   rib_rmlui_notify_state_task(host.state_path.c_str(), 1, true, true);
+   for (int waiting = 0; waiting < 3; ++waiting)
+      frame(menu);
+   std::ofstream(picture, std::ios::binary | std::ios::trunc)
+         << "the second save's picture, written after the report";
+   for (int after = 0; after < 3; ++after)
+      frame(menu);
+   check(inspect.texture_loads() > before,
+         "a save over a slot with a picture shows the new picture once RetroArch has "
+         "written it, without the menu being reopened");
+   rib_menu_destroy(menu);
+   std::remove(picture.c_str());
+   host.slot_occupied = false;
+   host.thumbnail.clear();
+}
+
+/* Replace the player's volume file and count each replacement. */
+int volume_writes;
+int counting_rename(const char *from, const char *to)
+{
+   const std::string target(to);
+   const std::string name = "/volume.cfg";
+   if (target.size() >= name.size()
+         && target.compare(target.size() - name.size(), name.size(), name) == 0)
+      ++volume_writes;
+   return std::rename(from, to);
+}
+
+/* The volume file has one decimal, so a level applied from it at launch
+ * is -44.4 where the position in the file is -44.44444. Loading the menu
+ * is not a change. We write nothing for a level at a position, and we move a
+ * level between two positions to the nearest one and store that. */
+void a_menu_load_writes_the_volume_only_off_a_position()
+{
+   rib_files_use_rename(counting_rename);
+   struct Load { float level; int writes; const char *what; };
+   for (const Load& load : {
+            Load{-44.4f, 0, "a level at a position, as its file holds it, is not written on a menu load"},
+            Load{-71.1f, 0, "nor is one a step above the bottom"},
+            Load{-50.0f, 1, "a level between positions is put on the nearest and written once"}})
+   {
+      host.settings["audio_volume"] = load.level;
+      volume_writes = 0;
+      void *menu = open_menu();
+      if (!menu) continue;
+      for (int settle = 0; settle < 3; ++settle)
+         frame(menu);
+      char message[256];
+      std::snprintf(message, sizeof(message), "%s: %d writes at %.1f dB",
+            load.what, volume_writes, load.level);
+      check(volume_writes == load.writes, message);
+      rib_menu_destroy(menu);
+   }
+   rib_files_use_rename(nullptr);
+}
+
+/* A drag that the player is still making when the menu closes, as with
+ * Escape or the menu button of a pad during the drag. We applied each step
+ * as the drag passed it, and we keep the level it reached as for a released
+ * drag, so the next launch starts from it. */
+void a_drag_cut_short_by_closing_is_kept(const char *data)
+{
+   const std::string file = std::string(data) + "/volume.cfg";
+   std::remove(file.c_str());
+   host.settings["audio_volume"] = 0.0f;
+   host.pointer = {};
+   void *menu = open_menu();
+   if (!menu) return;
+   click_and_frame(menu, "options");
+   int x = 0, y = 0, w = 0, h = 0;
+   check(view.document.element_box("volume-level", &x, &y, &w, &h) && w > 20,
+         "the volume slider has a width to drag across");
+   host.pointer.x = x + w - 1;
+   host.pointer.y = y + h / 2;
+   host.pointer.pressed = true;
+   frame(menu);
+   for (int at = x + w - 1; at >= x + w / 2; at -= 4)
+   {
+      host.pointer.x = at;
+      frame(menu);
+   }
+   const float dragged = host.settings["audio_volume"];
+   check(dragged < 0.0f && dragged > -80.0f, "the drag moved the level part of the way");
+   /* The menu closes with the button still held. */
+   rib_menu_toggle(menu, false);
+   host.menu_open = false;
+   frame(menu);
+   frame(menu);
+   rib_menu_destroy(menu);
+
+   /* The next launch: the launcher applies the player's file. */
+   config_file_t *saved = config_file_new_from_path_to_string(file.c_str());
+   float level = 1.0f;
+   check(saved && config_get_float(saved, "audio_volume", &level)
+            && std::fabs(level - dragged) < 0.06f,
+         "a drag cut short by closing the menu is written to the player's file");
+   if (saved) config_file_free(saved);
+   host.settings["audio_volume"] = level;
+   host.menu_open = true;
+   host.pointer = {};
+   if ((menu = open_menu()))
+   {
+      click_and_frame(menu, "options");
+      const auto& fractions = view.parts.fractions();
+      const auto shown = fractions.find("volume-level");
+      check(level != 1.0f && shown != fractions.end() && shown->second > 0.0f
+               && shown->second < 1.0f,
+            "the relaunched menu shows the level the cut-short drag reached");
+      rib_menu_destroy(menu);
+   }
+   std::remove(file.c_str());
+}
+
+/* Each step is a similar change to the ear, so five steps up from silence
+ * is clearly audible, about -10 dB, rather than the -36 dB that equal
+ * decibel steps reach. We test this through the Options composed in the
+ * export and the arrows that a player clicks. */
+void the_middle_of_the_volume_is_clearly_audible()
+{
+   host.settings["audio_volume"] = -80.0f;
+   void *menu = open_menu();
+   if (!menu) return;
+   click_and_frame(menu, "options");
+   for (int step = 0; step < 5; ++step)
+      click_and_frame(menu, "volume-up");
+   const float level = host.settings["audio_volume"];
+   char message[160];
+   std::snprintf(message, sizeof(message),
+         "five steps up from silence is about -10 dB, got %.1f dB", level);
+   check(level > -11.0f && level < -9.5f, message);
+   rib_menu_destroy(menu);
 }
 
 /* A move that fails at once, for example onto a file open in another program. */
@@ -1084,6 +1236,10 @@ int main(int argc, char **argv)
    fixes::binds_open_sooner_on_hover();
    fixes::pad_changes_and_reset_apply_together(argv[1], argv[2]);
    fixes::chosen_slot_shows_on_save_and_load(argv[1]);
+   fixes::a_save_over_a_picture_shows_the_new_one(argv[2]);
+   fixes::a_menu_load_writes_the_volume_only_off_a_position();
+   fixes::a_drag_cut_short_by_closing_is_kept(argv[2]);
+   fixes::the_middle_of_the_volume_is_clearly_audible();
 
    if (failures)
       std::fprintf(stderr, "%d menu orchestration failures\n", failures);

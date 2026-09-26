@@ -76,7 +76,8 @@ fn every_design_offers_every_player_setting() {
         let destination = root.join(&design);
         let composed = compose(&kit, &design, |_| {}, &destination);
         let document = destination.join("options.rml");
-        fs::write(&document, showing(&composed.menu, "options-panel")).unwrap();
+        let panel = support::panel_with_role(&composed.cfg, "options");
+        fs::write(&document, showing(&composed.menu, &panel)).unwrap();
         let controls: Vec<String> = settings.iter().map(PlayerSetting::control).collect();
         let ids: Vec<&str> = controls.iter().map(String::as_str).collect();
         for (control, laid_out) in ids.iter().zip(boxes(&document, (960, 600), &ids)) {
@@ -193,6 +194,50 @@ fn a_design_can_place_a_switch_itself() {
         "the switch is drawn once"
     );
     assert!(!composed.menu.contains(&slot), "the slot is filled");
+}
+
+/// The game is not silent by the middle of the slider. In every design we
+/// declare the volume for each position of its slider, from silence to
+/// normal, and five steps up from silence is about -10 dB, which anyone hears.
+#[test]
+fn the_volume_slider_is_told_an_audible_middle() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-player-settings-volume-curve");
+    let kit = support::kit(&root);
+    let volume = player_settings::volume();
+    for design in support::designs() {
+        let composed = compose(&kit, &design, |_| {}, &root.join(&design));
+        let told = format!("setting_values_{} = \"", volume.id);
+        let values: Vec<f32> = composed
+            .cfg
+            .lines()
+            .find_map(|line| line.strip_prefix(&told)?.strip_suffix('"'))
+            .unwrap_or_else(|| {
+                let said: Vec<&str> = composed
+                    .cfg
+                    .lines()
+                    .filter(|line| line.starts_with("setting_") && line.contains("_volume"))
+                    .collect();
+                panic!(
+                    "{design}: the volume slider is not told its value at each position:\n{}",
+                    said.join("\n")
+                )
+            })
+            .split_whitespace()
+            .map(|value| value.parse().unwrap())
+            .collect();
+        assert!(
+            values.first() == Some(&-80.0) && values.last() == Some(&0.0),
+            "{design}: the slider runs from silence to normal: {values:?}"
+        );
+        assert!(
+            values.windows(2).all(|pair| pair[0] < pair[1]),
+            "{design}: each position is louder than the one before: {values:?}"
+        );
+        assert!(
+            values.len() > 5 && values[5] > -11.0 && values[5] < -9.5,
+            "{design}: five steps up from silence is about -10 dB: {values:?}"
+        );
+    }
 }
 
 /// For a game without a menu sound pack, we ship the volume tick beside the
