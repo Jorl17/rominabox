@@ -531,7 +531,7 @@ mod tests {
                 .unwrap()
                 .preferred_core()
                 .unwrap()
-                .artifact()
+                .artifact_for("macos-arm64")
                 .unwrap(),
             "nestopia_libretro.dylib"
         );

@@ -3153,7 +3153,13 @@ mod tests {
         use super::*;
 
         /// A kit containing exactly the named cores and licence texts.
+        /// A kit prepared on the machine running the tests.
         fn kit(cores: &[(&str, bool, bool)]) -> rominabox_scratch::Scratch {
+            kit_for(crate::systems::current_target(), cores)
+        }
+
+        /// A kit prepared for `target`, whatever machine runs the tests.
+        fn kit_for(target: &str, cores: &[(&str, bool, bool)]) -> rominabox_scratch::Scratch {
             let root = rominabox_scratch::Scratch::dir("rominabox-availability");
             fs::create_dir_all(root.join("cores")).unwrap();
             fs::create_dir_all(root.join("licenses")).unwrap();
@@ -3166,7 +3172,7 @@ mod tests {
                 if *artifact {
                     fs::write(
                         root.join("cores")
-                            .join(core.artifact().expect("an artifact for this target")),
+                            .join(core.artifact_for(target).expect("an artifact for this target")),
                         [],
                     )
                     .unwrap();
@@ -3243,7 +3249,7 @@ mod tests {
         /// problem, and the report must make clear which of the two it is.
         #[test]
         fn a_console_with_no_artifact_for_a_target_says_exactly_that() {
-            let root = kit(&[("megadrive", true, true)]);
+            let root = kit_for("macos-arm64", &[("megadrive", true, true)]);
             let windows = system_availability_for(&root, "windows-x86_64")
                 .into_iter()
                 .find(|entry| entry.id == "megadrive")
@@ -3270,7 +3276,7 @@ mod tests {
 
         #[test]
         fn the_same_kit_resolves_for_the_target_it_was_built_for() {
-            let root = kit(&[("megadrive", true, true)]);
+            let root = kit_for("macos-arm64", &[("megadrive", true, true)]);
             let macos = system_availability_for(&root, "macos-arm64")
                 .into_iter()
                 .find(|entry| entry.id == "megadrive")
