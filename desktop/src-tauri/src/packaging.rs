@@ -473,7 +473,13 @@ where
     validate_request(request, resolved.as_ref())?;
     check_cancelled(cancelled)?;
     match request.target {
-        ExportTarget::Macos => export_macos(request, resolved.as_ref(), cancelled, &mut progress),
+        ExportTarget::Macos => export_app(
+            request,
+            resolved.as_ref(),
+            cancelled,
+            &mut progress,
+            &mut MacosPackager::default(),
+        ),
         ExportTarget::Windows => Err(ExportError::new(
             ErrorStage::Refused,
             "Windows apps cannot be made with this version of ROM-in-a-Box yet.",
@@ -543,40 +549,215 @@ pub fn stage_menu(
     Ok(profile)
 }
 
-fn export_macos<F>(
+/// The parts of an export that differ for each platform. In the export itself
+/// (`export_app`) we stage the files of the app the same way for every
+/// platform. In a packager we lay out the app, add the player and its
+/// dependencies, install the launcher, describe the app to its system and
+/// make it runnable.
+trait Packager {
+    /// Refuse, before staging anything, an app that we cannot make here.
+    fn check_host(&self) -> Result<(), ExportError>;
+    /// The app's name in the output folder.
+    fn app_name(&self, title: &str) -> String;
+    /// Make the app's folders, and return the folder for the app's files.
+    fn lay_out(&mut self, app: &Path) -> Result<PathBuf, ExportError>;
+    /// The player, from the runtime kit.
+    fn place_player(&mut self, runtime_kit: &Path) -> Result<(), ExportError>;
+    /// The core's name among the app's own files.
+    fn core_file(&self) -> &'static str;
+    /// The libraries the player and the core need beside them.
+    fn stage_dependencies(
+        &mut self,
+        runtime_kit: &Path,
+        core: &Path,
+        cancelled: &AtomicBool,
+    ) -> Result<(), ExportError>;
+    /// The first program that starts when the game opens, before the player.
+    fn install_launcher(&mut self) -> Result<(), ExportError>;
+    /// The app's description for the platform: its name, identity and icon.
+    fn describe(
+        &mut self,
+        request: &ExportRequest,
+        identity: &str,
+        staging: &Path,
+    ) -> Result<(), ExportError>;
+    /// The last steps to make the app runnable, such as signing.
+    fn finish(
+        &mut self,
+        request: &ExportRequest,
+        identity: &str,
+        staging: &Path,
+        cancelled: &AtomicBool,
+    ) -> Result<(), ExportError>;
+    /// The bytes of the app that are the runtime rather than the game.
+    fn runtime_bytes(&self) -> Result<u64, ExportError>;
+}
+
+/// A macOS app: one bundle, with the player in the launcher process, the
+/// libraries relocated next to it, and a signature with the game's sandbox.
+#[derive(Default)]
+struct MacosPackager {
+    app: PathBuf,
+    macos: PathBuf,
+    resources: PathBuf,
+    frameworks: PathBuf,
+    runtime: PathBuf,
+    /// Every Mach-O file in the app, which we relocate and sign.
+    mach_objects: Vec<PathBuf>,
+}
+
+impl Packager for MacosPackager {
+    fn check_host(&self) -> Result<(), ExportError> {
+        if !cfg!(target_os = "macos") {
+            return Err(ExportError::new(
+                ErrorStage::Refused,
+                "Mac apps can only be made on a Mac.",
+            ));
+        }
+        if !Path::new("/usr/bin/codesign").is_file() {
+            return Err(ExportError::new(ErrorStage::Refused, "This version of macOS does not provide the signing service required by this build. No tools were installed and no app was exported."));
+        }
+        Ok(())
+    }
+
+    fn app_name(&self, title: &str) -> String {
+        crate::publish::macos_app_name(title)
+    }
+
+    fn lay_out(&mut self, app: &Path) -> Result<PathBuf, ExportError> {
+        let contents = app.join("Contents");
+        self.app = app.to_path_buf();
+        self.macos = contents.join("MacOS");
+        self.resources = contents.join("Resources");
+        self.frameworks = contents.join("Frameworks");
+        for directory in [&self.macos, &self.resources, &self.frameworks] {
+            fs::create_dir_all(directory)
+                .map_err(|error| ExportError::io(ErrorStage::Stage, directory, error))?;
+        }
+        Ok(self.resources.clone())
+    }
+
+    fn place_player(&mut self, runtime_kit: &Path) -> Result<(), ExportError> {
+        self.runtime = self.macos.join("retroarch");
+        copy_file(&runtime_kit.join("bin/retroarch"), &self.runtime)?;
+        make_executable(&self.runtime)
+    }
+
+    fn core_file(&self) -> &'static str {
+        core_file!(Macos)
+    }
+
+    fn stage_dependencies(
+        &mut self,
+        runtime_kit: &Path,
+        core: &Path,
+        cancelled: &AtomicBool,
+    ) -> Result<(), ExportError> {
+        self.mach_objects = vec![self.runtime.clone(), core.to_path_buf()];
+        stage_frozen_dependencies(
+            runtime_kit,
+            &self.frameworks,
+            &mut self.mach_objects,
+            cancelled,
+        )
+    }
+
+    fn install_launcher(&mut self) -> Result<(), ExportError> {
+        install_launch_library(&self.macos, &self.runtime)?;
+        self.mach_objects
+            .push(self.macos.join("librominabox-launch.dylib"));
+        Ok(())
+    }
+
+    fn describe(
+        &mut self,
+        request: &ExportRequest,
+        identity: &str,
+        staging: &Path,
+    ) -> Result<(), ExportError> {
+        write_plist(
+            &self.app.join("Contents/Info.plist"),
+            &request.title,
+            identity,
+            request.icon.is_some() || icons::default_icon_path(&request.runtime_kit).is_some(),
+        )?;
+        let default_icon = icons::default_icon_path(&request.runtime_kit);
+        if let Some(icon) = request.icon.as_deref().or(default_icon.as_deref()) {
+            icons::create_macos_icon(icon, &self.resources.join("GameIcon.icns"), staging)?;
+        }
+        Ok(())
+    }
+
+    fn finish(
+        &mut self,
+        request: &ExportRequest,
+        identity: &str,
+        staging: &Path,
+        cancelled: &AtomicBool,
+    ) -> Result<(), ExportError> {
+        // A freshly built player still contains the names of the libraries it
+        // was linked against, and in the frozen kit we already rewrote them.
+        // Either way, the game must load the copies we just staged next to it.
+        relocate_dependencies(
+            &self.mach_objects,
+            "@executable_path/../Frameworks",
+            Some(cancelled),
+        )?;
+        for object in self.mach_objects.iter().rev() {
+            run_command_cancellable(
+                ErrorStage::Sign,
+                Command::new("/usr/bin/codesign")
+                    .args(["--force", "--sign", "-"])
+                    .arg(object),
+                cancelled,
+            )?;
+        }
+        let entitlements = staging.join("entitlements.plist");
+        fs::write(
+            &entitlements,
+            sandbox_entitlements(identity, accounts_folder(request)?.as_deref()),
+        )
+        .map_err(|error| ExportError::io(ErrorStage::Sign, &entitlements, error))?;
+        run_command_cancellable(
+            ErrorStage::Sign,
+            Command::new("/usr/bin/codesign")
+                .args(["--force", "--sign", "-", "--entitlements"])
+                .arg(&entitlements)
+                .arg(&self.app),
+            cancelled,
+        )
+    }
+
+    fn runtime_bytes(&self) -> Result<u64, ExportError> {
+        Ok(tree_size(&self.runtime)?
+            + tree_size(&self.resources.join(core_file!(Macos)))?
+            + tree_size(&self.frameworks)?
+            + tree_size(&self.resources.join(app_file!(MenuAssets)))?
+            + tree_size(&self.resources.join(shipped!(Autoconfig).0))?)
+    }
+}
+
+/// An export into an app, the same on every platform except for the steps
+/// in `packager`.
+fn export_app<F>(
     request: &ExportRequest,
     resolved: Option<&ExportCore<'_>>,
     cancelled: &AtomicBool,
     progress: &mut F,
+    packager: &mut dyn Packager,
 ) -> Result<ExportResult, ExportError>
 where
     F: FnMut(ExportProgress),
 {
-    if !cfg!(target_os = "macos") {
-        return Err(ExportError::new(
-            ErrorStage::Refused,
-            "Mac apps can only be made on a Mac.",
-        ));
-    }
-
-    if !Path::new("/usr/bin/codesign").is_file() {
-        return Err(ExportError::new(ErrorStage::Refused, "This version of macOS does not provide the signing service required by this build. No tools were installed and no app was exported."));
-    }
-    let app_name = crate::publish::macos_app_name(&request.title);
+    packager.check_host()?;
+    let app_name = packager.app_name(&request.title);
     let final_app = request.output_dir.join(&app_name);
     fs::create_dir_all(&request.output_dir)
         .map_err(|error| ExportError::io(ErrorStage::Stage, &request.output_dir, error))?;
 
     let staging = OwnedStaging::create(&request.output_dir)?;
     let app = staging.path().join(&app_name);
-    let contents = app.join("Contents");
-    let macos = contents.join("MacOS");
-    let resources = contents.join("Resources");
-    let frameworks = contents.join("Frameworks");
-    for directory in [&macos, &resources, &frameworks] {
-        fs::create_dir_all(directory)
-            .map_err(|error| ExportError::io(ErrorStage::Stage, directory, error))?;
-    }
+    let resources = packager.lay_out(&app)?;
 
     emit(
         progress,
@@ -584,10 +765,7 @@ where
         0.10,
         "Copying the game runtime",
     );
-    let runtime_source = request.runtime_kit.join("bin/retroarch");
-    let runtime = macos.join("retroarch");
-    copy_file(&runtime_source, &runtime)?;
-    make_executable(&runtime)?;
+    packager.place_player(&request.runtime_kit)?;
 
     let system = crate::systems::find(&request.system).ok_or_else(|| {
         ExportError::new(
@@ -605,7 +783,7 @@ where
         })?,
     };
     let core_source = shipped_core(request, resolved);
-    let core_name = OsStr::new(core_file!(Macos));
+    let core_name = OsStr::new(packager.core_file());
     let core = resources.join(core_name);
     copy_file(&core_source, &core)?;
     let collected_content = content::collect_for(&request.rom, Some(&system.id))
@@ -661,13 +839,7 @@ where
         0.30,
         "Verifying pinned native dependencies",
     );
-    let mut mach_objects = vec![runtime.clone(), core.clone()];
-    stage_frozen_dependencies(
-        &request.runtime_kit,
-        &frameworks,
-        &mut mach_objects,
-        cancelled,
-    )?;
+    packager.stage_dependencies(&request.runtime_kit, &core, cancelled)?;
     check_cancelled(cancelled)?;
 
     emit(
@@ -681,19 +853,12 @@ where
         &request.system,
         isolation_namespace().as_deref(),
     )?;
-    install_launch_library(&macos, &runtime)?;
-    mach_objects.push(macos.join("librominabox-launch.dylib"));
+    packager.install_launcher()?;
     write_launch_plan(
         &resources.join(app_file!(Plan)),
         &identity,
         rom_relative.as_os_str(),
         request,
-    )?;
-    write_plist(
-        &contents.join("Info.plist"),
-        &request.title,
-        &identity,
-        request.icon.is_some() || icons::default_icon_path(&request.runtime_kit).is_some(),
     )?;
     let manifest = serde_json::json!({
         "formatVersion": 1,
@@ -709,7 +874,7 @@ where
         "showMenu": request.show_menu,
         "startAtMenu": request.start_at_menu,
         "runtime": "RetroArch",
-        "core": core_file!(Macos),
+        "core": packager.core_file(),
         "coreSource": resolved.map(|export_core| export_core.artifact_name).unwrap_or(""),
         "content": collected_content.files.iter().map(|file| file.relative.to_string_lossy()).collect::<Vec<_>>(),
         "rom": rom_relative.to_string_lossy(),
@@ -726,53 +891,15 @@ where
         serde_json::to_vec_pretty(&manifest).unwrap(),
     )
     .map_err(|error| ExportError::io(ErrorStage::Configure, &resources.join("game.json"), error))?;
-    let default_icon = icons::default_icon_path(&request.runtime_kit);
-    if let Some(icon) = request.icon.as_deref().or(default_icon.as_deref()) {
-        icons::create_macos_icon(icon, &resources.join("GameIcon.icns"), staging.path())?;
-    }
+    packager.describe(request, &identity, staging.path())?;
     check_cancelled(cancelled)?;
 
-    // A freshly built player still refers to the libraries it was linked
-    // against, and the frozen kit was already rewritten. In both cases we must
-    // point the game at the copies that we just staged next to it.
-    relocate_dependencies(
-        &mach_objects,
-        "@executable_path/../Frameworks",
-        Some(cancelled),
-    )?;
-
     emit(progress, ExportStage::Sign, 0.70, "Signing the local app");
-    for object in mach_objects.iter().rev() {
-        run_command_cancellable(
-            ErrorStage::Sign,
-            Command::new("/usr/bin/codesign")
-                .args(["--force", "--sign", "-"])
-                .arg(object),
-            cancelled,
-        )?;
-    }
-    let entitlements = staging.path().join("entitlements.plist");
-    fs::write(
-        &entitlements,
-        sandbox_entitlements(&identity, accounts_folder(request)?.as_deref()),
-    )
-    .map_err(|error| ExportError::io(ErrorStage::Sign, &entitlements, error))?;
-    run_command_cancellable(
-        ErrorStage::Sign,
-        Command::new("/usr/bin/codesign")
-            .args(["--force", "--sign", "-", "--entitlements"])
-            .arg(&entitlements)
-            .arg(&app),
-        cancelled,
-    )?;
+    packager.finish(request, &identity, staging.path(), cancelled)?;
     check_cancelled(cancelled)?;
 
     let installed_bytes = tree_size(&app)?;
-    let runtime_bytes = tree_size(&runtime)?
-        + tree_size(&core)?
-        + tree_size(&frameworks)?
-        + tree_size(&resources.join(app_file!(MenuAssets)))?
-        + tree_size(&resources.join(shipped!(Autoconfig).0))?;
+    let runtime_bytes = packager.runtime_bytes()?;
     let content_bytes = tree_size(&content_directory)?
         + tree_size(&resources.join(shipped!(Firmware).0))?
         + request
