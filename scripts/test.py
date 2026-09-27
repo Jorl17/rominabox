@@ -62,9 +62,9 @@ WORKFLOW_ENV = {
 
 # What we link into a headless menu driver beside the cached menu objects,
 # which is the fake RetroArch host, its keyboard and achievements stand-ins,
-# libretro's config reader and its file layer (--file-layer). We build every
-# driver the same way, so all of them run the same menu.
-HEADLESS_FLAGS = ["--define", "HAVE_AUDIOMIXER", "--file-layer"]
+# and libretro's config reader. We build every driver the same way, so all of
+# them run the same menu.
+HEADLESS_FLAGS = ["--define", "HAVE_AUDIOMIXER"]
 HEADLESS_SUPPORT = [
     "scripts/native_runtime/menu_host_fake.cpp",
     "scripts/native_runtime/text_test_host.cpp",

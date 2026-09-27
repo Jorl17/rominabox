@@ -4,14 +4,14 @@ We list the menu's sources once, in the HAVE_RMLUI block of
 vendor/retroarch/Makefile.common. We read that block here, so a new menu file
 is added only there and we compile it into every harness.
 
-    python3 scripts/native_runtime/menu_harness.py build OUT [--define NAME]... [--framework NAME]... [--file-layer] SOURCE...
+    python3 scripts/native_runtime/menu_harness.py build OUT [--define NAME]... [--framework NAME]... SOURCE...
     python3 scripts/native_runtime/menu_harness.py sources
 
 With `build` we compile the menu into an archive and link OUT from the given
-test sources, that archive, RmlUi and FreeType. Only the parts of the archive
-that the program uses are linked, so a probe of the account form does not
-require a fake for every host command. With `sources` we print the list from
-the block.
+test sources, that archive, libretro's file layer (through which we read the
+menu's files), RmlUi and FreeType. Only the parts of the archive that the
+program uses are linked, so a probe of the account form does not require a
+fake for every host command. With `sources` we print the list from the block.
 
 The object cache is in work/menu-harness/, with one directory per compiler
 and flag set. We reuse an object while its source, every header listed for it
@@ -50,9 +50,9 @@ LIBRETRO_INCLUDE = RETROARCH / "libretro-common/include"
 CACHE = ROOT / "work/menu-harness"
 
 # libretro's file layer, through which we read and write the menu's files,
-# with UTF-8 paths on every platform. With `--file-layer` we link it into a
-# program. The config reader, file/config_file.c, is not part of it, so we
-# can use a fake config reader in a program.
+# with UTF-8 paths on every platform. We link it into every harness program.
+# The config reader, file/config_file.c, is not part of it, so we can use a
+# fake config reader in a program.
 FILE_LAYER = [RETROARCH / "libretro-common" / name for name in (
     "file/file_path.c", "file/file_path_io.c", "streams/file_stream.c",
     "vfs/vfs_implementation.c", "string/stdstring.c", "encodings/encoding_utf.c",
@@ -320,6 +320,9 @@ def build(output: Path, sources: list[Path], defines: list[str], frameworks: lis
         {"cflags": toolchain.cflags, "cxxflags": toolchain.cxxflags}, indent=1))
     freetype = rmlui_paths.freetype("--libs")
     menu = menu_sources()
+    # We read the menu's files through libretro's file layer, so we link
+    # it into every program with the menu.
+    sources = [*sources, *(source for source in FILE_LAYER if source not in sources)]
     # When two harness builds run at once, the second waits until the first is done.
     with open(variant / "lock", "w") as lock:
         file_lock.hold_exclusively(lock)
@@ -343,15 +346,13 @@ def main() -> int:
     making.add_argument("sources", nargs="+", type=Path)
     making.add_argument("--define", action="append", default=[])
     making.add_argument("--framework", action="append", default=[])
-    making.add_argument("--file-layer", action="store_true",
-                        help="also link libretro's file layer (FILE_LAYER)")
     commands.add_parser("sources", help="print the menu sources a harness compiles")
     arguments = parser.parse_args()
     if arguments.command == "sources":
         for source in menu_sources():
             print(source.relative_to(ROOT))
         return 0
-    sources = [*arguments.sources, *(FILE_LAYER if arguments.file_layer else [])]
+    sources = arguments.sources
     missing = [str(source) for source in sources if not source.is_file()]
     if missing:
         raise SystemExit(f"no such source: {', '.join(missing)}")

@@ -37,7 +37,7 @@ ORCHESTRATION = BUILD / "test_menu_orchestration"
 
 def harness(output: Path, *sources: Path) -> None:
     subprocess.run([PYTHON, str(HERE / "menu_harness.py"), "build", str(output),
-                    "--define", "HAVE_AUDIOMIXER", "--file-layer", *map(str, sources)], check=True)
+                    "--define", "HAVE_AUDIOMIXER", *map(str, sources)], check=True)
 
 
 @functools.cache
