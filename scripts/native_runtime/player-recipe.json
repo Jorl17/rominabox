@@ -145,6 +145,56 @@
       ]
     }
   },
+  "fileLayer": {
+    "comment": "libretro's file layer, which the menu reads and writes its files through with UTF-8 paths on every platform, named from the fork's root. Every program built from the menu's sources links it. The config reader, file/config_file.c, is not part of it, so a test program can stand in for that boundary.",
+    "sources": [
+      "libretro-common/file/file_path.c",
+      "libretro-common/file/file_path_io.c",
+      "libretro-common/streams/file_stream.c",
+      "libretro-common/vfs/vfs_implementation.c",
+      "libretro-common/string/stdstring.c",
+      "libretro-common/encodings/encoding_utf.c",
+      "libretro-common/encodings/encoding_crc32.c",
+      "libretro-common/time/rtime.c",
+      "libretro-common/compat/compat_strl.c",
+      "libretro-common/compat/fopen_utf8.c"
+    ]
+  },
+  "preview": {
+    "comment": "The builder's menu preview, rml-preview: the player's own RmlUi renderer drawing a composed menu into a picture, in an OpenGL context on a window never shown, built beside the player from the same fork, RmlUi and FreeType, and with the file layer above. 'sources' are the repository's, 'forkSources' the fork's; a target adds its OpenGL context. The menu GL probe (test_dcmenu.py) draws in the same context.",
+    "sources": [
+      "desktop/src-tauri/preview/rml_preview.cpp"
+    ],
+    "forkSources": [
+      "menu/drivers/rmlui/file_layer.cpp",
+      "menu/drivers/rmlui/render/rmlui_gl.cpp",
+      "menu/drivers/rmlui/render/rmlui_gl3.cpp",
+      "menu/drivers/third_party/lodepng.cpp",
+      "libretro-common/file/config_file.c",
+      "libretro-common/file/config_file_userdata.c",
+      "libretro-common/lists/string_list.c"
+    ],
+    "macos-arm64": {
+      "output": "rml-preview",
+      "context": {
+        "sources": ["desktop/src-tauri/preview/gl_context_macos.mm"],
+        "forkSources": [],
+        "flags": ["-fobjc-arc", "-Wno-deprecated-declarations"],
+        "libraries": ["-framework", "OpenGL", "-framework", "Cocoa"]
+      },
+      "flags": []
+    },
+    "windows-x86_64": {
+      "output": "rml-preview.exe",
+      "context": {
+        "sources": ["desktop/src-tauri/preview/gl_context_windows.cpp"],
+        "forkSources": ["libretro-common/glsym/rglgen.c", "libretro-common/glsym/glsym_gl.c"],
+        "flags": [],
+        "libraries": ["-lopengl32", "-lgdi32"]
+      },
+      "flags": ["-municode", "-static"]
+    }
+  },
   "kit": {
     "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A file is named by its role, which the exporter reads it by, and says where in the kit it goes. A source is build: a file in the player build, or toolchain: a file in the toolchain's installation.",
     "windows-x86_64": {

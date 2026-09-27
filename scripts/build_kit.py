@@ -1,4 +1,5 @@
-"""Make a target's runtime kit, from which builders package games, from a player build.
+"""Make a target's runtime kit, from which builders package games, from a player
+build, and install the builder's menu preview renderer that we build beside it.
 
     python3 scripts/build_kit.py BUILD [KIT]    # default KIT: desktop/src-tauri/resources/runtime
 
@@ -134,6 +135,16 @@ def main() -> int:
     # After the manifest, because we add the profiles' component record to it.
     prepare_runtime.stage_joypad_autoconfig(kit, native_build.joypad_profile_drivers(platform))
     print(f"Made the {target} runtime kit in {kit} from {build}")
+
+    # The builder's menu preview renderer, which we build beside the player.
+    if native_build.recipe()["preview"].get(target):
+        built = build / "preview" / native_build.recipe()["preview"][target]["output"]
+        if not built.is_file():
+            raise SystemExit(f"{build} has no menu preview renderer at {built}")
+        installed = native_build.preview_resource(target)
+        installed.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(built, installed)
+        print(f"Installed the menu preview renderer as {installed}")
     return 0
 
 

@@ -90,6 +90,16 @@ fn player_recipe() -> serde_json::Value {
         .expect("the player recipe parses")
 }
 
+/// The menu preview renderer in the builder's resources on `target`, with the
+/// program name from the player recipe, or an error for a target for which
+/// we build none.
+pub fn preview_renderer(target: Target) -> Result<String, String> {
+    player_recipe()["preview"][target.key()]["output"]
+        .as_str()
+        .map(|name| format!("preview/{name}"))
+        .ok_or_else(|| format!("No menu preview is built for {target}."))
+}
+
 /// Where the file with `role` (`player`, `launcher`) is in `target`'s kit.
 fn kit_file(target: Target, role: &str) -> PathBuf {
     let declared = &player_recipe()["kit"][target.key()]["files"][role]["at"];

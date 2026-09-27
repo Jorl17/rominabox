@@ -55,6 +55,7 @@ import frame_harness  # noqa: E402
 import free_space  # noqa: E402
 import menu_interaction  # noqa: E402
 import menu_shots  # noqa: E402
+import native_build  # noqa: E402
 import player_support  # noqa: E402
 import prepare_runtime  # noqa: E402
 import scratch  # noqa: E402
@@ -152,14 +153,15 @@ def write_disc(number: int, image: bytes) -> None:
     stem = f"{STEM} (Disc {number})"
     (FIXTURE / f"{stem}.bin").write_bytes(image)
     (FIXTURE / f"{stem}.cue").write_text(
-        f'FILE "{stem}.bin" BINARY\n  TRACK 01 MODE1/2048\n    INDEX 01 00:00:00\n'
+        f'FILE "{stem}.bin" BINARY\n  TRACK 01 MODE1/2048\n    INDEX 01 00:00:00\n',
+        encoding="utf-8", newline="\n",
     )
 
 
 def write_playlist(name: str, count: int) -> Path:
     path = FIXTURE / name
     lines = [f"{STEM} (Disc {number}).cue" for number in range(1, count + 1)]
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     return path
 
 
@@ -256,7 +258,7 @@ def require_disk() -> None:
 
 def design_screens(design: str) -> list[dict]:
     path = ROOT / "integrations/designs" / design / "design.json"
-    return json.loads(path.read_text())["screens"]
+    return json.loads(path.read_text(encoding="utf-8"))["screens"]
 
 
 def disc_list_id() -> str:
@@ -267,7 +269,7 @@ def disc_list_id() -> str:
 
 def disc_designs() -> list[str]:
     """Return the designs with a disc list, in their order in designs.json."""
-    declared = json.loads((ROOT / "desktop/designs.json").read_text())["designs"]
+    declared = json.loads((ROOT / "desktop/designs.json").read_text(encoding="utf-8"))["designs"]
     found = []
     for entry in declared:
         screens = design_screens(entry["id"])
@@ -363,7 +365,7 @@ def system_for(content: Path) -> str:
     take the console whose shipped core is the dylib loaded in the harness.
     """
     extension = content.suffix.lstrip(".")
-    systems = json.loads((ROOT / "desktop/systems.json").read_text())["systems"]
+    systems = json.loads((ROOT / "desktop/systems.json").read_text(encoding="utf-8"))["systems"]
     claimed = [system for system in systems if extension in system.get("extensions", [])]
     if len(claimed) == 1:
         return claimed[0]["id"]
@@ -385,7 +387,7 @@ def palette_id() -> str:
 
 
 def palette_color(name: str) -> tuple[int, int, int]:
-    declared = json.loads((ROOT / "desktop/designs.json").read_text())["palettes"]
+    declared = json.loads((ROOT / "desktop/designs.json").read_text(encoding="utf-8"))["palettes"]
     entry = next(item for item in declared if item["id"] == palette_id())
     text = entry[name].removeprefix("#")
     return tuple(int(text[index : index + 2], 16) for index in (0, 2, 4))
@@ -535,7 +537,7 @@ def menu_asset(app: Path, name: str) -> str:
     path = assets_of(app) / name
     if not path.is_file():
         raise SystemExit(f"the export has no {name}")
-    return path.read_text()
+    return path.read_text(encoding="utf-8")
 
 
 def rule_body(css: str, selector: str) -> str:
@@ -595,7 +597,7 @@ ENTRY_INSET_DP = 4
 
 
 def canvas() -> tuple[int, int]:
-    found = re.search(r"^RIB_CANVAS\((\d+),\s*(\d+)\)", CONTRACT.read_text(), re.MULTILINE)
+    found = re.search(r"^RIB_CANVAS\((\d+),\s*(\d+)\)", CONTRACT.read_text(encoding="utf-8"), re.MULTILINE)
     if not found:
         raise SystemExit(f"{CONTRACT.name} declares no canvas")
     return int(found.group(1)), int(found.group(2))
@@ -633,8 +635,8 @@ def options_showing(assets: Path, entry: str | None) -> str:
     """Return the menu in `assets` as we draw Options in the player, with its
     panel shown instead of the Pause panel, and `entry` shown as we show the
     disc entry once we have the disc count from the core."""
-    cfg = (assets / "design.cfg").read_text()
-    shown = with_display((assets / "menu.rml").read_text(), panel_with_role(cfg, "pause"), False)
+    cfg = (assets / "design.cfg").read_text(encoding="utf-8")
+    shown = with_display((assets / "menu.rml").read_text(encoding="utf-8"), panel_with_role(cfg, "pause"), False)
     shown = with_display(shown, panel_with_role(cfg, "options"), True)
     return with_display(shown, entry, True) if entry else shown
 
@@ -649,7 +651,7 @@ def entry_box(assets: Path, button_id: str, size: tuple[int, int],
     we show the disc entry in the player once we have the disc count. We lay
     out on the canvas and scale the box as we scale the canvas to the window
     in the player."""
-    if f'id="{button_id}"' not in (assets / "menu.rml").read_text():
+    if f'id="{button_id}"' not in (assets / "menu.rml").read_text(encoding="utf-8"):
         return None
     shown = options_showing(assets, showing or button_id)
     width, height = canvas()
@@ -658,7 +660,7 @@ def entry_box(assets: Path, button_id: str, size: tuple[int, int],
     with scratch.scratch("rominabox-discs-entry-") as made:
         copy = Path(made) / "menu-assets"
         shutil.copytree(assets, copy)
-        (copy / "menu.rml").write_text(shown)
+        (copy / "menu.rml").write_text(shown, encoding="utf-8", newline="\n")
         probed = subprocess.run(
             [str(menu_interaction.PROBE), "--document", str(copy / "menu.rml"),
              "--size", f"{round(size[0] / density)}x{round(size[1] / density)}",
@@ -766,7 +768,7 @@ def last_entry(assets: Path) -> str:
     """Return the last Options entry in the menu in `assets`."""
     entries = re.findall(
         r'<button\b(?=[^>]*\bclass="[^"]*\boption-entry\b)[^>]*\bid="([^"]+)"',
-        (assets / "menu.rml").read_text(),
+        (assets / "menu.rml").read_text(encoding="utf-8"),
     )
     if not entries:
         raise SystemExit("the menu has no Options entries")
@@ -795,10 +797,7 @@ def options_entry_visible(assets: Path, shot: Path, button_id: str) -> bool:
 
 
 # The offscreen renderer for the builder's preview and the states tests.
-PREVIEW = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
-# The platforms with that renderer. Its source is not in the repository, so
-# we run its picture checks only on macOS.
-PREVIEW_PLATFORMS = {"macos"}
+PREVIEW = native_build.preview_resource(host_target())
 # A window with other proportions and size than the canvas, so that we scale
 # and place the measurement as we scale and place the menu in the player.
 PREVIEW_SIZE = (1280, 900)
@@ -811,10 +810,6 @@ def measurement_problems(playlist: Path) -> list[str]:
     must be at the measured position. With two discs we draw the Disc entry,
     and with one disc there is none and we draw CONTROLS."""
     found: list[str] = []
-    if menu_shots.PLATFORM not in PREVIEW_PLATFORMS:
-        print(f"not checked on {menu_shots.PLATFORM}: the entry measurement, which needs the offscreen "
-              "renderer", flush=True)
-        return found
     if not PREVIEW.is_file():
         return [f"no offscreen renderer at {PREVIEW}"]
     with scratch.scratch("rominabox-discs-measure-") as made:
@@ -843,7 +838,7 @@ def measurement_problems(playlist: Path) -> list[str]:
                     )
                 shot = assets / f"options-{entry}.png"
                 document = assets / f"options-{entry}.rml"
-                document.write_text(options_showing(assets, entry if drawn else None))
+                document.write_text(options_showing(assets, entry if drawn else None), encoding="utf-8", newline="\n")
                 subprocess.run(
                     [str(PREVIEW), str(document), str(shot), *map(str, PREVIEW_SIZE)],
                     check=True, capture_output=True, timeout=120,
@@ -990,9 +985,7 @@ def main() -> None:
     if problems:
         raise SystemExit("\n".join(problems))
     if without_player:
-        measurement = ("and the entry measurement pass" if menu_shots.PLATFORM in PREVIEW_PLATFORMS
-                       else "pass")
-        print(f"the cores {measurement}; the exported player was not launched")
+        print("the cores and the entry measurement pass; the exported player was not launched")
 
 
 if __name__ == "__main__":

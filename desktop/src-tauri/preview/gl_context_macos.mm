@@ -1,18 +1,18 @@
-/* The context of the menu GL probe on macOS: NSOpenGL on a borderless window
- * that we never order front. With GL3 we draw onto the default framebuffer,
- * and a context without a drawable has no such framebuffer to read. */
+/* The off-screen menu context on macOS: NSOpenGL on a borderless window
+ * that is never ordered front. With GL3 we composite onto the default
+ * framebuffer, and a context with no drawable has none to read. */
 
-#include "menu_gl_platform.h"
+#include "gl_context.h"
 
 #import <Cocoa/Cocoa.h>
 
-struct ProbeContext
+struct OffscreenGl
 {
    NSOpenGLContext *context;
    NSWindow *window;
 };
 
-void probe_platform_start()
+void offscreen_gl_start()
 {
    @autoreleasepool
    {
@@ -21,7 +21,7 @@ void probe_platform_start()
    }
 }
 
-ProbeContext *probe_context_create(bool core)
+OffscreenGl *offscreen_gl_create(bool core)
 {
    @autoreleasepool
    {
@@ -48,11 +48,11 @@ ProbeContext *probe_context_create(bool core)
       [context setView:window.contentView];
       [context makeCurrentContext];
       [context update];
-      return new ProbeContext{context, window};
+      return new OffscreenGl{context, window};
    }
 }
 
-void probe_context_release(ProbeContext *context)
+void offscreen_gl_release(OffscreenGl *context)
 {
    @autoreleasepool
    {

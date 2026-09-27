@@ -39,8 +39,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-# The helper we package in the builder, as built in this checkout.
-PREVIEW = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
 ARTWORK = ROOT / "desktop/assets/controllers"
 STATES = ROOT / "scripts/fixtures/menu-states.json"
 # We build it here and check that it comes from this checkout, because every
@@ -48,8 +46,12 @@ STATES = ROOT / "scripts/fixtures/menu-states.json"
 # out of date or from another checkout. See scripts/built.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from built import cli as _cli  # noqa: E402
+import native_build  # noqa: E402
+from core_source import host_target  # noqa: E402
 
 CLI = _cli()
+# The helper we package in the builder, as built in this checkout.
+PREVIEW = native_build.preview_resource(host_target())
 
 # The window size of an exported game, because at any other size a rendered
 # state is not what a player sees.

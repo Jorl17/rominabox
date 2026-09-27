@@ -1,6 +1,6 @@
 mod support;
 
-use rominabox_desktop::{controls::Controls, menu, repo, themes};
+use rominabox_desktop::{controls::Controls, menu, packaging, repo, target::Target, themes};
 use std::{fs, path::Path, process::Command};
 
 fn style_only_design(destination: &Path) {
@@ -718,7 +718,10 @@ fn live_achievements_inherit_account_form_before_any_download() {
                         "Captures require the account input probe"
                     );
                     let output =
-                        Command::new(repo::at("desktop/src-tauri/resources/preview/rml-preview"))
+                        Command::new(repo::at("desktop/src-tauri/resources").join(
+                            packaging::preview_renderer(Target::host().expect("a builder target"))
+                                .unwrap(),
+                        ))
                             .arg(snapshot)
                             .arg(directory.join(format!("{name}-{}-{state}.png", palette.id)))
                             .args(["960", "600"])

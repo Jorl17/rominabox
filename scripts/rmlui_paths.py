@@ -8,7 +8,6 @@ makefile, so this file cannot describe a second layout.
 
 from __future__ import annotations
 
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -26,45 +25,10 @@ TARGET = core_source.host_target()
 _MAKEFILE = ROOT / "vendor/retroarch/Makefile.common"
 
 
-def _archive_name() -> str:
-    if not _MAKEFILE.is_file():
-        raise SystemExit(f"missing {_MAKEFILE}")
-    makefile = _MAKEFILE.read_text(encoding="utf-8", errors="replace")
-    found = re.search(r"\$\(RMLUI_BUILD_DIR\)/(\S+)", makefile)
-    if not found:
-        raise SystemExit("Makefile.common no longer links an RmlUi archive")
-    return found.group(1)
-
-
-def _header_dirs(source: Path) -> list[Path]:
-    if not _MAKEFILE.is_file():
-        raise SystemExit(f"missing {_MAKEFILE}")
-    makefile = _MAKEFILE.read_text(encoding="utf-8", errors="replace")
-    found: list[Path] = []
-    for name in re.findall(r"\$\(RMLUI_SOURCE_DIR\)/(\S+)", makefile):
-        path = source / name
-        if path not in found:
-            found.append(path)
-    if not found:
-        raise SystemExit("Makefile.common no longer names RmlUi header directories")
-    return found
-
-
-def _defines() -> list[str]:
-    """Return the RmlUi defines of the player build, such as the static-library one.
-
-    Without RMLUI_STATIC_LIB on Windows, every function in the RmlUi headers
-    is declared as a DLL import, and we cannot link a probe with the archive.
-    """
-    makefile = _MAKEFILE.read_text(encoding="utf-8", errors="replace")
-    return list(dict.fromkeys(re.findall(r"DEFINES \+= (-DRMLUI_\w+)", makefile)))
-
-
 SOURCE = DEST / native_build.recipe()["rmlui"]["source"]
 BUILD_DIR = DEST / native_build.recipe()["rmlui"]["build"]
-LIBRARY = BUILD_DIR / _archive_name()
-HEADER_DIRS = _header_dirs(SOURCE)
-DEFINES = _defines()
+_ARCHIVE, HEADER_DIRS, DEFINES = native_build.rmlui_linking(_MAKEFILE, SOURCE)
+LIBRARY = BUILD_DIR / _ARCHIVE
 
 
 def _include_dir() -> Path:

@@ -8,9 +8,9 @@
  * vertex position (NVIDIA's compatibility profile on Windows), those arrays
  * would replace the menu's positions and the whole menu would be invisible.
  *
- * We make the context in the code for each platform (menu_gl_platform.h). */
+ * We make the context in the code for each platform (gl_context.h). */
 
-#include "menu_gl_platform.h"
+#include "gl_context.h"
 #include "test_arguments.h"
 
 #include "rmlui/render/platform.h"
@@ -130,7 +130,7 @@ bool loads_picture(bool core, const std::string& path)
 
 int check(bool core, Leftover leftover, const char *name, const std::string& picture)
 {
-   ProbeContext *context = probe_context_create(core);
+   OffscreenGl *context = offscreen_gl_create(core);
    if (!context)
    {
       std::printf("FAIL %s context could not be created\n", name);
@@ -138,7 +138,7 @@ int check(bool core, Leftover leftover, const char *name, const std::string& pic
    }
    const Draw drawn = draw(core, leftover);
    const bool loaded = loads_picture(core, picture);
-   probe_context_release(context);
+   offscreen_gl_release(context);
    if (!loaded)
    {
       std::printf("FAIL %s context could not load %s as a 3x2 picture\n", name, picture.c_str());
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
       return 2;
    }
    const std::string picture = arguments.argv()[1];
-   probe_platform_start();
+   offscreen_gl_start();
    /* Write three by two opaque pixels at the given path, through the file
     * layer that we use in the menu. */
    std::vector<unsigned char> encoded;

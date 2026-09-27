@@ -273,6 +273,78 @@ def build_launcher(destination: Path, target: str, environment: dict[str, str]) 
     return output
 
 
+def rmlui_linking(makefile: Path, source: Path) -> tuple[str, list[Path], list[str]]:
+    """The RmlUi settings in the player's makefile: the archive we link (a
+    name in RmlUi's build directory), its header directories under `source`,
+    and the defines for its compilation, such as the static-library one.
+    Without RMLUI_STATIC_LIB, every function in the RmlUi headers is declared
+    as imported from a DLL on Windows, and the archive is never linked."""
+    import re
+
+    if not makefile.is_file():
+        raise SystemExit(f"missing {makefile}")
+    text = makefile.read_text(encoding="utf-8", errors="replace")
+    archive = re.search(r"\$\(RMLUI_BUILD_DIR\)/(\S+)", text)
+    if not archive:
+        raise SystemExit(f"{makefile} no longer links an RmlUi archive")
+    headers: list[Path] = []
+    for name in re.findall(r"\$\(RMLUI_SOURCE_DIR\)/(\S+)", text):
+        if source / name not in headers:
+            headers.append(source / name)
+    if not headers:
+        raise SystemExit(f"{makefile} no longer names RmlUi header directories")
+    defines = list(dict.fromkeys(re.findall(r"DEFINES \+= (-DRMLUI_\w+)", text)))
+    return archive.group(1), headers, defines
+
+
+PREVIEW = ROOT / "desktop/src-tauri/preview"
+
+
+def preview_resource(target: str) -> Path:
+    """Where the menu preview renderer for `target` is in the builder's
+    resources, under the name of the program in the recipe."""
+    declared = recipe()["preview"].get(require_target(target))
+    if declared is None:
+        raise SystemExit(f"no menu preview is built for {target}")
+    return ROOT / "desktop/src-tauri/resources/preview" / declared["output"]
+
+
+def build_preview(destination: Path, target: str, environment: dict[str, str], rmlui_build: Path) -> Path | None:
+    """The builder's menu preview renderer, from the fork archived in
+    `destination` and the RmlUi and FreeType built there, for a target listed
+    in the recipe."""
+    declared = recipe()["preview"]
+    platform = declared.get(require_target(target))
+    if platform is None:
+        return None
+    fork = destination / "retroarch"
+    archive, headers, defines = rmlui_linking(fork / "Makefile.common", destination / recipe()["rmlui"]["source"])
+    context = platform["context"]
+    own = [ROOT / name for name in (*declared["sources"], *context["sources"])]
+    forked = [fork / name for name in (*recipe()["fileLayer"]["sources"], *declared["forkSources"],
+                                       *context["forkSources"])]
+    freetype = subprocess.run([resolve("pkg-config", environment), "--static", "--cflags", "--libs", "freetype2"],
+                              capture_output=True, text=True, check=True, env=environment).stdout.split()
+    includes = [f"-I{path}" for path in (PREVIEW, fork / "menu/drivers", fork / "libretro-common/include", fork,
+                                         *headers)]
+    objects_dir = destination / "preview" / "objects"
+    objects_dir.mkdir(parents=True, exist_ok=True)
+    objects = []
+    for index, source in enumerate([*own, *forked]):
+        language = {".c": ["cc", "-std=gnu99"], ".cpp": ["c++", "-std=c++17"],
+                    ".mm": ["c++", "-std=c++17", "-x", "objective-c++"]}[source.suffix]
+        extra = context["flags"] if source in own[len(declared["sources"]):] else []
+        obj = objects_dir / f"{index:02d}-{source.stem}.o"
+        run([*language, "-O2", *defines, *includes, *freetype, *extra, "-c", str(source), "-o", str(obj)],
+            destination, environment)
+        objects.append(obj)
+    output = destination / "preview" / platform["output"]
+    run(["c++", *platform["flags"], "-o", str(output), *map(str, objects), str(rmlui_build / archive),
+         *freetype, *context["libraries"]], destination, environment)
+    run(["strip", str(output)], destination, environment)
+    return output
+
+
 def has_symbol(binary: Path, target: str, function: str, environment: dict[str, str]) -> bool:
     listed = subprocess.run([resolve("nm", environment), "-g", str(binary)], capture_output=True, text=True,
                             check=True, env=environment).stdout

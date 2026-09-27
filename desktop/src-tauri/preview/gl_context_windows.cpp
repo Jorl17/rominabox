@@ -1,10 +1,10 @@
-/* The context of the menu GL probe on Windows: WGL on a window that is never
- * shown. In the menu renderer we call OpenGL through RetroArch's loader. In
- * the player we resolve that loader in the WGL driver once its context is
- * current, first with wglGetProcAddress and then from the exports of
- * opengl32.dll (gfx/drivers_context/wgl_ctx.c), and here we do the same. */
+/* The off-screen menu context on Windows: WGL on a window that is never
+ * shown. In the menu renderer we call OpenGL through RetroArch's loader,
+ * which we resolve in the player's WGL driver once its context is current,
+ * first with wglGetProcAddress and then from opengl32.dll's own exports
+ * (gfx/drivers_context/wgl_ctx.c). We resolve it the same way here. */
 
-#include "menu_gl_platform.h"
+#include "gl_context.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -12,16 +12,16 @@
 #include <GL/wglext.h>
 #include <glsym/rglgen.h>
 
-struct ProbeContext
+struct OffscreenGl
 {
    HWND window;
    HDC device;
    HGLRC gl;
 };
 
-static const wchar_t window_class[] = L"RomInABoxMenuGlProbe";
+static const wchar_t window_class[] = L"RomInABoxOffscreenGl";
 
-void probe_platform_start()
+void offscreen_gl_start()
 {
    WNDCLASSW description = {};
    description.style = CS_OWNDC;
@@ -39,7 +39,7 @@ static rglgen_func_t proc_address(const char *name)
    return reinterpret_cast<rglgen_func_t>(found);
 }
 
-static void release(ProbeContext *context)
+static void release(OffscreenGl *context)
 {
    wglMakeCurrent(nullptr, nullptr);
    if (context->gl)
@@ -50,14 +50,14 @@ static void release(ProbeContext *context)
    delete context;
 }
 
-ProbeContext *probe_context_create(bool core)
+OffscreenGl *offscreen_gl_create(bool core)
 {
    /* Never given WS_VISIBLE and never shown. */
    HWND window = CreateWindowExW(0, window_class, L"", WS_POPUP, 0, 0, 64, 64,
          nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
    if (!window)
       return nullptr;
-   ProbeContext *context = new ProbeContext{window, GetDC(window), nullptr};
+   OffscreenGl *context = new OffscreenGl{window, GetDC(window), nullptr};
 
    PIXELFORMATDESCRIPTOR format = {};
    format.nSize = sizeof format;
@@ -106,7 +106,7 @@ ProbeContext *probe_context_create(bool core)
    return context;
 }
 
-void probe_context_release(ProbeContext *context)
+void offscreen_gl_release(OffscreenGl *context)
 {
    release(context);
 }

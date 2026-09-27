@@ -85,7 +85,8 @@ async fn menu_preview(
     palette: Option<String>,
     design: Option<String>,
 ) -> Result<Vec<u8>, String> {
-    let renderer = resource(&app, "preview/rml-preview")?;
+    let target = Target::host().ok_or("this machine is not one the builder builds for")?;
+    let renderer = resource(&app, &packaging::preview_renderer(target)?)?;
     // The design the author picked, from its own directory, and the shared
     // controller artwork from the kit's directory, which is not a design.
     let chosen = design.unwrap_or_else(|| "native".into());

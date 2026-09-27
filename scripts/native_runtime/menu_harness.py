@@ -41,6 +41,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 import file_lock  # noqa: E402
+import native_build  # noqa: E402
 import rmlui_paths  # noqa: E402
 import toolchain as declared_toolchain  # noqa: E402
 RETROARCH = ROOT / "vendor/retroarch"
@@ -49,16 +50,9 @@ BRIDGE = RETROARCH / "menu/drivers"
 LIBRETRO_INCLUDE = RETROARCH / "libretro-common/include"
 CACHE = ROOT / "work/menu-harness"
 
-# libretro's file layer, through which we read and write the menu's files,
-# with UTF-8 paths on every platform. We link it into every harness program.
-# The config reader, file/config_file.c, is not part of it, so we can use a
-# fake config reader in a program.
-FILE_LAYER = [RETROARCH / "libretro-common" / name for name in (
-    "file/file_path.c", "file/file_path_io.c", "streams/file_stream.c",
-    "vfs/vfs_implementation.c", "string/stdstring.c", "encodings/encoding_utf.c",
-    "encodings/encoding_crc32.c", "time/rtime.c", "compat/compat_strl.c",
-    # On Windows we open files through it, and on other platforms its compiled code is empty.
-    "compat/fopen_utf8.c")]
+# libretro's file layer, through which we read and write the menu's files, as
+# declared in the player recipe. We link it into every harness program.
+FILE_LAYER = [RETROARCH / name for name in native_build.recipe()["fileLayer"]["sources"]]
 
 # Objects in the block that we leave out of a headless harness, and why.
 HEADLESS_EXCLUDED = {

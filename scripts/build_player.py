@@ -3,7 +3,8 @@
     uv run python scripts/build_player.py /absolute/new/build            # the host's target
     uv run python scripts/build_player.py --target windows-x86_64 DIR
 
-A player for the tests that launch it has the menu's script driver
+In the same build we make the game's launcher, where the recipe has one, and
+the builder's menu preview renderer (rml-preview). A player for the tests that launch it has the menu's script driver
 (ROMINABOX_MENU_SCRIPT_BUILD=1), and a player we ship does not. With either
 test switch (the other is ROMINABOX_ACHIEVEMENTS_TEST_BUILD=1) the build is
 test-only, and we never freeze it into a kit. What we build is in
@@ -69,13 +70,15 @@ def main() -> int:
     }) + "\n", encoding="utf-8", newline="\n")
     native_build.run(["strip", str(binary)], retroarch, environment)
     launcher = native_build.build_launcher(destination, target, environment)
+    preview = native_build.build_preview(destination, target, environment, rmlui_build)
     if native_build.is_windows(target):
-        for built in [binary, *([launcher] if launcher else [])]:
+        for built in [binary, *([launcher] if launcher else []), *([preview] if preview else [])]:
             foreign = native_build.foreign_imports(built, target, environment)
             if foreign:
                 raise SystemExit(f"{built.name} needs DLLs Windows does not have: {', '.join(foreign)}")
 
-    print(f"Built {binary} from {commit}" + (f", and {launcher}" if launcher else ""))
+    others = [str(path) for path in (launcher, preview) if path]
+    print(f"Built {binary} from {commit}" + (f", and {', '.join(others)}" if others else ""))
     return 0
 
 

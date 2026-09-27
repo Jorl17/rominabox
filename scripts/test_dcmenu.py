@@ -142,23 +142,18 @@ int main(int argc, char **argv) {
 
 
 def probe_platform() -> tuple[list[Path], list[Path], list[str]]:
-    """The parts of the draw probe that we build differently per platform.
-
-    The context maker, the C sources it links, and its flags. Everything the
+    """Return the OpenGL context in which we draw in the probe, which is the
+    renderer draws in, as the recipe declares it for this target. Its
+    sources, the fork's C sources it links, and its flags. Everything the
     probe checks is menu_gl_probe.cpp, shared.
     """
-    target = rmlui_paths.TARGET
-    if native_build.is_macos(target):
-        return ([NATIVE / "menu_gl_platform_macos.mm"], [],
-                ["-fobjc-arc", "-Wno-deprecated-declarations",
-                 "-framework", "OpenGL", "-framework", "Cocoa"])
-    if native_build.is_windows(target):
-        # We call OpenGL in the menu renderer through RetroArch's loader.
-        glsym = RETROARCH / "libretro-common/glsym"
-        return ([NATIVE / "menu_gl_platform_windows.cpp"],
-                [glsym / "rglgen.c", glsym / "glsym_gl.c"],
-                ["-lopengl32", "-lgdi32"])
-    raise SystemExit(f"the menu draw probe has no GL context for {target}")
+    declared = native_build.recipe()["preview"].get(rmlui_paths.TARGET)
+    if declared is None:
+        raise SystemExit(f"the menu draw probe has no GL context for {rmlui_paths.TARGET}")
+    context = declared["context"]
+    return ([ROOT / name for name in context["sources"]],
+            [RETROARCH / name for name in context["forkSources"]],
+            [*context["flags"], *context["libraries"]])
 
 
 def check_menu_draw() -> bool:
@@ -179,6 +174,7 @@ def check_menu_draw() -> bool:
         *[f"-I{path}" for path in HEADER_DIRS],
         f"-I{DRIVERS}",
         f"-I{menu_harness.LIBRETRO_INCLUDE}",
+        f"-I{native_build.PREVIEW}",
         "-o", str(binary),
         str(NATIVE / "menu_gl_probe.cpp"),
         *map(str, context),
