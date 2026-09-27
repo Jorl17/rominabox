@@ -89,20 +89,48 @@ static void join_path(char *out, size_t out_cap, const char *left, const char *r
         die("a path does not fit");
 }
 
+/* We accept a path that exists, whatever it is: a folder, or a link to one,
+ * like /var on macOS. */
 static void mkdir_one(const char *path) {
-    if (fs_is_directory(path) || fs_make_directory(path) == 0)
+    if (fs_make_directory(path) == 0 || errno == EEXIST)
         return;
     die_errno(path);
+}
+
+/* The length of the root at the start of `path`, which we never create:
+ * `/`, or on Windows a drive (C:\) or a share (\\server\share\). */
+static size_t root_length(const char *path) {
+#if defined(_WIN32)
+    if (((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z'))
+        && path[1] == ':' && is_separator(path[2]))
+        return 3;
+    if (is_separator(path[0]) && is_separator(path[1])) {
+        size_t index = 2;
+        int separators = 0;
+        while (path[index] && separators < 2) {
+            if (is_separator(path[index]))
+                separators++;
+            index++;
+        }
+        return index;
+    }
+    return 0;
+#elif defined(__APPLE__) || defined(__unix__)
+    return path[0] == '/' ? 1 : 0;
+#else
+#error "the launcher has no path roots declared for this platform"
+#endif
 }
 
 static void mkdir_p(const char *path) {
     char buffer[PATH_CAP];
     size_t length = strlen(path);
     size_t index;
+    size_t start = root_length(path);
     if (length == 0 || length >= sizeof buffer)
         die("a directory path does not fit");
     memcpy(buffer, path, length + 1);
-    for (index = 1; index < length; index++) {
+    for (index = start > 1 ? start : 1; index < length; index++) {
         char separator = buffer[index];
         if (!is_separator(separator))
             continue;
