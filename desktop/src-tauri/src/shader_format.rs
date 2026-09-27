@@ -1,16 +1,20 @@
-//! The kind of shader file that an author added, read from the file itself.
+//! The kind of shader file an author added, which we read from the file
+//! itself, and the video driver for a game's shaders.
 //!
-//! RetroArch has three shader languages, each for some of its video drivers,
-//! GLSL (the OpenGL driver), slang (Vulkan, Metal, Direct3D 11 and 12, and
-//! the core-profile OpenGL driver) and the retired Cg. A preset lists passes
-//! in one of them. The name of a file can be wrong, so we judge it by its
-//! content. Nothing is compiled. We recognise a pass by the typical lines of
-//! each language, and a preset by its number of passes or by its base preset.
+//! RetroArch has three shader languages, each for its own video drivers: GLSL
+//! (its OpenGL driver), slang (Vulkan, Metal, Direct3D 11 and 12, and its
+//! core-profile OpenGL driver) and the retired Cg. A preset lists passes in
+//! one of them. The player has both OpenGL drivers, so the shaders of an
+//! exported game can be GLSL or slang, and we choose the driver from their
+//! language. We refuse Cg. A file's name is only a claim, and we decide by
+//! its contents. We compile nothing. We recognise a pass by the lines typical
+//! of each language, and a preset by its count of passes or by the preset it
+//! builds on.
 
 use std::fs;
 use std::path::Path;
 
-/// A language RetroArch runs shaders in.
+/// A shader language for an exported game.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Language {
     /// In the OpenGL driver it is compiled twice, with `VERTEX` and then
@@ -19,8 +23,72 @@ pub enum Language {
     /// `#version 450`, and one file holding both stages, each after
     /// `#pragma stage`, or an `#include` of them.
     Slang,
-    /// Entry points `main_vertex` and `main_fragment`.
+}
+
+/// Why a file's passes are not in a shader language for an exported game.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Unrunnable {
+    /// Retired Cg, with entry points `main_vertex` and `main_fragment`. None
+    /// of the player's drivers can use it.
     Cg,
+    /// Not a shader pass in any RetroArch language.
+    NotAShader,
+}
+
+/// The video driver we set for the player of an exported game.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VideoDriver {
+    /// RetroArch's OpenGL driver (`gl2.c`).
+    Gl,
+    /// Its core-profile OpenGL driver (`gl3.c`), with which slang is compiled
+    /// through SPIR-V.
+    Glcore,
+}
+
+impl VideoDriver {
+    /// Its name in RetroArch's `video_driver` setting.
+    pub fn name(self) -> &'static str {
+        match self {
+            VideoDriver::Gl => "gl",
+            VideoDriver::Glcore => "glcore",
+        }
+    }
+}
+
+impl Language {
+    /// The driver for a game whose shaders are in this language. For a game
+    /// with no shaders we use the GLSL driver.
+    pub fn video_driver(self) -> VideoDriver {
+        match self {
+            Language::Glsl => VideoDriver::Gl,
+            Language::Slang => VideoDriver::Glcore,
+        }
+    }
+
+    /// The name of a pass in this language. In RetroArch, a preset's language
+    /// comes from its name, and a pass's language from its preset's.
+    pub fn pass_extension(self) -> &'static str {
+        match self {
+            Language::Glsl => "glsl",
+            Language::Slang => "slang",
+        }
+    }
+
+    /// The name of a preset in this language.
+    pub fn preset_extension(self) -> &'static str {
+        match self {
+            Language::Glsl => "glslp",
+            Language::Slang => "slangp",
+        }
+    }
+
+    /// Its name in a sentence.
+    pub fn name(self) -> &'static str {
+        match self {
+            Language::Glsl => "GLSL",
+            Language::Slang => "slang",
+        }
+    }
 }
 
 /// What a file is.
@@ -59,8 +127,8 @@ pub fn kind(text: &str) -> Kind {
     }
 }
 
-/// The language a pass is written in, when it is one.
-pub fn language(text: &str) -> Option<Language> {
+/// The language a pass is written in.
+pub fn language(text: &str) -> Result<Language, Unrunnable> {
     let directives: Vec<&str> = text
         .lines()
         .filter_map(|line| line.trim().strip_prefix('#'))
@@ -77,21 +145,21 @@ pub fn language(text: &str) -> Option<Language> {
     // Check this first, because a GLSL pass ported from slang can still have
     // its `#pragma stage` lines, and the OpenGL driver ignores them.
     if branches_on("VERTEX") && branches_on("FRAGMENT") {
-        return Some(Language::Glsl);
+        return Ok(Language::Glsl);
     }
     if directives.iter().any(|directive| {
         directive.starts_with("pragma stage") || directive.starts_with("version 450")
     }) {
-        return Some(Language::Slang);
+        return Ok(Language::Slang);
     }
     if text.contains("main_fragment") || text.contains("main_vertex") {
-        return Some(Language::Cg);
+        return Err(Unrunnable::Cg);
     }
-    None
+    Err(Unrunnable::NotAShader)
 }
 
-/// A pass for an exported game, in GLSL because its video driver is OpenGL.
-pub fn require_runnable_pass(path: &Path) -> Result<(), String> {
+/// A pass we can use in an exported game, and its language.
+pub fn require_runnable_pass(path: &Path) -> Result<Language, String> {
     let source = text(path)?;
     if kind(&source) == Kind::Preset {
         return Err(format!(
@@ -99,28 +167,39 @@ pub fn require_runnable_pass(path: &Path) -> Result<(), String> {
             name(path)
         ));
     }
-    match language(&source) {
-        Some(Language::Glsl) => Ok(()),
-        Some(Language::Slang) => Err(format!(
-            "{} is a slang shader. Exported games run GLSL shaders (.glsl or .glslp).",
+    language(&source).map_err(|unrunnable| match unrunnable {
+        Unrunnable::Cg => format!(
+            "{} is a Cg shader, which exported games cannot run. Add a GLSL or slang shader.",
             name(path)
-        )),
-        Some(Language::Cg) => Err(format!(
-            "{} is a Cg shader. Exported games run GLSL shaders (.glsl or .glslp).",
+        ),
+        Unrunnable::NotAShader => format!(
+            "{} is not a shader RetroArch can run. Add a GLSL or slang shader.",
             name(path)
+        ),
+    })
+}
+
+/// The one language of every named shader, or none when there are none. In
+/// RetroArch a game's shaders use one driver, and each driver one language.
+pub fn one_language<'a>(
+    named: impl IntoIterator<Item = (&'a str, Language)>,
+) -> Result<Option<Language>, String> {
+    let mut named = named.into_iter();
+    let Some((first, language)) = named.next() else {
+        return Ok(None);
+    };
+    match named.find(|(_, other)| *other != language) {
+        Some((second, other)) => Err(format!(
+            "{first} is {} and {second} is {}. A game's shaders must all be in one language.",
+            language.name(),
+            other.name()
         )),
-        None => Err(not_a_shader(path)),
+        None => Ok(Some(language)),
     }
 }
 
-fn not_a_shader(path: &Path) -> String {
-    format!(
-        "{} is not a shader RetroArch can run. Add a .glsl or .glslp shader.",
-        name(path)
-    )
-}
-
-fn name(path: &Path) -> String {
+/// The file's name, for a sentence about it.
+pub fn name(path: &Path) -> String {
     path.file_name().map_or_else(
         || path.display().to_string(),
         |name| name.to_string_lossy().into_owned(),
@@ -138,30 +217,38 @@ mod tests {
 
     #[test]
     fn each_language_is_read_from_its_passes() {
-        assert_eq!(language(GLSL), Some(Language::Glsl));
+        assert_eq!(language(GLSL), Ok(Language::Glsl));
         assert_eq!(
             language("#ifdef VERTEX\n#endif\n#ifdef FRAGMENT\n#endif\n"),
-            Some(Language::Glsl)
+            Ok(Language::Glsl)
         );
-        assert_eq!(language(SLANG), Some(Language::Slang));
+        assert_eq!(language(SLANG), Ok(Language::Slang));
         // libretro's imgborder.slang, whose stages are in an included file.
         assert_eq!(
             language("#version 450\n#include \"imgborder.inc\"\n"),
-            Some(Language::Slang)
+            Ok(Language::Slang)
         );
-        assert_eq!(language(CG), Some(Language::Cg));
-        assert_eq!(language("// the pass\n"), None);
+        assert_eq!(language(CG), Err(Unrunnable::Cg));
+        assert_eq!(language("// the pass\n"), Err(Unrunnable::NotAShader));
         assert_eq!(
             language("#if defined(VERTEXES)\n#elif defined(FRAGMENTS)\n#endif\n"),
-            None
+            Err(Unrunnable::NotAShader)
         );
         // libretro's crt-blurPi.glsl, ported from slang.
         assert_eq!(
             language(&format!(
                 "#pragma stage vertex\n{GLSL}#pragma stage fragment\n"
             )),
-            Some(Language::Glsl)
+            Ok(Language::Glsl)
         );
+    }
+
+    /// We choose the driver from a game's shader language: the OpenGL driver
+    /// for GLSL, and the core-profile one for slang.
+    #[test]
+    fn each_language_runs_on_its_own_driver() {
+        assert_eq!(Language::Glsl.video_driver().name(), "gl");
+        assert_eq!(Language::Slang.video_driver().name(), "glcore");
     }
 
     #[test]
@@ -177,8 +264,9 @@ mod tests {
         assert_eq!(kind(GLSL), Kind::Pass);
     }
 
-    /// The name can be wrong. A slang pass saved as `.glsl` is slang, and a
-    /// picture renamed to `.glsl` is not a shader at all.
+    /// The name is only a claim. A slang pass saved as `.glsl` is slang, we
+    /// refuse a Cg pass whatever its name, and a picture renamed `.glsl` is
+    /// not a shader at all.
     #[test]
     fn what_a_file_holds_decides_not_its_name() {
         let folder = rominabox_scratch::Scratch::dir("rominabox-shader-format");
@@ -189,18 +277,20 @@ mod tests {
         };
         assert_eq!(
             require_runnable_pass(&write("crt.glsl", GLSL.as_bytes())),
-            Ok(())
+            Ok(Language::Glsl)
         );
         // libretro's quilez.glsl credits \"I\xf1igo Qu\xedlez\" in Latin-1.
         let latin = [b"/* I\xf1igo */\n".as_slice(), GLSL.as_bytes()].concat();
-        assert_eq!(require_runnable_pass(&write("quilez.glsl", &latin)), Ok(()));
-        let slang = require_runnable_pass(&write("crt-slang.glsl", SLANG.as_bytes())).unwrap_err();
-        assert!(
-            slang.contains("crt-slang.glsl is a slang shader"),
-            "{slang}"
+        assert_eq!(
+            require_runnable_pass(&write("quilez.glsl", &latin)),
+            Ok(Language::Glsl)
         );
-        let cg = require_runnable_pass(&write("old.glsl", CG.as_bytes())).unwrap_err();
-        assert!(cg.contains("is a Cg shader"), "{cg}");
+        assert_eq!(
+            require_runnable_pass(&write("crt-slang.glsl", SLANG.as_bytes())),
+            Ok(Language::Slang)
+        );
+        let cg = require_runnable_pass(&write("old.slang", CG.as_bytes())).unwrap_err();
+        assert!(cg.contains("old.slang is a Cg shader"), "{cg}");
         let picture =
             require_runnable_pass(&write("icon.glsl", b"\x89PNG\r\n\x1a\n\xff\xfe")).unwrap_err();
         assert!(picture.contains("icon.glsl is not a shader"), "{picture}");

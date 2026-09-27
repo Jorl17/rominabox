@@ -1,3 +1,4 @@
 {
-  "installed_bytes": 20000000
+  "comment": "installed_bytes is the size target for the featured export on disk. Every game's player carries glcore, slang and their compilers, so a game can bundle slang shaders.",
+  "installed_bytes": 25000000
 }

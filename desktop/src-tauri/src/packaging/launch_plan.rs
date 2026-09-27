@@ -97,7 +97,11 @@ pub const MANAGED_DATA_DIRECTORIES: &[&str] = &[
     "filters/audio",
 ];
 
-pub(super) fn isolated_runtime_config(request: &ExportRequest) -> String {
+pub(super) fn isolated_runtime_config(request: &ExportRequest) -> Result<String, ExportError> {
+    // We choose the video driver by the shader language of the game.
+    let video = crate::shaders::video_driver(&request.shaders)
+        .map_err(|message| ExportError::new(ErrorStage::Configure, message))?
+        .name();
     let menu_driver = if request.show_menu || request.splash {
         "rmlui"
     } else {
@@ -121,8 +125,8 @@ pub(super) fn isolated_runtime_config(request: &ExportRequest) -> String {
     } else {
         format!("{data}/assets")
     };
-    format!(
-        r#"video_driver = "gl"
+    Ok(format!(
+        r#"video_driver = "{video}"
 audio_driver = "{audio}"
 audio_enable_menu = "{menu_audio}"
 audio_enable_menu_ok = "{menu_sounds}"
@@ -210,7 +214,7 @@ savestate_thumbnail_enable = "true"
         remaps = shipped!(Remaps).1,
         core_options = shipped!(CoreOptions).1,
         autoconfig = shipped!(Autoconfig).1,
-    )
+    ))
 }
 
 fn game_data_template(identity: &str) -> String {
@@ -301,6 +305,6 @@ pub(super) fn write_launch_plan(
     }
     plan += plan_mark!(Config);
     plan += "\n";
-    plan += &isolated_runtime_config(request);
+    plan += &isolated_runtime_config(request)?;
     fs::write(path, plan).map_err(|error| ExportError::io(ErrorStage::Configure, path, error))
 }

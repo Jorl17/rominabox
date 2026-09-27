@@ -42,10 +42,10 @@
   "configure": {
     "common": [
       "--enable-opengl",
-      "--disable-opengl_core",
+      "--enable-opengl_core",
       "--enable-glsl",
-      "--disable-slang",
-      "--disable-builtinglslang",
+      "--enable-slang",
+      "--enable-builtinglslang",
       "--disable-vulkan",
       "--enable-menu",
       "--enable-rgui",
@@ -77,6 +77,7 @@
       "--disable-d3d12",
       "--disable-winmm"
     ],
+    "comment": "Two OpenGL drivers, one player for every game: gl runs GLSL shaders, glcore (opengl_core) runs slang, compiled with the fork's own glslang and SPIRV-Cross (builtinglslang). glslang and SPIRV-Cross are left for configure to settle: --enable-glslang makes it look for a system glslang and stop. A game's shader language picks the driver (shader_format.rs).",
     "comment-windows-x86_64": "No WinMM: it is only RetroArch's MIDI output, which the macOS player does not have (its build never enables CoreMIDI, so its MIDI driver is null), and it opens the system's synthesiser at every start, which slows the launch."
   },
   "makefile": {
@@ -86,8 +87,10 @@
       "CXXFLAGS += -std=c++17"
     ],
     "macos-arm64": [
-      "LDFLAGS += -framework QuartzCore"
+      "LDFLAGS += -framework QuartzCore",
+      "LDFLAGS += -Wl,-dead_strip"
     ],
+    "comment-macos-arm64": "dead_strip removes the functions nothing calls, which makes the Mac player smaller.",
     "windows-x86_64": [
       "LDFLAGS += -static",
       "CFLAGS += -Os",

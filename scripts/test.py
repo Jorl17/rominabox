@@ -216,7 +216,7 @@ SCOPES = [
     ),
     Scope(
         "dcmenu",
-        "that a core-profile context draws the menu and a legacy context still does, that each loads a picture from a folder with a non-ASCII name through libretro's file layer, and that a log line reaches the file before the process exits",
+        "that a core-profile context draws the menu and a legacy context still does, that each loads a picture from a folder with a non-ASCII name through libretro's file layer, that each draws text made after a game's frame left the unpack row length set as it was given, and that a log line reaches the file before the process exits",
         "that a Dreamcast disc boots, where the menu sits, or that a Windows path is read; the pictures are a separate run",
         [PYTHON, str(ROOT / "scripts/test_dcmenu.py")],
         prepare=RMLUI_PREPARE,

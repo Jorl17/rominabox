@@ -4,6 +4,7 @@ import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Controls } from "./controls";
+import { SHADER_EXTENSIONS } from "./shaderFiles";
 
 export const native = isTauri();
 export type GameInfo = {
@@ -116,7 +117,7 @@ export async function pickShader(): Promise<string | null> {
     multiple: false,
     directory: false,
     title: "Add a shader",
-    filters: [{ name: "Shaders", extensions: ["glsl", "glslp"] }],
+    filters: [{ name: "Shaders", extensions: SHADER_EXTENSIONS }],
   });
   return typeof path === "string" ? path : null;
 }
