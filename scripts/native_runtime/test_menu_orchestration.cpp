@@ -9,6 +9,8 @@
 #include "menu_test_view.hpp"
 #include "menu_host_fake.h"
 #include <file/config_file.h>
+#include <file/file_path.h>
+#include <streams/file_stream.h>
 #include "rmlui/files.h"
 #include "test_arguments.h"
 #include "test_environment.h"
@@ -20,6 +22,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <sstream>
 #include <string>
 #include <fstream>
 #include <functional>
@@ -31,6 +34,25 @@ rib::View& view = rib::menu_view();
 rib::test::Inspection inspect(view.document);
 using rib::test::host;
 int failures;
+
+/* The text of a file, read through the libretro file layer as in the menu,
+ * with UTF-8 paths on every platform. Empty when there is no such file. */
+std::string read_file(const std::filesystem::path& path)
+{
+   void *bytes = nullptr;
+   int64_t size = 0;
+   if (!filestream_read_file(path.u8string().c_str(), &bytes, &size))
+      return std::string();
+   std::string text(static_cast<const char*>(bytes), (size_t)size);
+   free(bytes);
+   return text;
+}
+
+/* Written through the same file layer. */
+bool write_file(const std::string& path, const std::string& text)
+{
+   return filestream_write_file(path.c_str(), text.data(), (int64_t)text.size());
+}
 
 void check(bool condition, const char *message)
 {
@@ -96,7 +118,7 @@ static int capacity_case(const char *assets, const char *data)
 {
    /* Without the shared part nothing in the document is a stop, and every
     * check below fails for that one reason. */
-   if (!std::ifstream(std::string(assets) + "/parts/navigation.rcss"))
+   if (!path_is_valid((std::string(assets) + "/parts/navigation.rcss").c_str()))
    {
       std::fprintf(stderr, "FAIL menu capacity: %s has no parts/navigation.rcss; "
             "composition stages the shared parts beside menu.rcss\n", assets);
@@ -112,7 +134,7 @@ static int capacity_case(const char *assets, const char *data)
       frame(menu);
       rib_menu_toggle(menu, true);
       frame(menu);
-      std::ifstream expected_file(std::string(assets) + "/expected-controls.txt");
+      std::istringstream expected_file(read_file(std::string(assets) + "/expected-controls.txt"));
       std::vector<std::string> expected;
       for (std::string id; std::getline(expected_file, id); ) expected.push_back(id);
       check(expected.size() == 48 && host.loaded_ids == expected,
@@ -323,11 +345,6 @@ void a_filter_row_applies_its_filter(const char *native_assets)
    test_setenv("ROMINABOX_RML_ASSETS", native_assets);
 }
 
-std::string read_file(const std::filesystem::path& path)
-{
-   std::ifstream in(path);
-   return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-}
 
 bool replace_once(std::string& text, const std::string& from, const std::string& to)
 {
@@ -719,7 +736,7 @@ void volume_is_heard_at_its_level(const char *native_assets)
     * with a pack has the same menu without it. */
    const std::string tick = std::string(native_assets) + "/volume-tick.wav";
    const std::string aside = tick + ".aside";
-   check(std::ifstream(tick).good(), "an export with menu sounds off ships the volume tick");
+   check(path_is_valid(tick.c_str()), "an export with menu sounds off ships the volume tick");
    for (const bool pack : {true, false})
    {
       const char *which = pack ? "with a sound pack: " : "with menu sounds off: ";
@@ -837,7 +854,7 @@ void an_idle_menu_builds_nothing(const char *native_assets)
 void a_save_over_a_picture_shows_the_new_one(const char *data)
 {
    const std::string picture = std::string(data) + "/resave-slot-1.png";
-   std::ofstream(picture, std::ios::binary) << "the first save's picture";
+   write_file(picture, "the first save's picture");
    host.slot_occupied = true;
    host.thumbnail = picture;
    host.save_accepted = true;
@@ -851,8 +868,7 @@ void a_save_over_a_picture_shows_the_new_one(const char *data)
    rib_rmlui_notify_state_task(host.state_path.c_str(), 1, true, true);
    for (int waiting = 0; waiting < 3; ++waiting)
       frame(menu);
-   std::ofstream(picture, std::ios::binary | std::ios::trunc)
-         << "the second save's picture, written after the report";
+   write_file(picture, "the second save's picture, written after the report");
    for (int after = 0; after < 3; ++after)
       frame(menu);
    check(inspect.texture_loads() > before,
@@ -1009,7 +1025,7 @@ void repeated_saves_replace_the_file(const char *data)
    rib_files_use_rename(failing_rename);
    check(!rib_write_player_setting(volume.c_str(), "audio_volume", "-5.0")
             && read_file(volume).find("-4.0") != std::string::npos
-            && !std::ifstream(volume + ".tmp"),
+            && !path_is_valid((volume + ".tmp").c_str()),
          "a replace that fails keeps the old file and leaves no temporary");
    rib_files_use_rename(nullptr);
    rib_menu_destroy(menu);
