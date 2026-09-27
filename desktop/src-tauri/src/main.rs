@@ -3,7 +3,7 @@
 use rominabox_desktop::export_error::{AuthorError, ErrorStage};
 use rominabox_desktop::target::Target;
 use rominabox_desktop::{
-    cores, icons, menu, metadata, packaging, pads, projects, systems, traveling,
+    builder, cores, icons, menu, metadata, packaging, pads, projects, systems, traveling,
 };
 use std::{
     fs,
@@ -89,7 +89,7 @@ async fn menu_preview(
     let renderer = resource(&app, &packaging::preview_renderer(target)?)?;
     // The design the author picked, from its own directory, and the shared
     // controller artwork from the kit's directory, which is not a design.
-    let chosen = design.unwrap_or_else(|| "native".into());
+    let chosen = design.unwrap_or_else(builder::unstated::theme);
     let design = resource(&app, &format!("runtime/designs/{chosen}"))?;
     let assets = resource(&app, "runtime/menu-assets")?;
     let cache = app.path().app_cache_dir().map_err(|e| e.to_string())?;
@@ -104,7 +104,7 @@ async fn menu_preview(
             assets,
             renderer,
             output_dir: directory,
-            palette: palette.unwrap_or_else(|| "blue".into()),
+            palette: palette.unwrap_or_else(builder::unstated::palette),
             background,
             width: 960,
             height: 600,

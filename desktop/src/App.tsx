@@ -22,6 +22,7 @@ import {
   type CoreNotice,
 } from "./CoreFetchNotice";
 import designs from "../designs.json";
+import declared from "../defaults.json";
 import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
@@ -93,17 +94,19 @@ type Draft = {
   autosaveOnQuit: boolean;
   advancedEmulatorAccess: boolean;
 };
+// The initial settings of a dropped game. We read the same declaration in
+// the exporter, so a command-line export of the game alone gives this draft.
 const defaults: Draft = {
   title: "",
   system: "",
   description: "",
-  showMenu: true,
-  includeAchievements: true,
-  startAtMenu: false,
-  splash: true,
-  keepPlayingInBackground: false,
-  autosaveOnQuit: false,
-  advancedEmulatorAccess: false,
+  showMenu: declared.showMenu,
+  includeAchievements: declared.includeAchievements,
+  startAtMenu: declared.startAtMenu,
+  splash: declared.splash,
+  keepPlayingInBackground: declared.keepPlayingInBackground,
+  autosaveOnQuit: declared.autosaveOnQuit,
+  advancedEmulatorAccess: declared.advancedEmulatorAccess,
 };
 
 // We name three tracks. Six is more than a handful, so we show a count.
@@ -210,12 +213,12 @@ export function App() {
   const [draft, setDraft] = useState<Draft>(defaults);
   const [icon, setIcon] = useState<bridge.Picture | null>(null);
   const [background, setBackground] = useState<bridge.Picture | null>(null);
-  const [online, setOnline] = useState(true);
-  const [palette, setPalette] = useState("blue");
+  const [online, setOnline] = useState(declared.online);
+  const [palette, setPalette] = useState(declared.palette);
   // The design the author picked, set through the selector and used in the
   // export.
-  const [design, setDesign] = useState(designs.designs[0]?.id ?? "native");
-  const [menuSounds, setMenuSounds] = useState("off");
+  const [design, setDesign] = useState(declared.theme);
+  const [menuSounds, setMenuSounds] = useState(declared.menuSounds);
   const [firmware, setFirmware] = useState<string[]>([]);
   const [bundledShaders, setBundledShaders] = useState<string[]>([]);
   const [customShaders, setCustomShaders] = useState<

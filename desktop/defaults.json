@@ -1,0 +1,13 @@
+{
+  "online": true,
+  "showMenu": true,
+  "startAtMenu": false,
+  "includeAchievements": true,
+  "splash": true,
+  "keepPlayingInBackground": false,
+  "autosaveOnQuit": false,
+  "advancedEmulatorAccess": false,
+  "theme": "native",
+  "palette": "blue",
+  "menuSounds": "off"
+}

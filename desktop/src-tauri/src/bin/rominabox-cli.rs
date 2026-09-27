@@ -1,6 +1,8 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
-use rominabox_desktop::{controls, cores, menu, metadata, packaging, projects, shaders, systems};
+use rominabox_desktop::{
+    builder, controls, cores, menu, metadata, packaging, projects, shaders, systems,
+};
 use serde::Deserialize;
 use serde_json::json;
 use std::io::{self, Read};
@@ -12,7 +14,7 @@ use std::sync::atomic::AtomicBool;
 struct InspectRequest {
     rom: PathBuf,
     cache: PathBuf,
-    #[serde(default = "online_default")]
+    #[serde(default = "builder::unstated::online")]
     online: bool,
     #[serde(default)]
     system: Option<String>,
@@ -30,10 +32,6 @@ struct ControlsRequest {
     system: String,
     #[serde(default)]
     profile: Option<String>,
-}
-
-fn online_default() -> bool {
-    true
 }
 
 fn main() {

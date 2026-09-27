@@ -5,7 +5,8 @@ use std::path::Path;
 
 pub const SCREEN: &str = "achievements";
 
-/// Default for new authoring requests and current project files.
+/// Default for a current project file without this field. For a new game we
+/// use the builder's (`crate::builder::defaults`).
 pub fn default_included() -> bool {
     true
 }

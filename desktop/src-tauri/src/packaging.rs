@@ -182,6 +182,8 @@ fn shipped_core(request: &ExportRequest, resolved: Option<&ExportCore<'_>>) -> P
     )
 }
 
+/// For a setting missing from a request we use the builder default
+/// (`crate::builder::defaults`), the same one that a first draft starts from.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportRequest {
@@ -191,12 +193,15 @@ pub struct ExportRequest {
     pub description: Option<String>,
     pub icon: Option<PathBuf>,
     pub background: Option<PathBuf>,
+    #[serde(default = "crate::builder::unstated::show_menu")]
     pub show_menu: bool,
+    #[serde(default = "crate::builder::unstated::start_at_menu")]
     pub start_at_menu: bool,
+    #[serde(default = "crate::builder::unstated::theme")]
     pub theme: String,
-    #[serde(default = "default_palette")]
+    #[serde(default = "crate::builder::unstated::palette")]
     pub palette: String,
-    #[serde(default = "crate::themes::default_menu_sounds")]
+    #[serde(default = "crate::builder::unstated::menu_sounds")]
     pub menu_sounds: String,
     /// The author's defaults, which we never change. We store the player's
     /// changes separately, in the managed data folder of the exported game.
@@ -207,20 +212,20 @@ pub struct ExportRequest {
     #[serde(default)]
     pub firmware: Vec<PathBuf>,
     /// Include the short native in-player splash and its logo asset.
-    #[serde(default)]
+    #[serde(default = "crate::builder::unstated::splash")]
     pub splash: bool,
     /// Restore stock RetroArch native menus in the exported app.
-    #[serde(default)]
+    #[serde(default = "crate::builder::unstated::advanced_emulator_access")]
     pub advanced_emulator_access: bool,
     /// Keep emulating when the window does not have the focus. RetroArch's
     /// `pause_nonactive` is the opposite of this. We write it into the frozen
     /// config, as we do quit-autosave, because the player has no control for
     /// it and a per-game `controls.cfg` would otherwise replace it.
-    #[serde(default)]
+    #[serde(default = "crate::builder::unstated::keep_playing_in_background")]
     pub keep_playing_in_background: bool,
     /// Save on quit and load that save the next time the player opens the
     /// game. The author makes one choice for both.
-    #[serde(default)]
+    #[serde(default = "crate::builder::unstated::autosave_on_quit")]
     pub autosave_on_quit: bool,
     /// The Options entries we offer in this game. When absent, we use the
     /// design's defaults. With an empty list, we show no Options button.
@@ -231,7 +236,7 @@ pub struct ExportRequest {
     #[serde(default)]
     pub shaders: crate::shaders::ShaderSelection,
     /// Include player-authenticated Casual achievements, independently of data.
-    #[serde(default = "crate::achievements::default_included")]
+    #[serde(default = "crate::builder::unstated::include_achievements")]
     pub include_achievements: bool,
     pub output_dir: PathBuf,
     /// Replace an app already at the destination. Without it, when an app is
@@ -255,10 +260,6 @@ pub struct ExportRequest {
     /// When this is absent, we fetch nothing and the core must be in the kit.
     #[serde(default)]
     pub core_cache: Option<PathBuf>,
-}
-
-fn default_palette() -> String {
-    "blue".to_string()
 }
 
 /// Return the canonical systems that this runtime kit can export. We read the
