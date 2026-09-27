@@ -17,6 +17,8 @@ export function shaderFileName(filePath: string): string {
   return baseName(filePath).replace(extension, "") || "Shader";
 }
 
-export const SHADER_ACCEPT = SHADER_EXTENSIONS.map((name) => `.${name}`).join(",");
+export const SHADER_ACCEPT = SHADER_EXTENSIONS.map((name) => `.${name}`).join(
+  ",",
+);
 
 export const NOT_A_SHADER_FILE = "Choose a GLSL or slang shader.";
