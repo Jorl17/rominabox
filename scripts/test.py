@@ -471,6 +471,14 @@ SCOPES = [
         launches_games=True,
     ),
     Scope(
+        "dxgi",
+        "on Windows, that a fullscreen game's picture presented through DXGI shows upright, as Windows composes "
+        "its window, and follows the window when it changes size; macOS presents through AppKit and has nothing here",
+        "that the display stays in HDR (checked by hand) or that the player uses the "
+        "presenter when it goes fullscreen",
+        [PYTHON, str(ROOT / "scripts/test_wgl_dxgi.py")],
+    ),
+    Scope(
         "scripted",
         "that a run a menu script drives starts no controller driver and a run without one starts "
         "the platform's, whichever pads are plugged in",

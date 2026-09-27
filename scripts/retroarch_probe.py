@@ -35,9 +35,11 @@ UNUSED = {
 }
 
 
-def build(programs: list[Path], sources: list[str], output: Path, defines: list[str] | None = None) -> Path:
+def build(programs: list[Path], sources: list[str], output: Path, defines: list[str] | None = None,
+          libraries: list[str] | None = None) -> Path:
     """Compile `programs`, the first of which contains main, with the fork's
-    `sources` and the stand-ins. Return the program, named after the first."""
+    `sources` and the stand-ins, and link the system's `libraries`. Return
+    the program, named after the first."""
     toolchain.activate()
     cc = toolchain.describe()["cc"]
     output.mkdir(parents=True, exist_ok=True)
@@ -63,7 +65,7 @@ def build(programs: list[Path], sources: list[str], output: Path, defines: list[
                         *(defines or []), *includes, "-c", str(source), "-o", str(built)], check=True)
         objects.append(str(built))
     binary = toolchain.executable(output / programs[0].stem)
-    subprocess.run([cc, *UNUSED[sys.platform], *objects, "-o", str(binary)], check=True)
+    subprocess.run([cc, *UNUSED[sys.platform], *objects, *(libraries or []), "-o", str(binary)], check=True)
     return binary
 
 
