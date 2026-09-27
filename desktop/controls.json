@@ -1,4 +1,70 @@
 {
+  "padPositions": [
+    {
+      "id": "up",
+      "name": "D-pad up"
+    },
+    {
+      "id": "down",
+      "name": "D-pad down"
+    },
+    {
+      "id": "left",
+      "name": "D-pad left"
+    },
+    {
+      "id": "right",
+      "name": "D-pad right"
+    },
+    {
+      "id": "b",
+      "name": "Bottom button"
+    },
+    {
+      "id": "a",
+      "name": "Right button"
+    },
+    {
+      "id": "y",
+      "name": "Left button"
+    },
+    {
+      "id": "x",
+      "name": "Top button"
+    },
+    {
+      "id": "l",
+      "name": "L1"
+    },
+    {
+      "id": "r",
+      "name": "R1"
+    },
+    {
+      "id": "l2",
+      "name": "L2"
+    },
+    {
+      "id": "r2",
+      "name": "R2"
+    },
+    {
+      "id": "select",
+      "name": "Select"
+    },
+    {
+      "id": "start",
+      "name": "Start"
+    },
+    {
+      "id": "l3",
+      "name": "L3"
+    },
+    {
+      "id": "r3",
+      "name": "R3"
+    }
+  ],
   "profiles": [
     {
       "id": "megadrive",

@@ -14,6 +14,8 @@ pub(crate) mod launch_contract;
 pub mod lists;
 pub mod menu;
 pub mod metadata;
+pub mod pad_positions;
+pub mod pads;
 pub mod packaging;
 pub mod player_settings;
 pub mod projects;

@@ -183,6 +183,18 @@ export function assessFirmware(
 ): Promise<FirmwareAssessment> {
   return invoke("assess_firmware", { system, files });
 }
+/**
+ * Wait up to `seconds` for a button on a controller, and return its pad
+ * position, or null on a timeout or when the wait was cancelled.
+ */
+export function capturePadPosition(seconds: number): Promise<string | null> {
+  if (!native)
+    return Promise.reject(new Error("Press on controller works in the app."));
+  return invoke("capture_pad_position", { seconds });
+}
+export function cancelPadCapture(): Promise<void> {
+  return native ? invoke("cancel_pad_capture") : Promise.resolve();
+}
 export async function pickFirmware(): Promise<string[]> {
   const files = await open({
     multiple: true,

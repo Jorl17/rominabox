@@ -1,7 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use rominabox_desktop::export_error::{AuthorError, ErrorStage};
-use rominabox_desktop::{cores, icons, menu, metadata, packaging, projects, systems, traveling};
+use rominabox_desktop::{
+    cores, icons, menu, metadata, packaging, pads, projects, systems, traveling,
+};
 use std::{
     fs,
     io::Cursor,
@@ -251,6 +253,21 @@ fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     )
 }
 
+/// Wait for a button on a controller and return its pad position.
+#[tauri::command]
+async fn capture_pad_position(seconds: u64) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        pads::capture(std::time::Duration::from_secs(seconds))
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+fn cancel_pad_capture() {
+    pads::cancel();
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -268,7 +285,9 @@ fn main() {
             cancel_export,
             save_project,
             open_project,
-            traveling_files
+            traveling_files,
+            capture_pad_position,
+            cancel_pad_capture
         ])
         .run(tauri::generate_context!())
         .expect("failed to run ROM-in-a-Box desktop shell");

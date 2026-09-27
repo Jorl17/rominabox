@@ -1,6 +1,13 @@
 import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// We read the controller on the Rust side. Here we answer as a pad would.
+const pad = vi.hoisted(() => ({ pressed: null as string | null }));
+vi.mock("./bridge", () => ({
+  capturePadPosition: () => Promise.resolve(pad.pressed),
+  cancelPadCapture: () => Promise.resolve(),
+}));
 import { ControlsEditor, emptyControls } from "./controls";
 import registry from "../controls.json";
 (
@@ -56,6 +63,19 @@ function press(code: string, key = code) {
       new KeyboardEvent("keydown", { key, code, bubbles: true }),
     ),
   );
+}
+
+function padSelect(container: HTMLElement, button: string) {
+  return row(container, button).querySelector(
+    `[aria-label="${button} pad"]`,
+  ) as HTMLSelectElement | null;
+}
+
+function choose(select: HTMLSelectElement, value: string) {
+  act(() => {
+    select.value = value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 }
 
 function enterText(input: HTMLInputElement, value: string) {
@@ -228,6 +248,57 @@ describe("controller authoring", () => {
       expect(actionInput(container, "A").value).toBe("Jump");
       expect(bindingButton(container, "Start").textContent).toContain("Z");
       expect(row(container, "Mode")).toBeTruthy();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("moves a control onto another's pad position by swapping them", () => {
+    const { container, cleanup } = renderEditor("megadrive");
+    try {
+      choose(padSelect(container, "C")!, "b");
+      expect(padSelect(container, "C")!.value).toBe("b");
+      expect(padSelect(container, "B")!.value).toBe("a");
+      expect(container.textContent).toContain("Pad updated.");
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("refuses a position another offered pad's control keeps", () => {
+    const { container, cleanup } = renderEditor("megadrive");
+    try {
+      // The top button is Y on the six-button pad, at the same place in the game.
+      choose(padSelect(container, "C")!, "x");
+      expect(padSelect(container, "C")!.value).toBe("a");
+      expect(container.textContent).toContain("Top button is taken.");
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("moves a control to the position pressed on a controller", async () => {
+    // R2: no Mega Drive pad uses it.
+    pad.pressed = "r2";
+    const { container, cleanup } = renderEditor("megadrive");
+    try {
+      const press = [...row(container, "C").querySelectorAll("button")].find(
+        (button) => button.textContent === "Press on controller",
+      )!;
+      await act(async () => press.click());
+      expect(padSelect(container, "C")!.value).toBe("r2");
+    } finally {
+      pad.pressed = null;
+      cleanup();
+    }
+  });
+
+  it("leaves a stick's controls where they are", () => {
+    const { container, cleanup } = renderEditor("ps1");
+    try {
+      expect(padSelect(container, "Cross")).toBeTruthy();
+      expect(padSelect(container, "Left stick up")).toBeNull();
+      expect(padSelect(container, "Left stick press")).toBeNull();
     } finally {
       cleanup();
     }

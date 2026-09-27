@@ -13,7 +13,7 @@ pub mod model;
 
 use model::{
     Console, Control, ControllerProfile, CoreComponent, Presentation, SheetParser, StickDirection,
-    CONTROL_IDS, SCHEMA_VERSION,
+    is_control_id, PAD_POSITIONS, SCHEMA_VERSION,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -577,7 +577,7 @@ impl Catalog {
             let package = package_name(path);
             let mut seen: BTreeSet<&str> = BTreeSet::new();
             for control in &profile.controls {
-                if !CONTROL_IDS.contains(&control.id.as_str()) {
+                if !is_control_id(&control.id) {
                     problems.push(Diagnostic::new(
                         "control.unknown_id",
                         &package,
@@ -1058,7 +1058,16 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
     let mut rendered = Vec::new();
     for (name, value) in [
         ("systems.json", json!({ "version": 1, "systems": systems })),
-        ("controls.json", json!({ "profiles": profiles })),
+        (
+            "controls.json",
+            json!({
+                "padPositions": PAD_POSITIONS
+                    .iter()
+                    .map(|(id, name)| json!({ "id": id, "name": name }))
+                    .collect::<Vec<_>>(),
+                "profiles": profiles,
+            }),
+        ),
     ] {
         let mut text = serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
         text.push('\n');

@@ -12,8 +12,6 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 const MAX_LABEL_BYTES: usize = 80;
-const MAX_BUTTON_BYTES: usize = 3;
-const MAX_AXIS_BYTES: usize = 4;
 const MAX_MOUSE_BUTTON: u32 = 5;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -27,19 +25,34 @@ pub struct Controls {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ControlOverride {
     pub label: Option<String>,
     pub key: Option<String>,
-    pub button: Option<String>,
-    pub axis: Option<String>,
+    /// The pad position we read the control from, when the author moved it.
+    /// It is one of the `padPositions` in `controls.json`.
+    pub pad: Option<String>,
     pub mouse: Option<u32>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ControlsRegistry {
+    pad_positions: Vec<PadPosition>,
     profiles: Vec<ControlProfile>,
+}
+
+/// A position on the standard pad that we can read a control from, and the
+/// words we show for it in the builder. We declare them in the catalog.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct PadPosition {
+    pub id: String,
+    pub name: String,
+}
+
+/// Every position on the standard pad, in the catalog's order.
+pub fn pad_positions() -> Result<Vec<PadPosition>, String> {
+    Ok(registry()?.pad_positions)
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -121,7 +134,44 @@ pub fn validate_for_system(system: &str, controls: &Controls) -> Result<ControlP
         profile_for_system(system)?
     };
     validate_for_profile(&profile, controls)?;
+    crate::pad_positions::place(
+        &declared_controls(system, &profile)?,
+        &controls.bindings,
+        &pad_positions()?,
+    )?;
     Ok(profile)
+}
+
+/// The position on the standard pad of every control the game can show.
+pub fn placement(
+    system: &str,
+    controls: &Controls,
+) -> Result<Vec<crate::pad_positions::Placed>, String> {
+    let profile = validate_for_system(system, controls)?;
+    crate::pad_positions::place(
+        &declared_controls(system, &profile)?,
+        &controls.bindings,
+        &pad_positions()?,
+    )
+}
+
+/// Every control of every pad in the picker, with the chosen pad first. A
+/// player who switches pad needs the labels and keys of the new pad at once,
+/// because nobody can supply them in an exported game. The chosen pad comes
+/// first so that the author's labels apply where two pads share a control.
+fn declared_controls(
+    system: &str,
+    profile: &ControlProfile,
+) -> Result<Vec<ControlDefinition>, String> {
+    let mut declared = profile.controls.clone();
+    for entry in &variants_for_system(system)? {
+        for control in &entry.controls {
+            if !declared.iter().any(|seen| seen.id == control.id) {
+                declared.push(control.clone());
+            }
+        }
+    }
+    Ok(declared)
 }
 
 /// Every controller we offer for a console, in the order we show them.
@@ -203,39 +253,35 @@ pub fn write_defaults_config(
                 .join(" ")
         ));
     }
-    // We do not write the emulated device here.
-    // `input_libretro_device_p1` works only in a remap file, never in a config
-    // file, so we write it to the remap file in
-    // `packaging::stage_controller_remap`.
-    // We write every pad that the player can choose, not only the chosen one,
-    // so that a player who switches pad has the new pad's labels and keys in
-    // the exported game. We write the chosen pad first, so that the author's
-    // own labels take precedence where two pads have the same control
-    // id.
-    let mut declared: Vec<crate::controls::ControlDefinition> = profile.controls.clone();
-    for entry in &offered {
-        for control in &entry.controls {
-            if !declared.iter().any(|seen| seen.id == control.id) {
-                declared.push(control.clone());
-            }
-        }
-    }
+    // We do not write the emulated device here, because
+    // `input_libretro_device_p1` takes effect only in a remap file, never in
+    // a config file. We write it in `packaging::stage_controller_remap`.
+    let declared = declared_controls(system, &profile)?;
+    let placed = crate::pad_positions::place(&declared, &controls.bindings, &pad_positions()?)?;
     for control in &declared {
         let fallback = EffectiveControl {
             label: control.label.clone(),
             key: control.key.clone(),
-            button: None,
-            axis: None,
             mouse: None,
         };
         let value = values.get(&control.id).unwrap_or(&fallback);
+        // We bind a control's key and mouse button where we read the control.
+        let slot = placed
+            .iter()
+            .find(|entry| entry.control == control.id)
+            .map_or(control.id.as_str(), |entry| entry.slot.as_str());
         config.push_str(&format!(
-            "{} = \"{}\"\ninput_player1_{} = \"{}\"\n",
+            "{} = \"{}\"\ninput_player1_{slot} = \"{}\"\n",
             key!(ControlLabel, &control.id),
             escape_config_value(&value.label),
-            control.id,
             escape_config_value(&value.key),
         ));
+        if slot != control.id {
+            config.push_str(&format!(
+                "{} = \"{slot}\"\n",
+                key!(ControlPosition, &control.id)
+            ));
+        }
         if let Some(group) = &control.group {
             config.push_str(&format!(
                 "{} = \"{}\"\n",
@@ -243,23 +289,8 @@ pub fn write_defaults_config(
                 escape_config_value(group),
             ));
         }
-        if let Some(button) = &value.button {
-            config.push_str(&format!(
-                "input_player1_{}_btn = \"{}\"\n",
-                control.id, button
-            ));
-        }
-        if let Some(axis) = &value.axis {
-            config.push_str(&format!(
-                "input_player1_{}_axis = \"{}\"\n",
-                control.id, axis
-            ));
-        }
         if let Some(mouse) = value.mouse {
-            config.push_str(&format!(
-                "input_player1_{}_mbtn = \"{}\"\n",
-                control.id, mouse
-            ));
+            config.push_str(&format!("input_player1_{slot}_mbtn = \"{mouse}\"\n"));
         }
     }
     fs::write(destination, config)
@@ -271,8 +302,6 @@ pub fn write_defaults_config(
 struct EffectiveControl {
     label: String,
     key: String,
-    button: Option<String>,
-    axis: Option<String>,
     mouse: Option<u32>,
 }
 
@@ -295,8 +324,6 @@ fn effective_controls(
                     key: override_value
                         .and_then(|value| value.key.clone())
                         .unwrap_or_else(|| control.key.clone()),
-                    button: override_value.and_then(|value| value.button.clone()),
-                    axis: override_value.and_then(|value| value.axis.clone()),
                     mouse: override_value.and_then(|value| value.mouse),
                 },
             )
@@ -322,12 +349,6 @@ fn validate_for_profile(profile: &ControlProfile, controls: &Controls) -> Result
         }
         if let Some(key) = &value.key {
             validate_key(id, key)?;
-        }
-        if let Some(button) = &value.button {
-            validate_button(id, button)?;
-        }
-        if let Some(axis) = &value.axis {
-            validate_axis(id, axis)?;
         }
         if let Some(mouse) = value.mouse {
             if mouse > MAX_MOUSE_BUTTON {
@@ -390,41 +411,6 @@ fn validate_key(id: &str, value: &str) -> Result<(), String> {
     if Some(key) == retroarch_key("escape") {
         return Err(format!(
             "key for {id} toggles the menu and cannot be a gameplay binding"
-        ));
-    }
-    Ok(())
-}
-
-fn validate_button(id: &str, value: &str) -> Result<(), String> {
-    let valid = value.len() <= MAX_BUTTON_BYTES
-        && value.bytes().all(|character| character.is_ascii_digit())
-        && value
-            .parse::<u8>()
-            .ok()
-            .filter(|number| *number <= 63 && number.to_string() == value)
-            .is_some();
-    if !valid {
-        return Err(format!(
-            "button for {id} must be a controller button from 0 to 63"
-        ));
-    }
-    Ok(())
-}
-
-fn validate_axis(id: &str, value: &str) -> Result<(), String> {
-    let valid = value.len() <= MAX_AXIS_BYTES
-        && matches!(value.as_bytes().first(), Some(b'+') | Some(b'-'))
-        && value[1..]
-            .bytes()
-            .all(|character| character.is_ascii_digit())
-        && value[1..]
-            .parse::<u8>()
-            .ok()
-            .filter(|number| *number <= 15 && format!("{}{}", &value[..1], number) == value)
-            .is_some();
-    if !valid {
-        return Err(format!(
-            "axis for {id} must be a signed controller axis from -15 to +15"
         ));
     }
     Ok(())

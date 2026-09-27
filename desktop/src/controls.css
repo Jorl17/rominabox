@@ -127,6 +127,17 @@
   font: inherit;
 }
 
+.pad-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+.pad-field [role="status"] {
+  font-size: 12px;
+  line-height: 32px;
+}
+
 .controls-table .binding-button {
   padding: 0 8px;
 }

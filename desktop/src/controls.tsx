@@ -2,14 +2,15 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import registry from "../controls.json";
 import { ControllerScene } from "./ControllerScene";
 import { capturedKey, keyName } from "./keys";
+import { PadField } from "./PadField";
 import systemRegistry from "../systems.json";
 import "./controls.css";
 
 export type ControlOverride = {
   label?: string;
   key?: string;
-  button?: string;
-  axis?: string;
+  /** The pad position we read the control from, when it was moved. */
+  pad?: string;
   mouse?: number;
 };
 export type Controls = {
@@ -43,6 +44,18 @@ export function ControlsEditor({
       (p) => p.id === systemDefinition?.controllerProfile,
     ) ||
     registry.profiles.find((p) => p.id === "retropad")!;
+  // The controls of a stick never move, and neither do those of another
+  // offered pad, because their positions are fixed in the game.
+  const grouped = (control: object) => "group" in control && !!control.group;
+  const others = variants
+    .flatMap((variant) => variant.controls)
+    .filter(
+      (control, index, all) =>
+        !profile.controls.some((own) => own.id === control.id) &&
+        all.findIndex((seen) => seen.id === control.id) === index,
+    );
+  const movable = profile.controls.filter((control) => !grouped(control));
+  const fixed = [...profile.controls.filter(grouped), ...others];
   const [selected, setSelected] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [seconds, setSeconds] = useState(10);
@@ -71,6 +84,13 @@ export function ControlsEditor({
         [id]: { ...current.value.bindings[id], ...update },
       },
     });
+  }
+  function movePads(moved: Record<string, string | undefined>) {
+    const current = state.current;
+    const bindings = { ...current.value.bindings };
+    for (const [id, pad] of Object.entries(moved))
+      bindings[id] = { ...bindings[id], pad };
+    current.onChange({ ...current.value, bindings });
   }
   function focusSelected() {
     restoreFocus.current = true;
@@ -163,10 +183,15 @@ export function ControlsEditor({
                 const ids = new Set(next.controls.map((c) => c.id));
                 onChange({
                   profile: next.id,
+                  // We reset pad positions, because a control of the new pad
+                  // may be where one was moved to.
                   bindings: Object.fromEntries(
-                    Object.entries(value.bindings).filter(([id]) =>
-                      ids.has(id),
-                    ),
+                    Object.entries(value.bindings)
+                      .filter(([id]) => ids.has(id))
+                      .map(([id, binding]) => [
+                        id,
+                        { ...binding, pad: undefined },
+                      ]),
                   ),
                 });
               }}
@@ -298,46 +323,21 @@ export function ControlsEditor({
                 </td>
                 <td>
                   <details className="device-bindings">
-                    <summary title="Device-specific defaults. Leave these blank to use the player's controller setup.">
+                    <summary title="The controller button and mouse button that also work this control.">
                       Devices
                     </summary>
                     <div className="device-binding-fields">
-                      <label>
-                        Controller button
-                        <input
-                          type="number"
-                          min={0}
-                          max={63}
+                      {!grouped(item) && (
+                        <PadField
+                          control={item}
+                          bindings={value.bindings}
+                          movable={movable}
+                          fixed={fixed}
                           disabled={capturing}
-                          value={override?.button ?? ""}
-                          onChange={(e) =>
-                            patch(item.id, {
-                              button: e.target.value || undefined,
-                            })
-                          }
+                          onMove={movePads}
+                          onMessage={setMessage}
                         />
-                      </label>
-                      <label>
-                        Controller axis
-                        <select
-                          disabled={capturing}
-                          value={override?.axis ?? ""}
-                          onChange={(e) =>
-                            patch(item.id, {
-                              axis: e.target.value || undefined,
-                            })
-                          }
-                        >
-                          <option value="">Automatic</option>
-                          {Array.from({ length: 16 }, (_, i) =>
-                            ["-", "+"].map((sign) => (
-                              <option key={`${sign}${i}`} value={`${sign}${i}`}>
-                                Axis {i} {sign}
-                              </option>
-                            )),
-                          )}
-                        </select>
-                      </label>
+                      )}
                       <label>
                         Mouse button
                         <select

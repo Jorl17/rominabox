@@ -592,8 +592,12 @@ where
         collected_content.discs,
         &resources.join(app_file!(MenuAssets)),
     )?;
+    let moved = controls::placement(&request.system, &request.controls)
+        .and_then(|placed| crate::pad_positions::remap_lines(&placed, &controls::pad_positions()?))
+        .map_err(|error| ExportError::new(ErrorStage::Stage, error))?;
     stage_controller_remap(
         &controls_profile,
+        &moved,
         selected_core,
         &resources.join(shipped!(Remaps).0),
     )?;
@@ -1333,32 +1337,40 @@ fn stable_identity(
     Ok(format!("{:x}", hash.finalize())[..24].to_string())
 }
 
-/// Write the emulated controller where RetroArch reads it.
+/// Write the emulated controller, and the controls that the author moved on
+/// the pad, to the remap file for RetroArch.
 ///
-/// `input_libretro_device_p1` looks like an ordinary setting, but its value is
-/// read only from a remap file, in `input_remapping_load_file` in
-/// `configuration.c`. In `retroarch.cfg` it has no effect, and the core uses
-/// its default device instead of a six-button Mega Drive pad or a PlayStation
-/// DualShock.
+/// `input_libretro_device_p1` looks like an ordinary setting, but the only
+/// read of it in `configuration.c` is inside `input_remapping_load_file`,
+/// not in the loading of `retroarch.cfg`. A device in the config has no
+/// effect, and the default device of the core stays in use.
 ///
-/// So we write the file to the path read in `config_load_remap`,
+/// So we write the file to the path in `config_load_remap`,
 /// `<remap dir>/<library name>/<library name>.rmp`, with the libretro library
-/// name of the core binary.
+/// name of the artifact. `moved` contains the lines that
+/// `pad_positions::remap_lines` returns for the author's controls.
 fn stage_controller_remap(
     profile: &controls::ControlProfile,
+    moved: &str,
     core: &crate::systems::Core,
     remaps: &Path,
 ) -> Result<(), ExportError> {
-    let Some(device) = profile.core_device else {
-        // Most pads are the default device of the core, so they require no remap.
+    let device = profile
+        .core_device
+        .map(|device| format!("input_libretro_device_p1 = \"{device}\"\n"))
+        .unwrap_or_default();
+    let contents = device + moved;
+    if contents.is_empty() {
+        // Most pads are the core's default device, with nothing moved, and
+        // need no remap at all.
         return Ok(());
-    };
+    }
     let Some(library) = core.library_name.as_deref() else {
         return Err(ExportError::new(
             ErrorStage::Stage,
             format!(
-                "{} needs the emulated device {device}, but component '{}' does not declare its \
-                 libraryName, so there is nowhere to write the remap RetroArch reads",
+                "{} needs a remap, but component '{}' does not declare its libraryName, so \
+                 there is nowhere to write the remap RetroArch reads",
                 profile.id, core.component
             ),
         ));
@@ -1367,7 +1379,6 @@ fn stage_controller_remap(
     fs::create_dir_all(&directory)
         .map_err(|error| ExportError::io(ErrorStage::Stage, &directory, error))?;
     let path = directory.join(format!("{library}.rmp"));
-    let contents = format!("input_libretro_device_p1 = \"{device}\"\n");
     fs::write(&path, contents).map_err(|error| ExportError::io(ErrorStage::Stage, &path, error))?;
     Ok(())
 }
@@ -2671,7 +2682,7 @@ mod tests {
             pixels: Vec::new(),
         };
         let remaps = root.join("remaps");
-        stage_controller_remap(&profile, &core, &remaps).expect("a remap is written");
+        stage_controller_remap(&profile, "", &core, &remaps).expect("a remap is written");
 
         // The folder name is the library name of the core, not its component
         // id, because the path in config_load_remap is made from that name.
@@ -2705,8 +2716,40 @@ mod tests {
             pixels: Vec::new(),
         };
         let remaps = root.join("remaps");
-        stage_controller_remap(&profile, &core, &remaps).expect("nothing to do is not an error");
+        stage_controller_remap(&profile, "", &core, &remaps)
+            .expect("nothing to do is not an error");
         assert!(!remaps.exists(), "no remap directory should be created");
+    }
+
+    /// A control the author moved on the pad is a remap even on a pad that is
+    /// the default device of the core.
+    #[test]
+    fn a_moved_control_is_written_into_the_remap() {
+        let root = scratch_dir();
+        let profile = controls::profile_for_system("megadrive").unwrap();
+        assert_eq!(
+            profile.core_device.map(|_| ()),
+            Some(()),
+            "the Mega Drive pad names its device"
+        );
+        let default_device = controls::ControlProfile {
+            core_device: None,
+            ..profile
+        };
+        let core = crate::systems::Core {
+            artifacts: Default::default(),
+            component: "genesis_plus_gx".into(),
+            license: String::new(),
+            license_file: String::new(),
+            capabilities: Vec::new(),
+            library_name: Some("Genesis Plus GX".into()),
+            pixels: Vec::new(),
+        };
+        let remaps = root.join("remaps");
+        let moved = "input_player1_btn_b = \"8\"\ninput_player1_btn_a = \"0\"\n";
+        stage_controller_remap(&default_device, moved, &core, &remaps).expect("a remap is written");
+        let text = fs::read_to_string(remaps.join("Genesis Plus GX/Genesis Plus GX.rmp")).unwrap();
+        assert_eq!(text, moved);
     }
 
     /// We write picture options where RetroArch reads per-core options.
@@ -2784,7 +2827,7 @@ mod tests {
             library_name: None,
             pixels: Vec::new(),
         };
-        let error = stage_controller_remap(&profile, &core, &root.join("remaps"))
+        let error = stage_controller_remap(&profile, "", &core, &root.join("remaps"))
             .expect_err("silently shipping the wrong pad is the defect being prevented");
         let message = error.to_string();
         assert!(

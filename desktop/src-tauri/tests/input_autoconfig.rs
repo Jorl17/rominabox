@@ -406,15 +406,21 @@ fn hotkey_allow_list_is_unchanged_and_controller_variants_stay_nul() {
     }
 }
 
-/// By default we write keyboard keys and leave joypad buttons unset. We still
-/// write a button that the author supplies, so the omission is a default and
-/// not missing code.
+/// We write keyboard keys and never the button numbers of a controller,
+/// because we read a player's pad through its controller profile, and a raw
+/// number would fit only one pad model. When the author moves a control on
+/// the pad, we move its key to the new position and tell the menu where it is.
 ///
-/// This does not prove that RetroArch ignores an absent `_btn` line. In the
-/// pinned poll code, the autoconfig bind applies while the joykey is `NO_BTN`.
+/// This does not prove that an absent `_btn` line has no effect. In the pinned
+/// poll, autoconfig applies when the user joykey stays `NO_BTN`.
 #[test]
-fn default_gameplay_binds_are_keyboard_only() {
+fn gameplay_binds_are_keys_on_pad_positions() {
     let root = scratch();
+    let no_pad_numbers = |text: &str| {
+        !text.lines().any(|line| {
+            line.contains("_btn") || line.contains("_axis") || line.contains("_mbtn")
+        })
+    };
     controls::write_defaults_config(
         "megadrive",
         &Controls::default(),
@@ -423,21 +429,30 @@ fn default_gameplay_binds_are_keyboard_only() {
     .unwrap();
     let text = fs::read_to_string(root.join("controls.cfg")).unwrap();
     assert!(text.contains("input_player1_a = \"c\""));
-    assert!(
-        !text.lines().any(|line| {
-            line.contains("_btn") || line.contains("_axis") || line.contains("_mbtn")
-        }),
-        "a default export must not invent controller buttons:\n{text}"
-    );
+    assert!(!text.contains("rib_position_"), "nothing moved:\n{text}");
+    assert!(no_pad_numbers(&text), "a default export must not invent controller buttons:\n{text}");
 
-    let authored: Controls = serde_json::from_value(serde_json::json!({
-        "bindings": { "a": { "button": "0" } }
+    // Mega Drive C is RetroPad a, B is b. Swapped, each key goes with its button.
+    let swapped: Controls = serde_json::from_value(serde_json::json!({
+        "bindings": { "a": { "pad": "b" }, "b": { "pad": "a" } }
     }))
     .unwrap();
-    controls::write_defaults_config("megadrive", &authored, &root.join("authored.cfg")).unwrap();
-    let authored_text = fs::read_to_string(root.join("authored.cfg")).unwrap();
-    assert!(authored_text.contains("input_player1_a_btn = \"0\""));
-    assert!(authored_text.contains("input_player1_a = \"c\""));
+    controls::write_defaults_config("megadrive", &swapped, &root.join("swapped.cfg")).unwrap();
+    let swapped_text = fs::read_to_string(root.join("swapped.cfg")).unwrap();
+    for line in [
+        "input_player1_b = \"c\"",
+        "input_player1_a = \"x\"",
+        "rib_position_a = \"b\"",
+        "rib_position_b = \"a\"",
+    ] {
+        assert!(swapped_text.contains(line), "no {line} in\n{swapped_text}");
+    }
+    assert!(no_pad_numbers(&swapped_text), "{swapped_text}");
+
+    let raw = serde_json::from_value::<Controls>(serde_json::json!({
+        "bindings": { "a": { "button": "0" } }
+    }));
+    assert!(raw.is_err(), "a pad model's button number is not a binding");
 }
 
 /// The staged hid directory contains the DualSense vendor and product ids.

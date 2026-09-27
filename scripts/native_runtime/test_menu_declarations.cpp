@@ -189,6 +189,38 @@ int test_menu_declarations()
             "a long list of controllers with long ids is read whole");
       config_file_free(defaults);
    }
+   {
+      /* We read a control that the author moved on the pad from its new
+       * position: we look up its binds and store them under the name of that
+       * position. A control that the author did not move keeps its binds. */
+      values.clear();
+      values["controls_profile"] = "pad";
+      values["controls_variant_controls_pad"] = "a b start";
+      values["rib_label_a"] = "C";
+      values["rib_label_b"] = "B";
+      values["rib_label_start"] = "Start";
+      values["rib_position_a"] = "b";
+      values["rib_position_b"] = "a";
+      static std::vector<std::string> resolved;
+      resolved.clear();
+      rib_controls_catalog pad{};
+      std::string named;
+      bool present = false;
+      config_file_t *defaults = rib_open_controls("fixture", true, named, &pad, &present,
+            [](const char *name, unsigned *index) {
+               resolved.emplace_back(name);
+               *index = (unsigned)resolved.size() - 1;
+               return true;
+            });
+      std::map<std::string, std::string> slots;
+      for (int index = 0; index < pad.count; ++index)
+         slots[pad.entries[index].id] = pad.entries[index].slot;
+      check(slots["a"] == "b" && slots["b"] == "a" && slots["start"] == "start",
+            "a moved control is read from its new position, and an unmoved one from its own");
+      check(resolved == std::vector<std::string>{"b", "a", "start"},
+            "its binding is found under the position's name");
+      config_file_free(defaults);
+   }
    if (!failures) std::puts("declaration load and existing field limits pass");
    return failures ? 1 : 0;
 }

@@ -14,32 +14,34 @@ use std::collections::BTreeMap;
 /// declares a version unknown to this build, and never read it in part.
 pub const SCHEMA_VERSION: u32 = 1;
 
-/// The logical controls we can bind a runtime input to. This is the fixed
-/// RetroPad vocabulary. A profile may use any subset, in any order, but may
-/// not invent an id, because we map these to emulator inputs in an export.
-///
-/// It must match `controls::is_stable_control_id` in the desktop crate, which
-/// we validate against in the player. We check that the two lists are the
-/// same in `the_two_control_vocabularies_agree`.
-pub const CONTROL_IDS: &[&str] = &[
-    "up",
-    "down",
-    "left",
-    "right",
-    "b",
-    "a",
-    "y",
-    "x",
-    "l",
-    "r",
-    "l2",
-    "r2",
-    "select",
-    "start",
-    "l3",
-    "r3",
-    // The analogue directions, spelled as in the RetroArch declarations in
-    // configuration.c:333-340. We bind each one as `input_player1_<id>_axis`.
+/// The positions of the standard pad (RetroArch's RetroPad), with the words
+/// we show for each in the builder. We read a control from one of these, and
+/// with RetroArch's controller profiles we map every player's controller onto
+/// this pad, so a control bound to a position works on any pad. The id is the
+/// RetroArch bind name (`input_player1_<id>`, configuration.c).
+pub const PAD_POSITIONS: &[(&str, &str)] = &[
+    ("up", "D-pad up"),
+    ("down", "D-pad down"),
+    ("left", "D-pad left"),
+    ("right", "D-pad right"),
+    ("b", "Bottom button"),
+    ("a", "Right button"),
+    ("y", "Left button"),
+    ("x", "Top button"),
+    ("l", "L1"),
+    ("r", "R1"),
+    ("l2", "L2"),
+    ("r2", "R2"),
+    ("select", "Select"),
+    ("start", "Start"),
+    ("l3", "L3"),
+    ("r3", "R3"),
+];
+
+/// A stick's directions, spelled as in the RetroArch declarations
+/// (configuration.c). A stick stays where it is, because its directions are
+/// not positions to which a control can move.
+pub const STICK_DIRECTIONS: &[&str] = &[
     "l_x_plus",
     "l_x_minus",
     "l_y_plus",
@@ -49,6 +51,13 @@ pub const CONTROL_IDS: &[&str] = &[
     "r_y_plus",
     "r_y_minus",
 ];
+
+/// Whether `id` is a control a profile may declare: a pad position or a
+/// stick direction. A profile may use any of them, in any order, but may not
+/// invent one.
+pub fn is_control_id(id: &str) -> bool {
+    PAD_POSITIONS.iter().any(|(position, _)| *position == id) || STICK_DIRECTIONS.contains(&id)
+}
 
 /// Whether we expect a build to include this console.
 ///
