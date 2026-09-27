@@ -1,10 +1,11 @@
 """Create, adopt and remove isolated worktrees.
 
 Two checkouts share more than is apparent: a dev-server port pinned with
-`strictPort`, two macOS bundle identifiers, a per-game data directory under
-Application Support, and a cargo target. None of those collisions produces
-an error. Each one produces a plausible wrong answer, the worst being a
-screenshot of a build from the other checkout.
+`strictPort`, the builder's identifier and the dev server for it, the
+identities of the exported games (and with them their data and sandboxes),
+the QUICK SIGN IN accounts folder, and a cargo target. None of those
+collisions produces an error. Each one produces a plausible wrong answer,
+the worst being a screenshot of a build from the other checkout.
 
     python3 scripts/worktree.py create feature-x     # make one, in ../rominabox-worktrees/
     python3 scripts/worktree.py adopt               # from inside an existing one
@@ -39,6 +40,7 @@ import sys
 import time
 from pathlib import Path
 
+import player_support
 import processes
 
 def _canonical() -> Path:
@@ -68,8 +70,6 @@ ROOT = _canonical()
 BASE_PORT = 1420
 BASE_BUNDLE = "com.rominabox.desktop"
 LOCAL_CONFIG = "worktree.local.json"
-DATA_HOME = Path.home() / "Library/Application Support"
-CANONICAL_DATA = DATA_HOME / "ROM-in-a-Box"
 
 # We allocate ports one offset at a time and store the offset in git's
 # per-worktree metadata, never in a committed file, because it is local state
@@ -260,10 +260,12 @@ def write_local(path: Path, suffix: str, offset: int) -> dict:
         "portOffset": offset,
         "vitePort": BASE_PORT + offset,
         "builderBundleId": f"{BASE_BUNDLE}.wt-{suffix}",
+        # We put this prefix in an exported game's identity, and so in its data
+        # folder and its sandbox (packaging.rs).
         "gameBundlePrefix": f"app.rominabox.game.wt-{suffix}",
-        "dataRoot": str(DATA_HOME / f"ROM-in-a-Box-wt-{suffix}"),
-        # The shared QUICK SIGN IN folder for this worktree's exports, in
-        # Application Support like the player's folder. We use it in the exporter.
+        # The shared QUICK SIGN IN folder for this worktree's exports, in the
+        # per-user application data folder like the player's folder. We use it
+        # in the exporter.
         "accountsFolder": f"ROM-in-a-Box Accounts-wt-{suffix}",
     }
     (path / LOCAL_CONFIG).write_text(json.dumps(local, indent=2) + "\n")
@@ -281,22 +283,22 @@ def write_local(path: Path, suffix: str, offset: int) -> dict:
 # that does not match its design.
 COPIED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/runtime"),
+    # The same applies to these small files. In build_kit.py we install the
+    # preview renderer into resources/preview, and in build_builder.py we write
+    # the command line into resources/bin and the skill into resources/skills,
+    # so with links we would write into the canonical checkout.
+    Path("desktop/src-tauri/resources/preview"),
+    Path("desktop/src-tauri/resources/bin"),
+    Path("desktop/src-tauri/resources/skills"),
 ]
 
 # We only ever read these, so we share them at no cost and save a lot of
 # space, because node_modules alone is larger than the kit.
 SHARED_ARTIFACTS = [
-    Path("desktop/src-tauri/resources/preview"),
     # Without node_modules we cannot run the frontend tests in a worktree, and
     # the failure, "tsc: command not found", looks like a fault in the change.
     # It is build output, the same in every worktree, and not in git.
     Path("desktop/node_modules"),
-    # These are bundled resources in the tauri build, so without them we cannot
-    # compile the desktop crate. The error, "resource path `resources/skills`
-    # doesn't exist", looks like a missing file and not a missing link, and
-    # most test scopes then fail.
-    Path("desktop/src-tauri/resources/bin"),
-    Path("desktop/src-tauri/resources/skills"),
     # The catalogues and picture lists for the identification measurement. We
     # fetch them on purpose and never during a test, so without them we cannot
     # run those tests in a worktree. The error message suggests a fetch, and in
@@ -306,15 +308,51 @@ SHARED_ARTIFACTS = [
 ]
 
 
-def link_build_artifacts(path: Path, own_copy: bool) -> None:
+def _symbolic_link(link: Path, target: Path) -> None:
+    link.symlink_to(target)
+
+
+def _junction(link: Path, target: Path) -> None:
+    import _winapi
+
+    _winapi.CreateJunction(str(target), str(link))
+
+
+# A link to a shared directory on each platform: a symbolic link on macOS, and
+# a directory junction on Windows, which any user may make, while a symbolic
+# link requires a privilege that most accounts lack (WinError 1314).
+DIRECTORY_LINKS = {"darwin": _symbolic_link, "win32": _junction}
+
+
+def link_directory(link: Path, target: Path) -> None:
+    if sys.platform not in DIRECTORY_LINKS:
+        raise SystemExit(f"no directory link is declared for {sys.platform}")
+    DIRECTORY_LINKS[sys.platform](link, target)
+
+
+def is_link(path: Path) -> bool:
+    """A symbolic link or a junction to another directory, which we remove by
+    unlinking it and never by deleting its target."""
+    return path.is_symlink() or path.is_junction()
+
+
+def accounts_of(local: dict) -> Path | str:
+    """Return the folder for the QUICK SIGN IN accounts of this worktree's exports."""
+    folder = local.get("accountsFolder", "")
+    return player_support.user_data() / folder if folder else "(none)"
+
+
+def link_build_artifacts(path: Path, own_copy: bool, canonical: Path = ROOT) -> None:
+    """The build output from `canonical` for a worktree: copied where we write it
+    in a build, and linked where we only read it."""
     for relative in COPIED_ARTIFACTS + SHARED_ARTIFACTS:
         copy = own_copy or relative in COPIED_ARTIFACTS
-        source = ROOT / relative
+        source = canonical / relative
         if not source.exists():
             print(f"  {relative} is not prepared here; skipping")
             continue
         target = path / relative
-        if target.exists() or target.is_symlink():
+        if target.exists() or is_link(target):
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         if copy:
@@ -322,7 +360,7 @@ def link_build_artifacts(path: Path, own_copy: bool) -> None:
             shutil.copytree(source, target, symlinks=True)
             print(f"  copied {relative} ({time.monotonic() - started:.0f}s)")
         else:
-            target.symlink_to(source)
+            link_directory(target, source)
             print(f"  linked {relative} -> the canonical checkout")
 
 def describe(local: dict) -> str:
@@ -330,7 +368,7 @@ def describe(local: dict) -> str:
         f"  port        {local['vitePort']}\n"
         f"  builder id  {local['builderBundleId']}\n"
         f"  game ids    {local['gameBundlePrefix']}.*\n"
-        f"  data root   {local['dataRoot']}"
+        f"  accounts    {accounts_of(local)}"
     )
 
 
@@ -397,6 +435,8 @@ def adopt() -> int:
     suffix = (here.name if here.parent == worktree_path(here.name).parent
               else here.name.removeprefix(f"{ROOT.name}-") or here.name)
     existing = known[here].get("local") or {}
+    # The setup from create, for a worktree created some other way.
+    link_build_artifacts(here, own_copy=False)
     with Lock(common_dir() / LOCK_NAME):
         offset = allocate_offset(existing.get("portOffset"))
         local = write_local(here, suffix, offset)
@@ -413,7 +453,6 @@ def environment() -> int:
     print(f"export ROMINABOX_VITE_PORT={local['vitePort']}")
     print(f"export ROMINABOX_BUNDLE_ID={local['builderBundleId']}")
     print(f"export ROMINABOX_GAME_BUNDLE_PREFIX={local['gameBundlePrefix']}")
-    print(f"export ROMINABOX_DATA_ROOT={json.dumps(local['dataRoot'])}")
     if local.get("accountsFolder"):
         print(f"export ROMINABOX_ACCOUNTS_FOLDER={json.dumps(local['accountsFolder'])}")
     # We share this on purpose. See the module docstring.
@@ -430,6 +469,27 @@ def show() -> int:
     return 0
 
 
+def own_accounts(local: dict) -> Path | None:
+    """Return the accounts folder that we may delete in `remove`: the one of this
+    worktree, named for its suffix, directly in the per-user data folder. Never
+    the player's, and never a name that leads anywhere else."""
+    folder = local.get("accountsFolder", "")
+    suffix = local.get("suffix", "")
+    if not folder or not suffix or "/" in folder or "\\" in folder or not folder.endswith(f"-wt-{suffix}"):
+        return None
+    return player_support.user_data() / folder
+
+
+def unlink_artifacts(path: Path) -> None:
+    """A shared artifact is a link into the canonical checkout, which we unlink
+    and never follow when we remove the worktree. An older worktree may still
+    have a link to an artifact that we now copy, so we check every one."""
+    for relative in COPIED_ARTIFACTS + SHARED_ARTIFACTS:
+        link = path / relative
+        if is_link(link):
+            link.unlink()
+
+
 def remove(suffix: str, keep_data: bool) -> int:
     path = worktree_path(suffix)
     entry = next((e for e in worktrees() if e["path"].resolve() == path.resolve()), None)
@@ -437,25 +497,14 @@ def remove(suffix: str, keep_data: bool) -> int:
         raise SystemExit(f"no worktree at {path}")
     local = entry.get("local")
 
-    # The data directory is outside the worktree, so `git worktree remove`
+    # The accounts folder is outside the worktree, so `git worktree remove`
     # does not delete it, and we delete it by hand in teardown.
-    if local and not keep_data:
-        data_root = Path(local["dataRoot"])
-        if data_root.exists() and data_root != CANONICAL_DATA:
-            shutil.rmtree(data_root)
-            print(f"removed {data_root}")
-        folder = local.get("accountsFolder", "")
-        accounts = DATA_HOME / folder
-        if folder and "/" not in folder and accounts.is_dir() and not accounts.is_symlink():
-            shutil.rmtree(accounts)
-            print(f"removed {accounts}")
+    accounts = own_accounts(local) if local and not keep_data else None
+    if accounts is not None and accounts.is_dir() and not is_link(accounts):
+        shutil.rmtree(accounts)
+        print(f"removed {accounts}")
     kept = keep_fork_commits(path, entry.get("branch"))
-    # A shared kit is a symlink into the canonical checkout. When we remove the
-    # worktree we must unlink it and never follow it.
-    for relative in SHARED_ARTIFACTS:
-        link = path / relative
-        if link.is_symlink():
-            link.unlink()
+    unlink_artifacts(path)
     git("worktree", "remove", "--force", str(path))
     print(f"removed {path}")
     if kept:
@@ -532,7 +581,7 @@ def main() -> int:
     commands.add_parser("list", help="every checkout and the resources it owns")
     gone = commands.add_parser("remove", help="remove a worktree and its data")
     gone.add_argument("suffix")
-    gone.add_argument("--keep-data", action="store_true", help="leave its Application Support directory")
+    gone.add_argument("--keep-data", action="store_true", help="leave its QUICK SIGN IN accounts folder")
     arguments = parser.parse_args()
 
     if arguments.command == "create":

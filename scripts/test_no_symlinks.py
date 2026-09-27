@@ -1,9 +1,9 @@
 """Check that no file in this repository is a symbolic link.
 
-In a worktree we link to the canonical checkout for the things too big to copy:
-node_modules, the preview helper, the built command line. Those links work only
-on one machine and must never enter git. A committed link is hard to notice. A
-link recorded as pointing at `<canonical
+In a worktree we link to the canonical checkout for the things too big to copy
+and never written in a worktree: node_modules and the identification cache.
+Those links work only on one machine and must never enter git. A committed link
+is hard to notice. A link recorded as pointing at `<canonical
 checkout>/desktop/src-tauri/resources/preview` is correct inside a worktree and
 points at itself in the canonical checkout.
 

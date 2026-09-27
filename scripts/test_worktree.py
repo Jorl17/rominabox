@@ -158,11 +158,13 @@ def adopt_works_from_inside_the_worktree_it_adopts() -> None:
                 cwd=worktree.ROOT, capture_output=True, text=True, check=True,
             )
             # The checkout is at HEAD, so its copy of the script is the committed
-            # one. Put the working copy there instead, because we test the script
-            # as it is now, not as it was in the last commit.
-            (made / "scripts/worktree.py").write_text(
-                (worktree.ROOT / "scripts/worktree.py").read_text()
-            )
+            # one. Put the working copy there instead, with the modules of this
+            # repository that it imports, because we test the script as it is
+            # now, not as it was in the last commit.
+            for name in ("worktree.py", "player_support.py", "processes.py"):
+                (made / "scripts" / name).write_text(
+                    (worktree.ROOT / "scripts" / name).read_text(encoding="utf-8"), encoding="utf-8"
+                )
             done = subprocess.run(
                 # The copy of the script IN THE WORKTREE, which is the one we run in
                 # that checkout. With the canonical copy we would miss the defect,
@@ -178,11 +180,18 @@ def adopt_works_from_inside_the_worktree_it_adopts() -> None:
             check(local.is_file(), "it wrote the worktree's own resources")
             if local.is_file():
                 settings = json.loads(local.read_text())
+                port = settings.get("vitePort")
                 check(
-                    settings.get("port") != worktree.BASE_PORT,
-                    f"and gave it a port of its own, not {worktree.BASE_PORT}",
+                    port not in (None, worktree.BASE_PORT),
+                    f"and gave it a port of its own, {port}" if port not in (None, worktree.BASE_PORT)
+                    else f"and gave it the canonical port {worktree.BASE_PORT}, or none: {port}",
                 )
+            check((made / "desktop/src-tauri/resources/bin").is_dir() or
+                  not (worktree.ROOT / "desktop/src-tauri/resources/bin").exists(),
+                  "and gave it the build output create gives a worktree")
         finally:
+            # As in remove: we unlink a link and never follow it.
+            worktree.unlink_artifacts(made)
             subprocess.run(
                 ["git", "worktree", "remove", "--force", str(made)],
                 cwd=worktree.ROOT, capture_output=True, text=True,
@@ -217,18 +226,49 @@ def the_local_config_is_never_committed() -> None:
     check(ignored.returncode == 0, f"{worktree.LOCAL_CONFIG} is git-ignored")
 
 
-def removal_never_touches_the_canonical_data() -> None:
-    """Check that in teardown we delete the right directory outside the worktree."""
-    check(
-        worktree.CANONICAL_DATA.name == "ROM-in-a-Box",
-        "the canonical data directory is known by name",
-    )
-    for suffix in ["a", "probe", "main"]:
-        derived = worktree.DATA_HOME / f"ROM-in-a-Box-wt-{suffix}"
-        check(
-            derived != worktree.CANONICAL_DATA,
-            f"a worktree's data root is distinct from the canonical one ({suffix})",
-        )
+def removal_deletes_only_the_worktrees_own_accounts_folder() -> None:
+    """Check that in teardown we delete only this worktree's folder outside it."""
+    home = worktree.player_support.user_data()
+    cases = [
+        ({"suffix": "a", "accountsFolder": "ROM-in-a-Box Accounts-wt-a"}, home / "ROM-in-a-Box Accounts-wt-a"),
+        ({"suffix": "a", "accountsFolder": "ROM-in-a-Box Accounts"}, None),
+        ({"suffix": "a", "accountsFolder": "ROM-in-a-Box Accounts-wt-b"}, None),
+        ({"suffix": "a", "accountsFolder": "../ROM-in-a-Box Accounts-wt-a"}, None),
+        ({"suffix": "a", "accountsFolder": "elsewhere\\ROM-in-a-Box Accounts-wt-a"}, None),
+        ({"suffix": "a"}, None),
+        ({"accountsFolder": "ROM-in-a-Box Accounts-wt-"}, None),
+    ]
+    for local, wanted in cases:
+        got = worktree.own_accounts(local)
+        check(got == wanted, f"removal with {local} deletes {wanted}" if got == wanted
+              else f"removal with {local} would delete {got}, not {wanted}")
+
+
+def shared_directories_are_linked_and_removal_never_follows_them() -> None:
+    """We link into a worktree what we only read there and copy what a build
+    writes, and on removal we unlink the links and leave their targets alone.
+    On Windows the link is a junction, because a symbolic link there requires
+    a privilege that most accounts lack (WinError 1314)."""
+    with tempfile.TemporaryDirectory() as directory:
+        canonical = Path(directory) / "canonical"
+        tree = Path(directory) / "tree"
+        tree.mkdir()
+        for relative in worktree.COPIED_ARTIFACTS + worktree.SHARED_ARTIFACTS:
+            (canonical / relative).mkdir(parents=True)
+            (canonical / relative / "kept.txt").write_text(relative.as_posix(), encoding="utf-8")
+        worktree.link_build_artifacts(tree, own_copy=False, canonical=canonical)
+        for relative in worktree.SHARED_ARTIFACTS:
+            check(worktree.is_link(tree / relative) and (tree / relative / "kept.txt").is_file(),
+                  f"{relative.as_posix()} is linked and read through the link")
+        for relative in worktree.COPIED_ARTIFACTS:
+            check(not worktree.is_link(tree / relative) and (tree / relative / "kept.txt").is_file(),
+                  f"{relative.as_posix()} is a copy a build may write")
+        worktree.unlink_artifacts(tree)
+        for relative in worktree.SHARED_ARTIFACTS:
+            check(not os.path.lexists(tree / relative), f"{relative.as_posix()}'s link is gone")
+        for relative in worktree.COPIED_ARTIFACTS + worktree.SHARED_ARTIFACTS:
+            check((canonical / relative / "kept.txt").is_file(),
+                  f"the canonical {relative.as_posix()} is untouched")
 
 
 def removing_a_worktree_keeps_the_fork_commits_its_branch_needs() -> None:
@@ -321,6 +361,24 @@ def removing_a_worktree_keeps_the_fork_commits_its_branch_needs() -> None:
             bool(kept) and run("rev-parse", kept, cwd=canonical) == advanced,
             "and a ref names it, so a later gc cannot collect it",
         )
+
+
+def a_checkout_is_its_folder_however_its_path_is_spelled() -> None:
+    """On Windows the output of `where` for the CLI has backslashes, and the
+    checkout path in MSYS2's Python has forward slashes, for the same folder.
+    Compared as text, we would refuse this checkout's CLI in the builder build."""
+    import built  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory() as directory:
+        folder = Path(directory).resolve()
+        other = folder / "other"
+        other.mkdir()
+        spellings = sorted({str(folder), str(folder).replace("\\", "/")})
+        for said in spellings:
+            for mine in spellings:
+                check(built.same_folder(said, mine), f"{said} names the checkout {mine}")
+        check(not built.same_folder(str(other), str(folder)), "another folder is another checkout")
+        check(not built.same_folder(None, str(folder)), "a binary that will not say belongs to no checkout")
 
 
 def the_built_cli_follows_the_redirected_cargo_target() -> None:
@@ -475,7 +533,6 @@ FROM_THE_CANONICAL_CHECKOUT = [
     adopt_works_from_inside_the_worktree_it_adopts,
     the_test_cartridge_is_in_the_repository,
     the_local_config_is_never_committed,
-    removal_never_touches_the_canonical_data,
     removing_a_worktree_keeps_the_fork_commits_its_branch_needs,
 ]
 
@@ -581,6 +638,9 @@ def a_branch_with_a_slash_keeps_its_whole_name() -> None:
 
 
 ANYWHERE = [
+    removal_deletes_only_the_worktrees_own_accounts_folder,
+    shared_directories_are_linked_and_removal_never_follows_them,
+    a_checkout_is_its_folder_however_its_path_is_spelled,
     a_branch_with_a_slash_keeps_its_whole_name,
     the_built_cli_follows_the_redirected_cargo_target,
     a_file_compiled_into_the_tool_counts_as_its_source,
