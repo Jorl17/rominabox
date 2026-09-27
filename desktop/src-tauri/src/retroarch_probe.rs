@@ -1,10 +1,11 @@
-//! Small programs in `scripts/native_runtime/` compiled against the RetroArch
-//! sources of the fork, so that a test checks RetroArch itself and not a
-//! description of it. RetroArch does not start. In a probe we call some of its
-//! functions, read some of its tables and print the results.
+//! Small programs in `scripts/native_runtime/` that we compile against the
+//! fork's own RetroArch sources, so that a test checks RetroArch itself
+//! instead of a description of it. We do not start RetroArch. In a probe we
+//! read its tables, call its functions and print the results. We build the
+//! probes with `scripts/retroarch_probe.py`, as for the `typing` scope.
 
 use rominabox_scratch::Scratch;
-use std::{fs, path::PathBuf, process::Command};
+use std::{path::PathBuf, process::Command};
 
 pub struct Probe {
     // We remove it, with the program, when we drop the probe.
@@ -17,46 +18,23 @@ impl Probe {
     /// named relative to `vendor/retroarch`.
     pub fn build(name: &str, sources: &[&str]) -> Self {
         let scratch = Scratch::dir(&format!("rominabox-{name}"));
-        let retroarch = crate::repo::at("vendor/retroarch");
-        // input_driver.h includes "../config.h", which is written by the
-        // RetroArch configure script. The code in a probe does not depend on it,
-        // so we put an empty one, one folder above a separate include path.
-        let configured = scratch.join("configured");
-        fs::create_dir_all(configured.join("include")).unwrap();
-        fs::write(configured.join("config.h"), "").unwrap();
-        let program = scratch.join(name);
-        // A probe uses only a few functions and tables, so we leave the rest of
-        // each source out of the program instead of adding its dependencies.
-        let unused = if cfg!(target_os = "macos") {
-            "-Wl,-dead_strip"
-        } else {
-            "-Wl,--gc-sections"
-        };
-        let built = Command::new("cc")
-            .args([
-                "-std=gnu99",
-                "-w",
-                "-ffunction-sections",
-                "-fdata-sections",
-                unused,
-            ])
-            .arg(format!("-I{}", configured.join("include").display()))
-            .arg(format!("-I{}", retroarch.display()))
-            .arg(format!(
-                "-I{}",
-                retroarch.join("libretro-common/include").display()
-            ))
-            .arg(format!("-I{}", retroarch.join("deps").display()))
+        let built = Command::new(crate::repo::python())
+            .arg(crate::repo::at("scripts/retroarch_probe.py"))
+            .arg(scratch.path())
             .arg(crate::repo::at(&format!("scripts/native_runtime/{name}.c")))
-            .args(sources.iter().map(|source| retroarch.join(source)))
-            .arg("-o")
-            .arg(&program)
+            .args(sources)
             .output()
-            .expect("cc runs");
+            .expect("the probe builder runs");
         assert!(
             built.status.success(),
-            "the {name} probe did not build:\n{}",
+            "the {name} probe did not build:\n{}{}",
+            String::from_utf8_lossy(&built.stdout),
             String::from_utf8_lossy(&built.stderr)
+        );
+        let program = PathBuf::from(
+            String::from_utf8(built.stdout)
+                .expect("the builder prints a path")
+                .trim(),
         );
         Self {
             _scratch: scratch,
@@ -70,7 +48,11 @@ impl Probe {
             .args(arguments)
             .output()
             .expect("the probe runs");
-        assert!(printed.status.success(), "the probe failed");
+        assert!(
+            printed.status.success(),
+            "the probe failed:\n{}",
+            String::from_utf8_lossy(&printed.stderr)
+        );
         String::from_utf8(printed.stdout)
             .expect("the probe prints text")
             .lines()

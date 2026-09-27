@@ -388,7 +388,18 @@ mod tests {
     /// `scripts/native_runtime/meta_binds.c` against configuration.c,
     /// config.def.keybinds.h and the key names of the fork.
     fn retroarch_meta_binds() -> Vec<(String, String)> {
-        Probe::build("meta_binds", &["configuration.c", "input/input_keymaps.c"])
+        Probe::build(
+            "meta_binds",
+            &[
+                "configuration.c",
+                "input/input_keymaps.c",
+                "input/input_driver.c",
+                "libretro-common/compat/compat_strl.c",
+                "libretro-common/string/stdstring.c",
+                "libretro-common/encodings/encoding_utf.c",
+                "libretro-common/file/file_path.c",
+            ],
+        )
             .lines(&[])
             .iter()
             .map(|line| {
@@ -399,7 +410,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(windows, ignore = "the RetroArch probe links only where the linker drops unreferenced code (macOS). GNU ld for Windows does not, and these tables are the same on every platform")]
     fn hotkey_policy_matches_pinned_retroarch_meta_binds() {
         let declared = retroarch_meta_binds();
         let policy: Vec<&str> = HOTKEY_BINDS.iter().map(|bind| bind.name).collect();

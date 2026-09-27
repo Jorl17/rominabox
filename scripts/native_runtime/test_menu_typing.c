@@ -9,7 +9,7 @@
  * QUICK SIGN IN does not leave the form.
  *
  * RetroArch is not started. We answer here the calls that the function makes
- * into the menu, and test_menu_typing_unreached.c stubs the rest of RetroArch. */
+ * into the menu, and retroarch_unreached.c stubs the rest of RetroArch. */
 #include <stdio.h>
 #include <string.h>
 #include <libretro.h>

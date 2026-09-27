@@ -151,15 +151,7 @@ pub fn declared_screens(cfg: &str) -> Vec<String> {
         .collect()
 }
 
-/// The Python we run helper scripts with: the one used to start
-/// `scripts/test.py` (`ROMINABOX_PYTHON`), or else the platform's usual name.
-/// On Windows that is `python`, because there `python3` is the Microsoft
-/// Store stub. On macOS, Linux and other POSIX systems it is `python3`.
-pub fn python() -> String {
-    std::env::var("ROMINABOX_PYTHON").unwrap_or_else(|_| {
-        if cfg!(windows) { "python" } else { "python3" }.to_string()
-    })
-}
+pub use rominabox_desktop::repo::python;
 
 /// The windowless RmlUi probe used by the `menu` tests. We build it with the
 /// same recipe as those tests, so this test cannot link a different RmlUi.
