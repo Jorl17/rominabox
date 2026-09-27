@@ -74,8 +74,10 @@
       "--disable-d3d9",
       "--disable-d3d10",
       "--disable-d3d11",
-      "--disable-d3d12"
-    ]
+      "--disable-d3d12",
+      "--disable-winmm"
+    ],
+    "comment-windows-x86_64": "No WinMM: it is only RetroArch's MIDI output, which the macOS player does not have (its build never enables CoreMIDI, so its MIDI driver is null), and it opens the system's synthesiser at every start, which slows the launch."
   },
   "makefile": {
     "common": [
