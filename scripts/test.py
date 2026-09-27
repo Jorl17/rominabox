@@ -44,6 +44,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRATCH = ROOT / "work/test-output"
 BUDGETS = ROOT / "scripts/fixtures/scope-budgets.json"
 PRINT_LOCK = threading.Lock()
+# We take this lock while a scope starts exported games (Scope.launches_games).
+GAMES_LOCK = threading.Lock()
 
 PYTHON = programs.PYTHON
 
@@ -97,12 +99,19 @@ class Scope:
         prepare: list[list[str]] | None = None,
         skipped: str | None = None,
         env: dict[str, str] | None = None,
+        launches_games: bool = False,
     ):
         self.name = name
         self.covers = covers
         self.not_covered = not_covered
         self.command = command
         self.slow = slow
+        # In this scope we start exported games. In the shot harness every game
+        # is in one namespace (menu_shots.SHOT_BUNDLE_PREFIX), so two such scopes
+        # at the same time could start the same game, with one identity,
+        # sandbox, data folder and log. We run them one at a time, so in
+        # launchtime we also never time a machine busy with other games.
+        self.launches_games = launches_games
         # Why we leave a scope out of an ordinary run. We still run it when named.
         self.skipped = skipped
         # What we must stage before the scope runs. We declare it here because
@@ -269,6 +278,7 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/achievements_native_workflow.py")],
         slow=True,
         skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD pointing to a test-only achievements build",
+        launches_games=True,
     ),
     Scope(
         "account-input",
@@ -311,6 +321,7 @@ SCOPES = [
         env=WORKFLOW_ENV,
         slow=True,
         skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player",
+        launches_games=True,
     ),
     Scope(
         "player",
@@ -426,6 +437,7 @@ SCOPES = [
         "that the filter looks right — only which row says it is the one on",
         [PYTHON, str(ROOT / "scripts/shader_state.py")],
         slow=True,
+        launches_games=True,
     ),
     Scope(
         "discs",
@@ -435,6 +447,7 @@ SCOPES = [
         slow=True,
         # In it we lay the menu out with RmlUi to find the Disc entry to click.
         prepare=RMLUI_PREPARE,
+        launches_games=True,
     ),
     Scope(
         "quit",
@@ -446,6 +459,7 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_quit.py")],
         slow=True,
         prepare=[[PYTHON, str(ROOT / "scripts/fetch_test_content.py"), "--scope", "quit"]],
+        launches_games=True,
     ),
     Scope(
         "launchtime",
@@ -454,6 +468,7 @@ SCOPES = [
         "a budget (none is set yet); a real game's core or content; a visible window",
         [PYTHON, str(ROOT / "scripts/test_launch_time.py")],
         slow=True,
+        launches_games=True,
     ),
     Scope(
         "quiet",
@@ -574,9 +589,16 @@ def main() -> int:
     wall_started = time.monotonic()
 
     def finish(scope: Scope) -> None:
-        with PRINT_LOCK:
-            print(f"start {scope.name}", flush=True)
-        passed, seconds, output = run(scope)
+        if scope.launches_games:
+            # We time it from when it starts, not while it waits for the others.
+            with GAMES_LOCK:
+                with PRINT_LOCK:
+                    print(f"start {scope.name}", flush=True)
+                passed, seconds, output = run(scope)
+        else:
+            with PRINT_LOCK:
+                print(f"start {scope.name}", flush=True)
+            passed, seconds, output = run(scope)
         with PRINT_LOCK:
             print(f"\n=== {scope.name} ===", flush=True)
             if output:
