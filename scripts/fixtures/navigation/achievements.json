@@ -91,6 +91,71 @@
       }
     },
     {
+      "name": "a pointer passing over the form leaves the username typing",
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-login",
+        "hover:achievement-password",
+        "hover:achievements-submit"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievements-login",
+          "achievement-username",
+          "achievement-username",
+          "achievement-username"
+        ]
+      }
+    },
+    {
+      "name": "a pointer moves between the form's buttons but never into a field",
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-login",
+        "key:down",
+        "key:down",
+        "hover:achievements-cancel",
+        "hover:achievement-password",
+        "hover:achievement-username",
+        "hover:achievements-submit"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievements-login",
+          "achievement-username",
+          "achievement-password",
+          "achievements-submit",
+          "achievements-cancel",
+          "achievements-cancel",
+          "achievements-cancel",
+          "achievements-submit"
+        ]
+      }
+    },
+    {
+      "name": "a press on a field takes the keyboard there, and a pointer passing on leaves it",
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-login",
+        "press:achievement-password",
+        "hover:achievements-cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievements-login",
+          "achievement-username",
+          "achievement-password",
+          "achievement-password"
+        ]
+      }
+    },
+    {
       "name": "cancelling the form returns to SIGN IN",
       "steps": [
         "options",
