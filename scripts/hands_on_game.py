@@ -1,6 +1,7 @@
-"""Export games for a person to try by hand, as we would make them in the
-builder: with each ROM's title, console, description and cover from an online
-lookup, the Native design, achievements, and a player built from the fork now.
+"""Export games for a person to try by hand, as we make them in the builder:
+we look up each ROM online and give it the builder's settings, as in the
+exporter's `export` for a ROM alone, and use a player built from the fork
+as it is now.
 
     python3 scripts/hands_on_game.py PLAYER_BUILD OUTPUT ROM...
 
@@ -24,14 +25,14 @@ import player_build  # noqa: E402
 from core_source import core_source  # noqa: E402
 
 
-def run(command: str, request: dict) -> dict:
-    """The result of one exporter command, or the reason it failed."""
-    done = subprocess.run([str(menu_shots.command()), command], input=json.dumps(request),
+def export(request: dict) -> dict:
+    """The result of one export, or the reason it failed."""
+    done = subprocess.run([str(menu_shots.command()), "export"], input=json.dumps(request),
                           capture_output=True, text=True, encoding="utf-8")
     events = [json.loads(line) for line in done.stdout.splitlines() if line.startswith("{")]
     last = events[-1] if events else {}
     if last.get("type") != "result":
-        raise SystemExit(f"{command} failed: {last or done.stderr[-500:]}")
+        raise SystemExit(f"export failed: {last or done.stderr[-500:]}")
     return last["result"]
 
 
@@ -53,18 +54,11 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="rominabox-hands-on-") as staging:
         kit = menu_shots.staged_kit(Path(staging) / "kit", player_build.player_in(build))
         for rom in roms:
-            found = run("inspect", {"rom": str(rom), "cache": str(output / "lookup"), "online": True})
-            made = run("export", {
-                "rom": str(rom), "title": found["title"], "system": found["system"],
-                "description": found.get("description") or "", "icon": found.get("iconPath"),
-                "background": None, "showMenu": True, "startAtMenu": False, "theme": "native",
-                "palette": "blue", "splash": True, "includeAchievements": True,
-                "keepPlayingInBackground": False, "autosaveOnQuit": False,
-                "advancedEmulatorAccess": False, "outputDir": str(output),
-                "target": menu_shots.PLATFORM, "runtimeKit": str(kit), "core": None,
-                "coreCache": str(core_source()),
-            })
-            print(f"{found['title']} ({found['system']}): {made['appPath']}")
+            # The kit with this player in it, and this checkout's cores. The
+            # rest is as in the builder.
+            made = export({"rom": str(rom), "outputDir": str(output), "runtimeKit": str(kit),
+                           "coreCache": str(core_source())})
+            print(f"{rom.name}: {made['appPath']}")
     return 0
 
 
