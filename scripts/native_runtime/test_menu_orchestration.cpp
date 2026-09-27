@@ -727,6 +727,57 @@ void background_play_is_the_players(const char *native_assets, const char *data)
    test_setenv("ROMINABOX_RML_ASSETS", native_assets);
 }
 
+/* The player can turn rumble off in the game's Options, in every design, but
+ * only in a game whose core requested rumble on a pad. In any other game we
+ * disable the setting and hide it. We apply a change in RetroArch at once and
+ * write it to the player's file. */
+void rumble_is_the_players_where_the_game_rumbles(const char *native_assets, const char *data)
+{
+   const std::string file = std::string(data) + "/rumble.cfg";
+   int x = 0, y = 0, w = 0, h = 0;
+   for (const char *design : {"native", "disc"})
+   {
+      const std::string assets = design_assets(native_assets, design);
+      const std::string name = std::string(design) + ": ";
+      test_setenv("ROMINABOX_RML_ASSETS", assets.c_str());
+      std::remove(file.c_str());
+      host.settings["input_rumble_enable"] = 1.0f;
+      host.rumbles = false;
+      void *menu = open_menu();
+      if (!menu) continue;
+      click_and_frame(menu, "options");
+      check(inspect.has_class("rumble", "disabled") && !inspect.box("rumble", &x, &y, &w, &h),
+            (name + "a game whose core never asked to rumble has RUMBLE disabled, and not shown").c_str());
+      rib_menu_destroy(menu);
+
+      host.rumbles = true;
+      if (!(menu = open_menu())) continue;
+      click_and_frame(menu, "options");
+      check(!inspect.has_class("rumble", "disabled") && inspect.box("rumble", &x, &y, &w, &h)
+               && std::string(inspect.text("rumble-state")) == "ON"
+               && inspect.has_class("rumble", "on"),
+            (name + "a game that rumbles shows RUMBLE, on").c_str());
+      click_and_frame(menu, "rumble");
+      check(host.settings["input_rumble_enable"] == 0.0f
+               && std::string(inspect.text("rumble-state")) == "OFF"
+               && !inspect.has_class("rumble", "on"),
+            (name + "turning it off turns RetroArch's rumble off at once, and says OFF").c_str());
+      check(read_file(file) == "input_rumble_enable = \"false\"\n",
+            (name + "the choice is written to the player's own file, as RetroArch reads it").c_str());
+      hover_and_frame(menu, "rumble");
+      rib_menu_key(menu, RIB_KEY_OK);
+      frame(menu);
+      check(focused("rumble") && host.settings["input_rumble_enable"] == 1.0f
+               && read_file(file) == "input_rumble_enable = \"true\"\n"
+               && std::string(inspect.text("rumble-state")) == "ON",
+            (name + "OK on the focused switch turns it back on, and that is written too").c_str());
+      rib_menu_destroy(menu);
+   }
+   host.rumbles = false;
+   std::remove(file.c_str());
+   test_setenv("ROMINABOX_RML_ASSETS", native_assets);
+}
+
 /* A change of volume plays a cue at the chosen level, once per step. The
  * bottom step is silence, so we request no cue there, whichever host plays
  * the cues. */
@@ -1267,6 +1318,7 @@ int main(int argc, char **argv)
    fixes::an_idle_menu_builds_nothing(argv[1]);
    fixes::repeated_saves_replace_the_file(argv[2]);
    fixes::background_play_is_the_players(argv[1], argv[2]);
+   fixes::rumble_is_the_players_where_the_game_rumbles(argv[1], argv[2]);
    fixes::volume_is_heard_at_its_level(argv[1]);
    fixes::design_prompt_survives_an_empty_status(argv[1], argv[2]);
    fixes::disc_list_keeps_its_page(argv[1], argv[2]);

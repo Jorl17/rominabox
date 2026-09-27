@@ -199,6 +199,64 @@
           "options-back"
         ]
       }
+    },
+    {
+      "name": "a game that rumbles offers RUMBLE after PLAY IN BACKGROUND",
+      "setup": {
+        "rumble": 1
+      },
+      "steps": {
+        "native": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ],
+        "options-columns": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ],
+        "disc": [
+          "options",
+          "key:up",
+          "key:up",
+          "key:up"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "background-play",
+          "rumble",
+          "options-back"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "achievements",
+          "rumble",
+          "options-back",
+          "options-back",
+          "options-back"
+        ],
+        "disc": [
+          "volume-level",
+          "rumble",
+          "background-play",
+          "achievements"
+        ]
+      }
     }
   ]
 }
