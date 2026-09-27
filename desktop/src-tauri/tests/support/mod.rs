@@ -183,15 +183,19 @@ pub fn rml_probe() -> PathBuf {
 
 /// What is under the pointer at each point, laid out at 960x600.
 pub fn hovered(document: &Path, points: &[(i32, i32)]) -> Vec<String> {
-    let mut command = Command::new(rml_probe());
-    command
+    // In a file beside the document, because a sweep of the screen is longer
+    // than the 32,767 characters allowed on a Windows command line.
+    let steps = document.with_extension("steps");
+    let listed: String = points.iter().map(|(x, y)| format!("move:{x},{y}\n")).collect();
+    std::fs::write(&steps, listed).unwrap();
+    let output = Command::new(rml_probe())
         .arg("--document")
         .arg(document)
-        .args(["--size", "960x600"]);
-    for (x, y) in points {
-        command.args(["--step", &format!("move:{x},{y}")]);
-    }
-    let output = command.output().unwrap();
+        .args(["--size", "960x600"])
+        .arg("--steps")
+        .arg(&steps)
+        .output()
+        .unwrap();
     assert!(
         output.status.success(),
         "{}: {}",

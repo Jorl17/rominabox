@@ -7,7 +7,7 @@
  * against a Mouseout that arrives after the next Mouseover. We render nothing
  * (no OpenGL, no window, no RetroArch), and test only the RmlUi layer.
  *
- *   rml_probe --document DOC [--size WxH] [--step SPEC ...]
+ *   rml_probe --document DOC [--size WxH] [--step SPEC ...] [--steps FILE]
  *
  *     --step move:X,Y          move the pointer
  *     --step down:X,Y          press the left button at a point
@@ -17,6 +17,8 @@
  *                              right, return, escape, tab)
  *     --step watch:ID          print element ID's state after every later step
  *     --step box:ID            print element ID's border box after every later step
+ *     --steps FILE             more steps, one SPEC to a line, for more than fits
+ *                              on a command line (Windows allows 32,767 characters)
  *
  * Coordinates are document pixels. For each step we print one JSON object with
  * the step, the element under the pointer and the classes of every watched
@@ -28,6 +30,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -127,6 +130,24 @@ bool parse_point(const std::string& text, int& x, int& y)
 
 } // namespace
 
+/* One step as written on the command line or in a steps file, VERB:ARGUMENT. */
+bool add_step(const std::string& spec, std::vector<Step>& steps)
+{
+    const auto colon = spec.find(':');
+    if (colon == std::string::npos) {
+        std::fprintf(stderr, "--step wants VERB:ARGUMENT\n");
+        return false;
+    }
+    Step step{spec.substr(0, colon), spec.substr(colon + 1), 0, 0};
+    if (step.verb != "key" && step.verb != "watch" && step.verb != "box" &&
+        !parse_point(step.argument, step.x, step.y)) {
+        std::fprintf(stderr, "step '%s' wants X,Y\n", spec.c_str());
+        return false;
+    }
+    steps.push_back(step);
+    return true;
+}
+
 int main(int argc, char** argv)
 {
     std::string document_path;
@@ -148,19 +169,20 @@ int main(int argc, char** argv)
             width = std::stoi(value.substr(0, x));
             height = std::stoi(value.substr(x + 1));
         } else if (argument == "--step" && i + 1 < argc) {
-            const std::string spec = argv[++i];
-            const auto colon = spec.find(':');
-            if (colon == std::string::npos) {
-                std::fprintf(stderr, "--step wants VERB:ARGUMENT\n");
+            if (!add_step(argv[++i], steps))
+                return 2;
+        } else if (argument == "--steps" && i + 1 < argc) {
+            std::ifstream file(argv[++i]);
+            if (!file) {
+                std::fprintf(stderr, "cannot read the steps in %s\n", argv[i]);
                 return 2;
             }
-            Step step{spec.substr(0, colon), spec.substr(colon + 1), 0, 0};
-            if (step.verb != "key" && step.verb != "watch" && step.verb != "box" &&
-                !parse_point(step.argument, step.x, step.y)) {
-                std::fprintf(stderr, "step '%s' wants X,Y\n", spec.c_str());
-                return 2;
+            for (std::string line; std::getline(file, line);) {
+                if (!line.empty() && line.back() == '\r')
+                    line.pop_back();
+                if (!line.empty() && !add_step(line, steps))
+                    return 2;
             }
-            steps.push_back(step);
         } else {
             std::fprintf(stderr, "unknown argument: %s\n", argument.c_str());
             return 2;
