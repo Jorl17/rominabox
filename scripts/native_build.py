@@ -280,6 +280,14 @@ def has_symbol(binary: Path, target: str, function: str, environment: dict[str, 
     return any(line.split()[-1:] == [wanted] for line in listed.splitlines())
 
 
+def joypad_profile_drivers(platform_name: str) -> list[str]:
+    """The controller profile folders for the player of a platform."""
+    declared = recipe()["drivers"].get(platform_name)
+    if declared is None:
+        raise SystemExit(f"the player recipe declares no drivers for {platform_name}")
+    return declared["joypadProfiles"]
+
+
 def system_libraries(target: str) -> set[str]:
     """The libraries present on every machine of `target`'s platform (lower
     case). We let a player or a launcher import these and nothing else,

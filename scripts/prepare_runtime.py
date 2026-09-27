@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from core_source import DOWNLOADS, host_target, seeded_cache  # noqa: E402
+import joypad_autoconfig  # noqa: E402
 import native_build  # noqa: E402
 
 # The provenance of each core is declared in the console package that
@@ -469,15 +470,6 @@ def _profile(member_name: str, drivers: list[str]) -> tuple[str, str] | None:
     return parts[1], filename
 
 
-def joypad_profile_drivers(platform_name: str) -> list[str]:
-    """Return the controller profile folders for a platform's player, as
-    declared in the player recipe."""
-    declared = native_build.recipe()["drivers"].get(platform_name)
-    if declared is None:
-        raise RuntimeError(f"the player recipe declares no drivers for {platform_name}")
-    return declared["joypadProfiles"]
-
-
 def _record_joypad_component(root: Path, record: dict[str, object]) -> None:
     """Add or update the component in an existing kit manifest, as we do for cores."""
     manifest_path = root / "manifest.json"
@@ -536,6 +528,11 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
         raise RuntimeError("Joypad autoconfig COPYING is missing the RetroArch MIT copyright")
     if "Permission is hereby granted" not in licence_text:
         raise RuntimeError("Joypad autoconfig COPYING is missing the MIT grant")
+    # When upstream disabled a profile by commenting out its device name or an
+    # id, no pad can match it in RetroArch, so we leave it out of the kit.
+    disabled = [(driver, filename) for driver, filename, raw in profiles
+                if not joypad_autoconfig.can_match(joypad_autoconfig.parse_entries(raw.decode("utf-8")))]
+    profiles = [profile for profile in profiles if (profile[0], profile[1]) not in disabled]
     for driver in drivers:
         if not any(staged == driver for staged, _filename, _raw in profiles):
             raise RuntimeError(f"No {driver} profiles in {archive}")
@@ -586,14 +583,15 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
         "origin": (
             f"Pinned {', '.join(drivers)} profiles from libretro/retroarch-joypad-autoconfig. "
             f"Only {', '.join(f'{driver}/*.cfg' for driver in drivers)} is staged: the folders "
-            "the exported player's controller driver reads. "
+            "the exported player's controller driver reads. Profiles upstream disabled, which "
+            "name no device and no complete pair of ids, are not staged. "
             "Meta-bind lines are removed at staging. SDL3 gamecontrollerdb.cfg is not shipped."
         ),
     }
     _record_joypad_component(root, record)
     print(
         f"Joypad autoconfig {revision}: {len(profiles)} {'/'.join(drivers)} profiles, "
-        f"{removed_lines} meta lines removed, {staged_bytes} staged bytes "
+        f"{len(disabled)} disabled ones left out, {removed_lines} meta lines removed, {staged_bytes} staged bytes "
         f"(upstream {upstream_bytes} bytes, archive {archive.stat().st_size} bytes)",
         flush=True,
     )
@@ -638,7 +636,7 @@ def main() -> None:
         (root / "sources").mkdir(parents=True, exist_ok=True)
         (root / "licenses").mkdir(parents=True, exist_ok=True)
         platform_name = (args.target or host_target()).split("-", 1)[0]
-        stage_joypad_autoconfig(root, joypad_profile_drivers(platform_name))
+        stage_joypad_autoconfig(root, native_build.joypad_profile_drivers(platform_name))
         print(f"Joypad autoconfig staged: {root}", flush=True)
         return
     if platform.system() != "Darwin":
@@ -716,7 +714,7 @@ def main() -> None:
             download(url, root / "catalogs" / f"{catalog}.dat")
         except OSError as exc:
             print(f"Optional catalog unavailable: {catalog}: {exc}", flush=True)
-    entries.append(stage_joypad_autoconfig(root))
+    entries.append(stage_joypad_autoconfig(root, native_build.joypad_profile_drivers(target.split("-", 1)[0])))
     (root / "components.json").write_text(
         json.dumps(
             {

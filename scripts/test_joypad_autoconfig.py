@@ -1,10 +1,14 @@
 """Check that RetroArch would apply every pad profile that we ship.
 
-The hid directory is the declaration. It contains every ``hid/*.cfg`` in the
-pinned autoconfig archive, because we scan only that folder in the exported
-player. A profile that is declared and not staged is the same failure as a
-console that lists a controller defined in no package. Removing the file for a
-pad is enough. The match score is then zero, and the log has "not configured".
+Each driver folder in the exports of this machine is a declaration. It
+contains every ``<driver>/*.cfg`` in the pinned autoconfig archive with a pad
+name (upstream disables some profiles by commenting out the name or an id),
+because we scan only those folders in the exported player (``hid`` on macOS,
+``xinput`` and ``dinput`` on Windows). A profile that is declared and not
+staged is the same failure as a console that lists a controller defined in no
+package. Removing the file for a pad is enough. The match score is then zero,
+and the log has "not configured". We check the DualSense that we test the
+product with in every driver folder where we match pads by their ids.
 
     python3 scripts/test_joypad_autoconfig.py
 
@@ -45,15 +49,18 @@ def check(condition: bool, message: str) -> None:
         FAILURES.append(message)
 
 
-def pinned_hid_names() -> set[str]:
+def pinned_names(driver: str) -> set[str]:
     revision = prepare_runtime.JOYPAD_AUTOCONFIG_REVISION
     archive = prepare_runtime.DOWNLOADS / f"retroarch-joypad-autoconfig-{revision}.tar.gz"
     names: set[str] = set()
     with tarfile.open(archive) as package:
         for member in package.getmembers():
-            filename = prepare_runtime._hid_profile_filename(member.name)
-            if filename:
-                names.add(filename)
+            profile = prepare_runtime._profile(member.name, [driver])
+            if not profile:
+                continue
+            source = package.extractfile(member)
+            if source and joypad.can_match(joypad.parse_entries(source.read().decode("utf-8"))):
+                names.add(profile[1])
     return names
 
 
@@ -71,24 +78,28 @@ def observed_device() -> joypad.Device:
     return joypad.Device(name=info_name, vendor=int(vendor_dec), product=int(product_dec))
 
 
-def the_staged_set_is_the_pinned_hid_directory() -> list[joypad.Profile]:
-    declared = pinned_hid_names()
-    staged = {path.name for path in joypad.STAGED_HID.glob("*.cfg")}
+def the_staged_set_is_the_pinned_directory(driver: str) -> list[joypad.Profile]:
+    declared = pinned_names(driver)
+    staged = {path.name for path in (joypad.STAGED / driver).glob("*.cfg")}
     missing = sorted(declared - staged)
     extra = sorted(staged - declared)
-    check(not missing, f"declared hid profiles are staged, missing {missing}")
-    check(not extra, f"staged profiles are all declared, extra {extra}")
+    check(not missing, f"declared {driver} profiles are staged, missing {missing}")
+    check(not extra, f"staged {driver} profiles are all declared, extra {extra}")
     check(len(staged) == len(declared) and len(declared) > 1, f"{len(staged)} profiles, not a single special case")
-    return joypad.load_hid_profiles()
+    return joypad.load_profiles(joypad.STAGED / driver)
 
 
-def the_observed_pad_matches_by_id_even_though_the_name_differs(profiles: list[joypad.Profile]) -> None:
+def the_observed_pad_matches_by_id_even_though_the_name_differs(driver: str, profiles: list[joypad.Profile]) -> None:
     device = observed_device()
     winners = joypad.score_all(device, profiles)
     check(len(winners) == 1, f"exactly one profile matches the logged pad, got {len(winners)}")
     if len(winners) != 1:
         return
     winner = winners[0]
+    check(
+        winner.profile.path.name == prepare_runtime.DUALSENSE_PROFILES[driver],
+        f"the {driver} profile it matches is {prepare_runtime.DUALSENSE_PROFILES[driver]}",
+    )
     check(
         winner.affinity >= joypad.ID_AFFINITY,
         f"vendor and product score a match (affinity {winner.affinity})",
@@ -119,14 +130,14 @@ def removing_that_profile_scores_zero(profiles: list[joypad.Profile]) -> None:
                 and joypad.config_int(profile.entries, "input_product_id") == device.product
             ):
                 (directory / profile.path.name).unlink()
-        remaining = joypad.load_hid_profiles(directory)
+        remaining = joypad.load_profiles(directory)
         check(
             joypad.score_all(device, remaining) == [],
             "without that profile the logged pad is not configured",
         )
 
 
-def every_profile_matches_a_device_that_reports_its_ids(profiles: list[joypad.Profile]) -> None:
+def every_profile_matches_a_device_that_reports_its_ids(driver: str, profiles: list[joypad.Profile]) -> None:
     """Check that we do not require the name when both ids are present and not zero.
 
     In RetroArch a zero id is not an id, so those profiles must match by the
@@ -152,7 +163,8 @@ def every_profile_matches_a_device_that_reports_its_ids(profiles: list[joypad.Pr
         not missed,
         f"every profile matches a device reporting its ids, or its name when an id is zero; missed {missed}",
     )
-    check(by_id > by_name, f"{by_id} profiles match by id, {by_name} only by name")
+    if driver in prepare_runtime.DUALSENSE_PROFILES:
+        check(by_id > by_name, f"{by_id} profiles match by id, {by_name} only by name")
 
 
 def shared_ids_are_reported_as_a_tie(profiles: list[joypad.Profile]) -> None:
@@ -233,7 +245,7 @@ def the_command_line_reports_the_logged_pad() -> None:
         text=True,
     )
     check(matched.returncode == 0, f"match exits 0 for the logged pad: {matched.stderr}")
-    check(matched.stdout.startswith("affinity "), f"match prints a score: {matched.stdout!r}")
+    check(": affinity " in matched.stdout, f"match prints a score: {matched.stdout!r}")
     unknown = subprocess.run(
         [
             sys.executable,
@@ -255,12 +267,20 @@ def the_command_line_reports_the_logged_pad() -> None:
 
 
 def main() -> int:
-    profiles = the_staged_set_is_the_pinned_hid_directory()
-    the_observed_pad_matches_by_id_even_though_the_name_differs(profiles)
-    removing_that_profile_scores_zero(profiles)
-    every_profile_matches_a_device_that_reports_its_ids(profiles)
-    shared_ids_are_reported_as_a_tie(profiles)
-    an_unknown_pad_matches_nothing(profiles)
+    drivers = joypad.declared_drivers()
+    for driver in drivers:
+        print(f"{driver}:")
+        profiles = the_staged_set_is_the_pinned_directory(driver)
+        if driver in prepare_runtime.DUALSENSE_PROFILES:
+            the_observed_pad_matches_by_id_even_though_the_name_differs(driver, profiles)
+            removing_that_profile_scores_zero(profiles)
+        every_profile_matches_a_device_that_reports_its_ids(driver, profiles)
+        shared_ids_are_reported_as_a_tie(profiles)
+        an_unknown_pad_matches_nothing(profiles)
+    check(
+        any(driver in prepare_runtime.DUALSENSE_PROFILES for driver in drivers),
+        "some shipped folder recognises the DualSense by its ids",
+    )
     integers_parse_the_way_retroarch_does()
     recognition_lines_are_not_stripped_with_hotkeys()
     the_command_line_reports_the_logged_pad()

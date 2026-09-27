@@ -1,6 +1,8 @@
 """Which plugged-in pads we can recognise in an export.
 
-In exports we force the hid joypad driver. We then look only in
+In an export we set the player's controller driver and ship the profile
+folders for that driver (``player-recipe.json``, ``drivers``): on macOS
+``hid``, on Windows ``xinput`` and ``dinput``. We look only in
 ``joypad_autoconfig_dir`` and ``joypad_autoconfig_dir/<driver>``, one level
 deep, and score each ``*.cfg`` as ``input_autoconfigure_get_config_file_affinity``
 does in ``vendor/retroarch/tasks/task_autodetect.c``. This script follows
@@ -12,10 +14,11 @@ pass the rules as they stand.
     python3 scripts/joypad_autoconfig.py list
     python3 scripts/joypad_autoconfig.py match --name "DualSense Wireless Controller" --vendor 1356 --product 3302
 
-``match`` exits 0 when some profile we ship scores above zero, and 1 when none
-does. Vendor and product are the integers that ``config_get_int`` would read
-(``strtol`` base 0), which is the decimal form in profiles and in the "not
-configured" log line.
+With both commands we read the staged folder of each driver in exports from
+this machine, or one ``--directory``. ``match`` exits 0 when, in some folder,
+one profile scores above zero, and 1 when none does or the best in a folder is a tie. Vendor and product are the integers that ``config_get_int``
+would read (``strtol`` base 0), which is the decimal form in profiles and in
+the "not configured" log line.
 """
 
 from __future__ import annotations
@@ -32,10 +35,17 @@ PHYS_AFFINITY = 10
 ALTERNATIVES = 10
 
 ROOT = Path(__file__).resolve().parent.parent
-STAGED_HID = ROOT / "desktop/src-tauri/resources/runtime/autoconfig/hid"
-# The string passed to input_autoconfigure_connect by the macOS HID driver.
-# The driver's own ident is "iohidmanager", and the scan directory has this name.
-EXPORT_JOYPAD_DRIVER = "hid"
+STAGED = ROOT / "desktop/src-tauri/resources/runtime/autoconfig"
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import native_build  # noqa: E402
+from core_source import host_target  # noqa: E402
+
+
+def declared_drivers() -> list[str]:
+    """The profile folders we ship in exports from this machine, each named
+    after the driver for its pads."""
+    return native_build.joypad_profile_drivers(host_target().split("-", 1)[0])
 
 
 @dataclass(frozen=True)
@@ -69,15 +79,19 @@ def extract_value(raw: str) -> str:
     return value.split()[0] if value else ""
 
 
-def parse_profile(path: Path) -> Profile:
+def parse_entries(text: str) -> dict[str, str]:
     entries: dict[str, str] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in text.splitlines():
         body = line.strip()
         if not body or body.startswith("#") or "=" not in line:
             continue
         key, raw = line.split("=", 1)
         entries[key.strip()] = extract_value(raw)
-    return Profile(path, entries)
+    return entries
+
+
+def parse_profile(path: Path) -> Profile:
+    return Profile(path, parse_entries(path.read_text(encoding="utf-8")))
 
 
 def config_int(entries: dict[str, str], key: str) -> int | None:
@@ -102,6 +116,18 @@ def config_int(entries: dict[str, str], key: str) -> int | None:
     if number < -0x80000000 or number > 0x7FFFFFFF:
         return None
     return number & 0xFFFF
+
+
+def can_match(entries: dict[str, str]) -> bool:
+    """Whether some pad could score above zero, because the main entry or an
+    alternative contains a device name, or both of its ids."""
+    for index in range(ALTERNATIVES):
+        suffix = "" if index == 0 else f"_alt{index}"
+        if entries.get(f"input_device{suffix}"):
+            return True
+        if config_int(entries, f"input_vendor_id{suffix}") and config_int(entries, f"input_product_id{suffix}"):
+            return True
+    return False
 
 
 def affinity(device: Device, profile: Profile) -> int:
@@ -141,11 +167,10 @@ def affinity(device: Device, profile: Profile) -> int:
     return best
 
 
-def load_hid_profiles(directory: Path | None = None) -> list[Profile]:
-    root = directory or STAGED_HID
-    if not root.is_dir():
-        raise SystemExit(f"no hid profiles at {root}")
-    return [parse_profile(path) for path in sorted(root.glob("*.cfg"))]
+def load_profiles(directory: Path) -> list[Profile]:
+    if not directory.is_dir():
+        raise SystemExit(f"no profiles at {directory}")
+    return [parse_profile(path) for path in sorted(directory.glob("*.cfg"))]
 
 
 def score_all(device: Device, profiles: list[Profile]) -> list[Scored]:
@@ -174,10 +199,10 @@ def list_profiles(profiles: list[Profile]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--directory", type=Path, default=STAGED_HID, help="hid profile directory")
+    parser.add_argument("--directory", type=Path, help="one profile folder, instead of every declared driver's")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("list", help="every staged hid profile")
+    sub.add_parser("list", help="every staged profile")
 
     match = sub.add_parser("match", help="score one reported device against the staged profiles")
     match.add_argument("--name", required=True)
@@ -186,10 +211,12 @@ def main(argv: list[str] | None = None) -> int:
     match.add_argument("--phys", default="")
 
     arguments = parser.parse_args(argv)
-    profiles = load_hid_profiles(arguments.directory)
+    folders = [arguments.directory] if arguments.directory else [STAGED / driver for driver in declared_drivers()]
     if arguments.command == "list":
-        list_profiles(profiles)
-        print(f"{len(profiles)} hid profiles")
+        for folder in folders:
+            profiles = load_profiles(folder)
+            list_profiles(profiles)
+            print(f"{len(profiles)} {folder.name} profiles")
         return 0
 
     device = Device(
@@ -198,22 +225,25 @@ def main(argv: list[str] | None = None) -> int:
         product=config_int({"id": arguments.product}, "id") or 0,
         phys=arguments.phys,
     )
-    winners = score_all(device, profiles)
-    if not winners:
+    matched = False
+    for folder in folders:
+        winners = score_all(device, load_profiles(folder))
+        if len(winners) > 1:
+            print(
+                f"{folder.name}: tie at affinity {winners[0].affinity}: "
+                + ", ".join(item.profile.path.name for item in winners),
+                file=sys.stderr,
+            )
+            return 1
+        if winners:
+            matched = True
+            print(f"{folder.name}: affinity {winners[0].affinity}  {winners[0].profile.path.name}")
+    if not matched:
         print(
             f"not configured: {device.name} ({device.vendor}/{device.product})",
             file=sys.stderr,
         )
         return 1
-    if len(winners) > 1:
-        print(
-            f"tie at affinity {winners[0].affinity}: "
-            + ", ".join(item.profile.path.name for item in winners),
-            file=sys.stderr,
-        )
-        return 1
-    winner = winners[0]
-    print(f"affinity {winner.affinity}  {winner.profile.path.name}")
     return 0
 
 

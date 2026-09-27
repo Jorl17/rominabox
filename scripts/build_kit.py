@@ -132,7 +132,7 @@ def main() -> int:
     }
     (kit / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
     # After the manifest, because we add the profiles' component record to it.
-    prepare_runtime.stage_joypad_autoconfig(kit, prepare_runtime.joypad_profile_drivers(platform))
+    prepare_runtime.stage_joypad_autoconfig(kit, native_build.joypad_profile_drivers(platform))
     print(f"Made the {target} runtime kit in {kit} from {build}")
     return 0
 
