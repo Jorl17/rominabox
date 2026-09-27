@@ -39,6 +39,7 @@
 #include "rmlui/view.hpp"
 #include "menu_host_fake.h"
 #include "achievements_fake.hpp"
+#include "test_arguments.h"
 #include "test_environment.h"
 #include "test_process.h"
 
@@ -251,6 +252,11 @@ void run_case(const Case& run)
 
 int main(int argc, char **argv)
 {
+   /* The path of this program, which we start again for each case, as
+    * UTF-8 on every platform. */
+   Utf8Arguments utf8(argc, argv);
+   argc = utf8.argc();
+   argv = utf8.argv();
    /* With --case, this process runs one case: we read the directives of
     * that case and run it. */
    const bool one_case = argc == 2 && std::strcmp(argv[1], "--case") == 0;

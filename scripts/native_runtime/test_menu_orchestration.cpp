@@ -10,6 +10,7 @@
 #include "menu_host_fake.h"
 #include <file/config_file.h>
 #include "rmlui/files.h"
+#include "test_arguments.h"
 #include "test_environment.h"
 #include <sys/stat.h>
 #include <filesystem>
@@ -1017,6 +1018,10 @@ void repeated_saves_replace_the_file(const char *data)
 
 int main(int argc, char **argv)
 {
+   /* Paths arrive as UTF-8 on every platform. */
+   Utf8Arguments utf8(argc, argv);
+   argc = utf8.argc();
+   argv = utf8.argv();
    if (argc == 4 && std::strcmp(argv[1], "--capacity") == 0)
       return capacity_case(argv[2], argv[3]);
    if (argc == 4 && std::strcmp(argv[1], "--stick-capture") == 0)
