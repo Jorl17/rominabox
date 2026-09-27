@@ -321,12 +321,15 @@ def run_menu_sounds() -> list[str]:
         shutil.copytree(size_bundles.resources(app), resources, dirs_exist_ok=True)
         size_bundles.remove_owned(app.parent)
         # The export's data folder is in the person's application data, but
-        # for this run we keep the data here instead.
+        # for this run we keep the data here. A game in its sandbox could not
+        # write here, so we run the plan tool outside it, as we run an unsigned
+        # Mac one whatever its plan contains.
         data = root / "data"
         plan = resources / "launch.plan"
         write(plan, "".join(
             f"data_dir\t{data}\n" if line.startswith("data_dir\t") else line
-            for line in plan.read_text(encoding="utf-8").splitlines(keepends=True)))
+            for line in plan.read_text(encoding="utf-8").splitlines(keepends=True)
+            if not line.startswith("sandbox\t")))
         home = root / "home"
         home.mkdir()
         launch(binary, home)
