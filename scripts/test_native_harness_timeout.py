@@ -211,6 +211,38 @@ def link_directory(link: Path, target: Path) -> None:
         raise NotImplementedError(f"no way to link a folder on os.name {os.name!r}")
 
 
+class GameStarted(Exception):
+    pass
+
+
+class HarnessLinkTest(unittest.TestCase):
+    def test_a_shot_refuses_game_storage_that_leads_elsewhere(self) -> None:
+        # For a shot we delete the game's log and remaps before we start the
+        # game. Through a link, those would be the files of someone else.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            data = root / "data"
+            data.mkdir()
+            elsewhere = root / "elsewhere"
+            elsewhere.mkdir()
+            kept = elsewhere / "launch.log"
+            kept.write_text("somebody else's log")
+            link_directory(data / "logs", elsewhere)
+            problem = None
+            with (
+                patch.object(menu_shots, "data_dir_of", return_value=data),
+                patch.object(menu_shots, "log_of", return_value=data / "logs" / "launch.log"),
+                patch.object(menu_shots, "launcher_of", return_value=Path("/fake/launcher")),
+                patch.object(menu_shots.subprocess, "Popen", side_effect=GameStarted),
+            ):
+                try:
+                    problem = menu_shots.take(Path("/fake/Game.app"), "shot", [], root / "out")
+                except GameStarted:
+                    pass
+            self.assertTrue(kept.exists(), "a shot deleted a file through a link")
+            self.assertIn("link", problem or "")
+
+
 class WorkflowFixtureOwnershipTest(unittest.TestCase):
     def test_claim_refuses_redirected_storage_parent(self) -> None:
         for linked in ("Data", "Games"):
