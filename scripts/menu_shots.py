@@ -45,6 +45,10 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from typing import Iterator
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import native_build  # noqa: E402
+from core_source import host_target  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 SHOTS = ROOT / "scripts/fixtures/menu-shots.json"
 DIGESTS = ROOT / "scripts/fixtures/menu-shot-digests.json"
@@ -109,7 +113,7 @@ def declared_shots() -> dict[str, dict]:
     }
 
 
-def launcher_of(app: Path) -> Path:
+def _macos_launcher(app: Path) -> Path:
     """The bundle's main executable, which is the sandboxed player."""
     identifier = subprocess.run(
         [
@@ -129,14 +133,15 @@ def launcher_of(app: Path) -> Path:
     raise SystemExit(f"no launcher inside {app}")
 
 
-def plan_text(app: Path) -> str:
-    path = app / "Contents/Resources/launch.plan"
-    if path.is_file():
-        return path.read_text()
-    return ""
+def _windows_launcher(app: Path) -> Path:
+    """The program of the game, named after the game, in its folder."""
+    executable = app / f"{app.name}.exe"
+    if executable.is_file():
+        return executable
+    raise SystemExit(f"no launcher inside {app}")
 
 
-def sandboxed(app: Path) -> bool:
+def _macos_sandboxed(app: Path) -> bool:
     signed = subprocess.run(
         ["/usr/bin/codesign", "-d", "--entitlements", "-", str(app)],
         capture_output=True,
@@ -168,12 +173,57 @@ def home_for(app: Path) -> str:
     return str(Path.home() / "Library/Containers" / identifier / "Data")
 
 
+# What differs with the platform of the game: its launcher, the folder for
+# its files, the per-user folder that $user_data stands for in the plan,
+# whether it is sandboxed, and the place of the player in the kit (we freeze
+# the macOS kit with freeze-runtime-kit.mjs and make the Windows kit from the
+# recipe). Windows games are not sandboxed.
+APPS = {
+    "macos": {
+        "launcher": _macos_launcher,
+        "resources": lambda app: app / "Contents/Resources",
+        "user_data": lambda app: Path(home_for(app)) / "Library/Application Support",
+        "sandboxed": _macos_sandboxed,
+        "kit_player": lambda: "bin/retroarch",
+    },
+    "windows": {
+        "launcher": _windows_launcher,
+        "resources": lambda app: app / "Resources",
+        "user_data": lambda app: Path(os.environ["LOCALAPPDATA"]),
+        "sandboxed": lambda app: False,
+        "kit_player": lambda: native_build.recipe()["kit"][host_target()]["files"]["player"]["at"],
+    },
+}
+PLATFORM = host_target().split("-", 1)[0]
+
+
+def _app() -> dict:
+    if PLATFORM not in APPS:
+        raise SystemExit(f"no exported game is declared for {PLATFORM}")
+    return APPS[PLATFORM]
+
+
+def launcher_of(app: Path) -> Path:
+    return _app()["launcher"](app)
+
+
+def sandboxed(app: Path) -> bool:
+    return _app()["sandboxed"](app)
+
+
+def plan_text(app: Path) -> str:
+    path = _app()["resources"](app) / "launch.plan"
+    if path.is_file():
+        return path.read_text()
+    return ""
+
+
 def data_dir_of(app: Path) -> Path | None:
     """The per-game storage, as we compute it in the launcher."""
     found = DATA_DIR.search(plan_text(app))
     if not found:
         return None
-    return Path(found.group(1).replace("$user_data", str(Path(home_for(app)) / "Library/Application Support")))
+    return Path(found.group(1).replace("$user_data", str(_app()["user_data"](app))))
 
 
 def log_of(app: Path) -> Path | None:
@@ -457,8 +507,9 @@ def _build_a_game(
                 shutil.copyfile(document, staged_design / document.name)
                 if package_name == "native":
                     shutil.copyfile(document, kit / "menu-assets" / document.name)
-    shutil.copyfile(built_player(), kit / "bin/retroarch")
-    (kit / "bin/retroarch").chmod(0o755)
+    player = kit / _app()["kit_player"]()
+    shutil.copyfile(built_player(), player)
+    player.chmod(0o755)
 
     out = run_dir / "exported"
     out.mkdir(parents=True)
@@ -477,7 +528,7 @@ def _build_a_game(
         # visual baselines do not include the account menu entries.
         "includeAchievements": False,
         "outputDir": str(out),
-        "target": "macos",
+        "target": PLATFORM,
         "runtimeKit": str(kit),
         # The kit contains no cores. In an export we take the core from the local
         # core cache, as we do from the cache of the builder.
@@ -493,9 +544,10 @@ def _build_a_game(
     )
     if result.returncode != 0:
         raise SystemExit(f"could not export a game to shoot:\n{result.stdout[-900:]}")
-    app = next(out.glob("*.app"), None)
-    if app is None:
-        raise SystemExit(f"the export wrote no .app into {out}")
+    written = [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
+    app = next((Path(event["result"]["appPath"]) for event in written if event.get("type") == "result"), None)
+    if app is None or not app.is_dir():
+        raise SystemExit(f"the export wrote no app into {out}")
     return app
 
 
