@@ -96,7 +96,7 @@ def claim_fixture(app: Path) -> None:
     if marker.is_symlink():
         raise SystemExit(f"refusing a symlink ownership marker: {marker}")
     if marker.exists():
-        if marker.read_text() != owner:
+        if marker.read_text(encoding="utf-8") != owner:
             raise SystemExit(f"fixture storage has a different owner: {data}")
         return
     existing = [data / name for name in ("volume.cfg", "background-play.cfg", "controls.cfg",
@@ -112,7 +112,7 @@ def claim_fixture(app: Path) -> None:
         raise SystemExit("pre-existing unowned fixture files; no reset performed:\n"
                          + "\n".join(str(path) for path in unknown))
     data.mkdir(parents=True, exist_ok=True)
-    marker.write_text(owner)
+    marker.write_text(owner, encoding="utf-8", newline="\n")
 
 
 def persisted(app: Path, table: dict) -> dict[str, str]:
@@ -125,7 +125,7 @@ def persisted(app: Path, table: dict) -> dict[str, str]:
     app_prefix = str(app.resolve()) + "/"
     paths = sorted({path for pattern in table["persisted"] for path in data.glob(pattern)})
     # Written with `/` on every platform, as in the rules of the table.
-    return {path.relative_to(data).as_posix(): path.read_text().replace(app_prefix, "$APP/")
+    return {path.relative_to(data).as_posix(): path.read_text(encoding="utf-8").replace(app_prefix, "$APP/")
             for path in paths if path.is_file()}
 
 
@@ -182,7 +182,7 @@ def reduced(record: dict, table: dict) -> dict:
 
 def checkpoints(log: Path) -> dict[str, dict]:
     """The reports from the player in its log, by checkpoint label."""
-    return {label: json.loads(value) for label, value in CHECKPOINT.findall(log.read_text())}
+    return {label: json.loads(value) for label, value in CHECKPOINT.findall(log.read_text(encoding="utf-8", errors="replace"))}
 
 
 def capture(app: Path, destination: Path, case: dict, table: dict) -> dict:
@@ -218,17 +218,17 @@ def main() -> int:
                                      "status", "--porcelain", "--untracked-files=no"], text=True)
     if dirty:
         raise SystemExit("commit the fork and build it before recording/comparing workflows")
-    table = json.loads(TABLE.read_text())
+    table = json.loads(TABLE.read_text(encoding="utf-8"))
     cases = [declared(table, item["design"], item["palette"], item["case"]) for item in table["launched"]]
     if not cases:
         raise SystemExit("the table launches no case")
     output = arguments.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     rom = fixture(output / "input")
-    provenance = json.loads((player.parents[1] / "build-info.json").read_text())
+    provenance = json.loads((player.parents[1] / "build-info.json").read_text(encoding="utf-8"))
     provenance["binarySha256"] = hashlib.sha256(player.read_bytes()).hexdigest()
     provenance["cliSha256"] = hashlib.sha256(shots.command().read_bytes()).hexdigest()
-    (output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
+    (output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     results: dict[str, dict] = {}
     with ExitStack() as exports:
@@ -241,12 +241,13 @@ def main() -> int:
             destination.mkdir(parents=True, exist_ok=True)
             results[case["key"]] = capture(games[key], destination, case, table)
             print(f"captured {case['key']}", flush=True)
-    (output / "results.json").write_text(json.dumps(results, indent=2, sort_keys=True) + "\n")
+    (output / "results.json").write_text(json.dumps(results, indent=2, sort_keys=True) + "\n",
+                                         encoding="utf-8", newline="\n")
 
     changed = []
     baselines: dict[str, dict] = {}
     for case in cases:
-        baseline = baselines.setdefault(case["baseline"], json.loads((ROOT / case["baseline"]).read_text()))
+        baseline = baselines.setdefault(case["baseline"], json.loads((ROOT / case["baseline"]).read_text(encoding="utf-8")))
         before = baseline.get(case["key"])
         after = results[case["key"]]
         if arguments.record:
@@ -265,7 +266,8 @@ def main() -> int:
     if arguments.record:
         for file, baseline in baselines.items():
             # We write these files in the headless runner too, in this form.
-            (ROOT / file).write_text(json.dumps(baseline, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+            (ROOT / file).write_text(json.dumps(baseline, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+                                     encoding="utf-8", newline="\n")
         print(f"recorded {len(results)} launched cases; inspect the pictures before accepting them")
         return 0
     if changed:

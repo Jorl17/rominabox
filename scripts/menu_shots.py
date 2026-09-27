@@ -84,7 +84,7 @@ def declared_palettes() -> list[str]:
     We read them instead of listing them here, so we take pictures of a new
     palette without a change to this code.
     """
-    declared = json.loads((ROOT / "desktop/designs.json").read_text())["palettes"]
+    declared = json.loads((ROOT / "desktop/designs.json").read_text(encoding="utf-8"))["palettes"]
     names = [entry["id"] for entry in declared]
     if not names:
         raise SystemExit("desktop/designs.json declares no palettes")
@@ -106,7 +106,7 @@ def declared_shots() -> dict[str, dict]:
     a game that opens at the menu. In that export there is nothing drawn over
     a running game.
     """
-    declared = json.loads(SHOTS.read_text())["shots"]
+    declared = json.loads(SHOTS.read_text(encoding="utf-8"))["shots"]
     return {
         name: ({"script": entry} if isinstance(entry, list) else entry)
         for name, entry in declared.items()
@@ -274,7 +274,7 @@ def resources_of(app: Path) -> Path:
 def plan_text(app: Path) -> str:
     path = resources_of(app) / "launch.plan"
     if path.is_file():
-        return path.read_text()
+        return path.read_text(encoding="utf-8")
     return ""
 
 
@@ -336,7 +336,9 @@ def take(app: Path, name: str, script: list[str], output: Path,
     if data and config:
         data.mkdir(parents=True, exist_ok=True)
         (data / "controls.cfg").write_text(
-            "".join(f'{key} = "{value}"\n' for key, value in config.items())
+            "".join(f'{key} = "{value}"\n' for key, value in config.items()),
+            encoding="utf-8",
+            newline="\n",
         )
 
     # In a sandbox, writing is allowed only inside the game's container, so we
@@ -370,7 +372,7 @@ def take(app: Path, name: str, script: list[str], output: Path,
         try:
             player.wait(timeout=TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired:
-            log_tail = log.read_text(errors="replace")[-800:] if log and log.exists() else ""
+            log_tail = log.read_text(encoding="utf-8", errors="replace")[-800:] if log and log.exists() else ""
             stderr_capture.seek(0, os.SEEK_END)
             stderr_capture.seek(max(stderr_capture.tell() - 800, 0))
             partial = stderr_capture.read()
@@ -385,9 +387,9 @@ def take(app: Path, name: str, script: list[str], output: Path,
     if inside != target and inside.exists():
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(inside), str(target))
-    written = log.read_text() if log and log.exists() else stderr
+    written = log.read_text(encoding="utf-8", errors="replace") if log and log.exists() else stderr
     # Copy the evidence next to its picture before we overwrite it next launch.
-    (output / f"{name}.log").write_text(written)
+    (output / f"{name}.log").write_text(written, encoding="utf-8", newline="\n")
 
     # We read this from the player report. Otherwise, when no click in the
     # script happened, we would take a picture of whatever was on screen.
@@ -451,7 +453,7 @@ def capture_export_entitlements(app: Path, destination: Path) -> None:
         ["/usr/bin/codesign", "-d", "--entitlements", str(destination), "--xml", str(app)],
         capture_output=True,
     )
-    text = destination.read_text() if destination.is_file() else ""
+    text = destination.read_text(encoding="utf-8") if destination.is_file() else ""
     if dumped.returncode != 0 or "com.apple.security.app-sandbox" not in text:
         detail = dumped.stderr.decode(errors="replace")[-400:]
         raise SystemExit(
@@ -486,7 +488,7 @@ def resign_replaced_player(app: Path, entitlements: Path) -> None:
 
 def _runs_scripts(build: Path) -> bool:
     info = build / "build-info.json"
-    return info.is_file() and json.loads(info.read_text()).get("capabilities", {}).get(
+    return info.is_file() and json.loads(info.read_text(encoding="utf-8")).get("capabilities", {}).get(
         "menuScript"
     ) is True
 
@@ -776,16 +778,16 @@ def main() -> int:
             return 1
         # We merge instead of replacing. A run with --only has no results for
         # the other shots, and writing only its results would drop theirs.
-        kept = json.loads(DIGESTS.read_text()) if DIGESTS.exists() else {}
+        kept = json.loads(DIGESTS.read_text(encoding="utf-8")) if DIGESTS.exists() else {}
         kept.update(digests)
-        DIGESTS.write_text(json.dumps(kept, indent=2, sort_keys=True) + "\n")
+        DIGESTS.write_text(json.dumps(kept, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
         print(f"\nrecorded {len(digests)} shots -> {DIGESTS.name}")
         return 0
 
     if arguments.check:
         if not DIGESTS.exists():
             raise SystemExit(f"no recorded shots at {DIGESTS}; run --record first")
-        expected = json.loads(DIGESTS.read_text())
+        expected = json.loads(DIGESTS.read_text(encoding="utf-8"))
         changed = [n for n, d in digests.items() if expected.get(n) != d]
         for name in changed:
             print(f"  CHANGED {name}", file=sys.stderr)
