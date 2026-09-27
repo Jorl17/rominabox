@@ -7,7 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unistd.h>
+#include "native_runtime/test_environment.h"
+#include "native_runtime/test_folders.h"
+#include "portable_fs.h"
 
 #include "../vendor/retroarch/cheevos/rominabox.h"
 #include "../vendor/retroarch/cheevos/rominabox_internal.h"
@@ -165,21 +167,6 @@ static void server(const rc_api_request_t *request,
 settings_t *config_get_ptr(void) { return &settings; }
 rcheevos_locals_t *get_rcheevos_locals(void) { return &locals; }
 
-bool path_is_directory(const char *path)
-{
-   struct stat st;
-   return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-}
-
-bool path_is_absolute(const char *path)
-{
-   return path && path[0] == '/';
-}
-
-bool path_is_valid(const char *path)
-{
-   return access(path, F_OK) == 0;
-}
 
 bool rcheevos_client_download_badge_from_url(const char *url,
       const char *badge_name)
@@ -294,7 +281,7 @@ static void badge_lifecycle(const char *directory)
     * snapshot we publish a revision and copied path without another get_row. */
    revision = snapshot().revision;
    snprintf(badge_dir, sizeof(badge_dir), "%s/achievements-badges", directory);
-   assert(mkdir(badge_dir, 0700) == 0);
+   assert(fs_make_directory(badge_dir) == 0);
    snprintf(badge_path, sizeof(badge_path), "%s/123_lock.png", badge_dir);
    file = fopen(badge_path, "wb");
    assert(file);
@@ -348,8 +335,8 @@ static size_t saved_accounts(rib_achievements_saved_account_t *saved)
 
 static void play(const char *directory, const char *game, const struct retro_game_info *info)
 {
-   assert(setenv("ROMINABOX_DATA_DIR", directory, 1) == 0);
-   assert(setenv("ROMINABOX_GAME_IDENTITY", game, 1) == 0);
+   test_setenv("ROMINABOX_DATA_DIR", directory);
+   test_setenv("ROMINABOX_GAME_IDENTITY", game);
    assert(rib_achievements_content_load(info));
 }
 
@@ -362,13 +349,13 @@ static void play(const char *directory, const char *game, const struct retro_gam
 static void shared_accounts(const struct retro_game_info *info,
       const char *first, const char *second)
 {
-   char accounts[] = "/tmp/rib-achievements-accounts-XXXXXX";
+   char accounts[512];
    char path[512];
    char line[256];
    rib_achievements_saved_account_t saved[4];
    FILE *file;
-   assert(mkdtemp(accounts));
-   assert(setenv("ROMINABOX_ACCOUNTS_DIR", accounts, 1) == 0);
+   test_temporary_folder(accounts, sizeof accounts, "rib-achievements-accounts-");
+   test_setenv("ROMINABOX_ACCOUNTS_DIR", accounts);
    replace_account = false;
 
    /* Game A: after a password sign-in we save the account for the others. */
@@ -394,11 +381,11 @@ static void shared_accounts(const struct retro_game_info *info,
    assert(fgets(line, sizeof(line), file) && !strcmp(line, "fixture-token\n"));
    fclose(file);
    snprintf(path, sizeof(path), "%s/66697874757265/games/" GAME_B, accounts);
-   assert(access(path, F_OK) == 0);
+   assert(fs_exists(path));
 
    /* B signs out. A still uses the account, so it stays listed. */
    rib_achievements_sign_out();
-   assert(access(path, F_OK) != 0);
+   assert(!fs_exists(path));
    assert(saved_accounts(saved) == 1);
    unload();
 
@@ -411,7 +398,7 @@ static void shared_accounts(const struct retro_game_info *info,
    assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNING_IN);
    rib_achievements_cancel();
    snprintf(path, sizeof(path), "%s/achievements.session", second);
-   assert(access(path, F_OK) != 0);
+   assert(!fs_exists(path));
    defer_login = false;
    {
       rc_api_server_response_t response = {0};
@@ -472,18 +459,18 @@ static void shared_accounts(const struct retro_game_info *info,
    assert(rib_achievements_sign_in("Fixture", "fixture-password"));
    ready();
    unload();
-   assert(setenv("ROMINABOX_ACHIEVEMENTS", "0", 1) == 0);
+   test_setenv("ROMINABOX_ACHIEVEMENTS", "0");
    assert(saved_accounts(saved) == 0);
    assert(!rib_achievements_quick_sign_in("Fixture"));
    assert(!rib_achievements_forget_account("Fixture"));
-   assert(setenv("ROMINABOX_ACHIEVEMENTS", "1", 1) == 0);
+   test_setenv("ROMINABOX_ACHIEVEMENTS", "1");
    play(first, GAME_A, info);
    ready();
    rib_achievements_sign_out();
    unload();
 
    /* Without the folder, a game signs in as before and we list nothing. */
-   assert(unsetenv("ROMINABOX_ACCOUNTS_DIR") == 0);
+   test_unsetenv("ROMINABOX_ACCOUNTS_DIR");
    play(second, GAME_B, info);
    assert(rib_achievements_sign_in("Fixture", "fixture-password"));
    ready();
@@ -495,14 +482,14 @@ static void shared_accounts(const struct retro_game_info *info,
    snprintf(path, sizeof(path), "%s/lock", accounts);
    assert(unlink(path) == 0);
    assert(rmdir(accounts) == 0);
-   assert(unsetenv("ROMINABOX_GAME_IDENTITY") == 0);
-   assert(setenv("ROMINABOX_DATA_DIR", first, 1) == 0);
+   test_unsetenv("ROMINABOX_GAME_IDENTITY");
+   test_setenv("ROMINABOX_DATA_DIR", first);
 }
 
 int main(void)
 {
-   char directory[] = "/tmp/rib-achievements-runtime-XXXXXX";
-   char second_directory[] = "/tmp/rib-achievements-other-XXXXXX";
+   char directory[512];
+   char second_directory[512];
    char invalid_directory[512];
    char session_path[512];
    char file_data[256];
@@ -517,17 +504,17 @@ int main(void)
    uint32_t revision;
    unsigned requested;
 
-   assert(mkdtemp(directory));
-   assert(mkdtemp(second_directory));
+   test_temporary_folder(directory, sizeof directory, "rib-achievements-runtime-");
+   test_temporary_folder(second_directory, sizeof second_directory, "rib-achievements-other-");
    snprintf(invalid_directory, sizeof(invalid_directory), "%s/missing", directory);
-   assert(setenv("ROMINABOX_DATA_DIR", "relative-store", 1) == 0);
-   assert(setenv("ROMINABOX_ACHIEVEMENTS", "1", 1) == 0);
+   test_setenv("ROMINABOX_DATA_DIR", "relative-store");
+   test_setenv("ROMINABOX_ACHIEVEMENTS", "1");
    info.path = "fixture.gbc";
    info.data = "fixture";
    info.size = 7;
    assert(!rib_achievements_content_load(&info));
    assert(snapshot().status == RIB_ACHIEVEMENTS_ERROR);
-   assert(setenv("ROMINABOX_DATA_DIR", directory, 1) == 0);
+   test_setenv("ROMINABOX_DATA_DIR", directory);
    assert(rib_achievements_content_load(&info));
    assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
 
@@ -567,11 +554,15 @@ int main(void)
 
    /* The per-game file contains only username, token and ON/OFF preference. */
    snprintf(session_path, sizeof(session_path), "%s/achievements.session", directory);
+#ifndef _WIN32
+   /* Only this user may read it: through its mode on macOS and Linux, and
+    * through the access list of the folder on Windows. */
    {
       struct stat st;
       assert(stat(session_path, &st) == 0);
       assert((st.st_mode & 077) == 0);
    }
+#endif
    file = fopen(session_path, "rb");
    assert(file);
    assert(fgets(file_data, sizeof(file_data), file));
@@ -582,11 +573,11 @@ int main(void)
    assert(strcmp(file_data, "1\n") == 0);
    fclose(file);
 
-   assert(setenv("ROMINABOX_DATA_DIR", invalid_directory, 1) == 0);
+   test_setenv("ROMINABOX_DATA_DIR", invalid_directory);
    assert(!rib_achievements_set_enabled(false));
    assert(snapshot().status == RIB_ACHIEVEMENTS_ERROR);
    assert(strstr(snapshot().error, "save") != NULL);
-   assert(setenv("ROMINABOX_DATA_DIR", directory, 1) == 0);
+   test_setenv("ROMINABOX_DATA_DIR", directory);
    memory_byte = 1;
    rc_client_do_frame(locals.client);
    assert(awards == 0);
@@ -734,7 +725,7 @@ int main(void)
    revision = snapshot().revision;
    rc_client_destroy(locals.client);
    locals.client = NULL;
-   assert(setenv("ROMINABOX_DATA_DIR", second_directory, 1) == 0);
+   test_setenv("ROMINABOX_DATA_DIR", second_directory);
    assert(rib_achievements_content_load(&info));
    assert(snapshot().revision > revision);
    assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
@@ -743,7 +734,7 @@ int main(void)
    rib_achievements_content_unload();
    rc_client_destroy(locals.client);
    locals.client = NULL;
-   assert(setenv("ROMINABOX_DATA_DIR", directory, 1) == 0);
+   test_setenv("ROMINABOX_DATA_DIR", directory);
    defer_login = true;
    assert(rib_achievements_content_load(&info));
    rib_achievements_begin_startup_gate();
@@ -780,14 +771,14 @@ int main(void)
    assert(rib_achievements_content_load(&info));
    ready(); /* the saved ON choice still restores on the next launch */
    assert(snapshot().enabled_preference);
-   assert(setenv("ROMINABOX_DATA_DIR", invalid_directory, 1) == 0);
+   test_setenv("ROMINABOX_DATA_DIR", invalid_directory);
    rib_achievements_sign_out();
    assert(snapshot().status == RIB_ACHIEVEMENTS_ERROR);
    assert(strstr(snapshot().error, "remove") != NULL);
-   assert(setenv("ROMINABOX_DATA_DIR", directory, 1) == 0);
+   test_setenv("ROMINABOX_DATA_DIR", directory);
    rib_achievements_sign_out();
    assert(snapshot().status == RIB_ACHIEVEMENTS_SIGNED_OUT);
-   assert(access(session_path, F_OK) != 0);
+   assert(!fs_exists(session_path));
    rib_achievements_content_unload();
    rc_client_destroy(locals.client);
    locals.client = NULL;

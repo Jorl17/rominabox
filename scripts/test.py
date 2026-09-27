@@ -247,7 +247,7 @@ SCOPES = [
         "achievement-client",
         "managed account, evaluator, pending uploads and state restoration using the real rcheevos client",
         "RetroArch core-memory mapping or its actual runloop/HTTP/save-task adapters",
-        ["sh", str(ROOT / "scripts/achievements_runtime_test.sh")],
+        [PYTHON, str(ROOT / "scripts/test_achievements_client.py")],
     ),
     Scope(
         "achievement-native",
