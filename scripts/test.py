@@ -35,6 +35,7 @@ from cargo_replay import cargo_test  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
 from player_support import modifications as support_modifications  # noqa: E402
 from player_support import snapshot as support_snapshot  # noqa: E402
+from player_support import user_data as support_user_data  # noqa: E402
 from temp_entries import additions as temp_additions  # noqa: E402
 from temp_entries import directory as temp_directory  # noqa: E402
 from temp_entries import snapshot as temp_snapshot  # noqa: E402
@@ -623,7 +624,7 @@ def main() -> int:
     modified = support_modifications(support_before, support_after)
     if created:
         print(
-            "\nA test run created paths under the player's ROM-in-a-Box folders in ~/Library/Application Support:"
+            f"\nA test run created paths under the player's ROM-in-a-Box folders in {support_user_data()}:"
         )
         for path in created[:20]:
             print(f"  {path}")
@@ -631,7 +632,7 @@ def main() -> int:
             print(f"  … and {len(created) - 20} more")
     if modified:
         print(
-            "\nA test run modified paths under the player's ROM-in-a-Box folders in ~/Library/Application Support:"
+            f"\nA test run modified paths under the player's ROM-in-a-Box folders in {support_user_data()}:"
         )
         for path in modified[:20]:
             print(f"  {path}")

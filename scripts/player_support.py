@@ -9,28 +9,44 @@ file with a changed size or mtime counts as the same leak.
 
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
-APPLICATION_SUPPORT = Path.home() / "Library/Application Support"
-REAL_SUPPORT = APPLICATION_SUPPORT / "ROM-in-a-Box"
-# Where installed exports keep the QUICK SIGN IN accounts. A test must never
-# reach it, and the exports of a worktree use a separate namespaced folder.
-REAL_ACCOUNTS = APPLICATION_SUPPORT / "ROM-in-a-Box Accounts"
-WATCHED = (REAL_SUPPORT, REAL_ACCOUNTS)
+# The per-user application data folder of each platform, where a game outside
+# a sandbox keeps its data and QUICK SIGN IN keeps its accounts, resolved as
+# in the launcher (desktop/src-tauri/launcher/accounts_folder.c).
+USER_DATA = {
+    "darwin": lambda: Path.home() / "Library/Application Support",
+    "win32": lambda: Path(os.environ["LOCALAPPDATA"]),
+}
+
+
+def user_data() -> Path:
+    if sys.platform not in USER_DATA:
+        raise SystemExit(f"no per-user application data folder is declared for {sys.platform}")
+    return USER_DATA[sys.platform]()
+
+
+def watched() -> tuple[Path, Path]:
+    """The player's ROM-in-a-Box folder, and the folder where installed
+    exports keep the QUICK SIGN IN accounts. A test must never reach either,
+    and the exports of a worktree use a separate namespaced accounts folder."""
+    return user_data() / "ROM-in-a-Box", user_data() / "ROM-in-a-Box Accounts"
 
 # A file is (size, mtime_ns). A directory is None. Only a file can be rewritten.
 Stamp = tuple[int, int] | None
 
 
 def snapshot() -> dict[str, Stamp]:
-    """Every path in the watched folders, relative to Application Support."""
+    """Every path in the watched folders, relative to the per-user data folder."""
     found: dict[str, Stamp] = {}
-    for root in WATCHED:
+    for root in watched():
         if not root.is_dir():
             continue
         found[root.name] = None
         for path in root.rglob("*"):
-            relative = str(path.relative_to(APPLICATION_SUPPORT))
+            relative = str(path.relative_to(user_data()))
             if path.is_file():
                 info = path.stat()
                 found[relative] = (info.st_size, info.st_mtime_ns)
