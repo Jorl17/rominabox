@@ -63,10 +63,9 @@ def main() -> int:
         raise SystemExit(f"no kit is declared for {target}; a macOS kit is frozen by freeze-runtime-kit.mjs")
 
     kit_assets.stage(kit)
-    for relative, reference in declared["files"].items():
-        source = source_of(reference, build)
-        (kit / relative).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, kit / relative)
+    for placed in declared["files"].values():
+        (kit / placed["at"]).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_of(placed["from"], build), kit / placed["at"])
     for relative, reference in declared["licences"].items():
         source = source_of(reference, build)
         (kit / "licenses" / relative).parent.mkdir(parents=True, exist_ok=True)
@@ -97,7 +96,7 @@ def main() -> int:
         "recipe": "scripts/native_runtime/player-recipe.json",
     }, indent=2) + "\n", encoding="utf-8", newline="\n")
 
-    player = kit / "bin" / native_build.binary_name(target)
+    player = kit / declared["files"]["player"]["at"]
     platform, _, architecture = target.partition("-")
     manifest = {
         "schema_version": 1,

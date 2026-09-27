@@ -108,6 +108,16 @@
     "macos": {"audio": "coreaudio", "joypad": "hid", "joypadProfiles": ["hid"]},
     "windows": {"audio": "wasapi", "joypad": "xinput", "joypadProfiles": ["xinput", "dinput"]}
   },
+  "systemLibraries": {
+    "comment": "The libraries every machine of a platform has, so a player, a launcher or a core may import them. scripts/build_player.py refuses a player or launcher that imports anything else, and an export refuses such a core. Names are lower case; Windows also resolves any api-ms-win- API set.",
+    "windows": [
+      "advapi32.dll", "bcrypt.dll", "cfgmgr32.dll", "comdlg32.dll", "crypt32.dll", "dinput8.dll",
+      "dsound.dll", "dwmapi.dll", "gdi32.dll", "hid.dll", "imm32.dll", "iphlpapi.dll",
+      "kernel32.dll", "msimg32.dll", "msvcrt.dll", "ntdll.dll", "ole32.dll", "oleaut32.dll",
+      "opengl32.dll", "setupapi.dll", "shell32.dll", "shlwapi.dll", "user32.dll", "uxtheme.dll",
+      "version.dll", "winmm.dll", "ws2_32.dll", "xinput1_4.dll"
+    ]
+  },
   "launcher": {
     "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher and its platform's entry in the folder named for the platform. A macOS launcher is built into the app at export when its kit does not contain one.",
     "windows-x86_64": {
@@ -130,11 +140,11 @@
     }
   },
   "kit": {
-    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A licence names its source: build: a file in the player build, toolchain: a file in the toolchain's installation.",
+    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A file is named by its role, which the exporter reads it by, and says where in the kit it goes. A source is build: a file in the player build, or toolchain: a file in the toolchain's installation.",
     "windows-x86_64": {
       "files": {
-        "bin/retroarch.exe": "build:retroarch/retroarch.exe",
-        "bin/launcher.exe": "build:launcher/launcher.exe"
+        "player": {"at": "bin/retroarch.exe", "from": "build:retroarch/retroarch.exe"},
+        "launcher": {"at": "bin/launcher.exe", "from": "build:launcher/launcher.exe"}
       },
       "runtime": "the MinGW-w64 runtime: its C runtime, winpthreads and the GCC runtime (native/MinGW-w64-runtime.txt, native/winpthreads-COPYING.txt, native/GCC-runtime-exception.txt)",
       "licences": {

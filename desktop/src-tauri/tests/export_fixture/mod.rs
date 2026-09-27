@@ -1,5 +1,6 @@
-//! A macOS export of a stand-in game from a stand-in kit, with a compiled
-//! player executable that does nothing, an empty core and the licence files.
+//! An export of a stand-in game from a stand-in kit, with, for macOS, a
+//! compiled player executable that does nothing and an empty core, and the
+//! licence files that are in every kit.
 #![allow(dead_code)]
 
 use rominabox_desktop::packaging::{ExportRequest, ExportTarget};
@@ -29,16 +30,28 @@ pub fn workspace() -> rominabox_scratch::Scratch {
     rominabox_scratch::Scratch::dir("rominabox-packaging")
 }
 
+/// A macOS kit.
 pub fn fixture_kit(root: &Path) -> PathBuf {
+    let kit = kit_base(root);
+    fs::create_dir_all(kit.join("Frameworks")).unwrap();
+    write_runtime_stub(&kit.join("bin/retroarch"));
+    fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
+    fs::write(
+        kit.join("runtime-dependencies.json"),
+        r#"{"formatVersion":1,"files":[]}"#,
+    )
+    .unwrap();
+    kit
+}
+
+/// What the kit for every platform contains besides its player and its core.
+pub fn kit_base(root: &Path) -> PathBuf {
     let kit = root.join("runtime-kit");
     fs::create_dir_all(kit.join("bin")).unwrap();
     fs::create_dir_all(kit.join("cores")).unwrap();
-    fs::create_dir_all(kit.join("Frameworks")).unwrap();
     fs::create_dir_all(kit.join("licenses")).unwrap();
     fs::create_dir_all(kit.join("licenses/native")).unwrap();
     fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
-    write_runtime_stub(&kit.join("bin/retroarch"));
-    fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
     for name in [
         "RetroArch.txt",
         "NATIVE-DEPENDENCIES.txt",
@@ -48,11 +61,6 @@ pub fn fixture_kit(root: &Path) -> PathBuf {
         fs::write(kit.join("licenses").join(name), name).unwrap();
     }
     fs::write(
-        kit.join("runtime-dependencies.json"),
-        r#"{"formatVersion":1,"files":[]}"#,
-    )
-    .unwrap();
-    fs::write(
         kit.join("manifest.json"),
         r#"{"schema_version":1,"components":[{"name":"RetroArch"},{"name":"RmlUi"},{"name":"genesis_plus_gx"}]}"#,
     )
@@ -60,7 +68,12 @@ pub fn fixture_kit(root: &Path) -> PathBuf {
     kit
 }
 
+/// A macOS export request.
 pub fn export_request(root: &Path) -> ExportRequest {
+    export_request_from(root, fixture_kit(root))
+}
+
+pub fn export_request_from(root: &Path, runtime_kit: PathBuf) -> ExportRequest {
     let rom = root.join("sonic.bin");
     fs::write(&rom, b"RIBtest").unwrap();
     ExportRequest {
@@ -87,7 +100,7 @@ pub fn export_request(root: &Path) -> ExportRequest {
         output_dir: root.join("out"),
         replace: false,
         target: ExportTarget::Macos,
-        runtime_kit: fixture_kit(root),
+        runtime_kit,
         core: None,
         core_cache: None,
     }

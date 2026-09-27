@@ -423,7 +423,7 @@ fn a_windows_export_with_the_windows_core_cached_does_not_ask_for_the_mac_file()
     fs::write(cache.join("licenses/flycast.txt"), b"flycast-licence").unwrap();
     let table = Table::default();
     let (said, shipped) = export_with(&mut request, &table);
-    let error = shipped.expect_err("this build does not finish a windows package");
+    let error = shipped.expect_err("the fixture kit has no Windows player");
     assert_eq!(said, []);
     assert!(
         table.downloads.borrow().is_empty(),

@@ -12,25 +12,28 @@ use std::path::{Path, PathBuf};
 use crate::export_error::{ErrorStage, ExportError};
 use crate::packaging::{ExportRequest, ExportTarget};
 
-/// The app that an export of `request` produces. On Windows we do no
-/// packaging here, so nothing can be in the way.
-fn destination(request: &ExportRequest) -> Option<PathBuf> {
-    match request.target {
-        ExportTarget::Macos => Some(request.output_dir.join(macos_app_name(&request.title))),
-        ExportTarget::Windows => None,
-    }
+/// The app that an export of `request` produces.
+fn destination(request: &ExportRequest) -> PathBuf {
+    request.output_dir.join(app_name(&request.target, &request.title))
 }
 
-pub(crate) fn macos_app_name(title: &str) -> String {
-    format!("{}.app", safe_filename(title))
+/// The name of the app for a game called `title` on `target`, a bundle on
+/// macOS or a folder on Windows, which contains the program of the game with
+/// the same name.
+pub(crate) fn app_name(target: &ExportTarget, title: &str) -> String {
+    match target {
+        ExportTarget::Macos => format!("{}.app", safe_filename(title)),
+        ExportTarget::Windows => windows_filename(title),
+    }
 }
 
 /// Before doing anything, refuse an export to the place of an existing app,
 /// unless the request includes replacing it.
 pub(crate) fn refuse_unless_replacing(request: &ExportRequest) -> Result<(), ExportError> {
-    match destination(request) {
-        Some(app) if !request.replace => refuse_existing(&app),
-        _ => Ok(()),
+    if request.replace {
+        Ok(())
+    } else {
+        refuse_existing(&destination(request))
     }
 }
 
@@ -129,6 +132,36 @@ fn safe_filename(title: &str) -> String {
     }
 }
 
+/// Names reserved for devices on Windows, with or without an extension.
+const WINDOWS_DEVICES: &[&str] = &[
+    "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+    "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+];
+
+/// `title` as a Windows file name, without characters invalid on Windows,
+/// without a trailing dot or space, which would be lost, and never a device name.
+fn windows_filename(title: &str) -> String {
+    let value: String = title
+        .trim()
+        .chars()
+        .map(|character| match character {
+            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '-',
+            character if character < ' ' => '-',
+            character => character,
+        })
+        .collect();
+    let value = value.trim_end_matches(['.', ' ']);
+    if value.is_empty() {
+        return "Game".to_string();
+    }
+    let stem = value.split('.').next().unwrap_or(value).trim_end();
+    if WINDOWS_DEVICES.iter().any(|device| device.eq_ignore_ascii_case(stem)) {
+        format!("{stem}-{}", &value[stem.len()..])
+    } else {
+        value.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,5 +236,26 @@ mod tests {
         assert_eq!(error.path.as_deref(), Some(destination.as_path()));
         assert!(destination.join("old").is_file());
         assert!(app.is_dir());
+    }
+
+    #[test]
+    fn a_windows_game_is_named_as_windows_allows() {
+        for (title, name) in [
+            ("Sonic 3 & Knuckles", "Sonic 3 & Knuckles"),
+            ("Pokémon Test", "Pokémon Test"),
+            ("What? A \"Game\": <1/2>", "What- A -Game-- -1-2-"),
+            ("Back\\slash|pipe*star", "Back-slash-pipe-star"),
+            ("Tab\there", "Tab-here"),
+            ("Ends with dots... ", "Ends with dots"),
+            ("  ", "Game"),
+            ("...", "Game"),
+            ("con", "con-"),
+            ("COM1.bin", "COM1-.bin"),
+            ("Nul .x", "Nul- .x"),
+            ("Console", "Console"),
+        ] {
+            assert_eq!(app_name(&ExportTarget::Windows, title), name, "{title:?}");
+        }
+        assert_eq!(app_name(&ExportTarget::Macos, "A/B: C"), "A-B- C.app");
     }
 }

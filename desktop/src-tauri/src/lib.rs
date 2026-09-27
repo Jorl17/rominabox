@@ -18,6 +18,7 @@ pub mod pad_positions;
 pub mod pads;
 pub mod packaging;
 pub mod player_settings;
+mod portable_executable;
 pub mod projects;
 mod publish;
 pub mod repo;

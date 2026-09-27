@@ -71,7 +71,7 @@ def main() -> int:
     launcher = native_build.build_launcher(destination, target, environment)
     if native_build.is_windows(target):
         for built in [binary, *([launcher] if launcher else [])]:
-            foreign = native_build.foreign_imports(built, environment)
+            foreign = native_build.foreign_imports(built, target, environment)
             if foreign:
                 raise SystemExit(f"{built.name} needs DLLs Windows does not have: {', '.join(foreign)}")
 

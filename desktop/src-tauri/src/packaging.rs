@@ -4,7 +4,9 @@
 //! `tauri::async_runtime::spawn_blocking` and use the callback for progress.
 
 use crate::target::Target;
-use crate::launch_contract::{app_file, core_file, plan_field, plan_mark, shipped, token};
+use crate::launch_contract::{
+    app_file, core_file, plan_field, plan_mark, shipped, token, windows_part,
+};
 use crate::menu::file_name;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -44,9 +46,14 @@ impl ExportTarget {
     /// The platform for exports from a builder on the host, or `None` on a
     /// host that we do not build for.
     pub fn of_host() -> Option<ExportTarget> {
-        match Target::host()? {
-            Target::MacosArm64 | Target::MacosX86_64 => Some(ExportTarget::Macos),
-            Target::WindowsX86_64 => Some(ExportTarget::Windows),
+        Target::host().map(ExportTarget::of_target)
+    }
+
+    /// The platform a target is on.
+    pub fn of_target(target: Target) -> ExportTarget {
+        match target {
+            Target::MacosArm64 | Target::MacosX86_64 => ExportTarget::Macos,
+            Target::WindowsX86_64 => ExportTarget::Windows,
         }
     }
 
@@ -69,15 +76,39 @@ impl ExportTarget {
     /// The drivers that we tell the player to use on this platform, which we
     /// declare with the player's build.
     pub fn drivers(&self) -> Drivers {
-        let recipe: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../scripts/native_runtime/player-recipe.json"
-        ))
-        .expect("the player recipe parses");
         let platform = serde_json::to_value(self).expect("a platform names itself");
-        let declared = &recipe["drivers"][platform.as_str().expect("a platform is a word")];
+        let declared = &player_recipe()["drivers"][platform.as_str().expect("a platform is a word")];
         serde_json::from_value(declared.clone())
             .unwrap_or_else(|error| panic!("the player recipe declares no drivers for {platform}: {error}"))
     }
+}
+
+/// How we build and run the player, per target and platform, as declared in
+/// `scripts/native_runtime/player-recipe.json`.
+fn player_recipe() -> serde_json::Value {
+    serde_json::from_str(include_str!("../../../scripts/native_runtime/player-recipe.json"))
+        .expect("the player recipe parses")
+}
+
+/// Where the file with `role` (`player`, `launcher`) is in `target`'s kit.
+fn kit_file(target: Target, role: &str) -> PathBuf {
+    let declared = &player_recipe()["kit"][target.key()]["files"][role]["at"];
+    PathBuf::from(
+        declared
+            .as_str()
+            .unwrap_or_else(|| panic!("the player recipe puts no {role} in the {target} kit")),
+    )
+}
+
+/// The libraries every machine of `target`'s platform has, in lower case.
+fn system_libraries(target: Target) -> Vec<String> {
+    let platform = serde_json::to_value(
+        ExportTarget::of_target(target),
+    )
+    .expect("a platform names itself");
+    let declared = &player_recipe()["systemLibraries"][platform.as_str().expect("a platform is a word")];
+    serde_json::from_value(declared.clone())
+        .unwrap_or_else(|error| panic!("the player recipe lists no system libraries for {target}: {error}"))
 }
 
 /// What we tell the player to use on a platform: its audio and controller
@@ -493,20 +524,23 @@ where
         0.02,
         "Checking export inputs",
     );
-    validate_request(request, resolved.as_ref())?;
+    let mut packager = packager_for(&request.target);
+    validate_request(request, resolved.as_ref(), &*packager)?;
     check_cancelled(cancelled)?;
-    match request.target {
-        ExportTarget::Macos => export_app(
-            request,
-            resolved.as_ref(),
-            cancelled,
-            &mut progress,
-            &mut MacosPackager::default(),
-        ),
-        ExportTarget::Windows => Err(ExportError::new(
-            ErrorStage::Refused,
-            "Windows apps cannot be made with this version of ROM-in-a-Box yet.",
-        )),
+    export_app(
+        request,
+        resolved.as_ref(),
+        cancelled,
+        &mut progress,
+        &mut *packager,
+    )
+}
+
+/// The packager for apps for `target`.
+fn packager_for(target: &ExportTarget) -> Box<dyn Packager> {
+    match target {
+        ExportTarget::Macos => Box::new(MacosPackager::default()),
+        ExportTarget::Windows => Box::new(WindowsPackager::default()),
     }
 }
 
@@ -580,8 +614,8 @@ pub fn stage_menu(
 trait Packager {
     /// Refuse, before staging anything, an app that we cannot make here.
     fn check_host(&self) -> Result<(), ExportError>;
-    /// The app's name in the output folder.
-    fn app_name(&self, title: &str) -> String;
+    /// Where the player is in the runtime kit.
+    fn player_in_kit(&self) -> PathBuf;
     /// Make the app's folders, and return the folder for the app's files.
     fn lay_out(&mut self, app: &Path) -> Result<PathBuf, ExportError>;
     /// The player, from the runtime kit.
@@ -596,7 +630,7 @@ trait Packager {
         cancelled: &AtomicBool,
     ) -> Result<(), ExportError>;
     /// The first program that starts when the game opens, before the player.
-    fn install_launcher(&mut self) -> Result<(), ExportError>;
+    fn install_launcher(&mut self, runtime_kit: &Path) -> Result<(), ExportError>;
     /// The app's description for the platform: its name, identity and icon.
     fn describe(
         &mut self,
@@ -604,6 +638,8 @@ trait Packager {
         identity: &str,
         staging: &Path,
     ) -> Result<(), ExportError>;
+    /// What we tell the author while `finish` runs, when it does anything.
+    fn finishing(&self) -> Option<&'static str>;
     /// The last steps to make the app runnable, such as signing.
     fn finish(
         &mut self,
@@ -643,8 +679,8 @@ impl Packager for MacosPackager {
         Ok(())
     }
 
-    fn app_name(&self, title: &str) -> String {
-        crate::publish::macos_app_name(title)
+    fn player_in_kit(&self) -> PathBuf {
+        PathBuf::from("bin/retroarch")
     }
 
     fn lay_out(&mut self, app: &Path) -> Result<PathBuf, ExportError> {
@@ -662,7 +698,7 @@ impl Packager for MacosPackager {
 
     fn place_player(&mut self, runtime_kit: &Path) -> Result<(), ExportError> {
         self.runtime = self.macos.join("retroarch");
-        copy_file(&runtime_kit.join("bin/retroarch"), &self.runtime)?;
+        copy_file(&runtime_kit.join(self.player_in_kit()), &self.runtime)?;
         make_executable(&self.runtime)
     }
 
@@ -685,7 +721,7 @@ impl Packager for MacosPackager {
         )
     }
 
-    fn install_launcher(&mut self) -> Result<(), ExportError> {
+    fn install_launcher(&mut self, _runtime_kit: &Path) -> Result<(), ExportError> {
         install_launch_library(&self.macos, &self.runtime)?;
         self.mach_objects
             .push(self.macos.join("librominabox-launch.dylib"));
@@ -709,6 +745,10 @@ impl Packager for MacosPackager {
             icons::create_macos_icon(icon, &self.resources.join("GameIcon.icns"), staging)?;
         }
         Ok(())
+    }
+
+    fn finishing(&self) -> Option<&'static str> {
+        Some("Signing the local app")
     }
 
     fn finish(
@@ -760,6 +800,124 @@ impl Packager for MacosPackager {
     }
 }
 
+/// A Windows game, a folder named after the game. It contains the program of
+/// the game, which is the launcher, next to `Resources`, the game files, and
+/// `Runtime`, the player. The player is one program that requires only Windows.
+#[derive(Default)]
+struct WindowsPackager {
+    app: PathBuf,
+    resources: PathBuf,
+    player: PathBuf,
+    launcher: PathBuf,
+    core: PathBuf,
+}
+
+impl WindowsPackager {
+    const TARGET: Target = Target::WindowsX86_64;
+}
+
+impl Packager for WindowsPackager {
+    fn check_host(&self) -> Result<(), ExportError> {
+        // We sign and compile nothing, so someone can make a Windows game on
+        // any machine with a Windows kit.
+        Ok(())
+    }
+
+    fn player_in_kit(&self) -> PathBuf {
+        kit_file(Self::TARGET, "player")
+    }
+
+    fn lay_out(&mut self, app: &Path) -> Result<PathBuf, ExportError> {
+        self.app = app.to_path_buf();
+        self.resources = app.join(windows_part!(Resources));
+        self.player = app.join(windows_part!(Player));
+        let name = app.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
+        self.launcher = app.join(format!("{name}.exe"));
+        fs::create_dir_all(&self.resources)
+            .map_err(|error| ExportError::io(ErrorStage::Stage, &self.resources, error))?;
+        Ok(self.resources.clone())
+    }
+
+    fn place_player(&mut self, runtime_kit: &Path) -> Result<(), ExportError> {
+        copy_file(&runtime_kit.join(self.player_in_kit()), &self.player)
+    }
+
+    fn core_file(&self) -> &'static str {
+        core_file!(Windows)
+    }
+
+    fn stage_dependencies(
+        &mut self,
+        _runtime_kit: &Path,
+        core: &Path,
+        _cancelled: &AtomicBool,
+    ) -> Result<(), ExportError> {
+        // We checked the player and the launcher when we built them, but a
+        // core comes from a download, so we check it here. With a library that
+        // Windows does not have, the game would fail when the core loads.
+        self.core = core.to_path_buf();
+        let image = fs::read(core).map_err(|error| ExportError::io(ErrorStage::Dependencies, core, error))?;
+        let imported = crate::portable_executable::imports(&image).map_err(|message| {
+            ExportError::new(ErrorStage::Dependencies, format!("{}: {message}", core.display()))
+        })?;
+        let system = system_libraries(Self::TARGET);
+        let foreign: Vec<String> = imported
+            .into_iter()
+            .filter(|name| {
+                let name = name.to_ascii_lowercase();
+                !system.contains(&name) && !name.starts_with("api-ms-win-")
+            })
+            .collect();
+        if foreign.is_empty() {
+            Ok(())
+        } else {
+            Err(ExportError::new(
+                ErrorStage::Dependencies,
+                format!(
+                    "The core needs libraries Windows does not have: {}",
+                    foreign.join(", ")
+                ),
+            ))
+        }
+    }
+
+    fn install_launcher(&mut self, runtime_kit: &Path) -> Result<(), ExportError> {
+        // The person opens the launcher, so it has the game's name.
+        copy_file(&runtime_kit.join(kit_file(Self::TARGET, "launcher")), &self.launcher)
+    }
+
+    fn describe(
+        &mut self,
+        _request: &ExportRequest,
+        _identity: &str,
+        _staging: &Path,
+    ) -> Result<(), ExportError> {
+        Ok(())
+    }
+
+    fn finishing(&self) -> Option<&'static str> {
+        None
+    }
+
+    fn finish(
+        &mut self,
+        _request: &ExportRequest,
+        _identity: &str,
+        _staging: &Path,
+        _cancelled: &AtomicBool,
+    ) -> Result<(), ExportError> {
+        Ok(())
+    }
+
+    fn runtime_bytes(&self) -> Result<u64, ExportError> {
+        Ok(tree_size(&self.player)?
+            + tree_size(&self.launcher)?
+            + tree_size(&self.core)?
+            + tree_size(&self.resources.join(app_file!(MenuAssets)))?
+            + tree_size(&self.resources.join(shipped!(Autoconfig).0))?)
+    }
+}
+
 /// An export into an app, the same on every platform except for the steps
 /// in `packager`.
 fn export_app<F>(
@@ -773,7 +931,7 @@ where
     F: FnMut(ExportProgress),
 {
     packager.check_host()?;
-    let app_name = packager.app_name(&request.title);
+    let app_name = crate::publish::app_name(&request.target, &request.title);
     let final_app = request.output_dir.join(&app_name);
     fs::create_dir_all(&request.output_dir)
         .map_err(|error| ExportError::io(ErrorStage::Stage, &request.output_dir, error))?;
@@ -876,7 +1034,7 @@ where
         &request.system,
         isolation_namespace().as_deref(),
     )?;
-    packager.install_launcher()?;
+    packager.install_launcher(&request.runtime_kit)?;
     write_launch_plan(
         &resources.join(app_file!(Plan)),
         &identity,
@@ -917,7 +1075,9 @@ where
     packager.describe(request, &identity, staging.path())?;
     check_cancelled(cancelled)?;
 
-    emit(progress, ExportStage::Sign, 0.70, "Signing the local app");
+    if let Some(finishing) = packager.finishing() {
+        emit(progress, ExportStage::Sign, 0.70, finishing);
+    }
     packager.finish(request, &identity, staging.path(), cancelled)?;
     check_cancelled(cancelled)?;
 
@@ -944,6 +1104,7 @@ where
 fn validate_request(
     request: &ExportRequest,
     resolved: Option<&ExportCore<'_>>,
+    packager: &dyn Packager,
 ) -> Result<(), ExportError> {
     if request.title.trim().is_empty() {
         return Err(ExportError::new(ErrorStage::Validate, "title is required"));
@@ -976,7 +1137,7 @@ fn validate_request(
     }
     crate::shaders::resolve(&request.shaders)
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
-    let runtime = request.runtime_kit.join("bin/retroarch");
+    let runtime = request.runtime_kit.join(packager.player_in_kit());
     for (stage, label, path) in [
         (ErrorStage::Missing, "ROM", &request.rom),
         (ErrorStage::Validate, "runtime", &runtime),

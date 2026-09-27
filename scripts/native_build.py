@@ -280,21 +280,18 @@ def has_symbol(binary: Path, target: str, function: str, environment: dict[str, 
     return any(line.split()[-1:] == [wanted] for line in listed.splitlines())
 
 
-# The DLLs we allow a Windows player to import, which are those of Windows.
-# Anything else we would have to ship next to the player, and we avoid that.
-WINDOWS_SYSTEM_DLLS = {
-    "advapi32.dll", "comdlg32.dll", "crypt32.dll", "dinput8.dll", "dsound.dll", "gdi32.dll",
-    "hid.dll", "imm32.dll", "iphlpapi.dll", "kernel32.dll", "msimg32.dll", "ole32.dll",
-    "opengl32.dll", "setupapi.dll", "shell32.dll", "user32.dll", "winmm.dll", "ws2_32.dll",
-    "xinput1_4.dll", "bcrypt.dll", "shlwapi.dll", "version.dll", "dwmapi.dll", "uxtheme.dll",
-    "oleaut32.dll", "cfgmgr32.dll", "ntdll.dll",
-}
+def system_libraries(target: str) -> set[str]:
+    """The libraries present on every machine of `target`'s platform (lower
+    case). We let a player or a launcher import these and nothing else,
+    because we would have to ship anything else next to it."""
+    return set(recipe()["systemLibraries"][platform_of(target)])
 
 
-def foreign_imports(binary: Path, environment: dict[str, str]) -> list[str]:
+def foreign_imports(binary: Path, target: str, environment: dict[str, str]) -> list[str]:
     """DLLs a Windows binary imports that are not part of Windows."""
+    allowed = system_libraries(target)
     dumped = subprocess.run([resolve("objdump", environment), "-p", str(binary)], capture_output=True, text=True,
                             check=True, env=environment).stdout
     names = [line.split("DLL Name:")[1].strip() for line in dumped.splitlines() if "DLL Name:" in line]
     return [name for name in names
-            if name.lower() not in WINDOWS_SYSTEM_DLLS and not name.lower().startswith("api-ms-win-")]
+            if name.lower() not in allowed and not name.lower().startswith("api-ms-win-")]

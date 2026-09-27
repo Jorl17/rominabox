@@ -27,6 +27,14 @@ macro_rules! core_file {
 }
 pub(crate) use core_file;
 
+/// `windows_part!(Name)`: where a part of a Windows game is in its folder.
+macro_rules! windows_part {
+    ($name:ident) => {
+        const { $crate::launch_contract::declared(&["RIB_WINDOWS_PART"], stringify!($name), 1) }
+    };
+}
+pub(crate) use windows_part;
+
 /// `plan_field!(Name)`: a field of `launch.plan`, followed on its line by a
 /// tab and its value.
 macro_rules! plan_field {
