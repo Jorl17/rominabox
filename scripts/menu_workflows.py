@@ -164,7 +164,8 @@ def declared(table: dict, design: str, palette: str, name: str) -> dict:
             if "continues" in entry:
                 raise SystemExit(f"{name} continues another case; launch that case first")
             return {"key": f"{design}/{palette}/{name}", "baseline": group["baseline"],
-                    "script": steps, "export": export, "inMotion": shot.get("inMotion", False)}
+                    "script": steps, "export": export,
+                    "inMotion": entry.get("inMotion", shot.get("inMotion", False))}
     raise SystemExit(f"the table declares no case {name}")
 
 
@@ -265,7 +266,10 @@ def main() -> int:
     if dirty:
         raise SystemExit("commit the fork and build it before recording/comparing workflows")
     table = json.loads(TABLE.read_text(encoding="utf-8"))
-    cases = [declared(table, item["design"], item["palette"], item["case"]) for item in table["launched"]]
+    # We run a launched case with a list of platforms only on those platforms,
+    # because going fullscreen on a Mac takes over the whole screen.
+    cases = [declared(table, item["design"], item["palette"], item["case"]) for item in table["launched"]
+             if shots.PLATFORM in item.get("platforms", [shots.PLATFORM])]
     if not cases:
         raise SystemExit("the table launches no case")
     output = arguments.output.resolve()

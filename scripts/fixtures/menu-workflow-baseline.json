@@ -1480,6 +1480,189 @@
       "report:reset"
     ]
   },
+  "disc/blue/fullscreen-menu": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "MEMORY CARD",
+          "status": "CHOOSE A BLOCK"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "fullscreen": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "MEMORY CARD",
+          "status": "CHOOSE A BLOCK"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "windowed": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "MEMORY CARD",
+          "status": "CHOOSE A BLOCK"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "report:windowed",
+      "fullscreen",
+      "wait:30",
+      "report:fullscreen"
+    ]
+  },
   "disc/blue/hover-then-key": {
     "files": {},
     "reports": {
@@ -6554,6 +6737,185 @@
     "size": [
       1920,
       1200
+    ]
+  },
+  "native/blue/fullscreen-menu": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "fullscreen": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "windowed": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "report:windowed",
+      "fullscreen",
+      "wait:30",
+      "report:fullscreen"
     ]
   },
   "native/blue/hover-then-key": {

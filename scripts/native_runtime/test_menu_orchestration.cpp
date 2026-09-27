@@ -1251,6 +1251,16 @@ int main(int argc, char **argv)
       rib_menu_context_reset(menu);
       frame(menu);
       check(view.document.has_element("save"), "context reset reloads the document");
+      /* When the player goes fullscreen and back while the game plays, the
+       * menu gets a new video driver, and we draw nothing until it opens.
+       * Escape must not open the menu before we build its document again, or
+       * the player crashes in ElementDocument::GetContext. */
+      rib_menu_toggle(menu, false);
+      rib_menu_context_destroy(menu);
+      rib_menu_context_reset(menu);
+      rib_menu_toggle(menu, true);
+      frame(menu);
+      check(view.document.has_element("save"), "a menu opened before its document is built again opens");
       rib_menu_destroy(menu);
    }
 

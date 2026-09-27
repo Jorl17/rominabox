@@ -52,6 +52,10 @@ struct Case {
     unfocused: BTreeSet<String>,
 }
 
+/// The steps of the script driver that are neither `name:value` nor an
+/// element to click (`menu/drivers/rmlui/script.cpp`): menu toggle and Alt+Enter.
+const SCRIPT_COMMANDS: [&str; 2] = ["toggle", "fullscreen"];
+
 fn read_json(relative: &str) -> Value {
     let path = repo::at(relative);
     serde_json::from_slice(&fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display())))
@@ -254,7 +258,7 @@ fn named_ids(expected: &Value, script: &[String]) -> BTreeSet<String> {
     for step in script {
         if let Some(id) = step.strip_prefix("hover:") {
             ids.insert(id.to_owned());
-        } else if !step.contains(':') && step != "toggle" {
+        } else if !step.contains(':') && !SCRIPT_COMMANDS.contains(&step.as_str()) {
             // Every other bare step clicks an element, or sets a slider (id@fraction).
             ids.insert(step.split('@').next().unwrap().to_owned());
         }
