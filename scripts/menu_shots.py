@@ -506,24 +506,6 @@ def _build_a_game(
     app = next(out.glob("*.app"), None)
     if app is None:
         raise SystemExit(f"the export wrote no .app into {out}")
-    # The player next to the launcher comes from the kit. Replace it with the
-    # freshly built one so that the shot shows this tree.
-    if player:
-        # Do this before the copy. After the copy, the export has no signature.
-        capture_export_entitlements(app, run_dir / "entitlements.plist")
-        retroarch = app / "Contents/MacOS/retroarch"
-        shutil.copyfile(player, retroarch)
-        retroarch.chmod(0o755)
-        injector = run_dir / "inject-dylib"
-        subprocess.run(
-            ["cc", "-Oz", "-o", str(injector), str(ROOT / "scripts/native_runtime/inject_dylib.c")],
-            check=True,
-        )
-        subprocess.run(
-            [str(injector), str(retroarch), "@executable_path/librominabox-launch.dylib"],
-            check=True,
-        )
-        resign_replaced_player(app, run_dir / "entitlements.plist")
     return app
 
 
