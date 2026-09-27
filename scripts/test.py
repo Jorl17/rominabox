@@ -375,9 +375,15 @@ SCOPES = [
     ),
     Scope(
         "automation",
-        "that something other than a person still runs this suite",
+        "that something other than a person still runs this suite before a push, and the line limit before a commit",
         "that the hook is installed in a fresh clone; core.hooksPath is local configuration",
         [PYTHON, str(ROOT / "scripts/test_automation.py")],
+    ),
+    Scope(
+        "linelimit",
+        "that the pre-commit check stops a source file over the line limit unless it is listed, a listed file that grows, and a list that no longer matches its files, reading what is staged",
+        "that the hook is installed (the automation scope reads that it is wired), or anything about this repository's own files",
+        [PYTHON, str(ROOT / "scripts/test_line_limit.py")],
     ),
     Scope(
         "artwork",

@@ -20,6 +20,7 @@
     "variants": 0.6,
     "identification": 6.7,
     "automation": 0.1,
+    "linelimit": 2.9,
     "artwork": 2.4,
     "size": 5.2,
     "isolation": 23.6,

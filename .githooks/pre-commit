@@ -1,0 +1,10 @@
+#!/bin/sh
+# Stop a commit that makes one of our own source files longer than the line
+# limit. scripts/line_limit.py says which files, what the limit is, and how a
+# file already over it is accepted.
+#
+#   git commit --no-verify   skips it, deliberately and visibly.
+set -e
+root=$(git rev-parse --show-toplevel)
+. "$root/.githooks/python.sh"
+exec "$python" "$root/scripts/line_limit.py"
