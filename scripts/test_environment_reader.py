@@ -27,7 +27,8 @@ FORK = ROOT / "vendor/retroarch"
 CASES = {
     "RIB_READER_VALUE": "value",
     "RIB_READER_EMPTY": "",
-    "RIB_READER_PATH": str(Path("C:/Users/João/Games") if os.name == "nt" else Path("/Users/João/Games")),
+    # A folder with a non-ASCII name, outside any home folder. We only read the value back.
+    "RIB_READER_PATH": str(Path("C:/Games/João") if os.name == "nt" else Path("/opt/Games/João")),
 }
 UNSET = "RIB_READER_UNSET"
 
