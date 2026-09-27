@@ -79,7 +79,7 @@ pub struct ResolvedShader {
     pub detail: String,
     /// The path from the staged menu assets, empty for the unfiltered choice.
     pub relative_preset: String,
-    /// Files to copy into that directory, as (source, file name).
+    /// Files to copy into that directory, as (source, path within it).
     files: Vec<(PathBuf, String)>,
     /// The `.glsl` we write when we generate this preset instead of copying it.
     generated: Option<String>,
@@ -271,26 +271,39 @@ fn safe_relative(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// The passes listed in a `.glslp`, each checked to be inside the preset folder.
-fn referenced_passes(preset: &Path) -> Result<Vec<PathBuf>, String> {
+/// The files listed in a `.glslp`, its passes and its lookup textures, each
+/// as (source, its path next to the preset as written in the preset), checked
+/// to be inside the preset folder. The libretro presets have passes in
+/// `shaders/` and textures in `resources/`, so at export we put every file at
+/// the same relative path next to the copied preset.
+fn referenced_files(preset: &Path) -> Result<Vec<(PathBuf, String)>, String> {
     let text = fs::read_to_string(preset)
         .map_err(|error| format!("could not read shader preset: {error}"))?;
     let directory = preset.parent().unwrap_or_else(|| Path::new("."));
-    let mut passes = Vec::new();
-    for (line_number, line) in text.lines().enumerate() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-        let Some((key, value)) = line.split_once('=') else {
-            continue;
-        };
-        let key = key.trim();
-        let value = value.trim().trim_matches('"');
+    let entries: Vec<(usize, &str, &str)> = text
+        .lines()
+        .enumerate()
+        .filter_map(|(index, line)| {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                return None;
+            }
+            let (key, value) = line.split_once('=')?;
+            Some((index + 1, key.trim(), value.trim().trim_matches('"')))
+        })
+        .collect();
+    let textures: Vec<&str> = entries
+        .iter()
+        .find(|(_, key, _)| *key == "textures")
+        .map(|(_, _, value)| value.split(';').map(str::trim).filter(|name| !name.is_empty()).collect())
+        .unwrap_or_default();
+    let mut files: Vec<(PathBuf, String)> = Vec::new();
+    let mut passes = 0;
+    for (line_number, key, value) in &entries {
         let is_pass = key.starts_with("shader")
             && key.len() > "shader".len()
             && key["shader".len()..].chars().all(|c| c.is_ascii_digit());
-        if !is_pass {
+        if !is_pass && !textures.contains(key) {
             continue;
         }
         let relative = Path::new(value);
@@ -298,17 +311,26 @@ fn referenced_passes(preset: &Path) -> Result<Vec<PathBuf>, String> {
         let source = directory.join(relative);
         if !source.is_file() {
             return Err(format!(
-                "shader preset line {} names a missing file: {value}",
-                line_number + 1
+                "shader preset line {line_number} names a missing file: {value}"
             ));
         }
-        shader_format(&source)?;
-        passes.push(source);
+        if is_pass {
+            shader_format(&source)?;
+            passes += 1;
+        }
+        let spelled = relative
+            .components()
+            .map(|component| component.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join("/");
+        if !files.iter().any(|(_, existing)| existing == &spelled) {
+            files.push((source, spelled));
+        }
     }
-    if passes.is_empty() {
+    if passes == 0 {
         return Err("a shader preset names no shader pass".into());
     }
-    Ok(passes)
+    Ok(files)
 }
 
 fn slug(name: &str) -> Result<String, String> {
@@ -426,7 +448,6 @@ pub fn resolve(selection: &ShaderSelection) -> Result<Vec<ResolvedShader>, Strin
                 )
             }
             "glslp" => {
-                let passes = referenced_passes(&custom.path)?;
                 let mut files = vec![(
                     custom.path.clone(),
                     custom
@@ -436,16 +457,10 @@ pub fn resolve(selection: &ShaderSelection) -> Result<Vec<ResolvedShader>, Strin
                         .unwrap_or("preset.glslp")
                         .to_string(),
                 )];
-                for pass in passes {
-                    let file_name = pass
-                        .file_name()
-                        .and_then(|value| value.to_str())
-                        .ok_or_else(|| "shader pass has no name".to_string())?
-                        .to_string();
-                    if files.iter().any(|(_, name)| name == &file_name) {
-                        continue;
+                for (source, relative) in referenced_files(&custom.path)? {
+                    if !files.iter().any(|(_, name)| name == &relative) {
+                        files.push((source, relative));
                     }
-                    files.push((pass, file_name));
                 }
                 let preset_name = files[0].1.clone();
                 (format!("shaders/{id}/{preset_name}"), files, None)
