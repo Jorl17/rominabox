@@ -168,6 +168,8 @@ static void prepare(void) {
     char bundle[LAUNCH_PATH_CAP];
     char resources[LAUNCH_PATH_CAP];
     char accounts_root[LAUNCH_PATH_CAP];
+    char user_data[LAUNCH_PATH_CAP];
+    const char *home = getenv("HOME");
     uint32_t exec_path_size = sizeof executable;
     struct passwd *user = getpwuid(getuid());
     LaunchPlaces places = {0};
@@ -196,7 +198,16 @@ static void prepare(void) {
     rominabox_launch_join(resources, sizeof resources, bundle, "Contents/Resources");
 
     places.resources = resources;
-    places.home = getenv("HOME");
+    /* A game's data is in its HOME's Application Support: inside the
+     * sandbox, HOME is the game's container. */
+    if (!home || home[0] != '/')
+        rominabox_launch_die("HOME is not an absolute path, so there is nowhere safe to keep this game's files");
+    {
+        int wrote = snprintf(user_data, sizeof user_data, "%s/Library/Application Support", home);
+        if (wrote < 0 || (size_t)wrote >= sizeof user_data)
+            rominabox_launch_die("the data directory does not fit");
+    }
+    places.user_data = user_data;
     /* QUICK SIGN IN's accounts are in the real home, which the sandbox's
      * HOME is not. */
     if (user && user->pw_dir && user->pw_dir[0] == '/') {

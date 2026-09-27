@@ -18,8 +18,9 @@
 typedef struct {
     /* The app's own files: the plan, the core, the menu. */
     const char *resources;
-    /* What the plan's $HOME stands for. */
-    const char *home;
+    /* The per-user application data folder the plan's $user_data stands
+     * for, absolute. */
+    const char *user_data;
     /* The per-user application data folder with the accounts for QUICK SIGN
      * IN, outside any sandbox, or NULL when there is none. */
     const char *accounts_root;

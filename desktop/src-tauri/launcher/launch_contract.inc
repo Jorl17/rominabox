@@ -60,8 +60,9 @@ RIB_PLAN_MARK(Config, "---config---")
 
 RIB_TOKEN(DataDir, "$data_dir")
 RIB_TOKEN(ResourcesDir, "$resources_dir")
-/* The player's home, at the start of the plan's data_dir. */
-RIB_TOKEN(Home, "$HOME")
+/* The player's per-user application data folder, at the start of the
+ * plan's data_dir. Each platform's launcher says where it is. */
+RIB_TOKEN(UserData, "$user_data")
 
 /* The core's options, where RetroArch looks for them per game. */
 RIB_SHIPPED_SETTINGS(CoreOptions, "core-options", "config")

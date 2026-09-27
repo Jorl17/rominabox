@@ -1607,8 +1607,8 @@ savestate_thumbnail_enable = "true"
 
 fn game_data_template(identity: &str) -> String {
     format!(
-        "{}/Library/Application Support/ROM-in-a-Box/Games/{identity}",
-        token!(Home)
+        "{}/ROM-in-a-Box/Games/{identity}",
+        token!(UserData)
     )
 }
 

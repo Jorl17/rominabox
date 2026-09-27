@@ -116,7 +116,7 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
             "the launch plan must name {directory}"
         );
     }
-    assert!(plan.contains("data_dir\t$HOME/Library/Application Support/ROM-in-a-Box/Games/"));
+    assert!(plan.contains("data_dir\t$user_data/ROM-in-a-Box/Games/"));
     for setting in rominabox_desktop::player_settings::declared(Default::default()) {
         assert!(
             plan.contains(&setting.launch_line()),

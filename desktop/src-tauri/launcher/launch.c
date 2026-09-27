@@ -533,7 +533,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     char accounts_name[128] = "";
     char *plan;
     const char *config_text;
-    const char *home = places->home;
+    const char *user_data = places->user_data;
     char *data_dir = launch->data_dir;
     size_t managed_count = 0;
     size_t index;
@@ -570,10 +570,10 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
         die("the launch plan has no data directory");
     collect_managed(plan, managed, &managed_count);
 
-    if (!home || !is_absolute(home))
-        die("HOME is not an absolute path, so there is nowhere safe to keep this game's files");
-    if (starts_with(data_template, token_Home)) {
-        int wrote = snprintf(data_dir, PATH_CAP, "%s%s", home, data_template + strlen(token_Home));
+    if (!user_data || !is_absolute(user_data))
+        die("there is no per-user folder to keep this game's files in");
+    if (starts_with(data_template, token_UserData)) {
+        int wrote = snprintf(data_dir, PATH_CAP, "%s%s", user_data, data_template + strlen(token_UserData));
         if (wrote < 0 || (size_t)wrote >= PATH_CAP)
             die("the data directory does not fit");
     } else if (is_absolute(data_template)) {

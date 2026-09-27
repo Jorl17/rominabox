@@ -346,7 +346,7 @@ def run_menu_sounds() -> list[str]:
 
 
 # Windows here, but we check that they compile, so no POSIX-only call slips in.
-PORTABLE = ("shipped_settings.c", "shipped_files.c", "portable_fs.c", "accounts_folder.c",
+PORTABLE = ("launch.c", "shipped_settings.c", "shipped_files.c", "portable_fs.c", "accounts_folder.c",
             "player_settings.c")
 
 

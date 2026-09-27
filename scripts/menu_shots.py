@@ -146,10 +146,10 @@ def sandboxed(app: Path) -> bool:
 
 
 def home_for(app: Path) -> str:
-    """The HOME directory in the environment of the exported game.
+    """The HOME of the exported game.
 
-    With App Sandbox, HOME points into the container. In the plan we still
-    write $HOME, because that is the path before the redirection.
+    In App Sandbox, HOME is inside the container. The plan's $user_data is
+    Application Support in that HOME, as we resolve it in the launcher.
     """
     if not sandboxed(app):
         return str(Path.home())
@@ -173,7 +173,7 @@ def data_dir_of(app: Path) -> Path | None:
     found = DATA_DIR.search(plan_text(app))
     if not found:
         return None
-    return Path(found.group(1).replace("$HOME", home_for(app)))
+    return Path(found.group(1).replace("$user_data", str(Path(home_for(app)) / "Library/Application Support")))
 
 
 def log_of(app: Path) -> Path | None:
