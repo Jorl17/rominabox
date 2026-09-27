@@ -715,13 +715,20 @@ static void prepare(void) {
     apply_player_file(&lines, &line_count, &line_capacity, controls_defaults);
     apply_player_file(&lines, &line_count, &line_capacity, controls_override);
     apply_player_settings(&lines, &line_count, &line_capacity, plan, data_dir);
-    /* We take a screenshot with the window unfocused, where the console would
-     * pause and the picture would show a stopped game. We replace
-     * pause_nonactive here for this run, after the player's settings, instead
-     * of writing the player's file. */
+    /* Quiet is opt-out. We publish ROMINABOX_QUIET so that we can apply the
+     * same setting in the fork. */
+    if (rominabox_launch_is_quiet(
+            getppid(), getenv(RIB_ENV_QUIET), getenv(ROMINABOX_SOUND_ENV)))
+        setenv(RIB_ENV_QUIET, "1", 1);
+    /* The window of a quiet run is never in front, and we take a screenshot
+     * with the window unfocused. With pause_nonactive on, the console would
+     * pause, so the run would never reach its frame limit, or the picture
+     * would show a stopped game. We turn it off here for this run, after the
+     * player's settings, and leave the player's file unchanged. */
     {
         const char *shot = getenv(RIB_ENV_MENU_SHOT);
-        if (shot && shot[0])
+        const char *quiet = getenv(RIB_ENV_QUIET);
+        if ((shot && shot[0]) || (quiet && quiet[0]))
             force_line(
                 &lines,
                 &line_count,
@@ -733,12 +740,7 @@ static void prepare(void) {
     /* After the player files, so a controls.cfg cannot turn CoreAudio back
      * on for this launch. With audio_enable false, no audio driver is ever
      * opened. We replace the frozen coreaudio line with null so the written
-     * config contains no device, and do not write this into the player's file.
-     * Quiet is opt-out, and we publish ROMINABOX_QUIET so that we apply the
-     * same choice in the fork. */
-    if (rominabox_launch_is_quiet(
-            getppid(), getenv(RIB_ENV_QUIET), getenv(ROMINABOX_SOUND_ENV)))
-        setenv(RIB_ENV_QUIET, "1", 1);
+     * config contains no device, and do not write this into the player's file. */
     {
         const char *quiet = getenv(RIB_ENV_QUIET);
         if (quiet && quiet[0]) {
