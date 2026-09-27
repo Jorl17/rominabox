@@ -1,6 +1,9 @@
 {
   "comment": "How the player is built, once, for every target. scripts/build_player.py builds it; scripts/prepare_rmlui.py builds the same RmlUi (and FreeType) for the tests. A difference between targets is a key under a target here, never a second script.",
-  "targets": ["macos-arm64", "windows-x86_64"],
+  "targets": [
+    "macos-arm64",
+    "windows-x86_64"
+  ],
   "rmlui": {
     "repository": "https://github.com/mikke89/RmlUi.git",
     "commit": "ba95ffe8bfb6370efb2cdcca927eaad4710c5413",
@@ -99,5 +102,44 @@
       "desktop/src-tauri/launcher/portable_fs.h"
     ]
   },
-  "capability": "rcheevos_rib_prepare_client"
+  "capability": "rcheevos_rib_prepare_client",
+  "launcher": {
+    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher and its platform's entry in the folder named for the platform. A macOS launcher is built into the app at export when its kit does not contain one.",
+    "windows-x86_64": {
+      "output": "launcher.exe",
+      "flags": [
+        "-std=gnu99",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-municode",
+        "-mwindows",
+        "-static"
+      ],
+      "libraries": [
+        "-lshell32",
+        "-lole32",
+        "-luuid"
+      ]
+    }
+  },
+  "kit": {
+    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A licence names its source: build: a file in the player build, toolchain: a file in the toolchain's installation.",
+    "windows-x86_64": {
+      "files": {
+        "bin/retroarch.exe": "build:retroarch/retroarch.exe",
+        "bin/launcher.exe": "build:launcher/launcher.exe"
+      },
+      "licences": {
+        "RetroArch.txt": "build:retroarch/COPYING",
+        "RmlUi-MIT.txt": "build:vendor/RmlUi/LICENSE.txt",
+        "native/FreeType-LICENSE.txt": "build:freetype-2.14.3/LICENSE.TXT",
+        "native/FreeType-FTL.txt": "build:freetype-2.14.3/docs/FTL.TXT",
+        "native/MinGW-w64-runtime.txt": "toolchain:share/licenses/crt/COPYING.MinGW-w64-runtime.txt",
+        "native/winpthreads-COPYING.txt": "toolchain:share/licenses/winpthreads/COPYING",
+        "native/GCC-runtime-exception.txt": "toolchain:share/licenses/gcc/COPYING.RUNTIME"
+      }
+    }
+  }
 }

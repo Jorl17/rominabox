@@ -248,6 +248,31 @@ def copy_accounts(destination: Path) -> Path:
     return accounts
 
 
+LAUNCHER = ROOT / "desktop/src-tauri/launcher"
+
+
+def platform_of(target: str) -> str:
+    """The platform folder with the sources specific to a target."""
+    if is_windows(target):
+        return "windows"
+    if is_macos(target):
+        return "macos"
+    raise SystemExit(f"no platform named for {target}")
+
+
+def build_launcher(destination: Path, target: str, environment: dict[str, str]) -> Path | None:
+    """The game's launcher, for a target where we build it next to the player."""
+    launcher = recipe()["launcher"].get(require_target(target))
+    if launcher is None:
+        return None
+    sources = sorted(LAUNCHER.glob("*.c")) + sorted((LAUNCHER / platform_of(target)).glob("*.c"))
+    output = destination / "launcher" / launcher["output"]
+    output.parent.mkdir(parents=True, exist_ok=True)
+    run(["cc", *launcher["flags"], "-o", str(output), *map(str, sources), *launcher["libraries"]],
+        destination, environment)
+    return output
+
+
 def has_symbol(binary: Path, target: str, function: str, environment: dict[str, str]) -> bool:
     listed = subprocess.run([resolve("nm", environment), "-g", str(binary)], capture_output=True, text=True,
                             check=True, env=environment).stdout

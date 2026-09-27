@@ -68,12 +68,14 @@ def main() -> int:
         "testOnly": achievements_test == "1" or menu_script == "1",
     }) + "\n", encoding="utf-8", newline="\n")
     native_build.run(["strip", str(binary)], retroarch, environment)
+    launcher = native_build.build_launcher(destination, target, environment)
     if native_build.is_windows(target):
-        foreign = native_build.foreign_imports(binary, environment)
-        if foreign:
-            raise SystemExit(f"{binary.name} needs DLLs Windows does not have: {', '.join(foreign)}")
+        for built in [binary, *([launcher] if launcher else [])]:
+            foreign = native_build.foreign_imports(built, environment)
+            if foreign:
+                raise SystemExit(f"{built.name} needs DLLs Windows does not have: {', '.join(foreign)}")
 
-    print(f"Built {binary} from {commit}")
+    print(f"Built {binary} from {commit}" + (f", and {launcher}" if launcher else ""))
     return 0
 
 
