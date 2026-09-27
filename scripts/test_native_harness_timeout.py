@@ -200,8 +200,7 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
                     (sandbox / "Games").symlink_to(elsewhere, target_is_directory=True)
                 with (
                     patch.object(menu_shots, "data_dir_of", return_value=sandbox / "Games" / "fixture"),
-                    patch.object(menu_shots, "home_for", return_value=str(sandbox)),
-                    patch.object(menu_shots, "sandboxed", return_value=True),
+                    patch.object(menu_shots, "storage_home", return_value=sandbox),
                 ):
                     with self.assertRaisesRegex(SystemExit, "symlink in fixture storage"):
                         menu_workflows.claim_fixture(Path("/fake/Fixture.app"))
@@ -215,8 +214,7 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
             saved.write_bytes(b"unowned save")
             with (
                 patch.object(menu_shots, "data_dir_of", return_value=data),
-                patch.object(menu_shots, "home_for", return_value=str(data)),
-                patch.object(menu_shots, "sandboxed", return_value=True),
+                patch.object(menu_shots, "storage_home", return_value=data),
             ):
                 with self.assertRaisesRegex(SystemExit, "pre-existing unowned fixture files"):
                     menu_workflows.reset_fixture(Path("/fake/Fixture.app"))
@@ -227,8 +225,7 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
             data = Path(directory).resolve()
             with (
                 patch.object(menu_shots, "data_dir_of", return_value=data),
-                patch.object(menu_shots, "home_for", return_value=str(data)),
-                patch.object(menu_shots, "sandboxed", return_value=True),
+                patch.object(menu_shots, "storage_home", return_value=data),
             ):
                 menu_workflows.claim_fixture(Path("/fake/Fixture.app"))
                 (data / "states").mkdir()
