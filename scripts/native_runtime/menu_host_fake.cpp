@@ -34,7 +34,11 @@ extern "C" void rib_host_load_bind(struct config_file *, const char *id, unsigne
 }
 extern "C" void rib_host_clear_bind(unsigned) {}
 extern "C" void rib_host_write_bind(struct config_file *, const char *, unsigned) {}
-extern "C" bool rib_host_bind_conflicts(unsigned, unsigned) { return false; }
+extern "C" bool rib_host_bind_conflicts(unsigned changed, unsigned other)
+{
+   return changed != other && changed < host.bind_ids.size()
+         && host.bind_ids[changed] == host.clashing;
+}
 extern "C" void rib_host_bind_lines(unsigned index, char details[][64], char kinds[][8], int *lines)
 {
    if (!details || !kinds || !lines || *lines + 2 > RIB_HOST_BIND_LINE_MAX) return;

@@ -18,6 +18,8 @@
  *                                            over height (4:3 unless set)
  *                           key NAME         the key bound to every control,
  *                                            by its name in a RetroArch config
+ *                           clash ID         the control whose new binding
+ *                                            clashes with every other
  *   ids ID...             ids of the case, reported when not in the document
  *   text ID...            ids whose words we report after every step
  *   box SELECTOR          the first element matching an RCSS selector. We
@@ -346,6 +348,7 @@ void reset_services(const Case& run)
       else if (key == "pending") session.pending_upload = value == "1";
       else if (key == "aspect") host.game_aspect = std::strtof(value.c_str(), nullptr);
       else if (key == "key") host.bound_key = value;
+      else if (key == "clash") host.clashing = value;
       else if (key == "achievements")
       {
          if (value == "active")

@@ -21,6 +21,8 @@ struct FakeHost
    /* The key bound to every control, by its name in a RetroArch config
     * (input_key_names.inc). */
    std::string bound_key = "a";
+   /* The control whose new binding clashes with every other, or none. */
+   std::string clashing;
    std::string captured_id;
    bool capture_start_accepted = true;
    /* The answer to a poll. Each new capture starts as pending. */
