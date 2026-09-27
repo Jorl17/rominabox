@@ -60,15 +60,6 @@ pub fn key_words() -> &'static [(String, String)] {
     })
 }
 
-/// The word for the key called `name` in the RetroArch config, as we show
-/// it in the game, which is its entry in `key_words.inc` or else the name.
-pub fn key_word(name: &str) -> &str {
-    key_words()
-        .iter()
-        .find(|(key, _)| key == name)
-        .map_or(name, |(_, word)| word.as_str())
-}
-
 /// The text for `id` in `given`, the wording of the design, or else the
 /// English text, with each hole filled in with the value we show there.
 pub fn say(given: &BTreeMap<String, String>, id: &str, values: &[(&str, &str)]) -> String {

@@ -6,7 +6,6 @@
 
 use super::manifest::Manifest;
 use super::{contract, file_name, Content};
-use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -177,10 +176,8 @@ fn scene_markup(
     // DualShock would need a callout, and both gutters are already full with
     // seven 54 dp callouts.
     let placed_scene = crate::scene_layout::layout(&profile.controls, metrics);
-    let said = callout_words(profile, controls, &manifest.words);
     markup.push_str(&control_group_markup(
         &placed_scene.groups,
-        &said.groups,
         illustrated,
         metrics.group_border,
     ));
@@ -217,7 +214,6 @@ fn scene_markup(
             &item.id,
             label,
             original,
-            &said.controls[&item.id],
             placed.callout,
             &ring,
         ));
@@ -378,7 +374,6 @@ fn direction_class(direction: crate::controls::StickDirection) -> &'static str {
 /// builder and in `scripts/render_control_overlays.py`.
 fn control_group_markup(
     groups: &[crate::scene_layout::GroupPlacement],
-    said: &BTreeMap<String, GroupWords>,
     illustrated: bool,
     border: i32,
 ) -> String {
@@ -393,16 +388,14 @@ fn control_group_markup(
             }
             _ => String::new(),
         };
-        let words = &said[name];
         markup.push_str(&format!(
             r#"
 <button id="{group_id}{name}" class="{group_class}" style="left:{x}dp;top:{y}dp;">
 <div class="control-label">{}</div>
-<div id="{binding_id}{name}" class="control-assignment">{}</div>{ring}
+<div id="{binding_id}{name}" class="control-assignment"></div>{ring}
 </button>
 "#,
-            crate::lists::rml_text(&words.title),
-            crate::lists::rml_text(&words.bindings),
+            crate::lists::rml_text(&group_title(name)),
             group_id = contract!(ControlGroupPrefix),
             group_class = contract!(ControlGroup),
             binding_id = contract!(ControlGroupBindingPrefix),
@@ -413,124 +406,33 @@ fn control_group_markup(
     markup
 }
 
-/// The text about its bindings in each callout on the scene of a pad, in the
-/// words of the design, by control id for a control drawn alone and by group
-/// name for a group, with the bindings of every member. We show this text in
-/// the composed menu until we fill it at run time, and in the overlay pictures.
-#[derive(Debug, Serialize)]
-pub struct CalloutWords {
-    pub controls: BTreeMap<String, String>,
-    pub groups: BTreeMap<String, GroupWords>,
+/// A stick's box's title, from its group's name.
+fn group_title(name: &str) -> String {
+    name.replace('_', " ").to_uppercase()
 }
 
-/// The callout of a group, with its title and the bindings of every member.
-#[derive(Debug, Serialize)]
-pub struct GroupWords {
-    pub title: String,
-    pub bindings: String,
+/// The title of every stick box on the scene of `profile`, by group name, for
+/// drawing the scene beside the menu. We write the bindings of a box in the
+/// game, from the bindings it has.
+pub fn scene_titles(profile: &crate::controls::ControlProfile) -> BTreeMap<String, String> {
+    profile
+        .controls
+        .iter()
+        .filter_map(|item| item.group.as_deref())
+        .map(|group| (group.to_string(), group_title(group)))
+        .collect()
 }
 
-/// The text of the callouts of `profile` with `controls` bound, in the words
-/// of the design at `design`.
-pub fn scene_words(
-    design: &Path,
-    profile: &crate::controls::ControlProfile,
-    controls: &crate::controls::Controls,
-) -> Result<CalloutWords, String> {
-    Ok(callout_words(profile, controls, &Manifest::load(design)?.words))
-}
-
-fn callout_words(
-    profile: &crate::controls::ControlProfile,
-    controls: &crate::controls::Controls,
-    given: &BTreeMap<String, String>,
-) -> CalloutWords {
-    let mut said = CalloutWords {
-        controls: BTreeMap::new(),
-        groups: BTreeMap::new(),
-    };
-    let mut grouped: BTreeMap<&str, Vec<String>> = BTreeMap::new();
-    for item in &profile.controls {
-        let custom = controls.bindings.get(&item.id);
-        let words = binding_words(
-            custom
-                .and_then(|value| value.key.as_deref())
-                .unwrap_or(&item.key),
-            custom.and_then(|value| value.button.as_deref()),
-            custom.and_then(|value| value.axis.as_deref()),
-            custom.and_then(|value| value.mouse),
-        );
-        match item.group.as_deref() {
-            Some(group) => grouped.entry(group).or_default().extend(words),
-            None => {
-                said.controls
-                    .insert(item.id.clone(), callout_line(&words, given));
-            }
-        }
-    }
-    for (group, words) in grouped {
-        said.groups.insert(
-            group.to_string(),
-            GroupWords {
-                title: group.replace('_', " ").to_uppercase(),
-                bindings: callout_line(&words, given),
-            },
-        );
-    }
-    said
-}
-
-/// The words that a callout can contain about one control, in list order.
-fn binding_words(
-    key: &str,
-    button: Option<&str>,
-    axis: Option<&str>,
-    mouse: Option<u32>,
-) -> Vec<String> {
-    let mut words = Vec::new();
-    if !key.is_empty() && key != "nul" {
-        words.push(super::words::key_word(key).to_string());
-    }
-    if let Some(button) = button.filter(|value| !value.is_empty()) {
-        words.push(format!("Button {button}"));
-    }
-    if let Some(axis) = axis.filter(|value| !value.is_empty()) {
-        words.push(format!("Axis {axis}"));
-    }
-    if let Some(mouse) = mouse {
-        words.push(match mouse {
-            2 => "Left".to_string(),
-            3 => "Right".to_string(),
-            4 => "Wheel up".to_string(),
-            5 => "Wheel down".to_string(),
-            6 => "Middle".to_string(),
-            other => format!("Mouse {other}"),
-        });
-    }
-    words
-}
-
-/// Every binding, separated by commas. One binding stays that binding, and
-/// none is the word for unbound in the design, as we show it in the game.
-/// We show no count such as "3 binds", which the player cannot see.
-fn callout_line(words: &[String], given: &BTreeMap<String, String>) -> String {
-    match words {
-        [] => super::words::say(given, "unbound", &[]),
-        [only] => only.clone(),
-        many => many.join(", "),
-    }
-}
-
+/// A control's callout: its label, and an empty place for its bindings,
+/// which we fill in the game from the bindings it has.
 fn control_callout_markup(
     id: &str,
     label: &str,
     original: Option<&str>,
-    key: &str,
     callout: crate::scene_layout::Rect,
     ring: &str,
 ) -> String {
     let label = crate::lists::rml_text(label);
-    let key = crate::lists::rml_text(key);
     let original = original
         .map(|value| {
             format!(
@@ -540,7 +442,7 @@ fn control_callout_markup(
         })
         .unwrap_or_default();
     format!(
-        r#"<button id="{stop}{id}" class="{class}" style="left:{}dp;top:{}dp;"><div id="{label_id}{id}" class="control-label">{label}</div><div class="control-assignment">{original}<span id="{binding_id}{id}">{key}</span></div>{ring}</button>"#,
+        r#"<button id="{stop}{id}" class="{class}" style="left:{}dp;top:{}dp;"><div id="{label_id}{id}" class="control-label">{label}</div><div class="control-assignment">{original}<span id="{binding_id}{id}"></span></div>{ring}</button>"#,
         callout.x,
         callout.y,
         stop = contract!(ControlPrefix),
@@ -548,44 +450,4 @@ fn control_callout_markup(
         label_id = contract!(ControlLabelPrefix),
         binding_id = contract!(ControlBindingPrefix),
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// A callout with one binding of a control that has three is false, and a
-    /// count with no bindings refers to something the player cannot see.
-    #[test]
-    fn a_callout_names_every_binding_and_never_a_count() {
-        let three = binding_words("up", Some("0"), Some("+0"), None);
-        let english = BTreeMap::new();
-        let line = callout_line(&three, &english);
-        assert_eq!(line, "Up, Button 0, Axis +0");
-        assert!(line.starts_with("Up"), "the first binding is visible");
-        assert!(line.contains("Button 0") && line.contains("Axis +0"));
-        assert!(!line.contains("bind"), "a count is not a binding: {line}");
-        assert_eq!(
-            callout_line(&binding_words("c", None, None, None), &english),
-            "c"
-        );
-        assert_eq!(callout_line(&[], &english), "---");
-        let worded = BTreeMap::from([("unbound".to_string(), "NONE".to_string())]);
-        assert_eq!(
-            callout_line(&[], &worded),
-            "NONE",
-            "the design's word, as the player says it"
-        );
-    }
-
-    /// The player sees the composed callout before we fill it in the menu, and
-    /// it appears in the builder preview, so we word a key as in the game.
-    #[test]
-    fn a_callout_words_a_key_as_the_game_does() {
-        let english = BTreeMap::new();
-        let line = |key| callout_line(&binding_words(key, None, None, None), &english);
-        assert_eq!(line("num1"), "1");
-        assert_eq!(line("rshift"), "Right Shift");
-        assert_eq!(line("c"), "c");
-    }
 }
