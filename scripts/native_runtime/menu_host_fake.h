@@ -46,6 +46,10 @@ struct FakeHost
    unsigned disc_index = 0;
    /* The last shader applied from the menu, and its preset. */
    std::string applied_shader, applied_preset;
+   /* The last controller passed to the core: the pad's id and its libretro
+    * device. */
+   std::string applied_device;
+   unsigned applied_libretro = 0;
 
    /* The RetroArch settings behind each player setting, by config key (its
     * name in settings.inc), with their values in the running game. We cannot

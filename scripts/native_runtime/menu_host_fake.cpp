@@ -79,7 +79,11 @@ extern "C" bool rib_host_core_gl_context(void) { return false; }
 extern "C" bool rib_host_prepare_script_shot(void) { return false; }
 extern "C" void rib_host_end_after_script_shot(const char *) {}
 extern "C" void rib_host_script_finished(void) { host.script_finished = true; }
-extern "C" void rib_host_apply_device(const char *, unsigned) {}
+extern "C" void rib_host_apply_device(const char *id, unsigned device)
+{
+   host.applied_device = id ? id : "";
+   host.applied_libretro = device;
+}
 extern "C" unsigned rib_host_disc_count(void) { return host.disc_count; }
 extern "C" unsigned rib_host_disc_index(void) { return host.disc_index; }
 extern "C" void rib_host_disc_label(unsigned index, char *out, size_t length)

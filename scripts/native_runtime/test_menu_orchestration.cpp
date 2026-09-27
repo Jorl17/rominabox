@@ -619,6 +619,8 @@ void pad_changes_and_reset_apply_together(const char *native_assets, const char 
             "choosing the 6-button pad draws it");
       check(std::string(inspect.text("controls-device-current")) == "Mega Drive 6 buttons",
             "the picker names the 6-button pad");
+      check(host.applied_device == "megadrive6" && host.applied_libretro == 513,
+            "choosing the 6-button pad hands its device to the core");
       click_and_frame(menu, "controls-device-current");
       check(picker_open(), "the picker opens again after a pad change");
       click_and_frame(menu, "controls-device-current");
@@ -632,6 +634,8 @@ void pad_changes_and_reset_apply_together(const char *native_assets, const char 
       check(std::string(inspect.text("controls-device-current")) == "Mega Drive 3 buttons",
             "Reset names the 3-button pad");
       check(std::string(inspect.text("control-label-y")) == "A", "Reset restores the 3-button labels");
+      check(host.applied_device == "megadrive" && host.applied_libretro == 257,
+            "Reset hands the 3-button pad's device back to the core");
       click_and_frame(menu, "controls-device-current");
       check(picker_open(), "the picker opens after Reset");
       click_and_frame(menu, "controls-device-current");
