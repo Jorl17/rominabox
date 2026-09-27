@@ -28,8 +28,7 @@ bool rib_accounts_available(void) {
 }
 
 static bool join(char out[PATH_SIZE], const char *left, const char *right) {
-    int length = snprintf(out, PATH_SIZE, "%s/%s", left, right);
-    return length > 0 && length < PATH_SIZE;
+    return fs_join(out, PATH_SIZE, left, right) == 0;
 }
 
 static bool field_valid(const char *text, size_t capacity) {

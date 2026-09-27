@@ -16,6 +16,15 @@
  * on Windows C:\ or C:/, or a share, \\server\name, and elsewhere /. */
 int fs_is_absolute(const char *path);
 
+/* `left` and `right` as one path, with this platform's separator between
+ * them and throughout, so on Windows we change every `/` to `\`. Windows
+ * accepts either, but some programs that receive a path from the launcher do
+ * not. For example, in a core the folder of a playlist ends at its last `/`.
+ * Fail with ENAMETOOLONG when it does not fit. */
+int fs_join(char *out, size_t capacity, const char *left, const char *right);
+/* `path` spelled with this platform's separator throughout, in place. */
+void fs_native_path(char *path);
+
 /* Call `visit` with each entry's name, skipping names that start with '.'.
  * Fail with ENOENT for a missing directory. When `visit` returns non-zero,
  * stop the listing and return that value. */

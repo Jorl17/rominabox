@@ -80,10 +80,7 @@ static int starts_with(const char *value, const char *prefix) {
 }
 
 static void join_path(char *out, size_t out_cap, const char *left, const char *right) {
-    size_t left_len = strlen(left);
-    int need_slash = left_len > 0 && !is_separator(left[left_len - 1]);
-    int wrote = snprintf(out, out_cap, "%s%s%s", left, need_slash ? "/" : "", right);
-    if (wrote < 0 || (size_t)wrote >= out_cap)
+    if (fs_join(out, out_cap, left, right) != 0)
         die("a path does not fit");
 }
 
@@ -579,6 +576,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     } else {
         die("the data directory is not absolute");
     }
+    fs_native_path(data_dir);
     if (!fs_is_absolute(data_dir))
         die("the data directory is not absolute");
 

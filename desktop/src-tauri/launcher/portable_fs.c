@@ -16,6 +16,8 @@
  * the last two, so a player could not sign out in one game while another game
  * reads the accounts folder. */
 #define SHARE_ALL (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+/* The path separator on Windows, where `/` is also accepted. */
+#define FS_SEPARATOR '\\'
 
 static void set_errno_from_windows(void) {
     switch (GetLastError()) {
@@ -390,6 +392,10 @@ void fs_lock_release(fs_lock *lock) {
 #include <sys/stat.h>
 #include <unistd.h>
 
+/* The path separator on macOS and Linux, and the only one there, because
+ * `\` is part of a name on those platforms. */
+#define FS_SEPARATOR '/'
+
 int fs_is_absolute(const char *path) {
     return path[0] == '/';
 }
@@ -541,3 +547,22 @@ void fs_lock_release(fs_lock *lock) {
 }
 
 #endif
+
+void fs_native_path(char *path) {
+    for (; *path; path++)
+        if (*path == '/')
+            *path = FS_SEPARATOR;
+}
+
+int fs_join(char *out, size_t capacity, const char *left, const char *right) {
+    const size_t length = strlen(left);
+    const char separator[2] = {FS_SEPARATOR, '\0'};
+    const int separate = length > 0 && left[length - 1] != '/' && left[length - 1] != FS_SEPARATOR;
+    const int wrote = snprintf(out, capacity, "%s%s%s", left, separate ? separator : "", right);
+    if (wrote < 0 || (size_t)wrote >= capacity) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+    fs_native_path(out);
+    return 0;
+}

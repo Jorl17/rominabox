@@ -241,15 +241,6 @@ static int options_write(const OptionFile *file, const char *path) {
     return result;
 }
 
-static int join(char *out, size_t cap, const char *left, const char *right) {
-    int wrote = snprintf(out, cap, "%s/%s", left, right);
-    if (wrote < 0 || (size_t)wrote >= cap) {
-        errno = ENAMETOOLONG;
-        return -1;
-    }
-    return 0;
-}
-
 static int make_directory(const char *path) {
     return fs_make_directory(path);
 }
@@ -399,10 +390,10 @@ static int apply_one(const char *name, void *context) {
     char shipped_path[OPTIONS_PATH_CAP];
     char game_path[OPTIONS_PATH_CAP];
     char applied_path[OPTIONS_PATH_CAP];
-    if (join(walked_path, sizeof walked_path, core->walked_dir, name) != 0
-        || join(shipped_path, sizeof shipped_path, core->shipped_dir, name) != 0
-        || join(game_path, sizeof game_path, core->game_dir, name) != 0
-        || join(applied_path, sizeof applied_path, core->applied_dir, name) != 0)
+    if (fs_join(walked_path, sizeof walked_path, core->walked_dir, name) != 0
+        || fs_join(shipped_path, sizeof shipped_path, core->shipped_dir, name) != 0
+        || fs_join(game_path, sizeof game_path, core->game_dir, name) != 0
+        || fs_join(applied_path, sizeof applied_path, core->applied_dir, name) != 0)
         return record(roots, core->walked_dir);
     if (!fs_is_file(walked_path))
         return 0;
@@ -421,10 +412,10 @@ static int apply_one(const char *name, void *context) {
 static int apply_core(const char *name, void *context) {
     CoreWalk *core = context;
     Roots *roots = core->roots;
-    if (join(core->walked_dir, sizeof core->walked_dir, core->walked, name) != 0
-        || join(core->shipped_dir, sizeof core->shipped_dir, roots->shipped, name) != 0
-        || join(core->game_dir, sizeof core->game_dir, roots->game, name) != 0
-        || join(core->applied_dir, sizeof core->applied_dir, roots->applied, name) != 0)
+    if (fs_join(core->walked_dir, sizeof core->walked_dir, core->walked, name) != 0
+        || fs_join(core->shipped_dir, sizeof core->shipped_dir, roots->shipped, name) != 0
+        || fs_join(core->game_dir, sizeof core->game_dir, roots->game, name) != 0
+        || fs_join(core->applied_dir, sizeof core->applied_dir, roots->applied, name) != 0)
         return record(roots, core->walked);
     if (!fs_is_directory(core->walked_dir))
         return 0;

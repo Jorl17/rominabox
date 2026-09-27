@@ -356,6 +356,7 @@ static void the_launcher_makes_exactly_the_named_folder(void)
    make_folder(app_data);
    assert(rominabox_accounts_folder(app_data, "ROM-in-a-Box Accounts", out, sizeof out) == 0);
    snprintf(expected, sizeof expected, "%s/ROM-in-a-Box Accounts", app_data);
+   fs_native_path(expected);
    assert(!strcmp(out, expected));
    assert(fs_is_directory(out));
 #ifndef _WIN32

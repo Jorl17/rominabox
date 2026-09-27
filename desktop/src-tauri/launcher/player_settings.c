@@ -127,11 +127,8 @@ int rominabox_player_setting(
         errno = EINVAL;
         return -1;
     }
-    wrote = snprintf(path, sizeof path, "%s/%s", data_dir, file);
-    if (wrote < 0 || (size_t)wrote >= sizeof path) {
-        errno = ENAMETOOLONG;
+    if (fs_join(path, sizeof path, data_dir, file) != 0)
         return -1;
-    }
     value = chosen_value(path, key, chosen, sizeof chosen) ? chosen : fallback;
     wrote = snprintf(line, line_cap, "%s = \"%s\"", key, value);
     if (wrote < 0 || (size_t)wrote >= line_cap) {

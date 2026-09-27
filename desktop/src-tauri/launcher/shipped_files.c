@@ -62,15 +62,6 @@ static int names_add(Names *names, const char *name, size_t length) {
     return 0;
 }
 
-static int join(char *out, size_t cap, const char *left, const char *right) {
-    int wrote = snprintf(out, cap, "%s/%s", left, right);
-    if (wrote < 0 || (size_t)wrote >= cap) {
-        errno = ENAMETOOLONG;
-        return -1;
-    }
-    return 0;
-}
-
 static int fail(const char *path, char *failed, size_t failed_cap) {
     int saved = errno;
     if (failed && failed_cap)
@@ -194,8 +185,8 @@ static int bring_one(const char *name, void *context) {
     int same;
     if (!plain_name(name))
         return 0;
-    if (join(shipped_path, sizeof shipped_path, walk->shipped, name) != 0
-        || join(game_path, sizeof game_path, walk->game, name) != 0)
+    if (fs_join(shipped_path, sizeof shipped_path, walk->shipped, name) != 0
+        || fs_join(game_path, sizeof game_path, walk->game, name) != 0)
         return fail(walk->shipped, walk->failed, walk->failed_cap);
     if (!fs_is_file(shipped_path))
         return 0;
@@ -264,7 +255,7 @@ int rominabox_replace_shipped_files(
         char game_path[FILES_PATH_CAP];
         if (names_has(&walk.now, before.names[index]))
             continue;
-        if (join(game_path, sizeof game_path, game, before.names[index]) != 0
+        if (fs_join(game_path, sizeof game_path, game, before.names[index]) != 0
             || fs_remove(game_path) != 0) {
             fail(game_path, failed, failed_cap);
             goto done;
