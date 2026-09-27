@@ -264,9 +264,8 @@ def home_for(app: Path) -> str:
 # whether it is sandboxed, the folder that must contain its per-game storage
 # (in a sandbox, a macOS game's container or a Windows game's Packages
 # folder, and otherwise nothing on macOS and the games folder in the per-user
-# application data on Windows), the place of the player in the kit (the macOS
-# kit from freeze-runtime-kit.mjs, the Windows kit from the recipe), and which
-# processes of the game are still running.
+# application data on Windows), and which processes of the game are still
+# running.
 APPS = {
     "macos": {
         "launcher": _macos_launcher,
@@ -275,7 +274,6 @@ APPS = {
         "sandboxed": _macos_sandboxed,
         "prepare_storage": _macos_prepare_storage,
         "storage_home": lambda app: Path(home_for(app)) if _macos_sandboxed(app) else None,
-        "kit_player": lambda: "bin/retroarch",
         "running": _macos_running,
     },
     "windows": {
@@ -287,7 +285,6 @@ APPS = {
         "prepare_storage": _windows_prepare_storage,
         "storage_home": lambda app: (_windows_sandbox_folder(app) if _windows_sandboxed(app)
                                      else Path(os.environ["LOCALAPPDATA"]) / "ROM-in-a-Box" / "Games"),
-        "kit_player": lambda: native_build.recipe()["kit"][host_target()]["files"]["player"]["at"],
         "running": _windows_running,
     },
 }
@@ -638,7 +635,7 @@ def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
                 shutil.copyfile(document, staged_design / document.name)
                 if package_name == "native":
                     shutil.copyfile(document, kit / "menu-assets" / document.name)
-    installed = kit / _app()["kit_player"]()
+    installed = kit / native_build.recipe()["kit"][host_target()]["files"]["player"]["at"]
     shutil.copyfile(player, installed)
     installed.chmod(0o755)
     return kit

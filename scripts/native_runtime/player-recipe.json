@@ -166,7 +166,7 @@
     ]
   },
   "preview": {
-    "comment": "The builder's menu preview, rml-preview: the player's own RmlUi renderer drawing a composed menu into a picture, in an OpenGL context on a window never shown, built beside the player from the same fork, RmlUi and FreeType, and with the file layer above. 'sources' are the repository's, 'forkSources' the fork's; a target adds its OpenGL context. The menu GL probe (test_dcmenu.py) draws in the same context.",
+    "comment": "The builder's menu preview, rml-preview: the player's own RmlUi renderer drawing a composed menu into a picture, in an OpenGL context on a window never shown, built beside the player from the same fork, RmlUi and FreeType, and with the file layer above. 'sources' are the repository's, 'forkSources' the fork's; a target adds its OpenGL context. The menu GL probe (test_dcmenu.py) draws in the same context. 'install' says how it reaches the builder's resources: copy, for a program linked with everything it needs; freeze, for one that carries its libraries in a Frameworks folder beside it (rominabox-cli freeze-macos-executable, as the macOS kit's player).",
     "sources": [
       "desktop/src-tauri/preview/rml_preview.cpp"
     ],
@@ -187,7 +187,8 @@
         "flags": ["-fobjc-arc", "-Wno-deprecated-declarations"],
         "libraries": ["-framework", "OpenGL", "-framework", "Cocoa"]
       },
-      "flags": []
+      "flags": [],
+      "install": "freeze"
     },
     "windows-x86_64": {
       "output": "rml-preview.exe",
@@ -197,11 +198,29 @@
         "flags": [],
         "libraries": ["-lopengl32", "-lgdi32"]
       },
-      "flags": ["-municode", "-static"]
+      "flags": ["-municode", "-static"],
+      "install": "copy"
     }
   },
   "kit": {
-    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A file is named by its role, which the exporter reads it by, and says where in the kit it goes. A source is build: a file in the player build, or toolchain: a file in the toolchain's installation.",
+    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A file is named by its role, which the exporter reads it by, and says where in the kit it goes. A source is build: a file in the player build, or toolchain: a file in the toolchain's installation. A target whose player links libraries the system lacks names 'libraries': the kit folder they are copied into, beside the player, and where they are installed; each goes with the licence files its installation carries.",
+    "macos-arm64": {
+      "files": {
+        "player": {
+          "at": "bin/retroarch",
+          "from": "build:retroarch/retroarch"
+        }
+      },
+      "libraries": {
+        "folder": "Frameworks",
+        "from": "homebrew",
+        "prefix": "/opt/homebrew"
+      },
+      "licences": {
+        "RetroArch.txt": "build:retroarch/COPYING",
+        "RmlUi-MIT.txt": "build:vendor/RmlUi/LICENSE.txt"
+      }
+    },
     "windows-x86_64": {
       "files": {
         "player": {"at": "bin/retroarch.exe", "from": "build:retroarch/retroarch.exe"},
