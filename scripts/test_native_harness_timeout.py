@@ -228,7 +228,7 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
                     patch.object(menu_shots, "data_dir_of", return_value=sandbox / "Games" / "fixture"),
                     patch.object(menu_shots, "storage_home", return_value=sandbox),
                 ):
-                    with self.assertRaisesRegex(SystemExit, "symlink in fixture storage"):
+                    with self.assertRaisesRegex(SystemExit, "link in fixture storage"):
                         menu_workflows.claim_fixture(Path("/fake/Fixture.app"))
                 self.assertEqual(list(elsewhere.iterdir()), [])
 
