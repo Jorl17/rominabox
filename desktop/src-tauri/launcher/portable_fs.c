@@ -7,6 +7,15 @@
 #ifdef _WIN32
 
 #include <windows.h>
+#include <fcntl.h>
+#include <io.h>
+#include <stdint.h>
+
+/* We open every file so that another process can read, write, replace or
+ * remove it while it is open, as on POSIX. Windows' own fopen does not allow
+ * the last two, so a player could not sign out in one game while another game
+ * reads the accounts folder. */
+#define SHARE_ALL (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
 
 static void set_errno_from_windows(void) {
     switch (GetLastError()) {
@@ -156,12 +165,36 @@ int fs_make_directory(const char *path) {
     return made ? 0 : -1;
 }
 
+/* Rename with POSIX semantics, replacing a file that another process has
+ * open (Windows 10 1809 and later, on NTFS). 0 when that is not available
+ * here, so that the caller can fall back. */
+static BOOL replace_posix(const wchar_t *source, const wchar_t *target) {
+    const size_t length = wcslen(target) * sizeof(wchar_t);
+    FILE_RENAME_INFO *info = malloc(sizeof *info + length);
+    HANDLE file;
+    BOOL renamed = FALSE;
+    if (!info)
+        return FALSE;
+    file = CreateFileW(source, DELETE | SYNCHRONIZE, SHARE_ALL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file != INVALID_HANDLE_VALUE) {
+        memset(info, 0, sizeof *info);
+        info->Flags = FILE_RENAME_FLAG_REPLACE_IF_EXISTS | FILE_RENAME_FLAG_POSIX_SEMANTICS;
+        info->FileNameLength = (DWORD)length;
+        memcpy(info->FileName, target, length + sizeof(wchar_t));
+        renamed = SetFileInformationByHandle(file, FileRenameInfoEx, info, (DWORD)(sizeof *info + length));
+        CloseHandle(file);
+    }
+    free(info);
+    return renamed;
+}
+
 int fs_replace(const char *from, const char *to) {
     wchar_t *source = wide(from);
     wchar_t *target = source ? wide(to) : NULL;
     BOOL moved = FALSE;
     if (source && target) {
-        moved = MoveFileExW(source, target, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
+        moved = replace_posix(source, target)
+            || MoveFileExW(source, target, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
         if (!moved)
             set_errno_from_windows();
     }
@@ -188,14 +221,36 @@ int fs_remove(const char *path) {
     return 0;
 }
 
+/* "r" or "w", with "b" for bytes: the modes this layer's callers use. */
 FILE *fs_open(const char *path, const char *mode) {
-    wchar_t *name = wide(path);
-    wchar_t *wide_mode = name ? wide(mode) : NULL;
-    FILE *stream = NULL;
-    if (name && wide_mode)
-        stream = _wfopen(name, wide_mode);
+    const int reading = mode[0] == 'r';
+    int flags = (reading ? _O_RDONLY : _O_WRONLY) | (strchr(mode, 'b') ? _O_BINARY : _O_TEXT);
+    wchar_t *name;
+    HANDLE file;
+    int descriptor;
+    FILE *stream;
+    if ((mode[0] != 'r' && mode[0] != 'w') || strchr(mode, '+')) {
+        errno = EINVAL;
+        return NULL;
+    }
+    name = wide(path);
+    if (!name)
+        return NULL;
+    file = CreateFileW(name, reading ? GENERIC_READ : GENERIC_WRITE, SHARE_ALL, NULL,
+                       reading ? OPEN_EXISTING : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     free(name);
-    free(wide_mode);
+    if (file == INVALID_HANDLE_VALUE) {
+        set_errno_from_windows();
+        return NULL;
+    }
+    descriptor = _open_osfhandle((intptr_t)file, flags);
+    if (descriptor < 0) {
+        CloseHandle(file);
+        return NULL;
+    }
+    stream = _fdopen(descriptor, mode);
+    if (!stream)
+        _close(descriptor);
     return stream;
 }
 

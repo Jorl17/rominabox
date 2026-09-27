@@ -29,6 +29,8 @@ int fs_make_directory(const char *path);
 int fs_replace(const char *from, const char *to);
 /* Succeeds when there is nothing to remove. */
 int fs_remove(const char *path);
+/* `mode` is "r" or "w", with "b" for bytes. Another process may still
+ * replace or remove the file while it is open, on Windows as on POSIX. */
 FILE *fs_open(const char *path, const char *mode);
 
 /* Only this user may enter it: 0700, or on Windows the access list a folder
