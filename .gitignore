@@ -31,3 +31,7 @@ worktree.local.json
 
 # Cargo build output; shared between worktrees through CARGO_TARGET_DIR.
 /desktop/src-tauri/target
+
+# C object files from ad-hoc compiles; build steps write theirs under work/.
+*.o
+*.obj
