@@ -219,6 +219,37 @@ fn what_a_request_states_wins_over_the_lookup_and_the_defaults() {
     assert_eq!(game["palette"], builder.palette, "{game}");
 }
 
+/// We do not look up a game when the request contains its title and console.
+/// In the size tests we export a seven-byte stand-in named `.bin` as a Mega
+/// Drive game. We would reject it at lookup, where Mega Drive files are not
+/// `.bin`, although we accept it at export.
+#[test]
+fn a_request_that_names_its_game_is_not_looked_up() {
+    let root = Scratch::dir("rominabox-cli-export-named-game");
+    let rom = root.path().join("stand-in.bin");
+    fs::write(&rom, b"RIBsize").unwrap();
+    let lookup = root.path().join("lookup");
+    fs::create_dir_all(&lookup).unwrap();
+    let request = json!({
+        "rom": rom,
+        "title": "Stand-in",
+        "system": "megadrive",
+        // If we did look it up, the lookup would stay offline, with nothing cached.
+        "online": false,
+        "metadataCache": lookup,
+        "runtimeKit": kit(root.path()),
+        "coreCache": null,
+        "outputDir": root.path().join("out"),
+    });
+    let (exported, last, printed) = export(&request);
+    assert!(exported, "{printed}");
+    let game = game(&last);
+    assert_eq!(game["title"], "Stand-in", "{game}");
+    assert_eq!(game["system"], "megadrive", "{game}");
+    assert_eq!(game["description"], Value::Null, "{game}");
+    assert_eq!(game["splash"], defaults().splash, "{game}");
+}
+
 /// `export GAME` is the whole request. When stdin is a pipe nobody writes to,
 /// the command still ends, here on the game we gave it, which does not exist.
 #[test]
