@@ -96,15 +96,12 @@
     "comment-windows-x86_64": "Os: the player's own code is optimised for size, which makes it smaller without slowing emulation, because the core does the work. RmlUi stays Release: built MinSizeRel it requires a std::string constructor the static C++ runtime does not have. -ffunction-sections with --gc-sections makes the player larger with this toolchain."
   },
   "accounts": {
-    "accounts": [
+    "comment": "ROM-in-a-Box's own sources the player compiles, the QUICK SIGN IN store. scripts/native_build.py hands them over with the launcher's file layer they are built on (portable_fs), as the target's platform has it, and the fork compiles every C file it is handed.",
+    "sources": [
       "desktop/src-tauri/accounts/accounts.c",
       "desktop/src-tauri/accounts/accounts.h",
       "desktop/src-tauri/accounts/sealed.c",
       "desktop/src-tauri/accounts/sealed.h"
-    ],
-    "launcher": [
-      "desktop/src-tauri/launcher/portable_fs.c",
-      "desktop/src-tauri/launcher/portable_fs.h"
     ]
   },
   "capability": "rcheevos_rib_prepare_client",
@@ -126,7 +123,8 @@
     ]
   },
   "launcher": {
-    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher and its platform's entry in the folder named for the platform. A macOS launcher is built into the app at export when its kit does not contain one.",
+    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher, and those in the folders `folders` names for the target's platform: its entry, in the folder named for the platform, and its file layer, portable_fs, in posix/ (the calls macOS and Linux share) or windows/. A macOS launcher is built into the app at export when its kit does not contain one.",
+    "folders": {"macos": ["macos", "posix"], "windows": ["windows"]},
     "windows-x86_64": {
       "output": "launcher.exe",
       "flags": [

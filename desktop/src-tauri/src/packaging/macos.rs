@@ -5,7 +5,7 @@
 use super::app_files::{copy_file, make_executable, tree_size};
 use super::launch_plan::accounts_folder;
 use super::{
-    check_cancelled, ErrorStage, ExportError, ExportRequest, OwnedStaging, Packager,
+    check_cancelled, player_recipe, ErrorStage, ExportError, ExportRequest, OwnedStaging, Packager,
 };
 use crate::icons;
 use crate::launch_contract::{app_file, core_file, shipped};
@@ -327,11 +327,19 @@ pub(super) fn compile_c(inputs: &[PathBuf], destination: &Path, extra: &[&str]) 
 }
 
 /// The launcher sources for one platform, the shared ones at the top of
-/// `launcher/` and the entry for the platform in a folder there.
+/// `launcher/` and those in the folders listed for the platform in the
+/// player recipe, with its entry and its file layer.
 fn launcher_sources(platform: &str) -> Result<Vec<PathBuf>, ExportError> {
     let launcher = crate::repo::at("desktop/src-tauri/launcher");
+    let declared: Vec<String> =
+        serde_json::from_value(player_recipe()["launcher"]["folders"][platform].clone())
+            .unwrap_or_else(|error| {
+                panic!("the player recipe names no launcher folders for {platform}: {error}")
+            });
+    let folders =
+        std::iter::once(launcher.clone()).chain(declared.iter().map(|name| launcher.join(name)));
     let mut sources = Vec::new();
-    for folder in [launcher.clone(), launcher.join(platform)] {
+    for folder in folders {
         let entries = fs::read_dir(&folder)
             .and_then(|entries| {
                 entries

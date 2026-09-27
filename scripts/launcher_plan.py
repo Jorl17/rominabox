@@ -20,16 +20,13 @@ import native_build  # noqa: E402
 import toolchain  # noqa: E402
 from core_source import host_target  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-LAUNCHER = ROOT / "desktop/src-tauri/launcher"
-
 
 def compile_macos(directory: Path) -> tuple[Path, Path]:
     binary = directory / "Plan.app" / "Contents" / "MacOS" / "plan"
     binary.parent.mkdir(parents=True)
     made = subprocess.run(
         ["cc", "-DROMINABOX_PLAN_MAIN", "-O2", "-o", str(binary),
-         *sorted(str(path) for path in [*LAUNCHER.glob("*.c"), *LAUNCHER.glob("macos/*.c")])],
+         *map(str, native_build.launcher_sources("macos"))],
         capture_output=True, text=True,
     )
     if made.returncode != 0:

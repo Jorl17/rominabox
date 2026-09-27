@@ -21,8 +21,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import free_space  # noqa: E402
 import menu_shots  # noqa: E402
+import native_build  # noqa: E402
 import scratch  # noqa: E402
 import toolchain  # noqa: E402
+from core_source import host_target  # noqa: E402
 from launcher_plan import compile_plan  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,8 +42,10 @@ FORK = ROOT / "vendor/retroarch"
 
 
 def shared_launcher_sources() -> list[str]:
-    """Return the launcher sources common to every platform, without an entry point."""
-    return sorted(str(path) for path in LAUNCHER.glob("*.c"))
+    """Return the launcher sources common to every platform, with this machine's
+    file layer, without an entry point."""
+    platform = host_target().split("-", 1)[0]
+    return sorted(str(path) for path in {*LAUNCHER.glob("*.c"), *native_build.file_layer(platform)})
 
 
 def write_plan(resources: Path, data: Path, driver: str = FROZEN_DRIVER) -> None:
