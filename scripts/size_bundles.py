@@ -86,20 +86,34 @@ def windows_libraries(app: Path) -> list[str]:
             if path.relative_to(app) != Path("Resources/game-core.dll")]
 
 
-# For each platform, its name in the export, where its kit has the player
-# (we freeze the macOS kit with freeze-runtime-kit.mjs, and the Windows one
-# follows the recipe), and the check of the libraries in an app.
+# For each platform, where its kit has the player (we freeze the macOS kit
+# with freeze-runtime-kit.mjs, and the Windows one follows the recipe), where
+# an app has its own files, and the check of the libraries in an app.
 PLATFORMS = {
     "macos": {
         "player": lambda: "bin/retroarch",
+        "resources": lambda app: app / "Contents" / "Resources",
         "libraries": macos_libraries,
     },
     "windows": {
         "player": lambda: native_build.recipe()["kit"][host_target()]["files"]["player"]["at"],
+        "resources": lambda app: app / "Resources",
         "libraries": windows_libraries,
     },
 }
 PLATFORM = host_target().split("-", 1)[0]
+
+
+def core_cache() -> Path:
+    """Return the core cache with the Mega Drive core for these games, for
+    this machine's platform."""
+    artifact = prepare_runtime.catalog_components()["genesis_plus_gx"]["artifacts"][host_target()]
+    return core(artifact).parent.parent
+
+
+def resources(app: Path) -> Path:
+    """Return the folder of an exported app's own files."""
+    return PLATFORMS[PLATFORM]["resources"](app)
 
 
 def export(command: Path, name: str, kit: Path, cache: Path, rom: Path, extra: dict) -> Path:
@@ -160,8 +174,7 @@ def main() -> int:
     kit = WORK / "kit"
     remove_owned(kit)
     shutil.copytree(KIT, kit, symlinks=True)
-    artifact = prepare_runtime.catalog_components()["genesis_plus_gx"]["artifacts"][host_target()]
-    cache = core(artifact).parent.parent
+    cache = core_cache()
     for document in DESIGN.iterdir():
         if document.is_file():
             shutil.copyfile(document, kit / "designs/native" / document.name)

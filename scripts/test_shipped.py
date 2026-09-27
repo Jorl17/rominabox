@@ -15,7 +15,8 @@ whatever the default in a later export. A player who never chose gets the
 default from the export.
 
 We compile the launcher as a plan tool, with which we prepare the data
-directory and exit before any core or window exists.
+directory and exit before any core or window exists. On macOS this is the
+plan entry, and on Windows the game's launcher, stopped by ROMINABOX_PLAN_ONLY.
 
     python3 scripts/test_shipped.py
 """
@@ -29,7 +30,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import native_build  # noqa: E402
 import scratch  # noqa: E402
+import toolchain  # noqa: E402
+from core_source import host_target  # noqa: E402
 from menu_shots import QUIET_ENV, SOUND_ENV  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -46,7 +50,13 @@ RETROARCH_DEFAULTS = (
 )
 
 
-def compile_plan(directory: Path) -> Path:
+def write(path: Path, text: str) -> None:
+    """Return `text` in the file format of the exporter and RetroArch: UTF-8,
+    with LF line ends on every platform."""
+    path.write_bytes(text.encode("utf-8"))
+
+
+def compile_macos_plan(directory: Path) -> tuple[Path, Path]:
     binary = directory / "Plan.app" / "Contents" / "MacOS" / "plan"
     binary.parent.mkdir(parents=True)
     made = subprocess.run(
@@ -56,7 +66,28 @@ def compile_plan(directory: Path) -> Path:
     )
     if made.returncode != 0:
         raise SystemExit(made.stderr[-600:] or "the launcher plan tool did not compile")
-    return binary
+    return binary, binary.parents[1] / "Resources"
+
+
+def compile_windows_plan(directory: Path) -> tuple[Path, Path]:
+    toolchain.activate()
+    built = native_build.build_launcher(directory, host_target(), dict(os.environ))
+    game = directory / "Plan"
+    game.mkdir()
+    binary = game / "Plan.exe"
+    shutil.copy2(built, binary)
+    return binary, game / "Resources"
+
+
+# The plan tool, and the folder for its app's files, on each platform.
+PLANS = {"macos": compile_macos_plan, "windows": compile_windows_plan}
+
+
+def compile_plan(directory: Path) -> tuple[Path, Path]:
+    platform = host_target().split("-", 1)[0]
+    if platform not in PLANS:
+        raise SystemExit(f"no launcher plan tool is declared for {platform}")
+    return PLANS[platform](directory)
 
 
 # The lines in which we declare the player settings in an export's plan, as
@@ -67,11 +98,11 @@ PLAYER_SETTINGS = (
 )
 
 
-def ship_plan(app: Path, data: Path, pause_nonactive: str = "true") -> None:
+def ship_plan(resources: Path, data: Path, pause_nonactive: str = "true") -> None:
     """Return the export's launch plan, with `data` as its data directory."""
-    resources = app / "Contents" / "Resources"
     resources.mkdir(parents=True, exist_ok=True)
-    (resources / "launch.plan").write_text(
+    write(
+        resources / "launch.plan",
         "identity\tplan\n"
         "content\tcontent\n"
         "title\tPlan\n"
@@ -83,18 +114,18 @@ def ship_plan(app: Path, data: Path, pause_nonactive: str = "true") -> None:
     )
 
 
-def ship(app: Path, data: Path, options: str) -> None:
+def ship(resources: Path, data: Path, options: str) -> None:
     """Return the export, a launch plan and the options file we stage at packaging."""
-    ship_plan(app, data)
-    shipped = app / "Contents" / "Resources" / "core-options" / CORE
+    ship_plan(resources, data)
+    shipped = resources / "core-options" / CORE
     shipped.mkdir(parents=True, exist_ok=True)
-    (shipped / f"{CORE}.opt").write_text(options)
+    write(shipped / f"{CORE}.opt", options)
 
 
 def launch(binary: Path, home: Path) -> None:
     env = os.environ.copy()
     env["ROMINABOX_PLAN_ONLY"] = "1"
-    # Not below HOME, so we do not look for an earlier data location.
+    # Not below HOME, so that on macOS we look for no earlier data location.
     env["HOME"] = str(home)
     # A launch by a person. This harness is not Launch Services, so otherwise
     # we would treat it in the launcher as an automated run, which never
@@ -124,14 +155,13 @@ def run() -> list[str]:
 
     with scratch.scratch("rominabox-core-options-") as made:
         root = Path(made)
-        binary = compile_plan(root)
-        app = binary.parents[2]
+        binary, resources = compile_plan(root)
         home = root / "home"
         home.mkdir()
 
         # In a new data directory we write the export's value.
         fresh = root / "fresh"
-        ship(app, fresh, f'{FILTER} = "disabled"\n')
+        ship(resources, fresh, f'{FILTER} = "disabled"\n')
         launch(binary, home)
         expect("fresh data", values(fresh / "config" / CORE / f"{CORE}.opt"), FILTER, "disabled")
 
@@ -139,8 +169,8 @@ def run() -> list[str]:
         data = root / "data"
         game_options = data / "config" / CORE / f"{CORE}.opt"
         game_options.parent.mkdir(parents=True)
-        game_options.write_text(RETROARCH_DEFAULTS)
-        ship(app, data, f'{FILTER} = "disabled"\n')
+        write(game_options, RETROARCH_DEFAULTS)
+        ship(resources, data, f'{FILTER} = "disabled"\n')
         launch(binary, home)
         got = values(game_options)
         expect("file from before the export", got, FILTER, "disabled")
@@ -148,31 +178,31 @@ def run() -> list[str]:
 
         # In RetroArch the file is written again with every option when the
         # game closes. Launching the same export again changes nothing.
-        game_options.write_text(RETROARCH_DEFAULTS.replace('"composite"', '"disabled"'))
+        write(game_options, RETROARCH_DEFAULTS.replace('"composite"', '"disabled"'))
         launch(binary, home)
         expect("relaunch", values(game_options), FILTER, "disabled")
 
         # The player changes it afterwards. We keep that value on this launch,
         # and after an export that ships the same value again.
-        game_options.write_text(RETROARCH_DEFAULTS.replace('"composite"', '"svideo"'))
+        write(game_options, RETROARCH_DEFAULTS.replace('"composite"', '"svideo"'))
         launch(binary, home)
         expect("player's change", values(game_options), FILTER, "svideo")
-        ship(app, data, f'{FILTER} = "disabled"\n')
+        ship(resources, data, f'{FILTER} = "disabled"\n')
         launch(binary, home)
         expect("player's change after re-export", values(game_options), FILTER, "svideo")
 
         # We give a new value from a new export to a player who never changed it.
         other = root / "other"
-        ship(app, other, f'{FILTER} = "disabled"\n')
+        ship(resources, other, f'{FILTER} = "disabled"\n')
         launch(binary, home)
         other_options = other / "config" / CORE / f"{CORE}.opt"
-        other_options.write_text(RETROARCH_DEFAULTS.replace('"composite"', '"disabled"'))
-        ship(app, other, f'{FILTER} = "rgb"\n')
+        write(other_options, RETROARCH_DEFAULTS.replace('"composite"', '"disabled"'))
+        ship(resources, other, f'{FILTER} = "rgb"\n')
         launch(binary, home)
         expect("new export value", values(other_options), FILTER, "rgb")
 
         # When an export no longer sets the option, the core's default applies.
-        ship(app, other, 'nestopia_aspect = "4:3"\n')
+        ship(resources, other, 'nestopia_aspect = "4:3"\n')
         launch(binary, home)
         got = values(other_options)
         expect("option no longer shipped", got, FILTER, None)
@@ -181,7 +211,6 @@ def run() -> list[str]:
         # With an export that has no options at all, every option set by an
         # earlier export goes back to the core's default. We remove only the
         # shipped file and its folders, each by name, never recursively.
-        resources = app / "Contents" / "Resources"
         (resources / "core-options" / CORE / f"{CORE}.opt").unlink()
         (resources / "core-options" / CORE).rmdir()
         (resources / "core-options").rmdir()
@@ -192,9 +221,9 @@ def run() -> list[str]:
         # no file, as with the copy it replaced.
         probe = resources / "core-options" / "probe-core"
         probe.mkdir(parents=True)
-        (probe / "copied.cfg").write_text("copied-from-kit\n")
+        write(probe / "copied.cfg", "copied-from-kit\n")
         plain = root / "plain"
-        ship_plan(app, plain)
+        ship_plan(resources, plain)
         launch(binary, home)
         copied = plain / "config" / "probe-core" / "copied.cfg"
         if not copied.is_file() or copied.read_text() != "copied-from-kit\n":
@@ -211,14 +240,14 @@ def run() -> list[str]:
         for leftover, text in ((remap, 'input_libretro_device_p1 = "1"\n'),
                                (profile, 'input_b_btn = "1"\n')):
             leftover.parent.mkdir(parents=True)
-            leftover.write_text(text)
-        ship_plan(app, pads)
+            write(leftover, text)
+        ship_plan(resources, pads)
         shipped_remap = resources / "remaps" / "Genesis Plus GX" / "Genesis Plus GX.rmp"
         shipped_profile = resources / "autoconfig" / "hid" / "Pad.cfg"
         for shipped, text in ((shipped_remap, 'input_libretro_device_p1 = "513"\n'),
                               (shipped_profile, 'input_b_btn = "2"\n')):
             shipped.parent.mkdir(parents=True)
-            shipped.write_text(text)
+            write(shipped, text)
         launch(binary, home)
         expect("remap from an earlier export", values(remap), "input_libretro_device_p1", "513")
         expect("controller profile from an earlier export", values(profile), "input_b_btn", "2")
@@ -230,7 +259,7 @@ def run() -> list[str]:
         system = bios / "system"
         system.mkdir(parents=True)
         (system / "core-made.dat").write_bytes(b"core")
-        ship_plan(app, bios)
+        ship_plan(resources, bios)
         firmware = resources / "firmware"
         firmware.mkdir()
         (firmware / "scph1001.bin").write_bytes(b"first")
@@ -259,14 +288,13 @@ def run_player_settings() -> list[str]:
 
     with scratch.scratch("rominabox-player-settings-") as made:
         root = Path(made)
-        binary = compile_plan(root)
-        app = binary.parents[2]
+        binary, resources = compile_plan(root)
         home = root / "home"
         home.mkdir()
         data = root / "data"
 
         # With nothing chosen, each setting has the export's default.
-        ship_plan(app, data, pause_nonactive="true")
+        ship_plan(resources, data, pause_nonactive="true")
         launch(binary, home)
         expect("no choice", data, "pause_nonactive", "true")
         expect("no choice", data, "audio_volume", "0.0")
@@ -274,26 +302,27 @@ def run_player_settings() -> list[str]:
             failures.append("the export's default was written into the player's file")
 
         # A player who never chose gets the new default from a new export.
-        ship_plan(app, data, pause_nonactive="false")
+        ship_plan(resources, data, pause_nonactive="false")
         launch(binary, home)
         expect("new default, no choice", data, "pause_nonactive", "false")
 
         # The player chooses in the menu, and we write the setting's file.
-        (data / "background-play.cfg").write_text('pause_nonactive = "true"\n')
-        (data / "volume.cfg").write_text('audio_volume = "-35.6"\n')
+        write(data / "background-play.cfg", 'pause_nonactive = "true"\n')
+        write(data / "volume.cfg", 'audio_volume = "-35.6"\n')
         launch(binary, home)
         expect("the player's choice", data, "pause_nonactive", "true")
         expect("the player's choice", data, "audio_volume", "-35.6")
 
         # After a re-export with the other default, the player's choice stays.
-        ship_plan(app, data, pause_nonactive="false")
+        ship_plan(resources, data, pause_nonactive="false")
         launch(binary, home)
         expect("re-export after a choice", data, "pause_nonactive", "true")
         if values(data / "background-play.cfg").get("pause_nonactive") != "true":
             failures.append("a re-export changed the player's own file")
 
         # Only the setting's key comes from its file.
-        (data / "background-play.cfg").write_text(
+        write(
+            data / "background-play.cfg",
             'pause_nonactive = "false"\nvideo_driver = "vulkan"\n')
         launch(binary, home)
         expect("a stray key in a setting's file", data, "video_driver", None)
@@ -301,7 +330,6 @@ def run_player_settings() -> list[str]:
     return failures
 
 
-# The modules that a Windows launcher will share. We cannot run them on
 def run_menu_sounds() -> list[str]:
     """Check that the menu sounds are in the folder that we give RetroArch in an
     exported game.
@@ -320,32 +348,37 @@ def run_menu_sounds() -> list[str]:
         rom.write_bytes(b"RIBsounds")
         app = size_bundles.export(
             size_bundles.cli(), "shipped-menu-sounds", size_bundles.KIT,
-            size_bundles.core("genesis_plus_gx_libretro.dylib").parent.parent, rom,
-            {"menuSounds": "blip"},
+            size_bundles.core_cache(), rom, {"menuSounds": "blip"},
         )
-        shipped = app / "Contents" / "Resources" / "assets" / "sounds"
+        shipped = size_bundles.resources(app) / "assets" / "sounds"
         if not (shipped / "ok.wav").is_file():
             return [f"the export shipped no pack at {shipped}"]
-        binary = compile_plan(root)
-        shutil.copytree(app / "Contents" / "Resources", binary.parents[1] / "Resources",
-                        dirs_exist_ok=True)
+        binary, resources = compile_plan(root)
+        shutil.copytree(size_bundles.resources(app), resources, dirs_exist_ok=True)
+        size_bundles.remove_owned(app.parent)
+        # The export's data folder is in the person's application data, but
+        # for this run we keep the data here instead.
+        data = root / "data"
+        plan = resources / "launch.plan"
+        write(plan, "".join(
+            f"data_dir\t{data}\n" if line.startswith("data_dir\t") else line
+            for line in plan.read_text(encoding="utf-8").splitlines(keepends=True)))
         home = root / "home"
         home.mkdir()
         launch(binary, home)
-        written = next(home.glob("Library/Application Support/ROM-in-a-Box/Games/*/retroarch.cfg"),
-                       None)
-        if written is None:
+        written = data / "retroarch.cfg"
+        if not written.is_file():
             return ["the launcher wrote no retroarch.cfg"]
         assets = values(written).get("assets_directory", "")
         told = Path(assets) / "sounds" / "ok.wav"
-        size_bundles.remove_owned(app.parent)
         if not told.is_file():
             return [f"menu sounds: RetroArch is told they are in {assets}/sounds, which does not "
-                    f"hold the pack (it is in {binary.parents[1] / 'Resources/assets/sounds'})"]
+                    f"hold the pack (it is in {resources / 'assets/sounds'})"]
     return []
 
 
-# Windows here, but we check that they compile, so no POSIX-only call slips in.
+# The modules we will share with a Windows launcher. We cannot run them on
+# Windows here, but we compile them for it, to catch any POSIX-only call.
 PORTABLE = ("launch.c", "shipped_settings.c", "shipped_files.c", "portable_fs.c", "accounts_folder.c",
             "player_settings.c")
 
