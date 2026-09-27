@@ -184,6 +184,26 @@ static void unavailable_without_a_named_folder(void)
    assert(rib_accounts_available());
 }
 
+#ifdef _WIN32
+/* A folder named like a share, \\server\name, is as absolute as one under a
+ * drive letter. In the launcher we make the accounts folder in a per-user
+ * folder that may be on a share, and we must accept it in the store. \\?\ is
+ * the local form of such a name. */
+static void a_share_path_names_the_folder(void)
+{
+   char share[1400];
+   size_t index;
+   reset();
+   snprintf(share, sizeof share, "\\\\?\\%s", folder);
+   for (index = 0; share[index]; ++index)
+      if (share[index] == '/')
+         share[index] = '\\';
+   set_variable("ROMINABOX_ACCOUNTS_DIR", share);
+   assert(rib_accounts_available());
+   set_variable("ROMINABOX_ACCOUNTS_DIR", folder);
+}
+#endif
+
 static void a_sign_in_is_listed_privately(void)
 {
    rib_saved_account_t accounts[4];
@@ -536,6 +556,9 @@ int main(int argc, char **argv)
    reset();
 
    unavailable_without_a_named_folder();
+#ifdef _WIN32
+   a_share_path_names_the_folder();
+#endif
    a_sign_in_is_listed_privately();
    different_accounts_live_side_by_side();
    one_name_in_any_case_is_one_account();
