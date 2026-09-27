@@ -245,10 +245,12 @@ mod tests {
         .lines(&[switch])
     }
 
-    // Off means off on every driver, which includes HID on the Mac, XInput and
-    // DirectInput (and so the relay for the sandbox), the second driver paired
-    // with the first in a build with MFi, and a driver that scales the strength
-    // itself, which would otherwise get full strength from the rumble gain.
+    // Off means off for any installed joypad drivers. We test three stand-ins:
+    // the primary, the secondary paired with it in a build with MFi, and one
+    // that scales the strength itself, to which RetroArch's rumble gain would
+    // otherwise give the whole strength. We do not run the actual drivers (the
+    // Mac's HID, XInput, DirectInput and so the sandbox's relay) here. In the
+    // code, every call reaches them through the function linked here.
     #[test]
     fn rumble_switched_off_reaches_every_pad_as_none() {
         let expected = |strength: u32| {
