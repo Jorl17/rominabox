@@ -184,6 +184,10 @@ def owned_storage(app: Path, rom: bytes) -> Path:
                         not state.name.startswith("achievement-native.state"):
                     raise AssertionError(f"unexpected fixture state: {state}")
                 state.unlink()
+    # We decided whose storage it is from what was there. We prepare it in the
+    # game before we write the marker and the session, because registering the
+    # sandbox at the first launch of a Windows game empties its storage.
+    shots.prepare_storage(app)
     data.mkdir(parents=True, exist_ok=True)
     marker.write_text(owner)
     return data
