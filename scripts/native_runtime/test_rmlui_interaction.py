@@ -9,6 +9,7 @@ and on Windows.
 
 from __future__ import annotations
 
+import functools
 import json
 import shutil
 import subprocess
@@ -39,6 +40,7 @@ def harness(output: Path, *sources: Path) -> None:
                     "--define", "HAVE_AUDIOMIXER", "--file-layer", *map(str, sources)], check=True)
 
 
+@functools.cache
 def cli() -> str:
     # We build it here and check that it comes from this checkout. When
     # worktrees share one cargo target, the binary next to the manifest may be
