@@ -219,6 +219,34 @@ fn windows_shows_the_games_icon_and_name_for_both_its_programs() {
     }
 }
 
+/// Libraries that come with Windows, as listed in the imports of cores in the
+/// catalog (Flycast, PCSX2 and Dolphin, as published on the buildbot). We
+/// export a core that requires them.
+#[test]
+fn a_core_that_needs_only_what_windows_carries_is_exported() {
+    let root = workspace();
+    let mut request = export_request_from(&root, windows_kit(&root));
+    request.target = ExportTarget::Windows;
+    library(
+        &request
+            .runtime_kit
+            .join("cores/genesis_plus_gx_libretro.dll"),
+        "#include <winsock2.h>\n#include <mswsock.h>\n#include <d3dcompiler.h>\n#include <dxgi.h>\n\
+         #define SECURITY_WIN32\n#include <security.h>\n\
+         __declspec(dllexport) void *windows_parts[] = {\n\
+             (void *)AcceptEx, (void *)D3DCompile, (void *)CreateDXGIFactory, (void *)GetUserNameExW};\n",
+        &[
+            Path::new("-lmswsock"),
+            Path::new("-ld3dcompiler_47"),
+            Path::new("-ldxgi"),
+            Path::new("-lsecur32"),
+        ],
+    );
+    let cancelled = AtomicBool::new(false);
+    let exported = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {});
+    assert!(exported.is_ok(), "{:?}", exported.err().map(|error| error.message));
+}
+
 #[test]
 fn a_core_that_needs_a_library_windows_lacks_is_refused() {
     let root = workspace();
