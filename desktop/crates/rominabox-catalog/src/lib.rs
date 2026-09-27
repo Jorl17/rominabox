@@ -38,11 +38,23 @@ pub const PACKAGE_ROOT: &str = "integrations/consoles";
 /// `scripts/test_repo_root.py` we reject any file with code that resolves
 /// paths outside its crate without reading the environment first.
 pub fn repo_root() -> std::path::PathBuf {
-    match std::env::var("ROMINABOX_REPO") {
-        Ok(declared) if !declared.is_empty() => std::path::PathBuf::from(declared),
-        // desktop/crates/rominabox-catalog -> repository root
-        _ => std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.."),
+    if let Ok(declared) = std::env::var("ROMINABOX_REPO") {
+        if !declared.is_empty() {
+            return std::path::PathBuf::from(declared);
+        }
     }
+    // The checkout in which someone runs the binary. We may have compiled the
+    // binary in another checkout that shares the cargo target.
+    let here = std::env::current_dir().ok();
+    if let Some(root) = here
+        .iter()
+        .flat_map(|dir| dir.ancestors())
+        .find(|dir| dir.join("integrations/consoles").is_dir())
+    {
+        return root.to_path_buf();
+    }
+    // desktop/crates/rominabox-catalog -> repository root
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..")
 }
 
 /// The generic profile that every catalog contains.
