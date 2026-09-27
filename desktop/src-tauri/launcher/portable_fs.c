@@ -179,9 +179,16 @@ int fs_make_directory(const char *path) {
     if (!name)
         return -1;
     made = CreateDirectoryW(name, NULL);
-    if (!made && GetLastError() == ERROR_ALREADY_EXISTS && fs_is_directory(path)) {
+    if (!made && GetLastError() == ERROR_ALREADY_EXISTS) {
         free(name);
-        return 0;
+        if (fs_is_directory(path))
+            return 0;
+        /* Something with that name exists, which is the result of POSIX's
+         * mkdir for any existing path. We report the same for a folder that
+         * this process may not inspect, such as C:\Users above a sandboxed
+         * game's own folder, instead of the access error. */
+        errno = EEXIST;
+        return -1;
     }
     if (!made)
         set_errno_from_windows();
