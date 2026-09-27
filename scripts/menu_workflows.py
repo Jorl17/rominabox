@@ -185,9 +185,21 @@ def reduced(record: dict, table: dict) -> dict:
     return {"script": record["script"], "reports": reports, "files": files}
 
 
+# What we add to every report in a test build with the achievements switch:
+# the state of its client (script_report.cpp, under RIB_ACHIEVEMENTS_TEST).
+# The menu in the workflow baselines is the same with or without it, so we
+# use one test build for this harness and the native achievements test.
+ACHIEVEMENTS_TEST_BUILD_ONLY = "achievements"
+
+
 def checkpoints(log: Path) -> dict[str, dict]:
-    """The reports from the player in its log, by checkpoint label."""
-    return {label: json.loads(value) for label, value in CHECKPOINT.findall(log.read_text(encoding="utf-8", errors="replace"))}
+    """The reports from the player in its log, by checkpoint label, in the
+    form of the workflow baselines."""
+    reports = {label: json.loads(value)
+               for label, value in CHECKPOINT.findall(log.read_text(encoding="utf-8", errors="replace"))}
+    for report in reports.values():
+        report.pop(ACHIEVEMENTS_TEST_BUILD_ONLY, None)
+    return reports
 
 
 def capture(app: Path, destination: Path, case: dict, table: dict) -> dict:
