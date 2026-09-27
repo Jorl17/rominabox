@@ -22,13 +22,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import frame_harness  # noqa: E402
 import scratch  # noqa: E402
 from core_source import core as local_core  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGES = ROOT / "integrations/consoles"
-HARNESS_SOURCE = ROOT / "scripts/native_runtime/frame_harness.c"
-LIBRETRO = ROOT / "vendor/retroarch/libretro-common/include"
 EXTENSION = "nes"
 
 
@@ -233,18 +232,10 @@ def main() -> int:
     overrides = component.get("pixels") or []
     with scratch.scratch("rominabox-picture-edges-") as temporary:
         root = Path(temporary)
-        harness = root / "frame_harness"
+        harness = frame_harness.compile_to(root / "frame_harness")
         rom = root / "edge.nes"
         shot = root / "edge.ppm"
         rom.write_bytes(edge_rom())
-        compiled = subprocess.run(
-            ["cc", "-O2", f"-I{LIBRETRO}", "-o", str(harness), str(HARNESS_SOURCE)],
-            capture_output=True,
-            text=True,
-        )
-        if compiled.returncode != 0:
-            sys.stderr.write(compiled.stderr)
-            return compiled.returncode
         command = [
             str(harness),
             "--core",

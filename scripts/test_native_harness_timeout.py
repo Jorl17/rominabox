@@ -155,7 +155,7 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
 
     def test_disc_leftover_reports_process_without_quitting(self) -> None:
         with (
-            patch.object(test_discs, "still_running", return_value="4242 /fake/launcher"),
+            patch.object(menu_shots, "running_from", return_value="4242 /fake/launcher"),
             patch.object(test_discs.subprocess, "run") as run,
         ):
             problem = test_discs.leftover_problem(Path("/fake/Game.app"))
@@ -166,7 +166,7 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
     def test_disc_timeout_reports_pid_without_signaling(self) -> None:
         player = FakePlayer()
         with (
-            patch.object(menu_shots, "sandboxed", return_value=True),
+            patch.object(menu_shots, "storage_home", return_value=Path("/fake")),
             patch.object(menu_shots, "log_of", return_value=None),
             patch.object(menu_shots, "launcher_of", return_value=Path("/fake/launcher")),
             patch.object(menu_shots, "quiet_env", return_value="ROMINABOX_QUIET"),

@@ -76,16 +76,6 @@ def bundle_id(app: Path) -> str:
     ).stdout.strip()
 
 
-def still_running(app: Path) -> str:
-    found = subprocess.run(
-        ["pgrep", "-fl", str(app)],
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    return found.stdout.strip()
-
-
 def quit_bundle(identifier: str) -> None:
     subprocess.run(
         ["osascript", "-e", f'tell application id "{identifier}" to quit'],
@@ -167,11 +157,11 @@ def apple_event_quit(app: Path) -> tuple[str, str]:
             except subprocess.TimeoutExpired:
                 pass
         reader.join(timeout=5)
-    left = still_running(app)
+    left = menu_shots.running_from(app)
     if left:
         quit_bundle(identifier)
         time.sleep(1)
-        left = still_running(app)
+        left = menu_shots.running_from(app)
         if left:
             raise SystemExit(f"player still running after quit:\n{left}")
     written = log.read_text(errors="replace") if log and log.exists() else ""

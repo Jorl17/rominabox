@@ -39,7 +39,6 @@
  * we can tell "the content did not load" from "the core cannot be loaded".
  */
 
-#include <dlfcn.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -48,6 +47,58 @@
 #include <string.h>
 
 #include "libretro.h"
+#include "test_arguments.h"
+#include "test_environment.h"
+
+/* Load the core in the usual way for a library on each platform, and open
+ * files by their UTF-8 paths. */
+#if defined(_WIN32)
+typedef HMODULE core_library;
+
+static core_library open_core(const char *path)
+{
+    wchar_t *wide = test_environment_wide(path);
+    HMODULE library = LoadLibraryW(wide);
+    free(wide);
+    if (!library) fprintf(stderr, "cannot load %s: error %lu\n", path, GetLastError());
+    return library;
+}
+
+static void *core_symbol(core_library library, const char *name)
+{
+    return (void *)GetProcAddress(library, name);
+}
+
+static void close_core(core_library library) { FreeLibrary(library); }
+
+static FILE *open_file(const char *path, const char *mode)
+{
+    wchar_t *wide_path = test_environment_wide(path), *wide_mode = test_environment_wide(mode);
+    FILE *file = _wfopen(wide_path, wide_mode);
+    free(wide_path);
+    free(wide_mode);
+    return file;
+}
+#elif defined(__APPLE__) || defined(__unix__)
+#include <dlfcn.h>
+
+typedef void *core_library;
+
+static core_library open_core(const char *path)
+{
+    void *library = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+    if (!library) fprintf(stderr, "%s\n", dlerror());
+    return library;
+}
+
+static void *core_symbol(core_library library, const char *name) { return dlsym(library, name); }
+
+static void close_core(core_library library) { dlclose(library); }
+
+static FILE *open_file(const char *path, const char *mode) { return fopen(path, mode); }
+#else
+#error "frame_harness declares no way to load a core on this platform"
+#endif
 
 #define MAX_EVENTS 16
 #define MAX_SHOTS 16
@@ -364,7 +415,7 @@ static bool environment(unsigned command, void *data)
 static void write_ppm(const char *path, const void *data, unsigned width,
                       unsigned height, size_t pitch)
 {
-    FILE *file = fopen(path, "wb");
+    FILE *file = open_file(path, "wb");
     if (!file) { fprintf(stderr, "cannot write %s\n", path); return; }
     fprintf(file, "P6\n%u %u\n255\n", width, height);
     for (unsigned y = 0; y < height; y++) {
@@ -433,7 +484,7 @@ static int16_t input_state(unsigned port, unsigned device, unsigned index, unsig
 
 static void *read_file(const char *path, size_t *size)
 {
-    FILE *file = fopen(path, "rb");
+    FILE *file = open_file(path, "rb");
     if (!file) return NULL;
     fseek(file, 0, SEEK_END);
     long length = ftell(file);
@@ -452,6 +503,8 @@ int main(int argc, char **argv)
 {
     const char *core_path = NULL, *content_path = NULL;
     unsigned frames = 600;
+
+    argv = test_utf8_argv(&argc, argv);
 
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--core") && i + 1 < argc) core_path = argv[++i];
@@ -522,11 +575,11 @@ int main(int argc, char **argv)
         return 2;
     }
 
-    void *library = dlopen(core_path, RTLD_NOW | RTLD_LOCAL);
-    if (!library) { fprintf(stderr, "%s\n", dlerror()); return 3; }
+    core_library library = open_core(core_path);
+    if (!library) return 3;
 
 #define BIND(name) \
-    name##_t name##_fn = (name##_t)dlsym(library, #name); \
+    name##_t name##_fn = (name##_t)core_symbol(library, #name); \
     if (!name##_fn) { fprintf(stderr, "core has no " #name "\n"); return 4; }
     typedef void (*retro_set_environment_t)(retro_environment_t);
     typedef void (*retro_set_video_refresh_t)(retro_video_refresh_t);
@@ -598,7 +651,7 @@ int main(int argc, char **argv)
     retro_unload_game_fn();
     retro_deinit_fn();
     free(content);
-    dlclose(library);
+    close_core(library);
     fprintf(stderr, "ran %u frames, %lu of them produced pixels\n", frames, frames_with_pixels);
     return 0;
 }

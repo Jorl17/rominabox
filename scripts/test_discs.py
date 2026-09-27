@@ -25,11 +25,19 @@ with a disc list. We open disc 2 with a menu script, and the player's log
 must then contain core image 1 of 2. In a cartridge export we must not show
 the Disc entry, and the DISC button must open the circle.
 
+We read the position of an Options entry from the RmlUi layout of the
+exported menu, made in the windowless probe of the layout tests, and never
+from the stylesheet. With `--without-player` we run every check without a
+player: the cores in the frame harness, and the entry positions in menus
+that we stage with the exporter's own CLI and draw offscreen.
+
     python3 scripts/test_discs.py
+    python3 scripts/test_discs.py --without-player
 """
 
 from __future__ import annotations
 
+import functools
 import json
 import os
 import re
@@ -42,11 +50,16 @@ from pathlib import Path
 from typing import Iterator
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import frame_harness  # noqa: E402
 import free_space  # noqa: E402
+import menu_interaction  # noqa: E402
 import menu_shots  # noqa: E402
 import player_support  # noqa: E402
+import prepare_runtime  # noqa: E402
 import scratch  # noqa: E402
-from core_source import core as local_core  # noqa: E402
+import toolchain  # noqa: E402
+from built import cli as built_cli  # noqa: E402
+from core_source import core as local_core, host_target  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CARTRIDGE = ROOT / "scripts/fixtures/test-game.gbc"
@@ -56,9 +69,8 @@ CARTRIDGE = ROOT / "scripts/fixtures/test-game.gbc"
 # number would not test that.
 STEM = "ROM in a Box (Europe) (En,Fr,De,Es,It,Nl,Pt,Sv,No,Da,Fi,Pl)"
 FIXTURE = ROOT / "work/i5-discs"
-HARNESS_SOURCE = ROOT / "scripts/native_runtime/frame_harness.c"
 LIBRETRO = ROOT / "vendor/retroarch/libretro-common/include"
-HARNESS = FIXTURE / "frame_harness"
+HARNESS = toolchain.executable(FIXTURE / "frame_harness")
 SECTOR = 2048
 
 
@@ -146,25 +158,19 @@ def write_playlist(name: str, count: int) -> Path:
 
 def compile_harness() -> None:
     FIXTURE.mkdir(parents=True, exist_ok=True)
-    compiled = subprocess.run(
-        ["cc", "-O2", f"-I{LIBRETRO}", "-o", str(HARNESS), str(HARNESS_SOURCE)],
-        capture_output=True,
-        text=True,
-    )
-    if compiled.returncode != 0:
-        sys.stderr.write(compiled.stderr)
-        raise SystemExit("frame_harness did not compile")
+    frame_harness.compile_to(FIXTURE / "frame_harness")
 
 
 def core_for(content: Path) -> Path:
     # Without its boot ROM, Gambatte does not load this cartridge. In mGBA it
     # loads with no disc tray, which is what we check for a cartridge.
-    name = (
-        "mgba_libretro.dylib"
-        if content.suffix == ".gbc"
-        else "pcsx_rearmed_libretro.dylib"
-    )
-    return local_core(name)
+    return core_of("mgba" if content.suffix == ".gbc" else "pcsx_rearmed")
+
+
+@functools.cache
+def core_of(component: str) -> Path:
+    """Return the core of the component for this machine, by its name in the catalog."""
+    return local_core(prepare_runtime.catalog_components()[component]["artifacts"][host_target()])
 
 
 def phases_of(text: str) -> dict[str, dict]:
@@ -310,9 +316,9 @@ def index_extension() -> str:
         "int main(void) { fputs(FILE_PATH_DISK_CONTROL_INDEX_EXTENSION, stdout); return 0; }\n"
     )
     with scratch.scratch("rominabox-discs-index-") as made:
-        probe = Path(made) / "index-extension"
+        probe = toolchain.executable(Path(made) / "index-extension")
         built = subprocess.run(
-            ["cc", "-x", "c", "-", "-o", str(probe),
+            [toolchain.describe()["cc"], "-x", "c", "-", "-o", str(probe),
              "-I", str(ROOT / "vendor/retroarch"), "-I", str(LIBRETRO)],
             input=probe_source, capture_output=True, text=True, timeout=60,
         )
@@ -402,21 +408,8 @@ def forget_tray_record(app: Path) -> None:
             record.unlink()
 
 
-def still_running(app: Path) -> str:
-    marker = str(app)
-    found = subprocess.run(
-        ["pgrep", "-fl", marker],
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    return "\n".join(
-        line for line in found.stdout.splitlines() if "pgrep" not in line
-    )
-
-
 def leftover_problem(app: Path) -> str | None:
-    left = still_running(app)
+    left = menu_shots.running_from(app)
     return f"a player is still running:\n{left}" if left else None
 
 
@@ -426,8 +419,8 @@ def launch(app: Path, script: str, shot: Path | None) -> str:
     We report a timeout or a leftover process with its PID, and leave the
     process running so that someone can inspect it.
     """
-    if not menu_shots.sandboxed(app):
-        raise SystemExit(f"{app.name} is not sandboxed; refusing to launch")
+    if menu_shots.storage_home(app) is None:
+        raise SystemExit(f"{app.name} keeps its storage uncontained; refusing to launch")
     log = menu_shots.log_of(app)
     if log and log.exists():
         log.unlink()
@@ -526,8 +519,13 @@ def export_game(content: Path, design: str) -> Iterator[Path]:
         yield app
 
 
+def assets_of(app: Path) -> Path:
+    """Return the composed menu that we put in an export."""
+    return app / "Contents/Resources/menu-assets"
+
+
 def menu_asset(app: Path, name: str) -> str:
-    path = app / "Contents/Resources/menu-assets" / name
+    path = assets_of(app) / name
     if not path.is_file():
         raise SystemExit(f"the export has no {name}")
     return path.read_text()
@@ -581,25 +579,92 @@ def screen_origin(css: str, scale: float, width: int, height: int) -> tuple[floa
     return left + border, top + border
 
 
-def button_top(menu: str, button_id: str) -> float:
-    match = re.search(rf"<button\b[^>]*\bid=\"{re.escape(button_id)}\"[^>]*>", menu)
+# The canvas on which we lay out every design, as declared in the contract of
+# the player. We scale it to fit whole in the window (Document::render).
+CONTRACT = ROOT / "vendor/retroarch/menu/drivers/rmlui/document_contract.inc"
+# How far inside the border box of an entry we sample its pixels, in dp. We
+# sample past the border, because we draw the border in another colour.
+ENTRY_INSET_DP = 4
+
+
+def canvas() -> tuple[int, int]:
+    found = re.search(r"^RIB_CANVAS\((\d+),\s*(\d+)\)", CONTRACT.read_text(), re.MULTILINE)
+    if not found:
+        raise SystemExit(f"{CONTRACT.name} declares no canvas")
+    return int(found.group(1)), int(found.group(2))
+
+
+def panel_with_role(cfg: str, role: str) -> str:
+    """Return the panel declared in design.cfg for the screen whose role is `role`."""
+    screen = re.search(rf'^screen_role_(\S+) = "{re.escape(role)}"$', cfg, re.MULTILINE)
+    if not screen:
+        raise SystemExit(f"the menu declares no {role} screen")
+    panel = re.search(rf'^screen_panel_{re.escape(screen.group(1))} = "([^"]*)"$', cfg, re.MULTILINE)
+    if not panel:
+        raise SystemExit(f"the menu declares no panel for {screen.group(1)}")
+    return panel.group(1)
+
+
+def with_display(markup: str, element_id: str, shown: bool) -> str:
+    """Return `markup` with one element shown or hidden by its style, as we show
+    the panel of a screen or the disc entry in the player."""
+    match = re.search(rf'<[a-zA-Z]+\b[^>]*\bid="{re.escape(element_id)}"[^>]*>', markup)
     if not match:
-        raise SystemExit(f"the export has no {button_id} button")
-    top = re.search(r"top:\s*(\d+(?:\.\d+)?)dp", match.group(0))
-    if not top:
-        raise SystemExit(f"the {button_id} entry does not say where it sits")
-    return float(top.group(1))
+        raise SystemExit(f"the menu has no #{element_id}")
+    tag = match.group(0)
+    style = re.search(r'\sstyle="([^"]*)"', tag)
+    declarations = re.sub(r"display\s*:\s*[^;]*;?", "", style.group(1)).strip() if style else ""
+    if not shown:
+        declarations = f"display: none; {declarations}".strip()
+    bare = tag[: style.start()] + tag[style.end():] if style else tag
+    closing = "/>" if bare.endswith("/>") else ">"
+    rewritten = bare[: -len(closing)] + (f' style="{declarations}"' if declarations else "") + closing
+    return markup[: match.start()] + rewritten + markup[match.end():]
 
 
-def entry_box(css: str, menu: str, button_id: str, scale: float, width: int, height: int):
-    origin_x, origin_y = screen_origin(css, scale, width, height)
-    entries = rule_body(css, "#options-entries")
-    entry = rule_body(css, ".option-entry")
-    left = origin_x + dp(css_prop(entries, "left") or "0") * scale
-    top = origin_y + (dp(css_prop(entries, "top") or "0") + button_top(menu, button_id)) * scale
-    box_width = dp(css_prop(entry, "width") or "0") * scale
-    box_height = dp(css_prop(entry, "height") or "0") * scale
-    inset = border_dp(entry) * scale + 2
+def options_showing(assets: Path, entry: str | None) -> str:
+    """Return the menu in `assets` as we draw Options in the player, with its
+    panel shown instead of the Pause panel, and `entry` shown as we show the
+    disc entry once we have the disc count from the core."""
+    cfg = (assets / "design.cfg").read_text()
+    shown = with_display((assets / "menu.rml").read_text(), panel_with_role(cfg, "pause"), False)
+    shown = with_display(shown, panel_with_role(cfg, "options"), True)
+    return with_display(shown, entry, True) if entry else shown
+
+
+def entry_box(assets: Path, button_id: str, size: tuple[int, int],
+              showing: str | None = None) -> tuple[int, int, int, int] | None:
+    """Return where we draw the Options entry `button_id` in a picture of
+    `size` pixels, or None when the menu has no such entry.
+
+    We lay out the menu in `assets` with RmlUi, with Options open as in the
+    picture and with the entry `showing` (by default `button_id`) shown, as
+    we show the disc entry in the player once we have the disc count. We lay
+    out on the canvas and scale the box as we scale the canvas to the window
+    in the player."""
+    if f'id="{button_id}"' not in (assets / "menu.rml").read_text():
+        return None
+    shown = options_showing(assets, showing or button_id)
+    width, height = canvas()
+    density = min(size[0] / width, size[1] / height)
+    menu_interaction.build()
+    with scratch.scratch("rominabox-discs-entry-") as made:
+        copy = Path(made) / "menu-assets"
+        shutil.copytree(assets, copy)
+        (copy / "menu.rml").write_text(shown)
+        probed = subprocess.run(
+            [str(menu_interaction.PROBE), "--document", str(copy / "menu.rml"),
+             "--size", f"{round(size[0] / density)}x{round(size[1] / density)}",
+             "--step", f"box:{button_id}", "--step", "move:0,0"],
+            capture_output=True, text=True, timeout=60,
+        )
+    if probed.returncode != 0:
+        raise SystemExit(f"the layout probe refused the menu:\n{probed.stderr[-600:]}")
+    box = json.loads(probed.stdout)["boxes"].get(button_id)
+    if not box:
+        return None
+    left, top, box_width, box_height = (value * density for value in box)
+    inset = ENTRY_INSET_DP * density
     return (
         int(left + inset),
         int(top + inset),
@@ -690,16 +755,91 @@ def open_image(path: Path):
     return Image.open(path).convert("RGB")
 
 
-def options_entry_visible(app: Path, shot: Path, button_id: str) -> bool:
-    css = menu_asset(app, "menu.rcss")
-    menu = menu_asset(app, "menu.rml")
+def last_entry(assets: Path) -> str:
+    """Return the last Options entry in the menu in `assets`."""
+    entries = re.findall(
+        r'<button\b(?=[^>]*\bclass="[^"]*\boption-entry\b)[^>]*\bid="([^"]+)"',
+        (assets / "menu.rml").read_text(),
+    )
+    if not entries:
+        raise SystemExit("the menu has no Options entries")
+    return entries[-1]
+
+
+def options_entry_visible(assets: Path, shot: Path, button_id: str) -> bool:
+    """Return whether the entry `button_id` appears in the picture of the
+    Options screen.
+
+    The entries are stacked, so when we hide one there is no gap. The entries
+    after it move up, and the column ends one place sooner. We look at the
+    place that only a column with `button_id` fills, which is the place of
+    the last entry when we lay out the menu with `button_id` shown."""
     image = open_image(shot)
-    window_width, _height = window_dp(app)
-    scale = image.size[0] / window_width
-    box = entry_box(css, menu, button_id, scale, image.size[0], image.size[1])
+    if entry_box(assets, button_id, image.size) is None:
+        print(f"  {button_id}: the menu has no such entry")
+        return False
+    last = last_entry(assets)
+    box = entry_box(assets, last, image.size, showing=button_id)
+    if box is None:
+        raise SystemExit(f"the menu lays out no {last}")
     fraction = button_fraction(image, box)
-    print(f"  {button_id} button pixels {fraction:.2f} in {box}")
+    print(f"  {button_id}: the last place, {last}'s, has button pixels {fraction:.2f} in {box}")
     return fraction > 0.4
+
+
+# The offscreen renderer for the builder's preview and the states tests.
+PREVIEW = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
+# A window with other proportions and size than the canvas, so that we scale
+# and place the measurement as we scale and place the menu in the player.
+PREVIEW_SIZE = (1280, 900)
+
+
+def measurement_problems(playlist: Path) -> list[str]:
+    """Check without a player the entry positions used by the launched checks.
+    We stage the menu of each design for this game with the exporter's CLI,
+    as for an export, draw it offscreen with Options open, and each entry
+    must be at the measured position. With two discs we draw the Disc entry,
+    and with one disc there is none and we draw CONTROLS."""
+    found: list[str] = []
+    if not PREVIEW.is_file():
+        return [f"no offscreen renderer at {PREVIEW}"]
+    with scratch.scratch("rominabox-discs-measure-") as made:
+        for design in disc_designs():
+            screens = design_screens(design)
+            listing = listing_of(screens)
+            if not listing.get("option"):
+                continue
+            controls = next(screen for screen in screens if screen.get("id") == "controls")
+            for discs, entry, drawn in ((2, listing["button"], True),
+                                        (1, listing["button"], False),
+                                        (1, controls["button"], True)):
+                assets = Path(made) / f"{design}-{discs}"
+                if not assets.is_dir():
+                    subprocess.run(
+                        [str(built_cli()), "stage-controls"],
+                        input=json.dumps({
+                            "source": str(ROOT / "desktop/assets/controllers"),
+                            "design": str(ROOT / "integrations/designs" / design),
+                            "destination": str(assets),
+                            "palette": palette_id(),
+                            "system": system_for(playlist),
+                            "discs": discs,
+                        }),
+                        text=True, check=True, capture_output=True,
+                    )
+                shot = assets / f"options-{entry}.png"
+                document = assets / f"options-{entry}.rml"
+                document.write_text(options_showing(assets, entry if drawn else None))
+                subprocess.run(
+                    [str(PREVIEW), str(document), str(shot), *map(str, PREVIEW_SIZE)],
+                    check=True, capture_output=True, timeout=120,
+                )
+                if options_entry_visible(assets, shot, entry) != drawn:
+                    found.append(
+                        f"{design}, {discs} disc(s): the {entry} entry is "
+                        f"{'not ' if drawn else ''}where the measurement says it is drawn"
+                    )
+    return found
 
 
 def exported_player(playlist: Path) -> list[str]:
@@ -732,7 +872,7 @@ def exported_player(playlist: Path) -> list[str]:
                             if screen.get("place") == "options"
                         )
                     ]), shot)
-                    if not options_entry_visible(app, shot, listing["button"]):
+                    if not options_entry_visible(assets_of(app), shot, listing["button"]):
                         found.append(f"{design}: a two-disc game does not show the Disc entry")
                         return found
         for design in disc_designs():
@@ -744,13 +884,13 @@ def exported_player(playlist: Path) -> list[str]:
                 shot = SHOTS / f"{design}-one.png"
                 launch(app, script_of(one_disc_steps(design)), shot)
                 if listing.get("option"):
-                    if options_entry_visible(app, shot, listing["button"]):
+                    if options_entry_visible(assets_of(app), shot, listing["button"]):
                         found.append("a one-disc game must not show the entry")
                         return found
                     controls = next(
                         screen for screen in screens if screen.get("id") == "controls"
                     )
-                    if not options_entry_visible(app, shot, controls["button"]):
+                    if not options_entry_visible(assets_of(app), shot, controls["button"]):
                         found.append(
                             "the options screen did not show CONTROLS, so the Disc slot was not measured"
                         )
@@ -761,7 +901,7 @@ def exported_player(playlist: Path) -> list[str]:
                         return found
     finally:
         for app in exported_apps:
-            left = still_running(app)
+            left = menu_shots.running_from(app)
             if left:
                 found.append(f"a player is still running:\n{left}")
         after = player_support.snapshot()
@@ -777,6 +917,7 @@ def exported_player(playlist: Path) -> list[str]:
 
 
 def main() -> None:
+    without_player = "--without-player" in sys.argv[1:]
     if not CARTRIDGE.is_file():
         raise SystemExit(f"the cartridge is not at {CARTRIDGE}")
     compile_harness()
@@ -829,9 +970,13 @@ def main() -> None:
                 f"disc {number} label lost its number: {label}"
             )
 
-    problems = [item for item in (index_problem, *exported_player(two)) if item]
+    measured = measurement_problems(two)
+    launched = [] if without_player else exported_player(two)
+    problems = [item for item in (index_problem, *measured, *launched) if item]
     if problems:
         raise SystemExit("\n".join(problems))
+    if without_player:
+        print("the cores and the entry measurement pass; the exported player was not launched")
 
 
 if __name__ == "__main__":

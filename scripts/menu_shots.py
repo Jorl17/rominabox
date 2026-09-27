@@ -141,6 +141,43 @@ def _windows_launcher(app: Path) -> Path:
     raise SystemExit(f"no launcher inside {app}")
 
 
+def _macos_running(app: Path) -> str:
+    """Processes whose command line contains the app, one "pid command" per line."""
+    found = subprocess.run(["pgrep", "-fl", str(app)], capture_output=True, text=True, timeout=15)
+    return "\n".join(line for line in found.stdout.splitlines() if "pgrep" not in line)
+
+
+def _windows_running(app: Path) -> str:
+    """Processes whose program lies inside the game's folder, one "pid program"
+    per line."""
+    import ctypes
+    from ctypes import wintypes
+
+    psapi = ctypes.WinDLL("psapi")
+    kernel32 = ctypes.WinDLL("kernel32")
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR,
+                                                    ctypes.POINTER(wintypes.DWORD)]
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    ids = (wintypes.DWORD * 4096)()
+    written = wintypes.DWORD()
+    if not psapi.EnumProcesses(ids, ctypes.sizeof(ids), ctypes.byref(written)):
+        raise SystemExit("could not list the running processes")
+    folder = app.resolve()
+    found = []
+    for pid in ids[: written.value // ctypes.sizeof(wintypes.DWORD)]:
+        process = kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
+        if not process:
+            continue
+        image = ctypes.create_unicode_buffer(32768)
+        size = wintypes.DWORD(len(image))
+        if kernel32.QueryFullProcessImageNameW(process, 0, image, ctypes.byref(size)):
+            if Path(image.value).resolve().is_relative_to(folder):
+                found.append(f"{pid} {image.value}")
+        kernel32.CloseHandle(process)
+    return "\n".join(found)
+
+
 def _macos_sandboxed(app: Path) -> bool:
     signed = subprocess.run(
         ["/usr/bin/codesign", "-d", "--entitlements", "-", str(app)],
@@ -177,9 +214,10 @@ def home_for(app: Path) -> str:
 # its files, the per-user folder that $user_data stands for in the plan,
 # whether it is sandboxed, the folder that must contain its per-game storage
 # (a macOS game's container, only when it is sandboxed, or the games folder
-# in the per-user application data on Windows), and the place of the player
-# in the kit (we freeze the macOS kit with freeze-runtime-kit.mjs and make
-# the Windows kit from the recipe). Windows games are not sandboxed.
+# in the per-user application data on Windows), the place of the player in
+# the kit (we freeze the macOS kit with freeze-runtime-kit.mjs and make the
+# Windows kit from the recipe), and which processes of the game are still
+# running. Windows games are not sandboxed.
 APPS = {
     "macos": {
         "launcher": _macos_launcher,
@@ -188,6 +226,7 @@ APPS = {
         "sandboxed": _macos_sandboxed,
         "storage_home": lambda app: Path(home_for(app)) if _macos_sandboxed(app) else None,
         "kit_player": lambda: "bin/retroarch",
+        "running": _macos_running,
     },
     "windows": {
         "launcher": _windows_launcher,
@@ -196,6 +235,7 @@ APPS = {
         "sandboxed": lambda app: False,
         "storage_home": lambda app: Path(os.environ["LOCALAPPDATA"]) / "ROM-in-a-Box" / "Games",
         "kit_player": lambda: native_build.recipe()["kit"][host_target()]["files"]["player"]["at"],
+        "running": _windows_running,
     },
 }
 PLATFORM = host_target().split("-", 1)[0]
@@ -213,6 +253,11 @@ def launcher_of(app: Path) -> Path:
 
 def sandboxed(app: Path) -> bool:
     return _app()["sandboxed"](app)
+
+
+def running_from(app: Path) -> str:
+    """The game's processes still running, one per line, or empty when none is."""
+    return _app()["running"](app)
 
 
 def storage_home(app: Path) -> Path | None:
