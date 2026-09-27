@@ -161,14 +161,15 @@ def fixture_service():
 
 def owned_storage(app: Path, rom: bytes) -> Path:
     data = shots.data_dir_of(app)
-    if not data or not shots.sandboxed(app):
-        raise AssertionError("native fixture requires sandboxed per-game storage")
-    home = Path(shots.home_for(app)).resolve()
+    home = shots.storage_home(app)
+    if not data or home is None:
+        raise AssertionError("native fixture requires contained per-game storage")
+    home = home.resolve()
     for current in (data, *data.parents):
         if current.is_symlink():
             raise AssertionError(f"symlink in fixture storage path: {current}")
     if not data.resolve().is_relative_to(home):
-        raise AssertionError(f"fixture storage escapes its app container: {data}")
+        raise AssertionError(f"fixture storage escapes its games' folder: {data}")
     marker = data / "achievements-native-owner"
     owner = f"{ROOT}\n{hashlib.sha256(rom).hexdigest()}\n"
     if data.exists() and any(data.iterdir()):
@@ -193,8 +194,12 @@ def session(data: Path, enabled: bool) -> None:
     if path.is_symlink():
         raise AssertionError(f"symlink in fixture storage: {path}")
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    os.fchmod(descriptor, 0o600)
-    with os.fdopen(descriptor, "w", encoding="ascii") as file:
+    # Only this user may read it: through its mode on macOS and Linux, and on
+    # Windows through the access list of the per-user folder, without a mode.
+    if hasattr(os, "fchmod"):
+        os.fchmod(descriptor, 0o600)
+    # LF on every platform, as in the player.
+    with os.fdopen(descriptor, "w", encoding="ascii", newline="\n") as file:
         file.write(f"Fixture\nfixture-token\n{int(enabled)}\n")
 
 

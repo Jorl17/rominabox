@@ -175,15 +175,18 @@ def home_for(app: Path) -> str:
 
 # What differs with the platform of the game: its launcher, the folder for
 # its files, the per-user folder that $user_data stands for in the plan,
-# whether it is sandboxed, and the place of the player in the kit (we freeze
-# the macOS kit with freeze-runtime-kit.mjs and make the Windows kit from the
-# recipe). Windows games are not sandboxed.
+# whether it is sandboxed, the folder that must contain its per-game storage
+# (a macOS game's container, only when it is sandboxed, or the games folder
+# in the per-user application data on Windows), and the place of the player
+# in the kit (we freeze the macOS kit with freeze-runtime-kit.mjs and make
+# the Windows kit from the recipe). Windows games are not sandboxed.
 APPS = {
     "macos": {
         "launcher": _macos_launcher,
         "resources": lambda app: app / "Contents/Resources",
         "user_data": lambda app: Path(home_for(app)) / "Library/Application Support",
         "sandboxed": _macos_sandboxed,
+        "storage_home": lambda app: Path(home_for(app)) if _macos_sandboxed(app) else None,
         "kit_player": lambda: "bin/retroarch",
     },
     "windows": {
@@ -191,6 +194,7 @@ APPS = {
         "resources": lambda app: app / "Resources",
         "user_data": lambda app: Path(os.environ["LOCALAPPDATA"]),
         "sandboxed": lambda app: False,
+        "storage_home": lambda app: Path(os.environ["LOCALAPPDATA"]) / "ROM-in-a-Box" / "Games",
         "kit_player": lambda: native_build.recipe()["kit"][host_target()]["files"]["player"]["at"],
     },
 }
@@ -209,6 +213,12 @@ def launcher_of(app: Path) -> Path:
 
 def sandboxed(app: Path) -> bool:
     return _app()["sandboxed"](app)
+
+
+def storage_home(app: Path) -> Path | None:
+    """The folder a game's own storage must lie inside, or None when the
+    game's storage is not contained."""
+    return _app()["storage_home"](app)
 
 
 def plan_text(app: Path) -> str:
