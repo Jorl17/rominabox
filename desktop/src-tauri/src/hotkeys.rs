@@ -399,6 +399,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "the RetroArch probe links only where the linker drops unreferenced code (macOS). GNU ld for Windows does not, and these tables are the same on every platform")]
     fn hotkey_policy_matches_pinned_retroarch_meta_binds() {
         let declared = retroarch_meta_binds();
         let policy: Vec<&str> = HOTKEY_BINDS.iter().map(|bind| bind.name).collect();

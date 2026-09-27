@@ -522,6 +522,7 @@ mod tests {
     // a word is for a key that the config can name. A name that is no key in
     // RetroArch exports without error and has no effect.
     #[test]
+    #[cfg_attr(windows, ignore = "the RetroArch probe links only where the linker drops unreferenced code (macOS). GNU ld for Windows does not, and these tables are the same on every platform")]
     fn every_key_the_builder_captures_or_words_is_a_name_retroarch_reads_as_that_key() {
         let capture = builder_capture();
         let worded = worded_keys();
@@ -548,6 +549,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "the RetroArch probe links only where the linker drops unreferenced code (macOS). GNU ld for Windows does not, and these tables are the same on every platform")]
     fn every_controller_default_is_a_name_retroarch_reads_as_that_key() {
         let profiles = registry().unwrap().profiles;
         let defaults: Vec<(String, &str)> = profiles
@@ -574,6 +576,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "the RetroArch probe links only where the linker drops unreferenced code (macOS). GNU ld for Windows does not, and these tables are the same on every platform")]
     fn the_exporter_refuses_a_name_retroarch_reads_as_no_key() {
         let unknown = [
             "lshift",
@@ -604,6 +607,7 @@ mod tests {
 
     // Some keys have more than one name in RetroArch, and each name works.
     #[test]
+    #[cfg_attr(windows, ignore = "the RetroArch probe links only where the linker drops unreferenced code (macOS). GNU ld for Windows does not, and these tables are the same on every platform")]
     fn the_exporter_accepts_every_name_retroarch_reads_for_a_key() {
         let aliases = [
             "add",
@@ -636,6 +640,7 @@ mod tests {
     // In RetroArch a name works in any case, and one letter is that letter's
     // key. nul is no key, and Escape stays reserved for the menu in any spelling.
     #[test]
+    #[cfg_attr(windows, ignore = "the RetroArch probe links only where the linker drops unreferenced code (macOS). GNU ld for Windows does not, and these tables are the same on every platform")]
     fn the_exporter_reads_a_name_as_retroarch_does() {
         let names = ["Shift", "KP_PLUS", "Q", "q", "NUL", "Escape"];
         assert_eq!(

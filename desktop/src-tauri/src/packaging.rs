@@ -2323,6 +2323,7 @@ mod tests {
     /// The launcher includes declarations from the player tree. We rebuild it
     /// after a change to one of them, though that file is not among its inputs.
     #[test]
+    #[cfg_attr(windows, ignore = "the export-time launcher compile is macOS-only")]
     fn a_header_outside_the_inputs_rebuilds_what_includes_it() {
         let root = rominabox_scratch::Scratch::dir("rominabox-compile-includes");
         let (folder, shared) = (root.join("launcher"), root.join("shared"));
