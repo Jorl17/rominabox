@@ -10,7 +10,8 @@ scripts/native_runtime/player-recipe.json lists the rest: the player, the
 launcher, the licence texts of what they are made from, and the player's
 controller profile folders, which we stage from the pinned autoconfig archive.
 Until we declare the macOS part in the recipe, we freeze a macOS kit with
-scripts/native_runtime/freeze-runtime-kit.mjs.
+scripts/native_runtime/freeze-runtime-kit.mjs. On macOS we install only the
+preview renderer.
 """
 
 from __future__ import annotations
@@ -61,7 +62,10 @@ def main() -> int:
     target = native_build.require_target(info["target"])
     declared = native_build.recipe()["kit"].get(target)
     if declared is None:
-        raise SystemExit(f"no kit is declared for {target}; a macOS kit is frozen by freeze-runtime-kit.mjs")
+        # The preview is for the builder, so we install it however we make the kit.
+        print(f"no kit is declared for {target}; a macOS kit is frozen by freeze-runtime-kit.mjs")
+        install_preview(build, target)
+        return 0
 
     kit_assets.stage(kit)
     for placed in declared["files"].values():
@@ -136,16 +140,22 @@ def main() -> int:
     prepare_runtime.stage_joypad_autoconfig(kit, native_build.joypad_profile_drivers(platform))
     print(f"Made the {target} runtime kit in {kit} from {build}")
 
-    # The builder's menu preview renderer, which we build beside the player.
-    if native_build.recipe()["preview"].get(target):
-        built = build / "preview" / native_build.recipe()["preview"][target]["output"]
-        if not built.is_file():
-            raise SystemExit(f"{build} has no menu preview renderer at {built}")
-        installed = native_build.preview_resource(target)
-        installed.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(built, installed)
-        print(f"Installed the menu preview renderer as {installed}")
+    install_preview(build, target)
     return 0
+
+
+def install_preview(build: Path, target: str) -> None:
+    """The builder's menu preview renderer, which we build beside the player,
+    in the folder we load it from in the builder and the picture tests."""
+    if not native_build.recipe()["preview"].get(target):
+        return
+    built = build / "preview" / native_build.recipe()["preview"][target]["output"]
+    if not built.is_file():
+        raise SystemExit(f"{build} has no menu preview renderer at {built}")
+    installed = native_build.preview_resource(target)
+    installed.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(built, installed)
+    print(f"Installed the menu preview renderer as {installed}")
 
 
 if __name__ == "__main__":
