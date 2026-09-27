@@ -42,13 +42,20 @@ def msys2_root() -> Path:
     return Path(os.environ.get("SystemDrive", "C:") + "\\") / "msys64"
 
 
+def installation() -> Path | None:
+    """Return the toolchain's prefix (its bin, lib and share), or None where
+    the toolchain is the system's."""
+    if os.name == "nt":
+        return msys2_root() / "ucrt64"
+    if os.name == "posix":
+        return None
+    raise NotImplementedError(f"no native toolchain for os.name {os.name!r}")
+
+
 def bin_directories() -> list[Path]:
     """Return the directories to put first on PATH for the toolchain's names."""
-    if os.name == "nt":
-        return [msys2_root() / "ucrt64" / "bin"]
-    if os.name == "posix":
-        return []
-    raise NotImplementedError(f"no native toolchain for os.name {os.name!r}")
+    prefix = installation()
+    return [prefix / "bin"] if prefix is not None else []
 
 
 def missing() -> list[Path]:

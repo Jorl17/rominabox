@@ -34,7 +34,10 @@ def source_of(reference: str, build: Path) -> Path:
     if place == "build":
         return build / relative
     if place == "toolchain":
-        return toolchain.msys2_root() / "ucrt64" / relative
+        prefix = toolchain.installation()
+        if prefix is None:
+            raise SystemExit(f"the kit recipe names a toolchain file, but this toolchain is the system's: {reference}")
+        return prefix / relative
     raise SystemExit(f"the kit recipe names an unknown place: {reference}")
 
 
@@ -78,9 +81,7 @@ def main() -> int:
         f"- RmlUi at {info['rmluiCommit']} (licence: ../RmlUi-MIT.txt)\n"
         f"- FreeType from {freetype['url']}, sha256 {freetype['sha256']}\n"
         "  (licence: native/FreeType-LICENSE.txt, native/FreeType-FTL.txt)\n"
-        "- the MinGW-w64 runtime: its C runtime, winpthreads and the GCC runtime\n"
-        "  (native/MinGW-w64-runtime.txt, native/winpthreads-COPYING.txt,\n"
-        "  native/GCC-runtime-exception.txt)\n\n"
+        f"- {declared['runtime']}\n\n"
         "RetroArch's own licence is ../RetroArch.txt; the libraries its source\n"
         "carries under deps/ are part of that source.\n",
         encoding="utf-8", newline="\n")

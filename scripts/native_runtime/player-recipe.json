@@ -131,6 +131,7 @@
         "bin/retroarch.exe": "build:retroarch/retroarch.exe",
         "bin/launcher.exe": "build:launcher/launcher.exe"
       },
+      "runtime": "the MinGW-w64 runtime: its C runtime, winpthreads and the GCC runtime (native/MinGW-w64-runtime.txt, native/winpthreads-COPYING.txt, native/GCC-runtime-exception.txt)",
       "licences": {
         "RetroArch.txt": "build:retroarch/COPYING",
         "RmlUi-MIT.txt": "build:vendor/RmlUi/LICENSE.txt",
