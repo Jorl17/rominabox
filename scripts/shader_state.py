@@ -40,8 +40,8 @@ INITIAL = "phosphor"
 
 def shader_config(app: Path) -> dict[str, str]:
     """Return a map from id to preset path, in the order we stage the list."""
-    path = app / "Contents/Resources/menu-assets/shaders.cfg"
-    text = path.read_text()
+    path = menu_shots.resources_of(app) / "menu-assets/shaders.cfg"
+    text = path.read_text(encoding="utf-8")
     ids: list[str] = []
     presets: dict[str, str] = {}
     for line in text.splitlines():
@@ -70,7 +70,7 @@ def running_id(app: Path, listed: dict[str, str]) -> str:
         raise SystemExit(
             "choosing a shader did not leave a preset for the next launch"
         )
-    current = choice.read_text().strip()
+    current = choice.read_text(encoding="utf-8").strip()
     if not current:
         matched = next((shader_id for shader_id, preset in listed.items() if not preset), None)
     else:
