@@ -5,6 +5,8 @@ use `--preserve-metadata=entitlements` on the bundle, the sandbox is lost.
 We then write the shot's data into ~/Library/Application Support/ROM-in-a-Box
 instead of a container. A different namespace per build directory would
 create a new container each time, and we must not delete those in a script.
+This applies only to macOS. A Windows game's sandbox is in its launch plan,
+which stays the same when we replace the player (see the isolation tests).
 
     python3 scripts/test_shot_sign.py
 """
@@ -98,6 +100,19 @@ def the_replaced_player_keeps_the_export_sandbox() -> None:
         )
 
 
+def a_windows_player_carries_no_sandbox() -> None:
+    """Nothing to keep, because the sandbox is in the launch plan, not the player."""
+    print("  --   a Windows game's sandbox is in its launch plan, which a shot does not replace")
+
+
+# Where we declare the sandbox that a shot's replaced player must keep, and
+# the check for it on each platform.
+KEEPS_THE_SANDBOX = {
+    "macos": the_replaced_player_keeps_the_export_sandbox,
+    "windows": a_windows_player_carries_no_sandbox,
+}
+
+
 def shots_reuse_one_bundle_namespace() -> None:
     """Check that menu-shots-build-0 and shaderstate-build have one identity."""
     saved = os.environ.pop("ROMINABOX_GAME_BUNDLE_PREFIX", None)
@@ -151,8 +166,10 @@ def the_suite_names_a_file_a_run_rewrote() -> None:
 
 
 def main() -> int:
+    if menu_shots.PLATFORM not in KEEPS_THE_SANDBOX:
+        raise SystemExit(f"no shot sandbox check is declared for {menu_shots.PLATFORM}")
     for test in (
-        the_replaced_player_keeps_the_export_sandbox,
+        KEEPS_THE_SANDBOX[menu_shots.PLATFORM],
         shots_reuse_one_bundle_namespace,
         the_suite_names_a_path_created_under_the_real_support_directory,
         the_suite_names_a_file_a_run_rewrote,

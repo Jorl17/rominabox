@@ -213,8 +213,8 @@ SCOPES = [
     ),
     Scope(
         "padrelay",
-        "on Windows, that a sandboxed game lists the controllers DirectInput lists outside, sets one up and reads it within the range it set, asks for rumble through its launcher and loses its controllers when the launcher stops answering; elsewhere, with zig, that both sides build for Windows",
-        "RetroArch's joypad driver using it (the isolation scope sees a gamepad), plugging in or out, or rumble on a controller that can; without a controller connected, anything about one",
+        "on Windows, that a sandboxed game lists the controllers DirectInput lists outside, again after letting go of them as the joypad driver does when one comes or goes, sets one up and reads it within the range it set, asks for rumble through its launcher, is refused whatever it writes into the relay, and loses its controllers when the launcher stops answering; elsewhere, with zig, that both sides build for Windows",
+        "RetroArch's joypad driver using it (the isolation scope sees a gamepad), a controller physically plugged in or out, or rumble on a controller that can; without a controller connected, anything about one",
         [PYTHON, str(ROOT / "scripts/test_pad_relay.py")],
     ),
     Scope(
