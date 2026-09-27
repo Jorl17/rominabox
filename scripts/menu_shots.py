@@ -621,6 +621,29 @@ def built_player() -> Path:
     return builds[-1]
 
 
+def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
+    """A copy of the runtime kit at `kit` with `player` as its player, and
+    Native and `design` as they are in this tree, not as they were when we
+    froze the kit. We resolve both from this tree in the exporter, and copy
+    Native into menu-assets for the controller art of the old shot path."""
+    shutil.copytree(KIT, kit, symlinks=True)
+    for package_name in dict.fromkeys(("native", design)):
+        package = ROOT / "integrations/designs" / package_name
+        if not package.is_dir():
+            raise SystemExit(f"no design package at {package}")
+        staged_design = kit / "designs" / package_name
+        staged_design.mkdir(parents=True, exist_ok=True)
+        for document in package.iterdir():
+            if document.is_file():
+                shutil.copyfile(document, staged_design / document.name)
+                if package_name == "native":
+                    shutil.copyfile(document, kit / "menu-assets" / document.name)
+    installed = kit / _app()["kit_player"]()
+    shutil.copyfile(player, installed)
+    installed.chmod(0o755)
+    return kit
+
+
 def _build_a_game(
     rom: Path,
     workspace: Path,
@@ -646,27 +669,7 @@ def _build_a_game(
     # like any other export setting. We copy the package for that export.
     design = str(settings.get("theme", design))
     palette = str(settings.get("palette", palette))
-    kit = run_dir / "kit"
-    shutil.copytree(KIT, kit, symlinks=True)
-
-    # Copy the design as it is in this tree, not as when we froze the kit.
-    # In the exporter we resolve Native and the selected design from this tree.
-    # We also copy Native into menu-assets, because in one shot path we read
-    # the controller art from there.
-    for package_name in dict.fromkeys(("native", design)):
-        package = ROOT / "integrations/designs" / package_name
-        if not package.is_dir():
-            raise SystemExit(f"no design package at {package}")
-        staged_design = kit / "designs" / package_name
-        staged_design.mkdir(parents=True, exist_ok=True)
-        for document in package.iterdir():
-            if document.is_file():
-                shutil.copyfile(document, staged_design / document.name)
-                if package_name == "native":
-                    shutil.copyfile(document, kit / "menu-assets" / document.name)
-    player = kit / _app()["kit_player"]()
-    shutil.copyfile(built_player(), player)
-    player.chmod(0o755)
+    kit = staged_kit(run_dir / "kit", built_player(), design)
 
     out = run_dir / "exported"
     out.mkdir(parents=True)

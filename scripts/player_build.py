@@ -39,7 +39,12 @@ def selected_build() -> Path:
     selected = os.environ.get("ROMINABOX_TEST_BUILD")
     if not selected:
         raise SystemExit(f"no player build selected; {HOW}")
-    build = Path(selected).resolve()
+    return current_build(Path(selected))
+
+
+def current_build(named: Path) -> Path:
+    """`named`, refused unless it was built from the current fork and contains a player."""
+    build = named.resolve()
     revision = subprocess.check_output(
         ["git", "-C", str(ROOT / "vendor/retroarch"), "rev-parse", "HEAD"], text=True
     ).strip()
