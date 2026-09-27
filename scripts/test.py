@@ -425,8 +425,11 @@ SCOPES = [
     ),
     Scope(
         "quit",
-        "that an Apple Event quit of an exported game unloads the core before the process exits",
-        "window placement and fullscreen; closing the window is the same AppKit terminate path",
+        "that quitting an exported game unloads the core before the process exits: an Apple Event "
+        "on macOS, closing the window on Windows, whose window also names the game's program for a "
+        "pinned taskbar button",
+        "window placement and fullscreen; on macOS closing the window is the same AppKit terminate "
+        "path; a quit that asks first (unsent achievements); that the taskbar honours the labels",
         [PYTHON, str(ROOT / "scripts/test_quit.py")],
         slow=True,
         prepare=[[PYTHON, str(ROOT / "scripts/fetch_test_content.py"), "--scope", "quit"]],
