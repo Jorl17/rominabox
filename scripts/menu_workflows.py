@@ -57,8 +57,8 @@ def reset_fixture(app: Path) -> None:
     """
     claim_fixture(app)
     data = shots.data_dir_of(app)
-    if data is None or not shots.sandboxed(app):
-        raise SystemExit("the generated fixture must have sandboxed game storage")
+    if data is None or shots.storage_home(app) is None:
+        raise SystemExit("the generated fixture must have contained game storage")
     session = data / "achievements.session"
     if session.exists() or session.is_symlink():
         raise SystemExit(f"fixture account storage is not signed out; no reset performed: {session}")
@@ -79,9 +79,11 @@ def reset_fixture(app: Path) -> None:
 def claim_fixture(app: Path) -> None:
     """Claim empty fixture storage once, and refuse unknown menu data already there."""
     data = shots.data_dir_of(app)
-    if data is None or data.is_symlink() or not shots.sandboxed(app):
-        raise SystemExit("the fixture requires its own sandboxed game storage")
-    sandbox = Path(shots.home_for(app))
+    # The folder that contains a game's storage on each platform: a sandboxed
+    # macOS game's container, or the games folder in Windows' per-user data.
+    sandbox = shots.storage_home(app)
+    if data is None or data.is_symlink() or sandbox is None:
+        raise SystemExit("the fixture requires its own contained game storage")
     if not data.is_relative_to(sandbox):
         raise SystemExit(f"fixture storage is outside its sandbox: {data}")
     for current in (data, *data.parents):
@@ -99,7 +101,6 @@ def claim_fixture(app: Path) -> None:
         return
     existing = [data / name for name in ("volume.cfg", "background-play.cfg", "controls.cfg",
                                          "shader-choice", "achievements.session")]
-    existing += list(data.glob("toggle-*"))
     for name in ("states", "remaps"):
         directory = data / name
         if directory.is_symlink():
@@ -123,7 +124,8 @@ def persisted(app: Path, table: dict) -> dict[str, str]:
     # as they are. A path into any other app will still differ.
     app_prefix = str(app.resolve()) + "/"
     paths = sorted({path for pattern in table["persisted"] for path in data.glob(pattern)})
-    return {str(path.relative_to(data)): path.read_text().replace(app_prefix, "$APP/")
+    # Written with `/` on every platform, as in the rules of the table.
+    return {path.relative_to(data).as_posix(): path.read_text().replace(app_prefix, "$APP/")
             for path in paths if path.is_file()}
 
 
