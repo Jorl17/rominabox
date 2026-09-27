@@ -30,6 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scratch  # noqa: E402
+from menu_shots import QUIET_ENV, SOUND_ENV  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 LAUNCHER = ROOT / "desktop/src-tauri/launcher"
@@ -95,6 +96,11 @@ def launch(binary: Path, home: Path) -> None:
     env["ROMINABOX_PLAN_ONLY"] = "1"
     # Not below HOME, so we do not look for an earlier data location.
     env["HOME"] = str(home)
+    # A launch by a person. This harness is not Launch Services, so otherwise
+    # we would treat it in the launcher as an automated run, which never
+    # pauses in the background and so hides the player's background-play choice.
+    env.pop(QUIET_ENV, None)
+    env[SOUND_ENV] = "1"
     ran = subprocess.run([str(binary)], env=env, capture_output=True, text=True, timeout=30)
     if ran.returncode != 0:
         raise SystemExit(f"the launcher plan tool exited {ran.returncode}\n{ran.stderr[-400:]}")
