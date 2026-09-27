@@ -8,6 +8,10 @@
  * vertex position (NVIDIA's compatibility profile on Windows), those arrays
  * would replace the menu's positions and the whole menu would be invisible.
  *
+ * In each context we also make a picture of a word and draw it inside one
+ * menu frame, with the unpack row length still at the value from glcore,
+ * as when we make the picture of a glyph in RmlUi during a menu frame.
+ *
  * We make the context in the code for each platform (gl_context.h). */
 
 #include "gl_context.h"
@@ -19,7 +23,9 @@
 
 #include <streams/file_stream.h>
 
+#include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -115,6 +121,133 @@ Draw draw(bool core, Leftover leftover)
    return result;
 }
 
+/* The word MENU in a three-by-five font, light on dark, one row of the
+ * picture per string. For a line of text, GenerateTexture receives a
+ * picture like this one from RmlUi. */
+const char *const word[] = {
+   "..................",
+   ".#.#.###.#..#.#.#.",
+   ".###.#...##.#.#.#.",
+   ".###.##..#.##.#.#.",
+   ".#.#.#...#..#.#.#.",
+   ".#.#.###.#..#.###.",
+   "..................",
+};
+constexpr int word_width = 18;
+constexpr int word_height = 7;
+/* The row length after the upload of a Mega Drive frame under glcore, which
+ * is the frame's pitch in pixels. */
+constexpr GLint frame_row_length = 320;
+
+void word_pixel(int x, int y, unsigned char *rgba)
+{
+   const bool ink = word[y][x] == '#';
+   rgba[0] = ink ? 250 : 20;
+   rgba[1] = ink ? 240 : 30;
+   rgba[2] = ink ? 90 : 110;
+   rgba[3] = 255;
+}
+
+/* The drawn picture, eight times larger, for a person to look at. */
+void write_enlarged(const std::string& path, const std::vector<unsigned char>& rgba, int width, int height)
+{
+   const int scale = 8;
+   std::vector<unsigned char> large((size_t)width * scale * height * scale * 4);
+   for (int y = 0; y < height * scale; y++)
+      for (int x = 0; x < width * scale; x++)
+         for (int c = 0; c < 4; c++)
+            large[((size_t)y * width * scale + x) * 4 + c] =
+               rgba[((size_t)(y / scale) * width + x / scale) * 4 + c];
+   std::vector<unsigned char> encoded;
+   if (lodepng::encode(encoded, large, width * scale, height * scale) == 0)
+      filestream_write_file(path.c_str(), encoded.data(), (int64_t)encoded.size());
+}
+
+struct Text
+{
+   bool as_given = false;
+   bool state_restored = false;
+};
+
+/* In RmlUi a glyph texture is made the first time a piece of text is drawn,
+ * inside the menu's frame, after the game's frame has run. With glcore each
+ * frame is uploaded with GL_UNPACK_ROW_LENGTH at the frame's pitch, and the
+ * value stays there, so a glyph read with that stride would be garbled. We
+ * make and draw the picture inside one frame with that row length still set,
+ * read it back and compare it with the input, and write the drawn picture
+ * beside `picture` so that a person can look at it. */
+Text draws_text_as_given(bool core, const char *name, const std::string& picture)
+{
+   Text result;
+   auto renderer = rib_menu_renderer(core);
+   renderer->SetViewport(word_width, word_height);
+   /* With a row length wider than the picture, a read goes past its end, so
+    * we put the picture at the start of a buffer long enough for that stride. */
+   std::vector<unsigned char> source((size_t)frame_row_length * word_height * 4);
+   for (int y = 0; y < word_height; y++)
+      for (int x = 0; x < word_width; x++)
+         word_pixel(x, y, &source[((size_t)y * word_width + x) * 4]);
+   const Rml::ColourbPremultiplied white(255, 255, 255, 255);
+   Rml::Vertex vertices[4] = {
+      {{0, 0}, white, {0, 0}},
+      {{(float)word_width, 0}, white, {1, 0}},
+      {{(float)word_width, (float)word_height}, white, {1, 1}},
+      {{0, (float)word_height}, white, {0, 1}},
+   };
+   const int indices[6] = {0, 1, 2, 0, 2, 3};
+   Rml::CompiledGeometryHandle geometry = renderer->CompileGeometry(
+         Rml::Span<const Rml::Vertex>(vertices, 4),
+         Rml::Span<const int>(indices, 6));
+   GLuint vao = 0;
+   if (core)
+   {
+      glGenVertexArrays(1, &vao);
+      glBindVertexArray(vao);
+   }
+   glClearColor(0, 0, 0, 1);
+   glClear(GL_COLOR_BUFFER_BIT);
+   glPixelStorei(GL_UNPACK_ROW_LENGTH, frame_row_length);
+   renderer->BeginFrame();
+   const Rml::TextureHandle texture = renderer->GenerateTexture(
+         Rml::Span<const Rml::byte>(source.data(), (size_t)word_width * word_height * 4),
+         Rml::Vector2i(word_width, word_height));
+   renderer->RenderGeometry(geometry, Rml::Vector2f(0, 0), texture);
+   renderer->EndFrame();
+   GLint row_length = 0;
+   glGetIntegerv(GL_UNPACK_ROW_LENGTH, &row_length);
+   result.state_restored = row_length == frame_row_length;
+   glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+   renderer->ReleaseTexture(texture);
+   renderer->ReleaseGeometry(geometry);
+   if (core)
+      glDeleteVertexArrays(1, &vao);
+
+   glFinish();
+   std::vector<unsigned char> drawn((size_t)word_width * word_height * 4);
+   glPixelStorei(GL_PACK_ALIGNMENT, 1);
+   glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+   glReadPixels(0, 0, word_width, word_height, GL_RGBA, GL_UNSIGNED_BYTE, drawn.data());
+   /* Read back from the bottom row up; the picture's first row is the top. */
+   std::vector<unsigned char> upright(drawn.size());
+   for (int y = 0; y < word_height; y++)
+      std::copy_n(&drawn[(size_t)(word_height - 1 - y) * word_width * 4], word_width * 4,
+            &upright[(size_t)y * word_width * 4]);
+   result.as_given = true;
+   for (int y = 0; y < word_height; y++)
+      for (int x = 0; x < word_width; x++)
+      {
+         unsigned char wanted[4];
+         word_pixel(x, y, wanted);
+         const unsigned char *got = &upright[((size_t)y * word_width + x) * 4];
+         for (int c = 0; c < 3; c++)
+            if (std::abs((int)got[c] - (int)wanted[c]) > 2)
+               result.as_given = false;
+      }
+   const std::string folder = picture.substr(0, picture.find_last_of("/\\") + 1);
+   write_enlarged(folder + "text-" + name + ".png", upright, word_width, word_height);
+   return result;
+}
+
 /* Read a picture that the menu shows, such as a slot picture, through
  * libretro's file layer, decode it from memory and return its size. The
  * folder name is like a game's data folder under a non-ASCII home folder. */
@@ -138,7 +271,20 @@ int check(bool core, Leftover leftover, const char *name, const std::string& pic
    }
    const Draw drawn = draw(core, leftover);
    const bool loaded = loads_picture(core, picture);
+   /* Once per context, because this check is not about the leftover arrays. */
+   const Text text = leftover == Leftover::none ? draws_text_as_given(core, name, picture) : Text{true, true};
    offscreen_gl_release(context);
+   if (!text.as_given)
+   {
+      std::printf("FAIL %s context menu text made after a frame left GL_UNPACK_ROW_LENGTH at %d was not drawn as given\n",
+            name, (int)frame_row_length);
+      return 1;
+   }
+   if (!text.state_restored)
+   {
+      std::printf("FAIL %s context menu frame did not put back the game's GL_UNPACK_ROW_LENGTH\n", name);
+      return 1;
+   }
    if (!loaded)
    {
       std::printf("FAIL %s context could not load %s as a 3x2 picture\n", name, picture.c_str());
