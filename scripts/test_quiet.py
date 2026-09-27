@@ -22,6 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import free_space  # noqa: E402
 import menu_shots  # noqa: E402
 import scratch  # noqa: E402
+import toolchain  # noqa: E402
+from launcher_plan import compile_plan  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -33,32 +35,19 @@ FROZEN_DRIVER = "frozen-by-the-export"
 QUIET_DRIVER = "null"
 
 
-def launcher_sources() -> list[str]:
-    launcher = ROOT / "desktop/src-tauri/launcher"
-    # The shared sources, and the macOS entry point that we run in these checks.
-    return sorted(str(path) for path in [*launcher.glob("*.c"), *launcher.glob("macos/*.c")])
+LAUNCHER = ROOT / "desktop/src-tauri/launcher"
+FORK = ROOT / "vendor/retroarch"
 
 
-def compile_plan(directory: Path) -> Path:
-    binary = directory / "Plan.app" / "Contents" / "MacOS" / "plan"
-    binary.parent.mkdir(parents=True)
-    made = subprocess.run(
-        [
-            "cc", "-DROMINABOX_PLAN_MAIN", "-O2",
-            "-o", str(binary), *launcher_sources(),
-        ],
-        capture_output=True, text=True,
-    )
-    if made.returncode != 0:
-        raise SystemExit(made.stderr[-400:] or "the launcher plan tool did not compile")
-    return binary
+def shared_launcher_sources() -> list[str]:
+    """Return the launcher sources common to every platform, without an entry point."""
+    return sorted(str(path) for path in LAUNCHER.glob("*.c"))
 
 
-def write_plan(app: Path, data: Path, driver: str = FROZEN_DRIVER) -> None:
+def write_plan(resources: Path, data: Path, driver: str = FROZEN_DRIVER) -> None:
     """Return a launch plan with only the export's driver in its config."""
-    resources = app / "Contents" / "Resources"
     resources.mkdir(parents=True, exist_ok=True)
-    (resources / "launch.plan").write_text(
+    (resources / "launch.plan").write_bytes((
         "identity\tplan\n"
         "content\tcontent\n"
         "title\tPlan\n"
@@ -69,7 +58,7 @@ def write_plan(app: Path, data: Path, driver: str = FROZEN_DRIVER) -> None:
         # What we write in an export when the player has not chosen to keep
         # playing in the background.
         'pause_nonactive = "true"\n'
-    )
+    ).encode("utf-8"))
 
 
 def run_plan(binary: Path, data: Path, quiet: bool = False, sound: bool = False) -> str:
@@ -111,13 +100,12 @@ def plan_check() -> list[str]:
     free_space.require(20)
     with scratch.scratch("rominabox-quiet-plan-") as made:
         root = Path(made)
-        binary = compile_plan(root)
-        app = binary.parents[2]
+        binary, resources = compile_plan(root)
         written = {}
         for name, quiet, sound in (("neither", False, False), ("sound", False, True),
                                    ("switch", True, False), ("both", True, True)):
             data = root / name
-            write_plan(app, data)
+            write_plan(resources, data)
             written[name] = run_plan(binary, data, quiet=quiet, sound=sound)
     failures = []
     expected = {"neither": QUIET_DRIVER, "sound": FROZEN_DRIVER,
@@ -154,36 +142,74 @@ def _config_value(config: str, key: str) -> str | None:
 def decision_check() -> list[str]:
     """Check the four cases by calling the function directly, with no config or core."""
     free_space.require(20)
+    toolchain.activate()
+    declared = toolchain.describe()
     with scratch.scratch("rominabox-quiet-decision-") as made:
-        binary = Path(made) / "decision"
+        binary = toolchain.executable(Path(made) / "decision")
         compiled = subprocess.run(
             [
-                "cc", "-DROMINABOX_DECISION_MAIN", "-O2",
-                "-o", str(binary), *launcher_sources(),
+                declared["cc"], "-O2", "-o", str(binary),
+                str(ROOT / "scripts/native_runtime/quiet_decision.c"), *shared_launcher_sources(),
             ],
             capture_output=True, text=True,
         )
         if compiled.returncode != 0:
             raise SystemExit(compiled.stderr[-400:] or "the decision tool did not compile")
         cases = (
-            ("1", "", "", "sound"),
-            ("20", "", "", "quiet"),
-            ("20", "", "1", "sound"),
-            ("1", "1", "", "quiet"),
+            ("person", "", "", "sound"),
+            ("harness", "", "", "quiet"),
+            ("harness", "", "1", "sound"),
+            ("person", "1", "", "quiet"),
         )
         failures = []
-        for parent, quiet, sound, expect in cases:
+        for opener, quiet, sound, expect in cases:
             ran = subprocess.run(
-                [str(binary), parent, quiet, sound],
+                [str(binary), opener, quiet, sound],
                 capture_output=True, text=True, timeout=15,
             )
             got = ran.stdout.strip()
             if ran.returncode != 0 or got != expect:
                 failures.append(
-                    f"parent {parent} quiet={quiet!r} sound={sound!r} "
+                    f"a {opener}'s launch with quiet={quiet!r} sound={sound!r} "
                     f"decided {got!r}, not {expect!r}"
                 )
         return failures
+
+
+def macos_window_probe(binary: Path) -> Path:
+    subprocess.run(
+        [
+            "clang", "-fobjc-arc", "-I", str(FORK), "-I", str(FORK / "libretro-common/include"),
+            "-framework", "Cocoa", "-o", str(binary),
+            str(ROOT / "scripts/native_runtime/test_quiet_window.m"),
+            str(FORK / "rominabox_session.c"),
+        ],
+        check=True, capture_output=True, text=True,
+    )
+    return binary
+
+
+def windows_window_probe(binary: Path) -> Path:
+    toolchain.activate()
+    declared = toolchain.describe()
+    binary = toolchain.executable(binary)
+    subprocess.run(
+        [
+            declared["cc"], "-std=gnu99", "-O2", "-I", str(FORK), "-I", str(FORK / "libretro-common/include"),
+            "-I", str(ROOT / "scripts/native_runtime"), "-o", str(binary),
+            str(ROOT / "scripts/native_runtime/test_quiet_window_win32.c"),
+            str(FORK / "rominabox_session.c"),
+            str(FORK / "libretro-common/encodings/encoding_utf.c"),
+            str(FORK / "libretro-common/compat/compat_strl.c"),
+        ],
+        check=True, capture_output=True, text=True,
+    )
+    return binary
+
+
+# The probe in which we prepare a window as we do in the player for an
+# automated run, on each platform, and never show it.
+WINDOW_PROBES = {"macos": macos_window_probe, "windows": windows_window_probe}
 
 
 def window_visibility_check() -> list[str]:
@@ -191,18 +217,10 @@ def window_visibility_check() -> list[str]:
 
     We check the drawn picture itself in the exported-game workflows.
     """
+    if menu_shots.PLATFORM not in WINDOW_PROBES:
+        raise SystemExit(f"no quiet window probe is declared for {menu_shots.PLATFORM}")
     with scratch.scratch("rominabox-quiet-window-") as made:
-        binary = Path(made) / "window-visibility"
-        subprocess.run(
-            [
-                "clang", "-fobjc-arc", "-I", str(ROOT / "vendor/retroarch"),
-                "-I", str(ROOT / "vendor/retroarch/libretro-common/include"),
-                "-framework", "Cocoa", "-o", str(binary),
-                str(ROOT / "scripts/native_runtime/test_quiet_window.m"),
-                str(ROOT / "vendor/retroarch/rominabox_session.c"),
-            ],
-            check=True, capture_output=True, text=True,
-        )
+        binary = WINDOW_PROBES[menu_shots.PLATFORM](Path(made) / "window-visibility")
         checked = subprocess.run(
             [str(binary)], capture_output=True, text=True, timeout=15,
         )

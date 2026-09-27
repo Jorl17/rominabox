@@ -30,10 +30,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import native_build  # noqa: E402
 import scratch  # noqa: E402
-import toolchain  # noqa: E402
-from core_source import host_target  # noqa: E402
+from launcher_plan import compile_plan  # noqa: E402
 from menu_shots import QUIET_ENV, SOUND_ENV  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -54,40 +52,6 @@ def write(path: Path, text: str) -> None:
     """Return `text` in the file format of the exporter and RetroArch: UTF-8,
     with LF line ends on every platform."""
     path.write_bytes(text.encode("utf-8"))
-
-
-def compile_macos_plan(directory: Path) -> tuple[Path, Path]:
-    binary = directory / "Plan.app" / "Contents" / "MacOS" / "plan"
-    binary.parent.mkdir(parents=True)
-    made = subprocess.run(
-        ["cc", "-DROMINABOX_PLAN_MAIN", "-O2", "-o", str(binary),
-         *sorted(str(path) for path in [*LAUNCHER.glob("*.c"), *LAUNCHER.glob("macos/*.c")])],
-        capture_output=True, text=True,
-    )
-    if made.returncode != 0:
-        raise SystemExit(made.stderr[-600:] or "the launcher plan tool did not compile")
-    return binary, binary.parents[1] / "Resources"
-
-
-def compile_windows_plan(directory: Path) -> tuple[Path, Path]:
-    toolchain.activate()
-    built = native_build.build_launcher(directory, host_target(), dict(os.environ))
-    game = directory / "Plan"
-    game.mkdir()
-    binary = game / "Plan.exe"
-    shutil.copy2(built, binary)
-    return binary, game / "Resources"
-
-
-# The plan tool, and the folder for its app's files, on each platform.
-PLANS = {"macos": compile_macos_plan, "windows": compile_windows_plan}
-
-
-def compile_plan(directory: Path) -> tuple[Path, Path]:
-    platform = host_target().split("-", 1)[0]
-    if platform not in PLANS:
-        raise SystemExit(f"no launcher plan tool is declared for {platform}")
-    return PLANS[platform](directory)
 
 
 # The lines in which we declare the player settings in an export's plan, as

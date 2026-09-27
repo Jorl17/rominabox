@@ -281,91 +281,6 @@ def macos_quit(cartridge: Path) -> str | None:
     )
 
 
-# The application and relaunch properties of the shell (propkey.h). We set
-# them so that a taskbar button pinned from a window reopens the game.
-APP_USER_MODEL = "{9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}"
-TASKBAR_LABELS = {"id": 5, "relaunch command": 2, "relaunch icon": 3, "relaunch name": 4}
-
-
-def windows_of(folder: Path) -> list[int]:
-    """Return the main RetroArch windows of programs inside `folder`."""
-    import ctypes
-    from ctypes import wintypes
-
-    user32 = ctypes.WinDLL("user32")
-    kernel32 = ctypes.WinDLL("kernel32")
-    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
-    user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
-    kernel32.OpenProcess.restype = wintypes.HANDLE
-    kernel32.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR,
-                                                    ctypes.POINTER(wintypes.DWORD)]
-    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
-    found: list[int] = []
-
-    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
-    def each(window, _):
-        owner = wintypes.DWORD()
-        user32.GetWindowThreadProcessId(window, ctypes.byref(owner))
-        name = ctypes.create_unicode_buffer(64)
-        user32.GetClassNameW(window, name, len(name))
-        process = kernel32.OpenProcess(0x1000, False, owner.value)  # QUERY_LIMITED_INFORMATION
-        if process and name.value == "RetroArch":
-            image = ctypes.create_unicode_buffer(32768)
-            size = wintypes.DWORD(len(image))
-            if kernel32.QueryFullProcessImageNameW(process, 0, image, ctypes.byref(size)):
-                if Path(image.value).resolve().is_relative_to(folder.resolve()):
-                    found.append(window)
-        if process:
-            kernel32.CloseHandle(process)
-        return True
-
-    user32.EnumWindows(each, 0)
-    return found
-
-
-def taskbar_labels(window: int) -> dict[str, str | None]:
-    """Return the window's properties for the taskbar as text, or None if unset."""
-    import ctypes
-    from ctypes import wintypes
-
-    class Guid(ctypes.Structure):
-        _fields_ = [("data", ctypes.c_ubyte * 16)]
-
-    class PropertyKey(ctypes.Structure):
-        _fields_ = [("fmtid", Guid), ("pid", wintypes.DWORD)]
-
-    class PropVariant(ctypes.Structure):
-        _fields_ = [("vt", ctypes.c_ushort), ("reserved", ctypes.c_ushort * 3),
-                    ("value", ctypes.c_void_p), ("more", ctypes.c_void_p)]
-
-    ole32 = ctypes.WinDLL("ole32")
-    shell32 = ctypes.WinDLL("shell32")
-    ole32.CoInitialize(None)
-    store_iid = Guid()
-    ole32.IIDFromString("{886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99}", ctypes.byref(store_iid))
-    store = ctypes.c_void_p()
-    if shell32.SHGetPropertyStoreForWindow(wintypes.HWND(window), ctypes.byref(store_iid),
-                                           ctypes.byref(store)) != 0:
-        raise SystemExit("the game's window has no property store")
-    methods = ctypes.cast(ctypes.cast(store, ctypes.POINTER(ctypes.c_void_p))[0],
-                          ctypes.POINTER(ctypes.c_void_p))
-    get_value = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.POINTER(PropertyKey),
-                                   ctypes.POINTER(PropVariant))(methods[5])
-    release = ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)(methods[2])
-    labels: dict[str, str | None] = {}
-    for label, pid in TASKBAR_LABELS.items():
-        key = PropertyKey(pid=pid)
-        ole32.IIDFromString(APP_USER_MODEL, ctypes.byref(key.fmtid))
-        value = PropVariant()
-        text = None
-        if get_value(store, ctypes.byref(key), ctypes.byref(value)) == 0 and value.vt == 31:  # VT_LPWSTR
-            text = ctypes.wstring_at(value.value)
-        ole32.PropVariantClear(ctypes.byref(value))
-        labels[label] = text
-    release(store)
-    return labels
-
-
 def windows_close(cartridge: Path) -> str | None:
     """Close the running game's window, as its close button does, in an
     export with the emulator's menus behind Advanced and in one with them
@@ -385,6 +300,8 @@ def close_window(cartridge: Path, advanced: bool) -> str | None:
     command. After the close, the game must unload its core and exit 0 soon.
     With the frame limit in the player, a missed close cannot leave it open.
     """
+    import win32_windows
+
     name = f"cartridge window close ({'advanced' if advanced else 'restricted'})"
     settings = {"title": TITLE, "startAtMenu": False, "autosaveOnQuit": True,
                 "advancedEmulatorAccess": advanced}
@@ -405,24 +322,12 @@ def close_window(cartridge: Path, advanced: bool) -> str | None:
         )
         labels: dict[str, str | None] = {}
         try:
-            deadline = time.monotonic() + 60
-            windows: list[int] = []
-            while time.monotonic() < deadline and process.poll() is None:
-                text = log.read_text(errors="replace") if log and log.exists() else ""
-                windows = windows_of(app) if "Loading dynamic libretro core" in text else []
-                if windows:
-                    break
-                time.sleep(0.4)
-            if not windows:
+            window = win32_windows.window_of_running_game(app, process, log)
+            if window is None:
                 return f"{name}: the game's window never appeared"
             time.sleep(2)
-            labels = taskbar_labels(windows[0])
-            import ctypes
-            from ctypes import wintypes
-
-            post = ctypes.WinDLL("user32").PostMessageW
-            post.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
-            post(windows[0], 0x0010, 0, 0)  # WM_CLOSE
+            labels = win32_windows.taskbar_labels(window)
+            win32_windows.close(window)
             try:
                 code = process.wait(timeout=CLOSE_SECONDS)
             except subprocess.TimeoutExpired:

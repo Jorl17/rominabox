@@ -253,15 +253,7 @@ static void prepare(void) {
     publish_arguments();
 }
 
-#ifdef ROMINABOX_DECISION_MAIN
-int main(int argc, char **argv) {
-    pid_t parent = argc > 1 ? (pid_t)atoi(argv[1]) : 0;
-    const char *quiet = argc > 2 && argv[2][0] ? argv[2] : NULL;
-    const char *sound = argc > 3 && argv[3][0] ? argv[3] : NULL;
-    printf("%s\n", rominabox_launch_is_quiet(parent == 1, quiet, sound) ? "quiet" : "sound");
-    return 0;
-}
-#elif defined ROMINABOX_PLAN_MAIN
+#ifdef ROMINABOX_PLAN_MAIN
 int main(void) {
     prepare();
     return 0;
