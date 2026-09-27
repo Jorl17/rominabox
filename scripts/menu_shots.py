@@ -73,6 +73,9 @@ DATA_DIR = re.compile(r'^data_dir\t(.+)$', re.MULTILINE)
 # the quiet tests we check them against the launcher (test_quiet.plan_check).
 QUIET_ENV = "ROMINABOX_QUIET"
 SOUND_ENV = "ROMINABOX_SOUND"
+# The menu script that we run in the player of a test build. In the launcher
+# we also give such a run no controller (checked in the quiet tests).
+SCRIPT_ENV = "ROMINABOX_MENU_SCRIPT"
 
 
 def quiet_env() -> str:
@@ -456,7 +459,7 @@ def take(app: Path, name: str, script: list[str], output: Path,
             text=True,
             env=dict(
                 os.environ,
-                ROMINABOX_MENU_SCRIPT=",".join(script),
+                **{SCRIPT_ENV: ",".join(script)},
                 ROMINABOX_MENU_SHOT=str(inside),
                 # No sound, and a transparent window. Without this, we would open
                 # CoreAudio during a shot and leave a window on the display.

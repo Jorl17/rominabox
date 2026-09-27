@@ -61,17 +61,21 @@ def write_plan(resources: Path, data: Path, driver: str = FROZEN_DRIVER) -> None
     ).encode("utf-8"))
 
 
-def run_plan(binary: Path, data: Path, quiet: bool = False, sound: bool = False) -> str:
+def run_plan(binary: Path, data: Path, quiet: bool = False, sound: bool = False,
+             script: str | None = None) -> str:
     env = os.environ.copy()
     env["ROMINABOX_PLAN_ONLY"] = "1"
-    # The parent process of the harness is not launchd. We remove both variables,
+    # The parent process of the harness is not launchd. We remove the variables,
     # so that a value left in this process cannot hide the default.
     env.pop(menu_shots.QUIET_ENV, None)
     env.pop(menu_shots.SOUND_ENV, None)
+    env.pop(menu_shots.SCRIPT_ENV, None)
     if quiet:
         env[menu_shots.QUIET_ENV] = "1"
     if sound:
         env[menu_shots.SOUND_ENV] = "1"
+    if script is not None:
+        env[menu_shots.SCRIPT_ENV] = script
     ran = subprocess.run(
         [str(binary)],
         env=env,
@@ -128,6 +132,33 @@ def plan_check() -> list[str]:
                 f"a launch with {name} ({menu_shots.QUIET_ENV}, {menu_shots.SOUND_ENV}) wrote "
                 f"pause_nonactive={paused!r}"
             )
+    return failures
+
+
+def script_check() -> list[str]:
+    """Give a run driven by a menu script no controller.
+
+    We control what such a run shows and does only through the script,
+    whatever pads the machine has. Otherwise a connected DualSense would add
+    its bindings to the workflow pictures on one machine and not on another.
+    For a run without a script we keep the export's controllers.
+    """
+    free_space.require(20)
+    with scratch.scratch("rominabox-script-plan-") as made:
+        root = Path(made)
+        binary, resources = compile_plan(root)
+        written = {}
+        for name, script in (("script", "options,controls"), ("plain", None)):
+            data = root / name
+            write_plan(resources, data)
+            written[name] = run_plan(binary, data, quiet=True, script=script)
+    failures = []
+    driver = _config_value(written["script"], "input_joypad_driver")
+    if driver != "null":
+        failures.append(f"a run {menu_shots.SCRIPT_ENV} drives wrote input_joypad_driver={driver!r}, not 'null'")
+    driver = _config_value(written["plain"], "input_joypad_driver")
+    if driver == "null":
+        failures.append("a run without a menu script lost its controllers: input_joypad_driver='null'")
     return failures
 
 
@@ -233,6 +264,8 @@ def main() -> int:
     failures = decision_check()
     if not failures:
         failures.extend(plan_check())
+    if not failures:
+        failures.extend(script_check())
     if not failures:
         failures.extend(window_visibility_check())
     if not failures:

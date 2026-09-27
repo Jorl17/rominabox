@@ -443,7 +443,7 @@ def launch(app: Path, script: str, shot: Path | None) -> str:
     env = {
         **os.environ,
         "ROMINABOX_MAX_FRAMES": frame_limit(script),
-        "ROMINABOX_MENU_SCRIPT": script,
+        menu_shots.SCRIPT_ENV: script,
         menu_shots.quiet_env(): "1",
     }
     if inside is not None:
