@@ -1,6 +1,6 @@
 //! Platform icon generation for exported games.
 
-use image::{imageops, DynamicImage, ImageFormat, ImageReader, Limits, Rgba, RgbaImage};
+use image::{imageops, DynamicImage, ImageReader, Limits, Rgba, RgbaImage};
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -103,17 +103,27 @@ pub fn create_macos_icon(
         .map_err(|e| ExportError::new(ErrorStage::Icon, e.to_string()))
 }
 
-/// Generate a Windows `.ico` icon without stretching the supplied artwork.
-pub fn create_windows_icon(source: &Path, destination: &Path) -> Result<(), ExportError> {
+/// A Windows `.ico` with every size needed in Explorer, the taskbar and
+/// Alt+Tab, scaled as for the macOS icon, without stretching the artwork.
+pub fn windows_icon(source: &Path) -> Result<Vec<u8>, ExportError> {
     let source_image = read_image(source)?;
-    DynamicImage::ImageRgba8(square_icon(&source_image, 256))
-        .save_with_format(destination, ImageFormat::Ico)
-        .map_err(|error| {
-            ExportError::new(
-                ErrorStage::Icon,
-                format!("could not write {}: {error}", destination.display()),
-            )
+    let failed = |error: image::ImageError| {
+        ExportError::new(ErrorStage::Icon, format!("could not make an icon of {}: {error}", source.display()))
+            .about(source)
+    };
+    let frames = [16, 24, 32, 48, 64, 128, 256]
+        .into_iter()
+        .map(|size| {
+            let square = square_icon(&source_image, size);
+            image::codecs::ico::IcoFrame::as_png(square.as_raw(), size, size, image::ExtendedColorType::Rgba8)
         })
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(failed)?;
+    let mut bytes = Vec::new();
+    image::codecs::ico::IcoEncoder::new(&mut bytes)
+        .encode_images(&frames)
+        .map_err(failed)?;
+    Ok(bytes)
 }
 
 pub(crate) fn default_icon_path(runtime_kit: &Path) -> Option<PathBuf> {

@@ -888,10 +888,20 @@ impl Packager for WindowsPackager {
 
     fn describe(
         &mut self,
-        _request: &ExportRequest,
+        request: &ExportRequest,
         _identity: &str,
         _staging: &Path,
     ) -> Result<(), ExportError> {
+        let default_icon = icons::default_icon_path(&request.runtime_kit);
+        let icon = request
+            .icon
+            .as_deref()
+            .or(default_icon.as_deref())
+            .map(icons::windows_icon)
+            .transpose()?;
+        for program in [&self.launcher, &self.player] {
+            crate::windows_program::describe(program, icon.as_deref(), &request.title)?;
+        }
         Ok(())
     }
 

@@ -32,6 +32,7 @@ pub mod traveling;
 
 pub mod themes;
 pub mod volume;
+mod windows_program;
 
 #[cfg(test)]
 mod measure;
