@@ -40,6 +40,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
+import file_lock  # noqa: E402
 import rmlui_paths  # noqa: E402
 RETROARCH = ROOT / "vendor/retroarch"
 MAKEFILE = RETROARCH / "Makefile.common"
@@ -319,7 +320,7 @@ def build(output: Path, sources: list[Path], defines: list[str], frameworks: lis
     menu = menu_sources()
     # When two harness builds run at once, the second waits until the first is done.
     with open(variant / "lock", "w") as lock:
-        _lock_exclusively(lock)
+        file_lock.hold_exclusively(lock)
         menu_objects, menu_compiled = compile_objects(menu, toolchain, variant / "objects", identity)
         program_objects, program_compiled = compile_objects(sources, toolchain, variant / "objects", identity)
         archived = archive(menu_objects, variant / "libmenu.a")
@@ -329,24 +330,6 @@ def build(output: Path, sources: list[Path], defines: list[str], frameworks: lis
     return (f"menu harness: {output.name}: compiled {compiled} of {len(menu) + len(sources)} objects, "
             f"archive {'rebuilt' if archived else 'reused'}, {'linked' if linked else 'link reused'}, "
             f"{time.monotonic() - started:.1f}s")
-
-
-def _lock_exclusively(lock) -> None:
-    """Keep `lock` locked until it is closed, on every platform we build players for."""
-    if os.name == "nt":
-        import msvcrt
-
-        # With LK_LOCK, waiting ends after about ten seconds. A build can take longer.
-        while True:
-            try:
-                msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
-                return
-            except OSError:
-                continue
-    else:
-        import fcntl
-
-        fcntl.flock(lock, fcntl.LOCK_EX)
 
 
 def main() -> int:

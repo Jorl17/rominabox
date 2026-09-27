@@ -9,13 +9,13 @@ could link a different RmlUi from the one in the player.
 
 from __future__ import annotations
 
-import fcntl
 import os
 import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import file_lock  # noqa: E402
 import free_space  # noqa: E402
 from rmlui_paths import (  # noqa: E402
     BUILD_DIR,
@@ -116,7 +116,7 @@ def main() -> int:
     # clones write one directory and each reports the failure of another.
     LOCK.parent.mkdir(parents=True, exist_ok=True)
     with LOCK.open("a") as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        file_lock.hold_exclusively(handle)
         produce()
     return 0
 
