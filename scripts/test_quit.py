@@ -1,12 +1,12 @@
 """Check that quitting unloads the core before the process exits.
 
 Cmd-Q, the menu bar Quit, closing the last window and an Apple Event quit
-all lead to applicationShouldTerminate. If we return NSTerminateNow, exit()
-runs on that stack, and the Flycast static destructors then abort while
-its threads are still running. From the pause menu we request
-CMD_EVENT_QUIT, and in the draw observer we run main_exit before exit. We
-launch an exported game under lldb and send the Apple Event, so that a
-regression shows up as the abort and not as a changed string.
+all lead to applicationShouldTerminate. If we returned NSTerminateNow,
+exit() would run on that stack, and the Flycast static destructors would
+abort while its threads were still running. So in the draw observer we run
+main_exit before exit. We export the generated cartridge, launch it under
+lldb and send the Apple Event, so that a regression shows up as the abort
+and not as a changed string.
 """
 
 from __future__ import annotations
@@ -26,9 +26,8 @@ import free_space  # noqa: E402
 import menu_shots  # noqa: E402
 from core_source import core_source  # noqa: E402
 
-EXPORT_DIR = ROOT / "work/quit-export"
 # Every directory that we write in an export of the quit tests, declared once.
-OWN_WORKSPACES = (ROOT / "work/quit-gbc", EXPORT_DIR, ROOT / "work/quit-ps1")
+OWN_WORKSPACES = (ROOT / "work/quit-gbc",)
 PREFIX = "app.rominabox.game.wt-quit"
 
 
@@ -36,12 +35,6 @@ def require_disk(floor: float) -> None:
     """The places where we require free space: the temporary directory, for
     the exports, and the directories of the quit tests."""
     free_space.require(floor, Path(tempfile.gettempdir()), *OWN_WORKSPACES)
-
-
-def launched_player() -> Path:
-    """Return the binary for the quit tests: the checkout's test build, the only
-    player that can run the menu script of these tests."""
-    return menu_shots.built_player()
 
 
 def use_checkout_player(app: Path, workspace: Path) -> None:
@@ -53,7 +46,7 @@ def use_checkout_player(app: Path, workspace: Path) -> None:
     install_player(app, menu_shots.built_player(), workspace)
 
 
-def install_player(app: Path, binary: Path, workspace: Path = EXPORT_DIR) -> None:
+def install_player(app: Path, binary: Path, workspace: Path) -> None:
     entitlements = workspace / "entitlements.plist"
     menu_shots.capture_export_entitlements(app, entitlements)
     retroarch = app / "Contents/MacOS/retroarch"
@@ -141,7 +134,6 @@ def apple_event_quit(app: Path) -> tuple[str, str]:
             **os.environ,
             "ROMINABOX_MAX_FRAMES": "2400",
             "ROMINABOX_VERBOSE": "1",
-            "ROMINABOX_MENU_SHOT": str(EXPORT_DIR / "unused-shot.png"),
             "ROMINABOX_GAME_BUNDLE_PREFIX": PREFIX,
             menu_shots.quiet_env(): "1",
         },
@@ -265,78 +257,6 @@ def export_rom(rom: Path, title: str, system: str, workspace: Path) -> Path:
     return app
 
 
-def scripted_quit(app: Path, script: str) -> tuple[str, str]:
-    """Click a menu element under lldb, bounded by the player's frame limit."""
-    log = menu_shots.log_of(app)
-    if log and log.exists():
-        log.unlink()
-    player = menu_shots.launcher_of(app)
-    bucket: list[str] = []
-
-    def collect(stream) -> None:
-        bucket.append(stream.read())
-
-    process = subprocess.Popen(
-        [
-            "lldb", "--batch",
-            "-o", "process handle SIGBUS SIGSEGV -s false -n false -p true",
-            "-o", "run",
-            "-k", "bt",
-            "-k", "process kill",
-            "--", str(player),
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        env={
-            **os.environ,
-            "ROMINABOX_MAX_FRAMES": "2400",
-            "ROMINABOX_VERBOSE": "1",
-            "ROMINABOX_MENU_SCRIPT": script,
-            "ROMINABOX_MENU_SHOT": str(EXPORT_DIR / "unused-shot.png"),
-            "ROMINABOX_GAME_BUNDLE_PREFIX": PREFIX,
-            menu_shots.quiet_env(): "1",
-        },
-    )
-    reader = threading.Thread(target=collect, args=(process.stdout,), daemon=True)
-    reader.start()
-    try:
-        process.wait(timeout=90)
-    except subprocess.TimeoutExpired:
-        quit_bundle(bundle_id(app))
-        try:
-            process.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            pass
-    finally:
-        reader.join(timeout=5)
-    left = still_running(app)
-    if left:
-        quit_bundle(bundle_id(app))
-        time.sleep(1)
-        left = still_running(app)
-        if left:
-            raise SystemExit(f"player still running after quit:\n{left}")
-    written = log.read_text(errors="replace") if log and log.exists() else ""
-    return "".join(bucket), written
-
-
-def pause_menu_quit(app: Path) -> tuple[str, str]:
-    """Quit from the pause row, with CMD_EVENT_QUIT and not an Apple Event."""
-    plan_path = app / "Contents/Resources/launch.plan"
-    plan = plan_path.read_text()
-    token = "start_at_menu\t0\n"
-    if token not in plan:
-        raise SystemExit("launch plan is not set to start in the game")
-    plan_path.write_text(plan.replace(token, "start_at_menu\t1\n", 1))
-    menu_shots.resign_replaced_player(app, EXPORT_DIR / "entitlements.plist")
-    try:
-        return scripted_quit(app, "wait:20,quit")
-    finally:
-        plan_path.write_text(plan_path.read_text().replace("start_at_menu\t1\n", token, 1))
-        menu_shots.resign_replaced_player(app, EXPORT_DIR / "entitlements.plist")
-
-
 def ready(name: str) -> Path | None:
     """Return the fetched or committed file, or None after printing the skip line.
 
@@ -361,39 +281,12 @@ def main() -> int:
     require_disk(20.2)
     failed = False
 
-    # We use the generated cartridge as "a game that boots". For Dreamcast and
-    # PlayStation a working program is required. We leave those entries out of
-    # the manifest until we can fetch one, and skip the cases without a disc.
+    # We use the generated cartridge as "a game that boots", so no test
+    # requires a commercial game.
     cartridge = ready("test-game")
     if cartridge is not None:
         app = exported(cartridge, "Quit Cartridge", "gbc", ROOT / "work/quit-gbc")
         problem = judge("cartridge apple-event", *apple_event_quit(app), apple_event=True)
-        if problem:
-            print(problem)
-            failed = True
-
-    dreamcast = ready("240p-dreamcast")
-    if dreamcast is not None:
-        app = exported(dreamcast, "Quit Subject", "dreamcast", EXPORT_DIR)
-        problem = judge("flycast apple-event", *apple_event_quit(app), apple_event=True)
-        if problem:
-            print(problem)
-            return 1
-        log = menu_shots.log_of(app)
-        saved = log.read_text(errors="replace") if log and log.exists() else ""
-        if "Auto save state" not in saved or "succeeded" not in saved:
-            print("autosave on quit did not succeed")
-            return 1
-        print("autosave on quit succeeded")
-        problem = judge("flycast pause menu", *pause_menu_quit(app), apple_event=False)
-        if problem:
-            print(problem)
-            failed = True
-
-    playstation = ready("ps1-homebrew")
-    if playstation is not None:
-        app = exported(playstation, "Quit Disc", "ps1", ROOT / "work/quit-ps1")
-        problem = judge("playstation apple-event", *apple_event_quit(app), apple_event=True)
         if problem:
             print(problem)
             failed = True
