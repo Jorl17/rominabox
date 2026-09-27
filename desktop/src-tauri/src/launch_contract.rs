@@ -10,13 +10,22 @@ pub(crate) const fn declared(macros: &[&str], name: &str, field: usize) -> &'sta
     crate::menu::inc::declared(SOURCE, macros, name, field)
 }
 
-/// `app_file!(Name)`: a file in the app's `Contents/Resources`.
+/// `app_file!(Name)`: a file in the app's resources (`Contents/Resources`).
 macro_rules! app_file {
     ($name:ident) => {
         const { $crate::launch_contract::declared(&["RIB_APP_FILE"], stringify!($name), 1) }
     };
 }
 pub(crate) use app_file;
+
+/// `core_file!(Platform)`: the file name of the core in the app, in the form
+/// of a library name on that platform.
+macro_rules! core_file {
+    ($platform:ident) => {
+        const { $crate::launch_contract::declared(&["RIB_CORE_FILE"], stringify!($platform), 1) }
+    };
+}
+pub(crate) use core_file;
 
 /// `plan_field!(Name)`: a field of `launch.plan`, followed on its line by a
 /// tab and its value.

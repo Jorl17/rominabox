@@ -4,7 +4,7 @@
 //! `tauri::async_runtime::spawn_blocking` and use the callback for progress.
 
 use crate::target::Target;
-use crate::launch_contract::{app_file, plan_field, plan_mark, shipped, token};
+use crate::launch_contract::{app_file, core_file, plan_field, plan_mark, shipped, token};
 use crate::menu::file_name;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -605,7 +605,7 @@ where
         })?,
     };
     let core_source = shipped_core(request, resolved);
-    let core_name = OsStr::new(app_file!(Core));
+    let core_name = OsStr::new(core_file!(Macos));
     let core = resources.join(core_name);
     copy_file(&core_source, &core)?;
     let collected_content = content::collect_for(&request.rom, Some(&system.id))
@@ -709,7 +709,7 @@ where
         "showMenu": request.show_menu,
         "startAtMenu": request.start_at_menu,
         "runtime": "RetroArch",
-        "core": app_file!(Core),
+        "core": core_file!(Macos),
         "coreSource": resolved.map(|export_core| export_core.artifact_name).unwrap_or(""),
         "content": collected_content.files.iter().map(|file| file.relative.to_string_lossy()).collect::<Vec<_>>(),
         "rom": rom_relative.to_string_lossy(),

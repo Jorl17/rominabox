@@ -16,6 +16,7 @@
  * refer to, as declared in launch_contract.inc, and the menu's files, as
  * declared in the player's declarations.inc. */
 #define RIB_APP_FILE(name, path) static const char app_##name[] = path;
+#define RIB_CORE_FILE(platform, file) static const char core_##platform[] = file;
 #define RIB_PLAN_FIELD(name, field) static const char plan_##name[] = field;
 #define RIB_PLAN_MARK(name, line) static const char plan_mark_##name[] = line;
 #define RIB_TOKEN(name, token) static const char token_##name[] = token;
@@ -62,6 +63,17 @@ static int is_absolute(const char *path) {
     return path[0] == '/';
 #else
 #error "the launcher has no absolute paths declared for this platform"
+#endif
+}
+
+/* The core's file name in the app, with this platform's library naming. */
+static const char *core_file(void) {
+#if defined(_WIN32)
+    return core_Windows;
+#elif defined(__APPLE__)
+    return core_Macos;
+#else
+#error "the launcher has no core file declared for this platform"
 #endif
 }
 
@@ -735,7 +747,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     set_variable(launch, "LIBRETRO_VIDEO_FILTER_DIRECTORY", NULL);
     set_variable(launch, "LIBRETRO_VIDEO_SHADER_DIRECTORY", NULL);
 
-    join_path(core_path, sizeof core_path, resources, app_Core);
+    join_path(core_path, sizeof core_path, resources, core_file());
     join_path(content_path, sizeof content_path, resources, content);
     add_argument(launch, "--config");
     add_argument(launch, launch->config_path);

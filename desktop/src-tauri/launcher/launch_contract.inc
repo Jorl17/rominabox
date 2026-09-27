@@ -5,7 +5,11 @@
  * (desktop/src-tauri/src/launch_contract.rs), so a name either side spells
  * differently stops its build instead of exporting a game that cannot start.
  *
- * RIB_APP_FILE(name, "path")                in the app's Contents/Resources
+ * RIB_APP_FILE(name, "path")                in the app's own files (Resources)
+ * RIB_CORE_FILE(platform, "file")           the core, named as its platform
+ *                                           names a library
+ * RIB_WINDOWS_PART(name, "path")            where a Windows game's parts sit
+ *                                           beside its .exe
  * RIB_PLAN_FIELD(name, "field")             a plan line: field, tab, value
  * RIB_PLAN_MARK(name, "line")               a line of its own in the plan
  * RIB_TOKEN(name, "$token")                 a place, in a config line or the
@@ -19,6 +23,12 @@
 /* A reader defines the declarations it reads; the others read as nothing. */
 #ifndef RIB_APP_FILE
 #define RIB_APP_FILE(name, path)
+#endif
+#ifndef RIB_CORE_FILE
+#define RIB_CORE_FILE(platform, file)
+#endif
+#ifndef RIB_WINDOWS_PART
+#define RIB_WINDOWS_PART(name, path)
 #endif
 #ifndef RIB_PLAN_FIELD
 #define RIB_PLAN_FIELD(name, field)
@@ -37,9 +47,16 @@
 #endif
 
 RIB_APP_FILE(Plan, "launch.plan")
-RIB_APP_FILE(Core, "game-core.dylib")
+RIB_CORE_FILE(Macos, "game-core.dylib")
+RIB_CORE_FILE(Windows, "game-core.dll")
 /* The composed menu: menu.rml and the files declarations.inc names. */
 RIB_APP_FILE(MenuAssets, "menu-assets")
+
+/* A Windows game is a folder with one program at its top, the game's .exe,
+ * which a person double-clicks: its own files and the player sit in
+ * folders beside it. */
+RIB_WINDOWS_PART(Resources, "Resources")
+RIB_WINDOWS_PART(Player, "Runtime/retroarch.exe")
 
 RIB_PLAN_FIELD(Identity, "identity")
 RIB_PLAN_FIELD(Content, "content")
@@ -71,6 +88,8 @@ RIB_SHIPPED_SETTINGS(Autoconfig, "autoconfig", "autoconfig")
 RIB_SHIPPED_FILES(Firmware, "firmware", "system")
 
 #undef RIB_APP_FILE
+#undef RIB_CORE_FILE
+#undef RIB_WINDOWS_PART
 #undef RIB_PLAN_FIELD
 #undef RIB_PLAN_MARK
 #undef RIB_TOKEN
