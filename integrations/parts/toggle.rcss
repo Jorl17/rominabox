@@ -3,3 +3,8 @@
 .toggle { display: block; position: relative; width: 240dp; height: 48dp; margin-top: 28dp; font-family: Silkscreen; font-size: 18dp; line-height: 42dp; padding-left: 56dp; border-width: 3dp; }
 .toggle-knob { position: absolute; left: 8dp; top: 6dp; width: 28dp; height: 28dp; border-width: 3dp; }
 .toggle.on .toggle-knob { left: 196dp; }
+
+/* We disable and hide a switch that does nothing in the running game, such as
+ * rumble in a game with a core that never uses rumble. To show it disabled, a
+ * design sets a display rule for it. */
+.switch.disabled, .toggle.disabled { display: none; }

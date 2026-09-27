@@ -35,6 +35,7 @@ fn player_word(macro_name: &str, name: &str) -> &'static str {
 pub enum Key {
     AudioVolume,
     PauseNonactive,
+    InputRumbleEnable,
 }
 
 impl Key {
@@ -182,6 +183,15 @@ pub fn declared(defaults: Defaults) -> Vec<PlayerSetting> {
                 1.0
             },
         },
+        // Every game has it. We disable it in a game whose core has no rumble,
+        // and whether to show it then is up to the design.
+        PlayerSetting {
+            id: "rumble",
+            label: "rumble",
+            key: Key::InputRumbleEnable,
+            kind: Kind::Switch { inverted: false },
+            default: 1.0,
+        },
     ]
 }
 
@@ -213,6 +223,41 @@ mod tests {
         }
         assert_eq!(Key::AudioVolume.name(), "audio_volume");
         assert_eq!(Key::PauseNonactive.name(), "pause_nonactive");
+        assert_eq!(Key::InputRumbleEnable.name(), "input_rumble_enable");
+    }
+
+    /// What each joypad driver receives for a rumble on the first pad, with
+    /// RetroArch's rumble switch at `switch`. We compile
+    /// `scripts/native_runtime/rumble_gate.c` against the fork's own input
+    /// layer and run it to find out.
+    fn rumble_reaching_pads(switch: &str) -> Vec<String> {
+        crate::retroarch_probe::Probe::build(
+            "rumble_gate",
+            &[
+                "input/input_driver.c",
+                "input/input_keymaps.c",
+                "libretro-common/compat/compat_strl.c",
+                "libretro-common/string/stdstring.c",
+                "libretro-common/encodings/encoding_utf.c",
+                "libretro-common/file/file_path.c",
+            ],
+        )
+        .lines(&[switch])
+    }
+
+    // Off means off on every driver, which includes HID on the Mac, XInput and
+    // DirectInput (and so the relay for the sandbox), the second driver paired
+    // with the first in a build with MFi, and a driver that scales the strength
+    // itself, which would otherwise get full strength from the rumble gain.
+    #[test]
+    fn rumble_switched_off_reaches_every_pad_as_none() {
+        let expected = |strength: u32| {
+            ["primary", "secondary", "scaling"]
+                .map(|driver| format!("{driver} {strength}"))
+                .to_vec()
+        };
+        assert_eq!(rumble_reaching_pads("on"), expected(30000));
+        assert_eq!(rumble_reaching_pads("off"), expected(0));
     }
 
     #[test]

@@ -8,6 +8,7 @@
  *   data DIR              the game's data directory, empty, made by the caller
  *   set KEY VALUE         host and service state before the menu opens:
  *                           discs N          disc images in the core
+ *                           rumble 1         rumble requested for a pad
  *                           load 1           slot 1 contains a state
  *                           accept 1         requested saves and loads start and
  *                                            never finish
@@ -346,6 +347,7 @@ void reset_services(const Case& run)
    for (const auto& [key, value] : run.setup)
    {
       if (key == "discs") host.disc_count = (unsigned)std::atoi(value.c_str());
+      else if (key == "rumble") host.rumbles = value == "1";
       else if (key == "load") host.slot_occupied = value == "1";
       else if (key == "accept") host.save_accepted = host.load_accepted = value == "1";
       else if (key == "pending") session.pending_upload = value == "1";

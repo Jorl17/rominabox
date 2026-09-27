@@ -276,6 +276,34 @@
       }
     },
     {
+      "name": "RUMBLE starts on, in the design's words",
+      "setup": {
+        "rumble": 1
+      },
+      "steps": [
+        "options",
+        "rumble"
+      ],
+      "text": {
+        "*": [
+          {
+            "rumble-state": "ON"
+          },
+          {
+            "rumble-state": "OFF"
+          }
+        ],
+        "wording": [
+          {
+            "rumble-state": "YES"
+          },
+          {
+            "rumble-state": "NO"
+          }
+        ]
+      }
+    },
+    {
       "name": "the running filter's mark in the design's words",
       "steps": [
         "options",

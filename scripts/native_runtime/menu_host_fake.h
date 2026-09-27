@@ -54,7 +54,11 @@ struct FakeHost
    /* The RetroArch settings behind each player setting, by config key (its
     * name in settings.inc), with their values in the running game. We cannot
     * apply a key that is missing here. */
-   std::map<std::string, float> settings{{"audio_volume", -12.0f}, {"pause_nonactive", 1.0f}};
+   std::map<std::string, float> settings{{"audio_volume", -12.0f}, {"pause_nonactive", 1.0f},
+         {"input_rumble_enable", 1.0f}};
+   /* Whether the core requested the rumble interface. For the generated Mega
+    * Drive cartridge it is not requested, so rumble has no effect there. */
+   bool rumbles = false;
    /* The game volume at each request for a level cue, in order. */
    std::vector<float> level_cue_db;
    /* The level cue file requested for a game with no sound pack. */

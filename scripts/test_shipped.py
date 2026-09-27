@@ -59,6 +59,7 @@ def write(path: Path, text: str) -> None:
 PLAYER_SETTINGS = (
     "player_setting\tvolume.cfg\taudio_volume\t0.0\n"
     "player_setting\tbackground-play.cfg\tpause_nonactive\t{pause}\n"
+    "player_setting\trumble.cfg\tinput_rumble_enable\ttrue\n"
 )
 
 
@@ -262,6 +263,7 @@ def run_player_settings() -> list[str]:
         launch(binary, home)
         expect("no choice", data, "pause_nonactive", "true")
         expect("no choice", data, "audio_volume", "0.0")
+        expect("no choice", data, "input_rumble_enable", "true")
         if (data / "background-play.cfg").exists():
             failures.append("the export's default was written into the player's file")
 
@@ -273,9 +275,11 @@ def run_player_settings() -> list[str]:
         # The player chooses in the menu, and we write the setting's file.
         write(data / "background-play.cfg", 'pause_nonactive = "true"\n')
         write(data / "volume.cfg", 'audio_volume = "-35.6"\n')
+        write(data / "rumble.cfg", 'input_rumble_enable = "false"\n')
         launch(binary, home)
         expect("the player's choice", data, "pause_nonactive", "true")
         expect("the player's choice", data, "audio_volume", "-35.6")
+        expect("the player's choice", data, "input_rumble_enable", "false")
 
         # After a re-export with the other default, the player's choice stays.
         ship_plan(resources, data, pause_nonactive="false")

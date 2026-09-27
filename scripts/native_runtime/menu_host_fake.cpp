@@ -140,6 +140,10 @@ extern "C" bool rib_host_set_setting(rib_setting_key key, float value)
    found->second = value;
    return true;
 }
+extern "C" bool rib_host_setting_used(rib_setting_key key)
+{
+   return key != RIB_SETTING_InputRumbleEnable || host.rumbles;
+}
 extern "C" void rib_host_level_sound(bool up)
 {
    host.sounds.push_back(up ? Sound::LevelUp : Sound::LevelDown);
