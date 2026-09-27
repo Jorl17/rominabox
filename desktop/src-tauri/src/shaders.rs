@@ -271,34 +271,80 @@ fn safe_relative(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// The files listed in a `.glslp`, its passes and its lookup textures, each
-/// as (source, its path next to the preset as written in the preset), checked
-/// to be inside the preset folder. The libretro presets have passes in
-/// `shaders/` and textures in `resources/`, so at export we put every file at
-/// the same relative path next to the copied preset.
+/// The row's picture, in each shader's folder beside its preset.
+const ROW_PICTURE: &str = "icon.png";
+
+/// The maximum depth of `#reference` between presets, as in RetroArch.
+const REFERENCE_DEPTH: usize = 16;
+
+/// The files listed in a `.glslp`, its passes, its lookup textures and the
+/// presets it `#reference`s with their files, each as (source, its path next
+/// to the preset as written in the presets), checked to be inside the preset
+/// folder. The libretro presets have passes in `shaders/` and textures in
+/// `resources/`, so at export we put every file at the same relative path
+/// next to the copied preset.
 fn referenced_files(preset: &Path) -> Result<Vec<(PathBuf, String)>, String> {
+    let mut files = Vec::new();
+    if collect_files(preset, Path::new(""), 0, &mut files)? == 0 {
+        return Err("a shader preset names no shader pass".into());
+    }
+    if files.iter().any(|(_, name)| name == ROW_PICTURE) {
+        return Err(format!(
+            "a shader preset cannot use a file named {ROW_PICTURE}; the menu keeps the row's picture there"
+        ));
+    }
+    Ok(files)
+}
+
+/// Add the files listed in `preset` to `files`, as paths from the folder of
+/// the top preset (`prefix` is the location of `preset` in it), and return the
+/// number of passes among them.
+fn collect_files(
+    preset: &Path,
+    prefix: &Path,
+    depth: usize,
+    files: &mut Vec<(PathBuf, String)>,
+) -> Result<usize, String> {
+    if depth > REFERENCE_DEPTH {
+        return Err("shader presets reference each other too deeply".into());
+    }
     let text = fs::read_to_string(preset)
         .map_err(|error| format!("could not read shader preset: {error}"))?;
     let directory = preset.parent().unwrap_or_else(|| Path::new("."));
-    let entries: Vec<(usize, &str, &str)> = text
-        .lines()
-        .enumerate()
-        .filter_map(|(index, line)| {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
-                return None;
+    let mut passes = 0;
+    let mut entries: Vec<(usize, &str, &str)> = Vec::new();
+    for (index, line) in text.lines().enumerate() {
+        let line = line.trim();
+        let line_number = index + 1;
+        if line.is_empty() {
+            continue;
+        }
+        // In RetroArch, `#include` and `#reference` are directives and every
+        // other `#` line is a comment.
+        if let Some(comment) = line.strip_prefix('#') {
+            if comment.starts_with("include ") {
+                return Err(format!(
+                    "shader preset line {line_number} uses #include, which exported games do not follow"
+                ));
             }
-            let (key, value) = line.split_once('=')?;
-            Some((index + 1, key.trim(), value.trim().trim_matches('"')))
-        })
-        .collect();
+            if let Some(value) = comment.strip_prefix("reference ") {
+                let (source, spelled) =
+                    beside(directory, prefix, value.trim().trim_matches('"'), line_number)?;
+                add_file(files, source.clone(), &spelled);
+                let inner = Path::new(&spelled).parent().unwrap_or_else(|| Path::new("")).to_path_buf();
+                passes += collect_files(&source, &inner, depth + 1, files)?;
+            }
+            continue;
+        }
+        if let Some((key, value)) = line.split_once('=') {
+            entries.push((line_number, key.trim(), value.trim().trim_matches('"')));
+        }
+    }
     let textures: Vec<&str> = entries
         .iter()
         .find(|(_, key, _)| *key == "textures")
         .map(|(_, _, value)| value.split(';').map(str::trim).filter(|name| !name.is_empty()).collect())
         .unwrap_or_default();
-    let mut files: Vec<(PathBuf, String)> = Vec::new();
-    let mut passes = 0;
     for (line_number, key, value) in &entries {
         let is_pass = key.starts_with("shader")
             && key.len() > "shader".len()
@@ -306,31 +352,45 @@ fn referenced_files(preset: &Path) -> Result<Vec<(PathBuf, String)>, String> {
         if !is_pass && !textures.contains(key) {
             continue;
         }
-        let relative = Path::new(value);
-        safe_relative(relative)?;
-        let source = directory.join(relative);
-        if !source.is_file() {
-            return Err(format!(
-                "shader preset line {line_number} names a missing file: {value}"
-            ));
-        }
+        let (source, spelled) = beside(directory, prefix, value, *line_number)?;
         if is_pass {
             shader_format(&source)?;
             passes += 1;
         }
-        let spelled = relative
-            .components()
-            .map(|component| component.as_os_str().to_string_lossy())
-            .collect::<Vec<_>>()
-            .join("/");
-        if !files.iter().any(|(_, existing)| existing == &spelled) {
-            files.push((source, spelled));
-        }
+        add_file(files, source, &spelled);
     }
-    if passes == 0 {
-        return Err("a shader preset names no shader pass".into());
+    Ok(passes)
+}
+
+/// A file listed in a preset, with its location and its path from the folder
+/// of the top preset, with `/` between parts.
+fn beside(
+    directory: &Path,
+    prefix: &Path,
+    value: &str,
+    line_number: usize,
+) -> Result<(PathBuf, String), String> {
+    let relative = Path::new(value);
+    safe_relative(relative)?;
+    let source = directory.join(relative);
+    if !source.is_file() {
+        return Err(format!(
+            "shader preset line {line_number} names a missing file: {value}"
+        ));
     }
-    Ok(files)
+    let spelled = prefix
+        .join(relative)
+        .components()
+        .map(|component| component.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/");
+    Ok((source, spelled))
+}
+
+fn add_file(files: &mut Vec<(PathBuf, String)>, source: PathBuf, spelled: &str) {
+    if !files.iter().any(|(_, existing)| existing == spelled) {
+        files.push((source, spelled.to_string()));
+    }
 }
 
 fn slug(name: &str) -> Result<String, String> {
@@ -611,11 +671,11 @@ pub fn stage(
                 files.push((directory.join(name), Content::Copy(source.clone())));
             }
         }
-        files.push((directory.join("icon.png"), Content::Bytes(icon_png(&item.id)?)));
+        files.push((directory.join(ROW_PICTURE), Content::Bytes(icon_png(&item.id)?)));
         let selected = item.id == initial;
         items.push(crate::lists::ListItem {
             id: item.id.clone(),
-            icon: format!("shaders/{}/icon.png", item.id),
+            icon: format!("shaders/{}/{ROW_PICTURE}", item.id),
             title: item.name.to_uppercase(),
             detail: item.detail.clone(),
             // The mark that we move to whichever filter is running.
