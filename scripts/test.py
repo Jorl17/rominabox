@@ -397,6 +397,8 @@ SCOPES = [
         "that a disc name was shortened — the bridge measures that",
         ["python3", str(ROOT / "scripts/test_discs.py")],
         slow=True,
+        # In it we lay the menu out with RmlUi to find the Disc entry to click.
+        prepare=RMLUI_PREPARE,
     ),
     Scope(
         "quit",
