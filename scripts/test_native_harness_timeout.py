@@ -185,6 +185,17 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
         self.assertIs(popen.call_args.kwargs["stderr"], popen.call_args.kwargs["stdout"])
 
 
+class WorkflowReportTest(unittest.TestCase):
+    def test_a_report_reads_as_the_utf8_the_player_writes(self) -> None:
+        # The name of the Mega Drive pad contains "·", and "Á" is a byte (0x81)
+        # that we cannot decode at all in the Windows code page.
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / "case.log"
+            log.write_bytes('[RIB] checkpoint final {"text": "Mega Drive · 3 buttons, Á"}\n'.encode("utf-8"))
+            reports = menu_workflows.checkpoints(log)
+        self.assertEqual(reports, {"final": {"text": "Mega Drive · 3 buttons, Á"}})
+
+
 class WorkflowFixtureOwnershipTest(unittest.TestCase):
     def test_claim_refuses_redirected_storage_parent(self) -> None:
         for linked in ("Data", "Games"):

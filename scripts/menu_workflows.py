@@ -180,6 +180,11 @@ def reduced(record: dict, table: dict) -> dict:
     return {"script": record["script"], "reports": reports, "files": files}
 
 
+def checkpoints(log: Path) -> dict[str, dict]:
+    """The reports from the player in its log, by checkpoint label."""
+    return {label: json.loads(value) for label, value in CHECKPOINT.findall(log.read_text())}
+
+
 def capture(app: Path, destination: Path, case: dict, table: dict) -> dict:
     name = case["key"].rsplit("/", 1)[1]
     reset_fixture(app)
@@ -187,8 +192,7 @@ def capture(app: Path, destination: Path, case: dict, table: dict) -> dict:
     failure = shots.take(app, name, script, destination, reset_settings=True)
     if failure:
         raise SystemExit(f"{case['key']}: {failure}")
-    reports = {label: json.loads(value) for label, value in
-               CHECKPOINT.findall((destination / f"{name}.log").read_text())}
+    reports = checkpoints(destination / f"{name}.log")
     wanted = [step[7:] for step in script if step.startswith("report:")]
     if list(reports) != wanted:
         raise SystemExit(f"{case['key']}: expected checkpoints {wanted}, got {list(reports)}")
