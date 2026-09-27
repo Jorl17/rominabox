@@ -614,7 +614,7 @@ fn catalog_path(
     if !online {
         return Ok(None);
     }
-    let bytes = download(&checksum_catalog_url(catalog, disc), CATALOG_LIMIT)?;
+    let bytes = download(&checksum_catalog_url(catalog, disc), CATALOG_LIMIT, WAIT)?;
     datary::from_bytes(&bytes).map_err(|error| {
         InspectionError::new(format!("downloaded DAT catalog was invalid: {error}"))
     })?;
@@ -658,6 +658,7 @@ fn lookup_boxart(
     let bytes = match download(
         &artwork::artwork_download_url(catalog, &matched.filename),
         ARTWORK_LIMIT,
+        WAIT,
     ) {
         Ok(bytes) => bytes,
         Err(_) => return Ok(None),
@@ -684,7 +685,11 @@ fn artwork_index(
     if !online {
         return Ok(None);
     }
-    let bytes = download(&artwork::artwork_index_url(catalog), CATALOG_LIMIT)?;
+    let bytes = download(
+        &artwork::artwork_index_url(catalog),
+        CATALOG_LIMIT,
+        PICTURE_LIST_WAIT,
+    )?;
     let names = artwork::filenames_from_git_tree(&bytes).map_err(InspectionError::new)?;
     write_cached(&path, names.join("\n").as_bytes())?;
     Ok(Some(artwork::ArtworkIndex::from_filenames(names)))
@@ -703,9 +708,16 @@ fn artwork_path(cache: &Path, catalog: &str, filename: &str) -> PathBuf {
         .join(format!("{filename}.png"))
 }
 
-fn download(url: &str, limit: u64) -> Result<Vec<u8>, InspectionError> {
+/// The longest time we allow for a lookup download, from start to end.
+const WAIT: Duration = Duration::from_secs(5);
+/// On GitHub, building the list of pictures for a console takes several
+/// seconds when nobody has asked for that list recently, and about a second
+/// otherwise.
+const PICTURE_LIST_WAIT: Duration = Duration::from_secs(60);
+
+fn download(url: &str, limit: u64, wait: Duration) -> Result<Vec<u8>, InspectionError> {
     let response = ureq::get(url)
-        .timeout(Duration::from_secs(5))
+        .timeout(wait)
         .call()
         .map_err(|error| InspectionError::new(error.to_string()))?;
     let mut bytes = Vec::new();
