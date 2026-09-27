@@ -434,15 +434,12 @@ def launch(app: Path, script: str, shot: Path | None) -> str:
     if log and log.exists():
         log.unlink()
     forget_tray_record(app)
+    menu_shots.prepared_storage(app)
     inside = shot
     if shot is not None:
         shot.parent.mkdir(parents=True, exist_ok=True)
         shot.unlink(missing_ok=True)
-        data = menu_shots.data_dir_of(app)
-        if data is not None:
-            inside = data / "shots" / shot.name
-            inside.parent.mkdir(parents=True, exist_ok=True)
-            inside.unlink(missing_ok=True)
+        inside = menu_shots.shot_inside(app, shot)
     env = {
         **os.environ,
         "ROMINABOX_MAX_FRAMES": frame_limit(script),
@@ -476,8 +473,8 @@ def launch(app: Path, script: str, shot: Path | None) -> str:
         capture.seek(0)
         output = capture.read()
     written = log.read_text(errors="replace") if log and log.exists() else ""
-    if inside is not None and shot is not None and inside != shot and inside.exists():
-        shutil.move(str(inside), str(shot))
+    if inside is not None and shot is not None:
+        menu_shots.carry_shot(inside, shot)
     left = leftover_problem(app)
     if left:
         raise menu_shots.PlayerTimeout(left, app)

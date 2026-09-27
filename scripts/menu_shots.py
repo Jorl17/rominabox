@@ -204,6 +204,28 @@ def _windows_sandboxed(app: Path) -> bool:
     return bool(SANDBOX.search(plan_text(app)))
 
 
+def _macos_prepare_storage(app: Path) -> None:
+    """Nothing. In the macOS tests we photograph a game's first launch with its
+    shot folder made beforehand, and the picture arrives."""
+
+
+def _windows_prepare_storage(app: Path) -> None:
+    """Register the game's sandbox with a plan-only launch before we write
+    anything into its storage. Registering a sandbox over an existing folder
+    empties that folder, including any shot folder we made there, so no
+    picture would arrive from a game's first shot."""
+    if not _windows_sandboxed(app):
+        return
+    subprocess.run(
+        [str(launcher_of(app))],
+        env=dict(os.environ, ROMINABOX_PLAN_ONLY="1", **{quiet_env(): "1"}),
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        check=True,
+        timeout=60,
+    )
+
+
 def _windows_sandbox_folder(app: Path) -> Path:
     """The sandbox folder of a Windows game, named as we name the sandbox in
     the launcher: the application id prefix declared for the launcher and
@@ -254,6 +276,7 @@ APPS = {
         "resources": lambda app: app / "Contents/Resources",
         "user_data": lambda app: Path(home_for(app)) / "Library/Application Support",
         "sandboxed": _macos_sandboxed,
+        "prepare_storage": _macos_prepare_storage,
         "storage_home": lambda app: Path(home_for(app)) if _macos_sandboxed(app) else None,
         "kit_player": lambda: "bin/retroarch",
         "running": _macos_running,
@@ -264,6 +287,7 @@ APPS = {
         "user_data": lambda app: (_windows_sandbox_folder(app) / "AC" if _windows_sandboxed(app)
                                   else Path(os.environ["LOCALAPPDATA"])),
         "sandboxed": _windows_sandboxed,
+        "prepare_storage": _windows_prepare_storage,
         "storage_home": lambda app: (_windows_sandbox_folder(app) if _windows_sandboxed(app)
                                      else Path(os.environ["LOCALAPPDATA"]) / "ROM-in-a-Box" / "Games"),
         "kit_player": lambda: native_build.recipe()["kit"][host_target()]["files"]["player"]["at"],
@@ -285,6 +309,52 @@ def launcher_of(app: Path) -> Path:
 
 def sandboxed(app: Path) -> bool:
     return _app()["sandboxed"](app)
+
+
+# The games whose storage we have prepared in this run, once each.
+_prepared: set[Path] = set()
+
+
+def prepare_storage(app: Path) -> None:
+    """The game's storage as it is after the first launch, before we write into
+    it from a harness."""
+    if app.resolve() in _prepared:
+        return
+    _app()["prepare_storage"](app)
+    _prepared.add(app.resolve())
+
+
+def prepared_storage(app: Path) -> Path | None:
+    """The game's own storage, prepared before we write into it from a
+    harness, or None for a game without one."""
+    data = data_dir_of(app)
+    if data is not None:
+        prepare_storage(app)
+    return data
+
+
+def shot_inside(app: Path, target: Path) -> Path:
+    """The path where we tell the game to write the picture for `target`.
+
+    A sandboxed game has write access only inside its own storage, not in
+    this repository. So the picture goes into the game's storage, and we
+    move it out with `carry_shot`. With a path in the tree, every shot would
+    end in "failed to open file for writing", because of the sandbox.
+    """
+    data = prepared_storage(app)
+    if data is None or not sandboxed(app):
+        return target
+    inside = data / "shots" / target.name
+    inside.parent.mkdir(parents=True, exist_ok=True)
+    inside.unlink(missing_ok=True)
+    return inside
+
+
+def carry_shot(inside: Path, target: Path) -> None:
+    """Move the picture from the game's own storage to `target`."""
+    if inside != target and inside.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(inside), str(target))
 
 
 def running_from(app: Path) -> str:
@@ -336,7 +406,7 @@ def take(app: Path, name: str, script: list[str], output: Path,
     target.unlink(missing_ok=True)
     # What we delete for a shot is in the game's storage, and through a link
     # it would be the files of someone else.
-    data = data_dir_of(app)
+    data = prepared_storage(app)
     if data is not None:
         for folder in (data, data / "logs", data / "remaps"):
             if redirected(folder):
@@ -379,15 +449,7 @@ def take(app: Path, name: str, script: list[str], output: Path,
             newline="\n",
         )
 
-    # In a sandbox, writing is allowed only inside the game's container, so we
-    # cannot have the picture written into this repository. We have it written
-    # into the game's storage and copy it out here. With a path in the tree, we
-    # would get "failed to open file for writing" for every shot.
-    inside = target
-    if data is not None and sandboxed(app):
-        inside = data / "shots" / f"{name}.png"
-        inside.parent.mkdir(parents=True, exist_ok=True)
-        inside.unlink(missing_ok=True)
+    inside = shot_inside(app, target)
 
     with (
         tempfile.TemporaryFile(mode="w+t") as stdout_capture,
@@ -422,9 +484,7 @@ def take(app: Path, name: str, script: list[str], output: Path,
             ) from None
         stderr_capture.seek(0)
         stderr = stderr_capture.read()
-    if inside != target and inside.exists():
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(inside), str(target))
+    carry_shot(inside, target)
     written = log.read_text(encoding="utf-8", errors="replace") if log and log.exists() else stderr
     # Copy the evidence next to its picture before we overwrite it next launch.
     (output / f"{name}.log").write_text(written, encoding="utf-8", newline="\n")
