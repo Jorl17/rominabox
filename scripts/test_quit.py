@@ -377,16 +377,27 @@ def taskbar_labels(window: int) -> dict[str, str | None]:
 
 
 def windows_close(cartridge: Path) -> str | None:
-    """Close the running game's window, as a click on its close button does.
+    """Close the running game's window, as its close button does, in an
+    export with the emulator's menus behind Advanced and in one with them
+    unlocked. In the first, closing starts a quit as from the pause menu. In
+    the second, closing is the usual RetroArch close."""
+    problems = [close_window(cartridge, advanced) for advanced in (False, True)]
+    return "\n".join(problem for problem in problems if problem) or None
 
-    The window is a window of the player process, so a pinned taskbar button
+
+# The longest time a person who closes the window waits for the game to end.
+CLOSE_SECONDS = 10
+
+
+def close_window(cartridge: Path, advanced: bool) -> str | None:
+    """The window is a window of the player process, so a pinned taskbar button
     reopens the game only if the window has the game's program as its relaunch
-    command. In a restricted export, closing the window starts a quit as from
-    the pause menu, and the game must still unload its core and exit 0. With
-    the frame limit in the player, a missed close cannot leave it open.
+    command. After the close, the game must unload its core and exit 0 soon.
+    With the frame limit in the player, a missed close cannot leave it open.
     """
-    name = "cartridge window close"
-    settings = {"title": TITLE, "startAtMenu": False, "autosaveOnQuit": True}
+    name = f"cartridge window close ({'advanced' if advanced else 'restricted'})"
+    settings = {"title": TITLE, "startAtMenu": False, "autosaveOnQuit": True,
+                "advancedEmulatorAccess": advanced}
     with menu_shots.build_a_game(cartridge, ROOT / "work/quit-gbc", "gbc", settings) as app:
         launcher = menu_shots.launcher_of(app)
         log = menu_shots.log_of(app)
@@ -423,9 +434,9 @@ def windows_close(cartridge: Path) -> str | None:
             post.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             post(windows[0], 0x0010, 0, 0)  # WM_CLOSE
             try:
-                code = process.wait(timeout=45)
+                code = process.wait(timeout=CLOSE_SECONDS)
             except subprocess.TimeoutExpired:
-                return f"{name}: the game was still running 45 s after its window was closed"
+                return f"{name}: the game was still running {CLOSE_SECONDS} s after its window was closed"
         finally:
             # This test process is the launcher here. Closing its job ends the player.
             if process.poll() is None:
