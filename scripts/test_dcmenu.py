@@ -20,13 +20,16 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 # We take the headers and the archive from the player build, because a
 # literal path here could point to a folder that no script creates.
+import native_build  # noqa: E402
 import rmlui_paths  # noqa: E402
 from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
 sys.path.insert(0, str(ROOT / "scripts/native_runtime"))
 # We read the renderer's pictures through libretro's file layer.
 import menu_harness  # noqa: E402
 
-DRIVERS = ROOT / "vendor/retroarch/menu/drivers"
+RETROARCH = ROOT / "vendor/retroarch"
+DRIVERS = RETROARCH / "menu/drivers"
+NATIVE = ROOT / "scripts/native_runtime"
 PROBE = ROOT / "work/dcmenu-probe"
 LAUNCHER = ROOT / "desktop/src-tauri/launcher/main.c"
 LINE = PROBE / "line.txt"
@@ -51,6 +54,11 @@ def extract_line_buffer() -> str:
 
 
 def check_log_line() -> bool:
+    if native_build.is_windows(rmlui_paths.TARGET):
+        # We fork and redirect output in the same way as the macOS launcher. We
+        # do not test the log of the Windows launcher here.
+        print("not yet on Windows: the launcher's log redirection is macOS code until the launcher split")
+        return True
     text = LAUNCHER.read_text()
     dup = text.find("dup2(log_fd, STDOUT_FILENO)")
     call = text.find("rominabox_line_buffer_stdio()", dup if dup >= 0 else 0)
@@ -130,6 +138,26 @@ int main(int argc, char **argv) {
     return ran.returncode == 0
 
 
+def probe_platform() -> tuple[list[Path], list[Path], list[str]]:
+    """The parts of the draw probe that we build differently per platform.
+
+    The context maker, the C sources it links, and its flags. Everything the
+    probe checks is menu_gl_probe.cpp, shared.
+    """
+    target = rmlui_paths.TARGET
+    if native_build.is_macos(target):
+        return ([NATIVE / "menu_gl_platform_macos.mm"], [],
+                ["-fobjc-arc", "-Wno-deprecated-declarations",
+                 "-framework", "OpenGL", "-framework", "Cocoa"])
+    if native_build.is_windows(target):
+        # We call OpenGL in the menu renderer through RetroArch's loader.
+        glsym = RETROARCH / "libretro-common/glsym"
+        return ([NATIVE / "menu_gl_platform_windows.cpp"],
+                [glsym / "rglgen.c", glsym / "glsym_gl.c"],
+                ["-lopengl32", "-lgdi32", "-lshell32"])
+    raise SystemExit(f"the menu draw probe has no GL context for {target}")
+
+
 def check_menu_draw() -> bool:
     if not LIBRARY.is_file():
         print(f"FAIL missing {LIBRARY}")
@@ -137,26 +165,27 @@ def check_menu_draw() -> bool:
     PROBE.mkdir(parents=True, exist_ok=True)
     binary = PROBE / "menu_core_gl"
     flags = rmlui_paths.freetype("--cflags", "--libs")
-    file_layer, _ = menu_harness.compile_objects(
-        menu_harness.FILE_LAYER,
+    context, c_sources, platform_flags = probe_platform()
+    c_objects, _ = menu_harness.compile_objects(
+        [*menu_harness.FILE_LAYER, *c_sources],
         menu_harness.Toolchain("cc", "c++", ("-I", str(menu_harness.LIBRETRO_INCLUDE)), ()),
         PROBE / "file-layer")
     command = [
-        "c++", "-std=c++17", "-fobjc-arc",
+        "c++", "-std=c++17",
+        *rmlui_paths.DEFINES,
         *[f"-I{path}" for path in HEADER_DIRS],
         f"-I{DRIVERS}",
         f"-I{menu_harness.LIBRETRO_INCLUDE}",
-        "-Wno-deprecated-declarations",
-        "-framework", "OpenGL",
-        "-framework", "Cocoa",
         "-o", str(binary),
-        str(ROOT / "scripts/native_runtime/test_menu_core_gl.mm"),
+        str(NATIVE / "menu_gl_probe.cpp"),
+        *map(str, context),
         str(DRIVERS / "rmlui/render/rmlui_gl.cpp"),
         str(DRIVERS / "rmlui/render/rmlui_gl3.cpp"),
         str(DRIVERS / "third_party/lodepng.cpp"),
-        *map(str, file_layer),
+        *map(str, c_objects),
         str(LIBRARY),
         *flags,
+        *platform_flags,
     ]
     compiled = subprocess.run(command, capture_output=True, text=True)
     if compiled.returncode != 0:

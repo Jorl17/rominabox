@@ -55,7 +55,9 @@ CACHE = ROOT / "work/menu-harness"
 FILE_LAYER = [RETROARCH / "libretro-common" / name for name in (
     "file/file_path.c", "file/file_path_io.c", "streams/file_stream.c",
     "vfs/vfs_implementation.c", "string/stdstring.c", "encodings/encoding_utf.c",
-    "encodings/encoding_crc32.c", "time/rtime.c", "compat/compat_strl.c")]
+    "encodings/encoding_crc32.c", "time/rtime.c", "compat/compat_strl.c",
+    # On Windows we open files through it, and on other platforms its compiled code is empty.
+    "compat/fopen_utf8.c")]
 
 # Objects in the block that we leave out of a headless harness, and why.
 HEADLESS_EXCLUDED = {
@@ -299,6 +301,7 @@ def headless(defines: list[str]) -> Toolchain:
         cflags=("-I", str(LIBRETRO_INCLUDE)),
         cxxflags=("-std=c++17", "-Werror=return-type", "-DRIB_RMLUI_HEADLESS",
                   *(f"-D{name}" for name in defines),
+                  *rmlui_paths.DEFINES,
                   *(f"-I{path}" for path in rmlui_paths.HEADER_DIRS),
                   "-I", str(BRIDGE), "-I", str(LIBRETRO_INCLUDE), *freetype),
     )

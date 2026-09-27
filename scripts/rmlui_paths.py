@@ -50,10 +50,21 @@ def _header_dirs(source: Path) -> list[Path]:
     return found
 
 
+def _defines() -> list[str]:
+    """Return the RmlUi defines of the player build, such as the static-library one.
+
+    Without RMLUI_STATIC_LIB on Windows, every function in the RmlUi headers
+    is declared as a DLL import, and we cannot link a probe with the archive.
+    """
+    makefile = _MAKEFILE.read_text(encoding="utf-8", errors="replace")
+    return list(dict.fromkeys(re.findall(r"DEFINES \+= (-DRMLUI_\w+)", makefile)))
+
+
 SOURCE = DEST / native_build.recipe()["rmlui"]["source"]
 BUILD_DIR = DEST / native_build.recipe()["rmlui"]["build"]
 LIBRARY = BUILD_DIR / _archive_name()
 HEADER_DIRS = _header_dirs(SOURCE)
+DEFINES = _defines()
 
 
 def _include_dir() -> Path:

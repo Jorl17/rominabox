@@ -88,6 +88,7 @@ def build() -> None:
     flags = rmlui_paths.freetype("--cflags", "--libs")
     subprocess.run(
         ["c++", "-std=c++17", "-O1",
+         *rmlui_paths.DEFINES,
          *[f"-I{path}" for path in HEADER_DIRS],
          "-o", str(PROBE), str(PROBE_SOURCE), str(LIBRARY), *flags],
         check=True,
