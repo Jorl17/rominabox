@@ -1,4 +1,5 @@
-"""Check that in a game's player we use only its data folder, and refuse to start without one.
+"""Check that in a game's player we use only its data folder, refuse to start
+without one, and read the arguments as UTF-8 on Windows.
 
 Stock RetroArch fails open. With no folder given, the Windows build created
 about 25 folders beside the program and would read the user's configuration.
@@ -6,7 +7,7 @@ A game must only use the absolute data folder that we give in
 ROMINABOX_DATA_DIR in its launcher. We ask the player only for its feature
 list, which we print before any window or core, so we open no window here.
 
-    ROMINABOX_TEST_BUILD=/absolute/build python3 scripts/test_player_data_root.py
+    ROMINABOX_TEST_BUILD=/absolute/build python3 scripts/test_player.py
 """
 
 from __future__ import annotations
@@ -32,9 +33,38 @@ def ask_features(player: Path, data_dir: str | None) -> subprocess.CompletedProc
                           capture_output=True, text=True, errors="replace", timeout=60)
 
 
+def utf8_arguments(build: Path, player: Path) -> int:
+    """Check that we declare UTF-8 as the code page of the player on Windows.
+
+    The arguments arrive in the code page of the process, and from the
+    launcher we pass paths under the game's folder and the player's folder.
+    Without UTF-8, a game called Pokémon or a user with a non-ASCII name makes
+    every path unreadable. The code page applies to the whole process, so it
+    also covers a core when it opens its content with the C runtime. We read
+    it from the player's manifest, because a launch that proves it opens a window.
+    """
+    target = player_build.info(build).get("target", "")
+    if not target.startswith("windows-"):
+        print(f"ok {target} passes arguments as UTF-8 already")
+        return 0
+    body = player.read_bytes()
+    start = body.find(b"<assembly")
+    end = body.find(b"</assembly>", start)
+    manifest = body[start:end].decode("utf-8", "replace") if start >= 0 and end > start else ""
+    if "<activeCodePage" not in manifest or ">UTF-8</activeCodePage>" not in manifest:
+        print(f"FAIL the Windows player does not declare UTF-8 as its code page; its manifest:\n{manifest or '(none)'}")
+        return 1
+    if 'level="asInvoker"' not in manifest:
+        print("FAIL the Windows player's manifest lost asInvoker")
+        return 1
+    print("ok the Windows player declares UTF-8 as its code page")
+    return 0
+
+
 def main() -> int:
-    source = player_build.player_in(player_build.selected_build())
-    failures = 0
+    build = player_build.selected_build()
+    source = player_build.player_in(build)
+    failures = utf8_arguments(build, source)
     with tempfile.TemporaryDirectory(prefix="rominabox-data-root-") as temporary:
         # The player alone in a folder, so that we see anything created beside it.
         folder = Path(temporary) / "bin"
