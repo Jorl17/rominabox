@@ -15,6 +15,7 @@ its installation.
 
 from __future__ import annotations
 
+import os
 import stat
 import subprocess
 import sys
@@ -24,12 +25,36 @@ ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / ".githooks/pre-push"
 
 
+def recorded_executable() -> bool:
+    """Return whether the hook is recorded in git as a program, because then
+    it is executable in every checkout on macOS and Linux."""
+    staged = subprocess.run(
+        ["git", "ls-files", "--stage", "--", HOOK.relative_to(ROOT).as_posix()],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return staged.startswith("100755 ")
+
+
+def runnable_here() -> bool:
+    """Return whether the hook file can run as it is with git on this machine."""
+    if os.name == "posix":
+        return bool(HOOK.stat().st_mode & stat.S_IXUSR)
+    if os.name == "nt":
+        # With Git for Windows a hook runs whatever its file mode.
+        return True
+    raise NotImplementedError(f"no hook check declared for os.name {os.name!r}")
+
+
 def main() -> int:
     failures: list[str] = []
 
     if not HOOK.exists():
         failures.append(f"{HOOK.name} is gone: nothing runs the suite before a push")
-    elif not HOOK.stat().st_mode & stat.S_IXUSR:
+    elif not recorded_executable():
+        failures.append(f"{HOOK.name} is not committed as executable, so a checkout's git will not run it")
+    elif not runnable_here():
         failures.append(f"{HOOK.name} is not executable, so git will not run it")
     else:
         body = HOOK.read_text().replace('"', " ").split()

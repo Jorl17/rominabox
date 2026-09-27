@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import frame_harness  # noqa: E402
 import scratch  # noqa: E402
-from core_source import core as local_core  # noqa: E402
+from core_source import core as local_core, host_target  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGES = ROOT / "integrations/consoles"
@@ -224,9 +224,9 @@ def edge_colours(width: int, height: int, pixels: list[bytes]) -> tuple[list[byt
 def main() -> int:
     console = console_for_extension(EXTENSION)
     component = component_of(console)
-    artifact = component.get("artifacts", {}).get("macos-arm64")
+    artifact = component.get("artifacts", {}).get(host_target())
     if not artifact:
-        raise SystemExit(f"{component['id']} has no macos-arm64 artifact")
+        raise SystemExit(f"{component['id']} has no {host_target()} artifact")
     core = local_core(artifact)
 
     overrides = component.get("pixels") or []
