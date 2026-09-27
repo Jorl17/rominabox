@@ -73,8 +73,10 @@ HEADLESS_EXCLUDED = {
 # Our answer in a headless build to each condition nested in the block. For a
 # condition missing from this table we stop the build instead of guessing.
 HEADLESS_CONDITIONS = {
-    # text_input_macos.mm is included in the composition probe itself.
+    # No platform text service, because text_input_macos.mm is included in
+    # the composition probe itself, and there is no Windows window in a harness.
     "ifeq ($(HAVE_COCOA), 1)": False,
+    "ifneq ($(findstring Win32,$(OS)),)": False,
     # We link no harness with rcheevos, so we build the menu with the stub
     # used in a player without achievements.
     "ifneq ($(HAVE_CHEEVOS), 1)": True,
