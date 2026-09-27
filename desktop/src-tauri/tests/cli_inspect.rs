@@ -72,3 +72,38 @@ fn a_cartridge_in_a_cached_catalogue_is_identified_by_its_checksums() {
     assert_eq!(result["matched"], true, "{result}");
     assert_eq!(result["catalogName"], NAME, "{result}");
 }
+
+/// No test uses the network. We set the variable for every scope in
+/// `scripts/test.py`, and stop a lookup instead of downloading a catalogue.
+#[test]
+fn a_lookup_under_test_cannot_reach_the_network() {
+    let scratch = Scratch::dir("rominabox-cli-inspect-offline");
+    let mut cartridge: Vec<u8> = (0..65536u32).map(|i| (i * 7 % 251) as u8).collect();
+    cartridge[0x100..0x110].copy_from_slice(b"SEGA MEGA DRIVE ");
+    let rom = scratch.path().join("cartridge.md");
+    fs::write(&rom, &cartridge).unwrap();
+    // We cache nothing and allow the lookup online.
+    let request = serde_json::json!({ "rom": rom, "cache": scratch.path().join("cache"), "online": true });
+    let mut child = Command::new(env!("CARGO_BIN_EXE_rominabox-cli"))
+        .arg("inspect")
+        .env(rominabox_desktop::cores::OFFLINE_VARIABLE, "1")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("start rominabox-cli");
+    child
+        .stdin
+        .take()
+        .expect("stdin is piped")
+        .write_all(request.to_string().as_bytes())
+        .expect("send the request");
+    let output = child.wait_with_output().expect("wait for rominabox-cli");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success(), "the lookup went ahead: {stderr}");
+    assert!(
+        stderr.contains("a lookup was asked of the network"),
+        "the lookup was not refused: {stderr}"
+    );
+    assert!(!scratch.path().join("cache/catalogs").exists());
+}

@@ -716,6 +716,12 @@ const WAIT: Duration = Duration::from_secs(5);
 const PICTURE_LIST_WAIT: Duration = Duration::from_secs(60);
 
 fn download(url: &str, limit: u64, wait: Duration) -> Result<Vec<u8>, InspectionError> {
+    if crate::cores::offline() {
+        panic!(
+            "{} is set and a lookup was asked of the network",
+            crate::cores::OFFLINE_VARIABLE
+        );
+    }
     let response = ureq::get(url)
         .timeout(wait)
         .call()

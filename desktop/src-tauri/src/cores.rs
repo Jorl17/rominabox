@@ -21,9 +21,10 @@ use crate::target::Target;
 pub const CHECK_TIMEOUT: Duration = Duration::from_secs(30);
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(120);
 
-/// Set in `scripts/test.py` for all tests. A download then stops the process,
-/// so a test that would use the network fails, and a check fails as with an
-/// unreachable server, so a test can export from a cache.
+/// We set this in `scripts/test.py` for every test run. We then stop the
+/// process on any download, so no test can use the network. A check fails
+/// as for an unreachable server, so we can still test an export from a cache.
+/// We stop a metadata download the same way (`crate::metadata`).
 pub const OFFLINE_VARIABLE: &str = "ROMINABOX_OFFLINE";
 
 pub struct CoreDownload {
@@ -74,7 +75,7 @@ pub trait Transport {
 
 pub struct UreqTransport;
 
-fn offline() -> bool {
+pub(crate) fn offline() -> bool {
     std::env::var_os(OFFLINE_VARIABLE).is_some()
 }
 
