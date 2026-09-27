@@ -39,6 +39,8 @@ import sys
 import time
 from pathlib import Path
 
+import processes
+
 def _canonical() -> Path:
     """Return the main checkout, whatever checkout we run this script from.
 
@@ -189,12 +191,7 @@ class Lock:
             holder = int(pid_file.read_text().strip())
         except (OSError, ValueError):
             return False
-        try:
-            os.kill(holder, 0)
-            return False
-        except ProcessLookupError:
-            pass
-        except PermissionError:
+        if processes.alive(holder):
             return False
         # We move it aside and check again, so we never delete a lock that a
         # new owner has just taken.

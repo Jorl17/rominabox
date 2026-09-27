@@ -21,6 +21,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import processes  # noqa: E402
 import scratch  # noqa: E402
 import worktree  # noqa: E402
 
@@ -99,14 +100,21 @@ def a_dead_holders_lock_is_reclaimed() -> None:
         finished = subprocess.Popen([sys.executable, "-c", "pass"])
         finished.wait()
         (path / "pid").write_text(str(finished.pid))
-        try:
-            os.kill(finished.pid, 0)
+        if processes.alive(finished.pid):
             print("  skip a dead holder's lock is reclaimed (pid was reused)")
             return
-        except (ProcessLookupError, PermissionError):
-            pass
         with worktree.Lock(path):
             check(True, "a lock left by a dead process is reclaimed")
+
+
+def a_live_holders_lock_is_kept() -> None:
+    """Check that we never take a lock from a process that is still running."""
+    with scratch.scratch() as made:
+        path = Path(made) / "lock"
+        path.mkdir()
+        (path / "pid").write_text(str(os.getpid()))
+        check(not worktree.Lock(path)._stale(), "a lock held by a running process is not stale")
+        check((path / "pid").is_file(), "the running holder's lock is left in place")
 
 
 def the_canonical_checkout_is_never_suffixed() -> None:
@@ -462,6 +470,7 @@ FROM_THE_CANONICAL_CHECKOUT = [
     two_worktrees_never_share_a_port,
     the_lock_is_exclusive_and_reentrant_after_release,
     a_dead_holders_lock_is_reclaimed,
+    a_live_holders_lock_is_kept,
     the_canonical_checkout_is_never_suffixed,
     adopt_works_from_inside_the_worktree_it_adopts,
     the_test_cartridge_is_in_the_repository,
