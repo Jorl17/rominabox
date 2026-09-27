@@ -435,6 +435,14 @@ SCOPES = [
         prepare=[[PYTHON, str(ROOT / "scripts/fetch_test_content.py"), "--scope", "quit"]],
     ),
     Scope(
+        "launchtime",
+        "how long an exported game takes from starting to its first frame (an upper bound: a "
+        "one-frame run, teardown included), first run and warm, on this platform",
+        "a budget (none is set yet); a real game's core or content; a visible window",
+        [PYTHON, str(ROOT / "scripts/test_launch_time.py")],
+        slow=True,
+    ),
+    Scope(
         "quiet",
         "quiet launch decisions, null audio, transparent windows, hands-on opt-outs, and safe native timeout handling",
         "actual GL presentation or hands-on focus/fullscreen; the window probe never orders its window in",
