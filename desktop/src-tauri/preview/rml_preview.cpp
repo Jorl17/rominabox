@@ -18,6 +18,7 @@
 #include "gl_context.h"
 
 #include "rmlui/declarations.h"
+#include "rmlui/document_contract.hpp"
 #include "rmlui/elements.hpp"
 #include "rmlui/file_layer.hpp"
 #include "rmlui/render/platform.h"
@@ -156,6 +157,10 @@ int render(const std::string& document_path, const std::string& output, int widt
       }
    Rml::Context *context = failed ? nullptr
          : Rml::CreateContext("preview", Rml::Vector2i(width, height));
+   /* We scale the design's canvas to the picture, as we scale it to the
+    * window in the player. */
+   if (context)
+      context->SetDensityIndependentPixelRatio(rib::document_contract::canvas_density(width, height));
    /* In RmlUi, a document's folder, from which we read its pictures, is its
     * path up to the last forward slash. A Windows path with only backslashes
     * has no folder there, and no picture would be read. */
