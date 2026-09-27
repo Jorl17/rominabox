@@ -10,6 +10,7 @@ from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import patch
 
+from directory_links import link_directory
 import menu_shots
 import menu_workflows
 import test_discs
@@ -195,20 +196,6 @@ class WorkflowReportTest(unittest.TestCase):
             log.write_bytes('[RIB] checkpoint final {"text": "Mega Drive · 3 buttons, Á"}\n'.encode("utf-8"))
             reports = menu_workflows.checkpoints(log)
         self.assertEqual(reports, {"final": {"text": "Mega Drive · 3 buttons, Á"}})
-
-
-def link_directory(link: Path, target: Path) -> None:
-    """Make a folder that leads somewhere else, in the way an ordinary user can
-    on this system: a symbolic link on macOS and Linux, and a junction on
-    Windows, where a symbolic link requires a privilege."""
-    if os.name == "posix":
-        link.symlink_to(target, target_is_directory=True)
-    elif os.name == "nt":
-        import _winapi
-
-        _winapi.CreateJunction(str(target), str(link))
-    else:
-        raise NotImplementedError(f"no way to link a folder on os.name {os.name!r}")
 
 
 class GameStarted(Exception):

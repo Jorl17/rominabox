@@ -40,6 +40,7 @@ import sys
 import time
 from pathlib import Path
 
+from directory_links import link_directory, redirected
 import player_support
 import processes
 
@@ -308,34 +309,6 @@ SHARED_ARTIFACTS = [
 ]
 
 
-def _symbolic_link(link: Path, target: Path) -> None:
-    link.symlink_to(target)
-
-
-def _junction(link: Path, target: Path) -> None:
-    import _winapi
-
-    _winapi.CreateJunction(str(target), str(link))
-
-
-# A link to a shared directory on each platform: a symbolic link on macOS, and
-# a directory junction on Windows, which any user may make, while a symbolic
-# link requires a privilege that most accounts lack (WinError 1314).
-DIRECTORY_LINKS = {"darwin": _symbolic_link, "win32": _junction}
-
-
-def link_directory(link: Path, target: Path) -> None:
-    if sys.platform not in DIRECTORY_LINKS:
-        raise SystemExit(f"no directory link is declared for {sys.platform}")
-    DIRECTORY_LINKS[sys.platform](link, target)
-
-
-def is_link(path: Path) -> bool:
-    """A symbolic link or a junction to another directory, which we remove by
-    unlinking it and never by deleting its target."""
-    return path.is_symlink() or path.is_junction()
-
-
 def accounts_of(local: dict) -> Path | str:
     """Return the folder for the QUICK SIGN IN accounts of this worktree's exports."""
     folder = local.get("accountsFolder", "")
@@ -352,7 +325,7 @@ def link_build_artifacts(path: Path, own_copy: bool, canonical: Path = ROOT) -> 
             print(f"  {relative} is not prepared here; skipping")
             continue
         target = path / relative
-        if target.exists() or is_link(target):
+        if target.exists() or redirected(target):
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         if copy:
@@ -486,7 +459,7 @@ def unlink_artifacts(path: Path) -> None:
     have a link to an artifact that we now copy, so we check every one."""
     for relative in COPIED_ARTIFACTS + SHARED_ARTIFACTS:
         link = path / relative
-        if is_link(link):
+        if redirected(link):
             link.unlink()
 
 
@@ -500,7 +473,7 @@ def remove(suffix: str, keep_data: bool) -> int:
     # The accounts folder is outside the worktree, so `git worktree remove`
     # does not delete it, and we delete it by hand in teardown.
     accounts = own_accounts(local) if local and not keep_data else None
-    if accounts is not None and accounts.is_dir() and not is_link(accounts):
+    if accounts is not None and accounts.is_dir() and not redirected(accounts):
         shutil.rmtree(accounts)
         print(f"removed {accounts}")
     kept = keep_fork_commits(path, entry.get("branch"))

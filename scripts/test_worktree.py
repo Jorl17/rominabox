@@ -157,14 +157,12 @@ def adopt_works_from_inside_the_worktree_it_adopts() -> None:
                 ["git", "worktree", "add", "--detach", str(made), "HEAD"],
                 cwd=worktree.ROOT, capture_output=True, text=True, check=True,
             )
-            # The checkout is at HEAD, so its copy of the script is the committed
-            # one. Put the working copy there instead, with the modules of this
-            # repository that it imports, because we test the script as it is
-            # now, not as it was in the last commit.
-            for name in ("worktree.py", "player_support.py", "processes.py"):
-                (made / "scripts" / name).write_text(
-                    (worktree.ROOT / "scripts" / name).read_text(encoding="utf-8"), encoding="utf-8"
-                )
+            # The checkout is at HEAD, so its scripts are the committed ones. Put
+            # the working copies there instead, of the script and every module
+            # it may import, because we test the script as it is now, not as it
+            # was in the last commit.
+            for script in (worktree.ROOT / "scripts").glob("*.py"):
+                (made / "scripts" / script.name).write_bytes(script.read_bytes())
             done = subprocess.run(
                 # The copy of the script IN THE WORKTREE, which is the one we run in
                 # that checkout. With the canonical copy we would miss the defect,
@@ -258,10 +256,10 @@ def shared_directories_are_linked_and_removal_never_follows_them() -> None:
             (canonical / relative / "kept.txt").write_text(relative.as_posix(), encoding="utf-8")
         worktree.link_build_artifacts(tree, own_copy=False, canonical=canonical)
         for relative in worktree.SHARED_ARTIFACTS:
-            check(worktree.is_link(tree / relative) and (tree / relative / "kept.txt").is_file(),
+            check(worktree.redirected(tree / relative) and (tree / relative / "kept.txt").is_file(),
                   f"{relative.as_posix()} is linked and read through the link")
         for relative in worktree.COPIED_ARTIFACTS:
-            check(not worktree.is_link(tree / relative) and (tree / relative / "kept.txt").is_file(),
+            check(not worktree.redirected(tree / relative) and (tree / relative / "kept.txt").is_file(),
                   f"{relative.as_posix()} is a copy a build may write")
         worktree.unlink_artifacts(tree)
         for relative in worktree.SHARED_ARTIFACTS:

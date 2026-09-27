@@ -48,6 +48,7 @@ from typing import Iterator
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import native_build  # noqa: E402
 from core_source import host_target  # noqa: E402
+from directory_links import redirected  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SHOTS = ROOT / "scripts/fixtures/menu-shots.json"
@@ -139,13 +140,6 @@ def _windows_launcher(app: Path) -> Path:
     if executable.is_file():
         return executable
     raise SystemExit(f"no launcher inside {app}")
-
-
-def redirected(path: Path) -> bool:
-    """A path that points somewhere else: a symbolic link, or on Windows a
-    directory junction, which is not a link for Python and which any user
-    can make."""
-    return path.is_symlink() or path.is_junction()
 
 
 def _macos_running(app: Path) -> str:
