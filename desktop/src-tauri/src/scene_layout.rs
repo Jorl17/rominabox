@@ -207,8 +207,8 @@ fn stick_leader(anchor: &ControlDefinition, strip: Rect, metrics: SceneMetrics) 
     route
 }
 
-/// Where each stick's box goes: side by side, centred, along the bottom of
-/// the scene, in name order.
+/// Where each stick's box goes when its pad profile gives no place: side by
+/// side, centred, along the bottom of the scene, in name order.
 fn strips(names: &[&str], metrics: SceneMetrics) -> Vec<Rect> {
     let count = names.len() as i32;
     let total = count * metrics.group_width + (count - 1) * metrics.group_gap;
@@ -305,14 +305,6 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
         .collect();
     names.sort_unstable();
     names.dedup();
-    let strips = strips(&names, metrics);
-    let boxes: Vec<Rect> = strips
-        .iter()
-        .map(|strip| painted(strip, metrics.group_border))
-        .collect();
-
-    // Every button on the pad, each stick once, for the pointer areas: the
-    // controls we draw, in order, then each stick's anchor.
     let anchors: Vec<Option<&ControlDefinition>> = names
         .iter()
         .map(|name| {
@@ -323,6 +315,28 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
                 .find(|c| c.group.as_deref() == Some(*name) && (c.x != 0 || c.y != 0))
         })
         .collect();
+    // When the pad profile gives a place on the anchor, the stick's box goes
+    // there, as for every other control. A pad with something at its bottom
+    // centre, such as the N64's Z trigger, has that place in its profile.
+    let strips: Vec<Rect> = strips(&names, metrics)
+        .into_iter()
+        .zip(&anchors)
+        .map(|(strip, anchor)| match anchor {
+            Some(anchor) if (anchor.callout_x, anchor.callout_y) != (0, 0) => Rect {
+                x: anchor.callout_x,
+                y: anchor.callout_y,
+                ..strip
+            },
+            _ => strip,
+        })
+        .collect();
+    let boxes: Vec<Rect> = strips
+        .iter()
+        .map(|strip| painted(strip, metrics.group_border))
+        .collect();
+
+    // Every button on the pad, each stick once, for the pointer areas: the
+    // controls we draw, in order, then each stick's anchor.
     let buttons: Vec<(i32, i32)> = drawn
         .iter()
         .copied()
@@ -485,6 +499,22 @@ mod tests {
                 mark("press", Press, 420, 200),
             ]
         );
+    }
+
+    /// A pad profile may give a place for a stick's box on the stick's anchor,
+    /// as for every other control's box.
+    #[test]
+    fn a_stick_box_goes_where_its_pad_says() {
+        use StickDirection::*;
+        let mut stick = members(Some((420, 200)), &[("up", Up), ("right", Right)]);
+        stick[0].callout_x = 230;
+        stick[0].callout_y = 240;
+        let group = layout(&stick, metrics()).groups[0].clone();
+        assert_eq!((group.strip.x, group.strip.y), (230, 240));
+        let default = layout(&members(Some((420, 200)), &[("up", Up), ("right", Right)]), metrics())
+            .groups[0]
+            .strip;
+        assert_ne!((default.x, default.y), (230, 240), "without one it keeps the bottom centre");
     }
 
     /// A stick without a click has no mark in the middle.

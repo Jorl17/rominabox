@@ -132,6 +132,38 @@
       "y": 120,
       "calloutX": 744,
       "calloutY": 324
+    },
+    {
+      "id": "l_y_minus",
+      "label": "Stick up",
+      "key": "t",
+      "group": "l_stick",
+      "direction": "up",
+      "x": 478,
+      "y": 203,
+      "calloutX": 502,
+      "calloutY": 308
+    },
+    {
+      "id": "l_x_plus",
+      "label": "Stick right",
+      "key": "b",
+      "group": "l_stick",
+      "direction": "right"
+    },
+    {
+      "id": "l_y_plus",
+      "label": "Stick down",
+      "key": "g",
+      "group": "l_stick",
+      "direction": "down"
+    },
+    {
+      "id": "l_x_minus",
+      "label": "Stick left",
+      "key": "v",
+      "group": "l_stick",
+      "direction": "left"
     }
   ],
   "presentationOrder": 9
