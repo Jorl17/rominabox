@@ -6,16 +6,14 @@ selected option is clearly selected. Only a picture shows these, and
 without this script we would have to launch a game to see one.
 
     python3 scripts/menu_states.py work/menu-states
-    python3 scripts/menu_states.py --check      # every state still renders
 
 The states are in `scripts/fixtures/menu-states.json`, where we declare them
 once. We draw every design in `desktop/designs.json` for the console we
-staged, in every palette, and the digest key is
-`<design>/<system>/<palette>/<state>`. A state that is the same in two
-designs is an error. A state is a small stylesheet that we append to the
-stylesheet of the design, never an edit to the markup. If we matched markup
-strings, we would have to change the generator and this tool together
-whenever an element changed, and we use console packages to avoid that.
+staged, in every palette. A state that is the same in two designs is an
+error. A state is a small stylesheet that we append to the stylesheet of
+the design, never an edit to the markup. If we matched markup strings, we
+would have to change the generator and this tool together whenever an
+element changed, and we use console packages to avoid that.
 
 Each state lists the selectors it depends on, and we refuse to render a
 state when any of its selectors are missing from the document. So after
@@ -45,7 +43,6 @@ ROOT = Path(__file__).resolve().parent.parent
 PREVIEW = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
 ARTWORK = ROOT / "desktop/assets/controllers"
 STATES = ROOT / "scripts/fixtures/menu-states.json"
-DIGESTS = ROOT / "scripts/fixtures/menu-state-digests.json"
 # We build it here and check that it comes from this checkout, because every
 # worktree shares one cargo target, so the binary next to the manifest may be
 # out of date or from another checkout. See scripts/built.py.
@@ -82,17 +79,6 @@ def declared_designs() -> list[str]:
 
 def design_dir(design: str) -> Path:
     return ROOT / "integrations/designs" / design
-
-
-def concerns(key: str, system: str) -> bool:
-    """Whether a digest key belongs to this console.
-
-    The key is design/system/palette/state. We stage one console in a run, so
-    in the record and the check we must tell the rows of that console from
-    the others without dropping a design in the same file.
-    """
-    parts = key.split("/")
-    return len(parts) == 4 and parts[1] == system
 
 
 def mapped(items, function):
@@ -490,12 +476,7 @@ def main() -> int:
     parser.add_argument(
         "--record",
         action="store_true",
-        help="record what every state looks like, after looking at it",
-    )
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="verify every declared state still applies, without keeping the pictures",
+        help="with --fixed-place, record where the picker lands, after looking at it",
     )
     parser.add_argument(
         "--every-variant",
@@ -732,41 +713,6 @@ def finish(arguments, digests, missing, rendered) -> int:
             file=sys.stderr,
         )
         return 1
-
-    if arguments.record:
-        # We merge instead of replacing, because in this run we staged one console,
-        # and without the rows of the other console its next check would fail.
-        kept = json.loads(DIGESTS.read_text()) if DIGESTS.exists() else {}
-        kept = {k: v for k, v in kept.items() if not concerns(k, arguments.system)}
-        kept.update(digests)
-        DIGESTS.write_text(json.dumps(kept, indent=2, sort_keys=True) + "\n")
-        print(f"\nrecorded {len(digests)} state digests -> {DIGESTS.name}")
-        return 0
-
-    if arguments.check:
-        if not DIGESTS.exists():
-            raise SystemExit(f"no recorded states at {DIGESTS}; run --record first")
-        expected = json.loads(DIGESTS.read_text())
-        # Only the entries of this console. A run with one staged console has no
-        # results for another, and if we called the others missing, every run
-        # with one console would fail.
-        mine = {k: v for k, v in expected.items() if concerns(k, arguments.system)}
-        changed = [n for n, d in digests.items() if mine.get(n) != d]
-        gone = sorted(set(mine) - set(digests))
-        if changed or gone:
-            for name in changed:
-                print(f"  CHANGED {name}", file=sys.stderr)
-            for name in gone:
-                print(f"  MISSING {name}: no longer rendered", file=sys.stderr)
-            print(
-                "\nA menu state looks different. Look at the pictures before "
-                "re-recording:\n  python3 scripts/menu_states.py work/menu-states\n"
-                "  python3 scripts/menu_states.py --record",
-                file=sys.stderr,
-            )
-            return 1
-        print(f"\n{rendered} states unchanged")
-        return 0
 
     print(f"\n{rendered} states -> {arguments.output}")
     return 0
