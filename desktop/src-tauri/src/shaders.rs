@@ -854,6 +854,88 @@ mod tests {
         let _ = fs::remove_dir_all(&root);
     }
 
+    /// An author's preset at `folder/name`, with the other files given, as
+    /// the only custom shader of a selection.
+    fn custom_preset(folder: &Path, name: &str, files: &[(&str, &str)]) -> ShaderSelection {
+        for (path, text) in files {
+            let path = folder.join(path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, text).unwrap();
+        }
+        ShaderSelection {
+            custom: vec![CustomShader {
+                name: "PAL".into(),
+                path: folder.join(name),
+            }],
+            initial: Some("pal".into()),
+            bundled: Vec::new(),
+        }
+    }
+
+    /// A `#reference` leads to another preset, which has its files next to
+    /// it. The libretro `presets/` folders contain such presets.
+    #[test]
+    fn a_referenced_preset_and_its_files_are_copied_too() {
+        let source = rominabox_scratch::Scratch::dir("rominabox-shader-reference");
+        let selection = custom_preset(
+            &source,
+            "pal.glslp",
+            &[
+                ("pal.glslp", "#reference \"base/base.glslp\"\n"),
+                ("base/base.glslp", "shaders = 1\nshader0 = shaders/pass.glsl\n"),
+                ("base/shaders/pass.glsl", "// the pass\n"),
+            ],
+        );
+        let root = rominabox_scratch::Scratch::dir("rominabox-shader-reference-staged");
+        composed(selection).write(&root).unwrap();
+        for named in ["pal.glslp", "base/base.glslp", "base/shaders/pass.glsl"] {
+            assert!(root.join("shaders/pal").join(named).is_file(), "{named} was not copied");
+        }
+        let _ = fs::remove_dir_all(&source);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    /// We apply the rule for passes to the directives used by RetroArch, so
+    /// their files must be next to the preset. We do not follow `#include`
+    /// here, so we reject it and do not copy it with an unchecked path.
+    #[test]
+    fn a_preset_cannot_reach_outside_its_folder_through_a_directive() {
+        let source = rominabox_scratch::Scratch::dir("rominabox-shader-directives");
+        for (name, text) in [
+            ("outside.glslp", "#reference \"../elsewhere.glslp\"\nshaders = 1\nshader0 = pass.glsl\n"),
+            ("included.glslp", "#include \"more.cfg\"\nshaders = 1\nshader0 = pass.glsl\n"),
+        ] {
+            let selection = custom_preset(
+                &source,
+                name,
+                &[(name, text), ("pass.glsl", "// the pass\n"), ("more.cfg", "\n")],
+            );
+            assert!(resolve(&selection).is_err(), "{name} was accepted");
+        }
+        let _ = fs::remove_dir_all(&source);
+    }
+
+    /// The picture of the row is `icon.png` in the preset folder, written last,
+    /// so it would replace a preset file of that name without a warning.
+    #[test]
+    fn a_preset_file_the_row_picture_would_replace_is_refused() {
+        let source = rominabox_scratch::Scratch::dir("rominabox-shader-icon");
+        let selection = custom_preset(
+            &source,
+            "pal.glslp",
+            &[
+                (
+                    "pal.glslp",
+                    "shaders = 1\nshader0 = pass.glsl\ntextures = \"icon\"\nicon = \"icon.png\"\n",
+                ),
+                ("pass.glsl", "// the pass\n"),
+                ("icon.png", "lookup"),
+            ],
+        );
+        assert!(resolve(&selection).is_err(), "a preset's icon.png would be overwritten");
+        let _ = fs::remove_dir_all(&source);
+    }
+
     #[test]
     fn an_ordinary_menu_gains_no_shader_screen() {
         let composed = composed(ShaderSelection::default());
