@@ -181,6 +181,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_held_key.py")],
     ),
     Scope(
+        "typing",
+        "that a key typed into the menu's text entry is never also a button of the menu's pad, and that Backspace is B otherwise; RetroArch's own function that reads the keyboard for the menu, handed a held key",
+        "whether the menu says it is typing (the navigation scope asks the real menu), or that a physical keyboard delivers the key; the rest of RetroArch is stand-ins that stop the program if reached",
+        [PYTHON, str(ROOT / "scripts/test_menu_typing.py")],
+    ),
+    Scope(
         "staging",
         "that the runtime-kit staging script names paths that exist, after any rename",
         "that the script runs or produces a correct kit; it builds a whole application",
