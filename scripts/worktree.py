@@ -148,12 +148,25 @@ def port_is_free(port: int) -> bool:
     process or an unrelated application can use a port without any
     reservation, and we can learn about those only from the system.
     """
-    probe = subprocess.run(
-        ["lsof", "-i", f":{port}", "-sTCP:LISTEN"],
-        capture_output=True,
-        text=True,
-    )
-    return probe.returncode != 0 or not probe.stdout.strip()
+    if sys.platform == "darwin" or sys.platform.startswith("linux"):
+        probe = subprocess.run(
+            ["lsof", "-i", f":{port}", "-sTCP:LISTEN"],
+            capture_output=True,
+            text=True,
+        )
+        return probe.returncode != 0 or not probe.stdout.strip()
+    if sys.platform == "win32":
+        # Windows has no lsof, and the words in netstat output are translated. A
+        # dev server listens on the loopback addresses, so we try to connect.
+        import socket
+
+        for family, address in ((socket.AF_INET, "127.0.0.1"), (socket.AF_INET6, "::1")):
+            with socket.socket(family, socket.SOCK_STREAM) as probe:
+                probe.settimeout(0.5)
+                if probe.connect_ex((address, port)) == 0:
+                    return False
+        return True
+    raise NotImplementedError(f"no way to ask whether a port is taken on {sys.platform}")
 
 
 class Lock:
@@ -486,7 +499,7 @@ def keep_fork_commits(path: Path, branch: str | None) -> str | None:
     # the branch, and the two differ on a branch where we committed the
     # superproject and then moved the submodule on.
     if branch and branch != "(detached)":
-        recorded = git("rev-parse", f"{branch}:{FORK}")
+        recorded = git("rev-parse", f"{branch}:{FORK.as_posix()}")
         if not reachable(canonical, recorded):
             git("fetch", "--quiet", str(path / FORK), f"+{recorded}:{name}-recorded",
                 cwd=canonical)
