@@ -50,16 +50,15 @@ import "./style.css";
 
 const steps = ["Game", "Details", "Menu", "Export"];
 
-// The only target of this builder. A Windows target would be the executable,
-// with a folder beside it if the runtime requires one.
-const EXPORT_TARGET = "macos";
-
-function exportProduct(target: string): string {
+// The name of an export, for the platform of this builder.
+function exportProduct(target: bridge.ExportTarget | null): string {
   switch (target) {
+    case "macos":
+      return "MACOS APP";
     case "windows":
       return "WINDOWS APP";
-    default:
-      return "MACOS APP";
+    case null:
+      return "";
   }
 }
 
@@ -201,6 +200,10 @@ function Cartridge() {
 export function App() {
   const [step, setStep] = useState(0);
   const [supported, setSupported] = useState<Set<string>>(new Set());
+  // The platform we export for: the one the builder runs on.
+  const [exportTarget, setExportTarget] = useState<bridge.ExportTarget | null>(
+    null,
+  );
   const [selection, setSelection] = useState<Selection | null>(null);
   const [info, setInfo] = useState<bridge.GameInfo | null>(null);
   const [traveling, setTraveling] = useState<string[]>([]);
@@ -528,7 +531,7 @@ export function App() {
       controls,
       firmware,
       outputDir: destination,
-      target: EXPORT_TARGET,
+      target: exportTarget,
     };
   }
   async function saveProject() {
@@ -558,7 +561,7 @@ export function App() {
       if (
         !designs.designs.some((design) => design.id === settings.theme) ||
         !designs.palettes.some((value) => value.id === settings.palette) ||
-        settings.target !== EXPORT_TARGET
+        settings.target !== exportTarget
       ) {
         throw new Error(
           "This project uses a menu design, palette or platform unavailable in this build.",
@@ -717,12 +720,18 @@ export function App() {
       });
   };
   useEffect(() => {
-    // The browser walkthrough has no kit, so we supply the answer of the
-    // desktop command here: which consoles already have a core on disk.
+    // The browser walkthrough has no kit and no backend, so we supply the
+    // answers of the desktop commands here: which consoles already have a
+    // core on disk, and which platform we export for.
     if (bridge.native) return;
-    const prepared = (window as Window & { __ROMINABOX_PREPARED__?: string[] })
-      .__ROMINABOX_PREPARED__;
-    if (prepared) setSupported(new Set(prepared));
+    const walkthrough = window as Window & {
+      __ROMINABOX_PREPARED__?: string[];
+      __ROMINABOX_EXPORT_TARGET__?: bridge.ExportTarget;
+    };
+    if (walkthrough.__ROMINABOX_PREPARED__)
+      setSupported(new Set(walkthrough.__ROMINABOX_PREPARED__));
+    if (walkthrough.__ROMINABOX_EXPORT_TARGET__)
+      setExportTarget(walkthrough.__ROMINABOX_EXPORT_TARGET__);
   }, []);
   useEffect(() => {
     if (!bridge.native) return;
@@ -750,6 +759,7 @@ export function App() {
       .then(save)
       .catch(fail);
     bridge.defaultDestination().then(setDestination).catch(fail);
+    bridge.exportTarget().then(setExportTarget).catch(fail);
     // Which cores are already on disk.
     bridge
       .availableSystems()
@@ -1601,7 +1611,7 @@ export function App() {
                   <h2>{draft.title}</h2>
                   <p>{systemName}</p>
                   <span className="export-format">
-                    {exportProduct(EXPORT_TARGET)}
+                    {exportProduct(exportTarget)}
                   </span>
                 </div>
                 {result && <Check className="complete-mark" size={38} />}

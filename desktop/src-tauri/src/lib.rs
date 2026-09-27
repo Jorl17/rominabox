@@ -26,6 +26,7 @@ mod retroarch_probe;
 pub mod shaders;
 pub mod scene_layout;
 pub mod systems;
+pub mod target;
 pub mod traveling;
 
 pub mod themes;

@@ -1069,8 +1069,11 @@ async function main() {
     const prepared = systems
       .map((system) => system.id)
       .filter((id) => id !== "dreamcast");
+    // On every machine we photograph a builder that exports for macOS, so the
+    // pictures of the walkthrough are the same everywhere.
     await page.addInitScript((ids) => {
       window.__ROMINABOX_PREPARED__ = ids;
+      window.__ROMINABOX_EXPORT_TARGET__ = "macos";
     }, prepared);
     await page.goto(`http://127.0.0.1:${address.port}/`, {
       waitUntil: "networkidle",

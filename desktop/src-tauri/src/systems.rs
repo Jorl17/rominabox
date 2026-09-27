@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use crate::target::Target;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
@@ -200,22 +201,6 @@ where
     }
 }
 
-/// The target of this build, in the triple format of the packages.
-///
-/// Callers pass a target and do not assume one, so to support a platform we
-/// prepare its kit and declare its binaries.
-pub fn current_target() -> &'static str {
-    match (std::env::consts::OS, std::env::consts::ARCH) {
-        ("macos", "aarch64") => "macos-arm64",
-        ("macos", "x86_64") => "macos-x86_64",
-        ("windows", "x86_64") => "windows-x86_64",
-        ("windows", "aarch64") => "windows-arm64",
-        ("linux", "x86_64") => "linux-x86_64",
-        ("linux", "aarch64") => "linux-arm64",
-        _ => "unsupported",
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Core {
@@ -256,13 +241,13 @@ pub struct PixelOption {
 
 impl Core {
     /// The artifact filename for a target, if this component declares one.
-    pub fn artifact_for(&self, target: &str) -> Option<&str> {
-        self.artifacts.get(target).map(String::as_str)
+    pub fn artifact_for(&self, target: Target) -> Option<&str> {
+        self.artifacts.get(target.key()).map(String::as_str)
     }
 
     /// The artifact for the target we are running on.
     pub fn artifact(&self) -> Option<&str> {
-        self.artifact_for(current_target())
+        Target::host().and_then(|target| self.artifact_for(target))
     }
 
     pub fn supports(&self, capability: &str) -> bool {
@@ -531,7 +516,7 @@ mod tests {
                 .unwrap()
                 .preferred_core()
                 .unwrap()
-                .artifact_for("macos-arm64")
+                .artifact_for(Target::MacosArm64)
                 .unwrap(),
             "nestopia_libretro.dylib"
         );

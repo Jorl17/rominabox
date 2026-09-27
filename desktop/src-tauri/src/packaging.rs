@@ -3,6 +3,7 @@
 //! Export is blocking on purpose. Desktop callers should run it with
 //! `tauri::async_runtime::spawn_blocking` and use the callback for progress.
 
+use crate::target::Target;
 use crate::launch_contract::{app_file, plan_field, plan_mark, shipped, token};
 use crate::menu::file_name;
 use serde::{Deserialize, Serialize};
@@ -39,29 +40,41 @@ pub enum ExportTarget {
     Windows,
 }
 
-/// The platform in the download list that this export is for.
-///
-/// For a Windows package we download the Windows core, even on a Mac. For a
-/// Mac package we download the Mac entry that matches the runtime in it. We
-/// build that runtime for this machine and do not cross-compile it.
-pub fn core_platform(target: &ExportTarget) -> &'static str {
-    match target {
-        ExportTarget::Windows => "windows-x86_64",
-        ExportTarget::Macos => match std::env::consts::ARCH {
-            "aarch64" => "macos-arm64",
-            "x86_64" => "macos-x86_64",
-            _ => "unsupported",
-        },
+impl ExportTarget {
+    /// The platform for exports from a builder on the host, or `None` on a
+    /// host that we do not build for.
+    pub fn of_host() -> Option<ExportTarget> {
+        match Target::host()? {
+            Target::MacosArm64 | Target::MacosX86_64 => Some(ExportTarget::Macos),
+            Target::WindowsX86_64 => Some(ExportTarget::Windows),
+        }
+    }
+
+    /// The target this export is for, or `None` when there is none.
+    ///
+    /// For a Windows package we download the Windows core, even on a Mac. For
+    /// a Mac package we download the Mac entry that matches the runtime in it.
+    /// We build that runtime for this machine and do not cross-compile it.
+    pub fn target(&self) -> Option<Target> {
+        match self {
+            ExportTarget::Windows => Some(Target::WindowsX86_64),
+            ExportTarget::Macos => match std::env::consts::ARCH {
+                "aarch64" => Some(Target::MacosArm64),
+                "x86_64" => Some(Target::MacosX86_64),
+                _ => None,
+            },
+        }
     }
 }
 
-/// The core we ship in this export, with the file name for its platform.
+/// The core that we will ship in this export, named for its platform.
 ///
-/// A Windows export made on macOS contains `flycast_libretro.dll`, not the
-/// host's `flycast_libretro.dylib`. We use this for the presence check, the
-/// download, the copy and the licence. What the host runs is in `current_target`.
+/// A Windows export contains `flycast_libretro.dll` even on a Mac builder,
+/// where `Core::artifact` is `flycast_libretro.dylib`. We use this name to
+/// check presence, download, copy and find the licence. `Target::host` is the
+/// platform of the builder.
 struct ExportCore<'a> {
-    platform: &'static str,
+    platform: Target,
     system_name: &'a str,
     core: &'a crate::systems::Core,
     artifact_name: &'a str,
@@ -70,7 +83,7 @@ struct ExportCore<'a> {
 fn export_core(request: &ExportRequest) -> Option<ExportCore<'static>> {
     let system = crate::systems::find(&request.system)?;
     let core = system.preferred_core()?;
-    let platform = core_platform(&request.target);
+    let platform = request.target.target()?;
     Some(ExportCore {
         platform,
         system_name: &system.name,
@@ -215,7 +228,7 @@ pub struct SystemAvailability {
 /// first, so we do not report a console as missing when its preferred core
 /// is absent and another core works.
 pub fn system_availability(runtime_kit: &Path) -> Vec<SystemAvailability> {
-    system_availability_for(runtime_kit, crate::systems::current_target())
+    system_availability_in(runtime_kit, None, Target::host())
 }
 
 /// Resolve availability for a named target.
@@ -223,19 +236,20 @@ pub fn system_availability(runtime_kit: &Path) -> Vec<SystemAvailability> {
 /// We take the target as an argument instead of using the running one, so on
 /// macOS we can answer "would this console work on Windows?", and we can
 /// test that question at all.
-pub fn system_availability_for(runtime_kit: &Path, target: &str) -> Vec<SystemAvailability> {
-    system_availability_in(runtime_kit, None, target)
+pub fn system_availability_for(runtime_kit: &Path, target: Target) -> Vec<SystemAvailability> {
+    system_availability_in(runtime_kit, None, Some(target))
 }
 
-/// Resolve availability, also looking in the cache of downloaded cores.
+/// Resolve availability, looking also in the cache of cores fetched at export.
 ///
-/// We search the cache first. It contains the cores downloaded when we create
+/// We search the cache first. It contains the cores we download while making
 /// an app, in the same `cores/` and `licenses/` layout, and it is not a
-/// global RetroArch folder.
+/// global RetroArch directory. `target` is `None` for a machine that we do
+/// not build for, where no core is ready.
 pub fn system_availability_in(
     runtime_kit: &Path,
     cache: Option<&Path>,
-    target: &str,
+    target: Option<Target>,
 ) -> Vec<SystemAvailability> {
     crate::systems::registry()
         .iter()
@@ -249,40 +263,16 @@ pub fn system_availability_in(
             }
             let mut tried = Vec::new();
             for core in &system.cores {
-                let Some(filename) = core.artifact_for(target) else {
-                    // The component exists but has no declaration for this target,
-                    // which is a different problem from a missing file.
-                    tried.push(format!(
-                        "{} (no {target} artifact declared)",
-                        core.component
-                    ));
-                    continue;
-                };
-                let artifact =
-                    resolve_cached(runtime_kit, cache, &Path::new("cores").join(filename));
-                let licence = resolve_cached(
-                    runtime_kit,
-                    cache,
-                    &Path::new("licenses").join(&core.license_file),
-                );
-                if artifact.is_file() && licence.is_file() {
-                    return SystemAvailability {
-                        id: system.id.clone(),
-                        component: Some(core.component.clone()),
-                        unavailable: None,
-                    };
-                }
-                // We report what was missing, so the reader can tell "this
-                // console is gone" from "this core was never prepared".
-                tried.push(format!(
-                    "{} ({})",
-                    core.component,
-                    if artifact.is_file() {
-                        format!("licence {} missing", core.license_file)
-                    } else {
-                        format!("artifact {filename} missing")
+                match core_readiness(runtime_kit, cache, core, target) {
+                    Ok(()) => {
+                        return SystemAvailability {
+                            id: system.id.clone(),
+                            component: Some(core.component.clone()),
+                            unavailable: None,
+                        };
                     }
-                ));
+                    Err(missing) => tried.push(missing),
+                }
             }
             SystemAvailability {
                 id: system.id.clone(),
@@ -291,6 +281,44 @@ pub fn system_availability_in(
             }
         })
         .collect()
+}
+
+/// Whether the file and licence of one core are in the cache or the kit for
+/// a target, or else the name of what is missing.
+fn core_readiness(
+    runtime_kit: &Path,
+    cache: Option<&Path>,
+    core: &crate::systems::Core,
+    target: Option<Target>,
+) -> Result<(), String> {
+    let Some(filename) = target.and_then(|target| core.artifact_for(target)) else {
+        // The component exists, but we declare nothing in it for this target,
+        // which is a different problem from a missing file.
+        return Err(match target {
+            Some(target) => format!("{} (no {target} artifact declared)", core.component),
+            None => format!("{} (this machine is not one the builder builds for)", core.component),
+        });
+    };
+    let artifact = resolve_cached(runtime_kit, cache, &Path::new("cores").join(filename));
+    let licence = resolve_cached(
+        runtime_kit,
+        cache,
+        &Path::new("licenses").join(&core.license_file),
+    );
+    if artifact.is_file() && licence.is_file() {
+        return Ok(());
+    }
+    // We name what is missing, so the author can tell "this console is gone"
+    // from "this core was never prepared".
+    Err(format!(
+        "{} ({})",
+        core.component,
+        if artifact.is_file() {
+            format!("licence {} missing", core.license_file)
+        } else {
+            format!("artifact {filename} missing")
+        }
+    ))
 }
 
 pub fn available_systems(runtime_kit: &Path) -> Vec<String> {
@@ -3156,11 +3184,11 @@ mod tests {
         /// A kit containing exactly the named cores and licence texts.
         /// A kit prepared on the machine running the tests.
         fn kit(cores: &[(&str, bool, bool)]) -> rominabox_scratch::Scratch {
-            kit_for(crate::systems::current_target(), cores)
+            kit_for(Target::host().expect("tests run on a target the builder builds for"), cores)
         }
 
         /// A kit prepared for `target`, whatever machine runs the tests.
-        fn kit_for(target: &str, cores: &[(&str, bool, bool)]) -> rominabox_scratch::Scratch {
+        fn kit_for(target: Target, cores: &[(&str, bool, bool)]) -> rominabox_scratch::Scratch {
             let root = rominabox_scratch::Scratch::dir("rominabox-availability");
             fs::create_dir_all(root.join("cores")).unwrap();
             fs::create_dir_all(root.join("licenses")).unwrap();
@@ -3197,7 +3225,7 @@ mod tests {
             let kit_root = kit(&[]);
             let cache = kit(&[("megadrive", true, true)]);
             let megadrive =
-                system_availability_in(&kit_root, Some(&cache), crate::systems::current_target())
+                system_availability_in(&kit_root, Some(&cache), Target::host())
                     .into_iter()
                     .find(|entry| entry.id == "megadrive")
                     .expect("every declared console is reported");
@@ -3250,8 +3278,8 @@ mod tests {
         /// problem, and the report must make clear which of the two it is.
         #[test]
         fn a_console_with_no_artifact_for_a_target_says_exactly_that() {
-            let root = kit_for("macos-arm64", &[("megadrive", true, true)]);
-            let windows = system_availability_for(&root, "windows-x86_64")
+            let root = kit_for(Target::MacosArm64, &[("megadrive", true, true)]);
+            let windows = system_availability_for(&root, Target::WindowsX86_64)
                 .into_iter()
                 .find(|entry| entry.id == "megadrive")
                 .expect("every console is reported for every target");
@@ -3262,23 +3290,35 @@ mod tests {
                 ),
                 other => panic!("expected a missing windows artifact, got {other:?}"),
             }
-            let undeclared = system_availability_for(&root, "linux-arm64")
-                .into_iter()
-                .find(|entry| entry.id == "megadrive")
-                .expect("every console is reported for every target");
-            match undeclared.unavailable {
-                Some(Unavailable::NoPreparedCore { ref tried }) => assert!(
-                    tried[0].contains("no linux-arm64 artifact declared"),
-                    "a target with nothing declared is a different problem from a missing file: {tried:?}"
-                ),
-                other => panic!("expected an undeclared target, got {other:?}"),
-            }
+            // Every shipped core declares every target, so we make a component
+            // with only one target here.
+            let megadrive = crate::systems::find("megadrive").unwrap();
+            let shipped = megadrive.preferred_core().unwrap();
+            let named_once = crate::systems::Core {
+                artifacts: [(
+                    Target::MacosArm64.key().to_string(),
+                    shipped.artifact_for(Target::MacosArm64).unwrap().to_string(),
+                )]
+                .into(),
+                component: shipped.component.clone(),
+                license: shipped.license.clone(),
+                license_file: shipped.license_file.clone(),
+                capabilities: Vec::new(),
+                library_name: None,
+                pixels: Vec::new(),
+            };
+            let undeclared =
+                core_readiness(&root, None, &named_once, Some(Target::WindowsX86_64)).unwrap_err();
+            assert!(
+                undeclared.contains("no windows-x86_64 artifact declared"),
+                "a target with nothing declared is a different problem from a missing file: {undeclared}"
+            );
         }
 
         #[test]
         fn the_same_kit_resolves_for_the_target_it_was_built_for() {
-            let root = kit_for("macos-arm64", &[("megadrive", true, true)]);
-            let macos = system_availability_for(&root, "macos-arm64")
+            let root = kit_for(Target::MacosArm64, &[("megadrive", true, true)]);
+            let macos = system_availability_for(&root, Target::MacosArm64)
                 .into_iter()
                 .find(|entry| entry.id == "megadrive")
                 .expect("reported");

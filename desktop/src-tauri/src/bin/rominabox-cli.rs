@@ -170,12 +170,12 @@ fn run() -> Result<(), String> {
             #[serde(rename_all = "camelCase")]
             struct Request {
                 cache: PathBuf,
-                target: String,
+                target: rominabox_desktop::target::Target,
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid cores request: {error}"))?;
             let report =
-                cores::install_target(&request.cache, &request.target, &cores::UreqTransport);
+                cores::install_target(&request.cache, request.target, &cores::UreqTransport);
             println!("{}", json!({ "type": "result", "result": report }));
             Ok(())
         }

@@ -47,8 +47,10 @@ export type ExportRequest = {
   /** Replace an app already at the destination. Without it we do nothing in
    * the export and fail with `AppExists`. */
   replace?: boolean;
-  target: string;
+  target: ExportTarget | null;
 };
+/** The platform of an export, by its name in the backend. */
+export type ExportTarget = "macos" | "windows";
 /** Our messages about cores in the export, when we fetch any or cannot. */
 export type CoreActivity =
   | { kind: "fetching"; downloading: number; updating: number }
@@ -266,6 +268,10 @@ export function availableSystems(): Promise<string[]> {
 }
 export function ensureCores(): Promise<unknown> {
   return invoke("ensure_cores");
+}
+/** The platform we export for on this machine, or null where we cannot. */
+export function exportTarget(): Promise<ExportTarget | null> {
+  return invoke("export_target");
 }
 export function defaultDestination(): Promise<string> {
   return invoke("default_destination");

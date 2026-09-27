@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use rominabox_desktop::export_error::{AuthorError, ErrorStage};
+use rominabox_desktop::target::Target;
 use rominabox_desktop::{
     cores, icons, menu, metadata, packaging, pads, projects, systems, traveling,
 };
@@ -183,7 +184,10 @@ async fn run_export(
     let shell = |message: String| packaging::ExportError::new(ErrorStage::Export, message);
     request.runtime_kit = resource(&app, "runtime").map_err(shell)?;
     request.core = None;
-    request.core_cache = core_cache(&app, packaging::core_platform(&request.target)).ok();
+    request.core_cache = request
+        .target
+        .target()
+        .and_then(|target| core_cache(&app, target).ok());
     let cancelled = Arc::new(AtomicBool::new(false));
     {
         let mut active = state.0.lock().map_err(|e| shell(e.to_string()))?;
@@ -215,24 +219,30 @@ fn assess_firmware(
     Ok(systems::assess_firmware(system, &files))
 }
 
-fn core_cache(app: &tauri::AppHandle, platform: &str) -> Result<PathBuf, String> {
+fn core_cache(app: &tauri::AppHandle, target: Target) -> Result<PathBuf, String> {
     Ok(app
         .path()
         .app_data_dir()
         .map_err(|error| error.to_string())?
         .join("core-cache")
-        .join(platform))
+        .join(target.key()))
 }
 
 #[tauri::command]
 async fn ensure_cores(app: tauri::AppHandle) -> Result<Vec<cores::CoreInstall>, String> {
-    let target = systems::current_target().to_string();
-    let cache = core_cache(&app, &target)?;
+    let target = Target::host().ok_or("this machine is not one the builder builds for")?;
+    let cache = core_cache(&app, target)?;
     tauri::async_runtime::spawn_blocking(move || {
-        cores::install_target(&cache, &target, &cores::UreqTransport)
+        cores::install_target(&cache, target, &cores::UreqTransport)
     })
     .await
     .map_err(|error| error.to_string())
+}
+
+/// The platform for exports from this builder, which is the one it runs on.
+#[tauri::command]
+fn export_target() -> Option<packaging::ExportTarget> {
+    packaging::ExportTarget::of_host()
 }
 
 #[tauri::command]
@@ -243,9 +253,9 @@ fn traveling_files(path: PathBuf, system: Option<String>) -> Result<traveling::T
 #[tauri::command]
 fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let kit = resource(&app, "runtime")?;
-    let cache = core_cache(&app, systems::current_target()).ok();
+    let cache = Target::host().and_then(|target| core_cache(&app, target).ok());
     Ok(
-        packaging::system_availability_in(&kit, cache.as_deref(), systems::current_target())
+        packaging::system_availability_in(&kit, cache.as_deref(), Target::host())
             .into_iter()
             .filter(|entry| entry.unavailable.is_none())
             .map(|entry| entry.id)
@@ -280,6 +290,7 @@ fn main() {
             default_destination,
             available_systems,
             ensure_cores,
+            export_target,
             assess_firmware,
             export_game,
             cancel_export,

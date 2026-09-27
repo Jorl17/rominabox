@@ -55,8 +55,8 @@ impl CoreActivity {
 /// One core an export needs.
 pub struct Wanted<'a> {
     pub component: &'a str,
-    /// The download-list platform of the export, not of this machine.
-    pub platform: &'a str,
+    /// The target of the export, not of this machine.
+    pub platform: crate::target::Target,
     /// The core and its licence are already present, in the cache or the kit.
     /// We read this only for a core that is not in the download list.
     pub present: bool,

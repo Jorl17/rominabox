@@ -15,6 +15,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
+use crate::target::Target;
+
 /// How long we wait on export for the server's answer about a core.
 pub const CHECK_TIMEOUT: Duration = Duration::from_secs(30);
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(120);
@@ -245,7 +247,7 @@ fn pins() -> PinSet {
 /// the cores that already match.
 pub fn install_target(
     directory: &Path,
-    target: &str,
+    target: Target,
     transport: &dyn Transport,
 ) -> Vec<CoreInstall> {
     install_pins(directory, target, &pins(), transport)
@@ -253,7 +255,7 @@ pub fn install_target(
 
 fn install_pins(
     directory: &Path,
-    target: &str,
+    target: Target,
     pins: &PinSet,
     transport: &dyn Transport,
 ) -> Vec<CoreInstall> {
@@ -267,7 +269,7 @@ fn install_pins(
 /// Fetch one recorded component into `directory`, or `None` when it is not pinned.
 pub fn install_component(
     directory: &Path,
-    target: &str,
+    target: Target,
     component: &str,
     transport: &dyn Transport,
 ) -> Option<CoreInstall> {
@@ -293,7 +295,7 @@ pub enum Need {
 /// cached core and say nothing.
 pub fn assess(
     cache: &Path,
-    target: &str,
+    target: Target,
     component: &str,
     transport: &dyn Transport,
 ) -> Option<Need> {
@@ -304,7 +306,7 @@ pub fn assess(
 /// Replace a cached core with the server's newer one, and its licence with
 /// today's text. Return `false` when we could not fetch the core, and use the
 /// cached one. Keep the cached licence text when we cannot fetch the new one.
-pub fn update(cache: &Path, target: &str, component: &str, transport: &dyn Transport) -> bool {
+pub fn update(cache: &Path, target: Target, component: &str, transport: &dyn Transport) -> bool {
     let pins = pins();
     let Some(located) = Located::find(&pins, target, component) else {
         return false;
@@ -323,14 +325,14 @@ struct Located<'a> {
 }
 
 impl<'a> Located<'a> {
-    fn find(pins: &'a PinSet, target: &str, component: &str) -> Option<Self> {
+    fn find(pins: &'a PinSet, target: Target, component: &str) -> Option<Self> {
         let core = pins.cores.iter().find(|core| core.component == component)?;
         Self::new(pins, core, target)
     }
 
-    fn new(pins: &'a PinSet, core: &'a PinnedCore, target: &str) -> Option<Self> {
-        let folder = pins.targets.get(target)?;
-        let artifact = core.artifacts.get(target)?;
+    fn new(pins: &'a PinSet, core: &'a PinnedCore, target: Target) -> Option<Self> {
+        let folder = pins.targets.get(target.key())?;
+        let artifact = core.artifacts.get(target.key())?;
         Some(Self {
             component: &core.component,
             core_file: &artifact.filename,
@@ -893,14 +895,14 @@ mod tests {
             ..Default::default()
         };
         let dir = temp();
-        let report = install_pins(&dir, "macos-arm64", &pins, &transport);
+        let report = install_pins(&dir, Target::MacosArm64, &pins, &transport);
         assert_eq!(report[0].component, "a");
         assert_eq!(report[0].core, InstallOutcome::Unreachable);
         assert_eq!(report[1].core, InstallOutcome::Installed);
         assert_eq!(report[1].license, InstallOutcome::Installed);
         assert_eq!(fs::read(dir.join("cores/b.dylib")).unwrap(), b"bbb");
         assert!(!dir.join("cores/a.dylib").exists());
-        let again = install_pins(&dir, "macos-arm64", &pins, &transport);
+        let again = install_pins(&dir, Target::MacosArm64, &pins, &transport);
         assert_eq!(again[1].core, InstallOutcome::Present);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -946,7 +948,7 @@ mod tests {
             ..Default::default()
         };
         let dir = temp();
-        let report = install_pins(&dir, "macos-arm64", &pins, &transport);
+        let report = install_pins(&dir, Target::MacosArm64, &pins, &transport);
         assert_eq!(report[0].core, InstallOutcome::Installed);
         assert_eq!(report[0].license, InstallOutcome::Installed);
         assert_eq!(fs::read(dir.join("licenses/flycast.txt")).unwrap(), today);
@@ -970,7 +972,7 @@ mod tests {
             "{when}"
         );
         let calls = transport.calls.get();
-        let again = install_pins(&dir, "macos-arm64", &pins, &transport);
+        let again = install_pins(&dir, Target::MacosArm64, &pins, &transport);
         assert_eq!(again[0].core, InstallOutcome::Present);
         assert_eq!(again[0].license, InstallOutcome::Present);
         assert_eq!(
@@ -1023,7 +1025,7 @@ mod tests {
     fn cached_flycast(etag: &str) -> rominabox_scratch::Scratch {
         let dir = temp();
         let pins = flycast_pins();
-        let located = Located::find(&pins, "macos-arm64", "flycast").unwrap();
+        let located = Located::find(&pins, Target::MacosArm64, "flycast").unwrap();
         let transport = Scripted {
             files: HashMap::from([
                 (
@@ -1090,7 +1092,7 @@ mod tests {
     fn a_missing_core_is_a_download_without_asking_the_server() {
         let dir = temp();
         let pins = flycast_pins();
-        let located = Located::find(&pins, "macos-arm64", "flycast").unwrap();
+        let located = Located::find(&pins, Target::MacosArm64, "flycast").unwrap();
         let transport = Scripted::default();
         assert_eq!(located.assess(&dir, &transport), Need::Download);
         assert_eq!(transport.checks.get() + transport.calls.get(), 0);
@@ -1101,7 +1103,7 @@ mod tests {
     fn a_changed_nightly_is_an_update_and_an_unchanged_one_is_not() {
         let dir = cached_flycast("\"1\"");
         let pins = flycast_pins();
-        let located = Located::find(&pins, "macos-arm64", "flycast").unwrap();
+        let located = Located::find(&pins, Target::MacosArm64, "flycast").unwrap();
         let same = Scripted {
             heads: HashMap::from([(FLYCAST_ZIP.into(), tagged("\"1\""))]),
             ..Default::default()
@@ -1120,7 +1122,7 @@ mod tests {
     fn a_check_that_cannot_reach_the_server_uses_the_cache() {
         let dir = cached_flycast("\"1\"");
         let pins = flycast_pins();
-        let located = Located::find(&pins, "macos-arm64", "flycast").unwrap();
+        let located = Located::find(&pins, Target::MacosArm64, "flycast").unwrap();
         let offline = Scripted::default();
         assert_eq!(located.assess(&dir, &offline), Need::UseCache);
         assert_eq!(offline.checks.get(), 1);
@@ -1132,7 +1134,7 @@ mod tests {
     fn an_update_replaces_the_core_its_licence_and_the_record() {
         let dir = cached_flycast("\"1\"");
         let pins = flycast_pins();
-        let located = Located::find(&pins, "macos-arm64", "flycast").unwrap();
+        let located = Located::find(&pins, Target::MacosArm64, "flycast").unwrap();
         let transport = Scripted {
             files: HashMap::from([
                 (
@@ -1165,7 +1167,7 @@ mod tests {
     fn an_update_that_fails_keeps_the_cached_files() {
         let dir = cached_flycast("\"1\"");
         let pins = flycast_pins();
-        let located = Located::find(&pins, "macos-arm64", "flycast").unwrap();
+        let located = Located::find(&pins, Target::MacosArm64, "flycast").unwrap();
         let install = located.install(&dir, true, &Scripted::default());
         assert_eq!(install.core, InstallOutcome::Unreachable);
         assert_eq!(install.license, InstallOutcome::Present);
