@@ -50,11 +50,7 @@ async fn inspect_game(
     online: bool,
     system_override: Option<String>,
 ) -> Result<metadata::Inspection, String> {
-    let cache = app
-        .path()
-        .app_cache_dir()
-        .map_err(|e| e.to_string())?
-        .join("metadata");
+    let cache = places(&app).metadata_cache()?;
     tauri::async_runtime::spawn_blocking(move || {
         metadata::inspect_game_with_system(&path, &cache, online, system_override.as_deref())
             .map_err(|e| e.to_string())
@@ -147,11 +143,8 @@ async fn open_project(
 }
 
 #[tauri::command]
-fn default_destination(app: tauri::AppHandle) -> Result<PathBuf, String> {
-    app.path()
-        .download_dir()
-        .map(|p| p.join("ROM-in-a-Box"))
-        .map_err(|e| e.to_string())
+fn default_destination() -> Result<PathBuf, String> {
+    builder::destination()
 }
 
 #[tauri::command]
@@ -188,7 +181,7 @@ async fn run_export(
     request.core_cache = request
         .target
         .target()
-        .and_then(|target| core_cache(&app, target).ok());
+        .and_then(|target| places(&app).core_cache(target).ok());
     let cancelled = Arc::new(AtomicBool::new(false));
     {
         let mut active = state.0.lock().map_err(|e| shell(e.to_string()))?;
@@ -220,23 +213,16 @@ fn assess_firmware(
     Ok(systems::assess_firmware(system, &files))
 }
 
-/// Downloaded cores, cached for this machine in the per-user local data
-/// folder. On Windows this is Local AppData, not the Roaming folder that is
-/// copied between machines with a profile, and on macOS it is Application
-/// Support.
-fn core_cache(app: &tauri::AppHandle, target: Target) -> Result<PathBuf, String> {
-    Ok(app
-        .path()
-        .app_local_data_dir()
-        .map_err(|error| error.to_string())?
-        .join("core-cache")
-        .join(target.key()))
+/// The folder for this builder's downloads, which we find in the same way for
+/// the command line.
+fn places(app: &tauri::AppHandle) -> builder::Places {
+    builder::Places::of(app.config().identifier.clone())
 }
 
 #[tauri::command]
 async fn ensure_cores(app: tauri::AppHandle) -> Result<Vec<cores::CoreInstall>, String> {
     let target = Target::host().ok_or("this machine is not one the builder builds for")?;
-    let cache = core_cache(&app, target)?;
+    let cache = places(&app).core_cache(target)?;
     tauri::async_runtime::spawn_blocking(move || {
         cores::install_target(&cache, target, &cores::UreqTransport)
     })
@@ -258,7 +244,7 @@ fn traveling_files(path: PathBuf, system: Option<String>) -> Result<traveling::T
 #[tauri::command]
 fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let kit = resource(&app, "runtime")?;
-    let cache = Target::host().and_then(|target| core_cache(&app, target).ok());
+    let cache = Target::host().and_then(|target| places(&app).core_cache(target).ok());
     Ok(
         packaging::system_availability_in(&kit, cache.as_deref(), Target::host())
             .into_iter()

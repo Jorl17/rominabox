@@ -54,7 +54,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume-markup|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume-markup|shaders|shaders-check|cores|schemas|where|freeze-macos-executable>\n       rominabox-cli export GAME [FOLDER]\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport makes the game that dropping GAME into the builder makes, in FOLDER or the builder's; a request on stdin can say more, and whatever it leaves out is the builder's.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     // The checkout from which we built this binary.
@@ -79,7 +79,7 @@ fn run() -> Result<(), String> {
                 "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
-                "export": { "request": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir", "replace?", "target", "runtimeKit", "core?", "coreCache?"], "coreCache": "directory of downloaded cores; each needed core is downloaded or updated there first, and a progress event carrying cores {kind: fetching, downloading, updating} or {kind: failed, missing} says so", "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "pad?", "mouse?"] }, "pad": "the pad position the control is read from, one of controls.json padPositions; a stick's controls stay where they are" }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "replace": "replace an app already at the destination; without it such an export does nothing and prints {type: exists, appPath}", "events": ["progress", "result", "exists", "error"] },
+                "export": { "request": ["rom", "title?", "system?", "description?", "icon?", "background?", "showMenu?", "startAtMenu?", "theme?", "palette?", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir?", "replace?", "target?", "runtimeKit?", "core?", "coreCache?", "online?", "metadataCache?"], "arguments": "export GAME [FOLDER] is the request {rom: GAME, outputDir: FOLDER} and reads nothing from stdin", "omitted": "what a request leaves out is what dropping rom into the builder gives: title, system, description and icon looked up as inspect does; each setting the builder's default (desktop/defaults.json); outputDir ROM-in-a-Box in Downloads; target this machine; runtimeKit the one beside this command, else this checkout's; coreCache the builder's. What a request states wins, null included", "online": "defaults true, and the lookup may download catalogues and covers; false uses only what metadataCache already holds. Internal tests pass false", "metadataCache": "where lookups are cached; defaults to the builder's", "coreCache": "directory of downloaded cores; each needed core is downloaded or updated there first, and a progress event carrying cores {kind: fetching, downloading, updating} or {kind: failed, missing} says so; null takes the core from runtimeKit alone", "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "pad?", "mouse?"] }, "pad": "the pad position the control is read from, one of controls.json padPositions; a stick's controls stay where they are" }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "replace": "replace an app already at the destination; without it such an export does nothing and prints {type: exists, appPath}", "events": ["progress", "result", "exists", "error"] },
                 "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
                 "cores": { "request": ["cache", "target"], "target": "macos-arm64 | macos-x86_64 | windows-x86_64 | linux-x86_64", "result": "per-core present, installed, unreachable or notRecorded" },
                 "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
@@ -195,9 +195,27 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "export" => {
-            let input = read_request()?;
-            let request: packaging::ExportRequest = serde_json::from_str(&input)
-                .map_err(|error| format!("invalid export request: {error}"))?;
+            // `export GAME [FOLDER]` is like dropping GAME into the builder.
+            // When someone names the game on the command line, it is the whole
+            // request, and we do not read stdin.
+            let arguments: Vec<String> = std::env::args().skip(2).collect();
+            let request = match arguments.as_slice() {
+                [] => {
+                    let input = read_request()?;
+                    serde_json::from_str(&input)
+                        .map_err(|error| format!("invalid export request: {error}"))?
+                }
+                [game, folder @ ..] if folder.len() <= 1 => {
+                    let mut request = serde_json::Map::new();
+                    request.insert("rom".into(), json!(game));
+                    if let Some(folder) = folder.first() {
+                        request.insert("outputDir".into(), json!(folder));
+                    }
+                    request
+                }
+                _ => return Err("export takes a game and, optionally, the folder to write it to".into()),
+            };
+            let request = builder::complete_export(request)?;
             let cancelled = AtomicBool::new(false);
             let result = packaging::export_game(&request, &cancelled, |event| {
                 println!("{}", json!({ "type": "progress", "progress": event }));

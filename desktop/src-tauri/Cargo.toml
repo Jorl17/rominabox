@@ -15,6 +15,9 @@ tauri-plugin-opener = "2"
 chd = "0.3"
 crc32fast = "1.5"
 datary = "0.3"
+# The per-user folders for the builder's caches, for the command line. In the
+# builder we find them through Tauri's path resolver, built on the same crate.
+dirs = "6"
 # Canonical paths without Windows' verbatim \\?\ prefix whenever the ordinary form
 # is the same path, so the paths we show read as the author wrote them.
 dunce = "1.0"
