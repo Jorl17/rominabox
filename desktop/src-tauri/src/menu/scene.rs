@@ -127,7 +127,6 @@ fn bind_list_markup(
         &template,
         &items,
         page_size,
-        &manifest.words,
     ))
 }
 

@@ -34,7 +34,7 @@ def panel(actions: bool) -> str:
     strip = ('<div class="list-actions">'
              '<button class="menu-action list-back" id="fixture-back">BACK</button></div>') if actions else ""
     return ('<div id="fixture-panel" class="screen-panel" style="display:none;">'
-            f'<div class="list"><div id="fixture-page-1" class="list-page">{rows}</div></div>'
+            f'<div class="list" data-page-size="4"><div id="fixture-page-1" class="list-page">{rows}</div></div>'
             f'{strip}</div>')
 
 

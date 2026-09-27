@@ -205,7 +205,7 @@ markup = markup.replace(
     anchor,
     '<div id="fixture-panel" class="screen-panel" '
     'style="display:none;position:absolute;left:100dp;top:100dp;width:600dp;height:300dp;">'
-    '<div class="list" style="width:500dp;"><div class="list-page">'
+    '<div class="list" style="width:500dp;" data-page-size="2"><div class="list-page">'
     '<button id="fixture-one" class="list-row" style="width:400dp;height:42dp;">ONE</button>'
     '<button id="fixture-two" class="list-row" style="width:400dp;height:42dp;">TWO</button>'
     '</div></div><button id="fixture-back" class="menu-action list-back">BACK</button>'
