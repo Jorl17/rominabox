@@ -328,7 +328,9 @@ fn hash_file(path: &Path, skip: u64, order: N64Order) -> io::Result<Fingerprint>
     let mut crc32 = Hasher::new();
     let mut sha1 = Sha1::new();
     let mut size = 0_u64;
-    let mut buffer = [0; 1024 * 1024];
+    // We allocate on the heap, because a thread's stack can be as small as
+    // the whole buffer (on Windows, the main thread has 1 MB).
+    let mut buffer = vec![0; 1024 * 1024];
     let mut pending = Vec::new();
     loop {
         let count = file.read(&mut buffer)?;
