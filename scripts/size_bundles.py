@@ -5,13 +5,14 @@ The kit contains no cores. As in the builder, we take the Mega Drive core from
 the local core source (scripts/core_source.py) as the export's core cache. The
 ROM is a few bytes that we write in the work directory, so the size is that of
 the player and the one core the game uses. A real Game Boy Advance ROM adds
-its own size. We check the .app on disk against
-scripts/fixtures/size-budgets.json. At export we write that app and nothing
-else.
+its own size. We check the app on disk for this machine's platform (a macOS
+bundle, a Windows game folder) against scripts/fixtures/size-budgets.json. At
+export we write that app and nothing else.
 
-We also refuse the video encoders. They can take a cartridge export past
-50 MB, and with a budget alone we could miss them if something else shrank to
-make room.
+We also refuse libraries the app should not contain. On macOS, the video
+encoders can take a cartridge export past 50 MB, and with a budget alone we
+could miss them if something else shrank to make room. On Windows we refuse
+every library but the game's core, because the player is one program.
 
     python3 scripts/size_bundles.py
 """
@@ -28,7 +29,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from built import cli  # noqa: E402
-from core_source import core  # noqa: E402
+from core_source import core, host_target  # noqa: E402
+import native_build  # noqa: E402
+import prepare_runtime  # noqa: E402
 
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 BUDGETS = ROOT / "scripts/fixtures/size-budgets.json"
@@ -66,6 +69,39 @@ def du(path: Path) -> int:
     return total
 
 
+def macos_libraries(app: Path) -> list[str]:
+    """Return the problems with the libraries in a macOS app."""
+    frameworks = app / "Contents/Frameworks"
+    names = {path.name for path in frameworks.iterdir() if path.is_file()}
+    wrong = [f"still ships {wanted}" for wanted in ABSENT if wanted in names]
+    if PRESENT not in names:
+        wrong.append(f"is missing {PRESENT}")
+    return wrong
+
+
+def windows_libraries(app: Path) -> list[str]:
+    """Return the problems with the libraries in a Windows game, which are any
+    library but its core. The player and the launcher use only Windows."""
+    return [f"carries {path.relative_to(app)}" for path in sorted(app.rglob("*.dll"))
+            if path.relative_to(app) != Path("Resources/game-core.dll")]
+
+
+# For each platform, its name in the export, where its kit has the player
+# (we freeze the macOS kit with freeze-runtime-kit.mjs, and the Windows one
+# follows the recipe), and the check of the libraries in an app.
+PLATFORMS = {
+    "macos": {
+        "player": lambda: "bin/retroarch",
+        "libraries": macos_libraries,
+    },
+    "windows": {
+        "player": lambda: native_build.recipe()["kit"][host_target()]["files"]["player"]["at"],
+        "libraries": windows_libraries,
+    },
+}
+PLATFORM = host_target().split("-", 1)[0]
+
+
 def export(command: Path, name: str, kit: Path, cache: Path, rom: Path, extra: dict) -> Path:
     out = WORK / name
     remove_owned(out)
@@ -83,7 +119,7 @@ def export(command: Path, name: str, kit: Path, cache: Path, rom: Path, extra: d
         "advancedEmulatorAccess": False,
         "shaders": {"bundled": ["scanlines", "phosphor"], "initial": "phosphor"},
         "outputDir": str(out),
-        "target": "macos",
+        "target": PLATFORM,
         "runtimeKit": str(kit),
         "coreCache": str(cache),
     }
@@ -98,16 +134,21 @@ def export(command: Path, name: str, kit: Path, cache: Path, rom: Path, extra: d
     )
     if result.returncode != 0:
         raise SystemExit(f"could not export {name}:\n{result.stdout[-800:]}")
-    app = next(out.glob("*.app"), None)
-    if app is None:
-        raise SystemExit(f"{name} wrote no .app")
+    written = [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
+    app = next((Path(event["result"]["appPath"]) for event in written if event.get("type") == "result"), None)
+    if app is None or not app.is_dir():
+        raise SystemExit(f"{name} wrote no app")
     return app
 
 
 def main() -> int:
-    if not (KIT / "bin/retroarch").is_file():
+    if PLATFORM not in PLATFORMS:
+        raise SystemExit(f"no size check is declared for {PLATFORM}")
+    platform = PLATFORMS[PLATFORM]
+    player = KIT / platform["player"]()
+    if not player.is_file():
         raise SystemExit(
-            f"no player at {KIT / 'bin/retroarch'}. This scope measures the "
+            f"no player at {player}. This scope measures the "
             "prepared kit; it does not build one."
         )
     budgets = json.loads(BUDGETS.read_text())
@@ -119,7 +160,8 @@ def main() -> int:
     kit = WORK / "kit"
     remove_owned(kit)
     shutil.copytree(KIT, kit, symlinks=True)
-    cache = core("genesis_plus_gx_libretro.dylib").parent.parent
+    artifact = prepare_runtime.catalog_components()["genesis_plus_gx"]["artifacts"][host_target()]
+    cache = core(artifact).parent.parent
     for document in DESIGN.iterdir():
         if document.is_file():
             shutil.copyfile(document, kit / "designs/native" / document.name)
@@ -142,20 +184,12 @@ def main() -> int:
             print(f"  {name} wrote more than the app: {', '.join(extras)}")
             failed = True
         installed = du(app)
-        frameworks = app / "Contents/Frameworks"
-        names = {path.name for path in frameworks.iterdir() if path.is_file()}
-        print(
-            f"  {name:<12} app {installed:8d}  frameworks {len(names)}"
-        )
+        print(f"  {name:<12} app {installed:8d}")
         if installed > installed_ceiling:
             print(f"  {name} app {installed} exceeds {installed_ceiling}")
             failed = True
-        carried = [wanted for wanted in ABSENT if wanted in names]
-        if carried:
-            print(f"  {name} still ships {', '.join(carried)}")
-            failed = True
-        if PRESENT not in names:
-            print(f"  {name} is missing {PRESENT}")
+        for wrong in platform["libraries"](app):
+            print(f"  {name} {wrong}")
             failed = True
     if failed:
         return 1

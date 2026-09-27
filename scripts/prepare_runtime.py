@@ -639,9 +639,9 @@ def main() -> None:
         stage_joypad_autoconfig(root, native_build.joypad_profile_drivers(platform_name))
         print(f"Joypad autoconfig staged: {root}", flush=True)
         return
-    if platform.system() != "Darwin":
-        parser.error("This preparation recipe currently builds the macOS prototype kit.")
     target = args.target or host_target()
+    # For seeding we take the target as an argument and download what we cannot
+    # build here, so seeding works on any machine. The kit below is for macOS.
     if args.seed_core_cache:
         root = seeded_cache(target)
         for name in ("cores", "licenses"):
@@ -654,6 +654,8 @@ def main() -> None:
             prepare_prebuilt_core(root, component, spec, target, DOWNLOADS)
         print(f"Local core source ready: {root}", flush=True)
         return
+    if platform.system() != "Darwin":
+        parser.error("This preparation recipe currently builds the macOS prototype kit.")
     root = args.output.resolve()
     refuse_bundled_kit(root)
     for name in ("cores", "sources", "licenses", "catalogs", "info"):
