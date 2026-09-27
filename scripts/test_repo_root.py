@@ -193,17 +193,21 @@ def declaration_readers() -> list[str]:
 
 
 def staged_preview() -> str | None:
-    """Check that we render menu_states with the helper in the builder package.
+    """Check, while they run, that the picture tests render with the helper in
+    the builder package.
 
-    We use the staged helper, not a binary from a directory that we never
-    create.
+    A binary from a directory that we never create must not take precedence
+    over the staged helper.
     """
+    import menu_states
+    import native_build
     import test_menu_preview
+    from core_source import host_target
 
-    relative = test_menu_preview.RENDERER.relative_to(ROOT).as_posix()
-    text = (ROOT / "scripts/menu_states.py").read_text(encoding="utf-8")
-    if relative not in text:
-        return "menu_states.py does not use the staged preview helper"
+    packaged = native_build.preview_resource(host_target())
+    for name, used in (("menu_states", menu_states.PREVIEW), ("test_menu_preview", test_menu_preview.RENDERER)):
+        if used != packaged:
+            return f"{name} renders with {used}, not the helper the builder packages, {packaged}"
     return None
 
 
