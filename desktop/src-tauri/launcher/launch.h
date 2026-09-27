@@ -24,6 +24,10 @@ typedef struct {
     /* The per-user application data folder with the accounts for QUICK SIGN
      * IN, outside any sandbox, or NULL when there is none. */
     const char *accounts_root;
+    /* Inside a sandbox, the per-user folder outside it, where a game exported
+     * in the older layout kept its data. On the first sandboxed launch we copy
+     * what it contains. NULL when the game is not in a sandbox. */
+    const char *previous_user_data;
     /* The person started this game (not a test, a script or a harness). */
     int opened_by_person;
     /* Called with the data folder before we create it, or NULL for none. */
@@ -47,6 +51,28 @@ typedef struct {
     char *arguments[LAUNCH_ARGUMENTS_CAP];
     int argument_count;
 } Launch;
+
+/* Which game this is and what it can reach outside its own data, from its
+ * launch plan. On macOS we declare a game's sandbox when we sign it in the
+ * export. On Windows we set up the sandbox in the launcher before the launch. */
+typedef struct {
+    char identity[128];
+    char title[LAUNCH_PATH_CAP];
+    /* The data folder, with $user_data standing for the per-user folder. */
+    char data_template[LAUNCH_PATH_CAP];
+    /* The network, and the QUICK SIGN IN folder when accounts_name is set. */
+    int achievements;
+    char accounts_name[128];
+    /* The game runs in its own sandbox. */
+    int sandbox;
+} LaunchGame;
+
+/* Read the plan in `resources`. Stop the process with a message when the
+ * game has no plan or the plan does not contain the game's identity. */
+void rominabox_read_game(const char *resources, LaunchGame *game);
+
+/* The game's data folder when `user_data` is the per-user folder. */
+void rominabox_game_data_folder(const LaunchGame *game, const char *user_data, char *out, size_t out_cap);
 
 /* Do everything before RetroArch starts. Stop the process with a message on
  * any failure, because a game without its plan or its data folder must not

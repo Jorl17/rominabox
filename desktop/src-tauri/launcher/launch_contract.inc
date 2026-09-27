@@ -64,6 +64,11 @@ RIB_PLAN_FIELD(Title, "title")
 RIB_PLAN_FIELD(StartAtMenu, "start_at_menu")
 RIB_PLAN_FIELD(Advanced, "advanced")
 RIB_PLAN_FIELD(Achievements, "achievements")
+/* "1": the game runs in its own sandbox. Every export says so. macOS's
+ * sandbox comes from the app's signature; the Windows launcher sets one up
+ * when its plan says this, so a launcher built without an export's plan, as
+ * the tests build it, runs as a Mac launcher that was never signed does. */
+RIB_PLAN_FIELD(Sandbox, "sandbox")
 /* One per player setting: file, key and default, tab-separated. */
 RIB_PLAN_FIELD(PlayerSetting, "player_setting")
 /* The filter a game starts with, in the menu's folder. */

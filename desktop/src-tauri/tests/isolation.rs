@@ -1,37 +1,40 @@
-//! The exported game runs in a sandbox, and with these tests we would notice
-//! if the sandbox were missing.
+//! We run every exported game in a sandbox, and with these tests we notice
+//! when it is missing. The checks are the same on every platform. What the
+//! game is on each platform, how we start it and where we keep its data in
+//! the sandbox are in isolation/macos.rs and isolation/windows.rs.
 //!
-//! We mark them ignored so that the exporter tests do not launch anything,
-//! and we run them in the isolation scope.
+//! We mark the tests ignored so that the exporter tests launch nothing, and
+//! we run them in the isolation tests.
 
-#![cfg(target_os = "macos")]
+#![cfg(any(target_os = "macos", windows))]
 
-use rominabox_desktop::packaging::{ExportRequest, ExportTarget};
+mod export_fixture;
+mod support;
+
+#[cfg(target_os = "macos")]
+#[path = "isolation/macos.rs"]
+mod platform;
+#[cfg(windows)]
+#[path = "isolation/windows.rs"]
+mod platform;
+
+use rominabox_desktop::packaging::ExportRequest;
 use std::{
     fs,
-    io::Read,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     time::{Duration, Instant},
 };
 
-struct RemoveDir(PathBuf);
+/// A game folder that the test makes where games kept their data before they
+/// had a sandbox. We remove it when the test ends.
+struct GameFolder(PathBuf);
 
-impl Drop for RemoveDir {
+impl Drop for GameFolder {
     fn drop(&mut self) {
         let Some(name) = self.0.file_name().and_then(|name| name.to_str()) else {
             return;
         };
-        if !self.0.is_dir() {
-            return;
-        }
-        let container = name.starts_with("app.rominabox.game.")
-            && self
-                .0
-                .parent()
-                .and_then(|parent| parent.file_name())
-                .and_then(|parent| parent.to_str())
-                == Some("Containers");
         let game = name.len() == 24
             && name.chars().all(|character| character.is_ascii_hexdigit())
             && self
@@ -40,51 +43,16 @@ impl Drop for RemoveDir {
                 .and_then(|parent| parent.file_name())
                 .and_then(|parent| parent.to_str())
                 == Some("Games");
-        if container || game {
+        if game && self.0.is_dir() {
             let _ = fs::remove_dir_all(&self.0);
         }
     }
 }
 
-struct RemoveFile(PathBuf);
-
-impl Drop for RemoveFile {
-    fn drop(&mut self) {
-        if self.0.file_name().and_then(|name| name.to_str()) != Some("rominabox-isolation-probe") {
-            return;
-        }
-        if self
-            .0
-            .parent()
-            .and_then(|parent| parent.file_name())
-            .and_then(|parent| parent.to_str())
-            != Some("builtin")
-        {
-            return;
-        }
-        let _ = fs::remove_file(&self.0);
-    }
-}
-
-fn write_runtime_stub(path: &Path) {
-    let source = path.with_extension("c");
-    fs::write(
-        &source,
-        "int rarch_main(int c, char **v, void *d){(void)c;(void)v;(void)d;return 0;}\nint main(void){return rarch_main(0,0,0);}\n",
-    )
-    .unwrap();
-    let status = Command::new("cc")
-        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
-        .arg(path)
-        .arg(&source)
-        .status()
-        .unwrap();
-    assert!(status.success(), "could not compile the runtime stub");
-}
-
 fn stay_quiet(command: &mut Command) {
-    // ROMINABOX_QUIET_ENV in the launcher. Without it the game uses CoreAudio.
-    // In the quiet tests we read that define and compare it with this name.
+    // In the launcher this is ROMINABOX_QUIET_ENV. Without it we open the
+    // sound device. In the quiet tests we check that the define and this
+    // name are the same.
     command.env("ROMINABOX_QUIET", "1");
 }
 
@@ -109,36 +77,6 @@ fn gamepad_connected() -> bool {
 
 fn scratch() -> rominabox_scratch::Scratch {
     rominabox_scratch::Scratch::dir("rominabox-isolation")
-}
-
-fn fixture_kit(root: &Path) -> PathBuf {
-    let kit = root.join("runtime-kit");
-    fs::create_dir_all(kit.join("bin")).unwrap();
-    fs::create_dir_all(kit.join("cores")).unwrap();
-    fs::create_dir_all(kit.join("Frameworks")).unwrap();
-    fs::create_dir_all(kit.join("licenses/native")).unwrap();
-    fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
-    write_runtime_stub(&kit.join("bin/retroarch"));
-    fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
-    for name in [
-        "RetroArch.txt",
-        "NATIVE-DEPENDENCIES.txt",
-        "RmlUi-MIT.txt",
-        "genesis_plus_gx.txt",
-    ] {
-        fs::write(kit.join("licenses").join(name), name).unwrap();
-    }
-    fs::write(
-        kit.join("runtime-dependencies.json"),
-        r#"{"formatVersion":1,"files":[]}"#,
-    )
-    .unwrap();
-    fs::write(
-        kit.join("manifest.json"),
-        r#"{"schema_version":1,"components":[{"name":"RetroArch"},{"name":"RmlUi"},{"name":"genesis_plus_gx"}]}"#,
-    )
-    .unwrap();
-    kit
 }
 
 fn request(
@@ -173,7 +111,7 @@ fn request(
         include_achievements: false,
         output_dir: root.join("out"),
         replace: false,
-        target: ExportTarget::Macos,
+        target: platform::TARGET,
         runtime_kit: kit,
         core: None,
         core_cache: None,
@@ -189,66 +127,16 @@ fn export(request: &ExportRequest) -> PathBuf {
 
 fn identity_of(app: &Path) -> String {
     let manifest: serde_json::Value =
-        serde_json::from_slice(&fs::read(app.join("Contents/Resources/game.json")).unwrap())
+        serde_json::from_slice(&fs::read(platform::resources_of(app).join("game.json")).unwrap())
             .unwrap();
     manifest["identity"].as_str().unwrap().to_string()
 }
 
-fn home() -> PathBuf {
-    PathBuf::from(std::env::var("HOME").unwrap())
-}
-
-fn container_for(identity: &str) -> PathBuf {
-    home()
-        .join("Library/Containers")
-        .join(format!("app.rominabox.game.{identity}"))
-}
-
-fn data_dir_for(identity: &str) -> PathBuf {
-    container_for(identity)
-        .join("Data/Library/Application Support/ROM-in-a-Box/Games")
+/// The folder a game kept its data in before it had a sandbox.
+fn previous_game_folder(identity: &str) -> PathBuf {
+    platform::user_data()
+        .join("ROM-in-a-Box/Games")
         .join(identity)
-}
-
-fn codesign_text(path: &Path) -> String {
-    let output = Command::new("/usr/bin/codesign")
-        .args(["-d", "--entitlements", "-"])
-        .arg(path)
-        .output()
-        .expect("codesign can be executed");
-    format!(
-        "{}{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    )
-}
-
-fn assert_main_executable_keeps_the_sandbox(app: &Path) {
-    let plist = fs::read_to_string(app.join("Contents/Info.plist")).unwrap();
-    let marker = "<key>CFBundleExecutable</key><string>";
-    let start = plist.find(marker).expect("the bundle names an executable");
-    let rest = &plist[start + marker.len()..];
-    let name = rest.split('<').next().unwrap();
-    let executable = app.join("Contents/MacOS").join(name);
-    let mut magic = [0u8; 4];
-    fs::File::open(&executable)
-        .unwrap()
-        .read_exact(&mut magic)
-        .unwrap();
-    let mach_o = magic == [0xcf, 0xfa, 0xed, 0xfe]
-        || magic == [0xfe, 0xed, 0xfa, 0xcf]
-        || magic == [0xca, 0xfe, 0xba, 0xbe];
-    assert!(mach_o, "main executable is a script");
-    let signed = codesign_text(&executable);
-    assert!(
-        signed.contains("com.apple.security.app-sandbox"),
-        "entitlements were dropped\n{signed}"
-    );
-    let library = codesign_text(&app.join("Contents/MacOS/librominabox-launch.dylib"));
-    assert!(
-        !library.contains("com.apple.security.app-sandbox"),
-        "the launcher library carries the sandbox entitlement\n{library}"
-    );
 }
 
 fn config_value<'a>(config: &'a str, key: &str) -> Option<&'a str> {
@@ -280,34 +168,41 @@ fn run_until(command: &mut Command, limit: Duration) -> std::process::ExitStatus
 }
 
 #[test]
-#[ignore = "signs an exported app; the isolation scope runs it"]
-fn signed_export_keeps_the_sandbox_entitlement() {
+#[ignore = "exports a game and reads how it keeps its sandbox; the isolation scope runs it"]
+fn every_export_keeps_its_sandbox() {
     let root = scratch();
     let app = export(&request(
         &root,
         b"rominabox-isolation-entitlement-v1",
         "Entitlement Probe",
-        fixture_kit(&root),
+        platform::fixture_kit(&root),
         "megadrive",
     ));
-    assert_main_executable_keeps_the_sandbox(&app);
-    let bytes = fs::metadata(app.join("Contents/MacOS/librominabox-launch.dylib"))
-        .unwrap()
-        .len();
-    println!("signed launcher bytes: {bytes}");
-    assert!(bytes < 80_000, "the launcher is {bytes} bytes");
+    platform::assert_keeps_the_sandbox(&app);
+    #[cfg(target_os = "macos")]
+    {
+        let bytes = fs::metadata(app.join("Contents/MacOS/librominabox-launch.dylib"))
+            .unwrap()
+            .len();
+        println!("signed launcher bytes: {bytes}");
+        assert!(bytes < 80_000, "the launcher is {bytes} bytes");
+    }
 }
 
-/// Every library that the exported game loads is where the game can find it.
+/// Every library of the exported game is where the game can find it.
 ///
 /// The launch library is beside the executable, signed separately, with an
-/// install name of `@executable_path/`. In the export we rewrite every
-/// dependency to `@executable_path/../Frameworks`, so a game contains only
-/// the libraries it loads. When a load command points at a missing file, the
-/// player exits in dyld before `main`, with a message about a search path.
+/// install name of `@executable_path/`. At export we rewrite every dependency
+/// to `@executable_path/../Frameworks`, so that a game contains only the
+/// libraries it loads. Together, the two would point the player at a missing
+/// file, and the player would exit before `main` with a dyld message about a
+/// search path.
 ///
 /// We resolve each load command here instead of waiting for dyld, so that we
-/// can report a path that leads nowhere by name.
+/// can report a path that leads nowhere as such. On Windows, we refuse to
+/// export a program that imports a library Windows does not include
+/// (tests/windows_export.rs).
+#[cfg(target_os = "macos")]
 #[test]
 #[ignore = "signs an exported app; the isolation scope runs it"]
 fn every_library_the_game_loads_is_inside_the_bundle() {
@@ -316,7 +211,7 @@ fn every_library_the_game_loads_is_inside_the_bundle() {
         &root,
         b"rominabox-isolation-loadpath-v1",
         "Load Path Probe",
-        fixture_kit(&root),
+        platform::fixture_kit(&root),
         "megadrive",
     ));
     let macos = app.join("Contents/MacOS");
@@ -367,18 +262,11 @@ fn every_library_the_game_loads_is_inside_the_bundle() {
 }
 
 #[test]
-#[ignore = "launches a signed probe that exits; the isolation scope runs it"]
+#[ignore = "launches a probe that exits in the game's sandbox; the isolation scope runs it"]
 fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     let root = scratch();
-    let kit = fixture_kit(&root);
-    let probe_source = repo_at("scripts/native_runtime/sandbox_probe.c");
-    let status = Command::new("cc")
-        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
-        .arg(kit.join("bin/retroarch"))
-        .arg(&probe_source)
-        .status()
-        .unwrap();
-    assert!(status.success(), "the sandbox probe failed to compile");
+    let kit = platform::fixture_kit(&root);
+    platform::use_probe_as_player(&kit);
     let app = export(&request(
         &root,
         b"rominabox-isolation-sandbox-v1",
@@ -390,17 +278,15 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
         &root.join("other"),
         b"rominabox-isolation-other-v1",
         "Other Game",
-        fixture_kit(&root.join("other")),
+        platform::fixture_kit(&root.join("other")),
         "megadrive",
     ));
     fs::create_dir_all(root.join("other")).unwrap();
     let identity = identity_of(&app);
     let other_identity = identity_of(&other);
-    let _container = RemoveDir(container_for(&identity));
-    let _other_container = RemoveDir(container_for(&other_identity));
-    let previous_game = home()
-        .join("Library/Application Support/ROM-in-a-Box/Games")
-        .join(&identity);
+    let _container = platform::sandbox_for(&identity);
+    let _other_container = platform::sandbox_for(&other_identity);
+    let previous_game = previous_game_folder(&identity);
     if previous_game.exists() {
         let marker = previous_game.join("saves/migrated-marker");
         let ours = fs::read(&marker).ok().as_deref() == Some(b"migrated-from-host\n");
@@ -410,21 +296,19 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
         );
         fs::remove_dir_all(&previous_game).unwrap();
     }
-    let _previous = RemoveDir(previous_game);
+    let _previous = GameFolder(previous_game);
 
-    let leak = home().join("Documents/RetroArch/playlists/builtin/content_history.lpl");
+    let host = platform::host_file();
+    let leak = host.read.clone();
     let leak_before = fs::read(&leak).expect("the host RetroArch history is not there to protect");
-    let write_path = leak.parent().unwrap().join("rominabox-isolation-probe");
-    let _written = RemoveFile(write_path.clone());
+    let write_path = host.write.clone();
     let secret = "isolation-secret-marker";
-    let other_secret = data_dir_for(&other_identity).join("secret.txt");
+    platform::prepare_storage(&other);
+    let other_secret = platform::data_dir_for(&other_identity).join("secret.txt");
     fs::create_dir_all(other_secret.parent().unwrap()).unwrap();
     fs::write(&other_secret, secret).unwrap();
 
-    let previous = home()
-        .join("Library/Application Support/ROM-in-a-Box/Games")
-        .join(&identity)
-        .join("saves/migrated-marker");
+    let previous = previous_game_folder(&identity).join("saves/migrated-marker");
     assert!(
         !previous.parent().unwrap().parent().unwrap().exists(),
         "a game directory for this identity already exists"
@@ -432,7 +316,8 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     fs::create_dir_all(previous.parent().unwrap()).unwrap();
     fs::write(&previous, b"migrated-from-host\n").unwrap();
 
-    let data = data_dir_for(&identity);
+    platform::prepare_storage(&app);
+    let data = platform::data_dir_for(&identity);
     fs::create_dir_all(&data).unwrap();
     fs::write(
         data.join("controls.cfg"),
@@ -450,22 +335,24 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
          audio_volume = \"-17.8\"\n",
     )
     .unwrap();
-    let resources = app.join("Contents/Resources/core-options/probe-core");
+    let resources = platform::resources_of(&app).join("core-options/probe-core");
     fs::create_dir_all(&resources).unwrap();
     fs::write(resources.join("copied.cfg"), b"copied-from-kit\n").unwrap();
     fs::write(resources.join("kept.cfg"), b"from-kit\n").unwrap();
     fs::create_dir_all(data.join("config/probe-core")).unwrap();
     fs::write(data.join("config/probe-core/kept.cfg"), b"player-copy\n").unwrap();
 
-    assert_main_executable_keeps_the_sandbox(&app);
+    platform::assert_keeps_the_sandbox(&app);
 
-    let mut command = Command::new(app.join("Contents/MacOS/retroarch"));
+    let mut command = Command::new(platform::launcher_of(&app));
     stay_quiet(&mut command);
     command
         .env("ROMINABOX_PROBE_READ", &leak)
         .env("ROMINABOX_PROBE_WRITE", &write_path)
         .env("ROMINABOX_PROBE_OTHER", &other_secret);
+    let targets = platform::probe_targets(&mut command);
     let status = run_until(&mut command, Duration::from_secs(20));
+    drop(targets);
     let log_path = data.join("logs/launch.log");
     let log = fs::read_to_string(&log_path).unwrap_or_default();
     assert!(status.success(), "probe launch failed\n{log}");
@@ -488,15 +375,14 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     );
     assert!(
         log.contains("UDP_DENIED"),
-        "the network command port was bindable\n{log}"
+        "the network command port could be reached\n{log}"
     );
-    let container = container_for(&identity);
     let home_line = log
         .lines()
         .find(|line| line.starts_with("HOME="))
         .unwrap_or("");
     assert!(
-        home_line.contains(container.join("Data").to_str().unwrap()),
+        platform::mentions(home_line, &platform::sandbox_home(&identity)),
         "HOME was not the container\n{log}"
     );
     let tmp_line = log
@@ -504,7 +390,7 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
         .find(|line| line.starts_with("TMPDIR="))
         .unwrap_or("");
     assert!(
-        tmp_line.contains(container.to_str().unwrap()),
+        platform::mentions(tmp_line, &platform::container_for(&identity)),
         "TMPDIR was not inside the container\n{log}"
     );
     assert!(
@@ -540,32 +426,16 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     assert_eq!(fs::read(&previous).unwrap(), b"migrated-from-host\n");
 }
 
-fn copy_tree(from: &Path, to: &Path) {
-    fs::create_dir_all(to).unwrap();
-    for entry in fs::read_dir(from).unwrap() {
-        let entry = entry.unwrap();
-        let dest = to.join(entry.file_name());
-        if entry.file_type().unwrap().is_dir() {
-            copy_tree(&entry.path(), &dest);
-        } else {
-            fs::copy(entry.path(), dest).unwrap();
-        }
-    }
-}
-
-/// QUICK SIGN IN: a signed export with achievements can create and use its
-/// accounts folder in the actual Application Support, and nothing beside it.
-/// The container of another game stays closed. The folder is only for this
-/// test, named as in `scripts/worktree.py` for a checkout, so we never touch
-/// the accounts of a player.
+/// QUICK SIGN IN: a game exported with achievements can create and use its
+/// accounts folder in the per-user application data, and nothing beside it,
+/// and cannot open the container of another game. The test makes its own
+/// folder, named as in a worktree, so we never touch a player's accounts.
 #[test]
-#[ignore = "launches a signed probe that exits; the isolation scope runs it"]
+#[ignore = "launches a probe that exits in the game's sandbox; the isolation scope runs it"]
 fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it() {
     const FOLDER: &str = "ROM-in-a-Box Accounts-isolation-test";
-    let accounts = home().join("Library/Application Support").join(FOLDER);
-    let beside = home()
-        .join("Library/Application Support")
-        .join(format!("{FOLDER}.beside"));
+    let accounts = platform::user_data().join(FOLDER);
+    let beside = platform::user_data().join(format!("{FOLDER}.beside"));
     assert!(
         !accounts.exists() && !beside.exists(),
         "{} or its neighbour is left over from an earlier run",
@@ -574,21 +444,15 @@ fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it
     std::env::set_var("ROMINABOX_ACCOUNTS_FOLDER", FOLDER);
 
     let root = scratch();
-    let kit = fixture_kit(&root);
-    let status = Command::new("cc")
-        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
-        .arg(kit.join("bin/retroarch"))
-        .arg(repo_at("scripts/native_runtime/sandbox_probe.c"))
-        .status()
-        .unwrap();
-    assert!(status.success(), "the sandbox probe failed to compile");
+    let kit = platform::fixture_kit(&root);
+    platform::use_probe_as_player(&kit);
     let manifest = kit.join("manifest.json");
     let mut value: serde_json::Value = serde_json::from_slice(&fs::read(&manifest).unwrap()).unwrap();
     value["components"][0]["capabilities"] = serde_json::json!({"achievements": true});
     fs::write(&manifest, serde_json::to_vec(&value).unwrap()).unwrap();
-    copy_tree(&repo_at("integrations/designs"), &kit.join("designs"));
-    copy_tree(&repo_at("integrations/parts"), &kit.join("parts"));
-    copy_tree(&repo_at("desktop/assets/controllers"), &kit.join("menu-assets"));
+    support::copy_tree(&repo_at("integrations/designs"), &kit.join("designs"));
+    support::copy_tree(&repo_at("integrations/parts"), &kit.join("parts"));
+    support::copy_tree(&repo_at("desktop/assets/controllers"), &kit.join("menu-assets"));
     let mut settings = request(&root, b"rominabox-isolation-accounts-v1", "Accounts Probe", kit, "megadrive");
     settings.show_menu = true;
     settings.include_achievements = true;
@@ -597,32 +461,34 @@ fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it
         &root.join("other"),
         b"rominabox-isolation-accounts-other-v1",
         "Other Game",
-        fixture_kit(&root.join("other")),
+        platform::fixture_kit(&root.join("other")),
         "megadrive",
     ));
     fs::create_dir_all(root.join("other")).unwrap();
     let identity = identity_of(&app);
     let other_identity = identity_of(&other);
-    let _container = RemoveDir(container_for(&identity));
-    let _other_container = RemoveDir(container_for(&other_identity));
-    let other_secret = data_dir_for(&other_identity).join("secret.txt");
+    let _container = platform::sandbox_for(&identity);
+    let _other_container = platform::sandbox_for(&other_identity);
+    platform::prepare_storage(&other);
+    let other_secret = platform::data_dir_for(&other_identity).join("secret.txt");
     fs::create_dir_all(other_secret.parent().unwrap()).unwrap();
     fs::write(&other_secret, "isolation-secret-marker").unwrap();
     fs::write(&beside, b"beside").unwrap();
 
-    let signed = codesign_text(&app);
     assert!(
-        signed.contains(&format!("/Library/Application Support/{FOLDER}/")),
-        "the export does not name its accounts folder\n{signed}"
+        platform::names_accounts_folder(&app, FOLDER),
+        "the export does not name its accounts folder"
     );
 
-    let mut command = Command::new(app.join("Contents/MacOS/retroarch"));
+    let mut command = Command::new(platform::launcher_of(&app));
     stay_quiet(&mut command);
     command
         .env("ROMINABOX_PROBE_OTHER", &other_secret)
         .env("ROMINABOX_PROBE_BESIDE", &beside);
+    let targets = platform::probe_targets(&mut command);
     let status = run_until(&mut command, Duration::from_secs(20));
-    let log = fs::read_to_string(data_dir_for(&identity).join("logs/launch.log")).unwrap_or_default();
+    drop(targets);
+    let log = fs::read_to_string(platform::data_dir_for(&identity).join("logs/launch.log")).unwrap_or_default();
 
     // Remove only what this test made, after checking its name.
     fs::remove_file(&beside).ok();
@@ -637,33 +503,34 @@ fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it
     assert!(log.contains("OTHER_DENIED"), "another game's container was readable\n{log}");
 }
 
-/// The author left background play off, and an earlier export of the same game
-/// left `pause_nonactive = "false"` in its controls.cfg. For a screenshot run
-/// the console must keep running, and we must set that at launch, not by
-/// writing to the file of the player.
+/// The author left background play off, and the controls.cfg of an older
+/// export of the same game already has `pause_nonactive = "false"`. In a
+/// screenshot run we need the console to keep running, and we must set that
+/// at launch, without writing to the player's file.
 #[test]
-#[ignore = "launches a signed stub that exits; the isolation scope runs it"]
+#[ignore = "launches a stub that exits in the game's sandbox; the isolation scope runs it"]
 fn author_background_play_survives_an_old_controls_file() {
     let root = scratch();
     let app = export(&request(
         &root,
         b"rominabox-background-play-author-v1",
         "Background Play",
-        fixture_kit(&root),
+        platform::fixture_kit(&root),
         "megadrive",
     ));
     let identity = identity_of(&app);
-    let _container = RemoveDir(container_for(&identity));
-    let data = data_dir_for(&identity);
+    let _container = platform::sandbox_for(&identity);
+    platform::prepare_storage(&app);
+    let data = platform::data_dir_for(&identity);
     fs::create_dir_all(&data).unwrap();
     let controls = data.join("controls.cfg");
     let leftover = "pause_nonactive = \"false\"\n";
     fs::write(&controls, leftover).unwrap();
 
-    assert_main_executable_keeps_the_sandbox(&app);
+    platform::assert_keeps_the_sandbox(&app);
     // Launch as a person would, because we never pause an automated run in
     // the background, whatever the author chose. The stub has no sound.
-    let mut person = Command::new(app.join("Contents/MacOS/retroarch"));
+    let mut person = Command::new(platform::launcher_of(&app));
     person
         .env_remove("ROMINABOX_QUIET")
         .env("ROMINABOX_SOUND", "1")
@@ -684,7 +551,7 @@ fn author_background_play_survives_an_old_controls_file() {
 
     let pad = "input_player1_a = \"x\"\n";
     fs::write(&controls, pad).unwrap();
-    let mut shot = Command::new(app.join("Contents/MacOS/retroarch"));
+    let mut shot = Command::new(platform::launcher_of(&app));
     stay_quiet(&mut shot);
     shot.env("ROMINABOX_MENU_SHOT", "/tmp/rominabox-menu-shot-proof.png");
     let status = run_until(&mut shot, Duration::from_secs(20));
@@ -702,10 +569,12 @@ fn author_background_play_survives_an_old_controls_file() {
     );
 }
 
-/// Without the signature there is no sandbox, and `$HOME` is whatever we give
-/// the launch. With the home of the account, the launch would create the
-/// game's `Games/<identity>` directory there. The stub must still run, so we
-/// give it a scratch HOME that we remove with the test.
+/// Without the signature there is no sandbox, and `$HOME` is whatever we set
+/// at launch. With HOME at the account, we would create the game's
+/// `Games/<identity>` folder there. So we set HOME for the stub to a scratch
+/// directory that we remove with the test. On Windows we cannot give an
+/// unsandboxed launch another per-user folder, so this test is macOS only.
+#[cfg(target_os = "macos")]
 #[test]
 #[ignore = "launches an unsigned stub; the isolation scope runs it"]
 fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
@@ -714,19 +583,16 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
         &root,
         b"rominabox-background-play-author-v1",
         "Background Play",
-        fixture_kit(&root),
+        platform::fixture_kit(&root),
         "megadrive",
     ));
     let identity = identity_of(&app);
-    let _container = RemoveDir(container_for(&identity));
-    let host = home()
-        .join("Library/Application Support/ROM-in-a-Box/Games")
-        .join(&identity)
-        .join("retroarch.cfg");
+    let _container = platform::sandbox_for(&identity);
+    let host = previous_game_folder(&identity).join("retroarch.cfg");
     let before = fs::metadata(&host)
         .ok()
         .map(|info| (info.len(), info.modified().ok()));
-    let executable = app.join("Contents/MacOS/retroarch");
+    let executable = platform::launcher_of(&app);
     let removed = Command::new("/usr/bin/codesign")
         .args(["--remove-signature"])
         .arg(&executable)
@@ -779,18 +645,27 @@ fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
     let root = scratch();
     fs::copy(&rom, root.join("game.bin")).unwrap();
     let mut settings = request(&root, b"", "Sandbox Game", kit, "gbc");
-    // The kit contains no cores. For an export we take them from the core cache.
-    settings.core_cache = Some(repo_at("work/core-cache/macos-arm64"));
+    // The kit contains no cores, so at export we take them from a core cache:
+    // the one for the developer core source named in scripts/test.py, or else
+    // the seeded one (scripts/core_source.py).
+    let target = rominabox_desktop::target::Target::host().expect("the host platform is one the builder builds for");
+    settings.core_cache = Some(
+        std::env::var_os("ROMINABOX_CORE_SOURCE")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| repo_at(&format!("work/core-cache/{}", target.key()))),
+    );
     settings.rom = rom;
     let app = export(&settings);
     let identity = identity_of(&app);
-    let _container = RemoveDir(container_for(&identity));
+    let _container = platform::sandbox_for(&identity);
 
-    assert_main_executable_keeps_the_sandbox(&app);
+    platform::assert_keeps_the_sandbox(&app);
 
-    let leak = home().join("Documents/RetroArch/playlists/builtin/content_history.lpl");
+    #[cfg(target_os = "macos")]
+    let leak = platform::home().join("Documents/RetroArch/playlists/builtin/content_history.lpl");
+    #[cfg(target_os = "macos")]
     let leak_before = fs::read(&leak).unwrap_or_default();
-    let mut command = Command::new(app.join("Contents/MacOS/retroarch"));
+    let mut command = Command::new(platform::launcher_of(&app));
     stay_quiet(&mut command);
     command.env("ROMINABOX_VERBOSE", "1");
     command.env("ROMINABOX_MAX_FRAMES", "30");
@@ -798,9 +673,9 @@ fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
     // console would stop before we log these lines. We set the screenshot
     // variable to keep it running without writing the player's controls.cfg.
     command.env("ROMINABOX_MENU_SHOT", "/tmp/rominabox-menu-shot-proof.png");
-    // We append to this log in the launcher. An earlier shot of this ROM put
-    // [CoreAudio] in this file, so a quiet run would still look loud.
-    let log_path = data_dir_for(&identity).join("logs/launch.log");
+    // We append to this log, so it may have sound device lines from an
+    // earlier screenshot run of the same ROM, and a quiet run could look loud.
+    let log_path = platform::data_dir_for(&identity).join("logs/launch.log");
     let _ = fs::remove_file(&log_path);
     let status = run_until(&mut command, Duration::from_secs(60));
     let log = fs::read_to_string(&log_path).unwrap_or_default();
@@ -822,17 +697,17 @@ fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
         "a core did not load\n{tail}"
     );
     assert!(
-        !log.contains("[CoreAudio]"),
-        "a quiet run opened CoreAudio\n{tail}"
+        !log.contains(platform::AUDIO_DEVICE_LOG),
+        "a quiet run opened the sound device\n{tail}"
     );
     // A test game that runs as a regular app appears in the Dock, so in a
     // quiet run we launch it as an accessory app.
-    assert!(
-        log.contains("[RIB] quiet activation accessory"),
-        "a quiet run took a Dock icon\n{tail}"
-    );
+    match platform::QUIET_WINDOW_LOG {
+        Some(line) => assert!(log.contains(line), "a quiet run took a Dock icon\n{tail}"),
+        None => eprintln!("this player logs nothing for its quiet window: the quiet scope reads the window itself"),
+    }
     let written =
-        fs::read_to_string(data_dir_for(&identity).join("retroarch.cfg")).unwrap_or_default();
+        fs::read_to_string(platform::data_dir_for(&identity).join("retroarch.cfg")).unwrap_or_default();
     assert_eq!(
         config_value(&written, "audio_driver"),
         Some("null"),
@@ -842,12 +717,13 @@ fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
     // We can see a gamepad only when one is plugged in, so say when none is.
     if gamepad_connected() {
         assert!(
-            log.contains("[IOHID] Port "),
+            log.contains(platform::GAMEPAD_LOG),
             "a gamepad was not seen\n{tail}"
         );
     } else {
         eprintln!("no gamepad is connected: whether the game sees one was not checked");
     }
+    #[cfg(target_os = "macos")]
     if leak.is_file() {
         assert_eq!(fs::read(&leak).unwrap(), leak_before);
     }

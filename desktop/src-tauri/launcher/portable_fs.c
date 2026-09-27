@@ -98,7 +98,15 @@ int fs_is_absolute(const char *path) {
         || ((path[0] == '\\' || path[0] == '/') && (path[1] == '\\' || path[1] == '/'));
 }
 
-int fs_list(const char *directory, fs_visit visit, void *context) {
+/* "." and "..", which are in every listing. With `hidden` we also skip any
+ * name that starts with '.'. */
+static int skipped(const wchar_t *name, int hidden) {
+    if (name[0] != L'.')
+        return 0;
+    return hidden || name[1] == L'\0' || (name[1] == L'.' && name[2] == L'\0');
+}
+
+static int list_names(const char *directory, int hidden, fs_visit visit, void *context) {
     size_t length = strlen(directory);
     char *pattern = malloc(length + 3);
     wchar_t *wide_pattern;
@@ -123,7 +131,7 @@ int fs_list(const char *directory, fs_visit visit, void *context) {
     }
     do {
         char *name;
-        if (entry.cFileName[0] == L'.')
+        if (skipped(entry.cFileName, hidden))
             continue;
         name = narrow(entry.cFileName);
         if (!name) {
@@ -139,6 +147,14 @@ int fs_list(const char *directory, fs_visit visit, void *context) {
     }
     FindClose(search);
     return result;
+}
+
+int fs_list(const char *directory, fs_visit visit, void *context) {
+    return list_names(directory, 1, visit, context);
+}
+
+int fs_list_all(const char *directory, fs_visit visit, void *context) {
+    return list_names(directory, 0, visit, context);
 }
 
 int fs_is_directory(const char *path) {
@@ -171,6 +187,24 @@ int fs_make_directory(const char *path) {
         set_errno_from_windows();
     free(name);
     return made ? 0 : -1;
+}
+
+int fs_copy_new(const char *from, const char *to) {
+    wchar_t *source = wide(from);
+    wchar_t *target = wide(to);
+    BOOL copied = FALSE;
+    DWORD error = ERROR_NOT_ENOUGH_MEMORY;
+    if (source && target) {
+        copied = CopyFileExW(source, target, NULL, NULL, NULL, COPY_FILE_FAIL_IF_EXISTS | COPY_FILE_COPY_SYMLINK);
+        error = copied ? ERROR_SUCCESS : GetLastError();
+    }
+    free(source);
+    free(target);
+    if (copied || error == ERROR_FILE_EXISTS || error == ERROR_ALREADY_EXISTS)
+        return 0;
+    SetLastError(error);
+    set_errno_from_windows();
+    return -1;
 }
 
 /* Rename with POSIX semantics, replacing a file that another process has
@@ -400,7 +434,15 @@ int fs_is_absolute(const char *path) {
     return path[0] == '/';
 }
 
-int fs_list(const char *directory, fs_visit visit, void *context) {
+/* "." and "..", which are in every listing. With `hidden` we also skip any
+ * name that starts with '.'. */
+static int skipped(const char *name, int hidden) {
+    if (name[0] != '.')
+        return 0;
+    return hidden || name[1] == '\0' || (name[1] == '.' && name[2] == '\0');
+}
+
+static int list_names(const char *directory, int hidden, fs_visit visit, void *context) {
     DIR *listing = opendir(directory);
     struct dirent *entry;
     int result = 0;
@@ -414,7 +456,7 @@ int fs_list(const char *directory, fs_visit visit, void *context) {
                 result = -1;
             break;
         }
-        if (entry->d_name[0] == '.')
+        if (skipped(entry->d_name, hidden))
             continue;
         result = visit(entry->d_name, context);
     }
@@ -424,6 +466,14 @@ int fs_list(const char *directory, fs_visit visit, void *context) {
         errno = saved;
     }
     return result;
+}
+
+int fs_list(const char *directory, fs_visit visit, void *context) {
+    return list_names(directory, 1, visit, context);
+}
+
+int fs_list_all(const char *directory, fs_visit visit, void *context) {
+    return list_names(directory, 0, visit, context);
 }
 
 int fs_is_directory(const char *path) {
@@ -447,6 +497,46 @@ int fs_make_directory(const char *path) {
     if (errno == EEXIST && fs_is_directory(path))
         return 0;
     return -1;
+}
+
+int fs_copy_new(const char *from, const char *to) {
+    char buffer[8192];
+    int in;
+    int out;
+    ssize_t count;
+    struct stat info;
+    if (lstat(to, &info) == 0)
+        return 0;
+    in = open(from, O_RDONLY | O_NOFOLLOW);
+    if (in < 0)
+        return -1;
+    out = open(to, O_WRONLY | O_CREAT | O_EXCL, 0644);
+    if (out < 0) {
+        close(in);
+        if (errno == EEXIST)
+            return 0;
+        return -1;
+    }
+    while ((count = read(in, buffer, sizeof buffer)) > 0) {
+        char *cursor = buffer;
+        while (count > 0) {
+            ssize_t wrote = write(out, cursor, (size_t)count);
+            if (wrote < 0) {
+                close(in);
+                close(out);
+                unlink(to);
+                return -1;
+            }
+            cursor += wrote;
+            count -= wrote;
+        }
+    }
+    close(in);
+    if (close(out) != 0) {
+        unlink(to);
+        return -1;
+    }
+    return count < 0 ? -1 : 0;
 }
 
 int fs_replace(const char *from, const char *to) {

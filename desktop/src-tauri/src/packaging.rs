@@ -2183,6 +2183,7 @@ fn write_launch_plan(
         flag(request.advanced_emulator_access),
     );
     plan += &line(plan_field!(Achievements), flag(achievements));
+    plan += &line(plan_field!(Sandbox), flag(true));
     for setting in crate::player_settings::declared(player_defaults(request)).iter() {
         plan += &setting.launch_line();
     }

@@ -194,6 +194,29 @@ def _macos_sandboxed(app: Path) -> bool:
     return "com.apple.security.app-sandbox" in signed.stdout + signed.stderr
 
 
+IDENTITY = re.compile(r'^identity\t(.+)$', re.MULTILINE)
+SANDBOX = re.compile(r'^sandbox\t1$', re.MULTILINE)
+
+
+def _windows_sandboxed(app: Path) -> bool:
+    """In a Windows game's launcher we set up the game's sandbox when the plan
+    has that option set, as it has in every export."""
+    return bool(SANDBOX.search(plan_text(app)))
+
+
+def _windows_sandbox_folder(app: Path) -> Path:
+    """The sandbox folder of a Windows game, named as we name the sandbox in
+    the launcher: the application id prefix declared for the launcher and
+    the player in vendor/retroarch/rominabox_launch.h, and the game's identity.
+    Inside, the game's per-user folder is its AC folder."""
+    header = (ROOT / "vendor/retroarch/rominabox_launch.h").read_text(encoding="utf-8")
+    prefix = re.search(r'#define RIB_GAME_APP_ID_PREFIX "([^"]+)"', header)
+    identity = IDENTITY.search(plan_text(app))
+    if not prefix or not identity:
+        raise SystemExit(f"cannot name the sandbox of {app}")
+    return Path(os.environ["LOCALAPPDATA"]) / "Packages" / f"{prefix.group(1)}{identity.group(1)}"
+
+
 def home_for(app: Path) -> str:
     """The HOME of the exported game.
 
@@ -220,11 +243,11 @@ def home_for(app: Path) -> str:
 # What differs with the platform of the game: its launcher, the folder for
 # its files, the per-user folder that $user_data stands for in the plan,
 # whether it is sandboxed, the folder that must contain its per-game storage
-# (a macOS game's container, only when it is sandboxed, or the games folder
-# in the per-user application data on Windows), the place of the player in
-# the kit (we freeze the macOS kit with freeze-runtime-kit.mjs and make the
-# Windows kit from the recipe), and which processes of the game are still
-# running. Windows games are not sandboxed.
+# (in a sandbox, a macOS game's container or a Windows game's Packages
+# folder, and otherwise nothing on macOS and the games folder in the per-user
+# application data on Windows), the place of the player in the kit (the macOS
+# kit from freeze-runtime-kit.mjs, the Windows kit from the recipe), and which
+# processes of the game are still running.
 APPS = {
     "macos": {
         "launcher": _macos_launcher,
@@ -238,9 +261,11 @@ APPS = {
     "windows": {
         "launcher": _windows_launcher,
         "resources": lambda app: app / "Resources",
-        "user_data": lambda app: Path(os.environ["LOCALAPPDATA"]),
-        "sandboxed": lambda app: False,
-        "storage_home": lambda app: Path(os.environ["LOCALAPPDATA"]) / "ROM-in-a-Box" / "Games",
+        "user_data": lambda app: (_windows_sandbox_folder(app) / "AC" if _windows_sandboxed(app)
+                                  else Path(os.environ["LOCALAPPDATA"])),
+        "sandboxed": _windows_sandboxed,
+        "storage_home": lambda app: (_windows_sandbox_folder(app) if _windows_sandboxed(app)
+                                     else Path(os.environ["LOCALAPPDATA"]) / "ROM-in-a-Box" / "Games"),
         "kit_player": lambda: native_build.recipe()["kit"][host_target()]["files"]["player"]["at"],
         "running": _windows_running,
     },

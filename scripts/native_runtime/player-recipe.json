@@ -121,7 +121,7 @@
       "dinput8.dll", "dsound.dll", "dwmapi.dll", "dxgi.dll", "gdi32.dll", "hid.dll", "imm32.dll",
       "iphlpapi.dll", "kernel32.dll", "msimg32.dll", "msvcrt.dll", "mswsock.dll", "ntdll.dll",
       "ole32.dll", "oleaut32.dll", "opengl32.dll", "secur32.dll", "setupapi.dll", "shell32.dll",
-      "shlwapi.dll", "user32.dll", "uxtheme.dll", "version.dll", "winmm.dll", "ws2_32.dll",
+      "shlwapi.dll", "user32.dll", "userenv.dll", "uxtheme.dll", "version.dll", "winmm.dll", "ws2_32.dll",
       "xinput1_4.dll"
     ]
   },
@@ -142,7 +142,9 @@
       "libraries": [
         "-lshell32",
         "-lole32",
-        "-luuid"
+        "-luuid",
+        "-luserenv",
+        "-ladvapi32"
       ]
     }
   },

@@ -506,9 +506,111 @@ static void add_argument(Launch *launch, const char *argument) {
     launch->arguments[launch->argument_count] = NULL;
 }
 
+static char *read_plan(const char *resources) {
+    char plan_path[PATH_CAP];
+    char *plan;
+    join_path(plan_path, sizeof plan_path, resources, app_Plan);
+    plan = read_file(plan_path, NULL);
+    if (!plan)
+        die("the game is missing its launch plan");
+    return plan;
+}
+
+static void read_game_from(const char *plan, LaunchGame *game) {
+    char achievements[8] = "0";
+    char sandbox[8] = "0";
+    memset(game, 0, sizeof *game);
+    if (!field(plan, plan_Identity, game->identity, sizeof game->identity) || strchr(game->identity, '/')
+        || game->identity[0] == '\0')
+        die("the launch plan has no identity");
+    if (!field(plan, plan_Title, game->title, sizeof game->title))
+        game->title[0] = '\0';
+    field(plan, plan_Achievements, achievements, sizeof achievements);
+    game->achievements = strcmp(achievements, "1") == 0;
+    field(plan, plan_Sandbox, sandbox, sizeof sandbox);
+    game->sandbox = strcmp(sandbox, "1") == 0;
+    field(plan, plan_AccountsDir, game->accounts_name, sizeof game->accounts_name);
+    if (!field(plan, plan_DataDir, game->data_template, sizeof game->data_template))
+        die("the launch plan has no data directory");
+}
+
+void rominabox_read_game(const char *resources, LaunchGame *game) {
+    char *plan = read_plan(resources);
+    read_game_from(plan, game);
+    free(plan);
+}
+
+void rominabox_game_data_folder(const LaunchGame *game, const char *user_data, char *out, size_t out_cap) {
+    if (!user_data || !fs_is_absolute(user_data))
+        die("there is no per-user folder to keep this game's files in");
+    if (starts_with(game->data_template, token_UserData)) {
+        int wrote = snprintf(out, out_cap, "%s%s", user_data, game->data_template + strlen(token_UserData));
+        if (wrote < 0 || (size_t)wrote >= out_cap)
+            die("the data directory does not fit");
+    } else if (fs_is_absolute(game->data_template)) {
+        snprintf(out, out_cap, "%s", game->data_template);
+    } else {
+        die("the data directory is not absolute");
+    }
+    fs_native_path(out);
+    if (!fs_is_absolute(out))
+        die("the data directory is not absolute");
+}
+
+typedef struct {
+    const char *from_dir;
+    const char *to_dir;
+} Copying;
+
+static void copy_tree(const char *from_dir, const char *to_dir);
+
+static int copy_entry(const char *name, void *context) {
+    const Copying *copying = context;
+    char from[PATH_CAP];
+    char to[PATH_CAP];
+    join_path(from, sizeof from, copying->from_dir, name);
+    join_path(to, sizeof to, copying->to_dir, name);
+    /* We leave a link in place, because we follow no link in either test. */
+    if (fs_is_directory(from))
+        copy_tree(from, to);
+    else if (fs_is_file(from) && fs_copy_new(from, to) != 0)
+        die_errno(from);
+    return 0;
+}
+
+static int nothing(const char *name, void *context) {
+    (void)name;
+    (void)context;
+    return 0;
+}
+
+/* Copy everything in `from_dir` that is not in `to_dir` yet. We skip a
+ * folder that we cannot list, and leave its copy alone. */
+static void copy_tree(const char *from_dir, const char *to_dir) {
+    Copying copying = {from_dir, to_dir};
+    if (fs_list_all(from_dir, nothing, NULL) != 0)
+        return;
+    mkdir_p(to_dir);
+    fs_list_all(from_dir, copy_entry, &copying);
+}
+
+/* A game exported in the older layout kept its data in the per-user folder
+ * outside the sandbox. On the first launch in the sandbox we copy what that
+ * folder contains, and never again once the game has its own config. */
+static void bring_previous_saves(const LaunchGame *game, const char *previous_user_data, const char *data_dir) {
+    char old_dir[PATH_CAP];
+    char marker[PATH_CAP];
+    rominabox_game_data_folder(game, previous_user_data, old_dir, sizeof old_dir);
+    if (strcmp(old_dir, data_dir) == 0)
+        return;
+    join_path(marker, sizeof marker, data_dir, "retroarch.cfg");
+    if (fs_exists(marker) || !fs_exists(old_dir))
+        return;
+    copy_tree(old_dir, data_dir);
+}
+
 void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     const char *resources = places->resources;
-    char plan_path[PATH_CAP];
     char core_path[PATH_CAP];
     char content_path[PATH_CAP];
     char assets[PATH_CAP];
@@ -516,19 +618,14 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     char controls_override[PATH_CAP];
     char shader_choice[PATH_CAP];
     char shader_preset[PATH_CAP];
-    char identity[128];
     char content[PATH_CAP];
-    char title[PATH_CAP];
     char start_at_menu[8];
     char advanced[8];
     char shader_initial[PATH_CAP];
-    char data_template[PATH_CAP];
     char managed[MANAGED_CAP][128];
-    char achievements[8] = "0";
-    char accounts_name[128] = "";
+    LaunchGame game;
     char *plan;
     const char *config_text;
-    const char *user_data = places->user_data;
     char *data_dir = launch->data_dir;
     size_t managed_count = 0;
     size_t index;
@@ -537,10 +634,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     size_t line_capacity = 0;
 
     memset(launch, 0, sizeof *launch);
-    join_path(plan_path, sizeof plan_path, resources, app_Plan);
-    plan = read_file(plan_path, NULL);
-    if (!plan)
-        die("the game is missing its launch plan");
+    plan = read_plan(resources);
     {
         char mark[64];
         snprintf(mark, sizeof mark, "\n%s\n", plan_mark_Config);
@@ -550,38 +644,20 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
         config_text += strlen(mark);
     }
 
-    if (!field(plan, plan_Identity, identity, sizeof identity) || strchr(identity, '/') || identity[0] == '\0')
-        die("the launch plan has no identity");
+    read_game_from(plan, &game);
     if (!field(plan, plan_Content, content, sizeof content) || path_has_dotdot(content))
         die("the launch plan has no content path");
-    if (!field(plan, plan_Title, title, sizeof title))
-        title[0] = '\0';
     field(plan, plan_StartAtMenu, start_at_menu, sizeof start_at_menu);
     field(plan, plan_Advanced, advanced, sizeof advanced);
-    field(plan, plan_Achievements, achievements, sizeof achievements);
-    field(plan, plan_AccountsDir, accounts_name, sizeof accounts_name);
     field(plan, plan_ShaderInitial, shader_initial, sizeof shader_initial);
-    if (!field(plan, plan_DataDir, data_template, sizeof data_template))
-        die("the launch plan has no data directory");
     collect_managed(plan, managed, &managed_count);
 
-    if (!user_data || !fs_is_absolute(user_data))
-        die("there is no per-user folder to keep this game's files in");
-    if (starts_with(data_template, token_UserData)) {
-        int wrote = snprintf(data_dir, PATH_CAP, "%s%s", user_data, data_template + strlen(token_UserData));
-        if (wrote < 0 || (size_t)wrote >= PATH_CAP)
-            die("the data directory does not fit");
-    } else if (fs_is_absolute(data_template)) {
-        snprintf(data_dir, PATH_CAP, "%s", data_template);
-    } else {
-        die("the data directory is not absolute");
-    }
-    fs_native_path(data_dir);
-    if (!fs_is_absolute(data_dir))
-        die("the data directory is not absolute");
+    rominabox_game_data_folder(&game, places->user_data, data_dir, PATH_CAP);
 
     if (places->before_data_folder)
         places->before_data_folder(data_dir);
+    if (places->previous_user_data)
+        bring_previous_saves(&game, places->previous_user_data, data_dir);
     mkdir_p(data_dir);
     for (index = 0; index < managed_count; index++) {
         char directory[PATH_CAP];
@@ -700,17 +776,17 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
         _Exit(0);
     join_path(launch->log_path, sizeof launch->log_path, data_dir, "logs/launch.log");
 
-    set_variable(launch, RIB_ENV_ACHIEVEMENTS, strcmp(achievements, "1") == 0 ? "1" : "0");
+    set_variable(launch, RIB_ENV_ACHIEVEMENTS, game.achievements ? "1" : "0");
     set_variable(launch, RIB_ENV_DATA_DIR, data_dir);
-    set_variable(launch, RIB_ENV_GAME_IDENTITY, identity);
+    set_variable(launch, RIB_ENV_GAME_IDENTITY, game.identity);
     /* The folder for QUICK SIGN IN, only when the export lists one. It is in
      * the real per-user application data, not in a sandbox's HOME. When a game
      * cannot reach it, the player plays on without QUICK SIGN IN. */
     {
         char accounts[PATH_CAP];
-        int found = strcmp(achievements, "1") == 0 && accounts_name[0];
+        int found = game.achievements && game.accounts_name[0];
         if (found && places->accounts_root
-            && rominabox_accounts_folder(places->accounts_root, accounts_name, accounts, sizeof accounts) == 0)
+            && rominabox_accounts_folder(places->accounts_root, game.accounts_name, accounts, sizeof accounts) == 0)
             set_variable(launch, RIB_ENV_ACCOUNTS_DIR, accounts);
         else {
             set_variable(launch, RIB_ENV_ACCOUNTS_DIR, NULL);
@@ -718,7 +794,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
                 fprintf(stderr, "ROM-in-a-Box: QUICK SIGN IN is unavailable: %s\n", strerror(errno));
         }
     }
-    set_variable(launch, RIB_ENV_TITLE, title);
+    set_variable(launch, RIB_ENV_TITLE, game.title);
     set_variable(launch, RIB_ENV_RML_ASSETS, assets);
     set_variable(launch, RIB_ENV_ADVANCED_ACCESS, strcmp(advanced, "1") == 0 ? "1" : "0");
     set_variable(launch, RIB_ENV_START_AT_MENU, strcmp(start_at_menu, "1") == 0 ? "1" : NULL);

@@ -30,6 +30,9 @@ void fs_native_path(char *path);
  * stop the listing and return that value. */
 typedef int (*fs_visit)(const char *name, void *context);
 int fs_list(const char *directory, fs_visit visit, void *context);
+/* As fs_list, with the names that start with '.' too, but never "." or
+ * "..". */
+int fs_list_all(const char *directory, fs_visit visit, void *context);
 
 /* 1 when the path is that kind of thing, 0 when it is not or is absent. */
 int fs_is_directory(const char *path);
@@ -38,6 +41,9 @@ int fs_exists(const char *path);
 
 /* Succeeds when the directory already exists. */
 int fs_make_directory(const char *path);
+/* Copy the file `from` to `to`, unless something is at `to` already, which
+ * also counts as success. We follow no link in either path. */
+int fs_copy_new(const char *from, const char *to);
 /* Moves `from` onto `to`, replacing a file already there. */
 int fs_replace(const char *from, const char *to);
 /* Succeeds when there is nothing to remove. */
