@@ -471,6 +471,15 @@ SCOPES = [
         launches_games=True,
     ),
     Scope(
+        "scripted",
+        "that a run a menu script drives starts no controller driver and a run without one starts "
+        "the platform's, whichever pads are plugged in",
+        "that the script does anything (workflows-native), or that a physical pad works",
+        [PYTHON, str(ROOT / "scripts/test_scripted_run.py")],
+        slow=True,
+        launches_games=True,
+    ),
+    Scope(
         "quiet",
         "quiet launch decisions, null audio, transparent windows, hands-on opt-outs, and safe native timeout handling",
         "actual GL presentation or hands-on focus/fullscreen; the window probe never orders its window in",
