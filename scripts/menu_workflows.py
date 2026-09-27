@@ -6,7 +6,9 @@ the cases listed under `launched` in the table, one launch each, in the
 exported player, and compare them with the same baselines: every checkpoint
 from the script driver of the player, the files written by its menu, and
 the picture. We leave out what the `headless` section of the table lists, so
-the record is the same for both runners, and we compare the picture only here.
+the record is the same for both runners. We compare the picture only here,
+with its reference in scripts/fixtures/menu-workflow-pictures, allowing the
+one level by which graphics cards can round differently.
 
 Use an explicit committed native build, with the worktree environment loaded:
     ROMINABOX_TEST_BUILD=/absolute/build python3 scripts/menu_workflows.py
@@ -27,9 +29,10 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 import menu_shots as shots
 from make_test_rom import make_megadrive_rom
@@ -37,6 +40,12 @@ from make_test_rom import make_megadrive_rom
 ROOT = shots.ROOT
 TABLE = ROOT / "scripts/fixtures/menu-workflows.json"
 OUTPUT = ROOT / "work/test-output/menu-workflows"
+# Each launched case's picture as recorded, by case key.
+REFERENCES = ROOT / "scripts/fixtures/menu-workflow-pictures"
+# How far a picture may differ from its reference in any colour channel. Two
+# graphics cards can round the edges of blended text differently, by one
+# level in a channel.
+PICTURE_TOLERANCE = 1
 CHECKPOINT = re.compile(r"\[RIB\] checkpoint (\S+) (\{.*\})")
 
 
@@ -216,9 +225,29 @@ def capture(app: Path, destination: Path, case: dict, table: dict) -> dict:
     picture = destination / f"{name}.png"
     record = reduced({"script": case["script"], "reports": reports, "files": persisted(app, table)}, table)
     if not case["inMotion"]:
-        record["picture"] = hashlib.sha256(picture.read_bytes()).hexdigest()
         record["size"] = list(Image.open(picture).size)
     return record
+
+
+def reference_of(case: dict) -> Path:
+    return REFERENCES / f"{case['key']}.png"
+
+
+def picture_problem(picture: Path, reference: Path) -> str | None:
+    """Why `picture` is not its reference, or None when every channel of
+    every pixel is within PICTURE_TOLERANCE of it."""
+    if not reference.is_file():
+        return f"no reference picture at {reference}"
+    drawn = Image.open(picture).convert("RGB")
+    wanted = Image.open(reference).convert("RGB")
+    if drawn.size != wanted.size:
+        return f"{drawn.size} against the reference's {wanted.size}"
+    difference = ImageChops.difference(drawn, wanted)
+    largest = max(high for _, high in difference.getextrema())
+    if largest <= PICTURE_TOLERANCE:
+        return None
+    over = sum(1 for pixel in difference.get_flattened_data() if max(pixel) > PICTURE_TOLERANCE)
+    return f"{over} pixel(s) differ from the reference by up to {largest} levels"
 
 
 def main() -> int:
@@ -267,16 +296,23 @@ def main() -> int:
         baseline = baselines.setdefault(case["baseline"], json.loads((ROOT / case["baseline"]).read_text(encoding="utf-8")))
         before = baseline.get(case["key"])
         after = results[case["key"]]
+        picture = output / f"{case['key']}.png"
         if arguments.record:
             baseline[case["key"]] = after
+            if not case["inMotion"]:
+                reference_of(case).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(picture, reference_of(case))
             continue
         if before is None:
             changed.append(case["key"])
             print(f"CHANGED {case['key']}: nothing recorded; inspect {output} and --record")
             continue
         compared = reduced(before, table)
-        compared.update({field: before[field] for field in ("picture", "size") if field in before})
+        compared.update({field: before[field] for field in ("size",) if field in before})
         fields = [field for field in sorted(compared.keys() | after.keys()) if compared.get(field) != after.get(field)]
+        problem = None if case["inMotion"] else picture_problem(picture, reference_of(case))
+        if problem:
+            fields.append(f"picture ({problem})")
         if fields:
             changed.append(case["key"])
             print(f"CHANGED {case['key']}: {', '.join(fields)}; inspect its log and picture in {output}")

@@ -957,7 +957,6 @@
   },
   "disc/blue/capture-timeout": {
     "files": {},
-    "picture": "2eaf498254c497b86f352b4585eccc9f02e0536da92f2706d2404852eda8caad",
     "reports": {
       "capturing": {
         "bindsBox": false,
@@ -5263,7 +5262,6 @@
   },
   "native/blue/binds-c": {
     "files": {},
-    "picture": "3307abe8ed0a3dacf489f365d6067d5a489bf55bf88c95bb370b6350cb3b1e30",
     "reports": {
       "final": {
         "bindsBox": true,
@@ -6274,7 +6272,6 @@
     "files": {
       "controls.cfg": "controls_profile = \"megadrive\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n"
     },
-    "picture": "32f460a7794b6809db23bc2b8f5ef3b2e0f8d839ebfe239583272171a6f8aed0",
     "reports": {
       "final": {
         "bindsBox": false,
@@ -8409,7 +8406,6 @@
   },
   "native/blue/save-load": {
     "files": {},
-    "picture": "615b7a0b366d975ea3b0e4091b1ad1106843f696b8531743fa4c3a39afb424fb",
     "reports": {
       "empty": {
         "bindsBox": false,
