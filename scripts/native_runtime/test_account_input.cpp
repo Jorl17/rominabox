@@ -56,6 +56,13 @@ int main(int argc, char **argv) {
    entry.physical(true, RETROK_a, 'a', 0);
    entry.physical(false, RETROK_a, 0, 0);
    check(username->GetValue() == "a", "Physical keyboard types into username");
+   check(entry.typing(), "The open form has the keyboard");
+   entry.physical(true, RETROK_b, 'b', 0);
+   /* Backspace as Windows sends it: the key, then its character. */
+   entry.physical(true, RETROK_BACKSPACE, 0, 0);
+   entry.physical(true, RETROK_UNKNOWN, '\b', 0);
+   entry.physical(false, RETROK_BACKSPACE, 0, 0);
+   check(username->GetValue() == "a", "Backspace deletes one character");
    entry.physical(true, RETROK_DOWN, 0, 0);
    check(document.get_context()->GetFocusElement() == password, "Keyboard Down uses the same form navigation as the joypad");
    entry.controller(RIB_KEY_UP);
@@ -112,6 +119,7 @@ int main(int argc, char **argv) {
          "the keypad's Alt+Enter is not the form's either");
    entry.disable();
    check(!entry.physical(true, RETROK_a, 'a', 0), "Closed form releases keyboard routing");
+   check(!entry.typing(), "Closed form lets go of the keyboard");
    rib::EventQueue events;
    rib::Event hovered;
    rib::Screens screens(document, events, hovered);

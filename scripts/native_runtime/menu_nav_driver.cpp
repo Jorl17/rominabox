@@ -48,8 +48,9 @@
  * After every step, record what the player sees highlighted (visible
  * elements with the `focused` class), what is marked as capturing a binding
  * (the `capturing` class), the visible screen panel, the requested sounds,
- * the attributes on the document and the boxes requested in the case. Print
- * one JSON line per case for the caller to judge.
+ * whether we report to RetroArch that a text entry in the menu has the
+ * keyboard, the attributes on the document and the boxes requested in the
+ * case. Print one JSON line per case for the caller to judge.
  *
  * We record sounds in the fake host and play nothing. */
 #include "rmlui/menu_api.h"
@@ -223,6 +224,7 @@ std::string observe(const std::vector<std::string>& screen_panels,
    heard = host.sounds.size();
    return "{\"focused\":" + marked(rib::document_contract::Focused) + ",\"capturing\":" + marked(rib::document_contract::Capturing)
          + ",\"screen\":" + json(screen) + ",\"sounds\":" + sounds
+         + ",\"typing\":" + (rib_rmlui_typing() ? "true" : "false")
          + ",\"text\":" + words(text) + ",\"document\":" + document_attributes()
          + ",\"boxes\":" + boxes(selectors) + "}";
 }

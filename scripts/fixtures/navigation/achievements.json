@@ -156,6 +156,34 @@
       }
     },
     {
+      "name": "the sign-in form has the keyboard while it shows, and only then",
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-login",
+        "key:tab",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievements-login",
+          "achievement-username",
+          "achievement-password",
+          "achievements-login"
+        ]
+      },
+      "typing": {
+        "*": [
+          false,
+          false,
+          true,
+          true,
+          false
+        ]
+      }
+    },
+    {
       "name": "cancelling the form returns to SIGN IN",
       "steps": [
         "options",

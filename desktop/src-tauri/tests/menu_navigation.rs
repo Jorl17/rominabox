@@ -1,31 +1,32 @@
 //! Arrow keys, pointer and focus on every composed menu screen, headless.
 //!
 //! We compose every design in the registry and every hypothetical design
-//! under `tests/fixtures/designs/` with `menu::compose_menu` for a few
-//! pads, and run the menu C++ on each composition in `menu_nav_driver`
-//! (built in the `navigation` scope, found through
-//! `ROMINABOX_NAVIGATION_DRIVER`). We load the document in the driver with a
-//! fake RetroArch host: no window, no GL, no sound. Then we press keys, move
-//! the pointer and record, after every step, the element the player sees
-//! highlighted, what shows that a binding is being captured, the screen,
-//! the sounds played and, for the elements a case lists under `text`, the
-//! words on them.
+//! under `tests/fixtures/designs/` with `menu::compose_menu` for a few pads,
+//! and drive the menu C++ on each composition with `menu_nav_driver`, which
+//! we build in the `navigation` tests and name in
+//! `ROMINABOX_NAVIGATION_DRIVER`. In the driver we load the document with a
+//! fake RetroArch host, without a window, GL or sound. We press keys, move
+//! the pointer and report after every step the element the player sees
+//! highlighted, what shows that we are capturing a binding, the screen, the
+//! sounds requested in the menu, whether we tell RetroArch that the text
+//! entry has the keyboard (`typing`) and, for the elements a case names
+//! under `text`, the words on them.
 //!
-//! The case tables, `scripts/fixtures/navigation/*.json`, list what each
-//! step should highlight, per design and from the picture a person sees.
-//! There is no second spatial search here: a table contains ids.
+//! The case tables, `scripts/fixtures/navigation/*.json`, contain what each
+//! step should highlight, per design and from the picture a person sees. We
+//! do not search the layout here a second time, because a table lists ids.
 //!
-//! A case can have a `red` marker for a design: the bug, why it happens, and
-//! the current result (`now`). We accept the case while the result is
-//! exactly `now`, and fail it once the result is the expected one ("fixed:
-//! remove the red marker"), so we report a red case that goes wrong for
-//! another reason instead of hiding it.
+//! A case may have a `red` marker for a design, with the bug, the reason and
+//! what the menu does today (`now`). The case passes while the menu still
+//! does exactly `now`, and fails once the menu does what is expected in the case
+//! ("fixed: remove the red marker"), so we report a red case that goes wrong
+//! for another reason instead of hiding it.
 //!
 //! With the same driver we also open Pause in each design for a 4:3, a 16:9
 //! and a 10:9 game and measure the picture of the first save slot, where a
 //! design can give an element the aspect ratio of the running game.
 //!
-//! Without the driver variable we fail the tests: they run only the driver.
+//! Without the driver variable the tests fail, because they run only the driver.
 
 mod support;
 
@@ -216,7 +217,7 @@ fn text_ids(case: &Value, design: &str) -> Vec<String> {
 /// The step results expected in a case for a design, in the driver's format.
 fn expected(case: &Value, design: &str) -> Value {
     let mut out = serde_json::Map::new();
-    for field in ["focused", "capturing", "screen", "sounds", "text"] {
+    for field in ["focused", "capturing", "screen", "sounds", "typing", "text"] {
         if let Some(value) = case.get(field).and_then(|value| for_design(value, design)) {
             out.insert(field.to_owned(), value.clone());
         }
