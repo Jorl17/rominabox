@@ -10,7 +10,7 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "tauri": "tauri",
+    "tauri": "node ../scripts/tauri.mjs",
     "catalog": "cargo run --quiet --manifest-path crates/rominabox-catalog/Cargo.toml --bin rominabox-catalog -- generate",
     "catalog:validate": "cargo run --quiet --manifest-path crates/rominabox-catalog/Cargo.toml --bin rominabox-catalog -- validate",
     "scene": "node ../scripts/python.mjs ../scripts/render_controllers.py --stage-frontend"
