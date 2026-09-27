@@ -220,10 +220,14 @@ fn assess_firmware(
     Ok(systems::assess_firmware(system, &files))
 }
 
+/// Downloaded cores, cached for this machine in the per-user local data
+/// folder. On Windows this is Local AppData, not the Roaming folder that is
+/// copied between machines with a profile, and on macOS it is Application
+/// Support.
 fn core_cache(app: &tauri::AppHandle, target: Target) -> Result<PathBuf, String> {
     Ok(app
         .path()
-        .app_data_dir()
+        .app_local_data_dir()
         .map_err(|error| error.to_string())?
         .join("core-cache")
         .join(target.key()))
