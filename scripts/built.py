@@ -59,6 +59,18 @@ def owner(binary: Path) -> str | None:
     return asked.stdout.strip() if asked.returncode == 0 else None
 
 
+def same_folder(said: str | None, mine: str) -> bool:
+    """Whether the folder in a binary's output is this checkout's folder. We
+    compare folders, not text, because on Windows the path from the binary
+    has backslashes and the path of this checkout in MSYS2's Python has
+    forward slashes, so a text comparison would reject this checkout's CLI."""
+    return bool(said) and os.path.isdir(said) and os.path.samefile(said, mine)
+
+
+def built_here(binary: Path, mine: str) -> bool:
+    return same_folder(owner(binary), mine)
+
+
 SOURCES = [
     Path("desktop/src-tauri/src"),
     Path("desktop/src-tauri/Cargo.toml"),
@@ -127,7 +139,7 @@ def cli(build: bool = False) -> Path:
     mine = str((ROOT / "desktop/src-tauri").resolve())
 
     stale = MINE.is_file() and MINE.stat().st_mtime < newest_source()
-    if not build and not stale and owner(MINE) == mine:
+    if not build and not stale and built_here(MINE, mine):
         return MINE
     build = build or stale
 
@@ -136,7 +148,7 @@ def cli(build: bool = False) -> Path:
     if local not in candidates:
         candidates.append(local)
 
-    if build or not any(owner(c) == mine for c in candidates):
+    if build or not any(built_here(c, mine) for c in candidates):
         made = subprocess.run(
             ["cargo", "build", "--quiet", "--release",
              "--manifest-path", str(MANIFEST), "--bin", "rominabox-cli"],
@@ -149,7 +161,7 @@ def cli(build: bool = False) -> Path:
             )
 
     for candidate in candidates:
-        if owner(candidate) != mine:
+        if not built_here(candidate, mine):
             continue
         # We keep it inside this checkout, so that building in another one
         # cannot replace it later. With the shared cargo target,
@@ -169,7 +181,7 @@ def cli(build: bool = False) -> Path:
         # We check the copy again. Checking the shared file and copying it are
         # two steps, and someone building in another checkout can replace that
         # file by a rename between them, so we could return a copy unchecked.
-        if owner(MINE) != mine:
+        if not built_here(MINE, mine):
             raise SystemExit(
                 f"{candidate} changed while it was being copied — another "
                 "checkout built during the copy. Run this again."
