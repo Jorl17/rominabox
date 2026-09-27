@@ -87,8 +87,11 @@
       "LDFLAGS += -framework QuartzCore"
     ],
     "windows-x86_64": [
-      "LDFLAGS += -static"
-    ]
+      "LDFLAGS += -static",
+      "CFLAGS += -Os",
+      "CXXFLAGS += -Os"
+    ],
+    "comment-windows-x86_64": "Os: the player's own code is optimised for size, which makes it smaller without slowing emulation, because the core does the work. RmlUi stays Release: built MinSizeRel it requires a std::string constructor the static C++ runtime does not have. -ffunction-sections with --gc-sections makes the player larger with this toolchain."
   },
   "accounts": {
     "accounts": [
