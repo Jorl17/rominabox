@@ -64,6 +64,9 @@ def write_plan(app: Path, data: Path, driver: str = FROZEN_DRIVER) -> None:
         "managed\tlogs\n"
         "\n---config---\n"
         f'audio_driver = "{driver}"\n'
+        # What we write in an export when the player has not chosen to keep
+        # playing in the background.
+        'pause_nonactive = "true"\n'
     )
 
 
@@ -126,6 +129,14 @@ def plan_check() -> list[str]:
                 f"a launch with {name} ({menu_shots.QUIET_ENV}, {menu_shots.SOUND_ENV}) wrote "
                 f"audio_driver={got!r} audio_enable={enabled!r}, not {driver!r}"
                 + (" disabled" if quiet else "")
+            )
+        # A quiet run is never in front, so a pause would stop it before its
+        # frame limit. For a launch by a person we keep the player's choice.
+        paused = _config_value(written[name], "pause_nonactive")
+        if paused != ("false" if quiet else "true"):
+            failures.append(
+                f"a launch with {name} ({menu_shots.QUIET_ENV}, {menu_shots.SOUND_ENV}) wrote "
+                f"pause_nonactive={paused!r}"
             )
     return failures
 
