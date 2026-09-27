@@ -9,6 +9,7 @@
 #include <shlobj.h>
 #include <tlhelp32.h>
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,6 +94,48 @@ static int opened_by_explorer(void) {
     return found;
 }
 
+/* When a person opens a game again while it runs, we bring it to the front
+ * instead of starting it a second time, as on a Mac, because two players
+ * would use one data folder. In the running game's launcher we keep a mapping
+ * named after its data folder, with the player's process id, while it runs.
+ * This rule does not apply to a launch from a test or a script. */
+static DWORD *running_player;
+
+static BOOL CALLBACK bring_forward(HWND window, LPARAM player) {
+    DWORD owner = 0;
+    GetWindowThreadProcessId(window, &owner);
+    if (owner != (DWORD)player || !IsWindowVisible(window) || GetWindow(window, GW_OWNER))
+        return TRUE;
+    if (IsIconic(window))
+        ShowWindow(window, SW_RESTORE);
+    SetForegroundWindow(window);
+    return FALSE;
+}
+
+static void one_game_per_data_folder(const char *data_dir) {
+    unsigned long long hash = 1469598103934665603ULL;
+    const unsigned char *cursor;
+    wchar_t name[64];
+    HANDLE mapping;
+    DWORD player;
+    /* A folder's name, however it is spelled: case and separators aside. */
+    for (cursor = (const unsigned char *)data_dir; *cursor; cursor++)
+        hash = (hash ^ (unsigned char)(*cursor == '\\' ? '/' : tolower(*cursor))) * 1099511628211ULL;
+    swprintf(name, sizeof name / sizeof name[0], L"Local\\ROM-in-a-Box game %016llx", hash);
+    mapping = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof *running_player, name);
+    if (!mapping)
+        return;
+    if (GetLastError() != ERROR_ALREADY_EXISTS) {
+        running_player = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, sizeof *running_player);
+        return;
+    }
+    running_player = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, sizeof *running_player);
+    player = running_player ? *running_player : 0;
+    if (player)
+        EnumWindows(bring_forward, (LPARAM)player);
+    exit(0);
+}
+
 /* One argument in the form that the C runtime parses back into the same
  * argument, quoted, with the backslashes before a quote doubled. */
 static void append_argument(wchar_t **line, size_t *length, size_t *capacity, const wchar_t *argument) {
@@ -164,6 +207,7 @@ static int run(void) {
     places.user_data = user_data;
     places.accounts_root = user_data;
     places.opened_by_person = opened_by_explorer();
+    places.before_data_folder = places.opened_by_person ? one_game_per_data_folder : NULL;
     rominabox_prepare_launch(&places, &launch);
 
     for (index = 0; index < launch.variable_count; index++) {
@@ -212,6 +256,8 @@ static int run(void) {
         rominabox_launch_die("could not start the player");
     if (job)
         AssignProcessToJobObject(job, process.hProcess);
+    if (running_player)
+        *running_player = process.dwProcessId;
     ResumeThread(process.hThread);
     CloseHandle(process.hThread);
     if (log != INVALID_HANDLE_VALUE)
