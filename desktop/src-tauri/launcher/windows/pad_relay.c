@@ -1,8 +1,8 @@
 /* The launcher's side of a sandboxed game's controllers (pad_relay.h). On one
  * thread we use DirectInput and a window of our own, and find the controllers
- * as in RetroArch's joypad driver. We wait on that thread until a request
- * arrives from the game, then perform it on the controllers and reply. Once a
- * frame, the request is to read every controller. */
+ * as in RetroArch's joypad driver each time the game builds its list. We wait
+ * on that thread until a request arrives from the game, then perform it on
+ * the controllers and reply. Once a frame, the request is to read them all. */
 #define WIN32_LEAN_AND_MEAN
 #define DIRECTINPUT_VERSION 0x0800
 #include <windows.h>
@@ -121,6 +121,23 @@ static void drop_effect(PadRelay *relay, DWORD pad, DWORD slot) {
     relay->effects[pad][slot] = NULL;
 }
 
+/* Replace the last list, and every effect made on it, with the controllers
+ * attached now, each set up again. */
+static void list_pads(PadRelay *relay) {
+    DWORD index;
+    DWORD slot;
+    for (index = 0; index < relay->pad_count; index++) {
+        for (slot = 0; slot < RIB_PAD_RELAY_EFFECTS; slot++)
+            drop_effect(relay, index, slot);
+        IDirectInputDevice8_Unacquire(relay->devices[index]);
+        IDirectInputDevice8_Release(relay->devices[index]);
+        relay->devices[index] = NULL;
+    }
+    relay->pad_count = 0;
+    relay->view->pad_count = 0;
+    IDirectInput8_EnumDevices(relay->input, DI8DEVCLASS_GAMECTRL, found_pad, relay, DIEDFL_ATTACHEDONLY);
+}
+
 static HRESULT set_range(IDirectInputDevice8A *device, const rib_pad_relay_ask *ask) {
     DIPROPRANGE range;
     range.diph.dwSize = sizeof range;
@@ -169,6 +186,9 @@ static HRESULT do_ask(PadRelay *relay, const rib_pad_relay_ask *ask, DWORD *slot
     if (!relay->input)
         return DIERR_NOTINITIALIZED;
     switch (ask->what) {
+    case RIB_PAD_RELAY_LIST:
+        list_pads(relay);
+        return DI_OK;
     case RIB_PAD_RELAY_READ:
         read_pads(relay);
         return DI_OK;
@@ -213,9 +233,8 @@ static DWORD WINAPI answer(void *context) {
     kind.lpszClassName = L"ROM-in-a-Box controllers";
     RegisterClassW(&kind);
     relay->window = CreateWindowExW(0, kind.lpszClassName, L"", WS_POPUP, 0, 0, 0, 0, NULL, NULL, instance, NULL);
-    if (relay->window
-        && SUCCEEDED(DirectInput8Create(instance, DIRECTINPUT_VERSION, &IID_IDirectInput8A, (void **)&relay->input, NULL)))
-        IDirectInput8_EnumDevices(relay->input, DI8DEVCLASS_GAMECTRL, found_pad, relay, DIEDFL_ATTACHEDONLY);
+    if (relay->window)
+        DirectInput8Create(instance, DIRECTINPUT_VERSION, &IID_IDirectInput8A, (void **)&relay->input, NULL);
     SetEvent(relay->ready);
 
     waits[0] = relay->request;
@@ -236,14 +255,12 @@ static DWORD WINAPI answer(void *context) {
         }
     }
 
-    for (index = 0; index < RIB_PAD_RELAY_PADS; index++)
+    for (index = 0; index < relay->pad_count; index++) {
         for (slot = 0; slot < RIB_PAD_RELAY_EFFECTS; slot++)
             drop_effect(relay, index, slot);
-    for (index = 0; index < RIB_PAD_RELAY_PADS; index++)
-        if (relay->devices[index]) {
-            IDirectInputDevice8_Unacquire(relay->devices[index]);
-            IDirectInputDevice8_Release(relay->devices[index]);
-        }
+        IDirectInputDevice8_Unacquire(relay->devices[index]);
+        IDirectInputDevice8_Release(relay->devices[index]);
+    }
     if (relay->input)
         IDirectInput8_Release(relay->input);
     if (relay->window)
@@ -290,7 +307,7 @@ PadRelay *pad_relay_start(void) {
         close_relay(relay);
         return NULL;
     }
-    /* We find the controllers before the first request from the game. */
+    /* We set up DirectInput before the first request from the game. */
     started[0] = relay->ready;
     started[1] = relay->thread;
     WaitForMultipleObjects(2, started, FALSE, INFINITE);

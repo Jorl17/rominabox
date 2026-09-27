@@ -7,8 +7,8 @@
 
 typedef struct PadRelay PadRelay;
 
-/* Find the controllers, start answering requests for them, and set the name
- * of the relay in the environment of the game. NULL, with no name set, when
+/* Start answering requests for the game's controllers, and set the name of
+ * the relay in the environment of the game. NULL, with no name set, when
  * there is nothing to answer with. The game then has no DirectInput
  * controllers, as in a sandbox without the relay. */
 PadRelay *pad_relay_start(void);

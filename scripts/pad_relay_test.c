@@ -19,7 +19,7 @@
 #include "rominabox_launch.h"
 
 static int failures;
-static char logged[4096];
+static char logged[65536];
 
 #define CHECK(condition, ...) \
    do { \
@@ -300,6 +300,24 @@ int main(void) {
       printf("pad relay: no controller is connected: setting one up, reading it and its rumble were not checked\n");
    for (i = 0; i < relayed.count; i++)
       check_pad(through, &relayed.found[i]);
+
+   /* Whenever Windows reports that a controller was added or removed, the
+    * joypad driver releases every controller and lists them again. The
+    * launcher lists them again, and we set up and read each as the first time. */
+   {
+      LARGE_INTEGER frequency, start, end;
+      Listed again;
+      QueryPerformanceFrequency(&frequency);
+      QueryPerformanceCounter(&start);
+      again = list(through, DI8DEVCLASS_GAMECTRL);
+      QueryPerformanceCounter(&end);
+      printf("pad relay: listing again took %.1f ms\n",
+             (double)(end.QuadPart - start.QuadPart) * 1000.0 / (double)frequency.QuadPart);
+      CHECK(same(&relayed, &again), "listed again, the game has %d controller(s), before %d", again.count,
+            relayed.count);
+      for (i = 0; i < again.count; i++)
+         check_pad(through, &again.found[i]);
+   }
    check_hostile_game();
 
    /* With the launcher gone, the game loses its controllers and reports it,
