@@ -22,6 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import menu_shots  # noqa: E402
+import toolchain  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 # Our own committed cartridge. Any game in which we can open the shader screen will do.
@@ -29,7 +30,7 @@ ROM = ROOT / "scripts/fixtures/test-game.gbc"
 BUILD = ROOT / "work/shaderstate-build"
 SHOTS = ROOT / "work/shaderstate-shots"
 MARK_SOURCE = ROOT / "scripts/native_runtime/test_shader_mark.c"
-MARK_BINARY = ROOT / "work/shaderstate-mark"
+MARK_BINARY = toolchain.executable(ROOT / "work/shaderstate-mark")
 
 # The blue palette's highlight. We draw ON in it, and nothing for an empty state.
 HIGHLIGHT = (255, 241, 61)
@@ -139,11 +140,13 @@ def unit() -> None:
     """The row index is a pure function of the running preset path."""
     compiled = subprocess.run(
         [
-            "cc",
+            toolchain.describe()["cc"],
             "-Wall",
             "-Werror",
             "-I",
             str(ROOT / "vendor/retroarch/menu/drivers"),
+            "-I",
+            str(ROOT / "vendor/retroarch/libretro-common/include"),
             "-o",
             str(MARK_BINARY),
             str(MARK_SOURCE),
