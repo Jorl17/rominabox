@@ -4,10 +4,10 @@
 #include <stdio.h>
 
 /* The file operations for the launcher's shared modules, with UTF-8 paths on
- * every platform. On macOS and Linux we use the POSIX calls. On Windows we use
- * the wide Win32 calls, because the narrow ones use the ANSI code page for
- * paths, which cannot represent every user folder name, and the narrow rename()
- * cannot replace an existing file.
+ * every platform. On macOS and Linux we use the POSIX calls (posix/). On Windows
+ * we use the wide Win32 calls (windows/), because the narrow ones use the ANSI
+ * code page for paths, which cannot represent every user folder name, and the
+ * narrow rename() cannot replace an existing file.
  *
  * Every function returns 0 on success, or -1 with errno set, except as noted in
  * its comment. We follow a symbolic link or reparse point only in fs_open. */
@@ -24,6 +24,8 @@ int fs_is_absolute(const char *path);
 int fs_join(char *out, size_t capacity, const char *left, const char *right);
 /* `path` spelled with this platform's separator throughout, in place. */
 void fs_native_path(char *path);
+/* This platform's separator: `\` on Windows, `/` on macOS and Linux. */
+extern const char fs_separator;
 
 /* Call `visit` with each entry's name, skipping names that start with '.'.
  * Fail with ENOENT for a missing directory. When `visit` returns non-zero,

@@ -1,0 +1,187 @@
+use super::*;
+use crate::packaging::app_files::{stage_controller_remap, stage_pixel_options};
+
+/// A unique empty directory, matching the pattern the other tests use.
+fn scratch_dir() -> rominabox_scratch::Scratch {
+    rominabox_scratch::Scratch::dir("rominabox-remap")
+}
+
+/// We write the emulated controller to the remap file.
+///
+/// In RetroArch, the device has an effect only in a remap file, not in the
+/// controls config, so with the device there, every console that declares a
+/// `coreDevice` would stay on the default pad of the core.
+#[test]
+fn the_emulated_device_is_written_as_a_remap_not_a_config_line() {
+    let root = scratch_dir();
+    let profile = controls::ControlProfile {
+        id: "ps1".into(),
+        name: "PlayStation".into(),
+        systems: vec!["ps1".into()],
+        image: String::new(),
+        core_device: Some(517),
+        controls: Vec::new(),
+    };
+    let core = crate::systems::Core {
+        artifacts: Default::default(),
+        component: "pcsx_rearmed".into(),
+        license: "GPL-2.0".into(),
+        license_file: "pcsx_rearmed.txt".into(),
+        capabilities: Vec::new(),
+        library_name: Some("PCSX-ReARMed".into()),
+        pixels: Vec::new(),
+    };
+    let remaps = root.join("remaps");
+    stage_controller_remap(&profile, "", &core, &remaps).expect("a remap is written");
+
+    // The directory name is the library name of the core, not its component
+    // id, because in config_load_remap the path comes from the artifact.
+    let written = remaps.join("PCSX-ReARMed/PCSX-ReARMed.rmp");
+    let text = fs::read_to_string(&written).expect("remap exists at the path RetroArch reads");
+    assert!(
+        text.contains("input_libretro_device_p1 = \"517\""),
+        "the remap must name the declared device: {text}"
+    );
+}
+
+/// A pad that is the core's default device needs no remap at all.
+#[test]
+fn a_profile_with_no_declared_device_writes_nothing() {
+    let root = scratch_dir();
+    let profile = controls::ControlProfile {
+        id: "nes".into(),
+        name: "NES".into(),
+        systems: vec!["nes".into()],
+        image: String::new(),
+        core_device: None,
+        controls: Vec::new(),
+    };
+    let core = crate::systems::Core {
+        artifacts: Default::default(),
+        component: "nestopia".into(),
+        license: "GPL-2.0".into(),
+        license_file: "nestopia.txt".into(),
+        capabilities: Vec::new(),
+        library_name: None,
+        pixels: Vec::new(),
+    };
+    let remaps = root.join("remaps");
+    stage_controller_remap(&profile, "", &core, &remaps)
+        .expect("nothing to do is not an error");
+    assert!(!remaps.exists(), "no remap directory should be created");
+}
+
+/// A control the author moved on the pad is a remap even on a pad that is
+/// the core's default device.
+#[test]
+fn a_moved_control_is_written_into_the_remap() {
+    let root = scratch_dir();
+    let profile = controls::profile_for_system("megadrive").unwrap();
+    assert_eq!(
+        profile.core_device.map(|_| ()),
+        Some(()),
+        "the Mega Drive pad names its device"
+    );
+    let default_device = controls::ControlProfile {
+        core_device: None,
+        ..profile
+    };
+    let core = crate::systems::Core {
+        artifacts: Default::default(),
+        component: "genesis_plus_gx".into(),
+        license: String::new(),
+        license_file: String::new(),
+        capabilities: Vec::new(),
+        library_name: Some("Genesis Plus GX".into()),
+        pixels: Vec::new(),
+    };
+    let remaps = root.join("remaps");
+    let moved = "input_player1_btn_b = \"8\"\ninput_player1_btn_a = \"0\"\n";
+    stage_controller_remap(&default_device, moved, &core, &remaps).expect("a remap is written");
+    let text = fs::read_to_string(remaps.join("Genesis Plus GX/Genesis Plus GX.rmp")).unwrap();
+    assert_eq!(text, moved);
+}
+
+/// We write picture options to the per-core options file of RetroArch.
+///
+/// The directory is the library name of the core, as for the remap. For a
+/// core with nothing declared we write no file, because its defaults already
+/// leave the pixels unchanged.
+#[test]
+fn picture_options_are_written_where_retroarch_reads_them() {
+    let root = scratch_dir();
+    let core = crate::systems::Core {
+        artifacts: Default::default(),
+        component: "nestopia".into(),
+        license: "GPL-2.0".into(),
+        license_file: "nestopia.txt".into(),
+        capabilities: Vec::new(),
+        library_name: Some("Nestopia".into()),
+        pixels: vec![crate::systems::PixelOption {
+            key: "nestopia_blargg_ntsc_filter".into(),
+            value: "disabled".into(),
+        }],
+    };
+    let destination = root.join("core-options");
+    stage_pixel_options(&core, &destination).expect("options are written");
+    let text = fs::read_to_string(destination.join("Nestopia/Nestopia.opt"))
+        .expect("options exist at the path RetroArch reads");
+    assert_eq!(text, "nestopia_blargg_ntsc_filter = \"disabled\"\n");
+
+    let untouched = crate::systems::Core {
+        pixels: Vec::new(),
+        library_name: None,
+        ..core
+    };
+    let empty = root.join("empty");
+    stage_pixel_options(&untouched, &empty).expect("nothing to write is not an error");
+    assert!(!empty.exists(), "no options directory should be created");
+
+    let nameless = crate::systems::Core {
+        library_name: None,
+        pixels: vec![crate::systems::PixelOption {
+            key: "nestopia_blargg_ntsc_filter".into(),
+            value: "disabled".into(),
+        }],
+        ..untouched
+    };
+    let error = stage_pixel_options(&nameless, &root.join("missing"))
+        .expect_err("options with no library name have nowhere to go");
+    assert!(error.message.contains("libraryName"), "{}", error.message);
+
+    let launcher = write_test_launcher(request(false));
+    assert!(
+        launcher.contains("managed\tconfig\n"),
+        "the launcher has to be told about the directory core options are copied into"
+    );
+}
+
+/// When we need a device but have nowhere to write it, we fail with an error.
+#[test]
+fn a_declared_device_with_no_library_name_is_refused() {
+    let root = scratch_dir();
+    let profile = controls::ControlProfile {
+        id: "megadrive6".into(),
+        name: "Mega Drive six-button".into(),
+        systems: vec!["megadrive".into()],
+        image: String::new(),
+        core_device: Some(513),
+        controls: Vec::new(),
+    };
+    let core = crate::systems::Core {
+        artifacts: Default::default(),
+        component: "genesis_plus_gx".into(),
+        license: "MAME".into(),
+        license_file: "genesis_plus_gx.txt".into(),
+        capabilities: Vec::new(),
+        library_name: None,
+        pixels: Vec::new(),
+    };
+    let error = stage_controller_remap(&profile, "", &core, &root.join("remaps"))
+        .expect_err("silently shipping the wrong pad is the defect being prevented");
+    let message = error.to_string();
+    assert!(
+        message.contains("libraryName"),
+        "the refusal must say what is missing: {message}"
+    );
+}

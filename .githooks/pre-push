@@ -7,14 +7,5 @@
 #   git push --no-verify   skips it.
 set -e
 root=$(git rev-parse --show-toplevel)
-# ROMINABOX_PYTHON, else the platform's usual name: on Windows (Git Bash)
-# `python3` is the Microsoft Store stub and the interpreter is `python`;
-# macOS, Linux and other POSIX systems name it `python3`.
-python=${ROMINABOX_PYTHON:-}
-if [ -z "$python" ]; then
-  case "$(uname -s)" in
-    MINGW*|MSYS*|CYGWIN*) python=python ;;
-    *) python=python3 ;;
-  esac
-fi
+. "$root/.githooks/python.sh"
 exec "$python" "$root/scripts/test.py" --all

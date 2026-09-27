@@ -46,7 +46,7 @@ def main() -> int:
     rmlui_build = native_build.build_rmlui(destination, target, jobs)
     retroarch = destination / "retroarch"
     (retroarch / "Makefile.local").write_text(native_build.makefile_local(target), encoding="utf-8", newline="\n")
-    accounts = native_build.copy_accounts(destination)
+    accounts = native_build.copy_accounts(destination, target)
 
     environment = {**native_build.build_environment(target),
                    **native_build.freetype_environment(destination, target)}

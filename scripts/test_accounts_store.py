@@ -21,18 +21,24 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import core_source  # noqa: E402
+import native_build  # noqa: E402
 import toolchain  # noqa: E402
+
 ACCOUNTS = ROOT / "desktop/src-tauri/accounts"
 # The player's root, which contains rominabox_launch.h, as in the player build.
 PLAYER = ROOT / "vendor/retroarch"
-PORTABLE = ROOT / "desktop/src-tauri/launcher/portable_fs.c"
 OUTPUT = ROOT / "work/test-output"
-SOURCES = [ACCOUNTS / "accounts.c", ACCOUNTS / "sealed.c", PORTABLE,
-           PORTABLE.parent / "accounts_folder.c"]
 WARNINGS = ["-Wall", "-Wextra", "-Werror"]
 # What we link into the store on each platform. In sealed.c we seal tokens
 # with DPAPI, which is in crypt32 on Windows.
 LIBRARIES = {"macos": [], "windows": ["-lcrypt32"]}
+
+
+def sources(platform: str) -> list[Path]:
+    """Return the store for `platform`, with the launcher's file layer and
+    folder code that it depends on."""
+    return [ACCOUNTS / "accounts.c", ACCOUNTS / "sealed.c", *native_build.file_layer(platform),
+            native_build.LAUNCHER / "accounts_folder.c"]
 
 
 def main() -> int:
@@ -42,7 +48,7 @@ def main() -> int:
     platform = core_source.host_target().split("-", 1)[0]
     subprocess.run(
         [toolchain.describe()["cc"], "-std=gnu99", "-O1", "-g", *WARNINGS, f"-I{ACCOUNTS}", f"-I{PLAYER}",
-         str(ROOT / "scripts/accounts_store_test.c"), *map(str, SOURCES), "-o", str(binary),
+         str(ROOT / "scripts/accounts_store_test.c"), *map(str, sources(platform)), "-o", str(binary),
          *LIBRARIES[platform]],
         check=True,
     )
@@ -51,10 +57,10 @@ def main() -> int:
     if not zig:
         print("accounts store: Windows build not checked, zig is not installed")
         return 0
-    for source in SOURCES:
+    for source in sources("windows"):
         subprocess.run(
             [zig, "cc", "-target", "x86_64-windows-gnu", "-std=c99", *WARNINGS, f"-I{PLAYER}",
-             "-c", str(source), "-o", str(OUTPUT / f"{source.stem}-windows.o")],
+             "-c", str(source), "-o", str(OUTPUT / f"{source.parent.name}-{source.stem}-windows.o")],
             check=True,
         )
     print("accounts store: builds for Windows")

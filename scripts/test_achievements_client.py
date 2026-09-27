@@ -17,9 +17,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import core_source  # noqa: E402
-from native_runtime.menu_harness import FILE_LAYER  # noqa: E402
+import native_build  # noqa: E402
 import test_accounts_store  # noqa: E402
 import toolchain  # noqa: E402
+from native_runtime.menu_harness import FILE_LAYER  # noqa: E402
 
 RETROARCH = ROOT / "vendor/retroarch"
 RCHEEVOS = RETROARCH / "deps/rcheevos"
@@ -38,7 +39,7 @@ def main() -> int:
         RETROARCH / "cheevos/rominabox_storage.c",
         test_accounts_store.ACCOUNTS / "accounts.c",
         test_accounts_store.ACCOUNTS / "sealed.c",
-        test_accounts_store.PORTABLE,
+        *native_build.file_layer(platform),
         RCHEEVOS / "src/rc_client.c",
         RCHEEVOS / "src/rc_compat.c",
         RCHEEVOS / "src/rc_util.c",

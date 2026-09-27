@@ -30,6 +30,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import native_build  # noqa: E402
 import scratch  # noqa: E402
 from launcher_plan import compile_plan  # noqa: E402
 from menu_shots import QUIET_ENV, SOUND_ENV  # noqa: E402
@@ -348,10 +349,10 @@ def run_menu_sounds() -> list[str]:
     return []
 
 
-# The modules we will share with a Windows launcher. We cannot run them on
-# Windows here, but we compile them for it, to catch any POSIX-only call.
-PORTABLE = ("launch.c", "shipped_settings.c", "shipped_files.c", "portable_fs.c", "accounts_folder.c",
-            "player_settings.c")
+# The modules that a Windows launcher will share, beside its file layer. We
+# cannot run them on Windows here, but we check that they compile there, so
+# that no POSIX-only call can slip in.
+PORTABLE = ("launch.c", "shipped_settings.c", "shipped_files.c", "accounts_folder.c", "player_settings.c")
 
 
 def windows_build(directory: Path) -> list[str]:
@@ -360,10 +361,11 @@ def windows_build(directory: Path) -> list[str]:
         print("core options: Windows build not checked, zig is not installed")
         return []
     failures = []
-    for name in PORTABLE:
+    for source in [*(LAUNCHER / name for name in PORTABLE), *native_build.file_layer("windows")]:
+        name = source.relative_to(LAUNCHER).as_posix()
         built = subprocess.run(
             [zig, "cc", "-target", "x86_64-windows-gnu", "-Wall", "-Wextra", "-Werror",
-             "-c", str(LAUNCHER / name), "-o", str(directory / f"{name}.obj")],
+             "-c", str(source), "-o", str(directory / f"{name.replace('/', '-')}.obj")],
             capture_output=True, text=True,
         )
         if built.returncode != 0:

@@ -237,18 +237,8 @@ def build_rmlui(destination: Path, target: str, jobs: int) -> Path:
     return build
 
 
-def copy_accounts(destination: Path) -> Path:
-    """The ROM-in-a-Box sources we compile into the player (the QUICK SIGN IN store)."""
-    accounts = destination / "rominabox-accounts"
-    for folder, files in recipe()["accounts"].items():
-        (accounts / folder).mkdir(parents=True, exist_ok=True)
-        for relative in files:
-            source = ROOT / relative
-            (accounts / folder / source.name).write_bytes(source.read_bytes())
-    return accounts
-
-
-LAUNCHER = ROOT / "desktop/src-tauri/launcher"
+DESKTOP = ROOT / "desktop/src-tauri"
+LAUNCHER = DESKTOP / "launcher"
 
 
 def platform_of(target: str) -> str:
@@ -260,12 +250,41 @@ def platform_of(target: str) -> str:
     raise SystemExit(f"no platform named for {target}")
 
 
+def launcher_sources(platform: str) -> list[Path]:
+    """The launcher's C sources on `platform`: the shared ones at the top of
+    LAUNCHER, and those in the folders listed in the recipe for the platform."""
+    folders = recipe()["launcher"]["folders"].get(platform)
+    if folders is None:
+        raise SystemExit(f"the player recipe names no launcher folders for {platform}")
+    return sorted(LAUNCHER.glob("*.c")) + [source for folder in folders
+                                           for source in sorted((LAUNCHER / folder).glob("*.c"))]
+
+
+def file_layer(platform: str) -> list[Path]:
+    """The C sources of the launcher's file layer (portable_fs.h) on
+    `platform`: the sources common to every platform, and those for it."""
+    return [source for source in launcher_sources(platform) if source.name == "portable_fs.c"]
+
+
+def copy_accounts(destination: Path, target: str) -> Path:
+    """The ROM-in-a-Box sources we compile into the player (the QUICK SIGN IN
+    store) and the file layer below it, in their folders under
+    desktop/src-tauri."""
+    accounts = destination / "rominabox-accounts"
+    sources = [ROOT / relative for relative in recipe()["accounts"]["sources"]]
+    for source in [*sources, LAUNCHER / "portable_fs.h", *file_layer(platform_of(target))]:
+        copy = accounts / source.relative_to(DESKTOP)
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        copy.write_bytes(source.read_bytes())
+    return accounts
+
+
 def build_launcher(destination: Path, target: str, environment: dict[str, str]) -> Path | None:
     """The game's launcher, for a target where we build it next to the player."""
     launcher = recipe()["launcher"].get(require_target(target))
     if launcher is None:
         return None
-    sources = sorted(LAUNCHER.glob("*.c")) + sorted((LAUNCHER / platform_of(target)).glob("*.c"))
+    sources = launcher_sources(platform_of(target))
     output = destination / "launcher" / launcher["output"]
     output.parent.mkdir(parents=True, exist_ok=True)
     run(["cc", *launcher["flags"], "-o", str(output), *map(str, sources), *launcher["libraries"]],

@@ -5,7 +5,8 @@ command for `scripts/test.py`.
 
 In `.githooks/pre-push` we run the whole suite on this machine, which has the
 runtime kit prepared, rsvg-convert installed and the offscreen renderer
-built. Here we check that the hook is still set up.
+built. In `.githooks/pre-commit` we check the line limit
+(scripts/line_limit.py). Here we check that both hooks are still set up.
 
 We do not check that the hook is installed in a given checkout.
 `core.hooksPath` is local configuration and is unset in a fresh clone, so
@@ -22,14 +23,15 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-HOOK = ROOT / ".githooks/pre-push"
+PRE_PUSH = ROOT / ".githooks/pre-push"
+PRE_COMMIT = ROOT / ".githooks/pre-commit"
 
 
-def recorded_executable() -> bool:
+def recorded_executable(hook: Path) -> bool:
     """Return whether the hook is recorded in git as a program, because then
     it is executable in every checkout on macOS and Linux."""
     staged = subprocess.run(
-        ["git", "ls-files", "--stage", "--", HOOK.relative_to(ROOT).as_posix()],
+        ["git", "ls-files", "--stage", "--", hook.relative_to(ROOT).as_posix()],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -37,33 +39,43 @@ def recorded_executable() -> bool:
     return staged.startswith("100755 ")
 
 
-def runnable_here() -> bool:
+def runnable_here(hook: Path) -> bool:
     """Return whether the hook file can run as it is with git on this machine."""
     if os.name == "posix":
-        return bool(HOOK.stat().st_mode & stat.S_IXUSR)
+        return bool(hook.stat().st_mode & stat.S_IXUSR)
     if os.name == "nt":
         # With Git for Windows a hook runs whatever its file mode.
         return True
     raise NotImplementedError(f"no hook check declared for os.name {os.name!r}")
 
 
+def wired(hook: Path) -> str | None:
+    """Return what is wrong with how `hook` is stored, or None."""
+    if not hook.exists():
+        return f"{hook.name} is gone"
+    if not recorded_executable(hook):
+        return f"{hook.name} is not committed as executable, so a checkout's git will not run it"
+    if not runnable_here(hook):
+        return f"{hook.name} is not executable, so git will not run it"
+    return None
+
+
 def main() -> int:
     failures: list[str] = []
 
-    if not HOOK.exists():
-        failures.append(f"{HOOK.name} is gone: nothing runs the suite before a push")
-    elif not recorded_executable():
-        failures.append(f"{HOOK.name} is not committed as executable, so a checkout's git will not run it")
-    elif not runnable_here():
-        failures.append(f"{HOOK.name} is not executable, so git will not run it")
-    else:
-        body = HOOK.read_text().replace('"', " ").split()
-        if not {"--all"} <= set(body) or not any(
-            word.endswith("scripts/test.py") for word in body
-        ):
-            failures.append(f"{HOOK.name} no longer runs the whole suite")
+    for hook, script, extra, runs in [
+        (PRE_PUSH, "scripts/test.py", {"--all"}, "the whole suite"),
+        (PRE_COMMIT, "scripts/line_limit.py", set(), "the line limit"),
+    ]:
+        problem = wired(hook)
+        if problem:
+            failures.append(f"{problem}: nothing runs {runs}")
+            continue
+        body = hook.read_text().replace('"', " ").split()
+        if not extra <= set(body) or not any(word.endswith(script) for word in body):
+            failures.append(f"{hook.name} no longer runs {runs}")
         else:
-            print("  ok   pre-push hook runs scripts/test.py --all")
+            print(f"  ok   {hook.name} hook runs {' '.join([script, *sorted(extra)])}")
 
     configured = subprocess.run(
         ["git", "config", "--get", "core.hooksPath"],
