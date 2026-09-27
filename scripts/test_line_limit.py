@@ -96,7 +96,7 @@ def a_new_file_over_the_limit_names_itself_until_it_is_listed(repo: Repository) 
     check(passed(result), "listing it in the same commit accepts it", shown(result))
 
 
-def a_listed_file_may_not_grow(repo: Repository) -> None:
+def a_listed_file_grows_only_by_recording_it(repo: Repository) -> None:
     repo.write("app/App.tsx", 1500)
     repo.accept({"app/App.tsx": 1500})
     repo.commit()
@@ -104,6 +104,9 @@ def a_listed_file_may_not_grow(repo: Repository) -> None:
     result = repo.stage()
     check(stopped(result, "app/App.tsx", "1501", "1500"), "a listed file that grows stops the commit",
           shown(result))
+    repo.accept({"app/App.tsx": 1501})
+    result = repo.stage()
+    check(passed(result), "recording its new count in the same commit accepts the growth", shown(result))
 
 
 def a_listed_file_that_shrinks_is_told_to_record_it(repo: Repository) -> None:
@@ -182,7 +185,7 @@ def what_counts_is_what_is_staged(repo: Repository) -> None:
 CASES = [
     a_new_file_within_the_limit_passes,
     a_new_file_over_the_limit_names_itself_until_it_is_listed,
-    a_listed_file_may_not_grow,
+    a_listed_file_grows_only_by_recording_it,
     a_listed_file_that_shrinks_is_told_to_record_it,
     a_listed_file_within_the_limit_leaves_the_list,
     a_listed_file_that_is_gone_or_moved_leaves_the_list,

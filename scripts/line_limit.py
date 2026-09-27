@@ -5,11 +5,11 @@ reader.
 
 We run it in .githooks/pre-commit over what is staged in the repository where
 it runs. A hand-written source file may be at most LIMIT lines. LIST contains
-the files already longer, once each, with their line counts. A listed file
-may not grow, and one that comes within the limit leaves the list. We accept
-a new file over the limit only when someone adds it to LIST in the same
-commit, where a reviewer sees it. When LIST is staged, every entry must
-contain its file's staged line count.
+the files already longer, once each, with their line counts, and a file that
+comes within the limit leaves the list. We stop the commit when a file is
+over the limit, new or longer than in LIST, until someone splits it or accepts
+it by recording its count in LIST in the same commit, where a reviewer sees
+it. When LIST is staged, every entry must contain its file's staged line count.
 """
 
 from __future__ import annotations
@@ -96,7 +96,8 @@ def check() -> tuple[list[str], list[str]]:
                 failures.append(f"{path} is {lines} lines, over the {LIMIT}-line limit. Split it, or accept it "
                                 f"by adding it to {LIST} with {lines}.")
         elif lines > recorded:
-            failures.append(f"{path} grew to {lines} lines; {LIST} accepts {recorded}. Split it instead.")
+            failures.append(f"{path} grew to {lines} lines; {LIST} accepts {recorded}. Split it, or accept "
+                            f"the growth by recording {lines} in {LIST}.")
         elif lines <= LIMIT:
             failures.append(f"{path} is {lines} lines, within the {LIMIT}-line limit: take it off {LIST}.")
         elif lines < recorded and editing:
