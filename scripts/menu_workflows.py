@@ -48,13 +48,6 @@ def fixture(directory: Path) -> Path:
     return rom
 
 
-def redirected(path: Path) -> bool:
-    """A path that points somewhere else: a symbolic link, or on Windows a
-    directory junction, which is not a link for Python and which any user
-    can make."""
-    return path.is_symlink() or path.is_junction()
-
-
 def reset_fixture(app: Path) -> None:
     """Reset only the menu files of the generated cartridge, never a supplied app.
 
@@ -67,19 +60,19 @@ def reset_fixture(app: Path) -> None:
     if data is None or shots.storage_home(app) is None:
         raise SystemExit("the generated fixture must have contained game storage")
     session = data / "achievements.session"
-    if session.exists() or redirected(session):
+    if session.exists() or shots.redirected(session):
         raise SystemExit(f"fixture account storage is not signed out; no reset performed: {session}")
     for name in ("volume.cfg", "background-play.cfg", "shader-choice"):
         path = data / name
-        if redirected(path):
+        if shots.redirected(path):
             raise SystemExit(f"refusing a link in fixture storage: {path}")
         path.unlink(missing_ok=True)
     states = data / "states"
-    if redirected(states):
+    if shots.redirected(states):
         raise SystemExit(f"refusing a link in fixture storage: {states}")
     if states.is_dir():
         for path in states.iterdir():
-            if path.is_file() and not redirected(path):
+            if path.is_file() and not shots.redirected(path):
                 path.unlink()
 
 
@@ -89,18 +82,18 @@ def claim_fixture(app: Path) -> None:
     # The folder that contains a game's storage on each platform: a sandboxed
     # macOS game's container, or the games folder in Windows' per-user data.
     sandbox = shots.storage_home(app)
-    if data is None or redirected(data) or sandbox is None:
+    if data is None or shots.redirected(data) or sandbox is None:
         raise SystemExit("the fixture requires its own contained game storage")
     if not data.is_relative_to(sandbox):
         raise SystemExit(f"fixture storage is outside its sandbox: {data}")
     for current in (data, *data.parents):
-        if redirected(current):
+        if shots.redirected(current):
             raise SystemExit(f"refusing a link in fixture storage: {current}")
     if not data.resolve().is_relative_to(sandbox.resolve()):
         raise SystemExit(f"fixture storage resolves outside its sandbox: {data}")
     marker = data / "menu-workflow-owner"
     owner = f"{ROOT}\n{hashlib.sha256(make_megadrive_rom()).hexdigest()}\n"
-    if redirected(marker):
+    if shots.redirected(marker):
         raise SystemExit(f"refusing a linked ownership marker: {marker}")
     if marker.exists():
         if marker.read_text(encoding="utf-8") != owner:
@@ -110,11 +103,11 @@ def claim_fixture(app: Path) -> None:
                                          "shader-choice", "achievements.session")]
     for name in ("states", "remaps"):
         directory = data / name
-        if redirected(directory):
+        if shots.redirected(directory):
             raise SystemExit(f"refusing a link in fixture storage: {directory}")
         if directory.is_dir():
             existing += [path for path in directory.rglob("*") if not path.is_dir()]
-    unknown = [path for path in existing if path.exists() or redirected(path)]
+    unknown = [path for path in existing if path.exists() or shots.redirected(path)]
     if unknown:
         raise SystemExit("pre-existing unowned fixture files; no reset performed:\n"
                          + "\n".join(str(path) for path in unknown))

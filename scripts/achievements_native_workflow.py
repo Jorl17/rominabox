@@ -166,21 +166,21 @@ def owned_storage(app: Path, rom: bytes) -> Path:
         raise AssertionError("native fixture requires contained per-game storage")
     home = home.resolve()
     for current in (data, *data.parents):
-        if current.is_symlink():
-            raise AssertionError(f"symlink in fixture storage path: {current}")
+        if shots.redirected(current):
+            raise AssertionError(f"link in fixture storage path: {current}")
     if not data.resolve().is_relative_to(home):
         raise AssertionError(f"fixture storage escapes its games' folder: {data}")
     marker = data / "achievements-native-owner"
     owner = f"{ROOT}\n{hashlib.sha256(rom).hexdigest()}\n"
     if data.exists() and any(data.iterdir()):
-        if marker.is_symlink() or not marker.is_file() or marker.read_text() != owner:
+        if shots.redirected(marker) or not marker.is_file() or marker.read_text() != owner:
             raise AssertionError(f"unowned fixture storage: {data}")
         states = data / "states"
-        if states.is_symlink():
-            raise AssertionError(f"symlink in fixture storage: {states}")
+        if shots.redirected(states):
+            raise AssertionError(f"link in fixture storage: {states}")
         if states.exists():
             for state in states.iterdir():
-                if state.is_symlink() or not state.is_file() or \
+                if shots.redirected(state) or not state.is_file() or \
                         not state.name.startswith("achievement-native.state"):
                     raise AssertionError(f"unexpected fixture state: {state}")
                 state.unlink()
@@ -191,8 +191,8 @@ def owned_storage(app: Path, rom: bytes) -> Path:
 
 def session(data: Path, enabled: bool) -> None:
     path = data / "achievements.session"
-    if path.is_symlink():
-        raise AssertionError(f"symlink in fixture storage: {path}")
+    if shots.redirected(path):
+        raise AssertionError(f"link in fixture storage: {path}")
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     # Only this user may read it: through its mode on macOS and Linux, and on
     # Windows through the access list of the per-user folder, without a mode.

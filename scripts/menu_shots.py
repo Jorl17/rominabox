@@ -141,6 +141,13 @@ def _windows_launcher(app: Path) -> Path:
     raise SystemExit(f"no launcher inside {app}")
 
 
+def redirected(path: Path) -> bool:
+    """A path that points somewhere else: a symbolic link, or on Windows a
+    directory junction, which is not a link for Python and which any user
+    can make."""
+    return path.is_symlink() or path.is_junction()
+
+
 def _macos_running(app: Path) -> str:
     """Processes whose command line contains the app, one "pid command" per line."""
     found = subprocess.run(["pgrep", "-fl", str(app)], capture_output=True, text=True, timeout=15)
@@ -302,6 +309,13 @@ def take(app: Path, name: str, script: list[str], output: Path,
     # error "failed to open file for writing" for every shot.
     target = output.resolve() / f"{name}.png"
     target.unlink(missing_ok=True)
+    # What we delete for a shot is in the game's storage, and through a link
+    # it would be the files of someone else.
+    data = data_dir_of(app)
+    if data is not None:
+        for folder in (data, data / "logs", data / "remaps"):
+            if redirected(folder):
+                return f"refusing a link in the game's storage: {folder}"
     log = log_of(app)
     if log and log.exists():
         log.unlink()
@@ -309,12 +323,11 @@ def take(app: Path, name: str, script: list[str], output: Path,
     # We start each shot from the game as it is shipped. Choosing a pad in the
     # picker writes it to the per-game override, so without this step the shot
     # of the six-button pad would change the pictures of every later shot.
-    data = data_dir_of(app)
     if name.startswith("achievements-"):
         if data is None:
             return "account shots require managed per-game storage"
         session = data / "achievements.session"
-        if session.exists() or session.is_symlink():
+        if session.exists() or redirected(session):
             return "account shots require signed-out game storage; achievements.session is present"
     if data and reset_settings:
         (data / "controls.cfg").unlink(missing_ok=True)
