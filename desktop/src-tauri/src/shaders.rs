@@ -800,6 +800,45 @@ mod tests {
         assert!(declarations.contains("screen_button_pause = \"options-back\""));
     }
 
+    /// The libretro presets have their passes in `shaders/` and their lookup
+    /// textures in `resources/`. When we copy all into one folder, a preset
+    /// such as `pal-r57shell.glslp` lists files that are not there, and the
+    /// game runs with no shader and no warning.
+    #[test]
+    fn a_preset_keeps_its_folders_so_every_file_it_names_is_there() {
+        let source = rominabox_scratch::Scratch::dir("rominabox-shader-folders");
+        fs::create_dir_all(source.join("shaders")).unwrap();
+        fs::create_dir_all(source.join("resources")).unwrap();
+        let preset = source.join("pal.glslp");
+        fs::write(
+            &preset,
+            "shaders = 1\nshader0 = shaders/pass.glsl\ntextures = \"lut\"\nlut = \"resources/lut.png\"\n",
+        )
+        .unwrap();
+        fs::write(source.join("shaders/pass.glsl"), "// the pass\n").unwrap();
+        fs::write(source.join("resources/lut.png"), b"lut").unwrap();
+        let composed = composed(ShaderSelection {
+            custom: vec![CustomShader {
+                name: "PAL".into(),
+                path: preset,
+            }],
+            initial: Some("pal".into()),
+            bundled: Vec::new(),
+        });
+        let root = rominabox_scratch::Scratch::dir("rominabox-shader-folders-staged");
+        composed.write(&root).unwrap();
+        let staged = root.join("shaders/pal");
+        assert!(staged.join("pal.glslp").is_file());
+        for named in ["shaders/pass.glsl", "resources/lut.png"] {
+            assert!(
+                staged.join(named).is_file(),
+                "the preset names {named}, which is not beside it"
+            );
+        }
+        let _ = fs::remove_dir_all(&source);
+        let _ = fs::remove_dir_all(&root);
+    }
+
     #[test]
     fn an_ordinary_menu_gains_no_shader_screen() {
         let composed = composed(ShaderSelection::default());
