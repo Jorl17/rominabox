@@ -212,6 +212,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_joypad_autoconfig.py")],
     ),
     Scope(
+        "padrelay",
+        "on Windows, that a sandboxed game lists the controllers DirectInput lists outside, sets one up and reads it within the range it set, asks for rumble through its launcher and loses its controllers when the launcher stops answering; elsewhere, with zig, that both sides build for Windows",
+        "RetroArch's joypad driver using it (the isolation scope sees a gamepad), plugging in or out, or rumble on a controller that can; without a controller connected, anything about one",
+        [PYTHON, str(ROOT / "scripts/test_pad_relay.py")],
+    ),
+    Scope(
         "reporoot",
         "that nothing finds the repository by the path it was compiled in, that no test or script uses a place in one person's home, that every script building against RmlUi uses the declared one, and that no script or test names the removed experiment tree",
         "that the rule is right, or that a binary really came from elsewhere; it reads how each place asks",

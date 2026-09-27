@@ -21,6 +21,7 @@
 #include "../accounts_folder.h"
 #include "../launch.h"
 #include "../portable_fs.h"
+#include "pad_relay.h"
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 
 #define RIB_WINDOWS_PART(name, path) static const char part_##name[] = path;
@@ -307,6 +308,7 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
     PROCESS_INFORMATION process = {0};
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = {0};
     HANDLE job;
+    PadRelay *pads;
     DWORD code = 1;
 
     own_path(program, sizeof program / sizeof program[0]);
@@ -334,6 +336,7 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
 
     SetEnvironmentVariableW(outside_user_data, user_data_wide);
     SetEnvironmentVariableW(outside_opened_by_person, opened_by_explorer() ? L"1" : NULL);
+    pads = pad_relay_start();
     InitializeProcThreadAttributeList(NULL, 1, 0, &size);
     attributes = HeapAlloc(GetProcessHeap(), 0, size);
     if (!line || !attributes || !InitializeProcThreadAttributeList(attributes, 1, 0, &size)
@@ -362,6 +365,7 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
     WaitForSingleObject(process.hProcess, INFINITE);
     GetExitCodeProcess(process.hProcess, &code);
     CloseHandle(process.hProcess);
+    pad_relay_stop(pads);
     if (job)
         CloseHandle(job);
     DeleteProcThreadAttributeList(attributes);

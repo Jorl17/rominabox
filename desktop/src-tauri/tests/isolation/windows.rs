@@ -20,8 +20,10 @@ use std::{
 pub const TARGET: ExportTarget = ExportTarget::Windows;
 /// The log line for an opened sound device.
 pub const AUDIO_DEVICE_LOG: &str = "[WASAPI]";
-/// The log line for a gamepad that the game can see.
-pub const GAMEPAD_LOG: &str = "[Autoconf] ";
+/// The log line when we open a gamepad in the joypad driver, after reading it
+/// in the launcher outside the sandbox. The RetroArch line comes only with the
+/// controller notification, which we turn off in games.
+pub const GAMEPAD_LOG: &str = "[RIB] Controller \"";
 /// There is no log line for the quiet window on Windows, so in the quiet
 /// tests we read the window itself.
 pub const QUIET_WINDOW_LOG: Option<&str> = None;

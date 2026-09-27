@@ -144,7 +144,9 @@
         "-lole32",
         "-luuid",
         "-luserenv",
-        "-ladvapi32"
+        "-ladvapi32",
+        "-ldinput8",
+        "-ldxguid"
       ]
     }
   },
