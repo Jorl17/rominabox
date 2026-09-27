@@ -112,13 +112,14 @@
     "windows": {"audio": "wasapi", "joypad": "xinput", "joypadProfiles": ["xinput", "dinput"]}
   },
   "systemLibraries": {
-    "comment": "The libraries every machine of a platform has, so a player, a launcher or a core may import them. scripts/build_player.py refuses a player or launcher that imports anything else, and an export refuses such a core. Names are lower case; Windows also resolves any api-ms-win- API set.",
+    "comment": "The libraries every machine of a platform has, so a player, a launcher or a core may import them. The Windows list covers every import of the catalog's Windows cores, as published on the buildbot. scripts/build_player.py rejects a player or launcher that imports anything else, and an export rejects such a core. Names are lower case; Windows also resolves any api-ms-win- API set.",
     "windows": [
-      "advapi32.dll", "bcrypt.dll", "cfgmgr32.dll", "comdlg32.dll", "crypt32.dll", "dinput8.dll",
-      "dsound.dll", "dwmapi.dll", "gdi32.dll", "hid.dll", "imm32.dll", "iphlpapi.dll",
-      "kernel32.dll", "msimg32.dll", "msvcrt.dll", "ntdll.dll", "ole32.dll", "oleaut32.dll",
-      "opengl32.dll", "setupapi.dll", "shell32.dll", "shlwapi.dll", "user32.dll", "uxtheme.dll",
-      "version.dll", "winmm.dll", "ws2_32.dll", "xinput1_4.dll"
+      "advapi32.dll", "bcrypt.dll", "cfgmgr32.dll", "comdlg32.dll", "crypt32.dll", "d3dcompiler_47.dll",
+      "dinput8.dll", "dsound.dll", "dwmapi.dll", "dxgi.dll", "gdi32.dll", "hid.dll", "imm32.dll",
+      "iphlpapi.dll", "kernel32.dll", "msimg32.dll", "msvcrt.dll", "mswsock.dll", "ntdll.dll",
+      "ole32.dll", "oleaut32.dll", "opengl32.dll", "secur32.dll", "setupapi.dll", "shell32.dll",
+      "shlwapi.dll", "user32.dll", "uxtheme.dll", "version.dll", "winmm.dll", "ws2_32.dll",
+      "xinput1_4.dll"
     ]
   },
   "launcher": {
