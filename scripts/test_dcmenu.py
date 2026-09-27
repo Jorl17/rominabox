@@ -56,9 +56,11 @@ def extract_line_buffer() -> str:
 
 def check_log_line() -> bool:
     if native_build.is_windows(rmlui_paths.TARGET):
-        # We fork and redirect output in the same way as the macOS launcher. We
-        # do not test the log of the Windows launcher here.
-        print("not yet on Windows: the launcher's log redirection is macOS code until the launcher split")
+        # We fork and redirect output in the same way as the macOS launcher,
+        # in one process. On Windows the player runs in a separate process
+        # with a log handle from its launcher, and we flush each line in
+        # RetroArch's logger. We do not test the Windows case here.
+        print("not on Windows: this checks the macOS launcher's in-process log redirection")
         return True
     text = LAUNCHER.read_text()
     dup = text.find("dup2(log_fd, STDOUT_FILENO)")
