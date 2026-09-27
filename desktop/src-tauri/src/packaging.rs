@@ -1905,10 +1905,10 @@ fn bundle_dependencies(
                 ));
             }
             let name = source.file_name().unwrap().to_string_lossy().into_owned();
-            let canonical = fs::canonicalize(&source)
+            let canonical = dunce::canonicalize(&source)
                 .map_err(|error| ExportError::io(ErrorStage::Dependencies, &source, error))?;
             if let Some(previous) = copied.get(&name) {
-                if fs::canonicalize(previous).ok().as_ref() != Some(&canonical) {
+                if dunce::canonicalize(previous).ok().as_ref() != Some(&canonical) {
                     return Err(ExportError::new(
                         ErrorStage::Dependencies,
                         format!("dependency filename collision: {name}"),

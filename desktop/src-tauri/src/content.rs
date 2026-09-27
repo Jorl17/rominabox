@@ -53,7 +53,7 @@ pub fn collect_for(entrypoint: &Path, system_id: Option<&str>) -> Result<Content
         None => systems::registry().iter().collect::<Vec<_>>(),
         Some(id) => vec![systems::find(id).ok_or_else(|| format!("unknown console: {id}"))?],
     };
-    let entrypoint = fs::canonicalize(entrypoint)
+    let entrypoint = dunce::canonicalize(entrypoint)
         .map_err(|error| format!("resolve game content {}: {error}", entrypoint.display()))?;
     let root = entrypoint
         .parent()
@@ -113,11 +113,11 @@ enum FolderPath {
 }
 
 fn folder_path(root: &Path, path: &Path) -> FolderPath {
-    let root = match fs::canonicalize(root) {
+    let root = match dunce::canonicalize(root) {
         Ok(root) => root,
         Err(error) => return FolderPath::Unreadable(error),
     };
-    let resolved = match fs::canonicalize(path) {
+    let resolved = match dunce::canonicalize(path) {
         Ok(resolved) => resolved,
         Err(error) => return FolderPath::Unreadable(error),
     };
@@ -585,7 +585,7 @@ fn same_file(left: &Path, right: &Path) -> bool {
     if left == right {
         return true;
     }
-    match (fs::canonicalize(left), fs::canonicalize(right)) {
+    match (dunce::canonicalize(left), dunce::canonicalize(right)) {
         (Ok(left), Ok(right)) => left == right,
         _ => false,
     }

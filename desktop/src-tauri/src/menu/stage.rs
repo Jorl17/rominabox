@@ -108,7 +108,7 @@ impl Composition {
                     // staging into the directory we read from would destroy
                     // the artwork we are about to use.
                     let same = matches!(
-                        (from.canonicalize(), to.canonicalize()),
+                        (dunce::canonicalize(&from), dunce::canonicalize(&to)),
                         (Ok(a), Ok(b)) if a == b
                     );
                     if same {

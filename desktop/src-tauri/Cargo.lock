@@ -3250,6 +3250,7 @@ dependencies = [
  "chd",
  "crc32fast",
  "datary",
+ "dunce",
  "gilrs",
  "icns",
  "image",
