@@ -382,6 +382,20 @@ static void shared_accounts(const struct retro_game_info *info,
    fclose(file);
    snprintf(path, sizeof(path), "%s/66697874757265/games/" GAME_B, accounts);
    assert(fs_exists(path));
+   unload();
+
+   /* The other way round: A, signed in with its password, signs out while B,
+    * signed in with QUICK SIGN IN, still uses the account. It stays listed,
+    * and A signs in with it again. */
+   play(first, GAME_A, info);
+   ready();
+   rib_achievements_sign_out();
+   assert(saved_accounts(saved) == 1);
+   assert(rib_achievements_quick_sign_in("Fixture"));
+   ready();
+   unload();
+   play(second, GAME_B, info);
+   ready();
 
    /* B signs out. A still uses the account, so it stays listed. */
    rib_achievements_sign_out();
