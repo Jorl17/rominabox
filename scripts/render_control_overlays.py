@@ -228,13 +228,13 @@ def main() -> int:
         print(f"{profile['id']:<14}{len(profile['controls']):>3} controls  {digests[profile['id']]}")
 
     rendered = json.dumps(digests, indent=2, sort_keys=True) + "\n"
-    (arguments.output / "digests.json").write_text(rendered)
+    (arguments.output / "digests.json").write_text(rendered, encoding="utf-8", newline="\n")
 
     # Without a comparison we only render pictures to inspect by eye. With
     # the committed digests we can test that nothing moved.
     if arguments.record:
         BASELINE.parent.mkdir(parents=True, exist_ok=True)
-        BASELINE.write_text(rendered)
+        BASELINE.write_text(rendered, encoding="utf-8", newline="\n")
         print(f"\nrecorded {len(digests)} digests -> {BASELINE}")
         return 0
     if arguments.check:

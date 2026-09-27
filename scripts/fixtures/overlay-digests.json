@@ -1,15 +1,15 @@
 {
-  "dreamcast": "b5d7af91abb5763e",
-  "gameboy": "d4fdce3e0132caae",
-  "gamecube": "9c24827a38ef1094",
-  "gamegear": "c15e382b66bb1aba",
-  "gba": "d33d8990454b0f35",
-  "mastersystem": "46dd0b22b734f239",
-  "megadrive": "669a5663ebda626d",
-  "megadrive6": "39e1a98951a184fa",
-  "n64": "5470b8f63fa0afd9",
-  "nes": "485ad74dd470f482",
-  "ps1": "99e8cfb15cabe6af",
-  "ps1-analog": "99e8cfb15cabe6af",
-  "snes": "0bee0430bc5f1fd1"
+  "dreamcast": "b0e89bbb2b997e1b",
+  "gameboy": "77c6b32a2d2a1451",
+  "gamecube": "1d19dcd129fe0a49",
+  "gamegear": "c9735879d9ec785c",
+  "gba": "e929ddaf9dbc1f81",
+  "mastersystem": "4476cb4ab1060f0f",
+  "megadrive": "1bd95d08de138ac8",
+  "megadrive6": "c48e23ada3e1086d",
+  "n64": "77c144ab059b363b",
+  "nes": "1c351ab4027e8346",
+  "ps1": "6e3f0387c79e8d30",
+  "ps1-analog": "6e3f0387c79e8d30",
+  "snes": "a1ba6991be942190"
 }
