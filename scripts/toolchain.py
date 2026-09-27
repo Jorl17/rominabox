@@ -21,12 +21,16 @@ import core_source  # noqa: E402
 # What we compile native test programs with on each platform. In scripts in
 # any language we read it here (`python3 scripts/toolchain.py describe`)
 # instead of naming a compiler or a flag. With `memoryChecks`, a test program
-# stops at its first bad memory access.
+# stops at its first bad memory access. `supportLibraries` are the libraries
+# required at link time by the shared test headers in scripts/native_runtime.
 DECLARED = {
-    "macos": {"cc": "cc", "cxx": "c++", "memoryChecks": ["-fsanitize=address"], "executableSuffix": ""},
+    "macos": {"cc": "cc", "cxx": "c++", "memoryChecks": ["-fsanitize=address"], "executableSuffix": "",
+              "supportLibraries": []},
     # GCC from MinGW-w64 has no AddressSanitizer runtime, so we run the same
-    # tests with the checks on macOS.
-    "windows": {"cc": "cc", "cxx": "c++", "memoryChecks": [], "executableSuffix": ".exe"},
+    # tests with the checks on macOS. In test_arguments.h we read the wide
+    # command line through shell32.
+    "windows": {"cc": "cc", "cxx": "c++", "memoryChecks": [], "executableSuffix": ".exe",
+                "supportLibraries": ["-lshell32"]},
 }
 
 

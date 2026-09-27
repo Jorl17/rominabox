@@ -106,24 +106,23 @@ const char *class_id(const char *class_name, int index)
    return "";
 }
 
-const char *property(const char *id, const char *property)
+/* A value, instead of a pointer into a buffer rewritten on each call,
+ * because a comparison of two properties would read that buffer twice, and
+ * the order of the two calls is up to the compiler. */
+std::string property(const char *id, const char *property)
 {
-   static std::string value;
    document.get_context()->Update();
    auto *element = document.root()->GetElementById(id);
-   value = element && element->GetProperty(property) ? element->GetProperty(property)->ToString() : "";
-   return value.c_str();
+   return element && element->GetProperty(property) ? element->GetProperty(property)->ToString() : "";
 }
 
 unsigned texture_loads() { return document.texture_loads(); }
 
 void advance(double seconds) { document.advance(seconds); }
 
-const char *text(const char *id) {
-   static std::string text;
+std::string text(const char *id) {
    Rml::Element *element = document.root() ? document.root()->GetElementById(id) : nullptr;
-   text = element ? element->GetInnerRML() : std::string("<no element ") + id + ">";
-   return text.c_str();
+   return element ? element->GetInnerRML() : std::string("<no element ") + id + ">";
 }
 
 bool has_class(const char *id, const char *name) {
@@ -131,8 +130,5 @@ bool has_class(const char *id, const char *name) {
    return element && name && element->IsClassSet(name);
 }
 
-float picture_aspect() {
-   document.get_context()->Update(); auto size = document.root()->GetElementById("slot-image-1")->GetParentNode()->GetBox().GetSize(Rml::BoxArea::Content); return size.x / size.y;
-}
 };
 }

@@ -57,6 +57,8 @@ static std::vector<std::string> stops_in(const char *panel)
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include "test_arguments.h"
+#include <streams/file_stream.h>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -836,8 +838,8 @@ static int check_one_list(const char *design, const char *profile,
       static bool stand_in_noted = false;
       const std::string first_row = view.lists.row_in("control-binds", 0); const char *first = first_row.c_str();
       const std::string title_id = first ? std::string(first) + "-title" : "";
-      const char *title = first ? inspect.text(title_id.c_str()) : "";
-      if (!stand_in_noted && title && std::strcmp(title, "LEFT STICK UP") == 0)
+      const std::string title = first ? inspect.text(title_id.c_str()) : "";
+      if (!stand_in_noted && title == "LEFT STICK UP")
       {
          stand_in_noted = true;
          CHECK(false,
@@ -995,8 +997,12 @@ static void check_glyphs(const char *design, const char *which)
 static void check_short_list(const char *design, int declared)
 {
    /* In the placement sweep we use the words of each control. Here we use the
-    * long stand-in, the text that a fixed width would have to fit. */
+    * long stand-in, the text that a fixed width would have to fit. We place
+    * the list for these rows, as for the short ones below, so that its width
+    * does not remain from the last scene placed in the sweep. */
    fill_bind_rows();
+   view.render(960, 600);
+   view.lists.place_list("control-binds", "control-up", declared);
    check_glyphs(design, "long");
    const int rows = view.lists.rows_in("control-binds");
    for (int index = 0; index < rows; ++index)
@@ -1012,14 +1018,13 @@ static void check_short_list(const char *design, int declared)
    view.lists.retarget_pages("control-binds");
    view.render(960, 600);
    view.lists.place_list("control-binds", "control-up", declared);
-   const char *prop = inspect.property("control-binds", "width");
+   const std::string prop = inspect.property("control-binds", "width");
    int parsed = 0;
-   if (prop)
-      std::sscanf(prop, "%d", &parsed);
+   std::sscanf(prop.c_str(), "%d", &parsed);
    char message[256];
    std::snprintf(message, sizeof(message),
          "%s short list width is %s; two short words should be under 200dp (declared %d)",
-         design, prop ? prop : "(none)", declared);
+         design, prop.c_str(), declared);
    CHECK(parsed > 0 && parsed < 200 && parsed <= declared, message);
    check_glyphs(design, "short");
 }
@@ -1147,7 +1152,13 @@ static int check_placement(const char *assets, const char *scenes,
    view.screens.show_screen("controls");
    fill_bind_rows();
    int scenes_seen = 0;
+   /* In name order: a directory lists its files in whatever order its
+    * filesystem keeps them, and a check must not depend on that. */
+   std::vector<std::filesystem::directory_entry> entries;
    for (const auto &entry : std::filesystem::directory_iterator(scenes))
+      entries.push_back(entry);
+   std::sort(entries.begin(), entries.end());
+   for (const auto &entry : entries)
    {
       if (entry.path().extension() != ".rml")
          continue;
@@ -1239,6 +1250,10 @@ int test_menu_declarations();
 
 int main(int argc, char **argv)
 {
+   /* Paths arrive as UTF-8 on every platform. */
+   Utf8Arguments utf8(argc, argv);
+   argc = utf8.argc();
+   argv = utf8.argv();
    if (argc == 2 && std::strcmp(argv[1], "declarations") == 0)
       return test_menu_declarations();
    const char *assets = argc > 1 ? argv[1] : nullptr;
@@ -1499,14 +1514,15 @@ int main(int argc, char **argv)
    if (argc > 2)
    {
       view.screens.show_screen("pause");
-      FILE *image = std::fopen(argv[2], "wb");
-      CHECK(image, "writable thumbnail fixture");
-      if (image) { std::fputs("first", image); std::fclose(image); }
+      /* Written through the file layer the menu reads it with. */
+      static const char first[] = "first";
+      static const char updated[] = "updated image content";
+      CHECK(filestream_write_file(argv[2], first, (int64_t)sizeof first - 1),
+            "writable thumbnail fixture");
       view.slots.set_slot_state(2, true, argv[2]);
       view.render(960, 600);
       const unsigned before = inspect.texture_loads();
-      image = std::fopen(argv[2], "wb");
-      if (image) { std::fputs("updated image content", image); std::fclose(image); }
+      filestream_write_file(argv[2], updated, (int64_t)sizeof updated - 1);
       view.slots.set_slot_state(2, true, argv[2]);
       view.render(960, 600);
       CHECK(inspect.texture_loads() > before,

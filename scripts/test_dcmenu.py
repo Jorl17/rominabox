@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 # We take the headers and the archive from the player build, because a
 # literal path here could point to a folder that no script creates.
 import native_build  # noqa: E402
+import toolchain  # noqa: E402
 import rmlui_paths  # noqa: E402
 from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
 sys.path.insert(0, str(ROOT / "scripts/native_runtime"))
@@ -154,7 +155,7 @@ def probe_platform() -> tuple[list[Path], list[Path], list[str]]:
         glsym = RETROARCH / "libretro-common/glsym"
         return ([NATIVE / "menu_gl_platform_windows.cpp"],
                 [glsym / "rglgen.c", glsym / "glsym_gl.c"],
-                ["-lopengl32", "-lgdi32", "-lshell32"])
+                ["-lopengl32", "-lgdi32"])
     raise SystemExit(f"the menu draw probe has no GL context for {target}")
 
 
@@ -186,6 +187,7 @@ def check_menu_draw() -> bool:
         str(LIBRARY),
         *flags,
         *platform_flags,
+        *toolchain.describe()["supportLibraries"],
     ]
     compiled = subprocess.run(command, capture_output=True, text=True)
     if compiled.returncode != 0:

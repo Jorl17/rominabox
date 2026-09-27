@@ -67,8 +67,7 @@ bool binds_visible(int *x, int *y)
 
 bool status_is(const char *expected)
 {
-   const char *status = inspect.text("status");
-   return status && std::strcmp(status, expected) == 0;
+   return inspect.text("status") == expected;
 }
 
 /* We draw the ring over a control on the pad lit while the stop for that

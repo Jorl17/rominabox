@@ -11,7 +11,6 @@
 #include <GL/gl.h>
 #include <GL/wglext.h>
 #include <glsym/rglgen.h>
-#include <shellapi.h>
 
 struct ProbeContext
 {
@@ -22,26 +21,7 @@ struct ProbeContext
 
 static const wchar_t window_class[] = L"RomInABoxMenuGlProbe";
 
-/* `argv` is in the ANSI code page, and only the wide command line is exact. */
-static std::vector<std::string> utf8_arguments()
-{
-   std::vector<std::string> arguments;
-   int count = 0;
-   wchar_t **wide = CommandLineToArgvW(GetCommandLineW(), &count);
-   for (int i = 0; wide && i < count; i++)
-   {
-      const int length = (int)wcslen(wide[i]);
-      const int size = WideCharToMultiByte(CP_UTF8, 0, wide[i], length, nullptr, 0, nullptr, nullptr);
-      std::string argument(size > 0 ? size : 0, ' ');
-      if (size > 0)
-         WideCharToMultiByte(CP_UTF8, 0, wide[i], length, &argument[0], size, nullptr, nullptr);
-      arguments.push_back(argument);
-   }
-   LocalFree(wide);
-   return arguments;
-}
-
-std::vector<std::string> probe_platform_start(int, char **)
+void probe_platform_start()
 {
    WNDCLASSW description = {};
    description.style = CS_OWNDC;
@@ -49,7 +29,6 @@ std::vector<std::string> probe_platform_start(int, char **)
    description.hInstance = GetModuleHandleW(nullptr);
    description.lpszClassName = window_class;
    RegisterClassW(&description);
-   return utf8_arguments();
 }
 
 static rglgen_func_t proc_address(const char *name)

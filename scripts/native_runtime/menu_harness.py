@@ -42,6 +42,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 import file_lock  # noqa: E402
 import rmlui_paths  # noqa: E402
+import toolchain as declared_toolchain  # noqa: E402
 RETROARCH = ROOT / "vendor/retroarch"
 MAKEFILE = RETROARCH / "Makefile.common"
 BRIDGE = RETROARCH / "menu/drivers"
@@ -326,7 +327,8 @@ def build(output: Path, sources: list[Path], defines: list[str], frameworks: lis
         program_objects, program_compiled = compile_objects(sources, toolchain, variant / "objects", identity)
         archived = archive(menu_objects, variant / "libmenu.a")
         linked = link(output, [*program_objects, variant / "libmenu.a", rmlui_paths.LIBRARY], toolchain,
-                      [*freetype, *(flag for name in frameworks for flag in ("-framework", name))])
+                      [*freetype, *(flag for name in frameworks for flag in ("-framework", name)),
+                       *declared_toolchain.describe()["supportLibraries"]])
     compiled = len(menu_compiled) + len(program_compiled)
     return (f"menu harness: {output.name}: compiled {compiled} of {len(menu) + len(sources)} objects, "
             f"archive {'rebuilt' if archived else 'reused'}, {'linked' if linked else 'link reused'}, "

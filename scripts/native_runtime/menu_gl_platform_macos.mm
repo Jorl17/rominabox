@@ -12,15 +12,13 @@ struct ProbeContext
    NSWindow *window;
 };
 
-std::vector<std::string> probe_platform_start(int argc, char **argv)
+void probe_platform_start()
 {
    @autoreleasepool
    {
       NSApplication *app = [NSApplication sharedApplication];
       [app setActivationPolicy:NSApplicationActivationPolicyProhibited];
    }
-   /* On macOS the arguments are already UTF-8. */
-   return std::vector<std::string>(argv, argv + argc);
 }
 
 ProbeContext *probe_context_create(bool core)

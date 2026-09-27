@@ -8,10 +8,10 @@
  * vertex position (NVIDIA's compatibility profile on Windows), those arrays
  * would replace the menu's positions and the whole menu would be invisible.
  *
- * The arguments and the context come from the code for each platform
- * (menu_gl_platform.h). */
+ * We make the context in the code for each platform (menu_gl_platform.h). */
 
 #include "menu_gl_platform.h"
+#include "test_arguments.h"
 
 #include "rmlui/render/platform.h"
 #include "rmlui/render/rmlui_gl.h"
@@ -165,13 +165,14 @@ int check(bool core, Leftover leftover, const char *name, const std::string& pic
 
 int main(int argc, char **argv)
 {
-   const std::vector<std::string> arguments = probe_platform_start(argc, argv);
-   if (arguments.size() != 2)
+   Utf8Arguments arguments(argc, argv);
+   if (arguments.argc() != 2)
    {
       std::printf("usage: menu_core_gl PICTURE\n");
       return 2;
    }
-   const std::string& picture = arguments[1];
+   const std::string picture = arguments.argv()[1];
+   probe_platform_start();
    /* Write three by two opaque pixels at the given path, through the file
     * layer that we use in the menu. */
    std::vector<unsigned char> encoded;
