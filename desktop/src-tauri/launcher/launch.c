@@ -151,7 +151,7 @@ void rominabox_launch_make_directories(const char *path) {
 
 static char *read_file(const char *path, size_t *length_out) {
     FILE *file = fs_open(path, "rb");
-    long length;
+    long length = 0;
     char *body;
     if (!file)
         return NULL;
