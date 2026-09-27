@@ -6,8 +6,9 @@ BUILD is a directory we made with scripts/build_player.py for a player we
 ship, not a test build. Its build-info.json contains the target. Every kit
 has the same assets (scripts/kit_assets.py). The target's part of
 scripts/native_runtime/player-recipe.json lists the rest: the player, the
-launcher and the licence texts of what they are made from. Until we declare
-the macOS part in the recipe, we freeze a macOS kit with
+launcher, the licence texts of what they are made from, and the player's
+controller profile folders, which we stage from the pinned autoconfig archive.
+Until we declare the macOS part in the recipe, we freeze a macOS kit with
 scripts/native_runtime/freeze-runtime-kit.mjs.
 """
 
@@ -22,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kit_assets  # noqa: E402
 import native_build  # noqa: E402
+import prepare_runtime  # noqa: E402
 import toolchain  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -130,6 +132,8 @@ def main() -> int:
         "branding": {"logo": "branding/logo.png"},
     }
     (kit / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
+    # After the manifest, because we add the profiles' component record to it.
+    prepare_runtime.stage_joypad_autoconfig(kit, prepare_runtime.joypad_profile_drivers(platform))
     print(f"Made the {target} runtime kit in {kit} from {build}")
     return 0
 

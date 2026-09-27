@@ -103,6 +103,11 @@
     ]
   },
   "capability": "rcheevos_rib_prepare_client",
+  "drivers": {
+    "comment": "What an exported game's player is told to use, per platform: its audio driver, its controller driver, and the controller profile folders RetroArch reads. A pad's profiles are read from the folder named for the driver it was connected under; on Windows that driver connects XInput pads as xinput and every other pad as dinput. The exporter writes audio and joypad into the game's settings; scripts/build_kit.py stages joypadProfiles from the pinned autoconfig archive (scripts/prepare_runtime.py).",
+    "macos": {"audio": "coreaudio", "joypad": "hid", "joypadProfiles": ["hid"]},
+    "windows": {"audio": "wasapi", "joypad": "xinput", "joypadProfiles": ["xinput", "dinput"]}
+  },
   "launcher": {
     "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher and its platform's entry in the folder named for the platform. A macOS launcher is built into the app at export when its kit does not contain one.",
     "windows-x86_64": {

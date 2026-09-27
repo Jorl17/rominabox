@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from core_source import DOWNLOADS, host_target, seeded_cache  # noqa: E402
+import native_build  # noqa: E402
 
 # The provenance of each core is declared in the console package that
 # contains its component. We read it from the catalog here instead of keeping
@@ -299,14 +300,22 @@ def build_core(root: Path, name: str, spec: dict, downloads: Path) -> dict[str, 
     )
 
 
-# Pinned joypad profiles. We set input_joypad_driver = "hid" in every
-# export. In RetroArch, profiles come only from joypad_autoconfig_dir and
-# joypad_autoconfig_dir/<driver>, one level deep, so we stage only hid/.
-# SDL3 gamecontrollerdb.cfg has its own notice and is not a hid profile.
+# Pinned joypad profiles. In RetroArch, profiles come only from
+# joypad_autoconfig_dir and joypad_autoconfig_dir/<driver>, one level deep,
+# so we stage only the driver folders declared for the kit's platform
+# (player-recipe.json, "drivers"). SDL3 gamecontrollerdb.cfg is not a profile.
 JOYPAD_AUTOCONFIG_REPO = "libretro/retroarch-joypad-autoconfig"
 JOYPAD_AUTOCONFIG_REVISION = "1c6d74cef79b56a3a5dc283b1b0b2e4af73376ff"
 JOYPAD_AUTOCONFIG_LICENSE_FILE = "retroarch-joypad-autoconfig.txt"
 JOYPAD_AUTOCONFIG_COMPONENT = "retroarch-joypad-autoconfig"
+
+# We test with a DualSense (1356/3302), so under each driver where a pad is
+# identified by its ids, this profile must be the only one that matches it. In
+# XInput every pad is called "XInput Controller", and a DualSense never appears.
+DUALSENSE_PROFILES = {
+    "hid": "DualSense Wireless Controller (PS5).cfg",
+    "dinput": "DualSense5.cfg",
+}
 
 _PLAYER_PREFIX = re.compile(r"^player\d+_")
 _ALT_SUFFIX = re.compile(r"_alt\d+$")
@@ -448,15 +457,25 @@ def strip_meta_bind_lines(text: str, names: set[str]) -> tuple[str, int]:
     return "".join(kept), removed
 
 
-def _hid_profile_filename(member_name: str) -> str | None:
-    """Return the cfg basename when the member is exactly `<root>/hid/<file>.cfg`."""
+def _profile(member_name: str, drivers: list[str]) -> tuple[str, str] | None:
+    """Return (driver, cfg basename) when the member is exactly
+    `<root>/<driver>/<file>.cfg` for one of `drivers`."""
     parts = Path(member_name).parts
-    if len(parts) != 3 or parts[1] != "hid":
+    if len(parts) != 3 or parts[1] not in drivers:
         return None
     filename = parts[2]
     if not filename.endswith(".cfg") or filename.startswith("."):
         return None
-    return filename
+    return parts[1], filename
+
+
+def joypad_profile_drivers(platform_name: str) -> list[str]:
+    """Return the controller profile folders for a platform's player, as
+    declared in the player recipe."""
+    declared = native_build.recipe()["drivers"].get(platform_name)
+    if declared is None:
+        raise RuntimeError(f"the player recipe declares no drivers for {platform_name}")
+    return declared["joypadProfiles"]
 
 
 def _record_joypad_component(root: Path, record: dict[str, object]) -> None:
@@ -474,26 +493,28 @@ def _record_joypad_component(root: Path, record: dict[str, object]) -> None:
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
-def stage_joypad_autoconfig(root: Path) -> dict[str, object]:
-    """Download the pinned autoconfig repository and stage its hid profiles.
+def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]:
+    """Download the pinned autoconfig repository and stage the profiles of `drivers`.
 
-    Keep the downloaded archive in work/downloads. Stage only `hid/*.cfg`
-    for export, without the meta/hotkey assignment lines, and store
-    `COPYING` beside the other component licences.
+    Keep the downloaded archive in work/downloads. For export, stage only
+    `<driver>/*.cfg` for each of `drivers`, without the meta/hotkey
+    assignment lines, and store `COPYING` beside the other component licences.
     """
+    if not drivers:
+        raise RuntimeError("no joypad drivers to stage profiles for")
     revision = JOYPAD_AUTOCONFIG_REVISION
     names = set(meta_bind_names())
     archive = DOWNLOADS / f"{JOYPAD_AUTOCONFIG_COMPONENT}-{revision}.tar.gz"
     source_url = f"https://codeload.github.com/{JOYPAD_AUTOCONFIG_REPO}/tar.gz/{revision}"
     download(source_url, archive)
     licence_member = None
-    profiles: list[tuple[str, bytes]] = []
+    profiles: list[tuple[str, str, bytes]] = []
     with tarfile.open(archive) as package:
         for member in package.getmembers():
             if not member.isfile():
                 continue
-            filename = _hid_profile_filename(member.name)
-            if filename is None:
+            profile = _profile(member.name, drivers)
+            if profile is None:
                 if Path(member.name).name == "COPYING" and len(Path(member.name).parts) == 2:
                     source = package.extractfile(member)
                     if source is None:
@@ -507,7 +528,7 @@ def stage_joypad_autoconfig(root: Path) -> dict[str, object]:
             source = package.extractfile(member)
             if source is None:
                 continue
-            profiles.append((filename, source.read()))
+            profiles.append((*profile, source.read()))
     if licence_member is None:
         raise RuntimeError(f"No COPYING member in {archive}")
     licence_text = (root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE).read_text(encoding="utf-8")
@@ -515,21 +536,23 @@ def stage_joypad_autoconfig(root: Path) -> dict[str, object]:
         raise RuntimeError("Joypad autoconfig COPYING is missing the RetroArch MIT copyright")
     if "Permission is hereby granted" not in licence_text:
         raise RuntimeError("Joypad autoconfig COPYING is missing the MIT grant")
-    if not profiles:
-        raise RuntimeError(f"No hid profiles in {archive}")
+    for driver in drivers:
+        if not any(staged == driver for staged, _filename, _raw in profiles):
+            raise RuntimeError(f"No {driver} profiles in {archive}")
 
-    destination_dir = root / "autoconfig" / "hid"
-    destination_dir.mkdir(parents=True, exist_ok=True)
-    expected = {filename for filename, _raw in profiles}
-    for child in destination_dir.iterdir():
-        if child.is_file() and child.name not in expected:
-            child.unlink()
+    for driver in drivers:
+        destination_dir = root / "autoconfig" / driver
+        destination_dir.mkdir(parents=True, exist_ok=True)
+        expected = {filename for staged, filename, _raw in profiles if staged == driver}
+        for child in destination_dir.iterdir():
+            if child.is_file() and child.name not in expected:
+                child.unlink()
 
     removed_lines = 0
     upstream_bytes = 0
     staged_bytes = 0
-    dualsense_files = []
-    for filename, raw in profiles:
+    dualsense_files: dict[str, list[str]] = {driver: [] for driver in drivers}
+    for driver, filename, raw in profiles:
         upstream_bytes += len(raw)
         text = raw.decode("utf-8")
         stripped, removed = strip_meta_bind_lines(text, names)
@@ -541,14 +564,17 @@ def stage_joypad_autoconfig(root: Path) -> dict[str, object]:
         ):
             raise RuntimeError(f"meta bind survived staging in {filename}")
         payload = stripped.encode("utf-8")
-        (destination_dir / filename).write_bytes(payload)
+        (root / "autoconfig" / driver / filename).write_bytes(payload)
         staged_bytes += len(payload)
         if 'input_vendor_id = "1356"' in stripped and 'input_product_id = "3302"' in stripped:
-            dualsense_files.append(filename)
-    if dualsense_files != ["DualSense Wireless Controller (PS5).cfg"]:
-        raise RuntimeError(
-            f"expected one DualSense 1356/3302 profile, found {dualsense_files}"
-        )
+            dualsense_files[driver].append(filename)
+    for driver in drivers:
+        expected_dualsense = [DUALSENSE_PROFILES[driver]] if driver in DUALSENSE_PROFILES else []
+        if dualsense_files[driver] != expected_dualsense:
+            raise RuntimeError(
+                f"expected the DualSense 1356/3302 profiles {expected_dualsense} under {driver}, "
+                f"found {dualsense_files[driver]}"
+            )
 
     record: dict[str, object] = {
         "name": JOYPAD_AUTOCONFIG_COMPONENT,
@@ -558,16 +584,17 @@ def stage_joypad_autoconfig(root: Path) -> dict[str, object]:
         "license_file": JOYPAD_AUTOCONFIG_LICENSE_FILE,
         "license_source_member": licence_member,
         "origin": (
-            "Pinned hid profiles from libretro/retroarch-joypad-autoconfig. "
-            "Only hid/*.cfg is staged, because exports set input_joypad_driver to hid. "
+            f"Pinned {', '.join(drivers)} profiles from libretro/retroarch-joypad-autoconfig. "
+            f"Only {', '.join(f'{driver}/*.cfg' for driver in drivers)} is staged: the folders "
+            "the exported player's controller driver reads. "
             "Meta-bind lines are removed at staging. SDL3 gamecontrollerdb.cfg is not shipped."
         ),
     }
     _record_joypad_component(root, record)
     print(
-        f"Joypad autoconfig {revision}: {len(profiles)} hid profiles, "
+        f"Joypad autoconfig {revision}: {len(profiles)} {'/'.join(drivers)} profiles, "
         f"{removed_lines} meta lines removed, {staged_bytes} staged bytes "
-        f"(upstream hid {upstream_bytes} bytes, archive {archive.stat().st_size} bytes)",
+        f"(upstream {upstream_bytes} bytes, archive {archive.stat().st_size} bytes)",
         flush=True,
     )
     return record
@@ -602,14 +629,16 @@ def main() -> None:
     parser.add_argument(
         "--joypad-autoconfig-only",
         action="store_true",
-        help="stage the pinned hid joypad profiles, their COPYING, and the manifest record into --output",
+        help="stage the pinned joypad profiles the target's platform declares, their COPYING, "
+        "and the manifest record into --output",
     )
     args = parser.parse_args()
     if args.joypad_autoconfig_only:
         root = args.output.resolve()
         (root / "sources").mkdir(parents=True, exist_ok=True)
         (root / "licenses").mkdir(parents=True, exist_ok=True)
-        stage_joypad_autoconfig(root)
+        platform_name = (args.target or host_target()).split("-", 1)[0]
+        stage_joypad_autoconfig(root, joypad_profile_drivers(platform_name))
         print(f"Joypad autoconfig staged: {root}", flush=True)
         return
     if platform.system() != "Darwin":

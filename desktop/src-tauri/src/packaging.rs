@@ -65,6 +65,29 @@ impl ExportTarget {
             },
         }
     }
+
+    /// The drivers that we tell the player to use on this platform, which we
+    /// declare with the player's build.
+    pub fn drivers(&self) -> Drivers {
+        let recipe: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../scripts/native_runtime/player-recipe.json"
+        ))
+        .expect("the player recipe parses");
+        let platform = serde_json::to_value(self).expect("a platform names itself");
+        let declared = &recipe["drivers"][platform.as_str().expect("a platform is a word")];
+        serde_json::from_value(declared.clone())
+            .unwrap_or_else(|error| panic!("the player recipe declares no drivers for {platform}: {error}"))
+    }
+}
+
+/// What we tell the player to use on a platform: its audio and controller
+/// drivers, and the controller profile folders for them in RetroArch.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Drivers {
+    pub audio: String,
+    pub joypad: String,
+    pub joypad_profiles: Vec<String>,
 }
 
 /// The core that we will ship in this export, named for its platform.
@@ -1392,9 +1415,10 @@ fn validate_firmware(
     Ok(())
 }
 
-/// Copy staged hid profiles into the app. At launch we copy them into
-/// `$data_dir/autoconfig/<driver>/`, the only folder in which we let RetroArch
-/// search. A kit that was not staged adds nothing.
+/// Copy the kit's controller profiles, one folder per driver, into the app.
+/// In the launcher we then copy them into `$data_dir/autoconfig/<driver>/`,
+/// the only directory that we tell RetroArch to search. We copy nothing from
+/// a kit that has not been staged.
 fn stage_bundled_autoconfig(runtime_kit: &Path, destination: &Path) -> Result<(), ExportError> {
     let source = runtime_kit.join("autoconfig");
     if !source.exists() {
@@ -1635,6 +1659,7 @@ fn isolated_runtime_config(request: &ExportRequest) -> String {
         "false"
     };
     let (data, resources) = (token!(DataDir), token!(ResourcesDir));
+    let Drivers { audio, joypad, .. } = request.target.drivers();
     let assets = if menu_sounds {
         format!("{resources}/assets")
     } else {
@@ -1642,7 +1667,7 @@ fn isolated_runtime_config(request: &ExportRequest) -> String {
     };
     format!(
         r#"video_driver = "gl"
-audio_driver = "coreaudio"
+audio_driver = "{audio}"
 audio_enable_menu = "{menu_audio}"
 audio_enable_menu_ok = "{menu_sounds}"
 audio_enable_menu_cancel = "{menu_sounds}"
@@ -1654,7 +1679,7 @@ cheevos_hardcore_mode_enable = "false"
 cheevos_test_unofficial = "false"
 cheevos_start_active = "false"
 cheevos_unlock_sound_enable = "false"
-input_joypad_driver = "hid"
+input_joypad_driver = "{joypad}"
 menu_driver = "{menu_driver}"
 menu_pause_libretro = "true"
 menu_show_start_screen = "false"
@@ -3033,6 +3058,25 @@ mod tests {
         assert_eq!(config.matches("auto_remaps_enable").count(), 1);
         assert_eq!(config_value(&config, "auto_remaps_enable"), Some("true"));
         assert_eq!(config_value(&config, "network_cmd_enable"), Some("false"));
+    }
+
+    #[test]
+    fn each_platform_player_is_told_its_own_drivers() {
+        for (target, audio, joypad) in [
+            (ExportTarget::Macos, "coreaudio", "hid"),
+            (ExportTarget::Windows, "wasapi", "xinput"),
+        ] {
+            let config = isolated_runtime_config(&ExportRequest {
+                target: target.clone(),
+                ..request(false)
+            });
+            assert_eq!(config_value(&config, "audio_driver"), Some(audio));
+            assert_eq!(config_value(&config, "input_joypad_driver"), Some(joypad));
+            assert!(
+                target.drivers().joypad_profiles.iter().any(|folder| folder == joypad),
+                "{target:?} must ship profiles for the driver it is told to use"
+            );
+        }
     }
 
     #[test]
