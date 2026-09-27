@@ -169,6 +169,12 @@ SCOPES = [
         prepare=RMLUI_PREPARE,
     ),
     Scope(
+        "environment",
+        "that the player reads a variable its launcher set as it was set: a value, a path with a non-ASCII name, an empty value, and no variable",
+        "which variables the launcher sets, or what the player does with them",
+        [PYTHON, str(ROOT / "scripts/test_environment_reader.py")],
+    ),
+    Scope(
         "heldkey",
         "that Escape still toggles the menu while another key is held, including a press that starts and ends between two samples",
         "that a physical keyboard delivers the events; the decision is the function the runloop calls",
