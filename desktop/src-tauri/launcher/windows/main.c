@@ -16,6 +16,7 @@
 #include <wchar.h>
 
 #include "../launch.h"
+#include "../../../../vendor/retroarch/rominabox_launch.h"
 
 #define RIB_WINDOWS_PART(name, path) static const char part_##name[] = path;
 #include "../launch_contract.inc"
@@ -36,14 +37,19 @@ static char *utf8(const wchar_t *text) {
     return result;
 }
 
+/* This .exe, in full. */
+static void own_path(wchar_t *path, DWORD capacity) {
+    DWORD length = GetModuleFileNameW(NULL, path, capacity);
+    if (length == 0 || length >= capacity)
+        rominabox_launch_die("could not find the launcher");
+}
+
 /* The folder this .exe is in, as UTF-8. */
 static void own_folder(char *out, size_t out_cap) {
     wchar_t path[32768];
-    DWORD length = GetModuleFileNameW(NULL, path, sizeof path / sizeof path[0]);
     wchar_t *last;
     char *folder;
-    if (length == 0 || length >= sizeof path / sizeof path[0])
-        rominabox_launch_die("could not find the launcher");
+    own_path(path, sizeof path / sizeof path[0]);
     last = wcsrchr(path, L'\\');
     if (!last)
         rominabox_launch_die("the launcher is not inside a folder");
@@ -216,6 +222,15 @@ static int run(void) {
         SetEnvironmentVariableW(name, value);
         free(name);
         free(value);
+    }
+    /* The game's window is in the player process, so a pin from it would
+     * start the player alone. We give the window this program instead. */
+    {
+        static wchar_t path[32768];
+        wchar_t *name = wide(RIB_ENV_RELAUNCH);
+        own_path(path, sizeof path / sizeof path[0]);
+        SetEnvironmentVariableW(name, path);
+        free(name);
     }
 
     {
