@@ -2203,6 +2203,9 @@ fn make_executable(path: &Path) -> Result<(), ExportError> {
         fs::set_permissions(path, permissions)
             .map_err(|error| ExportError::io(ErrorStage::Stage, path, error))?;
     }
+    // Windows has no executable bit. A file runs because of its extension.
+    #[cfg(windows)]
+    let _ = path;
     Ok(())
 }
 
