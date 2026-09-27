@@ -296,6 +296,7 @@ KIT = ROOT / "desktop/src-tauri/resources/runtime"
 # out of date or from another checkout. See scripts/built.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from built import cli as _cli  # noqa: E402
+import player_build  # noqa: E402
 from core_source import core_source  # noqa: E402
 
 
@@ -395,27 +396,16 @@ def built_player() -> Path:
         "build one with ROMINABOX_MENU_SCRIPT_BUILD=1 python3 "
         "scripts/build_player.py <absolute dir>"
     )
-    selected = os.environ.get("ROMINABOX_TEST_BUILD")
-    if selected:
-        build = Path(selected).resolve()
-        info = json.loads((build / "build-info.json").read_text())
-        revision = subprocess.check_output(
-            ["git", "-C", str(ROOT / "vendor/retroarch"), "rev-parse", "HEAD"],
-            text=True,
-        ).strip()
-        if info.get("retroarchCommit") != revision:
-            raise SystemExit(f"{build} was not built from the current fork commit {revision}")
+    if os.environ.get("ROMINABOX_TEST_BUILD"):
+        build = player_build.selected_build()
         if not _runs_scripts(build):
             raise SystemExit(f"{build} has no menu script driver; {how}")
-        player = build / "retroarch/retroarch"
-        if not player.is_file():
-            raise SystemExit(f"the selected build contains no player: {player}")
-        return player
+        return player_build.player_in(build)
     builds = sorted(
         (
-            player
-            for player in (ROOT / "work").glob("fork-build-*/retroarch/retroarch")
-            if _runs_scripts(player.parent.parent)
+            player_build.player_in(build)
+            for build in (ROOT / "work").glob("fork-build-*")
+            if _runs_scripts(build) and player_build.player_in(build).is_file()
         ),
         key=lambda entry: entry.stat().st_mtime,
     )
