@@ -29,7 +29,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "desktop/src-tauri/Cargo.toml"
-MINE = ROOT / "work/bin/rominabox-cli"
+# Executables have the .exe suffix on Windows and no suffix on POSIX systems.
+NAME = "rominabox-cli.exe" if os.name == "nt" else "rominabox-cli"
+MINE = ROOT / "work/bin" / NAME
 
 
 def target_dir() -> Path:
@@ -129,8 +131,8 @@ def cli(build: bool = False) -> Path:
         return MINE
     build = build or stale
 
-    candidates = [target_dir() / "release/rominabox-cli"]
-    local = ROOT / "desktop/src-tauri/target/release/rominabox-cli"
+    candidates = [target_dir() / "release" / NAME]
+    local = ROOT / "desktop/src-tauri/target/release" / NAME
     if local not in candidates:
         candidates.append(local)
 

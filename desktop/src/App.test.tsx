@@ -129,12 +129,14 @@ beforeAll(() => {
 });
 
 function cliBinary(): string {
+  // Executables end in .exe on Windows and have no suffix on POSIX systems.
+  const name = process.platform === "win32" ? "rominabox-cli.exe" : "rominabox-cli";
   const roots: string[] = [];
   if (process.env.CARGO_TARGET_DIR) roots.push(process.env.CARGO_TARGET_DIR);
   const here = dirname(fileURLToPath(import.meta.url));
   // A copy in this checkout. Checkouts that share a cargo target overwrite its
   // binary at each build, so the binary is not stable.
-  const privateCopy = resolve(here, "../../work/bios-cli/rominabox-cli");
+  const privateCopy = resolve(here, "../../work/bios-cli", name);
   if (existsSync(privateCopy)) return privateCopy;
   roots.push(resolve(here, "../src-tauri/target"));
   try {
@@ -155,7 +157,7 @@ function cliBinary(): string {
   }
   for (const root of roots) {
     for (const profile of ["debug", "release"]) {
-      const candidate = join(root, profile, "rominabox-cli");
+      const candidate = join(root, profile, name);
       if (existsSync(candidate)) return candidate;
     }
   }
