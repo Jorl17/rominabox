@@ -73,7 +73,10 @@ def palette(name: str | None) -> dict:
 def _font(size: int) -> ImageFont.ImageFont:
     if FONT.exists():
         try:
-            return ImageFont.truetype(str(FONT), size)
+            # Use the basic layout on every machine. In Pillow, raqm is the
+            # layout when the raqm library loads, and the basic one otherwise
+            # (Windows, without FriBiDi), and letters can differ by a pixel.
+            return ImageFont.truetype(str(FONT), size, layout_engine=ImageFont.Layout.BASIC)
         except OSError:
             pass
     return ImageFont.load_default()
