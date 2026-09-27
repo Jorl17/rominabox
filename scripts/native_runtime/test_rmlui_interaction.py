@@ -242,17 +242,19 @@ def stage_everything() -> None:
 
 def orchestrate() -> None:
     # A failing workflow may save a configuration before it reports the
-    # failure. With the project's scratch context, every run has fixed inputs.
-    with scratch("rominabox-menu-orchestration-") as data:
+    # failure. With the project's scratch context, every run has fixed inputs,
+    # in folders with non-ASCII names like a player's, which we pass to the
+    # program as arguments.
+    with scratch("rominabox-menu-orchestration-João-") as data:
         subprocess.run([str(ORCHESTRATION), str(BUILD / "placement-native"), data], check=True)
-    with scratch("rominabox-menu-capacity-") as data:
+    with scratch("rominabox-menu-capacity-João-") as data:
         subprocess.run([str(ORCHESTRATION), "--capacity",
                         str(BUILD / "placement-native/stage/ps1-analog"), data], check=True)
     # A stick waiting to be rebound, on the PlayStation analogue pad, in
     # every design.
     failed = []
     for staged in sorted(BUILD.glob("placement-*/stage/ps1-analog")):
-        with scratch("rominabox-menu-stick-capture-") as data:
+        with scratch("rominabox-menu-stick-capture-João-") as data:
             if subprocess.run([str(ORCHESTRATION), "--stick-capture", str(staged), data]).returncode != 0:
                 failed.append(staged.parent.parent.name)
     if failed:
