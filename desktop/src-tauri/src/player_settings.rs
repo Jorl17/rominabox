@@ -123,14 +123,6 @@ impl PlayerSetting {
         }
     }
 
-    /// Whether we show the value of a switch as on.
-    pub fn is_on(&self, value: f32) -> bool {
-        match self.kind {
-            Kind::Switch { inverted, .. } => (value != 0.0) != inverted,
-            Kind::Level { .. } => false,
-        }
-    }
-
     /// The value the player has chosen, from their file in `data_dir`, or
     /// `None` when they have not chosen one.
     pub fn chosen(&self, data_dir: &Path) -> Option<f32> {
@@ -227,10 +219,8 @@ mod tests {
     fn keeping_the_game_running_is_retroarchs_pause_nonactive_turned_off() {
         let on = background(true);
         assert_eq!(on.text(on.default), "false");
-        assert!(on.is_on(on.default), "the author's on is shown as on");
         let off = background(false);
         assert_eq!(off.text(off.default), "true");
-        assert!(!off.is_on(off.default));
     }
 
     #[test]

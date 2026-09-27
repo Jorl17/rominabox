@@ -284,40 +284,22 @@ fn entry_button(manifest: &Manifest, screen: &Screen) -> Result<String, String> 
     })
 }
 
-/// When the design does not place a switch, we add it as one more Options
-/// entry, drawn like the others with its name and then its state. At run time
-/// we write the state into the element whose id is the control id followed by
-/// the state suffix from the contract, and we handle a press on any element
-/// with the switch class from the contract.
+/// A switch that the design does not place is one more Options entry, drawn
+/// like the others: its name, then an empty state that we fill in the player,
+/// with the control's id and the contract's state suffix. We mark it with the
+/// contract's switch class, which is how we recognise a press in the player.
 fn switch_entry(manifest: &Manifest, setting: &PlayerSetting) -> Result<String, String> {
     let control = setting.control();
     let label = format!(
-        "{} <span id=\"{control}{}\" class=\"setting-state\">{}</span>",
+        "{} <span id=\"{control}{}\" class=\"setting-state\"></span>",
         crate::lists::rml_text(&words::say(&manifest.words, setting.label, &[])),
         contract!(StateSuffix),
-        crate::lists::rml_text(&state_word(&manifest.words, setting, setting.default)),
     );
     Ok(add_class(
         &entry_markup(manifest, &control, &label)?,
         &control,
         contract!(Switch),
     ))
-}
-
-/// The word that the design uses for the state of a switch at run time.
-fn state_word(given: &BTreeMap<String, String>, setting: &PlayerSetting, value: f32) -> String {
-    match setting.kind {
-        Kind::Switch { .. } => words::say(
-            given,
-            if setting.is_on(value) {
-                "switch-on"
-            } else {
-                "switch-off"
-            },
-            &[],
-        ),
-        Kind::Level { .. } => String::new(),
-    }
 }
 
 /// Rewrite the menu so that Options has exactly the entries for this game.
@@ -658,12 +640,6 @@ pub fn install_settings(
             .map(|end| at + end + 1)
             .ok_or_else(|| "the options panel tag is never closed".to_string())?;
         document.insert_str(tag_end, &markup);
-    }
-    // We mark a switch that starts on with the class `on` from the start.
-    for setting in settings {
-        if setting.is_on(setting.default) {
-            document = add_class(&document, &setting.control(), contract!(On));
-        }
     }
     Ok(document)
 }

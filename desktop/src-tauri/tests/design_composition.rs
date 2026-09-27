@@ -486,20 +486,19 @@ fn a_designs_words_name_the_settings_and_mark_the_lists() {
     for (menu, words) in [
         (
             &worded,
-            ["LOUDNESS", "SOFT", "LOUD", "KEEP PLAYING", "NO", "LIT"],
+            ["LOUDNESS", "SOFT", "LOUD", "KEEP PLAYING", "LIT"],
         ),
         (
             &native,
-            ["VOLUME", "LOW", "HIGH", "PLAY IN BACKGROUND", "OFF", "ON"],
+            ["VOLUME", "LOW", "HIGH", "PLAY IN BACKGROUND", "ON"],
         ),
     ] {
-        let [name, low, high, background, off, mark] = words;
+        let [name, low, high, background, mark] = words;
         for (what, text) in [
             ("the volume's name", format!("class=\"volume-name\">{name}<")),
             ("the volume's low end", format!("id=\"volume-low\" class=\"volume-end\">{low}<")),
             ("the volume's high end", format!("id=\"volume-high\" class=\"volume-end\">{high}<")),
             ("PLAY IN BACKGROUND's name", format!(">{background} <span")),
-            ("the switch's state", format!("id=\"background-play-state\" class=\"setting-state\">{off}<")),
             ("the running filter's mark", format!("class=\"list-row-state\">{mark}<")),
         ] {
             assert!(menu.menu.contains(&text), "{what}: no {text} in\n{}", menu.menu);
