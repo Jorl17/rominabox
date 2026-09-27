@@ -1,0 +1,7 @@
+# On Windows we link the C runtime into every program, so the builder and its
+# command-line tool start without the Visual C++ redistributable, which a
+# clean Windows does not have. We set the flags at the repository's root, so
+# that every cargo run in the checkout uses the same flags and we do not
+# rebuild the shared target between the tests and the builder.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
