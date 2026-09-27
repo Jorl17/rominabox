@@ -158,18 +158,21 @@ pub fn runtime_kit() -> Option<PathBuf> {
         .find(|kit| kit.join("manifest.json").is_file())
 }
 
-/// What we fill in by identification when a request leaves it out.
-const IDENTIFIED: [&str; 4] = ["title", "system", "description", "icon"];
-
 /// `request`, completed as we complete a dropped game in the builder.
 ///
-/// We look up the game's title, console, description and cover that it leaves
-/// out with the builder's own identification. The game's folder, its
-/// platform, and the kit and core cache we make it from are the builder's.
-/// For every setting it leaves out we use the builder's default, through
-/// `ExportRequest`'s serde defaults. We keep what it states, `null` included:
-/// `"icon": null` is a game without a cover, and with `"coreCache": null` we
-/// take the core from the kit alone.
+/// When a request leaves out the game's title or console, we identify it with
+/// the builder's own identification, and take the title, console, description
+/// and cover that it leaves out from that. We treat a request with both as
+/// already identified and do not look it up, so its description and cover are
+/// what it states. A lookup would also check the console against the file, as
+/// when someone chooses a console in the builder, and would reject games that
+/// we accept in the export.
+///
+/// The game's folder, its platform, and the kit and core cache we make it
+/// from are the builder's. For every setting a request leaves out we use the
+/// builder's default, through `ExportRequest`'s serde defaults. We keep what
+/// it states, `null` included: `"icon": null` is a game without a cover, and
+/// with `"coreCache": null` we take the core from the kit alone.
 ///
 /// Two fields control the lookup and are not part of the game: `online`, and
 /// `metadataCache`, where we cache lookups. Both default to the builder's.
@@ -190,7 +193,7 @@ pub fn complete_export(mut request: Map<String, Value>) -> Result<ExportRequest,
     let metadata_cache = request.remove("metadataCache");
     let places = Places::of(identifier());
 
-    if IDENTIFIED.iter().any(|field| !request.contains_key(*field)) {
+    if !request.contains_key("title") || !request.contains_key("system") {
         let cache = match metadata_cache {
             Some(Value::String(cache)) => PathBuf::from(cache),
             Some(other) => return Err(format!("metadataCache is a folder, not {other}")),
