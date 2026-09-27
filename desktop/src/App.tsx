@@ -28,6 +28,12 @@ import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
+import {
+  NOT_A_SHADER_FILE,
+  SHADER_ACCEPT,
+  isShaderFile,
+  shaderFileName,
+} from "./shaderFiles";
 // The same pictures as in the exported game, rendered from the GLSL of each
 // shader with scripts/render_shader_previews.py. We read them as a directory
 // and do not list them, so a preset added to the catalogue comes with its
@@ -61,19 +67,6 @@ function exportProduct(target: bridge.ExportTarget | null): string {
     case null:
       return "";
   }
-}
-
-function shaderFileName(filePath: string): string {
-  return (
-    filePath
-      .split(/[\\/]/)
-      .pop()
-      ?.replace(/\.(glslp|glsl)$/i, "") || "Shader"
-  );
-}
-
-function isShaderFile(filePath: string): boolean {
-  return /\.(glslp|glsl)$/i.test(filePath.split(/[\\/]/).pop() ?? "");
 }
 
 type Selection = {
@@ -681,7 +674,7 @@ export function App() {
   }
   function addCustomShader(filePath: string) {
     if (!isShaderFile(filePath)) {
-      setError("Choose a .glsl or .glslp file.");
+      setError(NOT_A_SHADER_FILE);
       return;
     }
     const name = shaderFileName(filePath);
@@ -1546,7 +1539,7 @@ export function App() {
                     ref={shaderInput}
                     type="file"
                     hidden
-                    accept=".glsl,.glslp"
+                    accept={SHADER_ACCEPT}
                     data-shader
                     onChange={(event) => {
                       const file = event.target.files?.[0];

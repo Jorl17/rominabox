@@ -255,7 +255,7 @@ fn escape_stays_the_menu_toggle_and_quit_and_fullscreen_have_no_key() {
 
 #[test]
 fn isolated_config_points_mutable_paths_at_the_managed_data_dir() {
-    let config = isolated_runtime_config(&request(false));
+    let config = isolated_runtime_config(&request(false)).unwrap();
     for (key, directory) in [
         ("savefile_directory", "saves"),
         ("savestate_directory", "states"),
@@ -289,7 +289,8 @@ fn each_platform_player_is_told_its_own_drivers() {
         let config = isolated_runtime_config(&ExportRequest {
             target: target.clone(),
             ..request(false)
-        });
+        })
+        .unwrap();
         assert_eq!(config_value(&config, "audio_driver"), Some(audio));
         assert_eq!(config_value(&config, "input_joypad_driver"), Some(joypad));
         assert!(
@@ -345,4 +346,44 @@ fn launcher_sets_advanced_emulator_access_explicitly() {
     let plan = write_test_launcher(on);
     assert!(plan.contains("advanced\t1\n"));
     assert!(!plan.contains("advanced\t0\n"));
+}
+
+/// We choose the video driver by the shader language of the game: glcore for
+/// a slang shader, and gl for GLSL and for a game with no shaders.
+#[test]
+fn a_slang_game_runs_glcore_and_every_other_game_gl() {
+    let folder = rominabox_scratch::Scratch::dir("rominabox-video-driver");
+    let shader = |file: &str, text: &str| {
+        fs::write(folder.join(file), text).unwrap();
+        crate::shaders::ShaderSelection {
+            custom: vec![crate::shaders::CustomShader {
+                name: "CRT".into(),
+                path: folder.join(file),
+            }],
+            ..crate::shaders::ShaderSelection::default()
+        }
+    };
+    let slang = shader(
+        "crt.slang",
+        "#version 450\n#pragma stage vertex\nvoid main() {}\n#pragma stage fragment\nvoid main() {}\n",
+    );
+    let glsl = shader(
+        "crt.glsl",
+        "#if defined(VERTEX)\nvoid main() {}\n#elif defined(FRAGMENT)\nvoid main() {}\n#endif\n",
+    );
+    for (shaders, driver) in [
+        (slang, "glcore"),
+        (glsl, "gl"),
+        (crate::shaders::ShaderSelection::default(), "gl"),
+    ] {
+        let plan = write_test_launcher(ExportRequest {
+            show_menu: true,
+            shaders,
+            ..request(false)
+        });
+        let config = embedded_runtime_config(&plan);
+        assert_eq!(config_value(&config, "video_driver"), Some(driver));
+        assert_eq!(config.matches("video_driver").count(), 1);
+    }
+    let _ = fs::remove_dir_all(&folder);
 }

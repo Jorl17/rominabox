@@ -27,6 +27,8 @@ pub mod repo;
 #[cfg(test)]
 mod retroarch_probe;
 pub mod shader_format;
+mod shader_preset;
+pub mod shader_source;
 pub mod shaders;
 pub mod scene_layout;
 pub mod systems;

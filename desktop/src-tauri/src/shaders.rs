@@ -1,14 +1,15 @@
 //! Shaders that an author can bundle.
 //!
 //! The list code for every screen of rows is in `lists`, and here we only
-//! define the content of a shader row. The presets are GLSL. In exported
-//! games we set `video_driver` to OpenGL and build without Metal and Vulkan,
-//! so we reject slang and Cg presets, by the content of the files
-//! (`shader_format`). We do not enable those drivers in this code.
+//! define the content of a shader row. The shaders of a game are all GLSL or
+//! all slang, as we read from the files of the author (`shader_format`). We
+//! choose the video driver of the game by that language and write the catalog
+//! presets in it (`shader_source`). Cg is not supported.
 
+use crate::shader_format::{Language, VideoDriver};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 /// The choice that means no preset. It is not a file, and an author does not
 /// tick it, because when we bundle any preset, the player can always return
@@ -65,7 +66,7 @@ impl ShaderSelection {
 }
 
 /// One item in a bundled list, after we have checked catalog ids and custom
-/// files. `preset` is the source `.glslp` when there is one.
+/// files.
 #[derive(Clone, Debug)]
 pub struct ResolvedShader {
     pub id: String,
@@ -73,10 +74,12 @@ pub struct ResolvedShader {
     pub detail: String,
     /// The path from the staged menu assets, empty for the unfiltered choice.
     pub relative_preset: String,
-    /// Files to copy into that directory, as (source, path within it).
+    /// Files to copy into that directory, as (source, path within it). The
+    /// file the author added comes first.
     files: Vec<(PathBuf, String)>,
-    /// The `.glsl` we write when we generate this preset instead of copying it.
-    generated: Option<String>,
+    /// Files we write into it, as (path within it, text), which are the pass
+    /// of a catalog preset and the one-pass preset we make for a single pass.
+    written: Vec<(String, String)>,
 }
 
 #[derive(Clone, Debug)]
@@ -114,10 +117,10 @@ pub fn sources() -> Result<Vec<(CatalogEntry, String)>, String> {
             name: unfiltered.name.clone(),
             detail: unfiltered.detail.clone(),
         },
-        glsl_source("FragColor = COMPAT_TEXTURE(Texture, TEX0.xy);"),
+        crate::shader_source::pass(Language::Glsl, "FragColor = COMPAT_TEXTURE(Texture, TEX0.xy);"),
     )];
     listed.extend(catalog_file()?.presets.into_iter().map(|preset| {
-        let glsl = glsl_source(&preset.fragment);
+        let glsl = crate::shader_source::pass(Language::Glsl, &preset.fragment);
         (
             CatalogEntry {
                 id: preset.id,
@@ -156,217 +159,8 @@ fn require_id(id: &str) -> Result<(), String> {
     Err(format!("shader id '{id}' must be a short lowercase name"))
 }
 
-fn glsl_source(fragment_body: &str) -> String {
-    format!(
-        r#"/* Original ROM-in-a-Box preset. RetroArch's OpenGL driver compiles this
- * twice, once with VERTEX defined and once with FRAGMENT defined. */
-#if defined(VERTEX)
-#if __VERSION__ >= 130
-#define COMPAT_VARYING out
-#define COMPAT_ATTRIBUTE in
-#define COMPAT_TEXTURE texture
-#else
-#define COMPAT_VARYING varying
-#define COMPAT_ATTRIBUTE attribute
-#define COMPAT_TEXTURE texture2D
-#endif
-#ifdef GL_ES
-#define COMPAT_PRECISION mediump
-#else
-#define COMPAT_PRECISION
-#endif
-COMPAT_ATTRIBUTE vec4 VertexCoord;
-COMPAT_ATTRIBUTE vec4 COLOR;
-COMPAT_ATTRIBUTE vec4 TexCoord;
-COMPAT_VARYING vec4 COL0;
-COMPAT_VARYING vec4 TEX0;
-uniform mat4 MVPMatrix;
-uniform COMPAT_PRECISION int FrameDirection;
-uniform COMPAT_PRECISION int FrameCount;
-uniform COMPAT_PRECISION vec2 OutputSize;
-uniform COMPAT_PRECISION vec2 TextureSize;
-uniform COMPAT_PRECISION vec2 InputSize;
-void main()
-{{
-    gl_Position = MVPMatrix * VertexCoord;
-    COL0 = COLOR;
-    TEX0.xy = TexCoord.xy;
-}}
-#elif defined(FRAGMENT)
-#if __VERSION__ >= 130
-#define COMPAT_VARYING in
-#define COMPAT_TEXTURE texture
-out vec4 FragColor;
-#else
-#define COMPAT_VARYING varying
-#define FragColor gl_FragColor
-#define COMPAT_TEXTURE texture2D
-#endif
-#ifdef GL_ES
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
-precision mediump float;
-#endif
-#define COMPAT_PRECISION mediump
-#else
-#define COMPAT_PRECISION
-#endif
-uniform COMPAT_PRECISION int FrameDirection;
-uniform COMPAT_PRECISION int FrameCount;
-uniform COMPAT_PRECISION vec2 OutputSize;
-uniform COMPAT_PRECISION vec2 TextureSize;
-uniform COMPAT_PRECISION vec2 InputSize;
-uniform sampler2D Texture;
-COMPAT_VARYING vec4 TEX0;
-void main()
-{{
-    {fragment_body}
-}}
-#endif
-"#
-    )
-}
-
-fn preset_text(shader_file: &str) -> String {
-    format!("shaders = 1\nshader0 = {shader_file}\nfilter_linear0 = false\n")
-}
-
-fn safe_relative(path: &Path) -> Result<(), String> {
-    if path.is_absolute()
-        || path
-            .components()
-            .any(|component| !matches!(component, Component::Normal(_)))
-    {
-        return Err(format!(
-            "a shader preset can only use files beside it, not {}",
-            path.display()
-        ));
-    }
-    Ok(())
-}
-
 /// The row's picture, in each shader's folder beside its preset.
 const ROW_PICTURE: &str = "icon.png";
-
-/// The maximum depth of `#reference` between presets, as in RetroArch.
-const REFERENCE_DEPTH: usize = 16;
-
-/// The files listed in a `.glslp`, its passes, its lookup textures and the
-/// presets it `#reference`s with their files, each as (source, its path next
-/// to the preset as written in the presets), checked to be inside the preset
-/// folder. The libretro presets have passes in `shaders/` and textures in
-/// `resources/`, so at export we put every file at the same relative path
-/// next to the copied preset.
-fn referenced_files(preset: &Path) -> Result<Vec<(PathBuf, String)>, String> {
-    let mut files = Vec::new();
-    if collect_files(preset, Path::new(""), 0, &mut files)? == 0 {
-        return Err("a shader preset names no shader pass".into());
-    }
-    if files.iter().any(|(_, name)| name == ROW_PICTURE) {
-        return Err(format!(
-            "a shader preset cannot use a file named {ROW_PICTURE}; the menu keeps the row's picture there"
-        ));
-    }
-    Ok(files)
-}
-
-/// Add the files listed in `preset` to `files`, as paths from the folder of
-/// the top preset (`prefix` is the location of `preset` in it), and return the
-/// number of passes among them.
-fn collect_files(
-    preset: &Path,
-    prefix: &Path,
-    depth: usize,
-    files: &mut Vec<(PathBuf, String)>,
-) -> Result<usize, String> {
-    if depth > REFERENCE_DEPTH {
-        return Err("shader presets reference each other too deeply".into());
-    }
-    let text = fs::read_to_string(preset)
-        .map_err(|error| format!("could not read shader preset: {error}"))?;
-    let directory = preset.parent().unwrap_or_else(|| Path::new("."));
-    let mut passes = 0;
-    let mut entries: Vec<(usize, &str, &str)> = Vec::new();
-    for (index, line) in text.lines().enumerate() {
-        let line = line.trim();
-        let line_number = index + 1;
-        if line.is_empty() {
-            continue;
-        }
-        // In RetroArch, `#include` and `#reference` are directives and every
-        // other `#` line is a comment.
-        if let Some(comment) = line.strip_prefix('#') {
-            if comment.starts_with("include ") {
-                return Err(format!(
-                    "shader preset line {line_number} uses #include, which exported games do not follow"
-                ));
-            }
-            if let Some(value) = comment.strip_prefix("reference ") {
-                let (source, spelled) =
-                    beside(directory, prefix, value.trim().trim_matches('"'), line_number)?;
-                add_file(files, source.clone(), &spelled);
-                let inner = Path::new(&spelled).parent().unwrap_or_else(|| Path::new("")).to_path_buf();
-                passes += collect_files(&source, &inner, depth + 1, files)?;
-            }
-            continue;
-        }
-        if let Some((key, value)) = line.split_once('=') {
-            entries.push((line_number, key.trim(), value.trim().trim_matches('"')));
-        }
-    }
-    let textures: Vec<&str> = entries
-        .iter()
-        .find(|(_, key, _)| *key == "textures")
-        .map(|(_, _, value)| value.split(';').map(str::trim).filter(|name| !name.is_empty()).collect())
-        .unwrap_or_default();
-    for (line_number, key, value) in &entries {
-        let is_pass = key.starts_with("shader")
-            && key.len() > "shader".len()
-            && key["shader".len()..].chars().all(|c| c.is_ascii_digit());
-        if !is_pass && !textures.contains(key) {
-            continue;
-        }
-        let (source, spelled) = beside(directory, prefix, value, *line_number)?;
-        if is_pass {
-            crate::shader_format::require_runnable_pass(&source)?;
-            passes += 1;
-        }
-        add_file(files, source, &spelled);
-    }
-    Ok(passes)
-}
-
-/// A file listed in a preset, with its location and its path from the folder
-/// of the top preset, with `/` between parts.
-fn beside(
-    directory: &Path,
-    prefix: &Path,
-    value: &str,
-    line_number: usize,
-) -> Result<(PathBuf, String), String> {
-    let relative = Path::new(value);
-    safe_relative(relative)?;
-    let source = directory.join(relative);
-    if !source.is_file() {
-        return Err(format!(
-            "shader preset line {line_number} names a missing file: {value}"
-        ));
-    }
-    let spelled = prefix
-        .join(relative)
-        .components()
-        .map(|component| component.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/");
-    Ok((source, spelled))
-}
-
-fn add_file(files: &mut Vec<(PathBuf, String)>, source: PathBuf, spelled: &str) {
-    if !files.iter().any(|(_, existing)| existing == spelled) {
-        files.push((source, spelled.to_string()));
-    }
-}
 
 fn slug(name: &str) -> Result<String, String> {
     let mut slug = String::new();
@@ -410,18 +204,77 @@ fn unfiltered() -> ResolvedShader {
         detail: "The picture as the console draws it".into(),
         relative_preset: String::new(),
         files: Vec::new(),
-        generated: None,
+        written: Vec::new(),
     }
 }
 
 /// Check a selection. Return nothing for an empty one, which is the usual case.
 pub fn resolve(selection: &ShaderSelection) -> Result<Vec<ResolvedShader>, String> {
+    Ok(resolved(selection)?.1)
+}
+
+/// The video driver for a game with this selection. We choose it from the
+/// language of the shaders, and use the GLSL driver for a game with none.
+pub fn video_driver(selection: &ShaderSelection) -> Result<VideoDriver, String> {
+    Ok(resolved(selection)?.0.video_driver())
+}
+
+/// The kind of a shader from the author, which is its language and, for a
+/// preset, the listed files. At export we wrap a single pass in a preset.
+struct Authored {
+    language: Language,
+    named: Option<Vec<(PathBuf, String)>>,
+}
+
+fn authored(path: &Path) -> Result<Authored, String> {
+    use crate::shader_format::{kind, require_runnable_pass, text, Kind};
+    Ok(match kind(&text(path)?) {
+        Kind::Pass => Authored {
+            language: require_runnable_pass(path)?,
+            named: None,
+        },
+        Kind::Preset => {
+            let (language, named) = crate::shader_preset::files(path)?;
+            if named.iter().any(|(_, name)| name == ROW_PICTURE) {
+                return Err(format!(
+                    "a shader preset cannot use a file named {ROW_PICTURE}; the menu keeps the row's picture there"
+                ));
+            }
+            Authored {
+                language,
+                named: Some(named),
+            }
+        }
+    })
+}
+
+/// The language of every shader in a selection, and each shader resolved.
+fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader>), String> {
     if selection.is_empty() {
         if selection.initial.is_some() {
             return Err("Choose a shader before setting which one starts.".into());
         }
-        return Ok(Vec::new());
+        return Ok((Language::Glsl, Vec::new()));
     }
+    // Read the author's shaders first. Catalog presets follow their language.
+    let mut authors = Vec::new();
+    for custom in &selection.custom {
+        let name = custom.name.trim();
+        if name.is_empty() {
+            return Err("a custom shader needs a name".into());
+        }
+        if !custom.path.is_file() {
+            return Err(format!(
+                "shader file does not exist: {}",
+                custom.path.display()
+            ));
+        }
+        authors.push((name, &custom.path, authored(&custom.path)?));
+    }
+    let named = authors.iter().map(|(name, _, author)| (*name, author.language));
+    let language = crate::shader_format::one_language(named)?.unwrap_or(Language::Glsl);
+    let pass_extension = language.pass_extension();
+    let preset_extension = language.preset_extension();
     let catalog = catalog_file()?;
     let mut resolved = vec![unfiltered()];
     for id in &selection.bundled {
@@ -435,76 +288,63 @@ pub fn resolve(selection: &ShaderSelection) -> Result<Vec<ResolvedShader>, Strin
         if resolved.iter().any(|item| item.id == preset.id) {
             continue;
         }
-        let file = format!("{id}.glsl");
+        let pass = format!("{id}.{pass_extension}");
+        let preset_file = format!("{id}.{preset_extension}");
         resolved.push(ResolvedShader {
             id: id.clone(),
             name: preset.name.clone(),
             detail: preset.detail.clone(),
-            relative_preset: format!("shaders/{id}/{id}.glslp"),
+            relative_preset: format!("shaders/{id}/{preset_file}"),
             files: Vec::new(),
-            generated: Some(file),
+            written: vec![
+                (pass.clone(), crate::shader_source::pass(language, &preset.fragment)),
+                (preset_file, crate::shader_source::preset(&pass)),
+            ],
         });
     }
-    for custom in &selection.custom {
-        let name = custom.name.trim();
-        if name.is_empty() {
-            return Err("a custom shader needs a name".into());
-        }
+    for (name, path, author) in authors {
         if resolved.iter().any(|item| item.name == name) {
             return Err(format!("shader name '{name}' is already used"));
         }
-        if !custom.path.is_file() {
-            return Err(format!(
-                "shader file does not exist: {}",
-                custom.path.display()
-            ));
-        }
         let taken: Vec<String> = resolved.iter().map(|item| item.id.clone()).collect();
         let id = unique_id(&slug(name)?, &taken);
-        let file_name = custom
-            .path
-            .file_name()
-            .and_then(|value| value.to_str())
-            .ok_or_else(|| "shader file has no name".to_string())?;
-        let (relative, files, generated) =
-            match crate::shader_format::kind(&crate::shader_format::text(&custom.path)?) {
-                crate::shader_format::Kind::Pass => {
-                    crate::shader_format::require_runnable_pass(&custom.path)?;
-                    let pass = format!("{id}.glsl");
-                    (
-                        format!("shaders/{id}/{id}.glslp"),
-                        vec![(custom.path.clone(), pass.clone())],
-                        Some(pass),
-                    )
-                }
-                crate::shader_format::Kind::Preset => {
-                    // In RetroArch the file name of a preset sets its language.
-                    let stem = Path::new(file_name)
-                        .file_stem()
-                        .and_then(|stem| stem.to_str());
-                    let preset_name = format!("{}.glslp", stem.unwrap_or("preset"));
-                    let mut files = vec![(custom.path.clone(), preset_name.clone())];
-                    for (source, relative) in referenced_files(&custom.path)? {
-                        if !files.iter().any(|(_, name)| name == &relative) {
-                            files.push((source, relative));
-                        }
+        let (preset_file, files, written) = match author.named {
+            // We copy a pass under its name in the game and write a
+            // one-pass preset beside it.
+            None => {
+                let pass = format!("{id}.{pass_extension}");
+                let preset_file = format!("{id}.{preset_extension}");
+                let written = vec![(preset_file.clone(), crate::shader_source::preset(&pass))];
+                (preset_file, vec![(path.clone(), pass)], written)
+            }
+            // We copy a preset unchanged, with the extension of its
+            // language, because RetroArch reads it by that extension.
+            Some(named) => {
+                let stem = path
+                    .file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .ok_or_else(|| "shader file has no name".to_string())?;
+                let preset_file = format!("{stem}.{preset_extension}");
+                let mut files = vec![(path.clone(), preset_file.clone())];
+                for (source, relative) in named {
+                    if !files.iter().any(|(_, name)| name == &relative) {
+                        files.push((source, relative));
                     }
-                    (format!("shaders/{id}/{preset_name}"), files, None)
                 }
-            };
-        // We wrap a pass. `generated` is its name in the game, and we write a
-        // one-pass preset next to it. We copy a preset unchanged.
+                (preset_file, files, Vec::new())
+            }
+        };
         resolved.push(ResolvedShader {
+            relative_preset: format!("shaders/{id}/{preset_file}"),
             id,
             name: name.to_string(),
             detail: "Added shader".into(),
-            relative_preset: relative,
             files,
-            generated,
+            written,
         });
     }
     starting(selection, &resolved)?;
-    Ok(resolved)
+    Ok((language, resolved))
 }
 
 /// The bundled shader to enable when the game starts. No choice and the
@@ -605,36 +445,13 @@ pub fn stage(
             .collect::<Vec<_>>()
             .join(" ")
     });
-    let catalog = catalog_file()?;
     for item in &resolved {
         let directory = Path::new("shaders").join(&item.id);
-        if let Some(source_name) = &item.generated {
-            if item.files.is_empty() {
-                let Some(preset) = catalog.presets.iter().find(|preset| preset.id == item.id)
-                else {
-                    return Err(format!("shader '{}' has no source", item.id));
-                };
-                files.push((
-                    directory.join(format!("{}.glsl", item.id)),
-                    Content::Text(glsl_source(&preset.fragment)),
-                ));
-                files.push((
-                    directory.join(format!("{}.glslp", item.id)),
-                    Content::Text(preset_text(&format!("{}.glsl", item.id))),
-                ));
-            } else {
-                for (source, name) in &item.files {
-                    files.push((directory.join(name), Content::Copy(source.clone())));
-                }
-                files.push((
-                    directory.join(format!("{}.glslp", item.id)),
-                    Content::Text(preset_text(source_name)),
-                ));
-            }
-        } else {
-            for (source, name) in &item.files {
-                files.push((directory.join(name), Content::Copy(source.clone())));
-            }
+        for (source, name) in &item.files {
+            files.push((directory.join(name), Content::Copy(source.clone())));
+        }
+        for (name, text) in &item.written {
+            files.push((directory.join(name), Content::Text(text.clone())));
         }
         files.push((directory.join(ROW_PICTURE), Content::Bytes(icon_png(&item.id)?)));
         let selected = item.id == initial;
@@ -770,25 +587,93 @@ mod tests {
 
     /// A pass for the RetroArch OpenGL driver, as far as this check can tell.
     const PASS: &str = "#if defined(VERTEX)\n#elif defined(FRAGMENT)\n#endif\n";
+    /// A slang pass, as far as this check can tell.
+    const SLANG: &str = "#version 450\n#pragma stage vertex\n#pragma stage fragment\n";
 
-    /// Rejected for the content of its pass, whatever the name of the preset.
+    /// We recognise a slang preset by the content of its pass, whatever its
+    /// name, stage it under the file name RetroArch uses for slang, and run the
+    /// game on glcore. A game without one stays on gl.
     #[test]
-    fn a_slang_preset_is_refused_because_those_drivers_stay_off() {
+    fn a_slang_preset_is_staged_as_slang_and_runs_on_glcore() {
         let root = rominabox_scratch::Scratch::dir("rominabox-slang");
-        let error = resolve(&custom_preset(
+        let selection = custom_preset(
             &root,
             "crt.glslp",
-            &[
-                ("crt.glslp", "shaders = 1\nshader0 = crt.slang\n"),
-                (
-                    "crt.slang",
-                    "#version 450\n#pragma stage vertex\n#pragma stage fragment\n",
-                ),
-            ],
-        ))
-        .expect_err("slang must not bundle");
-        assert!(error.contains("crt.slang is a slang shader"), "{error}");
+            &[("crt.glslp", "shaders = 1\nshader0 = crt.slang\n"), ("crt.slang", SLANG)],
+        );
+        let resolved = resolve(&selection).unwrap();
+        assert_eq!(resolved[1].relative_preset, "shaders/pal/crt.slangp");
+        assert_eq!(video_driver(&selection).unwrap(), VideoDriver::Glcore);
+        assert_eq!(video_driver(&ShaderSelection::default()).unwrap(), VideoDriver::Gl);
+        let glsl = custom_preset(
+            &root,
+            "pal.glslp",
+            &[("pal.glslp", "shaders = 1\nshader0 = pass.glsl\n"), ("pass.glsl", PASS)],
+        );
+        assert_eq!(video_driver(&glsl).unwrap(), VideoDriver::Gl);
         let _ = fs::remove_dir_all(&root);
+    }
+
+    /// All shaders of a game run on one driver, and each driver is for one
+    /// language, so we reject a slang shader next to a GLSL one, in a game or
+    /// in one preset, and we reject Cg too.
+    #[test]
+    fn shaders_in_two_languages_and_cg_are_refused() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-shader-languages");
+        let file = |name: &str, text: &str| {
+            fs::write(root.join(name), text).unwrap();
+            CustomShader { name: name.split('.').next().unwrap().into(), path: root.join(name) }
+        };
+        let selection = ShaderSelection {
+            custom: vec![file("crt.slang", SLANG), file("pal.glsl", PASS)],
+            ..ShaderSelection::default()
+        };
+        let error = resolve(&selection).unwrap_err();
+        assert!(error.contains("crt is slang and pal is GLSL"), "{error}");
+        assert!(error.contains("one language"), "{error}");
+        let mixed = custom_preset(
+            &root,
+            "mixed.slangp",
+            &[("mixed.slangp", "shaders = 2\nshader0 = crt.slang\nshader1 = pal.glsl\n")],
+        );
+        let error = resolve(&mixed).unwrap_err();
+        assert!(error.contains("crt.slang is slang and pal.glsl is GLSL"), "{error}");
+        let cg = ShaderSelection {
+            custom: vec![file("old.cg", "float4 main_fragment() : COLOR { return 0; }\n")],
+            ..ShaderSelection::default()
+        };
+        assert!(resolve(&cg).unwrap_err().contains("old.cg is a Cg shader"));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    /// Each catalog preset is one fragment, written in the language of the
+    /// other shaders of the game, so we bundle them as slang in a slang game.
+    #[test]
+    fn catalog_presets_are_written_in_a_slang_game_s_language() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-slang-catalog");
+        fs::write(root.join("crt.slang"), SLANG).unwrap();
+        let selection = ShaderSelection {
+            bundled: vec!["scanlines".into()],
+            custom: vec![CustomShader { name: "CRT".into(), path: root.join("crt.slang") }],
+            initial: Some("scanlines".into()),
+        };
+        let resolved = resolve(&selection).unwrap();
+        assert_eq!(resolved[1].relative_preset, "shaders/scanlines/scanlines.slangp");
+        assert_eq!(resolved[2].relative_preset, "shaders/crt/crt.slangp");
+        let staged = rominabox_scratch::Scratch::dir("rominabox-slang-catalog-staged");
+        composed(selection.clone()).write(&staged).unwrap();
+        let pass = fs::read_to_string(staged.join("shaders/scanlines/scanlines.slang")).unwrap();
+        assert_eq!(crate::shader_format::language(&pass), Ok(Language::Slang));
+        assert!(pass.contains("float line = mod(floor(TEX0.y * TextureSize.y), 2.0);"), "{pass}");
+        let preset = fs::read_to_string(staged.join("shaders/scanlines/scanlines.slangp")).unwrap();
+        assert!(preset.contains("shader0 = scanlines.slang"), "{preset}");
+        assert!(staged.join("shaders/crt/crt.slang").is_file());
+        assert_eq!(
+            launch_preset(&selection).unwrap().as_deref(),
+            Some("shaders/scanlines/scanlines.slangp")
+        );
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&staged);
     }
 
     /// We recognise a preset by its number of passes and stage it under the
