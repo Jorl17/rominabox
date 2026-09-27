@@ -30,6 +30,20 @@ from achievements_native_rom import make_achievement_rom
 ROOT = Path(__file__).resolve().parent.parent
 CHECKPOINT = re.compile(r"\[RIB\] checkpoint (\S+) (\{.*\})")
 TEST_MARKER = b"ROMINABOX_RA_TEST_HOST"
+
+# Whether a game in its sandbox can reach the fake service of this test on
+# 127.0.0.1, on each platform. In the macOS sandbox, a game with network
+# access can reach loopback. In a Windows sandbox (AppContainer) it never can,
+# because no capability exists for it. Only a loopback exemption helps, which
+# requires an administrator (NetworkIsolationSetAppContainerConfig and
+# CheckNetIsolation from Microsoft) and applies to the whole machine. So on
+# Windows we run the game of this test outside the sandbox. We test the
+# achievements client (hash, session, save and restore, unlock, OFF,
+# exclusion), which works the same either way. In the isolation tests we
+# check the effect of the sandbox on signing in (the accounts folder, and
+# nothing beside it). A shipped game reaches the actual service over the
+# internet, and internet access works in the sandbox.
+SANDBOX_REACHES_LOOPBACK = {"macos": True, "windows": False}
 PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9h+AAAAABJRU5ErkJggg=="
 )
@@ -159,6 +173,22 @@ def fixture_service():
         worker.join(timeout=5)
 
 
+def reaching_the_service(app: Path) -> None:
+    """The game, able to reach the fake service. Where the sandbox blocks it
+    (SANDBOX_REACHES_LOOPBACK), we run it outside the sandbox, with a launch
+    plan without the line that requests one."""
+    if shots.PLATFORM not in SANDBOX_REACHES_LOOPBACK:
+        raise SystemExit(f"whether a sandboxed game reaches loopback is not declared for {shots.PLATFORM}")
+    if SANDBOX_REACHES_LOOPBACK[shots.PLATFORM]:
+        return
+    plan = shots.resources_of(app) / "launch.plan"
+    lines = plan.read_text(encoding="utf-8").splitlines(keepends=True)
+    plan.write_text("".join(line for line in lines if not line.startswith("sandbox\t")),
+                    encoding="utf-8", newline="")
+    if shots.sandboxed(app):
+        raise AssertionError(f"{app} still asks for its sandbox")
+
+
 def owned_storage(app: Path, rom: bytes) -> Path:
     data = shots.data_dir_of(app)
     home = shots.storage_home(app)
@@ -284,6 +314,7 @@ def main() -> None:
             "includeAchievements": True, "autosaveOnQuit": True,
             "keepPlayingInBackground": True,
         }) as app:
+            reaching_the_service(app)
             data = owned_storage(app, rom_bytes)
             session(data, True)
             first = run_case(app, output, "partial", [

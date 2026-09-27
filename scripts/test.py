@@ -263,8 +263,8 @@ SCOPES = [
     ),
     Scope(
         "achievement-native",
-        "actual exported core/client authentication, autosave restoration, unlock, OFF and exclusion against a loopback service",
-        "a real RetroAchievements account or physical keyboard/controller behavior",
+        "actual exported core/client authentication, autosave restoration, unlock, OFF and exclusion against a loopback service; the signed-in game in its sandbox on macOS, outside it on Windows, whose sandbox cannot reach loopback (SANDBOX_REACHES_LOOPBACK)",
+        "a real RetroAchievements account, physical keyboard/controller behavior, or on Windows the sandbox's part in signing in (the isolation scope and a hand check cover that)",
         [PYTHON, str(ROOT / "scripts/achievements_native_workflow.py")],
         slow=True,
         skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD pointing to a test-only achievements build",
