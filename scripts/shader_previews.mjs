@@ -18,6 +18,7 @@ import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { findChrome } from "./chrome.mjs";
 
 const require = createRequire(
   new URL("../desktop/package.json", import.meta.url),
@@ -29,25 +30,6 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 function argument(name) {
   const index = process.argv.indexOf(name);
   return index === -1 ? null : process.argv[index + 1];
-}
-
-function findChrome() {
-  const candidates = [
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "/Applications/Chromium.app/Contents/MacOS/Chromium",
-    "/usr/bin/google-chrome",
-    "/usr/bin/google-chrome-stable",
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-  ];
-  const found = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!found) {
-    throw new Error(
-      "Google Chrome is not installed. This uses the browser already on the " +
-        "machine and does not download one.",
-    );
-  }
-  return found;
 }
 
 /* Run in the page. We pass in everything it uses, because the page does not

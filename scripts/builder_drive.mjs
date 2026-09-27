@@ -12,6 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { python } from "./python.mjs";
+import { findChrome } from "./chrome.mjs";
 
 const require = createRequire(
   new URL("../desktop/package.json", import.meta.url),
@@ -33,26 +34,6 @@ const MIME = {
 function argument(name) {
   const index = process.argv.indexOf(name);
   return index === -1 ? null : process.argv[index + 1];
-}
-
-function findChrome() {
-  const candidates = [
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "/Applications/Chromium.app/Contents/MacOS/Chromium",
-    "/usr/bin/google-chrome",
-    "/usr/bin/google-chrome-stable",
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-  ];
-  const found = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!found) {
-    throw new Error(
-      "Google Chrome is not installed. This uses the browser already on the machine and does not download one.",
-    );
-  }
-  return found;
 }
 
 let travelingCli = null;
