@@ -13,6 +13,11 @@ in the states tests. Here we check that we can draw in the builder the design
 that the author picked at all, and that the author's background picture
 appears behind the menu and nowhere else, and not over the running game,
 where we draw the overlays with the same document.
+
+We also check that the preview matches the player at the same size, with
+the menu canvas scaled to fit the picture as we scale it to the window in the
+player, and with a `text` change of an element drawn as the markup written
+by the exporter, as we set it in the picture tests.
 """
 
 from __future__ import annotations
@@ -42,7 +47,7 @@ def palettes() -> list[str]:
 
 
 def render(design: str, palette: str, into: Path, background: Path | None = None,
-           source: bool = False) -> str:
+           source: bool = False, size: tuple[int, int] = (960, 600)) -> str:
     """Return an empty string when the drawing worked, otherwise the reason.
 
     We draw from the kit, as the builder does, because a design missing from
@@ -55,8 +60,8 @@ def render(design: str, palette: str, into: Path, background: Path | None = None
         "renderer": str(RENDERER),
         "outputDir": str(into),
         "palette": palette,
-        "width": 960,
-        "height": 600,
+        "width": size[0],
+        "height": size[1],
     }
     if background is not None:
         request["background"] = str(background)
@@ -78,6 +83,19 @@ def render(design: str, palette: str, into: Path, background: Path | None = None
     image = Path(result["result"]["imagePath"])
     if not image.is_file() or image.stat().st_size == 0:
         return f"{image} was not written"
+    return ""
+
+
+def draw(document: Path, picture: Path, *changes: str) -> str:
+    """Return an empty string when we drew a composed document at 960 by 600
+    with these `--set` changes in the renderer, otherwise the reason."""
+    flags = [flag for change in changes for flag in ("--set", change)]
+    completed = subprocess.run(
+        [str(RENDERER), str(document), str(picture), "960", "600", *flags],
+        capture_output=True, text=True, timeout=180,
+    )
+    if completed.returncode != 0 or not picture.is_file():
+        return completed.stderr.strip() or f"{picture} was not written"
     return ""
 
 
@@ -118,12 +136,9 @@ def overlay_problem(design: str, area: Path) -> str:
     running = into / "overlay.rml"
     running.write_text(menu.replace(body, '<body id="body" class="overlay">'))
     drawn = into / "overlay.png"
-    completed = subprocess.run(
-        [str(RENDERER), str(running), str(drawn), "960", "600"],
-        capture_output=True, text=True, timeout=180,
-    )
-    if completed.returncode != 0 or not drawn.is_file():
-        return f"the overlay did not draw: {completed.stderr.strip()}"
+    problem = draw(running, drawn)
+    if problem:
+        return f"the overlay did not draw: {problem}"
     share = picture_share(drawn)
     if share:
         return f"{share:.1%} of the running game is covered by the menu's background picture"
@@ -148,6 +163,54 @@ def background_problem(design: str, area: Path) -> str:
     return ""
 
 
+# How far a menu drawn twice as large and then halved may differ from the menu
+# drawn at its own size, as the average difference per colour channel, out of
+# 255. We draw the letters again at each size, so the two are never identical,
+# and the difference is far larger when we draw the canvas unscaled.
+SCALE_TOLERANCE = 5.0
+
+
+def scale_problem(design: str, area: Path) -> str:
+    """Return an empty string when we scale the menu to the picture in the
+    preview as in the player. Drawn twice as large and halved, it is then the
+    menu at its own size, not a menu of that size in a larger picture."""
+    from PIL import Image, ImageChops, ImageStat
+
+    pictures = []
+    for width, height in ((960, 600), (1920, 1200)):
+        into = area / f"{design}-{width}x{height}"
+        problem = render(design, palettes()[0], into, size=(width, height))
+        if problem:
+            return f"at {width}x{height}: {problem}"
+        pictures.append(Image.open(into / "preview.png").convert("RGB"))
+    small, large = pictures
+    halved = large.resize(small.size, Image.Resampling.BOX)
+    difference = sum(ImageStat.Stat(ImageChops.difference(small, halved)).mean) / 3
+    if difference > SCALE_TOLERANCE:
+        return (f"drawn at 1920x1200 and halved, the menu differs from the menu drawn at "
+                f"960x600 by {difference:.2f} a channel (at most {SCALE_TOLERANCE})")
+    return ""
+
+
+def markup_problem(design: str, area: Path) -> str:
+    """Return an empty string when we draw a `text` change as markup. In the
+    picture tests we set the text of an element to the markup from the exporter
+    (the label of an options button is a span), and the tags must not appear."""
+    into = area / f"{design}-markup"
+    problem = render(design, palettes()[0], into)
+    if problem:
+        return problem
+    drawn = into / "markup.png"
+    colour = "#{:02x}{:02x}{:02x}".format(*PICTURE)
+    problem = draw(into / "menu.rml", drawn,
+                   f'heading:text=<span style="color: {colour};">MARKUP</span>')
+    if problem:
+        return problem
+    if not picture_share(drawn):
+        return f"a heading set to a span coloured {colour} shows none of that colour"
+    return ""
+
+
 def main() -> int:
     if not RENDERER.is_file():
         raise SystemExit(f"no offscreen renderer at {RENDERER}")
@@ -166,24 +229,22 @@ def main() -> int:
                     failures.append(f"{design}/{palette}")
                 else:
                     print(f"  ok   {design}/{palette}")
-            problem = background_problem(design, area)
-            if problem:
-                print(f"  FAIL {design} background: {problem}", file=sys.stderr)
-                failures.append(f"{design} background")
-            else:
-                print(f"  ok   {design} background")
-            problem = overlay_problem(design, area)
-            if problem:
-                print(f"  FAIL {design} over the game: {problem}", file=sys.stderr)
-                failures.append(f"{design} over the game")
-            else:
-                print(f"  ok   {design} over the game")
+            for name, check in (("background", background_problem),
+                                ("over the game", overlay_problem),
+                                ("at twice the size", scale_problem),
+                                ("text as markup", markup_problem)):
+                problem = check(design, area)
+                if problem:
+                    print(f"  FAIL {design} {name}: {problem}", file=sys.stderr)
+                    failures.append(f"{design} {name}")
+                else:
+                    print(f"  ok   {design} {name}")
 
     if failures:
         print(
-            f"\n{len(failures)} preview(s) the builder cannot draw: "
-            f"{', '.join(failures)}.\n"
-            "The author sees 'The preview could not be rendered.' for these.",
+            f"\n{len(failures)} preview check(s) failed: {', '.join(failures)}.\n"
+            "The author sees 'The preview could not be rendered.' for a design "
+            "and palette that did not draw.",
             file=sys.stderr,
         )
         return 1

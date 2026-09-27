@@ -370,8 +370,8 @@ SCOPES = [
     ),
     Scope(
         "menupreview",
-        "that the builder can draw its own preview of every design it offers, in every palette",
-        "what the preview looks like — the states scope asks that; this asks whether it draws at all",
+        "that the builder can draw its own preview of every design it offers, in every palette, scaled to the picture as the player scales it to the window, with a text change drawn as markup",
+        "what the menu looks like — the states scope asks that; this asks whether the preview draws it at all, and as the player would",
         [PYTHON, str(ROOT / "scripts/test_menu_preview.py")],
         slow=True,
     ),
