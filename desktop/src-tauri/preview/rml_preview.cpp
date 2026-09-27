@@ -156,7 +156,11 @@ int render(const std::string& document_path, const std::string& output, int widt
       }
    Rml::Context *context = failed ? nullptr
          : Rml::CreateContext("preview", Rml::Vector2i(width, height));
-   Rml::ElementDocument *document = context ? context->LoadDocument(document_path) : nullptr;
+   /* In RmlUi, a document's folder, from which we read its pictures, is its
+    * path up to the last forward slash. A Windows path with only backslashes
+    * has no folder there, and no picture would be read. */
+   const std::string source = std::filesystem::u8path(document_path).generic_u8string();
+   Rml::ElementDocument *document = context ? context->LoadDocument(source) : nullptr;
    if (!failed && !document)
    {
       std::fprintf(stderr, "could not load %s\n", document_path.c_str());
