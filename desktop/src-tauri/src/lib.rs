@@ -8,6 +8,7 @@ pub mod discs;
 pub mod dumps;
 pub mod export_cores;
 pub mod export_error;
+mod helper;
 pub mod hotkeys;
 pub mod icons;
 pub(crate) mod launch_contract;

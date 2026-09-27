@@ -392,7 +392,7 @@ pub fn render_preview(request: &PreviewRequest) -> Result<PathBuf, String> {
     })?
     .write(&request.output_dir)?;
     let output = request.output_dir.join("preview.png");
-    let run = std::process::Command::new(&request.renderer)
+    let run = crate::helper::command(&request.renderer)
         .arg(request.output_dir.join(DOCUMENT))
         .arg(&output)
         .arg(request.width.to_string())
