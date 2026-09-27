@@ -734,6 +734,13 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
                 "pause_nonactive = \"false\""
             );
     }
+    /* In a run driven by a menu script, the screens follow the script whatever
+     * pads the host has, so we read no controller in such a run. Otherwise the
+     * bindings of a connected pad would appear on the Controls screen. We set
+     * this after the player files, so a controls.cfg cannot enable one again. */
+    if (getenv(RIB_ENV_MENU_SCRIPT))
+        force_line(&lines, &line_count, &line_capacity,
+            "input_joypad_driver", "input_joypad_driver = \"null\"");
     /* After the player files, so a controls.cfg cannot turn sound back on for
      * this launch. With audio_enable false, no audio driver is ever opened.
      * We replace the frozen driver line with null so the written config
