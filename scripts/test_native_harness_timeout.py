@@ -281,11 +281,18 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
     def test_empty_claim_then_reset_only_fixture_files(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             data = Path(directory).resolve()
+
+            def prepare(_app: Path) -> None:
+                # We prepare the game's storage before we write the marker.
+                self.assertFalse((data / "menu-workflow-owner").exists())
+
             with (
                 patch.object(menu_shots, "data_dir_of", return_value=data),
                 patch.object(menu_shots, "storage_home", return_value=data),
+                patch.object(menu_shots, "prepare_storage", side_effect=prepare) as prepared,
             ):
                 menu_workflows.claim_fixture(Path("/fake/Fixture.app"))
+                prepared.assert_called_once()
                 (data / "states").mkdir()
                 saved = data / "states" / "menu.state1"
                 saved.write_bytes(b"generated fixture save")

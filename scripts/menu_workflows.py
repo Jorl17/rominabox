@@ -111,6 +111,11 @@ def claim_fixture(app: Path) -> None:
     if unknown:
         raise SystemExit("pre-existing unowned fixture files; no reset performed:\n"
                          + "\n".join(str(path) for path in unknown))
+    # We tell whose storage it is from its contents. We prepare the game before
+    # writing the marker, because at the first launch of a Windows game we
+    # register its sandbox, which empties its storage and would remove a
+    # marker written earlier.
+    shots.prepare_storage(app)
     data.mkdir(parents=True, exist_ok=True)
     marker.write_text(owner, encoding="utf-8", newline="\n")
 
