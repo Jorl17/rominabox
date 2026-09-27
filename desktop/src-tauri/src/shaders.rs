@@ -3,8 +3,8 @@
 //! The list code for every screen of rows is in `lists`, and here we only
 //! define the content of a shader row. The presets are GLSL. In exported
 //! games we set `video_driver` to OpenGL and build without Metal and Vulkan,
-//! so we reject slang and Cg presets. We do not enable those drivers in this
-//! code.
+//! so we reject slang and Cg presets, by the content of the files
+//! (`shader_format`). We do not enable those drivers in this code.
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -14,12 +14,6 @@ use std::path::{Component, Path, PathBuf};
 /// tick it, because when we bundle any preset, the player can always return
 /// to the unfiltered picture.
 pub const UNFILTERED_ID: &str = "none";
-
-/// A preset for the OpenGL driver. Slang, Cg and Metal are not included.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ShaderFormat {
-    Glsl,
-}
 
 #[derive(Clone, Debug, Deserialize)]
 struct CatalogFile {
@@ -238,25 +232,6 @@ fn preset_text(shader_file: &str) -> String {
     format!("shaders = 1\nshader0 = {shader_file}\nfilter_linear0 = false\n")
 }
 
-fn shader_format(path: &Path) -> Result<ShaderFormat, String> {
-    let extension = path
-        .extension()
-        .and_then(|value| value.to_str())
-        .unwrap_or("")
-        .to_ascii_lowercase();
-    match extension.as_str() {
-        "glsl" | "glslp" => Ok(ShaderFormat::Glsl),
-        "slang" | "slangp" => Err(
-            "This game's video driver is OpenGL. Slang presets need Vulkan, Metal or GLCore, and those are switched off. Add a .glsl or .glslp shader."
-                .into(),
-        ),
-        "cg" | "cgp" => Err(
-            "Cg presets are not built into exported games. Add a .glsl or .glslp shader.".into(),
-        ),
-        _ => Err("Add a .glsl or .glslp shader.".into()),
-    }
-}
-
 fn safe_relative(path: &Path) -> Result<(), String> {
     if path.is_absolute()
         || path
@@ -354,7 +329,7 @@ fn collect_files(
         }
         let (source, spelled) = beside(directory, prefix, value, *line_number)?;
         if is_pass {
-            shader_format(&source)?;
+            crate::shader_format::require_runnable_pass(&source)?;
             passes += 1;
         }
         add_file(files, source, &spelled);
@@ -478,7 +453,6 @@ pub fn resolve(selection: &ShaderSelection) -> Result<Vec<ResolvedShader>, Strin
         if resolved.iter().any(|item| item.name == name) {
             return Err(format!("shader name '{name}' is already used"));
         }
-        shader_format(&custom.path)?;
         if !custom.path.is_file() {
             return Err(format!(
                 "shader file does not exist: {}",
@@ -487,48 +461,39 @@ pub fn resolve(selection: &ShaderSelection) -> Result<Vec<ResolvedShader>, Strin
         }
         let taken: Vec<String> = resolved.iter().map(|item| item.id.clone()).collect();
         let id = unique_id(&slug(name)?, &taken);
-        let (relative, files, generated) = match custom
+        let file_name = custom
             .path
-            .extension()
+            .file_name()
             .and_then(|value| value.to_str())
-            .unwrap_or("")
-            .to_ascii_lowercase()
-            .as_str()
-        {
-            "glsl" => {
-                let file_name = custom
-                    .path
-                    .file_name()
-                    .and_then(|value| value.to_str())
-                    .ok_or_else(|| "shader file has no name".to_string())?;
-                (
-                    format!("shaders/{id}/{id}.glslp"),
-                    vec![(custom.path.clone(), file_name.to_string())],
-                    Some(file_name.to_string()),
-                )
-            }
-            "glslp" => {
-                let mut files = vec![(
-                    custom.path.clone(),
-                    custom
-                        .path
-                        .file_name()
-                        .and_then(|value| value.to_str())
-                        .unwrap_or("preset.glslp")
-                        .to_string(),
-                )];
-                for (source, relative) in referenced_files(&custom.path)? {
-                    if !files.iter().any(|(_, name)| name == &relative) {
-                        files.push((source, relative));
-                    }
+            .ok_or_else(|| "shader file has no name".to_string())?;
+        let (relative, files, generated) =
+            match crate::shader_format::kind(&crate::shader_format::text(&custom.path)?) {
+                crate::shader_format::Kind::Pass => {
+                    crate::shader_format::require_runnable_pass(&custom.path)?;
+                    let pass = format!("{id}.glsl");
+                    (
+                        format!("shaders/{id}/{id}.glslp"),
+                        vec![(custom.path.clone(), pass.clone())],
+                        Some(pass),
+                    )
                 }
-                let preset_name = files[0].1.clone();
-                (format!("shaders/{id}/{preset_name}"), files, None)
-            }
-            _ => return Err("Add a .glsl or .glslp shader.".into()),
-        };
-        // We wrap a bare .glsl. `generated` is the source file name, and we write
-        // a one-pass preset next to it. We copy a .glslp unchanged.
+                crate::shader_format::Kind::Preset => {
+                    // In RetroArch the file name of a preset sets its language.
+                    let stem = Path::new(file_name)
+                        .file_stem()
+                        .and_then(|stem| stem.to_str());
+                    let preset_name = format!("{}.glslp", stem.unwrap_or("preset"));
+                    let mut files = vec![(custom.path.clone(), preset_name.clone())];
+                    for (source, relative) in referenced_files(&custom.path)? {
+                        if !files.iter().any(|(_, name)| name == &relative) {
+                            files.push((source, relative));
+                        }
+                    }
+                    (format!("shaders/{id}/{preset_name}"), files, None)
+                }
+            };
+        // We wrap a pass. `generated` is its name in the game, and we write a
+        // one-pass preset next to it. We copy a preset unchanged.
         resolved.push(ResolvedShader {
             id,
             name: name.to_string(),
@@ -754,14 +719,13 @@ pub fn pack_selection(
             }
             files.push((archive_name, source.clone()));
         }
-        // Keep the file of the author, not the one-pass preset that we wrap a
-        // bare .glsl in at export. We resolve it again when someone opens the project.
-        let file_name = custom
-            .path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("shader.glsl");
-        custom.path = PathBuf::from(format!("shaders/{}/{file_name}", item.id));
+        // Keep the author's file, the first one, not the one-pass preset we
+        // wrap a pass in at export. We resolve it when someone opens the project.
+        let (_, author) = item
+            .files
+            .first()
+            .ok_or_else(|| format!("could not pack shader '{}'", custom.name))?;
+        custom.path = PathBuf::from(format!("shaders/{}/{author}", item.id));
     }
     Ok((stored, files))
 }
@@ -804,23 +768,44 @@ mod tests {
         assert!(resolved.is_empty());
     }
 
+    /// A pass for the RetroArch OpenGL driver, as far as this check can tell.
+    const PASS: &str = "#if defined(VERTEX)\n#elif defined(FRAGMENT)\n#endif\n";
+
+    /// Rejected for the content of its pass, whatever the name of the preset.
     #[test]
-    fn slang_is_refused_because_those_drivers_stay_off() {
+    fn a_slang_preset_is_refused_because_those_drivers_stay_off() {
         let root = rominabox_scratch::Scratch::dir("rominabox-slang");
-        let path = root.join("crt.slangp");
-        fs::write(&path, "shaders = 1\n").unwrap();
-        let error = resolve(&ShaderSelection {
-            custom: vec![CustomShader {
-                name: "CRT".into(),
-                path,
-            }],
-            ..ShaderSelection::default()
-        })
+        let error = resolve(&custom_preset(
+            &root,
+            "crt.glslp",
+            &[
+                ("crt.glslp", "shaders = 1\nshader0 = crt.slang\n"),
+                (
+                    "crt.slang",
+                    "#version 450\n#pragma stage vertex\n#pragma stage fragment\n",
+                ),
+            ],
+        ))
         .expect_err("slang must not bundle");
-        assert!(
-            error.contains("OpenGL") && error.contains("Metal"),
-            "{error}"
+        assert!(error.contains("crt.slang is a slang shader"), "{error}");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    /// We recognise a preset by its number of passes and stage it under the
+    /// file name that RetroArch uses for a GLSL preset.
+    #[test]
+    fn a_preset_is_known_by_what_it_holds() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-preset-named-otherwise");
+        let selection = custom_preset(
+            &root,
+            "pal.txt",
+            &[
+                ("pal.txt", "shaders = 1\nshader0 = pass.glsl\n"),
+                ("pass.glsl", PASS),
+            ],
         );
+        let resolved = resolve(&selection).unwrap();
+        assert_eq!(resolved[1].relative_preset, "shaders/pal/pal.glslp");
         let _ = fs::remove_dir_all(&root);
     }
 
@@ -890,7 +875,7 @@ mod tests {
             "shaders = 1\nshader0 = shaders/pass.glsl\ntextures = \"lut\"\nlut = \"resources/lut.png\"\n",
         )
         .unwrap();
-        fs::write(source.join("shaders/pass.glsl"), "// the pass\n").unwrap();
+        fs::write(source.join("shaders/pass.glsl"), PASS).unwrap();
         fs::write(source.join("resources/lut.png"), b"lut").unwrap();
         let composed = composed(ShaderSelection {
             custom: vec![CustomShader {
@@ -943,7 +928,7 @@ mod tests {
             &[
                 ("pal.glslp", "#reference \"base/base.glslp\"\n"),
                 ("base/base.glslp", "shaders = 1\nshader0 = shaders/pass.glsl\n"),
-                ("base/shaders/pass.glsl", "// the pass\n"),
+                ("base/shaders/pass.glsl", PASS),
             ],
         );
         let root = rominabox_scratch::Scratch::dir("rominabox-shader-reference-staged");
@@ -968,7 +953,7 @@ mod tests {
             let selection = custom_preset(
                 &source,
                 name,
-                &[(name, text), ("pass.glsl", "// the pass\n"), ("more.cfg", "\n")],
+                &[(name, text), ("pass.glsl", PASS), ("more.cfg", "\n")],
             );
             assert!(resolve(&selection).is_err(), "{name} was accepted");
         }
@@ -988,7 +973,7 @@ mod tests {
                     "pal.glslp",
                     "shaders = 1\nshader0 = pass.glsl\ntextures = \"icon\"\nicon = \"icon.png\"\n",
                 ),
-                ("pass.glsl", "// the pass\n"),
+                ("pass.glsl", PASS),
                 ("icon.png", "lookup"),
             ],
         );
