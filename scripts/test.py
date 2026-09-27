@@ -294,6 +294,13 @@ SCOPES = [
         skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player",
     ),
     Scope(
+        "player",
+        "that the built player refuses to start without an absolute data folder and creates nothing beside itself, and starts with one",
+        "where a game's folders go once it runs; it only asks the player for its feature list, before any window or core",
+        [PYTHON, str(ROOT / "scripts/test_player_data_root.py")],
+        skipped="opt-in: requires ROMINABOX_TEST_BUILD for a player built from the current fork commit",
+    ),
+    Scope(
         "edges",
         "that a photographed open list and a photographed focused control have all four outline edges painted",
         "where the list was placed, or that the boxes in the bridge agree; it only reads the picture",
