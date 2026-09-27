@@ -16,6 +16,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { toolchain } from '../toolchain.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const native = resolve(root, 'vendor/retroarch');
@@ -133,9 +134,12 @@ int main(void) {
 }
 `;
 
+const { cc, memoryChecks, executableSuffix } = toolchain();
 const file = resolve(output, 'pad-bindings.c');
-const binary = resolve(output, 'pad-bindings');
+const binary = resolve(output, `pad-bindings${executableSuffix}`);
 writeFileSync(file, source);
-execFileSync('cc', ['-std=c11', '-Wall', '-Wextra', '-Werror', '-fsanitize=address',
-  '-I', native, '-I', resolve(native, 'libretro-common/include'), '-o', binary, file], { stdio: 'inherit' });
+execFileSync(cc, ['-std=c11', '-Wall', '-Wextra', '-Werror', ...memoryChecks,
+  '-I', native, '-I', resolve(native, 'libretro-common/include'), '-o', binary, file,
+  // strlcpy where the C library has none, as in the player on every platform.
+  resolve(native, 'libretro-common/compat/compat_strl.c')], { stdio: 'inherit' });
 execFileSync(binary, { stdio: 'inherit' });

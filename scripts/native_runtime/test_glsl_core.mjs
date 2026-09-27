@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { toolchain } from '../toolchain.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const native = resolve(root, 'vendor/retroarch');
@@ -110,9 +111,10 @@ int main(void) {
 }
 `;
 
+const { cc, memoryChecks, executableSuffix } = toolchain();
 const file = resolve(output, 'glsl-core.c');
-const binary = resolve(output, 'glsl-core');
+const binary = resolve(output, `glsl-core${executableSuffix}`);
 writeFileSync(file, source);
-execFileSync('cc', ['-std=c11', '-Wall', '-Wextra', '-Werror', '-fsanitize=address',
+execFileSync(cc, ['-std=c11', '-Wall', '-Wextra', '-Werror', ...memoryChecks,
   '-o', binary, file], { stdio: 'inherit' });
 execFileSync(binary, { stdio: 'inherit' });

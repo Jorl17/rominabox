@@ -172,7 +172,7 @@ SCOPES = [
         "heldkey",
         "that Escape still toggles the menu while another key is held, including a press that starts and ends between two samples",
         "that a physical keyboard delivers the events; the decision is the function the runloop calls",
-        ["bash", str(ROOT / "scripts/test_held_key.sh")],
+        [PYTHON, str(ROOT / "scripts/test_held_key.py")],
     ),
     Scope(
         "staging",
