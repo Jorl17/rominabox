@@ -76,6 +76,16 @@ PLATFORMS = {
 }
 
 
+def cargo_output() -> Path:
+    """Where Cargo writes the builder and its command line: the target that
+    we get from built.target_dir in every build script, which in a worktree is
+    shared and outside the checkout. We resolve it from the working directory
+    of Cargo, so a relative CARGO_TARGET_DIR is the same folder during the
+    build and the steps after it."""
+    built = target_dir()
+    return (built if built.is_absolute() else TAURI / built).resolve()
+
+
 def writable(folder: Path, pattern: str = "*") -> None:
     """In a Tauri build, resources keep their permissions, and a frozen
     library can be read-only, so we make the copies writable for later builds."""
@@ -97,10 +107,7 @@ def main() -> int:
     if not renderer.is_file():
         raise SystemExit(f"prepare the menu preview renderer first: no {renderer}")
 
-    # We resolve it from the working directory of Cargo, so a relative
-    # CARGO_TARGET_DIR is the same output during the build and after it.
-    built = target_dir()
-    built = (built if built.is_absolute() else TAURI / built).resolve()
+    built = cargo_output()
     # We stage the assets of the kit the same way for every platform.
     kit_assets.stage(KIT)
     writable(RESOURCES)

@@ -5,14 +5,15 @@ controller pictures, the sound packs and the branding into a kit, for every
 platform. A rename can point the staging at a missing directory, and the
 failure then comes on the next build, far from the change. So we stage into
 a scratch kit and compare each staged file with its source. We also check
-that the checkout's kit is current, and that the macOS builder script uses
-the shared Cargo target.
+that the checkout's kit is current, and that in the builder's build tool
+(scripts/build_builder.py) we look for Cargo's output in the shared target.
 
     python3 scripts/test_staging.py
 """
 
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -20,8 +21,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import kit_assets  # noqa: E402
-
-SCRIPT = ROOT / "scripts/native_runtime/build-builder-macos.sh"
 
 
 def same_files(source: Path, staged: Path, names: list[str] | None = None) -> list[str]:
@@ -63,15 +62,30 @@ def staged_as_sources() -> list[str]:
     return wrong
 
 
-def builder_uses_cargo_target(text: str) -> bool:
-    return "from built import target_dir" in text and all(
-        path in text
-        for path in (
-            'staging="$cargo_target_dir/$profile"',
-            'cp "$cargo_target_dir/release/rominabox-cli" resources/bin/rominabox-cli',
-            'app="$cargo_target_dir/release/bundle/macos/ROM-in-a-Box.app"',
-        )
-    )
+def builder_finds_cargo_output() -> list[str]:
+    """Check where we look for Cargo's output in the builder's build tool, for
+    each way of setting CARGO_TARGET_DIR."""
+    import build_builder
+
+    wrong: list[str] = []
+    saved = os.environ.get("CARGO_TARGET_DIR")
+    try:
+        with tempfile.TemporaryDirectory(prefix="rominabox-target-") as shared:
+            os.environ["CARGO_TARGET_DIR"] = shared
+            if build_builder.cargo_output() != Path(shared).resolve():
+                wrong.append("a shared CARGO_TARGET_DIR is not where the builder looks")
+        os.environ["CARGO_TARGET_DIR"] = "elsewhere"
+        if build_builder.cargo_output() != (build_builder.TAURI / "elsewhere").resolve():
+            wrong.append("a relative CARGO_TARGET_DIR is not resolved from Cargo's working directory")
+        del os.environ["CARGO_TARGET_DIR"]
+        if build_builder.cargo_output() != (build_builder.TAURI / "target").resolve():
+            wrong.append("with no CARGO_TARGET_DIR the builder does not look beside its manifest")
+    finally:
+        if saved is None:
+            os.environ.pop("CARGO_TARGET_DIR", None)
+        else:
+            os.environ["CARGO_TARGET_DIR"] = saved
+    return wrong
 
 
 def main() -> int:
@@ -80,8 +94,12 @@ def main() -> int:
     # Cargo may write into the shared target outside this checkout. For the
     # builder we must use the same target directory as in the other build
     # scripts, for the permission pass, the CLI copy and the final app bundle.
-    if not builder_uses_cargo_target(SCRIPT.read_text()):
-        failures.append("builder does not use built.target_dir for every Cargo output")
+    looked = builder_finds_cargo_output()
+    for entry in looked:
+        print(f"  FAIL {entry}")
+    failures += looked
+    if not looked:
+        print("  ok   the builder looks for Cargo's output where Cargo writes it")
 
     wrong = staged_as_sources()
     for entry in wrong:
