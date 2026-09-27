@@ -837,6 +837,20 @@ mod tests {
     }
 
     #[test]
+    fn a_refusal_names_the_file_the_way_the_author_would_write_it() {
+        // A canonical path on Windows starts with the verbatim prefix \\?\,
+        // which an author should not see in a message.
+        let root = fixture("missing-sub");
+        let ccd = root.join("game.ccd");
+        fs::write(&ccd, "[CloneCD]\n").unwrap();
+        fs::write(root.join("game.img"), b"data").unwrap();
+
+        let error = collect_for(&ccd, Some("pcecd")).unwrap_err();
+        assert!(error.contains("game.ccd"), "{error}");
+        assert!(!error.contains(r"\\?\"), "{error}");
+    }
+
+    #[test]
     fn cue_rejects_parent_traversal() {
         let root = fixture("traversal");
         let cue = root.join("game.cue");
