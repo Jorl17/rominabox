@@ -29,6 +29,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import programs
+
 ROOT = Path(__file__).resolve().parent.parent
 TRACKS = [
     "identification", "achievements", "options", "volume", "shaders",
@@ -142,7 +144,7 @@ def merge(track: str) -> int:
     # that we get no typecheck error for a missing type definition.
     if (where / "desktop/package.json").exists():
         subprocess.run(
-            ["npm", "install", "--silent"],
+            [programs.require("npm"), "install", "--silent"],
             cwd=where / "desktop", capture_output=True, text=True,
         )
 
@@ -180,7 +182,7 @@ def merge(track: str) -> int:
         return 1
     # The same, in the tree the branch was just merged into.
     subprocess.run(
-        ["npm", "install", "--silent"],
+        [programs.require("npm"), "install", "--silent"],
         cwd=ROOT / "desktop", capture_output=True, text=True,
     )
     if not suite(ROOT):

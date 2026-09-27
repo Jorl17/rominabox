@@ -151,17 +151,27 @@ pub fn declared_screens(cfg: &str) -> Vec<String> {
         .collect()
 }
 
+/// The Python we run helper scripts with: the one used to start
+/// `scripts/test.py` (`ROMINABOX_PYTHON`), or else the platform's usual name.
+/// On Windows that is `python`, because there `python3` is the Microsoft
+/// Store stub. On macOS, Linux and other POSIX systems it is `python3`.
+pub fn python() -> String {
+    std::env::var("ROMINABOX_PYTHON").unwrap_or_else(|_| {
+        if cfg!(windows) { "python" } else { "python3" }.to_string()
+    })
+}
+
 /// The windowless RmlUi probe used by the `menu` tests. We build it with the
 /// same recipe as those tests, so this test cannot link a different RmlUi.
 pub fn rml_probe() -> PathBuf {
-    let output = Command::new("python3")
+    let output = Command::new(python())
         .current_dir(rominabox_desktop::repo::root())
         .args([
             "-c",
             "import sys; sys.path.insert(0, 'scripts'); import menu_interaction as m; m.build(); print(m.PROBE)",
         ])
         .output()
-        .expect("python3 runs");
+        .expect("the test Python runs");
     assert!(
         output.status.success(),
         "could not build the RmlUi probe (python3 scripts/prepare_rmlui.py first): {}{}",
@@ -229,6 +239,26 @@ pub fn boxes(document: &Path, (width, height): (u32, u32), ids: &[&str]) -> Vec<
             })
         })
         .collect()
+}
+
+/// The panel declared in `cfg` for the screen with the role `role`. Each
+/// design file lists its own panels.
+pub fn panel_with_role(cfg: &str, role: &str) -> String {
+    let value = |key: &str| {
+        cfg.lines()
+            .find_map(|line| line.strip_prefix(&format!("{key} = \"")))
+            .and_then(|rest| rest.strip_suffix('"'))
+            .map(str::to_owned)
+    };
+    let screen = cfg
+        .lines()
+        .find_map(|line| {
+            line.strip_prefix("screen_role_")
+                .and_then(|rest| rest.strip_suffix(&format!(" = \"{role}\"")))
+        })
+        .unwrap_or_else(|| panic!("design.cfg declares no {role} screen:\n{cfg}"));
+    value(&format!("screen_panel_{screen}"))
+        .unwrap_or_else(|| panic!("design.cfg declares no panel for {screen}:\n{cfg}"))
 }
 
 /// `menu` with one panel shown instead of Pause.

@@ -187,7 +187,7 @@ def _save(plan: Plan, digest: str, output: str) -> None:
     )
 
 
-def belongs_to(cwd: Path) -> dict:
+def belongs_to(cwd: Path, env: dict[str, str] | None = None) -> dict:
     """Tell a test binary which checkout it runs against.
 
     The path compiled into a binary is that of the checkout it was built in,
@@ -195,10 +195,10 @@ def belongs_to(cwd: Path) -> dict:
     built in another. Without this, we would read the console packages of
     the other checkout in the test.
     """
-    return {**os.environ, "ROMINABOX_REPO": str(cwd)}
+    return {**os.environ, "ROMINABOX_REPO": str(cwd), **(env or {})}
 
 
-def _replay(binaries: list[dict], harness: list[str], cwd: Path) -> subprocess.CompletedProcess:
+def _replay(binaries: list[dict], harness: list[str], cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     stdout: list[str] = ["replaying compiled tests; sources unchanged\n"]
     stderr: list[str] = []
     code = 0
@@ -210,7 +210,7 @@ def _replay(binaries: list[dict], harness: list[str], cwd: Path) -> subprocess.C
             capture_output=True,
             text=True,
             errors="replace",
-            env=belongs_to(cwd),
+            env=belongs_to(cwd, env),
         )
         stdout.append(ran.stdout)
         stderr.append(ran.stderr)
@@ -219,23 +219,23 @@ def _replay(binaries: list[dict], harness: list[str], cwd: Path) -> subprocess.C
     return subprocess.CompletedProcess(["replay"], code, "".join(stdout), "".join(stderr))
 
 
-def cargo_test(command: list[str], cwd: Path) -> subprocess.CompletedProcess:
+def cargo_test(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     plan = parse(command)
     if plan is None or not plan.manifest.is_file():
         return subprocess.run(
             command, cwd=cwd, capture_output=True, text=True, errors="replace",
-            env=belongs_to(cwd),
+            env=belongs_to(cwd, env),
         )
     digest = source_digest(plan.manifest)
     saved = _load(plan, digest)
     if saved is not None:
-        return _replay(saved, plan.harness, cwd)
+        return _replay(saved, plan.harness, cwd, env)
     # We read the stamp from the "Running … (path)" lines, not printed with --quiet.
     visible = [token for token in command if token != "--quiet"]
     with CARGO_LOCK:
         ran = subprocess.run(
             visible, cwd=cwd, capture_output=True, text=True, errors="replace",
-            env=belongs_to(cwd),
+            env=belongs_to(cwd, env),
         )
     if ran.returncode == 0:
         _save(plan, digest, ran.stdout + ran.stderr)

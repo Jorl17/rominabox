@@ -6,14 +6,14 @@
   "scripts": {
     "dev": "npm run catalog && npm run scene && vite",
     "build": "npm run catalog && npm run scene && tsc --noEmit && vite build",
-    "check": "npm run scene && python3 ../scripts/frontend_check.py",
+    "check": "npm run scene && node ../scripts/python.mjs ../scripts/frontend_check.py",
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "tauri": "tauri",
     "catalog": "cargo run --quiet --manifest-path crates/rominabox-catalog/Cargo.toml --bin rominabox-catalog -- generate",
     "catalog:validate": "cargo run --quiet --manifest-path crates/rominabox-catalog/Cargo.toml --bin rominabox-catalog -- validate",
-    "scene": "python3 ../scripts/render_controllers.py --stage-frontend"
+    "scene": "node ../scripts/python.mjs ../scripts/render_controllers.py --stage-frontend"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import {python} from '../python.mjs';
 const root=path.resolve(import.meta.dirname,'../..');
 if(process.argv.length!==3){console.error('Usage: node scripts/native_runtime/freeze-runtime-kit.mjs BUILD_DIRECTORY');process.exit(2);}
 const build=path.resolve(process.argv[2]),kit=path.join(root,'desktop/src-tauri/resources/runtime');
@@ -15,7 +16,7 @@ const revision=execFileSync('git',['rev-parse',info.retroarchCommit+'^{commit}']
 const frozen=path.join(fs.mkdtempSync(path.join(build,'frozen-')),'retroarch');
 // We get the CLI from scripts/built.py, with which we build it from this
 // checkout and reject a CLI built in another checkout.
-const cli=execFileSync('python3',[path.join(root,'scripts/built.py'),'--build'],{cwd:root,encoding:'utf8'}).trim().split('\n').pop();
+const cli=execFileSync(python(),[path.join(root,'scripts/built.py'),'--build'],{cwd:root,encoding:'utf8'}).trim().split('\n').pop();
 execFileSync(cli,['freeze-macos-executable'],{input:JSON.stringify({source:path.join(build,'retroarch/retroarch'),destination:frozen}),stdio:['pipe','inherit','inherit']});
 const binary=path.join(kit,'bin/retroarch');
 const dependencies=execFileSync('otool',['-L',frozen],{encoding:'utf8'}).split('\n').slice(1).map(x=>x.trim().split(' (')[0]).filter(x=>x.startsWith('@executable_path/Frameworks/'));

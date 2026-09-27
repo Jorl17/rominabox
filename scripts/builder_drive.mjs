@@ -11,6 +11,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { python } from "./python.mjs";
 
 const require = createRequire(
   new URL("../desktop/package.json", import.meta.url),
@@ -59,7 +60,7 @@ let travelingCli = null;
 function exporter() {
   if (travelingCli) return travelingCli;
   const found = spawnSync(
-    "python3",
+    python(),
     [
       "-c",
       "import sys; sys.path.insert(0, 'scripts'); from built import cli; print(cli())",

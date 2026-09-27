@@ -21,6 +21,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import programs
+
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "desktop" / "dist"
 DRIVE = Path(__file__).resolve().parent / "builder_drive.mjs"
@@ -29,8 +31,8 @@ DRIVE = Path(__file__).resolve().parent / "builder_drive.mjs"
 def build() -> int:
     desktop = ROOT / "desktop"
     for command in (
-        ["npm", "run", "scene"],
-        ["npm", "exec", "--", "vite", "build"],
+        [programs.require("npm"), "run", "scene"],
+        [programs.require("npm"), "exec", "--", "vite", "build"],
     ):
         result = subprocess.run(
             command,

@@ -19,6 +19,8 @@ use std::{
     sync::atomic::AtomicBool,
 };
 
+mod support;
+
 fn write_runtime_stub(path: &Path) {
     let source = path.with_extension("c");
     fs::write(
@@ -239,13 +241,13 @@ if removed < 1:
     raise SystemExit("stripper removed nothing")
 sys.stdout.write(stripped)
 "#;
-    let output = Command::new("python3")
+    let output = Command::new(support::python())
         .arg("-c")
         .arg(script)
         .arg(repo_root().join("scripts/prepare_runtime.py"))
         .arg(source)
         .output()
-        .expect("python3 can import the staging stripper");
+        .expect("the test Python can import the staging stripper");
     assert!(
         output.status.success(),
         "stripper failed: {}",

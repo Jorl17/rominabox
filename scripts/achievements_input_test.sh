@@ -1,11 +1,13 @@
 #!/bin/sh
 # RmlUi input and presentation, with stand-ins for external services. No window.
 set -eu
+# The Python that scripts/test.py runs with, or python3 when this runs alone.
+python=${ROMINABOX_PYTHON:-python3}
 root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$root"
-eval "$(python3 scripts/worktree.py env)"
+eval "$("$python" scripts/worktree.py env)"
 build="$root/work/account-input"
-harness() { python3 scripts/native_runtime/menu_harness.py build "$@"; }
+harness() { "$python" scripts/native_runtime/menu_harness.py build "$@"; }
 host="scripts/native_runtime/account_test_host.cpp"
 service="scripts/native_runtime/achievements_fake.cpp"
 harness "$build/probe" scripts/native_runtime/test_account_input.cpp "$host" "$service" scripts/native_runtime/text_test_host.cpp

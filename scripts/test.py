@@ -29,6 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import core_source  # noqa: E402
+import programs  # noqa: E402
 from cargo_replay import cargo_test  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
 from player_support import modifications as support_modifications  # noqa: E402
@@ -42,18 +43,20 @@ SCRATCH = ROOT / "work/test-output"
 BUDGETS = ROOT / "scripts/fixtures/scope-budgets.json"
 PRINT_LOCK = threading.Lock()
 
+PYTHON = programs.PYTHON
+
 CARGO_DESKTOP = ["--manifest-path", str(ROOT / "desktop/src-tauri/Cargo.toml")]
 CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog/Cargo.toml")]
 # bridge, dcmenu and menu link one RmlUi. We declare it in each scope that
 # uses it, or in a checkout where nobody has compiled it the scope fails.
-RMLUI_PREPARE = [["python3", str(ROOT / "scripts/prepare_rmlui.py")]]
+RMLUI_PREPARE = [[PYTHON, str(ROOT / "scripts/prepare_rmlui.py")]]
 
 # For the launched workflow cases we select a committed player explicitly and
 # use isolated storage, in a namespace apart from the other native scopes.
-WORKFLOW_COMMAND = [
-    "env", f"ROMINABOX_GAME_BUNDLE_PREFIX={os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.workflows",
-    "python3", str(ROOT / "scripts/menu_workflows.py"),
-]
+WORKFLOW_COMMAND = [PYTHON, str(ROOT / "scripts/menu_workflows.py")]
+WORKFLOW_ENV = {
+    "ROMINABOX_GAME_BUNDLE_PREFIX": f"{os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.workflows",
+}
 
 
 # What we link into a headless menu driver beside the cached menu objects,
@@ -71,7 +74,7 @@ HEADLESS_SUPPORT = [
 
 def headless_driver(output: Path, source: str) -> list[str]:
     """Return the harness helper's command to build one headless menu driver."""
-    return ["python3", str(ROOT / "scripts/native_runtime/menu_harness.py"), "build",
+    return [PYTHON, str(ROOT / "scripts/native_runtime/menu_harness.py"), "build",
             str(output), *HEADLESS_FLAGS,
             *(str(ROOT / path) for path in [source, *HEADLESS_SUPPORT])]
 
@@ -91,6 +94,7 @@ class Scope:
         slow: bool = False,
         prepare: list[list[str]] | None = None,
         skipped: str | None = None,
+        env: dict[str, str] | None = None,
     ):
         self.name = name
         self.covers = covers
@@ -103,6 +107,8 @@ class Scope:
         # without the declaration, a scope with generated input would work only
         # in a checkout where someone had generated it, and fail everywhere else.
         self.prepare = prepare or []
+        # Environment variables for the scope's command, added to this run's own.
+        self.env = env or {}
 
 
 SCOPES = [
@@ -122,19 +128,19 @@ SCOPES = [
         "picture",
         "that a hard edge in a core's picture is still a hard edge after the options an export ships",
         "window placement, bilinear scaling of an already-sharp frame, or any console whose core is not in the kit",
-        ["python3", str(ROOT / "scripts/picture_edges.py")],
+        [PYTHON, str(ROOT / "scripts/picture_edges.py")],
     ),
     Scope(
         "shipped",
         "that the core options, remaps, controller profiles and firmware an export ships replace what an earlier export or data location left in the game's data on every launch, that a setting the player changed afterwards stays, that a player setting chosen in the game's menu reaches the next launch whatever default a later export carries, and that the launcher modules build for Windows",
         "that RetroArch reads those files or that the core honours them (the picture scope covers the core), or that the Windows build runs",
-        ["python3", str(ROOT / "scripts/test_shipped.py")],
+        [PYTHON, str(ROOT / "scripts/test_shipped.py")],
     ),
     Scope(
         "accounts",
         "the shared RetroAchievements accounts store on real files: who is listed, when an account leaves, private modes, unsafe names, several games changing it at once, and that it builds for Windows",
         "that a game calls it, that the sandbox lets a game reach the folder (the isolation scope), or that the Windows build runs",
-        ["python3", str(ROOT / "scripts/test_accounts_store.py")],
+        [PYTHON, str(ROOT / "scripts/test_accounts_store.py")],
     ),
     Scope(
         "frontend",
@@ -151,14 +157,14 @@ SCOPES = [
         "builder",
         "that the browser build of the builder can be walked, that a dropped file's companions are named on the details step, and that shader packaging is on the menu step",
         "the desktop shell: catalog artwork, a rendered menu preview, firmware wording, and creating the app",
-        ["python3", str(ROOT / "scripts/builder_shots.py"), "--check"],
+        [PYTHON, str(ROOT / "scripts/builder_shots.py"), "--check"],
         slow=True,
     ),
     Scope(
         "menu",
         "what RmlUi does with the real menu.rml when clicked: hit testing, hover, focus, classes",
         "that the menu looks right, or anything about the C++ bridge, which is not loaded",
-        ["python3", str(ROOT / "scripts/menu_interaction.py"), "--check"],
+        [PYTHON, str(ROOT / "scripts/menu_interaction.py"), "--check"],
         prepare=RMLUI_PREPARE,
     ),
     Scope(
@@ -171,7 +177,7 @@ SCOPES = [
         "staging",
         "that the runtime-kit staging script names paths that exist, after any rename",
         "that the script runs or produces a correct kit; it builds a whole application",
-        ["python3", str(ROOT / "scripts/test_staging.py")],
+        [PYTHON, str(ROOT / "scripts/test_staging.py")],
     ),
     Scope(
         "padbinds",
@@ -189,44 +195,44 @@ SCOPES = [
         "dcmenu",
         "that a core-profile context draws the menu and a legacy context still does, that each loads a picture from a folder with a non-ASCII name through libretro's file layer, and that a log line reaches the file before the process exits",
         "that a Dreamcast disc boots, where the menu sits, or that a Windows path is read; the pictures are a separate run",
-        ["python3", str(ROOT / "scripts/test_dcmenu.py")],
+        [PYTHON, str(ROOT / "scripts/test_dcmenu.py")],
         prepare=RMLUI_PREPARE,
     ),
     Scope(
         "joypad",
         "that every hid profile the pin declares is staged, and that RetroArch's match rules would accept it",
         "that a physical pad's buttons match those numbers; nothing here opens a device",
-        ["python3", str(ROOT / "scripts/test_joypad_autoconfig.py")],
+        [PYTHON, str(ROOT / "scripts/test_joypad_autoconfig.py")],
     ),
     Scope(
         "reporoot",
         "that nothing finds the repository by the path it was compiled in, that no test or script uses a place in one person's home, that every script building against RmlUi uses the declared one, and that no script or test names the removed experiment tree",
         "that the rule is right, or that a binary really came from elsewhere; it reads how each place asks",
-        ["python3", str(ROOT / "scripts/test_repo_root.py")],
+        [PYTHON, str(ROOT / "scripts/test_repo_root.py")],
     ),
     Scope(
         "fixtures",
         "that a test file this repository does not generate is fetched or skipped out loud, and that the generated cartridge is ready",
         "that a fetched disc boots; the quit scope launches one, and only when the file is actually there",
-        ["python3", str(ROOT / "scripts/test_fetch_content.py")],
+        [PYTHON, str(ROOT / "scripts/test_fetch_content.py")],
     ),
     Scope(
         "symlinks",
         "that git carries no symbolic link, which would point somewhere else on every other machine",
         "that a worktree has the links it needs, or that the ignore rules are right",
-        ["python3", str(ROOT / "scripts/test_no_symlinks.py")],
+        [PYTHON, str(ROOT / "scripts/test_no_symlinks.py")],
     ),
     Scope(
         "worktree",
         "isolation between parallel checkouts: the shared git dir, the lock, refusing the canonical tree, and that create will not check out an existing branch",
         "that a real worktree builds or runs; it creates nothing outside a temporary directory",
-        ["python3", str(ROOT / "scripts/test_worktree.py")],
+        [PYTHON, str(ROOT / "scripts/test_worktree.py")],
     ),
     Scope(
         "shotsign",
         "that replacing the shot player keeps the sandbox the export signed, and that every shot shares one bundle namespace",
         "that a picture was taken; that is menu_shots, and this does not launch a game",
-        ["python3", str(ROOT / "scripts/test_shot_sign.py")],
+        [PYTHON, str(ROOT / "scripts/test_shot_sign.py")],
     ),
     Scope(
         "achievement-client",
@@ -238,7 +244,7 @@ SCOPES = [
         "achievement-native",
         "actual exported core/client authentication, autosave restoration, unlock, OFF and exclusion against a loopback service",
         "a real RetroAchievements account or physical keyboard/controller behavior",
-        ["python3", str(ROOT / "scripts/achievements_native_workflow.py")],
+        [PYTHON, str(ROOT / "scripts/achievements_native_workflow.py")],
         slow=True,
         skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD pointing to a test-only achievements build",
     ),
@@ -249,7 +255,7 @@ SCOPES = [
         ["sh", str(ROOT / "scripts/achievements_input_test.sh")],
         # The checks of the harness build itself. With a stale object from the
         # cache, bridge would compile against code that no longer exists.
-        prepare=RMLUI_PREPARE + [["python3", str(ROOT / "scripts/native_runtime/test_menu_harness.py")]],
+        prepare=RMLUI_PREPARE + [[PYTHON, str(ROOT / "scripts/native_runtime/test_menu_harness.py")]],
     ),
     Scope(
         "bridge",
@@ -257,29 +263,30 @@ SCOPES = [
         "physical input capture or audible sound; a fake RetroArch host controls the failure/capture boundary, and rendering appearance needs direct screenshot review",
         ["bash", str(ROOT / "scripts/native_runtime/test_rmlui_interaction.sh")],
         # We build bridge through the same cache, so we check the cache there too.
-        prepare=RMLUI_PREPARE + [["python3", str(ROOT / "scripts/native_runtime/test_menu_harness.py")]],
+        prepare=RMLUI_PREPARE + [[PYTHON, str(ROOT / "scripts/native_runtime/test_menu_harness.py")]],
     ),
     Scope(
         "navigation",
         "arrow keys, pointer, focus and their sounds on every screen of every registered design and of the hypothetical layouts, driven through the real menu C++ on composed documents, and that a save slot's picture takes the game's shape where a design marks it",
         "physical keyboards, pads or mice, audible sound, or how a highlight looks; a fake RetroArch host stands in for the player and nothing is drawn",
-        ["env", f"ROMINABOX_NAVIGATION_DRIVER={NAVIGATION_DRIVER}",
-         "cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_navigation", "--", "--include-ignored"],
+        ["cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_navigation", "--", "--include-ignored"],
         prepare=RMLUI_PREPARE + [headless_driver(NAVIGATION_DRIVER, "scripts/native_runtime/menu_nav_driver.cpp")],
+        env={"ROMINABOX_NAVIGATION_DRIVER": str(NAVIGATION_DRIVER)},
     ),
     Scope(
         "workflows",
         "every menu workflow case (keys, pointer, controls, capture, volume, shaders, saves, overlays, accounts) in both designs and every palette, replayed through the fork's own script driver and report on menus composed as an export composes them, compared checkpoint by checkpoint and file by file with what the launched player recorded",
         "anything drawn, audible cues, RetroArch's bind descriptions and remap files, or physical input; the fake host stands in for RetroArch, and the workflows-native scope launches a few cases for real",
-        ["env", f"ROMINABOX_WORKFLOW_DRIVER={WORKFLOW_DRIVER}",
-         "cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_workflows", "--", "--include-ignored", "--nocapture"],
+        ["cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_workflows", "--", "--include-ignored", "--nocapture"],
         prepare=RMLUI_PREPARE + [headless_driver(WORKFLOW_DRIVER, "scripts/native_runtime/menu_workflow_driver.cpp")],
+        env={"ROMINABOX_WORKFLOW_DRIVER": str(WORKFLOW_DRIVER)},
     ),
     Scope(
         "workflows-native",
         "the few workflow cases menu-workflows.json marks `launched`, in the exported player itself: one per design and a save and load through RetroArch's own state task, compared with the same baselines as the headless replay, and each picture",
         "audible cues, physical input or native focus/fullscreen; inspect the captured images directly too",
         WORKFLOW_COMMAND + ["--output", str(SCRATCH / "menu-workflows")],
+        env=WORKFLOW_ENV,
         slow=True,
         skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player",
     ),
@@ -287,26 +294,26 @@ SCOPES = [
         "edges",
         "that a photographed open list and a photographed focused control have all four outline edges painted",
         "where the list was placed, or that the boxes in the bridge agree; it only reads the picture",
-        ["python3", str(ROOT / "scripts/check_menu_edges.py")],
+        [PYTHON, str(ROOT / "scripts/check_menu_edges.py")],
     ),
     Scope(
         "pictures",
         "that a badge still downloading draws a moving placeholder and a failed one a mark, in every design, and draws every Disc screen into work/feedback-pictures",
         "that the player sets those classes or keeps redrawing: the rows are written the way its list writes them, and the second moment is RmlUi's 0.1 s step",
-        ["python3", str(ROOT / "scripts/menu_pictures.py")],
+        [PYTHON, str(ROOT / "scripts/menu_pictures.py")],
     ),
     Scope(
         "placement",
         "that the controller picker lands in the same place on every console that offers one",
         "that the place is a good one — only that it is the same one, whichever pad is drawn",
-        ["python3", str(ROOT / "scripts/menu_states.py"), "--fixed-place", str(SCRATCH / "picker-place")],
+        [PYTHON, str(ROOT / "scripts/menu_states.py"), "--fixed-place", str(SCRATCH / "picker-place")],
         slow=True,
     ),
     Scope(
         "variants",
         "that every controller a player can pick has artwork staged and a scene to swap to",
         "that the player actually swaps to it; that is the native menu, which is not linked here",
-        ["python3", str(ROOT / "scripts/menu_states.py"), "--every-variant", str(SCRATCH / "variants")],
+        [PYTHON, str(ROOT / "scripts/menu_states.py"), "--every-variant", str(SCRATCH / "variants")],
         slow=True,
     ),
     Scope(
@@ -330,34 +337,34 @@ SCOPES = [
         "automation",
         "that something other than a person still runs this suite",
         "that the hook is installed in a fresh clone; core.hooksPath is local configuration",
-        ["python3", str(ROOT / "scripts/test_automation.py")],
+        [PYTHON, str(ROOT / "scripts/test_automation.py")],
     ),
     Scope(
         "artwork",
         "that every controller PNG still matches a fresh render of its SVG source",
         "that the artwork is correct — only that the PNG has not diverged from the drawing",
-        ["python3", str(ROOT / "scripts/render_controllers.py"), "--check"],
+        [PYTHON, str(ROOT / "scripts/render_controllers.py"), "--check"],
         slow=True,
     ),
     Scope(
         "menupreview",
         "that the builder can draw its own preview of every design it offers, in every palette",
         "what the preview looks like — the states scope asks that; this asks whether it draws at all",
-        ["python3", str(ROOT / "scripts/test_menu_preview.py")],
+        [PYTHON, str(ROOT / "scripts/test_menu_preview.py")],
         slow=True,
     ),
     Scope(
         "shaderpreview",
         "that every shader's preview is still what that shader does to a picture, rendered from its own GLSL",
         "that the filter is a good one — only that the picture of it is made by running it",
-        ["python3", str(ROOT / "scripts/render_shader_previews.py"), "--check"],
+        [PYTHON, str(ROOT / "scripts/render_shader_previews.py"), "--check"],
         slow=True,
     ),
     Scope(
         "size",
         "that an exported app stays under the size ceiling, and does not carry the video encoders",
         "a cartridge's own size, or that the player was rebuilt; it measures the kit already on disk",
-        ["python3", str(ROOT / "scripts/size_bundles.py")],
+        [PYTHON, str(ROOT / "scripts/size_bundles.py")],
     ),
     Scope(
         "isolation",
@@ -381,21 +388,21 @@ SCOPES = [
         "overlays",
         "that no controller callout or button anchor moved, across every illustrated profile",
         "that the positions are correct — only that they are unchanged since a human looked",
-        ["python3", str(ROOT / "scripts/render_control_overlays.py"), "--check", str(SCRATCH / "overlays")],
+        [PYTHON, str(ROOT / "scripts/render_control_overlays.py"), "--check", str(SCRATCH / "overlays")],
         slow=True,
     ),
     Scope(
         "shaderstate",
         "that the shader row marked ON is the preset the running game is using, including after a restart",
         "that the filter looks right — only which row says it is the one on",
-        ["python3", str(ROOT / "scripts/shader_state.py")],
+        [PYTHON, str(ROOT / "scripts/shader_state.py")],
         slow=True,
     ),
     Scope(
         "discs",
         "that a cartridge and a single disc are not a multi-disc game, that choosing the second image makes the core report that index, and that an exported game's menu does the same in both designs while a one-disc game hides the Disc entry and opens the circle",
         "that a disc name was shortened — the bridge measures that",
-        ["python3", str(ROOT / "scripts/test_discs.py")],
+        [PYTHON, str(ROOT / "scripts/test_discs.py")],
         slow=True,
         # In it we lay the menu out with RmlUi to find the Disc entry to click.
         prepare=RMLUI_PREPARE,
@@ -404,29 +411,32 @@ SCOPES = [
         "quit",
         "that an Apple Event quit of an exported game unloads the core before the process exits",
         "window placement and fullscreen; closing the window is the same AppKit terminate path",
-        ["python3", str(ROOT / "scripts/test_quit.py")],
+        [PYTHON, str(ROOT / "scripts/test_quit.py")],
         slow=True,
-        prepare=[["python3", str(ROOT / "scripts/fetch_test_content.py"), "--scope", "quit"]],
+        prepare=[[PYTHON, str(ROOT / "scripts/fetch_test_content.py"), "--scope", "quit"]],
     ),
     Scope(
         "quiet",
         "quiet launch decisions, null audio, transparent windows, hands-on opt-outs, and safe native timeout handling",
         "actual GL presentation or hands-on focus/fullscreen; the window probe never orders its window in",
-        ["python3", str(ROOT / "scripts/test_quiet.py")],
+        [PYTHON, str(ROOT / "scripts/test_quiet.py")],
         slow=True,
-        prepare=[["python3", str(ROOT / "scripts/test_native_harness_timeout.py")]],
+        prepare=[[PYTHON, str(ROOT / "scripts/test_native_harness_timeout.py")]],
     ),
 ]
 
 BY_NAME = {scope.name: scope for scope in SCOPES}
 
 
-def execute(command: list[str]) -> subprocess.CompletedProcess:
+def execute(command: list[str], env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     if command and command[0] == "cargo" and "test" in command[:2]:
-        return cargo_test(command, ROOT)
+        return cargo_test(command, ROOT, env)
+    program = command[0] if Path(command[0]).is_absolute() else programs.find(command[0])
+    if program is None:
+        return subprocess.CompletedProcess(command, 127, "", f"{command[0]} is not on PATH\n")
     return subprocess.run(
-        command, cwd=ROOT, capture_output=True, text=True, errors="replace",
-        env=running_here(),
+        [program, *command[1:]], cwd=ROOT, capture_output=True, text=True, errors="replace",
+        env={**running_here(), **(env or {})},
     )
 
 
@@ -438,20 +448,20 @@ def running_here() -> dict:
     binary built in another, and the tests would then read the other
     checkout's console packages.
     """
-    return {**os.environ, "ROMINABOX_REPO": str(ROOT)}
+    return {**os.environ, "ROMINABOX_REPO": str(ROOT), "ROMINABOX_PYTHON": PYTHON}
 
 
 def run(scope: Scope) -> tuple[bool, float, str]:
     started = time.monotonic()
     chunks: list[str] = []
     for step in scope.prepare:
-        staged = execute(step)
+        staged = execute(step, scope.env)
         chunks.append(staged.stdout or "")
         chunks.append(staged.stderr or "")
         if staged.returncode != 0:
             chunks.append(f"  could not stage what {scope.name} needs\n")
             return False, time.monotonic() - started, "".join(chunks)
-    result = execute(scope.command)
+    result = execute(scope.command, scope.env)
     chunks.append(result.stdout or "")
     chunks.append(result.stderr or "")
     return result.returncode == 0, time.monotonic() - started, "".join(chunks)

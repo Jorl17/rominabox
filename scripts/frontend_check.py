@@ -12,12 +12,14 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import programs
+
 DESKTOP = Path(__file__).resolve().parent.parent / "desktop"
 
 STEPS = [
-    ("tsc", ["npm", "exec", "--", "tsc", "--noEmit"]),
-    ("vitest", ["npm", "exec", "--", "vitest", "run"]),
-    ("prettier", ["npm", "exec", "--", "prettier", "--check", "."]),
+    ("tsc", [programs.require("npm"), "exec", "--", "tsc", "--noEmit"]),
+    ("vitest", [programs.require("npm"), "exec", "--", "vitest", "run"]),
+    ("prettier", [programs.require("npm"), "exec", "--", "prettier", "--check", "."]),
 ]
 
 

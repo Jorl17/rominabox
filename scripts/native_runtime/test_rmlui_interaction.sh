@@ -1,6 +1,8 @@
 #!/bin/sh
 # Headless RmlUi interaction checks, with no RetroArch and no window.
 set -eu
+# The Python that scripts/test.py runs with, or python3 when this runs alone.
+python=${ROMINABOX_PYTHON:-python3}
 
 script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/../.." && pwd)
@@ -8,7 +10,7 @@ bridge_dir=$repo_root/vendor/retroarch/menu/drivers
 # Compile the menu sources that Makefile.common lists, cached per object, and
 # link a program against them. The binary stays in this checkout, so one
 # checkout never runs the tests of another.
-harness() { python3 "$script_dir/menu_harness.py" build "$@"; }
+harness() { "$python" "$script_dir/menu_harness.py" build "$@"; }
 design=$repo_root/integrations/designs/native
 build_dir=$repo_root/work/bridge-interaction
 # The stylesheet that we write in an export, not the file of the design. A
@@ -36,7 +38,7 @@ done
 # We build it here and check that it comes from this checkout, because every
 # worktree shares one cargo target, so the binary next to the manifest may be
 # out of date or from another checkout. See scripts/built.py.
-cli=$(python3 "$repo_root/scripts/built.py")
+cli=$("$python" "$repo_root/scripts/built.py")
 if [ -x "$cli" ]; then
   printf '{"source":"%s","destination":"%s","palette":"blue"}' "$design" "$assets" \
     | "$cli" stage-theme >/dev/null || {
@@ -49,7 +51,7 @@ fi
 # A generated list screen for the bridge (list_fixture.py). Without it the
 # bridge has no list, and the checks of the rows and controls on a list
 # screen cannot fail.
-python3 "$script_dir/list_fixture.py" "$assets/menu.rml" --actions
+"$python" "$script_dir/list_fixture.py" "$assets/menu.rml" --actions
 
 # A slot's picture in a folder with a non-ASCII name, like a player's data folder,
 # which we read in the menu through the libretro file layer.
@@ -66,7 +68,7 @@ for edge_design in native disc; do
   printf '{"source":"%s","destination":"%s","palette":"blue"}' \
     "$repo_root/integrations/designs/$edge_design" "$edge_assets" \
     | "$cli" stage-theme >/dev/null
-  python3 "$script_dir/list_fixture.py" "$edge_assets/menu.rml"
+  "$python" "$script_dir/list_fixture.py" "$edge_assets/menu.rml"
   echo "row-edge $edge_design"
   "$out" "$edge_assets" row-edge || row_edge_failed=1
 done
@@ -74,7 +76,7 @@ done
 # Bind lists and the volume thumb, for every controller declared in the
 # repository and both designs. We request the scenes from the exporter and
 # measure the boxes that the bridge lays out.
-python3 - "$repo_root" "$build_dir" "$out" <<'PY'
+"$python" - "$repo_root" "$build_dir" "$out" <<'PY'
 import json, subprocess, sys
 from pathlib import Path
 
@@ -84,7 +86,7 @@ binary = sys.argv[3]
 designs = [entry["id"] for entry in json.loads((root / "desktop/designs.json").read_text())["designs"]]
 profiles = json.loads((root / "desktop/controls.json").read_text())["profiles"]
 controllers = root / "desktop/assets/controllers"
-cli = subprocess.check_output(["python3", str(root / "scripts/built.py")], text=True).strip()
+cli = subprocess.check_output([sys.executable, str(root / "scripts/built.py")], text=True).strip()
 failed = False
 
 for design in designs:
@@ -182,7 +184,7 @@ PY
 # file writes, declarations and the RmlUi document are the production code.
 # All eight declared Mega Drive callouts are active, so we can move through
 # the scene by pointer or keyboard. These are fixture bindings, no runtime remap.
-python3 - "$build_dir/placement-native/controls-defaults.cfg" <<'FIXTURE'
+"$python" - "$build_dir/placement-native/controls-defaults.cfg" <<'FIXTURE'
 import pathlib
 import sys
 ids = ("up", "left", "right", "down", "y", "b", "a", "start")
@@ -190,7 +192,7 @@ pathlib.Path(sys.argv[1]).write_text(''.join(
     f'rib_label_{id} = "{id}"\ninput_player1_{id} = "a"\n' for id in ids
 ))
 FIXTURE
-python3 - "$build_dir/placement-native" "$repo_root/desktop/controls.json" <<'FIXTURE'
+"$python" - "$build_dir/placement-native" "$repo_root/desktop/controls.json" <<'FIXTURE'
 import json
 import pathlib
 import sys
@@ -265,14 +267,14 @@ harness "$build_dir/test_menu_orchestration" --define HAVE_AUDIOMIXER --file-lay
   "$repo_root/vendor/retroarch/libretro-common/file/config_file.c"
 # A whole Native menu as in a game with filters and achievements, staged by
 # the exporter, for the cases that choose rows on generated list screens.
-python3 - "$build_dir/placement-everything" "$repo_root" <<'EVERYTHING'
+"$python" - "$build_dir/placement-everything" "$repo_root" <<'EVERYTHING'
 import json
 import pathlib
 import subprocess
 import sys
 assets = pathlib.Path(sys.argv[1])
 root = pathlib.Path(sys.argv[2])
-cli = subprocess.check_output(["python3", str(root / "scripts/built.py")], text=True).strip()
+cli = subprocess.check_output([sys.executable, str(root / "scripts/built.py")], text=True).strip()
 design = root / "integrations/designs/native"
 assets.mkdir(parents=True, exist_ok=True)
 subprocess.run([cli, "stage-theme"], input=json.dumps(
@@ -286,7 +288,7 @@ subprocess.run([cli, "stage-controls"], input=json.dumps({
 EVERYTHING
 # A failing workflow may save a configuration before it reports the failure.
 # Use the project's scratch context so every run starts with fixed inputs.
-PYTHONPATH="$repo_root/scripts" python3 - "$build_dir" <<'ORCHESTRATION'
+PYTHONPATH="$repo_root/scripts" "$python" - "$build_dir" <<'ORCHESTRATION'
 from pathlib import Path
 import subprocess
 import sys
