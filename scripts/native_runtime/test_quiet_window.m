@@ -17,12 +17,12 @@ int main(void)
 
       unsetenv("ROMINABOX_QUIET");
       unsetenv("ROMINABOX_SHOW_WINDOW");
-      assert(!rominabox_test_window_hidden());
+      assert(!rib_session_window_hidden());
       rominabox_prepare_test_window(window);
       assert(NSEqualRects(ordinary, [window frame]));
 
       setenv("ROMINABOX_QUIET", "1", 1);
-      assert(rominabox_test_window_hidden());
+      assert(rib_session_window_hidden());
       rominabox_prepare_test_window(window);
       if ([window alphaValue] != 0.0)
       {
@@ -48,7 +48,7 @@ int main(void)
       [window setAlphaValue:1.0];
       [window setIgnoresMouseEvents:NO];
       [window setFrame:ordinary display:NO];
-      assert(!rominabox_test_window_hidden());
+      assert(!rib_session_window_hidden());
       rominabox_prepare_test_window(window);
       assert(NSEqualRects(ordinary, [window frame]));
       assert([window alphaValue] == 1.0);

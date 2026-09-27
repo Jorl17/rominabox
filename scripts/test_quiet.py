@@ -196,8 +196,10 @@ def window_visibility_check() -> list[str]:
         subprocess.run(
             [
                 "clang", "-fobjc-arc", "-I", str(ROOT / "vendor/retroarch"),
+                "-I", str(ROOT / "vendor/retroarch/libretro-common/include"),
                 "-framework", "Cocoa", "-o", str(binary),
                 str(ROOT / "scripts/native_runtime/test_quiet_window.m"),
+                str(ROOT / "vendor/retroarch/rominabox_session.c"),
             ],
             check=True, capture_output=True, text=True,
         )
