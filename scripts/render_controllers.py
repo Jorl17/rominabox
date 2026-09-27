@@ -209,8 +209,10 @@ def main() -> int:
                     f"could not ask for {profile['id']}'s geometry: {asked.stderr}"
                 )
             layout = json.loads(asked.stdout)["result"]
+            # Write LF on every host. In text mode on Windows we would write
+            # CRLF, and the staged layouts must be the same on every machine.
             (destination / f"{profile['image'].removesuffix('.png')}-layout.json").write_text(
-                json.dumps(layout, indent=2, sort_keys=True) + "\n"
+                json.dumps(layout, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
             )
             staged += 1
         print(
@@ -226,7 +228,7 @@ def main() -> int:
         recorded = {svg.stem: digest(svg.with_suffix(".png")) for svg in sources
                     if svg.with_suffix(".png").is_file()}
         BASELINE.parent.mkdir(parents=True, exist_ok=True)
-        BASELINE.write_text(json.dumps(recorded, indent=2, sort_keys=True) + "\n")
+        BASELINE.write_text(json.dumps(recorded, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
         print(f"recorded {len(recorded)} shipped PNGs -> {BASELINE.name}")
         return 0
 

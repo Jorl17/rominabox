@@ -130,7 +130,8 @@ beforeAll(() => {
 
 function cliBinary(): string {
   // Executables end in .exe on Windows and have no suffix on POSIX systems.
-  const name = process.platform === "win32" ? "rominabox-cli.exe" : "rominabox-cli";
+  const name =
+    process.platform === "win32" ? "rominabox-cli.exe" : "rominabox-cli";
   const roots: string[] = [];
   if (process.env.CARGO_TARGET_DIR) roots.push(process.env.CARGO_TARGET_DIR);
   const here = dirname(fileURLToPath(import.meta.url));
