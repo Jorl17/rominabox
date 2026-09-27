@@ -15,10 +15,11 @@ In PCSX ReARMed, an m3u counts only after the first image passes CheckCdrom
 and LoadCdrom. We read what these checks require in the core's code and then
 tried it: a MODE1/2048 cue whose file is a multiple of 2048 bytes and does
 not start with the raw sync word, an ISO9660 primary descriptor at sector 16,
-a SYSTEM.CNF that lists PSX.EXE;1, and a PS-X EXE header with text size 0, so
-that no program is copied. The HLE BIOS is enough. We run no frames in the
-harness, so the stub never runs. Once the first image is loaded,
-get_num_images is the number of lines in the playlist.
+a SYSTEM.CNF that lists PSX.EXE;1, and a PS-X EXE. The HLE BIOS is enough.
+We run no frames in the harness, but the exported game runs, so the
+executable is a program with one jump to itself. With no program at all,
+the core ran empty memory, and its dynarec crashed on Windows. Once the first
+image is loaded, get_num_images is the number of lines in the playlist.
 
 We then export the same playlist with the menu-shot exporter in every design
 with a disc list. We open disc 2 with a menu script, and the player's log
@@ -93,20 +94,25 @@ def directory_record(name: bytes, extent: int, size: int, flags: int) -> bytes:
 
 
 def disc_image() -> bytes:
-    """Return one data track with nothing to execute, for the core to load.
+    """Return one data track for the core, with a program that loops forever.
 
     Sector 16 is the volume descriptor. The root directory record in it
-    points to sector 18. SYSTEM.CNF and the executable header follow. The
-    text size of the executable is 0, so LoadCdrom returns after the header.
+    points to sector 18. Next come SYSTEM.CNF and the executable, which is a
+    header and then one sector of program. Its first instruction is a jump to
+    itself, with an empty delay slot.
     """
     configuration = (
         b"BOOT = cdrom:\\PSX.EXE;1\r\nTCB = 4\r\nEVENT = 10\r\nSTACK = 801FFFF0\r\n"
     )
-    executable = bytearray(SECTOR)
+    start = 0x80010000
+    executable = bytearray(2 * SECTOR)
     executable[0:8] = b"PS-X EXE"
-    executable[0x10:0x14] = (0x80010000).to_bytes(4, "little")
-    executable[0x18:0x1C] = (0x80010000).to_bytes(4, "little")
+    executable[0x10:0x14] = start.to_bytes(4, "little")
+    executable[0x18:0x1C] = start.to_bytes(4, "little")
+    executable[0x1C:0x20] = SECTOR.to_bytes(4, "little")
     executable[0x30:0x34] = (0x801FFF00).to_bytes(4, "little")
+    # MIPS j: opcode 2 and the word address of the target within its 256 MB.
+    executable[SECTOR : SECTOR + 4] = (0x08000000 | ((start & 0x0FFFFFFF) >> 2)).to_bytes(4, "little")
 
     root = b"".join(
         (
@@ -121,7 +127,8 @@ def disc_image() -> bytes:
     descriptor[1:6] = b"CD001"
     descriptor[6] = 1
     descriptor[40:72] = b"ROMINABOX".ljust(32)
-    descriptor[80:88] = both_endian(21, 4)
+    sectors = 20 + len(executable) // SECTOR
+    descriptor[80:88] = both_endian(sectors, 4)
     descriptor[120:124] = both_endian(1, 2)
     descriptor[124:128] = both_endian(1, 2)
     descriptor[128:132] = both_endian(SECTOR, 2)
@@ -132,12 +139,12 @@ def disc_image() -> bytes:
     terminator[1:6] = b"CD001"
     terminator[6] = 1
 
-    image = bytearray(21 * SECTOR)
+    image = bytearray(sectors * SECTOR)
     image[16 * SECTOR : 17 * SECTOR] = descriptor
     image[17 * SECTOR : 18 * SECTOR] = terminator
     image[18 * SECTOR : 18 * SECTOR + len(root)] = root
     image[19 * SECTOR : 19 * SECTOR + len(configuration)] = configuration
-    image[20 * SECTOR : 21 * SECTOR] = executable
+    image[20 * SECTOR : sectors * SECTOR] = executable
     return bytes(image)
 
 
@@ -521,7 +528,7 @@ def export_game(content: Path, design: str) -> Iterator[Path]:
 
 def assets_of(app: Path) -> Path:
     """Return the composed menu that we put in an export."""
-    return app / "Contents/Resources/menu-assets"
+    return menu_shots.resources_of(app) / "menu-assets"
 
 
 def menu_asset(app: Path, name: str) -> str:
@@ -789,6 +796,9 @@ def options_entry_visible(assets: Path, shot: Path, button_id: str) -> bool:
 
 # The offscreen renderer for the builder's preview and the states tests.
 PREVIEW = ROOT / "desktop/src-tauri/resources/preview/rml-preview"
+# The platforms with that renderer. Its source is not in the repository, so
+# we run its picture checks only on macOS.
+PREVIEW_PLATFORMS = {"macos"}
 # A window with other proportions and size than the canvas, so that we scale
 # and place the measurement as we scale and place the menu in the player.
 PREVIEW_SIZE = (1280, 900)
@@ -801,6 +811,10 @@ def measurement_problems(playlist: Path) -> list[str]:
     must be at the measured position. With two discs we draw the Disc entry,
     and with one disc there is none and we draw CONTROLS."""
     found: list[str] = []
+    if menu_shots.PLATFORM not in PREVIEW_PLATFORMS:
+        print(f"not checked on {menu_shots.PLATFORM}: the entry measurement, which needs the offscreen "
+              "renderer", flush=True)
+        return found
     if not PREVIEW.is_file():
         return [f"no offscreen renderer at {PREVIEW}"]
     with scratch.scratch("rominabox-discs-measure-") as made:
@@ -976,7 +990,9 @@ def main() -> None:
     if problems:
         raise SystemExit("\n".join(problems))
     if without_player:
-        print("the cores and the entry measurement pass; the exported player was not launched")
+        measurement = ("and the entry measurement pass" if menu_shots.PLATFORM in PREVIEW_PLATFORMS
+                       else "pass")
+        print(f"the cores {measurement}; the exported player was not launched")
 
 
 if __name__ == "__main__":

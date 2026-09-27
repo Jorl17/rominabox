@@ -266,8 +266,13 @@ def storage_home(app: Path) -> Path | None:
     return _app()["storage_home"](app)
 
 
+def resources_of(app: Path) -> Path:
+    """The folder of an exported game's own files."""
+    return _app()["resources"](app)
+
+
 def plan_text(app: Path) -> str:
-    path = _app()["resources"](app) / "launch.plan"
+    path = resources_of(app) / "launch.plan"
     if path.is_file():
         return path.read_text()
     return ""

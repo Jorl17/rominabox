@@ -417,7 +417,8 @@ SCOPES = [
     Scope(
         "discs",
         "that a cartridge and a single disc are not a multi-disc game, that choosing the second image makes the core report that index, and that an exported game's menu does the same in both designs while a one-disc game hides the Disc entry and opens the circle",
-        "that a disc name was shortened — the bridge measures that",
+        "that a disc name was shortened — the bridge measures that; on Windows, the entry "
+        "measurement drawn offscreen, which needs the macOS-only renderer",
         [PYTHON, str(ROOT / "scripts/test_discs.py")],
         slow=True,
         # In it we lay the menu out with RmlUi to find the Disc entry to click.
