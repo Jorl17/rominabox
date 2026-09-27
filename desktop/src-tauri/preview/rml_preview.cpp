@@ -1,17 +1,24 @@
 /* The builder's menu preview. We draw a composed menu into a picture with
  * the player's own RmlUi renderer, off screen, with nothing shown.
  *
- *   rml-preview DOCUMENT OUTPUT WIDTH HEIGHT
+ *   rml-preview DOCUMENT OUTPUT WIDTH HEIGHT [--set ID:NAME=VALUE]...
  *
  * DOCUMENT is the menu we composed in the exporter (menu::render_preview),
  * beside its design.cfg, style sheet, fonts and pictures. We write OUTPUT as
  * a PNG of WIDTH by HEIGHT. We read and write files through libretro's file
  * layer, as in the player, so every path is UTF-8 on every
- * platform. */
+ * platform.
+ *
+ * With each --set we change the element with that id before we draw it,
+ * through the same calls as at runtime in the player and RmlUi. NAME `class`
+ * sets a class, `pseudo` a pseudo-class, `text` the element's words, and any
+ * other NAME a property. In the picture tests we draw a menu's states this way
+ * (scripts/fixtures/menu-states.json). */
 
 #include "gl_context.h"
 
 #include "rmlui/declarations.h"
+#include "rmlui/elements.hpp"
 #include "rmlui/file_layer.hpp"
 #include "rmlui/render/platform.h"
 #include "rmlui/render/rmlui_gl.h"
@@ -68,7 +75,47 @@ std::vector<std::string> design_fonts(const std::filesystem::path& folder)
    return fonts;
 }
 
-int render(const std::string& document_path, const std::string& output, int width, int height)
+/* One --set: an element, what to change on it and the value. */
+struct Change
+{
+   std::string id, name, value;
+};
+
+bool parse_change(const std::string& text, Change& change)
+{
+   const size_t colon = text.find(':');
+   const size_t equals = colon == std::string::npos ? colon : text.find('=', colon);
+   if (colon == 0 || equals == std::string::npos || equals == colon + 1)
+      return false;
+   change = {text.substr(0, colon), text.substr(colon + 1, equals - colon - 1), text.substr(equals + 1)};
+   return true;
+}
+
+bool apply(Rml::ElementDocument *document, const Change& change)
+{
+   Rml::Element *element = document->GetElementById(change.id);
+   if (!element)
+   {
+      std::fprintf(stderr, "nothing named %s in the document\n", change.id.c_str());
+      return false;
+   }
+   if (change.name == "class")
+      element->SetClass(change.value, true);
+   else if (change.name == "pseudo")
+      element->SetPseudoClass(change.value, true);
+   else if (change.name == "text")
+      rib::write_text(element, change.value);
+   else if (!element->SetProperty(change.name, change.value))
+   {
+      std::fprintf(stderr, "%s does not take %s: %s\n", change.id.c_str(), change.name.c_str(),
+            change.value.c_str());
+      return false;
+   }
+   return true;
+}
+
+int render(const std::string& document_path, const std::string& output, int width, int height,
+      const std::vector<Change>& changes)
 {
    if (width <= 0 || height <= 0)
    {
@@ -115,6 +162,9 @@ int render(const std::string& document_path, const std::string& output, int widt
       std::fprintf(stderr, "could not load %s\n", document_path.c_str());
       failed = 4;
    }
+   for (const Change& change : changes)
+      if (!failed && !apply(document, change))
+         failed = 2;
 
    /* We draw into a framebuffer of our own, because a window that is never
     * shown has no pixels to read back. */
@@ -181,13 +231,21 @@ int render(const std::string& document_path, const std::string& output, int widt
 
 int run(const std::vector<std::string>& arguments)
 {
-   if (arguments.size() != 5)
+   std::vector<Change> changes;
+   bool understood = arguments.size() >= 5 && (arguments.size() - 5) % 2 == 0;
+   for (size_t index = 5; understood && index < arguments.size(); index += 2)
    {
-      std::fprintf(stderr, "usage: rml-preview DOCUMENT OUTPUT WIDTH HEIGHT\n");
+      Change change;
+      understood = arguments[index] == "--set" && parse_change(arguments[index + 1], change);
+      changes.push_back(change);
+   }
+   if (!understood)
+   {
+      std::fprintf(stderr, "usage: rml-preview DOCUMENT OUTPUT WIDTH HEIGHT [--set ID:NAME=VALUE]...\n");
       return 2;
    }
    return render(arguments[1], arguments[2], std::atoi(arguments[3].c_str()),
-         std::atoi(arguments[4].c_str()));
+         std::atoi(arguments[4].c_str()), changes);
 }
 
 }
