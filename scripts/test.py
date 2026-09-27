@@ -30,6 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import core_source  # noqa: E402
 import programs  # noqa: E402
+import toolchain  # noqa: E402
 from cargo_replay import cargo_test  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
 from player_support import modifications as support_modifications  # noqa: E402
@@ -494,6 +495,16 @@ def main() -> int:
                 mark += f" (skipped unless named: {scope.skipped})"
             print(f"{scope.name}{mark}\n  covers    {scope.covers}\n  does not  {scope.not_covered}\n")
         return 0
+
+    # In every scope we compile with one toolchain and run programs built with it.
+    absent = toolchain.missing()
+    if absent:
+        raise SystemExit(
+            "the native toolchain is not installed where expected: "
+            + ", ".join(str(directory) for directory in absent)
+            + " (set ROMINABOX_MSYS2 to the MSYS2 installation)"
+        )
+    toolchain.activate()
 
     if arguments.scopes:
         unknown = [name for name in arguments.scopes if name not in BY_NAME]
