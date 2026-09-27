@@ -1,4 +1,4 @@
-"""Check that we do not start a game's player without its data folder, and create nothing.
+"""Check that in a game's player we use only its data folder, and refuse to start without one.
 
 Stock RetroArch fails open. With no folder given, the Windows build created
 about 25 folders beside the program and would read the user's configuration.
@@ -58,12 +58,19 @@ def main() -> int:
                 print(f"ok with {label} the player refused and created nothing")
 
         ran = ask_features(player, str(data))
+        beside = sorted(entry.name for entry in folder.iterdir() if entry != player)
         if ran.returncode != 0 or REFUSAL in ran.stdout + ran.stderr:
             print(f"FAIL with an absolute data folder the player did not start (exit {ran.returncode}):\n"
                   f"{(ran.stdout + ran.stderr)[-1500:]}")
             failures += 1
+        elif beside:
+            # A game's folders are in its data folder, and there is nothing of
+            # RetroArch's usual layout beside the program.
+            print(f"FAIL with an absolute data folder the player created {beside} beside itself")
+            failures += 1
         else:
-            print("ok with an absolute data folder the player starts")
+            made = sorted(entry.name for entry in data.iterdir())
+            print(f"ok with an absolute data folder the player starts, and made {made} there and nothing beside itself")
     return 1 if failures else 0
 
 
