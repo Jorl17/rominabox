@@ -23,12 +23,15 @@
  * driver, each report in the same form as in the player, and whether the
  * script ran to its end. The caller judges the result.
  *
- * Each case runs in a child of this process, because some of what the menu
- * shows (status lines, slots) stays for the life of its process.
+ * Each case runs in a separate process, because some of what the menu shows
+ * (status lines, slots) stays for the life of its process. For each case we
+ * start the driver again with --case and write the directives of that case
+ * to it.
  *
  * Here, and only here, we stand in for RetroArch. A game starts, its overlays
  * begin, and the menu opens if the game starts at the menu. A save or load
- * from the menu completes on the next frame, with its thumbnail written. A
+ * from the menu completes on the next frame. We write the picture of a save a
+ * few frames after we report the save, in the same order as RetroArch. A
  * binding capture counts down on the clock (the fake host's timed capture). */
 #include "rmlui/menu_api.h"
 #include "rmlui/host.h"
@@ -36,9 +39,11 @@
 #include "rmlui/view.hpp"
 #include "menu_host_fake.h"
 #include "achievements_fake.hpp"
+#include "test_environment.h"
+#include "test_process.h"
 
-#include <sys/wait.h>
-#include <unistd.h>
+#include <file/file_path.h>
+#include <streams/file_stream.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -86,18 +91,33 @@ std::string json(const std::string& text)
 }
 
 /* The RetroArch state task: a save or load from the menu finishes on the
- * next frame, and after a save the slot is occupied and has its thumbnail. */
+ * next frame. We report a save once its state is written (save_state_cb) and
+ * before the screenshot, so the new picture appears a few frames after the
+ * report, over the picture of the previous save if there was one. */
 struct StateTasks
 {
+   /* Frames between the report of a save and its picture. */
+   static constexpr int kPictureFrames = 3;
    int saves = 0, loads = 0;
+   /* Frames until we write the picture of a reported save, 0 if none is due. */
+   int picture_in = 0;
 
    void finish(const std::string& data)
    {
+      if (picture_in && --picture_in == 0)
+      {
+         const std::string picture = data + "/states/slot-1.png";
+         path_mkdir((data + "/states").c_str());
+         /* Each save's picture differs from the one before it. */
+         const std::string contents = "picture of save " + std::to_string(saves);
+         filestream_write_file(picture.c_str(), contents.data(), (int64_t)contents.size());
+         host.thumbnail = picture;
+      }
       for (; saves < host.saves_started; ++saves)
       {
          host.slot_occupied = true;
-         host.thumbnail = data + "/states/slot-1.png";
          rib_rmlui_notify_state_task(host.state_path.c_str(), 1, true, true);
+         picture_in = kPictureFrames;
       }
       for (; loads < host.loads_started; ++loads)
          rib_rmlui_notify_state_task(host.state_path.c_str(), 1, false, true);
@@ -166,10 +186,10 @@ void run_case(const Case& run)
    service_rows.clear();
    saved_accounts.clear();
 
-   setenv("ROMINABOX_RML_ASSETS", run.assets.c_str(), 1);
-   setenv("ROMINABOX_DATA_DIR", run.data.c_str(), 1);
-   setenv("ROMINABOX_MENU_SCRIPT", run.script.c_str(), 1);
-   unsetenv("ROMINABOX_MENU_SHOT");
+   test_setenv("ROMINABOX_RML_ASSETS", run.assets.c_str());
+   test_setenv("ROMINABOX_DATA_DIR", run.data.c_str());
+   test_setenv("ROMINABOX_MENU_SCRIPT", run.script.c_str());
+   test_unsetenv("ROMINABOX_MENU_SHOT");
 
    Captured captured;
    StateTasks tasks;
@@ -229,9 +249,13 @@ void run_case(const Case& run)
 }
 }
 
-int main()
+int main(int argc, char **argv)
 {
+   /* With --case, this process runs one case: we read the directives of
+    * that case and run it. */
+   const bool one_case = argc == 2 && std::strcmp(argv[1], "--case") == 0;
    Case current;
+   std::string directives;
    int cases = 0;
    for (std::string line; std::getline(std::cin, line); )
    {
@@ -239,6 +263,9 @@ int main()
       const auto space = line.find(' ');
       const std::string word = line.substr(0, space);
       const std::string rest = space == std::string::npos ? "" : line.substr(space + 1);
+      if (word == "case")
+         directives.clear();
+      directives += line + "\n";
       if (word == "case") current = Case{rest};
       else if (word == "assets") current.assets = rest;
       else if (word == "data") current.data = rest;
@@ -275,23 +302,16 @@ int main()
                   current.name.c_str());
             return 2;
          }
-         /* Each case runs in a child of this process, because some of what
-          * the menu shows stays for the life of the process. */
-         std::fflush(stdout);
-         const pid_t child = fork();
-         if (child < 0)
-         {
-            std::perror("fork");
-            return 1;
-         }
-         if (child == 0)
+         if (one_case)
          {
             run_case(current);
             std::fflush(stdout);
-            _exit(0);
+            return 0;
          }
-         int status = 0;
-         if (waitpid(child, &status, 0) != child || !WIFEXITED(status) || WEXITSTATUS(status))
+         /* Run each case in a separate process (see the top of this file). */
+         std::fflush(stdout);
+         const int status = run_with_input({argv[0], "--case"}, directives);
+         if (status != 0)
          {
             std::fprintf(stderr, "%s: the case ended abnormally (status %d)\n",
                   current.name.c_str(), status);

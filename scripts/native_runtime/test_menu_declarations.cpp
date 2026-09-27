@@ -4,6 +4,7 @@
  * still reads a line into a buffer. */
 #include "rmlui/declarations.h"
 #include <file/config_file.h>
+#include <compat/strl.h>
 #include <map>
 #include <vector>
 #include <string>

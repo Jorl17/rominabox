@@ -10,6 +10,7 @@
 #include "menu_host_fake.h"
 #include <file/config_file.h>
 #include "rmlui/files.h"
+#include "test_environment.h"
 #include <sys/stat.h>
 #include <filesystem>
 
@@ -101,9 +102,9 @@ static int capacity_case(const char *assets, const char *data)
             "composition stages the shared parts beside menu.rcss\n", assets);
       return 1;
    }
-   setenv("ROMINABOX_RML_ASSETS", assets, 1);
-   setenv("ROMINABOX_DATA_DIR", data, 1);
-   unsetenv("ROMINABOX_MENU_SCRIPT");
+   test_setenv("ROMINABOX_RML_ASSETS", assets);
+   test_setenv("ROMINABOX_DATA_DIR", data);
+   test_unsetenv("ROMINABOX_MENU_SCRIPT");
    void *menu = rib_menu_create();
    check(menu != nullptr, "create menu for the large declared profile");
    if (menu)
@@ -193,9 +194,9 @@ static std::string look(const char *id)
  * it is only focused, and they change back when the capture ends. */
 static int stick_capture_case(const char *assets, const char *data)
 {
-   setenv("ROMINABOX_RML_ASSETS", assets, 1);
-   setenv("ROMINABOX_DATA_DIR", data, 1);
-   unsetenv("ROMINABOX_MENU_SCRIPT");
+   test_setenv("ROMINABOX_RML_ASSETS", assets);
+   test_setenv("ROMINABOX_DATA_DIR", data);
+   test_unsetenv("ROMINABOX_MENU_SCRIPT");
    void *menu = rib_menu_create();
    check(menu != nullptr, "create a menu for the stick capture case");
    if (!menu)
@@ -272,7 +273,7 @@ void design_prompt_survives_an_empty_status(const char *native_assets, const cha
 {
    const std::string assets = design_assets(native_assets, "disc");
    check(std::filesystem::is_regular_file(assets + "/menu.rml"), "the Disc design is staged");
-   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+   test_setenv("ROMINABOX_RML_ASSETS", assets.c_str());
    void *menu = open_menu();
    if (menu)
    {
@@ -291,7 +292,7 @@ void design_prompt_survives_an_empty_status(const char *native_assets, const cha
             "Disc's prompt comes back when the status expires");
       rib_menu_destroy(menu);
    }
-   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   test_setenv("ROMINABOX_RML_ASSETS", native_assets);
    (void)data;
 }
 
@@ -302,7 +303,7 @@ void a_filter_row_applies_its_filter(const char *native_assets)
 {
    const std::string assets = design_assets(native_assets, "everything");
    check(std::filesystem::is_regular_file(assets + "/shaders.cfg"), "the menu with filters is staged");
-   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+   test_setenv("ROMINABOX_RML_ASSETS", assets.c_str());
    host.applied_shader.clear();
    host.applied_preset.clear();
    void *menu = open_menu();
@@ -319,7 +320,7 @@ void a_filter_row_applies_its_filter(const char *native_assets)
             "the filter is applied with the preset the export named");
       rib_menu_destroy(menu);
    }
-   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   test_setenv("ROMINABOX_RML_ASSETS", native_assets);
 }
 
 std::string read_file(const std::filesystem::path& path)
@@ -385,7 +386,7 @@ std::string stage_disc_list(const char *native_assets, const char *data)
 void disc_list_keeps_its_page(const char *native_assets, const char *data)
 {
    const std::string assets = stage_disc_list(native_assets, data);
-   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+   test_setenv("ROMINABOX_RML_ASSETS", assets.c_str());
    host.disc_count = 7;
    host.disc_index = 0;
    void *menu = open_menu();
@@ -409,7 +410,7 @@ void disc_list_keeps_its_page(const char *native_assets, const char *data)
    }
    host.disc_count = 0;
    host.disc_index = 0;
-   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   test_setenv("ROMINABOX_RML_ASSETS", native_assets);
 }
 
 /* When the pointer rests on a control, we open its bindings list after
@@ -533,7 +534,7 @@ void chosen_slot_shows_on_save_and_load(const char *native_assets)
    {
       const std::string assets = design_assets(native_assets, design);
       check(std::filesystem::is_regular_file(assets + "/menu.rml"), "the design is staged");
-      setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+      test_setenv("ROMINABOX_RML_ASSETS", assets.c_str());
       host.slot_occupied = true;
       void *menu = open_menu();
       if (!menu) continue;
@@ -595,7 +596,7 @@ void chosen_slot_shows_on_save_and_load(const char *native_assets)
       rib_menu_destroy(menu);
    }
    host.slot_occupied = false;
-   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   test_setenv("ROMINABOX_RML_ASSETS", native_assets);
 }
 
 void pad_changes_and_reset_apply_together(const char *native_assets, const char *data)
@@ -603,8 +604,8 @@ void pad_changes_and_reset_apply_together(const char *native_assets, const char 
    const std::string assets = stage_pad_choice(native_assets, data);
    const std::string data_dir = std::string(data) + "/pad-choice-data";
    std::filesystem::create_directories(data_dir);
-   setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
-   setenv("ROMINABOX_DATA_DIR", data_dir.c_str(), 1);
+   test_setenv("ROMINABOX_RML_ASSETS", assets.c_str());
+   test_setenv("ROMINABOX_DATA_DIR", data_dir.c_str());
    host.pointer = {};
    void *menu = open_menu();
    if (menu)
@@ -652,8 +653,8 @@ void pad_changes_and_reset_apply_together(const char *native_assets, const char 
             "the next launch draws and names the pad the player chose");
       rib_menu_destroy(menu);
    }
-   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
-   setenv("ROMINABOX_DATA_DIR", data, 1);
+   test_setenv("ROMINABOX_RML_ASSETS", native_assets);
+   test_setenv("ROMINABOX_DATA_DIR", data);
 }
 
 /* The player decides in the game's Options, in every design, whether the game
@@ -667,7 +668,7 @@ void background_play_is_the_players(const char *native_assets, const char *data)
    {
       const std::string assets = design_assets(native_assets, design);
       const std::string name = std::string(design) + ": ";
-      setenv("ROMINABOX_RML_ASSETS", assets.c_str(), 1);
+      test_setenv("ROMINABOX_RML_ASSETS", assets.c_str());
       std::remove(file.c_str());
       host.settings["pause_nonactive"] = 1.0f;
       void *menu = open_menu();
@@ -706,7 +707,7 @@ void background_play_is_the_players(const char *native_assets, const char *data)
       }
    }
    std::remove(file.c_str());
-   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   test_setenv("ROMINABOX_RML_ASSETS", native_assets);
 }
 
 /* A change of volume plays a cue at the chosen level, once per step. The
@@ -791,7 +792,7 @@ void volume_is_heard_at_its_level(const char *native_assets)
  * to show whether we keep requesting the slot files. */
 void an_idle_menu_builds_nothing(const char *native_assets)
 {
-   setenv("ROMINABOX_RML_ASSETS", native_assets, 1);
+   test_setenv("ROMINABOX_RML_ASSETS", native_assets);
    host.slot_occupied = false;
    host.pointer = {};
    host.clock_us = 1000000;
@@ -1029,9 +1030,9 @@ int main(int argc, char **argv)
             argv[0], argv[0], argv[0]);
       return 2;
    }
-   setenv("ROMINABOX_RML_ASSETS", argv[1], 1);
-   setenv("ROMINABOX_DATA_DIR", argv[2], 1);
-   unsetenv("ROMINABOX_MENU_SCRIPT");
+   test_setenv("ROMINABOX_RML_ASSETS", argv[1]);
+   test_setenv("ROMINABOX_DATA_DIR", argv[2]);
+   test_unsetenv("ROMINABOX_MENU_SCRIPT");
 
    void *menu = rib_menu_create();
    check(menu != nullptr, "create menu state");

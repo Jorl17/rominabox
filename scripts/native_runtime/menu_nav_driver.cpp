@@ -63,6 +63,7 @@
 #include "../../vendor/retroarch/cheevos/rominabox.h"
 #include <libretro.h>
 #include "achievements_fake.hpp"
+#include "test_environment.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -387,9 +388,9 @@ void reset_services(const Case& run)
 void run_case(const Case& run)
 {
    reset_services(run);
-   setenv("ROMINABOX_RML_ASSETS", run.assets.c_str(), 1);
-   setenv("ROMINABOX_DATA_DIR", run.data.c_str(), 1);
-   unsetenv("ROMINABOX_MENU_SCRIPT");
+   test_setenv("ROMINABOX_RML_ASSETS", run.assets.c_str());
+   test_setenv("ROMINABOX_DATA_DIR", run.data.c_str());
+   test_unsetenv("ROMINABOX_MENU_SCRIPT");
    void *menu = rib_menu_create();
    if (!menu)
    {
