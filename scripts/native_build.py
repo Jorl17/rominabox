@@ -323,7 +323,7 @@ def build_preview(destination: Path, target: str, environment: dict[str, str], r
     own = [ROOT / name for name in (*declared["sources"], *context["sources"])]
     forked = [fork / name for name in (*recipe()["fileLayer"]["sources"], *declared["forkSources"],
                                        *context["forkSources"])]
-    freetype = subprocess.run([resolve("pkg-config", environment), "--static", "--cflags", "--libs", "freetype2"],
+    freetype = subprocess.run([resolve("pkg-config", environment), "--cflags", "--libs", "freetype2"],
                               capture_output=True, text=True, check=True, env=environment).stdout.split()
     includes = [f"-I{path}" for path in (PREVIEW, fork / "menu/drivers", fork / "libretro-common/include", fork,
                                          *headers)]
