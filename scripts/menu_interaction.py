@@ -30,6 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 # We link the probe with the same archive as the player build.
+import rmlui_paths  # noqa: E402
 from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
 from built import cli  # noqa: E402
 
@@ -84,10 +85,7 @@ def build() -> None:
     if PROBE.exists() and PROBE.stat().st_mtime >= max(path.stat().st_mtime for path in inputs):
         return
     PROBE.parent.mkdir(parents=True, exist_ok=True)
-    flags = subprocess.run(
-        ["pkg-config", "--cflags", "--libs", "freetype2"],
-        capture_output=True, text=True, check=True,
-    ).stdout.split()
+    flags = rmlui_paths.freetype("--cflags", "--libs")
     subprocess.run(
         ["c++", "-std=c++17", "-O1",
          *[f"-I{path}" for path in HEADER_DIRS],

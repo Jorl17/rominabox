@@ -210,6 +210,8 @@ SCOPES = [
         "that nothing finds the repository by the path it was compiled in, that no test or script uses a place in one person's home, that every script building against RmlUi uses the declared one, and that no script or test names the removed experiment tree",
         "that the rule is right, or that a binary really came from elsewhere; it reads how each place asks",
         [PYTHON, str(ROOT / "scripts/test_repo_root.py")],
+        # In it we ask the menu harness what it compiles with, FreeType included.
+        prepare=RMLUI_PREPARE,
     ),
     Scope(
         "fixtures",

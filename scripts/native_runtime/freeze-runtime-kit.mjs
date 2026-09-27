@@ -36,5 +36,5 @@ delete ra.integration_patch_sha256;delete ra.source_archive;delete ra.source_sha
 fs.writeFileSync(mf,JSON.stringify(manifest,null,2)+'\n');
 const provenance=path.join(kit,'provenance/native-rmlui');
 fs.writeFileSync(path.join(provenance,'source.json'),JSON.stringify({...info,retroarchRepository:'https://github.com/Jorl17/rominabox-retroarch'},null,2)+'\n');
-fs.writeFileSync(path.join(provenance,'README.txt'),'Current source is the pinned private RetroArch downstream commit recorded in source.json and the runtime manifest. Build with scripts/native_runtime/build-retroarch-rmlui-macos.sh, then freeze-runtime-kit.mjs. The file retroarch-rmlui.patch is not applied by current builds. Upstream licenses remain unchanged. Public redistribution and complete corresponding-source review remain separate.\n');
+fs.writeFileSync(path.join(provenance,'README.txt'),'Current source is the pinned private RetroArch downstream commit recorded in source.json and the runtime manifest. Build with scripts/build_player.py, then freeze-runtime-kit.mjs. The file retroarch-rmlui.patch is not applied by current builds. Upstream licenses remain unchanged. Public redistribution and complete corresponding-source review remain separate.\n');
 console.log('Frozen downstream commit '+revision);

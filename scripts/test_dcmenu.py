@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 # We take the headers and the archive from the player build, because a
 # literal path here could point to a folder that no script creates.
+import rmlui_paths  # noqa: E402
 from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
 sys.path.insert(0, str(ROOT / "scripts/native_runtime"))
 # We read the renderer's pictures through libretro's file layer.
@@ -135,10 +136,7 @@ def check_menu_draw() -> bool:
         return False
     PROBE.mkdir(parents=True, exist_ok=True)
     binary = PROBE / "menu_core_gl"
-    flags = subprocess.run(
-        ["pkg-config", "--cflags", "--libs", "freetype2"],
-        capture_output=True, text=True, check=True,
-    ).stdout.split()
+    flags = rmlui_paths.freetype("--cflags", "--libs")
     file_layer, _ = menu_harness.compile_objects(
         menu_harness.FILE_LAYER,
         menu_harness.Toolchain("cc", "c++", ("-I", str(menu_harness.LIBRETRO_INCLUDE)), ()),

@@ -392,8 +392,8 @@ def built_player() -> Path:
     fall back to the player in the kit, which is the one we ship in games.
     """
     how = (
-        "build one with ROMINABOX_MENU_SCRIPT_BUILD=1 sh "
-        "scripts/native_runtime/build-retroarch-rmlui-macos.sh <absolute dir>"
+        "build one with ROMINABOX_MENU_SCRIPT_BUILD=1 python3 "
+        "scripts/build_player.py <absolute dir>"
     )
     selected = os.environ.get("ROMINABOX_TEST_BUILD")
     if selected:

@@ -192,28 +192,6 @@ def declaration_readers() -> list[str]:
     return drifted
 
 
-def copied_player_flags() -> list[str]:
-    """Check for a second copy of a cmake flag, which would build another RmlUi.
-
-    We read the flags from the player build at prepare time. A flag written
-    into the prepare script means that we no longer read it there.
-    """
-    build = (ROOT / "scripts/native_runtime/build-retroarch-rmlui-macos.sh").read_text(
-        encoding="utf-8"
-    )
-    flags = re.findall(r"-D[A-Z][A-Z0-9_]+=\S+", build)
-    if len(flags) < 3:
-        return ["the player build no longer shows the RmlUi cmake flags"]
-    copied: list[str] = []
-    for relative in (
-        Path("scripts/prepare_rmlui.py"),
-        Path("scripts/rmlui_paths.py"),
-    ):
-        body = (ROOT / relative).read_text(encoding="utf-8")
-        copied.extend(f"{relative} copies {flag}" for flag in flags if flag in body)
-    return copied
-
-
 def staged_preview() -> str | None:
     """Check that we render menu_states with the helper in the builder package.
 
@@ -249,7 +227,7 @@ def main() -> int:
             print(f"  FAIL {hit}", file=sys.stderr)
         return 1
 
-    drifted = declaration_readers() + copied_player_flags()
+    drifted = declaration_readers()
     preview = staged_preview()
     if preview:
         drifted.append(preview)

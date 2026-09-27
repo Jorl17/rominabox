@@ -292,8 +292,7 @@ def link(output: Path, inputs: list[Path], toolchain: Toolchain, flags: list[str
 
 def headless(defines: list[str]) -> Toolchain:
     """Return the flags for compiling the menu in every harness, plus the program's own defines."""
-    freetype = subprocess.run(["pkg-config", "--cflags", "freetype2"],
-                              capture_output=True, text=True, check=True).stdout.split()
+    freetype = rmlui_paths.freetype("--cflags")
     return Toolchain(
         cc="cc",
         cxx="c++",
@@ -315,8 +314,7 @@ def build(output: Path, sources: list[Path], defines: list[str], frameworks: lis
     variant.mkdir(parents=True, exist_ok=True)
     (variant / "flags.json").write_text(json.dumps(
         {"cflags": toolchain.cflags, "cxxflags": toolchain.cxxflags}, indent=1))
-    freetype = subprocess.run(["pkg-config", "--libs", "freetype2"],
-                              capture_output=True, text=True, check=True).stdout.split()
+    freetype = rmlui_paths.freetype("--libs")
     menu = menu_sources()
     # When two harness builds run at once, the second waits until the first is done.
     with open(variant / "lock", "w") as lock:

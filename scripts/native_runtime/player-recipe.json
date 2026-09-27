@@ -1,0 +1,103 @@
+{
+  "comment": "How the player is built, once, for every target. scripts/build_player.py builds it; scripts/prepare_rmlui.py builds the same RmlUi (and FreeType) for the tests. A difference between targets is a key under a target here, never a second script.",
+  "targets": ["macos-arm64", "windows-x86_64"],
+  "rmlui": {
+    "repository": "https://github.com/mikke89/RmlUi.git",
+    "commit": "ba95ffe8bfb6370efb2cdcca927eaad4710c5413",
+    "source": "vendor/RmlUi",
+    "build": "build-rmlui",
+    "cmake": [
+      "-DCMAKE_BUILD_TYPE=Release",
+      "-DBUILD_SHARED_LIBS=OFF",
+      "-DRMLUI_SAMPLES=OFF",
+      "-DRMLUI_LOTTIE_PLUGIN=OFF",
+      "-DRMLUI_SVG_PLUGIN=OFF"
+    ]
+  },
+  "freetype": {
+    "macos-arm64": {
+      "from": "pkg-config"
+    },
+    "windows-x86_64": {
+      "from": "source",
+      "url": "https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.xz",
+      "sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+      "directory": "freetype-2.14.3",
+      "build": "build-freetype",
+      "prefix": "freetype",
+      "cmake": [
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DBUILD_SHARED_LIBS=OFF",
+        "-DFT_DISABLE_HARFBUZZ=ON",
+        "-DFT_DISABLE_BROTLI=ON",
+        "-DFT_DISABLE_BZIP2=ON",
+        "-DFT_DISABLE_PNG=ON",
+        "-DFT_DISABLE_ZLIB=ON"
+      ]
+    }
+  },
+  "configure": {
+    "common": [
+      "--enable-opengl",
+      "--disable-opengl_core",
+      "--enable-glsl",
+      "--disable-slang",
+      "--disable-builtinglslang",
+      "--disable-vulkan",
+      "--enable-menu",
+      "--enable-rgui",
+      "--disable-xmb",
+      "--disable-ozone",
+      "--disable-materialui",
+      "--disable-gfx_widgets",
+      "--disable-freetype",
+      "--disable-libusb",
+      "--disable-qt",
+      "--disable-sdl",
+      "--disable-sdl2",
+      "--disable-test_drivers",
+      "--disable-ffmpeg",
+      "--disable-cg",
+      "--disable-langextra"
+    ],
+    "macos-arm64": [
+      "--enable-cocoa",
+      "--disable-metal",
+      "--enable-coreaudio",
+      "--enable-hid",
+      "--disable-mfi"
+    ],
+    "windows-x86_64": [
+      "--disable-d3d9",
+      "--disable-d3d10",
+      "--disable-d3d11",
+      "--disable-d3d12"
+    ]
+  },
+  "makefile": {
+    "common": [
+      "HAVE_RMLUI = 1",
+      "NEED_CXX_LINKER = 1",
+      "CXXFLAGS += -std=c++17"
+    ],
+    "macos-arm64": [
+      "LDFLAGS += -framework QuartzCore"
+    ],
+    "windows-x86_64": [
+      "LDFLAGS += -static"
+    ]
+  },
+  "accounts": {
+    "accounts": [
+      "desktop/src-tauri/accounts/accounts.c",
+      "desktop/src-tauri/accounts/accounts.h",
+      "desktop/src-tauri/accounts/sealed.c",
+      "desktop/src-tauri/accounts/sealed.h"
+    ],
+    "launcher": [
+      "desktop/src-tauri/launcher/portable_fs.c",
+      "desktop/src-tauri/launcher/portable_fs.h"
+    ]
+  },
+  "capability": "rcheevos_rib_prepare_client"
+}

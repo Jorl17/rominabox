@@ -1,40 +1,29 @@
-"""The location of the RmlUi from the player build, for the tests.
+"""The location of the RmlUi from the player build, and of the FreeType linked
+into it, for the tests.
 
-We read the clone path, the cmake build directory and the archive linked into
-the player from the player build, so this file cannot describe a second
-layout.
+We read the clone and build directories from the player recipe, and the
+archive linked into the player and its header directories from the player's
+makefile, so this file cannot describe a second layout.
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import core_source  # noqa: E402
+import native_build  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 
 # We fill this with prepare_rmlui.py, never by hand.
 DEST = ROOT / "work" / "rmlui"
+TARGET = core_source.host_target()
 
-PLAYER_BUILD = ROOT / "scripts/native_runtime/build-retroarch-rmlui-macos.sh"
 _MAKEFILE = ROOT / "vendor/retroarch/Makefile.common"
-
-
-def _player_text() -> str:
-    if not PLAYER_BUILD.is_file():
-        raise SystemExit(f"missing player build script at {PLAYER_BUILD}")
-    return PLAYER_BUILD.read_text(encoding="utf-8")
-
-
-def _relative_dirs() -> tuple[str, str]:
-    script = _player_text()
-    source = re.search(r'git clone \S+ "\$destination/([^"]+)"', script)
-    build = re.search(r'-B "\$destination/([^"]+)"', script)
-    if not source or not build:
-        raise SystemExit(
-            "the player build no longer says where it clones or builds RmlUi"
-        )
-    return source.group(1), build.group(1)
 
 
 def _archive_name() -> str:
@@ -61,9 +50,8 @@ def _header_dirs(source: Path) -> list[Path]:
     return found
 
 
-_SOURCE_REL, _BUILD_REL = _relative_dirs()
-SOURCE = DEST / _SOURCE_REL
-BUILD_DIR = DEST / _BUILD_REL
+SOURCE = DEST / native_build.recipe()["rmlui"]["source"]
+BUILD_DIR = DEST / native_build.recipe()["rmlui"]["build"]
 LIBRARY = BUILD_DIR / _archive_name()
 HEADER_DIRS = _header_dirs(SOURCE)
 
@@ -84,6 +72,18 @@ def _include_dir() -> Path:
 
 INCLUDE = _include_dir()
 HEADER = INCLUDE / "RmlUi" / "Core.h"
+
+
+def freetype(*flags: str) -> list[str]:
+    """Return pkg-config's `flags` for the FreeType linked into the player here.
+
+    For a target with its own FreeType build, we install it beside RmlUi. With
+    the system's pkg-config, we would link the tests against another one.
+    """
+    environment = {**native_build.build_environment(TARGET),
+                   **native_build.freetype_environment(DEST, TARGET)}
+    return subprocess.run([native_build.resolve("pkg-config", environment), *flags, "freetype2"],
+                          capture_output=True, text=True, check=True, env=environment).stdout.split()
 
 
 def main() -> None:
