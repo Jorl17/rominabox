@@ -90,6 +90,12 @@ static DWORD attributes(const char *path) {
     return found;
 }
 
+int fs_is_absolute(const char *path) {
+    const int letter = (path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z');
+    return (letter && path[1] == ':' && (path[2] == '\\' || path[2] == '/'))
+        || ((path[0] == '\\' || path[0] == '/') && (path[1] == '\\' || path[1] == '/'));
+}
+
 int fs_list(const char *directory, fs_visit visit, void *context) {
     size_t length = strlen(directory);
     char *pattern = malloc(length + 3);
@@ -383,6 +389,10 @@ void fs_lock_release(fs_lock *lock) {
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+int fs_is_absolute(const char *path) {
+    return path[0] == '/';
+}
 
 int fs_list(const char *directory, fs_visit visit, void *context) {
     DIR *listing = opendir(directory);

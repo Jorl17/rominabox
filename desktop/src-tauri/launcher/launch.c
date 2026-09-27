@@ -52,20 +52,6 @@ static int is_separator(char c) {
 #endif
 }
 
-/* A path that points to the same place whatever the working directory is. */
-static int is_absolute(const char *path) {
-#if defined(_WIN32)
-    /* C:\ or C:/, or a share, \\server\name. */
-    return (((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z'))
-            && path[1] == ':' && is_separator(path[2]))
-        || (is_separator(path[0]) && is_separator(path[1]));
-#elif defined(__APPLE__) || defined(__unix__)
-    return path[0] == '/';
-#else
-#error "the launcher has no absolute paths declared for this platform"
-#endif
-}
-
 /* The core's file name in the app, with this platform's library naming. */
 static const char *core_file(void) {
 #if defined(_WIN32)
@@ -582,18 +568,18 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
         die("the launch plan has no data directory");
     collect_managed(plan, managed, &managed_count);
 
-    if (!user_data || !is_absolute(user_data))
+    if (!user_data || !fs_is_absolute(user_data))
         die("there is no per-user folder to keep this game's files in");
     if (starts_with(data_template, token_UserData)) {
         int wrote = snprintf(data_dir, PATH_CAP, "%s%s", user_data, data_template + strlen(token_UserData));
         if (wrote < 0 || (size_t)wrote >= PATH_CAP)
             die("the data directory does not fit");
-    } else if (is_absolute(data_template)) {
+    } else if (fs_is_absolute(data_template)) {
         snprintf(data_dir, PATH_CAP, "%s", data_template);
     } else {
         die("the data directory is not absolute");
     }
-    if (!is_absolute(data_dir))
+    if (!fs_is_absolute(data_dir))
         die("the data directory is not absolute");
 
     if (places->before_data_folder)

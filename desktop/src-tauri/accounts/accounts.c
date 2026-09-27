@@ -16,18 +16,9 @@
 #define KEY_SIZE (RIB_ACCOUNTS_NAME_SIZE * 2)
 #define SEALED_SIZE 1024
 
-static bool absolute(const char *path) {
-#ifdef _WIN32
-    return ((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z'))
-        && path[1] == ':' && (path[2] == '\\' || path[2] == '/');
-#else
-    return path[0] == '/';
-#endif
-}
-
 static const char *folder(void) {
     const char *path = getenv(RIB_ENV_ACCOUNTS_DIR);
-    if (!path || !*path || !absolute(path) || !fs_is_directory(path))
+    if (!path || !*path || !fs_is_absolute(path) || !fs_is_directory(path))
         return NULL;
     return path;
 }

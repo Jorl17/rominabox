@@ -12,6 +12,10 @@
  * Every function returns 0 on success, or -1 with errno set, except as noted in
  * its comment. We follow a symbolic link or reparse point only in fs_open. */
 
+/* 1 when `path` points to the same place whatever the working directory is:
+ * on Windows C:\ or C:/, or a share, \\server\name, and elsewhere /. */
+int fs_is_absolute(const char *path);
+
 /* Call `visit` with each entry's name, skipping names that start with '.'.
  * Fail with ENOENT for a missing directory. When `visit` returns non-zero,
  * stop the listing and return that value. */
