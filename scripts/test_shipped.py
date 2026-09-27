@@ -51,7 +51,7 @@ def compile_plan(directory: Path) -> Path:
     binary.parent.mkdir(parents=True)
     made = subprocess.run(
         ["cc", "-DROMINABOX_PLAN_MAIN", "-O2", "-o", str(binary),
-         *sorted(str(path) for path in LAUNCHER.glob("*.c"))],
+         *sorted(str(path) for path in [*LAUNCHER.glob("*.c"), *LAUNCHER.glob("macos/*.c")])],
         capture_output=True, text=True,
     )
     if made.returncode != 0:

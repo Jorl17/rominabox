@@ -32,7 +32,7 @@ RETROARCH = ROOT / "vendor/retroarch"
 DRIVERS = RETROARCH / "menu/drivers"
 NATIVE = ROOT / "scripts/native_runtime"
 PROBE = ROOT / "work/dcmenu-probe"
-LAUNCHER = ROOT / "desktop/src-tauri/launcher/main.c"
+LAUNCHER = ROOT / "desktop/src-tauri/launcher/macos/main.c"
 LINE = PROBE / "line.txt"
 
 

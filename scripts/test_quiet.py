@@ -34,7 +34,9 @@ QUIET_DRIVER = "null"
 
 
 def launcher_sources() -> list[str]:
-    return sorted(str(path) for path in (ROOT / "desktop/src-tauri/launcher").glob("*.c"))
+    launcher = ROOT / "desktop/src-tauri/launcher"
+    # The shared sources, and the macOS entry point that we run in these checks.
+    return sorted(str(path) for path in [*launcher.glob("*.c"), *launcher.glob("macos/*.c")])
 
 
 def compile_plan(directory: Path) -> Path:

@@ -1735,18 +1735,31 @@ fn compile_c(inputs: &[PathBuf], destination: &Path, extra: &[&str]) -> Result<(
     Ok(())
 }
 
-fn install_launch_library(macos: &Path, retroarch: &Path) -> Result<(), ExportError> {
+/// The launcher sources for one platform, the shared ones at the top of
+/// `launcher/` and the entry for the platform in a folder there.
+fn launcher_sources(platform: &str) -> Result<Vec<PathBuf>, ExportError> {
     let launcher = crate::repo::at("desktop/src-tauri/launcher");
-    let mut library_sources = fs::read_dir(&launcher)
-        .and_then(|entries| {
+    let mut sources = Vec::new();
+    for folder in [launcher.clone(), launcher.join(platform)] {
+        let entries = fs::read_dir(&folder)
+            .and_then(|entries| {
+                entries
+                    .map(|entry| entry.map(|entry| entry.path()))
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .map_err(|error| ExportError::io(ErrorStage::Configure, &folder, error))?;
+        sources.extend(
             entries
-                .map(|entry| entry.map(|entry| entry.path()))
-                .collect::<Result<Vec<_>, _>>()
-        })
-        .map_err(|error| ExportError::io(ErrorStage::Configure, &launcher, error))?;
-    library_sources
-        .retain(|path| matches!(path.extension().and_then(OsStr::to_str), Some("c" | "h")));
-    library_sources.sort();
+                .into_iter()
+                .filter(|path| matches!(path.extension().and_then(OsStr::to_str), Some("c" | "h"))),
+        );
+    }
+    sources.sort();
+    Ok(sources)
+}
+
+fn install_launch_library(macos: &Path, retroarch: &Path) -> Result<(), ExportError> {
+    let library_sources = launcher_sources("macos")?;
     let injector_source = vec![crate::repo::at("scripts/native_runtime/inject_dylib.c")];
     let work = crate::repo::at("work");
     let library = work.join("librominabox-launch.dylib");

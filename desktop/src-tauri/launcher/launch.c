@@ -1,19 +1,13 @@
-#include <dirent.h>
+#include "launch.h"
+
 #include <errno.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <mach-o/dyld.h>
-#include <mach-o/loader.h>
-#include <pwd.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include "accounts_folder.h"
 #include "player_settings.h"
+#include "portable_fs.h"
 #include "shipped_files.h"
 #include "shipped_settings.h"
 #include "../../../vendor/retroarch/rominabox_launch.h"
@@ -36,7 +30,7 @@ typedef struct {
     const char *data;
 } Shipped;
 
-#define PATH_CAP 4096
+#define PATH_CAP LAUNCH_PATH_CAP
 #define LINE_CAP 8192
 #define MANAGED_CAP 64
 
@@ -46,16 +40,32 @@ typedef struct {
  * read it only in the launcher. */
 #define ROMINABOX_SOUND_ENV "ROMINABOX_SOUND"
 
-/* stdout is fully buffered when it is not a terminal. In the launcher we
- * point it at launch.log, so when the player is killed, or still running when
- * someone reads the log, RetroArch's lines stay in that buffer. */
-void rominabox_line_buffer_stdio(void)
-{
-    setvbuf(stdout, NULL, _IOLBF, 0);
-    setvbuf(stderr, NULL, _IOLBF, 0);
+/* The separators in a path: `/` everywhere, and `\` on Windows too. */
+static int is_separator(char c) {
+#if defined(_WIN32)
+    return c == '/' || c == '\\';
+#elif defined(__APPLE__) || defined(__unix__)
+    return c == '/';
+#else
+#error "the launcher has no path separators declared for this platform"
+#endif
 }
 
-static void die(const char *message) {
+/* A path that points to the same place whatever the working directory is. */
+static int is_absolute(const char *path) {
+#if defined(_WIN32)
+    /* C:\ or C:/, or a share, \\server\name. */
+    return (((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z'))
+            && path[1] == ':' && is_separator(path[2]))
+        || (is_separator(path[0]) && is_separator(path[1]));
+#elif defined(__APPLE__) || defined(__unix__)
+    return path[0] == '/';
+#else
+#error "the launcher has no absolute paths declared for this platform"
+#endif
+}
+
+void rominabox_launch_die(const char *message) {
     fprintf(stderr, "ROM-in-a-Box: %s\n", message);
     exit(1);
 }
@@ -65,20 +75,22 @@ static void die_errno(const char *message) {
     exit(1);
 }
 
+#define die rominabox_launch_die
+
 static int starts_with(const char *value, const char *prefix) {
     return strncmp(value, prefix, strlen(prefix)) == 0;
 }
 
 static void join_path(char *out, size_t out_cap, const char *left, const char *right) {
     size_t left_len = strlen(left);
-    int need_slash = left_len > 0 && left[left_len - 1] != '/';
+    int need_slash = left_len > 0 && !is_separator(left[left_len - 1]);
     int wrote = snprintf(out, out_cap, "%s%s%s", left, need_slash ? "/" : "", right);
     if (wrote < 0 || (size_t)wrote >= out_cap)
         die("a path does not fit");
 }
 
 static void mkdir_one(const char *path) {
-    if (mkdir(path, 0755) == 0 || errno == EEXIST)
+    if (fs_is_directory(path) || fs_make_directory(path) == 0)
         return;
     die_errno(path);
 }
@@ -91,17 +103,26 @@ static void mkdir_p(const char *path) {
         die("a directory path does not fit");
     memcpy(buffer, path, length + 1);
     for (index = 1; index < length; index++) {
-        if (buffer[index] != '/')
+        char separator = buffer[index];
+        if (!is_separator(separator))
             continue;
         buffer[index] = '\0';
         mkdir_one(buffer);
-        buffer[index] = '/';
+        buffer[index] = separator;
     }
     mkdir_one(buffer);
 }
 
+void rominabox_launch_join(char *out, size_t out_cap, const char *left, const char *right) {
+    join_path(out, out_cap, left, right);
+}
+
+void rominabox_launch_make_directories(const char *path) {
+    mkdir_p(path);
+}
+
 static char *read_file(const char *path, size_t *length_out) {
-    FILE *file = fopen(path, "rb");
+    FILE *file = fs_open(path, "rb");
     long length;
     char *body;
     if (!file)
@@ -123,72 +144,6 @@ static char *read_file(const char *path, size_t *length_out) {
     if (length_out)
         *length_out = (size_t)length;
     return body;
-}
-
-static int copy_file_if_absent(const char *from, const char *to) {
-    char buffer[8192];
-    int in;
-    int out;
-    ssize_t count;
-    struct stat info;
-    if (lstat(to, &info) == 0)
-        return 0;
-    in = open(from, O_RDONLY | O_NOFOLLOW);
-    if (in < 0)
-        return -1;
-    out = open(to, O_WRONLY | O_CREAT | O_EXCL, 0644);
-    if (out < 0) {
-        close(in);
-        if (errno == EEXIST)
-            return 0;
-        return -1;
-    }
-    while ((count = read(in, buffer, sizeof buffer)) > 0) {
-        char *cursor = buffer;
-        while (count > 0) {
-            ssize_t wrote = write(out, cursor, (size_t)count);
-            if (wrote < 0) {
-                close(in);
-                close(out);
-                unlink(to);
-                return -1;
-            }
-            cursor += wrote;
-            count -= wrote;
-        }
-    }
-    close(in);
-    if (close(out) != 0) {
-        unlink(to);
-        return -1;
-    }
-    return count < 0 ? -1 : 0;
-}
-
-static void copy_tree(const char *from_dir, const char *to_dir) {
-    DIR *directory = opendir(from_dir);
-    struct dirent *entry;
-    if (!directory)
-        return;
-    mkdir_p(to_dir);
-    while ((entry = readdir(directory))) {
-        char from[PATH_CAP];
-        char to[PATH_CAP];
-        struct stat info;
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-            continue;
-        join_path(from, sizeof from, from_dir, entry->d_name);
-        if (lstat(from, &info) != 0)
-            continue;
-        if (S_ISLNK(info.st_mode))
-            continue;
-        join_path(to, sizeof to, to_dir, entry->d_name);
-        if (S_ISDIR(info.st_mode))
-            copy_tree(from, to);
-        else if (S_ISREG(info.st_mode) && copy_file_if_absent(from, to) != 0)
-            die_errno(from);
-    }
-    closedir(directory);
 }
 
 typedef struct {
@@ -311,7 +266,7 @@ static int find_key(ConfigLine *lines, size_t count, const char *key, int frozen
 }
 
 static void apply_player_file(ConfigLine **lines, size_t *count, size_t *capacity, const char *path) {
-    FILE *file = fopen(path, "r");
+    FILE *file = fs_open(path, "r");
     char raw[LINE_CAP];
     if (!file)
         return;
@@ -350,8 +305,9 @@ static void apply_player_file(ConfigLine **lines, size_t *count, size_t *capacit
     fclose(file);
 }
 
+/* We write in binary mode on every platform, so LF stays LF on Windows. */
 static void write_config(const char *path, ConfigLine *lines, size_t count) {
-    FILE *file = fopen(path, "w");
+    FILE *file = fs_open(path, "wb");
     size_t index;
     if (!file)
         die_errno(path);
@@ -460,13 +416,20 @@ static void apply_player_settings(ConfigLine **lines, size_t *count, size_t *cap
     }
 }
 
+/* A content path that starts at a root, or climbs out with `..`, is not a
+ * file inside the app. */
 static int path_has_dotdot(const char *path) {
     const char *cursor = path;
-    if (path[0] == '/')
+    if (is_separator(path[0]))
         return 1;
+#if defined(_WIN32)
+    /* A drive letter, C:, also points to a place outside the app. */
+    if (strchr(path, ':'))
+        return 1;
+#endif
     while (*cursor) {
-        if ((cursor == path || cursor[-1] == '/') && starts_with(cursor, "..") &&
-            (cursor[2] == '\0' || cursor[2] == '/'))
+        if ((cursor == path || is_separator(cursor[-1])) && starts_with(cursor, "..") &&
+            (cursor[2] == '\0' || is_separator(cursor[2])))
             return 1;
         cursor++;
     }
@@ -474,7 +437,7 @@ static int path_has_dotdot(const char *path) {
 }
 
 static void first_line(const char *path, char *out, size_t out_cap) {
-    FILE *file = fopen(path, "r");
+    FILE *file = fs_open(path, "r");
     if (!file) {
         out[0] = '\0';
         return;
@@ -489,86 +452,40 @@ static void first_line(const char *path, char *out, size_t out_cap) {
     }
 }
 
-static void migrate_previous_saves(const char *data_dir) {
-    struct passwd *user = getpwuid(getuid());
-    const char *home = getenv("HOME");
-    char old_dir[PATH_CAP];
-    char marker[PATH_CAP];
-    char real_old[PATH_CAP];
-    char real_new[PATH_CAP];
-    const char *suffix;
-    if (!user || !user->pw_dir || !home || home[0] != '/')
-        return;
-    if (!starts_with(data_dir, home) || data_dir[strlen(home)] != '/')
-        return;
-    suffix = data_dir + strlen(home);
-    if (snprintf(old_dir, sizeof old_dir, "%s%s", user->pw_dir, suffix) >= (int)sizeof old_dir)
-        return;
-    if (realpath(old_dir, real_old) && realpath(data_dir, real_new) && strcmp(real_old, real_new) == 0)
-        return;
-    join_path(marker, sizeof marker, data_dir, "retroarch.cfg");
-    if (access(marker, F_OK) == 0 || access(old_dir, F_OK) != 0)
-        return;
-    copy_tree(old_dir, data_dir);
-}
-
-static char *forwarded_argv[12];
-static int forwarded_argc;
-
-static void publish_arguments(void) {
-    const struct mach_header_64 *header =
-        (const struct mach_header_64 *)_dyld_get_image_header(0);
-    const uint8_t *commands;
-    uint32_t offset = 0;
-    uint32_t command_index;
-    if (!header || header->magic != MH_MAGIC_64)
-        return;
-    commands = (const uint8_t *)(header + 1);
-    for (command_index = 0; command_index < header->ncmds; command_index++) {
-        const struct load_command *command =
-            (const struct load_command *)(commands + offset);
-        if (command->cmd == LC_MAIN) {
-            const struct entry_point_command *entry =
-                (const struct entry_point_command *)command;
-            const uint8_t *trampoline = (const uint8_t *)header + entry->entryoff;
-            uint64_t argc_address;
-            uint64_t argv_address;
-            intptr_t slide;
-            if (memcmp(trampoline + 20, "RBOXLNCH", 8) != 0)
-                return;
-            memcpy(&argc_address, trampoline + 28, sizeof argc_address);
-            memcpy(&argv_address, trampoline + 36, sizeof argv_address);
-            slide = _dyld_get_image_vmaddr_slide(0);
-            *(uint64_t *)(slide + (intptr_t)argc_address) = (uint64_t)forwarded_argc;
-            *(uint64_t *)(slide + (intptr_t)argv_address) = (uint64_t)(uintptr_t)forwarded_argv;
-            return;
-        }
-        offset += command->cmdsize;
-    }
-}
-
-/* Quiet unless a person opened the game through Launch Services, or sound is
- * turned on in the environment. Quiet is opt-out, and the parent of a harness
- * is not launchd, so a run from a harness is quiet even when nothing is set.
- * ROMINABOX_QUIET makes even a Dock launch quiet. In the fork's accessory
- * check we read the variable set here instead of repeating the test. */
-static int rominabox_launch_is_quiet(pid_t parent, const char *quiet, const char *sound) {
+/* Quiet unless a person started the game, or sound is turned on in the
+ * environment. Quiet is opt-out, so a run from a harness is quiet even when
+ * nothing is set. ROMINABOX_QUIET makes even a person's launch quiet. */
+int rominabox_launch_is_quiet(int opened_by_person, const char *quiet, const char *sound) {
     if (quiet && quiet[0])
         return 1;
     if (sound && sound[0])
         return 0;
-    return parent != 1;
+    return !opened_by_person;
 }
 
-static void prepare(void) {
-    char executable[PATH_CAP];
-    char bundle[PATH_CAP];
+static void set_variable(Launch *launch, const char *name, const char *value) {
+    if (launch->variable_count >= LAUNCH_VARIABLES_CAP)
+        die("too many launch variables");
+    launch->variables[launch->variable_count].name = name;
+    launch->variables[launch->variable_count].value = value ? strdup(value) : NULL;
+    if (value && !launch->variables[launch->variable_count].value)
+        die("out of memory");
+    launch->variable_count++;
+}
+
+static void add_argument(Launch *launch, const char *argument) {
+    if (launch->argument_count >= LAUNCH_ARGUMENTS_CAP - 1)
+        die("too many launch arguments");
+    launch->arguments[launch->argument_count] = strdup(argument);
+    if (!launch->arguments[launch->argument_count])
+        die("out of memory");
+    launch->argument_count++;
+    launch->arguments[launch->argument_count] = NULL;
+}
+
+void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
+    const char *resources = places->resources;
     char plan_path[PATH_CAP];
-    char resources[PATH_CAP];
-    char macos[PATH_CAP];
-    char data_dir[PATH_CAP];
-    char config_path[PATH_CAP];
-    char log_path[PATH_CAP];
     char core_path[PATH_CAP];
     char content_path[PATH_CAP];
     char assets[PATH_CAP];
@@ -584,37 +501,19 @@ static void prepare(void) {
     char shader_initial[PATH_CAP];
     char data_template[PATH_CAP];
     char managed[MANAGED_CAP][128];
+    char achievements[8] = "0";
+    char accounts_name[128] = "";
     char *plan;
     const char *config_text;
-    const char *home;
+    const char *home = places->home;
+    char *data_dir = launch->data_dir;
     size_t managed_count = 0;
     size_t index;
-    uint32_t exec_path_size = sizeof executable;
     ConfigLine *lines = NULL;
     size_t line_count = 0;
     size_t line_capacity = 0;
-    int log_fd;
 
-    if (_NSGetExecutablePath(executable, &exec_path_size) != 0)
-        die("could not find the launcher");
-    if (!realpath(executable, bundle))
-        die_errno("could not resolve the launcher");
-    {
-        char *slash = strrchr(bundle, '/');
-        if (!slash)
-            die("the launcher is not inside an app");
-        *slash = '\0';
-        slash = strrchr(bundle, '/');
-        if (!slash)
-            die("the launcher is not inside an app");
-        *slash = '\0';
-        slash = strrchr(bundle, '/');
-        if (!slash)
-            die("the launcher is not inside an app");
-        *slash = '\0';
-    }
-    join_path(resources, sizeof resources, bundle, "Contents/Resources");
-    join_path(macos, sizeof macos, bundle, "Contents/MacOS");
+    memset(launch, 0, sizeof *launch);
     join_path(plan_path, sizeof plan_path, resources, app_Plan);
     plan = read_file(plan_path, NULL);
     if (!plan)
@@ -636,31 +535,29 @@ static void prepare(void) {
         title[0] = '\0';
     field(plan, plan_StartAtMenu, start_at_menu, sizeof start_at_menu);
     field(plan, plan_Advanced, advanced, sizeof advanced);
-    char achievements[8] = "0";
     field(plan, plan_Achievements, achievements, sizeof achievements);
-    char accounts_name[128] = "";
     field(plan, plan_AccountsDir, accounts_name, sizeof accounts_name);
     field(plan, plan_ShaderInitial, shader_initial, sizeof shader_initial);
     if (!field(plan, plan_DataDir, data_template, sizeof data_template))
         die("the launch plan has no data directory");
     collect_managed(plan, managed, &managed_count);
 
-    home = getenv("HOME");
-    if (!home || home[0] != '/')
+    if (!home || !is_absolute(home))
         die("HOME is not an absolute path, so there is nowhere safe to keep this game's files");
     if (starts_with(data_template, token_Home)) {
-        int wrote = snprintf(data_dir, sizeof data_dir, "%s%s", home, data_template + strlen(token_Home));
-        if (wrote < 0 || (size_t)wrote >= sizeof data_dir)
+        int wrote = snprintf(data_dir, PATH_CAP, "%s%s", home, data_template + strlen(token_Home));
+        if (wrote < 0 || (size_t)wrote >= PATH_CAP)
             die("the data directory does not fit");
-    } else if (data_template[0] == '/') {
-        snprintf(data_dir, sizeof data_dir, "%s", data_template);
+    } else if (is_absolute(data_template)) {
+        snprintf(data_dir, PATH_CAP, "%s", data_template);
     } else {
         die("the data directory is not absolute");
     }
-    if (data_dir[0] != '/')
+    if (!is_absolute(data_dir))
         die("the data directory is not absolute");
 
-    migrate_previous_saves(data_dir);
+    if (places->before_data_folder)
+        places->before_data_folder(data_dir);
     mkdir_p(data_dir);
     for (index = 0; index < managed_count; index++) {
         char directory[PATH_CAP];
@@ -717,9 +614,10 @@ static void prepare(void) {
     apply_player_settings(&lines, &line_count, &line_capacity, plan, data_dir);
     /* Quiet is opt-out. We publish ROMINABOX_QUIET so that we can apply the
      * same setting in the fork. */
-    if (rominabox_launch_is_quiet(
-            getppid(), getenv(RIB_ENV_QUIET), getenv(ROMINABOX_SOUND_ENV)))
-        setenv(RIB_ENV_QUIET, "1", 1);
+    launch->quiet = rominabox_launch_is_quiet(
+        places->opened_by_person, getenv(RIB_ENV_QUIET), getenv(ROMINABOX_SOUND_ENV));
+    if (launch->quiet)
+        set_variable(launch, RIB_ENV_QUIET, "1");
     /* The window of a quiet run is never in front, and we take a screenshot
      * with the window unfocused. With pause_nonactive on, the console would
      * pause, so the run would never reach its frame limit, or the picture
@@ -727,8 +625,7 @@ static void prepare(void) {
      * player's settings, and leave the player's file unchanged. */
     {
         const char *shot = getenv(RIB_ENV_MENU_SHOT);
-        const char *quiet = getenv(RIB_ENV_QUIET);
-        if ((shot && shot[0]) || (quiet && quiet[0]))
+        if ((shot && shot[0]) || launch->quiet)
             force_line(
                 &lines,
                 &line_count,
@@ -737,158 +634,104 @@ static void prepare(void) {
                 "pause_nonactive = \"false\""
             );
     }
-    /* After the player files, so a controls.cfg cannot turn CoreAudio back
-     * on for this launch. With audio_enable false, no audio driver is ever
-     * opened. We replace the frozen coreaudio line with null so the written
-     * config contains no device, and do not write this into the player's file. */
-    {
-        const char *quiet = getenv(RIB_ENV_QUIET);
-        if (quiet && quiet[0]) {
-            force_line(&lines, &line_count, &line_capacity,
-                "audio_driver", "audio_driver = \"null\"");
-            force_line(&lines, &line_count, &line_capacity,
-                "audio_enable", "audio_enable = \"false\"");
-            force_line(&lines, &line_count, &line_capacity,
-                "audio_enable_menu", "audio_enable_menu = \"false\"");
-            force_line(&lines, &line_count, &line_capacity,
-                "audio_enable_menu_ok", "audio_enable_menu_ok = \"false\"");
-            force_line(&lines, &line_count, &line_capacity,
-                "audio_enable_menu_cancel", "audio_enable_menu_cancel = \"false\"");
-            force_line(&lines, &line_count, &line_capacity,
-                "audio_enable_menu_scroll", "audio_enable_menu_scroll = \"false\"");
-            force_line(&lines, &line_count, &line_capacity,
-                "audio_enable_menu_bgm", "audio_enable_menu_bgm = \"false\"");
-            force_line(&lines, &line_count, &line_capacity,
-                "audio_enable_menu_notice", "audio_enable_menu_notice = \"false\"");
-        }
+    /* After the player files, so a controls.cfg cannot turn sound back on for
+     * this launch. With audio_enable false, no audio driver is ever opened.
+     * We replace the frozen driver line with null so the written config
+     * contains no device, and do not write this into the player's file. */
+    if (launch->quiet) {
+        force_line(&lines, &line_count, &line_capacity,
+            "audio_driver", "audio_driver = \"null\"");
+        force_line(&lines, &line_count, &line_capacity,
+            "audio_enable", "audio_enable = \"false\"");
+        force_line(&lines, &line_count, &line_capacity,
+            "audio_enable_menu", "audio_enable_menu = \"false\"");
+        force_line(&lines, &line_count, &line_capacity,
+            "audio_enable_menu_ok", "audio_enable_menu_ok = \"false\"");
+        force_line(&lines, &line_count, &line_capacity,
+            "audio_enable_menu_cancel", "audio_enable_menu_cancel = \"false\"");
+        force_line(&lines, &line_count, &line_capacity,
+            "audio_enable_menu_scroll", "audio_enable_menu_scroll = \"false\"");
+        force_line(&lines, &line_count, &line_capacity,
+            "audio_enable_menu_bgm", "audio_enable_menu_bgm = \"false\"");
+        force_line(&lines, &line_count, &line_capacity,
+            "audio_enable_menu_notice", "audio_enable_menu_notice = \"false\"");
     }
 
     shader_preset[0] = '\0';
     join_path(shader_choice, sizeof shader_choice, data_dir, menu_data_ShaderChoice);
-    if (access(shader_choice, F_OK) == 0)
+    if (fs_exists(shader_choice))
         first_line(shader_choice, shader_preset, sizeof shader_preset);
     else if (shader_initial[0])
         join_path(shader_preset, sizeof shader_preset, assets, shader_initial);
     if (shader_preset[0])
         append_setting(&lines, &line_count, &line_capacity, "video_shader_enable = \"true\"");
 
-    join_path(config_path, sizeof config_path, data_dir, "retroarch.cfg");
-    write_config(config_path, lines, line_count);
+    join_path(launch->config_path, sizeof launch->config_path, data_dir, "retroarch.cfg");
+    write_config(launch->config_path, lines, line_count);
     /* In the quiet check we run this binary to read the config from this run.
      * Going on would start the game, and without the switch the check would
-     * open CoreAudio. Stop once the file is on disk. */
+     * open an audio device. Stop once the file is on disk, before we touch
+     * anything outside the game's data. */
     if (getenv("ROMINABOX_PLAN_ONLY"))
-        _exit(0);
+        _Exit(0);
+    join_path(launch->log_path, sizeof launch->log_path, data_dir, "logs/launch.log");
 
-    setenv(RIB_ENV_ACHIEVEMENTS, strcmp(achievements, "1") == 0 ? "1" : "0", 1);
-    setenv(RIB_ENV_DATA_DIR, data_dir, 1);
-    setenv(RIB_ENV_GAME_IDENTITY, identity, 1);
+    set_variable(launch, RIB_ENV_ACHIEVEMENTS, strcmp(achievements, "1") == 0 ? "1" : "0");
+    set_variable(launch, RIB_ENV_DATA_DIR, data_dir);
+    set_variable(launch, RIB_ENV_GAME_IDENTITY, identity);
     /* The folder for QUICK SIGN IN, only when the export lists one. It is in
-     * the real home, not in the sandbox's HOME. When a game cannot reach it,
-     * the player plays on without QUICK SIGN IN. */
-    unsetenv(RIB_ENV_ACCOUNTS_DIR);
-    if (strcmp(achievements, "1") == 0 && accounts_name[0]) {
-        struct passwd *user = getpwuid(getuid());
-        char app_data[PATH_CAP];
-        char accounts[PATH_CAP];
-        int wrote = user && user->pw_dir && user->pw_dir[0] == '/'
-            ? snprintf(app_data, sizeof app_data, "%s/Library/Application Support", user->pw_dir) : -1;
-        if (wrote > 0 && (size_t)wrote < sizeof app_data
-            && rominabox_accounts_folder(app_data, accounts_name, accounts, sizeof accounts) == 0)
-            setenv(RIB_ENV_ACCOUNTS_DIR, accounts, 1);
-        else
-            fprintf(stderr, "ROM-in-a-Box: QUICK SIGN IN is unavailable: %s\n", strerror(errno));
-    }
-    setenv(RIB_ENV_TITLE, title, 1);
-    setenv(RIB_ENV_RML_ASSETS, assets, 1);
-    setenv(RIB_ENV_ADVANCED_ACCESS, strcmp(advanced, "1") == 0 ? "1" : "0", 1);
-    if (strcmp(start_at_menu, "1") == 0)
-        setenv(RIB_ENV_START_AT_MENU, "1", 1);
-    else
-        unsetenv(RIB_ENV_START_AT_MENU);
-    unsetenv("LIBRETRO_SYSTEM_DIRECTORY");
-    unsetenv("LIBRETRO_DIRECTORY");
-    unsetenv("LIBRETRO_ASSETS_DIRECTORY");
-    unsetenv("LIBRETRO_AUTOCONFIG_DIRECTORY");
-    unsetenv("LIBRETRO_CHEATS_DIRECTORY");
-    unsetenv("LIBRETRO_DATABASE_DIRECTORY");
-    unsetenv("LIBRETRO_VIDEO_FILTER_DIRECTORY");
-    unsetenv("LIBRETRO_VIDEO_SHADER_DIRECTORY");
-
-    join_path(log_path, sizeof log_path, data_dir, "logs/launch.log");
-    log_fd = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
-    if (log_fd >= 0) {
-        dup2(log_fd, STDOUT_FILENO);
-        dup2(log_fd, STDERR_FILENO);
-        if (log_fd > STDERR_FILENO)
-            close(log_fd);
-        rominabox_line_buffer_stdio();
-    }
+     * the real per-user application data, not in a sandbox's HOME. When a game
+     * cannot reach it, the player plays on without QUICK SIGN IN. */
     {
-        const char *quiet = getenv(RIB_ENV_QUIET);
-        if (quiet && quiet[0]) {
-            fprintf(stdout, "[RIB] quiet: audio driver null, output disabled\n");
-            fflush(stdout);
+        char accounts[PATH_CAP];
+        int found = strcmp(achievements, "1") == 0 && accounts_name[0];
+        if (found && places->accounts_root
+            && rominabox_accounts_folder(places->accounts_root, accounts_name, accounts, sizeof accounts) == 0)
+            set_variable(launch, RIB_ENV_ACCOUNTS_DIR, accounts);
+        else {
+            set_variable(launch, RIB_ENV_ACCOUNTS_DIR, NULL);
+            if (found)
+                fprintf(stderr, "ROM-in-a-Box: QUICK SIGN IN is unavailable: %s\n", strerror(errno));
         }
     }
-    if (chdir(data_dir) != 0)
-        die_errno(data_dir);
+    set_variable(launch, RIB_ENV_TITLE, title);
+    set_variable(launch, RIB_ENV_RML_ASSETS, assets);
+    set_variable(launch, RIB_ENV_ADVANCED_ACCESS, strcmp(advanced, "1") == 0 ? "1" : "0");
+    set_variable(launch, RIB_ENV_START_AT_MENU, strcmp(start_at_menu, "1") == 0 ? "1" : NULL);
+    set_variable(launch, "LIBRETRO_SYSTEM_DIRECTORY", NULL);
+    set_variable(launch, "LIBRETRO_DIRECTORY", NULL);
+    set_variable(launch, "LIBRETRO_ASSETS_DIRECTORY", NULL);
+    set_variable(launch, "LIBRETRO_AUTOCONFIG_DIRECTORY", NULL);
+    set_variable(launch, "LIBRETRO_CHEATS_DIRECTORY", NULL);
+    set_variable(launch, "LIBRETRO_DATABASE_DIRECTORY", NULL);
+    set_variable(launch, "LIBRETRO_VIDEO_FILTER_DIRECTORY", NULL);
+    set_variable(launch, "LIBRETRO_VIDEO_SHADER_DIRECTORY", NULL);
 
     join_path(core_path, sizeof core_path, resources, app_Core);
     join_path(content_path, sizeof content_path, resources, content);
+    add_argument(launch, "--config");
+    add_argument(launch, launch->config_path);
+    add_argument(launch, "--libretro");
+    add_argument(launch, core_path);
+    add_argument(launch, content_path);
+    if (shader_preset[0]) {
+        add_argument(launch, "--set-shader");
+        add_argument(launch, shader_preset);
+    }
     {
-        const char *frames = getenv("ROMINABOX_MAX_FRAMES");
         const char *verbose = getenv("ROMINABOX_VERBOSE");
-        static char frames_argument[32];
-        int count = 0;
-        forwarded_argv[count++] = strdup(executable);
-        forwarded_argv[count++] = strdup("--config");
-        forwarded_argv[count++] = strdup(config_path);
-        forwarded_argv[count++] = strdup("--libretro");
-        forwarded_argv[count++] = strdup(core_path);
-        forwarded_argv[count++] = strdup(content_path);
-        if (shader_preset[0]) {
-            forwarded_argv[count++] = strdup("--set-shader");
-            forwarded_argv[count++] = strdup(shader_preset);
-        }
+        const char *frames = getenv("ROMINABOX_MAX_FRAMES");
         if (verbose && strcmp(verbose, "1") == 0)
-            forwarded_argv[count++] = strdup("--verbose");
+            add_argument(launch, "--verbose");
         if (frames && frames[0]) {
+            char frames_argument[32];
             const char *digit = frames;
             while (*digit >= '0' && *digit <= '9')
                 digit++;
             if (*digit != '\0' || strlen(frames) > 6)
                 die("ROMINABOX_MAX_FRAMES is not a frame count");
             snprintf(frames_argument, sizeof frames_argument, "--max-frames=%s", frames);
-            forwarded_argv[count++] = frames_argument;
+            add_argument(launch, frames_argument);
         }
-        if (count >= 12)
-            die("too many launch arguments");
-        forwarded_argv[count] = NULL;
-        for (index = 0; index < (size_t)count; index++) {
-            if (!forwarded_argv[index])
-                die("out of memory");
-        }
-        forwarded_argc = count;
-        publish_arguments();
     }
 }
-
-#ifdef ROMINABOX_DECISION_MAIN
-int main(int argc, char **argv) {
-    pid_t parent = argc > 1 ? (pid_t)atoi(argv[1]) : 0;
-    const char *quiet = argc > 2 && argv[2][0] ? argv[2] : NULL;
-    const char *sound = argc > 3 && argv[3][0] ? argv[3] : NULL;
-    printf("%s\n", rominabox_launch_is_quiet(parent, quiet, sound) ? "quiet" : "sound");
-    return 0;
-}
-#elif defined ROMINABOX_PLAN_MAIN
-int main(void) {
-    prepare();
-    return 0;
-}
-#else
-__attribute__((constructor)) static void start_launch(void) {
-    prepare();
-}
-#endif
