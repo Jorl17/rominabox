@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import tempfile
 import unittest
@@ -179,7 +180,7 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
 
         self.assertIn("4242", str(raised.exception))
         self.assertIn("left running for inspection", str(raised.exception))
-        self.assertEqual(popen.call_args.args[0], ["/fake/launcher"])
+        self.assertEqual(popen.call_args.args[0], [str(Path("/fake/launcher"))])
         self.assertEqual(player.signals, [])
         self.assertNotEqual(popen.call_args.kwargs["stdout"], subprocess.PIPE)
         self.assertIs(popen.call_args.kwargs["stderr"], popen.call_args.kwargs["stdout"])
@@ -196,6 +197,20 @@ class WorkflowReportTest(unittest.TestCase):
         self.assertEqual(reports, {"final": {"text": "Mega Drive · 3 buttons, Á"}})
 
 
+def link_directory(link: Path, target: Path) -> None:
+    """Make a folder that leads somewhere else, in the way an ordinary user can
+    on this system: a symbolic link on macOS and Linux, and a junction on
+    Windows, where a symbolic link requires a privilege."""
+    if os.name == "posix":
+        link.symlink_to(target, target_is_directory=True)
+    elif os.name == "nt":
+        import _winapi
+
+        _winapi.CreateJunction(str(target), str(link))
+    else:
+        raise NotImplementedError(f"no way to link a folder on os.name {os.name!r}")
+
+
 class WorkflowFixtureOwnershipTest(unittest.TestCase):
     def test_claim_refuses_redirected_storage_parent(self) -> None:
         for linked in ("Data", "Games"):
@@ -205,10 +220,10 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
                 elsewhere = root / "elsewhere"
                 elsewhere.mkdir()
                 if linked == "Data":
-                    sandbox.symlink_to(elsewhere, target_is_directory=True)
+                    link_directory(sandbox, elsewhere)
                 else:
                     sandbox.mkdir()
-                    (sandbox / "Games").symlink_to(elsewhere, target_is_directory=True)
+                    link_directory(sandbox / "Games", elsewhere)
                 with (
                     patch.object(menu_shots, "data_dir_of", return_value=sandbox / "Games" / "fixture"),
                     patch.object(menu_shots, "storage_home", return_value=sandbox),
