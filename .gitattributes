@@ -1,0 +1,11 @@
+# Text is LF on every host, whatever core.autocrlf says. Shell scripts do not
+# run with CRLF, snapshots are compared byte for byte, and an exported game's
+# design files must be the same bytes whichever host exported it.
+* text=auto eol=lf
+
+*.gbc binary
+*.icns binary
+*.ico binary
+*.png binary
+*.ttf binary
+*.wav binary
