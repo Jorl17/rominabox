@@ -11,15 +11,15 @@
  *
  * With each --set we change the element with that id before we draw it,
  * through the same calls as at runtime in the player and RmlUi. NAME `class`
- * sets a class, `pseudo` a pseudo-class, `text` the element's words, and any
- * other NAME a property. In the picture tests we draw a menu's states this way
- * (scripts/fixtures/menu-states.json). */
+ * sets a class, `pseudo` a pseudo-class, `text` the element's content as
+ * markup, as we write it inside the element in the exporter (an options
+ * button's label is a span), and any other NAME a property. In the picture
+ * tests we draw a menu's states this way (scripts/fixtures/menu-states.json). */
 
 #include "gl_context.h"
 
 #include "rmlui/declarations.h"
 #include "rmlui/document_contract.hpp"
-#include "rmlui/elements.hpp"
 #include "rmlui/file_layer.hpp"
 #include "rmlui/render/platform.h"
 #include "rmlui/render/rmlui_gl.h"
@@ -105,7 +105,7 @@ bool apply(Rml::ElementDocument *document, const Change& change)
    else if (change.name == "pseudo")
       element->SetPseudoClass(change.value, true);
    else if (change.name == "text")
-      rib::write_text(element, change.value);
+      element->SetInnerRML(change.value);
    else if (!element->SetProperty(change.name, change.value))
    {
       std::fprintf(stderr, "%s does not take %s: %s\n", change.id.c_str(), change.name.c_str(),
@@ -250,7 +250,8 @@ int run(const std::vector<std::string>& arguments)
    }
    if (!understood)
    {
-      std::fprintf(stderr, "usage: rml-preview DOCUMENT OUTPUT WIDTH HEIGHT [--set ID:NAME=VALUE]...\n");
+      std::fprintf(stderr, "usage: rml-preview DOCUMENT OUTPUT WIDTH HEIGHT [--set ID:NAME=VALUE]...\n"
+            "NAME is class, pseudo, text (the element's content, as markup) or a property\n");
       return 2;
    }
    return render(arguments[1], arguments[2], std::atoi(arguments[3].c_str()),
