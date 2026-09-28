@@ -133,14 +133,6 @@ impl Composition {
     }
 }
 
-fn palette(id: &str) -> Result<crate::themes::Palette, String> {
-    crate::themes::registry()?
-        .palettes
-        .into_iter()
-        .find(|palette| palette.id == id)
-        .ok_or_else(|| "Choose an available colour palette.".to_string())
-}
-
 /// The fonts declared in the design and their licences, which we ship along.
 fn fonts(composition: &mut Composition, manifest: &Manifest) {
     for font in &manifest.fonts {
@@ -215,7 +207,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         return Ok(composition);
     }
     let manifest = Manifest::load(&request.design)?;
-    let palette = palette(&request.palette)?;
+    let palette = crate::themes::palette(&request.palette)?;
     let values = tokens::design(&manifest, &palette);
     fonts(&mut composition, &manifest);
     let stylesheet = tokens::substitute(&manifest.stylesheet()?, &values)?;

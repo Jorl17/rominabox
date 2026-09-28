@@ -1,17 +1,23 @@
-//! The choices we make in the builder for a game when its author does not:
-//! the settings for a dropped game, the folders for downloads and for games,
-//! and, for a request with less than the builder's draft, the rest of the
-//! game, filled in as when someone drops the file into the builder.
+//! What we decide for a game when its author does not: the settings a dropped
+//! game starts with, where we keep downloads and put games, and, for a request
+//! with less than the builder's draft, the rest of the game, which we fill in
+//! as when someone drops the file into the builder.
 //!
-//! We run the command line's `export` through `complete_export`, so
-//! `rominabox-cli export game.md` makes the same game as dropping game.md
-//! into the builder and creating the app.
+//! In the command line we run `export` through `complete_export` and `export`,
+//! so with `rominabox-cli export game.md` we make the same game as when
+//! someone drops game.md into the builder and creates the app. We run
+//! `project-save` through `complete_game`, and `preview` through
+//! `complete_preview`.
 
-use crate::packaging::{ExportRequest, ExportTarget};
+use crate::export_error::{ErrorStage, ExportError};
+use crate::game::Game;
+use crate::metadata::Inspection;
+use crate::packaging::{ExportProgress, ExportRequest, ExportResult, ExportTarget};
 use crate::target::Target;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicBool;
 use std::sync::OnceLock;
 
 /// The settings a dropped game starts with, before its author changes any.
@@ -165,40 +171,100 @@ pub fn identifier() -> String {
         .to_string()
 }
 
-/// The runtime kit in the builder, for the command line. In a built builder
-/// it is beside the command, where `bin/` and `runtime/` are both resources.
-/// Otherwise it is this checkout's, written by `scripts/build_kit.py`.
-pub fn runtime_kit() -> Option<PathBuf> {
+/// Where we find the builder's resources for the command line: beside the
+/// command in a built builder, where `bin/` is beside `runtime/` and
+/// `preview/`, else in this checkout, from `scripts/build_kit.py`.
+fn resource_folders() -> impl Iterator<Item = PathBuf> {
     let beside = std::env::current_exe()
         .ok()
-        .and_then(|program| Some(program.parent()?.parent()?.join("runtime")));
+        .and_then(|program| Some(program.parent()?.parent()?.to_path_buf()));
     beside
         .into_iter()
-        .chain([crate::repo::at("desktop/src-tauri/resources/runtime")])
+        .chain([crate::repo::at("desktop/src-tauri/resources")])
+}
+
+/// One of the builder's resources, by its path inside them, for the command
+/// line. In the builder we find them through Tauri.
+pub fn resource(relative: &str) -> Result<PathBuf, String> {
+    resource_folders()
+        .map(|folder| folder.join(relative))
+        .find(|path| path.exists())
+        .ok_or_else(|| format!("no {relative} is beside this command or in this checkout"))
+}
+
+/// The runtime kit inside the builder, for the command line.
+pub fn runtime_kit() -> Option<PathBuf> {
+    resource_folders()
+        .map(|folder| folder.join("runtime"))
         .find(|kit| kit.join("manifest.json").is_file())
 }
 
-/// `request`, completed as we complete a dropped game in the builder.
+/// A request completed as in the builder, and what we found for it in the
+/// builder's lookup, as we print it in `inspect`. It is `None` for a request
+/// that named its title and console, because we do not look such a request up.
+pub struct Completed<T> {
+    pub request: T,
+    pub identified: Option<Inspection>,
+}
+
+/// `request` completed as in the builder for a dropped game.
 ///
-/// When a request leaves out the game's title or console, we identify it with
-/// the builder's own identification and fill in the title, console and cover
-/// that it leaves out. We do not look up a request with both, so its cover is
-/// the one in the request, or none. A lookup
-/// would also check the console against the file, as when someone chooses a
-/// console in the builder, and would reject games that we accept in the export.
+/// We complete the game as in `complete_game`. Where the game goes, and the
+/// kit and core cache we make it from, are the builder's. For every setting
+/// a request leaves out, we use the builder's default, through the serde
+/// defaults of `ExportRequest`. We keep what the request states, `null`
+/// included. `"icon": null` is a game without a cover, and with
+/// `"coreCache": null` we take the core from the kit alone.
+pub fn complete_export(mut request: Map<String, Value>) -> Result<Completed<ExportRequest>, String> {
+    let places = Places::of(identifier());
+    let (identified, target) = fill_game(&mut request, &places)?;
+    if !request.contains_key("outputDir") {
+        request.insert("outputDir".into(), json!(destination()?));
+    }
+    if !request.contains_key("runtimeKit") {
+        let own = runtime_kit().ok_or(
+            "no runtime kit is beside this command or in this checkout; name one as runtimeKit",
+        )?;
+        request.insert("runtimeKit".into(), json!(kit_for(&target, &own, &places)?));
+    }
+    if !request.contains_key("coreCache") {
+        if let Some(platform) = target.target() {
+            request.insert("coreCache".into(), json!(places.core_cache(platform)?));
+        }
+    }
+    let request = serde_json::from_value(Value::Object(request))
+        .map_err(|error| format!("invalid export request: {error}"))?;
+    Ok(Completed { request, identified })
+}
+
+/// `game` completed as in the builder for a dropped game: the game we save
+/// in `project-save` for a request with only its file.
 ///
-/// The game's folder, its platform, and the kit and core cache we make it
-/// from are the builder's. For every setting a request leaves out we use the
-/// builder's default, through `ExportRequest`'s serde defaults. We keep what
-/// it states, `null` included: `"icon": null` is a game without a cover, and
-/// with `"coreCache": null` we take the core from the kit alone.
+/// For a game without its title or console, we use the builder's own
+/// identification to fill in the title, console and cover it leaves out. We
+/// do not look up a game with both, and its cover is the one it states, or
+/// none. A lookup would also check the console against the file, as when
+/// someone chooses a console in the builder, and we would reject games we
+/// can export. The platform is the one the command runs on.
 ///
-/// Two fields control the lookup and are not part of the game: `online`, and
+/// Two fields are for the lookup and not part of the game: `online`, and
 /// `metadataCache`, where we cache lookups. Both default to the builder's.
-pub fn complete_export(mut request: Map<String, Value>) -> Result<ExportRequest, String> {
+pub fn complete_game(mut game: Map<String, Value>) -> Result<Completed<Game>, String> {
+    let (identified, _) = fill_game(&mut game, &Places::of(identifier()))?;
+    let request = serde_json::from_value(Value::Object(game))
+        .map_err(|error| format!("invalid game: {error}"))?;
+    Ok(Completed { request, identified })
+}
+
+/// `request` with the game's fields that we fill in `complete_game`, the
+/// lookup when there was one, and the platform the game is for.
+fn fill_game(
+    request: &mut Map<String, Value>,
+    places: &Places,
+) -> Result<(Option<Inspection>, ExportTarget), String> {
     let rom: PathBuf = match request.get("rom") {
         Some(Value::String(rom)) => rom.into(),
-        _ => return Err("an export request names its game as rom".into()),
+        _ => return Err("a request names its game as rom".into()),
     };
     // The file that someone means by a drop: the sheet that lists a dropped
     // track, or the game in a dropped folder.
@@ -210,8 +276,8 @@ pub fn complete_export(mut request: Map<String, Value>) -> Result<ExportRequest,
         Some(other) => return Err(format!("online is true or false, not {other}")),
     };
     let metadata_cache = request.remove("metadataCache");
-    let places = Places::of(identifier());
 
+    let mut identified = None;
     if !request.contains_key("title") || !request.contains_key("system") {
         let cache = match metadata_cache {
             Some(Value::String(cache)) => PathBuf::from(cache),
@@ -234,11 +300,12 @@ pub fn complete_export(mut request: Map<String, Value>) -> Result<ExportRequest,
         ] {
             request.entry(field).or_insert(value);
         }
+        identified = Some(found);
     }
 
     let target: ExportTarget = match request.get("target") {
         Some(stated) => serde_json::from_value(stated.clone())
-            .map_err(|error| format!("invalid export request: target: {error}"))?,
+            .map_err(|error| format!("invalid target: {error}"))?,
         None => {
             let host = ExportTarget::of_host()
                 .ok_or("the builder does not make games on this machine; name a target")?;
@@ -246,24 +313,77 @@ pub fn complete_export(mut request: Map<String, Value>) -> Result<ExportRequest,
             host
         }
     };
-    if !request.contains_key("outputDir") {
-        request.insert("outputDir".into(), json!(destination()?));
+    Ok((identified, target))
+}
+
+/// The kit we make a game for `platform` from. For the builder's platform it
+/// is `own`, the builder's kit. For the other platform it is that platform's
+/// kit, which we download to the builder's kit store at first use (`kits`).
+pub fn kit_for(platform: &ExportTarget, own: &Path, places: &Places) -> Result<PathBuf, String> {
+    crate::kits::for_export(platform, own, &places.kit_store()?, &crate::cores::UreqTransport)
+}
+
+/// Make the game `request` describes, as with Create app in the builder: from
+/// the request's kit, or, for both platforms, each platform's game from its
+/// own kit (`kit_for`, beside `own_kit`) and core cache, in one zip.
+pub fn export(
+    request: &ExportRequest,
+    own_kit: Option<&Path>,
+    places: &Places,
+    cancelled: &AtomicBool,
+    report: impl FnMut(ExportProgress),
+) -> Result<ExportResult, ExportError> {
+    if !request.game.both_platforms {
+        return crate::packaging::export_game(request, cancelled, report);
     }
-    if !request.contains_key("runtimeKit") {
-        let own = runtime_kit().ok_or(
-            "no runtime kit is beside this command or in this checkout; name one as runtimeKit",
-        )?;
-        // We make a game for the other platform from that platform's kit.
-        let kit = crate::kits::for_export(&target, &own, &places.kit_store()?, &crate::cores::UreqTransport)?;
-        request.insert("runtimeKit".into(), json!(kit));
-    }
-    if !request.contains_key("coreCache") {
-        if let Some(platform) = target.target() {
-            request.insert("coreCache".into(), json!(places.core_cache(platform)?));
+    let own_kit = own_kit.ok_or_else(|| {
+        ExportError::new(
+            ErrorStage::Refused,
+            "no runtime kit is beside this command or in this checkout",
+        )
+    })?;
+    let kit_for = |platform: &ExportTarget| kit_for(platform, own_kit, places);
+    let core_cache_for = |target| places.core_cache(target).ok();
+    crate::packaging::export_for_both(request, &kit_for, &core_cache_for, cancelled, report)
+}
+
+/// The size at which we draw the preview in the builder's Menu step.
+const PREVIEW_SIZE: (u32, u32) = (960, 600);
+
+/// `request` completed as for the preview in the builder's Menu step: the
+/// design in `theme`, else the builder's, from the kit's designs, the
+/// builder's palette, the kit's controller artwork, the builder's preview
+/// renderer, and 960 by 600. With `resource` we find one of the builder's
+/// resources by its path inside them. What the request states comes first,
+/// so with `design`, a design's folder, we draw a design the kit lacks.
+pub fn complete_preview(
+    mut request: Map<String, Value>,
+    resource: &dyn Fn(&str) -> Result<PathBuf, String>,
+) -> Result<crate::menu::PreviewRequest, String> {
+    let theme = match request.remove("theme") {
+        None | Some(Value::Null) => unstated::theme(),
+        Some(Value::String(theme)) => theme,
+        Some(other) => return Err(format!("theme is a design's id, not {other}")),
+    };
+    let renderer = || -> Result<PathBuf, String> {
+        let host = Target::host().ok_or("this machine is not one the builder builds for")?;
+        resource(&crate::packaging::preview_renderer(host)?)
+    };
+    let unstated: [(&str, &dyn Fn() -> Result<Value, String>); 6] = [
+        ("design", &|| Ok(json!(resource(&format!("runtime/designs/{theme}"))?))),
+        ("assets", &|| Ok(json!(resource("runtime/menu-assets")?))),
+        ("renderer", &|| Ok(json!(renderer()?))),
+        ("palette", &|| Ok(json!(unstated::palette()))),
+        ("width", &|| Ok(json!(PREVIEW_SIZE.0))),
+        ("height", &|| Ok(json!(PREVIEW_SIZE.1))),
+    ];
+    for (field, value) in unstated {
+        if !request.contains_key(field) {
+            request.insert(field.into(), value()?);
         }
     }
     serde_json::from_value(Value::Object(request))
-        .map_err(|error| format!("invalid export request: {error}"))
+        .map_err(|error| format!("invalid preview request: {error}"))
 }
 
 #[cfg(test)]

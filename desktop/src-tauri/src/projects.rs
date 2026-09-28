@@ -442,6 +442,7 @@ fn validate_choices(settings: &Game) -> Result<(), String> {
         return Err("project theme and palette are required".to_string());
     }
     let design = crate::themes::design_root(&settings.theme)?;
+    crate::themes::palette(&settings.palette)?;
     crate::achievements::entries(
         &design,
         settings.include_achievements,

@@ -529,16 +529,9 @@ export function App() {
       const path = await bridge.pickProjectOpen();
       if (!path) return;
       setBusy("project");
+      // In open_project we reject a design or palette that this build lacks.
       const loaded = await bridge.openProject(path);
       const settings = loaded.settings;
-      if (
-        !designs.designs.some((design) => design.id === settings.theme) ||
-        !designs.palettes.some((value) => value.id === settings.palette)
-      ) {
-        throw new Error(
-          "This project uses a menu design or palette unavailable in this build.",
-        );
-      }
       generation.current++;
       imageGeneration.current.icon++;
       imageGeneration.current.background++;

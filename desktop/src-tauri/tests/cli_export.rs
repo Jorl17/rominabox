@@ -1,12 +1,15 @@
 //! With only a game, `export` makes the same game as dropping it into the
-//! builder, identified in the same way and with the builder settings for
-//! everything else. A value in the request replaces the builder setting.
+//! builder. We identify it as in the builder and use the builder's settings
+//! for everything else, and anything the request states takes precedence. We
+//! print what the author sees in the details step, which is the lookup, the
+//! files that go with the game, and the BIOS assessment. With only a game,
+//! `project-save` saves the same project as the builder.
 //!
-//! We make no network request here. The lookup is off (`online: false`), and
-//! we write the catalogue and the cover into the cache as a lookup would. The
-//! kit is the stand-in kit with the files required for the builder settings,
-//! which are the designs, the controller artwork, the logo, and a player with
-//! achievements support.
+//! These tests do not use the network. The lookup is off (`online: false`),
+//! and we write the catalogue and the cover into the cache as a lookup leaves
+//! them. The kit is the stand-in kit, with the files beside it that the
+//! builder's settings need, which are the designs, the controller artwork,
+//! the logo, and a player that reports support for achievements.
 #![cfg(any(windows, target_os = "macos"))]
 
 mod export_fixture;
@@ -98,8 +101,13 @@ fn request(root: &Path) -> Value {
 
 /// Whether the export succeeded, its last line of output, and all its output.
 fn export(request: &Value) -> (bool, Value, String) {
+    run("export", request)
+}
+
+/// Whether `command` succeeded, its last line of output, and all its output.
+fn run(command: &str, request: &Value) -> (bool, Value, String) {
     let mut child = Command::new(env!("CARGO_BIN_EXE_rominabox-cli"))
-        .arg("export")
+        .arg(command)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -123,6 +131,24 @@ fn export(request: &Value) -> (bool, Value, String) {
         .and_then(|line| serde_json::from_str(line).ok())
         .unwrap_or(Value::Null);
     (output.status.success(), last, printed)
+}
+
+/// The `kind` lines printed, each as its payload.
+fn events(printed: &str, kind: &str) -> Vec<Value> {
+    printed
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+        .filter(|line| line["type"] == kind)
+        .map(|line| line[kind].clone())
+        .collect()
+}
+
+/// The one `kind` line printed, as its payload.
+fn event(printed: &str, kind: &str) -> Value {
+    match events(printed, kind).as_slice() {
+        [one] => one.clone(),
+        other => panic!("{} {kind} lines were printed: {printed}", other.len()),
+    }
 }
 
 #[cfg(windows)]
@@ -191,6 +217,115 @@ fn a_game_alone_is_exported_as_the_builder_makes_it() {
     assert_eq!(game["theme"], builder.theme, "{game}");
     assert_eq!(game["palette"], builder.palette, "{game}");
     assert_eq!(game["menuSounds"], builder.menu_sounds, "{game}");
+
+    // What the author sees in the details step, the lookup and the files that
+    // go with the game. A Mega Drive runs without a BIOS, so there is no assessment.
+    let identified = event(&printed, "identified");
+    assert_eq!(identified["title"], TITLE, "{identified}");
+    assert_eq!(identified["system"], "megadrive", "{identified}");
+    assert_eq!(identified["matched"], true, "{identified}");
+    assert_eq!(identified["catalogName"], NAME, "{identified}");
+    assert!(identified["iconPath"].is_string(), "{identified}");
+    assert!(identified["warnings"].is_array(), "{identified}");
+    let content = event(&printed, "content");
+    assert_eq!(content["files"], json!(["cartridge.md"]), "{content}");
+    assert!(events(&printed, "firmware").is_empty(), "{printed}");
+}
+
+/// We show the lookup warnings under More details in the builder, and print
+/// them at export.
+#[test]
+fn the_lookups_warnings_are_printed() {
+    let root = Scratch::dir("rominabox-cli-export-warnings");
+    let mut uncached = request(root.path());
+    let empty = root.path().join("nothing-cached");
+    fs::create_dir_all(&empty).unwrap();
+    uncached["metadataCache"] = json!(empty);
+    let (exported, _, printed) = export(&uncached);
+    assert!(exported, "{printed}");
+    let identified = event(&printed, "identified");
+    assert_eq!(identified["matched"], false, "{identified}");
+    let warnings: Vec<&str> = identified["warnings"]
+        .as_array()
+        .expect("warnings")
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    assert!(
+        warnings.iter().any(|warning| warning.contains(&format!("{CATALOG} checksum catalog is not cached"))),
+        "{identified}"
+    );
+}
+
+/// Beside the BIOS picker in the builder we show why a file did not count, and
+/// at export we print the same assessment for a console with a required BIOS.
+#[test]
+fn the_bios_assessment_is_printed() {
+    let root = Scratch::dir("rominabox-cli-export-bios");
+    let disc = root.path().join("disc.bin");
+    fs::write(&disc, vec![0u8; 2352 * 16]).unwrap();
+    let sheet = root.path().join("disc.cue");
+    fs::write(&sheet, "FILE \"disc.bin\" BINARY\n  TRACK 01 MODE2/2352\n    INDEX 01 00:00:00\n").unwrap();
+    let notes = root.path().join("notes.txt");
+    fs::write(&notes, "not a BIOS").unwrap();
+    let request = json!({
+        "rom": sheet,
+        "title": "Disc",
+        "system": "ps1",
+        "firmware": [notes],
+        "runtimeKit": kit(root.path()),
+        "coreCache": null,
+        "outputDir": root.path().join("out"),
+    });
+    // There is no PlayStation core in the stand-in kit, so the export stops
+    // at the kit check. We print the assessment before the export starts.
+    let (_, _, printed) = export(&request);
+    let firmware = event(&printed, "firmware");
+    assert_eq!(firmware["files"][0]["name"], "notes.txt", "{firmware}");
+    assert_eq!(firmware["files"][0]["counted"], false, "{firmware}");
+    assert!(firmware["files"][0]["reason"].is_string(), "{firmware}");
+    let content = event(&printed, "content");
+    assert_eq!(content["files"], json!(["disc.cue", "disc.bin"]), "{content}");
+    // The request contains the title and console, so we do not look it up.
+    assert!(events(&printed, "identified").is_empty(), "{printed}");
+}
+
+/// With only a game, `project-save` saves the same as dropping the game into
+/// the builder and saving the project, which is the title, console and cover
+/// from the lookup, the builder's settings, and the host's platform.
+#[test]
+fn a_game_alone_is_saved_as_the_builder_saves_it() {
+    let root = Scratch::dir("rominabox-cli-project-alone");
+    let (rom, cache) = catalogued(root.path());
+    let archive = root.path().join("game.rominabox");
+    let (saved, _, printed) = run(
+        "project-save",
+        &json!({
+            "archivePath": archive,
+            "settings": { "rom": rom, "online": false, "metadataCache": cache },
+        }),
+    );
+    assert!(saved, "{printed}");
+    assert_eq!(event(&printed, "identified")["title"], TITLE, "{printed}");
+
+    let opened = rominabox_desktop::projects::open_project(&rominabox_desktop::projects::ProjectOpenRequest {
+        archive_path: archive,
+        extraction_dir: root.path().join("opened"),
+    })
+    .unwrap();
+    let game = serde_json::to_value(&opened.settings).unwrap();
+    assert_eq!(game["title"], TITLE, "{game}");
+    assert_eq!(game["system"], "megadrive", "{game}");
+    assert!(game["icon"].is_string(), "the cover was not saved: {game}");
+    assert_eq!(
+        game["target"],
+        json!(rominabox_desktop::packaging::ExportTarget::of_host().unwrap()),
+        "{game}"
+    );
+    let builder = defaults();
+    assert_eq!(game["splash"], builder.splash, "{game}");
+    assert_eq!(game["theme"], builder.theme, "{game}");
+    assert_eq!(game["palette"], builder.palette, "{game}");
 }
 
 #[test]
@@ -245,6 +380,7 @@ fn a_request_that_names_its_game_is_not_looked_up() {
     assert_eq!(game["title"], "Stand-in", "{game}");
     assert_eq!(game["system"], "megadrive", "{game}");
     assert_eq!(game["splash"], defaults().splash, "{game}");
+    assert!(events(&printed, "identified").is_empty(), "{printed}");
 }
 
 /// `export GAME` is the whole request. When stdin is a pipe nobody writes to,

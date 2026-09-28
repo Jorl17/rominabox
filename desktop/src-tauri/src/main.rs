@@ -3,8 +3,9 @@
 use rominabox_desktop::export_error::{AuthorError, ErrorStage};
 use rominabox_desktop::target::Target;
 use rominabox_desktop::{
-    builder, cores, icons, kits, menu, menu_controls, metadata, packaging, pads, projects, systems, traveling,
+    builder, cores, icons, menu, menu_controls, metadata, packaging, pads, projects, systems, traveling,
 };
+use serde_json::json;
 use std::{
     fs,
     io::Cursor,
@@ -81,30 +82,28 @@ async fn menu_preview(
     palette: Option<String>,
     design: Option<String>,
 ) -> Result<Vec<u8>, String> {
-    let target = Target::host().ok_or("this machine is not one the builder builds for")?;
-    let renderer = resource(&app, &packaging::preview_renderer(target)?)?;
-    // The design the author picked, from its own directory, and the shared
-    // controller artwork from the kit's directory, which is not a design.
-    let chosen = design.unwrap_or_else(builder::unstated::theme);
-    let design = resource(&app, &format!("runtime/designs/{chosen}"))?;
-    let assets = resource(&app, "runtime/menu-assets")?;
     let cache = app.path().app_cache_dir().map_err(|e| e.to_string())?;
     let directory = cache.join(format!(
         "menu-preview-{}-{}",
         std::process::id(),
         PREVIEW_SEQUENCE.fetch_add(1, Ordering::Relaxed)
     ));
+    // The design that the author chose, by its id. For what the author has not
+    // chosen we use the builder's defaults, as in the command line's `preview`.
+    let mut stated = serde_json::Map::new();
+    stated.insert("outputDir".into(), json!(directory));
+    if let Some(design) = design {
+        stated.insert("theme".into(), json!(design));
+    }
+    if let Some(palette) = palette {
+        stated.insert("palette".into(), json!(palette));
+    }
+    if let Some(background) = background {
+        stated.insert("background".into(), json!(background));
+    }
+    let request = builder::complete_preview(stated, &|relative| resource(&app, relative))?;
     tauri::async_runtime::spawn_blocking(move || {
-        let output = menu::render_preview(&menu::PreviewRequest {
-            design,
-            assets,
-            renderer,
-            output_dir: directory,
-            palette: palette.unwrap_or_else(builder::unstated::palette),
-            background,
-            width: 960,
-            height: 600,
-        })?;
+        let output = menu::render_preview(&request)?;
         fs::read(output).map_err(|e| e.to_string())
     })
     .await
@@ -177,12 +176,12 @@ async fn run_export(
 ) -> Result<packaging::ExportResult, packaging::ExportError> {
     let shell = |message: String| packaging::ExportError::new(ErrorStage::Export, message);
     let bundled = resource(&app, "runtime").map_err(shell)?;
-    let kit_store = places(&app).kit_store().map_err(shell)?;
+    let places = places(&app);
     request.core = None;
     request.core_cache = request
         .game.target
         .target()
-        .and_then(|target| places(&app).core_cache(target).ok());
+        .and_then(|target| places.core_cache(target).ok());
     let cancelled = Arc::new(AtomicBool::new(false));
     {
         let mut active = state.0.lock().map_err(|e| shell(e.to_string()))?;
@@ -195,23 +194,17 @@ async fn run_export(
         *active = Some(cancelled.clone());
     }
     let events = app.clone();
-    let caches = places(&app);
     let result = tauri::async_runtime::spawn_blocking(move || {
-        // We make a game for the other platform from that platform's kit,
-        // which we may have to download first.
-        let kit_for = |platform: &packaging::ExportTarget| {
-            kits::for_export(platform, &bundled, &kit_store, &cores::UreqTransport)
-        };
         let report = |progress| {
             let _ = events.emit("export-progress", progress);
         };
-        if request.game.both_platforms {
-            let core_cache_for = |target| caches.core_cache(target).ok();
-            return packaging::export_for_both(&request, &kit_for, &core_cache_for, &cancelled, report);
+        // We make a game for the other platform from that platform's kit,
+        // which we may have to download first.
+        if !request.game.both_platforms {
+            request.runtime_kit = builder::kit_for(&request.game.target, &bundled, &places)
+                .map_err(|message| packaging::ExportError::new(ErrorStage::Refused, message))?;
         }
-        request.runtime_kit = kit_for(&request.game.target)
-            .map_err(|message| packaging::ExportError::new(ErrorStage::Refused, message))?;
-        packaging::export_game(&request, &cancelled, report)
+        builder::export(&request, Some(&bundled), &places, &cancelled, report)
     })
     .await;
     *state.0.lock().map_err(|e| shell(e.to_string()))? = None;
