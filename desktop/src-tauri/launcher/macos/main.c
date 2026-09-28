@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <mach-o/dyld.h>
-#include <mach-o/loader.h>
 #include <pwd.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -17,6 +16,7 @@
 #include <unistd.h>
 
 #include "../launch.h"
+#include "arguments.h"
 
 /* stdout is fully buffered when it is not a terminal. In the launcher we
  * point it at launch.log, so when the player is killed, or still running when
@@ -34,38 +34,6 @@ static void die_errno(const char *message) {
 
 static char *forwarded_argv[LAUNCH_ARGUMENTS_CAP + 1];
 static int forwarded_argc;
-
-static void publish_arguments(void) {
-    const struct mach_header_64 *header =
-        (const struct mach_header_64 *)_dyld_get_image_header(0);
-    const uint8_t *commands;
-    uint32_t offset = 0;
-    uint32_t command_index;
-    if (!header || header->magic != MH_MAGIC_64)
-        return;
-    commands = (const uint8_t *)(header + 1);
-    for (command_index = 0; command_index < header->ncmds; command_index++) {
-        const struct load_command *command =
-            (const struct load_command *)(commands + offset);
-        if (command->cmd == LC_MAIN) {
-            const struct entry_point_command *entry =
-                (const struct entry_point_command *)command;
-            const uint8_t *trampoline = (const uint8_t *)header + entry->entryoff;
-            uint64_t argc_address;
-            uint64_t argv_address;
-            intptr_t slide;
-            if (memcmp(trampoline + 20, "RBOXLNCH", 8) != 0)
-                return;
-            memcpy(&argc_address, trampoline + 28, sizeof argc_address);
-            memcpy(&argv_address, trampoline + 36, sizeof argv_address);
-            slide = _dyld_get_image_vmaddr_slide(0);
-            *(uint64_t *)(slide + (intptr_t)argc_address) = (uint64_t)forwarded_argc;
-            *(uint64_t *)(slide + (intptr_t)argv_address) = (uint64_t)(uintptr_t)forwarded_argv;
-            return;
-        }
-        offset += command->cmdsize;
-    }
-}
 
 static void prepare(void) {
     char executable[LAUNCH_PATH_CAP];
@@ -161,7 +129,7 @@ static void prepare(void) {
         forwarded_argv[index + 1] = launch.arguments[index];
     forwarded_argc = launch.argument_count + 1;
     forwarded_argv[forwarded_argc] = NULL;
-    publish_arguments();
+    rominabox_publish_arguments(forwarded_argc, forwarded_argv);
 }
 
 #ifdef ROMINABOX_PLAN_MAIN
