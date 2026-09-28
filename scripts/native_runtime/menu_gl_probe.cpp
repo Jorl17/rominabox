@@ -12,6 +12,9 @@
  * menu frame, with the unpack row length still at the value from glcore,
  * as when we make the picture of a glyph in RmlUi during a menu frame.
  *
+ * We also draw the menu into a separate framebuffer bound as the window's,
+ * as in a fullscreen Windows game, where we bind the framebuffer from DXGI.
+ *
  * We make the context in the code for each platform (gl_context.h). */
 
 #include "gl_context.h"
@@ -248,6 +251,76 @@ Text draws_text_as_given(bool core, const char *name, const std::string& picture
    return result;
 }
 
+struct Window
+{
+   bool drawn = false;
+   bool still_bound = false;
+};
+
+/* Before we draw the menu, we bind the framebuffer that stands for the
+ * window: the default one in a window, and the one from DXGI in a fullscreen
+ * Windows game, so that HDR stays on (gl_window.h). We must draw the menu into
+ * that framebuffer. Drawn into framebuffer 0, the menu is never presented and
+ * does not appear in a fullscreen game. */
+Window draws_into_the_window(bool core)
+{
+   Window result;
+   const int width = 64;
+   const int height = 64;
+   GLuint texture = 0;
+   GLuint window = 0;
+   glGenTextures(1, &texture);
+   glBindTexture(GL_TEXTURE_2D, texture);
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+   glBindTexture(GL_TEXTURE_2D, 0);
+   glGenFramebuffers(1, &window);
+   glBindFramebuffer(GL_FRAMEBUFFER, window);
+   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+   glViewport(0, 0, width, height);
+   glClearColor(0, 0, 0, 1);
+   glClear(GL_COLOR_BUFFER_BIT);
+
+   auto renderer = rib_menu_renderer(core);
+   renderer->SetViewport(width, height);
+   const Rml::ColourbPremultiplied red(255, 0, 0, 255);
+   Rml::Vertex vertices[4] = {
+      {{0, 0}, red, {0, 0}},
+      {{(float)width, 0}, red, {1, 0}},
+      {{(float)width, (float)height}, red, {1, 1}},
+      {{0, (float)height}, red, {0, 1}},
+   };
+   const int indices[6] = {0, 1, 2, 0, 2, 3};
+   Rml::CompiledGeometryHandle geometry = renderer->CompileGeometry(
+         Rml::Span<const Rml::Vertex>(vertices, 4),
+         Rml::Span<const int>(indices, 6));
+   GLuint vao = 0;
+   if (core)
+   {
+      glGenVertexArrays(1, &vao);
+      glBindVertexArray(vao);
+   }
+   renderer->BeginFrame();
+   renderer->RenderGeometry(geometry, Rml::Vector2f(0, 0), 0);
+   renderer->EndFrame();
+   renderer->ReleaseGeometry(geometry);
+   if (core)
+      glDeleteVertexArrays(1, &vao);
+
+   GLint bound = 0;
+   glGetIntegerv(GL_FRAMEBUFFER_BINDING, &bound);
+   result.still_bound = bound == (GLint)window;
+   glBindFramebuffer(GL_FRAMEBUFFER, window);
+   glFinish();
+   unsigned char rgba[4] = {};
+   glPixelStorei(GL_PACK_ALIGNMENT, 1);
+   glReadPixels(width / 2, height / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+   result.drawn = rgba[0] > 200 && rgba[1] < 40 && rgba[2] < 40;
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+   glDeleteFramebuffers(1, &window);
+   glDeleteTextures(1, &texture);
+   return result;
+}
+
 /* Read a picture that the menu shows, such as a slot picture, through
  * libretro's file layer, decode it from memory and return its size. The
  * folder name is like a game's data folder under a non-ASCII home folder. */
@@ -273,7 +346,18 @@ int check(bool core, Leftover leftover, const char *name, const std::string& pic
    const bool loaded = loads_picture(core, picture);
    /* Once per context, because this check is not about the leftover arrays. */
    const Text text = leftover == Leftover::none ? draws_text_as_given(core, name, picture) : Text{true, true};
+   const Window window = leftover == Leftover::none ? draws_into_the_window(core) : Window{true, true};
    offscreen_gl_release(context);
+   if (!window.drawn)
+   {
+      std::printf("FAIL %s context menu did not draw into the framebuffer bound as the window\n", name);
+      return 1;
+   }
+   if (!window.still_bound)
+   {
+      std::printf("FAIL %s context menu frame did not leave the window's framebuffer bound\n", name);
+      return 1;
+   }
    if (!text.as_given)
    {
       std::printf("FAIL %s context menu text made after a frame left GL_UNPACK_ROW_LENGTH at %d was not drawn as given\n",
