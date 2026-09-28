@@ -246,11 +246,7 @@ pub(super) fn stage_controller_remap(
     core: &crate::systems::Core,
     remaps: &Path,
 ) -> Result<(), ExportError> {
-    let device = profile
-        .core_device
-        .map(|device| format!("input_libretro_device_p1 = \"{device}\"\n"))
-        .unwrap_or_default();
-    let contents = device + moved;
+    let contents = crate::pad_positions::remap_file(profile, moved);
     if contents.is_empty() {
         // Most pads are the core's default device, with nothing moved, and
         // need no remap at all.

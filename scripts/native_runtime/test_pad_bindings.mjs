@@ -125,6 +125,15 @@ int main(void) {
    check(count == 1 && strcmp(kinds[0], "KEY") == 0,
          "with no pad at all there is one line and it is the keyboard's");
 
+   /* A mouse wheel is a mouse line, with its word from mouse_buttons.inc,
+    * which is also the word in the builder. */
+   input_config_binds[0][at].mbutton = RETRO_DEVICE_ID_MOUSE_WHEELUP;
+   count = 0;
+   rib_lines_from_bind(&input_config_binds[0][at], &input_autoconf_binds[0][at], details, kinds, &count);
+   check(find(kinds, count, "MOUSE") >= 0
+         && strcmp(details[find(kinds, count, "MOUSE")], "Wheel up") == 0,
+         "a mouse wheel is listed in its declared word");
+
    if (failures) {
       printf("\\n%d pad binding check(s) failed\\n", failures);
       return 1;

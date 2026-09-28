@@ -2,10 +2,15 @@ import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 
-// We read the controller on the Rust side. Here we answer as a pad would.
-const pad = vi.hoisted(() => ({ pressed: null as string | null }));
+// We read the controller on the Rust side. Here we answer as a pad would:
+// each wait returns the next queued press, or goes on waiting with none.
+const pad = vi.hoisted(() => ({ presses: [] as string[], asked: 0 }));
 vi.mock("./bridge", () => ({
-  capturePadPosition: () => Promise.resolve(pad.pressed),
+  capturePadPosition: () => {
+    pad.asked += 1;
+    const next = pad.presses.shift();
+    return next ? Promise.resolve(next) : new Promise(() => {});
+  },
   cancelPadCapture: () => Promise.resolve(),
 }));
 import { ControlsEditor, emptyControls } from "./controls";
@@ -32,6 +37,21 @@ function renderEditor(system = "atari2600") {
       container.remove();
     },
   };
+}
+
+/** Let the answers for a waiting capture arrive. */
+async function settle() {
+  await act(async () => {
+    for (let tick = 0; tick < 20; tick += 1) await Promise.resolve();
+  });
+}
+
+function buttonNamed(container: HTMLElement, name: string) {
+  const found = [...container.querySelectorAll("button")].find(
+    (button) => button.textContent?.trim() === name,
+  );
+  expect(found, name).toBeTruthy();
+  return found!;
 }
 
 function row(container: HTMLElement, button: string) {
@@ -122,7 +142,7 @@ describe("controller authoring", () => {
       const l2 = bindingButton(container, "L2");
       expect(l2.textContent).toContain("W");
       click(l2);
-      expect(l2.textContent).toMatch(/Press a key…\s*10/);
+      expect(l2.textContent).toMatch(/Press an input…\s*10/);
       expect(container.querySelector("details[open]")).toBeNull();
       press("Space", " ");
       expect(bindingButton(container, "L2").textContent).toContain("Space");
@@ -277,28 +297,187 @@ describe("controller authoring", () => {
     }
   });
 
-  it("moves a control to the position pressed on a controller", async () => {
-    // R2: no Mega Drive pad uses it.
-    pad.pressed = "r2";
+  // In the game's capture we accept a wheel as well as a button, so the
+  // author can set one. The words are from the game (mouse_buttons.inc).
+  it("offers every mouse button the game declares, wheels included", () => {
     const { container, cleanup } = renderEditor("megadrive");
     try {
-      const press = [...row(container, "C").querySelectorAll("button")].find(
-        (button) => button.textContent === "Press on controller",
-      )!;
-      await act(async () => press.click());
-      expect(padSelect(container, "C")!.value).toBe("r2");
+      const mouse = row(container, "C").querySelector(
+        "details select:not([aria-label])",
+      ) as HTMLSelectElement;
+      expect([...mouse.options].map((option) => option.textContent)).toEqual([
+        "None",
+        "Left",
+        "Right",
+        "Middle",
+        "Button 4",
+        "Button 5",
+        "Wheel up",
+        "Wheel down",
+        "Wheel left",
+        "Wheel right",
+      ]);
+      choose(mouse, "wu");
+      expect(mouse.value).toBe("wu");
     } finally {
-      pad.pressed = null;
       cleanup();
     }
   });
 
-  it("leaves a stick's controls where they are", () => {
+  // With one Bind we listen to the keyboard and the controllers at once.
+  it("moves a control to the position pressed on a controller", async () => {
+    // R2: no Mega Drive pad uses it.
+    pad.presses = ["r2"];
+    const { container, cleanup } = renderEditor("megadrive");
+    try {
+      click(bindingButton(container, "C"));
+      await settle();
+      expect(padSelect(container, "C")!.value).toBe("r2");
+      expect(
+        bindingButton(container, "C").querySelector(".binding-pad")
+          ?.textContent,
+      ).toBe("R2");
+      expect(bindingButton(container, "C").textContent).toContain("C");
+      expect(container.textContent).toContain("Binding updated.");
+    } finally {
+      pad.presses = [];
+      cleanup();
+    }
+  });
+
+  it("swaps with the control whose position was pressed, and refuses one another pad keeps", async () => {
+    pad.presses = ["b", "x"];
+    const { container, cleanup } = renderEditor("megadrive");
+    try {
+      click(bindingButton(container, "C"));
+      await settle();
+      expect(padSelect(container, "C")!.value).toBe("b");
+      expect(padSelect(container, "B")!.value).toBe("a");
+      click(bindingButton(container, "A"));
+      await settle();
+      expect(container.textContent).toContain(
+        "Top button is taken. Binding unchanged.",
+      );
+      expect(padSelect(container, "A")!.value).toBe("y");
+    } finally {
+      pad.presses = [];
+      cleanup();
+    }
+  });
+
+  function stickMember(container: HTMLElement, label: string) {
+    return row(container, label).querySelector(".binding-text")!;
+  }
+
+  // We bind a stick as in the game: its directions in order, each with one
+  // press of a key or of the pad, with a mark on the one we wait for.
+  it("binds a stick direction by direction, with keys", async () => {
     const { container, cleanup } = renderEditor("ps1");
     try {
-      expect(padSelect(container, "Cross")).toBeTruthy();
-      expect(padSelect(container, "Left stick up")).toBeNull();
-      expect(padSelect(container, "Left stick press")).toBeNull();
+      expect(padSelect(container, "Left stick up")).toBeTruthy();
+      click(buttonNamed(container, "Bind stick"));
+      expect(row(container, "Left stick up").className).toContain("capturing");
+      expect(stickMember(container, "Left stick up").textContent).toMatch(
+        /Press an input…\s*10/,
+      );
+      press("KeyY", "y");
+      expect(row(container, "Left stick up").className).not.toContain(
+        "capturing",
+      );
+      expect(row(container, "Left stick right").className).toContain(
+        "capturing",
+      );
+      press("KeyM", "m");
+      press("KeyN", "n");
+      press("KeyH", "h");
+      expect(row(container, "Left stick press").className).toContain(
+        "capturing",
+      );
+      press("KeyU", "u");
+      expect(container.textContent).toContain("Binding updated.");
+      expect(stickMember(container, "Left stick up").textContent).toBe(
+        "YLeft stick up",
+      );
+      expect(stickMember(container, "Left stick left").textContent).toBe(
+        "HLeft stick left",
+      );
+      expect(stickMember(container, "Left stick press").textContent).toBe(
+        "UL3",
+      );
+      expect(container.querySelector(".binding-stops")).toBeNull();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("binds a stick onto the pad's d-pad, which takes the stick's place", async () => {
+    pad.presses = ["up", "right", "down", "left", "l3"];
+    const { container, cleanup } = renderEditor("ps1");
+    try {
+      click(buttonNamed(container, "Bind stick"));
+      await settle();
+      expect(container.textContent).toContain("Binding updated.");
+      expect(stickMember(container, "Left stick up").textContent).toBe(
+        "TD-pad up",
+      );
+      expect(stickMember(container, "Left stick left").textContent).toBe(
+        "VD-pad left",
+      );
+      expect(padSelect(container, "Up")!.value).toBe("l_y_minus");
+      expect(padSelect(container, "Left")!.value).toBe("l_x_minus");
+      expect(padSelect(container, "Left stick press")!.value).toBe("l3");
+      expect(container.querySelector(".binding-stops")).toBeNull();
+      expect(pad.asked).toBeGreaterThanOrEqual(5);
+    } finally {
+      pad.presses = [];
+      cleanup();
+    }
+  });
+
+  it("stops a stick partway on Escape, saying what was saved and what stops working", async () => {
+    pad.presses = ["up"];
+    const { container, cleanup } = renderEditor("ps1");
+    try {
+      click(buttonNamed(container, "Bind stick"));
+      await settle();
+      expect(row(container, "Left stick right").className).toContain(
+        "capturing",
+      );
+      press("Escape");
+      expect(container.textContent).toContain("Saved Left stick up.");
+      expect(stickMember(container, "Left stick up").textContent).toBe(
+        "TD-pad up",
+      );
+      expect(stickMember(container, "Left stick right").textContent).toBe(
+        "BLeft stick right",
+      );
+      expect(
+        row(container, "Left stick down").querySelector(".binding-stops")
+          ?.textContent,
+      ).toBe("Left stick down stops working while Left stick up is moved.");
+      expect(document.activeElement).toBe(buttonNamed(container, "Bind stick"));
+    } finally {
+      pad.presses = [];
+      cleanup();
+    }
+  });
+
+  it("asks before a stick's key takes another control's, then goes on", () => {
+    const { container, cleanup } = renderEditor("ps1");
+    try {
+      click(buttonNamed(container, "Bind stick"));
+      // Z is Cross's key.
+      press("KeyZ", "z");
+      expect(container.textContent).toContain("Z also controls Cross.");
+      click(buttonNamed(container, "Use for both"));
+      expect(stickMember(container, "Left stick up").textContent).toBe(
+        "ZLeft stick up",
+      );
+      expect(row(container, "Left stick right").className).toContain(
+        "capturing",
+      );
+      press("Escape");
+      expect(container.textContent).toContain("Saved Left stick up.");
     } finally {
       cleanup();
     }

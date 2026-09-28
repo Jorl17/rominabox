@@ -7,6 +7,24 @@
 use rominabox_scratch::Scratch;
 use std::{path::PathBuf, process::Command};
 
+/// The fork's input layer with its configuration reader, as in the player's
+/// build (`HAVE_CONFIGFILE`): the remap loader, the bind parsers and the
+/// input poll. For use with `build_defining(name, CONFIGURED, INPUT_LAYER)`.
+pub const INPUT_LAYER: &[&str] = &[
+    "configuration.c",
+    "input/input_driver.c",
+    "input/input_keymaps.c",
+    "libretro-common/file/config_file.c",
+    "libretro-common/file/file_path_io.c",
+    "libretro-common/streams/file_stream.c",
+    "libretro-common/vfs/vfs_implementation.c",
+    "libretro-common/compat/compat_strl.c",
+    "libretro-common/string/stdstring.c",
+    "libretro-common/encodings/encoding_utf.c",
+    "libretro-common/file/file_path.c",
+];
+pub const CONFIGURED: &[&str] = &["HAVE_CONFIGFILE"];
+
 pub struct Probe {
     // We remove it, with the program, when we drop the probe.
     _scratch: Scratch,
@@ -17,12 +35,19 @@ impl Probe {
     /// Compile `scripts/native_runtime/<name>.c` with the fork's `sources`,
     /// named relative to `vendor/retroarch`.
     pub fn build(name: &str, sources: &[&str]) -> Self {
+        Self::build_defining(name, &[], sources)
+    }
+
+    /// As `build`, with each of `defined` defined (`HAVE_CONFIGFILE`) in
+    /// every source, as in the player's build.
+    pub fn build_defining(name: &str, defined: &[&str], sources: &[&str]) -> Self {
         let scratch = Scratch::dir(&format!("rominabox-{name}"));
         let built = Command::new(crate::repo::python())
             .arg(crate::repo::at("scripts/retroarch_probe.py"))
             .arg(scratch.path())
             .arg(crate::repo::at(&format!("scripts/native_runtime/{name}.c")))
             .args(sources)
+            .args(defined.iter().map(|name| format!("-D{name}")))
             .output()
             .expect("the probe builder runs");
         assert!(

@@ -1,7 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import registry from "../controls.json";
 import { ControllerScene } from "./ControllerScene";
-import { capturedKey, keyName } from "./keys";
+import { ControlRow, StickRows, type RowContext } from "./ControlRows";
+import { useControlCapture } from "./controlCapture";
+import { mouseButtons } from "./mouse";
+import { stopped } from "./padPositions";
 import { PadField } from "./PadField";
 import systemRegistry from "../systems.json";
 import "./controls.css";
@@ -11,7 +14,8 @@ export type ControlOverride = {
   key?: string;
   /** The pad position we read the control from, when it was moved. */
   pad?: string;
-  mouse?: number;
+  /** The mouse button that also works the control: a `mouseButtons` value. */
+  mouse?: string;
 };
 export type Controls = {
   profile?: string;
@@ -19,7 +23,7 @@ export type Controls = {
 };
 export const emptyControls = (): Controls => ({ bindings: {} });
 
-/** Author defaults. Physical controller bindings remain device-specific player settings. */
+/** Author defaults: each control's label, key, pad position and mouse button. */
 export function ControlsEditor({
   system,
   value,
@@ -44,9 +48,8 @@ export function ControlsEditor({
       (p) => p.id === systemDefinition?.controllerProfile,
     ) ||
     registry.profiles.find((p) => p.id === "retropad")!;
-  // The controls of a stick never move, and neither do those of another
-  // offered pad, because their positions are fixed in the game.
-  const grouped = (control: object) => "group" in control && !!control.group;
+  // The controls of another offered pad stay where they are, because their
+  // positions are fixed in the game, so the author cannot take any of them.
   const others = variants
     .flatMap((variant) => variant.controls)
     .filter(
@@ -54,27 +57,13 @@ export function ControlsEditor({
         !profile.controls.some((own) => own.id === control.id) &&
         all.findIndex((seen) => seen.id === control.id) === index,
     );
-  const movable = profile.controls.filter((control) => !grouped(control));
-  const fixed = [...profile.controls.filter(grouped), ...others];
   const [selected, setSelected] = useState<string | null>(null);
-  const [capturing, setCapturing] = useState(false);
-  const [seconds, setSeconds] = useState(10);
   const [message, setMessage] = useState("");
-  const [pending, setPending] = useState<{
-    key: string;
-    conflicts: string[];
-  } | null>(null);
-  const captureButtons = useRef<Record<string, HTMLButtonElement | null>>({});
-  const restoreFocus = useRef(false);
-  const state = useRef({ value, onChange, selected });
-  state.current = { value, onChange, selected };
+  const buttons = useRef<Record<string, HTMLButtonElement | null>>({});
+  const restoreFocus = useRef<string | null>(null);
+  const state = useRef({ value, onChange });
+  state.current = { value, onChange };
 
-  useEffect(() => {
-    setSelected(null);
-    setCapturing(false);
-    setPending(null);
-    setMessage("");
-  }, [system, profile.id]);
   function patch(id: string, update: Partial<ControlOverride>) {
     const current = state.current;
     current.onChange({
@@ -92,82 +81,82 @@ export function ControlsEditor({
       bindings[id] = { ...bindings[id], pad };
     current.onChange({ ...current.value, bindings });
   }
-  function focusSelected() {
-    restoreFocus.current = true;
-  }
-  useLayoutEffect(() => {
-    // Capture buttons are disabled until React commits the state change.
-    if (capturing || !restoreFocus.current) return;
-    restoreFocus.current = false;
-    const id = state.current.selected;
-    if (id) captureButtons.current[id]?.focus();
+  const binding = useControlCapture({
+    controls: profile.controls,
+    fixed: others,
+    bindings: value.bindings,
+    setKey: (id, key) => patch(id, { key }),
+    movePads,
+    say: setMessage,
+    ended: (stop) => {
+      restoreFocus.current = stop;
+    },
   });
-  function cancel() {
-    setCapturing(false);
-    setPending(null);
-    setMessage("Binding unchanged.");
-    focusSelected();
-  }
-  function startCapture(id: string) {
-    setSelected(id);
-    setPending(null);
-    setMessage("");
-    setSeconds(10);
-    setCapturing(true);
-  }
+  useLayoutEffect(() => {
+    // Bind buttons are disabled until React commits the capture's end.
+    if (binding.capture || !restoreFocus.current) return;
+    const stop = restoreFocus.current;
+    restoreFocus.current = null;
+    buttons.current[stop]?.focus();
+  });
   useEffect(() => {
-    if (!capturing || !profile) return;
-    const deadline = performance.now() + 10000;
-    // Capture begins after the initiating click/keypress. The opening event is never a candidate.
-    const timer = window.setInterval(() => {
-      const remaining = Math.max(
-        0,
-        Math.ceil((deadline - performance.now()) / 1000),
-      );
-      setSeconds(remaining);
-      if (!remaining) cancel();
-    }, 100);
-    const listen = (event: KeyboardEvent) => {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (event.repeat) return;
-      if (event.key === "Escape") {
-        cancel();
-        return;
-      }
-      const key = capturedKey(event);
-      if (!key) {
-        setMessage("Choose a letter, number, arrow or modifier key.");
-        return;
-      }
-      const id = state.current.selected;
-      if (!id) return;
-      const conflicts = profile.controls
-        .filter(
-          (item) =>
-            item.id !== id &&
-            (state.current.value.bindings[item.id]?.key ?? item.key) === key,
-        )
-        .map((item) => item.label);
-      setCapturing(false);
-      if (conflicts.length) setPending({ key, conflicts });
-      else {
-        patch(id, { key });
-        setMessage("Binding updated.");
-        focusSelected();
-      }
-    };
-    const blur = () => cancel();
-    window.addEventListener("keydown", listen, true);
-    window.addEventListener("blur", blur);
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener("keydown", listen, true);
-      window.removeEventListener("blur", blur);
-    };
-  }, [capturing, profile]);
+    setSelected(null);
+    binding.reset();
+    setMessage("");
+  }, [system, profile.id]);
 
   if (!profile) return null;
+  const busy = !!binding.capture || !!binding.pending;
+  const context: RowContext = {
+    bindings: value.bindings,
+    capture: binding.capture,
+    pending: binding.pending,
+    stops: stopped([...profile.controls, ...others], value.bindings),
+    busy,
+    bind: (stop, members) => {
+      setSelected(stop);
+      binding.start(stop, members);
+    },
+    cancel: binding.cancel,
+    useForBoth: binding.useForBoth,
+    label: (id, label) => patch(id, { label }),
+    button: (stop, node) => {
+      buttons.current[stop] = node;
+    },
+    devices: (control) => (
+      <>
+        <PadField
+          control={control}
+          bindings={value.bindings}
+          movable={profile.controls}
+          fixed={others}
+          disabled={busy}
+          onMove={movePads}
+          onMessage={setMessage}
+        />
+        <label>
+          Mouse button
+          <select
+            disabled={busy}
+            value={value.bindings[control.id]?.mouse ?? ""}
+            onChange={(e) =>
+              patch(control.id, {
+                mouse: e.target.value || undefined,
+              })
+            }
+          >
+            <option value="">None</option>
+            {mouseButtons.map((button) => (
+              <option key={button.value} value={button.value}>
+                {button.word}
+              </option>
+            ))}
+          </select>
+        </label>
+      </>
+    ),
+  };
+  const drawn = new Set<string>();
   return (
     <div className="controls-editor">
       <div className="controls-toolbar">
@@ -177,7 +166,7 @@ export function ControlsEditor({
             <select
               aria-label="Controller variant"
               value={profile.id}
-              disabled={capturing}
+              disabled={busy}
               onChange={(e) => {
                 const next = variants.find((p) => p.id === e.target.value)!;
                 const ids = new Set(next.controls.map((c) => c.id));
@@ -209,10 +198,10 @@ export function ControlsEditor({
         <button
           type="button"
           className="text-button"
-          disabled={capturing || !Object.keys(value.bindings).length}
+          disabled={busy || !Object.keys(value.bindings).length}
           onClick={() => {
             onChange({ profile: value.profile, bindings: {} });
-            setPending(null);
+            binding.reset();
             setMessage("Defaults restored.");
           }}
         >
@@ -230,145 +219,33 @@ export function ControlsEditor({
           <tr>
             <th scope="col">Button</th>
             <th scope="col">Action label</th>
-            <th scope="col">Keyboard</th>
+            <th scope="col">Binding</th>
             <th scope="col">Devices</th>
           </tr>
         </thead>
         <tbody>
-          {profile.controls.map((item) => {
-            const override = value.bindings[item.id];
-            const keyLabel = keyName(override?.key ?? item.key);
-            const active = selected === item.id;
+          {profile.controls.map((control) => {
+            const group = "group" in control ? control.group : undefined;
+            if (!group) {
+              return (
+                <ControlRow
+                  key={control.id}
+                  control={control}
+                  context={context}
+                />
+              );
+            }
+            if (drawn.has(group)) return null;
+            drawn.add(group);
             return (
-              <tr
-                key={item.id}
-                className={active && (capturing || pending) ? "capturing" : ""}
-              >
-                <th scope="row">{item.label}</th>
-                <td>
-                  <input
-                    className="action-input"
-                    maxLength={32}
-                    disabled={capturing}
-                    value={override?.label ?? ""}
-                    placeholder={item.label}
-                    aria-label={`${item.label} action label`}
-                    onChange={(e) => patch(item.id, { label: e.target.value })}
-                  />
-                </td>
-                <td>
-                  <div className="control-key-field">
-                    <button
-                      ref={(node) => {
-                        captureButtons.current[item.id] = node;
-                      }}
-                      type="button"
-                      className="binding-button"
-                      disabled={capturing}
-                      aria-label={`${item.label} keyboard, ${
-                        capturing && active
-                          ? `press a key… ${seconds}`
-                          : keyLabel
-                      }`}
-                      onClick={() => startCapture(item.id)}
-                    >
-                      {capturing && active ? (
-                        `Press a key… ${seconds}`
-                      ) : (
-                        <>
-                          <span className="binding-key">{keyLabel}</span>
-                          <span className="binding-edit" aria-hidden="true">
-                            Edit
-                          </span>
-                        </>
-                      )}
-                    </button>
-                    {capturing && active && (
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={cancel}
-                      >
-                        Cancel
-                      </button>
-                    )}
-                    {pending && active && (
-                      <div className="binding-conflict">
-                        <span>
-                          {keyName(pending.key)} also controls{" "}
-                          {pending.conflicts.join(", ")}.
-                        </span>
-                        <button
-                          type="button"
-                          className="secondary"
-                          onClick={() => {
-                            patch(item.id, { key: pending.key });
-                            setPending(null);
-                            setMessage("Both controls use this key.");
-                            focusSelected();
-                          }}
-                        >
-                          Use for both
-                        </button>
-                        <button
-                          type="button"
-                          className="text-button"
-                          onClick={cancel}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  <details className="device-bindings">
-                    <summary title="The controller button and mouse button that also work this control.">
-                      Devices
-                    </summary>
-                    <div className="device-binding-fields">
-                      {!grouped(item) && (
-                        <PadField
-                          control={item}
-                          bindings={value.bindings}
-                          movable={movable}
-                          fixed={fixed}
-                          disabled={capturing}
-                          onMove={movePads}
-                          onMessage={setMessage}
-                        />
-                      )}
-                      <label>
-                        Mouse button
-                        <select
-                          disabled={capturing}
-                          value={override?.mouse ?? ""}
-                          onChange={(e) =>
-                            patch(item.id, {
-                              mouse: e.target.value
-                                ? Number(e.target.value)
-                                : undefined,
-                            })
-                          }
-                        >
-                          <option value="">None</option>
-                          {[
-                            "Left",
-                            "Right",
-                            "Middle",
-                            "Button 4",
-                            "Button 5",
-                          ].map((name, i) => (
-                            <option key={i} value={i + 1}>
-                              {name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                  </details>
-                </td>
-              </tr>
+              <StickRows
+                key={group}
+                group={group}
+                members={profile.controls.filter(
+                  (member) => "group" in member && member.group === group,
+                )}
+                context={context}
+              />
             );
           })}
         </tbody>

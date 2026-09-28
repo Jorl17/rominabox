@@ -74,7 +74,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-width: 7.5em;
+  min-width: 13em;
 }
 .binding-button:focus-visible {
   outline: 3px solid var(--accent);
@@ -84,6 +84,35 @@
   font-size: 11px;
   font-weight: 700;
   color: var(--accent);
+}
+/* The position of a control on the pad, beside its key: the second half of
+ * the callout in the game. */
+.binding-pad {
+  font-size: 12px;
+  color: #4b5563;
+}
+.binding-button .binding-pad {
+  margin-right: auto;
+}
+.binding-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 8px;
+}
+.binding-stops {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: #ab301d;
+}
+/* A stick is one Bind over its directions' rows. */
+.controls-table tr.stick-row th {
+  padding-top: 12px;
+}
+.controls-table tr.stick-member th {
+  padding-left: 22px;
+  font-weight: 500;
 }
 .binding-conflict {
   display: flex;
@@ -103,6 +132,7 @@
 .device-bindings summary {
   cursor: pointer;
   font-size: 14px;
+  white-space: nowrap;
 }
 .device-binding-fields {
   display: flex;
@@ -127,29 +157,20 @@
   font: inherit;
 }
 
-.pad-field {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 8px;
-}
-.pad-field [role="status"] {
-  font-size: 12px;
-  line-height: 32px;
-}
-
 .controls-table .binding-button {
   padding: 0 8px;
 }
 .controls-table .action-input {
   padding: 0 10px;
 }
-.controls-table tr.capturing .binding-button:disabled {
+.controls-table tr.capturing .binding-button:disabled,
+.controls-table tr.stick-member.capturing .binding-text {
   opacity: 1;
-  border-color: var(--accent);
-}
-.controls-table tr.capturing .binding-button:disabled {
+  border: 1px solid var(--accent);
   animation: capture-cue 1s steps(2, end) infinite;
+}
+.controls-table tr.stick-row.capturing .binding-button:disabled {
+  animation: none;
 }
 @keyframes capture-cue {
   50% {
