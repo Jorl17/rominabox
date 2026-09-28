@@ -147,9 +147,9 @@ fn the_launch_trampoline_hands_main_its_arguments_on_both_processors() {
     let signed = Command::new("/usr/bin/codesign")
         .args(["--force", "--sign", "-"])
         .arg(&player)
-        .status()
+        .output()
         .unwrap();
-    assert!(signed.success());
+    assert!(signed.status.success(), "{}", String::from_utf8_lossy(&signed.stderr));
 
     let run = |prefix: &[&str]| {
         let mut command = Command::new(prefix.first().copied().unwrap_or(player.to_str().unwrap()));
