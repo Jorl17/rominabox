@@ -5,7 +5,6 @@ mod app_files;
 mod availability;
 mod identity;
 mod launch_plan;
-mod macos;
 #[cfg(target_os = "macos")]
 mod slices;
 mod validation;
@@ -31,6 +30,7 @@ fn request(splash: bool) -> ExportRequest {
         splash,
         advanced_emulator_access: false,
         intel_macs: false,
+        zip: None,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,

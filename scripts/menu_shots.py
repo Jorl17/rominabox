@@ -619,10 +619,11 @@ def built_player() -> Path:
 
 
 def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
-    """A copy of the runtime kit at `kit` with `player` as its player, and
-    Native and `design` as they are in this tree, not as they were when we
-    froze the kit. We resolve both from this tree in the exporter, and copy
-    Native into menu-assets for the controller art of the old shot path."""
+    """A copy of the runtime kit at `kit` with `player` as its player (on
+    macOS with this tree's launch library attached), and Native and `design`
+    as they are in this tree, not as they were when we froze the kit. We
+    resolve both from this tree in the exporter, and copy Native into
+    menu-assets for the controller art of the old shot path."""
     shutil.copytree(KIT, kit, symlinks=True)
     for package_name in dict.fromkeys(("native", design)):
         package = ROOT / "integrations/designs" / package_name
@@ -638,6 +639,13 @@ def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
     installed = kit / native_build.kit_file(host_target(), "player")
     shutil.copyfile(player, installed)
     installed.chmod(0o755)
+    # The launch library of a macOS kit, built from this tree and attached to
+    # this player, as we do for the player of the kit in scripts/build_kit.py.
+    target_kit = native_build.kit_target(host_target())
+    if native_build.launch_library(target_kit):
+        workspace = kit.parent / "launch-library"
+        workspace.mkdir()
+        native_build.install_launch_library(kit, target_kit, workspace)
     return kit
 
 

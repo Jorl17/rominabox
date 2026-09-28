@@ -12,9 +12,36 @@ use std::path::{Path, PathBuf};
 use crate::export_error::{ErrorStage, ExportError};
 use crate::packaging::{ExportRequest, ExportTarget};
 
-/// The app that an export of `request` produces.
+/// The app, or the zip that contains it, from an export of `request`.
 fn destination(request: &ExportRequest) -> PathBuf {
-    request.output_dir.join(app_name(&request.target, &request.title))
+    request.output_dir.join(output_name(request))
+}
+
+/// Whether we write an export of `request` into a zip: a Mac game when the
+/// request is for one, or, when that is not set, a Mac game made where
+/// files cannot keep the Unix modes of a Mac app's programs (Windows).
+pub(crate) fn zipped(request: &ExportRequest) -> bool {
+    matches!(request.target, ExportTarget::Macos) && request.zip.unwrap_or(!cfg!(unix))
+}
+
+/// What we put in the output folder for an export of `request`: the app, or
+/// a zip with a name every system allows, which contains the app by its name.
+pub(crate) fn output_name(request: &ExportRequest) -> String {
+    if zipped(request) {
+        format!("{}.zip", windows_filename(&request.title))
+    } else {
+        app_name(&request.target, &request.title)
+    }
+}
+
+/// The name under which we build the app for an export of `request` before
+/// moving it into place: its own name, or for a zip, one every system allows.
+pub(crate) fn staged_app_name(request: &ExportRequest) -> String {
+    if zipped(request) {
+        format!("{}.app", windows_filename(&request.title))
+    } else {
+        app_name(&request.target, &request.title)
+    }
 }
 
 /// The name of the app for a game called `title` on `target`, a bundle on

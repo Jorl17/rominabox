@@ -10,6 +10,7 @@
 //! Record again with `ROMINABOX_RECORD_SNAPSHOT=1`, and say in the commit
 //! what changed and why.
 
+mod export_fixture;
 mod support;
 
 use rominabox_desktop::packaging::{ExportRequest, ExportTarget};
@@ -114,6 +115,7 @@ fn export_kit(root: &Path) -> PathBuf {
         .status()
         .unwrap();
     assert!(status.success(), "could not compile the runtime stub");
+    export_fixture::write_launch_library_stub(&kit);
     fs::write(
         kit.join("licenses/NATIVE-DEPENDENCIES.txt"),
         "NATIVE-DEPENDENCIES.txt",
@@ -183,6 +185,7 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
         splash: false,
         advanced_emulator_access: false,
         intel_macs: false,
+        zip: None,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,

@@ -24,7 +24,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import free_space  # noqa: E402
 import menu_shots  # noqa: E402
-from core_source import core_source  # noqa: E402
+import native_build  # noqa: E402
+from core_source import core_source, host_target  # noqa: E402
 
 # Every directory that we write in an export of the quit tests, declared once.
 OWN_WORKSPACES = (ROOT / "work/quit-gbc",)
@@ -52,17 +53,9 @@ def install_player(app: Path, binary: Path, workspace: Path) -> None:
     retroarch = app / "Contents/MacOS/retroarch"
     retroarch.write_bytes(binary.read_bytes())
     retroarch.chmod(0o755)
-    injector = workspace / "inject-dylib"
-    subprocess.run(
-        ["cc", "-Oz", "-o", str(injector), str(ROOT / "scripts/native_runtime/inject_dylib.c")],
-        check=True,
-        timeout=30,
-    )
-    subprocess.run(
-        [str(injector), str(retroarch), "@executable_path/librominabox-launch.dylib"],
-        check=True,
-        timeout=30,
-    )
+    attaching = workspace / "attach-launcher"
+    attaching.mkdir(parents=True, exist_ok=True)
+    native_build.attach_launch_library(retroarch, native_build.kit_target(host_target()), attaching)
     menu_shots.resign_replaced_player(app, entitlements)
 
 

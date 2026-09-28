@@ -1,65 +1,33 @@
-//! The oldest macOS a game runs on, the newest one its programs require.
+//! The oldest macOS for a game, which is the newest minimum of
+//! any of its programs.
 //!
-//! The load commands of each program contain it, per processor slice, in
-//! `minos` of LC_BUILD_VERSION or in `version` of the older
-//! LC_VERSION_MIN_MACOSX, which Intel cores built for old systems still use.
-//! We write the newest of them into the Info.plist of the game, and no newer
-//! one, so Intel Macs, which stop at older systems, can open the game.
+//! The load commands of each program give it per processor slice, as `minos`
+//! of LC_BUILD_VERSION, or `version` of the older LC_VERSION_MIN_MACOSX in
+//! Intel cores built for old systems (`crate::mach_o::minimum_systems`). We
+//! put the newest of them in the game's Info.plist, so it requires no newer
+//! system than necessary, and it opens on Intel Macs with older systems.
 
 use crate::export_error::{ErrorStage, ExportError};
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::fs;
+use std::path::PathBuf;
 
-/// The oldest macOS each slice of `program` runs on.
-fn minimums(program: &Path) -> Result<Vec<Vec<u32>>, ExportError> {
-    let output = Command::new("/usr/bin/otool")
-        .arg("-l")
-        .arg(program)
-        .output()
-        .map_err(|error| {
-            ExportError::new(
-                ErrorStage::Configure,
-                format!("could not run otool: {error}"),
-            )
-        })?;
-    if !output.status.success() {
-        return Err(ExportError::command(
-            ErrorStage::Configure,
-            "otool",
-            &output,
-        ));
-    }
-    let mut found = Vec::new();
-    let mut version_min = false;
-    for line in String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .map(str::trim)
-    {
-        if let Some(command) = line.strip_prefix("cmd ") {
-            version_min = command == "LC_VERSION_MIN_MACOSX";
-        }
-        let version = match line.strip_prefix("minos ") {
-            Some(version) => Some(version),
-            None if version_min => line.strip_prefix("version "),
-            None => None,
-        };
-        if let Some(version) = version {
-            found.push(
-                version
-                    .split('.')
-                    .filter_map(|part| part.parse().ok())
-                    .collect(),
-            );
-        }
-    }
-    Ok(found)
-}
-
-/// The newest of the oldest systems `programs` run on, as `11.0`.
+/// The newest of the oldest systems for `programs`, as `11.0`. We skip a
+/// file that is not a program (a stand-in core in a test).
 pub(super) fn newest(programs: &[PathBuf]) -> Result<String, ExportError> {
     let mut newest: Option<Vec<u32>> = None;
     for program in programs {
-        for minimum in minimums(program)? {
+        let bytes = fs::read(program)
+            .map_err(|error| ExportError::io(ErrorStage::Configure, program, error))?;
+        if !crate::mach_o::is_mach_o(&bytes) {
+            continue;
+        }
+        let minimums = crate::mach_o::minimum_systems(&bytes).map_err(|error| {
+            ExportError::new(
+                ErrorStage::Configure,
+                format!("{}: {error}", program.display()),
+            )
+        })?;
+        for minimum in minimums {
             if newest.as_ref().is_none_or(|current| minimum > *current) {
                 newest = Some(minimum);
             }

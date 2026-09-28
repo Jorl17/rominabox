@@ -1,20 +1,18 @@
-//! The processors that the code of a Mac app is built for.
+//! The processors for the code in a Mac app.
 //!
-//! A Mach-O file contains one slice of code for each processor it runs on,
-//! and a universal file contains several. We read the slices from the file
-//! (`lipo -archs`), never from a list kept next to it. An ordinary game
-//! contains only the slice for this Mac, so it stays small. A game that also
-//! runs on Intel Macs has slices for Apple silicon and Intel in its player,
+//! A Mach-O file contains a slice of code for each processor it runs on, and
+//! a universal file contains several. We read the slices from the file
+//! (`crate::mach_o`), never from a list next to it. An ordinary game contains
+//! only the Apple silicon slice, so it does not grow. A game that also runs
+//! on Intel Macs contains the Apple silicon and Intel slices in its player,
 //! its core and its launch library.
 
 use super::app_files::copy_file;
-use super::{ErrorStage, ExportError, OwnedStaging};
+use super::{ErrorStage, ExportError};
+use crate::mach_o::{self, Cpu};
 use crate::target::Target;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
-
-const LIPO: &str = "/usr/bin/lipo";
 
 /// A processor a Mac runs on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -52,8 +50,15 @@ impl Arch {
         }
     }
 
-    fn named(name: &str) -> Option<Arch> {
-        Arch::ALL.into_iter().find(|arch| arch.name() == name)
+    fn cpu(self) -> Cpu {
+        match self {
+            Arch::Arm64 => Cpu::ARM64,
+            Arch::X86_64 => Cpu::X86_64,
+        }
+    }
+
+    fn of_cpu(cpu: Cpu) -> Option<Arch> {
+        Arch::ALL.into_iter().find(|arch| arch.cpu() == cpu)
     }
 }
 
@@ -69,7 +74,10 @@ pub(crate) struct Slices {
 impl Slices {
     /// The first of `wanted` this file has no slice for.
     fn missing(&self, wanted: &[Arch]) -> Option<Arch> {
-        wanted.iter().copied().find(|arch| !self.archs.contains(arch))
+        wanted
+            .iter()
+            .copied()
+            .find(|arch| !self.archs.contains(arch))
     }
 
     /// It contains `wanted` and nothing else.
@@ -80,32 +88,46 @@ impl Slices {
     }
 }
 
-/// The slices in `path`.
-pub(crate) fn read(path: &Path, stage: ErrorStage) -> Result<Slices, ExportError> {
-    let output = Command::new(LIPO)
-        .arg("-archs")
-        .arg(path)
-        .output()
-        .map_err(|error| ExportError::new(stage, format!("could not run lipo: {error}")))?;
-    if !output.status.success() {
-        return Err(ExportError::command(stage, "lipo", &output).about(path));
-    }
+fn slices_of(bytes: &[u8], path: &Path, stage: ErrorStage) -> Result<Slices, ExportError> {
+    let found = mach_o::slices(bytes).map_err(|error| {
+        ExportError::new(stage, format!("{}: {error}", path.display())).about(path)
+    })?;
     let mut slices = Slices {
         archs: Vec::new(),
         others: Vec::new(),
     };
-    for name in String::from_utf8_lossy(&output.stdout).split_whitespace() {
-        match Arch::named(name) {
+    for slice in found {
+        match Arch::of_cpu(slice.cpu) {
             Some(arch) => slices.archs.push(arch),
-            None => slices.others.push(name.to_string()),
+            None => slices.others.push(slice.cpu.name()),
         }
     }
     Ok(slices)
 }
 
-/// Make `destination` a copy of `source` with exactly the slices `wanted`,
-/// either `source` itself when it has no others or the result of `lipo`. We
-/// use `what` as the name of the file in the error when one is missing.
+/// The slice for `arch` in `bytes`, as a separate file.
+fn slice_for<'a>(
+    bytes: &'a [u8],
+    arch: Arch,
+    path: &Path,
+    stage: ErrorStage,
+) -> Result<&'a [u8], ExportError> {
+    mach_o::slices(bytes)
+        .map_err(|error| ExportError::new(stage, format!("{}: {error}", path.display())))?
+        .into_iter()
+        .find(|slice| slice.cpu == arch.cpu())
+        .map(|slice| slice.bytes)
+        .ok_or_else(|| {
+            ExportError::new(
+                stage,
+                format!("{} has no {} slice", path.display(), arch.name()),
+            )
+        })
+}
+
+/// Make `destination` `source` with exactly the slices `wanted`. It is
+/// `source` itself when it has no others, or else those slices taken out of
+/// it. We use `what` to name the file to the author when it lacks one.
 pub(super) fn keep(
     source: &Path,
     wanted: &[Arch],
@@ -113,24 +135,21 @@ pub(super) fn keep(
     what: &str,
     stage: ErrorStage,
 ) -> Result<(), ExportError> {
-    let slices = read(regular(source, stage)?, stage)?;
+    let bytes = read_regular(source, stage)?;
+    let slices = slices_of(&bytes, source, stage)?;
     refuse_missing(&slices, wanted, what)?;
     if slices.exactly(wanted) {
         return copy_file(source, destination);
     }
-    let mut lipo = Command::new(LIPO);
-    lipo.arg(source);
-    match wanted {
-        [only] => {
-            lipo.args(["-thin", only.name()]);
-        }
-        several => {
-            for arch in several {
-                lipo.args(["-extract", arch.name()]);
-            }
-        }
-    }
-    run(lipo.arg("-output").arg(destination), stage)
+    let kept = wanted
+        .iter()
+        .map(|arch| slice_for(&bytes, *arch, source, stage))
+        .collect::<Result<Vec<_>, _>>()?;
+    let file = match kept.as_slice() {
+        [only] => only.to_vec(),
+        several => mach_o::join(several).map_err(|error| ExportError::new(stage, error))?,
+    };
+    write(destination, &file, stage)
 }
 
 /// Make `destination` one file with the slice of each part. `(arch, file)`
@@ -142,82 +161,17 @@ pub(super) fn join(
     what: &str,
     stage: ErrorStage,
 ) -> Result<(), ExportError> {
-    let parent = destination
-        .parent()
-        .ok_or_else(|| ExportError::new(stage, "a joined file needs a folder"))?;
-    let staging = OwnedStaging::create(parent)?;
+    let files = parts
+        .iter()
+        .map(|(_, file)| read_regular(file, stage))
+        .collect::<Result<Vec<_>, _>>()?;
     let mut thin = Vec::new();
-    for (arch, file) in parts {
-        let slices = read(regular(file, stage)?, stage)?;
-        refuse_missing(&slices, &[*arch], what)?;
-        if slices.exactly(&[*arch]) {
-            thin.push(file.clone());
-        } else {
-            let taken = staging.path().join(arch.name());
-            run(
-                Command::new(LIPO)
-                    .arg(file)
-                    .args(["-thin", arch.name(), "-output"])
-                    .arg(&taken),
-                stage,
-            )?;
-            thin.push(taken);
-        }
+    for ((arch, file), bytes) in parts.iter().zip(&files) {
+        refuse_missing(&slices_of(bytes, file, stage)?, &[*arch], what)?;
+        thin.push(slice_for(bytes, *arch, file, stage)?);
     }
-    run(
-        Command::new(LIPO)
-            .arg("-create")
-            .args(&thin)
-            .arg("-output")
-            .arg(destination),
-        stage,
-    )?;
-    staging.cleanup()
-}
-
-/// Run `edit` on each slice of `path` as a separate file, then join the
-/// slices again in `path`. We edit a file with one slice in place.
-pub(super) fn each_slice(
-    path: &Path,
-    stage: ErrorStage,
-    mut edit: impl FnMut(&Path, Arch) -> Result<(), ExportError>,
-) -> Result<(), ExportError> {
-    let slices = read(path, stage)?;
-    if let Some(other) = slices.others.first() {
-        return Err(ExportError::new(
-            stage,
-            format!("{} has a {other} slice, which a game does not ship", path.display()),
-        ));
-    }
-    if let [only] = slices.archs.as_slice() {
-        return edit(path, *only);
-    }
-    let parent = path
-        .parent()
-        .ok_or_else(|| ExportError::new(stage, "a sliced file needs a folder"))?;
-    let staging = OwnedStaging::create(parent)?;
-    let mut parts = Vec::new();
-    for arch in &slices.archs {
-        let slice = staging.path().join(arch.name());
-        run(
-            Command::new(LIPO)
-                .arg(path)
-                .args(["-thin", arch.name(), "-output"])
-                .arg(&slice),
-            stage,
-        )?;
-        edit(&slice, *arch)?;
-        parts.push(slice);
-    }
-    run(
-        Command::new(LIPO)
-            .arg("-create")
-            .args(&parts)
-            .arg("-output")
-            .arg(path),
-        stage,
-    )?;
-    staging.cleanup()
+    let joined = mach_o::join(&thin).map_err(|error| ExportError::new(stage, error))?;
+    write(destination, &joined, stage)
 }
 
 fn refuse_missing(slices: &Slices, wanted: &[Arch], what: &str) -> Result<(), ExportError> {
@@ -233,9 +187,9 @@ fn refuse_missing(slices: &Slices, wanted: &[Arch], what: &str) -> Result<(), Ex
     }
 }
 
-/// `path`, when it is a file and not a link to one, as required in `copy_file`
-/// for everything that we copy in an export.
-fn regular(path: &Path, stage: ErrorStage) -> Result<&Path, ExportError> {
+/// The bytes of `path`, when it is a file and not a link to one, as we
+/// require in `copy_file` for everything we copy in an export.
+fn read_regular(path: &Path, stage: ErrorStage) -> Result<Vec<u8>, ExportError> {
     let metadata =
         fs::symlink_metadata(path).map_err(|error| ExportError::io(stage, path, error))?;
     if metadata.file_type().is_symlink() || !metadata.is_file() {
@@ -244,16 +198,9 @@ fn regular(path: &Path, stage: ErrorStage) -> Result<&Path, ExportError> {
             format!("refusing to stage non-regular file: {}", path.display()),
         ));
     }
-    Ok(path)
+    fs::read(path).map_err(|error| ExportError::io(stage, path, error))
 }
 
-fn run(command: &mut Command, stage: ErrorStage) -> Result<(), ExportError> {
-    let output = command
-        .output()
-        .map_err(|error| ExportError::new(stage, format!("could not run lipo: {error}")))?;
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(ExportError::command(stage, "lipo", &output))
-    }
+fn write(destination: &Path, bytes: &[u8], stage: ErrorStage) -> Result<(), ExportError> {
+    fs::write(destination, bytes).map_err(|error| ExportError::io(stage, destination, error))
 }

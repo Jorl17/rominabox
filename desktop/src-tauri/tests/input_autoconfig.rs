@@ -6,6 +6,8 @@
 //! open a window or talk to a gamepad, so these tests do not prove that a
 //! DualSense moves a character.
 
+mod export_fixture;
+
 use rominabox_desktop::{
     controls::{self, Controls},
     hotkeys::{isolated_hotkey_config, HOTKEY_BINDS},
@@ -20,22 +22,6 @@ use std::{
 };
 
 mod support;
-
-fn write_runtime_stub(path: &Path) {
-    let source = path.with_extension("c");
-    fs::write(
-        &source,
-        "int rarch_main(int c, char **v, void *d){(void)c;(void)v;(void)d;return 0;}\nint main(void){return rarch_main(0,0,0);}\n",
-    )
-    .unwrap();
-    let status = Command::new("cc")
-        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
-        .arg(path)
-        .arg(&source)
-        .status()
-        .unwrap();
-    assert!(status.success(), "could not compile the runtime stub");
-}
 
 struct ContainerGuard(PathBuf);
 
@@ -687,7 +673,8 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
     fs::create_dir_all(kit.join("licenses")).unwrap();
     fs::create_dir_all(kit.join("licenses/native")).unwrap();
     fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
-    write_runtime_stub(&kit.join("bin/retroarch"));
+    export_fixture::write_runtime_stub_for(&kit.join("bin/retroarch"), &[]);
+    export_fixture::attach_real_launcher(&kit);
     fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
     for name in [
         "NATIVE-DEPENDENCIES.txt",
@@ -750,6 +737,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         splash: false,
         advanced_emulator_access: true,
         intel_macs: false,
+        zip: None,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,

@@ -106,6 +106,7 @@ fn request(
         splash: false,
         advanced_emulator_access: false,
         intel_macs: false,
+        zip: None,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,
@@ -638,9 +639,9 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
     );
 }
 
-#[test]
-#[ignore = "runs an exported core for a few frames, then exits"]
-fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
+/// Export the generated cartridge from the builder's kit and the core cache,
+/// and return the export and the folder we export it into.
+fn the_test_cartridge() -> (rominabox_scratch::Scratch, ExportRequest) {
     let rom = repo_at("scripts/fixtures/test-game.gbc");
     assert!(
         rom.is_file(),
@@ -660,8 +661,44 @@ fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
             .unwrap_or_else(|| repo_at(&format!("work/core-cache/{}", target.key()))),
     );
     settings.rom = rom;
-    let app = export(&settings);
-    let identity = identity_of(&app);
+    (root, settings)
+}
+
+#[test]
+#[ignore = "runs an exported core for a few frames, then exits"]
+fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
+    let (_root, settings) = the_test_cartridge();
+    loads_a_core_stays_quiet_and_sees_a_gamepad(&export(&settings));
+}
+
+/// When we make a Mac game on Windows, where files have no Unix modes, we
+/// write it into a zip with those modes. After an unpack as on a Mac
+/// (`ditto -x -k`, as in Archive Utility), the game passes a deep and strict
+/// verification, still has its sandbox and runs.
+#[test]
+#[cfg(target_os = "macos")]
+#[ignore = "runs an exported core for a few frames, then exits"]
+fn a_zipped_mac_game_unzips_verifies_and_runs() {
+    let (root, mut settings) = the_test_cartridge();
+    settings.zip = Some(true);
+    let zip = export(&settings);
+    assert_eq!(zip.file_name().and_then(|name| name.to_str()), Some("Sandbox Game.zip"));
+    assert_eq!(fs::read_dir(&settings.output_dir).unwrap().count(), 1, "the zip is all an export leaves");
+    let unzipped = root.join("unzipped");
+    let status = Command::new("/usr/bin/ditto").args(["-x", "-k"]).arg(&zip).arg(&unzipped).status().unwrap();
+    assert!(status.success());
+    let app = unzipped.join("Sandbox Game.app");
+    let verified = Command::new("/usr/bin/codesign")
+        .args(["--verify", "--deep", "--strict", "-vv"])
+        .arg(&app)
+        .output()
+        .unwrap();
+    assert!(verified.status.success(), "{}", String::from_utf8_lossy(&verified.stderr));
+    loads_a_core_stays_quiet_and_sees_a_gamepad(&app);
+}
+
+fn loads_a_core_stays_quiet_and_sees_a_gamepad(app: &Path) {
+    let identity = identity_of(app);
     let _container = platform::sandbox_for(&identity);
 
     platform::assert_keeps_the_sandbox(&app);
