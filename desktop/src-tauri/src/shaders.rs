@@ -347,7 +347,8 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
             relative_preset: format!("shaders/{id}/{preset_file}"),
             id,
             name: name.to_string(),
-            detail: "Added shader".into(),
+            // We show a shader that the author added by its name alone.
+            detail: String::new(),
             files,
             written,
         });
