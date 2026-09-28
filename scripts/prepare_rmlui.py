@@ -2,9 +2,9 @@
 
 A fresh clone has no compiled RmlUi. bridge, dcmenu and menu then stop on a
 library that was never produced, and menu cannot compile its probe. We
-build RmlUi (and FreeType, on a target where we build it) from the player
-recipe with the same function as the player build, so the tests cannot
-link a different RmlUi from the one in the player.
+build RmlUi and FreeType from the player recipe with the same function as
+the player build, so the tests cannot link a different RmlUi from the one
+in the player.
 """
 
 from __future__ import annotations
@@ -28,7 +28,8 @@ STAMP = DEST / "recipe.txt"
 def recipe() -> str:
     """The parts of the player recipe this build depends on, for this target."""
     whole = native_build.recipe()
-    return json.dumps({"rmlui": whole["rmlui"], "freetype": whole["freetype"][TARGET]},
+    return json.dumps({"rmlui": whole["rmlui"], "freetype": whole["freetype"],
+                       "cmake": native_build.cmake_flags(TARGET)},
                       indent=1, sort_keys=True) + "\n"
 
 

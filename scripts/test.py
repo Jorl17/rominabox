@@ -408,7 +408,7 @@ SCOPES = [
     ),
     Scope(
         "size",
-        "that an exported app stays under the size ceiling, and does not carry the video encoders",
+        "that an exported app stays under the size ceiling, and carries no library but its core",
         "a cartridge's own size, or that the player was rebuilt; it measures the kit already on disk",
         [PYTHON, str(ROOT / "scripts/size_bundles.py")],
     ),

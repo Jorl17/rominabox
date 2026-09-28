@@ -1,9 +1,18 @@
 {
-  "comment": "How the player is built, once, for every target. scripts/build_player.py builds it; scripts/prepare_rmlui.py builds the same RmlUi (and FreeType) for the tests. A difference between targets is a key under a target here, never a second script.",
+  "comment": "How the player is built, once, for every target. scripts/build_player.py builds it; scripts/prepare_rmlui.py builds the same RmlUi (and FreeType) for the tests. A difference between platforms or targets is a key under one here, never a second script. A target's processor is the part of its name after the platform, as Apple's tools spell it (-arch, lipo).",
   "targets": [
     "macos-arm64",
+    "macos-x86_64",
     "windows-x86_64"
   ],
+  "universal": {
+    "comment": "A player made of several targets' builds, one slice each, joined into one file (lipo -create). Each slice is built as its own target, in a folder named for it inside the universal build; the macOS kit is made from the joined player. Which slices a file holds is read from the file (lipo -archs), never from this list.",
+    "macos-universal": ["macos-arm64", "macos-x86_64"]
+  },
+  "deploymentTarget": {
+    "comment": "The oldest system a platform's player runs on. Every slice, and the RmlUi and FreeType linked into it, is compiled and linked for it: MACOSX_DEPLOYMENT_TARGET for configure, cmake and the compilers, and the fork's MINVERFLAGS, which otherwise names a version of its own per processor. 11.0 is the arm64 floor.",
+    "macos": "11.0"
+  },
   "rmlui": {
     "repository": "https://github.com/mikke89/RmlUi.git",
     "commit": "ba95ffe8bfb6370efb2cdcca927eaad4710c5413",
@@ -18,26 +27,21 @@
     ]
   },
   "freetype": {
-    "macos-arm64": {
-      "from": "pkg-config"
-    },
-    "windows-x86_64": {
-      "from": "source",
-      "url": "https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.xz",
-      "sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
-      "directory": "freetype-2.14.3",
-      "build": "build-freetype",
-      "prefix": "freetype",
-      "cmake": [
-        "-DCMAKE_BUILD_TYPE=Release",
-        "-DBUILD_SHARED_LIBS=OFF",
-        "-DFT_DISABLE_HARFBUZZ=ON",
-        "-DFT_DISABLE_BROTLI=ON",
-        "-DFT_DISABLE_BZIP2=ON",
-        "-DFT_DISABLE_PNG=ON",
-        "-DFT_DISABLE_ZLIB=ON"
-      ]
-    }
+    "comment": "Built from its pinned release for every target and linked into the player statically, so no platform's kit carries a FreeType library.",
+    "url": "https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.xz",
+    "sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+    "directory": "freetype-2.14.3",
+    "build": "build-freetype",
+    "prefix": "freetype",
+    "cmake": [
+      "-DCMAKE_BUILD_TYPE=Release",
+      "-DBUILD_SHARED_LIBS=OFF",
+      "-DFT_DISABLE_HARFBUZZ=ON",
+      "-DFT_DISABLE_BROTLI=ON",
+      "-DFT_DISABLE_BZIP2=ON",
+      "-DFT_DISABLE_PNG=ON",
+      "-DFT_DISABLE_ZLIB=ON"
+    ]
   },
   "configure": {
     "common": [
@@ -61,24 +65,30 @@
       "--disable-test_drivers",
       "--disable-ffmpeg",
       "--disable-cg",
-      "--disable-langextra"
+      "--disable-langextra",
+      "--disable-systemmbedtls",
+      "--enable-builtinmbedtls"
     ],
-    "macos-arm64": [
+    "macos": [
       "--enable-cocoa",
       "--disable-metal",
       "--enable-coreaudio",
       "--enable-hid",
       "--disable-mfi"
     ],
-    "windows-x86_64": [
+    "windows": [
       "--disable-d3d9",
       "--disable-d3d10",
       "--disable-d3d11",
       "--disable-d3d12",
       "--disable-winmm"
     ],
-    "comment": "Two OpenGL drivers, one player for every game: gl runs GLSL shaders, glcore (opengl_core) runs slang, compiled with the fork's own glslang and SPIRV-Cross (builtinglslang). glslang and SPIRV-Cross are left for configure to settle: --enable-glslang makes it look for a system glslang and stop. A game's shader language picks the driver (shader_format.rs).",
-    "comment-windows-x86_64": "No WinMM: it is only RetroArch's MIDI output, which the macOS player does not have (its build never enables CoreMIDI, so its MIDI driver is null), and it opens the system's synthesiser at every start, which slows the launch."
+    "comment": "Two OpenGL drivers, one player for every game: gl runs GLSL shaders, glcore (opengl_core) runs slang, compiled with the fork's own glslang and SPIRV-Cross (builtinglslang). glslang and SPIRV-Cross are left for configure to settle: --enable-glslang makes it look for a system glslang and stop. A game's shader language picks the driver (shader_format.rs). TLS is RetroArch's own mbedTLS (deps/mbedtls), built into the player on every platform; configure would otherwise take a system mbedTLS it finds, which on a Mac is Homebrew's and exists for one processor only.",
+    "environment": {
+      "macos": {"PKG_CONF_PATH": "none"}
+    },
+    "comment-environment": "On a Mac configure uses no pkg-config (PKG_CONF_PATH=none, a switch of the fork's configure): it finds a library by linking a test program against it, which reaches only the SDK's libraries, the system's zlib among them. pkg-config would offer any library Homebrew installed, which exists for one processor only. The RmlUi part of the fork's makefile still uses pkg-config for FreeType, which returns the FreeType built beside it.",
+    "comment-windows": "No WinMM: it is only RetroArch's MIDI output, which the macOS player does not have (its build never enables CoreMIDI, so its MIDI driver is null), and it opens the system's synthesiser at every start, which slows the launch."
   },
   "makefile": {
     "common": [
@@ -86,17 +96,17 @@
       "NEED_CXX_LINKER = 1",
       "CXXFLAGS += -std=c++17"
     ],
-    "macos-arm64": [
+    "macos": [
       "LDFLAGS += -framework QuartzCore",
       "LDFLAGS += -Wl,-dead_strip"
     ],
-    "comment-macos-arm64": "dead_strip removes the functions nothing calls, which makes the Mac player smaller.",
-    "windows-x86_64": [
+    "comment-macos": "dead_strip removes the functions nothing calls, which makes the Mac player smaller.",
+    "windows": [
       "LDFLAGS += -static",
       "CFLAGS += -Os",
       "CXXFLAGS += -Os"
     ],
-    "comment-windows-x86_64": "Os: the player's own code is optimised for size, which makes it smaller without slowing emulation, because the core does the work. RmlUi stays Release: built MinSizeRel it requires a std::string constructor the static C++ runtime does not have. -ffunction-sections with --gc-sections makes the player larger with this toolchain."
+    "comment-windows": "Os: the player's own code is optimised for size, which makes it smaller without slowing emulation, because the core does the work. RmlUi stays Release: built MinSizeRel it requires a std::string constructor the static C++ runtime does not have. -ffunction-sections with --gc-sections makes the player larger with this toolchain."
   },
   "accounts": {
     "comment": "ROM-in-a-Box's own sources the player compiles, the QUICK SIGN IN store. scripts/native_build.py hands them over with the launcher's file layer they are built on (portable_fs), as the target's platform has it, and the fork compiles every C file it is handed.",
@@ -107,14 +117,19 @@
       "desktop/src-tauri/accounts/sealed.h"
     ]
   },
-  "capability": "rcheevos_rib_prepare_client",
+  "capabilities": {
+    "comment": "A function each player must have, read from the linked player before it is stripped: the achievements client, and RetroArch's TLS socket layer, which achievements reach their service through. The player links no library outside the system, so its TLS is the one built into it.",
+    "achievements": "rcheevos_rib_prepare_client",
+    "tls": "ssl_socket_connect"
+  },
   "drivers": {
     "comment": "What an exported game's player is told to use, per platform: its audio driver, its controller driver, and the controller profile folders RetroArch reads. A pad's profiles are read from the folder named for the driver it was connected under; on Windows that driver connects XInput pads as xinput and every other pad as dinput. The exporter writes audio and joypad into the game's settings; scripts/build_kit.py stages joypadProfiles from the pinned autoconfig archive (scripts/prepare_runtime.py).",
     "macos": {"audio": "coreaudio", "joypad": "hid", "joypadProfiles": ["hid"]},
     "windows": {"audio": "wasapi", "joypad": "xinput", "joypadProfiles": ["xinput", "dinput"]}
   },
   "systemLibraries": {
-    "comment": "The libraries every machine of a platform has, so a player, a launcher or a core may import them. The Windows list covers every import of the catalog's Windows cores, as published on the buildbot, and of the builder. scripts/build_player.py rejects a player, launcher or preview renderer that imports anything else, scripts/build_builder.py a builder or command line, and an export rejects such a core. Names are lower case; Windows also resolves any api-ms-win- API set.",
+    "comment": "The libraries every machine of a platform has, so a player, a launcher or a core may import them. The Windows list covers every import of the catalog's Windows cores, as published on the buildbot, and of the builder. scripts/build_player.py rejects a player, launcher or preview renderer that imports anything else, scripts/build_builder.py a builder or command line, and an export rejects such a core. On Windows a library is named by its file name, in lower case, and Windows also resolves any api-ms-win- API set; on macOS by its path, and the system's are those under these folders.",
+    "macos": ["/System/Library/", "/usr/lib/"],
     "windows": [
       "advapi32.dll", "bcrypt.dll", "bcryptprimitives.dll", "cfgmgr32.dll", "combase.dll", "comctl32.dll",
       "comdlg32.dll", "crypt32.dll", "d3dcompiler_47.dll",
@@ -167,7 +182,7 @@
     ]
   },
   "preview": {
-    "comment": "The builder's menu preview, rml-preview: the player's own RmlUi renderer drawing a composed menu into a picture, in an OpenGL context on a window never shown, built beside the player from the same fork, RmlUi and FreeType, and with the file layer above. 'sources' are the repository's, 'forkSources' the fork's; a target adds its OpenGL context. The menu GL probe (test_dcmenu.py) draws in the same context. 'install' says how it reaches the builder's resources: copy, for a program linked with everything it needs; freeze, for one that carries its libraries in a Frameworks folder beside it (rominabox-cli freeze-macos-executable, as the macOS kit's player).",
+    "comment": "The builder's menu preview, rml-preview: the player's own RmlUi renderer drawing a composed menu into a picture, in an OpenGL context on a window never shown, built beside the player from the same fork, RmlUi and FreeType, and with the file layer above. 'sources' are the repository's, 'forkSources' the fork's; a target adds its OpenGL context. The menu GL probe (test_dcmenu.py) draws in the same context. It links FreeType statically, as the player does, so it is copied into the builder's resources alone. It is built for the builder's own processor only, never joined into a universal file.",
     "sources": [
       "desktop/src-tauri/preview/rml_preview.cpp"
     ],
@@ -188,8 +203,7 @@
         "flags": ["-fobjc-arc", "-Wno-deprecated-declarations"],
         "libraries": ["-framework", "OpenGL", "-framework", "Cocoa"]
       },
-      "flags": [],
-      "install": "freeze"
+      "flags": []
     },
     "windows-x86_64": {
       "output": "rml-preview.exe",
@@ -199,27 +213,21 @@
         "flags": [],
         "libraries": ["-lopengl32", "-lgdi32"]
       },
-      "flags": ["-municode", "-static"],
-      "install": "copy"
+      "flags": ["-municode", "-static"]
     }
   },
   "kit": {
-    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A file is named by its role, which the exporter reads it by, and says where in the kit it goes. A source is build: a file in the player build, or toolchain: a file in the toolchain's installation. A target whose player links libraries the system lacks names 'libraries': the kit folder they are copied into, beside the player, and where they are installed; each goes with the licence files its installation carries.",
-    "macos-arm64": {
+    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A file is named by its role, which the exporter reads it by, and says where in the kit it goes. A source is build: a file in the player build (in a universal build, the folder holding the joined player); source: a file of the sources the player was built from (in a universal build, its first slice's, since every slice is built from the same ones); or toolchain: a file in the toolchain's installation. 'libraryInventory' names the folder and the inventory the macOS exporter reads a kit's libraries from (packaging/macos.rs): the player links none, so the folder is empty and the inventory lists no file.",
+    "macos-universal": {
       "files": {
-        "player": {
-          "at": "bin/retroarch",
-          "from": "build:retroarch/retroarch"
-        }
+        "player": {"at": "bin/retroarch", "from": "build:retroarch/retroarch"}
       },
-      "libraries": {
-        "folder": "Frameworks",
-        "from": "homebrew",
-        "prefix": "/opt/homebrew"
-      },
+      "libraryInventory": {"folder": "Frameworks", "file": "runtime-dependencies.json"},
       "licences": {
-        "RetroArch.txt": "build:retroarch/COPYING",
-        "RmlUi-MIT.txt": "build:vendor/RmlUi/LICENSE.txt"
+        "RetroArch.txt": "source:retroarch/COPYING",
+        "RmlUi-MIT.txt": "source:vendor/RmlUi/LICENSE.txt",
+        "native/FreeType-LICENSE.txt": "source:freetype-2.14.3/LICENSE.TXT",
+        "native/FreeType-FTL.txt": "source:freetype-2.14.3/docs/FTL.TXT"
       }
     },
     "windows-x86_64": {
@@ -229,10 +237,10 @@
       },
       "runtime": "the MinGW-w64 runtime: its C runtime, winpthreads and the GCC runtime (native/MinGW-w64-runtime.txt, native/winpthreads-COPYING.txt, native/GCC-runtime-exception.txt)",
       "licences": {
-        "RetroArch.txt": "build:retroarch/COPYING",
-        "RmlUi-MIT.txt": "build:vendor/RmlUi/LICENSE.txt",
-        "native/FreeType-LICENSE.txt": "build:freetype-2.14.3/LICENSE.TXT",
-        "native/FreeType-FTL.txt": "build:freetype-2.14.3/docs/FTL.TXT",
+        "RetroArch.txt": "source:retroarch/COPYING",
+        "RmlUi-MIT.txt": "source:vendor/RmlUi/LICENSE.txt",
+        "native/FreeType-LICENSE.txt": "source:freetype-2.14.3/LICENSE.TXT",
+        "native/FreeType-FTL.txt": "source:freetype-2.14.3/docs/FTL.TXT",
         "native/MinGW-w64-runtime.txt": "toolchain:share/licenses/crt/COPYING.MinGW-w64-runtime.txt",
         "native/winpthreads-COPYING.txt": "toolchain:share/licenses/winpthreads/COPYING",
         "native/GCC-runtime-exception.txt": "toolchain:share/licenses/gcc/COPYING.RUNTIME"

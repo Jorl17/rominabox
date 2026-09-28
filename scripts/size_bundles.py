@@ -38,18 +38,6 @@ BUDGETS = ROOT / "scripts/fixtures/size-budgets.json"
 WORK = ROOT / "work/size-bundles"
 DESIGN = ROOT / "integrations/designs/native"
 
-# OpenSSL and the FFmpeg stack, including the H.265 and AV1 encoders.
-# mbedtls is not listed, because we use it for achievements and networking.
-ABSENT = (
-    "libavcodec.62.dylib",
-    "libavfilter.11.dylib",
-    "libavformat.62.dylib",
-    "libx265.216.dylib",
-    "libSvtAv1Enc.4.dylib",
-    "libcrypto.3.dylib",
-)
-PRESENT = "libmbedtls.21.dylib"
-
 
 def remove_owned(path: Path) -> None:
     """Remove one directory this script created under work/size-bundles."""
@@ -70,13 +58,13 @@ def du(path: Path) -> int:
 
 
 def macos_libraries(app: Path) -> list[str]:
-    """Return the problems with the libraries in a macOS app."""
+    """Return the problems with the libraries in a macOS app, which are any
+    library in its Frameworks. We link only the system's libraries into the
+    player and build TLS and FreeType into it (in scripts/build_player.py we
+    refuse a player without TLS)."""
     frameworks = app / "Contents/Frameworks"
-    names = {path.name for path in frameworks.iterdir() if path.is_file()}
-    wrong = [f"still ships {wanted}" for wanted in ABSENT if wanted in names]
-    if PRESENT not in names:
-        wrong.append(f"is missing {PRESENT}")
-    return wrong
+    return [f"carries {path.relative_to(app)}" for path in sorted(frameworks.rglob("*"))
+            if path.is_file() or path.is_symlink()]
 
 
 def windows_libraries(app: Path) -> list[str]:
@@ -156,7 +144,7 @@ def main() -> int:
     if PLATFORM not in PLATFORMS:
         raise SystemExit(f"no size check is declared for {PLATFORM}")
     platform = PLATFORMS[PLATFORM]
-    player = KIT / native_build.recipe()["kit"][host_target()]["files"]["player"]["at"]
+    player = KIT / native_build.kit_file(host_target(), "player")
     if not player.is_file():
         raise SystemExit(
             f"no player at {player}. This scope measures the "
