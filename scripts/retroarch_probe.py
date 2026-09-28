@@ -9,10 +9,12 @@ we link native_runtime/retroarch_unreached.c into every probe. It has a weak
 stand-in for every other name, which a definition in a linked source
 overrides, and reaching a stand-in stops the program with the stand-in's name.
 
-    python3 scripts/retroarch_probe.py OUTPUT PROGRAM.c SOURCE...
+    python3 scripts/retroarch_probe.py OUTPUT PROGRAM.c SOURCE... [-DNAME...]
 
 We compile PROGRAM.c with the SOURCEs, named relative to vendor/retroarch,
-into the directory OUTPUT, and print the program's path.
+into the directory OUTPUT, and print the program's path. With -DNAME we
+compile every source with NAME defined, as in the player's build (the remap
+loader is compiled only with HAVE_CONFIGFILE).
 """
 
 from __future__ import annotations
@@ -73,8 +75,10 @@ def main() -> int:
     if len(sys.argv) < 3:
         print(__doc__, file=sys.stderr)
         return 2
-    output, program, *sources = sys.argv[1:]
-    print(build([Path(program)], sources, Path(output)))
+    output, program, *named = sys.argv[1:]
+    defines = [name for name in named if name.startswith("-D")]
+    sources = [name for name in named if not name.startswith("-D")]
+    print(build([Path(program)], sources, Path(output), defines))
     return 0
 
 

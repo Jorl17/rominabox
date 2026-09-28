@@ -48,6 +48,9 @@ struct ControlsRegistry {
 pub struct PadPosition {
     pub id: String,
     pub name: String,
+    /// The opposite direction on the same axis of a stick, which moves with it.
+    #[serde(default)]
+    pub opposite: Option<String>,
 }
 
 /// Every position on the standard pad, in the catalog's order.

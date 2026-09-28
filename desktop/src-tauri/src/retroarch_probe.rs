@@ -17,12 +17,19 @@ impl Probe {
     /// Compile `scripts/native_runtime/<name>.c` with the fork's `sources`,
     /// named relative to `vendor/retroarch`.
     pub fn build(name: &str, sources: &[&str]) -> Self {
+        Self::build_defining(name, &[], sources)
+    }
+
+    /// As `build`, with each of `defined` defined (`HAVE_CONFIGFILE`) in
+    /// every source, as in the player's build.
+    pub fn build_defining(name: &str, defined: &[&str], sources: &[&str]) -> Self {
         let scratch = Scratch::dir(&format!("rominabox-{name}"));
         let built = Command::new(crate::repo::python())
             .arg(crate::repo::at("scripts/retroarch_probe.py"))
             .arg(scratch.path())
             .arg(crate::repo::at(&format!("scripts/native_runtime/{name}.c")))
             .args(sources)
+            .args(defined.iter().map(|name| format!("-D{name}")))
             .output()
             .expect("the probe builder runs");
         assert!(
