@@ -213,6 +213,34 @@ fn splash_only_document_has_no_pause_controls_and_can_make_its_background_transp
     );
 }
 
+/// A game with a menu opens on the same splash as one without, so the menu
+/// has every element of the logo-only document, including the name under the
+/// logo.
+#[test]
+fn a_game_with_a_menu_opens_on_the_splash_a_logo_only_game_shows() {
+    let ids = |markup: &str| -> Vec<String> {
+        markup
+            .split("id=\"")
+            .skip(1)
+            .map(|rest| rest[..rest.find('"').unwrap()].to_string())
+            .collect()
+    };
+    for design in support::designs() {
+        let source = rominabox_desktop::repo::at("integrations/designs").join(&design);
+        let (splash, menu) = (workspace(), workspace());
+        support::stage_splash(&source, &splash, "blue").unwrap();
+        support::stage_theme(&source, &menu, "blue").unwrap();
+        let menu = fs::read_to_string(menu.join("menu.rml")).unwrap();
+        let drawn = ids(&menu);
+        for id in ids(&fs::read_to_string(splash.join("menu.rml")).unwrap()) {
+            assert!(
+                drawn.contains(&id),
+                "{design}: the logo-only document draws #{id}, the menu does not"
+            );
+        }
+    }
+}
+
 /// We give a game with a logo and no menu a stylesheet that RmlUi can read.
 ///
 /// A stylesheet copied verbatim from the design would still contain
