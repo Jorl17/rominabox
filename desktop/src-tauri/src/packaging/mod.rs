@@ -5,13 +5,16 @@
 //!
 //! The export itself is here. What we write alike for every platform is in
 //! `app_files` and `launch_plan`, and each packager is in a file named after
-//! its platform (`macos`, `windows`). `availability` contains the check of
-//! the consoles a kit can export.
+//! its platform (`macos`, `windows`). The other files contain the consoles a
+//! kit can export (`availability`), the core files a game ships and their
+//! source (`export_core`), and the processors of a Mac app (`slices`).
 
 mod app_files;
 mod availability;
+mod export_core;
 mod launch_plan;
 mod macos;
+mod slices;
 mod windows;
 #[cfg(test)]
 mod tests;
@@ -31,7 +34,7 @@ use crate::controls;
 pub use crate::export_error::{ErrorStage, ExportError};
 
 use app_files::{
-    copy_content_file, copy_file, firmware_destination_name, stage_bundled_autoconfig,
+    copy_content_file, firmware_destination_name, stage_bundled_autoconfig,
     stage_controller_remap, stage_firmware, stage_legal_materials, stage_pixel_options, tree_size,
 };
 pub use app_files::{menu_request, stage_menu};
@@ -39,6 +42,7 @@ pub use availability::{
     available_systems, system_availability, system_availability_for, system_availability_in,
     SystemAvailability, Unavailable,
 };
+use export_core::{export_core, prepare_core, resolve_cached, shipped_cores, ExportCore};
 use launch_plan::{isolation_namespace, stable_identity, write_launch_plan};
 pub use launch_plan::MANAGED_DATA_DIRECTORIES;
 use macos::MacosPackager;
@@ -89,6 +93,19 @@ impl ExportTarget {
                 _ => None,
             },
         }
+    }
+
+    /// Every target that we build an app for on this platform: the platform's
+    /// target (`target`), and Intel Macs too when a Mac game also runs on them.
+    /// The author chooses `intel_macs` for a Mac game. A Windows game has one.
+    pub fn targets(&self, intel_macs: bool) -> Option<Vec<Target>> {
+        let own = self.target()?;
+        Some(match (self, own) {
+            (ExportTarget::Macos, Target::MacosArm64) if intel_macs => {
+                vec![own, Target::MacosX86_64]
+            }
+            (ExportTarget::Macos | ExportTarget::Windows, _) => vec![own],
+        })
     }
 
     /// The drivers that we tell the player to use on this platform, which we
@@ -149,57 +166,6 @@ pub struct Drivers {
     pub joypad_profiles: Vec<String>,
 }
 
-/// The core that we will ship in this export, named for its platform.
-///
-/// A Windows export contains `flycast_libretro.dll` even on a Mac builder,
-/// where `Core::artifact` is `flycast_libretro.dylib`. We use this name to
-/// check presence, download, copy and find the licence. `Target::host` is the
-/// platform of the builder.
-struct ExportCore<'a> {
-    platform: Target,
-    system_name: &'a str,
-    core: &'a crate::systems::Core,
-    artifact_name: &'a str,
-}
-
-fn export_core(request: &ExportRequest) -> Option<ExportCore<'static>> {
-    let system = crate::systems::find(&request.system)?;
-    let core = system.preferred_core()?;
-    let platform = request.target.target()?;
-    Some(ExportCore {
-        platform,
-        system_name: &system.name,
-        artifact_name: core.artifact_for(platform)?,
-        core,
-    })
-}
-
-impl ExportCore<'_> {
-    fn artifact_relative(&self) -> PathBuf {
-        Path::new("cores").join(self.artifact_name)
-    }
-
-    fn licence_relative(&self) -> PathBuf {
-        Path::new("licenses").join(&self.core.license_file)
-    }
-}
-
-/// The path of the core binary for this export. An explicit `request.core` is
-/// a development override. Otherwise it is the file chosen in `export_core`.
-fn shipped_core(request: &ExportRequest, resolved: Option<&ExportCore<'_>>) -> PathBuf {
-    if let Some(explicit) = &request.core {
-        return explicit.clone();
-    }
-    let relative = resolved
-        .map(ExportCore::artifact_relative)
-        .unwrap_or_else(|| PathBuf::from("cores"));
-    resolve_cached(
-        &request.runtime_kit,
-        request.core_cache.as_deref(),
-        &relative,
-    )
-}
-
 /// For a setting missing from a request we use the builder default
 /// (`crate::builder::defaults`), the same one that a first draft starts from.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -235,6 +201,9 @@ pub struct ExportRequest {
     /// Restore stock RetroArch native menus in the exported app.
     #[serde(default = "crate::builder::unstated::advanced_emulator_access")]
     pub advanced_emulator_access: bool,
+    /// A Mac game also runs on Intel Macs. Ignored for a Windows game.
+    #[serde(default = "crate::builder::unstated::intel_macs")]
+    pub intel_macs: bool,
     /// Keep emulating when the window does not have the focus. RetroArch's
     /// `pause_nonactive` is the opposite of this. We write it into the frozen
     /// config, as we do quit-autosave, because the player has no control for
@@ -400,7 +369,13 @@ where
     // fix the platform here and read `resolved` in every later step.
     // Before anything else, because the author decides about an app in the way.
     crate::publish::refuse_unless_replacing(request)?;
-    let resolved = export_core(request);
+    let targets = request.target.targets(request.intel_macs).ok_or_else(|| {
+        ExportError::new(
+            ErrorStage::Refused,
+            "The builder does not make games on this kind of computer.",
+        )
+    })?;
+    let resolved = export_core(request, &targets)?;
     prepare_core(request, resolved.as_ref(), &mut progress, transport)?;
     emit(
         &mut progress,
@@ -408,22 +383,23 @@ where
         0.02,
         "Checking export inputs",
     );
-    let mut packager = packager_for(&request.target);
-    validate_request(request, resolved.as_ref(), &*packager)?;
+    let mut packager = packager_for(&request.target, &targets);
+    validate_request(request, resolved.as_ref(), &targets, &*packager)?;
     check_cancelled(cancelled)?;
     export_app(
         request,
         resolved.as_ref(),
+        &targets,
         cancelled,
         &mut progress,
         &mut *packager,
     )
 }
 
-/// The packager for apps for `target`.
-fn packager_for(target: &ExportTarget) -> Box<dyn Packager> {
+/// The packager for an app for `target` that runs on `targets`.
+fn packager_for(target: &ExportTarget, targets: &[Target]) -> Box<dyn Packager> {
     match target {
-        ExportTarget::Macos => Box::new(MacosPackager::default()),
+        ExportTarget::Macos => Box::new(MacosPackager::for_targets(targets)),
         ExportTarget::Windows => Box::new(WindowsPackager::default()),
     }
 }
@@ -444,6 +420,14 @@ trait Packager {
     fn place_player(&mut self, runtime_kit: &Path) -> Result<(), ExportError>;
     /// The core's name among the app's own files.
     fn core_file(&self) -> &'static str;
+    /// Put the core at `destination`, from `builds`, the file for each target
+    /// of the app. We use `system_name` to name the core to the author.
+    fn place_core(
+        &mut self,
+        builds: &[(Target, PathBuf)],
+        destination: &Path,
+        system_name: &str,
+    ) -> Result<(), ExportError>;
     /// The libraries the player and the core need beside them.
     fn stage_dependencies(
         &mut self,
@@ -479,6 +463,7 @@ trait Packager {
 fn export_app<F>(
     request: &ExportRequest,
     resolved: Option<&ExportCore<'_>>,
+    targets: &[Target],
     cancelled: &AtomicBool,
     progress: &mut F,
     packager: &mut dyn Packager,
@@ -519,10 +504,9 @@ where
             )
         })?,
     };
-    let core_source = shipped_core(request, resolved);
     let core_name = OsStr::new(packager.core_file());
     let core = resources.join(core_name);
-    copy_file(&core_source, &core)?;
+    packager.place_core(&shipped_cores(request, resolved, targets), &core, &system.name)?;
     let collected_content = content::collect_for(&request.rom, Some(&system.id))
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     let content_directory = resources.join("content");
@@ -612,7 +596,7 @@ where
         "startAtMenu": request.start_at_menu,
         "runtime": "RetroArch",
         "core": packager.core_file(),
-        "coreSource": resolved.map(|export_core| export_core.artifact_name).unwrap_or(""),
+        "coreSource": resolved.and_then(|export_core| export_core.builds.first()).map_or("", |build| build.artifact_name),
         "content": collected_content.files.iter().map(|file| file.relative.to_string_lossy()).collect::<Vec<_>>(),
         "rom": rom_relative.to_string_lossy(),
         "firmware": request.firmware.iter().filter_map(|path| firmware_destination_name(path, system)).collect::<Vec<_>>(),
@@ -660,6 +644,7 @@ where
 fn validate_request(
     request: &ExportRequest,
     resolved: Option<&ExportCore<'_>>,
+    targets: &[Target],
     packager: &dyn Packager,
 ) -> Result<(), ExportError> {
     if request.title.trim().is_empty() {
@@ -723,12 +708,13 @@ fn validate_request(
             format!("{} has no configured core", system.name),
         ));
     }
-    let core = shipped_core(request, resolved);
-    if !core.is_file() {
-        return Err(ExportError::new(
-            ErrorStage::Validate,
-            format!("core does not exist: {}", core.display()),
-        ));
+    for (_, core) in shipped_cores(request, resolved, targets) {
+        if !core.is_file() {
+            return Err(ExportError::new(
+                ErrorStage::Validate,
+                format!("core does not exist: {}", core.display()),
+            ));
+        }
     }
     for path in request.icon.iter().chain(request.background.iter()) {
         if !path.is_file() {
@@ -777,60 +763,6 @@ fn validate_request(
         }
     }
     Ok(())
-}
-
-fn prepare_core<F>(
-    request: &ExportRequest,
-    resolved: Option<&ExportCore<'_>>,
-    progress: &mut F,
-    transport: &dyn crate::cores::Transport,
-) -> Result<(), ExportError>
-where
-    F: FnMut(ExportProgress),
-{
-    let (Some(resolved), Some(cache)) = (resolved, request.core_cache.as_deref()) else {
-        return Ok(());
-    };
-    let present = [resolved.artifact_relative(), resolved.licence_relative()]
-        .iter()
-        .all(|relative| resolve_cached(&request.runtime_kit, Some(cache), relative).is_file());
-    let wanted = [crate::export_cores::Wanted {
-        component: &resolved.core.component,
-        platform: resolved.platform,
-        present,
-    }];
-    // We write the words in the builder, and the event contains the facts for
-    // them. Neither contains a URL.
-    crate::export_cores::prepare(cache, &wanted, transport, |activity| {
-        progress(ExportProgress {
-            stage: ExportStage::Validate,
-            fraction: 0.04,
-            message: activity.message(),
-            cores: Some(activity.clone()),
-        })
-    })
-    .map_err(|_| {
-        ExportError::new(
-            ErrorStage::Cores,
-            format!(
-                "The {} core could not be downloaded. Try again later.",
-                resolved.system_name
-            ),
-        )
-    })
-}
-
-/// A file that we ship in the export, from the cache or the kit. We look in
-/// the cache first, because it contains what this builder downloaded, and we
-/// put a newer nightly there, not in the kit.
-fn resolve_cached(kit: &Path, cache: Option<&Path>, relative: &Path) -> PathBuf {
-    if let Some(cache) = cache {
-        let fetched = cache.join(relative);
-        if fetched.is_file() {
-            return fetched;
-        }
-    }
-    kit.join(relative)
 }
 
 fn validate_firmware(

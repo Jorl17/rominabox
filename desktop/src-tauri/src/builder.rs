@@ -33,6 +33,9 @@ pub struct Defaults {
     pub keep_playing_in_background: bool,
     pub autosave_on_quit: bool,
     pub advanced_emulator_access: bool,
+    /// A Mac game also runs on Intel Macs, because its player, core and
+    /// launcher contain Intel code beside the Apple silicon code.
+    pub intel_macs: bool,
     pub theme: String,
     pub palette: String,
     pub menu_sounds: String,
@@ -75,6 +78,9 @@ pub mod unstated {
     pub fn advanced_emulator_access() -> bool {
         defaults().advanced_emulator_access
     }
+    pub fn intel_macs() -> bool {
+        defaults().intel_macs
+    }
     pub fn theme() -> String {
         defaults().theme.clone()
     }
@@ -115,10 +121,10 @@ impl Places {
     /// Application Support.
     pub fn core_cache(&self, target: Target) -> Result<PathBuf, String> {
         let data = dirs::data_local_dir().ok_or("this machine has no local data folder for cores")?;
-        Ok(data
-            .join(&self.identifier)
-            .join("core-cache")
-            .join(target.key()))
+        Ok(crate::export_cores::cache_folder(
+            &data.join(&self.identifier).join("core-cache"),
+            target,
+        ))
     }
 }
 

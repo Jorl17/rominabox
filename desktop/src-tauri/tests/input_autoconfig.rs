@@ -733,6 +733,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: true,
+        intel_macs: false,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,

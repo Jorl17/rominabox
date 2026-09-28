@@ -92,6 +92,7 @@ pub fn export_request_from(root: &Path, runtime_kit: PathBuf) -> ExportRequest {
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: false,
+        intel_macs: false,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,

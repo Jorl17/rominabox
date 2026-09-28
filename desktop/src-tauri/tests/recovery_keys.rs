@@ -120,6 +120,7 @@ fn export_request(root: &Path, advanced: bool, controls: Controls) -> ExportRequ
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: advanced,
+        intel_macs: false,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,

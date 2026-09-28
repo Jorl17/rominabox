@@ -6,6 +6,8 @@ mod availability;
 mod identity;
 mod launch_plan;
 mod macos;
+#[cfg(target_os = "macos")]
+mod slices;
 mod validation;
 
 use super::*;
@@ -27,6 +29,7 @@ fn request(splash: bool) -> ExportRequest {
         firmware: Vec::new(),
         splash,
         advanced_emulator_access: false,
+        intel_macs: false,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,
