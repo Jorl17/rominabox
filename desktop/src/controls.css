@@ -89,7 +89,7 @@
  * the callout in the game. */
 .binding-pad {
   font-size: 12px;
-  color: #4b5563;
+  color: var(--muted);
 }
 .binding-button .binding-pad {
   margin-right: auto;
@@ -104,7 +104,7 @@
 .binding-stops {
   flex-basis: 100%;
   font-size: 12px;
-  color: #ab301d;
+  color: var(--error);
 }
 /* A stick is one Bind over its directions' rows. */
 .controls-table tr.stick-row th {

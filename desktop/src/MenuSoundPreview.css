@@ -11,7 +11,7 @@
   margin: 0;
   font-size: 12px;
   font-weight: 600;
-  color: #ab301d;
+  color: var(--error);
   white-space: nowrap;
   pointer-events: none;
 }

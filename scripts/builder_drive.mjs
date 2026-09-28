@@ -674,7 +674,7 @@ async function checkShaderPicker(page, out) {
       collision,
       rules,
       highlight: getComputedStyle(document.documentElement)
-        .getPropertyValue("--highlight")
+        .getPropertyValue("--wash-accent")
         .trim(),
     };
   });
@@ -703,7 +703,7 @@ async function checkShaderPicker(page, out) {
     );
   }
   const chosenRule = initial.rules.join("\n");
-  const usesHighlight = /background(?:-color)?:\s*var\(--highlight\)/.test(
+  const usesHighlight = /background(?:-color)?:\s*var\(--wash-accent\)/.test(
     chosenRule,
   );
   const paintsHex = /background(?:-color)?:\s*[^;]*#[0-9a-fA-F]{3,8}/.test(
@@ -752,7 +752,7 @@ async function checkShaderPicker(page, out) {
   const wash = await page.evaluate(() => {
     const card = document.querySelector(".shader-card.chosen");
     const probe = document.createElement("div");
-    probe.style.backgroundColor = "var(--highlight)";
+    probe.style.backgroundColor = "var(--wash-accent)";
     document.body.appendChild(probe);
     const expected = getComputedStyle(probe).backgroundColor;
     probe.remove();

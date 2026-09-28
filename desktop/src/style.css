@@ -1,17 +1,42 @@
+/* The builder typeface, bundled so it looks the same on every machine:
+ * Science Gothic (SIL Open Font License, ScienceGothic-OFL.txt beside it),
+ * cut to Latin at its normal width with all its weights. */
+@font-face {
+  font-family: "Science Gothic";
+  src: url("./fonts/ScienceGothic.ttf") format("truetype");
+  font-weight: 100 900;
+}
 :root {
-  font-family: "Avenir Next", "Segoe UI", sans-serif;
-  color: #151b30;
-  background: #ffffff;
+  font-family: "Science Gothic", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
   font-weight: 500;
-  --ink: #151b30;
+  /* What each colour is for, from the ROM-in-a-Box palette (--brand-*, the
+   * default palette in designs.json, which we set in main.tsx). */
+  --ink: var(--brand-background);
   --paper: #ffffff;
-  --accent: #1649ed;
-  --line: #c6cbd8;
-  /* The wash of selected picture-filter cards. The card rule only refers to it. */
-  --highlight: #d9e4ff;
+  --accent: var(--brand-screen);
+  --highlight: var(--brand-highlight);
+  --highlight-shadow: var(--brand-background);
+  --muted: var(--brand-rule);
+  --line: var(--brand-background);
+  --border: var(--brand-background);
+  --wash: #ffffff;
+  --wash-accent: var(--brand-highlight);
+  --wash-error: #ffe1dc;
+  --panel: var(--brand-focus);
+  --deep: var(--brand-bevel-dark);
+  --focus: var(--brand-screen);
+  --ok: #0b7a3e;
+  --error: #c2241c;
+  --warning: #8a4b00;
+  --alert: #ef352c;
+  --on-accent: #ffffff;
+  --on-highlight: var(--brand-background);
 }
+
 * {
   box-sizing: border-box;
 }
@@ -42,7 +67,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
-  outline: 3px solid #e2532f;
+  outline: 3px solid var(--focus);
   outline-offset: 4px;
 }
 button {
@@ -64,16 +89,17 @@ p {
   margin: 0;
 }
 h1 {
-  font-size: 38px;
+  font-size: 40px;
   line-height: 1.1;
-  letter-spacing: -1.6px;
-  font-weight: 800;
+  letter-spacing: -0.6px;
+  font-weight: 700;
   outline: none;
 }
 h2 {
   font-size: 23px;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.3px;
   line-height: 1.25;
+  font-weight: 700;
 }
 a {
   color: inherit;
@@ -84,9 +110,14 @@ a {
   margin: auto;
   padding: 0 44px;
 }
+/* A band in the night blue of the palette, with the icon on it. */
 .app-header {
-  height: 82px;
-  border-bottom: 2px solid var(--ink);
+  height: 88px;
+  padding: 0 22px;
+  margin-top: 6px;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 0 6px 0 var(--accent);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -94,10 +125,10 @@ a {
 .wordmark {
   display: flex;
   align-items: center;
-  gap: 13px;
-  font-size: 21px;
-  letter-spacing: -0.8px;
-  font-weight: 800;
+  gap: 14px;
+  font-size: 24px;
+  letter-spacing: -0.2px;
+  font-weight: 700;
 }
 /* The icon of the app, the picture for the builder in macOS and Windows. */
 .brand-mark {
@@ -106,10 +137,11 @@ a {
   display: block;
 }
 .edition {
-  font-family: monospace;
-  letter-spacing: 1.4px;
-  font-size: 11px;
+  font-family: inherit;
+  letter-spacing: 2px;
+  font-size: 12px;
   font-weight: 700;
+  color: var(--highlight);
 }
 main {
   max-width: 1040px;
@@ -127,7 +159,7 @@ main {
   gap: 8px;
   font-size: 12px;
   font-weight: 700;
-  color: #77796f;
+  color: var(--muted);
   white-space: nowrap;
   appearance: none;
   padding: 0;
@@ -140,28 +172,29 @@ main {
   cursor: default;
 }
 .step-number {
-  width: 28px;
-  height: 26px;
+  width: 30px;
+  height: 28px;
   display: grid;
   place-items: center;
-  border: 1px solid #a3a59b;
-  font-family: monospace;
-  font-size: 11px;
+  border: 2px solid var(--border);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
 }
 .step.current {
   color: var(--ink);
 }
 .current .step-number {
   border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 #f8ce42;
+  box-shadow: 3px 3px 0 var(--highlight-shadow);
 }
 .done .step-number {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: white;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }
 .step-line {
-  height: 1px;
+  height: 2px;
   flex: 1;
   background: var(--line);
 }
@@ -181,8 +214,8 @@ main {
 }
 .drop-zone {
   min-height: 298px;
-  background: #fff;
-  border: 2px dashed #777e88;
+  background: var(--paper);
+  border: 2px dashed var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -205,32 +238,32 @@ main {
 }
 .drop-zone.dragging {
   border: 2px solid var(--ink);
-  background: #ffda00;
+  background: var(--highlight);
   box-shadow: 5px 5px 0 var(--ink);
+  color: var(--on-highlight);
 }
 .drop-zone.has-file {
   border-style: solid;
-  background: #fff;
+  background: var(--paper);
 }
-.cartridge {
-  width: 66px;
-  height: 75px;
-  color: var(--ink);
-  filter: drop-shadow(4px 4px 0 #f2c644);
+.icon-art {
+  width: 92px;
+  height: 92px;
+  filter: drop-shadow(5px 5px 0 var(--ink));
   transform: rotate(-7deg);
   transition: transform 0.16s;
 }
-.drop-zone:hover .cartridge {
+.drop-zone:hover .icon-art {
   transform: rotate(0deg) translateY(-3px);
 }
 .file-size {
-  font-family: monospace;
+  font-family: inherit;
   font-size: 12px;
   margin-top: -7px;
-  color: #69706e;
+  color: var(--muted);
 }
 .secondary {
-  background: white;
+  background: var(--paper);
   border: 1px solid var(--ink);
   padding: 11px 15px;
   display: inline-flex;
@@ -265,7 +298,7 @@ main {
   width: 20px;
   height: 20px;
   border: 2px solid var(--ink);
-  background: white;
+  background: var(--paper);
   margin: 0;
   flex-shrink: 0;
   cursor: pointer;
@@ -279,7 +312,7 @@ main {
   content: "";
   width: 9px;
   height: 5px;
-  border: solid white;
+  border: solid var(--paper);
   border-width: 0 0 2px 2px;
   transform: translateY(-1px) rotate(-45deg);
 }
@@ -295,7 +328,7 @@ main {
 .help-button {
   background: none;
   padding: 3px;
-  color: #626976;
+  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -303,7 +336,7 @@ main {
 .help-tooltip {
   position: fixed;
   background: var(--ink);
-  color: white;
+  color: var(--paper);
   width: min(280px, calc(100vw - 24px));
   padding: 12px 14px;
   font-size: 13px;
@@ -312,7 +345,7 @@ main {
   letter-spacing: 0;
   z-index: 1000;
   text-align: left;
-  box-shadow: 3px 3px 0 #ffcc00;
+  box-shadow: 3px 3px 0 var(--highlight);
   pointer-events: none;
 }
 .option-toggle,
@@ -331,8 +364,8 @@ main {
 }
 .primary {
   min-width: 146px;
-  background: var(--ink);
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--on-accent);
   display: flex;
   gap: 32px;
   justify-content: space-between;
@@ -346,8 +379,8 @@ main {
     transform 0.13s;
 }
 .primary:hover:not(:disabled) {
-  background: #263458;
-  box-shadow: 4px 4px 0 #f2c644;
+  background: var(--panel);
+  box-shadow: 4px 4px 0 var(--highlight-shadow);
   transform: translate(-1px, -1px);
 }
 .back,
@@ -369,7 +402,7 @@ main {
   gap: 6px;
   align-items: center;
   font-size: 12px;
-  color: #226344;
+  color: var(--ok);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -382,7 +415,7 @@ main {
 .icon-picker {
   width: 168px;
   height: 168px;
-  background: #fff;
+  background: var(--paper);
   border: 2px solid var(--ink);
   display: flex;
   align-items: center;
@@ -393,16 +426,17 @@ main {
   transition: background 0.13s;
 }
 .icon-picker:hover {
-  background: #ffda00;
+  background: var(--highlight);
+  color: var(--on-highlight);
 }
 .icon-picker img {
   width: 103px;
   height: 103px;
   object-fit: contain;
 }
-.icon-picker .cartridge {
-  height: 89px;
-  width: 78px;
+.icon-picker .icon-art {
+  height: 84px;
+  width: 84px;
 }
 .icon-picker span {
   display: flex;
@@ -435,8 +469,8 @@ main {
 .advanced textarea {
   padding: 10px 12px;
   width: 100%;
-  background: #fff;
-  border: 1px solid #7d838b;
+  background: var(--paper);
+  border: 1px solid var(--border);
   font-size: 17px;
 }
 .fields input {
@@ -452,7 +486,7 @@ main {
   align-items: center;
   gap: 7px;
   font-size: 12px;
-  color: #596663;
+  color: var(--muted);
   margin-top: -6px;
 }
 .traveling {
@@ -472,7 +506,7 @@ main {
   font-size: 12px;
   font-weight: 400;
   line-height: 1.4;
-  color: #596663;
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -509,7 +543,7 @@ main {
 }
 .note {
   font-size: 12px;
-  color: #626b71;
+  color: var(--muted);
   line-height: 1.6;
   margin-top: 13px;
 }
@@ -517,7 +551,7 @@ main {
   overflow-wrap: anywhere;
 }
 .error {
-  color: #ab301d;
+  color: var(--error);
   font-size: 13px;
   line-height: 1.6;
   margin-top: 17px;
@@ -545,7 +579,7 @@ progress {
   border-radius: 0;
 }
 progress::-webkit-progress-bar {
-  background: #e8e5da;
+  background: var(--wash);
 }
 progress::-webkit-progress-value {
   background: var(--accent);
@@ -599,7 +633,7 @@ progress::-webkit-progress-value {
   height: 30px;
 }
 .icon-button:hover {
-  background: #ffe5d7;
+  background: var(--wash-error);
 }
 .menu-off {
   height: 270px;
@@ -626,7 +660,7 @@ progress::-webkit-progress-value {
   display: grid;
   place-items: center;
   border: 2px solid var(--ink);
-  background: #fff;
+  background: var(--paper);
 }
 .summary-icon img {
   width: 91px;
@@ -638,17 +672,17 @@ progress::-webkit-progress-value {
 }
 .export-summary p {
   font-size: 14px;
-  color: #626b71;
+  color: var(--muted);
   margin: 7px 0 10px;
 }
 .export-format {
-  font-family: monospace;
+  font-family: inherit;
   font-size: 10px;
   letter-spacing: 1.5px;
 }
 .complete-mark {
   margin-left: auto;
-  color: #226344;
+  color: var(--ok);
 }
 .destination > label {
   display: flex;
@@ -659,8 +693,8 @@ progress::-webkit-progress-value {
   margin-bottom: 10px;
 }
 .destination > button {
-  background: white;
-  border: 1px solid #7d838b;
+  background: var(--paper);
+  border: 1px solid var(--border);
   width: 100%;
   display: flex;
   align-items: center;
@@ -677,7 +711,8 @@ progress::-webkit-progress-value {
   font-weight: 700;
 }
 .destination > button:hover {
-  background: #ffda00;
+  background: var(--highlight);
+  color: var(--on-highlight);
 }
 .export-choice {
   margin-top: 18px;
@@ -705,7 +740,7 @@ progress::-webkit-progress-value {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgb(21 27 48 / 0.28);
+  background: color-mix(in srgb, var(--ink) 28%, transparent);
   z-index: 20;
 }
 .pop-up {
@@ -747,7 +782,7 @@ progress::-webkit-progress-value {
 }
 .result dt {
   font-size: 12px;
-  color: #626b71;
+  color: var(--muted);
 }
 .result dd {
   font-size: 25px;
@@ -844,8 +879,8 @@ progress::-webkit-progress-value {
 }
 .design-select select {
   padding: 6px 8px;
-  border: 1px solid #7d838b;
-  background: white;
+  border: 1px solid var(--border);
+  background: var(--paper);
   font-size: 12px;
 }
 .palette-picker {
@@ -864,10 +899,11 @@ progress::-webkit-progress-value {
 }
 .palette-picker button.active {
   border-color: var(--ink);
-  background: white;
+  background: var(--paper);
 }
 .palette-picker button:hover {
-  background: #ffda00;
+  background: var(--highlight);
+  color: var(--on-highlight);
 }
 .palette-swatch {
   width: 17px;
@@ -970,7 +1006,7 @@ main {
   width: auto;
   padding: 8px 28px 8px 10px;
   border: 1px solid var(--ink);
-  background: white;
+  background: var(--paper);
 }
 
 .splash-choice {
@@ -998,7 +1034,7 @@ main {
 /* Authoring controls share one compact field treatment. */
 select {
   appearance: none;
-  background: white
+  background: var(--paper)
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23151b30' stroke-width='2'/%3E%3C/svg%3E")
     no-repeat right 10px center !important;
   border: 2px solid var(--ink);
@@ -1119,24 +1155,23 @@ select {
 }
 .screen-0 .drop-zone {
   border: 3px solid var(--ink);
-  border-bottom-width: 8px;
-  box-shadow:
-    inset 0 0 0 6px white,
-    inset 0 0 0 8px #c6cbd8;
-  background: #f4f6fb;
+  box-shadow: 8px 8px 0 var(--accent);
+  background: var(--wash);
 }
 .drop-zone.has-file {
-  border-color: #1649ed;
+  border-color: var(--accent);
 }
 .drop-zone.dragging {
-  background: #ffda00;
+  background: var(--highlight);
+  color: var(--on-highlight);
 }
 .app-header {
   border-bottom: 4px solid var(--ink);
 }
 .current .step-number {
-  background: #ffda00;
+  background: var(--highlight);
   box-shadow: 3px 3px 0 var(--ink);
+  color: var(--on-highlight);
 }
 .app-header::after {
   content: "";
@@ -1147,9 +1182,9 @@ select {
   height: 6px;
   background: linear-gradient(
     90deg,
-    #1649ed 0 64%,
-    #ffda00 64% 86%,
-    #ef352c 86%
+    var(--accent) 0 64%,
+    var(--highlight) 64% 86%,
+    var(--alert) 86%
   );
 }
 @media (min-width: 900px) {
@@ -1168,12 +1203,12 @@ select {
    blocker or looks for a file nobody needs. */
 .firmware-required,
 .firmware-optional {
-  border-left: 3px solid var(--line, #d8d5c8);
+  border-left: 3px solid var(--line, var(--line));
   padding-left: 12px;
   margin: 12px 0;
 }
 .firmware-required {
-  border-left-color: #c2241c;
+  border-left-color: var(--error);
 }
 .firmware-status {
   margin: 0 0 8px;
@@ -1181,7 +1216,7 @@ select {
   line-height: 1.5;
 }
 .firmware-required .firmware-status {
-  color: #c2241c;
+  color: var(--error);
 }
 /* The other half of the ready badge: what the step is waiting for. When we
    disable Next, we must show why, where the tick would be, or the button
@@ -1191,7 +1226,7 @@ select {
   gap: 6px;
   align-items: center;
   font-size: 12px;
-  color: #8a4b00;
+  color: var(--warning);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -1201,7 +1236,7 @@ select {
 .shader-lede {
   margin: 0 0 10px;
   font-size: 12px;
-  color: #55606e;
+  color: var(--muted);
   max-width: 52ch;
 }
 .shader-grid {
@@ -1215,7 +1250,7 @@ select {
   flex-direction: column;
   gap: 2px;
   padding: 8px;
-  border: 2px solid #d8dce4;
+  border: 2px solid var(--line);
   background: var(--paper);
   color: inherit;
   cursor: pointer;
@@ -1223,11 +1258,11 @@ select {
   width: 100%;
 }
 .shader-card:hover {
-  border-color: #9aa4b4;
+  border-color: var(--border);
 }
 .shader-card.chosen {
   border-color: var(--ink);
-  background: var(--highlight);
+  background: var(--wash-accent);
 }
 .shader-preview {
   display: block;
@@ -1235,7 +1270,7 @@ select {
   aspect-ratio: 1;
   /* A console's picture is not smoothed, and neither is a picture of one. */
   image-rendering: pixelated;
-  background: #10131a;
+  background: var(--deep);
 }
 .shader-name {
   font-weight: 700;
@@ -1244,7 +1279,7 @@ select {
 }
 .shader-detail {
   font-size: 11px;
-  color: #55606e;
+  color: var(--muted);
   line-height: 1.35;
 }
 /* The square matches a filter preview, so a wrapped Add card is still a card

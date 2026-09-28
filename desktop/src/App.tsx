@@ -30,6 +30,7 @@ import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import { ExportChoices } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import appIcon from "../src-tauri/icons/icon.png";
+import largeIcon from "../src-tauri/icons/icon-large.png";
 import { MenuControlsEditor } from "./MenuControlsEditor";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
@@ -169,19 +170,9 @@ function StartupOptions({
     </>
   );
 }
-function Cartridge() {
-  return (
-    <svg className="cartridge" viewBox="0 0 120 136" aria-hidden="true">
-      <path d="M18 4h84l14 16v108H4V20z" fill="currentColor" />
-      <path d="M23 13h72v37H23z" fill="#fff6c9" />
-      <path d="M28 18h14v26H28zm24 0h14v26H52zm24 0h14v26H76" fill="#e45c35" />
-      <path d="M20 62h80v43H20z" fill="#fff6c9" />
-      <path d="M29 72h62v5H29zm0 12h40v5H29z" fill="currentColor" />
-      {[20, 34, 48, 62, 76, 90].map((x) => (
-        <path key={x} d={`M${x} 115h5v13h-5z`} fill="#fff6c9" />
-      ))}
-    </svg>
-  );
+/** The ROM-in-a-Box icon, for a game until the author chooses an icon. */
+function IconArt() {
+  return <img className="icon-art" src={largeIcon} alt="" />;
 }
 export function App() {
   const [step, setStep] = useState(0);
@@ -978,7 +969,7 @@ export function App() {
                   browserChoose(e.dataTransfer.files);
                 }}
               >
-                <Cartridge />
+                <IconArt />
                 <h2>{selection ? selection.name : "Drop your game here"}</h2>
                 {selection?.size !== undefined && (
                   <span className="file-size">
@@ -1094,7 +1085,7 @@ export function App() {
                         {icon ? (
                           <img src={icon.url} alt="App icon" />
                         ) : (
-                          <Cartridge />
+                          <IconArt />
                         )}
                         <span>
                           <FileImage size={16} />
@@ -1382,7 +1373,7 @@ export function App() {
                 </div>
               ) : (
                 <div className="menu-off">
-                  <Cartridge />
+                  <IconArt />
                   <p>No in-game menu.</p>
                 </div>
               )}
@@ -1546,7 +1537,7 @@ export function App() {
               </h1>
               <div className="export-summary">
                 <div className="summary-icon">
-                  {icon ? <img src={icon.url} alt="" /> : <Cartridge />}
+                  {icon ? <img src={icon.url} alt="" /> : <IconArt />}
                 </div>
                 <div>
                   <h2>{draft.title}</h2>

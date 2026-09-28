@@ -14,6 +14,9 @@ colour from `desktop/designs.json` and `desktop/defaults.json`. The outputs:
   desktop/src-tauri/icons/icon.ico    the builder on Windows, the squircle
                                       with its corners clear
   desktop/src-tauri/icons/icon.png    that squircle, for the builder's header
+  desktop/src-tauri/icons/icon-large.png  a larger one, where we show it big
+                                      in the builder (the drop area, a game's
+                                      icon before the author picks one)
   desktop/assets/default-icon.png     a game without artwork, the full-bleed
                                       square, which we keep whole at export
 
@@ -58,6 +61,7 @@ ICO = [16, 24, 32, 48, 64, 128, 256]
 # We show it 56 pixels wide in the header. This is twice that size, for
 # double density, with the lines of a 56-pixel icon.
 HEADER = 112
+LARGE = 256
 
 
 def ground() -> tuple[int, int, int, int]:
@@ -157,6 +161,10 @@ def render(into: Path) -> dict[str, Path]:
         tile(HEADER, scratch, shown=HEADER // 2).save(header)
         written["header"] = header
 
+        large = into / ICONS.relative_to(ROOT) / "icon-large.png"
+        tile(LARGE, scratch).save(large)
+        written["large"] = large
+
         default = into / DEFAULT_ICON.relative_to(ROOT)
         default.parent.mkdir(parents=True, exist_ok=True)
         square(MASTER, scratch).save(default)
@@ -177,7 +185,7 @@ def main() -> int:
     drifted = []
     with tempfile.TemporaryDirectory(prefix="rominabox-icons-check-") as made:
         fresh = render(Path(made))
-        for name in ("header", "default"):
+        for name in ("header", "large", "default"):
             shipped = ROOT / fresh[name].relative_to(made)
             why = compare(shipped, fresh[name]) if shipped.is_file() else "missing"
             if why:
