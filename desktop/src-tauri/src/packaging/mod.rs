@@ -683,10 +683,18 @@ where
     })
 }
 
-/// `path`, one of the game files relative to the game folder, written as in
-/// the launch plan and the manifest of the game.
-fn launch_path(_target: &ExportTarget, path: &Path) -> String {
-    path.to_string_lossy().into_owned()
+/// `path`, one of the game's files relative to its folder, as we write it in
+/// the launch plan and manifest: with "/" between its parts for a Mac game on
+/// every system, and as this system spells it for a Windows game.
+fn launch_path(target: &ExportTarget, path: &Path) -> String {
+    match target {
+        ExportTarget::Macos => path
+            .components()
+            .map(|part| part.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join("/"),
+        ExportTarget::Windows => path.to_string_lossy().into_owned(),
+    }
 }
 
 fn validate_request(
