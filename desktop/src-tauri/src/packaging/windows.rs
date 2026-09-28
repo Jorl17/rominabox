@@ -56,6 +56,22 @@ impl Packager for WindowsPackager {
         core_file!(Windows)
     }
 
+    /// A Windows game has one target, so one core.
+    fn place_core(
+        &mut self,
+        builds: &[(Target, PathBuf)],
+        destination: &Path,
+        _system_name: &str,
+    ) -> Result<(), ExportError> {
+        match builds {
+            [(_, only)] => copy_file(only, destination),
+            several => Err(ExportError::new(
+                ErrorStage::Stage,
+                format!("a Windows game has one core, not {}", several.len()),
+            )),
+        }
+    }
+
     fn stage_dependencies(
         &mut self,
         _runtime_kit: &Path,

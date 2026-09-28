@@ -4,11 +4,13 @@
 
 use super::app_files::{copy_file, make_executable, tree_size};
 use super::launch_plan::accounts_folder;
+use super::slices::{self, Arch};
 use super::{
     check_cancelled, player_recipe, ErrorStage, ExportError, ExportRequest, OwnedStaging, Packager,
 };
 use crate::icons;
 use crate::launch_contract::{app_file, core_file, shipped};
+use crate::target::Target;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -23,8 +25,9 @@ use std::time::Duration;
 
 /// A macOS app: one bundle, with the player in the launcher process, the
 /// libraries relocated next to it, and a signature with the game's sandbox.
-#[derive(Default)]
 pub(super) struct MacosPackager {
+    /// The processors for the code of the app, with the platform's first.
+    archs: Vec<Arch>,
     app: PathBuf,
     macos: PathBuf,
     resources: PathBuf,
@@ -32,6 +35,21 @@ pub(super) struct MacosPackager {
     runtime: PathBuf,
     /// Every Mach-O file in the app, which we relocate and sign.
     mach_objects: Vec<PathBuf>,
+}
+
+impl MacosPackager {
+    /// A packager for an app that runs on `targets`, each a Mac.
+    pub(super) fn for_targets(targets: &[Target]) -> Self {
+        Self {
+            archs: targets.iter().filter_map(|&target| Arch::of(target)).collect(),
+            app: PathBuf::new(),
+            macos: PathBuf::new(),
+            resources: PathBuf::new(),
+            frameworks: PathBuf::new(),
+            runtime: PathBuf::new(),
+            mach_objects: Vec::new(),
+        }
+    }
 }
 
 impl Packager for MacosPackager {
@@ -65,14 +83,51 @@ impl Packager for MacosPackager {
         Ok(self.resources.clone())
     }
 
+    /// The kit's player, with the slices for the processors of the app and no
+    /// others. For an ordinary game we thin a universal player.
     fn place_player(&mut self, runtime_kit: &Path) -> Result<(), ExportError> {
         self.runtime = self.macos.join("retroarch");
-        copy_file(&runtime_kit.join(self.player_in_kit()), &self.runtime)?;
+        slices::keep(
+            &runtime_kit.join(self.player_in_kit()),
+            &self.archs,
+            &self.runtime,
+            "This builder's runtime",
+            ErrorStage::Stage,
+        )?;
         make_executable(&self.runtime)
     }
 
     fn core_file(&self) -> &'static str {
         core_file!(Macos)
+    }
+
+    /// We copy one core as it is, and join the cores for several processors
+    /// into one file with the slice of each.
+    fn place_core(
+        &mut self,
+        builds: &[(Target, PathBuf)],
+        destination: &Path,
+        system_name: &str,
+    ) -> Result<(), ExportError> {
+        match builds {
+            [(_, only)] => copy_file(only, destination),
+            several => {
+                let parts = several
+                    .iter()
+                    .map(|(target, file)| {
+                        Arch::of(*target).map(|arch| (arch, file.clone())).ok_or_else(|| {
+                            ExportError::new(ErrorStage::Stage, format!("a Mac game has no {target} core"))
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                slices::join(
+                    &parts,
+                    destination,
+                    &format!("The {system_name} core"),
+                    ErrorStage::Stage,
+                )
+            }
+        }
     }
 
     fn stage_dependencies(
@@ -91,9 +146,8 @@ impl Packager for MacosPackager {
     }
 
     fn install_launcher(&mut self, _runtime_kit: &Path) -> Result<(), ExportError> {
-        install_launch_library(&self.macos, &self.runtime)?;
-        self.mach_objects
-            .push(self.macos.join("librominabox-launch.dylib"));
+        install_launch_library(&self.macos, &self.runtime, &self.archs)?;
+        self.mach_objects.push(self.macos.join(LAUNCH_LIBRARY));
         Ok(())
     }
 
@@ -357,40 +411,56 @@ fn launcher_sources(platform: &str) -> Result<Vec<PathBuf>, ExportError> {
     Ok(sources)
 }
 
-fn install_launch_library(macos: &Path, retroarch: &Path) -> Result<(), ExportError> {
+/// The launch library, built for `archs`, next to the player and loaded by
+/// each of its slices. We keep a build for other processors apart, because
+/// in `compile_c` we rebuild only on changed sources, not on changed flags.
+fn install_launch_library(macos: &Path, retroarch: &Path, archs: &[Arch]) -> Result<(), ExportError> {
     let library_sources = launcher_sources("macos")?;
-    let injector_source = vec![crate::repo::at("scripts/native_runtime/inject_dylib.c")];
-    let work = crate::repo::at("work");
-    let library = work.join("librominabox-launch.dylib");
-    let injector = work.join("inject-dylib");
+    let built_for = archs.iter().map(|arch| arch.name()).collect::<Vec<_>>().join("-");
+    let library = crate::repo::at("work/launch").join(built_for).join(LAUNCH_LIBRARY);
+    let install_name = format!("-Wl,-install_name,@executable_path/{LAUNCH_LIBRARY}");
+    let mut flags = vec!["-Oz", "-dynamiclib", "-Wl,-dead_strip", install_name.as_str()];
+    for arch in archs {
+        flags.extend(["-arch", arch.name()]);
+    }
+    compile_c(&library_sources, &library, &flags)?;
+    let injector = launch_injector()?;
+    slices::each_slice(retroarch, ErrorStage::Configure, |slice, _| {
+        attach_launch_library(&injector, slice)
+    })?;
+    copy_file(&library, &macos.join(LAUNCH_LIBRARY))
+}
+
+/// The program with which we attach the launch library to a slice of the
+/// player. We run it here at export, so we build it only for this Mac,
+/// whichever processors the game is for.
+pub(super) fn launch_injector() -> Result<PathBuf, ExportError> {
+    let injector = crate::repo::at("work/inject-dylib");
     compile_c(
-        &library_sources,
-        &library,
-        &[
-            "-Oz",
-            "-dynamiclib",
-            "-Wl,-dead_strip",
-            "-Wl,-install_name,@executable_path/librominabox-launch.dylib",
-        ],
+        &[crate::repo::at("scripts/native_runtime/inject_dylib.c")],
+        &injector,
+        &["-Oz"],
     )?;
-    compile_c(&injector_source, &injector, &["-Oz"])?;
-    let status = Command::new(&injector)
-        .arg(retroarch)
-        .arg("@executable_path/librominabox-launch.dylib")
-        .status()
+    Ok(injector)
+}
+
+/// Change the one-processor Mach-O `slice` so that it loads the launch
+/// library before its main and passes main the arguments from the library.
+pub(super) fn attach_launch_library(injector: &Path, slice: &Path) -> Result<(), ExportError> {
+    let output = Command::new(injector)
+        .arg(slice)
+        .arg(format!("@executable_path/{LAUNCH_LIBRARY}"))
+        .output()
         .map_err(|error| {
             ExportError::new(
                 ErrorStage::Configure,
                 format!("could not attach the launcher: {error}"),
             )
         })?;
-    if !status.success() {
-        return Err(ExportError::new(
-            ErrorStage::Configure,
-            "the runtime has no room for the launcher",
-        ));
+    if !output.status.success() {
+        return Err(ExportError::command(ErrorStage::Configure, "inject-dylib", &output));
     }
-    copy_file(&library, &macos.join("librominabox-launch.dylib"))
+    Ok(())
 }
 
 #[derive(Deserialize)]

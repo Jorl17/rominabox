@@ -11,13 +11,23 @@ use std::{
 };
 
 fn write_runtime_stub(path: &Path) {
+    write_runtime_stub_for(path, &[]);
+}
+
+/// A player that does nothing, with code for each of `archs` (`cc -arch`
+/// names), or for the host Mac alone when there are none.
+pub fn write_runtime_stub_for(path: &Path, archs: &[&str]) {
     let source = path.with_extension("c");
     fs::write(
         &source,
         "int rarch_main(int c, char **v, void *d){(void)c;(void)v;(void)d;return 0;}\nint main(void){return rarch_main(0,0,0);}\n",
     )
     .unwrap();
-    let status = Command::new("cc")
+    let mut cc = Command::new("cc");
+    for arch in archs {
+        cc.args(["-arch", arch]);
+    }
+    let status = cc
         .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
         .arg(path)
         .arg(&source)
@@ -92,6 +102,7 @@ pub fn export_request_from(root: &Path, runtime_kit: PathBuf) -> ExportRequest {
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: false,
+        intel_macs: false,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,

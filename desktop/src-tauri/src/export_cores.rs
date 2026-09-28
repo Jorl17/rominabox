@@ -6,11 +6,34 @@
 //! it is and say nothing. We report only what we are fetching, and only when
 //! we fetch something.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 use crate::cores::{self, Need, Transport};
+use crate::target::Target;
+
+/// Where we keep the cores for `target` under `root`: a folder named for the
+/// target. The Mac and Intel Mac builds of a core have the same file name, so
+/// each target has a separate cache folder, beside the others.
+pub fn cache_folder(root: &Path, target: Target) -> PathBuf {
+    root.join(target.key())
+}
+
+/// The cache for the cores of `target`, given `cache`, the one for `own`. For
+/// an export to more than one target, we fetch the others beside it.
+pub fn cache_for(cache: &Path, own: Target, target: Target) -> Result<PathBuf, String> {
+    if target == own {
+        return Ok(cache.to_path_buf());
+    }
+    match cache.parent() {
+        Some(root) if cache_folder(root, own) == cache => Ok(cache_folder(root, target)),
+        _ => Err(format!(
+            "The {target} cores are kept beside the {own} ones, in a folder named for each; {} is not named {own}.",
+            cache.display()
+        )),
+    }
+}
 
 /// What we show in the builder's pop-up and print in the CLI.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -56,16 +79,17 @@ impl CoreActivity {
 pub struct Wanted<'a> {
     pub component: &'a str,
     /// The target of the export, not of this machine.
-    pub platform: crate::target::Target,
+    pub platform: Target,
+    /// The cache we fetch it into, the one for the cores of `platform`.
+    pub cache: &'a Path,
     /// The core and its licence are already present, in the cache or the kit.
     /// We read this only for a core that is not in the download list.
     pub present: bool,
 }
 
-/// Bring every wanted core into `cache`. `Err` contains the reported failure,
-/// because at least one core is not cached and we could not download it.
+/// Bring every required core into its cache. `Err` contains the failure we
+/// reported, when a core is not cached and we could not download it.
 pub fn prepare(
-    cache: &Path,
     wanted: &[Wanted<'_>],
     transport: &dyn Transport,
     mut report: impl FnMut(&CoreActivity),
@@ -74,7 +98,7 @@ pub fn prepare(
     let mut updates = Vec::new();
     let mut missing = 0;
     for core in wanted {
-        match cores::assess(cache, core.platform, core.component, transport) {
+        match cores::assess(core.cache, core.platform, core.component, transport) {
             Some(Need::Download) => downloads.push(core),
             Some(Need::Update) => updates.push(core),
             Some(Need::UseCache) => {}
@@ -89,7 +113,7 @@ pub fn prepare(
         });
     }
     for core in downloads {
-        let usable = cores::install_component(cache, core.platform, core.component, transport)
+        let usable = cores::install_component(core.cache, core.platform, core.component, transport)
             .is_some_and(|install| install.usable());
         if !usable {
             missing += 1;
@@ -97,7 +121,7 @@ pub fn prepare(
     }
     for core in updates {
         // When an update fails, we keep the cached core, which still works.
-        let _ = cores::update(cache, core.platform, core.component, transport);
+        let _ = cores::update(core.cache, core.platform, core.component, transport);
     }
     if missing > 0 {
         let failed = CoreActivity::Failed { missing };

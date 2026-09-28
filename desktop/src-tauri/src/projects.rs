@@ -6,7 +6,7 @@
 
 use crate::content;
 use crate::controls::{self, Controls};
-use crate::packaging::{ExportRequest, ExportTarget};
+use crate::packaging::ExportTarget;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
@@ -14,6 +14,8 @@ use std::path::{Component, Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
+
+mod request;
 
 const FORMAT_VERSION: u32 = 2;
 const MANIFEST_PATH: &str = "manifest.json";
@@ -73,6 +75,8 @@ pub struct ProjectSettings {
     #[serde(default = "crate::achievements::default_included")]
     pub include_achievements: bool,
     pub target: ExportTarget,
+    #[serde(default = "crate::builder::unstated::intel_macs")]
+    pub intel_macs: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -144,6 +148,8 @@ struct StoredSettings {
     #[serde(default = "crate::achievements::default_included")]
     include_achievements: bool,
     target: ExportTarget,
+    #[serde(default = "crate::builder::unstated::intel_macs")]
+    intel_macs: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -159,73 +165,6 @@ struct ProjectAssets {
     /// Custom shader files. Catalog presets come with the builder, so we do not store them.
     #[serde(default)]
     shaders: Vec<String>,
-}
-
-impl From<&ExportRequest> for ProjectSettings {
-    fn from(request: &ExportRequest) -> Self {
-        Self {
-            rom: request.rom.clone(),
-            title: request.title.clone(),
-            system: request.system.clone(),
-            description: request.description.clone(),
-            icon: request.icon.clone(),
-            background: request.background.clone(),
-            show_menu: request.show_menu,
-            start_at_menu: request.start_at_menu,
-            theme: request.theme.clone(),
-            palette: request.palette.clone(),
-            menu_sounds: request.menu_sounds.clone(),
-            controls: request.controls.clone(),
-            firmware: request.firmware.clone(),
-            splash: request.splash,
-            advanced_emulator_access: request.advanced_emulator_access,
-            keep_playing_in_background: request.keep_playing_in_background,
-            autosave_on_quit: request.autosave_on_quit,
-            menu_entries: request.menu_entries.clone(),
-            shaders: request.shaders.clone(),
-            include_achievements: request.include_achievements,
-            target: request.target.clone(),
-        }
-    }
-}
-
-impl ProjectSettings {
-    /// Add the host-local export dependencies after someone opens a project.
-    pub fn into_export_request(
-        self,
-        output_dir: PathBuf,
-        runtime_kit: PathBuf,
-        core: Option<PathBuf>,
-    ) -> ExportRequest {
-        ExportRequest {
-            rom: self.rom,
-            title: self.title,
-            system: self.system,
-            description: self.description,
-            icon: self.icon,
-            background: self.background,
-            show_menu: self.show_menu,
-            start_at_menu: self.start_at_menu,
-            theme: self.theme,
-            palette: self.palette,
-            menu_sounds: self.menu_sounds,
-            controls: self.controls,
-            firmware: self.firmware,
-            splash: self.splash,
-            advanced_emulator_access: self.advanced_emulator_access,
-            keep_playing_in_background: self.keep_playing_in_background,
-            autosave_on_quit: self.autosave_on_quit,
-            menu_entries: self.menu_entries,
-            shaders: self.shaders,
-            include_achievements: self.include_achievements,
-            output_dir,
-            replace: false,
-            target: self.target,
-            runtime_kit,
-            core,
-            core_cache: None,
-        }
-    }
 }
 
 pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult, String> {
@@ -293,6 +232,7 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             shaders: stored_shaders,
             include_achievements: request.settings.include_achievements,
             target: request.settings.target.clone(),
+            intel_macs: request.settings.intel_macs,
         },
         assets: assets.clone(),
     };
@@ -428,6 +368,7 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
         ),
         include_achievements: manifest.settings.include_achievements,
         target: manifest.settings.target,
+        intel_macs: manifest.settings.intel_macs,
     };
     Ok(OpenProject {
         archive_path: request.archive_path.clone(),
@@ -568,6 +509,7 @@ fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
         shaders: settings.shaders.clone(),
         include_achievements: settings.include_achievements,
         target: settings.target.clone(),
+        intel_macs: settings.intel_macs,
     })?;
     for (label, path) in [
         ("ROM", Some(&settings.rom)),
@@ -943,6 +885,7 @@ mod tests {
                 shaders: crate::shaders::ShaderSelection::default(),
                 include_achievements: false,
                 target: ExportTarget::Macos,
+                intel_macs: false,
             },
         })
         .unwrap();
@@ -1009,6 +952,7 @@ mod tests {
             shaders: crate::shaders::ShaderSelection::default(),
             include_achievements: false,
             target: ExportTarget::Macos,
+            intel_macs: false,
         }
     }
 
