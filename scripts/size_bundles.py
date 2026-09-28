@@ -7,7 +7,10 @@ ROM is a few bytes that we write in the work directory, so the size is that of
 the player and the one core the game uses. A real Game Boy Advance ROM adds
 its own size. We check the app on disk for this machine's platform (a macOS
 bundle, a Windows game folder) against scripts/fixtures/size-budgets.json. At
-export we write that app and nothing else.
+export we write that app and nothing else. On macOS we export one more game,
+which also runs on Intel Macs. Its player and core contain code for both
+processors, it has its own ceiling, and its Intel core comes from the core
+source's macos-x86_64 folder, beside the folder for this Mac.
 
 We also refuse libraries the app should not contain. On macOS, the video
 encoders can take a cartridge export past 50 MB, and with a budget alone we
@@ -86,16 +89,21 @@ def windows_libraries(app: Path) -> list[str]:
             if path.relative_to(app) != Path("Resources/game-core.dll")]
 
 
-# For each platform, where an app has its own files, and the check of the
-# libraries in an app.
+# For each platform, where an app has its own files, the check of the
+# libraries in an app, and the games we make only on this platform, each with
+# its budget and the other target whose core we also include in it.
 PLATFORMS = {
     "macos": {
         "resources": lambda app: app / "Contents" / "Resources",
         "libraries": macos_libraries,
+        "more": {
+            "featured-intel": ({"intelMacs": True}, "intel_macs_installed_bytes", "macos-x86_64"),
+        },
     },
     "windows": {
         "resources": lambda app: app / "Resources",
         "libraries": windows_libraries,
+        "more": {},
     },
 }
 PLATFORM = host_target().split("-", 1)[0]
@@ -106,6 +114,18 @@ def core_cache() -> Path:
     this machine's platform."""
     artifact = prepare_runtime.catalog_components()["genesis_plus_gx"]["artifacts"][host_target()]
     return core(artifact).parent.parent
+
+
+def require_core_beside(cache: Path, target: str) -> None:
+    """Return the Mega Drive core for `target` in its folder beside `cache`,
+    where we look for it in an export for several targets. We download nothing."""
+    artifact = prepare_runtime.catalog_components()["genesis_plus_gx"]["artifacts"][target]
+    beside = cache.parent / target / "cores" / artifact
+    if not beside.is_file():
+        raise SystemExit(
+            f"{artifact} for {target} is not at {beside}. Seed it with: "
+            f"python3 scripts/prepare_runtime.py --seed-core-cache --target {target}"
+        )
 
 
 def resources(app: Path) -> Path:
@@ -163,7 +183,6 @@ def main() -> int:
             "prepared kit; it does not build one."
         )
     budgets = json.loads(BUDGETS.read_text())
-    installed_ceiling = int(budgets["installed_bytes"])
 
     rom = WORK / "stand-in.bin"
     WORK.mkdir(parents=True, exist_ok=True)
@@ -178,12 +197,16 @@ def main() -> int:
 
     command = cli()
     bundles = {
-        "featured": {},
-        "no-options": {"menuEntries": [], "includeAchievements": False},
-        "bare": {"showMenu": False, "splash": False, "startAtMenu": False, "shaders": {}},
+        "featured": ({}, "installed_bytes"),
+        "no-options": ({"menuEntries": [], "includeAchievements": False}, "installed_bytes"),
+        "bare": ({"showMenu": False, "splash": False, "startAtMenu": False, "shaders": {}}, "installed_bytes"),
     }
+    for name, (extra, budget, target) in platform["more"].items():
+        require_core_beside(cache, target)
+        bundles[name] = (extra, budget)
     failed = False
-    for name, extra in bundles.items():
+    for name, (extra, budget) in bundles.items():
+        ceiling = int(budgets[budget])
         app = export(command, name, kit, cache, rom, extra)
         extras = sorted(
             entry.name
@@ -194,16 +217,16 @@ def main() -> int:
             print(f"  {name} wrote more than the app: {', '.join(extras)}")
             failed = True
         installed = du(app)
-        print(f"  {name:<12} app {installed:8d}")
-        if installed > installed_ceiling:
-            print(f"  {name} app {installed} exceeds {installed_ceiling}")
+        print(f"  {name:<14} app {installed:8d}  of {ceiling}")
+        if installed > ceiling:
+            print(f"  {name} app {installed} exceeds {ceiling}")
             failed = True
         for wrong in platform["libraries"](app):
             print(f"  {name} {wrong}")
             failed = True
     if failed:
         return 1
-    print(f"\n3 apps within {installed_ceiling} bytes on disk")
+    print(f"\n{len(bundles)} apps within their ceilings on disk")
     return 0
 
 
