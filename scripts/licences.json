@@ -91,6 +91,19 @@
       "texts": [{"fork": "deps/xxHash/LICENSE"}]
     },
     {
+      "name": "zlib", "title": "zlib", "licence": "Zlib", "pin": "fork", "path": "deps/libz",
+      "versionDefine": ["libretro-common/include/compat/zlib/zlib.h", "ZLIB_VERSION"],
+      "usedBy": "the Windows player, which has no system zlib, in every Windows game",
+      "texts": [{"forkComment": "libretro-common/include/compat/zlib/zlib.h"}]
+    },
+    {
+      "name": "switchres", "title": "Switchres", "licence": "GPL-2.0-or-later", "pin": "fork", "path": "deps/switchres",
+      "versionDefine": ["deps/switchres/switchres.h", "SWITCHRES_VERSION"],
+      "usedBy": "the Windows player's CRT mode switching, in every Windows game",
+      "note": "Switchres names its licence in each file's header and carries no text of it, upstream included; the text is the Free Software Foundation's.",
+      "texts": [{"forkComment": "deps/switchres/switchres.cpp"}, {"url": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt"}]
+    },
+    {
       "name": "mingw-w64-runtime", "title": "MinGW-w64 runtime", "licence": "ZPL-2.1 AND others", "pin": "mingw-w64", "platforms": ["windows"],
       "usedBy": "the Windows player and launcher, in every Windows game",
       "texts": [{"url": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/{revision}/COPYING.MinGW-w64-runtime/COPYING.MinGW-w64-runtime.txt",

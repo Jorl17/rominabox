@@ -209,8 +209,13 @@ def comment_lines(block: list[str]) -> str:
 
 
 def first_comment(text: str) -> str:
+    """The comment a file starts with, read past a header's include guard:
+    the fork's copy of zlib.h opens with one."""
     lines = text.splitlines()
     start = next((index for index, line in enumerate(lines) if line.strip()), len(lines))
+    guard = re.fullmatch(r"\s*#\s*ifndef\s+(\w+)\s*", lines[start]) if start < len(lines) else None
+    if guard and start + 1 < len(lines) and re.fullmatch(rf"\s*#\s*define\s+{guard.group(1)}\s*", lines[start + 1]):
+        start = next((index for index in range(start + 2, len(lines)) if lines[index].strip()), len(lines))
     if start < len(lines) and lines[start].lstrip().startswith("//"):
         end = start
         while end < len(lines) and lines[end].lstrip().startswith("//"):

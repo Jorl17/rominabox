@@ -103,6 +103,16 @@ def main() -> int:
         windows = [component.name for component in licences.player_components(build, "windows")[0]]
         check("mingw-w64-runtime" in windows, "a Windows player build uses its runtime's licences", str(windows))
 
+    guarded = "#ifndef LIB_H\n#define LIB_H\n\n/* Copyright the authors. Permission is granted. */\n#endif\n"
+    comment = licences.sources.first_comment(guarded)
+    check(comment == "Copyright the authors. Permission is granted.",
+          "a header's first comment is read past its include guard", repr(comment))
+    try:
+        licences.sources.first_comment("#ifndef LIB_H\n#define OTHER_H\n/* Not after a guard. */\n")
+        check(False, "a comment after lines that are not an include guard is not the first comment")
+    except licences.sources.FetchError:
+        check(True, "a comment after lines that are not an include guard is not the first comment")
+
     if FAILURES:
         print(f"\n{len(FAILURES)} licence case(s) failed")
         return 1
