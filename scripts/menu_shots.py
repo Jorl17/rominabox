@@ -635,7 +635,7 @@ def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
                 shutil.copyfile(document, staged_design / document.name)
                 if package_name == "native":
                     shutil.copyfile(document, kit / "menu-assets" / document.name)
-    installed = kit / native_build.recipe()["kit"][host_target()]["files"]["player"]["at"]
+    installed = kit / native_build.kit_file(host_target(), "player")
     shutil.copyfile(player, installed)
     installed.chmod(0o755)
     return kit

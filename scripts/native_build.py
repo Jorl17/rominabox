@@ -3,13 +3,15 @@
 `scripts/native_runtime/player-recipe.json` lists what we build, and in this
 module we build it, for the player (`scripts/build_player.py`) and for the
 RmlUi linked into the tests (`scripts/prepare_rmlui.py`), so the two builds
-cannot differ. Targets differ only where the recipe has a key for a target
-or a function here is specific to one: the shell for configure, the source
-of FreeType, the name of the finished binary and the spelling of its symbols.
+cannot differ. Targets differ only where the recipe has a key for a platform
+or a target or a function here is specific to one: the shell for configure,
+the processor and system version of a slice, the name of the finished
+binary, the spelling of its symbols and the libraries we may link into it.
 """
 
 from __future__ import annotations
 
+import enum
 import hashlib
 import json
 import os
@@ -35,9 +37,68 @@ def recipe() -> dict:
 
 
 def require_target(target: str) -> str:
+    """`target`, if the recipe has a player for it as one slice."""
     if target not in recipe()["targets"]:
         raise SystemExit(f"the player recipe has no target {target}; it has {', '.join(recipe()['targets'])}")
     return target
+
+
+def universal_targets() -> dict[str, list[str]]:
+    """Each universal target declared in the recipe, with its slices."""
+    return {name: joined for name, joined in recipe()["universal"].items() if name != "comment"}
+
+
+def require_build_target(target: str) -> str:
+    """`target`, if the recipe has a player for it: one slice, or several joined."""
+    known = [*recipe()["targets"], *universal_targets()]
+    if target not in known:
+        raise SystemExit(f"the player recipe has no target {target}; it has {', '.join(known)}")
+    return target
+
+
+def slices(target: str) -> list[str]:
+    """The targets a build of `target` is made of: a universal target's
+    slices, or the target itself."""
+    joined = universal_targets().get(require_build_target(target))
+    return [require_target(name) for name in joined] if joined else [target]
+
+
+def kit_target(target: str) -> str:
+    """The build target of the kit we use for games on a builder for `target`:
+    the universal target that includes the slice, where the recipe declares
+    a kit for one, or the target itself."""
+    kits = recipe()["kit"]
+    for name, parts in universal_targets().items():
+        if require_target(target) in parts and name in kits:
+            return name
+    return target
+
+
+def kit_file(target: str, role: str) -> str:
+    """Where the file with `role` (player, launcher) is in the kit we use for
+    games on a builder for `target`."""
+    return recipe()["kit"][kit_target(target)]["files"][role]["at"]
+
+
+class Architecture(enum.Enum):
+    """A processor of a slice, spelled as in Apple's -arch and lipo and in the
+    fork's ARCH."""
+
+    ARM64 = "arm64"
+    X86_64 = "x86_64"
+
+
+def architecture_of(target: str) -> Architecture:
+    """The processor in the name of a slice target, after its platform."""
+    return Architecture(require_target(target).split("-", 1)[1])
+
+
+def deployment_target(target: str) -> str:
+    """The oldest system version the platform's player is built for."""
+    declared = recipe()["deploymentTarget"].get(platform_of(target))
+    if declared is None:
+        raise SystemExit(f"the player recipe declares no deployment target for {platform_of(target)}")
+    return declared
 
 
 def is_windows(target: str) -> bool:
@@ -68,12 +129,50 @@ def symbol_prefix(target: str) -> str:
 
 def configure_flags(target: str) -> list[str]:
     configure = recipe()["configure"]
-    return [*configure["common"], *configure.get(require_target(target), [])]
+    return [*configure["common"], *configure[platform_of(require_target(target))]]
+
+
+def configure_environment(target: str) -> dict[str, str]:
+    """What we run configure with on `target`'s platform, besides the build environment."""
+    return dict(recipe()["configure"]["environment"].get(platform_of(require_target(target)), {}))
 
 
 def makefile_local(target: str) -> str:
     makefile = recipe()["makefile"]
-    return "\n".join([*makefile["common"], *makefile.get(require_target(target), [])]) + "\n"
+    return "\n".join([*makefile["common"], *makefile[platform_of(require_target(target))]]) + "\n"
+
+
+def make_variables(target: str) -> list[str]:
+    """The command-line settings for the fork's makefile to build a slice for
+    its processor and system version. With its ARCH switch we add -arch to
+    every compile and the link, and with MINVERFLAGS we replace the default
+    version for that processor."""
+    if is_macos(target):
+        return [f"ARCH={architecture_of(target).value}",
+                f"MINVERFLAGS=-mmacosx-version-min={deployment_target(target)}"]
+    if is_windows(target):
+        return []
+    raise SystemExit(f"no make variables for {target}")
+
+
+def compiler_flags(target: str) -> list[str]:
+    """What we add to a compile or link run directly, outside a makefile or
+    cmake, to build for `target`'s processor and system version."""
+    if is_macos(target):
+        return ["-arch", architecture_of(target).value, f"-mmacosx-version-min={deployment_target(target)}"]
+    if is_windows(target):
+        return []
+    raise SystemExit(f"no compiler flags for {target}")
+
+
+def cmake_flags(target: str) -> list[str]:
+    """What we add to a cmake configuration to build for `target`'s processor and system version."""
+    if is_macos(target):
+        return [f"-DCMAKE_OSX_ARCHITECTURES={architecture_of(target).value}",
+                f"-DCMAKE_OSX_DEPLOYMENT_TARGET={deployment_target(target)}"]
+    if is_windows(target):
+        return []
+    raise SystemExit(f"no cmake flags for {target}")
 
 
 def build_environment(target: str) -> dict[str, str]:
@@ -85,7 +184,10 @@ def build_environment(target: str) -> dict[str, str]:
         environment["PATH"] = os.pathsep.join(
             [str(root / "ucrt64" / "bin"), str(root / "usr" / "bin"), environment.get("PATH", "")]
         )
-    elif not is_macos(target):
+    elif is_macos(target):
+        # Read by configure, cmake, the compilers and the linker alike.
+        environment["MACOSX_DEPLOYMENT_TARGET"] = deployment_target(target)
+    else:
         raise SystemExit(f"no build environment for {target}")
     return environment
 
@@ -183,22 +285,15 @@ def download(url: str, sha256: str) -> Path:
     return path
 
 
-def freetype_prefix(destination: Path, target: str) -> Path | None:
-    """Where this target's FreeType is installed, or None when the system's is used."""
-    freetype = recipe()["freetype"][require_target(target)]
-    if freetype["from"] == "pkg-config":
-        return None
-    return destination / freetype["prefix"]
+def freetype_prefix(destination: Path) -> Path:
+    """Where the FreeType built in `destination` is installed."""
+    return destination / recipe()["freetype"]["prefix"]
 
 
-def build_freetype(destination: Path, target: str, jobs: int) -> Path | None:
-    """FreeType built from its pinned release, for a target without the system's."""
-    freetype = recipe()["freetype"][require_target(target)]
-    if freetype["from"] == "pkg-config":
-        return None
-    if freetype["from"] != "source":
-        raise SystemExit(f"unknown FreeType source {freetype['from']!r} for {target}")
-    prefix = destination / freetype["prefix"]
+def build_freetype(destination: Path, target: str, jobs: int) -> Path:
+    """FreeType built from its pinned release for `target`, installed in `destination`."""
+    freetype = recipe()["freetype"]
+    prefix = freetype_prefix(destination)
     if (prefix / "lib" / "pkgconfig" / "freetype2.pc").is_file():
         return prefix
     archive = download(freetype["url"], freetype["sha256"])
@@ -208,19 +303,17 @@ def build_freetype(destination: Path, target: str, jobs: int) -> Path | None:
     source = destination / freetype["directory"]
     build = destination / freetype["build"]
     run(["cmake", "-S", str(source), "-B", str(build), "-G", "Ninja",
-         f"-DCMAKE_INSTALL_PREFIX={prefix}", *freetype["cmake"]], destination, environment)
+         f"-DCMAKE_INSTALL_PREFIX={prefix}", *freetype["cmake"], *cmake_flags(target)], destination, environment)
     run(["cmake", "--build", str(build), "--parallel", str(jobs)], destination, environment)
     run(["cmake", "--install", str(build)], destination, environment)
     return prefix
 
 
-def freetype_environment(destination: Path, target: str) -> dict[str, str]:
-    """Settings so that `pkg-config freetype2` returns this target's FreeType."""
-    prefix = freetype_prefix(destination, target)
-    if prefix is None:
-        return {}
-    # LIBDIR, not PATH, so that no other freetype2 on the machine is found.
-    return {"PKG_CONFIG_LIBDIR": str(prefix / "lib" / "pkgconfig")}
+def freetype_environment(destination: Path) -> dict[str, str]:
+    """Settings so that `pkg-config freetype2` returns the FreeType built in
+    `destination`. We use LIBDIR, not PATH, so that nothing else on the machine
+    is found, for freetype2 or any other library looked up in configure."""
+    return {"PKG_CONFIG_LIBDIR": str(freetype_prefix(destination) / "lib" / "pkgconfig")}
 
 
 def build_rmlui(destination: Path, target: str, jobs: int) -> Path:
@@ -229,10 +322,9 @@ def build_rmlui(destination: Path, target: str, jobs: int) -> Path:
     source = fetch_rmlui(destination)
     prefix = build_freetype(destination, target, jobs)
     build = destination / rmlui["build"]
-    environment = {**build_environment(target), **freetype_environment(destination, target)}
-    extra = [f"-DCMAKE_PREFIX_PATH={prefix}"] if prefix else []
-    run(["cmake", "-S", str(source), "-B", str(build), "-G", "Ninja", *rmlui["cmake"], *extra],
-        destination, environment)
+    environment = {**build_environment(target), **freetype_environment(destination)}
+    run(["cmake", "-S", str(source), "-B", str(build), "-G", "Ninja", *rmlui["cmake"],
+         f"-DCMAKE_PREFIX_PATH={prefix}", *cmake_flags(target)], destination, environment)
     run(["cmake", "--build", str(build), "--parallel", str(jobs)], destination, environment)
     return build
 
@@ -287,8 +379,8 @@ def build_launcher(destination: Path, target: str, environment: dict[str, str]) 
     sources = launcher_sources(platform_of(target))
     output = destination / "launcher" / launcher["output"]
     output.parent.mkdir(parents=True, exist_ok=True)
-    run(["cc", *launcher["flags"], "-o", str(output), *map(str, sources), *launcher["libraries"]],
-        destination, environment)
+    run(["cc", *compiler_flags(target), *launcher["flags"], "-o", str(output), *map(str, sources),
+         *launcher["libraries"]], destination, environment)
     return output
 
 
@@ -354,19 +446,20 @@ def build_preview(destination: Path, target: str, environment: dict[str, str], r
                     ".mm": ["c++", "-std=c++17", "-x", "objective-c++"]}[source.suffix]
         extra = context["flags"] if source in own[len(declared["sources"]):] else []
         obj = objects_dir / f"{index:02d}-{source.stem}.o"
-        run([*language, "-O2", *defines, *includes, *freetype, *extra, "-c", str(source), "-o", str(obj)],
-            destination, environment)
+        run([*language, *compiler_flags(target), "-O2", *defines, *includes, *freetype, *extra,
+             "-c", str(source), "-o", str(obj)], destination, environment)
         objects.append(obj)
     output = destination / "preview" / platform["output"]
-    run(["c++", *platform["flags"], "-o", str(output), *map(str, objects), str(rmlui_build / archive),
-         *freetype, *context["libraries"]], destination, environment)
+    run(["c++", *compiler_flags(target), *platform["flags"], "-o", str(output), *map(str, objects),
+         str(rmlui_build / archive), *freetype, *context["libraries"]], destination, environment)
     run(["strip", str(output)], destination, environment)
     return output
 
 
 def has_symbol(binary: Path, target: str, function: str, environment: dict[str, str]) -> bool:
-    listed = subprocess.run([resolve("nm", environment), "-g", str(binary)], capture_output=True, text=True,
-                            check=True, env=environment).stdout
+    """Whether `binary` exports `function`; in a universal file, its slice for `target`."""
+    listed = subprocess.run([resolve("nm", environment), "-g", *slice_selection(target), str(binary)],
+                            capture_output=True, text=True, check=True, env=environment).stdout
     wanted = symbol_prefix(target) + function
     return any(line.split()[-1:] == [wanted] for line in listed.splitlines())
 
@@ -380,17 +473,44 @@ def joypad_profile_drivers(platform_name: str) -> list[str]:
 
 
 def system_libraries(target: str) -> set[str]:
-    """The libraries present on every machine of `target`'s platform (lower
-    case). We let a player or a launcher import these and nothing else,
-    because we would have to ship anything else next to it."""
+    """The libraries present on every machine of `target`'s platform: on
+    Windows their names in lower case, on macOS their folders. We let a player
+    or a launcher link these and nothing else, because we would have to ship
+    anything else next to it."""
     return set(recipe()["systemLibraries"][platform_of(target)])
 
 
 def foreign_imports(binary: Path, target: str, environment: dict[str, str]) -> list[str]:
-    """DLLs a Windows binary imports that are not part of Windows."""
+    """Libraries linked into `binary` (in a universal file, its slice for
+    `target`) that are not part of the target's system, so that we would have
+    to ship them next to it."""
     allowed = system_libraries(target)
-    dumped = subprocess.run([resolve("objdump", environment), "-p", str(binary)], capture_output=True, text=True,
-                            check=True, env=environment).stdout
-    names = [line.split("DLL Name:")[1].strip() for line in dumped.splitlines() if "DLL Name:" in line]
-    return [name for name in names
-            if name.lower() not in allowed and not name.lower().startswith("api-ms-win-")]
+    if is_windows(target):
+        dumped = subprocess.run([resolve("objdump", environment), "-p", str(binary)], capture_output=True,
+                                text=True, check=True, env=environment).stdout
+        names = [line.split("DLL Name:")[1].strip() for line in dumped.splitlines() if "DLL Name:" in line]
+        return [name for name in names
+                if name.lower() not in allowed and not name.lower().startswith("api-ms-win-")]
+    if is_macos(target):
+        listed = subprocess.run(["otool", "-L", *slice_selection(target), str(binary)], capture_output=True,
+                                text=True, check=True, env=environment).stdout
+        # The first line contains the file name (and, for a slice, its processor).
+        paths = [line.strip().split(" (")[0] for line in listed.splitlines()[1:]]
+        return [path for path in paths if not path.startswith(tuple(allowed))]
+    raise SystemExit(f"no way to read the libraries a {target} binary links")
+
+
+def slice_selection(target: str) -> list[str]:
+    """The options of Apple's nm and otool for the slice for `target` in a
+    universal file, or nothing on a platform with one slice per file."""
+    if is_macos(target):
+        return ["-arch", architecture_of(target).value]
+    if is_windows(target):
+        return []
+    raise SystemExit(f"no slice selection for {target}")
+
+
+def architectures_in(binary: Path) -> set[Architecture]:
+    """The processors with a slice in a Mach-O file, read from the file."""
+    listed = subprocess.run(["lipo", "-archs", str(binary)], capture_output=True, text=True, check=True).stdout
+    return {Architecture(name) for name in listed.split()}

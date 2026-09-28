@@ -52,11 +52,11 @@ HEADER = INCLUDE / "RmlUi" / "Core.h"
 def freetype(*flags: str) -> list[str]:
     """Return pkg-config's `flags` for the FreeType linked into the player here.
 
-    For a target with its own FreeType build, we install it beside RmlUi. With
-    the system's pkg-config, we would link the tests against another one.
+    We build it and install it beside RmlUi. With the system's pkg-config,
+    we would link the tests against another one.
     """
     environment = {**native_build.build_environment(TARGET),
-                   **native_build.freetype_environment(DEST, TARGET)}
+                   **native_build.freetype_environment(DEST)}
     return subprocess.run([native_build.resolve("pkg-config", environment), *flags, "freetype2"],
                           capture_output=True, text=True, check=True, env=environment).stdout.split()
 
