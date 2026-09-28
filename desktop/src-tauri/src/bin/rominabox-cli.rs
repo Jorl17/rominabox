@@ -1,10 +1,11 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
 use rominabox_desktop::{
-    builder, controls, cores, kits, menu, metadata, packaging, projects, shaders, systems, themes,
+    builder, controls, cores, game::Game, menu, menu_controls::MenuControls, metadata, packaging,
+    projects, shaders, systems, themes, traveling,
 };
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Map, Value};
 use std::io::{self, Read};
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -13,7 +14,9 @@ use std::sync::atomic::AtomicBool;
 #[serde(rename_all = "camelCase")]
 struct InspectRequest {
     rom: PathBuf,
-    cache: PathBuf,
+    /// The builder's lookup cache when absent.
+    #[serde(default)]
+    cache: Option<PathBuf>,
     #[serde(default = "builder::unstated::online")]
     online: bool,
     #[serde(default)]
@@ -41,6 +44,24 @@ fn main() {
     }
 }
 
+/// Print what we show in the builder's details step for `game`, before we
+/// export or save it. That is the lookup, when there was one, the files that go
+/// with the game, and for a console that takes a BIOS, the assessment of the
+/// files given. We print no content line for a set of files we refuse in
+/// export, and refuse it with its own error in the export or save that follows.
+fn print_details(game: &Game, identified: Option<&metadata::Inspection>) {
+    if let Some(found) = identified {
+        println!("{}", json!({ "type": "identified", "identified": found }));
+    }
+    if let Ok(content) = traveling::files_for(&game.rom, Some(&game.system)) {
+        println!("{}", json!({ "type": "content", "content": content }));
+    }
+    if let Some(system) = systems::find(&game.system).filter(|system| !system.firmware.is_empty()) {
+        let assessment = systems::assess_firmware(system, &game.firmware);
+        println!("{}", json!({ "type": "firmware", "firmware": assessment }));
+    }
+}
+
 fn read_request() -> Result<String, String> {
     let mut input = String::new();
     io::stdin()
@@ -54,7 +75,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume-markup|design-screens|shaders|shaders-check|designs|defaults|cores|schemas|where|freeze-macos-executable>\n       rominabox-cli export GAME [FOLDER]\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport makes the game that dropping GAME into the builder makes, in FOLDER or the builder's; a request on stdin can say more, and whatever it leaves out is the builder's.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ndesigns lists the menu designs, palettes and sound packs. defaults prints the settings a request leaves out.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|menu-controls-check|project-save|project-open|volume-markup|design-screens|shaders|shaders-check|designs|defaults|places|cores|schemas|where|freeze-macos-executable>\n       rominabox-cli export GAME [FOLDER]\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport makes the game that dropping GAME into the builder makes, in FOLDER or the builder's; a request on stdin can say more, and whatever it leaves out is the builder's. Before it starts it prints what the builder's details step shows: the lookup, the files that travel with the game and the BIOS assessment.\nproject-save completes its game as export does.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ndesigns lists the menu designs, palettes and sound packs. defaults prints the settings a request leaves out, places the folders and platform it leaves to the builder.\npreview draws the builder's menu preview; menu-controls-check checks menu controls as export does.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     // The checkout from which we built this binary.
@@ -74,15 +95,17 @@ fn run() -> Result<(), String> {
         println!(
             "{}",
             json!({
-                "inspect": { "request": ["rom", "cache", "online?", "system?"], "result": "Inspection" },
+                "inspect": { "request": ["rom", "cache?", "online?", "system?"], "cache": "where lookups are cached; defaults to the builder's", "result": "Inspection" },
                 "content": { "request": ["rom", "system?"], "result": { "entry": "the game file collect ran on", "files": ["relative names, entry first, then whatever rides with it"] } },
                 "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
-                "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
-                "export": { "request": ["rom", "title?", "system?", "description?", "icon?", "background?", "showMenu?", "startAtMenu?", "theme?", "palette?", "menuSounds?", "controls?", "menuControls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "intelMacs?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir?", "replace?", "target?", "bothPlatforms?", "runtimeKit?", "core?", "coreCache?", "online?", "metadataCache?"], "arguments": "export GAME [FOLDER] is the request {rom: GAME, outputDir: FOLDER} and reads nothing from stdin", "omitted": "what a request leaves out is what dropping rom into the builder gives: without title or system the game is identified as inspect does, and the title, system, description and icon it leaves out come from that (one that names both is not looked up); each setting the builder's default (the defaults command); outputDir ROM-in-a-Box in Downloads; target this machine; runtimeKit the one beside this command, else this checkout's; coreCache the builder's. What a request states wins, null included", "online": "defaults true, and the lookup may download catalogues and covers; false uses only what metadataCache already holds. A test that looks a game up passes false", "metadataCache": "where lookups are cached; defaults to the builder's", "coreCache": "directory of downloaded cores; each needed core is downloaded or updated there first, and a progress event carrying cores {kind: fetching, downloading, updating} or {kind: failed, missing} says so; null takes the core from runtimeKit alone", "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "pad?", "mouse?"] }, "pad": "the pad position the control is read from, one of controls.json padPositions, a stick's directions among them; a direction moves with its opposite, and a position another offered pad's control keeps cannot be taken" }, "menuControls": { "<menu|confirm|back>": ["key:<RetroArch key name>", "pad:<pad button position or home>[+<pad input>...]"], "omitted": "an action left out keeps the defaults command's; MENU keeps a key and every action a binding, and an input is held by one action, or by both MENU and BACK" }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "intelMacs": "defaults false; a macos game also runs on Intel Macs: its player, core and launcher carry x86_64 code beside arm64, the core for macos-x86_64 fetched into a folder of that name beside coreCache. Refused when the runtime kit's player has no x86_64 code", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "replace": "replace an app already at the destination; without it such an export does nothing and prints {type: exists, appPath}", "bothPlatforms": "defaults false; the game for Mac and for Windows, each from its platform's kit, in one <title>.zip holding Mac/<title>.app and Windows/<title>; intelMacs is the Mac game's", "events": ["progress", "result", "exists", "error"] },
+                "preview": { "request": ["outputDir", "theme?", "palette?", "background?", "design?", "assets?", "renderer?", "width?", "height?"], "omitted": "the builder's Menu step preview: theme's design (else the builder's) from the runtime kit, the builder's palette, the kit's controller artwork, the builder's renderer, 960 by 600", "design": "a design's folder, for one the kit does not carry", "result": { "imagePath": "path" } },
+                "export": { "request": ["rom", "title?", "system?", "description?", "icon?", "background?", "showMenu?", "startAtMenu?", "theme?", "palette?", "menuSounds?", "controls?", "menuControls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "intelMacs?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir?", "replace?", "target?", "bothPlatforms?", "runtimeKit?", "core?", "coreCache?", "online?", "metadataCache?"], "arguments": "export GAME [FOLDER] is the request {rom: GAME, outputDir: FOLDER} and reads nothing from stdin", "omitted": "what a request leaves out is what dropping rom into the builder gives: without title or system the game is identified as inspect does, and the title, system, description and icon it leaves out come from that (one that names both is not looked up); each setting the builder's default (the defaults command); outputDir ROM-in-a-Box in Downloads; target this machine; runtimeKit the one beside this command, else this checkout's; coreCache the builder's. What a request states wins, null included", "online": "defaults true, and the lookup may download catalogues and covers; false uses only what metadataCache already holds. A test that looks a game up passes false", "metadataCache": "where lookups are cached; defaults to the builder's", "coreCache": "directory of downloaded cores; each needed core is downloaded or updated there first, and a progress event carrying cores {kind: fetching, downloading, updating} or {kind: failed, missing} says so; null takes the core from runtimeKit alone", "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "pad?", "mouse?"] }, "pad": "the pad position the control is read from, one of controls.json padPositions, a stick's directions among them; a direction moves with its opposite, and a position another offered pad's control keeps cannot be taken" }, "menuControls": { "<menu|confirm|back>": ["key:<RetroArch key name>", "pad:<pad button position or home>[+<pad input>...]"], "omitted": "an action left out keeps the defaults command's; MENU keeps a key and every action a binding, and an input is held by one action, or by both MENU and BACK" }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "intelMacs": "defaults false; a macos game also runs on Intel Macs: its player, core and launcher carry x86_64 code beside arm64, the core for macos-x86_64 fetched into a folder of that name beside coreCache. Refused when the runtime kit's player has no x86_64 code", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "replace": "replace an app already at the destination; without it such an export does nothing and prints {type: exists, appPath}", "bothPlatforms": "defaults false; the game for Mac and for Windows, each from its platform's kit, in one <title>.zip holding Mac/<title>.app and Windows/<title>; intelMacs is the Mac game's", "events": ["identified", "content", "firmware", "progress", "result", "exists", "error"], "identified": "the lookup, as inspect prints it; absent for a request that names title and system", "content": "the files that travel with the game, as content prints them", "firmware": "for a console that takes a BIOS, the assessment firmware prints for the files given" },
                 "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
+                "menu-controls-check": { "request": { "<menu|confirm|back>": ["binding"] }, "result": { "menuControls": "every action's bindings, the builder's for an action left out" }, "refused": { "type": "error", "message": "the sentence export refuses with", "refusal": { "kind": "noBinding | noKey | twice | shared", "action": "id", "binding?": "binding", "other?": "id" } } },
+                "places": { "request": [], "result": { "outputDir": "where export writes a game", "target": "the platform export makes games for", "runtimeKit": "the kit beside this command, else this checkout's", "coreCache": "the builder's downloaded cores for this machine", "metadataCache": "the builder's lookup cache" } },
                 "cores": { "request": ["cache", "target"], "target": "macos-arm64 | macos-x86_64 | windows-x86_64 | linux-x86_64", "result": "per-core present, installed, unreachable or notRecorded" },
-                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu?", "startAtMenu?", "theme?", "palette?", "menuSounds?", "controls?", "menuControls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "intelMacs?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "target", "bothPlatforms?"], "result": "ProjectArchiveResult" },
+                "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title?", "system?", "description?", "icon?", "background?", "showMenu?", "startAtMenu?", "theme?", "palette?", "menuSounds?", "controls?", "menuControls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "intelMacs?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "target?", "bothPlatforms?", "online?", "metadataCache?"], "omitted": "the game is completed as export completes it", "events": ["identified", "content", "firmware", "result", "error"], "result": "ProjectArchiveResult" },
                 "shaders": { "request": [], "result": "Catalog presets an author can bundle" },
                 "designs": { "request": [], "result": "The menu designs (theme ids), palettes and sound packs an export can name" },
                 "defaults": { "request": [], "result": "The builder's settings, which a request leaves out" },
@@ -106,6 +129,26 @@ fn run() -> Result<(), String> {
         println!(
             "{}",
             json!({ "type": "result", "result": { "presets": shaders::catalog()? } })
+        );
+        return Ok(());
+    }
+    if command == "places" {
+        let places = builder::Places::of(builder::identifier());
+        let target = packaging::ExportTarget::of_host();
+        let core_cache = target
+            .as_ref()
+            .and_then(|platform| platform.target())
+            .map(|core_target| places.core_cache(core_target))
+            .transpose()?;
+        println!(
+            "{}",
+            json!({ "type": "result", "result": {
+                "outputDir": builder::destination()?,
+                "target": target,
+                "runtimeKit": builder::runtime_kit(),
+                "coreCache": core_cache,
+                "metadataCache": places.metadata_cache()?,
+            }})
         );
         return Ok(());
     }
@@ -163,9 +206,13 @@ fn run() -> Result<(), String> {
             let input = read_request()?;
             let request: InspectRequest = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid inspect request: {error}"))?;
+            let cache = match request.cache {
+                Some(cache) => cache,
+                None => builder::Places::of(builder::identifier()).metadata_cache()?,
+            };
             let result = metadata::inspect_game_with_system(
                 &request.rom,
-                &request.cache,
+                &cache,
                 request.online,
                 request.system.as_deref(),
             )
@@ -205,6 +252,25 @@ fn run() -> Result<(), String> {
             println!("{}", json!({ "type": "result", "result": result }));
             Ok(())
         }
+        "menu-controls-check" => {
+            let input = read_request()?;
+            let menu_controls: MenuControls = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid menu controls: {error}"))?;
+            match menu_controls.check() {
+                Ok(()) => println!(
+                    "{}",
+                    json!({ "type": "result", "result": { "menuControls": menu_controls } })
+                ),
+                Err(refusal) => {
+                    println!(
+                        "{}",
+                        json!({ "type": "error", "message": refusal.to_string(), "refusal": refusal })
+                    );
+                    std::process::exit(1);
+                }
+            }
+            Ok(())
+        }
         "export" => {
             // `export GAME [FOLDER]` is like dropping GAME into the builder.
             // When someone names the game on the command line, it is the whole
@@ -226,22 +292,17 @@ fn run() -> Result<(), String> {
                 }
                 _ => return Err("export takes a game and, optionally, the folder to write it to".into()),
             };
-            let request = builder::complete_export(request)?;
+            let completed = builder::complete_export(request)?;
+            print_details(&completed.request.game, completed.identified.as_ref());
             let cancelled = AtomicBool::new(false);
             let report = |event| println!("{}", json!({ "type": "progress", "progress": event }));
-            // Both platforms at once, with the game for each in one zip.
-            let result = if request.game.both_platforms {
-                let own = builder::runtime_kit().ok_or("no runtime kit is beside this command or in this checkout")?;
-                let places = builder::Places::of(builder::identifier());
-                let store = places.kit_store()?;
-                let kit_for = |platform: &packaging::ExportTarget| {
-                    kits::for_export(platform, &own, &store, &cores::UreqTransport)
-                };
-                let core_cache_for = |target| places.core_cache(target).ok();
-                packaging::export_for_both(&request, &kit_for, &core_cache_for, &cancelled, report)
-            } else {
-                packaging::export_game(&request, &cancelled, report)
-            };
+            let result = builder::export(
+                &completed.request,
+                builder::runtime_kit().as_deref(),
+                &builder::Places::of(builder::identifier()),
+                &cancelled,
+                report,
+            );
             match result {
                 Ok(result) => println!("{}", json!({ "type": "result", "result": result })),
                 // This is not a failure. We did nothing, and with `replace` in
@@ -265,7 +326,20 @@ fn run() -> Result<(), String> {
         }
         "project-save" => {
             let input = read_request()?;
-            let request: projects::ProjectSaveRequest = serde_json::from_str(&input)
+            // We complete the game as in `export`, so for a request with
+            // only its file we save what we save for it in the builder.
+            let mut request: Map<String, Value> = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid project save request: {error}"))?;
+            let Some(Value::Object(settings)) = request.remove("settings") else {
+                return Err("a project-save request names its game as settings".into());
+            };
+            let completed = builder::complete_game(settings)?;
+            print_details(&completed.request, completed.identified.as_ref());
+            request.insert(
+                "settings".into(),
+                serde_json::to_value(&completed.request).map_err(|error| error.to_string())?,
+            );
+            let request: projects::ProjectSaveRequest = serde_json::from_value(Value::Object(request))
                 .map_err(|error| format!("invalid project save request: {error}"))?;
             let result = projects::save_project(&request)?;
             println!("{}", json!({ "type": "result", "result": result }));
@@ -397,8 +471,9 @@ fn run() -> Result<(), String> {
         }
         "preview" => {
             let input = read_request()?;
-            let request: menu::PreviewRequest = serde_json::from_str(&input)
+            let request: Map<String, Value> = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid preview request: {error}"))?;
+            let request = builder::complete_preview(request, &builder::resource)?;
             let image_path = menu::render_preview(&request)?;
             println!(
                 "{}",

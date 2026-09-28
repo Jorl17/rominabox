@@ -70,12 +70,17 @@ fn places_prints_where_the_builder_writes_games_and_keeps_downloads() {
     let places = Places::of(IDENTIFIER);
     let host = ExportTarget::of_host().expect("the tests run on a platform the builder makes games on");
     let core_target = host.target().expect("the host platform has a core target");
+    let mut printed = result("places", None);
+    // We look for the kit beside the running program, and this test is not
+    // that program, so here we only check that it is a kit.
+    let kit = PathBuf::from(printed["runtimeKit"].as_str().expect("a runtime kit"));
+    assert!(kit.join("manifest.json").is_file(), "{}", kit.display());
+    printed.as_object_mut().unwrap().remove("runtimeKit");
     assert_eq!(
-        result("places", None),
+        printed,
         json!({
             "outputDir": builder::destination().unwrap(),
             "target": host,
-            "runtimeKit": builder::runtime_kit(),
             "coreCache": places.core_cache(core_target).unwrap(),
             "metadataCache": places.metadata_cache().unwrap(),
         })

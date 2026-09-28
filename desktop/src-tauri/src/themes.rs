@@ -56,6 +56,15 @@ pub fn registry() -> Result<Registry, String> {
     serde_json::from_str(include_str!("../../designs.json")).map_err(|e| e.to_string())
 }
 
+/// Return the palette named `id`, or an error naming it when there is none.
+pub fn palette(id: &str) -> Result<Palette, String> {
+    registry()?
+        .palettes
+        .into_iter()
+        .find(|palette| palette.id == id)
+        .ok_or_else(|| format!("Unknown colour palette: {id}"))
+}
+
 /// The directory that contains a design's documents and fonts.
 ///
 /// A design defines its screens as well as its colours, and another design may
