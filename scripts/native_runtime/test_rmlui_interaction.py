@@ -35,6 +35,9 @@ ASSETS = BUILD / "assets"
 INTERACTION = BUILD / "test_rmlui_interaction"
 ORCHESTRATION = BUILD / "test_menu_orchestration"
 MENU_CONTROLS = BUILD / "test_menu_controls"
+# A game folder whose name has the characters that we escape in the menu
+# before RmlUi gets a path, as a title can have on each platform.
+NAMED_FOLDERS = {"darwin": "Who Wants a Game?", "linux": "Who Wants a Game?", "win32": "100% Game"}
 
 
 def harness(output: Path, *sources: Path) -> None:
@@ -313,15 +316,20 @@ def main() -> int:
     (BUILD / "João").mkdir(parents=True, exist_ok=True)
     subprocess.run([str(INTERACTION), str(ASSETS), str(BUILD / "João/thumbnail-test.png")], check=True)
 
-    # A game folder named like a title, question mark included. RmlUi keeps
-    # the path of a document as a URL, which ends at a "?".
-    named = BUILD / "Who Wants a Game?" / "menu-assets"
+    # A game folder named like a title. RmlUi keeps the path of a document as
+    # a URL, which ends at a "?", so in the menu we escape "?" and "%", the
+    # escape character. No Windows file name can contain "?" (at export we
+    # write it as "-"), so there the folder name has the "%".
+    folder_name = NAMED_FOLDERS.get(sys.platform)
+    if folder_name is None:
+        raise SystemExit(f"no folder name with the menu's escaped characters is declared for {sys.platform}")
+    named = BUILD / folder_name / "menu-assets"
     named.mkdir(parents=True, exist_ok=True)
     for document in (DESIGNS / "native").iterdir():
         if document.is_file():
             shutil.copy(document, named / document.name)
     stage_theme(DESIGNS / "native", named)
-    print("styled under a folder named with ?", flush=True)
+    print(f"styled under a folder named {folder_name!r}", flush=True)
     styled_ok = subprocess.run([str(INTERACTION), str(named), "named-folder"]).returncode == 0
 
     # The same rows under every design's stylesheet. Native keeps a constant
