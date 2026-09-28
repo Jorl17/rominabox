@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "native",
-  "name": "Native",
+  "name": "Pixel",
   "description": "The cartridge-era pixel look the player ships with.",
   "documents": {
     "menu": "menu.rml",

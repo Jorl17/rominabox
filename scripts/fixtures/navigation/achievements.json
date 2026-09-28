@@ -2,7 +2,7 @@
   "designs": [
     "native",
     "disc",
-    "flat"
+    "rominabox"
   ],
   "cases": [
     {
@@ -252,7 +252,7 @@
           "achievements-next",
           "achievements-enabled"
         ],
-        "flat": [
+        "rominabox": [
           "volume-level",
           "achievement-1",
           "achievement-2",
@@ -302,7 +302,7 @@
           "key:ok",
           "key:ok"
         ],
-        "flat": [
+        "rominabox": [
           "options",
           "achievements",
           "key:down",
@@ -343,7 +343,7 @@
           "achievements-prev",
           "achievements-next"
         ],
-        "flat": [
+        "rominabox": [
           "volume-level",
           "achievement-1",
           "achievement-2",

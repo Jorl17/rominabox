@@ -76,7 +76,7 @@ fn a_style_only_design_stages_the_base_screens_with_its_styles() {
 fn a_restyle_is_laid_over_natives_stylesheet() {
     let root = rominabox_scratch::Scratch::dir("rominabox-design-restyle");
     let staged = root.join("staged");
-    support::stage_theme(&repo::at("integrations/designs/flat"), &staged, "blue").unwrap();
+    support::stage_theme(&repo::at("integrations/designs/rominabox"), &staged, "blue").unwrap();
     let menu = fs::read_to_string(staged.join("menu.rml")).unwrap();
     assert!(menu.contains("id=\"pause-panel\"") && menu.contains("id=\"options-panel\""));
     let css = fs::read_to_string(staged.join("menu.rcss")).unwrap();

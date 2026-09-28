@@ -2,7 +2,7 @@
   "designs": [
     "native",
     "disc",
-    "flat",
+    "rominabox",
     "pause-column",
     "sparse"
   ],
@@ -41,7 +41,7 @@
           "slot-1",
           "slot-2"
         ],
-        "flat": [
+        "rominabox": [
           "slot-1",
           "slot-4"
         ]
@@ -80,7 +80,7 @@
           "slot-1",
           "slot-1"
         ],
-        "flat": [
+        "rominabox": [
           "slot-1",
           "slot-2",
           "slot-3",
@@ -116,7 +116,7 @@
           "slot-5",
           "slot-6"
         ],
-        "flat": [
+        "rominabox": [
           "slot-4",
           "resume",
           "resume"
@@ -156,7 +156,7 @@
           "quit",
           "quit"
         ],
-        "flat": [
+        "rominabox": [
           "save",
           "options",
           "quit",
@@ -202,7 +202,7 @@
           "options",
           "options"
         ],
-        "flat": [
+        "rominabox": [
           "resume",
           "resume",
           "resume",
@@ -234,7 +234,7 @@
           "resume",
           "resume"
         ],
-        "flat": [
+        "rominabox": [
           "slot-4",
           "slot-1"
         ]
@@ -268,7 +268,7 @@
           "resume",
           "resume"
         ],
-        "flat": [
+        "rominabox": [
           "resume",
           "resume",
           "resume"
@@ -306,7 +306,7 @@
           "quit",
           "quit"
         ],
-        "flat": [
+        "rominabox": [
           "save",
           "load",
           "options"
@@ -374,7 +374,7 @@
           "slot-3",
           "slot-3"
         ],
-        "flat": [
+        "rominabox": [
           "slot-2",
           "slot-5",
           "slot-5"

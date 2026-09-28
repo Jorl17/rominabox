@@ -1,5 +1,5 @@
-/* Flat: the screens and layout of Native, drawn more simply. We apply this
- * over the Native stylesheet (design.json "restyle"), so it contains only
+/* ROM-in-a-Box: the screens and layout of Native, drawn more simply. We apply
+ * this over the Native stylesheet (design.json "restyle"), so it contains only
  * what looks different. There is no frame and no bevel: every block is one
  * flat colour, with borders in that colour so nothing moves. Every word is in
  * Science Gothic, with larger titles aligned left. Focus is still yellow. */
@@ -9,6 +9,9 @@
 #body, #body *, #body #screen * { font-family: "Science Gothic"; font-weight: bold; }
 #screen { border-color: design(screen); }
 #heading { left: 56dp; width: 840dp; text-align: left; font-size: 34dp; color: design(ink); }
+/* The status on the pause screen is on the line of the footer, level with its
+ * words and clear of the buttons above. */
+#status { top: 563dp; }
 
 /* Buttons, pager arrows and option entries. */
 .menu-action, .list-pager-prev, .list-pager-next { background-color: design(surface); border-color: design(surface); }
@@ -34,6 +37,11 @@
 /* Controls. The pixel font has only capitals, but these words are in mixed
  * case in the console data, and here they look like the button labels. */
 .control-label, .control-assignment, .control-picker-current, .control-picker-option, .control-picker-label { text-transform: uppercase; }
+/* Science Gothic is wider than the pixel font. At these sizes the longest
+ * controller name, for PlayStation, still fits in the picker of every
+ * console, both closed and in the list, whose rows are indented further. */
+.control-picker-current { font-size: 12dp; }
+.control-picker-option { font-size: 11dp; }
 .control-callout, .control-group, .control-picker-current { border-color: design(surface); }
 .control-callout:hover, .control-group:hover, .control-picker-current:hover { border-color: design(ink); }
 .control-callout.focused, .control-group.focused, .control-picker-current.focused { border-color: design(highlight); }

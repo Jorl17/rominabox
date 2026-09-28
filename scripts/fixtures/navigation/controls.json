@@ -2,7 +2,7 @@
   "designs": [
     "native",
     "disc",
-    "flat"
+    "rominabox"
   ],
   "cases": [
     {
@@ -45,7 +45,7 @@
           "control-right",
           "controls-device-current"
         ],
-        "flat": [
+        "rominabox": [
           "volume-level",
           "control-up",
           "control-left",

@@ -2,7 +2,7 @@
   "designs": [
     "native",
     "disc",
-    "flat",
+    "rominabox",
     "wording"
   ],
   "cases": [
@@ -346,7 +346,7 @@
           "options",
           "discs"
         ],
-        "flat": [
+        "rominabox": [
           "options",
           "discs"
         ]
@@ -373,7 +373,7 @@
             "discs-0-state": "HERE"
           }
         ],
-        "flat": [
+        "rominabox": [
           {
             "discs-0-state": "IN"
           },

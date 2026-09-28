@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import functools
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -77,17 +78,17 @@ def placements() -> bool:
     controllers = ROOT / "desktop/assets/controllers"
     failed = False
     for design in designs:
-        declared = json.loads((DESIGNS / design / "design.json").read_text())
-        after = declared["binds"]["afterMs"]
-        width = declared["binds"]["width"]
-        if after != 1200:
-            print(f"FAIL {design} binds.afterMs is {after}; the list should wait 1200 ms", file=sys.stderr)
-            failed = True
         design_dir = DESIGNS / design
         assets = BUILD / f"placement-{design}"
         scenes = assets / "scenes"
         scenes.mkdir(parents=True, exist_ok=True)
         stage_theme(design_dir, assets)
+        # What we read in the player, from the design or inherited from Native.
+        staged = dict(re.findall(r'^(\w+) = "(.*)"$', (assets / "design.cfg").read_text(), re.M))
+        after, width = int(staged["binds_after"]), int(staged["binds_width"])
+        if after != 1200:
+            print(f"FAIL {design} binds_after is {after}; the list should wait 1200 ms", file=sys.stderr)
+            failed = True
         for profile in profiles:
             system = profile["systems"][0] if profile["systems"] else "megadrive"
             dest = assets / "stage" / profile["id"]

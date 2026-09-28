@@ -2,7 +2,7 @@
   "designs": [
     "native",
     "disc",
-    "flat"
+    "rominabox"
   ],
   "cases": [
     {
@@ -159,7 +159,7 @@
           "key:down",
           "key:right"
         ],
-        "flat": [
+        "rominabox": [
           "options",
           "discs",
           "key:down",
@@ -191,7 +191,7 @@
           "discs-next",
           "discs-back"
         ],
-        "flat": [
+        "rominabox": [
           "volume-level",
           "discs-0",
           "discs-1",
@@ -222,7 +222,7 @@
           "key:right",
           "key:left"
         ],
-        "flat": [
+        "rominabox": [
           "options",
           "discs",
           "key:right",
@@ -244,7 +244,7 @@
           "discs-5",
           "discs-0"
         ],
-        "flat": [
+        "rominabox": [
           "volume-level",
           "discs-0",
           "discs-5",
@@ -280,7 +280,7 @@
             "move"
           ]
         ],
-        "flat": [
+        "rominabox": [
           [
             "confirm"
           ],
@@ -316,7 +316,7 @@
           "discs-5",
           "key:down"
         ],
-        "flat": [
+        "rominabox": [
           "options",
           "discs",
           "key:right",
@@ -338,7 +338,7 @@
           "discs-5",
           "discs-6"
         ],
-        "flat": [
+        "rominabox": [
           "volume-level",
           "discs-0",
           "discs-5",
@@ -365,7 +365,7 @@
           "key:left",
           "key:right"
         ],
-        "flat": [
+        "rominabox": [
           "options",
           "key:down",
           "key:down",
@@ -390,7 +390,7 @@
           "disc-back",
           "disc-back"
         ],
-        "flat": [
+        "rominabox": [
           "volume-level",
           "controls",
           "menu-controls",
