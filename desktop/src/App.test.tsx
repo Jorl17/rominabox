@@ -484,7 +484,12 @@ describe("App workflow", () => {
     );
     if (!optional)
       throw new Error("the engine did not explain the optional BIOS");
-    await waitForText(optional.text);
+    // The button is labelled Optional, and its help describes the BIOS.
+    await waitForText("Add BIOS files (optional)");
+    expect(container.textContent).not.toContain(optional.text);
+    const help = container.querySelector(".firmware-picker .help-button");
+    act(() => (help as HTMLButtonElement).focus());
+    expect(document.body.textContent).toContain(optional.text);
     expect(button("Next").disabled).toBe(false);
     expect(container.querySelector(".firmware-required")).toBeNull();
     const progress = container.querySelector('nav[aria-label="Progress"]')!;

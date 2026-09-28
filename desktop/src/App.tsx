@@ -28,6 +28,7 @@ import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import { ExportChoices } from "./ExportChoices";
+import { FirmwarePicker } from "./FirmwarePicker";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
   NOT_A_SHADER_FILE,
@@ -242,7 +243,6 @@ export function App() {
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const gameInput = useRef<HTMLInputElement>(null);
-  const firmwareInput = useRef<HTMLInputElement>(null);
   const shaderInput = useRef<HTMLInputElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const imageTarget = useRef<"icon" | "background">("icon");
@@ -888,9 +888,14 @@ export function App() {
   const asksFirmware = requirements.length > 0;
   const firmwareBlocked =
     asksFirmware && firmwareAssessment?.canContinue !== true;
+  // We describe an optional BIOS in the help of the button, not on the page.
+  const { Unmatched, Optional } = bridge.FirmwareNoticeKind;
   const firmwareNotices = (firmwareAssessment?.notices ?? []).filter(
-    (notice) => notice.kind !== bridge.FirmwareNoticeKind.Unmatched,
+    (notice) => notice.kind !== Unmatched && notice.kind !== Optional,
   );
+  const optionalHelp = firmwareAssessment?.notices.find(
+    (notice) => notice.kind === Optional,
+  )?.text;
   const firmwareStops = (firmwareAssessment?.notices ?? []).some(
     (notice) =>
       notice.kind === bridge.FirmwareNoticeKind.Required ||
@@ -916,71 +921,6 @@ export function App() {
       cancelled = true;
     };
   }, [systemDefinition, firmware]);
-  const firmwarePicker = (
-    <div className="firmware-picker">
-      <button
-        type="button"
-        className="secondary"
-        onClick={async () => {
-          if (!bridge.native) {
-            firmwareInput.current?.click();
-            return;
-          }
-          try {
-            const paths = await bridge.pickFirmware();
-            setFirmware((current) => [...new Set([...current, ...paths])]);
-          } catch (e) {
-            fail(e);
-          }
-        }}
-      >
-        {firmwareBlocked && firmware.length === 0
-          ? "Choose BIOS files"
-          : "Add BIOS files"}
-      </button>
-      <input
-        ref={firmwareInput}
-        type="file"
-        hidden
-        multiple
-        data-firmware
-        onChange={(e) => {
-          const names = [...(e.target.files ?? [])].map((file) => file.name);
-          setFirmware((current) => [...new Set([...current, ...names])]);
-          e.target.value = "";
-        }}
-      />
-      <Help>
-        Choose the BIOS files for this console. Only these files are bundled.
-      </Help>
-      {firmware.map((path) => {
-        const name = path.split(/[\\/]/).pop() || path;
-        const reported = firmwareAssessment?.files.find(
-          (file) => file.name === name,
-        );
-        return (
-          <div className="firmware-file" key={path}>
-            <span>{name}</span>
-            <button
-              type="button"
-              className="text-button"
-              aria-label={"Remove " + name}
-              onClick={() =>
-                setFirmware((current) =>
-                  current.filter((file) => file !== path),
-                )
-              }
-            >
-              Remove
-            </button>
-            {reported?.reason && (
-              <p className="firmware-reason">{reported.reason}</p>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
   const validDetails = !!draft.title.trim() && !!draft.system;
   const stepAvailable = (index: number) =>
     index === 0 ||
@@ -1274,7 +1214,14 @@ export function App() {
                           {notice.text}
                         </p>
                       ))}
-                      {firmwarePicker}
+                      <FirmwarePicker
+                        files={firmware}
+                        onChange={setFirmware}
+                        blocked={firmwareBlocked}
+                        assessment={firmwareAssessment}
+                        optionalHelp={optionalHelp}
+                        onError={fail}
+                      />
                     </div>
                   )}
                   <details className="advanced">
