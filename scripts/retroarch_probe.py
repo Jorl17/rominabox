@@ -61,7 +61,14 @@ def build(programs: list[Path], sources: list[str], output: Path, defines: list[
     objects = []
     for source in compiled:
         # We compile the fork's sources as they are, and ours without warnings.
-        warnings = ["-w"] if source in forked else ["-Wall", "-Werror"]
+        # RetroArch's own build defines RARCH_INTERNAL, which brings in far
+        # more of RetroArch than we link into a probe, so we leave it out.
+        # Without it, a function that RetroArch declares only for itself is
+        # missing from a header, so a call to it in code a probe never reaches
+        # (configuration.c on Windows) is an implicit declaration, an error in
+        # newer compilers, so we allow it. The name has a stand-in.
+        warnings = (["-w", "-Wno-error=implicit-function-declaration"] if source in forked
+                    else ["-Wall", "-Werror"])
         built = output / f"{source.stem}.o"
         subprocess.run([cc, "-std=gnu99", "-ffunction-sections", "-fdata-sections", *warnings,
                         *(defines or []), *includes, "-c", str(source), "-o", str(built)], check=True)

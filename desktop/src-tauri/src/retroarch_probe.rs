@@ -22,6 +22,8 @@ pub const INPUT_LAYER: &[&str] = &[
     "libretro-common/string/stdstring.c",
     "libretro-common/encodings/encoding_utf.c",
     "libretro-common/file/file_path.c",
+    // RetroArch's file opening on Windows. Other systems need nothing.
+    "libretro-common/compat/fopen_utf8.c",
 ];
 pub const CONFIGURED: &[&str] = &["HAVE_CONFIGFILE"];
 
