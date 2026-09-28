@@ -101,20 +101,20 @@ def check_entries(folder: Path, components: list[Component]) -> list[str]:
         relative = entry_path(component)
         path = folder / relative
         if not path.is_file():
-            problems.append(f"{relative}: no entry for {component.title} {component.version}, "
+            problems.append(f"{relative.as_posix()}: no entry for {component.title} {component.version}, "
                             f"used by {component.used_by}")
             continue
         if component.local:
             try:
                 wanted = render(component, component.read())
             except FetchError as error:
-                problems.append(f"{relative}: {error}")
+                problems.append(f"{relative.as_posix()}: {error}")
                 continue
             if path.read_text(encoding="utf-8") != wanted:
-                problems.append(f"{relative}: differs from its source; run python3 scripts/licences.py")
+                problems.append(f"{relative.as_posix()}: differs from its source; run python3 scripts/licences.py")
             continue
         if not current(path, component):
-            problems.append(f"{relative}: names another version or source than the repository pins, "
+            problems.append(f"{relative.as_posix()}: names another version or source than the repository pins, "
                             "or holds no text; run python3 scripts/licences.py")
     return problems
 
@@ -128,7 +128,7 @@ def check(folder: Path = OUT, build: Path | None = None, components: list[Compon
     for component in components:
         relative = entry_path(component)
         if relative in seen:
-            problems.append(f"{relative}: names both {seen[relative].title} and {component.title}")
+            problems.append(f"{relative.as_posix()}: names both {seen[relative].title} and {component.title}")
         seen[relative] = component
     problems += check_entries(folder, components)
     if not (folder / "README.txt").is_file() or (folder / "README.txt").read_text(encoding="utf-8") != README:
@@ -136,7 +136,7 @@ def check(folder: Path = OUT, build: Path | None = None, components: list[Compon
     for path in sorted(folder.rglob("*")):
         relative = path.relative_to(folder)
         if path.is_file() and relative not in seen and relative != Path("README.txt"):
-            problems.append(f"{relative}: no component the repository uses; run python3 scripts/licences.py")
+            problems.append(f"{relative.as_posix()}: no component the repository uses; run python3 scripts/licences.py")
     for component in native_components():
         path = component.declared.get("path")
         if path and not sources.fork_has(path):
@@ -170,10 +170,10 @@ def generate(folder: Path = OUT, refresh: bool = False) -> list[str]:
         try:
             texts = component.read()
         except FetchError as error:
-            failures.append(f"{relative}: {error}")
+            failures.append(f"{relative.as_posix()}: {error}")
             continue
         if not texts:
-            failures.append(f"{relative}: found no licence text for {component.title} {component.version}")
+            failures.append(f"{relative.as_posix()}: found no licence text for {component.title} {component.version}")
             continue
         (folder / relative).parent.mkdir(parents=True, exist_ok=True)
         (folder / relative).write_text(render(component, texts), encoding="utf-8", newline="\n")

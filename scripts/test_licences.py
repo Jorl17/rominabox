@@ -73,9 +73,9 @@ def main() -> int:
         problems = licences.check(folder, build=unheard, components=components)
         shown = "\n".join(problems)
         check(names(problems, "native/glslang.txt", "no entry"), "a component with no entry fails the check", shown)
-        check(names(problems, str(licences.entry_path(crate)), "differs from its source"),
+        check(names(problems, licences.entry_path(crate).as_posix(), "differs from its source"),
               "an entry whose text is not its source's fails the check", shown)
-        check(names(problems, str(licences.entry_path(core)), "another version"),
+        check(names(problems, licences.entry_path(core).as_posix(), "another version"),
               "an entry read from the network that names another version fails the check", shown)
         check(names(problems, "crates/left-behind-0.1.0.txt", "no component"),
               "an entry no component uses fails the check", shown)

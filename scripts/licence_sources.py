@@ -134,7 +134,7 @@ def github_commit(repository: str, ref: str) -> str:
     """The current commit of the branch `ref` in `repository`, which we get from
     git instead of from the rate-limited API."""
     listed = subprocess.run(["git", "ls-remote", f"https://github.com/{repository}", f"refs/heads/{ref}"],
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, encoding="utf-8")
     if listed.returncode != 0 or not listed.stdout.strip():
         raise FetchError(f"https://github.com/{repository} has no branch {ref}: {listed.stderr.strip()}")
     return listed.stdout.split()[0]
@@ -182,7 +182,7 @@ def repository_texts(repository: str, commit: str, directory: str) -> list[Text]
 
 def fork_commit() -> str:
     return subprocess.run(["git", "-C", str(FORK), "rev-parse", "HEAD"],
-                          capture_output=True, text=True, check=True).stdout.strip()
+                          capture_output=True, text=True, encoding="utf-8", check=True).stdout.strip()
 
 
 def fork_file(path: str) -> str:
@@ -386,7 +386,7 @@ def cargo_packages() -> dict[tuple[str, str], tuple[dict, set[str]]]:
         metadata = json.loads(subprocess.run(
             ["cargo", "metadata", "--format-version", "1", "--locked", *platforms,
              "--manifest-path", str(workspace / "Cargo.toml")],
-            capture_output=True, text=True, check=True).stdout)
+            capture_output=True, text=True, encoding="utf-8", check=True).stdout)
         by_id = {package["id"]: package for package in metadata["packages"]}
         nodes = {node["id"]: node for node in metadata["resolve"]["nodes"]}
         seen: set[str] = set()
@@ -462,9 +462,9 @@ def crates() -> list[Component]:
 def rust_std() -> list[Component]:
     """The Rust standard library, which every Rust program links."""
     def read() -> list[Text]:
-        sysroot = Path(subprocess.run(["rustc", "--print", "sysroot"], capture_output=True, text=True,
+        sysroot = Path(subprocess.run(["rustc", "--print", "sysroot"], capture_output=True, text=True, encoding="utf-8",
                                       check=True).stdout.strip())
-        rustc = subprocess.run(["rustc", "--version"], capture_output=True, text=True, check=True).stdout.strip()
+        rustc = subprocess.run(["rustc", "--version"], capture_output=True, text=True, encoding="utf-8", check=True).stdout.strip()
         documents = sysroot / "share/doc/rust"
         if not (documents / "COPYRIGHT-library.html").is_file():
             raise FetchError(f"{rustc} has no {documents / 'COPYRIGHT-library.html'} (rustup's rust-docs)")
@@ -548,7 +548,7 @@ def fonts() -> list[Component]:
     `<Family>-OFL.txt`, `OFL.txt` or a LICENSE, named after the font's file
     up to its first hyphen or not at all."""
     tracked = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-z", "--", *(f"*{s}" for s in FONT_SUFFIXES)],
-                             capture_output=True, text=True, check=True).stdout.split("\0")
+                             capture_output=True, text=True, encoding="utf-8", check=True).stdout.split("\0")
     families: dict[str, list[str]] = {}
     for relative in (path for path in tracked if path and not path.startswith(("vendor/", "work/"))):
         names = font_names(ROOT / relative)
