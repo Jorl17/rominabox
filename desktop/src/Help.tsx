@@ -79,7 +79,9 @@ export function Help({
   );
 }
 
-/** Help is a sibling of the label so it cannot activate the checkbox. */
+/** The label and its help are one line of words beside the box, so the help
+ * follows the last word however the words wrap. The help is outside the
+ * label so that pressing it does not tick the box. */
 export function Checkbox({
   label,
   checked,
@@ -95,18 +97,23 @@ export function Checkbox({
   help?: ReactNode;
   className?: string;
 }) {
+  const id = useId();
   return (
     <div className={`option-toggle ${className}`}>
-      <label className="checkbox">
-        <input
-          type="checkbox"
-          checked={checked}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.checked)}
-        />
-        {label}
-      </label>
-      {help && <Help label={`About ${label.toLowerCase()}`}>{help}</Help>}
+      <input
+        id={id}
+        className="checkbox-box"
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="option-words">
+        <label className="checkbox" htmlFor={id}>
+          {label}
+        </label>
+        {help && <Help label={`About ${label.toLowerCase()}`}>{help}</Help>}
+      </span>
     </div>
   );
 }

@@ -51,7 +51,7 @@ function intelChoice(): HTMLInputElement | null {
   const label = [...container.querySelectorAll("label")].find(
     (element) => element.textContent === "Also runs on Intel Macs",
   );
-  return label?.querySelector("input[type='checkbox']") ?? null;
+  return label?.control instanceof HTMLInputElement ? label.control : null;
 }
 
 describe("the export step's choices", () => {

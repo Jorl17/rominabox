@@ -262,8 +262,24 @@
   min-width: 6em;
   font-weight: 600;
 }
+/* A binding: its words, and an × that removes it. Only the × is pressed. */
 .menu-control-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding: 2px 2px 2px 9px;
+  border: 1px solid var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+.menu-control-remove {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  background: none;
+  color: var(--muted);
+}
+.menu-control-remove:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
 }

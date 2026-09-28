@@ -679,7 +679,7 @@ async function checkShaderPicker(page, out) {
     };
   });
 
-  if (initial.summary !== "Picture filters · none selected") {
+  if (initial.summary !== "Picture filters (shaders) · none selected") {
     problems.push(
       `picture filters are not their own section titled with the count (summary is ${JSON.stringify(initial.summary)})`,
     );
@@ -739,7 +739,7 @@ async function checkShaderPicker(page, out) {
       .replace(/\s+/g, " ")
       .trim();
   });
-  if (one !== "Picture filters · 1 selected") {
+  if (one !== "Picture filters (shaders) · 1 selected") {
     problems.push(
       `selecting one filter left the title as ${JSON.stringify(one)}`,
     );
@@ -768,7 +768,7 @@ async function checkShaderPicker(page, out) {
       checkbox: !!card?.querySelector("input"),
     };
   });
-  if (wash.title !== "Picture filters · 2 selected") {
+  if (wash.title !== "Picture filters (shaders) · 2 selected") {
     problems.push(
       `selecting two filters left the title as ${JSON.stringify(wash.title)}`,
     );
@@ -923,7 +923,7 @@ async function checkShaderPicker(page, out) {
           .replace(/\s+/g, " ")
           .trim(),
       );
-      if (afterDrop !== "Picture filters · 3 selected") {
+      if (afterDrop !== "Picture filters (shaders) · 3 selected") {
         problems.push(
           `adding a shader by drop left the title as ${JSON.stringify(afterDrop)}`,
         );
@@ -1546,6 +1546,13 @@ async function main() {
       `shot ${path.relative(ROOT, path.join(out, "12-controls-table.png"))}`,
     );
     await shootEditor(page, path.join(out, "controllers/megadrive.png"));
+    // Menu controls, then with the pointer on an ×, the only way to remove one.
+    const menuControls = page.locator(".menu-controls");
+    const menuShot = (name) =>
+      menuControls.screenshot({ path: path.join(out, name), animations: "disabled" });
+    await menuShot("12-menu-controls.png");
+    await menuControls.locator(".menu-control-remove").first().hover();
+    await menuShot("12-menu-controls-hover.png");
 
     await clickNext(page);
     await page.getByRole("heading", { name: "Export your game" }).waitFor();

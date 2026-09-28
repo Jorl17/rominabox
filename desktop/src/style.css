@@ -286,14 +286,17 @@ main {
   align-items: center;
   gap: 8px;
 }
+/* A checkbox's words run as one line of text, so its help follows the last
+ * word even when they wrap. */
 .checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
   font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
 }
-.checkbox input {
+.option-words .help {
+  margin-left: 3px;
+}
+.checkbox-box {
   appearance: none;
   width: 20px;
   height: 20px;
@@ -305,19 +308,16 @@ main {
   display: grid;
   place-content: center;
 }
-.checkbox input:checked {
+.checkbox-box:checked {
   background: var(--ink);
 }
-.checkbox input:checked::after {
+.checkbox-box:checked::after {
   content: "";
   width: 9px;
   height: 5px;
   border: solid var(--paper);
   border-width: 0 0 2px 2px;
   transform: translateY(-1px) rotate(-45deg);
-}
-.checkbox {
-  cursor: pointer;
 }
 .help {
   position: relative;
@@ -935,12 +935,14 @@ progress::-webkit-progress-value {
   display: block;
 }
 
+/* As far below the drop zone's 8px offset shadow as the heading is above
+ * the zone (26px). */
 .opening-tools {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 20px;
-  margin-top: 12px;
+  margin-top: 34px;
 }
 .lookup-settings {
   border: 0;
@@ -1098,6 +1100,7 @@ select {
 }
 .option-toggle {
   min-height: 32px;
+  gap: 9px;
 }
 .lookup-settings .option-toggle {
   margin-top: 14px;
@@ -1326,6 +1329,11 @@ select {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+}
+.shader-formats {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
 }
 .shader-initial {
   display: flex;

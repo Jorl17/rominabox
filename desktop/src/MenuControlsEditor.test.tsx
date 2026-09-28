@@ -160,6 +160,22 @@ describe("the builder's menu controls", () => {
     expect(view.chips("Back")).toEqual(["Escape", "Bottom button"]);
   });
 
+  it("removes a binding with its ×, not with its words", async () => {
+    const view = show();
+    const enter = [
+      ...view
+        .row("Confirm")
+        .querySelectorAll<HTMLElement>(".menu-control-chip"),
+    ].find((chip) => chip.textContent === "Enter")!;
+    act(() => enter.click());
+    await settle();
+    expect(rust.checked).toEqual([]);
+    expect(view.chips("Confirm")).toEqual(["Enter", "Right button"]);
+    act(() => enter.querySelector("button")!.click());
+    await settle();
+    expect(view.chips("Confirm")).toEqual(["Right button"]);
+  });
+
   it("goes back to the builder's defaults", async () => {
     const view = show();
     act(() =>

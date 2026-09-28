@@ -243,7 +243,7 @@ function checkbox(label: string): HTMLInputElement {
   const match = [...container.querySelectorAll("label")].find((item) =>
     item.textContent?.includes(label),
   );
-  const input = match?.querySelector("input");
+  const input = match?.control;
   if (!(input instanceof HTMLInputElement))
     throw new Error(`Missing checkbox: ${label}`);
   return input;
@@ -591,35 +591,27 @@ describe("App workflow", () => {
       container.querySelector('[aria-label="Menu design"]'),
     ).not.toBeNull();
 
-    const splash = [...container.querySelectorAll("label")]
-      .find((label) => label.textContent?.includes("Startup logo"))
-      ?.querySelector("input") as HTMLInputElement;
+    const splash = checkbox("Startup logo");
     expect(splash.checked).toBe(true);
     act(() => click(splash));
     expect(splash.checked).toBe(false);
 
     act(() => click(button("Next")));
     act(() => click(button("Back")));
-    const restored = [...container.querySelectorAll("label")]
-      .find((label) => label.textContent?.includes("Startup logo"))
-      ?.querySelector("input") as HTMLInputElement;
+    const restored = checkbox("Startup logo");
     expect(restored.checked).toBe(false);
   });
 
   it("keeps advanced emulator access off unless the author opts in", async () => {
     await openMenu();
-    const access = [...container.querySelectorAll("label")]
-      .find((label) => label.textContent?.includes("Advanced emulator access"))
-      ?.querySelector("input") as HTMLInputElement;
+    const access = checkbox("Advanced emulator access");
     expect(access.checked).toBe(false);
     act(() => click(access));
     expect(access.checked).toBe(true);
 
     act(() => click(button("Next")));
     act(() => click(button("Back")));
-    const restored = [...container.querySelectorAll("label")]
-      .find((label) => label.textContent?.includes("Advanced emulator access"))
-      ?.querySelector("input") as HTMLInputElement;
+    const restored = checkbox("Advanced emulator access");
     expect(restored.checked).toBe(true);
   });
 
@@ -637,7 +629,7 @@ describe("App workflow", () => {
     // The title is the count, so a selected card has no Bundle tick that
     // repeats it.
     expect(text(filters?.querySelector("summary"))).toBe(
-      "Picture filters · none selected",
+      "Picture filters (shaders) · none selected",
     );
     expect(filters?.querySelector("input[type='checkbox']")).toBeNull();
     expect(text(filters)).not.toMatch(/\bBundle\b/);
@@ -660,13 +652,13 @@ describe("App workflow", () => {
     }
     act(() => click(scanlines));
     expect(text(filters?.querySelector("summary"))).toBe(
-      "Picture filters · 1 selected",
+      "Picture filters (shaders) · 1 selected",
     );
     expect(scanlines.classList.contains("chosen")).toBe(true);
     expect(scanlines.querySelector("input")).toBeNull();
     act(() => click(scanlines));
     expect(text(filters?.querySelector("summary"))).toBe(
-      "Picture filters · none selected",
+      "Picture filters (shaders) · none selected",
     );
     expect(filters?.querySelector('[aria-label="Starts on"]')).toBeNull();
   });

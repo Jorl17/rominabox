@@ -36,6 +36,7 @@ import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
   NOT_A_SHADER_FILE,
   SHADER_ACCEPT,
+  SHADER_FORMATS,
   isShaderFile,
   shaderFileName,
 } from "./shaderFiles";
@@ -1397,13 +1398,13 @@ export function App() {
                 <summary>
                   <ChevronRight size={16} />
                   {bundledShaders.length + customShaders.length === 0
-                    ? "Picture filters · none selected"
-                    : `Picture filters · ${bundledShaders.length + customShaders.length} selected`}
+                    ? "Picture filters (shaders) · none selected"
+                    : `Picture filters (shaders) · ${bundledShaders.length + customShaders.length} selected`}
                 </summary>
                 <div className="shader-choices">
                   <p className="shader-lede">
-                    A game with none selected has no shader screen. Each picture
-                    is that filter run over a test card.
+                    Pick the shaders players can choose in the game. Click one
+                    to select it.
                   </p>
                   <div className="shader-grid">
                     {shaderCatalog.presets.map((preset) => {
@@ -1456,6 +1457,9 @@ export function App() {
                       <span>
                         <Plus size={22} aria-hidden="true" />
                         Add your own
+                        <small className="shader-formats">
+                          {SHADER_FORMATS.join(" ")}
+                        </small>
                       </span>
                     </button>
                   </div>

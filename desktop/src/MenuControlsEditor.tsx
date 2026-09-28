@@ -75,25 +75,26 @@ export function MenuControlsEditor({
         <div className="menu-control-row" key={action}>
           <span className="menu-control-name">{actionName(action)}</span>
           {value[action].map((binding) => (
-            <button
-              type="button"
-              className="menu-control-chip"
-              key={binding}
-              disabled={busy}
-              aria-label={`Remove ${bindingWords(binding)} from ${actionName(action)}`}
-              onClick={() =>
-                void propose(
-                  {
-                    ...value,
-                    [action]: value[action].filter((one) => one !== binding),
-                  },
-                  action,
-                )
-              }
-            >
+            <span className="menu-control-chip" key={binding}>
               {bindingWords(binding)}
-              <X size={12} aria-hidden="true" />
-            </button>
+              <button
+                type="button"
+                className="menu-control-remove"
+                disabled={busy}
+                aria-label={`Remove ${bindingWords(binding)} from ${actionName(action)}`}
+                onClick={() =>
+                  void propose(
+                    {
+                      ...value,
+                      [action]: value[action].filter((one) => one !== binding),
+                    },
+                    action,
+                  )
+                }
+              >
+                <X size={12} aria-hidden="true" />
+              </button>
+            </span>
           ))}
           {waiting?.action === action ? (
             <>
