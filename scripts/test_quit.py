@@ -122,7 +122,10 @@ def apple_event_quit(app: Path) -> tuple[str, str]:
         text=True,
         env={
             **os.environ,
-            "ROMINABOX_MAX_FRAMES": "2400",
+            # Only to stop a hang. A quiet run has no audio driver to limit it to
+            # 60 frames a second, so a frame limit can run out before we send the
+            # quit, 8 seconds after the core loads. The deadline ends a hang.
+            "ROMINABOX_MAX_FRAMES": "600000",
             "ROMINABOX_VERBOSE": "1",
             "ROMINABOX_GAME_BUNDLE_PREFIX": PREFIX,
             menu_shots.quiet_env(): "1",
