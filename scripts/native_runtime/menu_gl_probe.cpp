@@ -371,6 +371,19 @@ std::vector<unsigned char> draw_shadow_document(bool core)
    {
       document->Show();
       context->Update();
+      /* The window is a framebuffer of the document's size, bound before
+       * we draw the menu, like the framebuffer for the window in the
+       * driver. The context's own window is 64 pixels square on Windows,
+       * and on a Mac its size depends on the display scale. */
+      GLuint texture = 0;
+      GLuint window = 0;
+      glGenTextures(1, &texture);
+      glBindTexture(GL_TEXTURE_2D, texture);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, shadow_width, shadow_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glGenFramebuffers(1, &window);
+      glBindFramebuffer(GL_FRAMEBUFFER, window);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
       GLuint vao = 0;
       if (core)
       {
@@ -385,11 +398,15 @@ std::vector<unsigned char> draw_shadow_document(bool core)
       renderer->EndFrame();
       if (core)
          glDeleteVertexArrays(1, &vao);
+      glBindFramebuffer(GL_FRAMEBUFFER, window);
       glFinish();
       std::vector<unsigned char> drawn((size_t)shadow_width * shadow_height * 4);
       glPixelStorei(GL_PACK_ALIGNMENT, 1);
       glPixelStorei(GL_PACK_ROW_LENGTH, 0);
       glReadPixels(0, 0, shadow_width, shadow_height, GL_RGBA, GL_UNSIGNED_BYTE, drawn.data());
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glDeleteFramebuffers(1, &window);
+      glDeleteTextures(1, &texture);
       upright.resize(drawn.size());
       for (int y = 0; y < shadow_height; y++)
          std::copy_n(&drawn[(size_t)(shadow_height - 1 - y) * shadow_width * 4], shadow_width * 4,
@@ -416,14 +433,14 @@ bool draws_box_shadows(bool core, const char *name, const std::string& picture)
    for (const Sample& sample : shadow_samples)
    {
       const unsigned char *got = &drawn[((size_t)sample.y * shadow_width + sample.x) * 4];
-      bool near = true;
+      bool alike = true;
       for (int c = 0; c < 3; c++)
-         near = near && std::abs((int)got[c] - (int)sample.rgb[c]) <= 4;
-      if (!near)
+         alike = alike && std::abs((int)got[c] - (int)sample.rgb[c]) <= 4;
+      if (!alike)
          std::printf("FAIL %s context box-shadow: %s at (%d, %d) is %u %u %u, not %u %u %u\n",
                name, sample.what, sample.x, sample.y, got[0], got[1], got[2],
                sample.rgb[0], sample.rgb[1], sample.rgb[2]);
-      matched = matched && near;
+      matched = matched && alike;
    }
    return matched;
 }
