@@ -50,6 +50,8 @@ export type ExportRequest = {
   menuSounds: string;
   controls: Controls;
   menuControls: MenuControls;
+  /** The Options entries of the game, or null for those of the design. */
+  menuEntries?: string[] | null;
   outputDir: string;
   /** Replace an app already at the destination. Without it we do nothing in
    * the export and fail with `AppExists`. */

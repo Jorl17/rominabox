@@ -79,7 +79,15 @@ const {
   menuSounds: _menuSounds,
   ...declaredDraft
 } = declared;
-const defaults = { title: "", system: "", description: "", ...declaredDraft };
+// A project can list Options entries, which have no control here. With null
+// we use the entries of the design.
+const defaults = {
+  title: "",
+  system: "",
+  description: "",
+  menuEntries: null as string[] | null,
+  ...declaredDraft,
+};
 type Draft = typeof defaults;
 
 // We name three tracks. Six is more than a handful, so we show a count.
@@ -485,6 +493,7 @@ export function App() {
       advancedEmulatorAccess: draft.advancedEmulatorAccess,
       intelMacs: draft.intelMacs,
       menuControls: draft.menuControls,
+      menuEntries: draft.menuEntries,
       shaders: {
         bundled: bundledShaders,
         custom: customShaders,
@@ -552,6 +561,7 @@ export function App() {
         advancedEmulatorAccess: settings.advancedEmulatorAccess ?? false,
         intelMacs: settings.intelMacs,
         menuControls: settings.menuControls,
+        menuEntries: settings.menuEntries ?? null,
         startAtMenu: settings.startAtMenu,
       });
       setPalette(settings.palette);
