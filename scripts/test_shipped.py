@@ -308,7 +308,8 @@ def run_plan_places() -> list[str]:
     """Check that the data folder and managed folders of a plan stay in bounds.
 
     We refuse the content path when it starts at a root or climbs out with
-    `..`, and apply the same rule to the data folder and every managed folder.
+    `..`, and apply the same rule to every managed folder and to the data
+    folder below $user_data. An absolute data folder may not climb out either.
     For a refused plan we stop before we make anything, so the place in the
     plan is never created.
     """
