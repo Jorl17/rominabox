@@ -80,43 +80,43 @@ impl ExportTarget {
         }
     }
 
-    /// The target this export is for, or `None` when there is none.
+    /// The target that we build this export for.
     ///
-    /// For a Windows package we download the Windows core, even on a Mac. For
-    /// a Mac package we download the Mac entry that matches the runtime in it.
-    /// We build that runtime for this machine and do not cross-compile it.
+    /// A Windows package uses the Windows core even on a Mac builder. A Mac
+    /// package is for the same kind of Mac as the builder, and a Mac package
+    /// made on another system is for Apple silicon, because the Mac kit's
+    /// player contains the code for every Mac. This is always `Some`, because
+    /// someone can make a Mac game on any platform.
     pub fn target(&self) -> Option<Target> {
-        self.target_on(Target::host())
+        Some(self.target_on(Target::host()))
     }
 
-    /// `target` for a builder running on `host`, `None` for a machine the
-    /// builder is not built for.
-    fn target_on(&self, host: Option<Target>) -> Option<Target> {
-        match self {
-            ExportTarget::Windows => Some(Target::WindowsX86_64),
-            ExportTarget::Macos => match host? {
-                Target::MacosArm64 => Some(Target::MacosArm64),
-                Target::MacosX86_64 | Target::WindowsX86_64 => Some(Target::MacosX86_64),
-            },
+    /// `target` for a builder running on `host`, or `None` for a machine that
+    /// `Target` does not name, such as Linux.
+    fn target_on(&self, host: Option<Target>) -> Target {
+        match (self, host) {
+            (ExportTarget::Windows, _) => Target::WindowsX86_64,
+            (ExportTarget::Macos, Some(mac @ (Target::MacosArm64 | Target::MacosX86_64))) => mac,
+            (ExportTarget::Macos, Some(Target::WindowsX86_64) | None) => Target::MacosArm64,
         }
     }
 
     /// Every target that we build an app for on this platform: the platform's
     /// target (`target`), and Intel Macs too when a Mac game also runs on them.
     /// The author chooses `intel_macs` for a Mac game. A Windows game has one.
-    pub fn targets(&self, intel_macs: bool) -> Option<Vec<Target>> {
+    pub fn targets(&self, intel_macs: bool) -> Vec<Target> {
         self.targets_on(Target::host(), intel_macs)
     }
 
     /// `targets` for a builder running on `host`.
-    pub(crate) fn targets_on(&self, host: Option<Target>, intel_macs: bool) -> Option<Vec<Target>> {
-        let own = self.target_on(host)?;
-        Some(match (self, own) {
+    pub(crate) fn targets_on(&self, host: Option<Target>, intel_macs: bool) -> Vec<Target> {
+        let own = self.target_on(host);
+        match (self, own) {
             (ExportTarget::Macos, Target::MacosArm64) if intel_macs => {
                 vec![own, Target::MacosX86_64]
             }
             (ExportTarget::Macos | ExportTarget::Windows, _) => vec![own],
-        })
+        }
     }
 
     /// The drivers that we tell the player to use on this platform, which we
@@ -395,12 +395,7 @@ where
     // fix the platform here and read `resolved` in every later step.
     // Before anything else, because the author decides about an app in the way.
     crate::publish::refuse_unless_replacing(request)?;
-    let targets = request.target.targets(request.intel_macs).ok_or_else(|| {
-        ExportError::new(
-            ErrorStage::Refused,
-            "The builder does not make games on this kind of computer.",
-        )
-    })?;
+    let targets = request.target.targets(request.intel_macs);
     let resolved = export_core(request, &targets)?;
     prepare_core(request, resolved.as_ref(), &mut progress, transport)?;
     emit(

@@ -100,18 +100,18 @@ fn a_cartridge_core_is_never_constrained_by_this_check() {
 fn a_mac_game_made_on_another_system_is_for_apple_silicon_and_intel_when_asked() {
     use Target::{MacosArm64, MacosX86_64, WindowsX86_64};
     for host in [Some(WindowsX86_64), None] {
-        assert_eq!(ExportTarget::Macos.targets_on(host, false), Some(vec![MacosArm64]), "{host:?}");
+        assert_eq!(ExportTarget::Macos.targets_on(host, false), vec![MacosArm64], "{host:?}");
         assert_eq!(
             ExportTarget::Macos.targets_on(host, true),
-            Some(vec![MacosArm64, MacosX86_64]),
+            vec![MacosArm64, MacosX86_64],
             "{host:?}"
         );
-        assert_eq!(ExportTarget::Windows.targets_on(host, true), Some(vec![WindowsX86_64]), "{host:?}");
+        assert_eq!(ExportTarget::Windows.targets_on(host, true), vec![WindowsX86_64], "{host:?}");
     }
-    assert_eq!(ExportTarget::Macos.targets_on(Some(MacosArm64), false), Some(vec![MacosArm64]));
+    assert_eq!(ExportTarget::Macos.targets_on(Some(MacosArm64), false), vec![MacosArm64]);
     assert_eq!(
         ExportTarget::Macos.targets_on(Some(MacosArm64), true),
-        Some(vec![MacosArm64, MacosX86_64])
+        vec![MacosArm64, MacosX86_64]
     );
-    assert_eq!(ExportTarget::Macos.targets_on(Some(MacosX86_64), true), Some(vec![MacosX86_64]));
+    assert_eq!(ExportTarget::Macos.targets_on(Some(MacosX86_64), true), vec![MacosX86_64]);
 }
