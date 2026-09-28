@@ -15,11 +15,15 @@ scripts/licences.json (we find them all in scripts/licence_sources.py).
 
 The check uses no network. An entry with a text from this machine must be
 exactly what we would write now, and one read from the network must contain
-what the repository pins now. With --player-build we also refuse a player
-build with a compiled library of the fork that has no entry. In
+what the repository pins now. With --player-build we also warn about a
+library of the fork, compiled in the player build, that has no entry. In
 scripts/build_kit.py we copy the entries of the libraries a player uses into
 its kit, which is in every exported game, and in scripts/prepare_runtime.py
 the licence of the controller profiles.
+
+We never remove or refuse anything because a licence text is missing. We
+make a kit from every library its player uses, and name what has no text yet
+in a warning, so that someone adds it here.
 """
 
 from __future__ import annotations
@@ -119,7 +123,7 @@ def check_entries(folder: Path, components: list[Component]) -> list[str]:
     return problems
 
 
-def check(folder: Path = OUT, build: Path | None = None, components: list[Component] | None = None) -> list[str]:
+def check(folder: Path = OUT, components: list[Component] | None = None) -> list[str]:
     """Everything wrong with `folder` for `components`, by default every
     component the repository uses now."""
     components = sources.discover() if components is None else components
@@ -141,8 +145,6 @@ def check(folder: Path = OUT, build: Path | None = None, components: list[Compon
         path = component.declared.get("path")
         if path and not sources.fork_has(path):
             problems.append(f"native/{component.name}.txt: the fork has no {path}")
-    if build is not None:
-        problems += uncovered(compiled_fork_files(build), native_components(), build)
     return problems
 
 
@@ -231,16 +233,19 @@ def uncovered(files: set[str], components: list[Component], build: Path) -> list
             if not any(covers(component, folder + "/") for component in components if component.declared.get("path"))]
 
 
-def player_components(build: Path, platform: str) -> list[Component]:
-    """The native components a player build uses: every player's, the fork
-    libraries compiled in it, and its platform's runtime. Refuse a build with
-    a compiled fork library that has no entry, or with an entry out of date."""
+def player_components(build: Path, platform: str) -> tuple[list[Component], list[str]]:
+    """The native components of a player build with entries in licenses/
+    (every player's, the fork libraries compiled in it, and its platform's
+    runtime), and what is missing: a compiled fork library with no component,
+    or an entry that is missing or out of date. We print what is missing and
+    never refuse."""
     components = native_components()
     files = compiled_fork_files(build)
+    missing = []
     if not files:
-        raise SystemExit(f"{build} holds no dependency files from the fork's build, "
-                         "so which of its libraries the player uses cannot be read")
-    problems = uncovered(files, components, build)
+        missing.append(f"{build} holds no dependency files from the fork's build, "
+                       "so the fork libraries its player uses cannot be read")
+    missing += uncovered(files, components, build)
     used = []
     for component in components:
         declared = component.declared
@@ -250,18 +255,17 @@ def player_components(build: Path, platform: str) -> list[Component]:
             wanted = declared.get("always") or any(covers(component, file) for file in files)
         if wanted:
             used.append(component)
-    problems += check_entries(OUT, used)
-    if problems:
-        raise SystemExit("The player's licences are not all in licenses/:\n  " + "\n  ".join(problems))
-    return used
+    missing += check_entries(OUT, used)
+    return [component for component in used if (OUT / entry_path(component)).is_file()], missing
 
 
-def verify_toolchain(components: list[Component], installation: Path | None) -> None:
-    """Refuse when a text installed with the toolchain differs from the entry
-    we copy into the kit, which means that the pin in scripts/licences.json
+def toolchain_differences(components: list[Component], installation: Path | None) -> list[str]:
+    """Each text installed with the toolchain that differs from the entry we
+    copy into the kit, which means that the pin in scripts/licences.json
     does not match the toolchain."""
     if installation is None:
-        return
+        return []
+    differences = []
     for component in components:
         texts = component.declared.get("texts", [])
         if not any("toolchain" in spec for spec in texts):
@@ -270,21 +274,33 @@ def verify_toolchain(components: list[Component], installation: Path | None) -> 
         for spec in texts:
             if "toolchain" in spec:
                 installed = installation / spec["toolchain"]
-                if clean(sources.decode(installed.read_bytes())) not in written:
-                    raise SystemExit(f"{installed} differs from licenses/{entry_path(component)}: "
-                                     "pin the toolchain's version in scripts/licences.json and run scripts/licences.py")
+                if not installed.is_file() or clean(sources.decode(installed.read_bytes())) not in written:
+                    differences.append(f"{installed} is not the text of licenses/{entry_path(component).as_posix()}: "
+                                       "pin the toolchain's version in scripts/licences.json and run scripts/licences.py")
+    return differences
+
+
+def warning(missing: list[str]) -> str:
+    """What we print in a kit build or a check about missing licence texts."""
+    return ("WARNING: licence texts are missing. Nothing was left out or refused; the player "
+            "keeps every library it uses. Add these to licenses/ (scripts/licences.json, then "
+            "python3 scripts/licences.py) so the games carry them:\n  " + "\n  ".join(missing))
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="read no network; fail on any entry out of step")
-    parser.add_argument("--player-build", type=Path, help="with --check: a player build whose libraries to check")
+    parser.add_argument("--player-build", type=Path, help="with --check: warn about a library of this player build no entry names")
     parser.add_argument("--refresh", action="store_true", help="read every text again, those on the network too")
     arguments = parser.parse_args()
     if arguments.check:
-        problems = check(build=arguments.player_build)
+        problems = check()
         for problem in problems:
             print(problem)
+        if arguments.player_build is not None:
+            unnamed = uncovered(compiled_fork_files(arguments.player_build), native_components(), arguments.player_build)
+            if unnamed:
+                print(warning(unnamed), file=sys.stderr)
         if not problems:
             print(f"Every component has its licence in {OUT}")
         return 1 if problems else 0

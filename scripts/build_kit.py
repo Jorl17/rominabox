@@ -10,10 +10,10 @@ The target's part of scripts/native_runtime/player-recipe.json lists the rest:
 the player, the launcher, and the player's controller profile folders, which
 we stage from the pinned autoconfig archive. The licence texts of what the
 player is made from are the entries in licenses/ (scripts/licences.py) of
-every library compiled in the build. We refuse to make a kit from a build
-with a compiled library that has no entry. We link only the system's
-libraries into the player, so the library folder in a macOS kit is empty and
-its inventory lists no file.
+every library compiled in the build. When a library has no entry yet, we
+name it in a warning and make the kit all the same. We link only the
+system's libraries into the player, so the library folder in a macOS kit is
+empty and its inventory lists no file.
 """
 
 from __future__ import annotations
@@ -66,8 +66,8 @@ def main() -> int:
         raise SystemExit(f"the player recipe declares no kit for {target}")
 
     platform, _, architecture = target.partition("-")
-    native = licences.player_components(build, platform)
-    licences.verify_toolchain(native, toolchain.installation())
+    native, missing = licences.player_components(build, platform)
+    missing += licences.toolchain_differences(native, toolchain.installation())
     kit_assets.stage(kit)
     for placed in declared["files"].values():
         source = source_of(placed["from"], build)
@@ -151,6 +151,8 @@ def main() -> int:
 
     for part in native_build.slices(target):
         install_preview(build if part == target else build / part, part)
+    if missing:
+        print(licences.warning(missing), file=sys.stderr)
     return 0
 
 

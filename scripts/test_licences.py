@@ -6,7 +6,8 @@ and that the check fails when one is missing.
 The folder in the repository must pass `scripts/licences.py --check`. We
 show the failures on a copy of it in a temporary directory: an entry
 removed, a text changed, a file that no component uses, an entry for another
-version, and a made-up player build with a fork library that has no entry.
+version. For a made-up player build with a fork library that has no entry,
+we still put every library in the kit and warn with that library's name.
 We read nothing from the network and do not change licenses/.
 """
 
@@ -69,8 +70,7 @@ def main() -> int:
         entry = folder / licences.entry_path(core)
         entry.write_text(entry.read_text(encoding="utf-8").replace(core.version, "an older build"), encoding="utf-8")
         (folder / "crates/left-behind-0.1.0.txt").write_text("MIT\n", encoding="utf-8")
-        unheard = fake_build(Path(temporary) / "unheard", ["deps/mbedtls/aes.c", "deps/unheard-of/lib.c"])
-        problems = licences.check(folder, build=unheard, components=components)
+        problems = licences.check(folder, components=components)
         shown = "\n".join(problems)
         check(names(problems, "native/glslang.txt", "no entry"), "a component with no entry fails the check", shown)
         check(names(problems, licences.entry_path(crate).as_posix(), "differs from its source"),
@@ -79,23 +79,28 @@ def main() -> int:
               "an entry read from the network that names another version fails the check", shown)
         check(names(problems, "crates/left-behind-0.1.0.txt", "no component"),
               "an entry no component uses fails the check", shown)
-        check(names(problems, "deps/unheard-of", "no native component"),
-              "a player build compiling a fork library with no entry fails the check", shown)
-        check(len(problems) == 5, "and nothing else does", shown)
-        try:
-            licences.player_components(unheard, "macos")
-            check(False, "a kit is not made from a player build compiling a fork library with no entry")
-        except SystemExit as refusal:
-            check("deps/unheard-of" in str(refusal),
-                  "a kit is not made from a player build compiling a fork library with no entry", str(refusal))
+        check(len(problems) == 4, "and nothing else does", shown)
+
+        # We warn about a library with no entry and still keep it in the kit.
+        unheard = fake_build(Path(temporary) / "unheard", ["deps/mbedtls/aes.c", "deps/unheard-of/lib.c"])
+        used, missing = licences.player_components(unheard, "macos")
+        check("mbedtls" in [component.name for component in used],
+              "a kit is made from a player build compiling a fork library with no entry", str(used))
+        check(names(missing, "deps/unheard-of", "no native component") and len(missing) == 1,
+              "and the fork library with no entry is named in its warning", "\n".join(missing))
+        warning = licences.warning(missing)
+        check("deps/unheard-of" in warning and "Nothing was left out or refused" in warning,
+              "the warning says nothing was left out", warning)
 
         build = fake_build(Path(temporary) / "known", ["deps/mbedtls/aes.c", "gfx/../deps/yxml/yxml.h", "retroarch.c"])
-        used = [component.name for component in licences.player_components(build, "macos")]
+        used, missing = licences.player_components(build, "macos")
+        used = [component.name for component in used]
         check("mbedtls" in used and "yxml" in used and "ibxm" not in used and "mingw-w64-runtime" not in used,
               "a player build uses the fork libraries it compiled, not the others", str(used))
         check({"retroarch", "libretro-common", "rmlui", "freetype"} <= set(used),
               "a player build uses what every player is made from", str(used))
-        windows = [component.name for component in licences.player_components(build, "windows")]
+        check(not missing, "a player build whose libraries all have entries warns of nothing", "\n".join(missing))
+        windows = [component.name for component in licences.player_components(build, "windows")[0]]
         check("mingw-w64-runtime" in windows, "a Windows player build uses its runtime's licences", str(windows))
 
     if FAILURES:
