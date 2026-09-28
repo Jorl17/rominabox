@@ -10,6 +10,7 @@
  * ASSETS is a composed Native menu with the builder's defaults. OTHER_ASSETS
  * is the same menu exported again with other defaults (CONFIRM Space and the
  * top button). DATA is an empty folder for this test. */
+#include <algorithm>
 #include "rmlui/menu_api.h"
 #include "rmlui/host.h"
 #include "rmlui_bridge.h"
@@ -80,8 +81,11 @@ std::vector<std::string> row(const char *action)
    {
       const std::string id = std::string("menu-control-") + action + "-" + std::to_string(chip);
       Rml::Element *element = view.document.root()->GetElementById(id);
-      if (element && !rib::hidden(element))
-         shown.push_back(inspect.text(id.c_str()));
+      if (!element || rib::hidden(element))
+         continue;
+      /* The words on a chip, besides anything else the design draws in it. */
+      Rml::Element *words = rib::find_class(element, "menu-control-words");
+      shown.push_back(words ? words->GetInnerRML() : inspect.text(id.c_str()));
    }
    return shown;
 }
@@ -256,23 +260,78 @@ void capture_look_and_ends(void *menu)
 void nobody_is_locked_out(void *menu)
 {
    click(menu, "menu-control-menu-1");
-   expect_status("MENU NEEDS A KEY", "removing MENU's only key");
+   expect_status("MENU MUST KEEP A KEY", "removing MENU's only key");
    expect_row("menu", {"Escape", "Home", "L3+R3"}, "a refused removal");
 
    click(menu, "menu-control-confirm-2");
    click(menu, "menu-control-confirm-1");
-   expect_status("CONFIRM NEEDS A BINDING", "removing CONFIRM's last binding");
+   expect_status("CONFIRM MUST KEEP A BINDING", "removing CONFIRM's last binding");
    expect_row("confirm", {"Enter"}, "a refused removal");
 
    /* Taking the only binding of CONFIRM leaves it with none, and BACK has no
     * key to give back, because Escape also belongs to MENU, so we refuse. */
    capture(menu, "back", "key:enter");
-   expect_status("CONFIRM NEEDS A BINDING", "a capture that would leave CONFIRM nothing");
+   expect_status("CONFIRM MUST KEEP A BINDING", "a capture that would leave CONFIRM nothing");
    expect_row("confirm", {"Enter"}, "a refused capture");
    expect_row("back", {"Escape", "Bottom button"}, "a refused capture");
 
    capture(menu, "confirm", "pad:a");
    expect_row("confirm", {"Enter", "Right button"}, "CONFIRM's pad button back");
+}
+
+/* Clicking + with the mouse captures the next press. The mouse button that
+ * started the capture is released at once, so we accept input for the
+ * capture again from the next frame. */
+void a_clicked_plus_takes_the_next_press(void *menu)
+{
+   const int before = host.input_captures_started;
+   check(view.document.element_center("menu-control-confirm-add", &host.pointer.x, &host.pointer.y),
+         "+ is on screen");
+   host.pointer.pressed = true;
+   frame(menu);
+   host.pointer.pressed = false;
+   frame(menu);
+   check(host.input_captures_started == before + 1, "a click on + starts a capture");
+   frame(menu);
+   check(host.capture_accepts_pointer, "the click let go, the capture takes the next press");
+   click(menu, "menu-controls-cancel");
+   host.pointer = {};
+   frame(menu);
+}
+
+/* The input that ends a capture is still held when we bind it, so it acts as
+ * its new action only after a release and a new press. When it is bound to
+ * MENU, its release must not close the screen, and when it is bound to
+ * CONFIRM, it must not press the focused element. */
+void the_input_that_binds_acts_once_let_go(void *menu)
+{
+   host.keys_down = {"f2"};
+   capture(menu, "confirm", "key:f2");
+   expect_row("confirm", {"Enter", "Right button", "f2"}, "F2 captured for CONFIRM");
+   check(!press({"f2"}, {}).ok, "F2, still held from its capture, does not confirm");
+   press({}, {});
+   check(press({"f2"}, {}).ok, "let go and pressed again, F2 confirms");
+   click(menu, "menu-control-confirm-3");
+
+   host.keys_down = {"f3"};
+   capture(menu, "menu", "key:f3");
+   const unsigned f3 = key_code("f3");
+   const std::vector<unsigned> held = press({"f3"}, {}).menu_keys;
+   check(std::find(held.begin(), held.end(), f3) == held.end(),
+         "F3, still held from its capture, is not yet one of MENU's keys");
+   press({}, {});
+   const std::vector<unsigned> later = press({}, {}).menu_keys;
+   check(std::find(later.begin(), later.end(), f3) != later.end(), "let go, F3 is one of MENU's keys");
+   click(menu, "menu-control-menu-4");
+
+   host.pads_down = {"x"};
+   capture(menu, "back", "pad:x");
+   check(!press({}, {"x"}).cancel, "a pad button still held from its capture does not go back");
+   press({}, {});
+   check(press({}, {"x"}).cancel, "let go and pressed again, it goes back");
+   click(menu, "menu-control-back-3");
+   expect_row("confirm", {"Enter", "Right button"}, "after the held inputs");
+   expect_row("back", {"Escape", "Bottom button"}, "after the held inputs");
 }
 
 void one_capture_swaps_confirm_and_back(void *menu)
@@ -386,6 +445,8 @@ int main(int argc, char **argv)
    add_and_remove(menu);
    capture_look_and_ends(menu);
    nobody_is_locked_out(menu);
+   a_clicked_plus_takes_the_next_press(menu);
+   the_input_that_binds_acts_once_let_go(menu);
    one_capture_swaps_confirm_and_back(menu);
    swapped_buttons_drive_the_menu(menu);
    what_retroarch_reads(menu);
