@@ -74,11 +74,26 @@ fn defaults_that_would_lock_a_player_out_or_hold_an_input_twice_are_refused() {
         (serde_json::json!({ "confirm": ["key:enter", "pad:b"] }), "bound to both"),
         (serde_json::json!({ "back": ["key:escape", "key:escape"] }), "twice"),
     ] {
-        let error = controls(json.clone()).unwrap().check().unwrap_err();
+        let error = controls(json.clone()).unwrap().check().unwrap_err().to_string();
         assert!(error.contains(says), "{json}: {error}");
     }
     // MENU and BACK have the same effect in the menu, so they may share one.
     controls(serde_json::json!({ "back": ["pad:home"] })).unwrap().check().unwrap();
+}
+
+/// We report the rule and the actions, so that we can word the problem in
+/// the builder and show it to the author before an export fails.
+#[test]
+fn a_refusal_names_the_rule_and_the_actions_for_the_builder() {
+    let refused = |json| serde_json::to_value(controls(json).unwrap().check().unwrap_err()).unwrap();
+    assert_eq!(
+        refused(serde_json::json!({ "back": ["key:enter"] })),
+        serde_json::json!({ "kind": "shared", "binding": "key:enter", "action": "confirm", "other": "back" })
+    );
+    assert_eq!(
+        refused(serde_json::json!({ "menu": ["pad:l3+r3"] })),
+        serde_json::json!({ "kind": "noKey", "action": "menu" })
+    );
 }
 
 #[test]

@@ -29,6 +29,7 @@ import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import { ExportChoices } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
+import { MenuControlsEditor } from "./MenuControlsEditor";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
   NOT_A_SHADER_FILE,
@@ -77,34 +78,18 @@ type Selection = {
   size?: number;
   browserFile?: File;
 };
-type Draft = {
-  title: string;
-  system: string;
-  description: string;
-  showMenu: boolean;
-  includeAchievements: boolean;
-  startAtMenu: boolean;
-  splash: boolean;
-  keepPlayingInBackground: boolean;
-  autosaveOnQuit: boolean;
-  advancedEmulatorAccess: boolean;
-  intelMacs: boolean;
-};
-// The initial settings of a dropped game. We read the same declaration in
+// The initial settings of a dropped game: the declared builder defaults,
+// except those we keep apart from the draft. We read the same declaration in
 // the exporter, so a command-line export of the game alone gives this draft.
-const defaults: Draft = {
-  title: "",
-  system: "",
-  description: "",
-  showMenu: declared.showMenu,
-  includeAchievements: declared.includeAchievements,
-  startAtMenu: declared.startAtMenu,
-  splash: declared.splash,
-  keepPlayingInBackground: declared.keepPlayingInBackground,
-  autosaveOnQuit: declared.autosaveOnQuit,
-  advancedEmulatorAccess: declared.advancedEmulatorAccess,
-  intelMacs: declared.intelMacs,
-};
+const {
+  online: _online,
+  theme: _theme,
+  palette: _palette,
+  menuSounds: _menuSounds,
+  ...declaredDraft
+} = declared;
+const defaults = { title: "", system: "", description: "", ...declaredDraft };
+type Draft = typeof defaults;
 
 // We name three tracks. Six is more than a handful, so we show a count.
 const NAMED_COMPANIONS = 5;
@@ -519,6 +504,7 @@ export function App() {
       autosaveOnQuit: draft.autosaveOnQuit,
       advancedEmulatorAccess: draft.advancedEmulatorAccess,
       intelMacs: draft.intelMacs,
+      menuControls: draft.menuControls,
       shaders: {
         bundled: bundledShaders,
         custom: customShaders,
@@ -585,6 +571,7 @@ export function App() {
         autosaveOnQuit: settings.autosaveOnQuit ?? false,
         advancedEmulatorAccess: settings.advancedEmulatorAccess ?? false,
         intelMacs: settings.intelMacs,
+        menuControls: settings.menuControls,
         startAtMenu: settings.startAtMenu,
       });
       setPalette(settings.palette);
@@ -1420,6 +1407,13 @@ export function App() {
                   value={controls}
                   onChange={setControls}
                 />
+                {draft.showMenu && (
+                  <MenuControlsEditor
+                    value={draft.menuControls}
+                    busy={!!busy}
+                    onChange={(value) => update("menuControls", value)}
+                  />
+                )}
               </details>
               <details className="advanced picture-filters">
                 <summary>

@@ -4,6 +4,7 @@ import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Controls } from "./controls";
+import type { MenuControls, Refusal } from "./menuControls";
 import { SHADER_EXTENSIONS } from "./shaderFiles";
 
 export const native = isTauri();
@@ -46,6 +47,7 @@ export type ExportRequest = {
   palette: string;
   menuSounds: string;
   controls: Controls;
+  menuControls: MenuControls;
   outputDir: string;
   /** Replace an app already at the destination. Without it we do nothing in
    * the export and fail with `AppExists`. */
@@ -187,6 +189,17 @@ export function assessFirmware(
   files: string[],
 ): Promise<FirmwareAssessment> {
   return invoke("assess_firmware", { system, files });
+}
+/** The rule that `menuControls` would break in the game's menu, as we would
+ * reject it in the export, or null. We check none in the browser preview. */
+export function checkMenuControls(
+  menuControls: MenuControls,
+): Promise<Refusal | null> {
+  if (!native) return Promise.resolve(null);
+  return invoke("check_menu_controls", { menuControls }).then(
+    () => null,
+    (refusal: Refusal) => refusal,
+  );
 }
 /**
  * Wait up to `seconds` for a press on a controller, a button or a moved stick

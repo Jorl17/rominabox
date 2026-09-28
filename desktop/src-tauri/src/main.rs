@@ -3,7 +3,8 @@
 use rominabox_desktop::export_error::{AuthorError, ErrorStage};
 use rominabox_desktop::target::Target;
 use rominabox_desktop::{
-    builder, cores, icons, menu, metadata, packaging, pads, projects, systems, traveling,
+    builder, cores, icons, menu, menu_controls, metadata, packaging, pads, projects, systems,
+    traveling,
 };
 use std::{
     fs,
@@ -213,6 +214,15 @@ fn assess_firmware(
     Ok(systems::assess_firmware(system, &files))
 }
 
+/// Whether the menu controls follow the rules of the game's menu, or else the
+/// error that we would show in an export.
+#[tauri::command]
+fn check_menu_controls(
+    menu_controls: menu_controls::MenuControls,
+) -> Result<(), menu_controls::Refusal> {
+    menu_controls.check()
+}
+
 /// The folder for this builder's downloads, which we find in the same way for
 /// the command line.
 fn places(app: &tauri::AppHandle) -> builder::Places {
@@ -283,6 +293,7 @@ fn main() {
             ensure_cores,
             export_target,
             assess_firmware,
+            check_menu_controls,
             export_game,
             cancel_export,
             save_project,

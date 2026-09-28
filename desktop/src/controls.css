@@ -242,3 +242,28 @@
 .controller-marker.selected .controller-ring {
   stroke: var(--palette-highlight, #fff13d);
 }
+/* The author's defaults for the actions of the menu: one row of chips each. */
+.menu-controls {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+.menu-controls h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.menu-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.menu-control-name {
+  min-width: 6em;
+  font-weight: 600;
+}
+.menu-control-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

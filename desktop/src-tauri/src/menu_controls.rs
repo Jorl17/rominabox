@@ -209,6 +209,37 @@ impl<'de> Deserialize<'de> for Binding {
     }
 }
 
+/// Defaults that break a rule of the menu, by the ids of the actions. We word
+/// it for the author in the builder, and an export fails with its sentence.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum Refusal {
+    NoBinding { action: &'static str },
+    NoKey { action: &'static str },
+    Twice { action: &'static str, binding: Binding },
+    /// `binding` belongs to both `action` and `other`, which may not share one.
+    Shared { binding: Binding, action: &'static str, other: &'static str },
+}
+
+impl fmt::Display for Refusal {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Refusal::NoBinding { action } => {
+                write!(formatter, "menu controls: {action} has no binding, and must keep one")
+            }
+            Refusal::NoKey { action } => write!(formatter, "menu controls: {action} has no key, and must keep one"),
+            Refusal::Twice { action, binding } => {
+                write!(formatter, "menu controls: {action} holds {} twice", binding.text())
+            }
+            Refusal::Shared { binding, action, other } => write!(
+                formatter,
+                "menu controls: {} is bound to both {action} and {other}, which cannot share an input",
+                binding.text()
+            ),
+        }
+    }
+}
+
 /// The bindings of each action, in order, as the defaults of an export.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MenuControls {
@@ -223,27 +254,26 @@ impl MenuControls {
     /// The rules for every change in the menu of the game. Each action keeps
     /// the bindings it must keep, and an input belongs to one action, or to
     /// two that share it.
-    pub fn check(&self) -> Result<(), String> {
+    pub fn check(&self) -> Result<(), Refusal> {
         for action in Action::ALL {
             let list = self.of(action);
             if list.is_empty() {
-                return Err(format!("menu controls: {} has no binding, and must keep one", action.id()));
+                return Err(Refusal::NoBinding { action: action.id() });
             }
             if action.keeps() == Keeps::Key && !list.iter().any(Binding::is_key) {
-                return Err(format!("menu controls: {} has no key, and must keep one", action.id()));
+                return Err(Refusal::NoKey { action: action.id() });
             }
             for (index, binding) in list.iter().enumerate() {
                 if list[..index].contains(binding) {
-                    return Err(format!("menu controls: {} holds {} twice", action.id(), binding.text()));
+                    return Err(Refusal::Twice { action: action.id(), binding: binding.clone() });
                 }
                 for other in Action::ALL {
                     if other != action && !action.shares_with(other) && self.of(other).contains(binding) {
-                        return Err(format!(
-                            "menu controls: {} is bound to both {} and {}, which cannot share an input",
-                            binding.text(),
-                            action.id(),
-                            other.id()
-                        ));
+                        return Err(Refusal::Shared {
+                            binding: binding.clone(),
+                            action: action.id(),
+                            other: other.id(),
+                        });
                     }
                 }
             }
@@ -254,7 +284,7 @@ impl MenuControls {
     /// `menu-controls-defaults.cfg`, with the list of each action and then the
     /// word for every pad input in the menu.
     pub fn defaults_config(&self) -> Result<String, String> {
-        self.check()?;
+        self.check().map_err(|refusal| refusal.to_string())?;
         let mut text = String::new();
         for action in Action::ALL {
             let list: Vec<String> = self.of(action).iter().map(Binding::text).collect();
