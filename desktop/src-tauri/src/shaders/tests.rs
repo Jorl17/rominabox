@@ -242,6 +242,109 @@ fn custom_preset(folder: &Path, name: &str, files: &[(&str, &str)]) -> ShaderSel
     }
 }
 
+/// Every file below `folder`, by its path from it with `/` between parts.
+fn files_below(folder: &Path) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut reading = vec![folder.to_path_buf()];
+    while let Some(directory) = reading.pop() {
+        for entry in fs::read_dir(&directory).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                reading.push(path);
+                continue;
+            }
+            let relative = path.strip_prefix(folder).unwrap();
+            let parts: Vec<_> = relative.iter().map(|part| part.to_string_lossy()).collect();
+            found.push(parts.join("/"));
+        }
+    }
+    found.sort();
+    found
+}
+
+/// Many libretro GLSL presets name files in a neighbouring folder, for
+/// example `crt/crt-royale-pal-r57shell.glslp` has its pass in
+/// `../pal/shaders/`. We bundle such a preset with the files it lists,
+/// and only those, each where the `../` in the preset leads.
+#[test]
+fn a_preset_takes_the_files_it_names_from_a_neighbouring_folder() {
+    let source = rominabox_scratch::Scratch::dir("rominabox-shader-neighbour");
+    let selection = custom_preset(
+        &source,
+        "crt/royale-pal.glslp",
+        &[
+            (
+                "crt/royale-pal.glslp",
+                "shaders = 1\nshader0 = ../pal/shaders/pal.glsl\ntextures = \"lut\"\nlut = \"../pal/resources/lut.png\"\n",
+            ),
+            ("pal/shaders/pal.glsl", PASS),
+            ("pal/resources/lut.png", "lut"),
+            ("pal/shaders/unnamed.glsl", PASS),
+            ("pal/pal.glslp", "shaders = 1\nshader0 = shaders/pal.glsl\n"),
+        ],
+    );
+    let root = rominabox_scratch::Scratch::dir("rominabox-shader-neighbour-staged");
+    composed(selection.clone()).write(&root).unwrap();
+    assert_eq!(
+        files_below(&root.join("shaders/pal")),
+        ["crt/royale-pal.glslp", "icon.png", "pal/resources/lut.png", "pal/shaders/pal.glsl"]
+    );
+    assert_eq!(
+        launch_preset(&selection).unwrap().as_deref(),
+        Some("shaders/pal/crt/royale-pal.glslp")
+    );
+}
+
+/// Every relative path in a preset we stage, `../` included, leads to a
+/// staged file in the game's folder for that preset. When we read it again
+/// with the same resolver, it lists the same files, and all of them exist.
+#[test]
+fn a_staged_preset_resolves_inside_its_own_folder() {
+    let source = rominabox_scratch::Scratch::dir("rominabox-shader-walk");
+    let selection = custom_preset(
+        &source,
+        "presets/plus/royale-pal.glslp",
+        &[
+            ("presets/plus/royale-pal.glslp", "#reference \"../../crt/royale.glslp\"\n"),
+            (
+                "crt/royale.glslp",
+                "shaders = 2\nshader0 = ../pal/shaders/pal.glsl\nshader1 = shaders/royale.glsl\ntextures = \"mask\"\nmask = \"../resources/mask.png\"\n",
+            ),
+            ("crt/shaders/royale.glsl", PASS),
+            ("pal/shaders/pal.glsl", PASS),
+            ("resources/mask.png", "mask"),
+        ],
+    );
+    let root = rominabox_scratch::Scratch::dir("rominabox-shader-walk-staged");
+    composed(selection.clone()).write(&root).unwrap();
+    let staged = root.join("shaders/pal");
+    let preset = launch_preset(&selection).unwrap().unwrap();
+    let again = resolve(&ShaderSelection {
+        custom: vec![CustomShader { name: "PAL".into(), path: root.join(&preset) }],
+        ..selection.clone()
+    })
+    .unwrap();
+    let inside = fs::canonicalize(&staged).unwrap();
+    for (file, _) in &again[1].files {
+        let resolved = fs::canonicalize(file).unwrap();
+        assert!(resolved.starts_with(&inside), "{} is outside {}", file.display(), staged.display());
+    }
+    let names = |shader: &ResolvedShader| {
+        let mut names: Vec<String> = shader.files.iter().map(|(_, name)| name.clone()).collect();
+        names.sort();
+        names
+    };
+    assert_eq!(names(&again[1]), names(&resolve(&selection).unwrap()[1]));
+    let mut expected = names(&again[1]);
+    expected.push("icon.png".into());
+    expected.sort();
+    assert_eq!(files_below(&staged), expected, "the staged files are those the preset names");
+    for file in files_below(&root) {
+        let named = ["royale", "pal.glsl", "mask.png"].iter().any(|part| file.contains(part));
+        assert!(!named || file.starts_with("shaders/pal/"), "{file} was written outside the game's shader folder");
+    }
+}
+
 /// A preset can name another with `#reference`, whose files are beside it.
 /// The libretro `presets/` folders contain such presets.
 #[test]
