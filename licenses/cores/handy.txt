@@ -1,0 +1,29 @@
+handy
+
+Version:  the buildbot's nightly build; licence from master
+Source:   https://github.com/libretro/libretro-handy
+Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
+
+==> https://raw.githubusercontent.com/libretro/libretro-handy/bc55d462f0b2d6b073ea93dc552ebd73cec60fd1/lynx/license.txt <==
+
+//
+// Copyright (c) 2004 K. Wilkins
+//
+// This software is provided 'as-is', without any express or implied warranty.
+// In no event will the authors be held liable for any damages arising from
+// the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+//
+// 2. Altered source versions must be plainly marked as such, and must not
+//    be misrepresented as being the original software.
+//
+// 3. This notice may not be removed or altered from any source distribution.
+//

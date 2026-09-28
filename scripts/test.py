@@ -228,6 +228,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_joypad_autoconfig.py")],
     ),
     Scope(
+        "licences",
+        "that licenses/ holds a current entry for every third-party component: the player's libraries, the cores, the crates, the builder's npm packages, the fonts and the data the product carries; and that a missing, changed or unused entry, or a player build compiling a fork library with no entry, fails",
+        "that a text read from the network is still what its URL serves, or that a component's declared licence is right; it reads no network, and the real player build only when build_kit.py makes a kit",
+        [PYTHON, str(ROOT / "scripts/test_licences.py")],
+    ),
+    Scope(
         "padrelay",
         "on Windows, that a sandboxed game lists the controllers DirectInput lists outside, again after letting go of them as the joypad driver does when one comes or goes, sets one up and reads it within the range it set, asks for rumble through its launcher, is refused whatever it writes into the relay, and loses its controllers when the launcher stops answering; elsewhere, with zig, that both sides build for Windows",
         "RetroArch's joypad driver using it (the isolation scope sees a gamepad), a controller physically plugged in or out, or rumble on a controller that can; without a controller connected, anything about one",

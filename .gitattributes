@@ -9,3 +9,6 @@
 *.png binary
 *.ttf binary
 *.wav binary
+
+# Written by scripts/licences.py from each component's own source.
+licenses/** linguist-generated
