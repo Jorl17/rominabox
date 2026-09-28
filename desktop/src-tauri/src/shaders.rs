@@ -866,6 +866,44 @@ mod tests {
         let _ = fs::remove_dir_all(&source);
     }
 
+    /// A slang pass is compiled with the files it `#include`s, read from next
+    /// to the file that includes them, and without one of them the game runs
+    /// unfiltered with no warning. The libretro passes include from a folder
+    /// next to the preset folder (`../include/`), which still belongs to it.
+    #[test]
+    fn a_slang_pass_takes_the_files_it_includes() {
+        let source = rominabox_scratch::Scratch::dir("rominabox-slang-includes");
+        let pass = "#version 450\n#include \"../include/common.inc\"\n";
+        let selection = custom_preset(
+            &source,
+            "crt.slangp",
+            &[
+                ("crt.slangp", "shaders = 1\nshader0 = shaders/crt.slang\n"),
+                ("shaders/crt.slang", pass),
+                ("include/common.inc", "#pragma stage vertex\n#include \"nested.inc\"\n"),
+                ("include/nested.inc", "#pragma stage fragment\n"),
+            ],
+        );
+        let root = rominabox_scratch::Scratch::dir("rominabox-slang-includes-staged");
+        composed(selection).write(&root).unwrap();
+        let staged = ["crt.slangp", "shaders/crt.slang", "include/common.inc", "include/nested.inc"];
+        for named in staged {
+            let path = root.join("shaders/pal").join(named);
+            assert!(path.is_file(), "{named} was not copied");
+        }
+
+        let lone_files = [("lone/crt.slang", "#version 450\n#include \"stages.inc\"\n"), ("lone/stages.inc", SLANG)];
+        let lone = resolve(&custom_preset(&source, "lone/crt.slang", &lone_files)).unwrap();
+        let names: Vec<&str> = lone[1].files.iter().map(|(_, name)| name.as_str()).collect();
+        assert!(names.contains(&"stages.inc"), "a lone pass's include was not copied: {names:?}");
+
+        let away = [("away/crt.slang", "#version 450\n#include \"../include/common.inc\"\n")];
+        let error = resolve(&custom_preset(&source, "away/crt.slang", &away)).unwrap_err();
+        assert!(error.contains("beside it"), "{error}");
+        let _ = fs::remove_dir_all(&source);
+        let _ = fs::remove_dir_all(&root);
+    }
+
     #[test]
     fn an_ordinary_menu_gains_no_shader_screen() {
         let composed = composed(ShaderSelection::default());
