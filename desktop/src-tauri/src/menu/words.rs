@@ -60,6 +60,39 @@ pub fn key_words() -> &'static [(String, String)] {
     })
 }
 
+const MOUSE_BUTTONS: &str =
+    include_str!("../../../../vendor/retroarch/menu/drivers/rmlui/mouse_buttons.inc");
+
+/// A mouse button for a control, as we declare it in `mouse_buttons.inc`:
+/// its value in a controls file, its RetroArch id and its word.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MouseButton {
+    pub value: String,
+    pub id: String,
+    pub word: String,
+}
+
+/// Every mouse button the player can bind a control to, in declared order.
+pub fn mouse_buttons() -> &'static [MouseButton] {
+    static BUTTONS: OnceLock<Vec<MouseButton>> = OnceLock::new();
+    BUTTONS.get_or_init(|| {
+        super::inc::declarations(MOUSE_BUTTONS)
+            .filter(|declaration| declaration.macro_name() == "RIB_MOUSE_BUTTON")
+            .map(|declaration| match declaration.fields()[..] {
+                [value, id, word] => MouseButton {
+                    value: value.to_string(),
+                    id: id.to_string(),
+                    word: word.to_string(),
+                },
+                ref fields => panic!(
+                    "mouse_buttons.inc: RIB_MOUSE_BUTTON({}) is not (\"value\", RETRO_DEVICE_ID_MOUSE_id, \"Word\")",
+                    fields.join(", ")
+                ),
+            })
+            .collect()
+    })
+}
+
 /// The text for `id` in `given`, the wording of the design, or else the
 /// English text, with each hole filled in with the value we show there.
 pub fn say(given: &BTreeMap<String, String>, id: &str, values: &[(&str, &str)]) -> String {

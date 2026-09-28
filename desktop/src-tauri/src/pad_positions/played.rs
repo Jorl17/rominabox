@@ -7,28 +7,12 @@
 
 use super::tests::moved;
 use crate::controls::{self, Controls};
-use crate::retroarch_probe::Probe;
+use crate::retroarch_probe::{Probe, CONFIGURED, INPUT_LAYER};
 use rominabox_scratch::Scratch;
 use std::fs;
 
 fn probe() -> Probe {
-    Probe::build_defining(
-        "remap_play",
-        &["HAVE_CONFIGFILE"],
-        &[
-            "configuration.c",
-            "input/input_driver.c",
-            "input/input_keymaps.c",
-            "libretro-common/file/config_file.c",
-            "libretro-common/file/file_path_io.c",
-            "libretro-common/streams/file_stream.c",
-            "libretro-common/vfs/vfs_implementation.c",
-            "libretro-common/compat/compat_strl.c",
-            "libretro-common/string/stdstring.c",
-            "libretro-common/encodings/encoding_utf.c",
-            "libretro-common/file/file_path.c",
-        ],
-    )
+    Probe::build_defining("remap_play", CONFIGURED, INPUT_LAYER)
 }
 
 /// A game's controls as we export them, and what the core receives for

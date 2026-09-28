@@ -12,7 +12,6 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 const MAX_LABEL_BYTES: usize = 80;
-const MAX_MOUSE_BUTTON: u32 = 5;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,7 +31,9 @@ pub struct ControlOverride {
     /// The pad position we read the control from, when the author moved it.
     /// It is one of the `padPositions` in `controls.json`.
     pub pad: Option<String>,
-    pub mouse: Option<u32>,
+    /// The mouse button that also presses the control, as named in a
+    /// controls file. It is one of the values in `mouse_buttons.inc`.
+    pub mouse: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -292,7 +293,7 @@ pub fn write_defaults_config(
                 escape_config_value(group),
             ));
         }
-        if let Some(mouse) = value.mouse {
+        if let Some(mouse) = &value.mouse {
             config.push_str(&format!("input_player1_{slot}_mbtn = \"{mouse}\"\n"));
         }
     }
@@ -305,7 +306,7 @@ pub fn write_defaults_config(
 struct EffectiveControl {
     label: String,
     key: String,
-    mouse: Option<u32>,
+    mouse: Option<String>,
 }
 
 fn effective_controls(
@@ -327,7 +328,7 @@ fn effective_controls(
                     key: override_value
                         .and_then(|value| value.key.clone())
                         .unwrap_or_else(|| control.key.clone()),
-                    mouse: override_value.and_then(|value| value.mouse),
+                    mouse: override_value.and_then(|value| value.mouse.clone()),
                 },
             )
         })
@@ -353,11 +354,12 @@ fn validate_for_profile(profile: &ControlProfile, controls: &Controls) -> Result
         if let Some(key) = &value.key {
             validate_key(id, key)?;
         }
-        if let Some(mouse) = value.mouse {
-            if mouse > MAX_MOUSE_BUTTON {
-                return Err(format!(
-                    "mouse button for {id} must be between 0 and {MAX_MOUSE_BUTTON}"
-                ));
+        if let Some(mouse) = &value.mouse {
+            if !crate::menu::words::mouse_buttons()
+                .iter()
+                .any(|button| &button.value == mouse)
+            {
+                return Err(format!("{mouse} is not a mouse button (for {id})"));
             }
         }
     }
@@ -653,6 +655,44 @@ mod tests {
             .filter(|name| validate_for_system("megadrive", &binding(name).1).is_ok())
             .collect();
         assert_eq!(accepted, vec!["Shift", "KP_PLUS", "Q", "q"]);
+    }
+
+    /// For every mouse button that we declare for the game and offer in the
+    /// builder, the RetroArch parser returns the declared button. We check it
+    /// with `scripts/native_runtime/mouse_buttons.c`, compiled against the fork.
+    #[test]
+    fn every_declared_mouse_button_is_read_by_retroarch_as_declared() {
+        use crate::retroarch_probe::{CONFIGURED, INPUT_LAYER};
+        let read = Probe::build_defining("mouse_buttons", CONFIGURED, INPUT_LAYER).lines(&[]);
+        let declared = crate::menu::words::mouse_buttons();
+        assert_eq!(declared.len(), 9, "five buttons and four wheel directions");
+        assert_eq!(
+            read,
+            declared
+                .iter()
+                .map(|button| format!("{} ok", button.value))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// A player can bind a wheel in the game, so the author can set one too,
+    /// in the same form. We refuse a value with no button declared for it.
+    #[test]
+    fn the_exporter_writes_a_mouse_wheel_as_the_game_does() {
+        let (control, wheel) = binding("x");
+        let mut wheel = wheel;
+        wheel.bindings.get_mut(&control).unwrap().mouse = Some("wu".into());
+        let folder = rominabox_scratch::Scratch::dir("rominabox-mouse");
+        let path = folder.path().join("controls.cfg");
+        write_defaults_config("megadrive", &wheel, &path).unwrap();
+        let written = fs::read_to_string(&path).unwrap();
+        assert!(
+            written.lines().any(|line| line == format!("input_player1_{control}_mbtn = \"wu\"")),
+            "{written}"
+        );
+        wheel.bindings.get_mut(&control).unwrap().mouse = Some("6".into());
+        let error = validate_for_system("megadrive", &wheel).unwrap_err();
+        assert!(error.contains("6 is not a mouse button"), "{error}");
     }
 
     // Pressing Escape in the builder cancels a capture, so we never store it.

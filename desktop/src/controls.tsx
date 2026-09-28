@@ -3,6 +3,7 @@ import registry from "../controls.json";
 import { ControllerScene } from "./ControllerScene";
 import { ControlRow, StickRows, type RowContext } from "./ControlRows";
 import { useControlCapture } from "./controlCapture";
+import { mouseButtons } from "./mouse";
 import { stopped } from "./padPositions";
 import { PadField } from "./PadField";
 import systemRegistry from "../systems.json";
@@ -13,15 +14,14 @@ export type ControlOverride = {
   key?: string;
   /** The pad position we read the control from, when it was moved. */
   pad?: string;
-  mouse?: number;
+  /** The mouse button that also works the control: a `mouseButtons` value. */
+  mouse?: string;
 };
 export type Controls = {
   profile?: string;
   bindings: Record<string, ControlOverride>;
 };
 export const emptyControls = (): Controls => ({ bindings: {} });
-
-const MOUSE_BUTTONS = ["Left", "Right", "Middle", "Button 4", "Button 5"];
 
 /** Author defaults: each control's label, key, pad position and mouse button. */
 export function ControlsEditor({
@@ -141,14 +141,14 @@ export function ControlsEditor({
             value={value.bindings[control.id]?.mouse ?? ""}
             onChange={(e) =>
               patch(control.id, {
-                mouse: e.target.value ? Number(e.target.value) : undefined,
+                mouse: e.target.value || undefined,
               })
             }
           >
             <option value="">None</option>
-            {MOUSE_BUTTONS.map((name, i) => (
-              <option key={i} value={i + 1}>
-                {name}
+            {mouseButtons.map((button) => (
+              <option key={button.value} value={button.value}>
+                {button.word}
               </option>
             ))}
           </select>

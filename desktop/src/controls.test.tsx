@@ -297,6 +297,33 @@ describe("controller authoring", () => {
     }
   });
 
+  // In the game's capture we accept a wheel as well as a button, so the
+  // author can set one. The words are from the game (mouse_buttons.inc).
+  it("offers every mouse button the game declares, wheels included", () => {
+    const { container, cleanup } = renderEditor("megadrive");
+    try {
+      const mouse = row(container, "C").querySelector(
+        "details select:not([aria-label])",
+      ) as HTMLSelectElement;
+      expect([...mouse.options].map((option) => option.textContent)).toEqual([
+        "None",
+        "Left",
+        "Right",
+        "Middle",
+        "Button 4",
+        "Button 5",
+        "Wheel up",
+        "Wheel down",
+        "Wheel left",
+        "Wheel right",
+      ]);
+      choose(mouse, "wu");
+      expect(mouse.value).toBe("wu");
+    } finally {
+      cleanup();
+    }
+  });
+
   // With one Bind we listen to the keyboard and the controllers at once.
   it("moves a control to the position pressed on a controller", async () => {
     // R2: no Mega Drive pad uses it.
