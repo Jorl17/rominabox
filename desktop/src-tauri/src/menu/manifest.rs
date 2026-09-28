@@ -200,10 +200,11 @@ pub enum ScreenRole {
     Achievements,
     Discs,
     Accounts,
+    MenuControls,
 }
 
 impl ScreenRole {
-    pub const ALL: [ScreenRole; 7] = [
+    pub const ALL: [ScreenRole; 8] = [
         ScreenRole::Pause,
         ScreenRole::Options,
         ScreenRole::Controls,
@@ -211,6 +212,7 @@ impl ScreenRole {
         ScreenRole::Achievements,
         ScreenRole::Discs,
         ScreenRole::Accounts,
+        ScreenRole::MenuControls,
     ];
 
     /// The word in `design.json` and `design.cfg`, as in the contract.

@@ -10,5 +10,10 @@
   "intelMacs": false,
   "theme": "native",
   "palette": "blue",
-  "menuSounds": "off"
+  "menuSounds": "off",
+  "menuControls": {
+    "menu": ["key:escape", "pad:home", "pad:l3+r3"],
+    "confirm": ["key:enter", "pad:a"],
+    "back": ["key:escape", "pad:b"]
+  }
 }

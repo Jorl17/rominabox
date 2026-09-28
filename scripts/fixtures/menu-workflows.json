@@ -36,7 +36,7 @@
   "sequences": {
     "account-entry": {
       "native": ["key:right", "key:right", "report:pause-entry", "key:ok",
-                 "key:down", "key:down", "key:down", "report:options-entry", "key:ok"],
+                 "key:down", "key:down", "key:down", "key:down", "report:options-entry", "key:ok"],
       "disc": ["key:down", "key:down", "key:down", "report:pause-entry", "key:ok",
                "key:up", "key:up", "report:options-entry", "key:ok"]
     }
@@ -67,6 +67,10 @@
         {"name": "pause-menu", "shot": "pause-menu", "palettes": "*"},
         {"name": "options", "shot": "options"},
         {"name": "controls", "shot": "controls", "palettes": "*"},
+        {"name": "menu-controls", "shot": "menu-controls", "palettes": "*"},
+        {"name": "menu-controls-capturing", "shot": "menu-controls-capturing"},
+        {"name": "menu-controls-keyboard", "shot": "menu-controls-keyboard"},
+        {"name": "menu-controls-full", "shot": "menu-controls-full"},
         {"name": "picker-open", "shot": "picker-open", "palettes": "*"},
         {"name": "picker-chosen", "shot": "picker-chosen"},
         {"name": "volume-low", "shot": "volume-low"},

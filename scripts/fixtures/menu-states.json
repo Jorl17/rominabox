@@ -954,6 +954,337 @@
           "class": "capturing"
         }
       }
+    },
+    "menu-controls": {
+      "describes": "MENU CONTROLS with the builder's defaults: each action and its bindings, keys raised and pad inputs set in",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "menu-controls-panel": {
+          "display": "block"
+        },
+        "heading": {
+          "text": "MENU CONTROLS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "menu-control-menu-1": {
+          "display": "block",
+          "text": "Escape",
+          "class": "key"
+        },
+        "menu-control-menu-2": {
+          "display": "block",
+          "text": "Home",
+          "class": "pad"
+        },
+        "menu-control-menu-3": {
+          "display": "block",
+          "text": "L3+R3",
+          "class": "pad"
+        },
+        "menu-control-confirm-1": {
+          "display": "block",
+          "text": "Enter",
+          "class": "key"
+        },
+        "menu-control-confirm-2": {
+          "display": "block",
+          "text": "Right button",
+          "class": "pad"
+        },
+        "menu-control-back-1": {
+          "display": "block",
+          "text": "Escape",
+          "class": "key"
+        },
+        "menu-control-back-2": {
+          "display": "block",
+          "text": "Bottom button",
+          "class": "pad"
+        }
+      }
+    },
+    "menu-controls-full": {
+      "describes": "every row holding as many bindings as it shows, with the longest words, each + dark",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "menu-controls-panel": {
+          "display": "block"
+        },
+        "heading": {
+          "text": "MENU CONTROLS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "menu-control-menu-1": {
+          "display": "block",
+          "text": "Escape",
+          "class": "key"
+        },
+        "menu-control-menu-2": {
+          "display": "block",
+          "text": "Home",
+          "class": "pad"
+        },
+        "menu-control-menu-3": {
+          "display": "block",
+          "text": "L3+R3",
+          "class": "pad"
+        },
+        "menu-control-menu-4": {
+          "display": "block",
+          "text": "Right Shift",
+          "class": "key"
+        },
+        "menu-control-menu-5": {
+          "display": "block",
+          "text": "D-pad right",
+          "class": "pad"
+        },
+        "menu-control-confirm-1": {
+          "display": "block",
+          "text": "Enter",
+          "class": "key"
+        },
+        "menu-control-confirm-2": {
+          "display": "block",
+          "text": "Right button",
+          "class": "pad"
+        },
+        "menu-control-confirm-3": {
+          "display": "block",
+          "text": "Space",
+          "class": "key"
+        },
+        "menu-control-confirm-4": {
+          "display": "block",
+          "text": "Top button",
+          "class": "pad"
+        },
+        "menu-control-confirm-5": {
+          "display": "block",
+          "text": "Backspace",
+          "class": "key"
+        },
+        "menu-control-back-1": {
+          "display": "block",
+          "text": "Escape",
+          "class": "key"
+        },
+        "menu-control-back-2": {
+          "display": "block",
+          "text": "Bottom button",
+          "class": "pad"
+        },
+        "menu-control-back-3": {
+          "display": "block",
+          "text": "Left Ctrl",
+          "class": "key"
+        },
+        "menu-control-back-4": {
+          "display": "block",
+          "text": "Left button",
+          "class": "pad"
+        },
+        "menu-control-back-5": {
+          "display": "block",
+          "text": "Select",
+          "class": "pad"
+        },
+        "menu-control-menu-add": {
+          "class": "disabled"
+        },
+        "menu-control-confirm-add": {
+          "class": "disabled"
+        },
+        "menu-control-back-add": {
+          "class": "disabled"
+        }
+      }
+    },
+    "menu-controls-keyboard": {
+      "describes": "a keyboard player's bindings, keys only, a key focused",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "menu-controls-panel": {
+          "display": "block"
+        },
+        "heading": {
+          "text": "MENU CONTROLS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "menu-control-menu-1": {
+          "display": "block",
+          "text": "Escape",
+          "class": "key"
+        },
+        "menu-control-menu-2": {
+          "display": "block",
+          "text": "F1",
+          "class": "key"
+        },
+        "menu-control-confirm-1": {
+          "display": "block",
+          "text": "Enter",
+          "class": "key"
+        },
+        "menu-control-confirm-2": {
+          "display": "block",
+          "text": "Space",
+          "class": "focused"
+        },
+        "menu-control-back-1": {
+          "display": "block",
+          "text": "Escape",
+          "class": "key"
+        },
+        "menu-control-back-2": {
+          "display": "block",
+          "text": "Backspace",
+          "class": "key"
+        }
+      }
+    },
+    "menu-controls-capturing": {
+      "describes": "CONFIRM's + waiting for an input, when CANCEL joins the action row and the status counts down",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "menu-controls-panel": {
+          "display": "block"
+        },
+        "heading": {
+          "text": "MENU CONTROLS"
+        },
+        "footer-hint": {
+          "text": "ESC  CANCEL"
+        },
+        "menu-control-menu-1": {
+          "display": "block",
+          "text": "Escape",
+          "class": "key"
+        },
+        "menu-control-menu-2": {
+          "display": "block",
+          "text": "Home",
+          "class": "pad"
+        },
+        "menu-control-menu-3": {
+          "display": "block",
+          "text": "L3+R3",
+          "class": "pad"
+        },
+        "menu-control-confirm-1": {
+          "display": "block",
+          "text": "Enter",
+          "class": "key"
+        },
+        "menu-control-confirm-2": {
+          "display": "block",
+          "text": "Right button",
+          "class": "pad"
+        },
+        "menu-control-back-1": {
+          "display": "block",
+          "text": "Escape",
+          "class": "key"
+        },
+        "menu-control-back-2": {
+          "display": "block",
+          "text": "Bottom button",
+          "class": "pad"
+        },
+        "menu-control-confirm-add": {
+          "class": "capturing"
+        },
+        "menu-controls-cancel": {
+          "display": "block"
+        },
+        "menu-controls-status": {
+          "text": "CONFIRM: PRESS AN INPUT (10)"
+        }
+      }
+    },
+    "menu-controls-refused": {
+      "describes": "a removal refused, the status saying why, the chip still focused",
+      "set": {
+        "pause-panel": {
+          "display": "none"
+        },
+        "controls-panel": {
+          "display": "none"
+        },
+        "menu-controls-panel": {
+          "display": "block"
+        },
+        "heading": {
+          "text": "MENU CONTROLS"
+        },
+        "footer-hint": {
+          "text": "ESC  BACK"
+        },
+        "menu-control-menu-1": {
+          "display": "block",
+          "text": "Escape",
+          "class": "focused"
+        },
+        "menu-control-menu-2": {
+          "display": "block",
+          "text": "Home",
+          "class": "pad"
+        },
+        "menu-control-menu-3": {
+          "display": "block",
+          "text": "L3+R3",
+          "class": "pad"
+        },
+        "menu-control-confirm-1": {
+          "display": "block",
+          "text": "Enter",
+          "class": "key"
+        },
+        "menu-control-confirm-2": {
+          "display": "block",
+          "text": "Right button",
+          "class": "pad"
+        },
+        "menu-control-back-1": {
+          "display": "block",
+          "text": "Escape",
+          "class": "key"
+        },
+        "menu-control-back-2": {
+          "display": "block",
+          "text": "Bottom button",
+          "class": "pad"
+        },
+        "menu-controls-status": {
+          "text": "MENU NEEDS A KEY"
+        }
+      }
     }
   }
 }

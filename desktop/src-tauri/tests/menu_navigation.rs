@@ -42,11 +42,14 @@ use std::{
 
 /// The pads available to a case, by name: the system and the controller we
 /// export the composition with.
-const MENUS: [(&str, &str, Option<&str>); 4] = [
-    ("md3", "megadrive", None),
-    ("md6", "megadrive", Some("megadrive6")),
-    ("gb", "gbc", None),
-    ("ps1-analog", "ps1", Some("ps1-analog")),
+/// Each menu available to a case: the console, its pad, and an Options entry
+/// we leave out of the game, when a case requires entries that fill a page.
+const MENUS: [(&str, &str, Option<&str>, Option<&str>); 5] = [
+    ("md3", "megadrive", None, None),
+    ("md6", "megadrive", Some("megadrive6"), None),
+    ("gb", "gbc", None, None),
+    ("ps1-analog", "ps1", Some("ps1-analog"), None),
+    ("md3-without-menu-controls", "megadrive", None, Some("menu-controls")),
 ];
 
 /// The designs a table must cover: registered ones, then hypothetical ones.
@@ -61,13 +64,21 @@ fn all_designs() -> (Vec<String>, Vec<String>) {
 }
 
 /// The menu composed from one design and pad, with every Options entry in
-/// the design and the bundled shaders and achievements, as in a full export.
-fn compose(kit: &Path, design: &str, system: &str, profile: Option<&str>, to: &Path) {
+/// the design except `leaves_out`, and the bundled shaders and achievements,
+/// as in a full export.
+fn compose(
+    kit: &Path,
+    design: &str,
+    system: &str,
+    profile: Option<&str>,
+    leaves_out: Option<&str>,
+    to: &Path,
+) {
     let staged = themes::staged_design(kit, design);
     let entries: Vec<String> = rominabox_desktop::menu::declared_screens(&staged)
         .unwrap()
         .into_iter()
-        .filter(|screen| screen.option_label.is_some())
+        .filter(|screen| screen.option_label.is_some() && Some(screen.id.as_str()) != leaves_out)
         .map(|screen| screen.id)
         .collect();
     let catalog = rominabox_desktop::shaders::catalog().unwrap();
@@ -315,7 +326,7 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
         for case in &table.cases {
             let menu = case["menu"].as_str().unwrap_or("md3").to_owned();
             assert!(
-                MENUS.iter().any(|(name, _, _)| *name == menu),
+                MENUS.iter().any(|(name, _, _, _)| *name == menu),
                 "{}: unknown menu {menu}",
                 table.name
             );
@@ -326,9 +337,10 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
     }
     let mut composed: BTreeMap<(String, String), PathBuf> = BTreeMap::new();
     for (design, menu) in wanted {
-        let (_, system, profile) = MENUS.iter().find(|(name, _, _)| *name == menu).unwrap();
+        let (_, system, profile, leaves_out) =
+            MENUS.iter().find(|(name, _, _, _)| *name == menu).unwrap();
         let to = root.join("composed").join(format!("{design}-{menu}"));
-        compose(&kit, &design, system, *profile, &to);
+        compose(&kit, &design, system, *profile, *leaves_out, &to);
         composed.insert((design, menu), to);
     }
 
@@ -607,12 +619,12 @@ fn a_slot_picture_takes_the_games_shape_where_the_design_marks_it() {
     let scratch = rominabox_scratch::Scratch::dir("rominabox-game-shape");
     let root = scratch.to_path_buf();
     let kit = support::kit_with_hypothetical(&root);
-    let (_, system, profile) = MENUS[0];
+    let (_, system, profile, leaves_out) = MENUS[0];
     let (four_three, wide) = (SHAPES[0], SHAPES[1]);
     let mut failures = Vec::new();
     for design in ["native", "disc", "unshaped"] {
         let assets = root.join("composed").join(design);
-        compose(&kit, design, system, profile, &assets);
+        compose(&kit, design, system, profile, leaves_out, &assets);
         let mut script = String::new();
         let mut case = |name: &str, aspect: f64, steps: &[String]| {
             let data = root.join("data").join(design).join(name.replace(':', "x"));

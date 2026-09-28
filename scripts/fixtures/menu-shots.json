@@ -178,6 +178,24 @@
         "achievements-cancel"
       ],
       "includeAchievements": true
+    },
+    "menu-controls": ["options", "menu-controls"],
+    "menu-controls-capturing": ["options", "menu-controls", "menu-control-confirm-add"],
+    "menu-controls-keyboard": {
+      "script": ["options", "menu-controls"],
+      "menuControls": {
+        "menu": ["key:escape", "key:f1"],
+        "confirm": ["key:enter", "key:space"],
+        "back": ["key:escape", "key:backspace"]
+      }
+    },
+    "menu-controls-full": {
+      "script": ["options", "menu-controls", "key:down"],
+      "menuControls": {
+        "menu": ["key:escape", "pad:home", "pad:l3+r3", "key:rshift", "pad:start"],
+        "confirm": ["key:enter", "pad:a", "key:space", "pad:x", "key:backspace"],
+        "back": ["key:escape", "pad:b", "key:ctrl", "pad:y", "pad:select"]
+      }
     }
   }
 }

@@ -306,10 +306,10 @@
         "native": [
           "volume-level",
           "controls",
+          "menu-controls",
           "shaders",
           "achievements",
-          "background-play",
-          "options-back"
+          "options-next"
         ],
         "disc": [
           "disc-back",

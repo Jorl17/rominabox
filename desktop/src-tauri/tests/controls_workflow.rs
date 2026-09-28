@@ -237,7 +237,7 @@ fn a_document_is_only_told_about_what_it_draws() {
         "{declared}"
     );
     assert!(
-        declared.contains("screens = \"pause options controls\""),
+        declared.contains("screens = \"pause options controls menu-controls\""),
         "{declared}"
     );
     assert!(

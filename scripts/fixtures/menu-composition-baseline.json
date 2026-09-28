@@ -4373,7 +4373,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -4485,6 +4487,7 @@
       "key:down",
       "key:down",
       "key:down",
+      "key:down",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -4498,7 +4501,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -4653,7 +4658,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -4704,7 +4711,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -4813,6 +4822,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -4885,7 +4895,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -4994,6 +5006,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -5061,7 +5074,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -5170,6 +5185,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -5236,7 +5252,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -5348,6 +5366,7 @@
       "key:down",
       "key:down",
       "key:down",
+      "key:down",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -5361,7 +5380,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -5516,7 +5537,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -5567,7 +5590,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -5676,6 +5701,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -5748,7 +5774,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -5857,6 +5885,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -5924,7 +5953,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -6033,6 +6064,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -6099,7 +6131,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -6211,6 +6245,7 @@
       "key:down",
       "key:down",
       "key:down",
+      "key:down",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -6224,7 +6259,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -6379,7 +6416,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -6430,7 +6469,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -6539,6 +6580,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -6611,7 +6653,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -6720,6 +6764,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -6787,7 +6832,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -6896,6 +6943,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -6962,7 +7010,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -7074,6 +7124,7 @@
       "key:down",
       "key:down",
       "key:down",
+      "key:down",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -7087,7 +7138,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -7242,7 +7295,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -7293,7 +7348,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -7402,6 +7459,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -7474,7 +7532,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -7583,6 +7643,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -7650,7 +7711,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -7759,6 +7822,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -7825,7 +7889,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -7937,6 +8003,7 @@
       "key:down",
       "key:down",
       "key:down",
+      "key:down",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -7950,7 +8017,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -8105,7 +8174,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -8156,7 +8227,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -8265,6 +8338,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -8337,7 +8411,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -8446,6 +8522,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",
@@ -8513,7 +8590,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -8622,6 +8701,7 @@
       "key:right",
       "report:pause-entry",
       "key:ok",
+      "key:down",
       "key:down",
       "key:down",
       "key:down",

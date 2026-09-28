@@ -274,3 +274,28 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 /* An account is one name to pick, in a large row with the name centred. */
 #accounts-list .list-row.line { height: 56dp; margin-bottom: 6dp; }
 #accounts-list .list-row.line .list-row-title { left: 0; right: 0; height: 56dp; line-height: 56dp; font-size: 20dp; text-align: center; }
+
+/* MENU CONTROLS, drawn like Options in the index. Each menu action is on a
+ * line above a rule, with its name, then its bindings as flat tags and + at
+ * the end. A key is a filled tag and a pad input an outlined one, so the two
+ * look different without a label. A line with five long tags wraps. */
+#menu-control-rows { position: absolute; left: 24dp; top: 56dp; width: 912dp; }
+.menu-control { position: relative; height: 104dp; margin-bottom: 8dp; border-width: 0 0 1dp 0; border-color: #476eab; }
+.menu-control-label { position: absolute; left: 16dp; top: 0; width: 160dp; height: 104dp; line-height: 104dp; font-size: 18dp; color: #ffffff; }
+.menu-control-chips { position: absolute; left: 180dp; right: 0; top: 14dp; height: 76dp; display: flex; flex-wrap: wrap; align-content: center; align-items: center; column-gap: 8dp; row-gap: 8dp; }
+.menu-control-chip, .menu-control-add { box-sizing: border-box; height: 34dp; line-height: 32dp; font-family: Silkscreen; font-size: 13dp; white-space: nowrap; }
+.menu-control-chip { padding: 0 12dp; text-align: left; text-transform: uppercase; }
+.menu-control-chip.pad { background-color: transparent; border-color: #75b2e4; }
+.menu-control-chip.pad:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
+.menu-control-chip.pad.focused { background-color: #193e88; color: #ffffff; border-color: #fff13d; }
+.menu-control-add { width: 34dp; padding: 0; text-align: center; font-size: 16dp; }
+/* Right at the end of a line stays there, because BACK, far down the right
+ * edge, is not the next binding. */
+.menu-control-add { nav-right: none; }
+.menu-control-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
+#menu-controls-actions { position: absolute; left: 360dp; top: 508dp; width: 584dp; height: 38dp; }
+#menu-controls-actions button { position: absolute; top: 0; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 13dp; border-width: 1dp; text-align: center; }
+#menu-controls-back { left: 406dp; width: 176dp; font-size: 14dp; }
+#menu-controls-reset { left: 0; width: 180dp; }
+#menu-controls-cancel { left: 192dp; width: 110dp; }
+#menu-controls-status { position: absolute; left: 24dp; top: 548dp; width: 700dp; font-size: 13dp; color: #b4e6ff; text-align: left; }

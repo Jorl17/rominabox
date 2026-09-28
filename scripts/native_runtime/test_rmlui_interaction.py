@@ -33,6 +33,7 @@ ASSETS = BUILD / "assets"
 # ends on every platform.
 INTERACTION = BUILD / "test_rmlui_interaction"
 ORCHESTRATION = BUILD / "test_menu_orchestration"
+MENU_CONTROLS = BUILD / "test_menu_controls"
 
 
 def harness(output: Path, *sources: Path) -> None:
@@ -186,10 +187,10 @@ def orchestration_fixtures() -> None:
     menu.write_text(markup, newline="\n")
     declarations = assets / "design.cfg"
     config = declarations.read_text()
-    assert 'screens = "pause options controls"' in config
+    assert 'screens = "pause options controls menu-controls"' in config
     assert 'screen_button_options = "options"' in config
-    config = config.replace('screens = "pause options controls"',
-                            'screens = "pause options controls fixture"', 1)
+    config = config.replace('screens = "pause options controls menu-controls"',
+                            'screens = "pause options controls menu-controls fixture"', 1)
     config = config.replace('screen_button_options = "options"',
                             'screen_button_options = "options fixture-back"', 1)
     config += ('\nscreen_panel_fixture = "fixture-panel"'
@@ -261,6 +262,32 @@ def orchestrate() -> None:
         raise SystemExit(f"stick capture failed in {', '.join(failed)}")
 
 
+def menu_controls() -> bool:
+    """MENU CONTROLS in every design: each staged twice by the exporter, with
+    the builder's defaults and with other ones, as a later export of the same
+    game would be, and run with a separate data folder."""
+    designs = [entry["id"] for entry in json.loads((ROOT / "desktop/designs.json").read_text())["designs"]]
+    failed = []
+    for design in designs:
+        staged = {}
+        for name, controls in (("first", None), ("later", {"confirm": ["key:space", "pad:x"]})):
+            assets = BUILD / f"menu-controls-{design}-{name}"
+            assets.mkdir(parents=True, exist_ok=True)
+            ask("stage-controls", {
+                "system": "megadrive", "source": str(ROOT / "desktop/assets/controllers"),
+                "design": str(DESIGNS / design), "destination": str(assets), "palette": "blue",
+                **({"menuControls": controls} if controls else {}),
+            }, stdout=subprocess.DEVNULL)
+            staged[name] = assets
+        print(f"menu controls {design}", flush=True)
+        with scratch("rominabox-menu-controls-João-") as data:
+            if subprocess.run([str(MENU_CONTROLS), str(staged["first"]), str(staged["later"]), data]).returncode != 0:
+                failed.append(design)
+    if failed:
+        print(f"FAIL menu controls in {', '.join(failed)}", file=sys.stderr)
+    return not failed
+
+
 def main() -> int:
     drivers = ROOT / "vendor/retroarch/menu/drivers"
     if not (drivers / "rmlui/view.cpp").is_file():
@@ -305,7 +332,10 @@ def main() -> int:
             HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
     stage_everything()
     orchestrate()
-    return 0 if row_edges_ok else 1
+    harness(MENU_CONTROLS, HERE / "test_menu_controls.cpp", HERE / "menu_host_fake.cpp",
+            HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
+    controls_ok = menu_controls()
+    return 0 if row_edges_ok and controls_ok else 1
 
 
 if __name__ == "__main__":

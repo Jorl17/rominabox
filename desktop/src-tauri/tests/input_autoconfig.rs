@@ -177,16 +177,20 @@ fn strip_alt_suffix(rest: &str) -> &str {
     }
 }
 
-/// Whether a config assignment binds a meta action: its key is `input_<name>`
-/// or that name plus one of the button, axis, mouse or label suffixes in
-/// RetroArch. Player prefixes and `_altN` alternatives count as the same
-/// bind. Comments are not assignments.
+/// Return whether a config line binds a meta action. Its key is then
+/// `input_<name>`, or that name with the button, axis, mouse or label suffix
+/// that RetroArch reads. A player prefix or an `_altN` alternative is the
+/// same bind. Comments do not count, and neither does the one meta line we
+/// keep in a profile, the pad's menu button, which we read as Home in the menu.
 fn is_meta_bind_assignment(line: &str, names: &[String]) -> bool {
     let body = line.trim();
     if body.is_empty() || body.starts_with('#') || !line.contains('=') {
         return false;
     }
     let key = line.split_once('=').unwrap().0.trim();
+    if key == rominabox_desktop::menu_controls::home_button_key() {
+        return false;
+    }
     let Some(rest) = key.strip_prefix("input_") else {
         return false;
     };
@@ -311,8 +315,8 @@ fn walk_files(root: &Path, found: &mut Vec<PathBuf>) {
 /// check author overrides that reuse Space.
 #[test]
 fn advanced_access_reaches_fast_forward_on_the_keyboard_only() {
-    let ordinary = isolated_hotkey_config(true, false);
-    let advanced = isolated_hotkey_config(true, true);
+    let ordinary = isolated_hotkey_config(false);
+    let advanced = isolated_hotkey_config(true);
 
     assert_eq!(
         config_value(&ordinary, "input_toggle_fast_forward"),
@@ -395,7 +399,7 @@ fn hotkey_allow_list_is_unchanged_and_controller_variants_stay_nul() {
     let policy: Vec<&str> = HOTKEY_BINDS.iter().map(|bind| bind.name).collect();
     assert_eq!(policy, pinned_meta_bind_names());
 
-    let advanced = isolated_hotkey_config(false, true);
+    let advanced = isolated_hotkey_config(true);
     for bind in HOTKEY_BINDS {
         for suffix in ["_btn", "_axis", "_mbtn"] {
             assert_eq!(
@@ -497,15 +501,16 @@ fn staged_hid_profile_matches_the_logged_dualsense_ids() {
     );
 }
 
-/// We remove meta and hotkey lines in staging instead of trusting upstream.
+/// We remove meta and hotkey lines in staging instead of trusting upstream,
+/// except the menu button of the pad, `input_menu_toggle_btn`. In our menu it
+/// is Home, and the RetroArch menu toggle does not use it.
 ///
-/// The public DualSense profile binds `input_menu_toggle_btn`, and a `nul`
-/// user joykey still falls back to that autoconfig bind. We add binds that
-/// the current hid set does not contain (exit, mouse, player prefix, alt),
-/// check that we strip them, check every staged profile, and show that the
-/// pinned archive still has the DualSense menu line that we removed. This
-/// does not prove that the PS button does nothing on hardware. A comment
-/// that mentions a meta key is not an assignment.
+/// We add binds that the current hid set does not contain (exit, mouse,
+/// player prefix, alt, the label and axis of the menu button), check that we
+/// strip them and keep the menu button, check every staged profile, and show
+/// that the DualSense menu line in the pinned archive is in the staged file.
+/// This does not prove that the PS button opens the menu on hardware. A
+/// comment that mentions a meta key is not an assignment.
 #[test]
 #[cfg(target_os = "macos")]
 fn shipped_profiles_strip_meta_binds_including_ones_upstream_hid_lacks() {
@@ -539,6 +544,17 @@ input_reset_btn = \"3\"
         stripped.contains("# input_menu_toggle_btn = \"99\""),
         "a comment is not a bind and must survive: {stripped}"
     );
+    assert!(
+        stripped.lines().any(|line| line == "input_menu_toggle_btn = \"12\""),
+        "the pad's own menu button survives, for Home: {stripped}"
+    );
+    for gone in ["input_menu_toggle_btn_label", "input_menu_toggle_axis", "input_menu_toggle_mbtn",
+            "input_menu_toggle = ", "input_player1_menu_toggle_btn", "input_menu_toggle_btn_alt1"] {
+        assert!(
+            !stripped.lines().any(|line| line.starts_with(gone)),
+            "{gone} is not the menu button and must go: {stripped}"
+        );
+    }
     for kept in [
         "input_b_btn = \"1\"",
         "input_b = \"c\"",
@@ -586,14 +602,9 @@ input_reset_btn = \"3\"
         "work/downloads/retroarch-joypad-autoconfig-{revision}.tar.gz"
     ));
     let upstream = archive_member(&archive, "hid/DualSense Wireless Controller (PS5).cfg");
-    assert!(
-        is_meta_bind_assignment(
-            upstream
-                .lines()
-                .find(|line| line.contains("input_menu_toggle_btn ="))
-                .expect("upstream DualSense binds menu toggle"),
-            &names
-        ),
+    assert_eq!(
+        profile_value(&upstream, &rominabox_desktop::menu_controls::home_button_key()),
+        Some("12"),
         "the pin no longer contains the menu bind this test uses as proof"
     );
     let staged = fs::read_to_string(
@@ -605,6 +616,11 @@ input_reset_btn = \"3\"
             .lines()
             .any(|line| is_meta_bind_assignment(line, &names)),
         "staged DualSense still has a meta bind:\n{staged}"
+    );
+    assert_eq!(
+        profile_value(&staged, &rominabox_desktop::menu_controls::home_button_key()),
+        Some("12"),
+        "the staged DualSense keeps its PS button as the menu button:\n{staged}"
     );
     assert_eq!(profile_value(&staged, "input_b_btn"), Some("1"));
     assert!(upstream.contains("input_b_btn = \"1\""));
@@ -730,6 +746,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         palette: "blue".to_string(),
         menu_sounds: "off".to_string(),
         controls: Controls::default(),
+        menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: true,
@@ -924,6 +941,9 @@ fn no_shipped_profile_can_bind_anything_but_gameplay() {
                 continue;
             };
             let key = key.trim();
+            if key == rominabox_desktop::menu_controls::home_button_key() {
+                continue;
+            }
             for bind in forbidden {
                 assert!(
                     !key.starts_with(&format!("input_{bind}")),

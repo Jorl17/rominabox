@@ -58,6 +58,7 @@ FILE_LAYER = [RETROARCH / name for name in native_build.recipe()["fileLayer"]["s
 HEADLESS_EXCLUDED = {
     "menu/drivers/rmlui/driver.o": "RetroArch's menu driver table; a harness calls the menu API itself",
     "menu/drivers/rmlui/host.o": "the live RetroArch host; each harness links a fake one",
+    "menu/drivers/rmlui/pad_inputs.o": "reads RetroArch's pads through the live host; the fake host answers for it",
     "menu/drivers/rmlui/text_host.o": "RetroArch's keyboard; text_test_host.cpp stands in",
     "menu/drivers/rmlui/render/rmlui_gl.o": "draws with OpenGL; headless has no context",
     "menu/drivers/rmlui/render/rmlui_gl3.o": "draws with OpenGL; headless has no context",

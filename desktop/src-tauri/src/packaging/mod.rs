@@ -202,6 +202,11 @@ pub struct ExportRequest {
     /// changes separately, in the managed data folder of the exported game.
     #[serde(default)]
     pub controls: controls::Controls,
+    /// The inputs to open the menu, and to confirm and go back in it, until
+    /// the player changes them on MENU CONTROLS. For an action left out, we
+    /// use the builder's default.
+    #[serde(default = "crate::builder::unstated::menu_controls")]
+    pub menu_controls: crate::menu_controls::MenuControls,
     /// The firmware files the author chose. On export we never look for
     /// firmware in global RetroArch locations.
     #[serde(default)]

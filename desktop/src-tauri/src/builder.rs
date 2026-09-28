@@ -39,6 +39,10 @@ pub struct Defaults {
     pub theme: String,
     pub palette: String,
     pub menu_sounds: String,
+    /// The inputs to open the menu, and to confirm and go back in it, until
+    /// the player changes them on MENU CONTROLS.
+    #[serde(deserialize_with = "crate::menu_controls::read_defaults")]
+    pub menu_controls: crate::menu_controls::MenuControls,
 }
 
 pub fn defaults() -> &'static Defaults {
@@ -89,6 +93,9 @@ pub mod unstated {
     }
     pub fn menu_sounds() -> String {
         defaults().menu_sounds.clone()
+    }
+    pub fn menu_controls() -> crate::menu_controls::MenuControls {
+        defaults().menu_controls.clone()
     }
 }
 

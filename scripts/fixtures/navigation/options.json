@@ -107,16 +107,16 @@
         "native": [
           "volume-level",
           "controls",
-          "controls",
-          "shaders",
-          "shaders"
+          "background-play",
+          "options-prev",
+          "options-back"
         ],
         "options-columns": [
           "volume-level",
           "controls",
-          "shaders",
-          "background-play",
-          "achievements"
+          "menu-controls",
+          "achievements",
+          "shaders"
         ],
         "disc": [
           "volume-level",
@@ -128,29 +128,51 @@
       }
     },
     {
-      "name": "down to BACK stops there",
-      "steps": [
-        "options",
-        "key:down",
-        "key:down",
-        "key:down",
-        "key:down",
-        "key:down"
-      ],
+      "name": "down to the bottom stops there",
+      "steps": {
+        "native": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ],
+        "disc": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ],
+        "options-columns": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ]
+      },
       "focused": {
         "native": [
           "volume-level",
           "controls",
+          "menu-controls",
           "shaders",
           "achievements",
-          "background-play",
-          "options-back"
+          "options-next",
+          "options-next",
+          "options-next"
         ],
         "options-columns": [
           "volume-level",
           "controls",
-          "achievements",
-          "options-back",
+          "shaders",
+          "background-play",
           "options-back",
           "options-back"
         ],
@@ -169,26 +191,50 @@
       "setup": {
         "discs": 2
       },
-      "steps": [
-        "options",
-        "key:down",
-        "key:down",
-        "key:down",
-        "key:down"
-      ],
+      "steps": {
+        "native": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:ok",
+          "key:up",
+          "key:up"
+        ],
+        "disc": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ],
+        "options-columns": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ]
+      },
       "focused": {
         "native": [
           "volume-level",
           "controls",
+          "menu-controls",
           "shaders",
           "achievements",
+          "options-next",
+          "options-prev",
+          "background-play",
           "discs"
         ],
         "options-columns": [
           "volume-level",
           "controls",
-          "achievements",
-          "background-play",
+          "shaders",
+          "discs",
           "options-back"
         ],
         "disc": [
@@ -212,16 +258,15 @@
           "key:down",
           "key:down",
           "key:down",
-          "key:right"
+          "key:right",
+          "key:down"
         ],
         "options-columns": [
           "options",
           "key:down",
           "key:down",
           "key:down",
-          "key:down",
-          "key:down",
-          "key:down"
+          "key:right"
         ],
         "disc": [
           "options",
@@ -234,6 +279,7 @@
         "native": [
           "volume-level",
           "controls",
+          "menu-controls",
           "shaders",
           "achievements",
           "background-play",
@@ -242,11 +288,9 @@
         "options-columns": [
           "volume-level",
           "controls",
-          "achievements",
-          "rumble",
-          "options-back",
-          "options-back",
-          "options-back"
+          "shaders",
+          "background-play",
+          "rumble"
         ],
         "disc": [
           "volume-level",
@@ -258,6 +302,7 @@
     },
     {
       "name": "a switch the game does not use leaves no page behind",
+      "menu": "md3-without-menu-controls",
       "steps": [
         "options",
         "key:down",
@@ -352,9 +397,9 @@
         "native": [
           "volume-level",
           "controls",
+          "menu-controls",
           "shaders",
           "achievements",
-          "discs",
           "options-next",
           "options-prev",
           "background-play"
@@ -362,17 +407,17 @@
         "options-columns": [
           "volume-level",
           "controls",
-          "shaders",
-          "discs",
+          "menu-controls",
           "achievements",
-          "background-play"
+          "shaders",
+          "discs"
         ],
         "disc": [
           "volume-level",
           "background-play",
           "achievements",
           "shaders",
-          "controls",
+          "menu-controls",
           "controls"
         ]
       },
@@ -405,22 +450,22 @@
         ],
         "options-columns": [
           {
-            "options-page-count": "1/1"
+            "options-page-count": "1/2"
           },
           {
-            "options-page-count": "1/1"
+            "options-page-count": "1/2"
           },
           {
-            "options-page-count": "1/1"
+            "options-page-count": "1/2"
           },
           {
-            "options-page-count": "1/1"
+            "options-page-count": "1/2"
           },
           {
-            "options-page-count": "1/1"
+            "options-page-count": "1/2"
           },
           {
-            "options-page-count": "1/1"
+            "options-page-count": "1/2"
           }
         ],
         "disc": [
@@ -480,19 +525,19 @@
         "native": [
           "volume-level",
           "controls",
+          "discs",
+          "discs",
           "background-play",
-          "background-play",
-          "rumble",
           "controls"
         ],
         "options-columns": [
           "volume-level",
           "controls",
-          "shaders",
-          "shaders",
-          "discs",
+          "menu-controls",
           "rumble",
-          "background-play"
+          "options-back",
+          "options-back",
+          "options-back"
         ],
         "disc": [
           "volume-level",
@@ -544,11 +589,13 @@
           "press:options-next",
           "hover:rumble",
           "press:options-prev",
-          "hover:discs"
+          "hover:controls"
         ],
         "options-columns": [
           "options",
+          "press:options-next",
           "hover:rumble",
+          "press:options-prev",
           "hover:discs"
         ],
         "disc": [
@@ -563,11 +610,13 @@
           "options-prev",
           "rumble",
           "options-next",
-          "discs"
+          "controls"
         ],
         "options-columns": [
           "volume-level",
+          "options-prev",
           "rumble",
+          "options-next",
           "discs"
         ],
         "disc": [
