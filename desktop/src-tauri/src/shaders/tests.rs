@@ -345,6 +345,45 @@ fn a_staged_preset_resolves_inside_its_own_folder() {
     }
 }
 
+/// With `../` a preset can reach any file on the computer, so we take a
+/// file it lists only if it is the kind of file in its line. A lookup
+/// texture must be a picture, a `#reference` a preset, and a slang
+/// `#include` shader source. We refuse a private key named as any of them,
+/// and name the line in the refusal.
+#[test]
+fn a_named_file_must_be_the_kind_its_line_names() {
+    let source = rominabox_scratch::Scratch::dir("rominabox-shader-kinds");
+    let secrets = [
+        ("home/.ssh/id_rsa", "-----BEGIN OPENSSH PRIVATE KEY-----\n"),
+        ("home/.aws/credentials", "[default]\naws_secret_access_key = x\n"),
+        ("home/.env", "TOKEN=x\n"),
+    ];
+    for (name, text, refusal) in [
+        (
+            "texture/pal.glslp",
+            "shaders = 1\nshader0 = ../pass.glsl\ntextures = \"lut\"\nlut = \"../home/.ssh/id_rsa\"\n",
+            "shader preset line 4 names ../home/.ssh/id_rsa, which is not a PNG, JPEG, BMP or TGA picture",
+        ),
+        (
+            "reference/pal.glslp",
+            "#reference \"../home/.aws/credentials\"\n",
+            "shader preset line 1 names ../home/.aws/credentials, which is not a shader preset",
+        ),
+        (
+            "include/crt.slang",
+            "#version 450\n#include \"../home/.env\"\n",
+            "crt.slang names ../home/.env, which is not shader source",
+        ),
+    ] {
+        let mut files = vec![(name, text), ("pass.glsl", PASS)];
+        files.extend(secrets);
+        let error = resolve(&custom_preset(&source, name, &files))
+            .expect_err(&format!("{name} took a private file into the game"));
+        assert!(error.contains(refusal), "{name}: {error}");
+    }
+    let _ = fs::remove_dir_all(&source);
+}
+
 /// A preset can name another with `#reference`, whose files are beside it.
 /// The libretro `presets/` folders contain such presets.
 #[test]
