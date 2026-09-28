@@ -60,6 +60,12 @@
       "leaveMs": 500
     }
   ],
+  "screens": [
+    {
+      "id": "options",
+      "pageSize": 6
+    }
+  ],
   "tokens": {
     "ink": "#ffffff"
   }

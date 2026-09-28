@@ -80,7 +80,8 @@
       "button": "options",
       "label": "OPTIONS",
       "back": "BACK",
-      "place": "options"
+      "place": "options",
+      "pageSize": 4
     },
     {
       "id": "controls",
@@ -140,7 +141,6 @@
       "footer": "ESC  BACK",
       "button": "discs",
       "back": "BACK",
-      "mark": "IN",
       "option": {
         "label": "DISC",
         "default": true

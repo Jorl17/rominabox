@@ -137,11 +137,9 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .menu-action:active { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 
-/* Volume and the entries under it are one column, the same as in .list, so
- * the bar and CONTROLS have the same edge. Both are in the band above BACK,
- * and the rows have the height of list rows. We do not use .list-row here,
- * because the achievement list depends on it and CONTROLS is an option
- * entry.
+/* Volume and the entries under it are one column, so the bar and the
+ * entries have the same edges. The entries have one height, however many
+ * there are.
  *
  * The label is the name of the level, and LOW and HIGH mark its direction.
  * The track is inset so the thumb at 0 and at 100 clears both arrows. At
@@ -155,13 +153,22 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .volume-arrow { position: absolute; top: 10dp; width: 44dp; height: 44dp; line-height: 38dp; font-family: Silkscreen; font-size: 20dp; text-align: center; border-width: 3dp; padding: 0; }
 #volume-down { left: 196dp; }
 #volume-up { left: 696dp; }
-/* Options lists what we bundled with this game. The positions are in the
- * design, and we append nothing afterwards that could override them. A long
- * label stays inside the button. */
-/* The entries share the column above BACK: each is 64dp while they fit and
- * all shrink alike when there are more. */
-#options-entries { position: absolute; left: 56dp; top: 176dp; width: 840dp; height: 290dp; display: flex; flex-direction: column; row-gap: 10dp; }
-.option-entry { position: relative; flex: 0 1 64dp; min-height: 34dp; width: 840dp; display: flex; align-items: center; justify-content: center; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; white-space: nowrap; overflow: hidden; }
+/* Options lists what we bundled with this game, in pages like every other
+ * list. The positions are in the design, and we append nothing afterwards
+ * that could override them. A page has four entries (design.json), and the
+ * gap under VOLUME is the gap between them, 14dp. A full page ends 18dp above
+ * BACK, and a fifth entry goes to the next page. The pager is on the same row
+ * as BACK, and a long label stays inside its entry. */
+#options-entries { position: absolute; left: 56dp; top: 188dp; width: 840dp; height: 274dp; }
+#options-entries .list { position: absolute; left: 0; top: 0; width: 840dp; }
+.option-entry { position: relative; height: 52dp; width: 840dp; margin-bottom: 14dp; display: flex; align-items: center; justify-content: center; font-family: Silkscreen; font-size: 20dp; border-width: 3dp; white-space: nowrap; overflow: hidden; }
+/* BACK's row, 480dp down the screen, is 292dp below the list. */
+#options-entries .list-pager { top: 292dp; height: 46dp; }
+#options-entries .list-pager-prev, #options-entries .list-pager-next { height: 42dp; line-height: 38dp; }
+#options-entries .list-pager-count { height: 46dp; line-height: 42dp; }
+#options-entries .list-pager-prev { left: 280dp; }
+#options-entries .list-pager-count { left: 360dp; }
+#options-entries .list-pager-next { left: 504dp; }
 .options-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
 
 #volume-control .slider { position: absolute; left: 252dp; top: 14dp; width: 432dp; height: 36dp; }
