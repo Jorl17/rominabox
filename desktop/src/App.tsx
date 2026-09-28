@@ -27,7 +27,7 @@ import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
-import { ExportChoices, exportProduct } from "./ExportChoices";
+import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import appIcon from "../src-tauri/icons/icon.png";
 import largeIcon from "../src-tauri/icons/icon-large.png";
@@ -165,10 +165,9 @@ function IconArt() {
 export function App() {
   const [step, setStep] = useState(0);
   const [supported, setSupported] = useState<Set<string>>(new Set());
-  // The game's platform: this machine's, unless the author changes it.
   const [host, setHost] = useState<bridge.ExportTarget | null>(null);
-  const [chosenTarget, setChosenTarget] = useState(host);
-  const exportTarget = chosenTarget ?? host;
+  const [platform, setPlatform] = useState<Platform | null>(null);
+  const exportTarget = platform === "both" ? host : (platform ?? host);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [info, setInfo] = useState<bridge.GameInfo | null>(null);
   const [traveling, setTraveling] = useState<string[]>([]);
@@ -498,6 +497,7 @@ export function App() {
       firmware,
       outputDir: destination,
       target: exportTarget,
+      bothPlatforms: platform === "both",
     };
   }
   async function saveProject() {
@@ -554,7 +554,7 @@ export function App() {
         startAtMenu: settings.startAtMenu,
       });
       setPalette(settings.palette);
-      setChosenTarget(settings.target);
+      setPlatform(settings.target);
       // A project contains the design it was saved with, and in the check
       // above we already reject one that this build does not have. We restore
       // it on reopen to keep the choice of the author.
@@ -1531,7 +1531,7 @@ export function App() {
                   <h2>{draft.title}</h2>
                   <p>{systemName}</p>
                   <span className="export-format">
-                    {exportProduct(exportTarget)}
+                    {exportProduct(platform ?? host)}
                   </span>
                 </div>
                 {result && <Check className="complete-mark" size={38} />}
@@ -1574,8 +1574,8 @@ export function App() {
                 <>
                   <ExportChoices
                     host={host}
-                    target={exportTarget}
-                    onTarget={setChosenTarget}
+                    target={platform ?? host}
+                    onTarget={setPlatform}
                     destination={destination}
                     onDestination={setDestination}
                     intelMacs={draft.intelMacs}

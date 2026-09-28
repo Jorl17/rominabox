@@ -3,13 +3,18 @@ import { useState } from "react";
 import * as bridge from "./bridge";
 import { Checkbox, Help } from "./Help";
 
-/** The name of an export, for its platform. */
-export function exportProduct(target: bridge.ExportTarget | null): string {
+/** What a game can be made for: one platform, or both in one zip. */
+export type Platform = bridge.ExportTarget | "both";
+
+/** The name of an export, for its target. */
+export function exportProduct(target: Platform | null): string {
   switch (target) {
     case "macos":
       return "MACOS APP";
     case "windows":
       return "WINDOWS APP";
+    case "both":
+      return "MAC AND WINDOWS ZIP";
     case null:
       return "";
   }
@@ -18,9 +23,10 @@ export function exportProduct(target: bridge.ExportTarget | null): string {
 /** The name a person uses for a platform: this machine as "This Mac" or
  * "This PC", the other one by its name. */
 function platformName(
-  target: bridge.ExportTarget,
+  target: Platform,
   host: bridge.ExportTarget | null,
 ): string {
+  if (target === "both") return "Mac and Windows";
   if (target === host) return target === "macos" ? "This Mac" : "This PC";
   return target === "macos" ? "Mac" : "Windows";
 }
@@ -41,8 +47,8 @@ export function ExportChoices({
   fail,
 }: {
   host: bridge.ExportTarget | null;
-  target: bridge.ExportTarget | null;
-  onTarget: (target: bridge.ExportTarget) => void;
+  target: Platform | null;
+  onTarget: (target: Platform) => void;
   destination: string;
   onDestination: (folder: string) => void;
   intelMacs: boolean;
@@ -50,15 +56,19 @@ export function ExportChoices({
   fail: (reason: unknown) => void;
 }) {
   const [choosing, setChoosing] = useState(false);
-  // This machine's platform first, then the other.
-  const platforms: bridge.ExportTarget[] =
-    host === "windows" ? ["windows", "macos"] : ["macos", "windows"];
-  function choose(chosen: bridge.ExportTarget) {
+  // This machine's platform first, then the other, then both in one zip.
+  const platforms: Platform[] =
+    host === "windows"
+      ? ["windows", "macos", "both"]
+      : ["macos", "windows", "both"];
+  function choose(chosen: Platform) {
     setChoosing(false);
     if (chosen === target) return;
     onTarget(chosen);
-    // A Mac game made elsewhere is for whichever Macs its players have.
-    if (chosen === "macos" && host !== "macos") onIntelMacs(true);
+    // A Mac game made elsewhere, or shared with everyone in one zip, is for
+    // whichever Macs its players have.
+    if (chosen === "both" || (chosen === "macos" && host !== "macos"))
+      onIntelMacs(true);
   }
   return (
     <>
@@ -117,7 +127,7 @@ export function ExportChoices({
           )}
         </div>
       )}
-      {target === "macos" && (
+      {(target === "macos" || target === "both") && (
         <Checkbox
           className="export-choice"
           label="Also runs on Intel Macs"

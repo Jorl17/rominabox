@@ -1,7 +1,7 @@
 //! Headless JSON-lines interface to the engine behind the desktop app.
 
 use rominabox_desktop::{
-    builder, controls, cores, menu, metadata, packaging, projects, shaders, systems, themes,
+    builder, controls, cores, kits, menu, metadata, packaging, projects, shaders, systems, themes,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -79,7 +79,7 @@ fn run() -> Result<(), String> {
                 "systems": { "request": ["runtimeKit?"], "result": "System declarations and optional available system IDs" },
                 "controls": { "request": ["system", "profile?"], "result": "Controller profile, console labels, stable IDs and default keys" },
                 "preview": { "request": ["assets", "renderer", "outputDir", "palette", "background?", "width", "height"], "result": { "imagePath": "path" } },
-                "export": { "request": ["rom", "title?", "system?", "description?", "icon?", "background?", "showMenu?", "startAtMenu?", "theme?", "palette?", "menuSounds?", "controls?", "menuControls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "intelMacs?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir?", "replace?", "target?", "runtimeKit?", "core?", "coreCache?", "online?", "metadataCache?"], "arguments": "export GAME [FOLDER] is the request {rom: GAME, outputDir: FOLDER} and reads nothing from stdin", "omitted": "what a request leaves out is what dropping rom into the builder gives: without title or system the game is identified as inspect does, and the title, system, description and icon it leaves out come from that (one that names both is not looked up); each setting the builder's default (the defaults command); outputDir ROM-in-a-Box in Downloads; target this machine; runtimeKit the one beside this command, else this checkout's; coreCache the builder's. What a request states wins, null included", "online": "defaults true, and the lookup may download catalogues and covers; false uses only what metadataCache already holds. A test that looks a game up passes false", "metadataCache": "where lookups are cached; defaults to the builder's", "coreCache": "directory of downloaded cores; each needed core is downloaded or updated there first, and a progress event carrying cores {kind: fetching, downloading, updating} or {kind: failed, missing} says so; null takes the core from runtimeKit alone", "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "pad?", "mouse?"] }, "pad": "the pad position the control is read from, one of controls.json padPositions, a stick's directions among them; a direction moves with its opposite, and a position another offered pad's control keeps cannot be taken" }, "menuControls": { "<menu|confirm|back>": ["key:<RetroArch key name>", "pad:<pad button position or home>[+<pad input>...]"], "omitted": "an action left out keeps the defaults command's; MENU keeps a key and every action a binding, and an input is held by one action, or by both MENU and BACK" }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "intelMacs": "defaults false; a macos game also runs on Intel Macs: its player, core and launcher carry x86_64 code beside arm64, the core for macos-x86_64 fetched into a folder of that name beside coreCache. Refused when the runtime kit's player has no x86_64 code", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "replace": "replace an app already at the destination; without it such an export does nothing and prints {type: exists, appPath}", "events": ["progress", "result", "exists", "error"] },
+                "export": { "request": ["rom", "title?", "system?", "description?", "icon?", "background?", "showMenu?", "startAtMenu?", "theme?", "palette?", "menuSounds?", "controls?", "menuControls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "intelMacs?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "outputDir?", "replace?", "target?", "bothPlatforms?", "runtimeKit?", "core?", "coreCache?", "online?", "metadataCache?"], "arguments": "export GAME [FOLDER] is the request {rom: GAME, outputDir: FOLDER} and reads nothing from stdin", "omitted": "what a request leaves out is what dropping rom into the builder gives: without title or system the game is identified as inspect does, and the title, system, description and icon it leaves out come from that (one that names both is not looked up); each setting the builder's default (the defaults command); outputDir ROM-in-a-Box in Downloads; target this machine; runtimeKit the one beside this command, else this checkout's; coreCache the builder's. What a request states wins, null included", "online": "defaults true, and the lookup may download catalogues and covers; false uses only what metadataCache already holds. A test that looks a game up passes false", "metadataCache": "where lookups are cached; defaults to the builder's", "coreCache": "directory of downloaded cores; each needed core is downloaded or updated there first, and a progress event carrying cores {kind: fetching, downloading, updating} or {kind: failed, missing} says so; null takes the core from runtimeKit alone", "controls": { "profile": "optional controller variant ID", "bindings": { "<control-id>": ["label?", "key?", "pad?", "mouse?"] }, "pad": "the pad position the control is read from, one of controls.json padPositions, a stick's directions among them; a direction moves with its opposite, and a position another offered pad's control keeps cannot be taken" }, "menuControls": { "<menu|confirm|back>": ["key:<RetroArch key name>", "pad:<pad button position or home>[+<pad input>...]"], "omitted": "an action left out keeps the defaults command's; MENU keeps a key and every action a binding, and an input is held by one action, or by both MENU and BACK" }, "shaders": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "bundled id or absent for unfiltered" }, "includeAchievements": "defaults true; effective only with showMenu; packages authenticated Casual support, not account data or downloaded rules", "intelMacs": "defaults false; a macos game also runs on Intel Macs: its player, core and launcher carry x86_64 code beside arm64, the core for macos-x86_64 fetched into a folder of that name beside coreCache. Refused when the runtime kit's player has no x86_64 code", "menuEntries": "option entry ids; omit for resolved defaults; an explicit list must agree with includeAchievements", "replace": "replace an app already at the destination; without it such an export does nothing and prints {type: exists, appPath}", "bothPlatforms": "defaults false; the game for Mac and for Windows, each from its platform's kit, in one <title>.zip holding Mac/<title>.app and Windows/<title>; intelMacs is the Mac game's", "events": ["progress", "result", "exists", "error"] },
                 "firmware": { "request": ["system", "files?"], "result": "FirmwareAssessment" },
                 "cores": { "request": ["cache", "target"], "target": "macos-arm64 | macos-x86_64 | windows-x86_64 | linux-x86_64", "result": "per-core present, installed, unreachable or notRecorded" },
                 "project-save": { "request": ["archivePath", "settings"], "settings": ["rom", "title", "system", "description?", "icon?", "background?", "showMenu", "startAtMenu", "theme", "palette", "menuSounds?", "controls?", "menuControls?", "firmware?", "splash?", "includeAchievements?", "advancedEmulatorAccess?", "intelMacs?", "keepPlayingInBackground?", "autosaveOnQuit?", "shaders?", "menuEntries?", "target"], "result": "ProjectArchiveResult" },
@@ -210,7 +210,7 @@ fn run() -> Result<(), String> {
             // When someone names the game on the command line, it is the whole
             // request, and we do not read stdin.
             let arguments: Vec<String> = std::env::args().skip(2).collect();
-            let request = match arguments.as_slice() {
+            let mut request = match arguments.as_slice() {
                 [] => {
                     let input = read_request()?;
                     serde_json::from_str(&input)
@@ -226,11 +226,23 @@ fn run() -> Result<(), String> {
                 }
                 _ => return Err("export takes a game and, optionally, the folder to write it to".into()),
             };
+            // Both platforms at once, with the game for each in one zip.
+            let both_platforms = request.remove("bothPlatforms").is_some_and(|both| both == json!(true));
             let request = builder::complete_export(request)?;
             let cancelled = AtomicBool::new(false);
-            let result = packaging::export_game(&request, &cancelled, |event| {
-                println!("{}", json!({ "type": "progress", "progress": event }));
-            });
+            let report = |event| println!("{}", json!({ "type": "progress", "progress": event }));
+            let result = if both_platforms {
+                let own = builder::runtime_kit().ok_or("no runtime kit is beside this command or in this checkout")?;
+                let places = builder::Places::of(builder::identifier());
+                let store = places.kit_store()?;
+                let kit_for = |platform: &packaging::ExportTarget| {
+                    kits::for_export(platform, &own, &store, &cores::UreqTransport)
+                };
+                let core_cache_for = |target| places.core_cache(target).ok();
+                packaging::export_for_both(&request, &kit_for, &core_cache_for, &cancelled, report)
+            } else {
+                packaging::export_game(&request, &cancelled, report)
+            };
             match result {
                 Ok(result) => println!("{}", json!({ "type": "result", "result": result })),
                 // This is not a failure. We did nothing, and with `replace` in

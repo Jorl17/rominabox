@@ -12,6 +12,7 @@
 
 mod app_files;
 pub mod archive;
+mod both;
 mod availability;
 mod export_core;
 mod launch_plan;
@@ -47,6 +48,7 @@ pub use availability::{
 };
 use export_core::{export_core, prepare_core, resolve_cached, shipped_cores, ExportCore};
 use launch_plan::{isolation_namespace, stable_identity, write_launch_plan};
+pub use both::export_for_both;
 pub use launch_plan::MANAGED_DATA_DIRECTORIES;
 use macos::MacosPackager;
 pub use macos::freeze_macos_executable;

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import declared from "../defaults.json";
 import { type ExportTarget } from "./bridge";
-import { ExportChoices } from "./ExportChoices";
+import { ExportChoices, type Platform } from "./ExportChoices";
 
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
@@ -25,11 +25,11 @@ afterEach(() => {
 });
 
 function show(
-  target: ExportTarget | null,
+  target: Platform | null,
   intelMacs: boolean,
   onIntelMacs = (_: boolean) => {},
-  host: ExportTarget | null = target,
-  onTarget = (_: ExportTarget) => {},
+  host: ExportTarget | null = target === "both" ? "macos" : target,
+  onTarget = (_: Platform) => {},
 ) {
   act(() =>
     root.render(
@@ -94,6 +94,7 @@ describe("the export step's choices", () => {
     expect(options.map((option) => option.textContent)).toEqual([
       "This Mac",
       "Windows",
+      "Mac and Windows",
     ]);
     act(() => options[1].querySelector("input")?.click());
     expect(chosen).toHaveBeenCalledWith("windows");
@@ -115,6 +116,7 @@ describe("the export step's choices", () => {
     expect(options.map((option) => option.textContent)).toEqual([
       "This PC",
       "Mac",
+      "Mac and Windows",
     ]);
     act(() => options[1].querySelector("input")?.click());
     expect(chosen).toHaveBeenCalledWith("macos");
@@ -124,5 +126,26 @@ describe("the export step's choices", () => {
   it("shows no platform before it knows this machine's", () => {
     show(null, false, () => {}, null);
     expect(container.querySelector(".platform")).toBeNull();
+  });
+
+  it("makes both in one zip, whose Mac game runs on every Mac", () => {
+    const chosen = vi.fn();
+    const intel = vi.fn();
+    show("macos", false, intel, "macos", chosen);
+    act(() =>
+      container.querySelector<HTMLButtonElement>(".platform > button")?.click(),
+    );
+    const both = [
+      ...container.querySelectorAll(".platform-choices label"),
+    ].find((option) => option.textContent === "Mac and Windows");
+    act(() => both?.querySelector("input")?.click());
+    expect(chosen).toHaveBeenCalledWith("both");
+    expect(intel).toHaveBeenCalledWith(true);
+
+    show("both", true, intel, "macos", chosen);
+    expect(container.querySelector(".platform")?.textContent).toContain(
+      "Mac and Windows",
+    );
+    expect(intelChoice()?.checked).toBe(true);
   });
 });

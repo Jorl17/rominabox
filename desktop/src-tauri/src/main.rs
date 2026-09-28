@@ -163,8 +163,9 @@ async fn export_game(
     app: tauri::AppHandle,
     state: tauri::State<'_, ExportControl>,
     request: packaging::ExportRequest,
+    both_platforms: Option<bool>,
 ) -> Result<packaging::ExportResult, AuthorError> {
-    run_export(app, state, request).await.map_err(|error| {
+    run_export(app, state, request, both_platforms.unwrap_or(false)).await.map_err(|error| {
         eprintln!("export failed: {error}");
         error.for_author()
     })
@@ -174,6 +175,7 @@ async fn run_export(
     app: tauri::AppHandle,
     state: tauri::State<'_, ExportControl>,
     mut request: packaging::ExportRequest,
+    both_platforms: bool,
 ) -> Result<packaging::ExportResult, packaging::ExportError> {
     let shell = |message: String| packaging::ExportError::new(ErrorStage::Export, message);
     let bundled = resource(&app, "runtime").map_err(shell)?;
@@ -195,14 +197,23 @@ async fn run_export(
         *active = Some(cancelled.clone());
     }
     let events = app.clone();
+    let caches = places(&app);
     let result = tauri::async_runtime::spawn_blocking(move || {
         // We make a game for the other platform from that platform's kit,
         // which we may have to download first.
-        request.runtime_kit = kits::for_export(&request.target, &bundled, &kit_store, &cores::UreqTransport)
-            .map_err(|message| packaging::ExportError::new(ErrorStage::Refused, message))?;
-        packaging::export_game(&request, &cancelled, |progress| {
+        let kit_for = |platform: &packaging::ExportTarget| {
+            kits::for_export(platform, &bundled, &kit_store, &cores::UreqTransport)
+        };
+        let report = |progress| {
             let _ = events.emit("export-progress", progress);
-        })
+        };
+        if both_platforms {
+            let core_cache_for = |target| caches.core_cache(target).ok();
+            return packaging::export_for_both(&request, &kit_for, &core_cache_for, &cancelled, report);
+        }
+        request.runtime_kit = kit_for(&request.target)
+            .map_err(|message| packaging::ExportError::new(ErrorStage::Refused, message))?;
+        packaging::export_game(&request, &cancelled, report)
     })
     .await;
     *state.0.lock().map_err(|e| shell(e.to_string()))? = None;

@@ -28,10 +28,16 @@ pub(crate) fn zipped(request: &ExportRequest) -> bool {
 /// a zip with a name every system allows, which contains the app by its name.
 pub(crate) fn output_name(request: &ExportRequest) -> String {
     if zipped(request) {
-        format!("{}.zip", windows_filename(&request.title))
+        download_name(&request.title)
     } else {
         app_name(&request.target, &request.title)
     }
+}
+
+/// The name of the zip for one download for every platform, a name that every
+/// system allows (`packaging::both`).
+pub(crate) fn download_name(title: &str) -> String {
+    format!("{}.zip", windows_filename(title))
 }
 
 /// The name under which we build the app for an export of `request` before
