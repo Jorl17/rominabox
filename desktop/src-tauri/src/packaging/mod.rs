@@ -86,12 +86,17 @@ impl ExportTarget {
     /// a Mac package we download the Mac entry that matches the runtime in it.
     /// We build that runtime for this machine and do not cross-compile it.
     pub fn target(&self) -> Option<Target> {
+        self.target_on(Target::host())
+    }
+
+    /// `target` for a builder running on `host`, `None` for a machine the
+    /// builder is not built for.
+    fn target_on(&self, host: Option<Target>) -> Option<Target> {
         match self {
             ExportTarget::Windows => Some(Target::WindowsX86_64),
-            ExportTarget::Macos => match std::env::consts::ARCH {
-                "aarch64" => Some(Target::MacosArm64),
-                "x86_64" => Some(Target::MacosX86_64),
-                _ => None,
+            ExportTarget::Macos => match host? {
+                Target::MacosArm64 => Some(Target::MacosArm64),
+                Target::MacosX86_64 | Target::WindowsX86_64 => Some(Target::MacosX86_64),
             },
         }
     }
@@ -100,7 +105,12 @@ impl ExportTarget {
     /// target (`target`), and Intel Macs too when a Mac game also runs on them.
     /// The author chooses `intel_macs` for a Mac game. A Windows game has one.
     pub fn targets(&self, intel_macs: bool) -> Option<Vec<Target>> {
-        let own = self.target()?;
+        self.targets_on(Target::host(), intel_macs)
+    }
+
+    /// `targets` for a builder running on `host`.
+    pub(crate) fn targets_on(&self, host: Option<Target>, intel_macs: bool) -> Option<Vec<Target>> {
+        let own = self.target_on(host)?;
         Some(match (self, own) {
             (ExportTarget::Macos, Target::MacosArm64) if intel_macs => {
                 vec![own, Target::MacosX86_64]
