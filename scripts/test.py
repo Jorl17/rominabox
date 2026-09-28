@@ -44,8 +44,6 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRATCH = ROOT / "work/test-output"
 BUDGETS = ROOT / "scripts/fixtures/scope-budgets.json"
 PRINT_LOCK = threading.Lock()
-# We take this lock while a scope starts exported games (Scope.launches_games).
-GAMES_LOCK = threading.Lock()
 
 PYTHON = programs.PYTHON
 
@@ -625,28 +623,35 @@ def main() -> int:
     wall_started = time.monotonic()
 
     def finish(scope: Scope) -> None:
-        if scope.launches_games:
-            # We time it from when it starts, not while it waits for the others.
-            with GAMES_LOCK:
-                with PRINT_LOCK:
-                    print(f"start {scope.name}", flush=True)
-                passed, seconds, output = run(scope)
-        else:
-            with PRINT_LOCK:
-                print(f"start {scope.name}", flush=True)
-            passed, seconds, output = run(scope)
+        with PRINT_LOCK:
+            print(f"start {scope.name}", flush=True)
+        passed, seconds, output = run(scope)
         with PRINT_LOCK:
             print(f"\n=== {scope.name} ===", flush=True)
             if output:
                 print(output, end="" if output.endswith("\n") else "\n", flush=True)
             recorded[scope.name] = (passed, seconds)
 
-    # Four at a time. With more, the renders and the test binaries wait for
-    # each other and the run is no faster. We run Cargo one at a time in
-    # cargo_replay, because the target directory is shared.
-    workers = min(4, len(selected), os.cpu_count() or 4)
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        pending = [pool.submit(finish, scope) for scope in selected]
+    # Longest first, by each scope's last recorded time, so that no long scope
+    # runs alone at the end. We run the scopes that launch games one at a time
+    # in a separate queue, beside the others, so they do not occupy a worker
+    # while they wait. We run four others at a time. With more, the renders and
+    # the test binaries wait for each other and the run is no faster. We run
+    # Cargo one at a time in cargo_replay, because the target directory is
+    # shared.
+    measured = (load_budgets() or {}).get("scopes") or {}
+    longest_first = sorted(selected, key=lambda scope: -measured.get(scope.name, 0.0))
+    games = [scope for scope in longest_first if scope.launches_games]
+    others = [scope for scope in longest_first if not scope.launches_games]
+
+    def game_lane() -> None:
+        for scope in games:
+            finish(scope)
+
+    workers = min(4, len(others), os.cpu_count() or 4) or 1
+    with ThreadPoolExecutor(max_workers=workers + 1) as pool:
+        pending = [pool.submit(game_lane)] if games else []
+        pending += [pool.submit(finish, scope) for scope in others]
         for future in as_completed(pending):
             future.result()
 
