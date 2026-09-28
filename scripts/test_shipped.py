@@ -64,7 +64,8 @@ PLAYER_SETTINGS = (
 )
 
 
-def ship_plan(resources: Path, data: Path, pause_nonactive: str = "true") -> None:
+def ship_plan(resources: Path, data: Path | str, pause_nonactive: str = "true",
+              managed: tuple[str, ...] = ("logs",)) -> None:
     """Return the export's launch plan, with `data` as its data directory."""
     resources.mkdir(parents=True, exist_ok=True)
     write(
@@ -74,8 +75,8 @@ def ship_plan(resources: Path, data: Path, pause_nonactive: str = "true") -> Non
         "title\tPlan\n"
         + PLAYER_SETTINGS.format(pause=pause_nonactive)
         + f"data_dir\t{data}\n"
-        "managed\tlogs\n"
-        "\n---config---\n"
+        + "".join(f"managed\t{name}\n" for name in managed)
+        + "\n---config---\n"
         'audio_driver = "null"\n'
     )
 
@@ -89,6 +90,12 @@ def ship(resources: Path, data: Path, options: str) -> None:
 
 
 def launch(binary: Path, home: Path) -> None:
+    ran = plan_tool(binary, home)
+    if ran.returncode != 0:
+        raise SystemExit(f"the launcher plan tool exited {ran.returncode}\n{ran.stderr[-400:]}")
+
+
+def plan_tool(binary: Path, home: Path) -> subprocess.CompletedProcess:
     env = os.environ.copy()
     env["ROMINABOX_PLAN_ONLY"] = "1"
     # Not below HOME, so that on macOS we look for no earlier data location.
@@ -98,9 +105,7 @@ def launch(binary: Path, home: Path) -> None:
     # pauses in the background and so hides the player's background-play choice.
     env.pop(QUIET_ENV, None)
     env[SOUND_ENV] = "1"
-    ran = subprocess.run([str(binary)], env=env, capture_output=True, text=True, timeout=30)
-    if ran.returncode != 0:
-        raise SystemExit(f"the launcher plan tool exited {ran.returncode}\n{ran.stderr[-400:]}")
+    return subprocess.run([str(binary)], env=env, capture_output=True, text=True, timeout=30)
 
 
 def values(path: Path) -> dict[str, str]:
@@ -299,6 +304,56 @@ def run_player_settings() -> list[str]:
     return failures
 
 
+def run_plan_places() -> list[str]:
+    """Check that the data folder and managed folders of a plan stay in bounds.
+
+    We refuse the content path when it starts at a root or climbs out with
+    `..`, and apply the same rule to the data folder and every managed folder.
+    For a refused plan we stop before we make anything, so the place in the
+    plan is never created.
+    """
+    failures = []
+    with scratch.scratch("rominabox-plan-places-") as made:
+        root = Path(made)
+        binary, resources = compile_plan(root)
+        home = root / "home"
+        home.mkdir()
+        data = root / "data"
+        # Each case contains the data folder, the managed folders, and where we
+        # would write if we followed it. On Windows, $user_data is the person's
+        # per-user folder, which HOME does not move, so those cases are macOS only.
+        cases = {
+            "an absolute data folder climbing out": (f"{data}/../escaped-data", ("logs",), root / "escaped-data"),
+            "a managed folder climbing out": (data, ("logs", "../escaped-managed"), root / "escaped-managed"),
+            # Joined to the data folder, this path is inside it on macOS and is
+            # no folder at all on Windows. We check for the refusal.
+            "a managed folder from the root": (data, ("logs", str(root / "rooted")), None),
+        }
+        if sys.platform == "darwin":
+            cases["a data folder climbing out of $user_data"] = (
+                "$user_data/../../../escaped-user-data", ("logs",), root / "escaped-user-data")
+        for label, (data_dir, managed, escaped) in cases.items():
+            ship_plan(resources, data_dir, managed=managed)
+            ran = plan_tool(binary, home)
+            if ran.returncode == 0:
+                failures.append(f"{label}: the launcher was not refused")
+            elif "leaves" not in ran.stderr:
+                failures.append(f"{label}: refused for another reason: {ran.stderr.strip()[-300:]}")
+            if escaped is not None and escaped.exists():
+                failures.append(f"{label}: the launcher made {escaped}")
+
+        # A plan as we write it in an export still launches, in the per-user folder.
+        if sys.platform == "darwin":
+            ship_plan(resources, "$user_data/ROM-in-a-Box/Games/plan", managed=("logs", "overlays/keyboards"))
+            ran = plan_tool(binary, home)
+            games = home / "Library/Application Support/ROM-in-a-Box/Games/plan"
+            if ran.returncode != 0:
+                failures.append(f"an export's plan was refused: {ran.stderr.strip()[-300:]}")
+            elif not (games / "retroarch.cfg").is_file() or not (games / "overlays/keyboards").is_dir():
+                failures.append(f"an export's plan did not make its data folder at {games}")
+    return failures
+
+
 def run_menu_sounds() -> list[str]:
     """Check that the menu sounds are in the folder that we give RetroArch in an
     exported game.
@@ -374,7 +429,7 @@ def windows_build(directory: Path) -> list[str]:
 
 
 def main() -> int:
-    failures = run() + run_player_settings() + run_menu_sounds()
+    failures = run() + run_player_settings() + run_plan_places() + run_menu_sounds()
     with scratch.scratch("rominabox-core-options-windows-") as made:
         failures += windows_build(Path(made))
     for failure in failures:
