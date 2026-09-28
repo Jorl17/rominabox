@@ -401,9 +401,29 @@ BIND_SUFFIXES = (
 )
 
 
+def home_button_key(inc: Path | None = None) -> str:
+    """Return the one meta line we keep in a profile. It sets the pad's own
+    menu button, which is Home in the player's MENU CONTROLS. We read that
+    bind from the player's declaration (`RIB_MENU_PAD_HOME` in
+    menu_controls.inc) instead of copying it."""
+    path = inc or (
+        Path(__file__).resolve().parent.parent
+        / "vendor/retroarch/menu/drivers/rmlui/menu_controls.inc"
+    )
+    for line in path.read_text(encoding="utf-8").splitlines():
+        found = re.match(r'\s*RIB_MENU_PAD_HOME\("[^"]*",\s*"([^"]+)"', line)
+        if found:
+            return f"input_{found.group(1)}_btn"
+    raise RuntimeError(f"No RIB_MENU_PAD_HOME in {path}")
+
+
 def is_allowed_key(key: str) -> bool:
     """Return whether a profile may contain this assignment."""
     if _ALT_SUFFIX.sub("", key) in DEVICE_KEYS:
+        return True
+    # The pad's own menu button, as a button only. It does not open the
+    # RetroArch menu, and in our menu it is Home.
+    if key == home_button_key():
         return True
     if not key.startswith("input_"):
         return False
@@ -556,6 +576,7 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
         removed_lines += removed
         if any(
             is_meta_bind_key(line.split("=", 1)[0].strip(), names)
+            and line.split("=", 1)[0].strip() != home_button_key()
             for line in stripped.splitlines()
             if "=" in line and not line.strip().startswith("#")
         ):
@@ -585,7 +606,8 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
             f"Only {', '.join(f'{driver}/*.cfg' for driver in drivers)} is staged: the folders "
             "the exported player's controller driver reads. Profiles upstream disabled, which "
             "name no device and no complete pair of ids, are not staged. "
-            "Meta-bind lines are removed at staging. SDL3 gamecontrollerdb.cfg is not shipped."
+            "Meta-bind lines are removed at staging, but for the pad's own menu button, which "
+            "the menu reads as Home. SDL3 gamecontrollerdb.cfg is not shipped."
         ),
     }
     _record_joypad_component(root, record)

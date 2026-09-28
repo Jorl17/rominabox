@@ -212,6 +212,7 @@ input_product_id = "3302"
 input_phys = "usb-1"
 input_b_btn = "1"
 input_menu_toggle_btn = "12"
+input_menu_toggle_btn_label = "PS"
 """
     stripped, removed = prepare_runtime.strip_meta_bind_lines(planted, set())
     check(removed >= 1, "a hotkey line is still removed")
@@ -223,7 +224,10 @@ input_menu_toggle_btn = "12"
         "input_b_btn",
     ):
         check(f"{key} = " in stripped, f"{key} survives staging")
-    check("input_menu_toggle_btn" not in stripped, "the menu button does not survive staging")
+    # We keep the menu button of the pad as a button, for Home in the menu. We
+    # drop its label, because we never show the names from a pad in the menu.
+    check('input_menu_toggle_btn = "12"' in stripped, "the menu button survives staging, for Home")
+    check("input_menu_toggle_btn_label" not in stripped, "the menu button's label does not survive staging")
 
 
 def the_command_line_reports_the_logged_pad() -> None:
