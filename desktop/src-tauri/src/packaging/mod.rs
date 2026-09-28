@@ -613,7 +613,7 @@ where
     write_launch_plan(
         &resources.join(app_file!(Plan)),
         &identity,
-        rom_relative.as_os_str(),
+        OsStr::new(&launch_path(&request.target, &rom_relative)),
         request,
     )?;
     let manifest = serde_json::json!({
@@ -632,8 +632,8 @@ where
         "runtime": "RetroArch",
         "core": packager.core_file(),
         "coreSource": resolved.and_then(|export_core| export_core.builds.first()).map_or("", |build| build.artifact_name),
-        "content": collected_content.files.iter().map(|file| file.relative.to_string_lossy()).collect::<Vec<_>>(),
-        "rom": rom_relative.to_string_lossy(),
+        "content": collected_content.files.iter().map(|file| launch_path(&request.target, &file.relative)).collect::<Vec<_>>(),
+        "rom": launch_path(&request.target, &rom_relative),
         "firmware": request.firmware.iter().filter_map(|path| firmware_destination_name(path, system)).collect::<Vec<_>>(),
         "splash": request.splash,
         "advancedEmulatorAccess": request.advanced_emulator_access,
@@ -681,6 +681,12 @@ where
         runtime_bytes,
         content_bytes,
     })
+}
+
+/// `path`, one of the game files relative to the game folder, written as in
+/// the launch plan and the manifest of the game.
+fn launch_path(_target: &ExportTarget, path: &Path) -> String {
+    path.to_string_lossy().into_owned()
 }
 
 fn validate_request(

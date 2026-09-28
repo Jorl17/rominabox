@@ -391,3 +391,14 @@ fn a_slang_game_runs_glcore_and_every_other_game_gl() {
     }
     let _ = fs::remove_dir_all(&folder);
 }
+
+/// We name the files of a Mac game with "/" between their parts on every
+/// system. On Windows, "\\" separates the parts of a path, but on a Mac it is
+/// part of a name, so the launcher would not find the game's cartridge. For
+/// a Windows game, we spell the paths as on the builder's system.
+#[test]
+fn a_mac_games_files_are_named_with_slashes_on_any_builder() {
+    let disc = Path::new("content").join("disc one").join("Track 01.bin");
+    assert_eq!(launch_path(&ExportTarget::Macos, &disc), "content/disc one/Track 01.bin");
+    assert_eq!(launch_path(&ExportTarget::Windows, &disc), disc.to_string_lossy());
+}
