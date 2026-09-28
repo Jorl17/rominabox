@@ -1545,6 +1545,11 @@ async function main() {
     console.log(
       `shot ${path.relative(ROOT, path.join(out, "12-controls-table.png"))}`,
     );
+    await page.locator(".controls-table .device-bindings summary").first().click();
+    await page.locator(".controls-table").screenshot({
+      path: path.join(out, "12-controls-devices-open.png"),
+      animations: "disabled",
+    });
     await shootEditor(page, path.join(out, "controllers/megadrive.png"));
     // Menu controls, then with the pointer on an ×, the only way to remove one.
     const menuControls = page.locator(".menu-controls");

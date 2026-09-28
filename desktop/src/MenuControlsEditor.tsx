@@ -70,7 +70,21 @@ export function MenuControlsEditor({
 
   return (
     <div className="menu-controls">
-      <h3>Menu controls</h3>
+      <div className="controls-toolbar">
+        <strong>Menu controls</strong>
+        <button
+          type="button"
+          className="text-button"
+          disabled={busy}
+          onClick={() => {
+            end();
+            setSaid("");
+            onChange(defaultMenuControls);
+          }}
+        >
+          Reset to defaults
+        </button>
+      </div>
       {menuActions.map((action) => (
         <div className="menu-control-row" key={action}>
           <span className="menu-control-name">{actionName(action)}</span>
@@ -118,23 +132,9 @@ export function MenuControlsEditor({
           )}
         </div>
       ))}
-      <div className="menu-control-row">
-        <button
-          type="button"
-          className="text-button"
-          disabled={busy}
-          onClick={() => {
-            end();
-            setSaid("");
-            onChange(defaultMenuControls);
-          }}
-        >
-          Reset to defaults
-        </button>
-        <span className="control-message" role="status">
-          {said}
-        </span>
-      </div>
+      <span className="control-message" role="status">
+        {said}
+      </span>
     </div>
   );
 }

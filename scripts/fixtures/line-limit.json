@@ -7,7 +7,7 @@
     "desktop/src-tauri/src/metadata.rs": 1815,
     "desktop/src/App.test.tsx": 1006,
     "desktop/src/App.tsx": 1736,
-    "scripts/builder_drive.mjs": 1656,
+    "scripts/builder_drive.mjs": 1661,
     "scripts/native_runtime/test_menu_orchestration.cpp": 1351,
     "scripts/native_runtime/test_rmlui_interaction.cpp": 1913
   }
