@@ -1,7 +1,8 @@
 {
   "designs": [
     "native",
-    "disc"
+    "disc",
+    "flat"
   ],
   "cases": [
     {
@@ -250,6 +251,20 @@
           "achievements-next",
           "achievements-next",
           "achievements-enabled"
+        ],
+        "flat": [
+          "volume-level",
+          "achievement-1",
+          "achievement-2",
+          "achievement-3",
+          "achievement-4",
+          "achievements-next",
+          "achievements-signout",
+          "achievements-signout",
+          "achievements-signout",
+          "achievements-signout",
+          "achievements-signout",
+          "achievements-back"
         ]
       }
     },
@@ -278,6 +293,18 @@
           "key:down",
           "key:down",
           "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:ok",
+          "key:ok",
+          "key:ok",
+          "key:ok"
+        ],
+        "flat": [
+          "options",
+          "achievements",
           "key:down",
           "key:down",
           "key:down",
@@ -315,6 +342,18 @@
           "achievements-prev",
           "achievements-prev",
           "achievements-next"
+        ],
+        "flat": [
+          "volume-level",
+          "achievement-1",
+          "achievement-2",
+          "achievement-3",
+          "achievement-4",
+          "achievements-next",
+          "achievements-next",
+          "achievements-next",
+          "achievements-prev",
+          "achievements-prev"
         ]
       }
     },
@@ -453,7 +492,7 @@
         "achievements",
         "achievements-signout",
         "key:right",
-        "press:achievements-confirmation",
+        "press:achievements-confirmation-copy",
         "key:right",
         "key:left"
       ],

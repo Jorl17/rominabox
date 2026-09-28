@@ -2,6 +2,7 @@
   "designs": [
     "native",
     "disc",
+    "flat",
     "options-columns"
   ],
   "cases": [
@@ -38,6 +39,11 @@
           "volume-level",
           "background-play",
           "achievements"
+        ],
+        "flat": [
+          "volume-level",
+          "volume-level",
+          "volume-level"
         ]
       }
     },
@@ -62,6 +68,11 @@
         "disc": [
           "volume-level",
           "options-back",
+          "volume-level"
+        ],
+        "flat": [
+          "volume-level",
+          "controls",
           "volume-level"
         ]
       }
@@ -124,6 +135,13 @@
           "options-back",
           "options-back",
           "volume-level"
+        ],
+        "flat": [
+          "volume-level",
+          "controls",
+          "background-play",
+          "options-prev",
+          "options-back"
         ]
       }
     },
@@ -150,6 +168,16 @@
         ],
         "options-columns": [
           "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
+        ],
+        "flat": [
+          "options",
+          "key:down",
+          "key:down",
           "key:down",
           "key:down",
           "key:down",
@@ -183,6 +211,16 @@
           "options-back",
           "options-back",
           "options-back"
+        ],
+        "flat": [
+          "volume-level",
+          "controls",
+          "menu-controls",
+          "shaders",
+          "achievements",
+          "options-next",
+          "options-next",
+          "options-next"
         ]
       }
     },
@@ -216,6 +254,17 @@
           "key:down",
           "key:down",
           "key:down"
+        ],
+        "flat": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:ok",
+          "key:up",
+          "key:up"
         ]
       },
       "focused": {
@@ -243,6 +292,17 @@
           "options-back",
           "options-back",
           "options-back"
+        ],
+        "flat": [
+          "volume-level",
+          "controls",
+          "menu-controls",
+          "shaders",
+          "achievements",
+          "options-next",
+          "options-prev",
+          "background-play",
+          "discs"
         ]
       }
     },
@@ -273,6 +333,15 @@
           "key:up",
           "key:up",
           "key:up"
+        ],
+        "flat": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:right",
+          "key:down"
         ]
       },
       "focused": {
@@ -297,6 +366,15 @@
           "rumble",
           "background-play",
           "achievements"
+        ],
+        "flat": [
+          "volume-level",
+          "controls",
+          "menu-controls",
+          "shaders",
+          "achievements",
+          "background-play",
+          "rumble"
         ]
       }
     },
@@ -334,6 +412,14 @@
           "options-back",
           "options-back",
           "options-back",
+          "options-back"
+        ],
+        "flat": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "background-play",
           "options-back"
         ]
       },
@@ -391,6 +477,16 @@
           "key:up",
           "key:up",
           "key:up"
+        ],
+        "flat": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:ok",
+          "key:up"
         ]
       },
       "focused": {
@@ -419,6 +515,16 @@
           "shaders",
           "menu-controls",
           "controls"
+        ],
+        "flat": [
+          "volume-level",
+          "controls",
+          "menu-controls",
+          "shaders",
+          "achievements",
+          "options-next",
+          "options-prev",
+          "background-play"
         ]
       },
       "text": {
@@ -486,6 +592,32 @@
           },
           {
             "options-page-count": "1/1"
+          }
+        ],
+        "flat": [
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "2/2"
+          },
+          {
+            "options-page-count": "2/2"
           }
         ]
       }
@@ -519,6 +651,14 @@
           "key:up",
           "key:right",
           "key:left"
+        ],
+        "flat": [
+          "options",
+          "key:down",
+          "key:right",
+          "key:right",
+          "key:down",
+          "key:left"
         ]
       },
       "focused": {
@@ -544,6 +684,14 @@
           "rumble",
           "rumble",
           "rumble"
+        ],
+        "flat": [
+          "volume-level",
+          "controls",
+          "discs",
+          "discs",
+          "background-play",
+          "controls"
         ]
       },
       "sounds": {
@@ -574,6 +722,24 @@
           ],
           [],
           []
+        ],
+        "flat": [
+          [
+            "confirm"
+          ],
+          [
+            "move"
+          ],
+          [
+            "move"
+          ],
+          [],
+          [
+            "move"
+          ],
+          [
+            "move"
+          ]
         ]
       }
     },
@@ -602,6 +768,13 @@
           "options",
           "hover:rumble",
           "hover:controls"
+        ],
+        "flat": [
+          "options",
+          "press:options-next",
+          "hover:rumble",
+          "press:options-prev",
+          "hover:controls"
         ]
       },
       "focused": {
@@ -623,10 +796,34 @@
           "volume-level",
           "rumble",
           "controls"
+        ],
+        "flat": [
+          "volume-level",
+          "options-prev",
+          "rumble",
+          "options-next",
+          "controls"
         ]
       },
       "text": {
         "native": [
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "2/2"
+          },
+          {
+            "options-page-count": "2/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          }
+        ],
+        "flat": [
           {
             "options-page-count": "1/2"
           },

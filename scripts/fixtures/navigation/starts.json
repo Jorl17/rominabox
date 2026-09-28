@@ -1,0 +1,27 @@
+{
+  "designs": [
+    "native",
+    "disc",
+    "flat",
+    "controls-reset-first"
+  ],
+  "cases": [
+    {
+      "name": "a screen starts where its design marks autofocus",
+      "steps": [
+        "options",
+        "controls"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "control-up"
+        ],
+        "controls-reset-first": [
+          "volume-level",
+          "controls-reset"
+        ]
+      }
+    }
+  ]
+}

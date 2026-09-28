@@ -2,6 +2,7 @@
   "designs": [
     "native",
     "disc",
+    "flat",
     "pause-column",
     "sparse",
     "options-columns",

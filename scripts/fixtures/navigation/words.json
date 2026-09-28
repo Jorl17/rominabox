@@ -2,6 +2,7 @@
   "designs": [
     "native",
     "disc",
+    "flat",
     "wording"
   ],
   "cases": [
@@ -344,6 +345,10 @@
         "wording": [
           "options",
           "discs"
+        ],
+        "flat": [
+          "options",
+          "discs"
         ]
       },
       "text": {
@@ -366,6 +371,14 @@
           },
           {
             "discs-0-state": "HERE"
+          }
+        ],
+        "flat": [
+          {
+            "discs-0-state": "IN"
+          },
+          {
+            "discs-0-state": "IN"
           }
         ]
       }

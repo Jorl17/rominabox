@@ -1,7 +1,8 @@
 {
   "designs": [
     "native",
-    "disc"
+    "disc",
+    "flat"
   ],
   "cases": [
     {

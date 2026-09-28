@@ -69,6 +69,23 @@ fn a_style_only_design_stages_the_base_screens_with_its_styles() {
         .contains("splash-logo"));
 }
 
+/// A design that keeps the Native screens and layout states only what looks
+/// different. We place its restyle after the Native stylesheet, so each of
+/// its rules takes effect, and the Native rules apply everywhere else.
+#[test]
+fn a_restyle_is_laid_over_natives_stylesheet() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-design-restyle");
+    let staged = root.join("staged");
+    support::stage_theme(&repo::at("integrations/designs/flat"), &staged, "blue").unwrap();
+    let menu = fs::read_to_string(staged.join("menu.rml")).unwrap();
+    assert!(menu.contains("id=\"pause-panel\"") && menu.contains("id=\"options-panel\""));
+    let css = fs::read_to_string(staged.join("menu.rcss")).unwrap();
+    let native = css.find("#slots {").expect("Native's layout is kept");
+    let heading = css.find("#heading { left: 56dp;").expect("the restyle's heading is staged");
+    assert!(native < heading, "the restyle must come after Native's rules");
+    assert!(!css.contains("design("), "palette tokens must be resolved in the restyle too");
+}
+
 #[test]
 fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
     let screens = rominabox_desktop::menu::declared_screens(&repo::at("integrations/designs/disc")).unwrap();

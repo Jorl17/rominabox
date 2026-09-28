@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "flat",
+  "name": "Flat",
+  "description": "Native's screens drawn flat: colour blocks with a hard shadow, titles in Science Gothic.",
+  "documents": {
+    "restyle": "restyle.rcss"
+  }
+}
