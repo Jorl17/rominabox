@@ -12,6 +12,7 @@ pub mod export_error;
 mod helper;
 pub mod hotkeys;
 pub mod icons;
+pub mod kits;
 pub(crate) mod launch_contract;
 pub mod lists;
 pub mod menu;

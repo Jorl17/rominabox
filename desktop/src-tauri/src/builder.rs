@@ -133,6 +133,13 @@ impl Places {
             target,
         ))
     }
+
+    /// Runtime kits for the other platform, beside the downloaded cores: a
+    /// game for Windows made on a Mac, or for a Mac on Windows (`kits`).
+    pub fn kit_store(&self) -> Result<PathBuf, String> {
+        let data = dirs::data_local_dir().ok_or("this machine has no local data folder for kits")?;
+        Ok(data.join(&self.identifier).join("kits"))
+    }
 }
 
 /// Where a game is written unless its author says otherwise.
@@ -245,9 +252,11 @@ pub fn complete_export(mut request: Map<String, Value>) -> Result<ExportRequest,
         request.insert("outputDir".into(), json!(destination()?));
     }
     if !request.contains_key("runtimeKit") {
-        let kit = runtime_kit().ok_or(
+        let own = runtime_kit().ok_or(
             "no runtime kit is beside this command or in this checkout; name one as runtimeKit",
         )?;
+        // We make a game for the other platform from that platform's kit.
+        let kit = crate::kits::for_export(&target, &own, &places.kit_store()?, &crate::cores::UreqTransport)?;
         request.insert("runtimeKit".into(), json!(kit));
     }
     if !request.contains_key("coreCache") {

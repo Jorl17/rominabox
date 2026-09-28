@@ -3,8 +3,7 @@
 use rominabox_desktop::export_error::{AuthorError, ErrorStage};
 use rominabox_desktop::target::Target;
 use rominabox_desktop::{
-    builder, cores, icons, menu, menu_controls, metadata, packaging, pads, projects, systems,
-    traveling,
+    builder, cores, icons, kits, menu, menu_controls, metadata, packaging, pads, projects, systems, traveling,
 };
 use std::{
     fs,
@@ -177,7 +176,8 @@ async fn run_export(
     mut request: packaging::ExportRequest,
 ) -> Result<packaging::ExportResult, packaging::ExportError> {
     let shell = |message: String| packaging::ExportError::new(ErrorStage::Export, message);
-    request.runtime_kit = resource(&app, "runtime").map_err(shell)?;
+    let bundled = resource(&app, "runtime").map_err(shell)?;
+    let kit_store = places(&app).kit_store().map_err(shell)?;
     request.core = None;
     request.core_cache = request
         .target
@@ -196,6 +196,10 @@ async fn run_export(
     }
     let events = app.clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
+        // We make a game for the other platform from that platform's kit,
+        // which we may have to download first.
+        request.runtime_kit = kits::for_export(&request.target, &bundled, &kit_store, &cores::UreqTransport)
+            .map_err(|message| packaging::ExportError::new(ErrorStage::Refused, message))?;
         packaging::export_game(&request, &cancelled, |progress| {
             let _ = events.emit("export-progress", progress);
         })
