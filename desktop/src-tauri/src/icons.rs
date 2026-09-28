@@ -130,3 +130,35 @@ pub(crate) fn default_icon_path(runtime_kit: &Path) -> Option<PathBuf> {
     let path = runtime_kit.join("default-icon.png");
     path.is_file().then_some(path)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The Windows icon of a tall cover is the whole cover in its proportions,
+    /// sized to fit the square of a Windows icon, with every pixel beside it
+    /// fully transparent. We do not stretch it, crop it or draw around it.
+    #[test]
+    fn a_rectangular_cover_is_padded_to_a_square_with_transparent_pixels() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-windows-icon");
+        let cover = root.join("tall.png");
+        RgbaImage::from_pixel(100, 140, Rgba([200, 40, 30, 255]))
+            .save(&cover)
+            .unwrap();
+        let icon = image::load_from_memory_with_format(
+            &windows_icon(&cover).unwrap(),
+            image::ImageFormat::Ico,
+        )
+        .unwrap()
+        .to_rgba8();
+        assert_eq!(icon.dimensions(), (256, 256));
+        let opaque: Vec<u32> = (0..256)
+            .filter(|&x| icon.get_pixel(x, 128)[3] == 255)
+            .collect();
+        let (left, right) = (opaque[0], *opaque.last().unwrap());
+        assert_eq!(right - left + 1, 183, "the cover keeps its shape: 256 × 100/140 wide");
+        assert!((0..left).chain(right + 1..256).all(|x| icon.get_pixel(x, 128)[3] == 0));
+        assert!((0..256).all(|y| icon.get_pixel(128, y)[3] == 255), "the cover's full height");
+        assert_eq!(*icon.get_pixel(128, 128), Rgba([200, 40, 30, 255]));
+    }
+}
