@@ -378,7 +378,8 @@ fn disc_stages_its_chrome_and_inherited_achievement_controls() {
     assert!(menu.contains("MEMORY CARD") && menu.contains("CHOOSE A BLOCK"));
     assert!(menu.contains("id=\"unlock-row\""));
     assert!(menu.contains("id=\"achievements\""));
-    assert!(!menu.contains("id=\"version\""));
+    // Its footer names ROM-in-a-Box with the mark, as Native's does.
+    assert!(menu.contains("id=\"version\"") && menu.contains("id=\"brand-mark\""));
     let css = fs::read_to_string(root.join("menu.rcss")).unwrap();
     assert!(css.contains("#unlock-row") && css.contains("#unlock-badge"));
     assert!(!css.contains("design("));

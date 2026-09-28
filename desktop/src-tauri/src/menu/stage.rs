@@ -150,6 +150,14 @@ fn fonts(composition: &mut Composition, manifest: &Manifest) {
     }
 }
 
+/// The pictures in the design's menu, which a game with only the splash
+/// does not contain.
+fn pictures(composition: &mut Composition, manifest: &Manifest) {
+    for name in &manifest.pictures {
+        composition.put(name.as_str(), Content::Copy(manifest.fragment_path(name)));
+    }
+}
+
 /// The shared part stylesheets, filled in and linked before the design's own.
 fn parts(
     composition: &mut Composition,
@@ -224,6 +232,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         return Ok(composition);
     }
 
+    pictures(&mut composition, &manifest);
     // We compose data lists and the live account screen with the same code.
     let mut lists: Vec<crate::lists::List> = Vec::new();
     if request.discs > 1 {

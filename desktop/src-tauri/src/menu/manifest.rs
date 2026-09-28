@@ -34,6 +34,7 @@ struct File {
     description: Option<String>,
     documents: Option<DocumentsFile>,
     fonts: Option<Vec<Font>>,
+    pictures: Option<Vec<String>>,
     metrics: Option<MetricsFile>,
     list: Option<ListFile>,
     binds: Option<BindsFile>,
@@ -363,6 +364,8 @@ pub struct Manifest {
     pub id: String,
     pub documents: Documents,
     pub fonts: Vec<Font>,
+    /// Pictures in the design's documents, which we ship with them.
+    pub pictures: Vec<String>,
     pub scene: SceneMetrics,
     /// Rows on one page of a list.
     pub list_page_size: usize,
@@ -455,6 +458,7 @@ impl Manifest {
             .clone()
             .or_else(|| native.fonts.clone())
             .ok_or_else(|| missing(&base, "fonts"))?;
+        let pictures = own.pictures.clone().or_else(|| native.pictures.clone()).unwrap_or_default();
         // We draw every word with these in the player, and start no menu
         // without one.
         if fonts.is_empty() {
@@ -539,6 +543,7 @@ impl Manifest {
             id,
             documents,
             fonts,
+            pictures,
             scene,
             list_page_size,
             list_row_step,

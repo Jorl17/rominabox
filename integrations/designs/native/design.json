@@ -15,6 +15,7 @@
       "family": "Silkscreen"
     }
   ],
+  "pictures": ["brand-mark.png"],
   "metrics": {
     "scene": {
       "width": 960,

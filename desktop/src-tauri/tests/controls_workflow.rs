@@ -89,9 +89,12 @@ fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
         .unwrap()
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
         .collect();
+    // The pictures in the menu of the design belong to the menu, as its font does.
+    let pictures = rominabox_desktop::menu::Manifest::load(&assets()).unwrap().pictures;
     assert!(
         written.iter().all(|name| {
-            name.ends_with(".rml")
+            pictures.contains(name)
+                || name.ends_with(".rml")
                 || name.ends_with(".cfg")
                 || name.ends_with(".rcss")
                 || name.starts_with("Silkscreen")
