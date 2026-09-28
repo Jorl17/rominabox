@@ -8708,5 +8708,4400 @@
       "report:options-entry",
       "key:ok"
     ]
+  },
+  "rominabox/amber/achievements-cancelled-form": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok",
+      "achievements-cancel"
+    ]
+  },
+  "rominabox/amber/achievements-return-options": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "form": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievement-username"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "form-closed": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok",
+      "report:form",
+      "key:cancel",
+      "report:form-closed",
+      "key:cancel",
+      "report:options"
+    ]
+  },
+  "rominabox/amber/achievements-sign-in": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievement-username"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok"
+    ]
+  },
+  "rominabox/amber/achievements-signed-out": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok"
+    ]
+  },
+  "rominabox/blue/achievements-cancelled-form": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok",
+      "achievements-cancel"
+    ]
+  },
+  "rominabox/blue/achievements-return-options": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "form": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievement-username"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "form-closed": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok",
+      "report:form",
+      "key:cancel",
+      "report:form-closed",
+      "key:cancel",
+      "report:options"
+    ]
+  },
+  "rominabox/blue/achievements-sign-in": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievement-username"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok"
+    ]
+  },
+  "rominabox/blue/achievements-signed-out": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok"
+    ]
+  },
+  "rominabox/carbon/achievements-cancelled-form": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok",
+      "achievements-cancel"
+    ]
+  },
+  "rominabox/carbon/achievements-return-options": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "form": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievement-username"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "form-closed": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok",
+      "report:form",
+      "key:cancel",
+      "report:form-closed",
+      "key:cancel",
+      "report:options"
+    ]
+  },
+  "rominabox/carbon/achievements-sign-in": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievement-username"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok"
+    ]
+  },
+  "rominabox/carbon/achievements-signed-out": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok"
+    ]
+  },
+  "rominabox/green/achievements-cancelled-form": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok",
+      "achievements-cancel"
+    ]
+  },
+  "rominabox/green/achievements-return-options": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "form": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievement-username"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "form-closed": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok",
+      "report:form",
+      "key:cancel",
+      "report:form-closed",
+      "key:cancel",
+      "report:options"
+    ]
+  },
+  "rominabox/green/achievements-sign-in": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievement-username"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok"
+    ]
+  },
+  "rominabox/green/achievements-signed-out": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok"
+    ]
+  },
+  "rominabox/violet/achievements-cancelled-form": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok",
+      "achievements-cancel"
+    ]
+  },
+  "rominabox/violet/achievements-return-options": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "form": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievement-username"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "form-closed": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok",
+      "report:form",
+      "key:cancel",
+      "report:form-closed",
+      "key:cancel",
+      "report:options"
+    ]
+  },
+  "rominabox/violet/achievements-sign-in": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievement-username"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok",
+      "key:ok"
+    ]
+  },
+  "rominabox/violet/achievements-signed-out": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "achievements-login"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "achievements",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "achievements-state": "OFF",
+          "footer-hint": "ESC  BACK",
+          "heading": "ACHIEVEMENTS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "options-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "achievements"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "pause-entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "options"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "key:right",
+      "key:right",
+      "report:pause-entry",
+      "key:ok",
+      "key:down",
+      "key:down",
+      "key:down",
+      "key:down",
+      "report:options-entry",
+      "key:ok"
+    ]
   }
 }
