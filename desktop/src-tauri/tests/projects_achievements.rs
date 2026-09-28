@@ -25,6 +25,7 @@ fn settings(rom: PathBuf) -> ProjectSettings {
         palette: "blue".into(),
         menu_sounds: "off".into(),
         controls: Controls::default(),
+        menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: false,

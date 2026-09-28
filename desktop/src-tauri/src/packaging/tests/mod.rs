@@ -26,6 +26,7 @@ fn request(splash: bool) -> ExportRequest {
         palette: "blue".to_string(),
         menu_sounds: "off".to_string(),
         controls: controls::Controls::default(),
+        menu_controls: crate::builder::unstated::menu_controls(),
         firmware: Vec::new(),
         splash,
         advanced_emulator_access: false,

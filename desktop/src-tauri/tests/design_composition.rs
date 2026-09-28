@@ -83,6 +83,7 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
             "discs",
             "options",
             "controls",
+            "menu-controls",
             "shaders",
             "achievements",
             "accounts"
@@ -175,7 +176,11 @@ fn a_non_pause_override_keeps_native_screen_and_entry_order() {
             .map(|screen| screen.id.as_str())
             .collect::<Vec<_>>()
     );
-    assert_eq!(selected[4].heading, "TROPHIES");
+    let achievements = selected
+        .iter()
+        .find(|screen| screen.id == "achievements")
+        .unwrap();
+    assert_eq!(achievements.heading, "TROPHIES");
 }
 
 #[test]

@@ -49,6 +49,8 @@ pub struct ProjectSettings {
     pub menu_sounds: String,
     #[serde(default)]
     pub controls: Controls,
+    #[serde(default = "crate::builder::unstated::menu_controls")]
+    pub menu_controls: crate::menu_controls::MenuControls,
     /// Explicit firmware files. We keep them with this project and later
     /// install them only in the managed storage of the exported game.
     #[serde(default)]
@@ -133,6 +135,8 @@ struct StoredSettings {
     menu_sounds: String,
     #[serde(default)]
     controls: Controls,
+    #[serde(default = "crate::builder::unstated::menu_controls")]
+    menu_controls: crate::menu_controls::MenuControls,
     #[serde(default)]
     splash: bool,
     #[serde(default)]
@@ -224,6 +228,7 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             palette: request.settings.palette.clone(),
             menu_sounds: request.settings.menu_sounds.clone(),
             controls: request.settings.controls.clone(),
+            menu_controls: request.settings.menu_controls.clone(),
             splash: request.settings.splash,
             advanced_emulator_access: request.settings.advanced_emulator_access,
             keep_playing_in_background: request.settings.keep_playing_in_background,
@@ -356,6 +361,7 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
         palette: manifest.settings.palette,
         menu_sounds: manifest.settings.menu_sounds,
         controls: manifest.settings.controls,
+        menu_controls: manifest.settings.menu_controls,
         firmware,
         splash: manifest.settings.splash,
         advanced_emulator_access: manifest.settings.advanced_emulator_access,
@@ -501,6 +507,7 @@ fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
         palette: settings.palette.clone(),
         menu_sounds: settings.menu_sounds.clone(),
         controls: settings.controls.clone(),
+        menu_controls: settings.menu_controls.clone(),
         splash: settings.splash,
         advanced_emulator_access: settings.advanced_emulator_access,
         keep_playing_in_background: settings.keep_playing_in_background,

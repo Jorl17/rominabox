@@ -60,6 +60,61 @@ extern "C" bool rib_host_capture_start(unsigned index, unsigned seconds)
    return true;
 }
 extern "C" void rib_host_capture_cancel(void) { ++host.captures_cancelled; }
+
+namespace {
+/* Keys in the order of their first mention, and pad inputs in the RetroPad
+ * bind order, then home. */
+std::vector<std::string> key_names;
+const char *const pad_inputs[] = {"b", "y", "select", "start", "up", "down", "left",
+      "right", "a", "x", "l", "r", "l2", "r2", "l3", "r3", "home"};
+bool held(const std::vector<std::string>& down, const std::string& name)
+{
+   return std::find(down.begin(), down.end(), name) != down.end();
+}
+}
+extern "C" bool rib_host_key_code(const char *name, unsigned *code)
+{
+   if (!name || !*name || !code || std::strchr(name, ' ')) return false;
+   auto found = std::find(key_names.begin(), key_names.end(), name);
+   if (found == key_names.end())
+      found = key_names.insert(key_names.end(), name);
+   *code = 1 + (unsigned)(found - key_names.begin());
+   return true;
+}
+extern "C" bool rib_host_key_down(unsigned code)
+{
+   return code >= 1 && code <= key_names.size() && held(host.keys_down, key_names[code - 1]);
+}
+extern "C" bool rib_host_pad_input(const char *id, unsigned *bind)
+{
+   for (unsigned index = 0; id && index < sizeof(pad_inputs) / sizeof(pad_inputs[0]); ++index)
+      if (!std::strcmp(id, pad_inputs[index]))
+      {
+         *bind = index;
+         return true;
+      }
+   return false;
+}
+extern "C" bool rib_host_pad_down(unsigned bind)
+{
+   return bind < sizeof(pad_inputs) / sizeof(pad_inputs[0]) && held(host.pads_down, pad_inputs[bind]);
+}
+extern "C" bool rib_host_capture_input_start(unsigned seconds)
+{
+   if (!host.capture_start_accepted) return false;
+   host.captured_id.clear();
+   host.capture_seconds = seconds;
+   host.capture_result = RIB_CAPTURE_PENDING;
+   if (host.timed_capture)
+      host.capture_began_us = host.clock_us;
+   ++host.input_captures_started;
+   return true;
+}
+extern "C" void rib_host_captured_input(char *binding, size_t length)
+{
+   if (binding && length)
+      std::snprintf(binding, length, "%s", host.captured_input.c_str());
+}
 extern "C" rib_capture_result rib_host_capture_poll(bool accept_pointer, float *remaining)
 {
    host.capture_accepts_pointer = accept_pointer;

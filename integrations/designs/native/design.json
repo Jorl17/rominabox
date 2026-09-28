@@ -96,6 +96,18 @@
       }
     },
     {
+      "id": "menu-controls",
+      "role": "menu-controls",
+      "panel": "menu-controls-panel",
+      "heading": "MENU CONTROLS",
+      "footer": "ESC  BACK",
+      "button": "menu-controls",
+      "option": {
+        "label": "MENU CONTROLS",
+        "default": true
+      }
+    },
+    {
       "id": "shaders",
       "role": "shaders",
       "panel": "shaders-panel",

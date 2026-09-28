@@ -442,7 +442,7 @@ fn key_names() -> &'static [(String, String)] {
 /// name that is no key. We follow `input_config_translate_str_to_rk`. A
 /// single letter is the key for that letter, and we look up any other name
 /// in the key table, ignoring case. There `nul` means no key.
-fn retroarch_key(name: &str) -> Option<String> {
+pub(crate) fn retroarch_key(name: &str) -> Option<String> {
     if let [letter] = name.as_bytes() {
         if letter.is_ascii_alphabetic() {
             return Some(format!("RETROK_{}", letter.to_ascii_lowercase() as char));

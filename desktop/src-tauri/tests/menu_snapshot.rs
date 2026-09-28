@@ -176,6 +176,7 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
         palette: "blue".to_string(),
         menu_sounds: "off".to_string(),
         controls: rominabox_desktop::controls::Controls::default(),
+        menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: false,
@@ -242,7 +243,12 @@ fn compose(request: &ExportRequest, destination: &Path) -> BTreeMap<String, Stri
 fn is_snapshot_file(name: &str) -> bool {
     matches!(
         name,
-        "menu.rml" | "menu.rcss" | "design.cfg" | "controls-defaults.cfg" | "shaders.cfg"
+        "menu.rml"
+            | "menu.rcss"
+            | "design.cfg"
+            | "controls-defaults.cfg"
+            | "shaders.cfg"
+            | "menu-controls-defaults.cfg"
     ) || (name.starts_with("scene-") && name.ends_with(".rml"))
 }
 

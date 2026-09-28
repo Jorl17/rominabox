@@ -87,7 +87,7 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
     let plan_path = result.app_path.join("Contents/Resources/launch.plan");
     let plan = fs::read_to_string(&plan_path).unwrap();
     let config = embedded_runtime_config(&plan);
-    let policy = isolated_hotkey_config(false, false);
+    let policy = isolated_hotkey_config(false);
 
     assert!(
         config.contains(&policy),

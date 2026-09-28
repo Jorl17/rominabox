@@ -310,6 +310,18 @@ pub fn validate(manifest: &Manifest, document: &str, shipped: &[&Screen]) -> Res
             });
         }
     }
+    // MENU CONTROLS has a row for every action declared in the player.
+    if let Some(screen) = shipped
+        .iter()
+        .find(|screen| screen.role == Some(ScreenRole::MenuControls))
+    {
+        if let Some(id) = crate::menu_controls::required_ids()
+            .into_iter()
+            .find(|id| !has_id(document, id))
+        {
+            return Err(missing(manifest, screen, &format!("#{id}")));
+        }
+    }
     for screen in shipped {
         let Some(tag) = opening_tag(document, &screen.panel) else {
             return Err(missing(manifest, screen, &format!("its panel #{}", screen.panel)));

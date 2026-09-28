@@ -385,8 +385,8 @@ std::string stage_disc_list(const char *native_assets, const char *data)
          && replace_once(menu, "<div id=\"options-entries\">",
                "<div id=\"options-entries\"><button class=\"menu-action option-entry\" id=\"discs\" disabled=\"disabled\" style=\"display: none;\"><span class=\"option-label\">DISC</span></button>");
    std::string config = read_file(assets / "design.cfg");
-   staged = staged && replace_once(config, "screens = \"pause options controls fixture\"",
-               "screens = \"pause options controls fixture discs\"")
+   staged = staged && replace_once(config, "screens = \"pause options controls menu-controls fixture\"",
+               "screens = \"pause options controls menu-controls fixture discs\"")
          && replace_once(config, "screen_button_options = \"options fixture-back\"",
                "screen_button_options = \"options fixture-back discs-back\"");
    config += "\nscreen_panel_discs = \"discs-panel\"\nscreen_heading_discs = \"DISC\""

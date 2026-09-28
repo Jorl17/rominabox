@@ -1,7 +1,9 @@
 //! Only Escape is reserved. Q and F are ordinary gameplay keys in every mode.
 //!
 //! Neither Q nor F is a hotkey, because the menu opened with Escape has Quit,
-//! and Alt+Enter is the fullscreen chord.
+//! and Alt+Enter is the fullscreen chord. Escape is the default for MENU in
+//! MENU CONTROLS, which we read in the menu from the export's
+//! `menu-controls-defaults.cfg`. The RetroArch menu toggle has no key.
 //!
 //! In these tests we read generated config and call the authoring validator.
 //! We do not launch a player or open a window, and we do not prove that
@@ -117,6 +119,7 @@ fn export_request(root: &Path, advanced: bool, controls: Controls) -> ExportRequ
         palette: "blue".to_string(),
         menu_sounds: "off".to_string(),
         controls,
+        menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: advanced,
@@ -148,6 +151,19 @@ fn config_value<'a>(config: &'a str, key: &str) -> Option<&'a str> {
         let (name, value) = line.split_once(" = ")?;
         (name == key).then(|| value.trim_matches('"'))
     })
+}
+
+/// The bindings for MENU, as we write them in an export for the menu.
+fn exported_menu(root: &Path, advanced: bool) -> String {
+    let request = export_request(root, advanced, Controls::default());
+    let cancelled = AtomicBool::new(false);
+    let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {})
+        .unwrap_or_else(|error| panic!("advanced={advanced}: export refused: {error:?}"));
+    let defaults = fs::read_to_string(
+        result.app_path.join("Contents/Resources/menu-assets/menu-controls-defaults.cfg"),
+    )
+    .unwrap();
+    config_value(&defaults, "menu_control_menu").unwrap().to_string()
 }
 
 /// The runtime config and the default controls that we write in an export.
@@ -207,7 +223,11 @@ fn a_default_export_binds_no_exit_key() {
     );
     assert_eq!(
         config_value(&config, "input_menu_toggle"),
-        Some("escape"),
+        Some("nul"),
+        "RetroArch's own menu toggle opens nothing"
+    );
+    assert!(
+        exported_menu(&workspace(), false).split(' ').any(|binding| binding == "key:escape"),
         "Escape is how the player reaches Quit"
     );
 }
@@ -251,25 +271,32 @@ fn q_and_f_are_gameplay_keys_and_no_hotkey_in_every_mode() {
         );
         assert_eq!(
             config_value(&config, "input_menu_toggle"),
-            Some("escape"),
+            Some("nul"),
+            "advanced={advanced}: RetroArch's own menu toggle opens nothing"
+        );
+        assert!(
+            exported_menu(&workspace(), advanced)
+                .split(' ')
+                .any(|binding| binding == "key:escape"),
             "advanced={advanced}: Escape opens the menu, which has Quit"
         );
     }
 }
 
-/// Escape toggles the menu whether or not advanced access is on, and it is
-/// never a gameplay binding, because it is the only way into that menu.
+/// The RetroArch menu toggle has no key, with or without advanced access. The
+/// menu opens with its MENU CONTROLS binding, Escape by default, so Escape is
+/// never a gameplay binding.
 ///
 /// The keyboard lines come from the hotkey policy in the launcher. This does
-/// not prove that a keypress opens the menu. In the export tests above we read
-/// a written launcher.
+/// not prove that a keypress opens the menu. In the export tests above we
+/// read a written launcher and menu.
 #[test]
 fn escape_toggles_the_menu_in_both_modes_and_is_never_a_gameplay_key() {
     for advanced in [false, true] {
-        let config = isolated_hotkey_config(true, advanced);
+        let config = isolated_hotkey_config(advanced);
         assert_eq!(
             config_value(&config, "input_menu_toggle"),
-            Some("escape"),
+            Some("nul"),
             "advanced={advanced}"
         );
     }

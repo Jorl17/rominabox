@@ -26,6 +26,7 @@ pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuR
         background: request.background.clone(),
         system: request.system.clone(),
         controls: request.controls.clone(),
+        menu_controls: request.menu_controls.clone(),
         show_menu: request.show_menu,
         splash: request.splash,
         include_achievements: request.include_achievements,

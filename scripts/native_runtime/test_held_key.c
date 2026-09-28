@@ -95,12 +95,48 @@ static void press_and_release_inside_one_sample(void)
    expect_fire("escape down and up inside one sample toggles", 0, 1, &flushing, 1);
 }
 
+/* MENU may have several keys (MENU CONTROLS). A press of any of them counts
+ * as the press, with the same rule. A key that is not bound to MENU does not
+ * count, and a key held while another is pressed does not block the toggle. */
+#define F1 282
+#define SPACE 32
+
+static void expect_any(const char *name, const unsigned *codes, unsigned count,
+      int level, unsigned *flushing, int expect)
+{
+   int got = held_key_menu_toggle_fires_any(codes, count, level, 0, flushing);
+   if (got == expect)
+      return;
+   fprintf(stderr, "FAIL %s: menu toggle %s (got %d)\n", name,
+         expect ? "did not fire" : "fired", got);
+   failures++;
+}
+
+static void any_of_several_keys_toggles(void)
+{
+   const unsigned menu[] = {ESCAPE, F1};
+   unsigned flushing = 0;
+   held_key_reset();
+   held_key_note(F1, 1);
+   expect_any("the second key's press arms", menu, 2, 1, &flushing, 0);
+   held_key_note(F1, 0);
+   expect_any("the second key's release toggles", menu, 2, 0, &flushing, 1);
+   held_key_note(SPACE, 1);
+   held_key_note(SPACE, 0);
+   expect_any("a key MENU does not hold does nothing", menu, 2, 0, &flushing, 0);
+   held_key_note(ESCAPE, 1);
+   held_key_note(ESCAPE, 0);
+   expect_any("the first key inside one sample toggles", menu, 2, 0, &flushing, 1);
+   expect_any("no key at all toggles nothing", menu, 0, 0, &flushing, 0);
+}
+
 int main(void)
 {
    normal_press_while_direction_held();
    flush_does_not_stick_while_direction_held();
    wait_does_not_outlive_flush();
    press_and_release_inside_one_sample();
+   any_of_several_keys_toggles();
    if (failures)
    {
       fprintf(stderr, "%d held-key check(s) failed\n", failures);

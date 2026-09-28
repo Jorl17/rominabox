@@ -326,3 +326,25 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 /* An account is one name to pick, in a large row with the name centred. */
 #accounts-list .list-row.line { height: 64dp; margin-bottom: 8dp; }
 #accounts-list .list-row.line .list-row-title { left: 0; right: 0; height: 64dp; line-height: 64dp; font-size: 24dp; text-align: center; }
+
+/* MENU CONTROLS: one panel for each action of the menu, with its name on the
+ * left and its bindings as keycaps, followed by +. A key is a raised cap and
+ * a pad input is a cap set into the panel, so the player can tell them apart
+ * without words. Up to five caps fit in two lines of the panel, and the + of
+ * a full row is dark. */
+#menu-control-rows { position: absolute; left: 56dp; top: 84dp; width: 840dp; }
+.menu-control { position: relative; height: 104dp; margin-bottom: 14dp; background-color: #061a48; border: 3dp #75b2e4; }
+.menu-control-label { position: absolute; left: 20dp; top: 0; width: 170dp; height: 104dp; line-height: 104dp; font-size: 24dp; color: #fff13d; }
+.menu-control-chips { position: absolute; left: 196dp; right: 12dp; top: 10dp; height: 84dp; display: flex; flex-wrap: wrap; align-content: center; align-items: center; column-gap: 10dp; row-gap: 8dp; }
+.menu-control-chip, .menu-control-add { box-sizing: border-box; height: 38dp; line-height: 32dp; font-family: Silkscreen; font-size: 15dp; text-align: center; white-space: nowrap; }
+.menu-control-chip { padding: 0 12dp; text-transform: uppercase; color: #ffffff; background-color: #0865bf; border-width: 3dp; border-top-color: #9edaff; border-left-color: #9edaff; border-right-color: #020b27; border-bottom-color: #020b27; }
+.menu-control-chip.pad { background-color: #193e88; border-top-color: #020b27; border-left-color: #020b27; border-right-color: #9edaff; border-bottom-color: #9edaff; }
+.menu-control-chip:hover, .menu-control-chip.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
+.menu-control-add { width: 38dp; padding: 0; font-size: 22dp; border-width: 3dp; }
+.menu-control-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
+#menu-controls-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
+#menu-controls-actions button { position: absolute; top: 0; font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
+#menu-controls-back { left: 0; width: 124dp; }
+#menu-controls-reset { left: 148dp; width: 256dp; }
+#menu-controls-cancel { right: 0; width: 160dp; }
+#menu-controls-status { position: absolute; top: 537dp; width: 100%; font-size: 16dp; color: #fff13d; text-align: center; }

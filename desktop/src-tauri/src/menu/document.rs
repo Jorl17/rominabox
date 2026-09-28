@@ -115,6 +115,9 @@ pub(crate) fn skeleton(manifest: &Manifest, staged: &[Screen]) -> Result<String,
         }
         menu = menu.replace(slot, &value);
     }
+    // The other screens of Native, at their places in its skeleton. We draw
+    // each one only in a game that has it.
+    menu = place_screens(manifest, &menu, staged, &skeleton)?;
     let order = manifest.design.join("screen-order.rml");
     let extra = if order.is_file() {
         fs::read_to_string(&order)
@@ -157,6 +160,35 @@ pub(crate) fn skeleton(manifest: &Manifest, staged: &[Screen]) -> Result<String,
     Ok(menu
         .replace("<!--EXTRA-SCREENS-->", &expanded)
         .replace("<!--SAVE-SLOTS-->", &slots))
+}
+
+/// `markup` with each `<!--SCREEN:id-->` in it replaced by that screen's
+/// fragment when the game has the screen, and by nothing when it does not.
+fn place_screens(
+    manifest: &Manifest,
+    markup: &str,
+    staged: &[Screen],
+    source: &Path,
+) -> Result<String, String> {
+    let mut placed = String::new();
+    let mut remaining = markup;
+    while let Some(start) = remaining.find("<!--SCREEN:") {
+        placed.push_str(&remaining[..start]);
+        let after = &remaining[start + "<!--SCREEN:".len()..];
+        let end = after
+            .find("-->")
+            .ok_or_else(|| format!("Unclosed screen in {}", source.display()))?;
+        let id = &after[..end];
+        if !manifest.screens.iter().any(|screen| screen.id == id) {
+            return Err(format!("Screen '{id}' in {} is not declared", source.display()));
+        }
+        if staged.iter().any(|screen| screen.id == id) {
+            placed.push_str(&manifest.fragment(&format!("screen-{id}.rml"))?);
+        }
+        remaining = &after[end + "-->".len()..];
+    }
+    placed.push_str(remaining);
+    Ok(placed)
 }
 
 /// The page as it appears when the menu opens on Pause. We write the heading

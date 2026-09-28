@@ -209,7 +209,7 @@ notification_show_remap_load = "false"
 notification_show_config_override_load = "false"
 savestate_thumbnail_enable = "true"
 "#,
-        isolated_hotkey_config(request.show_menu, request.advanced_emulator_access),
+        isolated_hotkey_config(request.advanced_emulator_access),
         firmware = shipped!(Firmware).1,
         remaps = shipped!(Remaps).1,
         core_options = shipped!(CoreOptions).1,

@@ -1,5 +1,5 @@
 use super::*;
-use crate::hotkeys::{isolated_hotkey_config, HotkeyKeyboard, HOTKEY_BINDS};
+use crate::hotkeys::{isolated_hotkey_config, HOTKEY_BINDS};
 use crate::packaging::launch_plan::isolated_runtime_config;
 
 #[test]
@@ -121,17 +121,14 @@ fn advanced_emulator_access_reaches_fast_forward_without_dropping_a_bind() {
     let advanced_tier: Vec<_> = HOTKEY_BINDS
         .iter()
         .filter(|bind| bind.advanced_key.is_some())
-        .map(|bind| (bind.name, bind.advanced_key.unwrap(), bind.keyboard))
+        .map(|bind| (bind.name, bind.advanced_key.unwrap()))
         .collect();
-    // Quit and fullscreen are not in this tier, because q and f are
-    // gameplay keys in every mode. The base keyboard stays Neutral, so a
-    // default export contains nul for both fast-forward keys.
+    // Quit and fullscreen are not in this tier, because q and f are gameplay
+    // keys in every mode. Every other key is nul, so in a default export we
+    // write nul for both fast-forward keys.
     assert_eq!(
         advanced_tier,
-        vec![
-            ("toggle_fast_forward", "space", HotkeyKeyboard::Neutral),
-            ("hold_fast_forward", "l", HotkeyKeyboard::Neutral),
-        ],
+        vec![("toggle_fast_forward", "space"), ("hold_fast_forward", "l")],
         "the advanced tier is fast-forward; a default export writes nul for both"
     );
 
@@ -186,7 +183,8 @@ fn advanced_emulator_access_reaches_fast_forward_without_dropping_a_bind() {
             );
         }
     }
-    assert_eq!(config_value(&config, "input_menu_toggle"), Some("escape"));
+    // The player opens the menu through MENU CONTROLS, not the RetroArch toggle.
+    assert_eq!(config_value(&config, "input_menu_toggle"), Some("nul"));
     // Advanced access does not bind q or f either.
     assert_eq!(config_value(&config, "input_exit_emulator"), Some("nul"));
     assert_eq!(
@@ -196,23 +194,29 @@ fn advanced_emulator_access_reaches_fast_forward_without_dropping_a_bind() {
     assert_eq!(config_value(&config, "input_rewind"), Some("nul"));
     assert_eq!(
         config_value(&config, "input_menu_toggle_gamepad_combo"),
-        Some("2")
+        Some("0")
     );
     assert_eq!(config_value(&config, "input_quit_gamepad_combo"), Some("0"));
-    assert!(config.contains(&isolated_hotkey_config(true, true)));
+    assert!(config.contains(&isolated_hotkey_config(true)));
 }
 
 /// The player still opens the menu with Escape and quits a game from it.
-/// Quit and fullscreen have no key, so Q cannot quit in the middle of a
+/// Escape is the default for MENU in MENU CONTROLS. The RetroArch menu toggle
+/// and its gamepad combo are off, so only the bindings of the player open the
+/// menu. Quit and fullscreen have no key, so Q cannot quit in the middle of a
 /// game, and q and f stay free for gameplay.
 #[test]
-fn escape_stays_the_menu_toggle_and_quit_and_fullscreen_have_no_key() {
+fn escape_stays_the_menu_and_quit_and_fullscreen_have_no_key() {
+    use crate::menu_controls::{Action, Binding};
+    assert!(crate::builder::unstated::menu_controls()
+        .of(Action::Menu)
+        .contains(&Binding::Key("escape".into())));
     let mut with_menu = request(false);
     with_menu.show_menu = true;
     let menu_config = embedded_runtime_config(&write_test_launcher(with_menu));
     assert_eq!(
         config_value(&menu_config, "input_menu_toggle"),
-        Some("escape")
+        Some("nul")
     );
     assert_eq!(
         config_value(&menu_config, "input_toggle_fullscreen"),
@@ -224,7 +228,7 @@ fn escape_stays_the_menu_toggle_and_quit_and_fullscreen_have_no_key() {
     );
     assert_eq!(
         config_value(&menu_config, "input_menu_toggle_gamepad_combo"),
-        Some("2")
+        Some("0")
     );
     assert_eq!(
         config_value(&menu_config, "input_quit_gamepad_combo"),
