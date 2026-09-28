@@ -33,7 +33,7 @@ function show(
     root.render(
       <ExportChoices
         target={target}
-        destination="/Users/player/Downloads/ROM-in-a-Box"
+        destination="/Volumes/Games/ROM-in-a-Box"
         onDestination={() => {}}
         intelMacs={intelMacs}
         onIntelMacs={onIntelMacs}
