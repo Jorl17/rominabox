@@ -14,49 +14,64 @@ use std::collections::BTreeMap;
 /// declares a version unknown to this build, and never read it in part.
 pub const SCHEMA_VERSION: u32 = 1;
 
-/// The positions of the standard pad (RetroArch's RetroPad), with the words
-/// we show for each in the builder. We read a control from one of these, and
-/// with RetroArch's controller profiles we map every player's controller onto
-/// this pad, so a control bound to a position works on any pad. The id is the
-/// RetroArch bind name (`input_player1_<id>`, configuration.c).
-pub const PAD_POSITIONS: &[(&str, &str)] = &[
-    ("up", "D-pad up"),
-    ("down", "D-pad down"),
-    ("left", "D-pad left"),
-    ("right", "D-pad right"),
-    ("b", "Bottom button"),
-    ("a", "Right button"),
-    ("y", "Left button"),
-    ("x", "Top button"),
-    ("l", "L1"),
-    ("r", "R1"),
-    ("l2", "L2"),
-    ("r2", "R2"),
-    ("select", "Select"),
-    ("start", "Start"),
-    ("l3", "L3"),
-    ("r3", "R3"),
+/// A position of the standard pad (RetroArch's RetroPad), with the words we
+/// show for it in the builder. The id is RetroArch's bind name
+/// (`input_player1_<id>`, configuration.c).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct PadPosition {
+    pub id: &'static str,
+    pub name: &'static str,
+    /// The other half of the axis of a stick direction. In RetroArch we read
+    /// an axis whole. If a remap moved one half and left the other, the other
+    /// half would do nothing, so we move the two together.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opposite: Option<&'static str>,
+}
+
+const fn button(id: &'static str, name: &'static str) -> PadPosition {
+    PadPosition { id, name, opposite: None }
+}
+
+const fn stick(id: &'static str, name: &'static str, opposite: &'static str) -> PadPosition {
+    PadPosition { id, name, opposite: Some(opposite) }
+}
+
+/// Every position of the standard pad. We read a control from one of these,
+/// and with RetroArch's controller profiles we map every player's controller
+/// onto this pad, so a control bound to a position works on any pad. The
+/// controls of a profile are these positions. We list a stick's directions
+/// up, right, down, left, the order in which we capture them in the menu.
+pub const PAD_POSITIONS: &[PadPosition] = &[
+    button("up", "D-pad up"),
+    button("down", "D-pad down"),
+    button("left", "D-pad left"),
+    button("right", "D-pad right"),
+    button("b", "Bottom button"),
+    button("a", "Right button"),
+    button("y", "Left button"),
+    button("x", "Top button"),
+    button("l", "L1"),
+    button("r", "R1"),
+    button("l2", "L2"),
+    button("r2", "R2"),
+    button("select", "Select"),
+    button("start", "Start"),
+    button("l3", "L3"),
+    button("r3", "R3"),
+    stick("l_y_minus", "Left stick up", "l_y_plus"),
+    stick("l_x_plus", "Left stick right", "l_x_minus"),
+    stick("l_y_plus", "Left stick down", "l_y_minus"),
+    stick("l_x_minus", "Left stick left", "l_x_plus"),
+    stick("r_y_minus", "Right stick up", "r_y_plus"),
+    stick("r_x_plus", "Right stick right", "r_x_minus"),
+    stick("r_y_plus", "Right stick down", "r_y_minus"),
+    stick("r_x_minus", "Right stick left", "r_x_plus"),
 ];
 
-/// A stick's directions, spelled as in the RetroArch declarations
-/// (configuration.c). A stick stays where it is, because its directions are
-/// not positions to which a control can move.
-pub const STICK_DIRECTIONS: &[&str] = &[
-    "l_x_plus",
-    "l_x_minus",
-    "l_y_plus",
-    "l_y_minus",
-    "r_x_plus",
-    "r_x_minus",
-    "r_y_plus",
-    "r_y_minus",
-];
-
-/// Whether `id` is a control a profile may declare: a pad position or a
-/// stick direction. A profile may use any of them, in any order, but may not
-/// invent one.
+/// Whether `id` is a control a profile may declare: a position of the pad. A
+/// profile may use any of them, in any order, but may not invent one.
 pub fn is_control_id(id: &str) -> bool {
-    PAD_POSITIONS.iter().any(|(position, _)| *position == id) || STICK_DIRECTIONS.contains(&id)
+    PAD_POSITIONS.iter().any(|position| position.id == id)
 }
 
 /// Whether we expect a build to include this console.
@@ -566,4 +581,25 @@ pub struct Console {
     /// Firmware the author must supply before we can export this console.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub firmware: Vec<FirmwareGroup>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Each stick direction lists the other half of its axis, and that half
+    /// lists it back. A button has no other half.
+    #[test]
+    fn a_stick_direction_and_its_opposite_name_each_other() {
+        for position in PAD_POSITIONS {
+            let Some(opposite) = position.opposite else { continue };
+            let other = PAD_POSITIONS
+                .iter()
+                .find(|candidate| candidate.id == opposite)
+                .unwrap_or_else(|| panic!("{} names {opposite}, which is no position", position.id));
+            assert_eq!(other.opposite, Some(position.id), "{} and {opposite}", position.id);
+        }
+        let ids: std::collections::BTreeSet<&str> = PAD_POSITIONS.iter().map(|position| position.id).collect();
+        assert_eq!(ids.len(), PAD_POSITIONS.len(), "a position is listed twice");
+    }
 }

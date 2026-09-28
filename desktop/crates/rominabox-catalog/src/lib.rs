@@ -1061,10 +1061,7 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
         (
             "controls.json",
             json!({
-                "padPositions": PAD_POSITIONS
-                    .iter()
-                    .map(|(id, name)| json!({ "id": id, "name": name }))
-                    .collect::<Vec<_>>(),
+                "padPositions": PAD_POSITIONS,
                 "profiles": profiles,
             }),
         ),

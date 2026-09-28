@@ -63,6 +63,46 @@
     {
       "id": "r3",
       "name": "R3"
+    },
+    {
+      "id": "l_y_minus",
+      "name": "Left stick up",
+      "opposite": "l_y_plus"
+    },
+    {
+      "id": "l_x_plus",
+      "name": "Left stick right",
+      "opposite": "l_x_minus"
+    },
+    {
+      "id": "l_y_plus",
+      "name": "Left stick down",
+      "opposite": "l_y_minus"
+    },
+    {
+      "id": "l_x_minus",
+      "name": "Left stick left",
+      "opposite": "l_x_plus"
+    },
+    {
+      "id": "r_y_minus",
+      "name": "Right stick up",
+      "opposite": "r_y_plus"
+    },
+    {
+      "id": "r_x_plus",
+      "name": "Right stick right",
+      "opposite": "r_x_minus"
+    },
+    {
+      "id": "r_y_plus",
+      "name": "Right stick down",
+      "opposite": "r_y_minus"
+    },
+    {
+      "id": "r_x_minus",
+      "name": "Right stick left",
+      "opposite": "r_x_plus"
     }
   ],
   "profiles": [
