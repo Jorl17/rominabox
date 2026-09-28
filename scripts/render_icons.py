@@ -25,6 +25,7 @@ At small sizes we draw the lines heavier, as icon sets do, because at 16 and
 
 Rendering requires `rsvg-convert` and, for the `.icns`, macOS's `iconutil`. We
 commit the outputs, so a build on a machine without them uses those files.
+With --check we render only the compared pictures, so it works everywhere.
 """
 
 from __future__ import annotations
@@ -137,25 +138,28 @@ def tile(size: int, scratch: Path, shown: int | None = None):
     return shaped
 
 
-def render(into: Path) -> dict[str, Path]:
-    """Write every output under `into`, at its path in the repository."""
+def render(into: Path, containers: bool = True) -> dict[str, Path]:
+    """Write every output under `into`, at its path in the repository.
+    Without `containers`, write all but the .icns and .ico, which we only look
+    for in the check (the .icns requires macOS's iconutil)."""
     written: dict[str, Path] = {}
     with tempfile.TemporaryDirectory(prefix="rominabox-icons-") as made:
         scratch = Path(made)
-        iconset = scratch / "icon.iconset"
-        iconset.mkdir()
-        for size, density in ICNS:
-            name = f"icon_{size}x{size}{'@2x' if density == 2 else ''}.png"
-            square(size * density, scratch).save(iconset / name)
-        icns = into / ICONS.relative_to(ROOT) / "icon.icns"
-        icns.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(icns)], check=True)
-        written["icns"] = icns
+        (into / ICONS.relative_to(ROOT)).mkdir(parents=True, exist_ok=True)
+        if containers:
+            iconset = scratch / "icon.iconset"
+            iconset.mkdir()
+            for size, density in ICNS:
+                name = f"icon_{size}x{size}{'@2x' if density == 2 else ''}.png"
+                square(size * density, scratch).save(iconset / name)
+            icns = into / ICONS.relative_to(ROOT) / "icon.icns"
+            subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(icns)], check=True)
+            written["icns"] = icns
 
-        frames = [tile(size, scratch) for size in ICO]
-        ico = into / ICONS.relative_to(ROOT) / "icon.ico"
-        frames[-1].save(ico, format="ICO", sizes=[(size, size) for size in ICO], append_images=frames[:-1])
-        written["ico"] = ico
+            frames = [tile(size, scratch) for size in ICO]
+            ico = into / ICONS.relative_to(ROOT) / "icon.ico"
+            frames[-1].save(ico, format="ICO", sizes=[(size, size) for size in ICO], append_images=frames[:-1])
+            written["ico"] = ico
 
         header = into / ICONS.relative_to(ROOT) / "icon.png"
         tile(HEADER, scratch, shown=HEADER // 2).save(header)
@@ -176,22 +180,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="fail if a committed icon differs from a fresh render")
     arguments = parser.parse_args()
-    if not shutil.which("iconutil"):
-        raise SystemExit("iconutil is macOS's; the icons are rendered on a Mac and committed")
     if not arguments.check:
+        if not shutil.which("iconutil"):
+            raise SystemExit("iconutil is macOS's; the icons are rendered on a Mac and committed")
         for name, path in render(ROOT).items():
             print(f"{name}: {path.relative_to(ROOT)}")
         return 0
     drifted = []
     with tempfile.TemporaryDirectory(prefix="rominabox-icons-check-") as made:
-        fresh = render(Path(made))
+        fresh = render(Path(made), containers=False)
         for name in ("header", "large", "default"):
             shipped = ROOT / fresh[name].relative_to(made)
             why = compare(shipped, fresh[name]) if shipped.is_file() else "missing"
             if why:
                 drifted.append(f"{shipped.relative_to(ROOT)}: {why}")
-        for name in ("icns", "ico"):
-            shipped = ROOT / fresh[name].relative_to(made)
+        for shipped in (ICONS / "icon.icns", ICONS / "icon.ico"):
             if not shipped.is_file():
                 drifted.append(f"{shipped.relative_to(ROOT)}: missing")
     if drifted:
