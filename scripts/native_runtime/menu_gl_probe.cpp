@@ -15,6 +15,10 @@
  * We also draw the menu into a separate framebuffer bound as the window's,
  * as in a fullscreen Windows game, where we bind the framebuffer from DXGI.
  *
+ * We also draw a document with an offset and an inset box-shadow through
+ * RmlUi, where a shadow is drawn into a layer that is then kept as a
+ * texture.
+ *
  * We make the context in the code for each platform (gl_context.h). */
 
 #include "gl_context.h"
@@ -24,6 +28,7 @@
 #include "rmlui/render/rmlui_gl.h"
 #include "third_party/lodepng.h"
 
+#include <RmlUi/Core.h>
 #include <streams/file_stream.h>
 
 #include <algorithm>
@@ -321,6 +326,108 @@ Window draws_into_the_window(bool core)
    return result;
 }
 
+/* Two boxes 32 by 20 at y 24: one at x 24 with a near-black shadow 6
+ * pixels right and down, one at x 80 with a red inset shadow 4 pixels right
+ * and down, which covers its top 4 rows and left 4 columns. No blur. */
+const char *const shadow_document = R"(<rml><head><style>
+div { display: block; position: absolute; top: 24px; width: 32px; height: 20px; background-color: #2050e0; }
+#outer { left: 24px; box-shadow: #101010 6px 6px 0px; }
+#inset { left: 80px; box-shadow: #e03030 4px 4px 0px inset; }
+</style></head><body><div id="outer"/><div id="inset"/></body></rml>)";
+constexpr int shadow_width = 128;
+constexpr int shadow_height = 64;
+
+struct Sample
+{
+   const char *what;
+   int x, y;
+   unsigned char rgb[3];
+};
+
+/* Where each colour must be, in the document's pixels from the top left. */
+const Sample shadow_samples[] = {
+   {"the outer box's own background", 40, 34, {0x20, 0x50, 0xe0}},
+   {"the outer box's top-left corner", 25, 25, {0x20, 0x50, 0xe0}},
+   {"the outer shadow, below and right of the box", 59, 47, {0x10, 0x10, 0x10}},
+   {"the window beside the box, above where the shadow starts", 59, 27, {200, 200, 200}},
+   {"the window's top-left corner", 2, 2, {200, 200, 200}},
+   {"the inset shadow along the box's top-left edges", 82, 26, {0xe0, 0x30, 0x30}},
+   {"the inset box's own background, clear of its shadow", 100, 38, {0x20, 0x50, 0xe0}},
+};
+
+/* Return the document drawn over a light grey window, as in the menu, and
+ * read back upright, or nothing when RmlUi fails to start. */
+std::vector<unsigned char> draw_shadow_document(bool core)
+{
+   std::vector<unsigned char> upright;
+   auto renderer = rib_menu_renderer(core);
+   renderer->SetViewport(shadow_width, shadow_height);
+   Rml::SetRenderInterface(renderer.get());
+   if (!Rml::Initialise())
+      return upright;
+   Rml::Context *context = Rml::CreateContext("shadows", Rml::Vector2i(shadow_width, shadow_height));
+   Rml::ElementDocument *document = context ? context->LoadDocumentFromMemory(shadow_document) : nullptr;
+   if (document)
+   {
+      document->Show();
+      context->Update();
+      GLuint vao = 0;
+      if (core)
+      {
+         glGenVertexArrays(1, &vao);
+         glBindVertexArray(vao);
+      }
+      glViewport(0, 0, shadow_width, shadow_height);
+      glClearColor(200 / 255.f, 200 / 255.f, 200 / 255.f, 1);
+      glClear(GL_COLOR_BUFFER_BIT);
+      renderer->BeginFrame();
+      context->Render();
+      renderer->EndFrame();
+      if (core)
+         glDeleteVertexArrays(1, &vao);
+      glFinish();
+      std::vector<unsigned char> drawn((size_t)shadow_width * shadow_height * 4);
+      glPixelStorei(GL_PACK_ALIGNMENT, 1);
+      glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+      glReadPixels(0, 0, shadow_width, shadow_height, GL_RGBA, GL_UNSIGNED_BYTE, drawn.data());
+      upright.resize(drawn.size());
+      for (int y = 0; y < shadow_height; y++)
+         std::copy_n(&drawn[(size_t)(shadow_height - 1 - y) * shadow_width * 4], shadow_width * 4,
+               &upright[(size_t)y * shadow_width * 4]);
+      document->Close();
+   }
+   Rml::Shutdown();
+   return upright;
+}
+
+/* Print each sample whose colour is off by more than 4 in any channel, and
+ * write the drawn document beside `picture` for a person to look at. */
+bool draws_box_shadows(bool core, const char *name, const std::string& picture)
+{
+   const std::vector<unsigned char> drawn = draw_shadow_document(core);
+   if (drawn.empty())
+   {
+      std::printf("FAIL %s context RmlUi did not draw the box-shadow document\n", name);
+      return false;
+   }
+   const std::string folder = picture.substr(0, picture.find_last_of("/\\") + 1);
+   write_enlarged(folder + "shadow-" + name + ".png", drawn, shadow_width, shadow_height);
+   bool matched = true;
+   for (const Sample& sample : shadow_samples)
+   {
+      const unsigned char *got = &drawn[((size_t)sample.y * shadow_width + sample.x) * 4];
+      bool near = true;
+      for (int c = 0; c < 3; c++)
+         near = near && std::abs((int)got[c] - (int)sample.rgb[c]) <= 4;
+      if (!near)
+         std::printf("FAIL %s context box-shadow: %s at (%d, %d) is %u %u %u, not %u %u %u\n",
+               name, sample.what, sample.x, sample.y, got[0], got[1], got[2],
+               sample.rgb[0], sample.rgb[1], sample.rgb[2]);
+      matched = matched && near;
+   }
+   return matched;
+}
+
 /* Read a picture that the menu shows, such as a slot picture, through
  * libretro's file layer, decode it from memory and return its size. The
  * folder name is like a game's data folder under a non-ASCII home folder. */
@@ -376,7 +483,10 @@ int check(bool core, Leftover leftover, const char *name, const std::string& pic
    /* Once per context, because this check is not about the leftover arrays. */
    const Text text = leftover == Leftover::none ? draws_text_as_given(core, name, picture) : Text{true, true};
    const Window window = leftover == Leftover::none ? draws_into_the_window(core) : Window{true, true};
+   const bool shadows = leftover == Leftover::none ? draws_box_shadows(core, name, picture) : true;
    offscreen_gl_release(context);
+   if (!shadows)
+      return 1;
    if (!window.drawn)
    {
       std::printf("FAIL %s context menu did not draw into the framebuffer bound as the window\n", name);

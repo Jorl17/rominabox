@@ -4,6 +4,10 @@ The Flycast core runs in an OpenGL core context, where nothing appears when
 we draw with client arrays, as RmlUi's GL2 backend does. A Dreamcast game
 would then have no pause menu. We must still draw in a legacy context too.
 
+In RmlUi, a box-shadow is drawn into a layer that is then used as a texture.
+Our GL2 backend had no layers, so every element with a shadow appeared as a
+white block, with its shadow over the top-left corner of the window.
+
 The standard output of the player is a file. When that output is fully
 buffered, RetroArch's lines stay in the buffer until the process exits,
 and they are lost when someone kills the player.
