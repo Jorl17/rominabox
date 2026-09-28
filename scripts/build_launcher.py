@@ -3,10 +3,10 @@ where it is.
 
     python3 scripts/build_launcher.py /absolute/new/folder
 
-We build a kit's launcher beside the player in scripts/build_player.py. For
-tests that require the launcher but not a whole player, we build it here,
-from the same recipe with the same function. On macOS we build the launcher
-at export, so there is nothing to build here, and we print that.
+We build a Windows kit's launcher beside the player in scripts/build_player.py
+and a macOS kit's launch library in scripts/build_kit.py. For tests that
+require the launcher but not a whole player or kit, we build it here with the
+same recipe and functions.
 """
 
 from __future__ import annotations
@@ -30,9 +30,13 @@ def main() -> int:
     destination.mkdir(parents=True, exist_ok=False)
     target = host_target()
     toolchain.activate()
-    built = native_build.build_launcher(destination, target, dict(os.environ))
+    kit = native_build.kit_target(target)
+    if native_build.launch_library(kit):
+        built = native_build.build_launch_library(destination, kit)
+    else:
+        built = native_build.build_launcher(destination, target, dict(os.environ))
     if built is None:
-        raise SystemExit(f"{target} builds its launcher at export; there is none to build here")
+        raise SystemExit(f"the player recipe builds no launcher for {target}")
     print(built)
     return 0
 

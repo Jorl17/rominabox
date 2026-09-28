@@ -22,6 +22,7 @@ import hashlib
 import json
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -34,12 +35,15 @@ import toolchain  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def source_of(reference: str, build: Path) -> Path:
-    """Return a file the recipe lists, where build: is in the player build."""
+def source_of(reference: str, build: Path, made: dict[str, Path]) -> Path:
+    """Return a file the recipe lists, where build: is in the player build and
+    made: is a file we made for the kit in this script."""
     place, _, relative = reference.partition(":")
-    if place != "build":
-        raise SystemExit(f"the kit recipe names an unknown place: {reference}")
-    return build / relative
+    if place == "build":
+        return build / relative
+    if place == "made" and relative in made:
+        return made[relative]
+    raise SystemExit(f"the kit recipe names an unknown place: {reference}")
 
 
 def sha256(path: Path) -> str:
@@ -65,9 +69,17 @@ def main() -> int:
     native = licences.player_components(build, platform)
     licences.verify_toolchain(native, toolchain.installation())
     kit_assets.stage(kit)
-    for placed in declared["files"].values():
-        (kit / placed["at"]).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source_of(placed["from"], build), kit / placed["at"])
+    with tempfile.TemporaryDirectory(prefix="rominabox-kit-") as workspace:
+        # A macOS kit's launcher is a library we load into the player, and we
+        # make it here from the launcher sources in the tree. For a Windows kit
+        # we build it with the player and only copy it here.
+        library = native_build.launch_library(target)
+        made = {"launcher": native_build.build_launch_library(Path(workspace), target)} if library else {}
+        for placed in declared["files"].values():
+            (kit / placed["at"]).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_of(placed["from"], build, made), kit / placed["at"])
+        if library:
+            native_build.attach_launch_library(kit / declared["files"]["player"]["at"], target, Path(workspace))
     # We write every native licence again below, so the kit contains only the
     # licences of libraries the player links. We remove the existing files
     # first, because on a case-insensitive file system we would otherwise
@@ -103,6 +115,7 @@ def main() -> int:
         "rmluiCommit": info["rmluiCommit"],
         "target": target,
         "recipe": "scripts/native_runtime/player-recipe.json",
+        **({"launchLibrarySources": native_build.launch_library_sources(target)} if library else {}),
     }, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     player = kit / declared["files"]["player"]["at"]

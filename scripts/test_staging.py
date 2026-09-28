@@ -108,6 +108,29 @@ def builder_signs_only_mach_o() -> list[str]:
     return wrong
 
 
+def launch_library_is_current() -> list[str]:
+    """We build a macOS kit's launch library when we make the kit, from the
+    launcher's sources and the player headers that they include, and record
+    the sources in the kit. Without that, a change to the launcher would be in
+    no export until we made the kit again."""
+    import json
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import native_build
+    from core_source import host_target
+
+    target = native_build.kit_target(host_target())
+    if not native_build.launch_library(target):
+        return []
+    recorded = KIT / "provenance/native-rmlui/source.json"
+    if not recorded.is_file():
+        return ["the kit records no build: make it with scripts/build_kit.py"]
+    built_from = json.loads(recorded.read_text(encoding="utf-8")).get("launchLibrarySources")
+    if built_from != native_build.launch_library_sources(target):
+        return ["the kit's launch library was built from other launcher sources than this tree's"]
+    return []
+
+
 def main() -> int:
     failures: list[str] = []
 
@@ -139,6 +162,10 @@ def main() -> int:
     for entry in stale:
         print(f"  STALE {entry}")
 
+    launcher = launch_library_is_current()
+    for entry in launcher:
+        print(f"  STALE {entry}")
+
     if failures:
         print(f"\n{len(failures)} staging problem(s)")
         return 1
@@ -150,7 +177,13 @@ def main() -> int:
             "  python3 scripts/kit_assets.py",
         )
         return 1
-    print("\nthe kit's assets stage as their sources, and this checkout's kit is current")
+    if launcher:
+        print(
+            "\nEvery export would ship the kit's older launcher. Make the kit again:\n"
+            "  python3 scripts/build_kit.py <the player build it was made from>",
+        )
+        return 1
+    print("\nthe kit's assets stage as their sources, and this checkout's kit, its launch library too, is current")
     return 0
 
 

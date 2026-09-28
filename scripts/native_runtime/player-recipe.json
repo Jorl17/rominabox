@@ -141,7 +141,7 @@
     ]
   },
   "launcher": {
-    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher, and those in the folders `folders` names for the target's platform: its entry, in the folder named for the platform, and its file layer, portable_fs, in posix/ (the calls macOS and Linux share) or windows/. A macOS launcher is built into the app at export when its kit does not contain one.",
+    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher, and those in the folders `folders` names for the target's platform: its entry, in the folder named for the platform, and its file layer, portable_fs, in posix/ (the calls macOS and Linux share) or windows/. A macOS kit carries its launcher as a library the player loads (launchLibrary).",
     "folders": {"macos": ["macos", "posix"], "windows": ["windows"]},
     "windows-x86_64": {
       "output": "launcher.exe",
@@ -164,6 +164,14 @@
         "-ldinput8",
         "-ldxguid"
       ]
+    }
+  },
+  "launchLibrary": {
+    "comment": "On macOS the launcher is a library the player loads before its main: it prepares the launch and hands main the arguments (launcher/macos/arguments.c), from the launcher's sources for the platform (launcher.folders). It is built when the macOS kit is made (scripts/build_kit.py), for every slice of the kit's player and the platform's deployment target, and attached to each slice of the kit's player then (scripts/native_runtime/inject_dylib.c): nothing about it depends on a game. The kit carries it as its launcher; an export copies the two, thinned for a game that runs on Apple silicon alone, and signs them.",
+    "macos-universal": {
+      "output": "librominabox-launch.dylib",
+      "loadedFrom": "@executable_path",
+      "flags": ["-Oz", "-dynamiclib", "-Wl,-dead_strip"]
     }
   },
   "fileLayer": {
@@ -217,10 +225,11 @@
     }
   },
   "kit": {
-    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A file is named by its role, which the exporter reads it by, and says where in the kit it goes; build: is a file in the player build (in a universal build, the folder holding the joined player). The licences of what the player is made from come from licenses/ (scripts/licences.py): those of every library the build compiled, and of the target's platform's runtime. 'libraryInventory' names the folder and the inventory the macOS exporter reads a kit's libraries from (packaging/macos.rs): the player links none, so the folder is empty and the inventory lists no file.",
+    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A file is named by its role, which the exporter reads it by, and says where in the kit it goes; build: is a file in the player build (in a universal build, the folder holding the joined player). made:launcher is the launch library scripts/build_kit.py builds for a kit whose target the recipe declares one for (launchLibrary), and attaches to the kit's player. The licences of what the player is made from come from licenses/ (scripts/licences.py): those of every library the build compiled, and of the target's platform's runtime. 'libraryInventory' names the folder and the inventory the macOS exporter reads a kit's libraries from (packaging/macos.rs): the player links none, so the folder is empty and the inventory lists no file.",
     "macos-universal": {
       "files": {
-        "player": {"at": "bin/retroarch", "from": "build:retroarch/retroarch"}
+        "player": {"at": "bin/retroarch", "from": "build:retroarch/retroarch"},
+        "launcher": {"at": "bin/librominabox-launch.dylib", "from": "made:launcher"}
       },
       "libraryInventory": {"folder": "Frameworks", "file": "runtime-dependencies.json"}
     },

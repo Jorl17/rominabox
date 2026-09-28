@@ -384,6 +384,76 @@ def build_launcher(destination: Path, target: str, environment: dict[str, str]) 
     return output
 
 
+INJECTOR = ROOT / "scripts/native_runtime/inject_dylib.c"
+
+
+def launch_library(kit: str) -> dict | None:
+    """The launcher in a kit as a library loaded into its player (macOS), as
+    declared in the recipe under the kit's target, or None for a kit with a
+    launcher program built next to the player (Windows)."""
+    return recipe()["launchLibrary"].get(require_build_target(kit))
+
+
+def build_launch_library(destination: Path, kit: str) -> Path:
+    """The kit's launch library, built into `destination` for every slice of
+    the kit's player and for the platform's deployment target, with the
+    install name that we load it by in the player."""
+    declared = launch_library(kit)
+    if declared is None:
+        raise SystemExit(f"the player recipe declares no launch library for {kit}")
+    output = destination / declared["output"]
+    output.parent.mkdir(parents=True, exist_ok=True)
+    processors = [flag for part in slices(kit) for flag in ("-arch", architecture_of(part).value)]
+    run(["cc", *processors, f"-mmacosx-version-min={deployment_target(kit)}", *declared["flags"],
+         f"-Wl,-install_name,{declared['loadedFrom']}/{declared['output']}",
+         "-o", str(output), *map(str, launcher_sources(platform_of(kit)))], destination, build_environment(kit))
+    return output
+
+
+def launch_library_sources(kit: str) -> str:
+    """A digest of everything we build the kit's launch library from: the
+    declaration in the recipe and every file included in its sources, as
+    found by the compiler, with the player's headers among them. We record it
+    in a kit and compare it with the tree's in the staging check."""
+    declared = launch_library(kit)
+    sources = launcher_sources(platform_of(kit))
+    listed = subprocess.run(["cc", "-MM", *map(str, sources)], capture_output=True, text=True, check=True,
+                            cwd=ROOT).stdout
+    # Make rules, `object: source header ...`. A trailing backslash continues
+    # a rule on the next line, and a backslash before a space escapes it.
+    words = listed.replace("\\\n", " ").replace("\\ ", "\0").split()
+    files = sorted({(ROOT / word.replace("\0", " ")).resolve() for word in words if not word.endswith(":")})
+    digest = hashlib.sha256(json.dumps([declared, deployment_target(kit)], sort_keys=True).encode())
+    for file in files:
+        digest.update(file.relative_to(ROOT).as_posix().encode() + b"\0" + file.read_bytes())
+    return digest.hexdigest()
+
+
+def attach_launch_library(player: Path, kit: str, workspace: Path) -> None:
+    """Attach the kit's launch library to every slice of the macOS `player`, to
+    be loaded before main and to prepare the arguments of main, then sign the
+    player ad hoc, as required for arm64 code on a Mac. We build the injector
+    for this Mac, where we run it, whatever the player is for."""
+    declared = launch_library(kit)
+    if declared is None:
+        raise SystemExit(f"the player recipe declares no launch library for {kit}")
+    injector = workspace / "inject-dylib"
+    run(["cc", "-Oz", "-o", str(injector), str(INJECTOR)], workspace, dict(os.environ))
+    loaded = f"{declared['loadedFrom']}/{declared['output']}"
+    held = sorted(architecture.value for architecture in architectures_in(player))
+    if len(held) == 1:
+        run([str(injector), str(player), loaded], workspace, dict(os.environ))
+    else:
+        parts = []
+        for architecture in held:
+            part = workspace / f"player-{architecture}"
+            run(["lipo", str(player), "-thin", architecture, "-output", str(part)], workspace, dict(os.environ))
+            run([str(injector), str(part), loaded], workspace, dict(os.environ))
+            parts.append(str(part))
+        run(["lipo", "-create", "-output", str(player), *parts], workspace, dict(os.environ))
+    run(["codesign", "--force", "--sign", "-", str(player)], workspace, dict(os.environ))
+
+
 def rmlui_linking(makefile: Path, source: Path) -> tuple[str, list[Path], list[str]]:
     """The RmlUi settings in the player's makefile: the archive we link (a
     name in RmlUi's build directory), its header directories under `source`,
