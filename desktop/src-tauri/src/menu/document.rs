@@ -191,11 +191,13 @@ fn place_screens(
     Ok(placed)
 }
 
-/// The page as it appears when the menu opens on Pause. We write the heading
-/// declared for Pause into the heading, and its footer, when it has one, into
-/// the footer hint, as we do at run time when Pause appears. A preview, an
-/// offscreen picture and the first screen of the game then show the same
-/// words, from one declaration.
+/// The page when the menu opens on Pause, with the declared heading of Pause
+/// in the heading and its footer, when it has one, in the footer hint, as we
+/// write them in the player when we show Pause. A preview, an offscreen
+/// picture and the first screen of the game then match, from one declaration.
+/// We write the footer in its declared words. Where we draw it, in the player
+/// and in the preview alike (`write_hint`), we make the key in brackets a
+/// separate element.
 pub(crate) fn opening_screen(manifest: &Manifest, document: &str) -> Result<String, String> {
     let pause = manifest.screen(ScreenRole::Pause).ok_or_else(|| {
         format!(

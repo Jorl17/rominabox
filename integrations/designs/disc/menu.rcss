@@ -71,6 +71,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #status { position: absolute; left: 24dp; top: 544dp; width: 700dp; text-align: left; font-size: 13dp; color: design(muted); }
 #footer { position: absolute; left: 24dp; bottom: 8dp; width: 912dp; height: 20dp; font-size: 13dp; color: design(edge); }
 #version { position: absolute; right: 0; top: 0; }
+/* The key in a hint, the ESC of "[ESC]  BACK", as a keycap in the colour of
+ * the lettering, so the key and its action look like two separate things. */
+.hint-key { padding: 0 3.2dp; background-color: design(edge); color: design(background); }
 /* The ROM-in-a-Box mark next to its name, pixel art on the pixel grid of the
  * lettering (1.6dp), in its colour, one space away plus the one-pixel side
  * bearing of a glyph, and two pixels down to centre it on the capitals. */

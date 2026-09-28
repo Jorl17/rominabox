@@ -50,7 +50,7 @@
           "text": "OPTIONS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "volume-level-fill": {
           "width": "456px"
@@ -265,7 +265,7 @@
           "text": "OPTIONS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "volume-level-fill": {
           "width": "0px"
@@ -291,7 +291,7 @@
           "text": "OPTIONS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "volume-level-fill": {
           "width": "405px"
@@ -317,7 +317,7 @@
           "text": "OPTIONS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "volume-level-fill": {
           "width": "456px"
@@ -346,7 +346,7 @@
           "text": "OPTIONS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "volume-level-fill": {
           "width": "456px"
@@ -375,7 +375,7 @@
           "text": "OPTIONS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "volume-level-fill": {
           "width": "456px"
@@ -404,7 +404,7 @@
           "text": "OPTIONS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "volume-level-fill": {
           "width": "456px"
@@ -433,7 +433,7 @@
           "text": "OPTIONS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "volume-level-fill": {
           "width": "456px"
@@ -971,7 +971,7 @@
           "text": "MENU CONTROLS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "menu-control-menu-1": {
           "display": "block",
@@ -1026,7 +1026,7 @@
           "text": "MENU CONTROLS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "menu-control-menu-1": {
           "display": "block",
@@ -1130,7 +1130,7 @@
           "text": "MENU CONTROLS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "menu-control-menu-1": {
           "display": "block",
@@ -1180,7 +1180,7 @@
           "text": "MENU CONTROLS"
         },
         "footer-hint": {
-          "text": "ESC  CANCEL"
+          "text": "[ESC]  CANCEL"
         },
         "menu-control-menu-1": {
           "display": "block",
@@ -1244,7 +1244,7 @@
           "text": "MENU CONTROLS"
         },
         "footer-hint": {
-          "text": "ESC  BACK"
+          "text": "[ESC]  BACK"
         },
         "menu-control-menu-1": {
           "display": "block",

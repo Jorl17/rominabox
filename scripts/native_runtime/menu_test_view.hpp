@@ -125,6 +125,12 @@ std::string text(const char *id) {
    return element ? element->GetInnerRML() : std::string("<no element ") + id + ">";
 }
 
+/* The words in an element, without the markup used for styling in a design. */
+std::string words(const char *id) {
+   Rml::Element *element = document.root() ? document.root()->GetElementById(id) : nullptr;
+   return element ? rib::words_of(element) : std::string("<no element ") + id + ">";
+}
+
 bool has_class(const char *id, const char *name) {
    Rml::Element *element = document.root() && id ? document.root()->GetElementById(id) : nullptr;
    return element && name && element->IsClassSet(name);

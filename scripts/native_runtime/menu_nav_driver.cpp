@@ -162,7 +162,7 @@ std::string marked(const char *state)
    return ids;
 }
 
-/* The words in each of `ids`, as markup, or null for one not in the document. */
+/* The words in each of `ids`, RML-encoded without the markup, or null for one not in the document. */
 std::string words(const std::vector<std::string>& ids)
 {
    std::string out = "{";
@@ -170,7 +170,7 @@ std::string words(const std::vector<std::string>& ids)
    {
       Rml::Element *element = view.document.root()->GetElementById(id);
       out += (out.size() > 1 ? "," : "") + json(id) + ":"
-            + (element ? json(element->GetInnerRML()) : std::string("null"));
+            + (element ? json(Rml::StringUtilities::EncodeRml(rib::words_of(element))) : std::string("null"));
    }
    return out + "}";
 }

@@ -225,14 +225,18 @@ void capture_look_and_ends(void *menu)
    check(!rib::hidden(view.document.root()->GetElementById("menu-controls-cancel")),
          "CANCEL shows while a binding is captured");
    expect_status("BACK: PRESS AN INPUT (9)", "a capture counts down in the row's own words");
-   check(inspect.text("footer-hint") == "ESC  CANCEL", "the footer says how to cancel: " + inspect.text("footer-hint"));
+   check(inspect.words("footer-hint") == "ESC  CANCEL", "the footer says how to cancel: " + inspect.words("footer-hint"));
+   {
+      Rml::Element *key = view.document.root()->GetElementById("footer-hint")->QuerySelector(".hint-key");
+      check(key && rib::words_of(key) == "ESC", "the key the footer names is its own element for the design to style");
+   }
    rib_menu_key(menu, RIB_KEY_CANCEL);
    frame(menu);
    expect_status("BINDING UNCHANGED", "the menu's back key during a capture");
    check(!inspect.has_class("menu-control-back-add", "capturing")
          && rib::hidden(view.document.root()->GetElementById("menu-controls-cancel")),
          "a cancelled capture looks done");
-   check(inspect.text("footer-hint") == "ESC  BACK", "the footer is the screen's again");
+   check(inspect.words("footer-hint") == "ESC  BACK", "the footer is the screen's again");
 
    capture(menu, "back", "key:escape");
    expect_status("BINDING UNCHANGED", "Escape during a capture");

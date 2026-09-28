@@ -71,14 +71,14 @@
       "id": "pause",
       "panel": "pause-panel",
       "heading": "MEMORY CARD",
-      "footer": "ESC  CONTINUE",
+      "footer": "[ESC]  CONTINUE",
       "button": "controls-back"
     },
     {
       "id": "disc",
       "panel": "disc-panel",
       "heading": "DISC",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "disc",
       "images": "discs"
     },
@@ -86,7 +86,7 @@
       "id": "discs",
       "panel": "discs-panel",
       "heading": "DISC",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "back": "BACK",
       "option": null
     },
@@ -94,7 +94,7 @@
       "id": "options",
       "panel": "options-panel",
       "heading": "OPTIONS",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "options",
       "label": "OPTIONS",
       "back": "BACK",
@@ -105,7 +105,7 @@
       "id": "controls",
       "panel": "controls-panel",
       "heading": "PAD",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "controls",
       "option": {
         "label": "PAD",
@@ -116,7 +116,7 @@
       "id": "shaders",
       "panel": "shaders-panel",
       "heading": "FILTERS",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "shaders",
       "back": "BACK",
       "option": {

@@ -20,6 +20,7 @@
 
 #include "rmlui/declarations.h"
 #include "rmlui/document_contract.hpp"
+#include "rmlui/elements.hpp"
 #include "rmlui/file_layer.hpp"
 #include "rmlui/render/platform.h"
 #include "rmlui/render/rmlui_gl.h"
@@ -175,6 +176,11 @@ int render(const std::string& document_path, const std::string& output, int widt
    for (const Change& change : changes)
       if (!failed && !apply(document, change))
          failed = 2;
+   /* The footer's hint, written as in the player (Screens::set_footer_hint).
+    * We make the key in brackets an element of its own. */
+   if (!failed)
+      if (Rml::Element *hint = document->GetElementById(rib::document_contract::FooterHint))
+         rib::write_hint(hint, rib::words_of(hint));
 
    /* We draw into a framebuffer of our own, because a window that is never
     * shown has no pixels to read back. */

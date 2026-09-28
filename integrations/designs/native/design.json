@@ -74,7 +74,7 @@
       "role": "pause",
       "panel": "pause-panel",
       "heading": "GAME PAUSED",
-      "footer": "ESC  CONTINUE",
+      "footer": "[ESC]  CONTINUE",
       "button": "controls-back"
     },
     {
@@ -82,7 +82,7 @@
       "role": "options",
       "panel": "options-panel",
       "heading": "OPTIONS",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "options",
       "label": "OPTIONS",
       "back": "BACK",
@@ -94,7 +94,7 @@
       "role": "controls",
       "panel": "controls-panel",
       "heading": "CONTROLS",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "controls",
       "option": {
         "label": "CONTROLS",
@@ -106,7 +106,7 @@
       "role": "menu-controls",
       "panel": "menu-controls-panel",
       "heading": "MENU CONTROLS",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "menu-controls",
       "option": {
         "label": "MENU CONTROLS",
@@ -118,7 +118,7 @@
       "role": "shaders",
       "panel": "shaders-panel",
       "heading": "SHADERS",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "shaders",
       "back": "BACK",
       "option": {
@@ -131,7 +131,7 @@
       "role": "achievements",
       "panel": "achievements-panel",
       "heading": "ACHIEVEMENTS",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "achievements",
       "back": "BACK",
       "option": {
@@ -146,7 +146,7 @@
       "role": "accounts",
       "panel": "accounts-panel",
       "heading": "QUICK SIGN IN",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "achievements-quick",
       "back": "BACK",
       "from": "achievements"
@@ -156,7 +156,7 @@
       "role": "discs",
       "panel": "discs-panel",
       "heading": "DISC",
-      "footer": "ESC  BACK",
+      "footer": "[ESC]  BACK",
       "button": "discs",
       "back": "BACK",
       "option": {
