@@ -149,8 +149,8 @@ int render(const std::string& document_path, const std::string& output, int widt
       failed = 4;
    }
    for (size_t index = 0; !failed && index < fonts.size(); ++index)
-      if (!Rml::LoadFontFace(fonts[index], false)
-            || (index == 0 && !Rml::LoadFontFace(fonts[index], true)))
+      if (!Rml::LoadFontFace(rib::to_rml_path(fonts[index]), false)
+            || (index == 0 && !Rml::LoadFontFace(rib::to_rml_path(fonts[index]), true)))
       {
          std::fprintf(stderr, "could not load the font %s\n", fonts[index].c_str());
          failed = 4;
@@ -163,8 +163,9 @@ int render(const std::string& document_path, const std::string& output, int widt
       context->SetDensityIndependentPixelRatio(rib::document_contract::canvas_density(width, height));
    /* In RmlUi, a document's folder, from which we read its pictures, is its
     * path up to the last forward slash. A Windows path with only backslashes
-    * has no folder there, and no picture would be read. */
-   const std::string source = std::filesystem::u8path(document_path).generic_u8string();
+    * has no folder there, and no picture would be read. A '?' would also cut
+    * the path there (file_layer.hpp). */
+   const std::string source = rib::to_rml_path(std::filesystem::u8path(document_path).generic_u8string());
    Rml::ElementDocument *document = context ? context->LoadDocument(source) : nullptr;
    if (!failed && !document)
    {

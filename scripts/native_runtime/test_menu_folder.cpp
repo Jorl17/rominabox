@@ -5,6 +5,7 @@
  * folder and check that the footer mark has the size from the style sheet
  * next to the document and that every picture we request exists. */
 #include "rmlui/view.hpp"
+#include "rmlui/file_layer.hpp"
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -21,6 +22,12 @@ int test_menu_named_folder(const char *assets, const std::vector<std::string>& f
          ++failures;
       }
    };
+   // Every path round-trips, whatever it contains, and RmlUi gets no '?'.
+   for (const std::string path : {"/Games/Who Wants a Game?.app", "C:/100% Games/a%3Fb?", "plain"})
+   {
+      check(rib::from_rml_path(rib::to_rml_path(path)) == path, "a path comes back from RmlUi as it went in");
+      check(rib::to_rml_path(path).find('?') == std::string::npos, "RmlUi is given no '?'");
+   }
    if (!view.initialize(assets, fonts, 960, 600, false, controls))
    {
       std::fprintf(stderr, "FAIL could not init RmlUi from %s\n", assets);

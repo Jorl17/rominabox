@@ -178,6 +178,7 @@ def check_menu_draw() -> bool:
         "-o", str(binary),
         str(NATIVE / "menu_gl_probe.cpp"),
         *map(str, context),
+        str(DRIVERS / "rmlui/file_layer.cpp"),
         str(DRIVERS / "rmlui/render/rmlui_gl.cpp"),
         str(DRIVERS / "rmlui/render/rmlui_gl3.cpp"),
         str(DRIVERS / "third_party/lodepng.cpp"),
