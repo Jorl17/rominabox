@@ -8,7 +8,6 @@
 
 use crate::shader_format::{Language, VideoDriver};
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::{Path, PathBuf};
 
 /// The choice that means no preset. It is not a file, and an author does not
@@ -224,15 +223,25 @@ pub fn video_driver(selection: &ShaderSelection) -> Result<VideoDriver, String> 
 struct Authored {
     language: Language,
     named: Option<Vec<(PathBuf, String)>>,
+    /// For a single slang pass, the files it `#include`s, beside it.
+    included: Vec<(PathBuf, String)>,
 }
 
 fn authored(path: &Path) -> Result<Authored, String> {
     use crate::shader_format::{kind, require_runnable_pass, text, Kind};
     Ok(match kind(&text(path)?) {
-        Kind::Pass => Authored {
-            language: require_runnable_pass(path)?,
-            named: None,
-        },
+        Kind::Pass => {
+            let language = require_runnable_pass(path)?;
+            let included = match (language, path.parent()) {
+                (Language::Slang, Some(folder)) => crate::shader_preset::includes(path, folder)?,
+                _ => Vec::new(),
+            };
+            Authored {
+                language,
+                named: None,
+                included,
+            }
+        }
         Kind::Preset => {
             let (language, named) = crate::shader_preset::files(path)?;
             if named.iter().any(|(_, name)| name == ROW_PICTURE) {
@@ -243,6 +252,7 @@ fn authored(path: &Path) -> Result<Authored, String> {
             Authored {
                 language,
                 named: Some(named),
+                included: Vec::new(),
             }
         }
     })
@@ -315,7 +325,9 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
                 let pass = format!("{id}.{pass_extension}");
                 let preset_file = format!("{id}.{preset_extension}");
                 let written = vec![(preset_file.clone(), crate::shader_source::preset(&pass))];
-                (preset_file, vec![(path.clone(), pass)], written)
+                let mut files = vec![(path.clone(), pass)];
+                files.extend(author.included);
+                (preset_file, files, written)
             }
             // We copy a preset unchanged, with the extension of its
             // language, because RetroArch reads it by that extension.
@@ -560,6 +572,7 @@ pub fn unpack_selection(mut selection: ShaderSelection, root: &Path) -> ShaderSe
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     /// The menu that we compose in an export with this shader selection.
     fn composed(selection: ShaderSelection) -> crate::menu::Composition {
