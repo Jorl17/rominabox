@@ -334,6 +334,34 @@ bool loads_picture(bool core, const std::string& path)
    return texture && dimensions.x == 3 && dimensions.y == 2;
 }
 
+/* We load a picture in the document during the RmlUi layout, outside the
+ * menu's frame and after the game's frame. With glcore, GL_UNPACK_ROW_LENGTH
+ * is still at the frame's pitch then, and reading the picture's rows at that
+ * stride can crash a driver or give the wrong rows. Load the picture with
+ * that row length still set, read it back whole, and check that the game's
+ * row length is still set afterwards. */
+bool loads_picture_after_a_frame(bool core, const std::string& path)
+{
+   auto renderer = rib_menu_renderer(core);
+   Rml::Vector2i dimensions;
+   glPixelStorei(GL_UNPACK_ROW_LENGTH, frame_row_length);
+   const Rml::TextureHandle texture = renderer->LoadTexture(dimensions, path);
+   GLint row_length = 0;
+   glGetIntegerv(GL_UNPACK_ROW_LENGTH, &row_length);
+   glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+   if (!texture || dimensions.x != 3 || dimensions.y != 2)
+      return false;
+   std::vector<unsigned char> read(3 * 2 * 4, 0);
+   glBindTexture(GL_TEXTURE_2D, (GLuint)texture);
+   glPixelStorei(GL_PACK_ALIGNMENT, 1);
+   glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+   glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, read.data());
+   glBindTexture(GL_TEXTURE_2D, 0);
+   renderer->ReleaseTexture(texture);
+   return row_length == frame_row_length
+      && std::all_of(read.begin(), read.end(), [](unsigned char value) { return value == 255; });
+}
+
 int check(bool core, Leftover leftover, const char *name, const std::string& picture)
 {
    OffscreenGl *context = offscreen_gl_create(core);
@@ -344,6 +372,7 @@ int check(bool core, Leftover leftover, const char *name, const std::string& pic
    }
    const Draw drawn = draw(core, leftover);
    const bool loaded = loads_picture(core, picture);
+   const bool loaded_after_a_frame = loads_picture_after_a_frame(core, picture);
    /* Once per context, because this check is not about the leftover arrays. */
    const Text text = leftover == Leftover::none ? draws_text_as_given(core, name, picture) : Text{true, true};
    const Window window = leftover == Leftover::none ? draws_into_the_window(core) : Window{true, true};
@@ -372,6 +401,12 @@ int check(bool core, Leftover leftover, const char *name, const std::string& pic
    if (!loaded)
    {
       std::printf("FAIL %s context could not load %s as a 3x2 picture\n", name, picture.c_str());
+      return 1;
+   }
+   if (!loaded_after_a_frame)
+   {
+      std::printf("FAIL %s context picture loaded after a frame left GL_UNPACK_ROW_LENGTH at %d was not uploaded as given\n",
+            name, (int)frame_row_length);
       return 1;
    }
    if (!drawn.state_restored)
