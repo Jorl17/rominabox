@@ -17,11 +17,12 @@ changes: the port is 1420, the identifiers have no suffix, and
 `stable_identity` is the same. This is important, because a regression test
 checks it so that a player's saves survive a re-export of the same game.
 
-We do NOT isolate the cargo target and the submodule's object store. An
-isolated 6 GB target would cost 6 GB per worktree to avoid a lock that only
-serialises compilation, and isolated submodule objects would mean a new
-clone of 289 MB that git can share at no cost. We share large artifacts
-that depend only on their content.
+Each worktree has a separate cargo target. With a shared one, a worktree
+could run the build of another. The freshness check in cargo uses file times
+and paths relative to the checkout, so a build from another checkout passes
+as up to date. A target takes several gigabytes, so in create and adopt we
+stop with an error when less than 15 GB is free. We share the submodule's
+object store, which git does at no cost.
 
 We copy the prepared runtime kit and do not share it. Through a symlink,
 staging a design in a worktree would write into the checkout it came from,
@@ -85,6 +86,19 @@ def worktree_path(suffix: str) -> Path:
     additional working directory."""
     return ROOT.parent / f"{ROOT.name}-worktrees" / suffix
 MAX_OFFSET = 200
+# The minimum free space, because each worktree has a separate cargo target.
+MINIMUM_FREE_BYTES = 15 * 10**9
+
+
+def require_room(path: Path) -> None:
+    """Refuse to set up a worktree on a disk with less than 15 GB free."""
+    existing = next(folder for folder in (path, *path.parents) if folder.exists())
+    free = shutil.disk_usage(existing).free
+    if free < MINIMUM_FREE_BYTES:
+        raise SystemExit(
+            f"only {free // 10**8 / 10} GB free; a worktree needs "
+            f"{MINIMUM_FREE_BYTES // 10**9} GB for its own cargo target"
+        )
 
 
 def git(*arguments: str, cwd: Path | None = None) -> str:
@@ -104,8 +118,7 @@ def common_dir() -> Path:
     The output of `--git-common-dir` is relative. Resolved against the process
     working directory, it is the *worktree's* `.git` when we run the command
     from inside one. Every worktree would then get a separate lock, so
-    allocation would not serialise, and a separate cargo target, so nothing
-    would be shared.
+    allocation would not serialise.
     """
     reported = Path(git("rev-parse", "--git-common-dir"))
     return reported if reported.is_absolute() else (ROOT / reported).resolve()
@@ -356,6 +369,7 @@ def create(suffix: str, branch: str | None, own_runtime: bool) -> int:
     path = worktree_path(suffix)
     if path.exists():
         raise SystemExit(f"{path} already exists; use adopt, or pick another suffix")
+    require_room(path)
     path.parent.mkdir(exist_ok=True)
     name = branch or f"{ROOT.name}-{suffix}"
     # With `git worktree add <path>` and no -b, git checks out the branch named
@@ -408,6 +422,7 @@ def adopt() -> int:
     suffix = (here.name if here.parent == worktree_path(here.name).parent
               else here.name.removeprefix(f"{ROOT.name}-") or here.name)
     existing = known[here].get("local") or {}
+    require_room(here)
     # The setup from create, for a worktree created some other way.
     link_build_artifacts(here, own_copy=False)
     with Lock(common_dir() / LOCK_NAME):
@@ -422,14 +437,14 @@ def environment() -> int:
     if not config.exists():
         raise SystemExit(f"no {LOCAL_CONFIG} here; run adopt first")
     local = json.loads(config.read_text())
-    shared_target = common_dir() / "shared-cargo-target"
     print(f"export ROMINABOX_VITE_PORT={local['vitePort']}")
     print(f"export ROMINABOX_BUNDLE_ID={local['builderBundleId']}")
     print(f"export ROMINABOX_GAME_BUNDLE_PREFIX={local['gameBundlePrefix']}")
     if local.get("accountsFolder"):
         print(f"export ROMINABOX_ACCOUNTS_FOLDER={json.dumps(local['accountsFolder'])}")
-    # We share this on purpose. See the module docstring.
-    print(f"export CARGO_TARGET_DIR={json.dumps(str(shared_target))}")
+    # A separate cargo target, beside the manifests. A shell set up for the
+    # shared target may still have it in its environment.
+    print("unset CARGO_TARGET_DIR")
     return 0
 
 
@@ -482,7 +497,7 @@ def remove(suffix: str, keep_data: bool) -> int:
     print(f"removed {path}")
     if kept:
         print(f"kept its fork commits at {kept}")
-    print("shared runtime kit and cargo target were left alone")
+    print("shared folders were unlinked and left alone")
     return 0
 
 

@@ -29,7 +29,7 @@ worktree.local.json
 /desktop/public/controllers/
 /desktop/node_modules
 
-# Cargo build output; shared between worktrees through CARGO_TARGET_DIR.
+# Cargo build output; each worktree has its own.
 /desktop/src-tauri/target
 
 # C object files from ad-hoc compiles; build steps write theirs under work/.

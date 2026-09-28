@@ -2,8 +2,8 @@
 
 The allocator is the code here most sensitive to concurrency, and its
 failures produce no error: two checkouts that use the same port, a lock that
-does not serialise, or a "shared" cargo target that is not shared. Because
-we get no message for any of those, we check them here.
+does not serialise, or two checkouts that build into one cargo target.
+Because we get no message for any of those, we check them here.
 
     python3 scripts/test_worktree.py
 
@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -37,12 +38,11 @@ def check(condition: bool, message: str) -> None:
 
 
 def the_common_dir_is_shared_not_per_worktree() -> None:
-    """Check for the defect that would cost gigabytes per worktree and break locking.
+    """Check for the defect that would break locking entirely.
 
     The output of `git rev-parse --git-common-dir` is RELATIVE. Against the
     process working directory it resolves to the worktree's `.git`, so every
-    worktree would take a different lock, without serialisation, and get a
-    separate cargo target, without sharing. We must resolve it against the
+    worktree would take a different lock. We must resolve it against the
     repository root, whatever directory we run the command from.
     """
     from_root = worktree.common_dir()
@@ -170,6 +170,9 @@ def adopt_works_from_inside_the_worktree_it_adopts() -> None:
                 [sys.executable, str(made / "scripts/worktree.py"), "adopt"],
                 cwd=made, capture_output=True, text=True,
             )
+            if shutil.disk_usage(made).free < worktree.MINIMUM_FREE_BYTES:
+                check("15 GB" in done.stderr, f"adopt refuses on a nearly full disk: {done.stderr.strip()}")
+                return
             check(
                 done.returncode == 0,
                 f"adopt succeeds inside a worktree: {done.stdout.strip() or done.stderr.strip()}",
@@ -537,6 +540,40 @@ def create_refuses_an_existing_branch_instead_of_checking_it_out() -> None:
         )
 
 
+def create_refuses_without_room_for_a_cargo_target() -> None:
+    """Each worktree has a separate cargo target, so in create we require 15 GB
+    free and refuse before we make anything. We fake only the disk space."""
+    import types
+
+    suffix = "roomcheck"
+    path = worktree.worktree_path(suffix)
+    name = f"{worktree.ROOT.name}-{suffix}"
+    if path.exists():
+        check(False, f"{path} is already there, so this check cannot start")
+        return
+    measure = shutil.disk_usage
+    shutil.disk_usage = lambda _: types.SimpleNamespace(free=worktree.MINIMUM_FREE_BYTES - 1)
+    try:
+        try:
+            worktree.create(suffix, None, False)
+            refused = ""
+        except SystemExit as refusal:
+            refused = str(refusal)
+        check("15 GB" in refused, f"create refuses on a nearly full disk: {refused or 'it went ahead'}")
+        check(not path.exists() and not worktree.branch_exists(name), "and made nothing")
+    finally:
+        shutil.disk_usage = measure
+        if path.exists():
+            subprocess.run(
+                ["git", "-C", str(worktree.ROOT), "worktree", "remove", "--force", str(path)],
+                capture_output=True, text=True,
+            )
+        subprocess.run(
+            ["git", "-C", str(worktree.ROOT), "branch", "-D", name],
+            capture_output=True, text=True,
+        )
+
+
 # From inside a worktree, these checks are the wrong checks. The common git
 # directory is always the canonical checkout's, and we do not test a worktree
 # of a worktree. Without this, a run of the full suite inside a worktree would
@@ -668,6 +705,7 @@ ANYWHERE = [
     # old branch by mistake. If we skipped that case here, the tests would pass
     # on the checkout where the mistake happens.
     create_refuses_an_existing_branch_instead_of_checking_it_out,
+    create_refuses_without_room_for_a_cargo_target,
 ]
 
 

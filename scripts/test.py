@@ -255,7 +255,7 @@ SCOPES = [
     ),
     Scope(
         "worktree",
-        "isolation between parallel checkouts: the shared git dir, the lock, refusing the canonical tree, and that create will not check out an existing branch",
+        "isolation between parallel checkouts: the shared git dir, the lock, refusing the canonical tree, each checkout's own cargo target, 15 GB free before one is made, and that create will not check out an existing branch",
         "that a real worktree builds or runs; it creates nothing outside a temporary directory",
         [PYTHON, str(ROOT / "scripts/test_worktree.py")],
     ),
