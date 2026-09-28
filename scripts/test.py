@@ -386,6 +386,13 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_line_limit.py")],
     ),
     Scope(
+        "icons",
+        "that every ROM-in-a-Box icon (the builder's .icns, .ico and header picture, and a game's icon without artwork) still matches a fresh render of logo.svg",
+        "that the icon looks right, or how macOS draws it; only that the files have not diverged from the drawing",
+        [PYTHON, str(ROOT / "scripts/render_icons.py"), "--check"],
+        slow=True,
+    ),
+    Scope(
         "artwork",
         "that every controller PNG still matches a fresh render of its SVG source",
         "that the artwork is correct — only that the PNG has not diverged from the drawing",

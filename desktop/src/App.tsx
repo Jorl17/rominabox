@@ -29,6 +29,7 @@ import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import { ExportChoices } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
+import appIcon from "../src-tauri/icons/icon.png";
 import { MenuControlsEditor } from "./MenuControlsEditor";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
@@ -925,9 +926,7 @@ export function App() {
     <div className="app-shell">
       <header className="app-header">
         <div className="wordmark">
-          <span className="brand-mark" aria-hidden="true">
-            R<span>■</span>
-          </span>
+          <img className="brand-mark" src={appIcon} alt="" />
           <span>ROM-in-a-Box</span>
         </div>
         <span className="edition">
