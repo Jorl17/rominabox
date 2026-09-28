@@ -293,6 +293,8 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
  * edge, is not the next binding. */
 .menu-control-add { nav-right: none; }
 .menu-control-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
+/* The mark for "choosing this binding removes it". */
+.menu-control-mark { margin-left: 8dp; }
 #menu-controls-actions { position: absolute; left: 360dp; top: 508dp; width: 584dp; height: 38dp; }
 #menu-controls-actions button { position: absolute; top: 0; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 13dp; border-width: 1dp; text-align: center; }
 #menu-controls-back { left: 406dp; width: 176dp; font-size: 14dp; }

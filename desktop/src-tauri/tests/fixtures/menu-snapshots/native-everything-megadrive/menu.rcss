@@ -342,6 +342,8 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .menu-control-chip:hover, .menu-control-chip.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
 .menu-control-add { width: 38dp; padding: 0; font-size: 22dp; border-width: 3dp; }
 .menu-control-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
+/* The mark for "choosing this binding removes it". */
+.menu-control-mark { margin-left: 10dp; }
 #menu-controls-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
 #menu-controls-actions button { position: absolute; top: 0; font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
 #menu-controls-back { left: 0; width: 124dp; }
