@@ -18,6 +18,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import threading
 import time
 import zlib
@@ -44,6 +45,8 @@ TEST_MARKER = b"ROMINABOX_RA_TEST_HOST"
 # nothing beside it). A shipped game reaches the actual service over the
 # internet, and internet access works in the sandbox.
 SANDBOX_REACHES_LOOPBACK = {"macos": True, "windows": False}
+# The file that marks the storage of a game as belonging to this test.
+OWNER_MARKER = "achievements-native-owner"
 PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9h+AAAAABJRU5ErkJggg=="
 )
@@ -189,6 +192,12 @@ def reaching_the_service(app: Path) -> None:
         raise AssertionError(f"{app} still asks for its sandbox")
 
 
+def owner_of(rom: bytes) -> str:
+    """What we write into the storage of this test: this checkout and its
+    cartridge."""
+    return f"{ROOT}\n{hashlib.sha256(rom).hexdigest()}\n"
+
+
 def owned_storage(app: Path, rom: bytes) -> Path:
     data = shots.data_dir_of(app)
     home = shots.storage_home(app)
@@ -200,8 +209,8 @@ def owned_storage(app: Path, rom: bytes) -> Path:
             raise AssertionError(f"link in fixture storage path: {current}")
     if not data.resolve().is_relative_to(home):
         raise AssertionError(f"fixture storage escapes its games' folder: {data}")
-    marker = data / "achievements-native-owner"
-    owner = f"{ROOT}\n{hashlib.sha256(rom).hexdigest()}\n"
+    marker = data / OWNER_MARKER
+    owner = owner_of(rom)
     if data.exists() and any(data.iterdir()):
         if shots.redirected(marker) or not marker.is_file() or marker.read_text() != owner:
             raise AssertionError(f"unowned fixture storage: {data}")
@@ -221,6 +230,21 @@ def owned_storage(app: Path, rom: bytes) -> Path:
     data.mkdir(parents=True, exist_ok=True)
     marker.write_text(owner)
     return data
+
+
+def leave_storage(data: Path, rom: bytes) -> None:
+    """When the sandbox blocked the service, we ran the game outside it
+    (reaching_the_service), with its storage in the games folder of the
+    player, which a test run must leave as it was. We remove the storage
+    after the cases, and only when it has the marker of this test. In
+    a sandbox it is the sandbox folder, which we keep for the next run."""
+    if SANDBOX_REACHES_LOOPBACK[shots.PLATFORM]:
+        return
+    marker = data / OWNER_MARKER
+    if shots.redirected(data) or shots.redirected(marker) or not marker.is_file() \
+            or marker.read_text() != owner_of(rom):
+        raise AssertionError(f"not this test's storage, left in place: {data}")
+    shutil.rmtree(data)
 
 
 def session(data: Path, enabled: bool) -> None:
@@ -358,6 +382,7 @@ def main() -> None:
             run_case(app, output, "off-screen", ["options", "achievements", "report:off"])
             if service.seen():
                 raise AssertionError("opening the OFF screen contacted the service")
+            leave_storage(data, rom_bytes)
 
         service.clear()
         with shots.build_a_game(rom, output, settings={"includeAchievements": False}) as excluded_app:
