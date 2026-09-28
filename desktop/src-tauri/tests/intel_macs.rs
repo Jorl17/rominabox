@@ -287,3 +287,67 @@ fn zip_of(name: &str, bytes: &[u8]) -> Vec<u8> {
     }
     cursor.into_inner()
 }
+
+/// Return the oldest macOS that each processor slice of `path` runs on, from
+/// its load commands (`minos` of LC_BUILD_VERSION, `version` of the older
+/// LC_VERSION_MIN_MACOSX), newest first.
+fn minimums(path: &Path) -> Vec<String> {
+    let output = Command::new("otool").arg("-l").arg(path).output().unwrap();
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut found = Vec::new();
+    let mut in_min = false;
+    for line in text.lines().map(str::trim) {
+        if line.starts_with("cmd ") {
+            in_min = line == "cmd LC_VERSION_MIN_MACOSX";
+        }
+        if let Some(version) = line.strip_prefix("minos ") {
+            found.push(version.to_string());
+        } else if in_min {
+            if let Some(version) = line.strip_prefix("version ") {
+                found.push(version.to_string());
+            }
+        }
+    }
+    found
+}
+
+fn version(text: &str) -> Vec<u32> {
+    text.split('.').map(|part| part.parse().unwrap()).collect()
+}
+
+/// We require no newer macOS for a game than its programs need, because Intel
+/// Macs stop at older systems than recent Macs. We build the launch library
+/// at export for the system that the player recipe declares, as for the
+/// player. The game's Info.plist contains the newest minimum system of any of
+/// its programs.
+#[test]
+fn a_game_asks_for_the_oldest_macos_its_programs_run_on() {
+    let root = workspace();
+    let mut request = universal_request(&root);
+    cached_core(&root, "macos-x86_64", "x86_64");
+    request.intel_macs = true;
+    let app = export(&request, &Table::default()).unwrap();
+    let recipe: Value = serde_json::from_str(include_str!(
+        "../../../scripts/native_runtime/player-recipe.json"
+    ))
+    .unwrap();
+    let declared = recipe["deploymentTarget"]["macos"].as_str().unwrap();
+    let library = minimums(&app.join("Contents/MacOS/librominabox-launch.dylib"));
+    assert_eq!(library, [declared, declared], "the launch library's slices");
+    let newest = [
+        "Contents/MacOS/retroarch",
+        "Contents/MacOS/librominabox-launch.dylib",
+        "Contents/Resources/game-core.dylib",
+    ]
+    .iter()
+    .flat_map(|program| minimums(&app.join(program)))
+    .max_by_key(|found| version(found))
+    .unwrap();
+    let plist = fs::read_to_string(app.join("Contents/Info.plist")).unwrap();
+    assert!(
+        plist.contains(&format!(
+            "<key>LSMinimumSystemVersion</key><string>{newest}</string>"
+        )),
+        "the game asks for {newest}: {plist}"
+    );
+}
