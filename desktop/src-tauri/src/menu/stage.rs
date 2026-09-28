@@ -218,7 +218,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     let palette = palette(&request.palette)?;
     let values = tokens::design(&manifest, &palette);
     fonts(&mut composition, &manifest);
-    let stylesheet = tokens::substitute(&manifest.fragment(&manifest.documents.style)?, &values)?;
+    let stylesheet = tokens::substitute(&manifest.stylesheet()?, &values)?;
 
     if !request.show_menu {
         let splash = manifest.fragment(&manifest.documents.splash)?;

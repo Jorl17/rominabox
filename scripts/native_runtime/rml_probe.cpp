@@ -31,6 +31,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -203,13 +204,35 @@ int main(int argc, char** argv)
     }
 
     const std::filesystem::path document_file(document_path);
-    const auto font = document_file.parent_path() / "Silkscreen-Regular.ttf";
-    /* Without a font, text elements collapse to zero size and hit testing
-     * no longer matches them, so the output of this tool would be wrong
-     * while looking plausible. */
-    if (!Rml::LoadFontFace(font.string())) {
-        std::fprintf(stderr, "no font at %s\n", font.string().c_str());
+    /* Load the fonts that the design declares, as we do in the player: the
+     * `fonts` in the staged design.cfg, and the first is also the fallback for
+     * any glyph missing from a face. Without a font, text elements collapse to
+     * zero size and hit testing no longer matches them, so the output would be
+     * wrong. The same is true of a font that the player does not use. */
+    const auto declaration = document_file.parent_path() / "design.cfg";
+    std::vector<std::string> fonts;
+    {
+        std::ifstream cfg(declaration);
+        std::string line;
+        const std::string key = "fonts = \"";
+        while (std::getline(cfg, line)) {
+            if (line.rfind(key, 0) != 0)
+                continue;
+            std::istringstream names(line.substr(key.size(), line.find('"', key.size()) - key.size()));
+            for (std::string name; names >> name;)
+                fonts.push_back(name);
+        }
+    }
+    if (fonts.empty()) {
+        std::fprintf(stderr, "no fonts declared in %s\n", declaration.string().c_str());
         return 4;
+    }
+    for (size_t index = 0; index < fonts.size(); ++index) {
+        const auto font = (document_file.parent_path() / fonts[index]).string();
+        if (!Rml::LoadFontFace(font, false) || (index == 0 && !Rml::LoadFontFace(font, true))) {
+            std::fprintf(stderr, "no font at %s\n", font.c_str());
+            return 4;
+        }
     }
 
     Rml::Context* context = Rml::CreateContext("probe", {width, height});
