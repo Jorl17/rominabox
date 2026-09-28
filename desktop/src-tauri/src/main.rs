@@ -254,7 +254,7 @@ fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     )
 }
 
-/// Wait for a button on a controller and return its pad position.
+/// Wait for a press on a controller and return its pad position.
 #[tauri::command]
 async fn capture_pad_position(seconds: u64) -> Result<Option<String>, String> {
     tauri::async_runtime::spawn_blocking(move || {

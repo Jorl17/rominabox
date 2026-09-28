@@ -189,12 +189,13 @@ export function assessFirmware(
   return invoke("assess_firmware", { system, files });
 }
 /**
- * Wait up to `seconds` for a button on a controller, and return its pad
- * position, or null on a timeout or when the wait was cancelled.
+ * Wait up to `seconds` for a press on a controller, a button or a moved stick
+ * or trigger, and return its pad position. Return null on a timeout, when the
+ * wait was cancelled, or when we cannot read a controller here (we read none
+ * in the browser preview).
  */
 export function capturePadPosition(seconds: number): Promise<string | null> {
-  if (!native)
-    return Promise.reject(new Error("Press on controller works in the app."));
+  if (!native) return Promise.resolve(null);
   return invoke("capture_pad_position", { seconds });
 }
 export function cancelPadCapture(): Promise<void> {
