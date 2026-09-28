@@ -1,7 +1,8 @@
 {
   "designs": [
     "native",
-    "disc"
+    "disc",
+    "rominabox"
   ],
   "cases": [
     {
@@ -157,6 +158,16 @@
           "key:down",
           "key:down",
           "key:right"
+        ],
+        "rominabox": [
+          "options",
+          "discs",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
         ]
       },
       "focused": {
@@ -177,6 +188,16 @@
           "discs-3",
           "discs-4",
           "discs-next",
+          "discs-next",
+          "discs-back"
+        ],
+        "rominabox": [
+          "volume-level",
+          "discs-0",
+          "discs-1",
+          "discs-2",
+          "discs-3",
+          "discs-4",
           "discs-next",
           "discs-back"
         ]
@@ -200,6 +221,13 @@
           "key:right",
           "key:right",
           "key:left"
+        ],
+        "rominabox": [
+          "options",
+          "discs",
+          "key:right",
+          "key:right",
+          "key:left"
         ]
       },
       "focused": {
@@ -211,6 +239,13 @@
           "discs-0"
         ],
         "disc": [
+          "discs-0",
+          "discs-5",
+          "discs-5",
+          "discs-0"
+        ],
+        "rominabox": [
+          "volume-level",
           "discs-0",
           "discs-5",
           "discs-5",
@@ -244,6 +279,21 @@
           [
             "move"
           ]
+        ],
+        "rominabox": [
+          [
+            "confirm"
+          ],
+          [
+            "confirm"
+          ],
+          [
+            "move"
+          ],
+          [],
+          [
+            "move"
+          ]
         ]
       }
     },
@@ -265,6 +315,13 @@
           "key:right",
           "discs-5",
           "key:down"
+        ],
+        "rominabox": [
+          "options",
+          "discs",
+          "key:right",
+          "discs-5",
+          "key:down"
         ]
       },
       "focused": {
@@ -276,6 +333,13 @@
           "discs-6"
         ],
         "disc": [
+          "discs-0",
+          "discs-5",
+          "discs-5",
+          "discs-6"
+        ],
+        "rominabox": [
+          "volume-level",
           "discs-0",
           "discs-5",
           "discs-5",
@@ -300,6 +364,14 @@
           "key:down",
           "key:left",
           "key:right"
+        ],
+        "rominabox": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down"
         ]
       },
       "focused": {
@@ -317,6 +389,14 @@
           "disc-back",
           "disc-back",
           "disc-back"
+        ],
+        "rominabox": [
+          "volume-level",
+          "controls",
+          "menu-controls",
+          "shaders",
+          "achievements",
+          "options-next"
         ]
       }
     }

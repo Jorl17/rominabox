@@ -1,7 +1,8 @@
 {
   "designs": [
     "native",
-    "disc"
+    "disc",
+    "rominabox"
   ],
   "cases": [
     {

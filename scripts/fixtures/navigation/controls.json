@@ -1,7 +1,8 @@
 {
   "designs": [
     "native",
-    "disc"
+    "disc",
+    "rominabox"
   ],
   "cases": [
     {
@@ -43,6 +44,14 @@
           "control-down",
           "control-right",
           "controls-device-current"
+        ],
+        "rominabox": [
+          "volume-level",
+          "control-up",
+          "control-left",
+          "control-down",
+          "control-right",
+          "controls-back"
         ]
       }
     },

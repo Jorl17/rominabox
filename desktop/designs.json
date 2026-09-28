@@ -1,8 +1,12 @@
 {
   "designs": [
     {
+      "id": "rominabox",
+      "name": "ROM-in-a-Box"
+    },
+    {
       "id": "native",
-      "name": "Default menu"
+      "name": "Pixel"
     },
     {
       "id": "disc",

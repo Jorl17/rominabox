@@ -3,7 +3,8 @@
 The builder's `desktop/src/fonts/ScienceGothic.ttf` has a weight axis. In the
 game's menu renderer we use a font file as one fixed face, so for games we
 take a fixed Bold (700, the weight of the builder's wordmark) of that same
-file, limited to printable ASCII:
+file, limited to Latin-1: printable ASCII, the · and × in the menus, and the
+accented letters of game and achievement names:
 
     python3 scripts/cut_game_font.py
 """
@@ -28,7 +29,7 @@ def main() -> None:
     options.name_IDs = ["*"]
     options.notdef_outline = True
     cutter = subset.Subsetter(options)
-    cutter.populate(unicodes=range(0x20, 0x7F))
+    cutter.populate(unicodes=[*range(0x20, 0x7F), *range(0xA0, 0x100)])
     cutter.subset(face)
     face.save(CUT)
     print(f"{CUT.relative_to(ROOT)}: {CUT.stat().st_size} bytes")

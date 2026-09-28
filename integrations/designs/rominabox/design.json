@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "rominabox",
+  "name": "ROM-in-a-Box",
+  "description": "ROM-in-a-Box's own menu: Native's screens drawn flat, every word in Science Gothic.",
+  "documents": {
+    "restyle": "restyle.rcss"
+  }
+}

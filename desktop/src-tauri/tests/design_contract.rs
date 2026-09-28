@@ -160,8 +160,8 @@ fn every_declared_overlay_has_an_element_in_the_design() {
              how to reach the pause menu",
             design.display()
         );
-        let drawn =
-            menu_document(&design) + &std::fs::read_to_string(design.join("splash.rml")).unwrap();
+        let manifest = rominabox_desktop::menu::Manifest::load(&design).unwrap();
+        let drawn = menu_document(&design) + &manifest.fragment(&manifest.documents.splash).unwrap();
         for overlay in &overlays {
             assert!(
                 drawn.contains(&format!("id=\"{}\"", overlay.id)),
@@ -226,7 +226,9 @@ fn no_overlay_is_also_a_screen() {
 #[test]
 fn an_overlays_leaving_time_is_declared_once_and_read_by_both_consumers() {
     for design in designs() {
-        let sheet = std::fs::read_to_string(design.join("menu.rcss")).expect("a stylesheet");
+        let sheet = rominabox_desktop::menu::Manifest::load(&design)
+            .and_then(|manifest| manifest.stylesheet())
+            .expect("a stylesheet");
         for overlay in
             rominabox_desktop::menu::declared_overlays(&design).expect("a design's overlays")
         {

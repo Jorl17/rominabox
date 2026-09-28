@@ -2,6 +2,7 @@
   "designs": [
     "native",
     "disc",
+    "rominabox",
     "pause-column",
     "sparse"
   ],
@@ -39,6 +40,10 @@
         "pause-column": [
           "slot-1",
           "slot-2"
+        ],
+        "rominabox": [
+          "slot-1",
+          "slot-4"
         ]
       }
     },
@@ -74,6 +79,12 @@
           "slot-1",
           "slot-1",
           "slot-1"
+        ],
+        "rominabox": [
+          "slot-1",
+          "slot-2",
+          "slot-3",
+          "slot-3"
         ]
       }
     },
@@ -104,6 +115,11 @@
           "slot-4",
           "slot-5",
           "slot-6"
+        ],
+        "rominabox": [
+          "slot-4",
+          "resume",
+          "resume"
         ]
       }
     },
@@ -137,6 +153,12 @@
         "sparse": [
           "save",
           "quit",
+          "quit",
+          "quit"
+        ],
+        "rominabox": [
+          "save",
+          "options",
           "quit",
           "quit"
         ]
@@ -179,6 +201,13 @@
           "options",
           "options",
           "options"
+        ],
+        "rominabox": [
+          "resume",
+          "resume",
+          "resume",
+          "resume",
+          "resume"
         ]
       }
     },
@@ -204,6 +233,10 @@
         "pause-column": [
           "resume",
           "resume"
+        ],
+        "rominabox": [
+          "slot-4",
+          "slot-1"
         ]
       }
     },
@@ -232,6 +265,11 @@
         ],
         "sparse": [
           "options",
+          "resume",
+          "resume"
+        ],
+        "rominabox": [
+          "resume",
           "resume",
           "resume"
         ]
@@ -267,6 +305,11 @@
           "save",
           "quit",
           "quit"
+        ],
+        "rominabox": [
+          "save",
+          "load",
+          "options"
         ]
       }
     },
@@ -330,6 +373,11 @@
           "slot-2",
           "slot-3",
           "slot-3"
+        ],
+        "rominabox": [
+          "slot-2",
+          "slot-5",
+          "slot-5"
         ]
       },
       "sounds": {

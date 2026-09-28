@@ -2,6 +2,7 @@
   "designs": [
     "native",
     "disc",
+    "rominabox",
     "pause-column",
     "sparse",
     "options-columns",

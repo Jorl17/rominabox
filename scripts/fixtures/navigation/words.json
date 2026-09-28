@@ -2,6 +2,7 @@
   "designs": [
     "native",
     "disc",
+    "rominabox",
     "wording"
   ],
   "cases": [
@@ -344,6 +345,10 @@
         "wording": [
           "options",
           "discs"
+        ],
+        "rominabox": [
+          "options",
+          "discs"
         ]
       },
       "text": {
@@ -366,6 +371,14 @@
           },
           {
             "discs-0-state": "HERE"
+          }
+        ],
+        "rominabox": [
+          {
+            "discs-0-state": "IN"
+          },
+          {
+            "discs-0-state": "IN"
           }
         ]
       }

@@ -56,6 +56,7 @@ struct DocumentsFile {
     menu: Option<String>,
     splash: Option<String>,
     style: Option<String>,
+    restyle: Option<String>,
 }
 
 /// A font in the design, and its licence, which we ship with it.
@@ -351,6 +352,10 @@ pub struct Documents {
     pub menu: String,
     pub splash: String,
     pub style: String,
+    /// A stylesheet laid over `style`, so that in a design with Native's
+    /// screens and layout we state only what looks different. We never
+    /// inherit it from Native.
+    pub restyle: Option<String>,
 }
 
 /// A design, resolved against Native.
@@ -451,6 +456,7 @@ impl Manifest {
                     .ok_or_else(|| missing(&base, "documents.menu"))?,
                 splash: pick(|documents| &documents.splash, "documents.splash")?,
                 style: pick(|documents| &documents.style, "documents.style")?,
+                restyle: own_documents.and_then(|documents| documents.restyle.clone()),
             }
         };
         let fonts = own
@@ -557,6 +563,17 @@ impl Manifest {
 
     pub fn screen(&self, role: ScreenRole) -> Option<&Screen> {
         self.screens.iter().find(|screen| screen.role == Some(role))
+    }
+
+    /// The design's stylesheet as we read it for the menu, before we fill in
+    /// its tokens: its style, and its restyle laid over it.
+    pub fn stylesheet(&self) -> Result<String, String> {
+        let mut style = self.fragment(&self.documents.style)?;
+        if let Some(restyle) = &self.documents.restyle {
+            style.push('\n');
+            style.push_str(&self.fragment(restyle)?);
+        }
+        Ok(style)
     }
 
     /// A fragment from the design, or Native's when the design has none.
