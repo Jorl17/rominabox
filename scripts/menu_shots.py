@@ -657,6 +657,7 @@ def _build_a_game(
     settings: dict | None = None,
     design: str = "native",
     palette: str = "blue",
+    namespace: str = "",
 ) -> Path:
     """Export a game from the tree as it is now, and return the app.
 
@@ -705,7 +706,7 @@ def _build_a_game(
         input=json.dumps(request),
         capture_output=True,
         text=True,
-        env=dict(os.environ, ROMINABOX_GAME_BUNDLE_PREFIX=shot_bundle_prefix(workspace)),
+        env=dict(os.environ, ROMINABOX_GAME_BUNDLE_PREFIX=shot_bundle_prefix(workspace) + namespace),
     )
     if result.returncode != 0:
         raise SystemExit(f"could not export a game to shoot:\n{result.stdout[-900:]}")
@@ -724,8 +725,12 @@ def build_a_game(
     settings: dict | None = None,
     design: str = "native",
     palette: str = "blue",
+    namespace: str = "",
 ) -> Iterator[Path]:
     """Keep one generated export only until the end of the block.
+
+    `namespace` is the end of the game's bundle prefix, so games with the same
+    content made at once (one per design) have separate storage.
 
     The app may still be in use by a player that timed out. In that case
     only, keep the temporary directory and print its location for inspection.
@@ -737,7 +742,7 @@ def build_a_game(
     created = run_dir.lstat()
     keep = False
     try:
-        app = _build_a_game(rom, workspace, run_dir, system, settings, design, palette)
+        app = _build_a_game(rom, workspace, run_dir, system, settings, design, palette, namespace)
         try:
             yield app
         except PlayerTimeout as error:

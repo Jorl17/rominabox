@@ -39,12 +39,15 @@ a hidden entry cannot pass for one shown on another page. With
 from __future__ import annotations
 
 import functools
+import io
 import json
 import os
 import re
 import subprocess
 import sys
 import tempfile
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -518,6 +521,8 @@ def require_swap(design: str, written: str) -> str | None:
 
 @contextmanager
 def export_game(content: Path, design: str) -> Iterator[Path]:
+    """Return a game of `content` in `design`, stored apart from the game of the
+    same content in any other design, so that we can run them all at once."""
     require_disk()
     print(f"export {design} {content.name}", flush=True)
     with menu_shots.build_a_game(
@@ -526,6 +531,7 @@ def export_game(content: Path, design: str) -> Iterator[Path]:
         system=system_for(content),
         design=design,
         palette=palette_id(),
+        namespace=f".{design}",
     ) as app:
         yield app
 
@@ -691,61 +697,103 @@ def focus_walk(app: Path, screens: list[dict], shot: Path) -> list[str]:
     return reached
 
 
+class JobOutput(io.TextIOBase):
+    """Standard output kept apart for each job that runs beside others, so that
+    we print the lines of a job together when it ends."""
+
+    def __init__(self, real) -> None:
+        self.real = real
+        self.local = threading.local()
+
+    def write(self, text: str) -> int:
+        buffer = getattr(self.local, "buffer", None)
+        return (buffer if buffer is not None else self.real).write(text)
+
+    def flush(self) -> None:
+        if getattr(self.local, "buffer", None) is None:
+            self.real.flush()
+
+
+def two_disc_game(playlist: Path, design: str, apps: list[Path]) -> list[str]:
+    """Check that choosing disc 2 swaps the image in the core, and that Options lists Disc."""
+    with export_game(playlist, design) as app:
+        apps.append(app)
+        written = launch(
+            app,
+            script_of(swap_steps(design), AFTER_SWAP_FRAMES),
+            SHOTS / f"{design}-two-list.png",
+        )
+        problem = require_swap(design, written)
+        if problem:
+            return [problem]
+        screens = design_screens(design)
+        listing = listing_of(screens)
+        if listing.get("option"):
+            reached = focus_walk(app, screens, SHOTS / f"{design}-two-options.png")
+            if listing["button"] not in reached:
+                return [f"{design}: a two-disc game does not show the Disc entry"]
+    return []
+
+
+def one_disc_game(design: str, apps: list[Path]) -> list[str]:
+    """Check that we hide the Disc entry for a cartridge, and that pressing DISC opens the circle."""
+    with export_game(CARTRIDGE, design) as app:
+        apps.append(app)
+        screens = design_screens(design)
+        listing = listing_of(screens)
+        redirect = redirect_of(screens, listing["id"])
+        shot = SHOTS / f"{design}-one.png"
+        launch(app, script_of(one_disc_steps(design)), shot)
+        if listing.get("option"):
+            reached = focus_walk(app, screens, SHOTS / f"{design}-one-options.png")
+            if listing["button"] in reached:
+                return ["a one-disc game must not show the entry"]
+            # The focus went past the place of the entry, so it is hidden
+            # and not on a page that we did not turn to. When an export has
+            # no such entry at all, there is nothing to hide.
+            entries = option_entries(app)
+            after = (entries[entries.index(listing["button"]) + 1:]
+                     if listing["button"] in entries else reached)
+            if not any(entry in reached for entry in after):
+                return ["focus never passed the Disc entry's place in Options, so the walk proves nothing"]
+        if redirect is not None:
+            if not circle_open(open_image(shot), menu_asset(app, "menu.rcss"), app):
+                return ["the DISC button did not open the circle"]
+    return []
+
+
 def exported_player(playlist: Path) -> list[str]:
+    """Export and launch the two-disc and one-disc game of every design at once.
+    We store each game apart (export_game), and print the lines of each game
+    together, in this order, when all have ended."""
     require_disk()
     fresh_player_dir()
     before = player_support.snapshot()
     found: list[str] = []
     exported_apps: list[Path] = []
+    games = [functools.partial(two_disc_game, playlist, design, exported_apps)
+             for design in disc_designs()]
+    games += [functools.partial(one_disc_game, design, exported_apps)
+              for design in disc_designs()]
+    output = JobOutput(sys.stdout)
+
+    def run_alone(game) -> tuple[str, list[str], BaseException | None]:
+        buffer = output.local.buffer = io.StringIO()
+        try:
+            problems = game()
+            return buffer.getvalue(), problems, None
+        except BaseException as error:  # reported after every game's lines
+            return buffer.getvalue(), [], error
+        finally:
+            output.local.buffer = None
+
+    failure: BaseException | None = None
+    sys.stdout = output
     try:
-        for design in disc_designs():
-            with export_game(playlist, design) as app:
-                exported_apps.append(app)
-                written = launch(
-                    app,
-                    script_of(swap_steps(design), AFTER_SWAP_FRAMES),
-                    SHOTS / f"{design}-two-list.png",
-                )
-                problem = require_swap(design, written)
-                if problem:
-                    found.append(problem)
-                    return found
-                screens = design_screens(design)
-                listing = listing_of(screens)
-                if listing.get("option"):
-                    reached = focus_walk(app, screens, SHOTS / f"{design}-two-options.png")
-                    if listing["button"] not in reached:
-                        found.append(f"{design}: a two-disc game does not show the Disc entry")
-                        return found
-        for design in disc_designs():
-            with export_game(CARTRIDGE, design) as app:
-                exported_apps.append(app)
-                screens = design_screens(design)
-                listing = listing_of(screens)
-                redirect = redirect_of(screens, listing["id"])
-                shot = SHOTS / f"{design}-one.png"
-                launch(app, script_of(one_disc_steps(design)), shot)
-                if listing.get("option"):
-                    reached = focus_walk(app, screens, SHOTS / f"{design}-one-options.png")
-                    if listing["button"] in reached:
-                        found.append("a one-disc game must not show the entry")
-                        return found
-                    # The focus went past the place of the entry, so it is hidden
-                    # and not on a page that we did not turn to. When an export has
-                    # no such entry at all, there is nothing to hide.
-                    entries = option_entries(app)
-                    after = (entries[entries.index(listing["button"]) + 1:]
-                             if listing["button"] in entries else reached)
-                    if not any(entry in reached for entry in after):
-                        found.append(
-                            "focus never passed the Disc entry's place in Options, so the walk proves nothing"
-                        )
-                        return found
-                if redirect is not None:
-                    if not circle_open(open_image(shot), menu_asset(app, "menu.rcss"), app):
-                        found.append("the DISC button did not open the circle")
-                        return found
+        with ThreadPoolExecutor(max_workers=len(games)) as pool:
+            ended = list(pool.map(run_alone, games))
     finally:
+        sys.stdout = output.real
         for app in exported_apps:
             left = menu_shots.running_from(app)
             if left:
@@ -759,6 +807,12 @@ def exported_player(playlist: Path) -> list[str]:
                 "an exported launch wrote the account ROM-in-a-Box directory: "
                 + ", ".join(leaked[:8])
             )
+    for text, problems, error in ended:
+        print(text, end="", flush=True)
+        found.extend(problems)
+        failure = failure or error
+    if failure is not None:
+        raise failure
     return found
 
 
