@@ -9,6 +9,8 @@
 //! We do not launch a player or open a window, and we do not prove that
 //! RetroArch performs the action bound to a key.
 
+mod export_fixture;
+
 use rominabox_desktop::{
     controls::{self, Controls},
     hotkeys::{isolated_hotkey_config, HOTKEY_BINDS},
@@ -62,6 +64,7 @@ fn fixture_kit(root: &Path) -> PathBuf {
     fs::create_dir_all(kit.join("licenses/native")).unwrap();
     fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
     write_runtime_stub(&kit.join("bin/retroarch"));
+    export_fixture::write_launch_library_stub(&kit);
     fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
     for name in [
         "NATIVE-DEPENDENCIES.txt",
@@ -122,6 +125,7 @@ fn export_request(root: &Path, advanced: bool, controls: Controls) -> ExportRequ
         splash: false,
         advanced_emulator_access: advanced,
         intel_macs: false,
+        zip: None,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,

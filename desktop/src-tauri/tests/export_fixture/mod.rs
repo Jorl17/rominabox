@@ -40,11 +40,43 @@ pub fn workspace() -> rominabox_scratch::Scratch {
     rominabox_scratch::Scratch::dir("rominabox-packaging")
 }
 
+/// A launch library that does nothing, for both Mac processors, because a Mac
+/// kit has its launch library beside its player. To run the game's launcher
+/// in a test, attach the one from the tree (`attach_real_launcher`).
+pub fn write_launch_library_stub(kit: &Path) {
+    let library = kit.join("bin/librominabox-launch.dylib");
+    let source = library.with_extension("c");
+    fs::write(&source, "void rominabox_launch_stub(void) {}\n").unwrap();
+    let status = Command::new("cc")
+        .args(["-arch", "arm64", "-arch", "x86_64", "-dynamiclib", "-mmacosx-version-min=11.0"])
+        .args(["-install_name", "@executable_path/librominabox-launch.dylib", "-o"])
+        .arg(&library)
+        .arg(&source)
+        .status()
+        .unwrap();
+    assert!(status.success(), "could not compile the launch library stub");
+    fs::remove_file(source).unwrap();
+}
+
+/// Put the tree's launch library in the Mac kit `kit`, attached to its
+/// player as in scripts/build_kit.py, for a test that runs the exported
+/// game's launcher.
+pub fn attach_real_launcher(kit: &Path) {
+    let output = Command::new(rominabox_desktop::repo::python())
+        .arg(rominabox_desktop::repo::at("scripts/build_launcher.py"))
+        .arg("--kit")
+        .arg(kit)
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+}
+
 /// A macOS kit.
 pub fn fixture_kit(root: &Path) -> PathBuf {
     let kit = kit_base(root);
     fs::create_dir_all(kit.join("Frameworks")).unwrap();
     write_runtime_stub(&kit.join("bin/retroarch"));
+    write_launch_library_stub(&kit);
     fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
     fs::write(
         kit.join("runtime-dependencies.json"),
@@ -102,6 +134,7 @@ pub fn export_request_from(root: &Path, runtime_kit: PathBuf) -> ExportRequest {
         splash: false,
         advanced_emulator_access: false,
         intel_macs: false,
+        zip: None,
         keep_playing_in_background: false,
         autosave_on_quit: false,
         menu_entries: None,

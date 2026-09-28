@@ -1,15 +1,15 @@
-//! A macOS app. This file contains the packager and the steps only for a Mac
-//! export, which are the Info.plist, the sandbox entitlements, the launch
-//! library in the app, and freezing, relocating and signing its Mach-O files.
+//! A macOS app: the packager, and the work for a Mac export only. That
+//! is the Info.plist and the sandbox entitlements, the launch library next to
+//! the player in the kit, and relocating and signing the Mach-O files. We use
+//! no Apple tool, so someone can make a Mac game on any system (`crate::mach_o`).
 
 use super::app_files::{copy_file, make_executable, tree_size};
 use super::launch_plan::accounts_folder;
 use super::slices::{self, Arch};
-use super::{
-    check_cancelled, player_recipe, ErrorStage, ExportError, ExportRequest, OwnedStaging, Packager,
-};
+use super::{check_cancelled, kit_file, ErrorStage, ExportError, ExportRequest, Packager};
 use crate::icons;
 use crate::launch_contract::{app_file, core_file, shipped};
+use crate::mach_o::{self, bundle, entitlements::Entitlements, entitlements::Value};
 use crate::target::Target;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
@@ -18,10 +18,11 @@ use std::ffi::OsStr;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread;
-use std::time::Duration;
+
+/// Where the files are in a Mac kit, which is one kit for every Mac.
+const KIT: Target = Target::MacosArm64;
 
 /// A macOS app: one bundle, with the player in the launcher process, the
 /// libraries relocated next to it, and a signature with the game's sandbox.
@@ -33,7 +34,8 @@ pub(super) struct MacosPackager {
     resources: PathBuf,
     frameworks: PathBuf,
     runtime: PathBuf,
-    /// Every Mach-O file in the app, which we relocate and sign.
+    /// Every Mach-O in the app, in the order we relocate and sign them, with
+    /// the player first.
     mach_objects: Vec<PathBuf>,
 }
 
@@ -54,20 +56,13 @@ impl MacosPackager {
 
 impl Packager for MacosPackager {
     fn check_host(&self) -> Result<(), ExportError> {
-        if !cfg!(target_os = "macos") {
-            return Err(ExportError::new(
-                ErrorStage::Refused,
-                "Mac apps can only be made on a Mac.",
-            ));
-        }
-        if !Path::new("/usr/bin/codesign").is_file() {
-            return Err(ExportError::new(ErrorStage::Refused, "This version of macOS does not provide the signing service required by this build. No tools were installed and no app was exported."));
-        }
+        // We compile nothing and run no Apple tool, so someone can make a Mac
+        // game on any machine with a Mac kit.
         Ok(())
     }
 
     fn player_in_kit(&self) -> PathBuf {
-        PathBuf::from("bin/retroarch")
+        kit_file(KIT, "player")
     }
 
     fn lay_out(&mut self, app: &Path) -> Result<PathBuf, ExportError> {
@@ -145,9 +140,20 @@ impl Packager for MacosPackager {
         )
     }
 
-    fn install_launcher(&mut self, _runtime_kit: &Path) -> Result<(), ExportError> {
-        install_launch_library(&self.macos, &self.runtime, &self.archs)?;
-        self.mach_objects.push(self.macos.join(LAUNCH_LIBRARY));
+    /// The kit's launch library next to the player, at the path already
+    /// linked into the kit's player, with the slices for the app's processors.
+    fn install_launcher(&mut self, runtime_kit: &Path) -> Result<(), ExportError> {
+        let library = runtime_kit.join(kit_file(KIT, "launcher"));
+        if !library.is_file() {
+            return Err(ExportError::new(
+                ErrorStage::Validate,
+                format!("the runtime kit has no launch library at {}", library.display()),
+            )
+            .about(&library));
+        }
+        let installed = self.macos.join(launch_library_name());
+        slices::keep(&library, &self.archs, &installed, "This builder's launcher", ErrorStage::Configure)?;
+        self.mach_objects.push(installed);
         Ok(())
     }
 
@@ -179,7 +185,7 @@ impl Packager for MacosPackager {
         &mut self,
         request: &ExportRequest,
         identity: &str,
-        staging: &Path,
+        _staging: &Path,
         cancelled: &AtomicBool,
     ) -> Result<(), ExportError> {
         // A freshly built player still contains the names of the libraries it
@@ -190,29 +196,33 @@ impl Packager for MacosPackager {
             "@executable_path/../Frameworks",
             Some(cancelled),
         )?;
-        for object in self.mach_objects.iter().rev() {
-            run_command_cancellable(
-                ErrorStage::Sign,
-                Command::new("/usr/bin/codesign")
-                    .args(["--force", "--sign", "-"])
-                    .arg(object),
-                cancelled,
-            )?;
+        // We sign every Mach-O separately without the entitlements, then the
+        // player last with them, which seals the rest. We seal a stand-in
+        // core that is not code as data.
+        let mut nested = Vec::new();
+        for object in &self.mach_objects[1..] {
+            if is_mach_o_file(object)? {
+                nested.push(object.clone());
+            }
         }
-        let entitlements = staging.join("entitlements.plist");
-        fs::write(
-            &entitlements,
-            sandbox_entitlements(identity, accounts_folder(request)?.as_deref()),
+        let entitlements = sandbox_entitlements(identity, accounts_folder(request)?.as_deref());
+        bundle::sign_app(
+            &bundle::AppSeal {
+                app: &self.app,
+                executable: &self.runtime,
+                identifier: &bundle_identifier(identity),
+                entitlements: &entitlements,
+                nested: &nested,
+            },
+            &|| cancelled.load(Ordering::Relaxed),
         )
-        .map_err(|error| ExportError::io(ErrorStage::Sign, &entitlements, error))?;
-        run_command_cancellable(
-            ErrorStage::Sign,
-            Command::new("/usr/bin/codesign")
-                .args(["--force", "--sign", "-", "--entitlements"])
-                .arg(&entitlements)
-                .arg(&self.app),
-            cancelled,
-        )
+        .map_err(|error| {
+            if cancelled.load(Ordering::Relaxed) {
+                ExportError::new(ErrorStage::Cancelled, "export cancelled while signing")
+            } else {
+                ExportError::new(ErrorStage::Sign, error)
+            }
+        })
     }
 
     fn runtime_bytes(&self) -> Result<u64, ExportError> {
@@ -224,33 +234,32 @@ impl Packager for MacosPackager {
     }
 }
 
+/// The identifier in the bundle and the signature of a game.
+fn bundle_identifier(identity: &str) -> String {
+    format!("app.rominabox.game.{identity}")
+}
+
 /// `accounts` is the QUICK SIGN IN folder, present exactly when the game has
 /// achievements. We grant the network and that folder together.
-fn sandbox_entitlements(identity: &str, accounts: Option<&str>) -> String {
-    let (network, shared) = match accounts {
-        Some(folder) => (
-            "<key>com.apple.security.network.client</key><true/>".to_string(),
-            format!(
-                "<key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>\n\
-                 <array><string>/Library/Application Support/{folder}/</string></array>"
-            ),
-        ),
-        None => (String::new(), String::new()),
-    };
-    format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-<key>com.apple.security.app-sandbox</key><true/>
-{network}
-<key>com.apple.security.device.usb</key><true/>
-<key>com.apple.security.device.bluetooth</key><true/>
-<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
-<array><string>/Library/Application Support/ROM-in-a-Box/Games/{identity}/</string></array>
-{shared}
-</dict></plist>
-"#
-    )
+fn sandbox_entitlements(identity: &str, accounts: Option<&str>) -> Entitlements {
+    let mut entitlements = Entitlements::default().with("com.apple.security.app-sandbox", Value::Bool(true));
+    if accounts.is_some() {
+        entitlements = entitlements.with("com.apple.security.network.client", Value::Bool(true));
+    }
+    entitlements = entitlements
+        .with("com.apple.security.device.usb", Value::Bool(true))
+        .with("com.apple.security.device.bluetooth", Value::Bool(true))
+        .with(
+            "com.apple.security.temporary-exception.files.home-relative-path.read-only",
+            Value::Strings(vec![format!("/Library/Application Support/ROM-in-a-Box/Games/{identity}/")]),
+        );
+    if let Some(folder) = accounts {
+        entitlements = entitlements.with(
+            "com.apple.security.temporary-exception.files.home-relative-path.read-write",
+            Value::Strings(vec![format!("/Library/Application Support/{folder}/")]),
+        );
+    }
+    entitlements
 }
 
 fn write_plist(
@@ -272,7 +281,7 @@ fn write_plist(
 <key>CFBundleDevelopmentRegion</key><string>en</string>
 <key>CFBundleDisplayName</key><string>{}</string>
 <key>CFBundleExecutable</key><string>retroarch</string>
-<key>CFBundleIdentifier</key><string>app.rominabox.game.{}</string>
+<key>CFBundleIdentifier</key><string>{}</string>
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
 <key>CFBundleName</key><string>{}</string>
 <key>CFBundlePackageType</key><string>APPL</string>
@@ -283,7 +292,7 @@ fn write_plist(
 </dict></plist>
 "#,
         xml_escape(title),
-        identity,
+        bundle_identifier(identity),
         xml_escape(title),
         minimum_macos,
         icon
@@ -298,188 +307,6 @@ fn xml_escape(value: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&apos;")
-}
-
-/// Every file that the `.c` files among `inputs` include, with the paths from
-/// the compiler, or `None` when that list is not available. The launcher
-/// includes declarations from the player tree, and we must rebuild it after a
-/// change there as after a change next to it.
-fn included_files(inputs: &[PathBuf]) -> Option<Vec<PathBuf>> {
-    let sources = inputs
-        .iter()
-        .filter(|input| input.extension() == Some(OsStr::new("c")));
-    let listed = Command::new("cc").arg("-MM").args(sources).output().ok()?;
-    if !listed.status.success() {
-        return None;
-    }
-    // Make rules, `object: source header ...`. A line that ends in a backslash
-    // continues on the next, and a space in a path has a backslash before it.
-    let text = String::from_utf8_lossy(&listed.stdout)
-        .replace("\\\n", " ")
-        .replace("\\ ", "\0");
-    Some(
-        text.lines()
-            .filter_map(|rule| rule.split_once(": "))
-            .flat_map(|(_, files)| files.split_whitespace())
-            .map(|file| PathBuf::from(file.replace('\0', " ")))
-            .collect(),
-    )
-}
-
-/// Build `destination` from `inputs`, every file it is made from. We compile
-/// the `.c` files among them, and we rebuild it after a change to any header
-/// it includes, wherever that header is.
-pub(super) fn compile_c(inputs: &[PathBuf], destination: &Path, extra: &[&str]) -> Result<(), ExportError> {
-    if let Some(parent) = destination.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| ExportError::io(ErrorStage::Configure, parent, error))?;
-    }
-    let built = fs::metadata(destination)
-        .and_then(|meta| meta.modified())
-        .ok();
-    let unchanged = |input: &PathBuf| {
-        fs::metadata(input)
-            .and_then(|meta| meta.modified())
-            .is_ok_and(|changed| Some(changed) <= built)
-    };
-    let current = built.is_some()
-        && inputs.iter().all(unchanged)
-        && included_files(inputs).is_some_and(|included| included.iter().all(unchanged));
-    if current {
-        return Ok(());
-    }
-    let parent = destination.parent().ok_or_else(|| {
-        ExportError::new(
-            ErrorStage::Configure,
-            "compiled output needs a parent directory",
-        )
-    })?;
-    let staging = OwnedStaging::create(parent)?;
-    let temporary = staging.path().join("compiled");
-    let status = Command::new("cc")
-        .args(extra)
-        .arg("-o")
-        .arg(&temporary)
-        .args(
-            inputs
-                .iter()
-                .filter(|input| input.extension() == Some(OsStr::new("c"))),
-        )
-        .status()
-        .map_err(|error| {
-            ExportError::new(
-                ErrorStage::Configure,
-                format!("could not compile the launcher: {error}"),
-            )
-        })?;
-    if !status.success() {
-        return Err(ExportError::new(
-            ErrorStage::Configure,
-            "the launcher failed to compile",
-        ));
-    }
-    fs::rename(&temporary, destination)
-        .map_err(|error| ExportError::io(ErrorStage::Configure, destination, error))?;
-    Ok(())
-}
-
-/// The launcher sources for one platform, the shared ones at the top of
-/// `launcher/` and those in the folders listed for the platform in the
-/// player recipe, with its entry and its file layer.
-fn launcher_sources(platform: &str) -> Result<Vec<PathBuf>, ExportError> {
-    let launcher = crate::repo::at("desktop/src-tauri/launcher");
-    let declared: Vec<String> =
-        serde_json::from_value(player_recipe()["launcher"]["folders"][platform].clone())
-            .unwrap_or_else(|error| {
-                panic!("the player recipe names no launcher folders for {platform}: {error}")
-            });
-    let folders =
-        std::iter::once(launcher.clone()).chain(declared.iter().map(|name| launcher.join(name)));
-    let mut sources = Vec::new();
-    for folder in folders {
-        let entries = fs::read_dir(&folder)
-            .and_then(|entries| {
-                entries
-                    .map(|entry| entry.map(|entry| entry.path()))
-                    .collect::<Result<Vec<_>, _>>()
-            })
-            .map_err(|error| ExportError::io(ErrorStage::Configure, &folder, error))?;
-        sources.extend(
-            entries
-                .into_iter()
-                .filter(|path| matches!(path.extension().and_then(OsStr::to_str), Some("c" | "h"))),
-        );
-    }
-    sources.sort();
-    Ok(sources)
-}
-
-/// The launch library, built for `archs` and for the macOS version in the
-/// player recipe, next to the player and loaded by each of its slices. We keep
-/// a build for other processors or systems apart, because in `compile_c` we
-/// rebuild only on changed sources, not on changed flags.
-fn install_launch_library(macos: &Path, retroarch: &Path, archs: &[Arch]) -> Result<(), ExportError> {
-    let library_sources = launcher_sources("macos")?;
-    let system = super::deployment_target(super::ExportTarget::Macos);
-    let processors = archs
-        .iter()
-        .map(|arch| arch.name())
-        .collect::<Vec<_>>()
-        .join("-");
-    let built_for = format!("{processors}-macos{system}");
-    let library = crate::repo::at("work/launch")
-        .join(built_for)
-        .join(LAUNCH_LIBRARY);
-    let install_name = format!("-Wl,-install_name,@executable_path/{LAUNCH_LIBRARY}");
-    let minimum = format!("-mmacosx-version-min={system}");
-    let mut flags = vec![
-        "-Oz",
-        "-dynamiclib",
-        "-Wl,-dead_strip",
-        install_name.as_str(),
-        minimum.as_str(),
-    ];
-    for arch in archs {
-        flags.extend(["-arch", arch.name()]);
-    }
-    compile_c(&library_sources, &library, &flags)?;
-    let injector = launch_injector()?;
-    slices::each_slice(retroarch, ErrorStage::Configure, |slice, _| {
-        attach_launch_library(&injector, slice)
-    })?;
-    copy_file(&library, &macos.join(LAUNCH_LIBRARY))
-}
-
-/// The program with which we attach the launch library to a slice of the
-/// player. We run it here at export, so we build it only for this Mac,
-/// whichever processors the game is for.
-pub(super) fn launch_injector() -> Result<PathBuf, ExportError> {
-    let injector = crate::repo::at("work/inject-dylib");
-    compile_c(
-        &[crate::repo::at("scripts/native_runtime/inject_dylib.c")],
-        &injector,
-        &["-Oz"],
-    )?;
-    Ok(injector)
-}
-
-/// Change the one-processor Mach-O `slice` so that it loads the launch
-/// library before its main and passes main the arguments from the library.
-pub(super) fn attach_launch_library(injector: &Path, slice: &Path) -> Result<(), ExportError> {
-    let output = Command::new(injector)
-        .arg(slice)
-        .arg(format!("@executable_path/{LAUNCH_LIBRARY}"))
-        .output()
-        .map_err(|error| {
-            ExportError::new(
-                ErrorStage::Configure,
-                format!("could not attach the launcher: {error}"),
-            )
-        })?;
-    if !output.status.success() {
-        return Err(ExportError::command(ErrorStage::Configure, "inject-dylib", &output));
-    }
-    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -723,58 +550,59 @@ fn bundle_dependencies(
     Ok(())
 }
 
-/// The library that we build and sign next to the player at export. Its
-/// install name is `@executable_path/` on purpose.
-const LAUNCH_LIBRARY: &str = "librominabox-launch.dylib";
+/// The name of the launch library next to the player, as linked into the
+/// kit's player (`@executable_path/`), which is its name in the kit.
+fn launch_library_name() -> String {
+    kit_file(KIT, "launcher")
+        .file_name()
+        .expect("the kit's launcher is a file")
+        .to_string_lossy()
+        .into_owned()
+}
 
+/// Whether `path` is a Mach-O file, one slice or several.
+fn is_mach_o_file(path: &Path) -> Result<bool, ExportError> {
+    let mut head = Vec::with_capacity(8);
+    fs::File::open(path)
+        .and_then(|file| file.take(8).read_to_end(&mut head))
+        .map_err(|error| ExportError::io(ErrorStage::Sign, path, error))?;
+    Ok(mach_o::is_mach_o(&head))
+}
+
+/// Point every non-system library that `objects` load at its copy under
+/// `framework_prefix`, and name each library in a Frameworks folder by
+/// `@rpath/`. The launch library is next to the executable, not in
+/// Frameworks, and we leave its install name `@executable_path` unchanged,
+/// because a rewritten name would point at a missing file and the player
+/// would fail to load.
 fn relocate_dependencies(
     objects: &[PathBuf],
     framework_prefix: &str,
     cancelled: Option<&AtomicBool>,
 ) -> Result<(), ExportError> {
+    let launch_library = launch_library_name();
     for object in objects {
         if let Some(cancelled) = cancelled {
             check_cancelled(cancelled)?;
         }
-        for dependency in macho_dependencies(object)? {
-            if is_system_dependency(&dependency)
-                || dependency.starts_with(&format!("{framework_prefix}/"))
-                // The launch library is next to the executable, not in
-                // Frameworks, because we sign it separately, without the
-                // entitlements of the bundle, and its install name is
-                // @executable_path. We do not rewrite its path to ../Frameworks,
-                // because the file is not there and dyld would fail before main.
-                || Path::new(&dependency).file_name()
-                    == Some(OsStr::new(LAUNCH_LIBRARY))
-            {
-                continue;
-            }
-            let name = Path::new(&dependency).file_name().ok_or_else(|| {
-                ExportError::new(
-                    ErrorStage::Dependencies,
-                    format!("invalid dependency: {dependency}"),
-                )
-            })?;
-            let replacement = format!("{framework_prefix}/{}", name.to_string_lossy());
-            let mut command = Command::new("/usr/bin/install_name_tool");
-            command
-                .args(["-change", &dependency, &replacement])
-                .arg(object);
-            if let Some(cancelled) = cancelled {
-                run_command_cancellable(ErrorStage::Dependencies, &mut command, cancelled)?;
-            } else {
-                run_command(ErrorStage::Dependencies, &mut command)?;
-            }
+        let bytes = fs::read(object).map_err(|error| ExportError::io(ErrorStage::Dependencies, object, error))?;
+        if !mach_o::is_mach_o(&bytes) {
+            continue;
         }
-        if object.parent().and_then(Path::file_name) == Some(OsStr::new("Frameworks")) {
-            let name = object.file_name().unwrap().to_string_lossy();
-            let mut command = Command::new("/usr/bin/install_name_tool");
-            command.args(["-id", &format!("@rpath/{name}")]).arg(object);
-            if let Some(cancelled) = cancelled {
-                run_command_cancellable(ErrorStage::Dependencies, &mut command, cancelled)?;
-            } else {
-                run_command(ErrorStage::Dependencies, &mut command)?;
-            }
+        let moved = |dependency: &str| {
+            let name = Path::new(dependency).file_name()?.to_str()?;
+            let kept = is_system_dependency(dependency)
+                || dependency.starts_with(&format!("{framework_prefix}/"))
+                || name == launch_library;
+            (!kept).then(|| format!("{framework_prefix}/{name}"))
+        };
+        let own = (object.parent().and_then(Path::file_name) == Some(OsStr::new("Frameworks")))
+            .then(|| format!("@rpath/{}", object.file_name().unwrap().to_string_lossy()));
+        let relocated = mach_o::rename_libraries(&bytes, moved, own.as_deref()).map_err(|error| {
+            ExportError::new(ErrorStage::Dependencies, format!("{}: {error}", object.display()))
+        })?;
+        if relocated != bytes {
+            fs::write(object, relocated).map_err(|error| ExportError::io(ErrorStage::Dependencies, object, error))?;
         }
     }
     Ok(())
@@ -840,47 +668,15 @@ fn resolve_dependency_source(
         .find(|path| path.is_file())
 }
 
-/// The libraries linked by `path`, each once. For a universal file, `otool -L`
-/// prints one slice at a time, each under a header line, and the name of the
-/// library itself (`otool -D`) first in each slice. We skip both lines.
+/// What `path` loads, each once, without the install name of a library
+/// itself. Nothing for a file that is not a Mach-O, according to `otool`.
 pub(super) fn macho_dependencies(path: &Path) -> Result<Vec<String>, ExportError> {
-    let listed = |flag: &str| -> Result<Vec<String>, ExportError> {
-        let output = Command::new("/usr/bin/otool")
-            .arg(flag)
-            .arg(path)
-            .output()
-            .map_err(|error| {
-                ExportError::new(
-                    ErrorStage::Dependencies,
-                    format!("could not run otool: {error}"),
-                )
-            })?;
-        if !output.status.success() {
-            return Err(ExportError::command(
-                ErrorStage::Dependencies,
-                "otool",
-                &output,
-            ));
-        }
-        // A header contains the name of the file or of one of its slices and
-        // ends with a colon. Each line under it contains one name.
-        Ok(String::from_utf8_lossy(&output.stdout)
-            .lines()
-            .filter(|line| {
-                !line.trim().is_empty() && !line.trim_end().ends_with(':')
-            })
-            .filter_map(|line| line.trim().split(" (compatibility").next())
-            .map(str::to_owned)
-            .collect())
-    };
-    let own_names = listed("-D")?;
-    let mut loaded: Vec<String> = Vec::new();
-    for name in listed("-L")? {
-        if !own_names.contains(&name) && !loaded.contains(&name) {
-            loaded.push(name);
-        }
+    let bytes = fs::read(path).map_err(|error| ExportError::io(ErrorStage::Dependencies, path, error))?;
+    if !mach_o::is_mach_o(&bytes) {
+        return Ok(Vec::new());
     }
-    Ok(loaded)
+    mach_o::dependencies(&bytes)
+        .map_err(|error| ExportError::new(ErrorStage::Dependencies, format!("{}: {error}", path.display())))
 }
 
 fn is_system_dependency(path: &str) -> bool {
@@ -896,51 +692,5 @@ fn run_command(stage: ErrorStage, command: &mut Command) -> Result<(), ExportErr
         Ok(())
     } else {
         Err(ExportError::command(stage, &program, &output))
-    }
-}
-
-fn run_command_cancellable(
-    stage: ErrorStage,
-    command: &mut Command,
-    cancelled: &AtomicBool,
-) -> Result<(), ExportError> {
-    let program = command.get_program().to_string_lossy().into_owned();
-    let mut child = command
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| ExportError::new(stage, format!("could not run {program}: {error}")))?;
-    loop {
-        if cancelled.load(Ordering::Relaxed) {
-            let _ = child.kill();
-            let _ = child.wait();
-            return Err(ExportError::new(
-                ErrorStage::Cancelled,
-                format!("export cancelled while running {program}"),
-            ));
-        }
-        if let Some(status) = child.try_wait().map_err(|error| {
-            ExportError::new(stage, format!("could not monitor {program}: {error}"))
-        })? {
-            let mut stdout = Vec::new();
-            let mut stderr = Vec::new();
-            if let Some(mut pipe) = child.stdout.take() {
-                let _ = pipe.read_to_end(&mut stdout);
-            }
-            if let Some(mut pipe) = child.stderr.take() {
-                let _ = pipe.read_to_end(&mut stderr);
-            }
-            let output = Output {
-                status,
-                stdout,
-                stderr,
-            };
-            return if output.status.success() {
-                Ok(())
-            } else {
-                Err(ExportError::command(stage, &program, &output))
-            };
-        }
-        thread::sleep(Duration::from_millis(20));
     }
 }

@@ -19,8 +19,12 @@ pub const GAMEPAD_LOG: &str = "[IOHID] Port ";
 /// The log line when we keep a quiet game out of the Dock.
 pub const QUIET_WINDOW_LOG: Option<&str> = Some("[RIB] quiet activation accessory");
 
+/// A stand-in kit with the shipped launch library attached to its player,
+/// as we attach it when we make a kit.
 pub fn fixture_kit(root: &Path) -> PathBuf {
-    crate::export_fixture::fixture_kit(root)
+    let kit = crate::export_fixture::fixture_kit(root);
+    crate::export_fixture::attach_real_launcher(&kit);
+    kit
 }
 
 /// The sandbox probe in the kit where the player would be.
@@ -32,6 +36,7 @@ pub fn use_probe_as_player(kit: &Path) {
         .status()
         .unwrap();
     assert!(status.success(), "the sandbox probe failed to compile");
+    crate::export_fixture::attach_real_launcher(kit);
 }
 
 /// The program a person opens.

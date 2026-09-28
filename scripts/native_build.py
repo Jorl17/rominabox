@@ -429,6 +429,16 @@ def launch_library_sources(kit: str) -> str:
     return digest.hexdigest()
 
 
+def install_launch_library(kit_folder: Path, kit: str, workspace: Path) -> None:
+    """The kit's launch library, built from the tree into the kit at
+    `kit_folder`, and attached to the kit's player there."""
+    files = recipe()["kit"][kit]["files"]
+    library = build_launch_library(workspace, kit)
+    (kit_folder / files["launcher"]["at"]).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(library, kit_folder / files["launcher"]["at"])
+    attach_launch_library(kit_folder / files["player"]["at"], kit, workspace)
+
+
 def attach_launch_library(player: Path, kit: str, workspace: Path) -> None:
     """Attach the kit's launch library to every slice of the macOS `player`, to
     be loaded before main and to prepare the arguments of main, then sign the

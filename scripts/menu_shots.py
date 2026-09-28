@@ -645,9 +645,7 @@ def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
     if native_build.launch_library(target_kit):
         workspace = kit.parent / "launch-library"
         workspace.mkdir()
-        library = native_build.build_launch_library(workspace, target_kit)
-        shutil.copyfile(library, kit / native_build.kit_file(host_target(), "launcher"))
-        native_build.attach_launch_library(installed, target_kit, workspace)
+        native_build.install_launch_library(kit, target_kit, workspace)
     return kit
 
 

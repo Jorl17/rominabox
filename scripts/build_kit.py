@@ -35,14 +35,14 @@ import toolchain  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def source_of(reference: str, build: Path, made: dict[str, Path]) -> Path:
-    """Return a file the recipe lists, where build: is in the player build and
-    made: is a file we made for the kit in this script."""
+def source_of(reference: str, build: Path) -> Path | None:
+    """Return a file the recipe lists, where build: is in the player build, or
+    None for made:, a file we make for the kit in this script."""
     place, _, relative = reference.partition(":")
     if place == "build":
         return build / relative
-    if place == "made" and relative in made:
-        return made[relative]
+    if place == "made":
+        return None
     raise SystemExit(f"the kit recipe names an unknown place: {reference}")
 
 
@@ -69,17 +69,18 @@ def main() -> int:
     native = licences.player_components(build, platform)
     licences.verify_toolchain(native, toolchain.installation())
     kit_assets.stage(kit)
-    with tempfile.TemporaryDirectory(prefix="rominabox-kit-") as workspace:
-        # A macOS kit's launcher is a library we load into the player, and we
-        # make it here from the launcher sources in the tree. For a Windows kit
-        # we build it with the player and only copy it here.
-        library = native_build.launch_library(target)
-        made = {"launcher": native_build.build_launch_library(Path(workspace), target)} if library else {}
-        for placed in declared["files"].values():
+    for placed in declared["files"].values():
+        source = source_of(placed["from"], build)
+        if source is not None:
             (kit / placed["at"]).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source_of(placed["from"], build, made), kit / placed["at"])
-        if library:
-            native_build.attach_launch_library(kit / declared["files"]["player"]["at"], target, Path(workspace))
+            shutil.copy2(source, kit / placed["at"])
+    # A macOS kit's launcher is a library we load into the player. We make it
+    # here from the launcher sources and attach it to the player we just
+    # copied. For a Windows kit we build it with the player and only copy it.
+    library = native_build.launch_library(target)
+    if library:
+        with tempfile.TemporaryDirectory(prefix="rominabox-kit-") as workspace:
+            native_build.install_launch_library(kit, target, Path(workspace))
     # We write every native licence again below, so the kit contains only the
     # licences of libraries the player links. We remove the existing files
     # first, because on a case-insensitive file system we would otherwise

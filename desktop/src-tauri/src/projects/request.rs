@@ -60,6 +60,7 @@ impl ProjectSettings {
             splash: self.splash,
             advanced_emulator_access: self.advanced_emulator_access,
             intel_macs: self.intel_macs,
+            zip: None,
             keep_playing_in_background: self.keep_playing_in_background,
             autosave_on_quit: self.autosave_on_quit,
             menu_entries: self.menu_entries,

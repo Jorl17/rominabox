@@ -1,15 +1,17 @@
-//! Assembly of a self-contained native game.
+//! Assembly of a self-contained native game export.
 //!
-//! Export is blocking on purpose. Desktop callers should run it with
+//! Export blocks on purpose. In the desktop app, run it with
 //! `tauri::async_runtime::spawn_blocking` and use the callback for progress.
 //!
-//! The export itself is here. What we write alike for every platform is in
-//! `app_files` and `launch_plan`, and each packager is in a file named after
-//! its platform (`macos`, `windows`). The other files contain the consoles a
-//! kit can export (`availability`), the core files a game ships and their
-//! source (`export_core`), and the processors of a Mac app (`slices`).
+//! The export itself is here. What we write the same way for every platform
+//! is in `app_files` and `launch_plan`, and the packager of each platform is
+//! in a separate file (`macos`, `windows`). `availability` covers which
+//! consoles we can export with a kit, `export_core` the core files we ship
+//! in a game and their source, `slices` the processors of the code in a Mac
+//! app, and `archive` the zip for a Mac game made on Windows.
 
 mod app_files;
+pub mod archive;
 mod availability;
 mod export_core;
 mod launch_plan;
@@ -146,24 +148,29 @@ pub fn preview_renderer(target: Target) -> Result<String, String> {
         .ok_or_else(|| format!("No menu preview is built for {target}."))
 }
 
+/// The kit for making games for `target`, as named in the player recipe. This
+/// is the universal kit whose player contains the slice for `target`, where
+/// there is one (for every Mac), or else the kit for `target`.
+fn kit_key(target: Target) -> String {
+    let recipe = player_recipe();
+    let universal = recipe["universal"].as_object().expect("the player recipe declares universal targets");
+    universal
+        .iter()
+        .find(|(name, slices)| {
+            recipe["kit"].get(name.as_str()).is_some()
+                && slices.as_array().is_some_and(|slices| slices.iter().any(|slice| slice == target.key()))
+        })
+        .map_or_else(|| target.key().to_string(), |(name, _)| name.clone())
+}
+
 /// Where the file with `role` (`player`, `launcher`) is in `target`'s kit.
 fn kit_file(target: Target, role: &str) -> PathBuf {
-    let declared = &player_recipe()["kit"][target.key()]["files"][role]["at"];
+    let declared = &player_recipe()["kit"][kit_key(target)]["files"][role]["at"];
     PathBuf::from(
         declared
             .as_str()
             .unwrap_or_else(|| panic!("the player recipe puts no {role} in the {target} kit")),
     )
-}
-
-/// The oldest system on which the player for `platform`, and what we build
-/// next to it at export, run, as declared in the player recipe.
-fn deployment_target(platform: ExportTarget) -> String {
-    let name = serde_json::to_value(platform).expect("a platform names itself");
-    player_recipe()["deploymentTarget"][name.as_str().expect("a platform is a word")]
-        .as_str()
-        .unwrap_or_else(|| panic!("the player recipe declares no deployment target for {name}"))
-        .to_string()
 }
 
 /// The libraries every machine of `target`'s platform has, in lower case.
@@ -230,6 +237,12 @@ pub struct ExportRequest {
     /// A Mac game also runs on Intel Macs. Ignored for a Windows game.
     #[serde(default = "crate::builder::unstated::intel_macs")]
     pub intel_macs: bool,
+    /// Write a Mac game into `<title>.zip`, which records the Unix modes of
+    /// its programs, instead of as the `.app` folder. When unset, we zip it
+    /// where the builder's files cannot keep those modes (Windows). We ignore
+    /// it for a Windows game.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zip: Option<bool>,
     /// Keep emulating when the window does not have the focus. RetroArch's
     /// `pause_nonactive` is the opposite of this. We write it into the frozen
     /// config, as we do quit-autosave, because the player has no control for
@@ -494,12 +507,13 @@ where
 {
     packager.check_host()?;
     let app_name = crate::publish::app_name(&request.target, &request.title);
-    let final_app = request.output_dir.join(&app_name);
+    let output_name = crate::publish::output_name(request);
+    let final_output = request.output_dir.join(&output_name);
     fs::create_dir_all(&request.output_dir)
         .map_err(|error| ExportError::io(ErrorStage::Stage, &request.output_dir, error))?;
 
     let staging = OwnedStaging::create(&request.output_dir)?;
-    let app = staging.path().join(&app_name);
+    let app = staging.path().join(crate::publish::staged_app_name(request));
     let resources = packager.lay_out(&app)?;
 
     emit(
@@ -651,11 +665,18 @@ where
             .as_ref()
             .map_or(0, |path| fs::metadata(path).map(|m| m.len()).unwrap_or(0));
     check_cancelled(cancelled)?;
-    crate::publish::put_in_place(&app, &final_app, request.replace)?;
+    let output = if crate::publish::zipped(request) {
+        let zip = staging.path().join(&output_name);
+        archive::write_zip(&[(&app, &app_name)], &zip)?;
+        zip
+    } else {
+        app
+    };
+    crate::publish::put_in_place(&output, &final_output, request.replace)?;
     staging.cleanup()?;
     emit(progress, ExportStage::Complete, 1.0, "Export complete");
     Ok(ExportResult {
-        app_path: final_app,
+        app_path: final_output,
         installed_bytes,
         runtime_bytes,
         content_bytes,

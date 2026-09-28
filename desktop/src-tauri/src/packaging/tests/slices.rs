@@ -2,7 +2,7 @@
 //! the files, join, and attach the launch library to.
 
 use super::*;
-use crate::packaging::macos::{attach_launch_library, launch_injector};
+use crate::mach_o::signature::{sign, Seal};
 use crate::packaging::slices::{self, Arch};
 use std::process::Command;
 
@@ -95,15 +95,19 @@ fn a_part_without_its_slice_is_refused_in_the_authors_words() {
     assert!(!root.join("game-core.dylib").exists());
 }
 
-/// At export we attach the launch library to every slice of the player, and
-/// on each processor main receives the arguments from the library through
-/// the trampoline at the entry point. The library here is the argument
-/// handover code of the launcher, with a constructor that calls it.
+/// We attach the launch library to every slice of the player in a kit
+/// (`scripts/build_launcher.py --kit`, as in `scripts/build_kit.py`), and on
+/// each processor main receives the arguments prepared in the library, through
+/// the trampoline we write at the entry, after we sign both as in an export.
+/// The library here is the argument hand-over code of the launcher, with a
+/// constructor that uses it.
 #[test]
 fn the_launch_trampoline_hands_main_its_arguments_on_both_processors() {
     let root = rominabox_scratch::Scratch::dir("rominabox-launch-slices");
     let both = [Arch::Arm64, Arch::X86_64];
-    let player = root.join("player");
+    let kit = root.join("kit");
+    fs::create_dir_all(kit.join("bin")).unwrap();
+    let player = kit.join("bin/retroarch");
     compile(
         &player,
         &both,
@@ -115,9 +119,18 @@ fn the_launch_trampoline_hands_main_its_arguments_on_both_processors() {
             "#include <stdio.h>\nint kept = 1;\nint main(int argc, char **argv) {\n  printf(\"%d\", argc);\n  for (int i = 0; i < argc; i++) printf(\" %s\", argv[i]);\n  printf(\"\\n\");\n  return kept - 1;\n}\n",
         )],
     );
+    let attached = Command::new(crate::repo::python())
+        .arg(crate::repo::at("scripts/build_launcher.py"))
+        .arg("--kit")
+        .arg(&kit)
+        .output()
+        .unwrap();
+    assert!(attached.status.success(), "{}", String::from_utf8_lossy(&attached.stderr));
+    assert_eq!(listed(&player), ["arm64", "x86_64"]);
+    let library = kit.join("bin/librominabox-launch.dylib");
     let launcher = crate::repo::at("desktop/src-tauri/launcher/macos");
     compile(
-        &root.join("librominabox-launch.dylib"),
+        &library,
         &both,
         &[
             "-dynamiclib",
@@ -133,23 +146,10 @@ fn the_launch_trampoline_hands_main_its_arguments_on_both_processors() {
             ),
         ],
     );
-
-    let injector = launch_injector().unwrap();
-    let mut attached = Vec::new();
-    slices::each_slice(&player, ErrorStage::Configure, |slice, arch| {
-        attached.push(arch);
-        attach_launch_library(&injector, slice)
-    })
-    .unwrap();
-    attached.sort();
-    assert_eq!(attached, both);
-    assert_eq!(listed(&player), ["arm64", "x86_64"]);
-    let signed = Command::new("/usr/bin/codesign")
-        .args(["--force", "--sign", "-"])
-        .arg(&player)
-        .output()
-        .unwrap();
-    assert!(signed.status.success(), "{}", String::from_utf8_lossy(&signed.stderr));
+    for (code, identifier) in [(&library, "librominabox-launch"), (&player, "retroarch")] {
+        let signed = sign(&fs::read(code).unwrap(), &Seal { identifier, ..Seal::default() }).unwrap();
+        fs::write(code, signed).unwrap();
+    }
 
     let run = |prefix: &[&str]| {
         let mut command = Command::new(prefix.first().copied().unwrap_or(player.to_str().unwrap()));
