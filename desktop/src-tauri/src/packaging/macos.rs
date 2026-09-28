@@ -162,6 +162,7 @@ impl Packager for MacosPackager {
             &request.title,
             identity,
             request.icon.is_some() || icons::default_icon_path(&request.runtime_kit).is_some(),
+            &super::macos_minimum::newest(&self.mach_objects)?,
         )?;
         let default_icon = icons::default_icon_path(&request.runtime_kit);
         if let Some(icon) = request.icon.as_deref().or(default_icon.as_deref()) {
@@ -257,6 +258,7 @@ fn write_plist(
     title: &str,
     identity: &str,
     has_icon: bool,
+    minimum_macos: &str,
 ) -> Result<(), ExportError> {
     let icon = if has_icon {
         "<key>CFBundleIconFile</key><string>GameIcon</string>"
@@ -276,13 +278,14 @@ fn write_plist(
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.0</string>
 <key>NSHighResolutionCapable</key><true/>
-<key>LSMinimumSystemVersion</key><string>26.0</string>
+<key>LSMinimumSystemVersion</key><string>{}</string>
 {}
 </dict></plist>
 "#,
         xml_escape(title),
         identity,
         xml_escape(title),
+        minimum_macos,
         icon
     );
     fs::write(path, plist).map_err(|error| ExportError::io(ErrorStage::Configure, path, error))
@@ -411,15 +414,31 @@ fn launcher_sources(platform: &str) -> Result<Vec<PathBuf>, ExportError> {
     Ok(sources)
 }
 
-/// The launch library, built for `archs`, next to the player and loaded by
-/// each of its slices. We keep a build for other processors apart, because
-/// in `compile_c` we rebuild only on changed sources, not on changed flags.
+/// The launch library, built for `archs` and for the macOS version in the
+/// player recipe, next to the player and loaded by each of its slices. We keep
+/// a build for other processors or systems apart, because in `compile_c` we
+/// rebuild only on changed sources, not on changed flags.
 fn install_launch_library(macos: &Path, retroarch: &Path, archs: &[Arch]) -> Result<(), ExportError> {
     let library_sources = launcher_sources("macos")?;
-    let built_for = archs.iter().map(|arch| arch.name()).collect::<Vec<_>>().join("-");
-    let library = crate::repo::at("work/launch").join(built_for).join(LAUNCH_LIBRARY);
+    let system = super::deployment_target(super::ExportTarget::Macos);
+    let processors = archs
+        .iter()
+        .map(|arch| arch.name())
+        .collect::<Vec<_>>()
+        .join("-");
+    let built_for = format!("{processors}-macos{system}");
+    let library = crate::repo::at("work/launch")
+        .join(built_for)
+        .join(LAUNCH_LIBRARY);
     let install_name = format!("-Wl,-install_name,@executable_path/{LAUNCH_LIBRARY}");
-    let mut flags = vec!["-Oz", "-dynamiclib", "-Wl,-dead_strip", install_name.as_str()];
+    let minimum = format!("-mmacosx-version-min={system}");
+    let mut flags = vec![
+        "-Oz",
+        "-dynamiclib",
+        "-Wl,-dead_strip",
+        install_name.as_str(),
+        minimum.as_str(),
+    ];
     for arch in archs {
         flags.extend(["-arch", arch.name()]);
     }

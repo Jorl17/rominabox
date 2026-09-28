@@ -14,6 +14,7 @@ mod availability;
 mod export_core;
 mod launch_plan;
 mod macos;
+mod macos_minimum;
 mod slices;
 mod windows;
 #[cfg(test)]
@@ -143,6 +144,16 @@ fn kit_file(target: Target, role: &str) -> PathBuf {
             .as_str()
             .unwrap_or_else(|| panic!("the player recipe puts no {role} in the {target} kit")),
     )
+}
+
+/// The oldest system on which the player for `platform`, and what we build
+/// next to it at export, run, as declared in the player recipe.
+fn deployment_target(platform: ExportTarget) -> String {
+    let name = serde_json::to_value(platform).expect("a platform names itself");
+    player_recipe()["deploymentTarget"][name.as_str().expect("a platform is a word")]
+        .as_str()
+        .unwrap_or_else(|| panic!("the player recipe declares no deployment target for {name}"))
+        .to_string()
 }
 
 /// The libraries every machine of `target`'s platform has, in lower case.
