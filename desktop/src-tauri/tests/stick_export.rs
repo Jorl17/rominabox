@@ -34,10 +34,10 @@ fn playstation(root: &Path, controls: serde_json::Value) -> ExportRequest {
     fs::write(root.join("game.bin"), vec![0u8; 2048]).unwrap();
     let cue = root.join("game.cue");
     fs::write(&cue, "FILE \"game.bin\" BINARY\n  TRACK 01 MODE1/2048\n    INDEX 01 00:00:00\n").unwrap();
-    request.rom = cue;
-    request.system = "ps1".into();
-    request.title = "Stick Export".into();
-    request.show_menu = true;
+    request.game.rom = cue;
+    request.game.system = "ps1".into();
+    request.game.title = "Stick Export".into();
+    request.game.show_menu = true;
     // We write the author's defaults in the menu, so the kit contains it.
     for (from, to) in [
         ("integrations/designs", "designs"),
@@ -46,7 +46,7 @@ fn playstation(root: &Path, controls: serde_json::Value) -> ExportRequest {
     ] {
         support::copy_tree(&rominabox_desktop::repo::at(from), &request.runtime_kit.join(to));
     }
-    request.controls = serde_json::from_value::<Controls>(controls).unwrap();
+    request.game.controls = serde_json::from_value::<Controls>(controls).unwrap();
     request
 }
 

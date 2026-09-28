@@ -1,0 +1,78 @@
+//! A game as described in the builder: its files and every choice made for
+//! it. An export request, a project and a project's archive each contain one,
+//! so we declare each setting once, here, with the default for a request that
+//! leaves it out, which is the builder's (`crate::builder::defaults`).
+
+use crate::controls;
+use crate::packaging::ExportTarget;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Game {
+    pub rom: PathBuf,
+    pub title: String,
+    pub system: String,
+    pub description: Option<String>,
+    pub icon: Option<PathBuf>,
+    pub background: Option<PathBuf>,
+    #[serde(default = "crate::builder::unstated::show_menu")]
+    pub show_menu: bool,
+    #[serde(default = "crate::builder::unstated::start_at_menu")]
+    pub start_at_menu: bool,
+    #[serde(default = "crate::builder::unstated::theme")]
+    pub theme: String,
+    #[serde(default = "crate::builder::unstated::palette")]
+    pub palette: String,
+    #[serde(default = "crate::builder::unstated::menu_sounds")]
+    pub menu_sounds: String,
+    /// The author's defaults, which we never change. We store the player's
+    /// changes separately, in the managed data folder of the exported game.
+    #[serde(default)]
+    pub controls: controls::Controls,
+    /// The inputs to open the menu, and to confirm and go back in it, until
+    /// the player changes them on MENU CONTROLS. For an action left out, we
+    /// use the builder's default.
+    #[serde(default = "crate::builder::unstated::menu_controls")]
+    pub menu_controls: crate::menu_controls::MenuControls,
+    /// The firmware files the author chose. On export we never look for
+    /// firmware in global RetroArch locations.
+    #[serde(default)]
+    pub firmware: Vec<PathBuf>,
+    /// Include the short native in-player splash and its logo asset.
+    #[serde(default = "crate::builder::unstated::splash")]
+    pub splash: bool,
+    /// Restore stock RetroArch native menus in the exported app.
+    #[serde(default = "crate::builder::unstated::advanced_emulator_access")]
+    pub advanced_emulator_access: bool,
+    /// Keep emulating when the window does not have the focus. RetroArch's
+    /// `pause_nonactive` is the opposite of this. We write it into the frozen
+    /// config, as we do quit-autosave, because the player has no control for
+    /// it and a per-game `controls.cfg` would otherwise replace it.
+    #[serde(default = "crate::builder::unstated::keep_playing_in_background")]
+    pub keep_playing_in_background: bool,
+    /// Save on quit and load that save the next time the player opens the
+    /// game. The author makes one choice for both.
+    #[serde(default = "crate::builder::unstated::autosave_on_quit")]
+    pub autosave_on_quit: bool,
+    /// The Options entries we offer in this game. When absent, we use the
+    /// design's defaults. With an empty list, we show no Options button.
+    #[serde(default)]
+    pub menu_entries: Option<Vec<String>>,
+    /// The shader presets we bundle into the game. Usually there are none,
+    /// and then the game has no shader screen and no preset.
+    #[serde(default)]
+    pub shaders: crate::shaders::ShaderSelection,
+    /// Include player-authenticated Casual achievements, independently of data.
+    #[serde(default = "crate::builder::unstated::include_achievements")]
+    pub include_achievements: bool,
+    pub target: ExportTarget,
+    /// The game for Mac and for Windows, each from its platform's kit, in one
+    /// `<title>.zip` containing `Mac/<title>.app` and `Windows/<title>`.
+    #[serde(default)]
+    pub both_platforms: bool,
+    /// A Mac game also runs on Intel Macs. Ignored for a Windows game.
+    #[serde(default = "crate::builder::unstated::intel_macs")]
+    pub intel_macs: bool,
+}

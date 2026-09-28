@@ -8,7 +8,7 @@ fn launcher_quotes_hostile_content_filename_as_data() {
     let launcher = directory.join("launcher");
     let hostile = OsStr::new("content/weird'$(touch PWNED)`echo nope`.bin");
     let mut settings = request(false);
-    settings.title = "Game's $(title) `literal`".into();
+    settings.game.title = "Game's $(title) `literal`".into();
     write_launch_plan(&launcher, "identity", hostile, &settings).unwrap();
     let plan = fs::read_to_string(launcher).unwrap();
 
@@ -37,8 +37,8 @@ fn export_records_background_play_and_quit_autosave() {
         "{plan}"
     );
 
-    settings.keep_playing_in_background = true;
-    settings.autosave_on_quit = true;
+    settings.game.keep_playing_in_background = true;
+    settings.game.autosave_on_quit = true;
     let plan = write_test_launcher(settings.clone());
     let on = embedded_runtime_config(&plan);
     assert_eq!(config_value(&on, "savestate_auto_save"), Some("true"));
@@ -56,7 +56,7 @@ fn export_records_background_play_and_quit_autosave() {
 #[test]
 fn the_menu_keeps_audio_for_the_volume_and_the_pack_decides_its_cues() {
     let mut settings = request(false);
-    settings.show_menu = true;
+    settings.game.show_menu = true;
     let off = embedded_runtime_config(&write_test_launcher(settings.clone()));
     assert_eq!(config_value(&off, "audio_enable_menu"), Some("true"));
     for cue in ["ok", "cancel", "scroll"] {
@@ -66,7 +66,7 @@ fn the_menu_keeps_audio_for_the_volume_and_the_pack_decides_its_cues() {
             "menu sounds Off plays no {cue} cue"
         );
     }
-    settings.menu_sounds = "blip".into();
+    settings.game.menu_sounds = "blip".into();
     let pack = embedded_runtime_config(&write_test_launcher(settings));
     for cue in ["ok", "cancel", "scroll"] {
         assert_eq!(
@@ -84,7 +84,7 @@ fn the_menu_keeps_audio_for_the_volume_and_the_pack_decides_its_cues() {
 #[test]
 fn exported_config_neutralizes_default_space_fast_forward() {
     let mut settings = request(false);
-    settings.show_menu = true;
+    settings.game.show_menu = true;
     let config = embedded_runtime_config(&write_test_launcher(settings));
 
     assert_eq!(
@@ -133,7 +133,7 @@ fn advanced_emulator_access_reaches_fast_forward_without_dropping_a_bind() {
     );
 
     let mut ordinary = request(false);
-    ordinary.show_menu = true;
+    ordinary.game.show_menu = true;
     let ordinary_config = embedded_runtime_config(&write_test_launcher(ordinary));
     assert_eq!(
         config_value(&ordinary_config, "input_toggle_fast_forward"),
@@ -159,8 +159,8 @@ fn advanced_emulator_access_reaches_fast_forward_without_dropping_a_bind() {
     );
 
     let mut advanced = request(false);
-    advanced.show_menu = true;
-    advanced.advanced_emulator_access = true;
+    advanced.game.show_menu = true;
+    advanced.game.advanced_emulator_access = true;
     let config = embedded_runtime_config(&write_test_launcher(advanced));
     assert_eq!(
         config_value(&config, "input_toggle_fast_forward"),
@@ -212,7 +212,7 @@ fn escape_stays_the_menu_and_quit_and_fullscreen_have_no_key() {
         .of(Action::Menu)
         .contains(&Binding::Key("escape".into())));
     let mut with_menu = request(false);
-    with_menu.show_menu = true;
+    with_menu.game.show_menu = true;
     let menu_config = embedded_runtime_config(&write_test_launcher(with_menu));
     assert_eq!(
         config_value(&menu_config, "input_menu_toggle"),
@@ -290,11 +290,9 @@ fn each_platform_player_is_told_its_own_drivers() {
         (ExportTarget::Macos, "coreaudio", "hid"),
         (ExportTarget::Windows, "wasapi", "xinput"),
     ] {
-        let config = isolated_runtime_config(&ExportRequest {
-            target: target.clone(),
-            ..request(false)
-        })
-        .unwrap();
+        let mut value = request(false);
+        value.game.target = target.clone();
+        let config = isolated_runtime_config(&value).unwrap();
         assert_eq!(config_value(&config, "audio_driver"), Some(audio));
         assert_eq!(config_value(&config, "input_joypad_driver"), Some(joypad));
         assert!(
@@ -336,7 +334,7 @@ fn export_request_defaults_advanced_emulator_access_off() {
         "target": "macos"
     }))
     .unwrap();
-    assert!(!request.advanced_emulator_access);
+    assert!(!request.game.advanced_emulator_access);
 }
 
 #[test]
@@ -346,7 +344,7 @@ fn launcher_sets_advanced_emulator_access_explicitly() {
     assert!(!off.contains("advanced\t1\n"));
 
     let mut on = request(false);
-    on.advanced_emulator_access = true;
+    on.game.advanced_emulator_access = true;
     let plan = write_test_launcher(on);
     assert!(plan.contains("advanced\t1\n"));
     assert!(!plan.contains("advanced\t0\n"));
@@ -380,11 +378,10 @@ fn a_slang_game_runs_glcore_and_every_other_game_gl() {
         (glsl, "gl"),
         (crate::shaders::ShaderSelection::default(), "gl"),
     ] {
-        let plan = write_test_launcher(ExportRequest {
-            show_menu: true,
-            shaders,
-            ..request(false)
-        });
+        let mut value = request(false);
+        value.game.show_menu = true;
+        value.game.shaders = shaders;
+        let plan = write_test_launcher(value);
         let config = embedded_runtime_config(&plan);
         assert_eq!(config_value(&config, "video_driver"), Some(driver));
         assert_eq!(config.matches("video_driver").count(), 1);

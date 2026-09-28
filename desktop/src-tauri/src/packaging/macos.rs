@@ -165,13 +165,13 @@ impl Packager for MacosPackager {
     ) -> Result<(), ExportError> {
         write_plist(
             &self.app.join("Contents/Info.plist"),
-            &request.title,
+            &request.game.title,
             identity,
-            request.icon.is_some() || icons::default_icon_path(&request.runtime_kit).is_some(),
+            request.game.icon.is_some() || icons::default_icon_path(&request.runtime_kit).is_some(),
             &super::macos_minimum::newest(&self.mach_objects)?,
         )?;
         let default_icon = icons::default_icon_path(&request.runtime_kit);
-        if let Some(icon) = request.icon.as_deref().or(default_icon.as_deref()) {
+        if let Some(icon) = request.game.icon.as_deref().or(default_icon.as_deref()) {
             icons::create_macos_icon(icon, &self.resources.join("GameIcon.icns"), staging)?;
         }
         Ok(())

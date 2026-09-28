@@ -1,8 +1,9 @@
 //! When we save a project with every setting changed from the builder's
 //! default, it opens with every setting and file as we saved it.
 
+use rominabox_desktop::game::Game;
 use rominabox_desktop::projects::{
-    open_project, save_project, ProjectOpenRequest, ProjectSaveRequest, ProjectSettings,
+    open_project, save_project, ProjectOpenRequest, ProjectSaveRequest,
 };
 use serde_json::{json, Value};
 use std::fs;
@@ -83,7 +84,7 @@ fn by_contents(mut settings: Value) -> Value {
 #[test]
 fn a_project_opens_with_every_setting_and_file_it_was_saved_with() {
     let root = rominabox_scratch::Scratch::dir("rominabox-project-everything");
-    let settings: ProjectSettings = serde_json::from_value(everything(&root)).unwrap();
+    let settings: Game = serde_json::from_value(everything(&root)).unwrap();
     let saved = serde_json::to_value(&settings).unwrap();
     assert_eq!(saved["bothPlatforms"], true, "a project takes Mac and Windows");
     save_project(&ProjectSaveRequest {

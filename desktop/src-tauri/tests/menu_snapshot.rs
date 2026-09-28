@@ -168,39 +168,42 @@ fn content(root: &Path, system: &str) -> PathBuf {
 fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
     let design = rominabox_desktop::themes::staged_design(kit, &case.design);
     let mut request = ExportRequest {
-        rom: PathBuf::new(),
-        title: "Menu Snapshot".to_string(),
-        system: case.system.to_string(),
-        description: None,
-        icon: None,
-        background: None,
-        show_menu: true,
-        start_at_menu: false,
-        theme: case.design.clone(),
-        palette: "blue".to_string(),
-        menu_sounds: "off".to_string(),
-        controls: rominabox_desktop::controls::Controls::default(),
-        menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
-        firmware: Vec::new(),
-        splash: false,
-        advanced_emulator_access: false,
-        intel_macs: false,
+        game: rominabox_desktop::game::Game {
+            rom: PathBuf::new(),
+            title: "Menu Snapshot".to_string(),
+            system: case.system.to_string(),
+            description: None,
+            icon: None,
+            background: None,
+            show_menu: true,
+            start_at_menu: false,
+            theme: case.design.clone(),
+            palette: "blue".to_string(),
+            menu_sounds: "off".to_string(),
+            controls: rominabox_desktop::controls::Controls::default(),
+            menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
+            firmware: Vec::new(),
+            splash: false,
+            advanced_emulator_access: false,
+            intel_macs: false,
+            keep_playing_in_background: false,
+            autosave_on_quit: false,
+            menu_entries: None,
+            shaders: rominabox_desktop::shaders::ShaderSelection::default(),
+            include_achievements: false,
+            target: ExportTarget::Macos,
+            both_platforms: false,
+        },
         zip: None,
-        keep_playing_in_background: false,
-        autosave_on_quit: false,
-        menu_entries: None,
-        shaders: rominabox_desktop::shaders::ShaderSelection::default(),
-        include_achievements: false,
         output_dir: root.join(format!("out-{}", case.name())),
         replace: false,
-        target: ExportTarget::Macos,
         runtime_kit: kit.to_path_buf(),
         core: None,
         core_cache: None,
     };
     match case.menu {
         Menu::Default => {}
-        Menu::NoOptions => request.menu_entries = Some(Vec::new()),
+        Menu::NoOptions => request.game.menu_entries = Some(Vec::new()),
         Menu::Everything => {
             let entries: Vec<String> = rominabox_desktop::menu::declared_screens(&design)
                 .unwrap()
@@ -208,20 +211,20 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
                 .filter(|screen| screen.option_label.is_some())
                 .map(|screen| screen.id)
                 .collect();
-            request.include_achievements = entries
+            request.game.include_achievements = entries
                 .iter()
                 .any(|entry| entry == rominabox_desktop::achievements::SCREEN);
-            request.menu_entries = Some(entries);
+            request.game.menu_entries = Some(entries);
             let catalog = rominabox_desktop::shaders::catalog().unwrap();
-            request.shaders = rominabox_desktop::shaders::ShaderSelection {
+            request.game.shaders = rominabox_desktop::shaders::ShaderSelection {
                 bundled: catalog.iter().map(|entry| entry.id.clone()).collect(),
                 custom: Vec::new(),
                 initial: catalog.last().map(|entry| entry.id.clone()),
             };
         }
         Menu::SplashOnly => {
-            request.show_menu = false;
-            request.splash = true;
+            request.game.show_menu = false;
+            request.game.splash = true;
         }
     }
     request
@@ -232,12 +235,12 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
 fn compose(request: &ExportRequest, destination: &Path) -> BTreeMap<String, String> {
     // Every case's content is one cartridge or one disc sheet.
     rominabox_desktop::packaging::stage_menu(request, 1, destination)
-        .unwrap_or_else(|error| panic!("{}: staging the menu failed: {error}", request.theme));
+        .unwrap_or_else(|error| panic!("{}: staging the menu failed: {error}", request.game.theme));
     let staged = staged_menu(destination);
     assert!(
         staged.contains_key("menu.rml") && staged.contains_key("controls-defaults.cfg"),
         "{}: nothing was staged: {:?}",
-        request.theme,
+        request.game.theme,
         staged.keys().collect::<Vec<_>>()
     );
     staged
@@ -450,7 +453,7 @@ fn an_export_stages_exactly_the_composed_menu() {
         let name = case.name();
         let mut request = request(&root, &kit, case);
         let composed = compose(&request, &root.join(format!("composed-{name}")));
-        request.rom = content(&root, case.system);
+        request.game.rom = content(&root, case.system);
         let result = rominabox_desktop::packaging::export_game(
             &request,
             &std::sync::atomic::AtomicBool::new(false),

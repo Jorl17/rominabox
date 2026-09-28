@@ -125,7 +125,7 @@ fn a_game_runs_on_this_mac_alone_unless_its_author_says_otherwise() {
         "outputDir": "out", "target": "macos"
     }))
     .unwrap();
-    assert!(!request.intel_macs);
+    assert!(!request.game.intel_macs);
 }
 
 #[test]
@@ -146,7 +146,7 @@ fn a_game_that_also_runs_on_intel_macs_carries_both_in_its_player_library_and_co
     let root = workspace();
     let mut request = universal_request(&root);
     cached_core(&root, "macos-x86_64", "x86_64");
-    request.intel_macs = true;
+    request.game.intel_macs = true;
     let app = export(&request, &Table::default()).unwrap();
     let both = vec!["arm64".to_string(), "x86_64".to_string()];
     assert_eq!(carried(&app), [both.clone(), both.clone(), both]);
@@ -168,7 +168,7 @@ fn a_game_that_also_runs_on_intel_macs_carries_both_in_its_player_library_and_co
 fn the_intel_core_is_fetched_into_the_cache_beside_this_macs() {
     let root = workspace();
     let mut request = universal_request(&root);
-    request.intel_macs = true;
+    request.game.intel_macs = true;
     let built = root.join("served").join(CORE);
     core_for(&built, "x86_64");
     let table = Table {
@@ -196,7 +196,7 @@ fn a_runtime_without_an_intel_player_is_refused_in_the_authors_words() {
     let mut request = universal_request(&root);
     write_runtime_stub_for(&request.runtime_kit.join("bin/retroarch"), &["arm64"]);
     cached_core(&root, "macos-x86_64", "x86_64");
-    request.intel_macs = true;
+    request.game.intel_macs = true;
     let error = export(&request, &Table::default()).unwrap_err();
     assert_eq!(error.stage, ErrorStage::Refused);
     assert_eq!(
@@ -325,7 +325,7 @@ fn a_game_asks_for_the_oldest_macos_its_programs_run_on() {
     let root = workspace();
     let mut request = universal_request(&root);
     cached_core(&root, "macos-x86_64", "x86_64");
-    request.intel_macs = true;
+    request.game.intel_macs = true;
     let app = export(&request, &Table::default()).unwrap();
     let recipe: Value = serde_json::from_str(include_str!(
         "../../../scripts/native_runtime/player-recipe.json"

@@ -99,27 +99,27 @@ pub const MANAGED_DATA_DIRECTORIES: &[&str] = &[
 
 pub(super) fn isolated_runtime_config(request: &ExportRequest) -> Result<String, ExportError> {
     // We choose the video driver by the shader language of the game.
-    let video = crate::shaders::video_driver(&request.shaders)
+    let video = crate::shaders::video_driver(&request.game.shaders)
         .map_err(|message| ExportError::new(ErrorStage::Configure, message))?
         .name();
-    let menu_driver = if request.show_menu || request.splash {
+    let menu_driver = if request.game.show_menu || request.game.splash {
         "rmlui"
     } else {
         "null"
     };
     // We keep the game's audio running in the menu, so the player hears a
     // change of volume, and play pack cues only when the export has a pack.
-    let menu_audio = request.show_menu;
-    let menu_sounds = request.show_menu && request.menu_sounds != "off";
+    let menu_audio = request.game.show_menu;
+    let menu_sounds = request.game.show_menu && request.game.menu_sounds != "off";
     // We set both halves with one option. The file is `<savestate>.auto`, not
     // a numbered pause-menu slot, so Save and Load on that row are unchanged.
-    let autosave = if request.autosave_on_quit {
+    let autosave = if request.game.autosave_on_quit {
         "true"
     } else {
         "false"
     };
     let (data, resources) = (token!(DataDir), token!(ResourcesDir));
-    let Drivers { audio, joypad, .. } = request.target.drivers();
+    let Drivers { audio, joypad, .. } = request.game.target.drivers();
     let assets = if menu_sounds {
         format!("{resources}/assets")
     } else {
@@ -209,7 +209,7 @@ notification_show_remap_load = "false"
 notification_show_config_override_load = "false"
 savestate_thumbnail_enable = "true"
 "#,
-        isolated_hotkey_config(request.advanced_emulator_access),
+        isolated_hotkey_config(request.game.advanced_emulator_access),
         firmware = shipped!(Firmware).1,
         remaps = shipped!(Remaps).1,
         core_options = shipped!(CoreOptions).1,
@@ -226,7 +226,7 @@ fn game_data_template(identity: &str) -> String {
 
 /// The shared QUICK SIGN IN folder for this export, when it has achievements.
 pub(super) fn accounts_folder(request: &ExportRequest) -> Result<Option<String>, ExportError> {
-    if !crate::achievements::included(request.include_achievements, request.show_menu) {
+    if !crate::achievements::included(request.game.include_achievements, request.game.show_menu) {
         return Ok(None);
     }
     let named = std::env::var("ROMINABOX_ACCOUNTS_FOLDER").ok();
@@ -257,14 +257,14 @@ pub(super) fn write_launch_plan(
             "the game's content path cannot be launched",
         ));
     }
-    if request.title.contains(['\n', '\t']) {
+    if request.game.title.contains(['\n', '\t']) {
         return Err(ExportError::new(
             ErrorStage::Configure,
             "the game title cannot be written into the launch plan",
         ));
     }
-    let shader_initial = if request.show_menu {
-        crate::shaders::launch_preset(&request.shaders)
+    let shader_initial = if request.game.show_menu {
+        crate::shaders::launch_preset(&request.game.shaders)
             .map_err(|message| ExportError::new(ErrorStage::Configure, message))?
             .unwrap_or_default()
     } else {
@@ -280,15 +280,15 @@ pub(super) fn write_launch_plan(
     let line = |field: &str, value: &str| format!("{field}\t{value}\n");
     let flag = |on: bool| if on { "1" } else { "0" };
     let achievements =
-        crate::achievements::included(request.include_achievements, request.show_menu);
+        crate::achievements::included(request.game.include_achievements, request.game.show_menu);
     let mut plan = String::from("rominabox-launch\t1\n");
     plan += &line(plan_field!(Identity), identity);
     plan += &line(plan_field!(Content), &content);
-    plan += &line(plan_field!(Title), &request.title);
-    plan += &line(plan_field!(StartAtMenu), flag(request.start_at_menu));
+    plan += &line(plan_field!(Title), &request.game.title);
+    plan += &line(plan_field!(StartAtMenu), flag(request.game.start_at_menu));
     plan += &line(
         plan_field!(Advanced),
-        flag(request.advanced_emulator_access),
+        flag(request.game.advanced_emulator_access),
     );
     plan += &line(plan_field!(Achievements), flag(achievements));
     plan += &line(plan_field!(Sandbox), flag(true));

@@ -27,12 +27,12 @@ fn names(directory: &Path) -> Vec<String> {
 fn a_windows_game_made_here_is_the_folder_a_windows_builder_makes() {
     let root = workspace();
     let mut request = export_request_from(&root, windows_kit(&root));
-    request.target = ExportTarget::Windows;
+    request.game.target = ExportTarget::Windows;
     let artwork = root.join("artwork.png");
     image::RgbaImage::from_pixel(64, 48, image::Rgba([0, 0, 255, 255]))
         .save(&artwork)
         .unwrap();
-    request.icon = Some(artwork);
+    request.game.icon = Some(artwork);
     let cancelled = AtomicBool::new(false);
     let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
 

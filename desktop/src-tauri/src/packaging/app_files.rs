@@ -12,7 +12,7 @@ use std::path::Path;
 /// The defaults of the player's settings that the author chose in `request`.
 pub(super) fn player_defaults(request: &ExportRequest) -> crate::player_settings::Defaults {
     crate::player_settings::Defaults {
-        keep_playing_in_background: request.keep_playing_in_background,
+        keep_playing_in_background: request.game.keep_playing_in_background,
     }
 }
 
@@ -22,23 +22,23 @@ pub(super) fn player_defaults(request: &ExportRequest) -> crate::player_settings
 pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuRequest {
     let kit = &request.runtime_kit;
     crate::menu::MenuRequest {
-        palette: request.palette.clone(),
-        background: request.background.clone(),
-        system: request.system.clone(),
-        controls: request.controls.clone(),
-        menu_controls: request.menu_controls.clone(),
-        show_menu: request.show_menu,
-        splash: request.splash,
-        include_achievements: request.include_achievements,
-        menu_entries: request.menu_entries.clone(),
-        shaders: request.shaders.clone(),
+        palette: request.game.palette.clone(),
+        background: request.game.background.clone(),
+        system: request.game.system.clone(),
+        controls: request.game.controls.clone(),
+        menu_controls: request.game.menu_controls.clone(),
+        show_menu: request.game.show_menu,
+        splash: request.game.splash,
+        include_achievements: request.game.include_achievements,
+        menu_entries: request.game.menu_entries.clone(),
+        shaders: request.game.shaders.clone(),
         discs,
         settings: player_defaults(request),
-        sound_pack: request.menu_sounds != "off",
+        sound_pack: request.game.menu_sounds != "off",
         // Controller artwork is not part of a design. We show the same pads in
         // every design, from the shared menu-assets in the kit.
         ..crate::menu::MenuRequest::new(
-            crate::themes::staged_design(kit, &request.theme),
+            crate::themes::staged_design(kit, &request.game.theme),
             kit.join("menu-assets"),
         )
     }
@@ -58,12 +58,12 @@ pub fn stage_menu(
     fs::create_dir_all(menu_assets)
         .map_err(|error| ExportError::io(ErrorStage::Stage, menu_assets, error))?;
     let profile = controls::write_defaults_config(
-        &request.system,
-        &request.controls,
+        &request.game.system,
+        &request.game.controls,
         &menu_assets.join(file_name!(ControlsDefaults)),
     )
     .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
-    if request.splash {
+    if request.game.splash {
         copy_file(
             &request.runtime_kit.join("branding/logo.png"),
             &menu_assets.join("splash-logo.png"),
@@ -195,13 +195,13 @@ pub(super) fn stage_bundled_autoconfig(runtime_kit: &Path, destination: &Path) -
 pub(super) fn stage_firmware(request: &ExportRequest, destination: &Path) -> Result<(), ExportError> {
     fs::create_dir_all(destination)
         .map_err(|error| ExportError::io(ErrorStage::Stage, destination, error))?;
-    let system = crate::systems::find(&request.system).ok_or_else(|| {
+    let system = crate::systems::find(&request.game.system).ok_or_else(|| {
         ExportError::new(
             ErrorStage::Stage,
-            format!("unsupported system: {}", request.system),
+            format!("unsupported system: {}", request.game.system),
         )
     })?;
-    for source in &request.firmware {
+    for source in &request.game.firmware {
         let name = firmware_destination_name(source, system).ok_or_else(|| {
             ExportError::new(
                 ErrorStage::Stage,

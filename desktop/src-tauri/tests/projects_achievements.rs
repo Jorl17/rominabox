@@ -1,8 +1,9 @@
 use rominabox_desktop::achievements;
 use rominabox_desktop::controls::Controls;
 use rominabox_desktop::packaging::ExportTarget;
+use rominabox_desktop::game::Game;
 use rominabox_desktop::projects::{
-    open_project, save_project, ProjectOpenRequest, ProjectSaveRequest, ProjectSettings,
+    open_project, save_project, ProjectOpenRequest, ProjectSaveRequest,
 };
 use rominabox_desktop::shaders::ShaderSelection;
 use std::fs::{self, File};
@@ -11,8 +12,8 @@ use std::path::PathBuf;
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
-fn settings(rom: PathBuf) -> ProjectSettings {
-    ProjectSettings {
+fn settings(rom: PathBuf) -> Game {
+    Game {
         rom,
         title: "Achievement project".into(),
         system: "megadrive".into(),
@@ -48,21 +49,22 @@ fn current_archive(path: &std::path::Path, settings: serde_json::Value) {
     writer
         .write_all(
             serde_json::to_string(&serde_json::json!({
-                "formatVersion": 2,
-                "settings": settings,
-                "assets": { "rom": "assets/rom.bin" }
+                "formatVersion": 3,
+                "game": settings,
+                "assets": { "content": ["content/game.bin"] }
             }))
             .unwrap()
             .as_bytes(),
         )
         .unwrap();
-    writer.start_file("assets/rom.bin", options).unwrap();
+    writer.start_file("content/game.bin", options).unwrap();
     writer.write_all(b"rom bytes").unwrap();
     writer.finish().unwrap();
 }
 
 fn current_settings() -> serde_json::Value {
     serde_json::json!({
+        "rom": "content/game.bin",
         "title": "Achievement project",
         "system": "megadrive",
         "showMenu": true,

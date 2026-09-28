@@ -108,9 +108,6 @@ pub fn prepare_sound_assets(source: &Path, destination: &Path, pack: &str) -> Re
     .map_err(|e| e.to_string())?;
     Ok(())
 }
-pub fn default_menu_sounds() -> String {
-    "off".into()
-}
 
 #[cfg(test)]
 mod tests {

@@ -21,16 +21,16 @@ fn destination(request: &ExportRequest) -> PathBuf {
 /// request is for one, or, when that is not set, a Mac game made where
 /// files cannot keep the Unix modes of a Mac app's programs (Windows).
 pub(crate) fn zipped(request: &ExportRequest) -> bool {
-    matches!(request.target, ExportTarget::Macos) && request.zip.unwrap_or(!cfg!(unix))
+    matches!(request.game.target, ExportTarget::Macos) && request.zip.unwrap_or(!cfg!(unix))
 }
 
 /// What we put in the output folder for an export of `request`: the app, or
 /// a zip with a name every system allows, which contains the app by its name.
 pub(crate) fn output_name(request: &ExportRequest) -> String {
     if zipped(request) {
-        download_name(&request.title)
+        download_name(&request.game.title)
     } else {
-        app_name(&request.target, &request.title)
+        app_name(&request.game.target, &request.game.title)
     }
 }
 
@@ -44,9 +44,9 @@ pub(crate) fn download_name(title: &str) -> String {
 /// moving it into place: its own name, or for a zip, one every system allows.
 pub(crate) fn staged_app_name(request: &ExportRequest) -> String {
     if zipped(request) {
-        format!("{}.app", windows_filename(&request.title))
+        format!("{}.app", windows_filename(&request.game.title))
     } else {
-        app_name(&request.target, &request.title)
+        app_name(&request.game.target, &request.game.title)
     }
 }
 

@@ -5,12 +5,6 @@ use std::path::Path;
 
 pub const SCREEN: &str = "achievements";
 
-/// Default for a current project file without this field. For a new game we
-/// use the builder's (`crate::builder::defaults`).
-pub fn default_included() -> bool {
-    true
-}
-
 /// Without a menu the player cannot sign in or manage an account.
 pub fn included(requested: bool, show_menu: bool) -> bool {
     requested && show_menu

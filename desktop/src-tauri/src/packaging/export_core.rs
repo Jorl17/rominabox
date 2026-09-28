@@ -32,7 +32,7 @@ pub(super) fn export_core(
     request: &ExportRequest,
     targets: &[Target],
 ) -> Result<Option<ExportCore<'static>>, ExportError> {
-    let Some(system) = crate::systems::find(&request.system) else {
+    let Some(system) = crate::systems::find(&request.game.system) else {
         return Ok(None);
     };
     let Some(core) = system.preferred_core() else {

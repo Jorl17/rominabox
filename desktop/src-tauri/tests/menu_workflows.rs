@@ -208,7 +208,7 @@ fn compose(kit: &Path, table: &Value, export: &Value, to: &Path) -> packaging::E
 fn launch_state(request: &packaging::ExportRequest, assets: &Path, data: &Path) -> String {
     let mut lines = String::new();
     let defaults = player_settings::Defaults {
-        keep_playing_in_background: request.keep_playing_in_background,
+        keep_playing_in_background: request.game.keep_playing_in_background,
     };
     for setting in player_settings::declared(defaults) {
         let value = setting.chosen(data).unwrap_or(setting.default);
@@ -217,8 +217,8 @@ fn launch_state(request: &packaging::ExportRequest, assets: &Path, data: &Path) 
     let chosen = fs::read_to_string(data.join("shader-choice"))
         .ok()
         .and_then(|text| text.lines().next().map(str::to_owned));
-    let initial = if request.show_menu {
-        shaders::launch_preset(&request.shaders)
+    let initial = if request.game.show_menu {
+        shaders::launch_preset(&request.game.shaders)
             .unwrap()
             .map(|relative| assets.join(relative).display().to_string())
     } else {
@@ -584,7 +584,7 @@ fn every_workflow_case_reports_what_the_launched_player_recorded() {
             script.push_str(&format!("assets {}\n", assets.display()));
             script.push_str(&format!("data {}\n", directory.display()));
             script.push_str(&format!("frame {} {}\n", frame["width"], frame["height"]));
-            script.push_str(&format!("open {}\n", u8::from(request.start_at_menu)));
+            script.push_str(&format!("open {}\n", u8::from(request.game.start_at_menu)));
             script.push_str(&launch_state(request, assets, &directory));
             if !ids.is_empty() {
                 script.push_str(&format!("ids {}\n", ids.join(" ")));

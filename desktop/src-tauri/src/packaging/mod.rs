@@ -196,82 +196,24 @@ pub struct Drivers {
     pub joypad_profiles: Vec<String>,
 }
 
-/// For a setting missing from a request we use the builder default
-/// (`crate::builder::defaults`), the same one that a first draft starts from.
+/// A game, and where and how we export it. For a setting that the game does
+/// not have, we use the builder's default (`crate::game::Game`).
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportRequest {
-    pub rom: PathBuf,
-    pub title: String,
-    pub system: String,
-    pub description: Option<String>,
-    pub icon: Option<PathBuf>,
-    pub background: Option<PathBuf>,
-    #[serde(default = "crate::builder::unstated::show_menu")]
-    pub show_menu: bool,
-    #[serde(default = "crate::builder::unstated::start_at_menu")]
-    pub start_at_menu: bool,
-    #[serde(default = "crate::builder::unstated::theme")]
-    pub theme: String,
-    #[serde(default = "crate::builder::unstated::palette")]
-    pub palette: String,
-    #[serde(default = "crate::builder::unstated::menu_sounds")]
-    pub menu_sounds: String,
-    /// The author's defaults, which we never change. We store the player's
-    /// changes separately, in the managed data folder of the exported game.
-    #[serde(default)]
-    pub controls: controls::Controls,
-    /// The inputs to open the menu, and to confirm and go back in it, until
-    /// the player changes them on MENU CONTROLS. For an action left out, we
-    /// use the builder's default.
-    #[serde(default = "crate::builder::unstated::menu_controls")]
-    pub menu_controls: crate::menu_controls::MenuControls,
-    /// The firmware files the author chose. On export we never look for
-    /// firmware in global RetroArch locations.
-    #[serde(default)]
-    pub firmware: Vec<PathBuf>,
-    /// Include the short native in-player splash and its logo asset.
-    #[serde(default = "crate::builder::unstated::splash")]
-    pub splash: bool,
-    /// Restore stock RetroArch native menus in the exported app.
-    #[serde(default = "crate::builder::unstated::advanced_emulator_access")]
-    pub advanced_emulator_access: bool,
-    /// A Mac game also runs on Intel Macs. Ignored for a Windows game.
-    #[serde(default = "crate::builder::unstated::intel_macs")]
-    pub intel_macs: bool,
+    #[serde(flatten)]
+    pub game: crate::game::Game,
     /// Write a Mac game into `<title>.zip`, which records the Unix modes of
     /// its programs, instead of as the `.app` folder. When unset, we zip it
     /// where the builder's files cannot keep those modes (Windows). We ignore
     /// it for a Windows game.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub zip: Option<bool>,
-    /// Keep emulating when the window does not have the focus. RetroArch's
-    /// `pause_nonactive` is the opposite of this. We write it into the frozen
-    /// config, as we do quit-autosave, because the player has no control for
-    /// it and a per-game `controls.cfg` would otherwise replace it.
-    #[serde(default = "crate::builder::unstated::keep_playing_in_background")]
-    pub keep_playing_in_background: bool,
-    /// Save on quit and load that save the next time the player opens the
-    /// game. The author makes one choice for both.
-    #[serde(default = "crate::builder::unstated::autosave_on_quit")]
-    pub autosave_on_quit: bool,
-    /// The Options entries we offer in this game. When absent, we use the
-    /// design's defaults. With an empty list, we show no Options button.
-    #[serde(default)]
-    pub menu_entries: Option<Vec<String>>,
-    /// The shader presets we bundle into the game. Usually there are none,
-    /// and then the game has no shader screen and no preset.
-    #[serde(default)]
-    pub shaders: crate::shaders::ShaderSelection,
-    /// Include player-authenticated Casual achievements, independently of data.
-    #[serde(default = "crate::builder::unstated::include_achievements")]
-    pub include_achievements: bool,
     pub output_dir: PathBuf,
     /// Replace an app already at the destination. Without it, when an app is
     /// already there, we export nothing and say so.
     #[serde(default)]
     pub replace: bool,
-    pub target: ExportTarget,
     /// A frozen, redistributable kit. It contains `bin/retroarch`,
     /// `designs/<id>/`, `menu-assets/`, `autoconfig/`, `licenses/` and
     /// `manifest.json`, but no cores, which come from `core_cache`. The
@@ -410,7 +352,7 @@ where
     // fix the platform here and read `resolved` in every later step.
     // Before anything else, because the author decides about an app in the way.
     crate::publish::refuse_unless_replacing(request)?;
-    let targets = request.target.targets(request.intel_macs);
+    let targets = request.game.target.targets(request.game.intel_macs);
     let resolved = export_core(request, &targets)?;
     prepare_core(request, resolved.as_ref(), &mut progress, transport)?;
     emit(
@@ -419,7 +361,7 @@ where
         0.02,
         "Checking export inputs",
     );
-    let mut packager = packager_for(&request.target, &targets);
+    let mut packager = packager_for(&request.game.target, &targets);
     validate_request(request, resolved.as_ref(), &targets, &*packager)?;
     check_cancelled(cancelled)?;
     export_app(
@@ -508,7 +450,7 @@ where
     F: FnMut(ExportProgress),
 {
     packager.check_host()?;
-    let app_name = crate::publish::app_name(&request.target, &request.title);
+    let app_name = crate::publish::app_name(&request.game.target, &request.game.title);
     let output_name = crate::publish::output_name(request);
     let final_output = request.output_dir.join(&output_name);
     fs::create_dir_all(&request.output_dir)
@@ -526,10 +468,10 @@ where
     );
     packager.place_player(&request.runtime_kit)?;
 
-    let system = crate::systems::find(&request.system).ok_or_else(|| {
+    let system = crate::systems::find(&request.game.system).ok_or_else(|| {
         ExportError::new(
             ErrorStage::Validate,
-            format!("unsupported system: {}", request.system),
+            format!("unsupported system: {}", request.game.system),
         )
     })?;
     let selected_core = match resolved {
@@ -544,7 +486,7 @@ where
     let core_name = OsStr::new(packager.core_file());
     let core = resources.join(core_name);
     packager.place_core(&shipped_cores(request, resolved, targets), &core, &system.name)?;
-    let collected_content = content::collect_for(&request.rom, Some(&system.id))
+    let collected_content = content::collect_for(&request.game.rom, Some(&system.id))
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     let content_directory = resources.join("content");
     for file in &collected_content.files {
@@ -556,7 +498,7 @@ where
         collected_content.discs,
         &resources.join(app_file!(MenuAssets)),
     )?;
-    let moved = controls::placement(&request.system, &request.controls)
+    let moved = controls::placement(&request.game.system, &request.game.controls)
         .and_then(|placed| crate::pad_positions::remap_lines(&placed, &controls::pad_positions()?))
         .map_err(|error| ExportError::new(ErrorStage::Stage, error))?;
     stage_controller_remap(
@@ -566,11 +508,11 @@ where
         &resources.join(shipped!(Remaps).0),
     )?;
     stage_pixel_options(selected_core, &resources.join(shipped!(CoreOptions).0))?;
-    if request.show_menu {
+    if request.game.show_menu {
         crate::themes::prepare_sound_assets(
             &request.runtime_kit.join("sound-packs"),
             &resources.join("assets/sounds"),
-            &request.menu_sounds,
+            &request.game.menu_sounds,
         )
         .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     }
@@ -607,42 +549,42 @@ where
         "Writing isolated game configuration",
     );
     let identity = stable_identity(
-        &request.rom,
-        &request.system,
+        &request.game.rom,
+        &request.game.system,
         isolation_namespace().as_deref(),
     )?;
     packager.install_launcher(&request.runtime_kit)?;
     write_launch_plan(
         &resources.join(app_file!(Plan)),
         &identity,
-        OsStr::new(&launch_path(&request.target, &rom_relative)),
+        OsStr::new(&launch_path(&request.game.target, &rom_relative)),
         request,
     )?;
     let manifest = serde_json::json!({
         "formatVersion": 1,
         "identity": identity,
-        "title": request.title,
-        "system": request.system,
-        "description": request.description,
-        "theme": request.theme,
-        "palette": request.palette,
-        "menuSounds": request.menu_sounds,
-        "controls": request.controls,
+        "title": request.game.title,
+        "system": request.game.system,
+        "description": request.game.description,
+        "theme": request.game.theme,
+        "palette": request.game.palette,
+        "menuSounds": request.game.menu_sounds,
+        "controls": request.game.controls,
         "controlsProfile": controls_profile.id,
-        "showMenu": request.show_menu,
-        "startAtMenu": request.start_at_menu,
+        "showMenu": request.game.show_menu,
+        "startAtMenu": request.game.start_at_menu,
         "runtime": "RetroArch",
         "core": packager.core_file(),
         "coreSource": resolved.and_then(|export_core| export_core.builds.first()).map_or("", |build| build.artifact_name),
-        "content": collected_content.files.iter().map(|file| launch_path(&request.target, &file.relative)).collect::<Vec<_>>(),
-        "rom": launch_path(&request.target, &rom_relative),
-        "firmware": request.firmware.iter().filter_map(|path| firmware_destination_name(path, system)).collect::<Vec<_>>(),
-        "splash": request.splash,
-        "advancedEmulatorAccess": request.advanced_emulator_access,
-        "keepPlayingInBackground": request.keep_playing_in_background,
-        "autosaveOnQuit": request.autosave_on_quit,
-        "menuEntries": request.menu_entries,
-        "includeAchievements": crate::achievements::included(request.include_achievements, request.show_menu),
+        "content": collected_content.files.iter().map(|file| launch_path(&request.game.target, &file.relative)).collect::<Vec<_>>(),
+        "rom": launch_path(&request.game.target, &rom_relative),
+        "firmware": request.game.firmware.iter().filter_map(|path| firmware_destination_name(path, system)).collect::<Vec<_>>(),
+        "splash": request.game.splash,
+        "advancedEmulatorAccess": request.game.advanced_emulator_access,
+        "keepPlayingInBackground": request.game.keep_playing_in_background,
+        "autosaveOnQuit": request.game.autosave_on_quit,
+        "menuEntries": request.game.menu_entries,
+        "includeAchievements": crate::achievements::included(request.game.include_achievements, request.game.show_menu),
     });
     fs::write(
         resources.join("game.json"),
@@ -663,7 +605,7 @@ where
     let content_bytes = tree_size(&content_directory)?
         + tree_size(&resources.join(shipped!(Firmware).0))?
         + request
-            .background
+            .game.background
             .as_ref()
             .map_or(0, |path| fs::metadata(path).map(|m| m.len()).unwrap_or(0));
     check_cancelled(cancelled)?;
@@ -705,40 +647,40 @@ fn validate_request(
     targets: &[Target],
     packager: &dyn Packager,
 ) -> Result<(), ExportError> {
-    if request.title.trim().is_empty() {
+    if request.game.title.trim().is_empty() {
         return Err(ExportError::new(ErrorStage::Validate, "title is required"));
     }
     // A design is a directory, so we catch an unknown one when we resolve it.
-    if let Err(message) = crate::themes::design_root(&request.theme) {
+    if let Err(message) = crate::themes::design_root(&request.game.theme) {
         return Err(ExportError::new(ErrorStage::Validate, message));
     }
-    if request.start_at_menu && !request.show_menu {
+    if request.game.start_at_menu && !request.game.show_menu {
         return Err(ExportError::new(
             ErrorStage::Validate,
             "startAtMenu requires showMenu",
         ));
     }
     crate::achievements::entries(
-        &crate::themes::design_root(&request.theme)
+        &crate::themes::design_root(&request.game.theme)
             .map_err(|message| ExportError::new(ErrorStage::Validate, message))?,
-        request.include_achievements,
-        request.show_menu,
-        request.menu_entries.as_deref(),
+        request.game.include_achievements,
+        request.game.show_menu,
+        request.game.menu_entries.as_deref(),
     )
     .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
-    controls::validate_for_system(&request.system, &request.controls)
+    controls::validate_for_system(&request.game.system, &request.game.controls)
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
-    if !request.shaders.is_empty() && !request.show_menu {
+    if !request.game.shaders.is_empty() && !request.game.show_menu {
         return Err(ExportError::new(
             ErrorStage::Refused,
             "Shaders need the in-game menu. Turn the menu on, or leave shaders unset.",
         ));
     }
-    crate::shaders::resolve(&request.shaders)
+    crate::shaders::resolve(&request.game.shaders)
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     let runtime = request.runtime_kit.join(packager.player_in_kit());
     for (stage, label, path) in [
-        (ErrorStage::Missing, "ROM", &request.rom),
+        (ErrorStage::Missing, "ROM", &request.game.rom),
         (ErrorStage::Validate, "runtime", &runtime),
     ] {
         if !path.is_file() {
@@ -751,13 +693,13 @@ fn validate_request(
     }
     crate::achievements::validate_runtime(
         &request.runtime_kit,
-        crate::achievements::included(request.include_achievements, request.show_menu),
+        crate::achievements::included(request.game.include_achievements, request.game.show_menu),
     )
     .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
-    let system = crate::systems::find(&request.system).ok_or_else(|| {
+    let system = crate::systems::find(&request.game.system).ok_or_else(|| {
         ExportError::new(
             ErrorStage::Validate,
-            format!("unsupported system: {}", request.system),
+            format!("unsupported system: {}", request.game.system),
         )
     })?;
     if system.preferred_core().is_none() {
@@ -774,7 +716,7 @@ fn validate_request(
             ));
         }
     }
-    for path in request.icon.iter().chain(request.background.iter()) {
+    for path in request.game.icon.iter().chain(request.game.background.iter()) {
         if !path.is_file() {
             return Err(ExportError::new(
                 ErrorStage::Missing,
@@ -783,7 +725,7 @@ fn validate_request(
             .about(path));
         }
     }
-    content::collect_for(&request.rom, Some(&system.id))
+    content::collect_for(&request.game.rom, Some(&system.id))
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     // We reject a container format by the core that would have to read it,
     // not by the console name, because CHD support in an upstream project
@@ -791,7 +733,7 @@ fn validate_request(
     // not restrict cores for which we declare no capabilities.
     if let (Some(core), Some(extension)) = (
         system.cores.first(),
-        request.rom.extension().and_then(OsStr::to_str),
+        request.game.rom.extension().and_then(OsStr::to_str),
     ) {
         let extension = extension.to_ascii_lowercase();
         if !core.capabilities.is_empty()
@@ -811,7 +753,7 @@ fn validate_request(
         }
     }
     validate_firmware(request, system)?;
-    if request.splash {
+    if request.game.splash {
         let logo = request.runtime_kit.join("branding/logo.png");
         if !logo.is_file() {
             return Err(ExportError::new(
@@ -827,7 +769,7 @@ fn validate_firmware(
     request: &ExportRequest,
     system: &crate::systems::System,
 ) -> Result<(), ExportError> {
-    for path in &request.firmware {
+    for path in &request.game.firmware {
         if !path.is_file() {
             return Err(ExportError::new(
                 ErrorStage::Missing,
@@ -842,7 +784,7 @@ fn validate_firmware(
             ));
         }
     }
-    let assessment = crate::systems::assess_firmware(system, &request.firmware);
+    let assessment = crate::systems::assess_firmware(system, &request.game.firmware);
     if !assessment.can_continue {
         return Err(ExportError::new(ErrorStage::Refused, assessment.refusal()));
     }

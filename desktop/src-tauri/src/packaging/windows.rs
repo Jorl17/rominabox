@@ -120,13 +120,13 @@ impl Packager for WindowsPackager {
     ) -> Result<(), ExportError> {
         let default_icon = icons::default_icon_path(&request.runtime_kit);
         let icon = request
-            .icon
+            .game.icon
             .as_deref()
             .or(default_icon.as_deref())
             .map(icons::windows_icon)
             .transpose()?;
         for program in [&self.launcher, &self.player] {
-            crate::windows_program::describe(program, icon.as_deref(), &request.title)?;
+            crate::windows_program::describe(program, icon.as_deref(), &request.game.title)?;
         }
         Ok(())
     }

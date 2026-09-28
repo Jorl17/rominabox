@@ -4,7 +4,7 @@ use super::*;
 fn export_refuses_a_missing_required_bios_with_the_builders_explanation() {
     let system = crate::systems::find("pcecd").unwrap();
     let mut settings = request(false);
-    settings.system = "pcecd".into();
+    settings.game.system = "pcecd".into();
     let error = validate_firmware(&settings, system).unwrap_err();
     let assessment = crate::systems::assess_firmware(system, &[]);
     assert!(!assessment.can_continue);
@@ -15,7 +15,7 @@ fn export_refuses_a_missing_required_bios_with_the_builders_explanation() {
 fn export_allows_a_console_whose_bios_is_optional() {
     let system = crate::systems::find("ps1").unwrap();
     let mut settings = request(false);
-    settings.system = "ps1".into();
+    settings.game.system = "ps1".into();
     assert!(validate_firmware(&settings, system).is_ok());
 }
 
@@ -27,8 +27,8 @@ fn export_allows_a_console_whose_bios_is_optional() {
 
 fn request_for(system: &str, rom: &str) -> ExportRequest {
     let mut value = request(false);
-    value.system = system.to_string();
-    value.rom = PathBuf::from(rom);
+    value.game.system = system.to_string();
+    value.game.rom = PathBuf::from(rom);
     value
 }
 
@@ -37,7 +37,7 @@ fn refusal(system: &str, rom: &str) -> Option<String> {
     let definition = crate::systems::find(system).expect("known system");
     let core = definition.cores.first()?;
     let extension = value
-        .rom
+        .game.rom
         .extension()
         .and_then(OsStr::to_str)?
         .to_ascii_lowercase();

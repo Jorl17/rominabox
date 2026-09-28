@@ -24,7 +24,7 @@ pub fn export_for_both<F: FnMut(ExportProgress)>(
     cancelled: &AtomicBool,
     mut progress: F,
 ) -> Result<ExportResult, ExportError> {
-    let name = crate::publish::download_name(&request.title);
+    let name = crate::publish::download_name(&request.game.title);
     let destination = request.output_dir.join(&name);
     if !request.replace {
         crate::publish::refuse_existing(&destination)?;
@@ -40,7 +40,7 @@ pub fn export_for_both<F: FnMut(ExportProgress)>(
         game.runtime_kit = kit_for(&platform).map_err(|message| ExportError::new(ErrorStage::Refused, message))?;
         game.core = None;
         game.core_cache = platform.target().and_then(core_cache_for);
-        game.target = platform;
+        game.game.target = platform;
         game.output_dir = staging.path().join(folder);
         game.replace = false;
         game.zip = Some(false);

@@ -89,32 +89,35 @@ fn request(
     let rom = root.join("game.bin");
     fs::write(&rom, rom_bytes).unwrap();
     ExportRequest {
-        rom,
-        title: title.to_string(),
-        system: system.to_string(),
-        description: None,
-        icon: None,
-        background: None,
-        show_menu: false,
-        start_at_menu: false,
-        theme: "native".to_string(),
-        palette: "blue".to_string(),
-        menu_sounds: "off".to_string(),
-        controls: rominabox_desktop::controls::Controls::default(),
-        menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
-        firmware: Vec::new(),
-        splash: false,
-        advanced_emulator_access: false,
-        intel_macs: false,
+        game: rominabox_desktop::game::Game {
+            rom,
+            title: title.to_string(),
+            system: system.to_string(),
+            description: None,
+            icon: None,
+            background: None,
+            show_menu: false,
+            start_at_menu: false,
+            theme: "native".to_string(),
+            palette: "blue".to_string(),
+            menu_sounds: "off".to_string(),
+            controls: rominabox_desktop::controls::Controls::default(),
+            menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
+            firmware: Vec::new(),
+            splash: false,
+            advanced_emulator_access: false,
+            intel_macs: false,
+            keep_playing_in_background: false,
+            autosave_on_quit: false,
+            menu_entries: None,
+            shaders: rominabox_desktop::shaders::ShaderSelection::default(),
+            include_achievements: false,
+            target: platform::TARGET,
+            both_platforms: false,
+        },
         zip: None,
-        keep_playing_in_background: false,
-        autosave_on_quit: false,
-        menu_entries: None,
-        shaders: rominabox_desktop::shaders::ShaderSelection::default(),
-        include_achievements: false,
         output_dir: root.join("out"),
         replace: false,
-        target: platform::TARGET,
         runtime_kit: kit,
         core: None,
         core_cache: None,
@@ -460,8 +463,8 @@ fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it
     support::copy_tree(&repo_at("integrations/parts"), &kit.join("parts"));
     support::copy_tree(&repo_at("desktop/assets/controllers"), &kit.join("menu-assets"));
     let mut settings = request(&root, b"rominabox-isolation-accounts-v1", "Accounts Probe", kit, "megadrive");
-    settings.show_menu = true;
-    settings.include_achievements = true;
+    settings.game.show_menu = true;
+    settings.game.include_achievements = true;
     let app = export(&settings);
     let other = export(&request(
         &root.join("other"),
@@ -660,7 +663,7 @@ fn the_test_cartridge() -> (rominabox_scratch::Scratch, ExportRequest) {
             .map(PathBuf::from)
             .unwrap_or_else(|| repo_at(&format!("work/core-cache/{}", target.key()))),
     );
-    settings.rom = rom;
+    settings.game.rom = rom;
     (root, settings)
 }
 

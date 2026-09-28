@@ -1,4 +1,6 @@
 use super::*;
+use crate::controls::Controls;
+use crate::packaging::ExportTarget;
 
 fn fixture(name: &str) -> rominabox_scratch::Scratch {
     rominabox_scratch::Scratch::dir(&format!("rominabox-project-{name}"))
@@ -18,7 +20,7 @@ fn project_round_trip_preserves_cue_and_tracks() {
     let archive_path = root.join("game.rominabox");
     save_project(&ProjectSaveRequest {
         archive_path: archive_path.clone(),
-        settings: ProjectSettings {
+        settings: Game {
             rom: source.join("disc.cue"),
             title: "Disc game".to_string(),
             system: "segacd".to_string(),
@@ -86,8 +88,8 @@ fn project_round_trip_preserves_background_play_and_quit_autosave() {
     assert!(opened.settings.autosave_on_quit);
 }
 
-fn settings(rom: PathBuf, advanced_emulator_access: bool) -> ProjectSettings {
-    ProjectSettings {
+fn settings(rom: PathBuf, advanced_emulator_access: bool) -> Game {
+    Game {
         rom,
         title: "Access game".to_string(),
         system: "megadrive".to_string(),
@@ -137,7 +139,7 @@ fn project_round_trip_preserves_advanced_emulator_access() {
         opened
             .settings
             .into_export_request(root.join("out"), root.join("kit"), None)
-            .advanced_emulator_access
+            .game.advanced_emulator_access
     );
 }
 
@@ -151,8 +153,9 @@ fn current_project_defaults_omitted_capability_on() {
         let options =
             SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
         let manifest = br#"{
-  "formatVersion": 2,
-  "settings": {
+  "formatVersion": 3,
+  "game": {
+    "rom": "content/game.bin",
     "title": "Current",
     "system": "megadrive",
     "showMenu": false,
@@ -161,10 +164,10 @@ fn current_project_defaults_omitted_capability_on() {
     "palette": "blue",
     "target": "macos"
   },
-  "assets": { "rom": "assets/rom.bin" }
+  "assets": { "content": ["content/game.bin"] }
 }"#;
         write_bytes(&mut writer, MANIFEST_PATH, manifest, options).unwrap();
-        write_bytes(&mut writer, "assets/rom.bin", b"rom", options).unwrap();
+        write_bytes(&mut writer, "content/game.bin", b"rom", options).unwrap();
         writer.finish().unwrap();
     }
 

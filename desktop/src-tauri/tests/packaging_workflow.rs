@@ -259,9 +259,9 @@ fn dreamcast_request(root: &Path) -> rominabox_desktop::packaging::ExportRequest
     let mut request = export_request(root);
     let rom = root.join("sonic.cdi");
     fs::write(&rom, b"RIBdreamcast").unwrap();
-    request.rom = rom;
-    request.title = "Dreamcast Fetch".into();
-    request.system = "dreamcast".into();
+    request.game.rom = rom;
+    request.game.title = "Dreamcast Fetch".into();
+    request.game.system = "dreamcast".into();
     request.core_cache = Some(root.join("core-cache"));
     fs::create_dir_all(request.core_cache.as_ref().unwrap()).unwrap();
     request
@@ -392,7 +392,7 @@ fn a_missing_core_that_cannot_be_downloaded_stops_the_export_before_anything_is_
 fn a_windows_export_fetches_the_windows_core_not_this_machines() {
     let root = workspace();
     let mut request = dreamcast_request(&root);
-    request.target = ExportTarget::Windows;
+    request.game.target = ExportTarget::Windows;
     let table = Table::default();
     let _ = export_with(&mut request, &table);
     let asked = table.downloads.borrow();
@@ -415,7 +415,7 @@ fn a_windows_export_fetches_the_windows_core_not_this_machines() {
 fn a_windows_export_with_the_windows_core_cached_does_not_ask_for_the_mac_file() {
     let root = workspace();
     let mut request = dreamcast_request(&root);
-    request.target = ExportTarget::Windows;
+    request.game.target = ExportTarget::Windows;
     let cache = request.core_cache.as_ref().unwrap();
     fs::create_dir_all(cache.join("cores")).unwrap();
     fs::create_dir_all(cache.join("licenses")).unwrap();
@@ -473,8 +473,8 @@ fn an_export_under_test_cannot_reach_the_network() {
 fn achievements_require_a_capable_artifact_before_export_staging() {
     let root = workspace();
     let mut request = export_request(&root);
-    request.show_menu = true;
-    request.include_achievements = true;
+    request.game.show_menu = true;
+    request.game.include_achievements = true;
     let error =
         rominabox_desktop::packaging::export_game(&request, &AtomicBool::new(false), |_| {})
             .unwrap_err();
@@ -486,7 +486,7 @@ fn achievements_require_a_capable_artifact_before_export_staging() {
         !request.output_dir.exists(),
         "preflight must not stage an incapable player"
     );
-    request.show_menu = false;
+    request.game.show_menu = false;
     let result =
         rominabox_desktop::packaging::export_game(&request, &AtomicBool::new(false), |_| {})
             .unwrap();
@@ -522,8 +522,8 @@ fn included_achievements_export_an_account_screen_and_network_permission() {
     }
     let root = workspace();
     let mut request = export_request(&root);
-    request.show_menu = true;
-    request.include_achievements = true;
+    request.game.show_menu = true;
+    request.game.include_achievements = true;
     let manifest = request.runtime_kit.join("manifest.json");
     let mut value: serde_json::Value =
         serde_json::from_slice(&fs::read(&manifest).unwrap()).unwrap();

@@ -5,8 +5,8 @@
 //! copy disc images of several gigabytes with bounded streaming.
 
 use crate::content;
-use crate::controls::{self, Controls};
-use crate::packaging::ExportTarget;
+use crate::controls;
+use crate::game::Game;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
@@ -17,9 +17,8 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 mod request;
 
-const FORMAT_VERSION: u32 = 2;
+const FORMAT_VERSION: u32 = 3;
 const MANIFEST_PATH: &str = "manifest.json";
-const ROM_PREFIX: &str = "assets/rom.";
 const CONTENT_PREFIX: &str = "content/";
 const FIRMWARE_PREFIX: &str = "firmware/";
 const ICON_PREFIX: &str = "assets/icon.";
@@ -33,62 +32,10 @@ const MAX_TOTAL_UNCOMPRESSED_BYTES: u64 =
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ProjectSettings {
-    pub rom: PathBuf,
-    pub title: String,
-    pub system: String,
-    pub description: Option<String>,
-    pub icon: Option<PathBuf>,
-    pub background: Option<PathBuf>,
-    pub show_menu: bool,
-    pub start_at_menu: bool,
-    pub theme: String,
-    #[serde(default = "default_palette")]
-    pub palette: String,
-    #[serde(default = "crate::themes::default_menu_sounds")]
-    pub menu_sounds: String,
-    #[serde(default)]
-    pub controls: Controls,
-    #[serde(default = "crate::builder::unstated::menu_controls")]
-    pub menu_controls: crate::menu_controls::MenuControls,
-    /// Explicit firmware files. We keep them with this project and later
-    /// install them only in the managed storage of the exported game.
-    #[serde(default)]
-    pub firmware: Vec<PathBuf>,
-    /// Whether we include the short native splash in the player.
-    #[serde(default)]
-    pub splash: bool,
-    /// Restore stock RetroArch native menus in the exported app.
-    #[serde(default)]
-    pub advanced_emulator_access: bool,
-    /// Keep emulating when the window is not focused. Per game, set at export.
-    #[serde(default)]
-    pub keep_playing_in_background: bool,
-    /// Save on quit and resume from that save next launch. Per game.
-    #[serde(default)]
-    pub autosave_on_quit: bool,
-    /// The Options entries we offer in this game. When absent, we use the
-    /// design's defaults. With an empty list, we show no Options button.
-    #[serde(default)]
-    pub menu_entries: Option<Vec<String>>,
-    /// Presets bundled into the game. Usually this is empty.
-    #[serde(default)]
-    pub shaders: crate::shaders::ShaderSelection,
-    #[serde(default = "crate::achievements::default_included")]
-    pub include_achievements: bool,
-    pub target: ExportTarget,
-    /// Made for Mac and for Windows in one zip (bothPlatforms in the export).
-    #[serde(default)]
-    pub both_platforms: bool,
-    #[serde(default = "crate::builder::unstated::intel_macs")]
-    pub intel_macs: bool,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ProjectSaveRequest {
     pub archive_path: PathBuf,
-    pub settings: ProjectSettings,
+    /// The game the project makes: its files and every choice.
+    pub settings: Game,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -113,65 +60,25 @@ pub struct OpenProject {
     pub extraction_dir: PathBuf,
     /// Contains absolute paths to extracted assets. It has no runtime kit,
     /// explicit core, or previous output directory, which are machine-local.
-    pub settings: ProjectSettings,
+    pub settings: Game,
 }
 
+/// The game, with its files named after their place in the archive, and
+/// the files in the archive that are in no single setting.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ProjectManifest {
     format_version: u32,
-    settings: StoredSettings,
+    game: Game,
     assets: ProjectAssets,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct StoredSettings {
-    title: String,
-    system: String,
-    description: Option<String>,
-    show_menu: bool,
-    start_at_menu: bool,
-    theme: String,
-    palette: String,
-    #[serde(default = "crate::themes::default_menu_sounds")]
-    menu_sounds: String,
-    #[serde(default)]
-    controls: Controls,
-    #[serde(default = "crate::builder::unstated::menu_controls")]
-    menu_controls: crate::menu_controls::MenuControls,
-    #[serde(default)]
-    splash: bool,
-    #[serde(default)]
-    advanced_emulator_access: bool,
-    #[serde(default)]
-    keep_playing_in_background: bool,
-    #[serde(default)]
-    autosave_on_quit: bool,
-    #[serde(default)]
-    menu_entries: Option<Vec<String>>,
-    #[serde(default)]
-    shaders: crate::shaders::ShaderSelection,
-    #[serde(default = "crate::achievements::default_included")]
-    include_achievements: bool,
-    target: ExportTarget,
-    #[serde(default)]
-    both_platforms: bool,
-    #[serde(default = "crate::builder::unstated::intel_macs")]
-    intel_macs: bool,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 struct ProjectAssets {
-    rom: String,
-    #[serde(default)]
+    /// Every file of the game's content, its ROM (`game.rom`) among them.
     content: Vec<String>,
-    #[serde(default)]
-    firmware: Vec<String>,
-    icon: Option<String>,
-    background: Option<String>,
-    /// Custom shader files. Catalog presets come with the builder, so we do not store them.
+    /// Every file of its custom shaders, passes included.
     #[serde(default)]
     shaders: Vec<String>,
 }
@@ -192,7 +99,6 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
         .iter()
         .map(|file| archive_content_name(&file.relative))
         .collect::<Result<Vec<_>, _>>()?;
-    let rom = archive_content_name(&content.entrypoint)?;
     let firmware_assets = request
         .settings
         .firmware
@@ -203,49 +109,32 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
     let (stored_shaders, shader_files) = crate::shaders::pack_selection(&request.settings.shaders)?;
     let shader_assets: Vec<String> = shader_files.iter().map(|(name, _)| name.clone()).collect();
     ensure_unique_names(&shader_assets, "shader")?;
-    let assets = ProjectAssets {
-        rom,
-        content: content_assets,
-        firmware: firmware_assets,
-        icon: request
-            .settings
-            .icon
-            .as_deref()
-            .map(|path| archive_asset_name(ICON_PREFIX, path))
-            .transpose()?,
-        background: request
-            .settings
-            .background
-            .as_deref()
-            .map(|path| archive_asset_name(BACKGROUND_PREFIX, path))
-            .transpose()?,
-        shaders: shader_assets,
-    };
+    let icon_asset = request
+        .settings
+        .icon
+        .as_deref()
+        .map(|path| archive_asset_name(ICON_PREFIX, path))
+        .transpose()?;
+    let background_asset = request
+        .settings
+        .background
+        .as_deref()
+        .map(|path| archive_asset_name(BACKGROUND_PREFIX, path))
+        .transpose()?;
     let manifest = ProjectManifest {
         format_version: FORMAT_VERSION,
-        settings: StoredSettings {
-            title: request.settings.title.clone(),
-            system: request.settings.system.clone(),
-            description: request.settings.description.clone(),
-            show_menu: request.settings.show_menu,
-            start_at_menu: request.settings.start_at_menu,
-            theme: request.settings.theme.clone(),
-            palette: request.settings.palette.clone(),
-            menu_sounds: request.settings.menu_sounds.clone(),
-            controls: request.settings.controls.clone(),
-            menu_controls: request.settings.menu_controls.clone(),
-            splash: request.settings.splash,
-            advanced_emulator_access: request.settings.advanced_emulator_access,
-            keep_playing_in_background: request.settings.keep_playing_in_background,
-            autosave_on_quit: request.settings.autosave_on_quit,
-            menu_entries: request.settings.menu_entries.clone(),
+        game: Game {
+            rom: PathBuf::from(archive_content_name(&content.entrypoint)?),
+            icon: icon_asset.clone().map(PathBuf::from),
+            background: background_asset.clone().map(PathBuf::from),
+            firmware: firmware_assets.iter().map(PathBuf::from).collect(),
             shaders: stored_shaders,
-            include_achievements: request.settings.include_achievements,
-            target: request.settings.target.clone(),
-            both_platforms: request.settings.both_platforms,
-            intel_macs: request.settings.intel_macs,
+            ..request.settings.clone()
         },
-        assets: assets.clone(),
+        assets: ProjectAssets {
+            content: content_assets,
+            shaders: shader_assets,
+        },
     };
     let manifest_bytes = serde_json::to_vec_pretty(&manifest)
         .map_err(|error| format!("serialize project manifest: {error}"))?;
@@ -261,23 +150,23 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
         .compression_method(CompressionMethod::Stored)
         .large_file(true);
     write_bytes(&mut writer, MANIFEST_PATH, &manifest_bytes, options)?;
-    for (file, name) in content.files.iter().zip(&assets.content) {
+    for (file, name) in content.files.iter().zip(&manifest.assets.content) {
         if let Some(bytes) = &file.staged_bytes {
             write_bytes(&mut writer, name, bytes, options)?;
         } else {
             write_path(&mut writer, name, &file.source, MAX_ASSET_BYTES, options)?;
         }
     }
-    for (path, name) in request.settings.firmware.iter().zip(&assets.firmware) {
+    for (path, name) in request.settings.firmware.iter().zip(&firmware_assets) {
         write_path(&mut writer, name, path, MAX_ASSET_BYTES, options)?;
     }
     for (name, path) in &shader_files {
         write_path(&mut writer, name, path, MAX_ASSET_BYTES, options)?;
     }
-    if let (Some(name), Some(path)) = (&assets.icon, &request.settings.icon) {
+    if let (Some(name), Some(path)) = (&icon_asset, &request.settings.icon) {
         write_path(&mut writer, name, path, MAX_IMAGE_BYTES, options)?;
     }
-    if let (Some(name), Some(path)) = (&assets.background, &request.settings.background) {
+    if let (Some(name), Some(path)) = (&background_asset, &request.settings.background) {
         write_path(&mut writer, name, path, MAX_IMAGE_BYTES, options)?;
     }
     writer
@@ -324,64 +213,29 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
             error,
         )
     })?;
-    let content_names = if manifest.assets.content.is_empty() {
-        vec![manifest.assets.rom.clone()]
-    } else {
-        manifest.assets.content.clone()
-    };
-    for name in &content_names {
-        extract_asset(&mut archive, name, &request.extraction_dir, MAX_ASSET_BYTES)?;
+    let root = &request.extraction_dir;
+    for name in manifest.assets.content.iter().chain(&manifest.assets.shaders) {
+        extract_asset(&mut archive, name, root, MAX_ASSET_BYTES)?;
     }
-    let rom = request.extraction_dir.join(&manifest.assets.rom);
-    let firmware = manifest
-        .assets
+    let stored = manifest.game;
+    let firmware = stored
         .firmware
         .iter()
-        .map(|name| extract_asset(&mut archive, name, &request.extraction_dir, MAX_ASSET_BYTES))
+        .map(|name| extract_asset(&mut archive, stored_name(name)?, root, MAX_ASSET_BYTES))
         .collect::<Result<Vec<_>, _>>()?;
-    for name in &manifest.assets.shaders {
-        extract_asset(&mut archive, name, &request.extraction_dir, MAX_ASSET_BYTES)?;
-    }
-    let icon = manifest
-        .assets
-        .icon
-        .as_deref()
-        .map(|name| extract_asset(&mut archive, name, &request.extraction_dir, MAX_IMAGE_BYTES))
-        .transpose()?;
-    let background = manifest
-        .assets
-        .background
-        .as_deref()
-        .map(|name| extract_asset(&mut archive, name, &request.extraction_dir, MAX_IMAGE_BYTES))
-        .transpose()?;
-    let settings = ProjectSettings {
-        rom,
-        title: manifest.settings.title,
-        system: manifest.settings.system,
-        description: manifest.settings.description,
+    let mut picture = |name: &Option<PathBuf>| {
+        name.as_deref()
+            .map(|name| extract_asset(&mut archive, stored_name(name)?, root, MAX_IMAGE_BYTES))
+            .transpose()
+    };
+    let (icon, background) = (picture(&stored.icon)?, picture(&stored.background)?);
+    let settings = Game {
+        rom: root.join(&stored.rom),
         icon,
         background,
-        show_menu: manifest.settings.show_menu,
-        start_at_menu: manifest.settings.start_at_menu,
-        theme: manifest.settings.theme,
-        palette: manifest.settings.palette,
-        menu_sounds: manifest.settings.menu_sounds,
-        controls: manifest.settings.controls,
-        menu_controls: manifest.settings.menu_controls,
         firmware,
-        splash: manifest.settings.splash,
-        advanced_emulator_access: manifest.settings.advanced_emulator_access,
-        keep_playing_in_background: manifest.settings.keep_playing_in_background,
-        autosave_on_quit: manifest.settings.autosave_on_quit,
-        menu_entries: manifest.settings.menu_entries,
-        shaders: crate::shaders::unpack_selection(
-            manifest.settings.shaders,
-            &request.extraction_dir,
-        ),
-        include_achievements: manifest.settings.include_achievements,
-        target: manifest.settings.target,
-        both_platforms: manifest.settings.both_platforms,
-        intel_macs: manifest.settings.intel_macs,
+        shaders: crate::shaders::unpack_selection(stored.shaders.clone(), root),
+        ..stored
     };
     Ok(OpenProject {
         archive_path: request.archive_path.clone(),
@@ -450,21 +304,21 @@ fn validate_manifest(manifest: &ProjectManifest, names: &[String]) -> Result<(),
             manifest.format_version
         ));
     }
-    validate_stored_settings(&manifest.settings)?;
+    let game = &manifest.game;
+    validate_choices(game)?;
+    let rom = stored_name(&game.rom)?.to_string();
+    let firmware = game
+        .firmware
+        .iter()
+        .map(|name| stored_name(name).map(str::to_string))
+        .collect::<Result<Vec<_>, _>>()?;
+    let icon = game.icon.as_deref().map(stored_name).transpose()?;
+    let background = game.background.as_deref().map(stored_name).transpose()?;
     let mut expected = vec![MANIFEST_PATH.to_string()];
-    if manifest.assets.content.is_empty() {
-        expected.push(manifest.assets.rom.clone());
-    } else {
-        expected.extend(manifest.assets.content.iter().cloned());
-    }
-    expected.extend(manifest.assets.firmware.iter().cloned());
+    expected.extend(manifest.assets.content.iter().cloned());
+    expected.extend(firmware.iter().cloned());
     expected.extend(manifest.assets.shaders.iter().cloned());
-    if let Some(icon) = &manifest.assets.icon {
-        expected.push(icon.clone());
-    }
-    if let Some(background) = &manifest.assets.background {
-        expected.push(background.clone());
-    }
+    expected.extend(icon.into_iter().chain(background).map(str::to_string));
     if names.len() != expected.len()
         || expected
             .iter()
@@ -472,60 +326,30 @@ fn validate_manifest(manifest: &ProjectManifest, names: &[String]) -> Result<(),
     {
         return Err("project archive entries do not match its manifest".to_string());
     }
-    if manifest.assets.content.is_empty() {
-        validate_asset_name(&manifest.assets.rom, ROM_PREFIX)?;
-    } else {
-        for name in &manifest.assets.content {
-            validate_prefixed_path(name, CONTENT_PREFIX)?;
-        }
-        if !manifest
-            .assets
-            .content
-            .iter()
-            .any(|name| name == &manifest.assets.rom)
-        {
-            return Err("project content does not include its entrypoint".to_string());
-        }
+    for name in &manifest.assets.content {
+        validate_prefixed_path(name, CONTENT_PREFIX)?;
     }
-    for name in &manifest.assets.firmware {
+    if !manifest.assets.content.contains(&rom) {
+        return Err("project content does not include its entrypoint".to_string());
+    }
+    for name in &firmware {
         validate_prefixed_path(name, FIRMWARE_PREFIX)?;
     }
     for name in &manifest.assets.shaders {
         validate_prefixed_path(name, "shaders/")?;
     }
     ensure_unique_names(&expected, "project asset")?;
-    if let Some(icon) = &manifest.assets.icon {
+    if let Some(icon) = icon {
         validate_asset_name(icon, ICON_PREFIX)?;
     }
-    if let Some(background) = &manifest.assets.background {
+    if let Some(background) = background {
         validate_asset_name(background, BACKGROUND_PREFIX)?;
     }
     Ok(())
 }
 
-fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
-    validate_stored_settings(&StoredSettings {
-        title: settings.title.clone(),
-        system: settings.system.clone(),
-        description: settings.description.clone(),
-        show_menu: settings.show_menu,
-        start_at_menu: settings.start_at_menu,
-        theme: settings.theme.clone(),
-        palette: settings.palette.clone(),
-        menu_sounds: settings.menu_sounds.clone(),
-        controls: settings.controls.clone(),
-        menu_controls: settings.menu_controls.clone(),
-        splash: settings.splash,
-        advanced_emulator_access: settings.advanced_emulator_access,
-        keep_playing_in_background: settings.keep_playing_in_background,
-        autosave_on_quit: settings.autosave_on_quit,
-        menu_entries: settings.menu_entries.clone(),
-        shaders: settings.shaders.clone(),
-        include_achievements: settings.include_achievements,
-        target: settings.target.clone(),
-        both_platforms: settings.both_platforms,
-        intel_macs: settings.intel_macs,
-    })?;
+fn validate_settings(settings: &Game) -> Result<(), String> {
+    validate_choices(settings)?;
     for (label, path) in [
         ("ROM", Some(&settings.rom)),
         ("icon", settings.icon.as_ref()),
@@ -547,7 +371,7 @@ fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
 }
 
 fn validate_save_sizes(
-    settings: &ProjectSettings,
+    settings: &Game,
     content: &content::ContentSet,
     manifest_bytes: u64,
 ) -> Result<(), String> {
@@ -606,7 +430,8 @@ fn add_sized_asset(total: u64, label: &str, path: &Path, limit: u64) -> Result<u
     Ok(total)
 }
 
-fn validate_stored_settings(settings: &StoredSettings) -> Result<(), String> {
+/// The rules for a game's choices, which we check when we save or open it.
+fn validate_choices(settings: &Game) -> Result<(), String> {
     if settings.title.trim().is_empty() || settings.system.trim().is_empty() {
         return Err("project title and system are required".to_string());
     }
@@ -775,6 +600,12 @@ fn archive_named_asset(prefix: &str, path: &Path) -> Result<String, String> {
     Ok(archive_name)
 }
 
+/// A file the archived game names, as the archive names it.
+fn stored_name(path: &Path) -> Result<&str, String> {
+    path.to_str()
+        .ok_or_else(|| format!("invalid project asset reference: {}", path.display()))
+}
+
 fn validate_prefixed_path(name: &str, prefix: &str) -> Result<(), String> {
     ensure_safe_archive_name(name)?;
     if !name.starts_with(prefix) || name.len() == prefix.len() {
@@ -850,10 +681,6 @@ fn refuse_existing(path: &Path, label: &str) -> Result<(), String> {
 
 fn path_error(action: &str, path: &Path, error: io::Error) -> String {
     format!("{action} {}: {error}", path.display())
-}
-
-fn default_palette() -> String {
-    "blue".to_string()
 }
 
 #[cfg(test)]

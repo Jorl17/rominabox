@@ -22,7 +22,7 @@ export type GameInfo = {
 };
 export type Picture = { path: string; url: string };
 export type ExportRequest = {
-  /** Mac and Windows at once, in one zip. A builder option, not a game option. */
+  /** Mac and Windows at once, in one zip. */
   bothPlatforms?: boolean;
   rom: string;
   title: string;
@@ -251,15 +251,11 @@ export async function menuPreview(
 }
 /** Export a game. For a request with both platforms we make it for Mac and
  * Windows, in one zip, and we keep that option out of the game. */
-export async function exportGame({
-  bothPlatforms = false,
-  ...request
-}: ExportRequest): Promise<ExportResult> {
+export async function exportGame(
+  request: ExportRequest,
+): Promise<ExportResult> {
   try {
-    return await invoke<ExportResult>("export_game", {
-      request,
-      bothPlatforms,
-    });
+    return await invoke<ExportResult>("export_game", { request });
   } catch (reason) {
     throw exportFailure(reason);
   }

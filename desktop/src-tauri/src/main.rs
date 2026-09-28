@@ -163,9 +163,8 @@ async fn export_game(
     app: tauri::AppHandle,
     state: tauri::State<'_, ExportControl>,
     request: packaging::ExportRequest,
-    both_platforms: Option<bool>,
 ) -> Result<packaging::ExportResult, AuthorError> {
-    run_export(app, state, request, both_platforms.unwrap_or(false)).await.map_err(|error| {
+    run_export(app, state, request).await.map_err(|error| {
         eprintln!("export failed: {error}");
         error.for_author()
     })
@@ -175,14 +174,13 @@ async fn run_export(
     app: tauri::AppHandle,
     state: tauri::State<'_, ExportControl>,
     mut request: packaging::ExportRequest,
-    both_platforms: bool,
 ) -> Result<packaging::ExportResult, packaging::ExportError> {
     let shell = |message: String| packaging::ExportError::new(ErrorStage::Export, message);
     let bundled = resource(&app, "runtime").map_err(shell)?;
     let kit_store = places(&app).kit_store().map_err(shell)?;
     request.core = None;
     request.core_cache = request
-        .target
+        .game.target
         .target()
         .and_then(|target| places(&app).core_cache(target).ok());
     let cancelled = Arc::new(AtomicBool::new(false));
@@ -207,11 +205,11 @@ async fn run_export(
         let report = |progress| {
             let _ = events.emit("export-progress", progress);
         };
-        if both_platforms {
+        if request.game.both_platforms {
             let core_cache_for = |target| caches.core_cache(target).ok();
             return packaging::export_for_both(&request, &kit_for, &core_cache_for, &cancelled, report);
         }
-        request.runtime_kit = kit_for(&request.target)
+        request.runtime_kit = kit_for(&request.game.target)
             .map_err(|message| packaging::ExportError::new(ErrorStage::Refused, message))?;
         packaging::export_game(&request, &cancelled, report)
     })
