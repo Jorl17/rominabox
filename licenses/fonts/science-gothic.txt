@@ -1,11 +1,11 @@
 Science Gothic
 
 Version:  Version 1.035
-Source:   desktop/src/fonts/ScienceGothic.ttf
+Source:   desktop/src/fonts/ScienceGothic.ttf, integrations/designs/native/ScienceGothic-Bold.ttf
 Licence:  OFL-1.1
-Used by:  the builder's interface
+Used by:  the builder's interface; the native menu design, in every game exported with it
 
-==> desktop/src/fonts/ScienceGothic-OFL.txt <==
+==> desktop/src/fonts/ScienceGothic-OFL.txt, integrations/designs/native/ScienceGothic-OFL.txt <==
 
 Copyright 2024 Font Detective LLC <https://github.com/googlefonts/science-gothic/OFL.txt>
 
