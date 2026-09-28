@@ -49,6 +49,28 @@ pub fn read_image(source: &Path) -> Result<DynamicImage, ExportError> {
     })
 }
 
+/// How far from square an opaque cover may be for us to crop it to fill the
+/// macOS icon. We cut off at most 6% of its longer side.
+const NEARLY_SQUARE: f32 = 1.06;
+/// The picture from which macOS shows a game's icon. From macOS 26, a
+/// full-bleed square appears cut to the system squircle, and a picture with
+/// transparent padding appears shrunk inside a grey squircle. So we crop an
+/// opaque cover that is nearly square to fill the square. We use a picture
+/// that is already a squircle as it is, with or without padding. We pad
+/// anything else and keep its proportions.
+fn macos_face(source_image: &DynamicImage) -> DynamicImage {
+    let picture = source_image.to_rgba8();
+    let (width, height) = picture.dimensions();
+    let opaque = picture.pixels().all(|pixel| pixel[3] == 255);
+    let ratio = width.max(height) as f32 / width.min(height).max(1) as f32;
+    if !opaque || ratio > NEARLY_SQUARE {
+        return source_image.clone();
+    }
+    let side = width.min(height);
+    let cropped = imageops::crop_imm(&picture, (width - side) / 2, (height - side) / 2, side, side);
+    DynamicImage::ImageRgba8(cropped.to_image())
+}
+
 fn square_icon(source_image: &DynamicImage, size: u32) -> RgbaImage {
     let resized = source_image
         .resize(size, size, imageops::FilterType::Lanczos3)
@@ -60,13 +82,14 @@ fn square_icon(source_image: &DynamicImage, size: u32) -> RgbaImage {
     canvas
 }
 
-/// Generate a macOS `.icns` icon with aspect-preserving transparent padding.
+/// Generate a macOS `.icns` icon: full bleed from a nearly square cover,
+/// aspect-preserving transparent padding otherwise.
 pub fn create_macos_icon(
     source: &Path,
     destination: &Path,
     _retained_work_dir: &Path,
 ) -> Result<(), ExportError> {
-    let source_image = read_image(source)?;
+    let source_image = macos_face(&read_image(source)?);
     let mut family = icns::IconFamily::new();
     for icon_type in [
         icns::IconType::RGBA32_16x16,
@@ -135,6 +158,35 @@ pub(crate) fn default_icon_path(runtime_kit: &Path) -> Option<PathBuf> {
 mod tests {
     use super::*;
 
+    const COVER: Rgba<u8> = Rgba([200, 40, 30, 255]);
+
+    fn cover(width: u32, height: u32) -> DynamicImage {
+        DynamicImage::ImageRgba8(RgbaImage::from_pixel(width, height, COVER))
+    }
+
+    fn full_bleed(icon: &RgbaImage) -> bool {
+        icon.pixels().all(|pixel| pixel[3] == 255)
+    }
+
+    /// We extend a square cover, or one a few pixels from square, to the edges
+    /// of the macOS icon, so it appears cut to the squircle and not shrunk
+    /// inside a grey one.
+    #[test]
+    fn a_square_or_nearly_square_cover_fills_the_icon() {
+        for (width, height) in [(100, 100), (100, 104), (104, 100)] {
+            let icon = square_icon(&macos_face(&cover(width, height)), 64);
+            assert!(full_bleed(&icon), "{width}x{height} was padded");
+        }
+    }
+
+    /// We pad a tall cover and keep its proportions, because cropping it to a
+    /// square would cut away most of its art.
+    #[test]
+    fn a_tall_cover_keeps_its_shape() {
+        let tall = square_icon(&macos_face(&cover(100, 140)), 64);
+        assert_eq!(tall.get_pixel(0, 32)[3], 0, "a tall cover was not padded");
+    }
+
     /// The Windows icon of a tall cover is the whole cover in its proportions,
     /// sized to fit the square of a Windows icon, with every pixel beside it
     /// fully transparent. We do not stretch it, crop it or draw around it.
@@ -142,9 +194,7 @@ mod tests {
     fn a_rectangular_cover_is_padded_to_a_square_with_transparent_pixels() {
         let root = rominabox_scratch::Scratch::dir("rominabox-windows-icon");
         let cover = root.join("tall.png");
-        RgbaImage::from_pixel(100, 140, Rgba([200, 40, 30, 255]))
-            .save(&cover)
-            .unwrap();
+        RgbaImage::from_pixel(100, 140, COVER).save(&cover).unwrap();
         let icon = image::load_from_memory_with_format(
             &windows_icon(&cover).unwrap(),
             image::ImageFormat::Ico,
@@ -159,6 +209,6 @@ mod tests {
         assert_eq!(right - left + 1, 183, "the cover keeps its shape: 256 × 100/140 wide");
         assert!((0..left).chain(right + 1..256).all(|x| icon.get_pixel(x, 128)[3] == 0));
         assert!((0..256).all(|y| icon.get_pixel(128, y)[3] == 255), "the cover's full height");
-        assert_eq!(*icon.get_pixel(128, 128), Rgba([200, 40, 30, 255]));
+        assert_eq!(*icon.get_pixel(128, 128), COVER);
     }
 }
