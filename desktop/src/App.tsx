@@ -565,7 +565,7 @@ export function App() {
         startAtMenu: settings.startAtMenu,
       });
       setPalette(settings.palette);
-      setPlatform(settings.target);
+      setPlatform(settings.bothPlatforms ? "both" : settings.target);
       // A project contains the design it was saved with, and in the check
       // above we already reject one that this build does not have. We restore
       // it on reopen to keep the choice of the author.

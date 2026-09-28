@@ -41,6 +41,7 @@ fn project_round_trip_preserves_cue_and_tracks() {
             shaders: crate::shaders::ShaderSelection::default(),
             include_achievements: false,
             target: ExportTarget::Macos,
+            both_platforms: false,
             intel_macs: false,
         },
     })
@@ -109,6 +110,7 @@ fn settings(rom: PathBuf, advanced_emulator_access: bool) -> ProjectSettings {
         shaders: crate::shaders::ShaderSelection::default(),
         include_achievements: false,
         target: ExportTarget::Macos,
+        both_platforms: false,
         intel_macs: false,
     }
 }

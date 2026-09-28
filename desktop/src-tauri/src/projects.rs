@@ -77,6 +77,9 @@ pub struct ProjectSettings {
     #[serde(default = "crate::achievements::default_included")]
     pub include_achievements: bool,
     pub target: ExportTarget,
+    /// Made for Mac and for Windows in one zip (bothPlatforms in the export).
+    #[serde(default)]
+    pub both_platforms: bool,
     #[serde(default = "crate::builder::unstated::intel_macs")]
     pub intel_macs: bool,
 }
@@ -152,6 +155,8 @@ struct StoredSettings {
     #[serde(default = "crate::achievements::default_included")]
     include_achievements: bool,
     target: ExportTarget,
+    #[serde(default)]
+    both_platforms: bool,
     #[serde(default = "crate::builder::unstated::intel_macs")]
     intel_macs: bool,
 }
@@ -237,6 +242,7 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             shaders: stored_shaders,
             include_achievements: request.settings.include_achievements,
             target: request.settings.target.clone(),
+            both_platforms: request.settings.both_platforms,
             intel_macs: request.settings.intel_macs,
         },
         assets: assets.clone(),
@@ -374,6 +380,7 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
         ),
         include_achievements: manifest.settings.include_achievements,
         target: manifest.settings.target,
+        both_platforms: manifest.settings.both_platforms,
         intel_macs: manifest.settings.intel_macs,
     };
     Ok(OpenProject {
@@ -516,6 +523,7 @@ fn validate_settings(settings: &ProjectSettings) -> Result<(), String> {
         shaders: settings.shaders.clone(),
         include_achievements: settings.include_achievements,
         target: settings.target.clone(),
+        both_platforms: settings.both_platforms,
         intel_macs: settings.intel_macs,
     })?;
     for (label, path) in [

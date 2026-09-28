@@ -35,6 +35,7 @@ fn settings(rom: PathBuf) -> ProjectSettings {
         shaders: ShaderSelection::default(),
         include_achievements: true,
         target: ExportTarget::Macos,
+        both_platforms: false,
         intel_macs: false,
     }
 }

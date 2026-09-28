@@ -29,6 +29,8 @@ impl From<&ExportRequest> for ProjectSettings {
             shaders: request.shaders.clone(),
             include_achievements: request.include_achievements,
             target: request.target.clone(),
+            // An export request has the Mac and Windows option next to it, not in it.
+            both_platforms: false,
             intel_macs: request.intel_macs,
         }
     }
