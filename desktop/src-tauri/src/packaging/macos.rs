@@ -604,9 +604,16 @@ fn stage_frozen_dependencies(
         copy_file(&source, &staged)?;
         signed_objects.push(staged);
     }
-    for entry in fs::read_dir(&source_directory)
-        .map_err(|error| ExportError::io(ErrorStage::Dependencies, &source_directory, error))?
-    {
+    // A kit whose player links no library has none, and we leave the empty
+    // folder out of a builder bundle, so a missing folder means no libraries.
+    let entries = match fs::read_dir(&source_directory) {
+        Ok(entries) => entries.collect::<Vec<_>>(),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+        Err(error) => {
+            return Err(ExportError::io(ErrorStage::Dependencies, &source_directory, error))
+        }
+    };
+    for entry in entries {
         let entry = entry
             .map_err(|error| ExportError::io(ErrorStage::Dependencies, &source_directory, error))?;
         let name = entry.file_name().to_string_lossy().into_owned();
