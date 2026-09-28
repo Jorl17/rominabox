@@ -1247,6 +1247,8 @@ static int check_placement(const char *assets, const char *scenes,
 }
 
 int test_menu_declarations();
+int test_menu_named_folder(const char *assets, const std::vector<std::string>& fonts,
+      const rib_controls_catalog& controls);
 
 int main(int argc, char **argv)
 {
@@ -1279,6 +1281,8 @@ int main(int argc, char **argv)
       std::printf("ok\n");
       return 0;
    }
+   if (argc > 2 && std::strcmp(argv[2], "named-folder") == 0)
+      return test_menu_named_folder(assets, kFonts, fixture_controls);
    if (argc > 2 && std::strcmp(argv[2], "placement") == 0)
    {
       if (argc < 6)

@@ -295,7 +295,7 @@ def main() -> int:
         raise SystemExit(f"missing RmlUi menu view at {drivers}")
     BUILD.mkdir(parents=True, exist_ok=True)
     harness(INTERACTION, HERE / "test_rmlui_interaction.cpp", HERE / "test_menu_declarations.cpp",
-            HERE / "menu_host_fake.cpp")
+            HERE / "test_menu_folder.cpp", HERE / "menu_host_fake.cpp")
     subprocess.run([str(INTERACTION), "declarations"], check=True)
 
     ASSETS.mkdir(parents=True, exist_ok=True)
@@ -312,6 +312,17 @@ def main() -> int:
     # folder, which we read in the menu through the libretro file layer.
     (BUILD / "João").mkdir(parents=True, exist_ok=True)
     subprocess.run([str(INTERACTION), str(ASSETS), str(BUILD / "João/thumbnail-test.png")], check=True)
+
+    # A game folder named like a title, question mark included. RmlUi keeps
+    # the path of a document as a URL, which ends at a "?".
+    named = BUILD / "Who Wants a Game?" / "menu-assets"
+    named.mkdir(parents=True, exist_ok=True)
+    for document in (DESIGNS / "native").iterdir():
+        if document.is_file():
+            shutil.copy(document, named / document.name)
+    stage_theme(DESIGNS / "native", named)
+    print("styled under a folder named with ?", flush=True)
+    styled_ok = subprocess.run([str(INTERACTION), str(named), "named-folder"]).returncode == 0
 
     # The same rows under every design's stylesheet. Native keeps a constant
     # border, and the disc accent is present on every row, so focus does not
@@ -336,7 +347,7 @@ def main() -> int:
     harness(MENU_CONTROLS, HERE / "test_menu_controls.cpp", HERE / "menu_host_fake.cpp",
             HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
     controls_ok = menu_controls()
-    return 0 if row_edges_ok and controls_ok else 1
+    return 0 if row_edges_ok and controls_ok and styled_ok else 1
 
 
 if __name__ == "__main__":
