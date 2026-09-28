@@ -217,33 +217,17 @@
     }
   },
   "kit": {
-    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A file is named by its role, which the exporter reads it by, and says where in the kit it goes. A source is build: a file in the player build (in a universal build, the folder holding the joined player); source: a file of the sources the player was built from (in a universal build, its first slice's, since every slice is built from the same ones); or toolchain: a file in the toolchain's installation. 'libraryInventory' names the folder and the inventory the macOS exporter reads a kit's libraries from (packaging/macos.rs): the player links none, so the folder is empty and the inventory lists no file.",
+    "comment": "What scripts/build_kit.py puts in a target's runtime kit besides the assets every kit carries (scripts/kit_assets.py). A file is named by its role, which the exporter reads it by, and says where in the kit it goes; build: is a file in the player build (in a universal build, the folder holding the joined player). The licences of what the player is made from come from licenses/ (scripts/licences.py): those of every library the build compiled, and of the target's platform's runtime. 'libraryInventory' names the folder and the inventory the macOS exporter reads a kit's libraries from (packaging/macos.rs): the player links none, so the folder is empty and the inventory lists no file.",
     "macos-universal": {
       "files": {
         "player": {"at": "bin/retroarch", "from": "build:retroarch/retroarch"}
       },
-      "libraryInventory": {"folder": "Frameworks", "file": "runtime-dependencies.json"},
-      "licences": {
-        "RetroArch.txt": "source:retroarch/COPYING",
-        "RmlUi-MIT.txt": "source:vendor/RmlUi/LICENSE.txt",
-        "native/FreeType-LICENSE.txt": "source:freetype-2.14.3/LICENSE.TXT",
-        "native/FreeType-FTL.txt": "source:freetype-2.14.3/docs/FTL.TXT"
-      }
+      "libraryInventory": {"folder": "Frameworks", "file": "runtime-dependencies.json"}
     },
     "windows-x86_64": {
       "files": {
         "player": {"at": "bin/retroarch.exe", "from": "build:retroarch/retroarch.exe"},
         "launcher": {"at": "bin/launcher.exe", "from": "build:launcher/launcher.exe"}
-      },
-      "runtime": "the MinGW-w64 runtime: its C runtime, winpthreads and the GCC runtime (native/MinGW-w64-runtime.txt, native/winpthreads-COPYING.txt, native/GCC-runtime-exception.txt)",
-      "licences": {
-        "RetroArch.txt": "source:retroarch/COPYING",
-        "RmlUi-MIT.txt": "source:vendor/RmlUi/LICENSE.txt",
-        "native/FreeType-LICENSE.txt": "source:freetype-2.14.3/LICENSE.TXT",
-        "native/FreeType-FTL.txt": "source:freetype-2.14.3/docs/FTL.TXT",
-        "native/MinGW-w64-runtime.txt": "toolchain:share/licenses/crt/COPYING.MinGW-w64-runtime.txt",
-        "native/winpthreads-COPYING.txt": "toolchain:share/licenses/winpthreads/COPYING",
-        "native/GCC-runtime-exception.txt": "toolchain:share/licenses/gcc/COPYING.RUNTIME"
       }
     }
   }

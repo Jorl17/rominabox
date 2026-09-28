@@ -1,5 +1,7 @@
 use super::*;
-use crate::packaging::app_files::{stage_controller_remap, stage_pixel_options};
+use crate::packaging::app_files::{
+    stage_controller_remap, stage_legal_materials, stage_pixel_options,
+};
 
 /// A unique empty directory, matching the pattern the other tests use.
 fn scratch_dir() -> rominabox_scratch::Scratch {
@@ -183,5 +185,55 @@ fn a_declared_device_with_no_library_name_is_refused() {
     assert!(
         message.contains("libraryName"),
         "the refusal must say what is missing: {message}"
+    );
+}
+
+/// A game contains the licences of every part of its player, as in the kit,
+/// one file per component in `licenses/native`, RetroArch included (we copy
+/// them from licenses/ with scripts/build_kit.py).
+#[test]
+fn a_game_carries_every_licence_the_kit_holds_for_its_player() {
+    let root = scratch_dir();
+    let kit = root.join("kit");
+    fs::create_dir_all(kit.join("licenses/native")).unwrap();
+    fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
+    fs::write(kit.join("licenses/NATIVE-DEPENDENCIES.txt"), "list").unwrap();
+    let native = ["retroarch.txt", "rmlui.txt", "mbedtls.txt"];
+    for name in native {
+        fs::write(kit.join("licenses/native").join(name), name).unwrap();
+    }
+    fs::write(kit.join("licenses/genesis_plus_gx.txt"), "core").unwrap();
+    fs::write(
+        kit.join("manifest.json"),
+        r#"{"components":[{"name":"RetroArch"},{"name":"Mbed TLS"}]}"#,
+    )
+    .unwrap();
+    let core = crate::systems::Core {
+        artifacts: Default::default(),
+        component: "genesis_plus_gx".into(),
+        license: "MAME".into(),
+        license_file: "genesis_plus_gx.txt".into(),
+        capabilities: Vec::new(),
+        library_name: None,
+        pixels: Vec::new(),
+    };
+    let legal = root.join("Legal");
+    stage_legal_materials(
+        &kit,
+        None,
+        &legal,
+        &core,
+        Path::new("licenses/genesis_plus_gx.txt"),
+    )
+    .expect("the legal materials are staged");
+    for name in native {
+        assert_eq!(
+            fs::read_to_string(legal.join("Licenses/native").join(name)).unwrap(),
+            name
+        );
+    }
+    assert_eq!(
+        fs::read_to_string(legal.join("Licenses/genesis_plus_gx.txt")).unwrap(),
+        "core"
     );
 }

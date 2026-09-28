@@ -63,9 +63,7 @@ pub fn kit_base(root: &Path) -> PathBuf {
     fs::create_dir_all(kit.join("licenses/native")).unwrap();
     fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
     for name in [
-        "RetroArch.txt",
         "NATIVE-DEPENDENCIES.txt",
-        "RmlUi-MIT.txt",
         "genesis_plus_gx.txt",
     ] {
         fs::write(kit.join("licenses").join(name), name).unwrap();

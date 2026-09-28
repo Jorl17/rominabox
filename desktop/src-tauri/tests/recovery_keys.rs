@@ -64,9 +64,7 @@ fn fixture_kit(root: &Path) -> PathBuf {
     write_runtime_stub(&kit.join("bin/retroarch"));
     fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
     for name in [
-        "RetroArch.txt",
         "NATIVE-DEPENDENCIES.txt",
-        "RmlUi-MIT.txt",
         "genesis_plus_gx.txt",
     ] {
         fs::write(kit.join("licenses").join(name), name).unwrap();

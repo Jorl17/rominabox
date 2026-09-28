@@ -1,0 +1,11 @@
+LZMA SDK (7-Zip)
+
+Version:  as vendored in the RetroArch fork
+Source:   https://github.com/Jorl17/rominabox-retroarch (deps/7zip)
+Licence:  public domain
+Used by:  the player, in every exported game
+
+==> the first comment of deps/7zip/7zDec.c in the RetroArch fork <==
+
+7zDec.c -- Decoding from 7z folder
+2019-02-02 : Igor Pavlov : Public domain
