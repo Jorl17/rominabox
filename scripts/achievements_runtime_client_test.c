@@ -65,7 +65,14 @@ static const char game_json[] =
    "\"ID\":123,\"Title\":\"First step\","
    "\"Description\":\"Reach one\",\"Flags\":3,\"Points\":5,"
    "\"MemAddr\":\"0xH0000=1.3.\",\"Author\":\"Fixture\","
-   "\"BadgeName\":\"123\",\"Created\":1,\"Modified\":1}],"
+   "\"BadgeName\":\"123\",\"Created\":1,\"Modified\":1},{"
+   /* A warning sent by RetroAchievements as an achievement, with an id for
+    * warnings ("Unsupported Game Version" for a version with no achievements).
+    * Its trigger here never fires. */
+   "\"ID\":101000001,\"Title\":\"Unsupported Game Version\","
+   "\"Description\":\"This version has no achievements\",\"Flags\":3,"
+   "\"Points\":0,\"MemAddr\":\"0xH0000=255\",\"Author\":\"Server\","
+   "\"BadgeName\":\"00000\",\"Created\":1,\"Modified\":1}],"
    "\"Leaderboards\":[]}]}";
 static const char session_json[] =
    "{\"Success\":true,\"Unlocks\":[],\"HardcoreUnlocks\":[]}";
@@ -552,7 +559,16 @@ int main(void)
    assert(rib_achievements_sign_in("Fixture", "fixture-password"));
    ready();
    assert(!rc_client_get_hardcore_enabled(locals.client));
+   /* The warning is not one of the player's achievements, and firing it
+    * unlocks nothing. */
    assert(snapshot().count == 1);
+   {
+      rc_client_achievement_t warning = {0};
+      warning.id = 101000001;
+      warning.title = "Unsupported Game Version";
+      rib_catalog_triggered(&warning);
+      assert(!rib_achievements_has_unlocks());
+   }
    achievement = rc_client_get_achievement_info(locals.client, 123);
    assert(achievement);
    strcpy(badge_name, achievement->badge_name);
