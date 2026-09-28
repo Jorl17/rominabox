@@ -474,7 +474,11 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
     if (job)
         SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits, sizeof limits);
-    if (!CreateProcessW(player_wide, line, NULL, NULL, TRUE, CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
+    /* No console window. The player is a windowed program with a log, and a
+     * console program in its place, such as the probe in the isolation
+     * tests, would otherwise open a terminal on the screen. */
+    if (!CreateProcessW(player_wide, line, NULL, NULL, TRUE,
+                        CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW,
                         NULL, data_wide, &startup, &process))
         rominabox_launch_die("could not start the player");
     if (job)

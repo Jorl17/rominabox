@@ -18,7 +18,7 @@ import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { findChrome } from "./chrome.mjs";
+import { chromeLaunch } from "./chrome.mjs";
 
 const require = createRequire(
   new URL("../desktop/package.json", import.meta.url),
@@ -199,13 +199,11 @@ async function main() {
   const width = Number(argument("--width") || 256);
   const height = Number(argument("--height") || 256);
 
-  const browser = await chromium.launch({
-    executablePath: findChrome(),
-    headless: true,
+  const browser = await chromium.launch(
     // In headless Chrome, WebGL runs on a software rasteriser, so we get the
     // same picture on a machine with any GPU, or none.
-    args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"],
-  });
+    chromeLaunch(["--use-gl=swiftshader", "--enable-unsafe-swiftshader"]),
+  );
   try {
     const page = await browser.newPage();
     page.setDefaultTimeout(30000);

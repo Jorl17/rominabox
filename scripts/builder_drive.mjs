@@ -12,7 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { python } from "./python.mjs";
-import { findChrome } from "./chrome.mjs";
+import { chromeLaunch } from "./chrome.mjs";
 
 const require = createRequire(
   new URL("../desktop/package.json", import.meta.url),
@@ -1032,10 +1032,7 @@ async function main() {
   }
   const server = await serve(dist);
   const address = server.address();
-  const browser = await chromium.launch({
-    executablePath: findChrome(),
-    headless: true,
-  });
+  const browser = await chromium.launch(chromeLaunch());
   let code = 0;
   try {
     const page = await browser.newPage({

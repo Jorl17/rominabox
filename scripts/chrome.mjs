@@ -24,6 +24,17 @@ const LOCATIONS = {
       .map((folder) => path.join(folder, WINDOWS_CHROME)),
 };
 
+/* How we start Chrome to drive a page from a script: headless, muted (on the
+ * builder's menu step we play previews of the sound packs), with the
+ * switches of the script. */
+export function chromeLaunch(switches = []) {
+  return {
+    executablePath: findChrome(),
+    headless: true,
+    args: ["--mute-audio", ...switches],
+  };
+}
+
 export function findChrome() {
   const locations = LOCATIONS[process.platform];
   if (!locations) {
