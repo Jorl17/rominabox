@@ -19,6 +19,10 @@ body.overlay .screen-panel { display: none; }
 #splash.showing { display: block; opacity: 1; }
 #splash.leaving { display: block; opacity: 0; transition: opacity 0.18s linear-in-out; }
 #splash-logo { position: absolute; right: 48dp; bottom: 36dp; width: 220dp; height: 220dp; }
+/* The ROM-in-a-Box name in its lettering, Science Gothic, next to the logo,
+ * centred on its box, where the eye sees the middle of the logo, and as far
+ * from the box wall, for its size, as the name in Native is from its logo. */
+#splash-name { position: absolute; right: 266.5dp; bottom: 92dp; text-align: right; font-family: "Science Gothic"; font-weight: bold; font-size: 30dp; color: #ffffff; }
 
 /* A thin strip along the top edge, like the short prompts of a disc console.
  * It slides down into view and back up out of it. */

@@ -16,7 +16,9 @@ body.overlay #controls-panel, body.overlay .screen-panel { display: none; }
 #splash { display: none; position: absolute; left: -4dp; top: -4dp; width: design(canvas-width)dp; height: design(canvas-height)dp; z-index: 100; background-color: design(background); opacity: 0; transition: opacity 0.12s linear-in-out; }
 #splash.showing { display: block; opacity: 1; }
 #splash.leaving { display: block; opacity: 0; transition: opacity design(overlay-leave-splash)s linear-in-out; }
-#splash-logo { position: absolute; left: 320dp; top: 140dp; width: 320dp; height: 320dp; }
+#splash-logo { position: absolute; left: 320dp; top: 96dp; width: 320dp; height: 320dp; }
+/* The name ROM-in-a-Box in its lettering, Science Gothic, under the logo. */
+#splash-name { position: absolute; left: 0; top: 404dp; width: 100%; text-align: center; font-family: "Science Gothic"; font-weight: bold; font-size: 44dp; color: design(ink); }
 
 /* Bottom left, where games put a prompt that the player soon stops noticing.
  * It pops up into place and drops back out, because the lettering is stepped

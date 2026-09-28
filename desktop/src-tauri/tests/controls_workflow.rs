@@ -89,15 +89,18 @@ fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
         .unwrap()
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
         .collect();
-    // The pictures in the menu of the design belong to the menu, as its font does.
-    let pictures = rominabox_desktop::menu::Manifest::load(&assets()).unwrap().pictures;
+    // The pictures and fonts the design uses in its menu belong to the menu.
+    let design = rominabox_desktop::menu::Manifest::load(&assets()).unwrap();
+    let declared = |name: &String| {
+        design.pictures.contains(name)
+            || design.fonts.iter().any(|font| &font.file == name || &font.license == name)
+    };
     assert!(
         written.iter().all(|name| {
-            pictures.contains(name)
+            declared(name)
                 || name.ends_with(".rml")
                 || name.ends_with(".cfg")
                 || name.ends_with(".rcss")
-                || name.starts_with("Silkscreen")
                 || name == "parts"
                 || name == rominabox_desktop::volume::tick_file()
         }),
@@ -197,6 +200,8 @@ fn splash_only_document_has_no_pause_controls_and_can_make_its_background_transp
     assert_eq!(
         written,
         [
+            "ScienceGothic-Bold.ttf",
+            "ScienceGothic-OFL.txt",
             "Silkscreen-OFL.txt",
             "Silkscreen-Regular.ttf",
             "design.cfg",
@@ -204,7 +209,7 @@ fn splash_only_document_has_no_pause_controls_and_can_make_its_background_transp
             "menu.rml",
             "parts"
         ],
-        "the logo, its stylesheet and font, and nothing of the menu"
+        "the logo and name, their stylesheet and fonts, and nothing of the menu"
     );
 }
 

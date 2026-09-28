@@ -13,6 +13,11 @@
       "file": "Silkscreen-Regular.ttf",
       "license": "Silkscreen-OFL.txt",
       "family": "Silkscreen"
+    },
+    {
+      "file": "ScienceGothic-Bold.ttf",
+      "license": "ScienceGothic-OFL.txt",
+      "family": "Science Gothic"
     }
   ],
   "pictures": ["brand-mark.png"],

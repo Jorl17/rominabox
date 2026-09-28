@@ -199,6 +199,8 @@ fn an_author_can_pick_the_generic_retropad_and_get_an_asset_free_grid() {
             "menu.rcss".to_string(),
             "Silkscreen-Regular.ttf".to_string(),
             "Silkscreen-OFL.txt".to_string(),
+            "ScienceGothic-Bold.ttf".to_string(),
+            "ScienceGothic-OFL.txt".to_string(),
             rominabox_desktop::volume::tick_file().to_string(),
             "parts".to_string(),
             "scene-retropad.rml".to_string(),
@@ -315,6 +317,8 @@ fn export_stages_only_the_mastersystem_illustration() {
             "menu.rcss".to_string(),
             "Silkscreen-Regular.ttf".to_string(),
             "Silkscreen-OFL.txt".to_string(),
+            "ScienceGothic-Bold.ttf".to_string(),
+            "ScienceGothic-OFL.txt".to_string(),
             rominabox_desktop::volume::tick_file().to_string(),
             "parts".to_string(),
             // We stage the screen declarations with the menu.
