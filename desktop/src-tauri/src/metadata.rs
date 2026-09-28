@@ -26,7 +26,6 @@ pub struct Inspection {
     pub source: MetadataSource,
     pub matched: bool,
     pub catalog_name: Option<String>,
-    pub description: Option<String>,
     pub icon_path: Option<PathBuf>,
     pub warnings: Vec<String>,
 }
@@ -149,14 +148,12 @@ pub fn inspect_game_with_system(
             source,
             matched: false,
             catalog_name: None,
-            description: None,
             icon_path: None,
             warnings,
         });
     };
 
     let mut catalog_name = None;
-    let mut description = None;
     let mut icon_path = None;
     let disc = system.category == "disc";
     if system.catalog.is_some() {
@@ -172,7 +169,6 @@ pub fn inspect_game_with_system(
                 online,
                 &mut title,
                 &mut source,
-                &mut description,
                 &mut catalog_name,
                 &mut icon_path,
                 &mut warnings,
@@ -187,7 +183,6 @@ pub fn inspect_game_with_system(
                 online,
                 &mut title,
                 &mut source,
-                &mut description,
                 &mut catalog_name,
                 &mut icon_path,
                 &mut warnings,
@@ -211,7 +206,6 @@ pub fn inspect_game_with_system(
         source,
         matched: catalog_name.is_some(),
         catalog_name,
-        description,
         icon_path,
         warnings,
     })
@@ -219,7 +213,6 @@ pub fn inspect_game_with_system(
 
 struct CatalogEntry {
     name: String,
-    description: Option<String>,
 }
 
 fn apply_cartridge_catalog(
@@ -231,7 +224,6 @@ fn apply_cartridge_catalog(
     online: bool,
     title: &mut String,
     source: &mut MetadataSource,
-    description: &mut Option<String>,
     catalog_name: &mut Option<String>,
     icon_path: &mut Option<PathBuf>,
     warnings: &mut Vec<String>,
@@ -269,7 +261,6 @@ fn apply_cartridge_catalog(
                             online,
                             title,
                             source,
-                            description,
                             catalog_name,
                             icon_path,
                             warnings,
@@ -301,7 +292,6 @@ fn apply_disc_catalog(
     online: bool,
     title: &mut String,
     source: &mut MetadataSource,
-    description: &mut Option<String>,
     catalog_name: &mut Option<String>,
     icon_path: &mut Option<PathBuf>,
     warnings: &mut Vec<String>,
@@ -357,7 +347,6 @@ fn apply_disc_catalog(
             online,
             title,
             source,
-            description,
             catalog_name,
             icon_path,
             warnings,
@@ -373,7 +362,6 @@ fn apply_disc_catalog(
             online,
             title,
             source,
-            description,
             catalog_name,
             icon_path,
             warnings,
@@ -401,7 +389,6 @@ fn remember_match(
     online: bool,
     title: &mut String,
     source: &mut MetadataSource,
-    description: &mut Option<String>,
     catalog_name: &mut Option<String>,
     icon_path: &mut Option<PathBuf>,
     warnings: &mut Vec<String>,
@@ -409,10 +396,6 @@ fn remember_match(
     *system = candidate;
     *title = display_title(&entry.name);
     *source = MetadataSource::Catalog;
-    *description = entry
-        .description
-        .clone()
-        .filter(|value| value != &entry.name);
     *catalog_name = Some(entry.name.clone());
     match lookup_boxart(cache, catalog, &entry.name, online) {
         Ok(Some(path)) => *icon_path = Some(path),
@@ -497,7 +480,6 @@ fn match_by_name(
             game.name.clone(),
             CatalogEntry {
                 name: game.name.clone(),
-                description: (!game.description.is_empty()).then_some(game.description),
             },
         );
     }
@@ -527,7 +509,6 @@ fn match_serial(
             .entry(game.name.clone())
             .or_insert_with(|| CatalogEntry {
                 name: game.name.clone(),
-                description: (!game.description.is_empty()).then_some(game.description.clone()),
             });
         for rom in &game.roms {
             let Some(serial) = rom.serial.as_deref() else {
@@ -594,7 +575,6 @@ fn match_catalog(
         }) {
             return Ok(Some(CatalogEntry {
                 name: game.name,
-                description: (!game.description.is_empty()).then_some(game.description),
             }));
         }
     }

@@ -724,7 +724,6 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
             rom,
             title: "Autoconfig".to_string(),
             system: "megadrive".to_string(),
-            description: None,
             icon: None,
             background: None,
             show_menu: false,

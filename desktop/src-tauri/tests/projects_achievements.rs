@@ -17,7 +17,6 @@ fn settings(rom: PathBuf) -> Game {
         rom,
         title: "Achievement project".into(),
         system: "megadrive".into(),
-        description: None,
         icon: None,
         background: None,
         show_menu: true,

@@ -112,7 +112,6 @@ fn export_request(root: &Path, advanced: bool, controls: Controls) -> ExportRequ
             rom,
             title: "Recovery Keys".to_string(),
             system: "megadrive".to_string(),
-            description: None,
             icon: None,
             background: None,
             show_menu: true,

@@ -237,18 +237,17 @@ pub fn complete_export(mut request: Map<String, Value>) -> Result<Completed<Expo
     Ok(Completed { request, identified })
 }
 
-/// `game`, completed as we complete a dropped game in the builder. This is
-/// the game that we save with `project-save` for a request with only its file.
+/// `game` completed as in the builder for a dropped game: the game we save
+/// in `project-save` for a request with only its file.
 ///
-/// When a game leaves out its title or console, we identify it with the
-/// builder's own identification, and take the title, console, description and
-/// cover that it leaves out from that. We treat a game with both as already
-/// identified and do not look it up, so its description and cover are what it
-/// states. A lookup would also check the console against the file, as when
-/// someone chooses a console in the builder, and would reject games that we
-/// accept in the export. The platform is the host's.
+/// For a game without its title or console, we use the builder's own
+/// identification to fill in the title, console and cover it leaves out. We
+/// do not look up a game with both, and its cover is the one it states, or
+/// none. A lookup would also check the console against the file, as when
+/// someone chooses a console in the builder, and we would reject games we
+/// can export. The platform is the one the command runs on.
 ///
-/// Two fields control the lookup and are not part of the game: `online`, and
+/// Two fields are for the lookup and not part of the game: `online`, and
 /// `metadataCache`, where we cache lookups. Both default to the builder's.
 pub fn complete_game(mut game: Map<String, Value>) -> Result<Completed<Game>, String> {
     let (identified, _) = fill_game(&mut game, &Places::of(identifier()))?;
@@ -297,7 +296,6 @@ fn fill_game(
         for (field, value) in [
             ("title", json!(found.title)),
             ("system", json!(found.system)),
-            ("description", json!(found.description)),
             ("icon", json!(found.icon_path)),
         ] {
             request.entry(field).or_insert(value);

@@ -121,7 +121,6 @@ pub fn export_request_from(root: &Path, runtime_kit: PathBuf) -> ExportRequest {
             rom,
             title: "Hotkey Isolation".to_string(),
             system: "megadrive".to_string(),
-            description: None,
             icon: None,
             background: None,
             show_menu: false,

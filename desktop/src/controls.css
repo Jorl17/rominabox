@@ -26,12 +26,17 @@
   color: var(--ink);
   background: var(--paper);
 }
+/* Top-aligned, so a row that grows (Devices opened, a warning) keeps its
+   other cells where they were. */
 .controls-table th,
 .controls-table td {
   text-align: left;
-  vertical-align: middle;
+  vertical-align: top;
   padding: 4px 10px;
   border-bottom: 1px solid var(--ink);
+}
+.controls-table tbody th {
+  padding-top: 11px;
 }
 .controls-table thead th {
   font-size: 12px;
@@ -126,24 +131,31 @@
   font-size: 14px;
   min-height: 20px;
 }
+.control-message:empty {
+  min-height: 0;
+  padding: 0;
+}
 .device-bindings {
   width: auto;
 }
 .device-bindings summary {
   cursor: pointer;
   font-size: 14px;
+  line-height: 32px;
   white-space: nowrap;
 }
+/* The name of each field on the line of its dropdown, so opening Devices
+   adds only two short lines. */
 .device-binding-fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding-top: 8px;
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  align-items: center;
+  gap: 4px 8px;
+  padding-bottom: 4px;
 }
 .device-binding-fields label {
-  display: grid;
-  gap: 6px;
-  min-width: 140px;
+  display: contents;
   font-size: 12px;
   font-weight: 700;
 }
@@ -242,21 +254,26 @@
 .controller-marker.selected .controller-ring {
   stroke: var(--palette-highlight, #fff13d);
 }
-/* The author's defaults for the actions of the menu: one row of chips each. */
+/* The author's defaults for the actions of the menu: one row of chips each,
+   in a box like the pad's, with its own heading and Reset. */
 .menu-controls {
-  display: grid;
-  gap: 10px;
   margin-top: 20px;
-}
-.menu-controls h3 {
-  margin: 0;
-  font-size: 15px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
 }
 .menu-control-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  padding: 8px 16px;
+}
+.menu-control-row + .menu-control-row {
+  border-top: 1px solid var(--ink);
+}
+.menu-controls .control-message:not(:empty) {
+  border-top: 1px solid var(--ink);
 }
 .menu-control-name {
   min-width: 6em;

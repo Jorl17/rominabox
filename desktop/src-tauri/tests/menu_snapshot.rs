@@ -172,7 +172,6 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
             rom: PathBuf::new(),
             title: "Menu Snapshot".to_string(),
             system: case.system.to_string(),
-            description: None,
             icon: None,
             background: None,
             show_menu: true,

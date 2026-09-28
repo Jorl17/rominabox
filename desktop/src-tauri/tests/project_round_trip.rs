@@ -30,7 +30,6 @@ fn everything(root: &Path) -> Value {
         "rom": root.join("Game.md"),
         "title": "Every Setting",
         "system": "megadrive",
-        "description": "A game saved with everything changed.",
         "icon": root.join("cover.png"),
         "background": root.join("backdrop.png"),
         "showMenu": true,

@@ -17,7 +17,6 @@ fn request(splash: bool) -> ExportRequest {
             rom: PathBuf::from("game.bin"),
             title: "Game".to_string(),
             system: "megadrive".to_string(),
-            description: None,
             icon: None,
             background: None,
             show_menu: false,

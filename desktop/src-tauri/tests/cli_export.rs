@@ -202,7 +202,7 @@ fn a_game_alone_is_exported_as_the_builder_makes_it() {
 
     assert_eq!(game["title"], TITLE, "{game}");
     assert_eq!(game["system"], "megadrive", "{game}");
-    assert_eq!(game["description"], DESCRIPTION, "{game}");
+    assert!(game.get("description").is_none(), "{game}");
     let app = PathBuf::from(last["result"]["appPath"].as_str().unwrap());
     assert!(shows_the_cover(&app), "the cover is not the game's icon");
 
@@ -334,7 +334,6 @@ fn what_a_request_states_wins_over_the_lookup_and_the_defaults() {
     let mut stated = request(root.path());
     let builder = defaults();
     stated["title"] = json!("Named By Hand");
-    stated["description"] = json!("Written by hand");
     stated["icon"] = Value::Null;
     stated["splash"] = json!(!builder.splash);
     stated["showMenu"] = json!(!builder.show_menu);
@@ -343,7 +342,6 @@ fn what_a_request_states_wins_over_the_lookup_and_the_defaults() {
     let game = game(&last);
 
     assert_eq!(game["title"], "Named By Hand", "{game}");
-    assert_eq!(game["description"], "Written by hand", "{game}");
     // The request does not state it, so we still look it up.
     assert_eq!(game["system"], "megadrive", "{game}");
     let app = PathBuf::from(last["result"]["appPath"].as_str().unwrap());
@@ -381,7 +379,6 @@ fn a_request_that_names_its_game_is_not_looked_up() {
     let game = game(&last);
     assert_eq!(game["title"], "Stand-in", "{game}");
     assert_eq!(game["system"], "megadrive", "{game}");
-    assert_eq!(game["description"], Value::Null, "{game}");
     assert_eq!(game["splash"], defaults().splash, "{game}");
     assert!(events(&printed, "identified").is_empty(), "{printed}");
 }
