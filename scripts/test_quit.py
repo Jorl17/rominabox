@@ -287,8 +287,8 @@ def macos_quit(cartridge: Path) -> str | None:
 def windows_close(cartridge: Path) -> str | None:
     """Close the running game's window, as its close button does, in an
     export with the emulator's menus behind Advanced and in one with them
-    unlocked. In the first, closing starts a quit as from the pause menu. In
-    the second, closing is the usual RetroArch close."""
+    unlocked. In both, closing starts a quit as from the pause menu, and we
+    keep the window until quitting finishes."""
     problems = [close_window(cartridge, advanced) for advanced in (False, True)]
     return "\n".join(problem for problem in problems if problem) or None
 

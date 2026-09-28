@@ -390,6 +390,30 @@ static const char *field(const char *plan, const char *name, char *out, size_t o
     return NULL;
 }
 
+/* Some part of `path` is `..`. */
+static int climbs_out(const char *path) {
+    const char *cursor = path;
+    for (; *cursor; cursor++)
+        if ((cursor == path || is_separator(cursor[-1])) && starts_with(cursor, "..") &&
+            (cursor[2] == '\0' || is_separator(cursor[2])))
+            return 1;
+    return 0;
+}
+
+/* `path` stays inside the folder it is joined to: it does not start at a
+ * root and never climbs out with `..`. We apply this to the content path,
+ * each managed folder and the data folder below $user_data. */
+static int stays_inside(const char *path) {
+    if (is_separator(path[0]))
+        return 0;
+#if defined(_WIN32)
+    /* A drive letter, C:, also points to a place outside. */
+    if (strchr(path, ':'))
+        return 0;
+#endif
+    return !climbs_out(path);
+}
+
 static void collect_managed(const char *plan, char managed[][128], size_t *count) {
     const char *cursor = plan;
     *count = 0;
@@ -404,6 +428,8 @@ static void collect_managed(const char *plan, char managed[][128], size_t *count
                 die("too many managed directories");
             memcpy(managed[*count], cursor + field_len + 1, name_len);
             managed[*count][name_len] = '\0';
+            if (!stays_inside(managed[*count]))
+                die("a managed folder in the launch plan leaves the game's data");
             (*count)++;
         }
         if (!end)
@@ -437,26 +463,6 @@ static void apply_player_settings(ConfigLine **lines, size_t *count, size_t *cap
             break;
         cursor = end + 1;
     }
-}
-
-/* A content path that starts at a root, or climbs out with `..`, is not a
- * file inside the app. */
-static int path_has_dotdot(const char *path) {
-    const char *cursor = path;
-    if (is_separator(path[0]))
-        return 1;
-#if defined(_WIN32)
-    /* A drive letter, C:, also points to a place outside the app. */
-    if (strchr(path, ':'))
-        return 1;
-#endif
-    while (*cursor) {
-        if ((cursor == path || is_separator(cursor[-1])) && starts_with(cursor, "..") &&
-            (cursor[2] == '\0' || is_separator(cursor[2])))
-            return 1;
-        cursor++;
-    }
-    return 0;
 }
 
 static void first_line(const char *path, char *out, size_t out_cap) {
@@ -516,6 +522,17 @@ static char *read_plan(const char *resources) {
     return plan;
 }
 
+/* An export's data folder is $user_data and a path that stays inside it. A
+ * plan may instead contain an absolute folder, as in the tests that keep a
+ * game's data in their own place, but never a path that climbs out of it. */
+static int data_folder_stays_inside(const char *folder) {
+    if (starts_with(folder, token_UserData)) {
+        const char *below = folder + strlen(token_UserData);
+        return is_separator(below[0]) && stays_inside(below + 1);
+    }
+    return fs_is_absolute(folder) && !climbs_out(folder);
+}
+
 static void read_game_from(const char *plan, LaunchGame *game) {
     char achievements[8] = "0";
     char sandbox[8] = "0";
@@ -532,6 +549,8 @@ static void read_game_from(const char *plan, LaunchGame *game) {
     field(plan, plan_AccountsDir, game->accounts_name, sizeof game->accounts_name);
     if (!field(plan, plan_DataDir, game->data_template, sizeof game->data_template))
         die("the launch plan has no data directory");
+    if (!data_folder_stays_inside(game->data_template))
+        die("the launch plan's data directory leaves its folder");
 }
 
 void rominabox_read_game(const char *resources, LaunchGame *game) {
@@ -645,7 +664,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     }
 
     read_game_from(plan, &game);
-    if (!field(plan, plan_Content, content, sizeof content) || path_has_dotdot(content))
+    if (!field(plan, plan_Content, content, sizeof content) || !stays_inside(content))
         die("the launch plan has no content path");
     field(plan, plan_StartAtMenu, start_at_menu, sizeof start_at_menu);
     field(plan, plan_Advanced, advanced, sizeof advanced);
