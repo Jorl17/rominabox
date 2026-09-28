@@ -176,3 +176,27 @@ fn the_launch_trampoline_hands_main_its_arguments_on_both_processors() {
         );
     }
 }
+
+/// What a universal library loads, each once. The output of `otool -L` has a
+/// header for each slice and the name of the library first in each, and
+/// neither is a library it loads, which we would try to move next to it.
+#[test]
+fn a_universal_librarys_dependencies_are_what_it_loads() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-dependencies");
+    let source = root.join("probe.c");
+    fs::write(&source, "int probe(void) { return 1; }\n").unwrap();
+    let library = root.join("libprobe.dylib");
+    let built = Command::new("cc")
+        .args(["-arch", "arm64", "-arch", "x86_64", "-dynamiclib"])
+        .args(["-install_name", "@rpath/libprobe.dylib", "-o"])
+        .arg(&library)
+        .arg(&source)
+        .status()
+        .unwrap();
+    assert!(built.success());
+    assert_eq!(
+        crate::packaging::macos::macho_dependencies(&library).unwrap(),
+        ["/usr/lib/libSystem.B.dylib"]
+    );
+    let _ = fs::remove_dir_all(&root);
+}

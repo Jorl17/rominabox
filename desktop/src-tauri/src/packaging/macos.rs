@@ -846,7 +846,7 @@ fn resolve_dependency_source(
         .find(|path| path.is_file())
 }
 
-fn macho_dependencies(path: &Path) -> Result<Vec<String>, ExportError> {
+pub(super) fn macho_dependencies(path: &Path) -> Result<Vec<String>, ExportError> {
     let output = Command::new("/usr/bin/otool")
         .arg("-L")
         .arg(path)
