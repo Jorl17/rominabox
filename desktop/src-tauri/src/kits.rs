@@ -23,9 +23,18 @@ struct Identity {
     player: String,
 }
 
+fn manifest(kit: &Path) -> Option<serde_json::Value> {
+    serde_json::from_slice(&fs::read(kit.join("manifest.json")).ok()?).ok()
+}
+
+/// The platform a kit is for. That is all we need from the bundled kit to
+/// make games for the builder's own platform.
+fn platform_of_kit(kit: &Path) -> Option<String> {
+    Some(manifest(kit)?["platform"].as_str()?.to_string())
+}
+
 fn identity(kit: &Path) -> Option<Identity> {
-    let manifest: serde_json::Value =
-        serde_json::from_slice(&fs::read(kit.join("manifest.json")).ok()?).ok()?;
+    let manifest = manifest(kit)?;
     let player = manifest["components"]
         .as_array()?
         .iter()
@@ -100,11 +109,11 @@ fn resolve(
     pins: &[Pin],
     transport: &dyn Transport,
 ) -> Result<PathBuf, String> {
-    let own = identity(bundled)
-        .ok_or_else(|| format!("{} is not a runtime kit: it has no manifest naming its player", bundled.display()))?;
-    if own.platform == word(platform) {
+    if platform_of_kit(bundled).as_deref() == Some(word(platform)) {
         return Ok(bundled.to_path_buf());
     }
+    let own = identity(bundled)
+        .ok_or_else(|| format!("{} is not a runtime kit: it has no manifest naming its player", bundled.display()))?;
     let wanted = Identity {
         platform: word(platform).to_string(),
         player: own.player.clone(),
