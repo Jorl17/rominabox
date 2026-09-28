@@ -551,6 +551,7 @@ where
     let identity = stable_identity(
         &request.game.rom,
         &request.game.system,
+        &request.game.title,
         isolation_namespace().as_deref(),
     )?;
     packager.install_launcher(&request.runtime_kit)?;

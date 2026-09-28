@@ -11,16 +11,16 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::Path;
 
-/// An optional namespace for everything that an export creates.
+/// An optional namespace for everything that belongs to an export.
 ///
-/// The same game exported from two checkouts has the same identity on
-/// purpose. It is `sha256(system + ROM bytes)`, so the saves of a player
-/// stay in place after a new export. Two worktrees building in parallel would
-/// then use the same bundle identifier and data folder.
+/// The same game built in two checkouts has the same identity on purpose. It
+/// is `sha256(system + title + ROM bytes)`, so a player keeps the saves when
+/// the author exports the game again. Two development checkouts that build
+/// in parallel would then share a bundle identifier and a data directory.
 ///
-/// So we isolate them with a namespace from the environment and never change
-/// the identity itself. When it is unset, as in every ordinary export, the
-/// identity is unchanged, and so is the save path of a player.
+/// So for isolation, we take a namespace from the environment and never
+/// change the identity itself. When there is none, as in every published
+/// export, the identity is exactly the hash above and the save path stays.
 pub(super) fn isolation_namespace() -> Option<String> {
     std::env::var("ROMINABOX_GAME_BUNDLE_PREFIX")
         .ok()
@@ -28,12 +28,18 @@ pub(super) fn isolation_namespace() -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-/// We take this as an argument and do not read the environment here, so a
-/// test can call it without changing process-wide state that is shared by
-/// every other test in this binary.
+/// The identity of a game, from which we name its data folder, its sandbox and its
+/// app ID: the console, the title and the ROM's bytes. When the author
+/// exports the same game again with the same title, the player keeps the
+/// saves, and the same ROM under another title is a separate game.
+///
+/// We take the namespace as an argument instead of reading the environment
+/// here, so we can test it without changing process-wide state that every
+/// other test in this binary shares.
 pub(super) fn stable_identity(
     rom: &Path,
     system: &str,
+    title: &str,
     namespace: Option<&str>,
 ) -> Result<String, ExportError> {
     // The author's game file. When it is gone, we tell the author that.
@@ -54,6 +60,8 @@ pub(super) fn stable_identity(
         hash.update(b"\0");
     }
     hash.update(system.trim().to_ascii_lowercase().as_bytes());
+    hash.update(b"\0");
+    hash.update(title.trim().as_bytes());
     hash.update(b"\0");
     let mut buffer = [0u8; 1024 * 128];
     loop {
