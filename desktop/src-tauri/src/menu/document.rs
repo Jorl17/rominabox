@@ -441,6 +441,16 @@ pub(crate) fn apply_options(
         }
         entries.push_str(&switch_entry(manifest, setting)?);
     }
+    // One list, as on every screen of rows. In the player we split the
+    // entries into pages of the size the design sets for Options, and show
+    // the pager when there is more than one page.
+    let entries = crate::lists::paged(
+        &crate::lists::list_id(&options.id),
+        "",
+        &options.id,
+        &entries,
+        options.list_page_size.unwrap_or(manifest.list_page_size),
+    );
     if document.contains("<!--OPTIONS-->") {
         document = document.replace("<!--OPTIONS-->", &entries);
     } else if document.contains(&panel_id) {

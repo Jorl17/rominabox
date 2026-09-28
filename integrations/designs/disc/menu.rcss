@@ -193,8 +193,14 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #achievements-panel #achievements-back { left: 766dp; right: auto; width: 176dp; }
 .list-status { position: absolute; left: 24dp; top: 544dp; color: design(muted); font-size: 13dp; }
 
-.menu-index { position: absolute; left: 24dp; top: 56dp; width: 680dp; height: 384dp; }
-.option-entry { position: relative; display: block; margin-bottom: 8dp; width: 680dp; min-height: 26dp; padding-top: 13dp; padding-bottom: 13dp; line-height: 26dp; font-family: Silkscreen; font-size: 18dp; border-width: 0 0 1dp 0; border-color: design(rule); text-align: left; padding-left: 16dp; background-color: transparent; }
+/* The index has pages like every other list. Six entries of one height, 61dp
+ * apart, end 34dp above the volume row, and a seventh goes to the next page.
+ * The pager is at the left of the button row, as in every Disc list. A long
+ * label stays on its line. */
+.menu-index { position: absolute; left: 24dp; top: 56dp; width: 680dp; height: 358dp; }
+.menu-index .list { position: absolute; left: 0; top: 0; width: 680dp; }
+.menu-index .list-pager { top: 452dp; }
+.option-entry { position: relative; display: block; margin-bottom: 8dp; width: 680dp; height: 26dp; padding-top: 13dp; padding-bottom: 13dp; line-height: 26dp; font-family: Silkscreen; font-size: 18dp; border-width: 0 0 1dp 0; border-color: design(rule); text-align: left; padding-left: 16dp; background-color: transparent; white-space: nowrap; overflow: hidden; }
 .option-entry:hover { background-color: design(focus); color: design(ink); border-color: design(edge); }
 .option-entry.focused { border-color: design(rule); border-left-width: 6dp; border-left-color: design(highlight); background-color: transparent; color: design(ink); }
 .option-entry:active { background-color: design(highlight); color: design(slot-label); }

@@ -93,7 +93,8 @@
       "button": "options",
       "label": "OPTIONS",
       "back": "BACK",
-      "place": "options"
+      "place": "options",
+      "pageSize": 6
     },
     {
       "id": "controls",

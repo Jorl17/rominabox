@@ -242,8 +242,12 @@ pub fn render_row(template: &str, item: &ListItem) -> String {
 /// `{screen}-prev` and `{screen}-next`, and the page count has the screen id
 /// with the page-count suffix of the contract.
 pub fn render_list(screen: &str, template: &str, items: &[ListItem], page_size: usize) -> String {
-    let id = format!("{screen}{}", contract!(ListSuffix));
-    render_list_in(&id, "", screen, template, items, page_size)
+    render_list_in(&list_id(screen), "", screen, template, items, page_size)
+}
+
+/// The id of a screen's list: the screen id with the contract's list suffix.
+pub fn list_id(screen: &str) -> String {
+    format!("{screen}{}", contract!(ListSuffix))
 }
 
 /// `render_list`, in the list element `id` with `attributes` after its class,
@@ -256,10 +260,17 @@ pub fn render_list_in(
     items: &[ListItem],
     page_size: usize,
 ) -> String {
-    if items.is_empty() || page_size == 0 {
+    let rows: String = items.iter().map(|item| render_row(template, item)).collect();
+    paged(id, attributes, screen, &rows, page_size)
+}
+
+/// Rows already written, as one list that we page in the player. A page
+/// contains its rows, whatever they are. We write the Options entries this
+/// way, and they stay the entries of the design instead of list rows.
+pub fn paged(id: &str, attributes: &str, screen: &str, rows: &str, page_size: usize) -> String {
+    if rows.is_empty() || page_size == 0 {
         return String::new();
     }
-    let rows: String = items.iter().map(|item| render_row(template, item)).collect();
     format!(
         "<div id=\"{id}\" class=\"{list}\"{attributes} {page_size_attribute}=\"{page_size}\">\
          <div class=\"{page}\">{rows}</div>{pager}</div>",

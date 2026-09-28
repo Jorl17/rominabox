@@ -1,5 +1,5 @@
-/* Two columns of entries, filled left to right, with CONTROLS and SHADERS
- * on the first row and ACHIEVEMENTS below CONTROLS. The entries float in
- * this layout, so here an ordinary block replaces the Native column. */
+/* Two columns of entries, filled left to right, with CONTROLS | SHADERS on
+ * the first row and ACHIEVEMENTS below CONTROLS. The entries in this layout
+ * float. A page is two columns of three rows (design.json). */
 #options-entries { position: absolute; left: 56dp; top: 190dp; width: 840dp; height: 240dp; display: block; }
 #options-entries .option-entry { position: static; display: block; float: left; width: 390dp; height: 64dp; line-height: 58dp; margin: 0 20dp 16dp 0; }

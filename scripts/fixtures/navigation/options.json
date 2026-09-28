@@ -201,7 +201,7 @@
       }
     },
     {
-      "name": "a game that rumbles offers RUMBLE after PLAY IN BACKGROUND",
+      "name": "a game that rumbles offers RUMBLE after PLAY IN BACKGROUND, on the next page where a page is full",
       "setup": {
         "rumble": 1
       },
@@ -212,8 +212,7 @@
           "key:down",
           "key:down",
           "key:down",
-          "key:down",
-          "key:down"
+          "key:right"
         ],
         "options-columns": [
           "options",
@@ -238,8 +237,7 @@
           "shaders",
           "achievements",
           "background-play",
-          "rumble",
-          "options-back"
+          "rumble"
         ],
         "options-columns": [
           "volume-level",
@@ -255,6 +253,346 @@
           "rumble",
           "background-play",
           "achievements"
+        ]
+      }
+    },
+    {
+      "name": "a switch the game does not use leaves no page behind",
+      "steps": [
+        "options",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "background-play",
+          "options-back"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "achievements",
+          "options-back",
+          "options-back",
+          "options-back"
+        ],
+        "disc": [
+          "volume-level",
+          "options-back",
+          "options-back",
+          "options-back",
+          "options-back",
+          "options-back"
+        ]
+      },
+      "text": {
+        "*": [
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a fifth entry is on the next page: down from a full page reaches the pager, OK turns it, up is that entry",
+      "setup": {
+        "discs": 2
+      },
+      "steps": {
+        "native": [
+          "options",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:down",
+          "key:ok",
+          "key:up"
+        ],
+        "options-columns": [
+          "options",
+          "key:down",
+          "key:right",
+          "key:down",
+          "key:left",
+          "key:down"
+        ],
+        "disc": [
+          "options",
+          "key:up",
+          "key:up",
+          "key:up",
+          "key:up",
+          "key:up"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "achievements",
+          "discs",
+          "options-next",
+          "options-prev",
+          "background-play"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "discs",
+          "achievements",
+          "background-play"
+        ],
+        "disc": [
+          "volume-level",
+          "background-play",
+          "achievements",
+          "shaders",
+          "controls",
+          "controls"
+        ]
+      },
+      "text": {
+        "native": [
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "2/2"
+          },
+          {
+            "options-page-count": "2/2"
+          }
+        ],
+        "options-columns": [
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          }
+        ],
+        "disc": [
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          },
+          {
+            "options-page-count": "1/1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Left and Right turn Options' pages from an entry, and move between entries side by side",
+      "setup": {
+        "discs": 2,
+        "rumble": 1
+      },
+      "steps": {
+        "native": [
+          "options",
+          "key:down",
+          "key:right",
+          "key:right",
+          "key:down",
+          "key:left"
+        ],
+        "options-columns": [
+          "options",
+          "key:down",
+          "key:right",
+          "key:right",
+          "key:down",
+          "key:down",
+          "key:left"
+        ],
+        "disc": [
+          "options",
+          "key:up",
+          "key:right",
+          "key:left"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "controls",
+          "background-play",
+          "background-play",
+          "rumble",
+          "controls"
+        ],
+        "options-columns": [
+          "volume-level",
+          "controls",
+          "shaders",
+          "shaders",
+          "discs",
+          "rumble",
+          "background-play"
+        ],
+        "disc": [
+          "volume-level",
+          "rumble",
+          "rumble",
+          "rumble"
+        ]
+      },
+      "sounds": {
+        "native": [
+          [
+            "confirm"
+          ],
+          [
+            "move"
+          ],
+          [
+            "move"
+          ],
+          [],
+          [
+            "move"
+          ],
+          [
+            "move"
+          ]
+        ],
+        "disc": [
+          [
+            "confirm"
+          ],
+          [
+            "move"
+          ],
+          [],
+          []
+        ]
+      }
+    },
+    {
+      "name": "the pointer turns Options' pages at the pager and reaches the entries on each",
+      "setup": {
+        "discs": 2,
+        "rumble": 1
+      },
+      "steps": {
+        "native": [
+          "options",
+          "press:options-next",
+          "hover:rumble",
+          "press:options-prev",
+          "hover:discs"
+        ],
+        "options-columns": [
+          "options",
+          "hover:rumble",
+          "hover:discs"
+        ],
+        "disc": [
+          "options",
+          "hover:rumble",
+          "hover:controls"
+        ]
+      },
+      "focused": {
+        "native": [
+          "volume-level",
+          "options-prev",
+          "rumble",
+          "options-next",
+          "discs"
+        ],
+        "options-columns": [
+          "volume-level",
+          "rumble",
+          "discs"
+        ],
+        "disc": [
+          "volume-level",
+          "rumble",
+          "controls"
+        ]
+      },
+      "text": {
+        "native": [
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "2/2"
+          },
+          {
+            "options-page-count": "2/2"
+          },
+          {
+            "options-page-count": "1/2"
+          },
+          {
+            "options-page-count": "1/2"
+          }
         ]
       }
     }
