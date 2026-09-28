@@ -29,6 +29,8 @@ fn an_empty_selection_is_no_shaders() {
 const PASS: &str = "#if defined(VERTEX)\n#elif defined(FRAGMENT)\n#endif\n";
 /// A slang pass, as far as we check it.
 const SLANG: &str = "#version 450\n#pragma stage vertex\n#pragma stage fragment\n";
+/// A lookup texture, as far as we check it, which is a PNG header.
+const PICTURE: &[u8] = b"\x89PNG\r\n\x1a\n";
 
 /// We recognise a slang preset by the contents of its pass, whatever its
 /// name, stage it under the file name for slang in RetroArch, and run
@@ -201,7 +203,7 @@ fn a_preset_keeps_its_folders_so_every_file_it_names_is_there() {
     )
     .unwrap();
     fs::write(source.join("shaders/pass.glsl"), PASS).unwrap();
-    fs::write(source.join("resources/lut.png"), b"lut").unwrap();
+    fs::write(source.join("resources/lut.png"), PICTURE).unwrap();
     let composed = composed(ShaderSelection {
         custom: vec![CustomShader {
             name: "PAL".into(),
@@ -278,11 +280,12 @@ fn a_preset_takes_the_files_it_names_from_a_neighbouring_folder() {
                 "shaders = 1\nshader0 = ../pal/shaders/pal.glsl\ntextures = \"lut\"\nlut = \"../pal/resources/lut.png\"\n",
             ),
             ("pal/shaders/pal.glsl", PASS),
-            ("pal/resources/lut.png", "lut"),
             ("pal/shaders/unnamed.glsl", PASS),
             ("pal/pal.glslp", "shaders = 1\nshader0 = shaders/pal.glsl\n"),
         ],
     );
+    fs::create_dir_all(source.join("pal/resources")).unwrap();
+    fs::write(source.join("pal/resources/lut.png"), PICTURE).unwrap();
     let root = rominabox_scratch::Scratch::dir("rominabox-shader-neighbour-staged");
     composed(selection.clone()).write(&root).unwrap();
     assert_eq!(
@@ -312,9 +315,10 @@ fn a_staged_preset_resolves_inside_its_own_folder() {
             ),
             ("crt/shaders/royale.glsl", PASS),
             ("pal/shaders/pal.glsl", PASS),
-            ("resources/mask.png", "mask"),
         ],
     );
+    fs::create_dir_all(source.join("resources")).unwrap();
+    fs::write(source.join("resources/mask.png"), PICTURE).unwrap();
     let root = rominabox_scratch::Scratch::dir("rominabox-shader-walk-staged");
     composed(selection.clone()).write(&root).unwrap();
     let staged = root.join("shaders/pal");
@@ -453,10 +457,11 @@ fn a_preset_file_the_row_picture_would_replace_is_refused() {
                 "shaders = 1\nshader0 = pass.glsl\ntextures = \"icon\"\nicon = \"icon.png\"\n",
             ),
             ("pass.glsl", PASS),
-            ("icon.png", "lookup"),
         ],
     );
-    assert!(resolve(&selection).is_err(), "a preset's icon.png would be overwritten");
+    fs::write(source.join("icon.png"), PICTURE).unwrap();
+    let error = resolve(&selection).expect_err("a preset's icon.png would be overwritten");
+    assert!(error.contains("icon.png"), "{error}");
     let _ = fs::remove_dir_all(&source);
 }
 

@@ -1,14 +1,17 @@
-//! The files listed in a shader of the author, read from the shader.
+//! The files an author's shader lists, which we read from the shader.
 //!
 //! A preset lists its passes, its lookup textures and the presets it
 //! `#reference`s, each relative to itself, and a slang pass lists the files
-//! it `#include`s, relative to itself. Any of these paths may contain `../`.
-//! For example, libretro's `crt/crt-royale-pal-r57shell.glslp` uses a pass
-//! from `../pal/shaders/`. At export we copy the shader and its files below
-//! the lowest folder that contains them all, each at its path from there, so
-//! every relative path still leads to its file and none leads out of the
-//! shader folder in the game. We copy only the listed files, and each pass
-//! must be in a language for exported games.
+//! it `#include`s, relative to itself. Any of these paths may go through
+//! `../`. For example, libretro's `crt/crt-royale-pal-r57shell.glslp` has
+//! its pass in `../pal/shaders/`. At export we lay out the shader and its
+//! files below the lowest folder that contains them all, each at its path
+//! from there, so every relative path still leads to its file and none leads
+//! out of the game's shader folder. We export only the named files, and each
+//! must be the kind of file in its line, so a `../` cannot bring anything
+//! else, such as a private key, into a game. A pass must be in a shader
+//! language for an exported game, a lookup texture a picture, a `#reference`
+//! a preset and an `#include` shader source.
 
 use crate::shader_format::{one_language, require_runnable_pass, Language};
 use std::fs;
@@ -17,6 +20,64 @@ use std::path::{Component, Path, PathBuf};
 /// How many presets deep `#reference` may go, as in RetroArch, and how
 /// many files deep a slang pass's `#include`s may go.
 const REFERENCE_DEPTH: usize = 16;
+
+/// The kind of file in a line.
+#[derive(Clone, Copy)]
+enum Named {
+    /// `shaderN`, which we check as a pass, for its language, once we find it.
+    Pass,
+    /// A lookup texture.
+    Picture,
+    /// A `#reference`d preset.
+    Preset,
+    /// A file a slang pass `#include`s.
+    Source,
+}
+
+impl Named {
+    /// Whether `path` is this kind of file. We recognise a picture by its
+    /// first bytes, the header of a PNG, JPEG, BMP or TGA, which are the
+    /// texture formats in RetroArch. A preset or an included file is text with
+    /// a name as in libretro's packs. A `.params` file contains only a preset's
+    /// parameter values.
+    fn holds(self, path: &Path) -> Result<bool, String> {
+        let extensions: &[&str] = match self {
+            Named::Pass => return Ok(true),
+            Named::Picture => {
+                let bytes = read(path)?;
+                let tga = bytes.len() >= 18
+                    && bytes[1] <= 1
+                    && matches!(bytes[2], 1 | 2 | 3 | 9 | 10 | 11)
+                    && matches!(bytes[16], 8 | 15 | 16 | 24 | 32);
+                return Ok(bytes.starts_with(b"\x89PNG\r\n\x1a\n")
+                    || bytes.starts_with(b"\xff\xd8\xff")
+                    || bytes.starts_with(b"BM")
+                    || tga);
+            }
+            Named::Preset => &["glslp", "slangp", "params"],
+            Named::Source => &["slang", "glsl", "inc", "h", "hlsl"],
+        };
+        let extension = path.extension().and_then(|extension| extension.to_str());
+        let named = extension.is_some_and(|extension| {
+            extensions.iter().any(|name| name.eq_ignore_ascii_case(extension))
+        });
+        Ok(named && !read(path)?.contains(&0))
+    }
+
+    /// What a file of this kind is called in a sentence.
+    fn called(self) -> &'static str {
+        match self {
+            Named::Pass => "a shader pass",
+            Named::Picture => "a PNG, JPEG, BMP or TGA picture",
+            Named::Preset => "a shader preset",
+            Named::Source => "shader source",
+        }
+    }
+}
+
+fn read(path: &Path) -> Result<Vec<u8>, String> {
+    fs::read(path).map_err(|error| format!("could not read {}: {error}", path.display()))
+}
 
 /// An author's shader and the files it lists, laid out below the lowest
 /// folder that contains them all.
@@ -85,7 +146,7 @@ fn collect_files(
                 ));
             }
             if let Some(value) = comment.strip_prefix("reference ") {
-                let source = named(directory, value.trim().trim_matches('"'))
+                let source = named(directory, value.trim().trim_matches('"'), Named::Preset)
                     .map_err(|error| format!("shader preset line {line_number} {error}"))?;
                 add_file(files, source.clone());
                 collect_files(&source, depth + 1, files, passes)?;
@@ -114,7 +175,8 @@ fn collect_files(
         if !is_pass && !textures.contains(key) {
             continue;
         }
-        let source = named(directory, value)
+        let kind = if is_pass { Named::Pass } else { Named::Picture };
+        let source = named(directory, value, kind)
             .map_err(|error| format!("shader preset line {line_number} {error}"))?;
         if is_pass {
             let language = require_runnable_pass(&source)?;
@@ -130,9 +192,10 @@ fn collect_files(
     Ok(())
 }
 
-/// The file at `value` from `directory`, with `../` resolved. The error
-/// message completes a sentence about the file that listed it.
-fn named(directory: &Path, value: &str) -> Result<PathBuf, String> {
+/// The file at `value` from `directory`, with `../` resolved, when it is the
+/// kind of file expected on its line. The error message completes a sentence
+/// about the file that listed it.
+fn named(directory: &Path, value: &str, kind: Named) -> Result<PathBuf, String> {
     let relative = Path::new(value);
     if relative
         .components()
@@ -145,6 +208,9 @@ fn named(directory: &Path, value: &str) -> Result<PathBuf, String> {
     let source = normalized(&directory.join(relative));
     if !source.is_file() {
         return Err(format!("names a missing file: {value}"));
+    }
+    if !kind.holds(&source)? {
+        return Err(format!("names {value}, which is not {}", kind.called()));
     }
     Ok(source)
 }
@@ -163,7 +229,7 @@ fn includes(pass: &Path) -> Result<Vec<PathBuf>, String> {
         let text = crate::shader_format::text(&file)?;
         let directory = file.parent().unwrap_or_else(|| Path::new("."));
         for value in text.lines().filter_map(included) {
-            let source = named(directory, value).map_err(|error| {
+            let source = named(directory, value, Named::Source).map_err(|error| {
                 format!("{} {error}", crate::shader_format::name(&file))
             })?;
             if !found.contains(&source) {
