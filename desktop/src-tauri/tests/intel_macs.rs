@@ -351,3 +351,15 @@ fn a_game_asks_for_the_oldest_macos_its_programs_run_on() {
         "the game asks for {newest}: {plist}"
     );
 }
+
+/// A builder bundle contains no empty folders, so the kit in it has no
+/// Frameworks folder when the player links only system libraries. We must
+/// still export games from that kit.
+#[test]
+fn a_kit_without_a_frameworks_folder_still_exports() {
+    let root = workspace();
+    let request = universal_request(&root);
+    fs::remove_dir(request.runtime_kit.join("Frameworks")).unwrap();
+    let app = export(&request, &Table::default()).unwrap();
+    assert_eq!(carried(&app)[0], ["arm64"]);
+}
