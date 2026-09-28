@@ -35,8 +35,11 @@ PROGRAM = "rominabox-desktop"
 
 
 def mach_o(path: Path) -> bool:
-    """Whether `path` is a Mach-O file, which we sign separately."""
-    kind = subprocess.run(["/usr/bin/file", "-b", "--", str(path)], capture_output=True, text=True,
+    """Whether `path` is a Mach-O file, which we sign separately. The output
+    of file(1) for other files can contain any byte (the copyright sign of a
+    font in Latin-1), and we use only the start of the output."""
+    kind = subprocess.run(["/usr/bin/file", "-b", "--", str(path)], capture_output=True,
+                          encoding="utf-8", errors="replace",
                           env={**os.environ, "LC_ALL": "C"}, check=True).stdout
     return kind.startswith("Mach-O")
 
