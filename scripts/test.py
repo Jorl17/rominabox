@@ -437,7 +437,6 @@ SCOPES = [
             "--",
             "--ignored",
             "--nocapture",
-            "--test-threads=1",
         ],
         slow=True,
     ),
