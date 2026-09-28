@@ -766,6 +766,7 @@ def main() -> int:
         help="export a game from this ROM first, using the tree as it is now",
     )
     parser.add_argument("--system", default="megadrive", help="the console --rom is for")
+    parser.add_argument("--title", help="the exported game's title (default: Shot Subject)")
     parser.add_argument("--design", default="native", help="which design to export")
     parser.add_argument("--palette", help="export this declared palette (default: blue)")
     parser.add_argument(
@@ -812,6 +813,8 @@ def main() -> int:
     def game_for(settings: dict) -> Path:
         if not arguments.rom:
             return arguments.app
+        if arguments.title:
+            settings = {**settings, "title": arguments.title}
         key = json.dumps(settings, sort_keys=True)
         if key not in exported:
             workspace = ROOT / "work" / f"menu-shots-build-{len(exported)}"
