@@ -221,7 +221,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     let stylesheet = tokens::substitute(&manifest.stylesheet()?, &values)?;
 
     if !request.show_menu {
-        let splash = manifest.fragment(&manifest.documents.splash)?;
+        let splash = document::place_parts(&manifest, &manifest.fragment(&manifest.documents.splash)?)?;
         super::contract::validate_splash(&manifest, &splash)?;
         let staged = document::staged_screens(&manifest.screens, None, request.discs)?;
         let cfg = declarations::write(&manifest, &staged, &[], &[], &splash)?;

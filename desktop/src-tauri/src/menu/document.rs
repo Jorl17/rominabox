@@ -91,30 +91,46 @@ pub(crate) fn staged_screens(
     Ok(staged)
 }
 
+/// The parts a design may supply, each with its marker in a page. The menu
+/// has all of them, and the logo-only page has the spine and the splash.
+const PAGE_PARTS: [(&str, &str); 5] = [
+    ("<!--SPINE-->", "spine.rml"),
+    ("<!--SPLASH-->", "overlay-splash.rml"),
+    ("<!--FOOTER-->", "footer.rml"),
+    ("<!--SCREEN:pause-->", "screen-pause.rml"),
+    ("<!--SCREEN:controls-->", "screen-controls.rml"),
+];
+
+/// `page` with each part at its marker: the design's, or else Native's, or
+/// else nothing (Native has no spine).
+pub(crate) fn place_parts(manifest: &Manifest, page: &str) -> Result<String, String> {
+    let mut page = page.to_string();
+    for (slot, name) in PAGE_PARTS {
+        if !page.contains(slot) {
+            continue;
+        }
+        let value = if manifest.has_fragment(name) {
+            manifest.fragment(name)?
+        } else {
+            String::new()
+        };
+        page = page.replace(slot, &value);
+    }
+    Ok(page)
+}
+
 /// The page skeleton of Native with the chrome and screen fragments of the
 /// design. The extra panels are in the `screen-order.rml` of the design, and
 /// we draw only those for this game. An export with no Options entries has
 /// no Options panel, instead of one that nobody can reach.
 pub(crate) fn skeleton(manifest: &Manifest, staged: &[Screen]) -> Result<String, String> {
     let skeleton = manifest.base.join(&manifest.documents.menu);
-    let mut menu = fs::read_to_string(&skeleton)
+    let menu = fs::read_to_string(&skeleton)
         .map_err(|e| format!("Could not read {}: {e}", skeleton.display()))?;
-    for (slot, name) in [
-        ("<!--SPINE-->", "spine.rml"),
-        ("<!--FOOTER-->", "footer.rml"),
-        ("<!--SCREEN:pause-->", "screen-pause.rml"),
-        ("<!--SCREEN:controls-->", "screen-controls.rml"),
-    ] {
-        let value = if manifest.has_fragment(name) {
-            manifest.fragment(name)?
-        } else {
-            String::new()
-        };
-        if !menu.contains(slot) {
-            return Err(format!("Native menu has no {slot} insertion point"));
-        }
-        menu = menu.replace(slot, &value);
+    if let Some((slot, _)) = PAGE_PARTS.iter().find(|(slot, _)| !menu.contains(slot)) {
+        return Err(format!("Native menu has no {slot} insertion point"));
     }
+    let mut menu = place_parts(manifest, &menu)?;
     // The other screens of Native, at their places in its skeleton. We draw
     // each one only in a game that has it.
     menu = place_screens(manifest, &menu, staged, &skeleton)?;
