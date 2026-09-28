@@ -186,7 +186,10 @@ fn every_export_keeps_its_sandbox() {
             .unwrap()
             .len();
         println!("signed launcher bytes: {bytes}");
-        assert!(bytes < 80_000, "the launcher is {bytes} bytes");
+        // We build for macOS 11 so that games open on older and Intel Macs.
+        // The signed file is then larger than a build of the same sources for
+        // a newer macOS, because of the layout for the older target.
+        assert!(bytes < 100_000, "the launcher is {bytes} bytes");
     }
 }
 
