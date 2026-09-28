@@ -187,6 +187,26 @@ def adopt_works_from_inside_the_worktree_it_adopts() -> None:
             check((made / "desktop/src-tauri/resources/bin").is_dir() or
                   not (worktree.ROOT / "desktop/src-tauri/resources/bin").exists(),
                   "and gave it the build output create gives a worktree")
+            # In the environment documented for the worktree, cargo builds
+            # inside the worktree. With a target shared between checkouts, one
+            # could run another's build, because the freshness check in cargo
+            # uses file times and paths relative to the checkout. We start the
+            # shell with a shared target already set in its environment.
+            asked = subprocess.run(
+                ["bash", "-c",
+                 f'eval "$("{sys.executable}" scripts/worktree.py env)" && '
+                 "cargo metadata --no-deps --offline --format-version 1 "
+                 "--manifest-path desktop/crates/rominabox-scratch/Cargo.toml"],
+                cwd=made, capture_output=True, text=True,
+                env={**os.environ,
+                     "CARGO_TARGET_DIR": str(worktree.common_dir() / "shared-cargo-target")},
+            )
+            target = (Path(json.loads(asked.stdout)["target_directory"])
+                      if asked.returncode == 0 else None)
+            check(
+                target is not None and target.resolve().is_relative_to(made.resolve()),
+                f"and cargo builds it into its own target: {target or asked.stderr.strip()}",
+            )
         finally:
             # As in remove: we unlink a link and never follow it.
             worktree.unlink_artifacts(made)
