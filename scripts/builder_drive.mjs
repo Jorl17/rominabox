@@ -1550,6 +1550,9 @@ async function main() {
     await clickNext(page);
     await page.getByRole("heading", { name: "Export your game" }).waitFor();
     await shot(page, path.join(out, "13-export.png"));
+    await page.locator(".platform > button").click(); // this machine's until Change
+    await shot(page, path.join(out, "13-export-platform.png"));
+    await page.locator(".platform > button").click();
     await quoteHelp(page);
     if (!(await downloadNotice(page, out))) {
       code = 1;

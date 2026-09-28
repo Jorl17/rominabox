@@ -717,6 +717,29 @@ progress::-webkit-progress-value {
 .export-choice {
   margin-top: 18px;
 }
+/* Where the game runs: this machine's platform, until the author opens it. */
+.destination.platform {
+  margin-top: 18px;
+}
+.platform-choices {
+  display: flex;
+  gap: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  background: var(--paper);
+  font-size: 13px;
+  font-weight: 700;
+}
+.platform-choices label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.platform-choices input {
+  accent-color: var(--accent);
+}
 .export-progress > div {
   display: flex;
   justify-content: space-between;

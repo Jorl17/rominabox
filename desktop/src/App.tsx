@@ -27,7 +27,7 @@ import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
-import { ExportChoices } from "./ExportChoices";
+import { ExportChoices, exportProduct } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import appIcon from "../src-tauri/icons/icon.png";
 import largeIcon from "../src-tauri/icons/icon-large.png";
@@ -61,18 +61,6 @@ const shaderPreviews = Object.fromEntries(
 import "./style.css";
 
 const steps = ["Game", "Details", "Menu", "Export"];
-
-// The name of an export, for the platform of this builder.
-function exportProduct(target: bridge.ExportTarget | null): string {
-  switch (target) {
-    case "macos":
-      return "MACOS APP";
-    case "windows":
-      return "WINDOWS APP";
-    case null:
-      return "";
-  }
-}
 
 type Selection = {
   path: string;
@@ -177,10 +165,10 @@ function IconArt() {
 export function App() {
   const [step, setStep] = useState(0);
   const [supported, setSupported] = useState<Set<string>>(new Set());
-  // The platform we export for: the one the builder runs on.
-  const [exportTarget, setExportTarget] = useState<bridge.ExportTarget | null>(
-    null,
-  );
+  // The game's platform: this machine's, unless the author changes it.
+  const [host, setHost] = useState<bridge.ExportTarget | null>(null);
+  const [chosenTarget, setChosenTarget] = useState(host);
+  const exportTarget = chosenTarget ?? host;
   const [selection, setSelection] = useState<Selection | null>(null);
   const [info, setInfo] = useState<bridge.GameInfo | null>(null);
   const [traveling, setTraveling] = useState<string[]>([]);
@@ -538,11 +526,10 @@ export function App() {
       const settings = loaded.settings;
       if (
         !designs.designs.some((design) => design.id === settings.theme) ||
-        !designs.palettes.some((value) => value.id === settings.palette) ||
-        settings.target !== exportTarget
+        !designs.palettes.some((value) => value.id === settings.palette)
       ) {
         throw new Error(
-          "This project uses a menu design, palette or platform unavailable in this build.",
+          "This project uses a menu design or palette unavailable in this build.",
         );
       }
       generation.current++;
@@ -567,6 +554,7 @@ export function App() {
         startAtMenu: settings.startAtMenu,
       });
       setPalette(settings.palette);
+      setChosenTarget(settings.target);
       // A project contains the design it was saved with, and in the check
       // above we already reject one that this build does not have. We restore
       // it on reopen to keep the choice of the author.
@@ -711,7 +699,7 @@ export function App() {
     if (walkthrough.__ROMINABOX_PREPARED__)
       setSupported(new Set(walkthrough.__ROMINABOX_PREPARED__));
     if (walkthrough.__ROMINABOX_EXPORT_TARGET__)
-      setExportTarget(walkthrough.__ROMINABOX_EXPORT_TARGET__);
+      setHost(walkthrough.__ROMINABOX_EXPORT_TARGET__);
   }, []);
   useEffect(() => {
     if (!bridge.native) return;
@@ -739,7 +727,7 @@ export function App() {
       .then(save)
       .catch(fail);
     bridge.defaultDestination().then(setDestination).catch(fail);
-    bridge.exportTarget().then(setExportTarget).catch(fail);
+    bridge.exportTarget().then(setHost).catch(fail);
     // Which cores are already on disk.
     bridge
       .availableSystems()
@@ -1585,7 +1573,9 @@ export function App() {
               ) : (
                 <>
                   <ExportChoices
+                    host={host}
                     target={exportTarget}
+                    onTarget={setChosenTarget}
                     destination={destination}
                     onDestination={setDestination}
                     intelMacs={draft.intelMacs}
