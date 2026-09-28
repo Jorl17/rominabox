@@ -682,10 +682,7 @@ fn bundle_dependencies(
         if !inspected.insert(object.clone()) {
             continue;
         }
-        for (index, dependency) in macho_dependencies(&object)?.into_iter().enumerate() {
-            if index == 0 && object.extension() == Some(OsStr::new("dylib")) {
-                continue;
-            }
+        for dependency in macho_dependencies(&object)? {
             if is_system_dependency(&dependency) {
                 continue;
             }
@@ -739,10 +736,7 @@ fn relocate_dependencies(
         if let Some(cancelled) = cancelled {
             check_cancelled(cancelled)?;
         }
-        for (index, dependency) in macho_dependencies(object)?.into_iter().enumerate() {
-            if index == 0 && object.extension() == Some(OsStr::new("dylib")) {
-                continue;
-            }
+        for dependency in macho_dependencies(object)? {
             if is_system_dependency(&dependency)
                 || dependency.starts_with(&format!("{framework_prefix}/"))
                 // The launch library is next to the executable, not in
@@ -846,30 +840,47 @@ fn resolve_dependency_source(
         .find(|path| path.is_file())
 }
 
+/// The libraries linked by `path`, each once. For a universal file, `otool -L`
+/// prints one slice at a time, each under a header line, and the name of the
+/// library itself (`otool -D`) first in each slice. We skip both lines.
 pub(super) fn macho_dependencies(path: &Path) -> Result<Vec<String>, ExportError> {
-    let output = Command::new("/usr/bin/otool")
-        .arg("-L")
-        .arg(path)
-        .output()
-        .map_err(|error| {
-            ExportError::new(
+    let listed = |flag: &str| -> Result<Vec<String>, ExportError> {
+        let output = Command::new("/usr/bin/otool")
+            .arg(flag)
+            .arg(path)
+            .output()
+            .map_err(|error| {
+                ExportError::new(
+                    ErrorStage::Dependencies,
+                    format!("could not run otool: {error}"),
+                )
+            })?;
+        if !output.status.success() {
+            return Err(ExportError::command(
                 ErrorStage::Dependencies,
-                format!("could not run otool: {error}"),
-            )
-        })?;
-    if !output.status.success() {
-        return Err(ExportError::command(
-            ErrorStage::Dependencies,
-            "otool",
-            &output,
-        ));
+                "otool",
+                &output,
+            ));
+        }
+        // A header contains the name of the file or of one of its slices and
+        // ends with a colon. Each line under it contains one name.
+        Ok(String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .filter(|line| {
+                !line.trim().is_empty() && !line.trim_end().ends_with(':')
+            })
+            .filter_map(|line| line.trim().split(" (compatibility").next())
+            .map(str::to_owned)
+            .collect())
+    };
+    let own_names = listed("-D")?;
+    let mut loaded: Vec<String> = Vec::new();
+    for name in listed("-L")? {
+        if !own_names.contains(&name) && !loaded.contains(&name) {
+            loaded.push(name);
+        }
     }
-    Ok(String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .skip(1)
-        .filter_map(|line| line.trim().split(" (compatibility").next())
-        .map(str::to_owned)
-        .collect())
+    Ok(loaded)
 }
 
 fn is_system_dependency(path: &str) -> bool {
