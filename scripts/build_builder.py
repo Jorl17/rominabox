@@ -34,6 +34,13 @@ PRODUCT = "ROM-in-a-Box"
 PROGRAM = "rominabox-desktop"
 
 
+def mach_o(path: Path) -> bool:
+    """Whether `path` is a Mach-O file, which we sign separately."""
+    kind = subprocess.run(["/usr/bin/file", "-b", "--", str(path)], capture_output=True, text=True,
+                          env={**os.environ, "LC_ALL": "C"}, check=True).stdout
+    return kind.startswith("Mach-O")
+
+
 def macos_finish(built: Path) -> Path:
     """The .app, signed ad hoc for development after Tauri copied the
     resources in: each actual Mach-O leaf first, including libraries without
@@ -44,9 +51,7 @@ def macos_finish(built: Path) -> Path:
     for path in sorted(app.rglob("*")):
         if path.is_symlink() or not path.is_file():
             continue
-        kind = subprocess.run(["/usr/bin/file", "-b", "--", str(path)], capture_output=True, text=True,
-                              env={**os.environ, "LC_ALL": "C"}, check=True).stdout
-        if kind.startswith("Mach-O"):
+        if mach_o(path):
             subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", "--", str(path)], check=True)
     subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", "--", str(app)], check=True)
     subprocess.run(["/usr/bin/codesign", "--verify", "--deep", "--strict", "--", str(app)], check=True)

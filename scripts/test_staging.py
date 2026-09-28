@@ -88,8 +88,35 @@ def builder_finds_cargo_output() -> list[str]:
     return wrong
 
 
+def builder_signs_only_mach_o() -> list[str]:
+    """Check which files we sign one by one in the builder's build tool, with
+    `file`, whose description of a font can contain a byte that is not UTF-8,
+    for example the Latin-1 copyright sign in the Science Gothic description."""
+    if sys.platform != "darwin":
+        return []
+    import build_builder
+
+    wrong: list[str] = []
+    font = ROOT / "integrations/designs/native/ScienceGothic-Bold.ttf"
+    try:
+        if build_builder.mach_o(font):
+            wrong.append(f"{font.name} was taken for a Mach-O file")
+    except UnicodeDecodeError as error:
+        wrong.append(f"reading what {font.name} is failed: {error}")
+    if not build_builder.mach_o(Path("/usr/bin/true")):
+        wrong.append("/usr/bin/true was not taken for a Mach-O file")
+    return wrong
+
+
 def main() -> int:
     failures: list[str] = []
+
+    signed = builder_signs_only_mach_o()
+    for entry in signed:
+        print(f"  FAIL {entry}")
+    failures += signed
+    if not signed:
+        print("  ok   the builder signs its Mach-O files, whatever `file` says of the others")
 
     # Cargo may write into the shared target outside this checkout. For the
     # builder we must use the same target directory as in the other build
