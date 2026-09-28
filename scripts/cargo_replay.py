@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # that list the non-Rust files compiled into a binary, so their patterns
 # cannot differ. It matches with or without a space after the `!`.
 from built import compiled_in  # noqa: E402
+import programs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 STAMPS = ROOT / "work/cargo-stamps"
@@ -87,7 +88,7 @@ def parse(command: list[str]) -> Plan | None:
 
 
 def _rustc() -> str:
-    asked = subprocess.run(["rustc", "--version"], capture_output=True, text=True)
+    asked = subprocess.run(["rustc", "--version"], capture_output=True, text=True, **programs.windowless())
     return asked.stdout.strip() if asked.returncode == 0 else "unknown"
 
 
@@ -211,6 +212,7 @@ def _replay(binaries: list[dict], harness: list[str], cwd: Path, env: dict[str, 
             text=True,
             errors="replace",
             env=belongs_to(cwd, env),
+            **programs.windowless(),
         )
         stdout.append(ran.stdout)
         stderr.append(ran.stderr)
@@ -224,7 +226,7 @@ def cargo_test(command: list[str], cwd: Path, env: dict[str, str] | None = None)
     if plan is None or not plan.manifest.is_file():
         return subprocess.run(
             command, cwd=cwd, capture_output=True, text=True, errors="replace",
-            env=belongs_to(cwd, env),
+            env=belongs_to(cwd, env), **programs.windowless(),
         )
     digest = source_digest(plan.manifest)
     saved = _load(plan, digest)
@@ -235,7 +237,7 @@ def cargo_test(command: list[str], cwd: Path, env: dict[str, str] | None = None)
     with CARGO_LOCK:
         ran = subprocess.run(
             visible, cwd=cwd, capture_output=True, text=True, errors="replace",
-            env=belongs_to(cwd, env),
+            env=belongs_to(cwd, env), **programs.windowless(),
         )
     if ran.returncode == 0:
         _save(plan, digest, ran.stdout + ran.stderr)

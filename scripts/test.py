@@ -514,7 +514,7 @@ def execute(command: list[str], env: dict[str, str] | None = None) -> subprocess
         return subprocess.CompletedProcess(command, 127, "", f"{command[0]} is not on PATH\n")
     return subprocess.run(
         [program, *command[1:]], cwd=ROOT, capture_output=True, text=True, errors="replace",
-        env={**running_here(), **(env or {})},
+        env={**running_here(), **(env or {})}, **programs.windowless(),
     )
 
 
