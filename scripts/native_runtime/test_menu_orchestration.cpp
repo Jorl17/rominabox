@@ -1312,6 +1312,19 @@ int main(int argc, char **argv)
       rib_menu_toggle(menu, true);
       frame(menu);
       check(view.document.has_element("save"), "a menu opened before its document is built again opens");
+      /* Going fullscreen while the game runs with something drawn over it. We
+       * build the new document in a frame of the running game, and the pause
+       * screen must not appear over it. */
+      rib_menu_toggle(menu, false);
+      host.menu_open = false;
+      frame(menu);
+      check(view.document.root()->IsClassSet("overlay"), "a closed menu draws only its overlays");
+      rib_menu_context_destroy(menu);
+      rib_menu_context_reset(menu);
+      frame(menu);
+      check(view.document.root()->IsClassSet("overlay"),
+            "a document built again while the game runs draws only its overlays");
+      host.menu_open = true;
       rib_menu_destroy(menu);
    }
 
