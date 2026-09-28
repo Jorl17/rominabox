@@ -368,24 +368,36 @@ fn a_referenced_preset_and_its_files_are_copied_too() {
     let _ = fs::remove_dir_all(&root);
 }
 
-/// We apply the rule for passes to the directives used by RetroArch, so
-/// their files must be next to the preset. We do not follow `#include`
-/// here, so we reject it and do not copy it with an unchecked path.
+/// A preset must name its files by paths relative to itself, `../` included,
+/// and each file must exist. An absolute path leads nowhere once someone
+/// copies the game to another computer, and with a missing file the game runs
+/// unfiltered with no message. We do not follow `#include` here, so we refuse
+/// it and do not copy it with a path nobody checked.
 #[test]
-fn a_preset_cannot_reach_outside_its_folder_through_a_directive() {
+fn a_preset_names_files_that_are_there_by_paths_from_itself() {
     let source = rominabox_scratch::Scratch::dir("rominabox-shader-directives");
-    for (name, text) in [
-        ("outside.glslp", "#reference \"../elsewhere.glslp\"\nshaders = 1\nshader0 = pass.glsl\n"),
-        ("included.glslp", "#include \"more.cfg\"\nshaders = 1\nshader0 = pass.glsl\n"),
+    let pass = source.join("pass.glsl").display().to_string();
+    let absolute_reference = format!("#reference \"{}\"\n", source.join("base.glslp").display());
+    let absolute_pass = format!("shaders = 1\nshader0 = \"{pass}\"\n");
+    for (name, text, refusal) in [
+        ("absolute.glslp", absolute_reference.as_str(), "absolute path"),
+        ("absolute-pass.glslp", absolute_pass.as_str(), "absolute path"),
+        ("missing.glslp", "#reference \"../missing.glslp\"\n", "missing file: ../missing.glslp"),
+        ("included.glslp", "#include \"more.cfg\"\nshaders = 1\nshader0 = pass.glsl\n", "#include"),
     ] {
         let selection = custom_preset(
             &source,
             name,
-            &[(name, text), ("pass.glsl", PASS), ("more.cfg", "\n")],
+            &[
+                (name, text),
+                ("pass.glsl", PASS),
+                ("base.glslp", "shaders = 1\nshader0 = pass.glsl\n"),
+                ("more.cfg", "\n"),
+            ],
         );
-        assert!(resolve(&selection).is_err(), "{name} was accepted");
+        let error = resolve(&selection).unwrap_err();
+        assert!(error.contains(refusal), "{name}: {error}");
     }
-    let _ = fs::remove_dir_all(&source);
 }
 
 /// The row's picture is `icon.png` in the preset's folder, and we write it
@@ -440,9 +452,23 @@ fn a_slang_pass_takes_the_files_it_includes() {
     let names: Vec<&str> = lone[1].files.iter().map(|(_, name)| name.as_str()).collect();
     assert!(names.contains(&"stages.inc"), "a lone pass's include was not copied: {names:?}");
 
+    // We keep a single pass that includes files from a neighbouring folder
+    // at its place among those files, with its one-pass preset beside it.
     let away = [("away/crt.slang", "#version 450\n#include \"../include/common.inc\"\n")];
-    let error = resolve(&custom_preset(&source, "away/crt.slang", &away)).unwrap_err();
-    assert!(error.contains("beside it"), "{error}");
+    let away = resolve(&custom_preset(&source, "away/crt.slang", &away)).unwrap();
+    assert_eq!(away[1].relative_preset, "shaders/pal/away/pal.slangp");
+    let names: Vec<&str> = away[1].files.iter().map(|(_, name)| name.as_str()).collect();
+    assert_eq!(names, ["away/pal.slang", "include/common.inc", "include/nested.inc"]);
+
+    let included = source.join("include/common.inc").display().to_string();
+    for (text, refusal) in [
+        (format!("#version 450\n#include \"{included}\"\n"), "absolute path"),
+        ("#version 450\n#include \"../nowhere.inc\"\n".to_string(), "crt.slang names a missing file: ../nowhere.inc"),
+    ] {
+        let refused = [("refused/crt.slang", text.as_str())];
+        let error = resolve(&custom_preset(&source, "refused/crt.slang", &refused)).unwrap_err();
+        assert!(error.contains(refusal), "{error}");
+    }
     let _ = fs::remove_dir_all(&source);
     let _ = fs::remove_dir_all(&root);
 }

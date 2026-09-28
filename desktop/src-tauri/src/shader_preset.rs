@@ -1,10 +1,14 @@
-//! The files listed in a shader preset of the author, read from the preset.
+//! The files listed in a shader of the author, read from the shader.
 //!
 //! A preset lists its passes, its lookup textures and the presets it
 //! `#reference`s, each relative to itself, and a slang pass lists the files
-//! it `#include`s, relative to itself. At export we copy them next to the
-//! copied preset at the same relative paths, so each must stay inside the
-//! preset folder, and each pass must be in a language for exported games.
+//! it `#include`s, relative to itself. Any of these paths may contain `../`.
+//! For example, libretro's `crt/crt-royale-pal-r57shell.glslp` uses a pass
+//! from `../pal/shaders/`. At export we copy the shader and its files below
+//! the lowest folder that contains them all, each at its path from there, so
+//! every relative path still leads to its file and none leads out of the
+//! shader folder in the game. We copy only the listed files, and each pass
+//! must be in a language for exported games.
 
 use crate::shader_format::{one_language, require_runnable_pass, Language};
 use std::fs;
@@ -14,32 +18,49 @@ use std::path::{Component, Path, PathBuf};
 /// many files deep a slang pass's `#include`s may go.
 const REFERENCE_DEPTH: usize = 16;
 
-/// The files listed in a preset, each as (source, its path next to the
-/// preset as written in the presets), and the language of its passes. The
-/// libretro presets have passes in `shaders/` and textures in `resources/`.
-pub fn files(preset: &Path) -> Result<(Language, Vec<(PathBuf, String)>), String> {
+/// An author's shader and the files it lists, laid out below the lowest
+/// folder that contains them all.
+pub struct Layout {
+    /// The folder of the author's own file, relative to that folder, with `/`
+    /// between parts, or empty when it is that folder.
+    pub folder: String,
+    /// The files the shader names, each as (source, its path from there with
+    /// `/` between parts).
+    pub files: Vec<(PathBuf, String)>,
+}
+
+/// A preset's layout, and the language its passes share.
+pub fn preset(path: &Path) -> Result<(Language, Layout), String> {
+    let path = absolute(path)?;
     let mut files = Vec::new();
     let mut passes = Vec::new();
-    let root = preset.parent().unwrap_or_else(|| Path::new("."));
-    collect_files(preset, root, Path::new(""), 0, &mut files, &mut passes)?;
-    let named = passes
+    collect_files(&path, 0, &mut files, &mut passes)?;
+    let languages = passes
         .iter()
         .map(|(name, language)| (name.as_str(), *language));
-    match one_language(named)? {
-        Some(language) => Ok((language, files)),
+    match one_language(languages)? {
+        Some(language) => Ok((language, laid_out(&path, &files)?)),
         None => Err("a shader preset names no shader pass".into()),
     }
 }
 
-/// Add the files listed in `preset` to `files`, as paths from the folder of
-/// the top preset (`prefix` is the location of `preset` in it), and its
-/// passes, by name and language, to `passes`.
+/// A lone pass's layout: a slang pass names the files it `#include`s, and
+/// a GLSL pass names none.
+pub fn pass(path: &Path, language: Language) -> Result<Layout, String> {
+    let path = absolute(path)?;
+    let included = match language {
+        Language::Slang => includes(&path)?,
+        Language::Glsl => Vec::new(),
+    };
+    laid_out(&path, &included)
+}
+
+/// Add the files `preset` lists to `files`, and its passes, by name and
+/// language, to `passes`.
 fn collect_files(
     preset: &Path,
-    root: &Path,
-    prefix: &Path,
     depth: usize,
-    files: &mut Vec<(PathBuf, String)>,
+    files: &mut Vec<PathBuf>,
     passes: &mut Vec<(String, Language)>,
 ) -> Result<(), String> {
     if depth > REFERENCE_DEPTH {
@@ -64,18 +85,10 @@ fn collect_files(
                 ));
             }
             if let Some(value) = comment.strip_prefix("reference ") {
-                let (source, spelled) = beside(
-                    directory,
-                    prefix,
-                    value.trim().trim_matches('"'),
-                    line_number,
-                )?;
-                add_file(files, source.clone(), &spelled);
-                let inner = Path::new(&spelled)
-                    .parent()
-                    .unwrap_or_else(|| Path::new(""))
-                    .to_path_buf();
-                collect_files(&source, root, &inner, depth + 1, files, passes)?;
+                let source = named(directory, value.trim().trim_matches('"'))
+                    .map_err(|error| format!("shader preset line {line_number} {error}"))?;
+                add_file(files, source.clone());
+                collect_files(&source, depth + 1, files, passes)?;
             }
             continue;
         }
@@ -101,82 +114,60 @@ fn collect_files(
         if !is_pass && !textures.contains(key) {
             continue;
         }
-        let (source, spelled) = beside(directory, prefix, value, *line_number)?;
+        let source = named(directory, value)
+            .map_err(|error| format!("shader preset line {line_number} {error}"))?;
         if is_pass {
             let language = require_runnable_pass(&source)?;
             passes.push((crate::shader_format::name(&source), language));
             if language == Language::Slang {
-                for (included, spelled) in includes(&source, root)? {
-                    add_file(files, included, &spelled);
+                for included in includes(&source)? {
+                    add_file(files, included);
                 }
             }
         }
-        add_file(files, source, &spelled);
+        add_file(files, source);
     }
     Ok(())
 }
 
-/// A file listed in a preset, with its location and its path from the folder
-/// of the top preset, with `/` between parts.
-fn beside(
-    directory: &Path,
-    prefix: &Path,
-    value: &str,
-    line_number: usize,
-) -> Result<(PathBuf, String), String> {
+/// The file at `value` from `directory`, with `../` resolved. The error
+/// message completes a sentence about the file that listed it.
+fn named(directory: &Path, value: &str) -> Result<PathBuf, String> {
     let relative = Path::new(value);
-    safe_relative(relative)?;
-    let source = directory.join(relative);
-    if !source.is_file() {
+    if relative
+        .components()
+        .any(|component| matches!(component, Component::Prefix(_) | Component::RootDir))
+    {
         return Err(format!(
-            "shader preset line {line_number} names a missing file: {value}"
+            "names a file by an absolute path, which an exported game cannot reach: {value}"
         ));
     }
-    let spelled = prefix
-        .join(relative)
-        .components()
-        .map(|component| component.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/");
-    Ok((source, spelled))
+    let source = normalized(&directory.join(relative));
+    if !source.is_file() {
+        return Err(format!("names a missing file: {value}"));
+    }
+    Ok(source)
 }
 
-/// The files that a slang pass `#include`s, and those they include, each as
-/// (source, its path from `root` with `/` between parts). An included file is
-/// read from next to the file that includes it when the pass is compiled, and
-/// without it the game runs unfiltered, so we copy them with the pass. Each
-/// must be inside `root`, the folder that we copy at export.
-pub fn includes(pass: &Path, root: &Path) -> Result<Vec<(PathBuf, String)>, String> {
-    let root = normalized(root);
-    let mut found: Vec<(PathBuf, String)> = Vec::new();
-    let mut reading = vec![(normalized(pass), 0)];
+/// The files a slang pass `#include`s, and those they include. In RetroArch
+/// an included file must be beside the file that includes it when the pass
+/// is compiled, and without it the game has no filter, so we export these
+/// files with the pass.
+fn includes(pass: &Path) -> Result<Vec<PathBuf>, String> {
+    let mut found: Vec<PathBuf> = Vec::new();
+    let mut reading = vec![(pass.to_path_buf(), 0)];
     while let Some((file, depth)) = reading.pop() {
         if depth > REFERENCE_DEPTH {
             return Err("a shader's files include each other too deeply".into());
         }
-        let text = String::from_utf8_lossy(
-            &fs::read(&file)
-                .map_err(|error| format!("could not read {}: {error}", file.display()))?,
-        )
-        .into_owned();
+        let text = crate::shader_format::text(&file)?;
+        let directory = file.parent().unwrap_or_else(|| Path::new("."));
         for value in text.lines().filter_map(included) {
-            let source = normalized(&file.parent().unwrap_or(&root).join(value));
-            let relative = source.strip_prefix(&root).map_err(|_| {
-                format!("a shader preset can only use files beside it, not {value}")
+            let source = named(directory, value).map_err(|error| {
+                format!("{} {error}", crate::shader_format::name(&file))
             })?;
-            if !source.is_file() {
-                return Err(format!(
-                    "{} includes a missing file: {value}",
-                    crate::shader_format::name(&file)
-                ));
-            }
-            let spelled = relative
-                .components()
-                .map(|component| component.as_os_str().to_string_lossy())
-                .collect::<Vec<_>>()
-                .join("/");
-            if !found.iter().any(|(_, existing)| existing == &spelled) {
-                found.push((source.clone(), spelled));
+            if !found.contains(&source) {
+                found.push(source.clone());
                 reading.push((source, depth + 1));
             }
         }
@@ -195,8 +186,53 @@ fn included(line: &str) -> Option<&str> {
     Some(value)
 }
 
-/// `path` with its `.` and `..` parts resolved without a file system call,
-/// because the file system would follow links out of the folder.
+/// `own` and the files it lists, below the lowest folder that contains them.
+fn laid_out(own: &Path, files: &[PathBuf]) -> Result<Layout, String> {
+    let folder_of = |file: &Path| file.parent().unwrap_or(file).to_path_buf();
+    let mut root = folder_of(own);
+    for file in files {
+        let folder = folder_of(file);
+        while !folder.starts_with(&root) {
+            if !root.pop() {
+                return Err("a shader's files must all be on one drive".into());
+            }
+        }
+    }
+    Ok(Layout {
+        folder: from(&root, &folder_of(own))?,
+        files: files
+            .iter()
+            .map(|file| Ok((file.clone(), from(&root, file)?)))
+            .collect::<Result<_, String>>()?,
+    })
+}
+
+/// `path` below `root`, with `/` between parts. We accept only a plain name
+/// as a part, so nothing we stage with it ends up outside the staging
+/// folder.
+fn from(root: &Path, path: &Path) -> Result<String, String> {
+    let outside = || format!("{} is not below {}", path.display(), root.display());
+    let relative = path.strip_prefix(root).map_err(|_| outside())?;
+    let mut parts = Vec::new();
+    for component in relative.components() {
+        match component {
+            Component::Normal(part) => parts.push(part.to_string_lossy()),
+            _ => return Err(outside()),
+        }
+    }
+    Ok(parts.join("/"))
+}
+
+/// `path` from the file system's root, with its `.` and `..` parts resolved
+/// by name, without asking the file system. What we stage has no links, so
+/// we find the staged files where these names lead.
+fn absolute(path: &Path) -> Result<PathBuf, String> {
+    std::path::absolute(path)
+        .map(|path| normalized(&path))
+        .map_err(|error| format!("could not find {}: {error}", path.display()))
+}
+
+/// `path` with its `.` and `..` parts resolved by name.
 fn normalized(path: &Path) -> PathBuf {
     let mut resolved = PathBuf::new();
     for component in path.components() {
@@ -211,22 +247,8 @@ fn normalized(path: &Path) -> PathBuf {
     resolved
 }
 
-fn add_file(files: &mut Vec<(PathBuf, String)>, source: PathBuf, spelled: &str) {
-    if !files.iter().any(|(_, existing)| existing == spelled) {
-        files.push((source, spelled.to_string()));
+fn add_file(files: &mut Vec<PathBuf>, source: PathBuf) {
+    if !files.contains(&source) {
+        files.push(source);
     }
-}
-
-fn safe_relative(path: &Path) -> Result<(), String> {
-    if path.is_absolute()
-        || path
-            .components()
-            .any(|component| !matches!(component, Component::Normal(_)))
-    {
-        return Err(format!(
-            "a shader preset can only use files beside it, not {}",
-            path.display()
-        ));
-    }
-    Ok(())
 }

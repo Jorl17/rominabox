@@ -218,43 +218,34 @@ pub fn video_driver(selection: &ShaderSelection) -> Result<VideoDriver, String> 
     Ok(resolved(selection)?.0.video_driver())
 }
 
-/// The kind of a shader from the author, which is its language and, for a
-/// preset, the listed files. At export we wrap a single pass in a preset.
+/// A shader the author added: whether it is a preset or a single pass,
+/// for which we make a one-pass preset at export, its language, and
+/// where we stage it and the files it lists.
 struct Authored {
+    kind: crate::shader_format::Kind,
     language: Language,
-    named: Option<Vec<(PathBuf, String)>>,
-    /// For a single slang pass, the files it `#include`s, beside it.
-    included: Vec<(PathBuf, String)>,
+    layout: crate::shader_preset::Layout,
 }
 
 fn authored(path: &Path) -> Result<Authored, String> {
     use crate::shader_format::{kind, require_runnable_pass, text, Kind};
-    Ok(match kind(&text(path)?) {
+    let kind = kind(&text(path)?);
+    let (language, layout) = match kind {
         Kind::Pass => {
             let language = require_runnable_pass(path)?;
-            let included = match (language, path.parent()) {
-                (Language::Slang, Some(folder)) => crate::shader_preset::includes(path, folder)?,
-                _ => Vec::new(),
-            };
-            Authored {
-                language,
-                named: None,
-                included,
-            }
+            (language, crate::shader_preset::pass(path, language)?)
         }
-        Kind::Preset => {
-            let (language, named) = crate::shader_preset::files(path)?;
-            if named.iter().any(|(_, name)| name == ROW_PICTURE) {
-                return Err(format!(
-                    "a shader preset cannot use a file named {ROW_PICTURE}; the menu keeps the row's picture there"
-                ));
-            }
-            Authored {
-                language,
-                named: Some(named),
-                included: Vec::new(),
-            }
-        }
+        Kind::Preset => crate::shader_preset::preset(path)?,
+    };
+    if layout.files.iter().any(|(_, name)| name == ROW_PICTURE) {
+        return Err(format!(
+            "a shader cannot use a file named {ROW_PICTURE}; the menu keeps the row's picture there"
+        ));
+    }
+    Ok(Authored {
+        kind,
+        language,
+        layout,
     })
 }
 
@@ -318,27 +309,33 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
         }
         let taken: Vec<String> = resolved.iter().map(|item| item.id.clone()).collect();
         let id = unique_id(&slug(name)?, &taken);
-        let (preset_file, files, written) = match author.named {
+        // We keep the author's file at its place among the files it lists.
+        let layout = author.layout;
+        let at = |name: String| match layout.folder.as_str() {
+            "" => name,
+            folder => format!("{folder}/{name}"),
+        };
+        let (preset_file, files, written) = match author.kind {
             // We copy a pass under its name in the game and write a
             // one-pass preset beside it.
-            None => {
+            crate::shader_format::Kind::Pass => {
                 let pass = format!("{id}.{pass_extension}");
-                let preset_file = format!("{id}.{preset_extension}");
+                let preset_file = at(format!("{id}.{preset_extension}"));
                 let written = vec![(preset_file.clone(), crate::shader_source::preset(&pass))];
-                let mut files = vec![(path.clone(), pass)];
-                files.extend(author.included);
+                let mut files = vec![(path.clone(), at(pass))];
+                files.extend(layout.files);
                 (preset_file, files, written)
             }
             // We copy a preset unchanged, with the extension of its
             // language, because RetroArch reads it by that extension.
-            Some(named) => {
+            crate::shader_format::Kind::Preset => {
                 let stem = path
                     .file_stem()
                     .and_then(|stem| stem.to_str())
                     .ok_or_else(|| "shader file has no name".to_string())?;
-                let preset_file = format!("{stem}.{preset_extension}");
+                let preset_file = at(format!("{stem}.{preset_extension}"));
                 let mut files = vec![(path.clone(), preset_file.clone())];
-                for (source, relative) in named {
+                for (source, relative) in layout.files {
                     if !files.iter().any(|(_, name)| name == &relative) {
                         files.push((source, relative));
                     }
