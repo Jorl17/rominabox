@@ -33,7 +33,7 @@ fn config_value<'a>(plan: &'a str, key: &str) -> Option<&'a str> {
 fn a_windows_game_is_a_folder_holding_its_program_resources_and_player() {
     let root = workspace();
     let mut request = export_request_from(&root, windows_kit(&root));
-    request.target = ExportTarget::Windows;
+    request.game.target = ExportTarget::Windows;
     let cancelled = AtomicBool::new(false);
     let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
 
@@ -105,12 +105,12 @@ fn first_icon(program: &Path) -> image::RgbaImage {
 fn windows_shows_the_games_icon_and_name_for_both_its_programs() {
     let root = workspace();
     let mut request = export_request_from(&root, windows_kit(&root));
-    request.target = ExportTarget::Windows;
+    request.game.target = ExportTarget::Windows;
     let artwork = root.join("artwork.png");
     image::RgbaImage::from_pixel(64, 48, image::Rgba([0, 0, 255, 255]))
         .save(&artwork)
         .unwrap();
-    request.icon = Some(artwork);
+    request.game.icon = Some(artwork);
     let cancelled = AtomicBool::new(false);
     let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
 
@@ -151,7 +151,7 @@ fn windows_shows_the_games_icon_and_name_for_both_its_programs() {
 fn a_core_that_needs_only_what_windows_carries_is_exported() {
     let root = workspace();
     let mut request = export_request_from(&root, windows_kit(&root));
-    request.target = ExportTarget::Windows;
+    request.game.target = ExportTarget::Windows;
     library(
         &request
             .runtime_kit
@@ -176,7 +176,7 @@ fn a_core_that_needs_only_what_windows_carries_is_exported() {
 fn a_core_that_needs_a_library_windows_lacks_is_refused() {
     let root = workspace();
     let mut request = export_request_from(&root, windows_kit(&root));
-    request.target = ExportTarget::Windows;
+    request.game.target = ExportTarget::Windows;
     // In its import table, the core lists a library that no Windows machine has.
     let helper = root.join("helper.dll");
     library(
