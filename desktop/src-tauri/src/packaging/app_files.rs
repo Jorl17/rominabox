@@ -83,17 +83,12 @@ pub(super) fn stage_legal_materials(
     fs::create_dir_all(&licenses)
         .map_err(|error| ExportError::io(ErrorStage::Stage, &licenses, error))?;
     copy_file(
-        &runtime_kit.join("licenses/RetroArch.txt"),
-        &licenses.join("RetroArch.txt"),
-    )?;
-    copy_file(
         &runtime_kit.join("licenses/NATIVE-DEPENDENCIES.txt"),
         &licenses.join("NATIVE-DEPENDENCIES.txt"),
     )?;
-    copy_file(
-        &runtime_kit.join("licenses/RmlUi-MIT.txt"),
-        &licenses.join("RmlUi-MIT.txt"),
-    )?;
+    // The licences of every part of the player, RetroArch included. We copy
+    // them from licenses/ in the repository with scripts/build_kit.py, one
+    // file per component.
     copy_optional_tree(
         &runtime_kit.join("licenses/native"),
         &licenses.join("native"),
@@ -116,7 +111,7 @@ pub(super) fn stage_legal_materials(
     }
     fs::write(
         licenses.join("README.txt"),
-        "Private ROM-in-a-Box solution-discovery export. Runtime, selected core, RmlUi, joypad autoconfig profiles, and native dependency notices are included here. Component revisions and source provenance are recorded in ../components.json. The native RetroArch fork revision and build inputs are recorded in ../Source-Provenance/native-rmlui. Historical patches are retained there only as prior-checkpoint records. Public distribution requires a separate license and source-completeness review.\n",
+        "Private ROM-in-a-Box solution-discovery export. The licences of the player and what it is made from (native/, listed in NATIVE-DEPENDENCIES.txt), the selected core and the joypad autoconfig profiles are included here. Component revisions and source provenance are recorded in ../components.json. The native RetroArch fork revision and build inputs are recorded in ../Source-Provenance/native-rmlui. Historical patches are retained there only as prior-checkpoint records. Public distribution requires a separate license and source-completeness review.\n",
     ).map_err(|error| ExportError::io(ErrorStage::Stage, &licenses.join("README.txt"), error))?;
 
     let manifest_path = runtime_kit.join("manifest.json");

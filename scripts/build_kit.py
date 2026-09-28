@@ -7,10 +7,13 @@ BUILD is a directory we made with scripts/build_player.py for a player we
 ship, not a test build. Its build-info.json contains the target, which for
 macOS is macos-universal. Every kit has the same assets (scripts/kit_assets.py).
 The target's part of scripts/native_runtime/player-recipe.json lists the rest:
-the player, the launcher, the licence texts of what they are made from, and
-the player's controller profile folders, which we stage from the pinned
-autoconfig archive. We link only the system's libraries into the player, so
-the library folder in a macOS kit is empty and its inventory lists no file.
+the player, the launcher, and the player's controller profile folders, which
+we stage from the pinned autoconfig archive. The licence texts of what the
+player is made from are the entries in licenses/ (scripts/licences.py) of
+every library compiled in the build. We refuse to make a kit from a build
+with a compiled library that has no entry. We link only the system's
+libraries into the player, so the library folder in a macOS kit is empty and
+its inventory lists no file.
 """
 
 from __future__ import annotations
@@ -23,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kit_assets  # noqa: E402
+import licences  # noqa: E402
 import native_build  # noqa: E402
 import prepare_runtime  # noqa: E402
 import toolchain  # noqa: E402
@@ -30,22 +34,12 @@ import toolchain  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def source_of(reference: str, build: Path, target: str) -> Path:
-    """Return a file the recipe lists, where build: is in the player build,
-    source: in the sources it was built from (the first slice of a universal
-    build) and toolchain: in the toolchain's installation."""
+def source_of(reference: str, build: Path) -> Path:
+    """Return a file the recipe lists, where build: is in the player build."""
     place, _, relative = reference.partition(":")
-    if place == "build":
-        return build / relative
-    if place == "source":
-        parts = native_build.slices(target)
-        return (build if parts == [target] else build / parts[0]) / relative
-    if place == "toolchain":
-        prefix = toolchain.installation()
-        if prefix is None:
-            raise SystemExit(f"the kit recipe names a toolchain file, but this toolchain is the system's: {reference}")
-        return prefix / relative
-    raise SystemExit(f"the kit recipe names an unknown place: {reference}")
+    if place != "build":
+        raise SystemExit(f"the kit recipe names an unknown place: {reference}")
+    return build / relative
 
 
 def sha256(path: Path) -> str:
@@ -67,37 +61,36 @@ def main() -> int:
     if declared is None:
         raise SystemExit(f"the player recipe declares no kit for {target}")
 
+    platform, _, architecture = target.partition("-")
+    native = licences.player_components(build, platform)
+    licences.verify_toolchain(native, toolchain.installation())
     kit_assets.stage(kit)
     for placed in declared["files"].values():
         (kit / placed["at"]).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source_of(placed["from"], build, target), kit / placed["at"])
+        shutil.copy2(source_of(placed["from"], build), kit / placed["at"])
     # We write every native licence again below, so the kit contains only the
     # licences of libraries the player links. We remove the existing files
     # first, because on a case-insensitive file system we would otherwise
     # write a new name into an old file.
     native_licences = kit / "licenses" / "native"
-    if native_licences.is_dir():
-        for stale in native_licences.iterdir():
-            if stale.is_file():
-                stale.unlink()
-    for relative, reference in declared["licences"].items():
-        source = source_of(reference, build, target)
-        (kit / "licenses" / relative).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, kit / "licenses" / relative)
+    native_licences.mkdir(parents=True, exist_ok=True)
+    for stale in native_licences.iterdir():
+        if stale.is_file():
+            stale.unlink()
+    for component in native:
+        shutil.copy2(licences.OUT / licences.entry_path(component), kit / "licenses" / licences.entry_path(component))
 
     if "libraryInventory" in declared:
         empty_library_inventory(kit, declared["libraryInventory"])
-    native, notice = native_dependencies(declared)
     (kit / "licenses" / "NATIVE-DEPENDENCIES.txt").write_text(
         f"Native dependency provenance for the {target} runtime kit.\n"
         "Private ROM-in-a-Box solution-discovery artifact, not a publication decision.\n\n"
         "The player is built by scripts/build_player.py from the pinned ROM-in-a-Box\n"
-        f"RetroArch fork at {info['retroarchCommit']}, with the toolchain\n"
-        "scripts/toolchain.py declares for its target. Linked into it:\n\n"
-        f"- RmlUi at {info['rmluiCommit']} (licence: ../RmlUi-MIT.txt)\n"
-        f"{notice}\n"
-        "RetroArch's own licence is ../RetroArch.txt; the libraries its source\n"
-        "carries under deps/ are part of that source.\n",
+        f"RetroArch fork at {info['retroarchCommit']}, with RmlUi at {info['rmluiCommit']}\n"
+        "and the toolchain scripts/toolchain.py declares for its target. It is made\n"
+        "from these, each with its licence in native/:\n\n"
+        + "".join(f"- {component.title} {component.version} (native/{component.name}.txt)\n"
+                  for component in native),
         encoding="utf-8", newline="\n")
     # Every export contains this folder, so it has only the record of this build.
     provenance = kit / "provenance" / "native-rmlui"
@@ -113,32 +106,29 @@ def main() -> int:
     }, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     player = kit / declared["files"]["player"]["at"]
-    platform, _, architecture = target.partition("-")
+    records = {component.name: {
+        "name": component.title,
+        "license": component.licence,
+        "license_file": f"licenses/{licences.entry_path(component).as_posix()}",
+        "version": component.version,
+        "source": component.source,
+        "origin": f"Used by {component.used_by}.",
+    } for component in native}
+    # The player itself: RetroArch, built from the fork's commit.
+    records["retroarch"].update({
+        "revision": info["retroarchCommit"],
+        "capabilities": info["capabilities"],
+        "origin": "Built from the pinned ROM-in-a-Box RetroArch submodule; private development build.",
+        "source_url": f"https://github.com/Jorl17/rominabox-retroarch/tree/{info['retroarchCommit']}",
+        "binary_sha256": sha256(player),
+        "integration_provenance": "provenance/native-rmlui/source.json",
+    })
+    records["rmlui"]["revision"] = info["rmluiCommit"]
     manifest = {
         "schema_version": 1,
         "platform": platform,
         "architecture": architecture,
-        "components": [
-            {
-                "name": "RetroArch",
-                "license": "GPL-3.0",
-                "license_file": "licenses/RetroArch.txt",
-                "revision": info["retroarchCommit"],
-                "capabilities": info["capabilities"],
-                "origin": "Built from the pinned ROM-in-a-Box RetroArch submodule; private development build.",
-                "source_url": f"https://github.com/Jorl17/rominabox-retroarch/tree/{info['retroarchCommit']}",
-                "binary_sha256": sha256(player),
-                "integration_provenance": "provenance/native-rmlui/source.json",
-            },
-            {
-                "name": "RmlUi",
-                "license": "MIT",
-                "license_file": "licenses/RmlUi-MIT.txt",
-                "revision": info["rmluiCommit"],
-                "origin": "Static library linked into the player.",
-            },
-            *native,
-        ],
+        "components": list(records.values()),
         "branding": {"logo": "branding/logo.png"},
     }
     (kit / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
@@ -162,23 +152,6 @@ def empty_library_inventory(kit: Path, declared: dict) -> None:
             stale.unlink()
     (kit / declared["file"]).write_text(json.dumps({"formatVersion": 1, "files": []}, indent=2) + "\n",
                                         encoding="utf-8", newline="\n")
-
-
-def native_dependencies(declared: dict) -> tuple[list[dict], str]:
-    """The records in the manifest of the native libraries other than RmlUi
-    that we link into the player, and their lines in NATIVE-DEPENDENCIES.txt:
-    FreeType from its pinned release, and the toolchain's runtime for a
-    target where we link one in."""
-    freetype = native_build.recipe()["freetype"]
-    runtime = f"- {declared['runtime']}\n" if "runtime" in declared else ""
-    return [{
-        "name": "FreeType",
-        "license": "FTL or GPL-2.0",
-        "license_file": "licenses/native/FreeType-LICENSE.txt",
-        "origin": f"Static library linked into the player, from {freetype['url']}.",
-    }], (f"- FreeType from {freetype['url']}, sha256 {freetype['sha256']}\n"
-         "  (licence: native/FreeType-LICENSE.txt, native/FreeType-FTL.txt)\n"
-         f"{runtime}")
 
 
 def install_preview(build: Path, target: str) -> None:

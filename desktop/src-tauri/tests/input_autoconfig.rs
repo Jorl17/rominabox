@@ -642,7 +642,8 @@ fn joypad_autoconfig_licence_and_provenance_match_the_pin() {
         .expect("staged COPYING");
     assert!(licence.contains("Copyright (c) 2019 The RetroArch team"));
     assert!(licence.contains("Permission is hereby granted"));
-    assert!(licence.starts_with("MIT License"));
+    assert!(licence.contains("\n\nMIT License\n"));
+    assert!(licence.contains(&format!("Version:  {revision}\n")));
 
     let manifest: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(resources.join("manifest.json")).unwrap())
@@ -689,9 +690,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
     write_runtime_stub(&kit.join("bin/retroarch"));
     fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
     for name in [
-        "RetroArch.txt",
         "NATIVE-DEPENDENCIES.txt",
-        "RmlUi-MIT.txt",
         "genesis_plus_gx.txt",
     ] {
         fs::write(kit.join("licenses").join(name), name).unwrap();

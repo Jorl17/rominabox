@@ -114,9 +114,11 @@ fn export_kit(root: &Path) -> PathBuf {
         .status()
         .unwrap();
     assert!(status.success(), "could not compile the runtime stub");
-    for name in ["RetroArch.txt", "NATIVE-DEPENDENCIES.txt", "RmlUi-MIT.txt"] {
-        fs::write(kit.join("licenses").join(name), name).unwrap();
-    }
+    fs::write(
+        kit.join("licenses/NATIVE-DEPENDENCIES.txt"),
+        "NATIVE-DEPENDENCIES.txt",
+    )
+    .unwrap();
     for system in SYSTEMS {
         let core = rominabox_desktop::systems::find(system)
             .and_then(|system| system.preferred_core())

@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from core_source import DOWNLOADS, host_target, seeded_cache  # noqa: E402
 import joypad_autoconfig  # noqa: E402
+import licences  # noqa: E402
 import native_build  # noqa: E402
 
 # The provenance of each core is declared in the console package that
@@ -510,7 +511,9 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
 
     Keep the downloaded archive in work/downloads. For export, stage only
     `<driver>/*.cfg` for each of `drivers`, without the meta/hotkey
-    assignment lines, and store `COPYING` beside the other component licences.
+    assignment lines. Beside the other component licences, store the
+    repository's licence entry for the profiles (licenses/data), which must
+    contain this archive's `COPYING`.
     """
     if not drivers:
         raise RuntimeError("no joypad drivers to stage profiles for")
@@ -532,10 +535,12 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
                     if source is None:
                         continue
                     licence_member = member.name
-                    licence_bytes = source.read()
+                    entry = licences.OUT / "data" / f"{JOYPAD_AUTOCONFIG_COMPONENT}.txt"
+                    if licences.clean(licences.sources.decode(source.read())) not in licences.sections(entry).values():
+                        raise RuntimeError(f"{entry} does not hold {licence_member}; run scripts/licences.py")
                     destination = root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE
                     destination.parent.mkdir(parents=True, exist_ok=True)
-                    destination.write_bytes(licence_bytes)
+                    shutil.copy2(entry, destination)
                 continue
             source = package.extractfile(member)
             if source is None:
