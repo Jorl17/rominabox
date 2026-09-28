@@ -27,6 +27,7 @@ import { ControlsEditor, emptyControls, type Controls } from "./controls";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
+import { ExportChoices } from "./ExportChoices";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
   NOT_A_SHADER_FILE,
@@ -86,6 +87,7 @@ type Draft = {
   keepPlayingInBackground: boolean;
   autosaveOnQuit: boolean;
   advancedEmulatorAccess: boolean;
+  intelMacs: boolean;
 };
 // The initial settings of a dropped game. We read the same declaration in
 // the exporter, so a command-line export of the game alone gives this draft.
@@ -100,6 +102,7 @@ const defaults: Draft = {
   keepPlayingInBackground: declared.keepPlayingInBackground,
   autosaveOnQuit: declared.autosaveOnQuit,
   advancedEmulatorAccess: declared.advancedEmulatorAccess,
+  intelMacs: declared.intelMacs,
 };
 
 // We name three tracks. Six is more than a handful, so we show a count.
@@ -515,6 +518,7 @@ export function App() {
       keepPlayingInBackground: draft.keepPlayingInBackground,
       autosaveOnQuit: draft.autosaveOnQuit,
       advancedEmulatorAccess: draft.advancedEmulatorAccess,
+      intelMacs: draft.intelMacs,
       shaders: {
         bundled: bundledShaders,
         custom: customShaders,
@@ -580,6 +584,7 @@ export function App() {
         keepPlayingInBackground: settings.keepPlayingInBackground ?? false,
         autosaveOnQuit: settings.autosaveOnQuit ?? false,
         advancedEmulatorAccess: settings.advancedEmulatorAccess ?? false,
+        intelMacs: settings.intelMacs,
         startAtMenu: settings.startAtMenu,
       });
       setPalette(settings.palette);
@@ -1648,29 +1653,14 @@ export function App() {
                 </div>
               ) : (
                 <>
-                  <div className="destination">
-                    <label>
-                      Save to
-                      <Help>
-                        An existing app will not be silently replaced.
-                      </Help>
-                    </label>
-                    <button
-                      onClick={async () => {
-                        if (!bridge.native) return;
-                        try {
-                          const folder = await bridge.pickFolder();
-                          if (folder) setDestination(folder);
-                        } catch (e) {
-                          fail(e);
-                        }
-                      }}
-                    >
-                      <FolderOpen size={19} />
-                      <span>{destination || "Downloads / ROM-in-a-Box"}</span>
-                      <span>Change</span>
-                    </button>
-                  </div>
+                  <ExportChoices
+                    target={exportTarget}
+                    destination={destination}
+                    onDestination={setDestination}
+                    intelMacs={draft.intelMacs}
+                    onIntelMacs={(value) => update("intelMacs", value)}
+                    fail={fail}
+                  />
                   {!bridge.native && (
                     <p className="note">
                       Export is available in the desktop app.

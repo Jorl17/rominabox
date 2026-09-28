@@ -693,6 +693,9 @@ progress::-webkit-progress-value {
 .destination > button:hover {
   background: #ffda00;
 }
+.export-choice {
+  margin-top: 18px;
+}
 .export-progress > div {
   display: flex;
   justify-content: space-between;

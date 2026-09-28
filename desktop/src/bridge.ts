@@ -34,6 +34,8 @@ export type ExportRequest = {
   keepPlayingInBackground: boolean;
   autosaveOnQuit: boolean;
   advancedEmulatorAccess: boolean;
+  /** A Mac app also runs on Intel Macs. */
+  intelMacs: boolean;
   shaders?: {
     bundled: string[];
     custom: { name: string; path: string }[];
