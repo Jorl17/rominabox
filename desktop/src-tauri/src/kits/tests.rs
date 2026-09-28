@@ -166,3 +166,16 @@ fn the_shipped_pins_parse() {
         assert!(["macos", "windows"].contains(&pin.platform.as_str()), "{}", pin.platform);
     }
 }
+
+/// For the builder's own platform we require only that the kit is for that
+/// platform. With a manifest that lists no player, we still make games for
+/// the builder's own platform.
+#[test]
+fn the_builders_own_kit_needs_no_player_named() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-kits-unnamed");
+    let bundled = root.join("bundled");
+    fs::create_dir_all(&bundled).unwrap();
+    fs::write(bundled.join("manifest.json"), r#"{"platform":"windows","components":[]}"#).unwrap();
+    let found = for_export(&ExportTarget::Windows, &bundled, &root.join("store"), &nothing()).unwrap();
+    assert_eq!(found, bundled);
+}
