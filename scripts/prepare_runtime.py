@@ -535,7 +535,7 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
                     if source is None:
                         continue
                     licence_member = member.name
-                    entry = licences.OUT / "data" / f"{JOYPAD_AUTOCONFIG_COMPONENT}.txt"
+                    entry = licences.entry("data", JOYPAD_AUTOCONFIG_COMPONENT)
                     if licences.clean(licences.sources.decode(source.read())) not in licences.sections(entry).values():
                         raise RuntimeError(f"{entry} does not hold {licence_member}; run scripts/licences.py")
                     destination = root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE

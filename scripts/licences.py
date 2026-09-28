@@ -59,7 +59,13 @@ headed by where it was read.
 
 
 def entry_path(component: Component) -> Path:
+    """Where in licenses/ a component's entry is."""
     return Path(component.group) / f"{component.name}.txt"
+
+
+def entry(group: str, name: str) -> Path:
+    """The entry of the component `name` of `group`."""
+    return OUT / group / f"{name}.txt"
 
 
 def clean(body: str) -> str:

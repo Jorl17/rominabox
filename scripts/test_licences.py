@@ -64,7 +64,7 @@ def main() -> int:
         (folder / "native/glslang.txt").unlink()
         crate = next(component for component in components if component.group == "crates" and component.local)
         entry = folder / licences.entry_path(crate)
-        entry.write_text(entry.read_text(encoding="utf-8").replace("Permission", "Permision"), encoding="utf-8")
+        entry.write_text(entry.read_text(encoding="utf-8") + "A line its source does not have.\n", encoding="utf-8")
         core = next(component for component in components if component.group == "cores")
         entry = folder / licences.entry_path(core)
         entry.write_text(entry.read_text(encoding="utf-8").replace(core.version, "an older build"), encoding="utf-8")

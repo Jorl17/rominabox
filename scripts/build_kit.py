@@ -123,7 +123,6 @@ def main() -> int:
         "binary_sha256": sha256(player),
         "integration_provenance": "provenance/native-rmlui/source.json",
     })
-    records["rmlui"]["revision"] = info["rmluiCommit"]
     manifest = {
         "schema_version": 1,
         "platform": platform,
