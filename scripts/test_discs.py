@@ -252,9 +252,17 @@ def require_disk() -> None:
     free_space.require(22, Path(tempfile.gettempdir()), PLAYER)
 
 
+@functools.cache
 def design_screens(design: str) -> list[dict]:
-    path = ROOT / "integrations/designs" / design / "design.json"
-    return json.loads(path.read_text(encoding="utf-8"))["screens"]
+    """Return the screens of a design as we resolve them in the menu, which are
+    the Native screens merged by id with those of the design. A design that
+    only restyles Native declares none and still has all of them."""
+    from built import cli
+
+    request = json.dumps({"design": str(ROOT / "integrations/designs" / design)})
+    ran = subprocess.run([str(cli()), "design-screens"], input=request, capture_output=True,
+                         text=True, check=True)
+    return json.loads(ran.stdout)["result"]["screens"]
 
 
 def disc_list_id() -> str:

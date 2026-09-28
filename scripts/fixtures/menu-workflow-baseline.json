@@ -11512,5 +11512,5763 @@
       "controls",
       "controls-device-current"
     ]
+  },
+  "rominabox/amber/controls": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-up"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls"
+    ]
+  },
+  "rominabox/amber/menu-controls": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "menu-control-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "menu-controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "MENU CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "menu-controls"
+    ]
+  },
+  "rominabox/amber/pause-menu": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": []
+  },
+  "rominabox/amber/picker-open": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "controls-device-option-megadrive"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [
+          "controls-device-option-megadrive"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "controls-device-current"
+    ]
+  },
+  "rominabox/blue/binds-c": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": true,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-a"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "control-binds": true,
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "popup": {
+        "bindsBox": true,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-a"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "control-binds": true,
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "hover:control-a",
+      "wait-ms:1400",
+      "report:popup"
+    ]
+  },
+  "rominabox/blue/binds-start": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": true,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-start"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "control-binds": true,
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "popup": {
+        "bindsBox": true,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-start"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "control-binds": true,
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "hover:control-start",
+      "wait-ms:1400",
+      "report:popup"
+    ]
+  },
+  "rominabox/blue/binds-up": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": true,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-up"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "control-binds": true,
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "popup": {
+        "bindsBox": true,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-up"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "control-binds": true,
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "hover:control-up",
+      "wait-ms:1400",
+      "report:popup"
+    ]
+  },
+  "rominabox/blue/boot-1-logo": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [],
+        "leaving": [],
+        "menuOpen": false,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [],
+        "showing": [
+          "splash"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {},
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "wait-ms:200"
+    ]
+  },
+  "rominabox/blue/boot-2-game": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [],
+        "leaving": [],
+        "menuOpen": false,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {},
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "wait-ms:900"
+    ]
+  },
+  "rominabox/blue/boot-3-notice": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [],
+        "leaving": [],
+        "menuOpen": false,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {},
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "wait-ms:2200"
+    ]
+  },
+  "rominabox/blue/boot-4-gone": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [],
+        "leaving": [],
+        "menuOpen": false,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {},
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "wait-ms:6500"
+    ]
+  },
+  "rominabox/blue/capture-cancel": {
+    "files": {},
+    "reports": {
+      "cancelled": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-a"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "BINDING UNCHANGED",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "capturing": {
+        "bindsBox": false,
+        "captureActive": true,
+        "capturing": [
+          "control-a",
+          "controls-cancel"
+        ],
+        "disabled": [],
+        "focused": [
+          "control-a"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "C: PRESS AN INPUT (10)",
+          "footer-hint": "ESC  CANCEL",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-a"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "BINDING UNCHANGED",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "control-a",
+      "report:capturing",
+      "key:cancel",
+      "report:cancelled"
+    ]
+  },
+  "rominabox/blue/capture-timeout": {
+    "files": {},
+    "reports": {
+      "capturing": {
+        "bindsBox": false,
+        "captureActive": true,
+        "capturing": [
+          "control-a",
+          "controls-cancel"
+        ],
+        "disabled": [],
+        "focused": [
+          "control-a"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "C: PRESS AN INPUT (10)",
+          "footer-hint": "ESC  CANCEL",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-a"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "TIMED OUT; BINDING UNCHANGED",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "timed-out": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-a"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "TIMED OUT; BINDING UNCHANGED",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "control-a",
+      "report:capturing",
+      "wait-ms:10500",
+      "report:timed-out"
+    ]
+  },
+  "rominabox/blue/controls": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-up"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls"
+    ]
+  },
+  "rominabox/blue/controls-keys": {
+    "files": {
+      "controls.cfg": "controls_profile = \"megadrive\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n"
+    },
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-start"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "DEFAULTS RESTORED",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "first": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-up"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "moved": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-a"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "previous": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-start"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "reset": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-start"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "DEFAULTS RESTORED",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "report:first",
+      "key:down",
+      "key:right",
+      "report:moved",
+      "key:up",
+      "report:previous",
+      "key:start",
+      "report:reset"
+    ]
+  },
+  "rominabox/blue/fullscreen-menu": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "fullscreen": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "windowed": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "report:windowed",
+      "fullscreen",
+      "wait:30",
+      "report:fullscreen"
+    ]
+  },
+  "rominabox/blue/hover-then-key": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-left"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "hover": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-a"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "key": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-left"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "left": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-left"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "hover:control-a",
+      "report:hover",
+      "key:left",
+      "report:key",
+      "hover:heading",
+      "wait:2",
+      "report:left"
+    ]
+  },
+  "rominabox/blue/logo-without-notice": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [],
+        "leaving": [],
+        "menuOpen": false,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "",
+        "selected": [],
+        "showing": [
+          "splash"
+        ],
+        "sliders": {},
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {},
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "wait-ms:200"
+    ]
+  },
+  "rominabox/blue/menu-controls": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "menu-control-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "menu-controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "MENU CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "menu-controls"
+    ]
+  },
+  "rominabox/blue/menu-controls-capturing": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": true,
+        "capturing": [
+          "menu-control-confirm-add",
+          "menu-controls-cancel"
+        ],
+        "disabled": [],
+        "focused": [
+          "menu-control-confirm-add"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "menu-controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CANCEL",
+          "heading": "MENU CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "menu-controls",
+      "menu-control-confirm-add"
+    ]
+  },
+  "rominabox/blue/menu-controls-full": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "menu-control-menu-add",
+          "menu-control-confirm-add",
+          "menu-control-back-add"
+        ],
+        "focused": [
+          "menu-control-menu-5"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "menu-controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "MENU CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "menu-controls",
+      "key:down"
+    ]
+  },
+  "rominabox/blue/menu-controls-keyboard": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "menu-control-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "menu-controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "MENU CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "menu-controls"
+    ]
+  },
+  "rominabox/blue/notice-leaving": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [],
+        "leaving": [
+          "notice"
+        ],
+        "menuOpen": false,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {},
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "wait-ms:4400"
+    ]
+  },
+  "rominabox/blue/notice-without-logo": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [],
+        "leaving": [],
+        "menuOpen": false,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {},
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "wait-ms:1700"
+    ]
+  },
+  "rominabox/blue/options": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options"
+    ]
+  },
+  "rominabox/blue/options-keys": {
+    "files": {
+      "volume.cfg": "audio_volume = \"-2.0\"\n"
+    },
+    "reports": {
+      "entry": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "controls"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.888889
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -2.0
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "controls"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.888889
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -2.0
+      },
+      "opened": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-up"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.888889
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": -2.0
+      },
+      "options": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "volume": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.888889
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -2.0
+      }
+    },
+    "script": [
+      "options",
+      "report:options",
+      "key:left",
+      "report:volume",
+      "key:down",
+      "report:entry",
+      "key:ok",
+      "report:opened",
+      "key:cancel"
+    ]
+  },
+  "rominabox/blue/pause-keys": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-5"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "grid": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "slot-4"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-4"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "left": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-5"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "opened": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "right": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "slot-5"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-5"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "row": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "save"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-5"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "report:opened",
+      "key:up",
+      "report:grid",
+      "key:right",
+      "report:right",
+      "key:down",
+      "report:row",
+      "key:left",
+      "report:left"
+    ]
+  },
+  "rominabox/blue/pause-menu": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": []
+  },
+  "rominabox/blue/persist": {
+    "files": {
+      "controls.cfg": "controls_profile = \"megadrive6\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n",
+      "volume.cfg": "audio_volume = \"-26.1\"\n"
+    },
+    "reports": {
+      "chosen": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "controls-device-current"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive6",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.222222
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 6 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": -26.1
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "controls"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive6",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.222222
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -26.1
+      }
+    },
+    "script": [
+      "options",
+      "volume-level@0.25",
+      "controls",
+      "controls-device-current",
+      "controls-device-option-megadrive6",
+      "report:chosen",
+      "controls-back"
+    ]
+  },
+  "rominabox/blue/picker-chosen": {
+    "files": {
+      "controls.cfg": "controls_profile = \"megadrive6\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n"
+    },
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "controls-device-current"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive6",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 6 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "controls-device-current",
+      "controls-device-option-megadrive6"
+    ]
+  },
+  "rominabox/blue/picker-keys": {
+    "files": {
+      "controls.cfg": "controls_profile = \"megadrive6\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n"
+    },
+    "reports": {
+      "cancelled": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "controls"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive6",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "capturing": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "controls-device-current"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive6",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 6 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "control": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "controls-device-option-megadrive6"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [
+          "controls-device-option-megadrive"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "controls"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive6",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "picker": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "controls-device-option-megadrive"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [
+          "controls-device-option-megadrive"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "controls-device-current",
+      "report:picker",
+      "key:down",
+      "report:control",
+      "key:ok",
+      "report:capturing",
+      "key:cancel",
+      "report:cancelled"
+    ]
+  },
+  "rominabox/blue/picker-open": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "controls-device-option-megadrive"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [
+          "controls-device-option-megadrive"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "controls-device-current"
+    ]
+  },
+  "rominabox/blue/reopen": {
+    "files": {
+      "controls.cfg": "controls_profile = \"megadrive6\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n",
+      "volume.cfg": "audio_volume = \"-26.1\"\n"
+    },
+    "reports": {
+      "controller": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-up"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive6",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.222222
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 6 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": -26.1
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "controls"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive6",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.222222
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -26.1
+      },
+      "volume": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive6",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.222222
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -26.1
+      }
+    },
+    "script": [
+      "options",
+      "report:volume",
+      "controls",
+      "report:controller",
+      "controls-back"
+    ]
+  },
+  "rominabox/blue/save-load": {
+    "files": {},
+    "reports": {
+      "empty": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": true,
+            "thumbnail": true
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "SLOT 1 LOADED"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "loaded": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": true,
+            "thumbnail": true
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "SLOT 1 LOADED"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "saved": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": true,
+            "thumbnail": true
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "SLOT 1 SAVED"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "report:empty",
+      "key:start",
+      "wait-ms:500",
+      "report:saved",
+      "load",
+      "wait-ms:500",
+      "report:loaded"
+    ]
+  },
+  "rominabox/blue/shader-keys": {
+    "files": {
+      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/scanlines/scanlines.glslp\n"
+    },
+    "reports": {
+      "back": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "shaders"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "chosen": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "scanlines"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "scanlines"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "shaders"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "opened": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "row": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "scanlines"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "shaders",
+      "report:opened",
+      "key:down",
+      "report:row",
+      "key:ok",
+      "report:chosen",
+      "key:cancel",
+      "report:back"
+    ]
+  },
+  "rominabox/blue/shaders": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "shaders"
+    ]
+  },
+  "rominabox/blue/shaders-phosphor": {
+    "files": {
+      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/phosphor/phosphor.glslp\n"
+    },
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "phosphor"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "shaders",
+      "phosphor"
+    ]
+  },
+  "rominabox/blue/shaders-scanlines": {
+    "files": {
+      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/scanlines/scanlines.glslp\n"
+    },
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "scanlines"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "scanlines"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "shaders",
+      "scanlines"
+    ]
+  },
+  "rominabox/blue/volume-arrow": {
+    "files": {
+      "volume.cfg": "audio_volume = \"-38.2\"\n"
+    },
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.111111
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -38.200001
+      }
+    },
+    "script": [
+      "options",
+      "volume-level@0",
+      "volume-up"
+    ]
+  },
+  "rominabox/blue/volume-inputs": {
+    "files": {
+      "volume.cfg": "audio_volume = \"-19.1\"\n"
+    },
+    "reports": {
+      "arrow": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "before": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.333333
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -19.1
+      },
+      "fraction": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.333333
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -19.1
+      },
+      "key": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "options-prev"
+        ],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.888889
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -2.0
+      }
+    },
+    "script": [
+      "options",
+      "report:before",
+      "key:left",
+      "report:key",
+      "volume-up",
+      "report:arrow",
+      "volume-level@0.375",
+      "report:fraction"
+    ]
+  },
+  "rominabox/blue/volume-low": {
+    "files": {
+      "volume.cfg": "audio_volume = \"-80.0\"\n"
+    },
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -80.0
+      }
+    },
+    "script": [
+      "options",
+      "volume-level@0"
+    ]
+  },
+  "rominabox/blue/volume-step": {
+    "files": {
+      "volume.cfg": "audio_volume = \"-2.0\"\n"
+    },
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "volume-level"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "options",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 0.888889
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "OPTIONS"
+        },
+        "transferPending": false,
+        "volumeDb": -2.0
+      }
+    },
+    "script": [
+      "options",
+      "volume-down"
+    ]
+  },
+  "rominabox/carbon/controls": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-up"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls"
+    ]
+  },
+  "rominabox/carbon/menu-controls": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "menu-control-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "menu-controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "MENU CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "menu-controls"
+    ]
+  },
+  "rominabox/carbon/pause-menu": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": []
+  },
+  "rominabox/carbon/picker-open": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "controls-device-option-megadrive"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [
+          "controls-device-option-megadrive"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "controls-device-current"
+    ]
+  },
+  "rominabox/green/controls": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-up"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls"
+    ]
+  },
+  "rominabox/green/menu-controls": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "menu-control-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "menu-controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "MENU CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "menu-controls"
+    ]
+  },
+  "rominabox/green/pause-menu": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": []
+  },
+  "rominabox/green/picker-open": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "controls-device-option-megadrive"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [
+          "controls-device-option-megadrive"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "controls-device-current"
+    ]
+  },
+  "rominabox/violet/controls": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "control-up"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls"
+    ]
+  },
+  "rominabox/violet/menu-controls": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "menu-control-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "menu-controls",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "MENU CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "menu-controls"
+    ]
+  },
+  "rominabox/violet/pause-menu": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "load"
+        ],
+        "focused": [
+          "resume"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "pause",
+        "selected": [
+          "slot-1"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CONTINUE",
+          "heading": "GAME PAUSED",
+          "status": "CHOOSE A SLOT"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": []
+  },
+  "rominabox/violet/picker-open": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "controls-device-option-megadrive"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "controls",
+        "selected": [
+          "controls-device-option-megadrive"
+        ],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "controls-device-current": "Mega Drive · 3 buttons",
+          "controls-status": "CHOOSE A CONTROL",
+          "footer-hint": "ESC  BACK",
+          "heading": "CONTROLS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "controls",
+      "controls-device-current"
+    ]
   }
 }

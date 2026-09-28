@@ -54,7 +54,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume-markup|shaders|shaders-check|designs|defaults|cores|schemas|where|freeze-macos-executable>\n       rominabox-cli export GAME [FOLDER]\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport makes the game that dropping GAME into the builder makes, in FOLDER or the builder's; a request on stdin can say more, and whatever it leaves out is the builder's.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ndesigns lists the menu designs, palettes and sound packs. defaults prints the settings a request leaves out.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|project-save|project-open|volume-markup|design-screens|shaders|shaders-check|designs|defaults|cores|schemas|where|freeze-macos-executable>\n       rominabox-cli export GAME [FOLDER]\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport makes the game that dropping GAME into the builder makes, in FOLDER or the builder's; a request on stdin can say more, and whatever it leaves out is the builder's.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ndesigns lists the menu designs, palettes and sound packs. defaults prints the settings a request leaves out.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     // The checkout from which we built this binary.
@@ -88,7 +88,8 @@ fn run() -> Result<(), String> {
                 "defaults": { "request": [], "result": "The builder's settings, which a request leaves out" },
                 "shaders-check": { "request": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "optional id" }, "result": "Resolved shaders, or an error" },
                 "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" },
-                "volume-markup": { "request": ["design"], "result": { "markup": "the volume control, in the design's slider, with an arrow either side" } }
+                "volume-markup": { "request": ["design"], "result": { "markup": "the volume control, in the design's slider, with an arrow either side" } },
+                "design-screens": { "request": ["design"], "result": { "screens": "the design's screens as the menu resolves them, Native's merged with its own, in design.json's words" } }
             })
         );
         return Ok(());
@@ -392,6 +393,31 @@ fn run() -> Result<(), String> {
                 "{}",
                 json!({ "type": "result", "result": { "imagePath": image_path } })
             );
+            Ok(())
+        }
+        "design-screens" => {
+            let input = read_request()?;
+            #[derive(Deserialize)]
+            struct Request {
+                design: PathBuf,
+            }
+            let request: Request = serde_json::from_str(&input)
+                .map_err(|error| format!("invalid design-screens request: {error}"))?;
+            let screens: Vec<_> = menu::declared_screens(&request.design)?
+                .iter()
+                .map(|screen| {
+                    json!({
+                        "id": screen.id,
+                        "role": screen.role.map(|role| role.name()),
+                        "panel": screen.panel,
+                        "button": screen.button,
+                        "place": (screen.place == menu::ScreenPlace::Options).then_some("options"),
+                        "option": screen.option_label.as_ref().map(|label| json!({ "label": label, "default": screen.option_default })),
+                        "images": screen.images,
+                    })
+                })
+                .collect();
+            println!("{}", json!({ "type": "result", "result": { "screens": screens } }));
             Ok(())
         }
         "volume-markup" => {

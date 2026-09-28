@@ -30,11 +30,14 @@
     "includeAchievements": false
   },
   "designs": {
+    "rominabox": {"export": {"includeAchievements": true}},
     "native": {"export": {"includeAchievements": true}},
     "disc": {"export": {}}
   },
   "sequences": {
     "account-entry": {
+      "rominabox": ["key:right", "key:right", "report:pause-entry", "key:ok",
+                    "key:down", "key:down", "key:down", "key:down", "report:options-entry", "key:ok"],
       "native": ["key:right", "key:right", "report:pause-entry", "key:ok",
                  "key:down", "key:down", "key:down", "key:down", "report:options-entry", "key:ok"],
       "disc": ["key:down", "key:down", "key:down", "report:pause-entry", "key:ok",
@@ -80,19 +83,19 @@
         {"name": "shaders-phosphor", "shot": "shaders-phosphor"},
         {"name": "shaders-scanlines", "shot": "shaders-scanlines"},
         {"name": "boot-1-logo", "shot": "boot-1-logo",
-         "script": {"native": ["wait-ms:200"], "disc": ["wait-ms:200"]}},
+         "script": {"rominabox": ["wait-ms:200"], "native": ["wait-ms:200"], "disc": ["wait-ms:200"]}},
         {"name": "boot-2-game", "shot": "boot-2-game",
-         "script": {"native": ["wait-ms:900"], "disc": ["wait-ms:650"]}},
+         "script": {"rominabox": ["wait-ms:900"], "native": ["wait-ms:900"], "disc": ["wait-ms:650"]}},
         {"name": "boot-3-notice", "shot": "boot-3-notice",
-         "script": {"native": ["wait-ms:2200"], "disc": ["wait-ms:2200"]}},
+         "script": {"rominabox": ["wait-ms:2200"], "native": ["wait-ms:2200"], "disc": ["wait-ms:2200"]}},
         {"name": "boot-4-gone", "shot": "boot-4-gone",
-         "script": {"native": ["wait-ms:6500"], "disc": ["wait-ms:6500"]}},
+         "script": {"rominabox": ["wait-ms:6500"], "native": ["wait-ms:6500"], "disc": ["wait-ms:6500"]}},
         {"name": "notice-without-logo", "shot": "notice-without-logo",
-         "script": {"native": ["wait-ms:1700"], "disc": ["wait-ms:1700"]}},
+         "script": {"rominabox": ["wait-ms:1700"], "native": ["wait-ms:1700"], "disc": ["wait-ms:1700"]}},
         {"name": "notice-leaving", "shot": "notice-leaving",
-         "script": {"native": ["wait-ms:4400"], "disc": ["wait-ms:3280"]}},
+         "script": {"rominabox": ["wait-ms:4400"], "native": ["wait-ms:4400"], "disc": ["wait-ms:3280"]}},
         {"name": "logo-without-notice", "shot": "logo-without-notice",
-         "script": {"native": ["wait-ms:200"], "disc": ["wait-ms:200"]}}
+         "script": {"rominabox": ["wait-ms:200"], "native": ["wait-ms:200"], "disc": ["wait-ms:200"]}}
       ]
     },
     {
