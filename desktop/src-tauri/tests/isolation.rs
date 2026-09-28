@@ -93,7 +93,6 @@ fn request(
             rom,
             title: title.to_string(),
             system: system.to_string(),
-            description: None,
             icon: None,
             background: None,
             show_menu: false,

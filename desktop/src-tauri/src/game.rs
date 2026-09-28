@@ -14,7 +14,6 @@ pub struct Game {
     pub rom: PathBuf,
     pub title: String,
     pub system: String,
-    pub description: Option<String>,
     pub icon: Option<PathBuf>,
     pub background: Option<PathBuf>,
     #[serde(default = "crate::builder::unstated::show_menu")]

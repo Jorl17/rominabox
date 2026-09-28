@@ -79,12 +79,11 @@ const {
   menuSounds: _menuSounds,
   ...declaredDraft
 } = declared;
-// A project can list Options entries, which have no control here. With null
-// we use the entries of the design.
+// A project can list the Options entries of its game, which have no control
+// in the builder. With null we use the entries of the design.
 const defaults = {
   title: "",
   system: "",
-  description: "",
   menuEntries: null as string[] | null,
   ...declaredDraft,
 };
@@ -449,7 +448,6 @@ export function App() {
         ...defaults,
         title: data.title,
         system: data.system,
-        description: data.description || "",
       });
       if (data.iconPath && bridge.native)
         loadPicture("icon", data.iconPath).catch(() => {});
@@ -482,7 +480,6 @@ export function App() {
       rom: selection!.path,
       title: draft.title.trim(),
       system: draft.system,
-      description: draft.description,
       icon: icon?.path || null,
       background: background?.path || null,
       showMenu: draft.showMenu,
@@ -552,7 +549,6 @@ export function App() {
       setDraft({
         title: settings.title,
         system: settings.system,
-        description: settings.description || "",
         showMenu: settings.showMenu,
         includeAchievements: settings.includeAchievements,
         splash: settings.splash ?? false,
@@ -1205,15 +1201,6 @@ export function App() {
                       <ChevronRight size={16} />
                       More details
                     </summary>
-                    <label>
-                      Description
-                      <textarea
-                        rows={3}
-                        maxLength={2000}
-                        value={draft.description}
-                        onChange={(e) => update("description", e.target.value)}
-                      />
-                    </label>
                     {info.warnings?.map((w) => (
                       <p className="note" key={w}>
                         {w}

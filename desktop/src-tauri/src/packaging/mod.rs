@@ -565,7 +565,6 @@ where
         "identity": identity,
         "title": request.game.title,
         "system": request.game.system,
-        "description": request.game.description,
         "theme": request.game.theme,
         "palette": request.game.palette,
         "menuSounds": request.game.menu_sounds,

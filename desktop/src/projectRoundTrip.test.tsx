@@ -44,7 +44,6 @@ const everySetting = {
   rom: "/opened/content/Game.md",
   title: "Every Setting",
   system: "megadrive",
-  description: "A game saved with everything changed.",
   icon: "/opened/assets/icon.png",
   background: "/opened/assets/background.png",
   showMenu: true,

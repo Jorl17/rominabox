@@ -181,12 +181,11 @@ pub fn runtime_kit() -> Option<PathBuf> {
 /// `request`, completed as we complete a dropped game in the builder.
 ///
 /// When a request leaves out the game's title or console, we identify it with
-/// the builder's own identification, and take the title, console, description
-/// and cover that it leaves out from that. We treat a request with both as
-/// already identified and do not look it up, so its description and cover are
-/// what it states. A lookup would also check the console against the file, as
-/// when someone chooses a console in the builder, and would reject games that
-/// we accept in the export.
+/// the builder's own identification and fill in the title, console and cover
+/// that it leaves out. We do not look up a request with both, so its cover is
+/// the one in the request, or none. A lookup
+/// would also check the console against the file, as when someone chooses a
+/// console in the builder, and would reject games that we accept in the export.
 ///
 /// The game's folder, its platform, and the kit and core cache we make it
 /// from are the builder's. For every setting a request leaves out we use the
@@ -231,7 +230,6 @@ pub fn complete_export(mut request: Map<String, Value>) -> Result<ExportRequest,
         for (field, value) in [
             ("title", json!(found.title)),
             ("system", json!(found.system)),
-            ("description", json!(found.description)),
             ("icon", json!(found.icon_path)),
         ] {
             request.entry(field).or_insert(value);

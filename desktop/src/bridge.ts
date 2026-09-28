@@ -16,7 +16,6 @@ export type GameInfo = {
   source: string;
   matched: boolean;
   catalogName?: string;
-  description?: string;
   iconPath?: string;
   warnings: string[];
 };
@@ -27,7 +26,6 @@ export type ExportRequest = {
   rom: string;
   title: string;
   system: string;
-  description: string;
   icon: string | null;
   background: string | null;
   showMenu: boolean;
