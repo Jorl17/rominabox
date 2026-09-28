@@ -30,11 +30,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 # We link the probe with the same archive as the player build.
+import file_lock  # noqa: E402
 import rmlui_paths  # noqa: E402
 from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
 from built import cli  # noqa: E402
 
 PROBE = ROOT / "work/probe/rml_probe"
+PROBE_LOCK = ROOT / "work/probe/rml_probe.lock"
 PROBE_SOURCE = ROOT / "scripts/native_runtime/rml_probe.cpp"
 DESIGN = ROOT / "integrations/designs/native"
 ASSETS = ROOT / "work/probe/menu-assets"
@@ -82,17 +84,22 @@ def build() -> None:
             "python3 scripts/prepare_rmlui.py"
         )
     inputs = (PROBE_SOURCE, Path(__file__), ROOT / "scripts/rmlui_paths.py", LIBRARY)
-    if PROBE.exists() and PROBE.stat().st_mtime >= max(path.stat().st_mtime for path in inputs):
-        return
     PROBE.parent.mkdir(parents=True, exist_ok=True)
-    flags = rmlui_paths.freetype("--cflags", "--libs")
-    subprocess.run(
-        ["c++", "-std=c++17", "-O1",
-         *rmlui_paths.DEFINES,
-         *[f"-I{path}" for path in HEADER_DIRS],
-         "-o", str(PROBE), str(PROBE_SOURCE), str(LIBRARY), *flags],
-        check=True,
-    )
+    # We run test scopes together, and use the probe in several. On Windows we
+    # cannot overwrite a running program, so we check and build the probe only
+    # in the process that has the lock, and use the result in the others.
+    with PROBE_LOCK.open("a") as handle:
+        file_lock.hold_exclusively(handle)
+        if PROBE.exists() and PROBE.stat().st_mtime >= max(path.stat().st_mtime for path in inputs):
+            return
+        flags = rmlui_paths.freetype("--cflags", "--libs")
+        subprocess.run(
+            ["c++", "-std=c++17", "-O1",
+             *rmlui_paths.DEFINES,
+             *[f"-I{path}" for path in HEADER_DIRS],
+             "-o", str(PROBE), str(PROBE_SOURCE), str(LIBRARY), *flags],
+            check=True,
+        )
 
 
 def run() -> str:
