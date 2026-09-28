@@ -124,6 +124,42 @@ mod tests {
         assert_eq!(mode_of(b""), DATA);
     }
 
+    /// A zip made where files have no modes. Here the program on disk is
+    /// not executable and the data is, and after unpacking as on a Mac
+    /// (`ditto -x -k`, as with Archive Utility), each has its correct mode.
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn modes_come_from_what_each_file_is_not_from_the_disk() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = rominabox_scratch::Scratch::dir("rominabox-zip-modes");
+        let app = root.path().join("staged");
+        let program = app.join("Contents/MacOS/retroarch");
+        let data = app.join("Contents/Resources/content/Pokémon Gold.gbc");
+        fs::create_dir_all(program.parent().unwrap()).unwrap();
+        fs::create_dir_all(data.parent().unwrap()).unwrap();
+        fs::copy("/usr/bin/true", &program).unwrap();
+        fs::write(&data, b"cartridge").unwrap();
+        fs::set_permissions(&program, fs::Permissions::from_mode(0o644)).unwrap();
+        fs::set_permissions(&data, fs::Permissions::from_mode(0o755)).unwrap();
+
+        let zip = root.path().join("Game.zip");
+        write_zip(&[(&app, "Pokémon Gold.app")], &zip).unwrap();
+        let unzipped = root.path().join("unzipped");
+        let status = std::process::Command::new("/usr/bin/ditto")
+            .args(["-x", "-k"])
+            .arg(&zip)
+            .arg(&unzipped)
+            .status()
+            .unwrap();
+        assert!(status.success());
+        let mode = |relative: &str| fs::metadata(unzipped.join(relative)).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode("Pokémon Gold.app/Contents/MacOS/retroarch"), PROGRAM);
+        assert_eq!(mode("Pokémon Gold.app/Contents/Resources/content/Pokémon Gold.gbc"), DATA);
+        assert_eq!(mode("Pokémon Gold.app/Contents/MacOS"), FOLDER);
+        let ran = std::process::Command::new(unzipped.join("Pokémon Gold.app/Contents/MacOS/retroarch")).status().unwrap();
+        assert!(ran.success(), "the unpacked program does not run");
+    }
+
     #[test]
     fn a_date_is_the_same_date_in_a_zip() {
         let time = UNIX_EPOCH + std::time::Duration::from_secs(1_790_586_896); // 2026-09-28 09:14:56 UTC
