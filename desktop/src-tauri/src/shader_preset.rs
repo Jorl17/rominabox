@@ -192,11 +192,13 @@ fn collect_files(
     Ok(())
 }
 
-/// The file at `value` from `directory`, with `../` resolved, when it is the
-/// kind of file expected on its line. The error message completes a sentence
-/// about the file that listed it.
+/// The file at path `value`, relative to `directory`, with `../` resolved,
+/// when it is the kind of file for its line. A backslash in the path is a
+/// separator, as in RetroArch (`fill_pathname_expanded_and_absolute`). The
+/// error message ends a sentence about the line or file with the path.
 fn named(directory: &Path, value: &str, kind: Named) -> Result<PathBuf, String> {
-    let relative = Path::new(value);
+    let separated = value.replace('\\', "/");
+    let relative = Path::new(&separated);
     if relative
         .components()
         .any(|component| matches!(component, Component::Prefix(_) | Component::RootDir))

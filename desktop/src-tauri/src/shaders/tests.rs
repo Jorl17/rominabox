@@ -298,12 +298,12 @@ fn a_preset_takes_the_files_it_names_from_a_neighbouring_folder() {
     );
 }
 
-/// A preset written on Windows can list its files with backslashes, for
-/// example `..\..\..\shaders\menus\menu-hdr.slang` in `bezel/scanline-classic/`.
-/// In RetroArch a backslash in the paths of a preset is the separator of the
-/// platform, so we bundle such a preset as if it were written with slashes.
+/// Presets written on Windows have backslashes in their file paths
+/// (`bezel/scanline-classic/`: `..\..\..\shaders\menus\menu-hdr.slang`).
+/// For RetroArch, a backslash in the paths of a preset is the platform's
+/// separator, so we bundle such a preset as if it had slashes.
 #[test]
-fn a_preset_that_names_its_files_with_backslashes_is_bundled_whole() {
+fn a_preset_with_backslashes_in_its_paths_is_bundled_whole() {
     let source = rominabox_scratch::Scratch::dir("rominabox-shader-backslash");
     let selection = custom_preset(
         &source,
