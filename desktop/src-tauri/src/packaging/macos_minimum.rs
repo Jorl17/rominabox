@@ -16,12 +16,17 @@ use std::path::PathBuf;
 pub(super) fn newest(programs: &[PathBuf]) -> Result<String, ExportError> {
     let mut newest: Option<Vec<u32>> = None;
     for program in programs {
-        let bytes = fs::read(program).map_err(|error| ExportError::io(ErrorStage::Configure, program, error))?;
+        let bytes = fs::read(program)
+            .map_err(|error| ExportError::io(ErrorStage::Configure, program, error))?;
         if !crate::mach_o::is_mach_o(&bytes) {
             continue;
         }
-        let minimums = crate::mach_o::minimum_systems(&bytes)
-            .map_err(|error| ExportError::new(ErrorStage::Configure, format!("{}: {error}", program.display())))?;
+        let minimums = crate::mach_o::minimum_systems(&bytes).map_err(|error| {
+            ExportError::new(
+                ErrorStage::Configure,
+                format!("{}: {error}", program.display()),
+            )
+        })?;
         for minimum in minimums {
             if newest.as_ref().is_none_or(|current| minimum > *current) {
                 newest = Some(minimum);

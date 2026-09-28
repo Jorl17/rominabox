@@ -291,22 +291,13 @@ fn write_plist(
 {}
 </dict></plist>
 "#,
-        xml_escape(title),
+        mach_o::plist_text(title),
         bundle_identifier(identity),
-        xml_escape(title),
+        mach_o::plist_text(title),
         minimum_macos,
         icon
     );
     fs::write(path, plist).map_err(|error| ExportError::io(ErrorStage::Configure, path, error))
-}
-
-fn xml_escape(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&apos;")
 }
 
 #[derive(Deserialize)]

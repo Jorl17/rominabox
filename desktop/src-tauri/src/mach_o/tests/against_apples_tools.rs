@@ -17,7 +17,13 @@ fn compile(output: &Path, archs: &[&str], flags: &[&str], source: &str) {
     for arch in archs {
         cc.args(["-arch", arch]);
     }
-    let status = cc.args(flags).arg("-o").arg(output).arg(&file).status().unwrap();
+    let status = cc
+        .args(flags)
+        .arg("-o")
+        .arg(output)
+        .arg(&file)
+        .status()
+        .unwrap();
     assert!(status.success(), "could not compile {}", output.display());
     fs::remove_file(file).unwrap();
 }
@@ -65,9 +71,16 @@ fn shape(description: &str) -> Vec<String> {
     description
         .lines()
         .filter(|line| {
-            ["CodeDirectory", "Hash type", "Page size", "Executable Segment", "Internal requirements", "Signature="]
-                .iter()
-                .any(|start| line.starts_with(start))
+            [
+                "CodeDirectory",
+                "Hash type",
+                "Page size",
+                "Executable Segment",
+                "Internal requirements",
+                "Signature=",
+            ]
+            .iter()
+            .any(|start| line.starts_with(start))
                 || line.trim_start().starts_with('-')
         })
         .map(str::to_owned)
@@ -75,7 +88,10 @@ fn shape(description: &str) -> Vec<String> {
 }
 
 fn rosetta() -> bool {
-    Command::new("arch").args(["-x86_64", "/usr/bin/true"]).status().is_ok_and(|status| status.success())
+    Command::new("arch")
+        .args(["-x86_64", "/usr/bin/true"])
+        .status()
+        .is_ok_and(|status| status.success())
 }
 
 const PROGRAM: &str = "#include <stdio.h>\nint main(int argc, char **argv) { printf(\"ran %d\\n\", argc); return 0; }\n";
@@ -91,17 +107,43 @@ fn slices_are_what_lipo_lists_and_each_is_what_lipo_thins() {
     assert_eq!(names.join(" "), tool("lipo", &["-archs"], &program).trim());
     for slice in found {
         let thinned = root.path().join(slice.cpu.name());
-        tool("lipo", &["-thin", &slice.cpu.name(), "-output", thinned.to_str().unwrap()], &program);
-        assert!(fs::read(&thinned).unwrap() == slice.bytes, "the {} slice differs", slice.cpu.name());
+        tool(
+            "lipo",
+            &[
+                "-thin",
+                &slice.cpu.name(),
+                "-output",
+                thinned.to_str().unwrap(),
+            ],
+            &program,
+        );
+        assert!(
+            fs::read(&thinned).unwrap() == slice.bytes,
+            "the {} slice differs",
+            slice.cpu.name()
+        );
     }
 }
 
 #[test]
 fn joined_slices_are_what_lipo_creates() {
     let root = Scratch::dir("rominabox-mach-o-join");
-    let (apple, intel) = (root.path().join("arm64.dylib"), root.path().join("x86_64.dylib"));
-    compile(&apple, &["arm64"], &["-dynamiclib"], "int probe(void) { return 1; }\n");
-    compile(&intel, &["x86_64"], &["-dynamiclib"], "int probe(void) { return 2; }\n");
+    let (apple, intel) = (
+        root.path().join("arm64.dylib"),
+        root.path().join("x86_64.dylib"),
+    );
+    compile(
+        &apple,
+        &["arm64"],
+        &["-dynamiclib"],
+        "int probe(void) { return 1; }\n",
+    );
+    compile(
+        &intel,
+        &["x86_64"],
+        &["-dynamiclib"],
+        "int probe(void) { return 2; }\n",
+    );
     let joined = join(&[&fs::read(&apple).unwrap(), &fs::read(&intel).unwrap()]).unwrap();
     let created = root.path().join("created.dylib");
     let status = Command::new("lipo")
@@ -112,7 +154,10 @@ fn joined_slices_are_what_lipo_creates() {
         .status()
         .unwrap();
     assert!(status.success());
-    assert!(joined == fs::read(&created).unwrap(), "the joined file differs from lipo's");
+    assert!(
+        joined == fs::read(&created).unwrap(),
+        "the joined file differs from lipo's"
+    );
 }
 
 /// The dependencies of a universal library and the oldest systems for its
@@ -121,24 +166,58 @@ fn joined_slices_are_what_lipo_creates() {
 fn dependencies_and_minimum_systems_are_what_otool_reads() {
     let root = Scratch::dir("rominabox-mach-o-otool");
     let source = "#include <CoreFoundation/CoreFoundation.h>\nint probe(void) { return (int)CFAbsoluteTimeGetCurrent(); }\n";
-    let (apple, intel) = (root.path().join("arm64.dylib"), root.path().join("x86_64.dylib"));
-    let flags = ["-dynamiclib", "-framework", "CoreFoundation", "-install_name", "@rpath/libprobe.dylib"];
-    compile(&apple, &["arm64"], &[&flags[..], &["-mmacosx-version-min=11.0"]].concat(), source);
-    compile(&intel, &["x86_64"], &[&flags[..], &["-mmacosx-version-min=10.13"]].concat(), source);
+    let (apple, intel) = (
+        root.path().join("arm64.dylib"),
+        root.path().join("x86_64.dylib"),
+    );
+    let flags = [
+        "-dynamiclib",
+        "-framework",
+        "CoreFoundation",
+        "-install_name",
+        "@rpath/libprobe.dylib",
+    ];
+    compile(
+        &apple,
+        &["arm64"],
+        &[&flags[..], &["-mmacosx-version-min=11.0"]].concat(),
+        source,
+    );
+    compile(
+        &intel,
+        &["x86_64"],
+        &[&flags[..], &["-mmacosx-version-min=10.13"]].concat(),
+        source,
+    );
     let library = root.path().join("libprobe.dylib");
-    fs::write(&library, join(&[&fs::read(&apple).unwrap(), &fs::read(&intel).unwrap()]).unwrap()).unwrap();
+    fs::write(
+        &library,
+        join(&[&fs::read(&apple).unwrap(), &fs::read(&intel).unwrap()]).unwrap(),
+    )
+    .unwrap();
     let file = fs::read(&library).unwrap();
 
     let own = tool("otool", &["-D"], &library);
     let mut listed: Vec<String> = Vec::new();
     for line in tool("otool", &["-L"], &library).lines() {
-        let name = line.trim().split(" (compatibility").next().unwrap().to_string();
-        if !line.trim_end().ends_with(':') && !own.contains(&format!("\n{name}")) && !listed.contains(&name) {
+        let name = line
+            .trim()
+            .split(" (compatibility")
+            .next()
+            .unwrap()
+            .to_string();
+        if !line.trim_end().ends_with(':')
+            && !own.contains(&format!("\n{name}"))
+            && !listed.contains(&name)
+        {
             listed.push(name);
         }
     }
     assert_eq!(dependencies(&file).unwrap(), listed);
-    assert!(listed.iter().any(|name| name.contains("CoreFoundation")), "{listed:?}");
+    assert!(
+        listed.iter().any(|name| name.contains("CoreFoundation")),
+        "{listed:?}"
+    );
 
     // LC_BUILD_VERSION's `minos`, or LC_VERSION_MIN_MACOSX's `version`,
     // which the Intel slice, built for an older system, contains.
@@ -148,13 +227,21 @@ fn dependencies_and_minimum_systems_are_what_otool_reads() {
         if let Some(command) = line.strip_prefix("cmd ") {
             version_min = command == "LC_VERSION_MIN_MACOSX";
         }
-        let version = line.strip_prefix("minos ").or(line.strip_prefix("version ").filter(|_| version_min));
+        let version = line
+            .strip_prefix("minos ")
+            .or(line.strip_prefix("version ").filter(|_| version_min));
         asked.extend(version.map(str::to_owned));
     }
     let read: Vec<String> = minimum_systems(&file)
         .unwrap()
         .iter()
-        .map(|parts| parts.iter().map(u32::to_string).collect::<Vec<_>>().join("."))
+        .map(|parts| {
+            parts
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join(".")
+        })
         .collect();
     assert_eq!(read, asked);
     assert_eq!(read, ["10.13", "11.0"]);
@@ -166,12 +253,26 @@ fn dependencies_and_minimum_systems_are_what_otool_reads() {
 fn renamed_libraries_are_what_install_name_tool_makes() {
     let root = Scratch::dir("rominabox-mach-o-rename");
     let dependency = root.path().join("libdep.dylib");
-    compile(&dependency, &["arm64", "x86_64"], &["-dynamiclib", "-install_name", "/opt/elsewhere/libdep.dylib"], "int dep(void) { return 3; }\n");
+    compile(
+        &dependency,
+        &["arm64", "x86_64"],
+        &[
+            "-dynamiclib",
+            "-install_name",
+            "/opt/elsewhere/libdep.dylib",
+        ],
+        "int dep(void) { return 3; }\n",
+    );
     let user = root.path().join("libuser.dylib");
     compile(
         &user,
         &["arm64", "x86_64"],
-        &["-dynamiclib", "-install_name", "/opt/elsewhere/libuser.dylib", dependency.to_str().unwrap()],
+        &[
+            "-dynamiclib",
+            "-install_name",
+            "/opt/elsewhere/libuser.dylib",
+            dependency.to_str().unwrap(),
+        ],
         "int dep(void);\nint user(void) { return dep(); }\n",
     );
     let moved = "@executable_path/../Frameworks/libdep.dylib";
@@ -186,14 +287,23 @@ fn renamed_libraries_are_what_install_name_tool_makes() {
     let theirs = root.path().join("theirs.dylib");
     fs::copy(&user, &theirs).unwrap();
     let output = Command::new("install_name_tool")
-        .args(["-change", "/opt/elsewhere/libdep.dylib", moved, "-id", "@rpath/libuser.dylib"])
+        .args([
+            "-change",
+            "/opt/elsewhere/libdep.dylib",
+            moved,
+            "-id",
+            "@rpath/libuser.dylib",
+        ])
         .arg(&theirs)
         .output()
         .unwrap();
-    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
-    let without_file_name = |path: &Path| {
-        tool("otool", &["-L"], path).replace(path.to_str().unwrap(), "FILE")
-    };
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let without_file_name =
+        |path: &Path| tool("otool", &["-L"], path).replace(path.to_str().unwrap(), "FILE");
     assert_eq!(without_file_name(&ours), without_file_name(&theirs));
     assert!(without_file_name(&ours).contains(moved));
 }
@@ -206,24 +316,52 @@ fn a_signed_program_is_what_codesign_accepts_and_runs() {
     let root = Scratch::dir("rominabox-mach-o-sign");
     for (name, archs, flags) in [
         ("apple", &["arm64"][..], &[][..]),
-        ("intel-unsigned", &["x86_64"][..], &["-Wl,-no_adhoc_codesign"][..]),
+        (
+            "intel-unsigned",
+            &["x86_64"][..],
+            &["-Wl,-no_adhoc_codesign"][..],
+        ),
         ("both", &["arm64", "x86_64"][..], &[][..]),
     ] {
         let program = root.path().join(name);
         compile(&program, archs, flags, PROGRAM);
         let theirs = root.path().join(format!("{name}-codesign"));
         fs::copy(&program, &theirs).unwrap();
-        tool("/usr/bin/codesign", &["--force", "--sign", "-", "--identifier", "probe"], &theirs);
+        tool(
+            "/usr/bin/codesign",
+            &["--force", "--sign", "-", "--identifier", "probe"],
+            &theirs,
+        );
 
-        let signed = sign(&fs::read(&program).unwrap(), &Seal { identifier: "probe", ..Seal::default() }).unwrap();
+        let signed = sign(
+            &fs::read(&program).unwrap(),
+            &Seal {
+                identifier: "probe",
+                ..Seal::default()
+            },
+        )
+        .unwrap();
         fs::write(&program, signed).unwrap();
         verify(&program);
         for arch in archs {
-            assert_eq!(shape(&described(&program, arch)), shape(&described(&theirs, arch)), "{name}, {arch}");
+            assert_eq!(
+                shape(&described(&program, arch)),
+                shape(&described(&theirs, arch)),
+                "{name}, {arch}"
+            );
             let runs = *arch == "arm64" || rosetta();
             if runs {
-                let output = Command::new("arch").args([&format!("-{arch}")]).arg(&program).arg("x").output().unwrap();
-                assert_eq!(String::from_utf8_lossy(&output.stdout), "ran 2\n", "{name} on {arch}");
+                let output = Command::new("arch")
+                    .args([&format!("-{arch}")])
+                    .arg(&program)
+                    .arg("x")
+                    .output()
+                    .unwrap();
+                assert_eq!(
+                    String::from_utf8_lossy(&output.stdout),
+                    "ran 2\n",
+                    "{name} on {arch}"
+                );
             } else {
                 eprintln!("SKIPPED running {name} for {arch}: this Mac cannot run it");
             }
@@ -245,7 +383,12 @@ fn an_app_is_sealed_as_codesign_seals_it() {
     let root = Scratch::dir("rominabox-mach-o-app");
     let app = root.path().join("Sealed Game.app");
     let contents = app.join("Contents");
-    for folder in ["MacOS", "Resources/content", "Resources/menu assets", "Frameworks"] {
+    for folder in [
+        "MacOS",
+        "Resources/content",
+        "Resources/menu assets",
+        "Frameworks",
+    ] {
         fs::create_dir_all(contents.join(folder)).unwrap();
     }
     fs::write(
@@ -256,10 +399,24 @@ fn an_app_is_sealed_as_codesign_seals_it() {
     let executable = contents.join("MacOS/retroarch");
     compile(&executable, &["arm64", "x86_64"], &[], PROGRAM);
     let library = contents.join("MacOS/librominabox-launch.dylib");
-    compile(&library, &["arm64", "x86_64"], &["-dynamiclib"], "int launch(void) { return 1; }\n");
+    compile(
+        &library,
+        &["arm64", "x86_64"],
+        &["-dynamiclib"],
+        "int launch(void) { return 1; }\n",
+    );
     let core = contents.join("Resources/game-core.dylib");
-    compile(&core, &["arm64"], &["-dynamiclib"], "int core(void) { return 2; }\n");
-    fs::write(contents.join("Resources/content/Pokémon Gold & Silver.gbc"), b"cartridge").unwrap();
+    compile(
+        &core,
+        &["arm64"],
+        &["-dynamiclib"],
+        "int core(void) { return 2; }\n",
+    );
+    fs::write(
+        contents.join("Resources/content/Pokémon Gold & Silver.gbc"),
+        b"cartridge",
+    )
+    .unwrap();
     fs::write(contents.join("Resources/menu assets/menu.rml"), b"<rml/>").unwrap();
     fs::write(contents.join("Resources/game.json"), b"{}").unwrap();
     let entitlements = Entitlements::default()
@@ -267,7 +424,9 @@ fn an_app_is_sealed_as_codesign_seals_it() {
         .with("com.apple.security.device.usb", Value::Bool(true))
         .with(
             "com.apple.security.temporary-exception.files.home-relative-path.read-only",
-            Value::Strings(vec!["/Library/Application Support/ROM-in-a-Box/Games/test/".into()]),
+            Value::Strings(vec![
+                "/Library/Application Support/ROM-in-a-Box/Games/test/".into(),
+            ]),
         );
 
     sign_app(
@@ -282,9 +441,25 @@ fn an_app_is_sealed_as_codesign_seals_it() {
     )
     .unwrap();
     verify(&app);
+    // We name nested code as with `codesign` for ad hoc code outside a bundle.
+    let alone = root.path().join("alone");
+    fs::create_dir_all(&alone).unwrap();
+    let theirs = alone.join("librominabox-launch.dylib");
+    fs::copy(&library, &theirs).unwrap();
+    tool("/usr/bin/codesign", &["--force", "--sign", "-"], &theirs);
+    let named = |path: &Path| {
+        described(path, "arm64")
+            .lines()
+            .find(|line| line.starts_with("Identifier="))
+            .map(str::to_owned)
+    };
+    assert_eq!(named(&library), named(&theirs));
     let shown = tool("/usr/bin/codesign", &["-d", "--entitlements", "-"], &app);
     assert!(shown.contains("com.apple.security.app-sandbox"), "{shown}");
-    assert!(shown.contains("/Library/Application Support/ROM-in-a-Box/Games/test/"), "{shown}");
+    assert!(
+        shown.contains("/Library/Application Support/ROM-in-a-Box/Games/test/"),
+        "{shown}"
+    );
 
     // We seal a copy again with `codesign`. Because we sign only the app, the
     // nested code keeps our signatures, so CodeResources can match.
@@ -299,8 +474,13 @@ fn an_app_is_sealed_as_codesign_seals_it() {
         .arg(&copy)
         .output()
         .unwrap();
-    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
-    let resources = |app: &Path| fs::read_to_string(app.join("Contents/_CodeSignature/CodeResources")).unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let resources =
+        |app: &Path| fs::read_to_string(app.join("Contents/_CodeSignature/CodeResources")).unwrap();
     assert_eq!(resources(&app), resources(&copy));
     for arch in ["arm64", "x86_64"] {
         let sealed_with = |app: &PathBuf| -> Vec<String> {
@@ -311,6 +491,10 @@ fn an_app_is_sealed_as_codesign_seals_it() {
                 .collect()
         };
         assert_eq!(sealed_with(&app), sealed_with(&copy), "{arch}");
-        assert_eq!(shape(&described(&app, arch)), shape(&described(&copy, arch)), "{arch}");
+        assert_eq!(
+            shape(&described(&app, arch)),
+            shape(&described(&copy, arch)),
+            "{arch}"
+        );
     }
 }

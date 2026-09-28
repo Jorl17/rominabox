@@ -23,7 +23,9 @@ fn entitlements_are_written_in_der_as_codesign_writes_them() {
         )
         .with(
             "com.apple.security.temporary-exception.files.home-relative-path.read-write",
-            Value::Strings(vec!["/Library/Application Support/ROM-in-a-Box Accounts/".into()]),
+            Value::Strings(vec![
+                "/Library/Application Support/ROM-in-a-Box Accounts/".into()
+            ]),
         );
     let written = concat!(
         "708201c3020101b08201bc30230c1e636f6d2e6170706c652e73656375726974792e6170702d73616e64626f780101ff",
@@ -37,7 +39,11 @@ fn entitlements_are_written_in_der_as_codesign_writes_them() {
         "2d706174682e726561642d777269746530350c332f4c6962726172792f4170706c69636174696f6e20537570706f7274",
         "2f524f4d2d696e2d612d426f78204163636f756e74732f",
     );
-    let hex: String = entitlements.der().iter().map(|byte| format!("{byte:02x}")).collect();
+    let hex: String = entitlements
+        .der()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
     assert_eq!(hex, written);
 }
 

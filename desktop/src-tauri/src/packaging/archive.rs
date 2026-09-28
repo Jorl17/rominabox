@@ -43,7 +43,10 @@ fn add<W: Write + io::Seek>(zip: &mut ZipWriter<W>, path: &Path, name: &str) -> 
         .compression_method(CompressionMethod::Deflated)
         .last_modified_time(dos_time(metadata.modified().unwrap_or(UNIX_EPOCH)));
     if metadata.file_type().is_symlink() {
-        return Err(io::Error::other(format!("{} is a link, which a zip made here does not carry", path.display())));
+        return Err(io::Error::other(format!(
+            "{} is a link, which a zip made here does not carry",
+            path.display()
+        )));
     }
     if metadata.is_dir() {
         zip.add_directory(name, options.unix_permissions(FOLDER))?;
@@ -52,9 +55,9 @@ fn add<W: Write + io::Seek>(zip: &mut ZipWriter<W>, path: &Path, name: &str) -> 
             .collect::<io::Result<Vec<_>>>()?;
         entries.sort();
         for entry in entries {
-            let child = entry
-                .to_str()
-                .ok_or_else(|| io::Error::other(format!("{} holds a name that is not UTF-8", path.display())))?;
+            let child = entry.to_str().ok_or_else(|| {
+                io::Error::other(format!("{} holds a name that is not UTF-8", path.display()))
+            })?;
             add(zip, &path.join(child), &format!("{name}/{child}"))?;
         }
         return Ok(());
@@ -80,7 +83,9 @@ fn mode_of(head: &[u8]) -> u32 {
 /// `time` in the form of a zip date, in whole seconds of UTC. For a time
 /// before 1980, which a zip cannot store, we use the first zip date.
 fn dos_time(time: SystemTime) -> DateTime {
-    let seconds = time.duration_since(UNIX_EPOCH).map_or(0, |since| since.as_secs());
+    let seconds = time
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs());
     // Days since 1970 to a civil date (Howard Hinnant's algorithm).
     let days = (seconds / 86_400) as i64 + 719_468;
     let era = days.div_euclid(146_097);
@@ -89,7 +94,11 @@ fn dos_time(time: SystemTime) -> DateTime {
     let of_year = of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
     let shifted_month = (5 * of_year + 2) / 153;
     let day = of_year - (153 * shifted_month + 2) / 5 + 1;
-    let month = if shifted_month < 10 { shifted_month + 3 } else { shifted_month - 9 };
+    let month = if shifted_month < 10 {
+        shifted_month + 3
+    } else {
+        shifted_month - 9
+    };
     let year = year_of_era + era * 400 + i64::from(month <= 2);
     let clock = seconds % 86_400;
     u16::try_from(year)
@@ -152,11 +161,23 @@ mod tests {
             .status()
             .unwrap();
         assert!(status.success());
-        let mode = |relative: &str| fs::metadata(unzipped.join(relative)).unwrap().permissions().mode() & 0o777;
+        let mode = |relative: &str| {
+            fs::metadata(unzipped.join(relative))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777
+        };
         assert_eq!(mode("Pokémon Gold.app/Contents/MacOS/retroarch"), PROGRAM);
-        assert_eq!(mode("Pokémon Gold.app/Contents/Resources/content/Pokémon Gold.gbc"), DATA);
+        assert_eq!(
+            mode("Pokémon Gold.app/Contents/Resources/content/Pokémon Gold.gbc"),
+            DATA
+        );
         assert_eq!(mode("Pokémon Gold.app/Contents/MacOS"), FOLDER);
-        let ran = std::process::Command::new(unzipped.join("Pokémon Gold.app/Contents/MacOS/retroarch")).status().unwrap();
+        let ran =
+            std::process::Command::new(unzipped.join("Pokémon Gold.app/Contents/MacOS/retroarch"))
+                .status()
+                .unwrap();
         assert!(ran.success(), "the unpacked program does not run");
     }
 
@@ -165,7 +186,14 @@ mod tests {
         let time = UNIX_EPOCH + std::time::Duration::from_secs(1_790_586_896); // 2026-09-28 09:14:56 UTC
         let written = dos_time(time);
         assert_eq!(
-            (written.year(), written.month(), written.day(), written.hour(), written.minute(), written.second()),
+            (
+                written.year(),
+                written.month(),
+                written.day(),
+                written.hour(),
+                written.minute(),
+                written.second()
+            ),
             (2026, 9, 28, 9, 14, 56)
         );
         assert_eq!(dos_time(UNIX_EPOCH), DateTime::default());

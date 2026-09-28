@@ -39,6 +39,14 @@ pub(crate) const LC_CODE_SIGNATURE: u32 = 0x1d;
 const LC_VERSION_MIN_MACOSX: u32 = 0x24;
 const LC_BUILD_VERSION: u32 = 0x32;
 
+/// `text` escaped for an element of a property list, as in the Apple writer:
+/// only what XML requires.
+pub(crate) fn plist_text(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
 /// The largest alignment of a slice in a universal file, 32 KB, as in `lipo`.
 const MAXIMUM_ALIGNMENT: u32 = 15;
 
@@ -50,11 +58,20 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub const ARM64: Cpu = Cpu { kind: CPU_ARCH_ABI64 | CPU_TYPE_ARM, subtype: 0 };
-    pub const X86_64: Cpu = Cpu { kind: CPU_ARCH_ABI64 | CPU_TYPE_X86, subtype: 3 };
+    pub const ARM64: Cpu = Cpu {
+        kind: CPU_ARCH_ABI64 | CPU_TYPE_ARM,
+        subtype: 0,
+    };
+    pub const X86_64: Cpu = Cpu {
+        kind: CPU_ARCH_ABI64 | CPU_TYPE_X86,
+        subtype: 3,
+    };
 
     fn of(kind: u32, subtype: u32) -> Cpu {
-        Cpu { kind, subtype: subtype & !CPU_SUBTYPE_MASK }
+        Cpu {
+            kind,
+            subtype: subtype & !CPU_SUBTYPE_MASK,
+        }
     }
 
     /// Its name in the spelling of `lipo` and `cc -arch`.
@@ -123,7 +140,9 @@ fn u64_be(bytes: &[u8], at: usize) -> Result<u64, String> {
 /// them apart by the field with the class version or the slice count.
 pub fn is_mach_o(bytes: &[u8]) -> bool {
     match (u32_be(bytes, 0), u32_le(bytes, 0)) {
-        (Ok(FAT_MAGIC | FAT_MAGIC_64), _) => u32_be(bytes, 4).is_ok_and(|count| (1..20).contains(&count)),
+        (Ok(FAT_MAGIC | FAT_MAGIC_64), _) => {
+            u32_be(bytes, 4).is_ok_and(|count| (1..20).contains(&count))
+        }
         (_, Ok(MH_MAGIC | MH_MAGIC_64)) => true,
         _ => false,
     }
@@ -137,7 +156,11 @@ pub fn slices(file: &[u8]) -> Result<Vec<Slice<'_>>, String> {
         FAT_MAGIC_64 => true,
         _ => {
             let header = Header::read(file)?;
-            return Ok(vec![Slice { cpu: header.cpu, bytes: file, align: alignment(file)? }]);
+            return Ok(vec![Slice {
+                cpu: header.cpu,
+                bytes: file,
+                align: alignment(file)?,
+            }]);
         }
     };
     let count = u32_be(file, 4)? as usize;
@@ -147,9 +170,17 @@ pub fn slices(file: &[u8]) -> Result<Vec<Slice<'_>>, String> {
             let at = 8 + index * entry;
             let cpu = Cpu::of(u32_be(file, at)?, u32_be(file, at + 4)?);
             let (offset, size, align) = if wide {
-                (u64_be(file, at + 8)?, u64_be(file, at + 16)?, u32_be(file, at + 24)?)
+                (
+                    u64_be(file, at + 8)?,
+                    u64_be(file, at + 16)?,
+                    u32_be(file, at + 24)?,
+                )
             } else {
-                (u32_be(file, at + 8)? as u64, u32_be(file, at + 12)? as u64, u32_be(file, at + 16)?)
+                (
+                    u32_be(file, at + 8)? as u64,
+                    u32_be(file, at + 12)? as u64,
+                    u32_be(file, at + 16)?,
+                )
             };
             let bytes = usize::try_from(offset)
                 .ok()
@@ -158,7 +189,11 @@ pub fn slices(file: &[u8]) -> Result<Vec<Slice<'_>>, String> {
                 .ok_or_else(|| format!("its {} slice is past the end of the file", cpu.name()))?;
             let header = Header::read(bytes)?;
             if header.cpu != cpu {
-                return Err(format!("its {} slice says it is for {}", cpu.name(), header.cpu.name()));
+                return Err(format!(
+                    "its {} slice says it is for {}",
+                    cpu.name(),
+                    header.cpu.name()
+                ));
             }
             Ok(Slice { cpu, bytes, align })
         })
@@ -173,7 +208,11 @@ pub fn join(parts: &[&[u8]]) -> Result<Vec<u8>, String> {
         .iter()
         .map(|part| {
             let header = Header::read(part)?;
-            Ok(Slice { cpu: header.cpu, bytes: part, align: alignment(part)? })
+            Ok(Slice {
+                cpu: header.cpu,
+                bytes: part,
+                align: alignment(part)?,
+            })
         })
         .collect::<Result<Vec<_>, String>>()?;
     slices.sort_by(|left, right| {
@@ -181,7 +220,9 @@ pub fn join(parts: &[&[u8]]) -> Result<Vec<u8>, String> {
         if left.cpu.kind == right.cpu.kind {
             left.cpu.subtype.cmp(&right.cpu.subtype)
         } else {
-            apple(left).cmp(&apple(right)).then(left.align.cmp(&right.align))
+            apple(left)
+                .cmp(&apple(right))
+                .then(left.align.cmp(&right.align))
         }
     });
     if let Some(pair) = slices.windows(2).find(|pair| pair[0].cpu == pair[1].cpu) {
@@ -219,7 +260,13 @@ fn universal(slices: &[Slice<'_>]) -> Vec<u8> {
     for slice in slices {
         let alignment = 1usize << slice.align;
         offset = offset.div_ceil(alignment) * alignment;
-        for word in [slice.cpu.kind, slice.cpu.subtype, offset as u32, slice.bytes.len() as u32, slice.align] {
+        for word in [
+            slice.cpu.kind,
+            slice.cpu.subtype,
+            offset as u32,
+            slice.bytes.len() as u32,
+            slice.align,
+        ] {
             file.extend(word.to_be_bytes());
         }
         placed.push(offset);
@@ -250,7 +297,11 @@ pub fn map_slices(
     let rebuilt: Vec<Slice<'_>> = slices
         .iter()
         .zip(&edited)
-        .map(|(slice, bytes)| Slice { cpu: slice.cpu, bytes, align: slice.align.max(12) })
+        .map(|(slice, bytes)| Slice {
+            cpu: slice.cpu,
+            bytes,
+            align: slice.align,
+        })
         .collect();
     Ok(universal(&rebuilt))
 }
@@ -317,7 +368,11 @@ pub(crate) fn commands(slice: &[u8]) -> Result<(Header, Vec<Command<'_>>), Strin
         if size < 8 || offset + size > end {
             return Err(format!("a load command at {offset} has a size of {size}"));
         }
-        found.push(Command { cmd, offset, bytes: &slice[offset..offset + size] });
+        found.push(Command {
+            cmd,
+            offset,
+            bytes: &slice[offset..offset + size],
+        });
         offset += size;
     }
     Ok((header, found))
@@ -326,15 +381,25 @@ pub(crate) fn commands(slice: &[u8]) -> Result<(Header, Vec<Command<'_>>), Strin
 fn loads_a_library(cmd: u32) -> bool {
     matches!(
         cmd,
-        LC_LOAD_DYLIB | LC_LOAD_WEAK_DYLIB | LC_REEXPORT_DYLIB | LC_LAZY_LOAD_DYLIB | LC_LOAD_UPWARD_DYLIB
+        LC_LOAD_DYLIB
+            | LC_LOAD_WEAK_DYLIB
+            | LC_REEXPORT_DYLIB
+            | LC_LAZY_LOAD_DYLIB
+            | LC_LOAD_UPWARD_DYLIB
     )
 }
 
 /// The library a dylib command names.
 fn library_name(command: &Command<'_>) -> Result<String, String> {
     let at = u32_le(command.bytes, 8)? as usize;
-    let text = command.bytes.get(at..).ok_or("a library's name is outside its load command")?;
-    let end = text.iter().position(|&byte| byte == 0).unwrap_or(text.len());
+    let text = command
+        .bytes
+        .get(at..)
+        .ok_or("a library's name is outside its load command")?;
+    let end = text
+        .iter()
+        .position(|&byte| byte == 0)
+        .unwrap_or(text.len());
     Ok(String::from_utf8_lossy(&text[..end]).into_owned())
 }
 
@@ -373,7 +438,11 @@ pub fn minimum_systems(file: &[u8]) -> Result<Vec<Vec<u32>>, String> {
                 _ => continue,
             };
             let (major, minor, patch) = (version >> 16, (version >> 8) & 0xff, version & 0xff);
-            found.push(if patch == 0 { vec![major, minor] } else { vec![major, minor, patch] });
+            found.push(if patch == 0 {
+                vec![major, minor]
+            } else {
+                vec![major, minor, patch]
+            });
         }
     }
     Ok(found)
@@ -445,7 +514,11 @@ fn library_command(command: &Command<'_>, name: &str, wide: bool) -> Vec<u8> {
 
 /// Where the first section's contents start: load commands may grow up to
 /// there and no further.
-pub(crate) fn first_content(slice: &[u8], header: &Header, commands: &[Command<'_>]) -> Result<usize, String> {
+pub(crate) fn first_content(
+    slice: &[u8],
+    header: &Header,
+    commands: &[Command<'_>],
+) -> Result<usize, String> {
     let mut first = slice.len();
     for command in commands {
         let (sections, count, section_size, offset_at) = match command.cmd {
@@ -454,7 +527,8 @@ pub(crate) fn first_content(slice: &[u8], header: &Header, commands: &[Command<'
             _ => continue,
         };
         for index in 0..count as usize {
-            let offset = u32_le(command.bytes, sections + index * section_size + offset_at)? as usize;
+            let offset =
+                u32_le(command.bytes, sections + index * section_size + offset_at)? as usize;
             if offset != 0 {
                 first = first.min(offset);
             }

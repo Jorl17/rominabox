@@ -74,7 +74,10 @@ pub(crate) struct Slices {
 impl Slices {
     /// The first of `wanted` this file has no slice for.
     fn missing(&self, wanted: &[Arch]) -> Option<Arch> {
-        wanted.iter().copied().find(|arch| !self.archs.contains(arch))
+        wanted
+            .iter()
+            .copied()
+            .find(|arch| !self.archs.contains(arch))
     }
 
     /// It contains `wanted` and nothing else.
@@ -86,9 +89,13 @@ impl Slices {
 }
 
 fn slices_of(bytes: &[u8], path: &Path, stage: ErrorStage) -> Result<Slices, ExportError> {
-    let found = mach_o::slices(bytes)
-        .map_err(|error| ExportError::new(stage, format!("{}: {error}", path.display())).about(path))?;
-    let mut slices = Slices { archs: Vec::new(), others: Vec::new() };
+    let found = mach_o::slices(bytes).map_err(|error| {
+        ExportError::new(stage, format!("{}: {error}", path.display())).about(path)
+    })?;
+    let mut slices = Slices {
+        archs: Vec::new(),
+        others: Vec::new(),
+    };
     for slice in found {
         match Arch::of_cpu(slice.cpu) {
             Some(arch) => slices.archs.push(arch),
@@ -99,13 +106,23 @@ fn slices_of(bytes: &[u8], path: &Path, stage: ErrorStage) -> Result<Slices, Exp
 }
 
 /// The slice for `arch` in `bytes`, as a separate file.
-fn slice_for<'a>(bytes: &'a [u8], arch: Arch, path: &Path, stage: ErrorStage) -> Result<&'a [u8], ExportError> {
+fn slice_for<'a>(
+    bytes: &'a [u8],
+    arch: Arch,
+    path: &Path,
+    stage: ErrorStage,
+) -> Result<&'a [u8], ExportError> {
     mach_o::slices(bytes)
         .map_err(|error| ExportError::new(stage, format!("{}: {error}", path.display())))?
         .into_iter()
         .find(|slice| slice.cpu == arch.cpu())
         .map(|slice| slice.bytes)
-        .ok_or_else(|| ExportError::new(stage, format!("{} has no {} slice", path.display(), arch.name())))
+        .ok_or_else(|| {
+            ExportError::new(
+                stage,
+                format!("{} has no {} slice", path.display(), arch.name()),
+            )
+        })
 }
 
 /// Make `destination` `source` with exactly the slices `wanted`. It is

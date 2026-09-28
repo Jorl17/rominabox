@@ -3,6 +3,8 @@
 //! property list in XML and as DER, which is the form for macOS. We make
 //! both from one declaration.
 
+use super::plist_text;
+
 /// An entitlement's value: a switch, or a list of strings (paths).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Value {
@@ -32,14 +34,14 @@ impl Entitlements {
             "<plist version=\"1.0\"><dict>\n",
         ));
         for (key, value) in &self.entries {
-            text += &format!("<key>{}</key>", escape(key));
+            text += &format!("<key>{}</key>", plist_text(key));
             match value {
                 Value::Bool(true) => text += "<true/>\n",
                 Value::Bool(false) => text += "<false/>\n",
                 Value::Strings(strings) => {
                     text += "\n<array>";
                     for string in strings {
-                        text += &format!("<string>{}</string>", escape(string));
+                        text += &format!("<string>{}</string>", plist_text(string));
                     }
                     text += "</array>\n";
                 }
@@ -58,15 +60,22 @@ impl Entitlements {
             .flat_map(|(key, value)| {
                 let value = match value {
                     Value::Bool(on) => vec![0x01, 0x01, if *on { 0xff } else { 0x00 }],
-                    Value::Strings(strings) => {
-                        tagged(0x30, &strings.iter().flat_map(|string| utf8(string)).collect::<Vec<_>>())
-                    }
+                    Value::Strings(strings) => tagged(
+                        0x30,
+                        &strings
+                            .iter()
+                            .flat_map(|string| utf8(string))
+                            .collect::<Vec<_>>(),
+                    ),
                 };
                 tagged(0x30, &[utf8(key), value].concat())
             })
             .collect();
         // [APPLICATION 16] { INTEGER 1, [CONTEXT 16] { entries } }
-        tagged(0x70, &[vec![0x02, 0x01, 0x01], tagged(0xb0, &dictionary)].concat())
+        tagged(
+            0x70,
+            &[vec![0x02, 0x01, 0x01], tagged(0xb0, &dictionary)].concat(),
+        )
     }
 }
 
@@ -81,18 +90,14 @@ fn tagged(tag: u8, content: &[u8]) -> Vec<u8> {
     if length < 0x80 {
         bytes.push(length as u8);
     } else {
-        let digits: Vec<u8> = length.to_be_bytes().into_iter().skip_while(|&byte| byte == 0).collect();
+        let digits: Vec<u8> = length
+            .to_be_bytes()
+            .into_iter()
+            .skip_while(|&byte| byte == 0)
+            .collect();
         bytes.push(0x80 | digits.len() as u8);
         bytes.extend(digits);
     }
     bytes.extend_from_slice(content);
     bytes
-}
-
-fn escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&apos;")
 }

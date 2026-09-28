@@ -10,7 +10,7 @@
 
 use super::entitlements::Entitlements;
 use super::signature::{code_directory_hashes, identifier_for, sign, Seal};
-use super::Cpu;
+use super::{plist_text, Cpu};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -37,9 +37,18 @@ pub fn sign_app(seal: &AppSeal<'_>, cancelled: &dyn Fn() -> bool) -> Result<(), 
             return Err("cancelled".into());
         }
         let bytes = read(path)?;
-        let name = path.file_name().and_then(|name| name.to_str()).unwrap_or("code");
-        let signed = sign(&bytes, &Seal { identifier: &identifier_for(name, &bytes), ..Seal::default() })
-            .map_err(|error| format!("{}: {error}", path.display()))?;
+        let name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("code");
+        let signed = sign(
+            &bytes,
+            &Seal {
+                identifier: &identifier_for(name, &bytes),
+                ..Seal::default()
+            },
+        )
+        .map_err(|error| format!("{}: {error}", path.display()))?;
         write(path, &signed)?;
     }
     let contents = seal.app.join("Contents");
@@ -96,37 +105,63 @@ fn sealed_as(path: &str) -> Sealed {
     }
     if localised {
         // A base localisation is always there, so it is not optional.
-        return Sealed::File { optional: !path.starts_with("Resources/Base.lproj/"), in_version_1: true };
+        return Sealed::File {
+            optional: !path.starts_with("Resources/Base.lproj/"),
+            in_version_1: true,
+        };
     }
     if path == "Info.plist" || path == "PkgInfo" {
         return Sealed::Omitted;
     }
     if resource || path == "version.plist" {
-        return Sealed::File { optional: false, in_version_1: true };
+        return Sealed::File {
+            optional: false,
+            in_version_1: true,
+        };
     }
     if path == "embedded.provisionprofile" {
-        return Sealed::File { optional: false, in_version_1: false };
+        return Sealed::File {
+            optional: false,
+            in_version_1: false,
+        };
     }
     let dsym = path.split('/').any(|part| part.ends_with(".dSYM"));
     let code_folder = [
-        "Frameworks/", "SharedFrameworks/", "PlugIns/", "Plug-ins/", "XPCServices/", "Helpers/", "MacOS/",
-        "Library/Automator/", "Library/Spotlight/", "Library/LoginItems/",
+        "Frameworks/",
+        "SharedFrameworks/",
+        "PlugIns/",
+        "Plug-ins/",
+        "XPCServices/",
+        "Helpers/",
+        "MacOS/",
+        "Library/Automator/",
+        "Library/Spotlight/",
+        "Library/LoginItems/",
     ]
     .iter()
     .any(|folder| path.starts_with(folder));
     if !dsym && (code_folder || !path.contains('/')) {
         return Sealed::Nested;
     }
-    Sealed::File { optional: false, in_version_1: false }
+    Sealed::File {
+        optional: false,
+        in_version_1: false,
+    }
 }
 
 /// Every file under `folder`, as paths relative to `contents`, sorted.
-fn files_in(contents: &Path, folder: &Path, found: &mut Vec<(String, PathBuf)>) -> Result<(), String> {
+fn files_in(
+    contents: &Path,
+    folder: &Path,
+    found: &mut Vec<(String, PathBuf)>,
+) -> Result<(), String> {
     let entries = fs::read_dir(folder).map_err(|error| format!("{}: {error}", folder.display()))?;
     for entry in entries {
         let entry = entry.map_err(|error| format!("{}: {error}", folder.display()))?;
         let path = entry.path();
-        let kind = entry.file_type().map_err(|error| format!("{}: {error}", path.display()))?;
+        let kind = entry
+            .file_type()
+            .map_err(|error| format!("{}: {error}", path.display()))?;
         let relative = path
             .strip_prefix(contents)
             .ok()
@@ -134,7 +169,9 @@ fn files_in(contents: &Path, folder: &Path, found: &mut Vec<(String, PathBuf)>) 
             .ok_or_else(|| format!("{} is not a UTF-8 path", path.display()))?
             .replace('\\', "/");
         if kind.is_symlink() {
-            return Err(format!("{relative} is a link, which an app made here does not carry"));
+            return Err(format!(
+                "{relative} is a link, which an app made here does not carry"
+            ));
         } else if kind.is_dir() {
             if relative != "_CodeSignature" {
                 files_in(contents, &path, found)?;
@@ -158,12 +195,19 @@ fn code_resources(contents: &Path, executable: &Path) -> Result<String, String> 
         if path == executable {
             continue;
         }
-        let key = format!("\t\t<key>{}</key>\n", escape(relative));
+        let key = format!("\t\t<key>{}</key>\n", plist_text(relative));
         match sealed_as(relative) {
             Sealed::Omitted => {}
-            Sealed::File { optional, in_version_1 } => {
+            Sealed::File {
+                optional,
+                in_version_1,
+            } => {
                 let bytes = read(path)?;
-                let optional_entry = if optional { "\t\t\t<key>optional</key>\n\t\t\t<true/>\n" } else { "" };
+                let optional_entry = if optional {
+                    "\t\t\t<key>optional</key>\n\t\t\t<true/>\n"
+                } else {
+                    ""
+                };
                 if in_version_1 {
                     let sha1 = base64(&<sha1::Sha1 as sha1::Digest>::digest(&bytes));
                     version_1 += &key;
@@ -183,7 +227,10 @@ fn code_resources(contents: &Path, executable: &Path) -> Result<String, String> 
                 let hashes = code_directory_hashes(&read(path)?)
                     .map_err(|error| format!("{relative} is not signed code: {error}"))?;
                 // Apple silicon first, as in `codesign` on an Apple silicon Mac.
-                let mut ordered: Vec<&(Cpu, [u8; 20])> = hashes.iter().filter(|(cpu, _)| *cpu == Cpu::ARM64).collect();
+                let mut ordered: Vec<&(Cpu, [u8; 20])> = hashes
+                    .iter()
+                    .filter(|(cpu, _)| *cpu == Cpu::ARM64)
+                    .collect();
                 ordered.extend(hashes.iter().filter(|(cpu, _)| *cpu != Cpu::ARM64));
                 let requirement = ordered
                     .iter()
@@ -194,7 +241,7 @@ fn code_resources(contents: &Path, executable: &Path) -> Result<String, String> 
                 version_2 += &format!(
                     "\t\t<dict>\n\t\t\t<key>cdhash</key>\n\t\t\t<data>\n\t\t\t{}\n\t\t\t</data>\n\t\t\t<key>requirement</key>\n\t\t\t<string>{}</string>\n\t\t</dict>\n",
                     base64(&ordered[0].1),
-                    escape(&requirement)
+                    plist_text(&requirement)
                 );
             }
         }
@@ -209,7 +256,9 @@ fn base64(bytes: &[u8]) -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut text = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for group in bytes.chunks(3) {
-        let word = group.iter().enumerate().fold(0u32, |word, (index, &byte)| word | (byte as u32) << (16 - 8 * index));
+        let word = group.iter().enumerate().fold(0u32, |word, (index, &byte)| {
+            word | (byte as u32) << (16 - 8 * index)
+        });
         for index in 0..4 {
             text.push(if index <= group.len() {
                 ALPHABET[(word >> (18 - 6 * index) & 63) as usize] as char
@@ -223,11 +272,6 @@ fn base64(bytes: &[u8]) -> String {
 
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
-}
-
-/// Escape text as in a property list, only where XML requires it.
-fn escape(text: &str) -> String {
-    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
 }
 
 /// The rules of `codesign` for an app, as they appear in CodeResources:
