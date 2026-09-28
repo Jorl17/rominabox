@@ -56,6 +56,7 @@ fn everything(root: &Path) -> Value {
             "initial": "phosphor"
         },
         "target": "windows",
+        "bothPlatforms": true,
         "intelMacs": true
     })
 }
@@ -84,6 +85,7 @@ fn a_project_opens_with_every_setting_and_file_it_was_saved_with() {
     let root = rominabox_scratch::Scratch::dir("rominabox-project-everything");
     let settings: ProjectSettings = serde_json::from_value(everything(&root)).unwrap();
     let saved = serde_json::to_value(&settings).unwrap();
+    assert_eq!(saved["bothPlatforms"], true, "a project takes Mac and Windows");
     save_project(&ProjectSaveRequest {
         archive_path: root.join("Every Setting.rominabox"),
         settings,

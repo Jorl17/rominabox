@@ -96,30 +96,40 @@ function pressButton(container: HTMLElement, words: string) {
   act(() => button.click());
 }
 
+/** What we save in the builder after opening `opened` and going to Export. */
+async function reopenAndSave(opened: Omit<ExportRequest, "outputDir">) {
+  shell.opened = opened;
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  cleanup = () => {
+    act(() => root.unmount());
+    container.remove();
+  };
+  act(() => root.render(<App />));
+  await settle();
+  pressButton(container, "Open project");
+  await settle();
+  pressButton(container, "Export");
+  await settle();
+  pressButton(container, "Save project");
+  await settle();
+  expect(shell.saved).toHaveLength(1);
+  const { outputDir, ...saved } = shell.saved[0];
+  void outputDir;
+  return saved;
+}
+
 describe("a project in the builder", () => {
   it("saves again with every setting it was opened with", async () => {
-    shell.opened = everySetting;
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    cleanup = () => {
-      act(() => root.unmount());
-      container.remove();
-    };
-    act(() => root.render(<App />));
-    await settle();
+    expect(await reopenAndSave(everySetting)).toEqual({
+      ...everySetting,
+      bothPlatforms: false,
+    });
+  });
 
-    pressButton(container, "Open project");
-    await settle();
-    pressButton(container, "Export");
-    await settle();
-    pressButton(container, "Save project");
-    await settle();
-
-    expect(shell.saved).toHaveLength(1);
-    const { outputDir, bothPlatforms, ...saved } = shell.saved[0];
-    void outputDir;
-    void bothPlatforms;
-    expect(saved).toEqual(everySetting);
+  it("stays a game for Mac and Windows", async () => {
+    const both = { ...everySetting, target: "macos", bothPlatforms: true };
+    expect(await reopenAndSave(both as typeof everySetting)).toEqual(both);
   });
 });
