@@ -298,6 +298,34 @@ fn a_preset_takes_the_files_it_names_from_a_neighbouring_folder() {
     );
 }
 
+/// A preset written on Windows can list its files with backslashes, for
+/// example `..\..\..\shaders\menus\menu-hdr.slang` in `bezel/scanline-classic/`.
+/// In RetroArch a backslash in the paths of a preset is the separator of the
+/// platform, so we bundle such a preset as if it were written with slashes.
+#[test]
+fn a_preset_that_names_its_files_with_backslashes_is_bundled_whole() {
+    let source = rominabox_scratch::Scratch::dir("rominabox-shader-backslash");
+    let selection = custom_preset(
+        &source,
+        "crt/royale-pal.glslp",
+        &[
+            (
+                "crt/royale-pal.glslp",
+                "shaders = 1\nshader0 = ..\\pal\\shaders\\pal.glsl\ntextures = \"lut\"\nlut = \"..\\pal\\resources\\lut.png\"\n",
+            ),
+            ("pal/shaders/pal.glsl", PASS),
+        ],
+    );
+    fs::create_dir_all(source.join("pal/resources")).unwrap();
+    fs::write(source.join("pal/resources/lut.png"), PICTURE).unwrap();
+    let root = rominabox_scratch::Scratch::dir("rominabox-shader-backslash-staged");
+    composed(selection).write(&root).unwrap();
+    assert_eq!(
+        files_below(&root.join("shaders/pal")),
+        ["crt/royale-pal.glslp", "icon.png", "pal/resources/lut.png", "pal/shaders/pal.glsl"]
+    );
+}
+
 /// Every relative path in a preset we stage, `../` included, leads to a
 /// staged file in the game's folder for that preset. When we read it again
 /// with the same resolver, it lists the same files, and all of them exist.
