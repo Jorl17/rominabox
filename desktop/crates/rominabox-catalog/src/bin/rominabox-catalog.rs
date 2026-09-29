@@ -113,6 +113,11 @@ fn main() -> ExitCode {
                 let desktop = repository_root().join("desktop");
                 for (name, text) in rendered {
                     let path = desktop.join(name);
+                    // We compile these into the builder, so writing one again
+                    // unchanged would make us compile the builder again.
+                    if std::fs::read_to_string(&path).is_ok_and(|written| written == text) {
+                        continue;
+                    }
                     if let Err(error) = std::fs::write(&path, text) {
                         eprintln!("could not write {}: {error}", path.display());
                         return ExitCode::FAILURE;
