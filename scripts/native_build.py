@@ -371,15 +371,16 @@ def copy_accounts(destination: Path, target: str) -> Path:
     return accounts
 
 
-def build_launcher(destination: Path, target: str, environment: dict[str, str]) -> Path | None:
-    """The game's launcher, for a target where we build it next to the player."""
+def build_launcher(destination: Path, target: str, environment: dict[str, str], fork: Path) -> Path | None:
+    """The game's launcher, for a target where we build it next to the player,
+    built into `destination`, with the parts from the RetroArch fork read
+    from `fork`: the fork archived for a player build, or the checkout's."""
     launcher = recipe()["launcher"].get(require_target(target))
     if launcher is None:
         return None
     sources = launcher_sources(platform_of(target))
     output = destination / "launcher" / launcher["output"]
     output.parent.mkdir(parents=True, exist_ok=True)
-    fork = destination / "retroarch"
     forked = launcher.get("fork", {"includes": [], "flags": [], "sources": []})
     includes = [f"-I{fork / path}" for path in forked["includes"]]
     objects_dir = destination / "launcher" / "objects"

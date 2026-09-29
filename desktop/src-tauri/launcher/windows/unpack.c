@@ -199,6 +199,31 @@ static void sha_end(Sha *sha, unsigned char out[32]) {
     BCryptCloseAlgorithmProvider(sha->algorithm, 0);
 }
 
+/* `path` in the form that Windows' file functions accept at any length.
+ * After `\\?\`, a path is used exactly as written and is not limited to
+ * MAX_PATH. The game's files are deep (in libretro's shader packs, some
+ * files are over a hundred characters from their folder), and a folder that
+ * we unpack or remove has a longer name than the game's, so we use the long
+ * form for every file operation here. The player reads the unpacked game at
+ * its ordinary path, which we keep within MAX_PATH in the export. */
+static wchar_t *long_form(const wchar_t *path) {
+    size_t length = wcslen(path) + 5;
+    wchar_t *longer = malloc(length * sizeof *longer);
+    if (!longer)
+        rominabox_launch_die("out of memory");
+    if (path[0] && path[1] == L':' && path[2] == L'\\')
+        swprintf(longer, length, L"\\\\?\\%ls", path);
+    else
+        wcscpy(longer, path);
+    return longer;
+}
+
+/* `path` without the `\\?\` of the long form, as we use it in the rest of
+ * the launcher and in the player. */
+static const wchar_t *ordinary(const wchar_t *path) {
+    return wcsncmp(path, L"\\\\?\\", 4) == 0 ? path + 4 : path;
+}
+
 static wchar_t *joined(const wchar_t *folder, const char *relative) {
     wchar_t *tail = to_wide(relative);
     size_t length = wcslen(folder) + 1 + wcslen(tail) + 1;
@@ -388,7 +413,7 @@ static void unpack_file(HANDLE self, ZSTD_DCtx *context, const Entry *entry, con
         broken();
 }
 
-void unpack_remove_tree(const wchar_t *path) {
+static void remove_tree(const wchar_t *path) {
     DWORD attributes = GetFileAttributesW(path);
     if (attributes == INVALID_FILE_ATTRIBUTES)
         return;
@@ -413,7 +438,7 @@ void unpack_remove_tree(const wchar_t *path) {
                 if (!child)
                     continue;
                 swprintf(child, child_length, L"%ls\\%ls", path, found.cFileName);
-                unpack_remove_tree(child);
+                remove_tree(child);
                 free(child);
             } while (FindNextFileW(search, &found));
             FindClose(search);
@@ -426,6 +451,12 @@ void unpack_remove_tree(const wchar_t *path) {
             SetFileAttributesW(path, attributes & ~FILE_ATTRIBUTE_READONLY);
         DeleteFileW(path);
     }
+}
+
+void unpack_remove_tree(const wchar_t *path) {
+    wchar_t *longer = long_form(path);
+    remove_tree(longer);
+    free(longer);
 }
 
 /* The game's folders beside `target`, which are earlier versions and the
@@ -463,7 +494,7 @@ static void forget_versions(const wchar_t *target, int keep) {
             swprintf(other, length, L"%.*ls\\%ls", (int)folder_length, target, found.cFileName);
             swprintf(removing, length, L"%ls.removing-%lu", other, GetCurrentProcessId());
             if (MoveFileExW(other, removing, 0))
-                unpack_remove_tree(removing);
+                remove_tree(removing);
         }
         free(other);
         free(removing);
@@ -486,7 +517,11 @@ int unpack_game(const wchar_t *self, const char *local_app_data, int shown, char
         CloseHandle(file);
         return 0;
     }
-    root = to_wide(local_app_data);
+    {
+        wchar_t *given = to_wide(local_app_data);
+        root = long_form(given);
+        free(given);
+    }
     target = joined(root, pack.runtime);
 
     if (!unpacked(target, &pack)) {
@@ -537,14 +572,14 @@ int unpack_game(const wchar_t *self, const char *local_app_data, int shown, char
     }
     CloseHandle(file);
 
-    size = WideCharToMultiByte(CP_UTF8, 0, target, -1, NULL, 0, NULL, NULL);
+    size = WideCharToMultiByte(CP_UTF8, 0, ordinary(target), -1, NULL, 0, NULL, NULL);
     if (size <= 0 || (size_t)size > folder_cap)
         rominabox_launch_die("a path does not fit");
-    WideCharToMultiByte(CP_UTF8, 0, target, -1, folder, size, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, ordinary(target), -1, folder, size, NULL, NULL);
     launcher = joined(target, pack.program);
-    if (wcslen(launcher) + 1 > program_cap)
+    if (wcslen(ordinary(launcher)) + 1 > program_cap)
         rominabox_launch_die("a path does not fit");
-    wcscpy(program, launcher);
+    wcscpy(program, ordinary(launcher));
     free(launcher);
     free(target);
     free(root);
@@ -552,7 +587,9 @@ int unpack_game(const wchar_t *self, const char *local_app_data, int shown, char
 }
 
 void unpack_forget_all(const char *folder) {
-    wchar_t *target = to_wide(folder);
+    wchar_t *given = to_wide(folder);
+    wchar_t *target = long_form(given);
     forget_versions(target, 0);
     free(target);
+    free(given);
 }

@@ -36,7 +36,7 @@ def compile_macos(directory: Path) -> tuple[Path, Path]:
 
 def compile_windows(directory: Path) -> tuple[Path, Path]:
     toolchain.activate()
-    built = native_build.build_launcher(directory, host_target(), dict(os.environ))
+    built = native_build.build_launcher(directory, host_target(), dict(os.environ), native_build.FORK)
     game = directory / "Plan"
     game.mkdir()
     binary = game / "Plan.exe"

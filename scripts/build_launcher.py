@@ -38,7 +38,7 @@ def main() -> int:
     if native_build.launch_library(kit):
         built = native_build.build_launch_library(destination, kit)
     else:
-        built = native_build.build_launcher(destination, target, dict(os.environ))
+        built = native_build.build_launcher(destination, target, dict(os.environ), native_build.FORK)
     if built is None:
         raise SystemExit(f"the player recipe builds no launcher for {target}")
     print(built)

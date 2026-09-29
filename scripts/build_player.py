@@ -84,7 +84,7 @@ def build_slice(destination: Path, target: str, commit: str, switches: dict[str,
             raise SystemExit(f"The built {target} player has no {name} ({function})")
     write_info(destination, target, commit, switches)
     native_build.run(["strip", str(binary)], retroarch, environment)
-    launcher = native_build.build_launcher(destination, target, environment)
+    launcher = native_build.build_launcher(destination, target, environment, retroarch)
     preview = native_build.build_preview(destination, target, environment, rmlui_build)
     for built in [binary, *([launcher] if launcher else []), *([preview] if preview else [])]:
         foreign = native_build.foreign_imports(built, target, environment)
