@@ -246,6 +246,13 @@ SCOPES = [
         prepare=RMLUI_PREPARE,
     ),
     Scope(
+        "testplayer",
+        "that a launched test, given no build by name, runs the newest player built from the fork as "
+        "it is now with the menu's script driver, never a newer build of another commit",
+        "that such a build exists or runs; it reads build records it makes in a temporary folder",
+        [PYTHON, str(ROOT / "scripts/test_player_choice.py")],
+    ),
+    Scope(
         "fixtures",
         "that a test file this repository does not generate is fetched or skipped out loud, and that the generated cartridge is ready",
         "that a fetched disc boots; the quit scope launches one, and only when the file is actually there",

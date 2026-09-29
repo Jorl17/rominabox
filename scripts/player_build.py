@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import core_source  # noqa: E402
@@ -34,6 +35,30 @@ def player_in(build: Path) -> Path:
     return build / "retroarch" / native_build.binary_name(target)
 
 
+def current_revision() -> str:
+    """The fork commit from which we build the player in this checkout."""
+    return subprocess.check_output(
+        ["git", "-C", str(ROOT / "vendor/retroarch"), "rev-parse", "HEAD"], text=True
+    ).strip()
+
+
+def runs_scripts(build: Path) -> bool:
+    """Whether the player in the build has the menu script driver, which we
+    use in every launched test to drive the menu."""
+    record = build / "build-info.json"
+    return record.is_file() and info(build).get("capabilities", {}).get("menuScript") is True
+
+
+def newest_script_build(builds: Iterable[Path], revision: str) -> Path | None:
+    """The newest of `builds` that a launched test can run: built from the fork
+    commit `revision`, with the menu script driver, and containing its player.
+    A build from another commit proves nothing about the code of this one."""
+    usable = [build for build in builds
+              if runs_scripts(build) and info(build).get("retroarchCommit") == revision
+              and player_in(build).is_file()]
+    return max(usable, key=lambda build: player_in(build).stat().st_mtime, default=None)
+
+
 def selected_build() -> Path:
     """The build in ROMINABOX_TEST_BUILD, refused unless it is from the current fork."""
     selected = os.environ.get("ROMINABOX_TEST_BUILD")
@@ -45,9 +70,7 @@ def selected_build() -> Path:
 def current_build(named: Path) -> Path:
     """`named`, refused unless it was built from the current fork and contains a player."""
     build = named.resolve()
-    revision = subprocess.check_output(
-        ["git", "-C", str(ROOT / "vendor/retroarch"), "rev-parse", "HEAD"], text=True
-    ).strip()
+    revision = current_revision()
     if info(build).get("retroarchCommit") != revision:
         raise SystemExit(f"{build} was not built from the current fork commit {revision}")
     if not player_in(build).is_file():

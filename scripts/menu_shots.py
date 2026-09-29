@@ -623,13 +623,6 @@ def resign_replaced_player(app: Path, entitlements: Path) -> None:
     )
 
 
-def _runs_scripts(build: Path) -> bool:
-    info = build / "build-info.json"
-    return info.is_file() and json.loads(info.read_text(encoding="utf-8")).get("capabilities", {}).get(
-        "menuScript"
-    ) is True
-
-
 def built_player() -> Path:
     """The player for a launched test: one built in this checkout with the
     script driver of the menu.
@@ -647,20 +640,15 @@ def built_player() -> Path:
     )
     if os.environ.get("ROMINABOX_TEST_BUILD"):
         build = player_build.selected_build()
-        if not _runs_scripts(build):
+        if not player_build.runs_scripts(build):
             raise SystemExit(f"{build} has no menu script driver; {how}")
         return player_build.player_in(build)
-    builds = sorted(
-        (
-            player_build.player_in(build)
-            for build in (ROOT / "work").glob("fork-build-*")
-            if _runs_scripts(build) and player_build.player_in(build).is_file()
-        ),
-        key=lambda entry: entry.stat().st_mtime,
-    )
-    if not builds:
-        raise SystemExit(f"no player that runs menu scripts in work/fork-build-*; {how}")
-    return builds[-1]
+    revision = player_build.current_revision()
+    build = player_build.newest_script_build((ROOT / "work").glob("fork-build-*"), revision)
+    if build is None:
+        raise SystemExit(f"no player that runs menu scripts in work/fork-build-* was built "
+                         f"from the fork's {revision[:10]}; {how}")
+    return player_build.player_in(build)
 
 
 def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
