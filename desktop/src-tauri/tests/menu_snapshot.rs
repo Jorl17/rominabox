@@ -93,6 +93,7 @@ fn cases() -> Vec<Case> {
 #[cfg(target_os = "macos")]
 fn export_kit(root: &Path) -> PathBuf {
     let kit = support::kit(root);
+    support::with_shader_library(&kit);
     for directory in [
         "bin",
         "cores",
@@ -396,6 +397,7 @@ fn record(directory: &Path, staged: &BTreeMap<String, String>) {
 fn the_composed_menu_matches_its_snapshot() {
     let root = rominabox_scratch::Scratch::dir("rominabox-menu-snapshot");
     let kit = support::kit(&root);
+    support::with_shader_library(&kit);
     let recording = std::env::var_os("ROMINABOX_RECORD_SNAPSHOT").is_some_and(|value| value == "1");
     let cases = cases();
     let mut failures = Vec::new();

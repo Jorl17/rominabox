@@ -75,6 +75,7 @@ fn every_design_satisfies_the_contract_with_every_capability() {
         for system in ["megadrive", "ps1", "gb"] {
             let base = menu::MenuRequest {
                 system: system.into(),
+                shader_library: rominabox_desktop::repo::at("integrations/shaders/library"),
                 ..menu::MenuRequest::new(&design, support::artwork())
             };
             let requests = [

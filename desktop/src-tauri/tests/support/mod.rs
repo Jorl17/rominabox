@@ -43,6 +43,15 @@ pub fn kit(root: &Path) -> PathBuf {
     kit
 }
 
+/// `kit` with the shader library from which we take libretro's presets in an
+/// export, for a test that bundles them. No other test uses these 5 MB.
+pub fn with_shader_library(kit: &Path) {
+    copy_tree(
+        &rominabox_desktop::repo::at("integrations/shaders/library"),
+        &kit.join("shaders"),
+    );
+}
+
 /// The hypothetical designs under `tests/fixtures/designs`, by name. They have
 /// layouts that no shipped design has, and we must still compose them.
 pub fn hypothetical_designs() -> Vec<String> {
@@ -156,6 +165,14 @@ pub use rominabox_desktop::repo::python;
 /// The windowless RmlUi probe used by the `menu` tests. We build it with the
 /// same recipe as those tests, so this test cannot link a different RmlUi.
 pub fn rml_probe() -> PathBuf {
+    // We build it, or find it up to date, once for the whole test program.
+    // Each check starts Python and reads every source of the probe, and
+    // nothing can change it during the run.
+    static PROBE: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    PROBE.get_or_init(build_rml_probe).clone()
+}
+
+fn build_rml_probe() -> PathBuf {
     let output = Command::new(python())
         .current_dir(rominabox_desktop::repo::root())
         .args([

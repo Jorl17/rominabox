@@ -220,10 +220,10 @@ fn every_file_of_a_game_with_every_shader_fits_windows_path_limit() {
         ("integrations/designs", "designs"),
         ("integrations/parts", "parts"),
         ("desktop/assets/controllers", "menu-assets"),
-        ("integrations/shaders/library", "shaders"),
     ] {
         support::copy_tree(&rominabox_desktop::repo::at(from), &kit.join(to));
     }
+    support::with_shader_library(&kit);
     let every: Vec<String> = rominabox_desktop::shaders::catalog()
         .unwrap()
         .into_iter()
