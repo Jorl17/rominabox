@@ -62,25 +62,30 @@ def macos_finish(built: Path) -> Path:
 
 
 def windows_finish(built: Path) -> Path:
-    """The program Tauri built, with its resources beside it. The program and
-    the command line inside it may import only what comes with Windows."""
+    """The installer Tauri built: one setup program for installing the
+    builder for the person, with its resources, and WebView2 only where
+    Windows lacks it (tauri.conf.json). The program and the command line
+    inside it may import only what comes with Windows."""
     program = built / "release" / f"{PROGRAM}.exe"
     if not program.is_file():
         raise SystemExit(f"missing builder program: {program}")
+    installers = sorted((built / "release/bundle/nsis").glob("*-setup.exe"), key=lambda path: path.stat().st_mtime)
+    if not installers:
+        raise SystemExit(f"missing builder installer in {built / 'release/bundle/nsis'}")
     environment = native_build.build_environment(host_target())
     for binary in (program, RESOURCES / "bin" / CLI_NAME):
         foreign = native_build.foreign_imports(binary, host_target(), environment)
         if foreign:
             raise SystemExit(f"{binary.name} needs DLLs Windows does not have: {', '.join(foreign)}")
-    return program
+    return installers[-1]
 
 
-# How we bundle and finish the builder on each platform. On Windows we build
-# without a bundle. `staged` lists libraries that may be read-only in the
-# Tauri staging folder from an earlier build.
+# How we bundle and finish the builder on each platform: a signed .app on
+# macOS, an NSIS installer on Windows. `staged` lists libraries that may be
+# read-only in the Tauri staging folder from an earlier build.
 PLATFORMS = {
     "macos": {"bundle": ["--bundles", "app"], "staged": "*.dylib", "finish": macos_finish},
-    "windows": {"bundle": ["--no-bundle"], "staged": None, "finish": windows_finish},
+    "windows": {"bundle": ["--bundles", "nsis"], "staged": None, "finish": windows_finish},
 }
 
 
