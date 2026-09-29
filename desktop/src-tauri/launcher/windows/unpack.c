@@ -388,9 +388,7 @@ static void unpack_file(HANDLE self, ZSTD_DCtx *context, const Entry *entry, con
         broken();
 }
 
-/* Remove `path` and everything in it. We remove a link or junction itself,
- * and never follow it out of the folder. */
-static void remove_tree(const wchar_t *path) {
+void unpack_remove_tree(const wchar_t *path) {
     DWORD attributes = GetFileAttributesW(path);
     if (attributes == INVALID_FILE_ATTRIBUTES)
         return;
@@ -415,7 +413,7 @@ static void remove_tree(const wchar_t *path) {
                 if (!child)
                     continue;
                 swprintf(child, child_length, L"%ls\\%ls", path, found.cFileName);
-                remove_tree(child);
+                unpack_remove_tree(child);
                 free(child);
             } while (FindNextFileW(search, &found));
             FindClose(search);
@@ -430,11 +428,11 @@ static void remove_tree(const wchar_t *path) {
     }
 }
 
-/* The game's other folders beside `target`, which are earlier versions and
- * the leftovers of an interrupted unpacking. We rename each before we remove
- * it, and Windows refuses the rename while a program in it runs, so we leave
- * a version that is still running alone. */
-static void forget_other_versions(const wchar_t *target) {
+/* The game's folders beside `target`, which are earlier versions and the
+ * leftovers of an interrupted unpacking, and `target` too unless `keep`. We
+ * rename each before we remove it, and Windows refuses the rename while a
+ * program in it runs, so we leave a version that is still running alone. */
+static void forget_versions(const wchar_t *target, int keep) {
     const wchar_t *name = wcsrchr(target, L'\\');
     const wchar_t *version = name ? wcsrchr(name, L'-') : NULL;
     size_t folder_length;
@@ -461,11 +459,11 @@ static void forget_other_versions(const wchar_t *target) {
         wchar_t *other = malloc(length * sizeof *other);
         wchar_t *removing = malloc(length * sizeof *removing);
         if (other && removing && (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-            && wcscmp(found.cFileName, name + 1) != 0 && !wcsstr(found.cFileName, L".removing-")) {
+            && (!keep || wcscmp(found.cFileName, name + 1) != 0) && !wcsstr(found.cFileName, L".removing-")) {
             swprintf(other, length, L"%.*ls\\%ls", (int)folder_length, target, found.cFileName);
             swprintf(removing, length, L"%ls.removing-%lu", other, GetCurrentProcessId());
             if (MoveFileExW(other, removing, 0))
-                remove_tree(removing);
+                unpack_remove_tree(removing);
         }
         free(other);
         free(removing);
@@ -535,7 +533,7 @@ int unpack_game(const wchar_t *self, const char *local_app_data, int shown, char
         if (!MoveFileExW(fresh, target, 0) && !unpacked(target, &pack))
             rominabox_launch_die("could not put the unpacked game in place");
         unpack_dialog_close(progress.dialog);
-        forget_other_versions(target);
+        forget_versions(target, 1);
     }
     CloseHandle(file);
 
@@ -551,4 +549,10 @@ int unpack_game(const wchar_t *self, const char *local_app_data, int shown, char
     free(target);
     free(root);
     return 1;
+}
+
+void unpack_forget_all(const char *folder) {
+    wchar_t *target = to_wide(folder);
+    forget_versions(target, 0);
+    free(target);
 }

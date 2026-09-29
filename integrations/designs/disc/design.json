@@ -53,6 +53,7 @@
   "overlays": [
     {
       "id": "splash",
+      "holdsGame": true,
       "afterMs": 0,
       "holdMs": 400,
       "leaveMs": 180,

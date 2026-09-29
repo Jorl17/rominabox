@@ -17,4 +17,12 @@
 int unpack_game(const wchar_t *self, const char *local_app_data, int shown, char *folder, size_t folder_cap,
                 wchar_t *program, size_t program_cap);
 
+/* Remove `path` and everything in it. We remove a link or junction itself,
+ * and never follow it. */
+void unpack_remove_tree(const wchar_t *path);
+
+/* Remove every unpacked version of the game unpacked in `folder` (UTF-8),
+ * that one included. */
+void unpack_forget_all(const char *folder);
+
 #endif

@@ -60,10 +60,10 @@ const CONTAINER_FORMATS: &[&str] = &[
     "ccd", "cdi", "chd", "cue", "gdi", "iso", "m3u", "pbp", "rvz", "toc",
 ];
 
-/// What we write in an export. On macOS we write one `.app`. On Windows we
-/// write the executable and, when the runtime requires one, a folder next to
-/// it. We put that app in the output folder and nothing else.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+/// What we write in an export: one `.app` on macOS, and on Windows the
+/// executable and, when the runtime has one, a folder next to it. The output
+/// directory contains that app and nothing else.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ExportTarget {
     Macos,

@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <ftw.h>
 #include <limits.h>
 #include <mach-o/dyld.h>
 #include <pwd.h>
@@ -16,6 +17,8 @@
 #include <unistd.h>
 
 #include "../launch.h"
+#include "../portable_fs.h"
+#include "../../../../vendor/retroarch/rominabox_launch.h"
 #include "arguments.h"
 
 /* stdout is fully buffered when it is not a terminal. In the launcher we
@@ -30,6 +33,29 @@ void rominabox_line_buffer_stdio(void)
 static void die_errno(const char *message) {
     fprintf(stderr, "ROM-in-a-Box: %s: %s\n", message, strerror(errno));
     exit(1);
+}
+
+/* When the player chooses RESET in the menu, we leave RIB_FORGET_MARKER in
+ * the game's data folder. When the player process ends, we remove the folder
+ * with everything in it, including saves and settings, and keep the app. */
+static char forget_folder[LAUNCH_PATH_CAP];
+
+static int remove_entry(const char *path, const struct stat *facts, int kind, struct FTW *where) {
+    (void)facts;
+    (void)kind;
+    (void)where;
+    remove(path);
+    return 0;
+}
+
+static void forget_if_asked(void) {
+    char marker[LAUNCH_PATH_CAP];
+    if (!forget_folder[0])
+        return;
+    rominabox_launch_join(marker, sizeof marker, forget_folder, RIB_FORGET_MARKER);
+    if (fs_exists(marker))
+        /* Deepest first. We remove a link itself and never follow it. */
+        nftw(forget_folder, remove_entry, 16, FTW_DEPTH | FTW_PHYS);
 }
 
 static char *forwarded_argv[LAUNCH_ARGUMENTS_CAP + 1];
@@ -121,6 +147,10 @@ static void prepare(void) {
     }
     if (chdir(launch.data_dir) != 0)
         die_errno(launch.data_dir);
+    if (strlen(launch.data_dir) < sizeof forget_folder) {
+        strcpy(forget_folder, launch.data_dir);
+        atexit(forget_if_asked);
+    }
 
     forwarded_argv[0] = strdup(executable);
     if (!forwarded_argv[0])

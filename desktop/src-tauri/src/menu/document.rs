@@ -27,7 +27,32 @@ pub(crate) fn staged_screens(
     screens: &[Screen],
     chosen: Option<&[String]>,
     discs: usize,
+    target: crate::packaging::ExportTarget,
 ) -> Result<Vec<Screen>, String> {
+    // An entry is one that the design declares on any platform, because we
+    // export one project for every platform.
+    if let Some(ids) = chosen {
+        for id in ids {
+            if !screens.iter().any(|screen| screen.option_label.is_some() && screen.id == *id) {
+                return Err(format!("'{id}' is not an options entry this design declares"));
+            }
+        }
+    }
+    // Only the screens for a game made for `target`: UNINSTALL on Windows,
+    // RESET on a Mac.
+    let screens: Vec<Screen> = screens
+        .iter()
+        .filter(|screen| screen.ships_for(target))
+        .cloned()
+        .collect();
+    let screens = screens.as_slice();
+    let chosen: Option<Vec<String>> = chosen.map(|ids| {
+        ids.iter()
+            .filter(|id| screens.iter().any(|screen| screen.id == **id))
+            .cloned()
+            .collect()
+    });
+    let chosen = chosen.as_deref();
     let entries: Vec<&Screen> = screens
         .iter()
         .filter(|screen| screen.option_label.is_some())

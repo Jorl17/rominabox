@@ -55,6 +55,7 @@
   "overlays": [
     {
       "id": "splash",
+      "holdsGame": true,
       "afterMs": 0,
       "holdMs": 550,
       "leaveMs": 250,
@@ -161,6 +162,32 @@
       "back": "BACK",
       "option": {
         "label": "DISC",
+        "default": true
+      }
+    },
+    {
+      "id": "uninstall",
+      "role": "forget",
+      "platforms": ["windows"],
+      "panel": "uninstall-panel",
+      "heading": "UNINSTALL",
+      "footer": "[ESC]  BACK",
+      "button": "uninstall",
+      "option": {
+        "label": "UNINSTALL",
+        "default": true
+      }
+    },
+    {
+      "id": "reset",
+      "role": "forget",
+      "platforms": ["macos"],
+      "panel": "reset-panel",
+      "heading": "RESET",
+      "footer": "[ESC]  BACK",
+      "button": "reset",
+      "option": {
+        "label": "RESET",
         "default": true
       }
     }

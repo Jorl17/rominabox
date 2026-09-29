@@ -5,6 +5,7 @@
 //! Native. An unknown key is an error, so we refuse a misspelt field instead
 //! of ignoring it.
 
+use crate::packaging::ExportTarget;
 use serde::{Deserialize, Deserializer};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -135,6 +136,8 @@ struct OverlayFile {
     leave_ms: u32,
     #[serde(default)]
     needs: String,
+    #[serde(default)]
+    holds_game: bool,
 }
 
 #[derive(Clone, Default, Deserialize)]
@@ -155,6 +158,7 @@ struct ScreenFile {
     images: Option<String>,
     dialogs: Option<Vec<String>>,
     from: Option<String>,
+    platforms: Option<Vec<ExportTarget>>,
 }
 
 #[derive(Clone, Copy, Deserialize)]
@@ -183,7 +187,7 @@ impl ScreenFile {
         }
         take!(
             panel, heading, footer, button, label, back, page_size, place, option, images,
-            dialogs, from
+            dialogs, from, platforms
         );
         self
     }
@@ -203,10 +207,12 @@ pub enum ScreenRole {
     Discs,
     Accounts,
     MenuControls,
+    /// UNINSTALL on Windows or RESET on a Mac, to forget the game after asking.
+    Forget,
 }
 
 impl ScreenRole {
-    pub const ALL: [ScreenRole; 8] = [
+    pub const ALL: [ScreenRole; 9] = [
         ScreenRole::Pause,
         ScreenRole::Options,
         ScreenRole::Controls,
@@ -215,6 +221,7 @@ impl ScreenRole {
         ScreenRole::Discs,
         ScreenRole::Accounts,
         ScreenRole::MenuControls,
+        ScreenRole::Forget,
     ];
 
     /// The word in `design.json` and `design.cfg`, as in the contract.
@@ -276,6 +283,9 @@ pub struct Screen {
     /// The screen whose button opens this one, when that is not Options or
     /// Pause. BACK on this screen leads there.
     pub opener: Option<String>,
+    /// The platforms on which a game has this screen, or every one if empty.
+    /// UNINSTALL is on Windows, RESET on a Mac.
+    pub platforms: Vec<ExportTarget>,
 }
 
 impl Screen {
@@ -288,6 +298,18 @@ impl Screen {
     /// on a generated list or on a screen that only the design has.
     pub fn back_button(&self) -> String {
         format!("{}-back", self.id)
+    }
+
+    /// Whether a game made for `target` has this screen.
+    pub fn ships_for(&self, target: ExportTarget) -> bool {
+        self.platforms.is_empty() || self.platforms.contains(&target)
+    }
+
+    /// Whether some game could have both this screen and `other`.
+    fn ships_with(&self, other: &Screen) -> bool {
+        self.platforms.is_empty()
+            || other.platforms.is_empty()
+            || self.platforms.iter().any(|target| other.platforms.contains(target))
     }
 }
 
@@ -314,6 +336,8 @@ pub struct Overlay {
     pub leave_ms: u32,
     /// A staged file that we need to draw the overlay. Empty means none.
     pub needs: String,
+    /// We start the game only after this overlay has gone, as for the splash.
+    pub holds_game: bool,
 }
 
 /// The frame of the controller scene in a design.
@@ -618,6 +642,7 @@ fn overlays(declaration: &Path, listed: Vec<OverlayFile>) -> Result<Vec<Overlay>
             hold_ms: entry.hold_ms,
             leave_ms: entry.leave_ms,
             needs: entry.needs,
+            holds_game: entry.holds_game,
         });
     }
     Ok(overlays)
@@ -743,9 +768,15 @@ fn screens(
             images: entry.images,
             dialogs: entry.dialogs.unwrap_or_default(),
             opener: entry.from,
+            platforms: entry.platforms.unwrap_or_default(),
         };
         if let Some(role) = screen.role {
-            if let Some(other) = screens.iter().find(|other| other.role == Some(role)) {
+            // Two screens may have one role on different platforms, and a game
+            // has only the one for its platform.
+            if let Some(other) = screens
+                .iter()
+                .find(|other| other.role == Some(role) && other.ships_with(&screen))
+            {
                 return Err(format!(
                     "screens '{}' and '{}' in {} both take the {} role",
                     other.id,

@@ -35,6 +35,7 @@ pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuR
         discs,
         settings: player_defaults(request),
         sound_pack: request.game.menu_sounds != "off",
+        target: request.game.target,
         // Controller artwork is not part of a design. We show the same pads in
         // every design, from the shared menu-assets in the kit.
         ..crate::menu::MenuRequest::new(

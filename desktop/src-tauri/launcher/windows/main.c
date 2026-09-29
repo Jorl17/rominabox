@@ -413,6 +413,66 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
     return (int)code;
 }
 
+/* When the player chooses UNINSTALL in the menu, we leave RIB_FORGET_MARKER
+ * in the game's data folder. Once the game has ended, we remove its sandbox,
+ * with the saves and settings in the sandbox's folder, its data folder from
+ * the older layout outside a sandbox, and every unpacked copy of it. The
+ * program that the person opened stays. */
+static void forget_if_asked(const LaunchGame *game) {
+    char name[sizeof RIB_GAME_APP_ID_PREFIX + sizeof game->identity];
+    char data[LAUNCH_PATH_CAP];
+    char marker[LAUNCH_PATH_CAP];
+    char *user_data = local_application_data();
+    char *container_utf8 = NULL;
+    wchar_t *wide_name;
+    PWSTR container = NULL;
+    PSID sid = NULL;
+    snprintf(name, sizeof name, RIB_GAME_APP_ID_PREFIX "%s", game->identity);
+    wide_name = wide(name);
+    /* Inside its sandbox the game's per-user folder is the sandbox's own. */
+    if (game->sandbox && SUCCEEDED(DeriveAppContainerSidFromAppContainerName(wide_name, &sid))) {
+        LPWSTR sid_text = NULL;
+        if (ConvertSidToStringSidW(sid, &sid_text)) {
+            if (SUCCEEDED(GetAppContainerFolderPath(sid_text, &container)))
+                container_utf8 = utf8(container);
+            LocalFree(sid_text);
+        }
+        FreeSid(sid);
+    }
+    rominabox_game_data_folder(game, container_utf8 ? container_utf8 : user_data, data, sizeof data);
+    rominabox_launch_join(marker, sizeof marker, data, RIB_FORGET_MARKER);
+    if (fs_exists(marker)) {
+        if (game->sandbox) {
+            DeleteAppContainerProfile(wide_name);
+            /* The sandbox's folder, if anything is left of it. It is the folder
+             * above its AC, with the name of the sandbox. */
+            if (container) {
+                wchar_t *last = wcsrchr(container, L'\\');
+                if (last) {
+                    wchar_t *above;
+                    *last = L'\0';
+                    above = wcsrchr(container, L'\\');
+                    if (above && _wcsicmp(above + 1, wide_name) == 0)
+                        unpack_remove_tree(container);
+                }
+            }
+        }
+        rominabox_game_data_folder(game, user_data, data, sizeof data);
+        {
+            wchar_t *before = wide(data);
+            unpack_remove_tree(before);
+            free(before);
+        }
+        if (unpacked_folder[0])
+            unpack_forget_all(unpacked_folder);
+    }
+    if (container)
+        CoTaskMemFree(container);
+    free(container_utf8);
+    free(wide_name);
+    free(user_data);
+}
+
 /* The value passed in from outside, as UTF-8, which we remove from the
  * environment of the player. NULL when it was not set. */
 static char *from_outside(const wchar_t *name) {
@@ -565,8 +625,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int
         game_folder(folder, sizeof folder);
         rominabox_launch_join(resources, sizeof resources, folder, part_Resources);
         rominabox_read_game(resources, &game);
-        if (game.sandbox)
-            return start_in_sandbox(folder, &game);
+        {
+            int code = game.sandbox ? start_in_sandbox(folder, &game)
+                                    : run(local_application_data(), NULL, opened_by_explorer());
+            forget_if_asked(&game);
+            return code;
+        }
     }
-    return run(local_application_data(), NULL, opened_by_explorer());
 }

@@ -45,6 +45,8 @@ pub struct MenuRequest {
     /// The game has a menu sound pack, and we play its movement cue when the
     /// volume changes. Without a pack we ship a tick for the volume.
     pub sound_pack: bool,
+    /// The platform we make the game for, and so the screens it has.
+    pub target: crate::packaging::ExportTarget,
 }
 
 impl MenuRequest {
@@ -66,6 +68,8 @@ impl MenuRequest {
             discs: 1,
             settings: crate::player_settings::Defaults::default(),
             sound_pack: false,
+            target: crate::packaging::ExportTarget::of_host()
+                .expect("the builder runs on a platform it makes games for"),
         }
     }
 }
@@ -215,7 +219,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     if !request.show_menu {
         let splash = document::place_parts(&manifest, &manifest.fragment(&manifest.documents.splash)?)?;
         super::contract::validate_splash(&manifest, &splash)?;
-        let staged = document::staged_screens(&manifest.screens, None, request.discs)?;
+        let staged = document::staged_screens(&manifest.screens, None, request.discs, request.target)?;
         let cfg = declarations::write(&manifest, &staged, &[], &[], &splash)?;
         let splash = parts(&mut composition, &manifest, &values, &splash)?;
         composition.put(DOCUMENT, Content::Text(splash));
@@ -244,7 +248,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         lists.extend(crate::achievements::accounts_screen(&manifest));
     }
     let entries = entries(&manifest, request, &lists)?;
-    let staged = document::staged_screens(&manifest.screens, Some(&entries), request.discs)?;
+    let staged = document::staged_screens(&manifest.screens, Some(&entries), request.discs, request.target)?;
 
     let scene = scene::compose(
         &request.artwork,
@@ -662,7 +666,13 @@ mod tests {
         let mut screens = crate::menu::declared_screens(&design("native")).unwrap();
         screens.retain(|screen| screen.id != "options");
         let error =
-            document::staged_screens(&screens, Some(&["controls".into()]), 1).unwrap_err();
+            document::staged_screens(
+                &screens,
+                Some(&["controls".into()]),
+                1,
+                crate::packaging::ExportTarget::of_host().unwrap(),
+            )
+            .unwrap_err();
         assert!(
             error.contains("Native base must declare an Options screen"),
             "{error}"

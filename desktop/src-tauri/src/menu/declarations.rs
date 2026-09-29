@@ -248,6 +248,11 @@ pub(crate) fn write(
             &overlay.leave_ms.to_string(),
         )?;
         line(&mut text, &key!(OverlayNeeds, id), &overlay.needs)?;
+        line(
+            &mut text,
+            &key!(OverlayHoldsGame, id),
+            if overlay.holds_game { "1" } else { "" },
+        )?;
     }
 
     let binds = manifest.binds;

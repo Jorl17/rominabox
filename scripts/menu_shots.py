@@ -138,10 +138,12 @@ def _macos_launcher(app: Path) -> Path:
 
 
 def _windows_launcher(app: Path) -> Path:
-    """The program of the game, named after the game, in its folder."""
-    executable = app / f"{app.name}.exe"
-    if executable.is_file():
-        return executable
+    """The game's own program, the one program at the top of its folder:
+    named for the game, in a folder named for the game or, unpacked, for its
+    identity."""
+    programs = sorted(app.glob("*.exe"))
+    if len(programs) == 1:
+        return programs[0]
     raise SystemExit(f"no launcher inside {app}")
 
 
@@ -500,6 +502,7 @@ KIT = ROOT / "desktop/src-tauri/resources/runtime"
 # out of date or from another checkout. See scripts/built.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from built import cli as _cli  # noqa: E402
+import windows_pack  # noqa: E402
 import player_build  # noqa: E402
 from core_source import core_source  # noqa: E402
 
@@ -712,6 +715,10 @@ def _build_a_game(
         raise SystemExit(f"could not export a game to shoot:\n{result.stdout[-900:]}")
     written = [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
     app = next((Path(event["result"]["appPath"]) for event in written if event.get("type") == "result"), None)
+    # A Windows game is one program, and in a harness we work on the folder
+    # of its unpacked files.
+    if app is not None and app.is_file() and PLATFORM == "windows":
+        app = windows_pack.unpacked(app, dict(os.environ, **{quiet_env(): "1"}))
     if app is None or not app.is_dir():
         raise SystemExit(f"the export wrote no app into {out}")
     return app

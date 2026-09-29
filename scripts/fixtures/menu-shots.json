@@ -28,6 +28,10 @@
     "options": [
       "options"
     ],
+    "uninstall": [
+      "options",
+      "uninstall"
+    ],
     "controls": [
       "options",
       "controls"
