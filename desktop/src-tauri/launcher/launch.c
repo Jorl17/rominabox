@@ -792,8 +792,14 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
      * Going on would start the game, and without the switch the check would
      * open an audio device. Stop once the file is on disk, before we touch
      * anything outside the game's data. */
-    if (getenv("ROMINABOX_PLAN_ONLY"))
+    if (getenv("ROMINABOX_PLAN_ONLY")) {
+        /* And return the filter the game would start with, which we pass to
+         * RetroArch as an argument rather than in the file. */
+        if (shader_preset[0])
+            printf("shader\t%s\n", shader_preset);
+        fflush(stdout);
         _Exit(0);
+    }
     join_path(launch->log_path, sizeof launch->log_path, data_dir, "logs/launch.log");
 
     set_variable(launch, RIB_ENV_ACHIEVEMENTS, game.achievements ? "1" : "0");
