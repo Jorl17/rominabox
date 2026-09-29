@@ -48,9 +48,6 @@ windows-sys = { version = "0.59", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 
-[features]
-custom-protocol = ["tauri/custom-protocol"]
-
 [dev-dependencies]
 libc = "0.2.189"
 rominabox-scratch = { path = "../crates/rominabox-scratch" }

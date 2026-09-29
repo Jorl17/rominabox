@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run catalog && npm run scene && vite",
-    "build": "npm run catalog && npm run scene && tsc --noEmit && vite build",
+    "build": "npm run catalog && npm run scene && tsc --noEmit && vite build --outDir vite-build && node ../scripts/sync_folder.mjs vite-build dist",
     "check": "npm run scene && node ../scripts/python.mjs ../scripts/frontend_check.py",
     "test": "vitest run",
     "format": "prettier --write .",

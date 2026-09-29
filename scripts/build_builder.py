@@ -129,7 +129,9 @@ def main() -> int:
             if (built / profile).is_dir():
                 writable(built / profile, platform["staged"])
 
-    subprocess.run(["cargo", "build", "--release", "--features", "custom-protocol", "--bin", "rominabox-cli"],
+    # The features we pass in the Tauri build, so the command line and the app
+    # use one compile of the crate.
+    subprocess.run(["cargo", "build", "--release", "--features", "tauri/custom-protocol", "--bin", "rominabox-cli"],
                    cwd=TAURI, check=True)
     (RESOURCES / "bin").mkdir(parents=True, exist_ok=True)
     shutil.copy2(built / "release" / CLI_NAME, RESOURCES / "bin" / CLI_NAME)
