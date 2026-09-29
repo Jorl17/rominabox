@@ -385,9 +385,14 @@ std::string stage_disc_list(const char *native_assets, const char *data)
          && replace_once(menu, "<div id=\"options-entries\">",
                "<div id=\"options-entries\"><button class=\"menu-action option-entry\" id=\"discs\" disabled=\"disabled\" style=\"display: none;\"><span class=\"option-label\">DISC</span></button>");
    std::string config = read_file(assets / "design.cfg");
-   staged = staged && replace_once(config, "screens = \"pause options controls menu-controls fixture\"",
-               "screens = \"pause options controls menu-controls fixture discs\"")
-         && replace_once(config, "screen_button_options = \"options fixture-back\"",
+   /* We add the disc list to the screens that the design declares, which end
+    * with the screen for the platform (UNINSTALL or RESET). */
+   const size_t screens = config.find("screens = \"");
+   const size_t screens_end = screens == std::string::npos ? screens : config.find('"', screens + 11);
+   staged = staged && screens_end != std::string::npos;
+   if (staged)
+      config.insert(screens_end, " discs");
+   staged = staged && replace_once(config, "screen_button_options = \"options fixture-back\"",
                "screen_button_options = \"options fixture-back discs-back\"");
    config += "\nscreen_panel_discs = \"discs-panel\"\nscreen_heading_discs = \"DISC\""
              "\nscreen_footer_discs = \"ESC  BACK\"\nscreen_button_discs = \"discs\""
@@ -731,6 +736,15 @@ void background_play_is_the_players(const char *native_assets, const char *data)
  * only in a game whose core requested rumble on a pad. In any other game we
  * disable the setting and hide it. We apply a change in RetroArch at once and
  * write it to the player's file. */
+/* Options, turned to the page with `id`. A design splits its entries into
+ * pages, and the platform screen (UNINSTALL or RESET) can move one onward. */
+void show_option(void *menu, const char *id)
+{
+   int x = 0, y = 0, w = 0, h = 0;
+   for (int turns = 0; turns < 4 && !inspect.box(id, &x, &y, &w, &h); ++turns)
+      click_and_frame(menu, "options-next");
+}
+
 void rumble_is_the_players_where_the_game_rumbles(const char *native_assets, const char *data)
 {
    const std::string file = std::string(data) + "/rumble.cfg";
@@ -753,6 +767,7 @@ void rumble_is_the_players_where_the_game_rumbles(const char *native_assets, con
       host.rumbles = true;
       if (!(menu = open_menu())) continue;
       click_and_frame(menu, "options");
+      show_option(menu, "rumble");
       check(!inspect.has_class("rumble", "disabled") && inspect.box("rumble", &x, &y, &w, &h)
                && std::string(inspect.text("rumble-state")) == "ON"
                && inspect.has_class("rumble", "on"),
@@ -1312,6 +1327,17 @@ int main(int argc, char **argv)
       rib_menu_toggle(menu, true);
       frame(menu);
       check(view.document.has_element("save"), "a menu opened before its document is built again opens");
+      /* A key in that gap must not reach the menu's focus through the old
+       * document, which ElementDocument::GetContext and
+       * Context::GetFocusElement would then read. */
+      rib_menu_toggle(menu, false);
+      rib_menu_context_destroy(menu);
+      rib_menu_context_reset(menu);
+      rib_menu_toggle(menu, true);
+      rib_menu_key(menu, RIB_KEY_CANCEL);
+      rib_menu_key(menu, RIB_KEY_DOWN);
+      frame(menu);
+      check(view.document.has_element("save"), "a key before the document is built again is ignored");
       /* Going fullscreen while the game runs with something drawn over it. We
        * build the new document in a frame of the running game, and the pause
        * screen must not appear over it. */

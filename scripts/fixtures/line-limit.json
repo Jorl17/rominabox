@@ -8,7 +8,7 @@
     "desktop/src/App.test.tsx": 1006,
     "desktop/src/App.tsx": 1729,
     "scripts/builder_drive.mjs": 1660,
-    "scripts/native_runtime/test_menu_orchestration.cpp": 1351,
+    "scripts/native_runtime/test_menu_orchestration.cpp": 1377,
     "scripts/native_runtime/test_rmlui_interaction.cpp": 1913
   }
 }

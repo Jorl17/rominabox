@@ -181,6 +181,7 @@ extern "C" void rib_host_resume(void) {}
 extern "C" void rib_host_toggle_fullscreen(void) {}
 extern "C" void rib_host_show_pointer(bool) {}
 extern "C" void rib_host_quit(void) { host.quit = true; }
+extern "C" void rib_host_forget(void) { host.forgotten = true; }
 extern "C" bool rib_host_setting(rib_setting_key key, float *value)
 {
    const auto found = host.settings.find(rib::setting_key_name(key));

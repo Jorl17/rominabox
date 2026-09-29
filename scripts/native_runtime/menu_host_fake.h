@@ -76,6 +76,7 @@ struct FakeHost
    /* The commands from the menu to the host. */
    std::vector<Sound> sounds;
    bool quit = false;
+   bool forgotten = false;
    bool script_finished = false;
    std::string error_log;
 

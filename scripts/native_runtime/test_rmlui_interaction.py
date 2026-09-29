@@ -191,10 +191,12 @@ def orchestration_fixtures() -> None:
     menu.write_text(markup, newline="\n")
     declarations = assets / "design.cfg"
     config = declarations.read_text()
-    assert 'screens = "pause options controls menu-controls"' in config
+    # We add the screen of the fixture to the screens that the design
+    # declares, which end with this platform's screen (UNINSTALL or RESET).
+    declared = re.search(r'^screens = "pause options controls menu-controls[^"]*"$', config, re.M)
+    assert declared, config
     assert 'screen_button_options = "options"' in config
-    config = config.replace('screens = "pause options controls menu-controls"',
-                            'screens = "pause options controls menu-controls fixture"', 1)
+    config = config.replace(declared.group(0), declared.group(0)[:-1] + ' fixture"', 1)
     config = config.replace('screen_button_options = "options"',
                             'screen_button_options = "options fixture-back"', 1)
     config += ('\nscreen_panel_fixture = "fixture-panel"'

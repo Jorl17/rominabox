@@ -186,8 +186,8 @@ void defaults_and_words(void *menu)
 {
    check(view.document.has_element("menu-controls"), "Options offers MENU CONTROLS");
    expect_row("menu", {"Escape", "Home", "L3+R3"}, "the defaults");
-   expect_row("confirm", {"Enter", "Right button"}, "the defaults");
-   expect_row("back", {"Escape", "Bottom button"}, "the defaults");
+   expect_row("confirm", {"Enter", "Bottom button"}, "the defaults");
+   expect_row("back", {"Escape", "Right button"}, "the defaults");
    check(inspect.has_class("menu-control-menu-1", "key") && !inspect.has_class("menu-control-menu-1", "pad"),
          "a key's chip is marked key");
    check(inspect.has_class("menu-control-menu-2", "pad") && !inspect.has_class("menu-control-menu-2", "key"),
@@ -214,7 +214,7 @@ void add_and_remove(void *menu)
    /* We capture pad inputs by their position on the standard pad, and show
     * a chord in the words for each position. */
    capture(menu, "confirm", "pad:x");
-   expect_row("confirm", {"Enter", "Right button", "Top button"}, "a pad button captured");
+   expect_row("confirm", {"Enter", "Bottom button", "Top button"}, "a pad button captured");
    click(menu, "menu-control-confirm-3");
 }
 
@@ -240,7 +240,7 @@ void capture_look_and_ends(void *menu)
 
    capture(menu, "back", "key:escape");
    expect_status("BINDING UNCHANGED", "Escape during a capture");
-   expect_row("back", {"Escape", "Bottom button"}, "Escape during a capture");
+   expect_row("back", {"Escape", "Right button"}, "Escape during a capture");
 
    capture(menu, "back", "");
    expect_status("USE A KEY OR A PAD BUTTON", "an input that is no key and no pad input");
@@ -277,10 +277,10 @@ void nobody_is_locked_out(void *menu)
    capture(menu, "back", "key:enter");
    expect_status("CONFIRM MUST KEEP A BINDING", "a capture that would leave CONFIRM nothing");
    expect_row("confirm", {"Enter"}, "a refused capture");
-   expect_row("back", {"Escape", "Bottom button"}, "a refused capture");
+   expect_row("back", {"Escape", "Right button"}, "a refused capture");
 
-   capture(menu, "confirm", "pad:a");
-   expect_row("confirm", {"Enter", "Right button"}, "CONFIRM's pad button back");
+   capture(menu, "confirm", "pad:b");
+   expect_row("confirm", {"Enter", "Bottom button"}, "CONFIRM's pad button back");
 }
 
 /* Clicking + with the mouse captures the next press. The mouse button that
@@ -311,7 +311,7 @@ void the_input_that_binds_acts_once_let_go(void *menu)
 {
    host.keys_down = {"f2"};
    capture(menu, "confirm", "key:f2");
-   expect_row("confirm", {"Enter", "Right button", "f2"}, "F2 captured for CONFIRM");
+   expect_row("confirm", {"Enter", "Bottom button", "f2"}, "F2 captured for CONFIRM");
    check(!press({"f2"}, {}).ok, "F2, still held from its capture, does not confirm");
    press({}, {});
    check(press({"f2"}, {}).ok, "let go and pressed again, F2 confirms");
@@ -334,34 +334,34 @@ void the_input_that_binds_acts_once_let_go(void *menu)
    press({}, {});
    check(press({}, {"x"}).cancel, "let go and pressed again, it goes back");
    click(menu, "menu-control-back-3");
-   expect_row("confirm", {"Enter", "Right button"}, "after the held inputs");
-   expect_row("back", {"Escape", "Bottom button"}, "after the held inputs");
+   expect_row("confirm", {"Enter", "Bottom button"}, "after the held inputs");
+   expect_row("back", {"Escape", "Right button"}, "after the held inputs");
 }
 
 void one_capture_swaps_confirm_and_back(void *menu)
 {
-   capture(menu, "confirm", "pad:b");
-   expect_row("confirm", {"Enter", "Bottom button"}, "the bottom button captured for CONFIRM");
-   expect_row("back", {"Escape", "Right button"}, "the bottom button captured for CONFIRM");
-   expect_status("SWAPPED WITH BACK", "the bottom button captured for CONFIRM");
+   capture(menu, "confirm", "pad:a");
+   expect_row("confirm", {"Enter", "Right button"}, "the right button captured for CONFIRM");
+   expect_row("back", {"Escape", "Bottom button"}, "the right button captured for CONFIRM");
+   expect_status("SWAPPED WITH BACK", "the right button captured for CONFIRM");
 }
 
 void swapped_buttons_drive_the_menu(void *menu)
 {
-   const Pressed bottom = press({}, {"b"});
-   check(bottom.ok && !bottom.cancel, "after the swap the bottom button is OK");
    const Pressed right = press({}, {"a"});
-   check(right.cancel && !right.ok, "after the swap the right button is cancel");
+   check(right.ok && !right.cancel, "after the swap the right button is OK");
+   const Pressed bottom = press({}, {"b"});
+   check(bottom.cancel && !bottom.ok, "after the swap the bottom button is cancel");
    check(press({"enter"}, {}).ok, "Enter still confirms");
 
-   /* Navigating with them: pressing the right button leaves MENU CONTROLS for
-    * Options, and the bottom button presses the focused element there. */
-   act(menu, right);
-   check(view.screens.current() == "options", "the right button goes back to Options, on "
+   /* Navigating with them: pressing the bottom button leaves MENU CONTROLS for
+    * Options, and the right button presses the focused element there. */
+   act(menu, bottom);
+   check(view.screens.current() == "options", "the bottom button goes back to Options, on "
          + view.screens.current());
    view.focus.set("menu-controls");
-   act(menu, bottom);
-   check(view.screens.current() == "menu-controls", "the bottom button opens the focused entry, on "
+   act(menu, right);
+   check(view.screens.current() == "menu-controls", "the right button opens the focused entry, on "
          + view.screens.current());
 }
 
@@ -370,7 +370,7 @@ void what_retroarch_reads(void *menu)
    /* MENU's pad bindings: Home alone, L3 and R3 together. */
    check(press({}, {"home"}).menu_pad, "Home opens the menu");
    check(!press({}, {"l3"}).menu_pad && press({}, {"l3", "r3"}).menu_pad, "L3+R3 held together opens the menu");
-   check(!press({}, {"b"}).menu_pad, "a CONFIRM button does not open the menu");
+   check(!press({}, {"a"}).menu_pad, "a CONFIRM button does not open the menu");
    /* Escape is bound to MENU and BACK. It acts once, as MENU, through its keys. */
    const Pressed escape = press({"escape"}, {});
    check(!escape.cancel, "Escape, which MENU also holds, is not BACK's as well");
@@ -405,10 +405,10 @@ void a_full_row(void *menu)
    capture(menu, "confirm", "key:f3");
    capture(menu, "confirm", "key:f4");
    capture(menu, "back", "pad:y");
-   capture(menu, "back", "pad:b");
+   capture(menu, "back", "pad:a");
    expect_status("NO ROOM IN CONFIRM", "a swap that would overfill a row");
-   expect_row("confirm", {"Enter", "Bottom button", "f2", "f3", "f4"}, "a refused swap");
-   expect_row("back", {"Escape", "Right button", "Left button"}, "a refused swap");
+   expect_row("confirm", {"Enter", "Right button", "f2", "f3", "f4"}, "a refused swap");
+   expect_row("back", {"Escape", "Bottom button", "Left button"}, "a refused swap");
    click(menu, "menu-control-back-3");
    click(menu, "menu-control-confirm-5");
    click(menu, "menu-control-confirm-4");
@@ -422,7 +422,7 @@ void reset(void *menu)
    click(menu, "menu-controls-reset");
    expect_status("DEFAULTS RESTORED", "RESET");
    expect_row("confirm", {"Space", "Top button"}, "RESET");
-   expect_row("back", {"Escape", "Bottom button"}, "RESET");
+   expect_row("back", {"Escape", "Right button"}, "RESET");
    check(!path_is_valid((data + "/menu-controls.cfg").c_str()), "RESET removes the player's file");
 }
 }
@@ -460,14 +460,14 @@ int main(int argc, char **argv)
    /* At the next launch we read the player's file. The swap is still there
     * and still applies in the menu. */
    menu = open(argv[1]);
-   expect_row("confirm", {"Enter", "Bottom button"}, "a relaunch");
-   expect_row("back", {"Escape", "Right button"}, "a relaunch");
-   check(press({}, {"b"}).ok, "after a relaunch the bottom button is still OK");
+   expect_row("confirm", {"Enter", "Right button"}, "a relaunch");
+   expect_row("back", {"Escape", "Bottom button"}, "a relaunch");
+   check(press({}, {"a"}).ok, "after a relaunch the right button is still OK");
    close(menu);
 
    /* A later export with other defaults does not replace the player's. */
    menu = open(argv[2]);
-   expect_row("confirm", {"Enter", "Bottom button"}, "a later export");
+   expect_row("confirm", {"Enter", "Right button"}, "a later export");
    reset(menu);
    close(menu);
    menu = open(argv[2]);
