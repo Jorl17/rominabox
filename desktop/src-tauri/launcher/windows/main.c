@@ -22,6 +22,7 @@
 #include "../launch.h"
 #include "../portable_fs.h"
 #include "pad_relay.h"
+#include "unpack.h"
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 
 #define RIB_WINDOWS_PART(name, path) static const char part_##name[] = path;
@@ -65,6 +66,33 @@ static void own_folder(char *out, size_t out_cap) {
         rominabox_launch_die("a path does not fit");
     strcpy(out, folder);
     free(folder);
+}
+
+/* We run a game made into one program from the folder we unpacked it into:
+ * that folder and the launcher in it, set once before anything else. Empty
+ * for a game laid out as a folder, which we run from where this program is. */
+static char unpacked_folder[LAUNCH_PATH_CAP];
+static wchar_t unpacked_program[32768];
+
+static void game_folder(char *out, size_t out_cap) {
+    if (!unpacked_folder[0]) {
+        own_folder(out, out_cap);
+        return;
+    }
+    if (strlen(unpacked_folder) >= out_cap)
+        rominabox_launch_die("a path does not fit");
+    strcpy(out, unpacked_folder);
+}
+
+/* The launcher to start inside the sandbox: the one in the game's folder. */
+static void game_program(wchar_t *path, DWORD capacity) {
+    if (!unpacked_program[0]) {
+        own_path(path, capacity);
+        return;
+    }
+    if (wcslen(unpacked_program) >= capacity)
+        rominabox_launch_die("a path does not fit");
+    wcscpy(path, unpacked_program);
 }
 
 /* The per-user application data folder, %LOCALAPPDATA%. */
@@ -200,6 +228,8 @@ static void append_argument(wchar_t **line, size_t *length, size_t *capacity, co
  * pass the values known only outside in these. */
 static const wchar_t outside_user_data[] = L"ROMINABOX_OUTSIDE_USER_DATA";
 static const wchar_t outside_opened_by_person[] = L"ROMINABOX_OPENED_BY_PERSON";
+/* The program that the person opened, also started from a taskbar pin. */
+static const wchar_t outside_program[] = L"ROMINABOX_OUTSIDE_PROGRAM";
 /* internetClient, the capability to open connections to the internet. */
 static const wchar_t internet_client[] = L"S-1-15-3-1";
 
@@ -311,7 +341,7 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
     PadRelay *pads;
     DWORD code = 1;
 
-    own_path(program, sizeof program / sizeof program[0]);
+    game_program(program, sizeof program / sizeof program[0]);
     capabilities.AppContainerSid = sandbox_of(game);
     let_sandbox(capabilities.AppContainerSid, folder, FILE_GENERIC_READ | FILE_GENERIC_EXECUTE);
     /* The data folder of a game exported in the older layout, outside a
@@ -336,6 +366,11 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
 
     SetEnvironmentVariableW(outside_user_data, user_data_wide);
     SetEnvironmentVariableW(outside_opened_by_person, opened_by_explorer() ? L"1" : NULL);
+    {
+        static wchar_t opened[32768];
+        own_path(opened, sizeof opened / sizeof opened[0]);
+        SetEnvironmentVariableW(outside_program, opened);
+    }
     pads = pad_relay_start();
     InitializeProcThreadAttributeList(NULL, 1, 0, &size);
     attributes = HeapAlloc(GetProcessHeap(), 0, size);
@@ -413,7 +448,7 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     DWORD code = 1;
     size_t index;
 
-    own_folder(folder, sizeof folder);
+    game_folder(folder, sizeof folder);
     rominabox_launch_join(resources, sizeof resources, folder, part_Resources);
     rominabox_launch_join(player, sizeof player, folder, part_Player);
     places.resources = resources;
@@ -436,7 +471,10 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     {
         static wchar_t path[32768];
         wchar_t *name = wide(RIB_ENV_RELAUNCH);
-        own_path(path, sizeof path / sizeof path[0]);
+        DWORD length = GetEnvironmentVariableW(outside_program, path, sizeof path / sizeof path[0]);
+        SetEnvironmentVariableW(outside_program, NULL);
+        if (length == 0 || length >= sizeof path / sizeof path[0])
+            own_path(path, sizeof path / sizeof path[0]);
         SetEnvironmentVariableW(name, path);
         free(name);
     }
@@ -515,7 +553,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int
         char folder[LAUNCH_PATH_CAP];
         char resources[LAUNCH_PATH_CAP];
         LaunchGame game;
-        own_folder(folder, sizeof folder);
+        wchar_t self[32768];
+        char *user_data = local_application_data();
+        own_path(self, sizeof self / sizeof self[0]);
+        /* Shown only when the game would play sound, so not in a quiet launch. */
+        unpack_game(self, user_data,
+                    !rominabox_launch_is_quiet(opened_by_explorer(), getenv(RIB_ENV_QUIET), getenv(ROMINABOX_SOUND_ENV)),
+                    unpacked_folder, sizeof unpacked_folder, unpacked_program,
+                    sizeof unpacked_program / sizeof unpacked_program[0]);
+        free(user_data);
+        game_folder(folder, sizeof folder);
         rominabox_launch_join(resources, sizeof resources, folder, part_Resources);
         rominabox_read_game(resources, &game);
         if (game.sandbox)

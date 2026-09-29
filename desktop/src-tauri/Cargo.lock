@@ -3280,6 +3280,7 @@ dependencies = [
  "md-5",
  "percent-encoding",
  "rominabox-scratch",
+ "ruzstd",
  "serde",
  "serde_json",
  "sha1",

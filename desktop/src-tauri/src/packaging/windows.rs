@@ -10,9 +10,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
-/// A Windows game, a folder named after the game. It contains the program of
-/// the game, which is the launcher, next to `Resources`, the game files, and
-/// `Runtime`, the player. The player is one program that requires only Windows.
+/// A Windows game: one program, the launcher, with the game packed inside it
+/// (`windows_pack`). We first lay it out as the folder it unpacks into, with
+/// the launcher next to `Resources`, the game's files, and `Runtime`, the
+/// player. The player is one program that uses only what Windows has.
 #[derive(Default)]
 pub(super) struct WindowsPackager {
     app: PathBuf,
@@ -20,6 +21,7 @@ pub(super) struct WindowsPackager {
     player: PathBuf,
     launcher: PathBuf,
     core: PathBuf,
+    identity: String,
 }
 
 impl WindowsPackager {
@@ -115,9 +117,10 @@ impl Packager for WindowsPackager {
     fn describe(
         &mut self,
         request: &ExportRequest,
-        _identity: &str,
+        identity: &str,
         _staging: &Path,
     ) -> Result<(), ExportError> {
+        self.identity = identity.to_string();
         let default_icon = icons::default_icon_path(&request.runtime_kit);
         let icon = request
             .game.icon
@@ -143,6 +146,26 @@ impl Packager for WindowsPackager {
         _cancelled: &AtomicBool,
     ) -> Result<(), ExportError> {
         Ok(())
+    }
+
+    /// Pack the laid-out folder into one program, which we unpack on its
+    /// first launch.
+    fn deliver(
+        &mut self,
+        app: &Path,
+        staging: &Path,
+        name: &str,
+        cancelled: &AtomicBool,
+    ) -> Result<PathBuf, ExportError> {
+        let program = staging.join(name);
+        super::windows_pack::pack(
+            app,
+            &self.launcher,
+            &super::launch_plan::runtime_folder(&self.identity),
+            &program,
+            cancelled,
+        )?;
+        Ok(program)
     }
 
     fn runtime_bytes(&self) -> Result<u64, ExportError> {

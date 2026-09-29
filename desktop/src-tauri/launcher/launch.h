@@ -79,6 +79,12 @@ void rominabox_game_data_folder(const LaunchGame *game, const char *user_data, c
  * start at all. */
 void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch);
 
+/* RIB_ENV_QUIET is one switch for an automated run, and a person who opens
+ * the game does not set it. Without it, a screenshot run would open an output
+ * device and play sound. ROMINABOX_SOUND turns sound on in any case, and we
+ * read it only in the launcher. */
+#define ROMINABOX_SOUND_ENV "ROMINABOX_SOUND"
+
 /* Quiet unless a person started the game or sound is turned on in the
  * environment. ROMINABOX_QUIET makes even that launch quiet. */
 int rominabox_launch_is_quiet(int opened_by_person, const char *quiet, const char *sound);

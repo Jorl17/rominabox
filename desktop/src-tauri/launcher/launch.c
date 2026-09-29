@@ -35,12 +35,6 @@ typedef struct {
 #define LINE_CAP 8192
 #define MANAGED_CAP 64
 
-/* RIB_ENV_QUIET is one switch for an automated run, and a person who opens
- * the game does not set it. Without it, a screenshot run would open an output
- * device and play sound. ROMINABOX_SOUND turns sound on in any case, and we
- * read it only in the launcher. */
-#define ROMINABOX_SOUND_ENV "ROMINABOX_SOUND"
-
 /* The separators in a path: `/` everywhere, and `\` on Windows too. */
 static int is_separator(char c) {
 #if defined(_WIN32)

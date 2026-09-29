@@ -20,6 +20,7 @@ mod macos;
 mod macos_minimum;
 mod slices;
 mod windows;
+mod windows_pack;
 #[cfg(test)]
 mod tests;
 
@@ -434,6 +435,18 @@ trait Packager {
     ) -> Result<(), ExportError>;
     /// The bytes of the app that are the runtime rather than the game.
     fn runtime_bytes(&self) -> Result<u64, ExportError>;
+    /// What the person gets, made from the laid-out `app` in `staging` and
+    /// called `name`. This is the app itself, unless we make it into something
+    /// else for the platform (a Windows game is one program).
+    fn deliver(
+        &mut self,
+        app: &Path,
+        _staging: &Path,
+        _name: &str,
+        _cancelled: &AtomicBool,
+    ) -> Result<PathBuf, ExportError> {
+        Ok(app.to_path_buf())
+    }
 }
 
 /// An export into an app, the same on every platform except for the steps
@@ -614,7 +627,7 @@ where
         archive::write_zip(&[(&app, &app_name)], &zip)?;
         zip
     } else {
-        app
+        packager.deliver(&app, staging.path(), &output_name, cancelled)?
     };
     crate::publish::put_in_place(&output, &final_output, request.replace)?;
     staging.cleanup()?;

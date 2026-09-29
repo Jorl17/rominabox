@@ -133,9 +133,9 @@
     "windows": [
       "advapi32.dll", "bcrypt.dll", "bcryptprimitives.dll", "cfgmgr32.dll", "combase.dll", "comctl32.dll",
       "comdlg32.dll", "crypt32.dll", "d3dcompiler_47.dll",
-      "dinput8.dll", "dsound.dll", "dwmapi.dll", "dxgi.dll", "gdi32.dll", "hid.dll", "imm32.dll",
+      "dinput8.dll", "dsound.dll", "dwmapi.dll", "dxgi.dll", "gdi32.dll", "gdiplus.dll", "hid.dll", "imm32.dll",
       "iphlpapi.dll", "kernel32.dll", "msimg32.dll", "msvcrt.dll", "mswsock.dll", "ntdll.dll",
-      "ole32.dll", "oleaut32.dll", "opengl32.dll", "secur32.dll", "setupapi.dll", "shell32.dll",
+      "ole32.dll", "oleaut32.dll", "opengl32.dll", "secur32.dll", "setupapi.dll", "shcore.dll", "shell32.dll",
       "shlwapi.dll", "user32.dll", "userenv.dll", "uxtheme.dll", "version.dll", "winmm.dll", "ws2_32.dll",
       "xinput1_4.dll"
     ]
@@ -162,8 +162,30 @@
         "-luserenv",
         "-ladvapi32",
         "-ldinput8",
-        "-ldxguid"
-      ]
+        "-ldxguid",
+        "-lbcrypt",
+        "-lgdiplus",
+        "-lgdi32",
+        "-luser32",
+        "-lshlwapi",
+        "-lshcore"
+      ],
+      "fork": {
+        "comment": "The fork's code the launcher links, compiled as the fork's own, without the launcher's warnings: the zstd decoder a game made into one program unpacks itself with (launcher/windows/unpack.c), without its assembly.",
+        "includes": ["deps/zstd/lib"],
+        "flags": ["-DZSTD_DISABLE_ASM", "-DZSTD_LEGACY_SUPPORT=0"],
+        "sources": [
+          "deps/zstd/lib/common/entropy_common.c",
+          "deps/zstd/lib/common/error_private.c",
+          "deps/zstd/lib/common/fse_decompress.c",
+          "deps/zstd/lib/common/xxhash.c",
+          "deps/zstd/lib/common/zstd_common.c",
+          "deps/zstd/lib/decompress/huf_decompress.c",
+          "deps/zstd/lib/decompress/zstd_ddict.c",
+          "deps/zstd/lib/decompress/zstd_decompress.c",
+          "deps/zstd/lib/decompress/zstd_decompress_block.c"
+        ]
+      }
     }
   },
   "launchLibrary": {

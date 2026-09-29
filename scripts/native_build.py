@@ -379,8 +379,19 @@ def build_launcher(destination: Path, target: str, environment: dict[str, str]) 
     sources = launcher_sources(platform_of(target))
     output = destination / "launcher" / launcher["output"]
     output.parent.mkdir(parents=True, exist_ok=True)
-    run(["cc", *compiler_flags(target), *launcher["flags"], "-o", str(output), *map(str, sources),
-         *launcher["libraries"]], destination, environment)
+    fork = destination / "retroarch"
+    forked = launcher.get("fork", {"includes": [], "flags": [], "sources": []})
+    includes = [f"-I{fork / path}" for path in forked["includes"]]
+    objects_dir = destination / "launcher" / "objects"
+    objects_dir.mkdir(parents=True, exist_ok=True)
+    objects = []
+    for index, source in enumerate(forked["sources"]):
+        obj = objects_dir / f"{index:02d}-{Path(source).stem}.o"
+        run(["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w", *forked["flags"], *includes,
+             "-c", str(fork / source), "-o", str(obj)], destination, environment)
+        objects.append(obj)
+    run(["cc", *compiler_flags(target), *launcher["flags"], *includes, "-o", str(output), *map(str, sources),
+         *map(str, objects), *launcher["libraries"]], destination, environment)
     return output
 
 

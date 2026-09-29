@@ -35,6 +35,8 @@ zip = { version = "2.4", default-features = false, features = ["deflate"] }
 icns = { version = "0.4", default-features = false, features = ["pngio"] }
 # For writing a Windows game's icon and version into its programs. BSD-2-Clause.
 editpe = { version = "0.2.4", default-features = false, features = ["std"] }
+# For packing a Windows game into one program (packaging/windows_pack.rs). MIT.
+ruzstd = "0.8"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

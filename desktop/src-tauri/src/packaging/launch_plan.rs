@@ -225,11 +225,20 @@ savestate_thumbnail_enable = "true"
     ))
 }
 
+/// The folder under the per-user data folder that contains all data of a game.
+const DATA_ROOT: &str = "ROM-in-a-Box";
+
 fn game_data_template(identity: &str) -> String {
     format!(
-        "{}/ROM-in-a-Box/Games/{identity}",
+        "{}/{DATA_ROOT}/Games/{identity}",
         token!(UserData)
     )
+}
+
+/// Where we unpack a game made into one program (a Windows game,
+/// `windows_pack`), under the per-user data folder.
+pub(super) fn runtime_folder(identity: &str) -> String {
+    format!("{DATA_ROOT}/Runtimes/{identity}")
 }
 
 /// The shared QUICK SIGN IN folder for this export, when it has achievements.

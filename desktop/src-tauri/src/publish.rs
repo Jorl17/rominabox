@@ -27,10 +27,10 @@ pub(crate) fn zipped(request: &ExportRequest) -> bool {
 /// What we put in the output folder for an export of `request`: the app, or
 /// a zip with a name every system allows, which contains the app by its name.
 pub(crate) fn output_name(request: &ExportRequest) -> String {
-    if zipped(request) {
-        download_name(&request.game.title)
-    } else {
-        app_name(&request.game.target, &request.game.title)
+    match request.game.target {
+        _ if zipped(request) => download_name(&request.game.title),
+        ExportTarget::Macos => app_name(&request.game.target, &request.game.title),
+        ExportTarget::Windows => format!("{}.exe", app_name(&request.game.target, &request.game.title)),
     }
 }
 
@@ -50,9 +50,9 @@ pub(crate) fn staged_app_name(request: &ExportRequest) -> String {
     }
 }
 
-/// The name of the app for a game called `title` on `target`, a bundle on
-/// macOS or a folder on Windows, which contains the program of the game with
-/// the same name.
+/// The name of the app we lay out for a game called `title` on `target`: a
+/// bundle on macOS, or a folder on Windows that contains the game's program
+/// by the same name and that we pack into it (`packaging::windows_pack`).
 pub(crate) fn app_name(target: &ExportTarget, title: &str) -> String {
     match target {
         ExportTarget::Macos => format!("{}.app", safe_filename(title)),
