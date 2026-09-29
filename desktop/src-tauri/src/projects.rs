@@ -173,9 +173,10 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
         .finish()
         .map_err(|error| format!("finish project archive: {error}"))?;
 
-    // On the supported file systems, a hard link is an atomic publication that
-    // never overwrites. If this step fails we leave the staging file in place,
-    // and we never overwrite the final path.
+    // On the supported filesystems, creating a hard link is an atomic
+    // publication that never overwrites. If this step fails, we leave the
+    // staging file in place and never overwrite the final path. After we
+    // publish, the staging name is only a second name for the project.
     fs::hard_link(&temporary, &request.archive_path).map_err(|error| {
         path_error(
             "publish project archive without overwrite",
@@ -183,6 +184,8 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             error,
         )
     })?;
+    fs::remove_file(&temporary)
+        .map_err(|error| path_error("remove project staging archive", &temporary, error))?;
     let archive_bytes = fs::metadata(&request.archive_path)
         .map_err(|error| path_error("measure project archive", &request.archive_path, error))?
         .len();
