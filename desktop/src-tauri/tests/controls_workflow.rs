@@ -272,8 +272,14 @@ fn a_document_is_only_told_about_what_it_draws() {
         declared.contains("overlays = \"splash notice\""),
         "{declared}"
     );
+    // The screen that removes the game's data depends on the platform.
+    let forget = match rominabox_desktop::packaging::ExportTarget::of_host() {
+        Some(rominabox_desktop::packaging::ExportTarget::Windows) => "uninstall",
+        Some(rominabox_desktop::packaging::ExportTarget::Macos) => "reset",
+        None => panic!("no platform the builder exports for"),
+    };
     assert!(
-        declared.contains("screens = \"pause options controls menu-controls\""),
+        declared.contains(&format!("screens = \"pause options controls menu-controls {forget}\"")),
         "{declared}"
     );
     assert!(

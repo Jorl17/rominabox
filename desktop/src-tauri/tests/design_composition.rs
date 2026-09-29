@@ -103,7 +103,9 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
             "menu-controls",
             "shaders",
             "achievements",
-            "accounts"
+            "accounts",
+            "uninstall",
+            "reset"
         ]
     );
     // The QUICK SIGN IN accounts also come from Native, and BACK leads to the

@@ -496,11 +496,16 @@ mod tests {
         );
     }
 
-    /// We move the Controls button from the pause row into Options. A game with
-    /// nothing enabled has no button that opens an empty screen.
+    /// The Controls button is inside Options, with the screen for removing
+    /// what we store for the game on its platform: UNINSTALL on Windows, RESET
+    /// on a Mac. A game with nothing enabled has no button that opens an empty
+    /// screen.
     #[test]
     fn options_lists_only_the_entries_a_game_enables() {
-        let composed = compose(request("native"));
+        let composed = compose(MenuRequest {
+            target: crate::packaging::ExportTarget::Windows,
+            ..request("native")
+        });
         let staged = composed.text("menu.rml").unwrap();
         let panel = staged.find("id=\"options-panel\"").expect("options panel");
         let controls = staged.find("id=\"controls\"").expect("controls entry");
@@ -512,9 +517,15 @@ mod tests {
         assert!(staged.contains(">OPTIONS<") && staged.contains(">CONTROLS<"));
         let cfg = composed.text("design.cfg").unwrap();
         assert!(
-            cfg.contains("screens = \"pause options controls menu-controls\""),
+            cfg.contains("screens = \"pause options controls menu-controls uninstall\""),
             "{cfg}"
         );
+        let mac = compose(MenuRequest {
+            target: crate::packaging::ExportTarget::Macos,
+            ..request("native")
+        });
+        let mac = mac.text("design.cfg").unwrap();
+        assert!(mac.contains("screens = \"pause options controls menu-controls reset\""), "{mac}");
         assert!(cfg.contains("screen_button_options = \"options\""));
         assert!(cfg.contains("screen_button_controls = \"controls\""));
 

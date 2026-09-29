@@ -151,9 +151,15 @@ fn event(printed: &str, kind: &str) -> Value {
     }
 }
 
+/// A Windows game is one program, and its files are the ones packed in it.
+/// Here we unpack them into a separate folder beside it for each look.
 #[cfg(windows)]
 fn resources(app: &Path) -> PathBuf {
-    app.join("Resources")
+    static LOOKS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let look = LOOKS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let unpacked = app.with_extension(format!("unpacked-{look}"));
+    export_fixture::unpack(app, &unpacked);
+    unpacked.join("Resources")
 }
 
 #[cfg(target_os = "macos")]
@@ -161,15 +167,10 @@ fn resources(app: &Path) -> PathBuf {
     app.join("Contents/Resources")
 }
 
-/// Whether the game icon is the cover, judged by the middle of the program icon.
+/// Whether the game's icon is the cover, from the middle of the program's icon.
 #[cfg(windows)]
 fn shows_the_cover(app: &Path) -> bool {
-    let program = fs::read_dir(app)
-        .unwrap()
-        .map(|entry| entry.unwrap().path())
-        .find(|path| path.extension().is_some_and(|extension| extension == "exe"))
-        .expect("the game's program");
-    let image = editpe::Image::parse_file(&program).unwrap();
+    let image = editpe::Image::parse_file(app).unwrap();
     let Some(icon) = image
         .resource_directory()
         .and_then(|resources| resources.get_main_icon().unwrap())

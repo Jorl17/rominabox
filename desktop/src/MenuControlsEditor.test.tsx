@@ -81,8 +81,8 @@ describe("the builder's menu controls", () => {
   it("starts from the builder's defaults, in the words the game shows", () => {
     const { chips } = show();
     expect(chips("Menu")).toEqual(["Escape", "Home", "L3 + R3"]);
-    expect(chips("Confirm")).toEqual(["Enter", "Right button"]);
-    expect(chips("Back")).toEqual(["Escape", "Bottom button"]);
+    expect(chips("Confirm")).toEqual(["Enter", "Bottom button"]);
+    expect(chips("Back")).toEqual(["Escape", "Right button"]);
   });
 
   it("adds a key or a pad button pressed after +, and says no to a stick", async () => {
@@ -95,10 +95,10 @@ describe("the builder's menu controls", () => {
     );
     press("Space", " ");
     await settle();
-    expect(view.chips("Confirm")).toEqual(["Enter", "Right button", "Space"]);
+    expect(view.chips("Confirm")).toEqual(["Enter", "Bottom button", "Space"]);
     expect(view.seen.value.confirm).toEqual([
       "key:enter",
-      "pad:a",
+      "pad:b",
       "key:space",
     ]);
 
@@ -110,7 +110,7 @@ describe("the builder's menu controls", () => {
         .click(),
     );
     await settle();
-    expect(view.seen.value.back).toEqual(["key:escape", "pad:b", "pad:r3"]);
+    expect(view.seen.value.back).toEqual(["key:escape", "pad:a", "pad:r3"]);
 
     rust.presses.push("l_x_plus");
     act(() =>
@@ -157,7 +157,7 @@ describe("the builder's menu controls", () => {
     press("Enter");
     await settle();
     expect(view.said()).toBe("Enter is already Confirm's.");
-    expect(view.chips("Back")).toEqual(["Escape", "Bottom button"]);
+    expect(view.chips("Back")).toEqual(["Escape", "Right button"]);
   });
 
   it("removes a binding with its ×, not with its words", async () => {
@@ -170,10 +170,10 @@ describe("the builder's menu controls", () => {
     act(() => enter.click());
     await settle();
     expect(rust.checked).toEqual([]);
-    expect(view.chips("Confirm")).toEqual(["Enter", "Right button"]);
+    expect(view.chips("Confirm")).toEqual(["Enter", "Bottom button"]);
     act(() => enter.querySelector("button")!.click());
     await settle();
-    expect(view.chips("Confirm")).toEqual(["Right button"]);
+    expect(view.chips("Confirm")).toEqual(["Bottom button"]);
   });
 
   it("goes back to the builder's defaults", async () => {
@@ -187,7 +187,7 @@ describe("the builder's menu controls", () => {
         .click(),
     );
     await settle();
-    expect(view.chips("Confirm")).toEqual(["Right button"]);
+    expect(view.chips("Confirm")).toEqual(["Bottom button"]);
     const reset = [...view.container.querySelectorAll("button")].find(
       (button) => button.textContent === "Reset to defaults",
     )!;

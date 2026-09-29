@@ -24,14 +24,18 @@ STEPS = [
 
 
 def run(name: str, command: list[str]) -> tuple[str, int, str]:
+    # Node output is UTF-8 whatever the console's code page is.
     result = subprocess.run(
-        command, cwd=DESKTOP, capture_output=True, text=True, errors="replace"
+        command, cwd=DESKTOP, capture_output=True, encoding="utf-8", errors="replace"
     )
     text = result.stdout + result.stderr
     return name, result.returncode, text
 
 
 def main() -> int:
+    # When the console cannot show a character from the tests, we print a
+    # stand-in for it instead of losing the report.
+    sys.stdout.reconfigure(errors="replace")
     failed: list[str] = []
     with ThreadPoolExecutor(max_workers=len(STEPS)) as pool:
         finished = list(pool.map(lambda step: run(*step), STEPS))
