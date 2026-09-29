@@ -34,6 +34,14 @@ NAME = "rominabox-cli.exe" if os.name == "nt" else "rominabox-cli"
 MINE = ROOT / "work/bin" / NAME
 
 
+def cli_build(manifest: Path = MANIFEST) -> list[str]:
+    """The command to build the command line from `manifest`, with the features
+    we pass in the Tauri build, so that the builder, the command line and the
+    tests use one compile of the crate instead of each undoing the others'."""
+    return ["cargo", "build", "--release", "--manifest-path", str(manifest),
+            "--features", "tauri/custom-protocol", "--bin", "rominabox-cli"]
+
+
 def target_dir() -> Path:
     """The cargo target folder, which is not always beside the manifest."""
     shared = os.environ.get("CARGO_TARGET_DIR")
@@ -149,11 +157,7 @@ def cli(build: bool = False) -> Path:
         candidates.append(local)
 
     if build or not any(built_here(c, mine) for c in candidates):
-        made = subprocess.run(
-            ["cargo", "build", "--quiet", "--release",
-             "--manifest-path", str(MANIFEST), "--bin", "rominabox-cli"],
-            capture_output=True, text=True,
-        )
+        made = subprocess.run(cli_build(), capture_output=True, text=True)
         if made.returncode != 0:
             raise SystemExit(
                 "no rominabox-cli belonging to this checkout, and it would "
@@ -198,8 +202,7 @@ def cli(build: bool = False) -> Path:
         + f"  this checkout is\n    {mine}\n\n"
         "Every worktree shares one cargo target, so that binary is whichever\n"
         "checkout built last. Build it here:\n"
-        "  cargo build --release --manifest-path desktop/src-tauri/Cargo.toml "
-        "--bin rominabox-cli"
+        f"  {' '.join(cli_build())}"
     )
 
 

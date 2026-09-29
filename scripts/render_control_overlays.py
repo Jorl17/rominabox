@@ -86,7 +86,7 @@ def _font(size: int) -> ImageFont.ImageFont:
 # worktree shares one cargo target, so the binary next to the manifest may be
 # out of date or from another checkout. See scripts/built.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from built import cli as _cli  # noqa: E402
+from built import cli as _cli, cli_build  # noqa: E402
 
 CLI = _cli()
 
@@ -103,8 +103,7 @@ def scene_geometry(profile_id: str) -> dict:
     if not CLI.exists():
         raise SystemExit(
             f"{CLI.name} is not built, and it owns the scene's geometry:\n"
-            "  cargo build --release --manifest-path "
-            "desktop/src-tauri/Cargo.toml --bin rominabox-cli"
+            f"  {' '.join(cli_build())}"
         )
     system = next(
         (s for p in json.loads(CONTROLS.read_text())["profiles"]

@@ -19,6 +19,7 @@ from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SCRIPTS))
+from built import cli_build  # noqa: E402
 from scratch import scratch  # noqa: E402
 
 ROOT = SCRIPTS.parent
@@ -52,7 +53,7 @@ def cli() -> str:
     # stale or from another checkout. See scripts/built.py.
     found = subprocess.check_output([PYTHON, str(SCRIPTS / "built.py")], text=True).strip()
     if not Path(found).is_file():
-        raise SystemExit("build the CLI first: cargo build --release --bin rominabox-cli")
+        raise SystemExit(f"build the CLI first: {' '.join(cli_build())}")
     return found
 
 
