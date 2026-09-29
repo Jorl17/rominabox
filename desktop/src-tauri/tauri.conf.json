@@ -41,7 +41,11 @@
     },
     "windows": {
       "webviewInstallMode": { "type": "downloadBootstrapper" },
-      "nsis": { "installMode": "currentUser", "installerIcon": "icons/icon.ico" }
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "installerHooks": "windows/installer-hooks.nsh"
+      }
     },
     "macOS": {
       "minimumSystemVersion": "26.0"
