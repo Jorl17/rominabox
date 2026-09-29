@@ -29,6 +29,9 @@ pub enum ErrorStage {
     /// We could not put the new app in place of the old one, or move the old
     /// one back. The path is where the old app is now.
     Replace,
+    /// The game we would replace is running, and on Windows a running program
+    /// cannot be removed. We changed nothing. The path is that game.
+    Running,
     Validate,
     Stage,
     Image,
@@ -49,6 +52,7 @@ impl ErrorStage {
         match self {
             Self::Exists => "exists",
             Self::Replace => "replace",
+            Self::Running => "running",
             Self::Missing => "missing",
             Self::Refused => "refused",
             Self::Export => "export",
@@ -197,6 +201,10 @@ impl ExportError {
             ErrorStage::Exists => {
                 format!("An app with this name already exists in {}.", folder())
             }
+            ErrorStage::Running => format!(
+                "\u{201c}{}\u{201d} is running. Close it, then create the app again.",
+                file()
+            ),
             ErrorStage::Missing => format!(
                 "The file \u{201c}{}\u{201d} can no longer be found. Choose it again, then create the app.",
                 file()

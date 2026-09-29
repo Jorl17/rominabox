@@ -94,6 +94,13 @@ pub(crate) fn put_in_place(app: &Path, destination: &Path, replace: bool) -> Res
     if !replace {
         return refuse_existing(destination);
     }
+    if running(destination) {
+        return Err(ExportError::new(
+            ErrorStage::Running,
+            format!("{} is running", destination.display()),
+        )
+        .about(destination));
+    }
     let aside = set_aside_name(destination);
     fs::rename(destination, &aside).map_err(saving)?;
     if let Err(error) = fs::rename(app, destination) {
@@ -142,6 +149,30 @@ fn remove_set_aside(aside: &Path) -> Result<(), ExportError> {
         fs::remove_file(aside)
     }
     .map_err(|error| ExportError::io(ErrorStage::Cleanup, aside, error))
+}
+
+/// Whether the program at `path` is running. On Windows a running program's
+/// file can be renamed but not removed, so a replacement would leave it
+/// beside the new file. The file is mapped while it runs, not open, and no
+/// one may write it. So we ask to write it, change nothing and share
+/// everything, and only a running program makes that request fail.
+#[cfg(windows)]
+fn running(path: &Path) -> bool {
+    use std::os::windows::fs::OpenOptionsExt;
+    const SHARE_EVERYTHING: u32 = 0x1 | 0x2 | 0x4;
+    const ERROR_SHARING_VIOLATION: i32 = 32;
+    path.is_file()
+        && matches!(
+            fs::OpenOptions::new().write(true).share_mode(SHARE_EVERYTHING).open(path),
+            Err(error) if error.raw_os_error() == Some(ERROR_SHARING_VIOLATION)
+        )
+}
+
+/// On a POSIX system we can remove a file that is open or running, so a
+/// running program never prevents a replacement.
+#[cfg(unix)]
+fn running(_path: &Path) -> bool {
+    false
 }
 
 /// Anything at `path`, including a link that points nowhere.
