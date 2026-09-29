@@ -32,6 +32,7 @@ pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuR
         include_achievements: request.game.include_achievements,
         menu_entries: request.game.menu_entries.clone(),
         shaders: request.game.shaders.clone(),
+        shader_library: kit.join("shaders"),
         discs,
         settings: player_defaults(request),
         sound_pack: request.game.menu_sounds != "off",

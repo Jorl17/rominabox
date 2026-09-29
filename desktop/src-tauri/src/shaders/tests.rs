@@ -558,3 +558,155 @@ fn an_ordinary_menu_gains_no_shader_screen() {
         .any(|name| name.starts_with("shaders")));
     assert!(!document.contains("video_shader"));
 }
+
+/// The shader library in the repository, which we put in the kit.
+fn library() -> std::path::PathBuf {
+    crate::repo::at("integrations/shaders/library")
+}
+
+/// The menu we compose at export with these catalog presets, from the library.
+fn composed_from_library(bundled: &[&str]) -> crate::menu::Composition {
+    crate::menu::compose_menu(&crate::menu::MenuRequest {
+        shaders: ShaderSelection {
+            bundled: bundled.iter().map(|id| id.to_string()).collect(),
+            ..Default::default()
+        },
+        shader_library: library(),
+        menu_entries: Some(vec!["controls".into(), "shaders".into()]),
+        ..crate::menu::MenuRequest::new(
+            crate::repo::at("integrations/designs/native"),
+            crate::repo::at("desktop/assets/controllers"),
+        )
+    })
+    .unwrap()
+}
+
+/// We put a libretro preset in the game with every file it lists, each at
+/// its path in its pack, inside the game's folder for its language, so the
+/// paths in the preset and its passes lead to them. Its credits and picture
+/// go in the preset's folder.
+#[test]
+fn a_libretro_preset_is_staged_whole_at_its_paths_in_its_pack() {
+    let composed = composed_from_library(&["crt-royale"]);
+    let root = rominabox_scratch::Scratch::dir("rominabox-shader-royale");
+    composed.write(&root).unwrap();
+    let game = root.join("shaders/glsl");
+    for file in [
+        "crt/crt-royale.glslp",
+        "crt/shaders/crt-royale/src/crt-royale-first-pass-linearize-crt-gamma-bob-fields.glsl",
+        "crt/shaders/crt-royale/TileableLinearApertureGrille15Wide8And5d5Spacing.png",
+        "blurs/shaders/royale/blur9fast-vertical.glsl",
+    ] {
+        assert!(game.join(file).is_file(), "{file} is not in the game");
+    }
+    let preset = fs::read_to_string(game.join("crt/crt-royale.glslp")).unwrap();
+    for (key, value) in preset.lines().filter_map(|line| line.split_once('=')) {
+        let key = key.trim();
+        if !(key.len() > 6 && key.starts_with("shader") && key[6..].chars().all(|c| c.is_ascii_digit())) {
+            continue;
+        }
+        let named = value.trim().trim_matches('"');
+        assert!(game.join("crt").join(named).is_file(), "{named} is not where the preset looks");
+    }
+    let credits = fs::read_to_string(root.join("shaders/crt-royale/CREDITS.txt")).unwrap();
+    assert!(credits.contains("TroggleMonkey") && credits.contains("libretro/glsl-shaders"), "{credits}");
+    let config = composed.text("shaders.cfg").unwrap();
+    assert!(config.contains("shader_preset_crt-royale = \"shaders/glsl/crt/crt-royale.glslp\""), "{config}");
+    let selection = ShaderSelection { bundled: vec!["crt-royale".into()], ..Default::default() };
+    assert_eq!(video_driver(&selection).unwrap(), VideoDriver::Gl);
+}
+
+/// When a libretro preset exists only in slang, the game uses slang, and we
+/// take the other catalog presets in slang too.
+#[test]
+fn a_preset_only_in_slang_makes_the_game_slang() {
+    let selection = ShaderSelection {
+        bundled: vec!["crt-easymode".into(), "crt-guest-advanced".into(), "scanlines".into()],
+        ..Default::default()
+    };
+    assert_eq!(video_driver(&selection).unwrap(), VideoDriver::Glcore);
+    let presets: Vec<String> = resolve(&selection).unwrap().into_iter().map(|item| item.relative_preset).collect();
+    assert_eq!(
+        presets,
+        [
+            "",
+            "shaders/slang/crt/crt-easymode.slangp",
+            "shaders/slang/crt/crt-guest-advanced.slangp",
+            "shaders/scanlines/scanlines.slangp",
+        ]
+    );
+    let composed = composed_from_library(&["crt-guest-advanced"]);
+    let root = rominabox_scratch::Scratch::dir("rominabox-shader-guest");
+    composed.write(&root).unwrap();
+    assert!(root.join("shaders/slang/crt/crt-guest-advanced.slangp").is_file());
+}
+
+/// When the author adds a shader, its language is the game's. We refuse a
+/// catalog preset that libretro lacks in that language, and name both.
+#[test]
+fn a_catalog_preset_not_in_the_authors_language_is_refused() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-shader-mixed");
+    let mut selection = custom_preset(
+        &root,
+        "mine.glslp",
+        &[("mine.glslp", "shaders = 1\nshader0 = pass.glsl\n"), ("pass.glsl", PASS)],
+    );
+    selection.bundled = vec!["crt-guest-advanced".into()];
+    let error = resolve(&selection).unwrap_err();
+    assert!(error.contains("CRT Guest has no GLSL version"), "{error}");
+    let _ = fs::remove_dir_all(&root);
+}
+
+/// Every libretro preset in the catalog is in the library with every file it
+/// lists, and nothing else is there, because we include it in the builder.
+#[test]
+fn the_library_holds_each_catalog_preset_whole_and_nothing_else() {
+    let mut named = std::collections::BTreeSet::new();
+    for preset in library_presets().unwrap() {
+        let (folder, path) = preset.split_once('/').unwrap();
+        for (_, name) in library_files(&library().join(folder), path).unwrap() {
+            named.insert(format!("{folder}/{name}"));
+        }
+    }
+    let mut held = std::collections::BTreeSet::new();
+    let mut folders = vec![library()];
+    while let Some(folder) = folders.pop() {
+        for entry in fs::read_dir(&folder).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                folders.push(path);
+            } else {
+                let relative = path.strip_prefix(library()).unwrap();
+                held.insert(relative.to_string_lossy().replace('\\', "/"));
+            }
+        }
+    }
+    assert_eq!(held, named);
+}
+
+/// Every catalogue preset has its picture, so no row in a game, and no card
+/// in the builder, is blank.
+#[test]
+fn every_catalog_preset_has_its_preview() {
+    for entry in catalog().unwrap() {
+        assert!(PREVIEWS.iter().any(|(id, _)| *id == entry.id), "{} has no preview", entry.id);
+    }
+}
+
+/// We keep a shader from the author with the name of a language out of the
+/// library folder for that language, where we put the libretro presets.
+#[test]
+fn an_authors_shader_never_takes_a_library_folder() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-shader-named-glsl");
+    let mut selection = custom_preset(
+        &root,
+        "mine.glslp",
+        &[("mine.glslp", "shaders = 1\nshader0 = pass.glsl\n"), ("pass.glsl", PASS)],
+    );
+    selection.custom[0].name = "GLSL".into();
+    selection.initial = None;
+    selection.bundled = vec!["crt-lottes".into()];
+    let ids: Vec<String> = resolve(&selection).unwrap().into_iter().map(|item| item.id).collect();
+    assert_eq!(ids, ["none", "crt-lottes", "glsl-2"]);
+    let _ = fs::remove_dir_all(&root);
+}

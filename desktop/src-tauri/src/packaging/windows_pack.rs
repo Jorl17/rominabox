@@ -198,7 +198,7 @@ pub(super) fn pack(
         id.update(entry.whole);
     }
     let id = format!("{:x}", id.finalize());
-    let runtime = format!("{runtime}-{}", &id[..16]);
+    let runtime = format!("{runtime}-{}", &id[..8]);
     let program = launcher
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())

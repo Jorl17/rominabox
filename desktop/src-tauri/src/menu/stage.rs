@@ -37,6 +37,8 @@ pub struct MenuRequest {
     /// when absent.
     pub menu_entries: Option<Vec<String>>,
     pub shaders: ShaderSelection,
+    /// The runtime kit's shader library, which libretro presets come from.
+    pub shader_library: PathBuf,
     /// How many discs the game has. The disc list, and its Options entry,
     /// exist only for more than one.
     pub discs: usize,
@@ -65,6 +67,7 @@ impl MenuRequest {
             include_achievements: false,
             menu_entries: None,
             shaders: ShaderSelection::default(),
+            shader_library: PathBuf::new(),
             discs: 1,
             settings: crate::player_settings::Defaults::default(),
             sound_pack: false,
@@ -234,7 +237,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     if request.discs > 1 {
         lists.extend(crate::disc_menu::list(&manifest));
     }
-    let shaders = crate::shaders::stage(&manifest, &request.shaders)?;
+    let shaders = crate::shaders::stage(&manifest, &request.shaders, &request.shader_library)?;
     for (name, content) in shaders.files {
         composition.put(name, content);
     }

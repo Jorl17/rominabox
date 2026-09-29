@@ -1,4 +1,14 @@
 {
+  "libraries": {
+    "glsl": {
+      "repository": "https://github.com/libretro/glsl-shaders",
+      "commit": "f8e23ff880668f0f0e837a05a316534d82a7f31b"
+    },
+    "slang": {
+      "repository": "https://github.com/libretro/slang-shaders",
+      "commit": "84bcd19a854348c0e6a1d3db814a76f11fb6f011"
+    }
+  },
   "presets": [
     {
       "id": "scanlines",
@@ -11,6 +21,155 @@
       "name": "Phosphor",
       "detail": "A strong green tint",
       "fragment": "vec3 colour = COMPAT_TEXTURE(Texture, TEX0.xy).rgb; colour = vec3(colour.r * 0.22, min(colour.g * 1.25, 1.0), colour.b * 0.28); FragColor = vec4(colour, 1.0);"
+    },
+    {
+      "id": "crt-royale",
+      "name": "CRT Royale",
+      "detail": "A detailed tube, for large screens",
+      "files": {
+        "glsl": "crt/crt-royale.glslp",
+        "slang": "crt/crt-royale.slangp"
+      },
+      "authors": "TroggleMonkey; GLSL port by hunterk"
+    },
+    {
+      "id": "crt-royale-pal",
+      "name": "CRT Royale PAL",
+      "detail": "A detailed tube fed a European TV signal",
+      "files": {
+        "glsl": "crt/crt-royale-pal-r57shell.glslp",
+        "slang": "presets/crt-plus-signal/crt-royale-pal-r57shell.slangp"
+      },
+      "authors": "TroggleMonkey and r57shell; GLSL port by hunterk"
+    },
+    {
+      "id": "crt-guest-advanced",
+      "name": "CRT Guest",
+      "detail": "A tube with glow and many settings",
+      "files": {
+        "slang": "crt/crt-guest-advanced.slangp"
+      },
+      "authors": "guest(r), with ideas from Dr. Venom"
+    },
+    {
+      "id": "crt-easymode",
+      "name": "CRT Easymode",
+      "detail": "A sharp, flat tube",
+      "files": {
+        "glsl": "crt/crt-easymode.glslp",
+        "slang": "crt/crt-easymode.slangp"
+      },
+      "authors": "EasyMode; GLSL conversion by hunterk"
+    },
+    {
+      "id": "crt-lottes",
+      "name": "CRT Lottes",
+      "detail": "An arcade monitor",
+      "files": {
+        "glsl": "crt/crt-lottes.glslp",
+        "slang": "crt/crt-lottes.slangp"
+      },
+      "authors": "Timothy Lottes"
+    },
+    {
+      "id": "crt-geom",
+      "name": "CRT Geom",
+      "detail": "A curved tube",
+      "files": {
+        "glsl": "crt/crt-geom.glslp",
+        "slang": "crt/crt-geom.slangp"
+      },
+      "authors": "cgwg, Themaister and DOLLS"
+    },
+    {
+      "id": "crt-aperture",
+      "name": "CRT Aperture",
+      "detail": "A studio monitor's fine grille",
+      "files": {
+        "glsl": "crt/crt-aperture.glslp",
+        "slang": "crt/crt-aperture.slangp"
+      },
+      "authors": "EasyMode"
+    },
+    {
+      "id": "zfast-crt",
+      "name": "zfast CRT",
+      "detail": "A light tube for slower computers",
+      "files": {
+        "glsl": "crt/zfast-crt.glslp",
+        "slang": "crt/zfast-crt.slangp"
+      },
+      "authors": "Greg Hogan (SoltanGris42)"
+    },
+    {
+      "id": "ntsc-adaptive",
+      "name": "NTSC",
+      "detail": "A TV signal that blends dithering",
+      "files": {
+        "glsl": "ntsc/ntsc-adaptive.glslp",
+        "slang": "ntsc/ntsc-adaptive.slangp"
+      },
+      "authors": "hunterk and guest(r), after Themaister"
+    },
+    {
+      "id": "blargg",
+      "name": "Composite",
+      "detail": "Colour bleed of a composite cable",
+      "files": {
+        "glsl": "ntsc/blargg.glslp",
+        "slang": "ntsc/blargg.slangp"
+      },
+      "authors": "blargg and NewRisingSun; port by metallic77"
+    },
+    {
+      "id": "pal-r57shell",
+      "name": "PAL",
+      "detail": "A European TV signal",
+      "files": {
+        "glsl": "pal/pal-r57shell.glslp",
+        "slang": "pal/pal-r57shell.slangp"
+      },
+      "authors": "r57shell"
+    },
+    {
+      "id": "lcd-grid-v2",
+      "name": "LCD Grid",
+      "detail": "A handheld screen's pixel grid",
+      "files": {
+        "glsl": "handheld/lcd-grid-v2.glslp",
+        "slang": "handheld/lcd-grid-v2.slangp"
+      },
+      "authors": "cgwg; conversion by hunterk"
+    },
+    {
+      "id": "zfast-lcd",
+      "name": "zfast LCD",
+      "detail": "A light handheld screen",
+      "files": {
+        "glsl": "handheld/zfast-lcd.glslp",
+        "slang": "handheld/zfast-lcd.slangp"
+      },
+      "authors": "Greg Hogan (SoltanGris42)"
+    },
+    {
+      "id": "gameboy",
+      "name": "Dot Matrix",
+      "detail": "The green handheld screen",
+      "files": {
+        "glsl": "handheld/gameboy.glslp",
+        "slang": "handheld/gameboy.slangp"
+      },
+      "authors": "Harlequin; slang by Matt Akins"
+    },
+    {
+      "id": "sharp-bilinear-simple",
+      "name": "Sharp Pixels",
+      "detail": "Even pixels at any size",
+      "files": {
+        "glsl": "interpolation/sharp-bilinear-simple.glslp",
+        "slang": "pixel-art-scaling/sharp-bilinear-simple.slangp"
+      },
+      "authors": "rsn8887, after Themaister"
     }
   ]
 }

@@ -200,6 +200,14 @@
         "confirm": ["key:enter", "pad:a", "key:space", "pad:x", "key:backspace"],
         "back": ["key:escape", "pad:b", "key:ctrl", "pad:y", "pad:select"]
       }
+    },
+    "shaders-royale": {
+      "script": ["options", "shaders"],
+      "shaders": { "bundled": ["crt-royale", "crt-lottes", "zfast-crt"], "initial": "crt-royale" }
+    },
+    "shaders-guest": {
+      "script": ["options", "shaders"],
+      "shaders": { "bundled": ["crt-guest-advanced", "crt-easymode"], "initial": "crt-guest-advanced" }
     }
   }
 }

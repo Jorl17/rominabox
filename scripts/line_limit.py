@@ -23,10 +23,11 @@ LIMIT = 1000
 LIST = "scripts/fixtures/line-limit.json"
 # Our own hand-written source.
 EXTENSIONS = {".rs", ".c", ".h", ".cpp", ".hpp", ".m", ".mm", ".ts", ".tsx", ".py", ".mjs", ".js"}
-# Not ours or not written by hand: upstream sources and scratch output. We
-# also leave out test data under a `fixtures` folder and whatever is marked
-# linguist-generated in .gitattributes. Lockfiles have none of EXTENSIONS.
-EXCLUDED = ("vendor/", "work/")
+# Not ours or not written by hand: upstream sources (RetroArch, libretro's
+# shaders) and scratch output. We also leave out test data under a `fixtures`
+# folder and whatever is marked linguist-generated in .gitattributes.
+# Lockfiles have none of EXTENSIONS.
+EXCLUDED = ("vendor/", "integrations/shaders/library/", "work/")
 
 
 def git(*arguments: str, stdin: bytes | None = None) -> bytes:

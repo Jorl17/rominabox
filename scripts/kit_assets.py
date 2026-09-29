@@ -4,9 +4,9 @@
 
 What we read from the kit on export besides the player: every menu design,
 the shared parts we compose them with, the controller pictures, the menu
-sound packs and the branding. We copy them from the repository unchanged,
-so this is the same on macOS and Windows. We add the player, its libraries
-and the licences for each platform in the kit tool.
+sound packs, the shader library and the branding. We copy them from the
+repository unchanged, so this is the same on macOS and Windows. We add the
+player, its libraries and the licences for each platform in the kit tool.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ CONTROLLERS = ROOT / "desktop/assets/controllers"
 SOUNDS = ROOT / "desktop/assets/menu-sounds"
 BRANDING = ROOT / "desktop/assets/branding"
 DEFAULT_ICON = ROOT / "desktop/assets/default-icon.png"
+SHADERS = ROOT / "integrations/shaders/library"
 # A pack is one complete set of cues.
 CUES = ("up", "down", "ok", "cancel")
 
@@ -112,6 +113,17 @@ def stage(kit: Path) -> None:
                 raise SystemExit(f"Menu sound pack {pack} is missing {cue}.wav")
             shutil.copy2(source, staging / pack / f"{cue}.wav")
     shutil.copy2(SOUNDS / "PROVENANCE.txt", staging / "PROVENANCE.txt")
+
+    # The shader library from which we take libretro presets in the exporter,
+    # as in the repository. We remove a file that the library no longer has.
+    if not SHADERS.is_dir():
+        raise SystemExit(f"Missing shader library: {SHADERS}")
+    library = kit / "shaders"
+    copy_tree(SHADERS, library)
+    for staged in sorted(library.rglob("*")):
+        if (staged.is_file() and not staged.is_symlink()
+                and not (SHADERS / staged.relative_to(library)).is_file()):
+            staged.unlink()
 
     (kit / "branding").mkdir(exist_ok=True)
     shutil.copy2(BRANDING / "logo.png", kit / "branding" / "logo.png")

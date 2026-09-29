@@ -1,10 +1,18 @@
-//! Shaders that an author can bundle.
+//! Shaders an author can bundle.
 //!
-//! The list code for every screen of rows is in `lists`, and here we only
-//! define the content of a shader row. The shaders of a game are all GLSL or
-//! all slang, as we read from the files of the author (`shader_format`). We
-//! choose the video driver of the game by that language and write the catalog
-//! presets in it (`shader_source`). Cg is not supported.
+//! The code for every list of rows is in `lists`, and here we only say what a
+//! shader row contains. The shaders of a game are all GLSL or all slang, and
+//! we tell which by reading the author's files (`shader_format`). We choose
+//! the game's video driver from that language, and write the catalog presets
+//! in it (`shader_source`). We refuse Cg.
+//!
+//! The catalog has two kinds of preset. Each ROM-in-a-Box preset is one
+//! fragment body, which we write out in the game's language. We keep the
+//! libretro presets in the shader library of the runtime kit as their packs
+//! lay them out, one folder per language, and copy the files of a preset into
+//! a game at the same paths in the same folder. So every path in the preset
+//! still leads to its file, and we copy a file that presets share once. A
+//! game with no author's shader uses GLSL, unless a preset is only in slang.
 
 use crate::shader_format::{Language, VideoDriver};
 use serde::{Deserialize, Serialize};
@@ -17,15 +25,85 @@ pub const UNFILTERED_ID: &str = "none";
 
 #[derive(Clone, Debug, Deserialize)]
 struct CatalogFile {
+    /// Where the shader library's files come from, per language.
+    libraries: Libraries,
     presets: Vec<CatalogPreset>,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+struct Libraries {
+    glsl: Source,
+    slang: Source,
+}
+
+impl Libraries {
+    fn of(&self, language: Language) -> &Source {
+        match language {
+            Language::Glsl => &self.glsl,
+            Language::Slang => &self.slang,
+        }
+    }
+}
+
+/// A libretro shader pack, at the commit we took the library from.
+#[derive(Clone, Debug, Deserialize)]
+struct Source {
+    repository: String,
+    commit: String,
+}
+
+/// The note beside a libretro preset in a game, naming its authors and source.
+const CREDITS: &str = "CREDITS.txt";
 
 #[derive(Clone, Debug, Deserialize)]
 struct CatalogPreset {
     id: String,
     name: String,
     detail: String,
-    fragment: String,
+    #[serde(flatten)]
+    made: Made,
+    /// Who wrote a libretro preset, as its files credit them.
+    #[serde(default)]
+    authors: Option<String>,
+}
+
+/// How a catalog preset is made.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum Made {
+    /// Ours, one fragment body that we write in the game's language.
+    Fragment(String),
+    /// A libretro preset in the shader library.
+    Files(LibraryPreset),
+}
+
+/// A libretro preset's file in each of its languages, by its path in that
+/// language's pack, which is the same as in that language's library folder.
+#[derive(Clone, Debug, Deserialize)]
+struct LibraryPreset {
+    glsl: Option<String>,
+    slang: Option<String>,
+}
+
+impl LibraryPreset {
+    fn in_language(&self, language: Language) -> Option<&str> {
+        match language {
+            Language::Glsl => self.glsl.as_deref(),
+            Language::Slang => self.slang.as_deref(),
+        }
+    }
+}
+
+/// The shader library folders, one per language, in the kit and in a game's
+/// `shaders`. No other shader folder may use their names.
+const LIBRARY_FOLDERS: [&str; 2] = ["glsl", "slang"];
+
+/// The shader library's folder for a language's presets.
+fn library_folder(language: Language) -> &'static str {
+    match language {
+        Language::Glsl => "glsl",
+        Language::Slang => "slang",
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -34,6 +112,8 @@ pub struct CatalogEntry {
     pub id: String,
     pub name: String,
     pub detail: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authors: Option<String>,
 }
 
 /// The shaders the author chose. When it is empty, which is usual, we add no
@@ -73,6 +153,9 @@ pub struct ResolvedShader {
     pub detail: String,
     /// The path from the staged menu assets, empty for the unfiltered choice.
     pub relative_preset: String,
+    /// A libretro preset's path in the shader library, starting with the
+    /// language folder. We find its files there when we stage the game.
+    library: Option<String>,
     /// Files to copy into that directory, as (source, path within it). The
     /// file the author added comes first.
     files: Vec<(PathBuf, String)>,
@@ -96,7 +179,61 @@ pub struct StagedShaders {
 
 fn catalog_file() -> Result<CatalogFile, String> {
     let text = include_str!("../../../integrations/shaders/catalog.json");
-    serde_json::from_str(text).map_err(|error| format!("shader catalog is not readable: {error}"))
+    let catalog: CatalogFile = serde_json::from_str(text)
+        .map_err(|error| format!("shader catalog is not readable: {error}"))?;
+    for preset in &catalog.presets {
+        if LIBRARY_FOLDERS.contains(&preset.id.as_str()) {
+            return Err(format!("shader catalog preset '{}' takes a library folder's name", preset.id));
+        }
+        if let Made::Files(files) = &preset.made {
+            if files.glsl.is_none() && files.slang.is_none() {
+                return Err(format!("shader catalog preset '{}' names no file", preset.id));
+            }
+        }
+    }
+    Ok(catalog)
+}
+
+/// Every libretro preset in the catalog, as its path in the shader library.
+pub fn library_presets() -> Result<Vec<String>, String> {
+    let mut paths = Vec::new();
+    for preset in catalog_file()?.presets {
+        if let Made::Files(files) = preset.made {
+            for language in [Language::Glsl, Language::Slang] {
+                if let Some(path) = files.in_language(language) {
+                    paths.push(format!("{}/{path}", library_folder(language)));
+                }
+            }
+        }
+    }
+    Ok(paths)
+}
+
+/// A libretro preset and every file it lists, below `root`, which is the
+/// folder of the language's pack or of the library that contains it. Each is
+/// (the file, its path from `root` with `/` between parts). `preset` is the
+/// path from `root` to the preset. We find the files as for an author's preset.
+pub fn library_files(root: &Path, preset: &str) -> Result<Vec<(PathBuf, String)>, String> {
+    let path = root.join(preset);
+    if !path.is_file() {
+        return Err(format!("the shader library has no {preset} in {}", root.display()));
+    }
+    let (_, layout) = crate::shader_preset::preset(&path)?;
+    // The paths in the layout start at the lowest folder that contains every
+    // file, which is the preset's folder or one above it.
+    let mut base: Vec<&str> = preset.split('/').collect();
+    base.pop();
+    for part in layout.folder.split('/').filter(|part| !part.is_empty()).rev() {
+        if base.pop() != Some(part) {
+            return Err(format!("{preset} names files outside its pack"));
+        }
+    }
+    let from_root = |name: &str| {
+        base.iter().copied().chain(name.split('/')).collect::<Vec<_>>().join("/")
+    };
+    let mut files = vec![(path, preset.to_string())];
+    files.extend(layout.files.into_iter().map(|(source, name)| (source, from_root(&name))));
+    Ok(files)
 }
 
 /// Every catalog preset with the GLSL of an exported game.
@@ -115,19 +252,24 @@ pub fn sources() -> Result<Vec<(CatalogEntry, String)>, String> {
             id: unfiltered.id.clone(),
             name: unfiltered.name.clone(),
             detail: unfiltered.detail.clone(),
+            authors: None,
         },
         crate::shader_source::pass(Language::Glsl, "FragColor = COMPAT_TEXTURE(Texture, TEX0.xy);"),
     )];
-    listed.extend(catalog_file()?.presets.into_iter().map(|preset| {
-        let glsl = crate::shader_source::pass(Language::Glsl, &preset.fragment);
-        (
+    listed.extend(catalog_file()?.presets.into_iter().filter_map(|preset| {
+        let Made::Fragment(fragment) = &preset.made else {
+            return None;
+        };
+        let glsl = crate::shader_source::pass(Language::Glsl, fragment);
+        Some((
             CatalogEntry {
                 id: preset.id,
                 name: preset.name,
                 detail: preset.detail,
+                authors: preset.authors,
             },
             glsl,
-        )
+        ))
     }));
     Ok(listed)
 }
@@ -140,6 +282,7 @@ pub fn catalog() -> Result<Vec<CatalogEntry>, String> {
             id: preset.id,
             name: preset.name,
             detail: preset.detail,
+            authors: preset.authors,
         })
         .collect())
 }
@@ -202,6 +345,7 @@ fn unfiltered() -> ResolvedShader {
         name: "Unfiltered".into(),
         detail: "The picture as the console draws it".into(),
         relative_preset: String::new(),
+        library: None,
         files: Vec::new(),
         written: Vec::new(),
     }
@@ -272,12 +416,8 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
         }
         authors.push((name, &custom.path, authored(&custom.path)?));
     }
-    let named = authors.iter().map(|(name, _, author)| (*name, author.language));
-    let language = crate::shader_format::one_language(named)?.unwrap_or(Language::Glsl);
-    let pass_extension = language.pass_extension();
-    let preset_extension = language.preset_extension();
     let catalog = catalog_file()?;
-    let mut resolved = vec![unfiltered()];
+    let mut chosen: Vec<&CatalogPreset> = Vec::new();
     for id in &selection.bundled {
         if id == UNFILTERED_ID {
             continue;
@@ -286,28 +426,85 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
         let Some(preset) = catalog.presets.iter().find(|preset| preset.id == *id) else {
             return Err(format!("unknown shader '{id}'"));
         };
-        if resolved.iter().any(|item| item.id == preset.id) {
-            continue;
+        if !chosen.iter().any(|seen| seen.id == preset.id) {
+            chosen.push(preset);
         }
-        let pass = format!("{id}.{pass_extension}");
-        let preset_file = format!("{id}.{preset_extension}");
+    }
+    // We take the language of the author's shader, or slang when a preset
+    // exists only in slang, or else GLSL.
+    let named = authors.iter().map(|(name, _, author)| (*name, author.language));
+    let decided = match crate::shader_format::one_language(named)? {
+        Some(language) => Some((authors[0].0, language)),
+        None => chosen.iter().find_map(|preset| match &preset.made {
+            Made::Files(files) if files.glsl.is_none() => {
+                Some((preset.name.as_str(), Language::Slang))
+            }
+            _ => None,
+        }),
+    };
+    let language = decided.map_or(Language::Glsl, |(_, language)| language);
+    let pass_extension = language.pass_extension();
+    let preset_extension = language.preset_extension();
+    let mut resolved = vec![unfiltered()];
+    for preset in chosen {
+        let id = &preset.id;
+        let (relative_preset, library, written) = match &preset.made {
+            Made::Fragment(fragment) => {
+                let pass = format!("{id}.{pass_extension}");
+                let preset_file = format!("{id}.{preset_extension}");
+                (
+                    format!("shaders/{id}/{preset_file}"),
+                    None,
+                    vec![
+                        (pass.clone(), crate::shader_source::pass(language, fragment)),
+                        (preset_file, crate::shader_source::preset(&pass)),
+                    ],
+                )
+            }
+            Made::Files(files) => {
+                let Some(path) = files.in_language(language) else {
+                    let (decider, _) = decided.expect("GLSL is only missing from a slang game");
+                    return Err(format!(
+                        "{} has no {} version, and {decider} is {}. A game's shaders must all be in one language.",
+                        preset.name,
+                        language.name(),
+                        language.name(),
+                    ));
+                };
+                let source = catalog.libraries.of(language);
+                let credits = format!(
+                    "{name}, by {authors}.\nFrom {repository} at commit {commit}: {path}\nEach file keeps its own notice.\n",
+                    name = preset.name,
+                    authors = preset.authors.as_deref().unwrap_or("its authors"),
+                    repository = source.repository,
+                    commit = source.commit,
+                );
+                (
+                    format!("shaders/{}/{path}", library_folder(language)),
+                    Some(format!("{}/{path}", library_folder(language))),
+                    vec![(CREDITS.to_string(), credits)],
+                )
+            }
+        };
         resolved.push(ResolvedShader {
             id: id.clone(),
             name: preset.name.clone(),
             detail: preset.detail.clone(),
-            relative_preset: format!("shaders/{id}/{preset_file}"),
+            relative_preset,
+            library,
             files: Vec::new(),
-            written: vec![
-                (pass.clone(), crate::shader_source::pass(language, &preset.fragment)),
-                (preset_file, crate::shader_source::preset(&pass)),
-            ],
+            written,
         });
     }
     for (name, path, author) in authors {
         if resolved.iter().any(|item| item.name == name) {
             return Err(format!("shader name '{name}' is already used"));
         }
-        let taken: Vec<String> = resolved.iter().map(|item| item.id.clone()).collect();
+        let taken: Vec<String> = resolved
+            .iter()
+            .map(|item| item.id.clone())
+            .chain(LIBRARY_FOLDERS.map(String::from))
+            .collect();
         let id = unique_id(&slug(name)?, &taken);
         // We keep the author's file at its place among the files it lists.
         let layout = author.layout;
@@ -345,6 +542,7 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
         };
         resolved.push(ResolvedShader {
             relative_preset: format!("shaders/{id}/{preset_file}"),
+            library: None,
             id,
             name: name.to_string(),
             // We show a shader that the author added by its name alone.
@@ -371,27 +569,15 @@ fn starting<'a>(
         .ok_or_else(|| format!("the starting shader '{wanted}' is not one of the bundled shaders"))
 }
 
-/// The picture next to a shader in the list, which is the test card with that
-/// shader applied.
+/// The picture beside a shader in the list, which is the test card with that
+/// shader run over it.
 ///
-/// We render the previews from the GLSL of each shader with
-/// `scripts/render_shader_previews.py` and check them in the `shaderpreview`
-/// scope, so we notice a fragment that changes without its picture before we
-/// ship it.
-const PREVIEWS: &[(&str, &[u8])] = &[
-    (
-        UNFILTERED_ID,
-        include_bytes!("../../../integrations/shaders/previews/none.png"),
-    ),
-    (
-        "scanlines",
-        include_bytes!("../../../integrations/shaders/previews/scanlines.png"),
-    ),
-    (
-        "phosphor",
-        include_bytes!("../../../integrations/shaders/previews/phosphor.png"),
-    ),
-];
+/// We render the previews with `scripts/render_shader_previews.py`, from the
+/// GLSL of each fragment preset, and from libretro presets with the player of
+/// the runtime kit. In the `shaderpreview` tests we check that no fragment
+/// changes without its picture. With `build.rs` we embed every picture in
+/// the previews folder, each named after its shader.
+const PREVIEWS: &[(&str, &[u8])] = include!(concat!(env!("OUT_DIR"), "/shader_previews.rs"));
 
 fn icon_png(id: &str) -> Result<Vec<u8>, String> {
     if let Some((_, bytes)) = PREVIEWS.iter().find(|(name, _)| *name == id) {
@@ -421,14 +607,18 @@ fn icon_png(id: &str) -> Result<Vec<u8>, String> {
     Ok(bytes.into_inner())
 }
 
-/// The presets bundled in a game, the files they require next to the menu,
-/// and the screen for them.
+/// The presets we bundle in a game, the files they need beside the menu, and
+/// the screen we put them on.
 ///
-/// We return the rows and do not write them, because all lists use one marker
-/// in the menu, so we fill it with all of them in one place.
+/// We return the rows and do not write them, because every list goes in at one
+/// marker in the menu, which we replace once with all the lists together.
+///
+/// `library` is the shader library of the runtime kit, from which we take the
+/// files of a libretro preset.
 pub fn stage(
     manifest: &crate::menu::Manifest,
     selection: &ShaderSelection,
+    library: &Path,
 ) -> Result<StagedShaders, String> {
     use crate::menu::Content;
     let resolved = resolve(selection)?;
@@ -459,6 +649,14 @@ pub fn stage(
         let directory = Path::new("shaders").join(&item.id);
         for (source, name) in &item.files {
             files.push((directory.join(name), Content::Copy(source.clone())));
+        }
+        if let Some(preset) = &item.library {
+            let (folder, path) = preset
+                .split_once('/')
+                .expect("a library path starts with its folder");
+            for (source, name) in library_files(&library.join(folder), path)? {
+                files.push((Path::new("shaders").join(folder).join(name), Content::Copy(source)));
+            }
         }
         for (name, text) in &item.written {
             files.push((directory.join(name), Content::Text(text.clone())));

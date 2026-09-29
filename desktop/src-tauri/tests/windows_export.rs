@@ -6,6 +6,7 @@
 #![cfg(windows)]
 
 mod export_fixture;
+mod support;
 
 use export_fixture::{export_request_from, library, unpack, windows_kit, workspace};
 use rominabox_desktop::packaging::{ErrorStage, ExportTarget};
@@ -203,3 +204,55 @@ fn a_core_that_needs_a_library_windows_lacks_is_refused() {
     assert_eq!(names(&request.output_dir), Vec::<String>::new());
 }
 
+/// On Windows, no program can open a path longer than 259 characters. We set
+/// up the game's folder under the local application data of the person, which
+/// is longest for a local account with the longest name allowed, twenty
+/// characters.
+const LONGEST_LOCAL_APP_DATA: &str = r"C:\Users\fcporto-campeao-2026\AppData\Local";
+
+/// In a game with every shader in the catalogue, in either language, every
+/// file we unpack is within that limit, in the folder we read it from.
+#[test]
+fn every_file_of_a_game_with_every_shader_fits_windows_path_limit() {
+    let root = workspace();
+    let kit = windows_kit(&root);
+    for (from, to) in [
+        ("integrations/designs", "designs"),
+        ("integrations/parts", "parts"),
+        ("desktop/assets/controllers", "menu-assets"),
+        ("integrations/shaders/library", "shaders"),
+    ] {
+        support::copy_tree(&rominabox_desktop::repo::at(from), &kit.join(to));
+    }
+    let every: Vec<String> = rominabox_desktop::shaders::catalog()
+        .unwrap()
+        .into_iter()
+        .map(|entry| entry.id)
+        .collect();
+    // Without the shader that libretro has only in slang, we export the game with GLSL.
+    let glsl: Vec<String> = every.iter().filter(|id| *id != "crt-guest-advanced").cloned().collect();
+    for (language, bundled) in [("slang", every.clone()), ("glsl", glsl)] {
+        let mut request = export_request_from(&root, kit.clone());
+        request.game.target = ExportTarget::Windows;
+        request.game.show_menu = true;
+        request.game.shaders.bundled = bundled;
+        request.output_dir = root.join(language);
+        let cancelled = AtomicBool::new(false);
+        let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
+        let game = root.join(format!("unpacked-{language}"));
+        let runtime = unpack(&result.app_path, &game);
+        let mut folders = vec![game.clone()];
+        while let Some(folder) = folders.pop() {
+            for entry in fs::read_dir(&folder).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    folders.push(path);
+                    continue;
+                }
+                let inside = path.strip_prefix(&game).unwrap().to_string_lossy().into_owned();
+                let read_from = format!("{LONGEST_LOCAL_APP_DATA}\\{}\\{inside}", runtime.replace('/', "\\"));
+                assert!(read_from.len() <= 259, "{} characters: {read_from}", read_from.len());
+            }
+        }
+    }
+}
