@@ -20,15 +20,24 @@ export function exportProduct(target: Platform | null): string {
   }
 }
 
-/** The name a person uses for a platform: this machine as "This Mac" or
- * "This PC", the other one by its name. */
+/** The names a person uses for each platform: as this machine, and by name.
+ * A new platform must be listed here, or the builder does not compile. */
+const PLATFORM_NAMES: Record<
+  bridge.ExportTarget,
+  { own: string; other: string }
+> = {
+  macos: { own: "This Mac", other: "Mac" },
+  windows: { own: "This PC", other: "Windows" },
+};
+
+/** The name a person uses for a platform: this machine, or another by name. */
 function platformName(
   target: Platform,
   host: bridge.ExportTarget | null,
 ): string {
   if (target === "both") return "Mac and Windows";
-  if (target === host) return target === "macos" ? "This Mac" : "This PC";
-  return target === "macos" ? "Mac" : "Windows";
+  const names = PLATFORM_NAMES[target];
+  return target === host ? names.own : names.other;
 }
 
 /** What we ask on the export step before we make the app: where it goes,
