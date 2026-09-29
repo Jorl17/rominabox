@@ -285,8 +285,82 @@ fn cancel_pad_capture() {
     pads::cancel();
 }
 
+/// The window at its size in tauri.conf.json, made smaller when the screen
+/// has less room, and centred there. We create it hidden and show it once it
+/// has its size, so it never appears at a size it will not keep.
+fn fit_to_screen(window: &tauri::WebviewWindow) -> tauri::Result<()> {
+    if let Some(monitor) = window.current_monitor()? {
+        let area = monitor.work_area().size;
+        let outer = window.outer_size()?;
+        let inner = window.inner_size()?;
+        // The frame and title bar keep their size when the inside shrinks.
+        let frame_width = outer.width.saturating_sub(inner.width);
+        let frame_height = outer.height.saturating_sub(inner.height);
+        let width = inner.width.min(area.width.saturating_sub(frame_width));
+        let height = inner.height.min(area.height.saturating_sub(frame_height));
+        if (width, height) != (inner.width, inner.height) {
+            window.set_size(tauri::PhysicalSize::new(width, height))?;
+        }
+        window.center()?;
+    }
+    Ok(())
+}
+
+/// The title bar's icon, also shown in the taskbar's window preview, from the
+/// program's own icon at the size for this screen. With Tauri, Windows gets
+/// only one picture, the first in the .ico at 16 pixels, which is stretched
+/// on a scaled screen.
+#[cfg(windows)]
+fn sharp_window_icon(window: &tauri::WebviewWindow) {
+    use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+    use windows_sys::Win32::UI::Controls::LoadIconWithScaleDown;
+    use windows_sys::Win32::UI::HiDpi::{GetDpiForWindow, GetSystemMetricsForDpi};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        SendMessageW, ICON_SMALL, SM_CXSMICON, SM_CYSMICON, WM_SETICON,
+    };
+    // The resource name of icons/icon.ico, as embedded by tauri-build.
+    const PROGRAM_ICON: usize = 32512;
+    let Ok(handle) = window.hwnd() else {
+        return;
+    };
+    let hwnd = handle.0 as windows_sys::Win32::Foundation::HWND;
+    unsafe {
+        let dpi = GetDpiForWindow(hwnd);
+        let mut icon = std::ptr::null_mut();
+        let loaded = LoadIconWithScaleDown(
+            GetModuleHandleW(std::ptr::null()),
+            PROGRAM_ICON as *const u16,
+            GetSystemMetricsForDpi(SM_CXSMICON, dpi),
+            GetSystemMetricsForDpi(SM_CYSMICON, dpi),
+            &mut icon,
+        );
+        if loaded == 0 && !icon.is_null() {
+            SendMessageW(hwnd, WM_SETICON, ICON_SMALL as usize, icon as isize);
+        }
+    }
+}
+
 fn main() {
     tauri::Builder::default()
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                // Shown whatever the result of the fitting. When we cannot
+                // measure the window, it opens at its declared size.
+                let _ = fit_to_screen(&window);
+                #[cfg(windows)]
+                {
+                    sharp_window_icon(&window);
+                    let moved = window.clone();
+                    window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::ScaleFactorChanged { .. } = event {
+                            sharp_window_icon(&moved);
+                        }
+                    });
+                }
+                window.show()?;
+            }
+            Ok(())
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(ExportControl::default())

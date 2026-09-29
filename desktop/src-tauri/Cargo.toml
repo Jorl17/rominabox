@@ -38,6 +38,16 @@ editpe = { version = "0.2.4", default-features = false, features = ["std"] }
 # For packing a Windows game into one program (packaging/windows_pack.rs). MIT.
 ruzstd = "0.8"
 
+[target.'cfg(windows)'.dependencies]
+# The small icon of the builder window, loaded at the size shown on the screen.
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_Controls",
+    "Win32_UI_HiDpi",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
 [features]
 custom-protocol = ["tauri/custom-protocol"]
 
