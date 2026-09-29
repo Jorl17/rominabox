@@ -65,7 +65,7 @@ PLAYER_SETTINGS = (
 
 
 def ship_plan(resources: Path, data: Path | str, pause_nonactive: str = "true",
-              managed: tuple[str, ...] = ("logs",)) -> None:
+              managed: tuple[str, ...] = ("logs",), shader_initial: str | None = None) -> None:
     """Return the export's launch plan, with `data` as its data directory."""
     resources.mkdir(parents=True, exist_ok=True)
     write(
@@ -74,6 +74,7 @@ def ship_plan(resources: Path, data: Path | str, pause_nonactive: str = "true",
         "content\tcontent\n"
         "title\tPlan\n"
         + PLAYER_SETTINGS.format(pause=pause_nonactive)
+        + (f"shader_initial\t{shader_initial}\n" if shader_initial else "")
         + f"data_dir\t{data}\n"
         + "".join(f"managed\t{name}\n" for name in managed)
         + "\n---config---\n"
@@ -304,6 +305,49 @@ def run_player_settings() -> list[str]:
     return failures
 
 
+def run_shader_choice() -> list[str]:
+    """We store the filter that a player chose by its id, as in the menu, and on
+    the next launch we look for that filter's file wherever the game's files
+    are now. After a re-export a Windows game unpacks into a new folder, and a
+    Mac game can be moved. A saved path would point to the old folder, and the
+    first launch after a re-export would have no filter."""
+    failures = []
+    presets = {"none": "", "scanlines": "shaders/scanlines/scanlines.glslp",
+               "royale": "shaders/glsl/crt/crt-royale.glslp"}
+    with scratch.scratch("rominabox-shader-choice-") as made:
+        root = Path(made)
+        binary, resources = compile_plan(root)
+        home = root / "home"
+        home.mkdir()
+        data = root / "data"
+        ship_plan(resources, data, shader_initial=presets["scanlines"])
+        assets = resources / "menu-assets"
+        assets.mkdir(parents=True, exist_ok=True)
+        write(assets / "shaders.cfg",
+              f'shader_ids = "{" ".join(presets)}"\n'
+              + "".join(f'shader_preset_{name} = "{preset}"\n' for name, preset in presets.items()))
+        for preset in filter(None, presets.values()):
+            (assets / preset).parent.mkdir(parents=True, exist_ok=True)
+            write(assets / preset, "shaders = 1\n")
+
+        def started(label: str, wanted: str) -> None:
+            ran = plan_tool(binary, home)
+            said = [line.split("\t", 1)[1] for line in ran.stdout.splitlines() if line.startswith("shader\t")]
+            got = Path(said[0]).resolve() if said else None
+            expected = (assets / wanted).resolve() if wanted else None
+            if ran.returncode != 0 or got != expected:
+                failures.append(f"{label}: the launch asks for {got}, expected {expected}")
+
+        started("no choice", presets["scanlines"])
+        write(data / "shader-choice", "royale\n")
+        started("the player chose CRT Royale", presets["royale"])
+        write(data / "shader-choice", "none\n")
+        started("the player chose Unfiltered", "")
+        write(data / "shader-choice", "gone\n")
+        started("a filter this export no longer has", presets["scanlines"])
+    return failures
+
+
 def run_plan_places() -> list[str]:
     """Check that the data folder and managed folders of a plan stay in bounds.
 
@@ -430,7 +474,7 @@ def windows_build(directory: Path) -> list[str]:
 
 
 def main() -> int:
-    failures = run() + run_player_settings() + run_plan_places() + run_menu_sounds()
+    failures = run() + run_player_settings() + run_shader_choice() + run_plan_places() + run_menu_sounds()
     with scratch.scratch("rominabox-core-options-windows-") as made:
         failures += windows_build(Path(made))
     for failure in failures:

@@ -321,7 +321,7 @@ void design_prompt_survives_an_empty_status(const char *native_assets, const cha
 /* Choosing a row on a list screen runs the action of that list. A row of the
  * filter list applies its filter, and we do not call the list of another
  * screen. We stage a whole Native menu, with filters, next to the others. */
-void a_filter_row_applies_its_filter(const char *native_assets)
+void a_filter_row_applies_its_filter(const char *native_assets, const char *data)
 {
    const std::string assets = design_assets(native_assets, "everything");
    check(std::filesystem::is_regular_file(assets + "/shaders.cfg"), "the menu with filters is staged");
@@ -340,6 +340,10 @@ void a_filter_row_applies_its_filter(const char *native_assets)
       check(host.applied_preset.size() > preset.size() &&
             host.applied_preset.compare(host.applied_preset.size() - preset.size(), preset.size(), preset) == 0,
             "the filter is applied with the preset the export named");
+      /* We store it by id, because a path would contain the folder this copy
+       * of the game was unpacked into, and the next export replaces that. */
+      check(read_file(std::string(data) + "/shader-choice") == "scanlines\n",
+            "the chosen filter is kept by its id, not by where its file is");
       rib_menu_destroy(menu);
    }
    test_setenv("ROMINABOX_RML_ASSETS", native_assets);
@@ -1361,7 +1365,7 @@ int main(int argc, char **argv)
    fixes::volume_is_heard_at_its_level(argv[1]);
    fixes::design_prompt_survives_an_empty_status(argv[1], argv[2]);
    fixes::disc_list_keeps_its_page(argv[1], argv[2]);
-   fixes::a_filter_row_applies_its_filter(argv[1]);
+   fixes::a_filter_row_applies_its_filter(argv[1], argv[2]);
    fixes::binds_open_sooner_on_hover();
    fixes::pad_changes_and_reset_apply_together(argv[1], argv[2]);
    fixes::chosen_slot_shows_on_save_and_load(argv[1]);
