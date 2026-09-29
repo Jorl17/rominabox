@@ -5,8 +5,10 @@ The kit contains no cores. As in the builder, we take the Mega Drive core from
 the local core source (scripts/core_source.py) as the export's core cache. The
 ROM is a few bytes that we write in the work directory, so the size is that of
 the player and the one core the game uses. A real Game Boy Advance ROM adds
-its own size. We check the app on disk for this machine's platform (a macOS
-bundle, a Windows game folder) against scripts/fixtures/size-budgets.json. At
+its own size. We check the game's files on disk for this machine's platform
+against scripts/fixtures/size-budgets.json. On macOS that is the bundle. On
+Windows it is the files unpacked from the game's one program, as listed in
+its index, and we print the size of the download beside it. At
 export we write that app and nothing else. On macOS we export one more game,
 which also runs on Intel Macs. Its player and core contain code for both
 processors, it has its own ceiling, and its Intel core comes from the core
@@ -35,6 +37,8 @@ from built import cli  # noqa: E402
 from core_source import core, host_target  # noqa: E402
 import native_build  # noqa: E402
 import prepare_runtime  # noqa: E402
+import windows_pack  # noqa: E402
+from menu_shots import QUIET_ENV  # noqa: E402
 
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 BUDGETS = ROOT / "scripts/fixtures/size-budgets.json"
@@ -70,11 +74,24 @@ def macos_libraries(app: Path) -> list[str]:
             if path.is_file() or path.is_symlink()]
 
 
-def windows_libraries(app: Path) -> list[str]:
+def windows_libraries(program: Path) -> list[str]:
     """Return the problems with the libraries in a Windows game, which are any
     library but its core. The player and the launcher use only Windows."""
-    return [f"carries {path.relative_to(app)}" for path in sorted(app.rglob("*.dll"))
-            if path.relative_to(app) != Path("Resources/game-core.dll")]
+    return [f"carries {path}" for path, _ in sorted(windows_pack.packed(program).files)
+            if path.endswith(".dll") and path != "Resources/game-core.dll"]
+
+
+def windows_installed(program: Path) -> int:
+    """Return a Windows game's files after we unpack its program, which are
+    the launcher and everything packed after it."""
+    pack = windows_pack.packed(program)
+    return pack.launcher_bytes + sum(size for _, size in pack.files)
+
+
+def windows_resources(program: Path) -> Path:
+    """Return the folder of a Windows game's own files. We fill it by running
+    the game's program with its silent option."""
+    return windows_pack.unpacked(program, dict(os.environ, **{QUIET_ENV: "1"})) / "Resources"
 
 
 # For each platform, where an app has its own files, the check of the
@@ -83,13 +100,15 @@ def windows_libraries(app: Path) -> list[str]:
 PLATFORMS = {
     "macos": {
         "resources": lambda app: app / "Contents" / "Resources",
+        "installed": du,
         "libraries": macos_libraries,
         "more": {
             "featured-intel": ({"intelMacs": True}, "intel_macs_installed_bytes", "macos-x86_64"),
         },
     },
     "windows": {
-        "resources": lambda app: app / "Resources",
+        "resources": windows_resources,
+        "installed": windows_installed,
         "libraries": windows_libraries,
         "more": {},
     },
@@ -121,6 +140,12 @@ def resources(app: Path) -> Path:
     return PLATFORMS[PLATFORM]["resources"](app)
 
 
+def namespace(name: str) -> str:
+    """Return the namespace of the games we export here, separate from a
+    player's games and other checks' games (ROMINABOX_GAME_BUNDLE_PREFIX)."""
+    return f"size-{name}"
+
+
 def export(command: Path, name: str, kit: Path, cache: Path, rom: Path, extra: dict) -> Path:
     out = WORK / name
     remove_owned(out)
@@ -143,7 +168,7 @@ def export(command: Path, name: str, kit: Path, cache: Path, rom: Path, extra: d
         "coreCache": str(cache),
     }
     request.update(extra)
-    env = dict(os.environ, ROMINABOX_GAME_BUNDLE_PREFIX=f"size-{name}")
+    env = dict(os.environ, ROMINABOX_GAME_BUNDLE_PREFIX=namespace(name))
     result = subprocess.run(
         [str(command), "export"],
         input=json.dumps(request),
@@ -155,7 +180,7 @@ def export(command: Path, name: str, kit: Path, cache: Path, rom: Path, extra: d
         raise SystemExit(f"could not export {name}:\n{result.stdout[-800:]}")
     written = [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
     app = next((Path(event["result"]["appPath"]) for event in written if event.get("type") == "result"), None)
-    if app is None or not app.is_dir():
+    if app is None or not app.exists():
         raise SystemExit(f"{name} wrote no app")
     return app
 
@@ -204,8 +229,9 @@ def main() -> int:
         if extras:
             print(f"  {name} wrote more than the app: {', '.join(extras)}")
             failed = True
-        installed = du(app)
-        print(f"  {name:<14} app {installed:8d}  of {ceiling}")
+        installed = platform["installed"](app)
+        download = f"  download {app.stat().st_size}" if app.is_file() else ""
+        print(f"  {name:<14} app {installed:8d}  of {ceiling}{download}")
         if installed > ceiling:
             print(f"  {name} app {installed} exceeds {ceiling}")
             failed = True

@@ -384,6 +384,47 @@ def data_dir_of(app: Path) -> Path | None:
     return Path(found.group(1).replace("$user_data", str(_app()["user_data"](app))))
 
 
+def _launch_declaration(name: str) -> str:
+    """A name the launcher and the player share, from rominabox_launch.h."""
+    header = (ROOT / "vendor/retroarch/rominabox_launch.h").read_text(encoding="utf-8")
+    found = re.search(rf'#define {name} "([^"]+)"', header)
+    if not found:
+        raise SystemExit(f"rominabox_launch.h declares no {name}")
+    return found.group(1)
+
+
+def forget_windows_game(program: Path, namespace: str) -> None:
+    """Remove everything on this computer from the Windows game `program` with
+    the game's own UNINSTALL. We write the same marker as its menu into its
+    data folder and launch it, and before a core is loaded we remove in the
+    launcher the game's sandbox, its data and every unpacked copy
+    (forget_if_asked, launcher/windows/main.c). We also remove the
+    QUICK SIGN IN folder of a game exported under `namespace`, but keep the
+    shared one and the one for a worktree."""
+    environment = dict(os.environ, **{QUIET_ENV: "1"})
+    folder = windows_pack.unpacked(program, environment)
+    data = data_dir_of(folder)
+    accounts = re.search(r"^accounts_dir\t(.+)$", plan_text(folder), re.MULTILINE)
+    if data is not None:
+        data.mkdir(parents=True, exist_ok=True)
+        (data / _launch_declaration("RIB_FORGET_MARKER")).write_bytes(b"")
+        subprocess.run(
+            [str(program)],
+            env=dict(environment, ROMINABOX_PLAN_ONLY="1"),
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            check=True,
+            timeout=600,
+            **windowless(),
+        )
+    if accounts and namespace and accounts.group(1).endswith(f"-{namespace}") \
+            and accounts.group(1) != os.environ.get("ROMINABOX_ACCOUNTS_FOLDER"):
+        local = Path(os.environ["LOCALAPPDATA"])
+        made = local / accounts.group(1)
+        if made.parent == local and made.is_dir() and not made.is_symlink():
+            shutil.rmtree(made)
+
+
 def log_of(app: Path) -> Path | None:
     """The file to which we send the player's output in the launcher."""
     data = data_dir_of(app)
@@ -503,6 +544,7 @@ KIT = ROOT / "desktop/src-tauri/resources/runtime"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from built import cli as _cli  # noqa: E402
 import windows_pack  # noqa: E402
+from programs import windowless  # noqa: E402
 import player_build  # noqa: E402
 from core_source import core_source  # noqa: E402
 
@@ -661,8 +703,9 @@ def _build_a_game(
     design: str = "native",
     palette: str = "blue",
     namespace: str = "",
-) -> Path:
-    """Export a game from the tree as it is now, and return the app.
+) -> tuple[Path, Path | None]:
+    """Export a game from the tree as it is now, and return the app, or on
+    Windows the single program of the export.
 
     To take a picture of a change by hand, someone has to assemble a kit,
     remember which pieces are out of date, export, and replace the player
@@ -717,11 +760,13 @@ def _build_a_game(
     app = next((Path(event["result"]["appPath"]) for event in written if event.get("type") == "result"), None)
     # A Windows game is one program, and in a harness we work on the folder
     # of its unpacked files.
+    program = None
     if app is not None and app.is_file() and PLATFORM == "windows":
+        program = app
         app = windows_pack.unpacked(app, dict(os.environ, **{quiet_env(): "1"}))
     if app is None or not app.is_dir():
         raise SystemExit(f"the export wrote no app into {out}")
-    return app
+    return app, program
 
 
 @contextmanager
@@ -749,7 +794,7 @@ def build_a_game(
     created = run_dir.lstat()
     keep = False
     try:
-        app = _build_a_game(rom, workspace, run_dir, system, settings, design, palette, namespace)
+        app, program = _build_a_game(rom, workspace, run_dir, system, settings, design, palette, namespace)
         try:
             yield app
         except PlayerTimeout as error:
@@ -758,6 +803,10 @@ def build_a_game(
                 print(f"retained timed-out player's export for inspection: {run_dir}", file=sys.stderr)
             raise
     finally:
+        # When the block ends, we remove everything a Windows game made on the
+        # computer, the same as choosing UNINSTALL in the player.
+        if not keep and program is not None:
+            forget_windows_game(program, shot_bundle_prefix(workspace) + namespace)
         if not keep:
             current = run_dir.lstat()
             if (

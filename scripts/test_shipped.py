@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import native_build  # noqa: E402
 import scratch  # noqa: E402
 from launcher_plan import compile_plan  # noqa: E402
+import menu_shots  # noqa: E402
 from menu_shots import QUIET_ENV, SOUND_ENV  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -415,8 +416,9 @@ def run_menu_sounds() -> list[str]:
         root = Path(made)
         rom = root / "stand-in.bin"
         rom.write_bytes(b"RIBsounds")
+        name = "shipped-menu-sounds"
         app = size_bundles.export(
-            size_bundles.cli(), "shipped-menu-sounds", size_bundles.KIT,
+            size_bundles.cli(), name, size_bundles.KIT,
             size_bundles.core_cache(), rom, {"menuSounds": "blip"},
         )
         shipped = size_bundles.resources(app) / "assets" / "sounds"
@@ -424,6 +426,9 @@ def run_menu_sounds() -> list[str]:
             return [f"the export shipped no pack at {shipped}"]
         binary, resources = compile_plan(root)
         shutil.copytree(size_bundles.resources(app), resources, dirs_exist_ok=True)
+        # The Windows game unpacked its files here, so we forget the game afterwards.
+        if app.is_file():
+            menu_shots.forget_windows_game(app, size_bundles.namespace(name))
         size_bundles.remove_owned(app.parent)
         # The export's data folder is in the person's application data, but
         # for this run we keep the data here. A game in its sandbox could not
