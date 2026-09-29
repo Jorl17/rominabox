@@ -1,13 +1,13 @@
-//! A Windows export of a stand-in game from a stand-in Windows kit: the game's
-//! folder, its contents, what we tell its player, and the resources of its
-//! programs. The core, the player and the launcher are actual programs that
-//! we compile, so we check actual import tables and resources. The programs
-//! do nothing but end.
+//! A Windows export of a stand-in game from a stand-in Windows kit. We check
+//! the game's one program, what we unpack from it, what we tell its player,
+//! and the details about its programs that Windows shows. The core, the
+//! player and the launcher are real programs compiled with the toolchain, so
+//! we check real import tables and resources. The programs only exit.
 #![cfg(windows)]
 
 mod export_fixture;
 
-use export_fixture::{export_request_from, library, windows_kit, workspace};
+use export_fixture::{export_request_from, library, unpack, windows_kit, workspace};
 use rominabox_desktop::packaging::{ErrorStage, ExportTarget};
 use editpe::constants::{RT_GROUP_ICON, RT_ICON};
 use editpe::{Image, ResourceEntryName};
@@ -30,16 +30,18 @@ fn config_value<'a>(plan: &'a str, key: &str) -> Option<&'a str> {
 }
 
 #[test]
-fn a_windows_game_is_a_folder_holding_its_program_resources_and_player() {
+fn a_windows_game_is_one_program_holding_its_resources_and_player() {
     let root = workspace();
     let mut request = export_request_from(&root, windows_kit(&root));
     request.game.target = ExportTarget::Windows;
     let cancelled = AtomicBool::new(false);
     let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
 
-    assert_eq!(names(&request.output_dir), ["Hotkey Isolation"]);
-    let game = request.output_dir.join("Hotkey Isolation");
-    assert_eq!(result.app_path, game);
+    assert_eq!(names(&request.output_dir), ["Hotkey Isolation.exe"]);
+    assert_eq!(result.app_path, request.output_dir.join("Hotkey Isolation.exe"));
+    let game = root.join("unpacked");
+    let runtime = unpack(&result.app_path, &game);
+    assert!(runtime.starts_with("ROM-in-a-Box/Runtimes/"), "{runtime}");
     assert_eq!(
         names(&game),
         ["Hotkey Isolation.exe", "Resources", "Runtime"]
@@ -113,11 +115,11 @@ fn windows_shows_the_games_icon_and_name_for_both_its_programs() {
     request.game.icon = Some(artwork);
     let cancelled = AtomicBool::new(false);
     let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
+    let game = root.join("unpacked");
+    unpack(&result.app_path, &game);
 
-    for program in [
-        result.app_path.join("Hotkey Isolation.exe"),
-        result.app_path.join("Runtime/retroarch.exe"),
-    ] {
+    // The program that the person opens, and the player unpacked from it.
+    for program in [result.app_path.clone(), game.join("Runtime/retroarch.exe")] {
         let (groups, icons) = icons_of(&program);
         // One group, the one used for RetroArch's window. The player's own
         // icon is no longer there.
@@ -200,3 +202,4 @@ fn a_core_that_needs_a_library_windows_lacks_is_refused() {
     assert!(error.message.contains("helper.dll"), "{}", error.message);
     assert_eq!(names(&request.output_dir), Vec::<String>::new());
 }
+

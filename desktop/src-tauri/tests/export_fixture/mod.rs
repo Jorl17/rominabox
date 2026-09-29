@@ -272,3 +272,59 @@ pub fn windows_kit_here(root: &Path) -> std::path::PathBuf {
     );
     kit
 }
+
+/// The next `count` bytes at `index`, which we move past them.
+fn take<'a>(index: &mut &'a [u8], count: usize) -> &'a [u8] {
+    let (head, rest) = index.split_at(count);
+    *index = rest;
+    head
+}
+
+fn number<const N: usize>(index: &mut &[u8]) -> u64 {
+    let mut bytes = [0u8; 8];
+    bytes[..N].copy_from_slice(take(index, N));
+    u64::from_le_bytes(bytes)
+}
+
+fn text(index: &mut &[u8]) -> String {
+    let length = number::<2>(index) as usize;
+    String::from_utf8(take(index, length).to_vec()).unwrap()
+}
+
+/// Write into `into` the contents of the one program of a Windows game, as
+/// we unpack them at the first launch (`launcher/windows/unpack.c`), with the
+/// launcher under its name and every packed file at its path. Returns the
+/// folder under the local application data that we unpack into at launch.
+pub fn unpack(program: &Path, into: &Path) -> String {
+    let bytes = fs::read(program).unwrap();
+    let trailer = &bytes[bytes.len() - 24..];
+    assert_eq!(&trailer[16..], b"RIBTAIL1", "{} is not a packed game", program.display());
+    let start = u64::from_le_bytes(trailer[..8].try_into().unwrap()) as usize;
+    let mut index = &bytes[start..bytes.len() - 24];
+    assert_eq!(take(&mut index, 8), b"RIBPACK1");
+    let runtime = text(&mut index);
+    let launcher = text(&mut index);
+    take(&mut index, 32);
+    for _ in 0..2 {
+        let length = number::<4>(&mut index) as usize;
+        take(&mut index, length);
+    }
+    let count = number::<4>(&mut index);
+    let mut head = start;
+    for _ in 0..count {
+        let path = text(&mut index);
+        let (offset, packed, size) = (number::<8>(&mut index), number::<8>(&mut index), number::<8>(&mut index));
+        take(&mut index, 32 + 1 + 32);
+        head = head.min(offset as usize);
+        let frame = &bytes[offset as usize..(offset + packed) as usize];
+        let mut file = Vec::new();
+        std::io::Read::read_to_end(&mut ruzstd::decoding::StreamingDecoder::new(frame).unwrap(), &mut file).unwrap();
+        assert_eq!(file.len() as u64, size, "{path}");
+        let destination = into.join(&path);
+        fs::create_dir_all(destination.parent().unwrap()).unwrap();
+        fs::write(destination, file).unwrap();
+    }
+    fs::create_dir_all(into).unwrap();
+    fs::write(into.join(launcher), &bytes[..head]).unwrap();
+    runtime
+}
