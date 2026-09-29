@@ -92,10 +92,9 @@ def build_slice(destination: Path, target: str, commit: str, switches: dict[str,
     retroarch = destination / "retroarch"
     accounts = native_build.copy_accounts(destination, target)
     binary = retroarch / native_build.binary_name(target)
-    # We link the player unstripped under this name with make, and make the
-    # stripped player from it, so a link that is up to date still has the
-    # symbols we read in the capability check.
-    linked = binary.with_name(f"{binary.stem}-linked{binary.suffix}")
+    # We link the player unstripped with make, and read its symbols there in
+    # the capability check.
+    linked = native_build.linked(binary)
     rmlui = native_build.recipe()["rmlui"]
     settings = {"RIB_ACHIEVEMENTS_TEST": switches["achievements_test"],
                 "RIB_MENU_SCRIPT": switches["menu_script"],

@@ -147,7 +147,7 @@ def configure_makefile(target: str) -> str:
     return "\n".join([
         *exports,
         "configured: configure $(wildcard qb/*) configure.mk",
-        f"\t$(SHELL) ./configure {' '.join(configure_flags(target))}",
+        "\t$(SHELL) ./configure " + shlex.join(configure_flags(target)).replace("$", "$$"),
         "\t@touch configured",
     ]) + "\n"
 
@@ -255,6 +255,20 @@ class Step:
 # How we run a command through ninja on each system: CreateProcess on Windows,
 # with Windows quoting, and /bin/sh on macOS and Linux.
 COMMAND_LINE = {"nt": subprocess.list2cmdline, "posix": shlex.join}
+
+
+def compile_step(objects: Path, index: int, source: Path, compiler: list[str]) -> Step:
+    """`source` compiled with `compiler` into the folder `objects`, numbered by
+    `index` so that two sources with one name do not collide."""
+    output = objects / f"{index:02d}-{source.stem}.o"
+    return Step(output, [source], [*compiler, "-c", str(source), "-o", str(output)], compiles=True)
+
+
+def linked(program: Path) -> Path:
+    """The unstripped program from which we make a stripped `program`. We keep it,
+    because when the link is up to date it still has its symbols, and we make
+    the stripped copy again from it."""
+    return program.with_name(f"{program.stem}-linked{program.suffix}")
 
 
 def ninja(folder: Path, steps: list[Step], environment: dict[str, str]) -> None:
@@ -436,7 +450,7 @@ def copy_accounts(destination: Path, target: str) -> Path:
 def build_launcher(destination: Path, target: str, environment: dict[str, str], fork: Path) -> Path | None:
     """The game's launcher, for a target where we build it next to the player,
     built into `destination`, with the parts from the RetroArch fork read
-    from `fork`: the fork archived for a player build, or the checkout's."""
+    from `fork`: the fork checked out for a player build, or the checkout's."""
     launcher = recipe()["launcher"].get(require_target(target))
     if launcher is None:
         return None
@@ -448,10 +462,8 @@ def build_launcher(destination: Path, target: str, environment: dict[str, str], 
            for source in launcher_sources(platform_of(target))]
     theirs = [(fork / source, ["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w", *forked["flags"], *includes])
               for source in forked["sources"]]
-    steps = [Step(folder / "objects" / f"{index:02d}-{source.stem}.o", [source],
-                  [*compile, "-c", str(source), "-o", str(folder / "objects" / f"{index:02d}-{source.stem}.o")],
-                  compiles=True)
-             for index, (source, compile) in enumerate([*own, *theirs])]
+    steps = [compile_step(folder / "objects", index, source, compiler)
+             for index, (source, compiler) in enumerate([*own, *theirs])]
     objects = [step.output for step in steps]
     steps.append(Step(output, objects, ["cc", *compiler_flags(target), *launcher["flags"], "-o", str(output),
                                         *map(str, objects), *launcher["libraries"]]))
@@ -576,7 +588,7 @@ def preview_resource(target: str) -> Path:
 
 
 def build_preview(destination: Path, target: str, environment: dict[str, str], rmlui_build: Path) -> Path | None:
-    """The builder's menu preview renderer, from the fork archived in
+    """The builder's menu preview renderer, from the fork checked out in
     `destination` and the RmlUi and FreeType built there, for a target listed
     in the recipe."""
     declared = recipe()["preview"]
@@ -599,16 +611,15 @@ def build_preview(destination: Path, target: str, environment: dict[str, str], r
         language = {".c": ["cc", "-std=gnu99"], ".cpp": ["c++", "-std=c++17"],
                     ".mm": ["c++", "-std=c++17", "-x", "objective-c++"]}[source.suffix]
         extra = context["flags"] if source in own[len(declared["sources"]):] else []
-        obj = folder / "objects" / f"{index:02d}-{source.stem}.o"
-        steps.append(Step(obj, [source], [*language, *compiler_flags(target), "-O2", *defines, *includes,
-                                          *freetype, *extra, "-c", str(source), "-o", str(obj)], compiles=True))
+        steps.append(compile_step(folder / "objects", index, source,
+                                  [*language, *compiler_flags(target), "-O2", *defines, *includes, *freetype, *extra]))
     objects = [step.output for step in steps]
     output = folder / platform["output"]
-    linked = output.with_name(f"{output.stem}-linked{output.suffix}")
-    steps.append(Step(linked, [*objects, rmlui_build / archive],
-                      ["c++", *compiler_flags(target), *platform["flags"], "-o", str(linked), *map(str, objects),
+    unstripped = linked(output)
+    steps.append(Step(unstripped, [*objects, rmlui_build / archive],
+                      ["c++", *compiler_flags(target), *platform["flags"], "-o", str(unstripped), *map(str, objects),
                        str(rmlui_build / archive), *freetype, *context["libraries"]]))
-    steps.append(Step(output, [linked], ["strip", "-o", str(output), str(linked)]))
+    steps.append(Step(output, [unstripped], ["strip", "-o", str(output), str(unstripped)]))
     ninja(folder, steps, environment)
     return output
 
