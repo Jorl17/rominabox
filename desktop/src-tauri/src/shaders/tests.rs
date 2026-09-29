@@ -710,3 +710,14 @@ fn an_authors_shader_never_takes_a_library_folder() {
     assert_eq!(ids, ["none", "crt-lottes", "glsl-2"]);
     let _ = fs::remove_dir_all(&root);
 }
+
+/// A filter the author added has no picture of what it does, so in its row
+/// we show a pixel S, for shader, at the size of the other filter pictures.
+#[test]
+fn an_added_filter_shows_a_pixel_s() {
+    let picture = image::load_from_memory(&icon_png("mine").unwrap()).unwrap().to_rgba8();
+    assert_eq!(picture.dimensions(), (256, 256));
+    // The middle of the S's top bar, and the open space right of its middle.
+    assert_eq!(picture.get_pixel(128, 44).0, [232, 232, 232, 255]);
+    assert_eq!(picture.get_pixel(128, 100).0, [16, 18, 24, 255]);
+}

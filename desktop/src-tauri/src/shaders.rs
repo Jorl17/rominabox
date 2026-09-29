@@ -583,21 +583,32 @@ fn icon_png(id: &str) -> Result<Vec<u8>, String> {
     if let Some((_, bytes)) = PREVIEWS.iter().find(|(name, _)| *name == id) {
         return Ok(bytes.to_vec());
     }
-    // A shader from the author. We do not compile its GLSL here, so we cannot
-    // make a true picture of it. We show an empty card, which means "this is
-    // your shader" and does not claim to show its effect.
+    // A shader the author added. We cannot know what it does before it runs
+    // in the game, so we show a pixel S, for shader, in its row, instead of
+    // a picture that claims to show its effect.
     use image::{ImageBuffer, Rgba};
-    let (width, height) = (256u32, 192u32);
+    const GLYPH: [&str; 7] = [".###.", "#...#", "#....", ".###.", "....#", "#...#", ".###."];
+    const SIZE: u32 = 256;
+    const CELL: u32 = 28;
+    const SHADOW: u32 = 8;
+    let left = (SIZE - CELL * 5) / 2;
+    let top = (SIZE - CELL * 7) / 2;
     let mut image: ImageBuffer<Rgba<u8>, Vec<u8>> =
-        ImageBuffer::from_pixel(width, height, Rgba([14, 14, 18, 255]));
-    for x in 0..width {
-        for y in [0, 1, height - 2, height - 1] {
-            image.put_pixel(x, y, Rgba([120, 128, 150, 255]));
-        }
-    }
-    for y in 0..height {
-        for x in [0, 1, width - 2, width - 1] {
-            image.put_pixel(x, y, Rgba([120, 128, 150, 255]));
+        ImageBuffer::from_pixel(SIZE, SIZE, Rgba([16, 18, 24, 255]));
+    // Draw a crisp shadow first, then the letter over it.
+    for (offset, colour) in [(SHADOW, Rgba([0, 0, 0, 255])), (0, Rgba([232, 232, 232, 255]))] {
+        for (row, line) in GLYPH.iter().enumerate() {
+            for (column, cell) in line.chars().enumerate() {
+                if cell != '#' {
+                    continue;
+                }
+                let (x, y) = (left + column as u32 * CELL + offset, top + row as u32 * CELL + offset);
+                for dy in 0..CELL {
+                    for dx in 0..CELL {
+                        image.put_pixel(x + dx, y + dy, colour);
+                    }
+                }
+            }
         }
     }
     let mut bytes = std::io::Cursor::new(Vec::new());
