@@ -13,7 +13,7 @@
   "menuSounds": "off",
   "menuControls": {
     "menu": ["key:escape", "pad:home", "pad:l3+r3"],
-    "confirm": ["key:enter", "pad:a"],
-    "back": ["key:escape", "pad:b"]
+    "confirm": ["key:enter", "pad:b"],
+    "back": ["key:escape", "pad:a"]
   }
 }
