@@ -1,7 +1,8 @@
 //! The command line uses the same functions as the backend commands of the
 //! builder for the folders for games and downloads, the menu controls check,
-//! a lookup in the builder cache, the preview in the Menu step, and the error
-//! for a project with a palette that this build does not have.
+//! the controller variants in the Controls step, a lookup in the builder
+//! cache, the preview in the Menu step, and the error for a project with a
+//! palette that this build does not have.
 
 use rominabox_desktop::builder::{self, defaults, Places};
 use rominabox_desktop::game::Game;
@@ -97,22 +98,38 @@ fn menu_controls_check_prints_the_controls_or_the_refusal() {
     assert_eq!(kept["menuControls"]["confirm"], declared["confirm"], "{kept}");
     assert_eq!(kept["menuControls"]["back"], declared["back"], "{kept}");
 
-    // B on the pad is already bound to BACK.
-    let (succeeded, lines, printed) = run("menu-controls-check", Some(&json!({ "confirm": ["key:enter", "pad:b"] })));
+    // The pad's right face button is already bound to BACK.
+    let (succeeded, lines, printed) = run("menu-controls-check", Some(&json!({ "confirm": ["key:enter", "pad:a"] })));
     assert!(!succeeded, "{printed}");
     let refused = lines.last().unwrap();
     assert_eq!(refused["type"], "error", "{printed}");
     assert_eq!(refused["refusal"]["kind"], "shared", "{printed}");
-    assert_eq!(refused["refusal"]["binding"], "pad:b", "{printed}");
+    assert_eq!(refused["refusal"]["binding"], "pad:a", "{printed}");
     assert!(
         refused["message"].as_str().unwrap().contains("cannot share an input"),
         "{printed}"
     );
 }
 
-/// `inspect_game` uses the builder cache, whose path the author never gives.
-/// The cache has nothing under this identifier and the lookup stays offline,
-/// so we identify the console from the header.
+/// In `inspect_game` we look in the builder's cache, which the author
+/// never names. We cache nothing under this identifier and keep the
+/// lookup offline, so we identify the console from the header. The
+/// controller variants we offer for a console in the Controls step, each
+/// of which `controls` describes when the request contains it.
+#[test]
+fn controls_lists_the_variants_a_console_offers() {
+    let variants = |answer: &Value| -> Vec<String> {
+        answer["variants"].as_array().unwrap().iter().map(|variant| variant["id"].as_str().unwrap().to_owned()).collect()
+    };
+    let megadrive = result("controls", Some(&json!({ "system": "megadrive" })));
+    assert_eq!(megadrive["id"], "megadrive");
+    assert_eq!(variants(&megadrive), ["megadrive", "megadrive6"]);
+    let six = result("controls", Some(&json!({ "system": "megadrive", "profile": "megadrive6" })));
+    assert_eq!(six["id"], "megadrive6");
+    let snes = result("controls", Some(&json!({ "system": "snes" })));
+    assert_eq!(variants(&snes), [snes["id"].as_str().unwrap()]);
+}
+
 #[test]
 fn inspect_without_a_cache_looks_up_in_the_builders() {
     let root = Scratch::dir("rominabox-cli-inspect-builders-cache");

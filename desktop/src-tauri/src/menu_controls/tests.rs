@@ -22,15 +22,15 @@ fn the_actions_are_the_players_own() {
 }
 
 /// The builder defaults. MENU is Escape, Home on the pad and L3+R3. CONFIRM
-/// is Enter and the right face button. BACK is Escape and the bottom face
-/// button.
+/// is Enter and the bottom face button (Cross). BACK is Escape and the right
+/// face button (Circle).
 #[test]
 fn the_builders_defaults_are_todays_menu_keys() {
     let defaults = crate::builder::unstated::menu_controls();
     let texts = |action| defaults.of(action).iter().map(Binding::text).collect::<Vec<_>>();
     assert_eq!(texts(Action::Menu), ["key:escape", "pad:home", "pad:l3+r3"]);
-    assert_eq!(texts(Action::Confirm), ["key:enter", "pad:a"]);
-    assert_eq!(texts(Action::Back), ["key:escape", "pad:b"]);
+    assert_eq!(texts(Action::Confirm), ["key:enter", "pad:b"]);
+    assert_eq!(texts(Action::Back), ["key:escape", "pad:a"]);
     defaults.check().unwrap();
 }
 
@@ -71,7 +71,7 @@ fn defaults_that_would_lock_a_player_out_or_hold_an_input_twice_are_refused() {
     for (json, says) in [
         (serde_json::json!({ "menu": ["pad:home"] }), "menu has no key"),
         (serde_json::json!({ "confirm": [] }), "confirm has no binding"),
-        (serde_json::json!({ "confirm": ["key:enter", "pad:b"] }), "bound to both"),
+        (serde_json::json!({ "confirm": ["key:enter", "pad:a"] }), "bound to both"),
         (serde_json::json!({ "back": ["key:escape", "key:escape"] }), "twice"),
     ] {
         let error = controls(json.clone()).unwrap().check().unwrap_err().to_string();
@@ -100,8 +100,8 @@ fn a_refusal_names_the_rule_and_the_actions_for_the_builder() {
 fn the_defaults_file_holds_each_list_and_every_pad_inputs_words() {
     let text = crate::builder::unstated::menu_controls().defaults_config().unwrap();
     assert!(text.contains("menu_control_menu = \"key:escape pad:home pad:l3+r3\"\n"), "{text}");
-    assert!(text.contains("menu_control_confirm = \"key:enter pad:a\"\n"), "{text}");
-    assert!(text.contains("menu_control_back = \"key:escape pad:b\"\n"), "{text}");
+    assert!(text.contains("menu_control_confirm = \"key:enter pad:b\"\n"), "{text}");
+    assert!(text.contains("menu_control_back = \"key:escape pad:a\"\n"), "{text}");
     assert!(text.contains("pad_word_b = \"Bottom button\"\n"), "{text}");
     assert!(text.contains("pad_word_a = \"Right button\"\n"), "{text}");
     assert!(text.contains("pad_word_home = \"Home\"\n"), "{text}");

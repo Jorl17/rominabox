@@ -129,18 +129,11 @@ pub fn profile_for_system(system: &str) -> Result<ControlProfile, String> {
 /// Escape is the only key a gameplay binding may not use, in every mode.
 pub fn validate_for_system(system: &str, controls: &Controls) -> Result<ControlProfile, String> {
     let profile = if let Some(id) = &controls.profile {
-        let normalized = normalize_system(system);
-        registry()?
-            .profiles
+        let mut offered = variants_for_system(system)?;
+        offered.extend(registry()?.profiles.into_iter().filter(|profile| profile.id == "retropad"));
+        offered
             .into_iter()
-            .find(|profile| {
-                profile.id == *id
-                    && (profile.id == "retropad"
-                        || profile
-                            .systems
-                            .iter()
-                            .any(|candidate| normalize_system(candidate) == normalized))
-            })
+            .find(|profile| profile.id == *id)
             .ok_or_else(|| format!("Controller variant {id} is not available for {system}."))?
     } else {
         profile_for_system(system)?
