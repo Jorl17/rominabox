@@ -99,3 +99,22 @@ fn a_project_opens_with_every_setting_and_file_it_was_saved_with() {
     let opened = serde_json::to_value(&opened.settings).unwrap();
     assert_eq!(by_contents(opened), by_contents(saved));
 }
+
+#[test]
+fn saving_a_project_leaves_only_the_project_where_it_was_saved() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-project-alone");
+    let settings: Game = serde_json::from_value(everything(&root)).unwrap();
+    let folder = root.join("saved");
+    fs::create_dir(&folder).unwrap();
+    save_project(&ProjectSaveRequest {
+        archive_path: folder.join("Every Setting.rominabox"),
+        settings,
+    })
+    .unwrap();
+    let mut names: Vec<String> = fs::read_dir(&folder)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    names.sort();
+    assert_eq!(names, ["Every Setting.rominabox"]);
+}
