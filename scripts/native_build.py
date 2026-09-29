@@ -4,9 +4,9 @@
 module we build it, for the player (`scripts/build_player.py`) and for the
 RmlUi linked into the tests (`scripts/prepare_rmlui.py`), so the two builds
 cannot differ. Targets differ only where the recipe has a key for a platform
-or a target or a function here is specific to one: the shell for configure,
-the processor and system version of a slice, the name of the finished
-binary, the spelling of its symbols and the libraries we may link into it.
+or a target or a function here is specific to one: the processor and
+system version of a slice, the name of the finished binary, the spelling of
+its symbols and the libraries we may link into it.
 """
 
 from __future__ import annotations
@@ -19,7 +19,6 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import tempfile
 import urllib.request
 from pathlib import Path
 
@@ -137,21 +136,39 @@ def configure_environment(target: str) -> dict[str, str]:
     return dict(recipe()["configure"]["environment"].get(platform_of(require_target(target)), {}))
 
 
-def makefile_local(target: str) -> str:
+def configure_makefile(target: str) -> str:
+    """configure.mk, with which we run the fork's configure for `target` when
+    configure, its qb scripts or this file are newer than its last run. We
+    keep unchanged outputs of configure as they were, so we do not compile
+    them again."""
+    exports = [f"export {name} = {value}" for name, value in configure_environment(target).items()]
+    return "\n".join([
+        *exports,
+        "configured: configure $(wildcard qb/*) configure.mk",
+        f"\t$(SHELL) ./configure {' '.join(configure_flags(target))}",
+        "\t@touch configured",
+    ]) + "\n"
+
+
+def makefile_local(target: str, settings: dict[str, str]) -> str:
+    """The build's Makefile.local: the recipe's lines for `target`, then
+    `settings`, the choices of this build, which override any assignment in
+    the fork's makefiles, as on the make command line. Every object depends
+    on this file, so after a change of settings we compile everything again."""
     makefile = recipe()["makefile"]
-    return "\n".join([*makefile["common"], *makefile[platform_of(require_target(target))]]) + "\n"
+    return "\n".join([*makefile["common"], *makefile[platform_of(require_target(target))],
+                      *(f"override {name} = {value}" for name, value in settings.items())]) + "\n"
 
 
-def make_variables(target: str) -> list[str]:
-    """The command-line settings for the fork's makefile to build a slice for
-    its processor and system version. With its ARCH switch we add -arch to
-    every compile and the link, and with MINVERFLAGS we replace the default
-    version for that processor."""
+def make_variables(target: str) -> dict[str, str]:
+    """The settings for the fork's makefile to build a slice for its processor
+    and system version. With its ARCH switch we add -arch to every compile and
+    the link, and with MINVERFLAGS we set the version for that processor."""
     if is_macos(target):
-        return [f"ARCH={architecture_of(target).value}",
-                f"MINVERFLAGS=-mmacosx-version-min={deployment_target(target)}"]
+        return {"ARCH": architecture_of(target).value,
+                "MINVERFLAGS": f"-mmacosx-version-min={deployment_target(target)}"}
     if is_windows(target):
-        return []
+        return {}
     raise SystemExit(f"no make variables for {target}")
 
 
@@ -190,15 +207,6 @@ def build_environment(target: str) -> dict[str, str]:
     else:
         raise SystemExit(f"no build environment for {target}")
     return environment
-
-
-def shell(target: str) -> list[str]:
-    """The POSIX shell in which we run the RetroArch configure script."""
-    if is_windows(target):
-        return [str(toolchain.msys2_root() / "usr" / "bin" / "bash.exe")]
-    if is_macos(target):
-        return ["/bin/sh"]
-    raise SystemExit(f"no shell for {target}")
 
 
 def make_path(path: Path, target: str) -> str:
@@ -240,22 +248,34 @@ def fork_commit() -> str:
                           capture_output=True, text=True, check=True).stdout.strip()
 
 
-def archive_fork(commit: str, destination: Path, target: str) -> None:
-    """The committed fork, with LF line endings whatever the checkout has."""
-    with tempfile.TemporaryDirectory() as temporary:
-        archive = Path(temporary) / "retroarch.tar"
-        subprocess.run(["git", "-c", "core.autocrlf=false", "-C", str(FORK), "archive",
-                        "--format=tar", "--prefix=retroarch/", "-o", str(archive), commit], check=True)
-        with tarfile.open(archive) as tar:
-            members = tar.getmembers()
-            if is_windows(target):
-                # On Windows, creating symbolic links requires extra rights.
-                # The only ones in the fork are inside Apple framework bundles.
-                skipped = [member.name for member in members if member.issym() or member.islnk()]
-                if any("pkg/apple/" not in name for name in skipped):
-                    raise SystemExit(f"the fork has symbolic links outside Apple bundles: {skipped}")
-                members = [member for member in members if not (member.issym() or member.islnk())]
-            tar.extractall(destination, members=members, filter="data")
+def write_if_changed(path: Path, data: bytes) -> None:
+    """`data` at `path`, written only when it differs from what is there, so
+    that a file read in a build keeps its time and we do not rebuild what
+    depends on it."""
+    if path.is_file() and path.read_bytes() == data:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+
+
+def checkout_fork(commit: str, destination: Path, target: str) -> None:
+    """The committed fork at `commit` in destination/retroarch, with LF line
+    endings whatever the checkout has. The Git data is next to the folder, in
+    fork.git, with the fork's objects shared, and the folder contains only the
+    fork's files, because in the fork's makefile we build a version from any
+    .git inside it. We move a folder from an earlier build to `commit` with
+    git, rewriting only the files that differ and removing those not in
+    `commit`, so we compile only what changed, and the build's files stay."""
+    repository = destination / "fork.git"
+    source = destination / "retroarch"
+    if not repository.is_dir():
+        subprocess.run(["git", "clone", "--quiet", "--bare", "--shared", str(FORK), str(repository)], check=True)
+    source.mkdir(parents=True, exist_ok=True)
+    settings = ["core.bare=false", "core.autocrlf=false", "advice.detachedHead=false",
+                *recipe()["checkout"][platform_of(require_target(target))]]
+    subprocess.run(["git", f"--git-dir={repository}", f"--work-tree={source}",
+                    *(part for setting in settings for part in ("-c", setting)),
+                    "checkout", "--quiet", "--force", "--detach", commit], check=True)
 
 
 def fetch_rmlui(destination: Path) -> Path:
@@ -364,10 +384,14 @@ def copy_accounts(destination: Path, target: str) -> Path:
     desktop/src-tauri."""
     accounts = destination / "rominabox-accounts"
     sources = [ROOT / relative for relative in recipe()["accounts"]["sources"]]
+    copies = set()
     for source in [*sources, LAUNCHER / "portable_fs.h", *file_layer(platform_of(target))]:
         copy = accounts / source.relative_to(DESKTOP)
-        copy.parent.mkdir(parents=True, exist_ok=True)
-        copy.write_bytes(source.read_bytes())
+        write_if_changed(copy, source.read_bytes())
+        copies.add(copy)
+    # In the fork's makefile we compile every source in the folder.
+    for left in [path for path in accounts.rglob("*") if path.is_file() and path not in copies]:
+        left.unlink()
     return accounts
 
 

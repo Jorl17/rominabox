@@ -42,8 +42,8 @@ import time
 from pathlib import Path
 
 from directory_links import link_directory, redirected
+from folder_lock import Lock
 import player_support
-import processes
 
 def _canonical() -> Path:
     """Return the main checkout, whatever checkout we run this script from.
@@ -78,6 +78,7 @@ LOCAL_CONFIG = "worktree.local.json"
 # and `git worktree remove` deletes it with everything else.
 OFFSET_FILE = "rominabox_port_offset"
 LOCK_NAME = "rominabox-worktree-lock"
+LOCK_BUSY = "another worktree command has held the worktree lock for 30s"
 
 
 def worktree_path(suffix: str) -> Path:
@@ -181,64 +182,6 @@ def port_is_free(port: int) -> bool:
                     return False
         return True
     raise NotImplementedError(f"no way to ask whether a port is taken on {sys.platform}")
-
-
-class Lock:
-    """Serialise allocation with a directory, which is created atomically.
-
-    Two `create` runs at the same time must not choose the same offset. `mkdir`
-    is the portable atomic primitive, and `flock` is not always dependable.
-    """
-
-    def __init__(self, path: Path):
-        self.path = path
-        self.held = False
-
-    def __enter__(self) -> "Lock":
-        deadline = time.monotonic() + 30
-        while True:
-            try:
-                self.path.mkdir(parents=True)
-                (self.path / "pid").write_text(str(os.getpid()))
-                self.held = True
-                return self
-            except FileExistsError:
-                if self._stale():
-                    continue
-                if time.monotonic() > deadline:
-                    raise SystemExit(
-                        f"another worktree command has held {self.path} for 30s"
-                    )
-                time.sleep(0.2)
-
-    def _stale(self) -> bool:
-        """Reclaim a lock whose owner process has ended, without taking one in use."""
-        pid_file = self.path / "pid"
-        try:
-            holder = int(pid_file.read_text().strip())
-        except (OSError, ValueError):
-            return False
-        if processes.alive(holder):
-            return False
-        # We move it aside and check again, so we never delete a lock that a
-        # new owner has just taken.
-        aside = self.path.with_suffix(f".stale.{os.getpid()}")
-        try:
-            self.path.rename(aside)
-        except OSError:
-            return False
-        try:
-            if int((aside / "pid").read_text().strip()) != holder:
-                aside.rename(self.path)
-                return False
-        except (OSError, ValueError):
-            pass
-        shutil.rmtree(aside, ignore_errors=True)
-        return True
-
-    def __exit__(self, *_: object) -> None:
-        if self.held:
-            shutil.rmtree(self.path, ignore_errors=True)
 
 
 def reserved_offsets() -> set[int]:
@@ -396,7 +339,7 @@ def create(suffix: str, branch: str | None, own_runtime: bool) -> int:
 
     link_build_artifacts(path, own_runtime)
 
-    with Lock(common_dir() / LOCK_NAME):
+    with Lock(common_dir() / LOCK_NAME, busy=LOCK_BUSY):
         offset = allocate_offset(None)
         local = write_local(path, suffix, offset)
     print(f"\n{path}\n{describe(local)}")
@@ -424,7 +367,7 @@ def adopt() -> int:
     require_room(here)
     # The setup from create, for a worktree created some other way.
     link_build_artifacts(here, own_copy=False)
-    with Lock(common_dir() / LOCK_NAME):
+    with Lock(common_dir() / LOCK_NAME, busy=LOCK_BUSY):
         offset = allocate_offset(existing.get("portOffset"))
         local = write_local(here, suffix, offset)
     print(f"{here}\n{describe(local)}")

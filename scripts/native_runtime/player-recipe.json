@@ -90,12 +90,19 @@
     "comment-environment": "On a Mac configure uses no pkg-config (PKG_CONF_PATH=none, a switch of the fork's configure): it finds a library by linking a test program against it, which reaches only the SDK's libraries, the system's zlib among them. pkg-config would offer any library Homebrew installed, which exists for one processor only. The RmlUi part of the fork's makefile still uses pkg-config for FreeType, which returns the FreeType built beside it.",
     "comment-windows": "No WinMM: it is only RetroArch's MIDI output, which the macOS player does not have (its build never enables CoreMIDI, so its MIDI driver is null), and it opens the system's synthesiser at every start, which slows the launch."
   },
+  "checkout": {
+    "windows": ["core.symlinks=false", "core.longpaths=true"],
+    "macos": ["core.symlinks=true"]
+  },
+  "comment-checkout": "How git writes the fork into a build folder. Windows makes no symbolic link without extra rights (the fork's are inside Apple bundles, which Windows never builds), and some of the fork's paths are longer than 260 characters there.",
   "makefile": {
     "common": [
       "HAVE_RMLUI = 1",
       "NEED_CXX_LINKER = 1",
-      "CXXFLAGS += -std=c++17"
+      "CXXFLAGS += -std=c++17",
+      "HAVE_CONFIG_MK = 1"
     ],
+    "comment-common": "HAVE_CONFIG_MK turns off the makefile's stop when configure's sources are newer than config.mk: the build's configure.mk runs configure again whenever they are, and configure keeps an unchanged config.mk as it was.",
     "macos": [
       "LDFLAGS += -framework QuartzCore",
       "LDFLAGS += -Wl,-dead_strip"

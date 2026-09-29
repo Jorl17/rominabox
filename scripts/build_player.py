@@ -1,8 +1,12 @@
-"""Build the player (the RetroArch fork with the RmlUi menu) into a new directory.
+"""Build the player (the RetroArch fork with the RmlUi menu) into a build folder.
 
-    uv run python scripts/build_player.py /absolute/new/build            # the host's target
+    uv run python scripts/build_player.py /absolute/build/folder         # the host's target
     uv run python scripts/build_player.py --target windows-x86_64 DIR
     uv run python scripts/build_player.py --target macos-universal DIR   # the macOS kit's player
+
+To build a folder again, pass it again. We bring the fork's committed source
+there to its current commit and compile only what changed. A folder contains
+the build of one target, and one build at a time.
 
 For a universal target we build each slice as its own target, in a folder
 named after the slice inside DIR, and join their players into DIR/retroarch.
@@ -25,34 +29,56 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import core_source  # noqa: E402
 import native_build  # noqa: E402
+from folder_lock import Lock  # noqa: E402
+
+# The target of a build folder, which we write when its first build starts.
+TARGET_RECORD = "build-target"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("destination", type=Path, help="a new, absolute directory")
+    parser.add_argument("destination", type=Path, help="an absolute directory: a new one, or one to build again")
     parser.add_argument("--target", default=core_source.host_target(), help="default: this machine's")
     arguments = parser.parse_args()
     target = native_build.require_build_target(arguments.target)
     destination: Path = arguments.destination
     if not destination.is_absolute():
         raise SystemExit("DESTINATION must be an absolute path")
-    if destination.exists():
-        raise SystemExit(f"refusing to overwrite existing destination: {destination}")
 
     commit = native_build.fork_commit()
     switches = {"achievements_test": os.environ.get("ROMINABOX_ACHIEVEMENTS_TEST_BUILD", "0"),
                 "menu_script": os.environ.get("ROMINABOX_MENU_SCRIPT_BUILD", "0")}
-    destination.mkdir(parents=True)
-    parts = native_build.slices(target)
-    if parts == [target]:
-        build_slice(destination, target, commit, switches)
-    else:
-        for part in parts:
-            build_slice(destination / part, part, commit, switches)
-        join(destination, target, parts)
-        write_info(destination, target, commit, switches, parts)
+    destination.mkdir(parents=True, exist_ok=True)
+    with Lock(destination / ".building", busy=f"another build is using {destination}", wait=0):
+        claim(destination, target)
+        parts = native_build.slices(target)
+        if parts == [target]:
+            build_slice(destination, target, commit, switches)
+        else:
+            for part in parts:
+                build_slice(destination / part, part, commit, switches)
+            join(destination, target, parts)
+            write_info(destination, target, commit, switches, parts)
     print(f"Built {destination / 'retroarch' / native_build.binary_name(target)} for {target} from {commit}")
     return 0
+
+
+def claim(destination: Path, target: str) -> None:
+    """Make `destination` the build folder for `target`. A new or empty folder
+    becomes one, and a build folder stays one. We build its FreeType and
+    RmlUi for its target, so we refuse a folder of another target or of
+    anything else. We write build-info.json last, so until this build
+    finishes, nothing in the folder marks any build as complete."""
+    record = destination / TARGET_RECORD
+    if record.is_file():
+        held = record.read_text(encoding="utf-8").strip()
+        if held != target:
+            raise SystemExit(f"{destination} is a {held} build folder, not {target}")
+    elif any(entry.name != ".building" for entry in destination.iterdir()):
+        raise SystemExit(f"{destination} is not a build folder: name a new folder or one a build made")
+    else:
+        record.write_text(target + "\n", encoding="utf-8", newline="\n")
+    (destination / "build-info.json").unlink(missing_ok=True)
 
 
 def build_slice(destination: Path, target: str, commit: str, switches: dict[str, str]) -> None:
@@ -60,36 +86,43 @@ def build_slice(destination: Path, target: str, commit: str, switches: dict[str,
     the preview renderer that the recipe lists beside it."""
     jobs = os.cpu_count() or 1
     destination.mkdir(parents=True, exist_ok=True)
-    native_build.archive_fork(commit, destination, target)
+    (destination / "build-info.json").unlink(missing_ok=True)
+    native_build.checkout_fork(commit, destination, target)
     rmlui_build = native_build.build_rmlui(destination, target, jobs)
     retroarch = destination / "retroarch"
-    (retroarch / "Makefile.local").write_text(native_build.makefile_local(target), encoding="utf-8", newline="\n")
     accounts = native_build.copy_accounts(destination, target)
+    binary = retroarch / native_build.binary_name(target)
+    # We link the player unstripped under this name with make, and make the
+    # stripped player from it, so a link that is up to date still has the
+    # symbols we read in the capability check.
+    linked = binary.with_name(f"{binary.stem}-linked{binary.suffix}")
+    rmlui = native_build.recipe()["rmlui"]
+    settings = {"RIB_ACHIEVEMENTS_TEST": switches["achievements_test"],
+                "RIB_MENU_SCRIPT": switches["menu_script"],
+                "RMLUI_SOURCE_DIR": f"../{rmlui['source']}", "RMLUI_BUILD_DIR": f"../{rmlui_build.name}",
+                "RIB_ACCOUNTS_DIR": native_build.make_path(accounts, target),
+                "TARGET": linked.stem,
+                **native_build.make_variables(target)}
+    native_build.write_if_changed(retroarch / "Makefile.local",
+                                  native_build.makefile_local(target, settings).encode("utf-8"))
+
+    native_build.write_if_changed(retroarch / "configure.mk", native_build.configure_makefile(target).encode("utf-8"))
 
     environment = {**native_build.build_environment(target), **native_build.freetype_environment(destination)}
-    native_build.run([*native_build.shell(target), "./configure", *native_build.configure_flags(target)],
-                     retroarch, {**environment, **native_build.configure_environment(target)})
-    rmlui = native_build.recipe()["rmlui"]
-    native_build.run(["make", f"-j{jobs}",
-                      f"RIB_ACHIEVEMENTS_TEST={switches['achievements_test']}",
-                      f"RIB_MENU_SCRIPT={switches['menu_script']}",
-                      f"RMLUI_SOURCE_DIR=../{rmlui['source']}", f"RMLUI_BUILD_DIR=../{rmlui_build.name}",
-                      f"RIB_ACCOUNTS_DIR={native_build.make_path(accounts, target)}",
-                      *native_build.make_variables(target)],
-                     retroarch, environment)
+    native_build.run(["make", "-f", "configure.mk"], retroarch, environment)
+    native_build.run(["make", f"-j{jobs}"], retroarch, environment)
 
-    binary = retroarch / native_build.binary_name(target)
     for name, function in native_build.recipe()["capabilities"].items():
-        if name != "comment" and not native_build.has_symbol(binary, target, function, environment):
+        if name != "comment" and not native_build.has_symbol(linked, target, function, environment):
             raise SystemExit(f"The built {target} player has no {name} ({function})")
-    write_info(destination, target, commit, switches)
-    native_build.run(["strip", str(binary)], retroarch, environment)
+    native_build.run(["strip", "-o", str(binary), str(linked)], retroarch, environment)
     launcher = native_build.build_launcher(destination, target, environment, retroarch)
     preview = native_build.build_preview(destination, target, environment, rmlui_build)
     for built in [binary, *([launcher] if launcher else []), *([preview] if preview else [])]:
         foreign = native_build.foreign_imports(built, target, environment)
         if foreign:
             raise SystemExit(f"{built.name} links libraries {target} does not have: {', '.join(foreign)}")
+    write_info(destination, target, commit, switches)
     others = [str(path) for path in (launcher, preview) if path]
     print(f"Built {binary}" + (f", and {', '.join(others)}" if others else ""), flush=True)
 
@@ -101,7 +134,7 @@ def join(destination: Path, target: str, parts: list[str]) -> None:
     stripping no symbol is left to read."""
     name = native_build.binary_name(target)
     joined = destination / "retroarch" / name
-    joined.parent.mkdir()
+    joined.parent.mkdir(exist_ok=True)
     environment = native_build.build_environment(parts[0])
     native_build.run(["lipo", "-create", "-output", str(joined),
                       *(str(destination / part / "retroarch" / name) for part in parts)], destination, environment)
