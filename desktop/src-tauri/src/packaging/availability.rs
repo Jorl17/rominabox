@@ -107,26 +107,15 @@ pub(super) fn core_readiness(
             None => format!("{} (this machine is not one the builder builds for)", core.component),
         });
     };
+    // We check only the core, because a missing licence text never makes a
+    // console unavailable.
     let artifact = resolve_cached(runtime_kit, cache, &Path::new("cores").join(filename));
-    let licence = resolve_cached(
-        runtime_kit,
-        cache,
-        &Path::new("licenses").join(&core.license_file),
-    );
-    if artifact.is_file() && licence.is_file() {
+    if artifact.is_file() {
         return Ok(());
     }
     // We name what is missing, so the author can tell "this console is gone"
     // from "this core was never prepared".
-    Err(format!(
-        "{} ({})",
-        core.component,
-        if artifact.is_file() {
-            format!("licence {} missing", core.license_file)
-        } else {
-            format!("artifact {filename} missing")
-        }
-    ))
+    Err(format!("{} (artifact {filename} missing)", core.component))
 }
 
 pub fn available_systems(runtime_kit: &Path) -> Vec<String> {

@@ -204,12 +204,10 @@ pub struct CoreInstall {
 }
 
 impl CoreInstall {
-    /// Both files are in the cache now.
+    /// The core is in the cache now. We fetch its licence text with it when
+    /// we can, and we never stop a game for a missing licence.
     pub fn usable(&self) -> bool {
-        let ok = |outcome: &InstallOutcome| {
-            matches!(outcome, InstallOutcome::Present | InstallOutcome::Installed)
-        };
-        ok(&self.core) && ok(&self.license)
+        matches!(self.core, InstallOutcome::Present | InstallOutcome::Installed)
     }
 }
 

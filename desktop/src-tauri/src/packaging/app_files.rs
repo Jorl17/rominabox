@@ -99,10 +99,11 @@ pub(super) fn stage_legal_materials(
         &destination.join("Source-Provenance/native-rmlui"),
     )?;
 
-    copy_file(
-        &resolve_cached(runtime_kit, cache, licence),
-        &licenses.join(&core.license_file),
-    )?;
+    // The licence text of the core, when we fetched it with the core.
+    let core_licence = resolve_cached(runtime_kit, cache, licence);
+    if core_licence.is_file() {
+        copy_file(&core_licence, &licenses.join(&core.license_file))?;
+    }
     let joypad_licence = runtime_kit.join("licenses/retroarch-joypad-autoconfig.txt");
     if joypad_licence.is_file() {
         copy_file(

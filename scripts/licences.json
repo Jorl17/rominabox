@@ -104,6 +104,19 @@
       "texts": [{"forkComment": "deps/switchres/switchres.cpp"}, {"url": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt"}]
     },
     {
+      "name": "xdelta3", "title": "Xdelta 3", "licence": "Apache-2.0", "pin": "fork", "path": "deps/xdelta3",
+      "usedBy": "the Windows player's patches, in every Windows game",
+      "texts": [{"fork": "deps/xdelta3/LICENSE"}]
+    },
+    {
+      "name": "liblzma", "title": "liblzma (XZ Utils)", "licence": "0BSD", "pin": "xz", "platforms": ["windows"],
+      "usedBy": "the Windows player, which links it for Xdelta 3, in every Windows game",
+      "texts": [
+        {"url": "https://raw.githubusercontent.com/tukaani-project/xz/{revision}/COPYING"},
+        {"url": "https://raw.githubusercontent.com/tukaani-project/xz/{revision}/COPYING.0BSD", "toolchain": "share/licenses/xz/COPYING.0BSD"}
+      ]
+    },
+    {
       "name": "mingw-w64-runtime", "title": "MinGW-w64 runtime", "licence": "ZPL-2.1 AND others", "pin": "mingw-w64", "platforms": ["windows"],
       "usedBy": "the Windows player and launcher, in every Windows game",
       "texts": [{"url": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/{revision}/COPYING.MinGW-w64-runtime/COPYING.MinGW-w64-runtime.txt",
@@ -125,7 +138,7 @@
   "pins": {
     "comment": "Pins nothing else in the repository records: the toolchain Windows players are built with (GCC 16.2.0 from MSYS2 UCRT64).",
     "mingw-w64": {"revision": "v14.0.0", "source": "https://github.com/mingw-w64/mingw-w64"},
-    "gcc": {"revision": "releases/gcc-16.2.0", "source": "https://github.com/gcc-mirror/gcc"}
+    "gcc": {"revision": "releases/gcc-16.2.0", "source": "https://github.com/gcc-mirror/gcc"}, "xz": {"revision": "v5.8.4", "source": "https://github.com/tukaani-project/xz"}
   },
   "data": [
     {
