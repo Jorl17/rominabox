@@ -253,6 +253,37 @@ mod tests {
         assert!(!root.join("Game (replaced).app").exists());
     }
 
+    /// On Windows we cannot remove a running game, only rename it, so a
+    /// replacement would leave the old program beside the new one with a
+    /// permissions error. We report that the game is running and change
+    /// nothing. In this test, the running game is a copy of Windows' own ping,
+    /// pinging the loopback address.
+    #[cfg(windows)]
+    #[test]
+    fn a_windows_game_that_is_running_is_not_replaced() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-publish");
+        let destination = root.join("Game.exe");
+        let system = std::env::var("SystemRoot").expect("Windows names its folder");
+        fs::copy(Path::new(&system).join("System32/PING.EXE"), &destination).unwrap();
+        let mut running = std::process::Command::new(&destination)
+            .args(["-n", "30", "127.0.0.1"])
+            .stdout(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        let app = root.join("new.exe");
+        fs::write(&app, b"new").unwrap();
+
+        let result = put_in_place(&app, &destination, true);
+        running.kill().unwrap();
+        running.wait().unwrap();
+
+        let error = result.unwrap_err();
+        assert!(error.sentence().contains("running"), "{}", error.sentence());
+        assert_ne!(fs::read(&destination).unwrap(), b"new");
+        assert_eq!(fs::read(&app).unwrap(), b"new");
+        assert!(!root.join("Game (replaced).exe").exists());
+    }
+
     #[test]
     fn without_replace_an_app_in_the_way_is_left_alone() {
         let root = rominabox_scratch::Scratch::dir("rominabox-publish");
