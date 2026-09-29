@@ -317,6 +317,15 @@ typedef struct {
     uint64_t total;
 } Progress;
 
+/* What we have written so far in an unpacking, and the file we are writing.
+ * If unpacking stops at a damaged file or a full disk, we remove both when
+ * the launcher ends (`forget_unpacking`). Otherwise a damaged game would
+ * leave another partly unpacked copy at every launch. */
+static struct {
+    const wchar_t *folder;
+    HANDLE file;
+} unpacking = {NULL, INVALID_HANDLE_VALUE};
+
 static void moved(Progress *progress, uint64_t bytes) {
     progress->done += bytes;
     unpack_dialog_progress(progress->dialog, progress->total ? (double)progress->done / progress->total : 1);
@@ -332,7 +341,13 @@ static HANDLE create(const wchar_t *root, const wchar_t *path) {
     file = CreateFileW(path, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE)
         rominabox_launch_die("could not unpack the game");
+    unpacking.file = file;
     return file;
+}
+
+static void close_written(HANDLE file) {
+    CloseHandle(file);
+    unpacking.file = INVALID_HANDLE_VALUE;
 }
 
 static void write_all(HANDLE file, const void *bytes, size_t size) {
@@ -360,7 +375,7 @@ static void unpack_program(HANDLE self, const Pack *pack, const wchar_t *folder,
         moved(progress, size);
     }
     sha_end(&sha, got);
-    CloseHandle(out);
+    close_written(out);
     free(buffer);
     free(path);
     if (memcmp(got, pack->head_hash, 32) != 0)
@@ -405,7 +420,7 @@ static void unpack_file(HANDLE self, ZSTD_DCtx *context, const Entry *entry, con
             broken();
     }
     sha_end(&sha, got);
-    CloseHandle(out);
+    close_written(out);
     free(in_bytes);
     free(out_bytes);
     free(path);
@@ -451,6 +466,13 @@ static void remove_tree(const wchar_t *path) {
             SetFileAttributesW(path, attributes & ~FILE_ATTRIBUTE_READONLY);
         DeleteFileW(path);
     }
+}
+
+static void forget_unpacking(void) {
+    if (unpacking.file != INVALID_HANDLE_VALUE)
+        CloseHandle(unpacking.file);
+    if (unpacking.folder)
+        remove_tree(unpacking.folder);
 }
 
 void unpack_remove_tree(const wchar_t *path) {
@@ -544,6 +566,8 @@ int unpack_game(const wchar_t *self, const char *local_app_data, int shown, char
         swprintf(fresh, sizeof fresh / sizeof fresh[0], L"%ls.unpacking-%lu\\", target, GetCurrentProcessId());
         make_folders(root, fresh);
         fresh[wcslen(fresh) - 1] = 0;
+        unpacking.folder = fresh;
+        atexit(forget_unpacking);
 
         MultiByteToWideChar(CP_UTF8, 0, pack.program, -1, title, sizeof title / sizeof title[0]);
         length = wcslen(title);
@@ -567,6 +591,7 @@ int unpack_game(const wchar_t *self, const char *local_app_data, int shown, char
          * same game is already there. */
         if (!MoveFileExW(fresh, target, 0) && !unpacked(target, &pack))
             rominabox_launch_die("could not put the unpacked game in place");
+        unpacking.folder = NULL;
         unpack_dialog_close(progress.dialog);
         forget_versions(target, 1);
     }
