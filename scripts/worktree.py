@@ -299,11 +299,10 @@ COPIED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/runtime"),
     # The same applies to these small files. In build_kit.py we install the
     # preview renderer into resources/preview, and in build_builder.py we write
-    # the command line into resources/bin and the skill into resources/skills,
-    # so with links we would write into the canonical checkout.
+    # the command line into resources/bin, so with links we would write into
+    # the canonical checkout.
     Path("desktop/src-tauri/resources/preview"),
     Path("desktop/src-tauri/resources/bin"),
-    Path("desktop/src-tauri/resources/skills"),
 ]
 
 # We only ever read these, so we share them at no cost and save a lot of

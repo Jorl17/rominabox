@@ -133,9 +133,6 @@ def main() -> int:
                    cwd=TAURI, check=True)
     (RESOURCES / "bin").mkdir(parents=True, exist_ok=True)
     shutil.copy2(built / "release" / CLI_NAME, RESOURCES / "bin" / CLI_NAME)
-    skill = RESOURCES / "skills/rominabox"
-    skill.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(ROOT / "skills/rominabox/SKILL.md", skill / "SKILL.md")
 
     npm = shutil.which("npm")
     if not npm:

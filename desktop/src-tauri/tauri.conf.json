@@ -36,8 +36,7 @@
     "resources": {
       "resources/runtime/": "runtime/",
       "resources/preview/": "preview/",
-      "resources/bin/": "bin/",
-      "resources/skills/": "skills/"
+      "resources/bin/": "bin/"
     },
     "windows": {
       "webviewInstallMode": { "type": "downloadBootstrapper" },
