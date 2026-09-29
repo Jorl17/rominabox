@@ -144,7 +144,8 @@ where
     crate::export_cores::prepare(&wanted, transport, |activity| {
         progress(ExportProgress {
             stage: ExportStage::Validate,
-            fraction: 0.04,
+            // Before the first step of the export, where we report 0.02.
+            fraction: 0.01,
             message: activity.message(),
             cores: Some(activity.clone()),
         })
