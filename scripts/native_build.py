@@ -15,11 +15,13 @@ import enum
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
 import tarfile
 import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -240,6 +242,42 @@ def run(command: list[str], cwd: Path, environment: dict[str, str]) -> None:
     subprocess.run([resolve(command[0], environment), *command[1:]], cwd=cwd, env=environment, check=True)
 
 
+@dataclass(frozen=True)
+class Step:
+    """One file we make with ninja: `output`, from `inputs`, by `command`. A step
+    with `compiles` also has a ninja depfile with the headers read in it."""
+    output: Path
+    inputs: list[Path]
+    command: list[str]
+    compiles: bool = False
+
+
+# How we run a command through ninja on each system: CreateProcess on Windows,
+# with Windows quoting, and /bin/sh on macOS and Linux.
+COMMAND_LINE = {"nt": subprocess.list2cmdline, "posix": shlex.join}
+
+
+def ninja(folder: Path, steps: list[Step], environment: dict[str, str]) -> None:
+    """Bring the output of every step up to date with ninja, with its files in
+    `folder`. We run a step again only when an input, a header read in it or
+    its command line changed since the last run."""
+    def escaped(path: Path) -> str:
+        return str(path).replace("$", "$$").replace(" ", "$ ").replace(":", "$:")
+
+    lines = ["rule step", "  command = $command", "rule compile", "  command = $command",
+             "  depfile = $out.d", "  deps = gcc"]
+    for step in steps:
+        command = [resolve(step.command[0], environment), *step.command[1:]]
+        if step.compiles:
+            command += ["-MD", "-MF", f"{step.output}.d"]
+        lines += [f"build {escaped(step.output)}: {'compile' if step.compiles else 'step'} "
+                  + " ".join(escaped(path) for path in step.inputs),
+                  "  command = " + COMMAND_LINE[os.name](command).replace("$", "$$")]
+    folder.mkdir(parents=True, exist_ok=True)
+    write_if_changed(folder / "build.ninja", ("\n".join(lines) + "\n").encode("utf-8"))
+    run(["ninja", "-C", str(folder)], folder, environment)
+
+
 def fork_commit() -> str:
     if subprocess.run(["git", "-C", str(FORK), "status", "--porcelain"],
                       capture_output=True, text=True, check=True).stdout.strip():
@@ -402,21 +440,22 @@ def build_launcher(destination: Path, target: str, environment: dict[str, str], 
     launcher = recipe()["launcher"].get(require_target(target))
     if launcher is None:
         return None
-    sources = launcher_sources(platform_of(target))
-    output = destination / "launcher" / launcher["output"]
-    output.parent.mkdir(parents=True, exist_ok=True)
+    folder = destination / "launcher"
+    output = folder / launcher["output"]
     forked = launcher.get("fork", {"includes": [], "flags": [], "sources": []})
     includes = [f"-I{fork / path}" for path in forked["includes"]]
-    objects_dir = destination / "launcher" / "objects"
-    objects_dir.mkdir(parents=True, exist_ok=True)
-    objects = []
-    for index, source in enumerate(forked["sources"]):
-        obj = objects_dir / f"{index:02d}-{Path(source).stem}.o"
-        run(["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w", *forked["flags"], *includes,
-             "-c", str(fork / source), "-o", str(obj)], destination, environment)
-        objects.append(obj)
-    run(["cc", *compiler_flags(target), *launcher["flags"], *includes, "-o", str(output), *map(str, sources),
-         *map(str, objects), *launcher["libraries"]], destination, environment)
+    own = [(source, ["cc", *compiler_flags(target), *launcher["flags"], *includes])
+           for source in launcher_sources(platform_of(target))]
+    theirs = [(fork / source, ["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w", *forked["flags"], *includes])
+              for source in forked["sources"]]
+    steps = [Step(folder / "objects" / f"{index:02d}-{source.stem}.o", [source],
+                  [*compile, "-c", str(source), "-o", str(folder / "objects" / f"{index:02d}-{source.stem}.o")],
+                  compiles=True)
+             for index, (source, compile) in enumerate([*own, *theirs])]
+    objects = [step.output for step in steps]
+    steps.append(Step(output, objects, ["cc", *compiler_flags(target), *launcher["flags"], "-o", str(output),
+                                        *map(str, objects), *launcher["libraries"]]))
+    ninja(folder, steps, environment)
     return output
 
 
@@ -554,21 +593,23 @@ def build_preview(destination: Path, target: str, environment: dict[str, str], r
                               capture_output=True, text=True, check=True, env=environment).stdout.split()
     includes = [f"-I{path}" for path in (PREVIEW, fork / "menu/drivers", fork / "libretro-common/include", fork,
                                          *headers)]
-    objects_dir = destination / "preview" / "objects"
-    objects_dir.mkdir(parents=True, exist_ok=True)
-    objects = []
+    folder = destination / "preview"
+    steps = []
     for index, source in enumerate([*own, *forked]):
         language = {".c": ["cc", "-std=gnu99"], ".cpp": ["c++", "-std=c++17"],
                     ".mm": ["c++", "-std=c++17", "-x", "objective-c++"]}[source.suffix]
         extra = context["flags"] if source in own[len(declared["sources"]):] else []
-        obj = objects_dir / f"{index:02d}-{source.stem}.o"
-        run([*language, *compiler_flags(target), "-O2", *defines, *includes, *freetype, *extra,
-             "-c", str(source), "-o", str(obj)], destination, environment)
-        objects.append(obj)
-    output = destination / "preview" / platform["output"]
-    run(["c++", *compiler_flags(target), *platform["flags"], "-o", str(output), *map(str, objects),
-         str(rmlui_build / archive), *freetype, *context["libraries"]], destination, environment)
-    run(["strip", str(output)], destination, environment)
+        obj = folder / "objects" / f"{index:02d}-{source.stem}.o"
+        steps.append(Step(obj, [source], [*language, *compiler_flags(target), "-O2", *defines, *includes,
+                                          *freetype, *extra, "-c", str(source), "-o", str(obj)], compiles=True))
+    objects = [step.output for step in steps]
+    output = folder / platform["output"]
+    linked = output.with_name(f"{output.stem}-linked{output.suffix}")
+    steps.append(Step(linked, [*objects, rmlui_build / archive],
+                      ["c++", *compiler_flags(target), *platform["flags"], "-o", str(linked), *map(str, objects),
+                       str(rmlui_build / archive), *freetype, *context["libraries"]]))
+    steps.append(Step(output, [linked], ["strip", "-o", str(output), str(linked)]))
+    ninja(folder, steps, environment)
     return output
 
 
