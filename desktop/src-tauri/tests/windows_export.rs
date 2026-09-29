@@ -256,3 +256,55 @@ fn every_file_of_a_game_with_every_shader_fits_windows_path_limit() {
         }
     }
 }
+
+/// When a game's program is damaged, we show an error and stop, and remove
+/// everything we unpacked in the person's application data. Otherwise every
+/// launch would leave another partly unpacked copy there. The launcher is the
+/// real one, built from this tree.
+#[test]
+fn a_damaged_game_leaves_nothing_of_its_unpack_behind() {
+    let root = workspace();
+    let kit = windows_kit(&root);
+    let built = Command::new(rominabox_desktop::repo::python())
+        .arg(rominabox_desktop::repo::at("scripts/build_launcher.py"))
+        .arg(root.join("launcher"))
+        .output()
+        .unwrap();
+    assert!(built.status.success(), "{}", String::from_utf8_lossy(&built.stderr));
+    // The output contains the path of the launcher from the last build.
+    let launcher = String::from_utf8(built.stdout).unwrap();
+    fs::copy(launcher.lines().last().unwrap().trim(), kit.join("bin/launcher.exe")).unwrap();
+    let mut request = export_request_from(&root, kit);
+    request.game.target = ExportTarget::Windows;
+    let cancelled = AtomicBool::new(false);
+    let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
+    let runtime = unpack(&result.app_path, &root.join("unpacked"));
+
+    // The last byte of the last packed file, which ends where the index starts.
+    let mut bytes = fs::read(&result.app_path).unwrap();
+    let trailer = bytes.len() - 24;
+    let index = u64::from_le_bytes(bytes[trailer..trailer + 8].try_into().unwrap()) as usize;
+    bytes[index - 1] ^= 0xFF;
+    fs::write(&result.app_path, &bytes).unwrap();
+
+    let ran = Command::new(&result.app_path)
+        .env("ROMINABOX_QUIET", "1")
+        .env("ROMINABOX_PLAN_ONLY", "1")
+        .output()
+        .unwrap();
+    let runtimes = Path::new(&std::env::var("LOCALAPPDATA").unwrap()).join("ROM-in-a-Box/Runtimes");
+    let name = Path::new(&runtime).file_name().unwrap().to_string_lossy().into_owned();
+    let left: Vec<_> = fs::read_dir(&runtimes)
+        .into_iter()
+        .flatten()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.file_name().unwrap().to_string_lossy().starts_with(&name))
+        .collect();
+    // What this game left behind, created during this run.
+    for path in &left {
+        fs::remove_dir_all(path).unwrap();
+    }
+    assert_eq!(ran.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&ran.stderr).contains("damaged"), "{}", String::from_utf8_lossy(&ran.stderr));
+    assert_eq!(left, Vec::<std::path::PathBuf>::new());
+}
