@@ -595,6 +595,21 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     return (int)code;
 }
 
+/* Whether a person opened this game, once we have found out. Until then we
+ * do not show a failure. */
+static int person_opened;
+
+/* A Windows game has no console, so we show why it cannot start in a message
+ * box to a person who opened it. We never show one in a quiet run or a dry
+ * run. */
+void rominabox_launch_tell(const char *message) {
+    wchar_t text[1024];
+    if (!person_opened || getenv(RIB_ENV_QUIET) || getenv("ROMINABOX_PLAN_ONLY"))
+        return;
+    if (MultiByteToWideChar(CP_UTF8, 0, message, -1, text, (int)(sizeof text / sizeof text[0])))
+        MessageBoxW(NULL, text, L"ROM-in-a-Box", MB_OK | MB_ICONERROR);
+}
+
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int show) {
     (void)instance;
     (void)previous;
@@ -603,8 +618,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int
     if (inside_sandbox()) {
         char *person = from_outside(outside_opened_by_person);
         char *outside = from_outside(outside_user_data);
-        return run(outside, outside, person && strcmp(person, "1") == 0);
+        person_opened = person && strcmp(person, "1") == 0;
+        return run(outside, outside, person_opened);
     }
+    person_opened = opened_by_explorer();
     /* We started this from outside and it is still not in a sandbox, so
      * going on would start it again and again. */
     if (GetEnvironmentVariableW(outside_user_data, NULL, 0))

@@ -35,6 +35,12 @@ static void die_errno(const char *message) {
     exit(1);
 }
 
+/* We run a Mac game's launcher inside the player before there is a window,
+ * so we write the reason a game cannot start to its error stream. */
+void rominabox_launch_tell(const char *message) {
+    (void)message;
+}
+
 /* When the player chooses RESET in the menu, we leave RIB_FORGET_MARKER in
  * the game's data folder. When the player process ends, we remove the folder
  * with everything in it, including saves and settings, and keep the app. */

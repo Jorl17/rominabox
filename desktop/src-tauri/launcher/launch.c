@@ -60,12 +60,14 @@ static const char *core_file(void) {
 
 void rominabox_launch_die(const char *message) {
     fprintf(stderr, "ROM-in-a-Box: %s\n", message);
+    rominabox_launch_tell(message);
     exit(1);
 }
 
 static void die_errno(const char *message) {
-    fprintf(stderr, "ROM-in-a-Box: %s: %s\n", message, strerror(errno));
-    exit(1);
+    char said[512];
+    snprintf(said, sizeof said, "%s: %s", message, strerror(errno));
+    rominabox_launch_die(said);
 }
 
 #define die rominabox_launch_die

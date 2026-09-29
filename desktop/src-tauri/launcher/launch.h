@@ -91,6 +91,11 @@ int rominabox_launch_is_quiet(int opened_by_person, const char *quiet, const cha
 
 void rominabox_launch_die(const char *message);
 
+/* Tell a person who opened the game why it cannot start, where the platform
+ * allows it. We define it in the launcher for each platform. In a quiet run,
+ * or a run that stops after its plan, we only write to the error stream. */
+void rominabox_launch_tell(const char *message);
+
 /* `left`, a separator unless it ends in one, and `right`. Stop the process
  * when the result does not fit. */
 void rominabox_launch_join(char *out, size_t out_cap, const char *left, const char *right);
