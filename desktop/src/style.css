@@ -1265,11 +1265,11 @@ select {
   color: var(--muted);
   max-width: 52ch;
 }
+/* As wide as the step, so the catalogue is a few rows and not a column. */
 .shader-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
   gap: 12px;
-  max-width: 560px;
 }
 .shader-card {
   display: flex;

@@ -1334,10 +1334,10 @@ async function main() {
       );
       if (!details) return { found: false };
       const screen = details.closest(".screen");
-      // We check the cards, not the summary row. The check must fail when the
-      // top of the summary is just inside the area and every shader is below
+      // We check the first row of cards, not the summary row. The check must
+      // fail when the summary is just inside the area and every shader is below
       // the fold, and the <details> element is the same in both cases.
-      const box = details.querySelector(".shader-grid").getBoundingClientRect();
+      const box = details.querySelector(".shader-card").getBoundingClientRect();
       const frame = screen
         ? screen.getBoundingClientRect()
         : { top: 0, bottom: window.innerHeight };
