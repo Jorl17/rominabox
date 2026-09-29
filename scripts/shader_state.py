@@ -56,11 +56,12 @@ def shader_config(app: Path) -> dict[str, str]:
 
 
 def running_id(app: Path, listed: dict[str, str]) -> str:
-    """Return the listed preset that we will pass to RetroArch at launch.
+    """Return the listed filter that we will start the game with.
 
-    At the next launch we pass the choice file as --set-shader. We match a row
-    to it to know which filter is running, because we must not keep a second
-    copy in the menu and read that instead.
+    The choice file contains the filter's id. At the next launch we look it
+    up in the game's shaders.cfg and pass that preset as --set-shader. We
+    read the file to know which filter is running, because we must not keep
+    a second copy in the menu and read that instead.
     """
     data = menu_shots.data_dir_of(app)
     if data is None:
@@ -70,20 +71,11 @@ def running_id(app: Path, listed: dict[str, str]) -> str:
         raise SystemExit(
             "choosing a shader did not leave a preset for the next launch"
         )
+    # In the menu we save the chosen filter's id, and at launch we find its preset.
     current = choice.read_text(encoding="utf-8").strip()
-    if not current:
-        matched = next((shader_id for shader_id, preset in listed.items() if not preset), None)
-    else:
-        matched = next(
-            (
-                shader_id
-                for shader_id, preset in listed.items()
-                if preset and (current == preset or current.endswith("/" + preset))
-            ),
-            None,
-        )
+    matched = current if current in listed else None
     if matched is None:
-        raise SystemExit(f"the saved preset matches no bundled shader: {current}")
+        raise SystemExit(f"the saved choice names no bundled shader: {current!r}")
     return matched
 
 

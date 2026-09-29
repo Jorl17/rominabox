@@ -23,6 +23,7 @@
 #include "launch_contract.inc"
 #define RIB_FILE(name, file) static const char menu_##name[] = file;
 #define RIB_DATA_FILE(name, file) static const char menu_data_##name[] = file;
+#define RIB_KEYS(name, prefix) static const char menu_keys_##name[] = prefix;
 #include "../../../vendor/retroarch/menu/drivers/rmlui/declarations.inc"
 
 /* A folder that we ship in the app, and its counterpart in the game's data. */
@@ -475,6 +476,41 @@ static void first_line(const char *path, char *out, size_t out_cap) {
     }
 }
 
+/* The preset listed in the game's shaders.cfg for the filter `id`, in
+ * `assets`: 1 and the preset's path, 1 and nothing for a filter without a
+ * preset (Unfiltered), or 0 when this copy of the game has no such filter. */
+static int shader_preset_of(const char *assets, const char *id, char *out, size_t out_cap) {
+    char path[PATH_CAP];
+    char wanted[160];
+    char raw[LINE_CAP];
+    FILE *file;
+    int found = 0;
+    out[0] = '\0';
+    if (!id[0] || strlen(menu_keys_ShaderPreset) + strlen(id) >= sizeof wanted)
+        return 0;
+    snprintf(wanted, sizeof wanted, "%s%s", menu_keys_ShaderPreset, id);
+    join_path(path, sizeof path, assets, menu_Shaders);
+    file = fs_open(path, "r");
+    if (!file)
+        return 0;
+    while (!found && fgets(raw, sizeof raw, file)) {
+        char *key = config_key(raw);
+        const char *open = strchr(raw, '"');
+        const char *close = open ? strchr(open + 1, '"') : NULL;
+        if (key && strcmp(key, wanted) == 0 && close && (size_t)(close - open) < sizeof path) {
+            char relative[PATH_CAP];
+            memcpy(relative, open + 1, (size_t)(close - open - 1));
+            relative[close - open - 1] = '\0';
+            found = 1;
+            if (relative[0] && stays_inside(relative))
+                join_path(out, out_cap, assets, relative);
+        }
+        free(key);
+    }
+    fclose(file);
+    return found;
+}
+
 /* Quiet unless a person started the game, or sound is turned on in the
  * environment. Quiet is opt-out, so a run from a harness is quiet even when
  * nothing is set. ROMINABOX_QUIET makes even a person's launch quiet. */
@@ -777,12 +813,20 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
             "audio_enable_menu_notice", "audio_enable_menu_notice = \"false\"");
     }
 
-    shader_preset[0] = '\0';
+    /* We store the player's filter by its id and look for its preset in this
+     * copy of the game, because we unpack a re-export elsewhere and a person
+     * can move a game. When this export no longer has the filter, the game
+     * starts with the export's own filter. */
     join_path(shader_choice, sizeof shader_choice, data_dir, menu_data_ShaderChoice);
-    if (fs_exists(shader_choice))
-        first_line(shader_choice, shader_preset, sizeof shader_preset);
-    else if (shader_initial[0])
-        join_path(shader_preset, sizeof shader_preset, assets, shader_initial);
+    {
+        char chosen[128];
+        first_line(shader_choice, chosen, sizeof chosen);
+        if (!shader_preset_of(assets, chosen, shader_preset, sizeof shader_preset)) {
+            shader_preset[0] = '\0';
+            if (shader_initial[0])
+                join_path(shader_preset, sizeof shader_preset, assets, shader_initial);
+        }
+    }
     if (shader_preset[0])
         append_setting(&lines, &line_count, &line_capacity, "video_shader_enable = \"true\"");
 

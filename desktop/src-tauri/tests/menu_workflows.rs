@@ -214,9 +214,22 @@ fn launch_state(request: &packaging::ExportRequest, assets: &Path, data: &Path) 
         let value = setting.chosen(data).unwrap_or(setting.default);
         lines.push_str(&format!("setting {} {value}\n", setting.key.name()));
     }
+    // We keep the player's filter by its id, with the preset in this game's
+    // shaders.cfg for it. An id that is no longer there is no choice.
+    let config = fs::read_to_string(assets.join("shaders.cfg")).unwrap_or_default();
     let chosen = fs::read_to_string(data.join("shader-choice"))
         .ok()
-        .and_then(|text| text.lines().next().map(str::to_owned));
+        .and_then(|text| text.lines().next().map(str::to_owned))
+        .and_then(|id| {
+            let key = format!("shader_preset_{id} = \"");
+            config
+                .lines()
+                .find_map(|line| line.strip_prefix(key.as_str())?.strip_suffix('"').map(str::to_owned))
+        })
+        .map(|preset| match preset.as_str() {
+            "" => preset,
+            relative => assets.join(relative).display().to_string(),
+        });
     let initial = if request.game.show_menu {
         shaders::launch_preset(&request.game.shaders)
             .unwrap()
