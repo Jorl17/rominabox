@@ -371,6 +371,13 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "states",
+        "that every declared state of the menu draws, in every design and palette, on the screen it names, and that no two states draw the same picture, so a player can tell each one apart",
+        "that a state looks good, or that the player reaches it at the right moment; for that a person looks at the pictures `python scripts/menu_states.py work/menu-states` draws",
+        [PYTHON, str(ROOT / "scripts/menu_states.py"), str(SCRATCH / "menu-states")],
+        slow=True,
+    ),
+    Scope(
         "variants",
         "that every controller a player can pick has artwork staged and a scene to swap to",
         "that the player actually swaps to it; that is the native menu, which is not linked here",
