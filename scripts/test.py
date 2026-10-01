@@ -277,6 +277,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_shot_sign.py")],
     ),
     Scope(
+        "stagedkit",
+        "that the kit a launched test exports from carries the tree's shared menu parts and shader library, and that a second kit or a second plan tool compiles the game's launcher no more",
+        "that a game exported from the kit runs (the launched scopes), or that a change to the launcher's sources is compiled; ninja and the kit's record of its launch library's sources decide that",
+        [PYTHON, str(ROOT / "scripts/test_staged_kit.py")],
+    ),
+    Scope(
         "achievement-client",
         "managed account, evaluator, pending uploads and state restoration using the real rcheevos client",
         "RetroArch core-memory mapping or its actual runloop/HTTP/save-task adapters",
