@@ -87,6 +87,10 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .control-hit { position: absolute; box-sizing: border-box; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 1dp transparent; border-radius: design(marker-radius)dp; }
 .control-callout:hover .control-hit, .control-group:hover .control-hit { border-color: design(edge); border-width: 2dp; }
 .control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: design(highlight); border-width: 2dp; margin-left: -3dp; }
+/* A lit ring has a crisp dark edge outside and inside, so it is visible on a
+ * pale pad as well as on a dark one. */
+.control-callout:hover .control-hit, .control-group:hover .control-hit,
+.control-callout.focused .control-hit, .control-group.focused .control-hit { box-shadow: design(bevel-dark) 0dp 0dp 0dp 1dp, design(bevel-dark) 0dp 0dp 0dp 1dp inset; }
 /* The thicker left edge of the focused box moves its content to the right.
  * The ring and the area for the pointer stay on the button. */
 .control-callout.focused .control-reach, .control-group.focused .control-reach { margin-left: -3dp; }

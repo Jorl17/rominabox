@@ -148,20 +148,16 @@ fn run() -> Result<(), String> {
     match command.as_str() {
         "systems" => {
             let input = read_request()?;
+            // We can export every console, because we download a core
+            // for each export, so there is nothing to check in a kit.
             #[derive(Deserialize)]
-            #[serde(rename_all = "camelCase")]
-            struct Request {
-                runtime_kit: Option<PathBuf>,
-            }
-            let request: Request = serde_json::from_str(&input)
+            #[serde(deny_unknown_fields)]
+            struct Request {}
+            let Request {} = serde_json::from_str(&input)
                 .map_err(|e| format!("invalid systems request: {e}"))?;
-            let available = request
-                .runtime_kit
-                .as_deref()
-                .map(packaging::available_systems);
             println!(
                 "{}",
-                json!({"type":"result", "result":{"systems":systems::registry(), "available":available}})
+                json!({"type":"result", "result":{"systems":systems::registry()}})
             );
             Ok(())
         }
@@ -383,12 +379,8 @@ fn run() -> Result<(), String> {
             options.profile = request.profile.clone();
             let profile = controls::validate_for_system(&request.system, &options)?;
             let metrics = menu::scene_metrics(&request.design)?;
-            let layout = rominabox_desktop::scene_layout::layout(&profile.controls, metrics);
-            // And the title in each stick's box, as in the composed menu.
-            let mut result = serde_json::to_value(layout).map_err(|error| error.to_string())?;
-            result["titles"] = serde_json::to_value(menu::scene_titles(&profile))
-                .map_err(|error| error.to_string())?;
-            println!("{}", json!({ "type": "result", "result": result }));
+            let layout = rominabox_desktop::scene_layout::layout(&profile, metrics);
+            println!("{}", json!({ "type": "result", "result": layout }));
             Ok(())
         }
         "stage-theme" | "stage-controls" => {

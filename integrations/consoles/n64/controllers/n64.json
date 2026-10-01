@@ -166,5 +166,10 @@
       "direction": "left"
     }
   ],
+  "groups": {
+    "l_stick": {
+      "title": "Stick"
+    }
+  },
   "presentationOrder": 9
 }

@@ -18,7 +18,6 @@ vi.mock("./bridge", async (importOriginal) => {
     onExportProgress: () => Promise.resolve(() => {}),
     defaultDestination: () => Promise.resolve("/Games"),
     exportTarget: () => Promise.resolve("macos"),
-    availableSystems: () => Promise.resolve(["megadrive"]),
     assessFirmware: () =>
       Promise.resolve({ canContinue: true, notices: [], files: [] }),
     travelingFiles: (path: string) =>

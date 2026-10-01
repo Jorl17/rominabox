@@ -23,8 +23,10 @@
 <div class="control-leader horizontal" style="left:216dp;top:334dp;width:255dp;"/>
 <div class="control-leader vertical" style="left:471dp;top:175dp;height:159dp;"/>
 <button id="control-start" class="control-callout" style="left:16dp;top:308dp;"><div id="control-label-start" class="control-label">Start</div><div class="control-assignment"><span id="control-binding-start"></span></div><div id="control-hit-start" class="control-hit" style="left:432dp;top:-156dp;pointer-events:none;"/><div id="control-reach-start" class="control-reach" style="position:absolute;left:439dp;top:-149dp;width:28dp;height:28dp;"/></button>
-<div class="control-leader horizontal" style="left:553dp;top:154dp;width:191dp;"/>
-<div class="control-leader vertical" style="left:553dp;top:154dp;height:22dp;"/>
+<div class="control-leader horizontal" style="left:668dp;top:154dp;width:76dp;"/>
+<div class="control-leader vertical" style="left:668dp;top:113dp;height:41dp;"/>
+<div class="control-leader horizontal" style="left:553dp;top:113dp;width:115dp;"/>
+<div class="control-leader vertical" style="left:553dp;top:113dp;height:63dp;"/>
 <button id="control-l" class="control-callout" style="left:744dp;top:128dp;"><div id="control-label-l" class="control-label">X</div><div class="control-assignment"><span id="control-binding-l"></span></div><div id="control-hit-l" class="control-hit" style="left:-214dp;top:25dp;pointer-events:none;"/><div id="control-reach-l" class="control-reach" style="position:absolute;left:-207dp;top:32dp;width:28dp;height:28dp;"/></button>
 <div class="control-leader horizontal" style="left:595dp;top:94dp;width:149dp;"/>
 <div class="control-leader vertical" style="left:595dp;top:94dp;height:60dp;"/>
