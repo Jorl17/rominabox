@@ -64,7 +64,7 @@ fn shaders_in_two_languages_and_cg_are_refused() {
     let root = rominabox_scratch::Scratch::dir("rominabox-shader-languages");
     let file = |name: &str, text: &str| {
         fs::write(root.join(name), text).unwrap();
-        CustomShader { name: name.split('.').next().unwrap().into(), path: root.join(name) }
+        CustomShader { name: Some(name.split('.').next().unwrap().into()), path: root.join(name) }
     };
     let selection = ShaderSelection {
         custom: vec![file("crt.slang", SLANG), file("pal.glsl", PASS)],
@@ -96,7 +96,7 @@ fn catalog_presets_are_written_in_a_slang_game_s_language() {
     fs::write(root.join("crt.slang"), SLANG).unwrap();
     let selection = ShaderSelection {
         bundled: vec!["scanlines".into()],
-        custom: vec![CustomShader { name: "CRT".into(), path: root.join("crt.slang") }],
+        custom: vec![CustomShader { name: Some("CRT".into()), path: root.join("crt.slang") }],
         initial: Some("scanlines".into()),
     };
     let resolved = resolve(&selection).unwrap();
@@ -206,7 +206,7 @@ fn a_preset_keeps_its_folders_so_every_file_it_names_is_there() {
     fs::write(source.join("resources/lut.png"), PICTURE).unwrap();
     let composed = composed(ShaderSelection {
         custom: vec![CustomShader {
-            name: "PAL".into(),
+            name: Some("PAL".into()),
             path: preset,
         }],
         initial: Some("pal".into()),
@@ -236,7 +236,7 @@ fn custom_preset(folder: &Path, name: &str, files: &[(&str, &str)]) -> ShaderSel
     }
     ShaderSelection {
         custom: vec![CustomShader {
-            name: "PAL".into(),
+            name: Some("PAL".into()),
             path: folder.join(name),
         }],
         initial: Some("pal".into()),
@@ -352,7 +352,7 @@ fn a_staged_preset_resolves_inside_its_own_folder() {
     let staged = root.join("shaders/pal");
     let preset = launch_preset(&selection).unwrap().unwrap();
     let again = resolve(&ShaderSelection {
-        custom: vec![CustomShader { name: "PAL".into(), path: root.join(&preset) }],
+        custom: vec![CustomShader { name: Some("PAL".into()), path: root.join(&preset) }],
         ..selection.clone()
     })
     .unwrap();
@@ -703,7 +703,7 @@ fn an_authors_shader_never_takes_a_library_folder() {
         "mine.glslp",
         &[("mine.glslp", "shaders = 1\nshader0 = pass.glsl\n"), ("pass.glsl", PASS)],
     );
-    selection.custom[0].name = "GLSL".into();
+    selection.custom[0].name = Some("GLSL".into());
     selection.initial = None;
     selection.bundled = vec!["crt-lottes".into()];
     let ids: Vec<String> = resolve(&selection).unwrap().into_iter().map(|item| item.id).collect();
@@ -752,4 +752,39 @@ fn an_authors_filter_too_deep_for_windows_is_a_warning() {
     assert_eq!(windows_warnings(&shallow).unwrap(), []);
     let _ = fs::remove_dir_all(&deep_source);
     let _ = fs::remove_dir_all(&shallow_source);
+}
+
+/// We call a file nobody named by its file name without a shader extension,
+/// in any case, and keep any other extension.
+#[test]
+fn an_unnamed_file_is_named_after_it() {
+    for (file, name) in [
+        ("crt.glsl", "crt"),
+        ("pal-r57shell.SLANGP", "pal-r57shell"),
+        ("CRT Royale.glslp", "CRT Royale"),
+        ("my.crt.slang", "my.crt"),
+        ("notes.txt", "notes.txt"),
+        (".slang", ".slang"),
+    ] {
+        assert_eq!(named_after_file(Path::new(file)), name, "{file}");
+    }
+    let given = |name: Option<&str>| CustomShader { name: name.map(String::from), path: "crt.glsl".into() };
+    assert_eq!(given(Some(" Royale ")).name(), "Royale");
+    assert_eq!(given(Some("  ")).name(), "crt");
+    assert_eq!(given(None).name(), "crt");
+}
+
+/// We keep the name of a shader nobody named in the project, because we pack
+/// its file under its id in the game, which differs from that name.
+#[test]
+fn a_packed_project_keeps_the_name_its_file_gave() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-shader-packed-name");
+    fs::write(root.join("CRT Royale.glsl"), PASS).unwrap();
+    let selection = ShaderSelection {
+        custom: vec![CustomShader { name: None, path: root.join("CRT Royale.glsl") }],
+        ..ShaderSelection::default()
+    };
+    let (stored, files) = pack_selection(&selection).unwrap();
+    assert_eq!(stored.custom[0].name.as_deref(), Some("CRT Royale"));
+    assert_ne!(named_after_file(&stored.custom[0].path), "CRT Royale", "{files:?}");
 }

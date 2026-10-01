@@ -1062,9 +1062,6 @@ fn core_pins(catalog: &Catalog) -> Result<String, String> {
         let Some(provenance) = &component.provenance else {
             continue;
         };
-        if provenance.downloads.is_empty() {
-            continue;
-        }
         let Some(license_path) = provenance.license_candidates.first() else {
             return Err(format!("{id} has no licence path"));
         };
@@ -1073,13 +1070,11 @@ fn core_pins(catalog: &Catalog) -> Result<String, String> {
                 "{id} has no branch for the licence that travels with the nightly"
             ));
         };
-        let mut artifacts = Map::new();
-        for target in provenance.downloads.keys() {
-            let Some(filename) = component.artifacts.get(target) else {
-                continue;
-            };
-            artifacts.insert(target.clone(), json!({ "filename": filename }));
-        }
+        let artifacts: Map<String, Value> = component
+            .artifacts
+            .iter()
+            .map(|(target, filename)| (target.clone(), json!({ "filename": filename })))
+            .collect();
         cores.push(json!({
             "component": id,
             "repository": provenance.repository,

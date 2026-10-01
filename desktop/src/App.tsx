@@ -39,7 +39,6 @@ import {
   SHADER_ACCEPT,
   SHADER_FORMATS,
   isShaderFile,
-  shaderFileName,
 } from "./shaderFiles";
 // The same pictures as in the exported game, rendered from the GLSL of each
 // shader with scripts/render_shader_previews.py. We read them as a directory
@@ -645,12 +644,12 @@ export function App() {
     );
     setShaderInitial((current) => (current === shader.name ? null : current));
   }
-  function addCustomShader(filePath: string) {
+  async function addCustomShader(filePath: string) {
     if (!isShaderFile(filePath)) {
       setError(NOT_A_SHADER_FILE);
       return;
     }
-    const name = shaderFileName(filePath);
+    const name = await bridge.customShaderName(filePath);
     setCustomShaders((current) => {
       if (current.some((item) => item.path === filePath)) return current;
       return [...current, { name, path: filePath }];
@@ -664,7 +663,7 @@ export function App() {
     }
     try {
       const path = await bridge.pickShader();
-      if (path) addCustomShader(path);
+      if (path) await addCustomShader(path);
     } catch (e) {
       fail(e);
     }
@@ -681,7 +680,7 @@ export function App() {
     }
     if (target === "icon" || target === "background")
       loadPicture(target, paths[0]).catch(fail);
-    else if (target === "shader") addCustomShader(paths[0]);
+    else if (target === "shader") addCustomShader(paths[0]).catch(fail);
     else if (step === 0)
       choose({
         path: paths[0],
@@ -1436,7 +1435,7 @@ export function App() {
                         const file = event.dataTransfer.files[0];
                         if (!file) return;
                         const dropped = file as File & { path?: string };
-                        addCustomShader(dropped.path || file.name);
+                        addCustomShader(dropped.path || file.name).catch(fail);
                       }}
                     >
                       <span>
@@ -1456,7 +1455,7 @@ export function App() {
                     data-shader
                     onChange={(event) => {
                       const file = event.target.files?.[0];
-                      if (file) addCustomShader(file.name);
+                      if (file) addCustomShader(file.name).catch(fail);
                       event.target.value = "";
                     }}
                   />

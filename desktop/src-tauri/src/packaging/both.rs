@@ -39,7 +39,7 @@ pub fn export_for_both<F: FnMut(ExportProgress)>(
         let mut game = request.clone();
         game.runtime_kit = kit_for(&platform).map_err(|message| ExportError::new(ErrorStage::Refused, message))?;
         game.core = None;
-        game.core_cache = platform.target().and_then(core_cache_for);
+        game.core_cache = core_cache_for(platform.target());
         game.game.target = platform;
         game.output_dir = staging.path().join(folder);
         game.replace = false;

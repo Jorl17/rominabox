@@ -13,91 +13,32 @@
 //! pressing a key has the effect bound to it.
 
 mod export_fixture;
+mod support;
 
+use export_fixture::workspace;
 use rominabox_desktop::{
     controls::Controls,
     meta_binds::{isolated_meta_bind_config, META_BINDS},
-    packaging::{ExportRequest, ExportTarget},
+    packaging::ExportRequest,
 };
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
     sync::atomic::AtomicBool,
 };
 
-fn write_runtime_stub(path: &Path) {
-    let source = path.with_extension("c");
-    fs::write(
-        &source,
-        "int rarch_main(int c, char **v, void *d){(void)c;(void)v;(void)d;return 0;}\nint main(void){return rarch_main(0,0,0);}\n",
-    )
-    .unwrap();
-    let status = Command::new("cc")
-        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
-        .arg(path)
-        .arg(&source)
-        .status()
-        .unwrap();
-    assert!(status.success(), "could not compile the runtime stub");
-}
-
-fn workspace() -> rominabox_scratch::Scratch {
-    rominabox_scratch::Scratch::dir("rominabox-recovery")
-}
-
-fn copy_tree(source: &Path, destination: &Path) {
-    fs::create_dir_all(destination).unwrap();
-    for entry in fs::read_dir(source).unwrap().filter_map(Result::ok) {
-        let target = destination.join(entry.file_name());
-        if entry.path().is_dir() {
-            copy_tree(&entry.path(), &target);
-        } else {
-            fs::copy(entry.path(), target).unwrap();
-        }
-    }
-}
-
+/// The Mac kit for an export test (`export_fixture::fixture_kit`), with the
+/// native design and every pad picture for the Mega Drive picker. We must not
+/// offer a controller in a game without a drawing for it.
 fn fixture_kit(root: &Path) -> PathBuf {
-    let kit = root.join("runtime-kit");
-    fs::create_dir_all(kit.join("bin")).unwrap();
-    fs::create_dir_all(kit.join("cores")).unwrap();
-    fs::create_dir_all(kit.join("Frameworks")).unwrap();
-    fs::create_dir_all(kit.join("licenses")).unwrap();
-    fs::create_dir_all(kit.join("licenses/native")).unwrap();
-    fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
-    write_runtime_stub(&kit.join("bin/retroarch"));
-    export_fixture::write_launch_library_stub(&kit);
-    fs::write(kit.join("cores/genesis_plus_gx_libretro.dylib"), b"core").unwrap();
-    for name in [
-        "NATIVE-DEPENDENCIES.txt",
-        "genesis_plus_gx.txt",
-    ] {
-        fs::write(kit.join("licenses").join(name), name).unwrap();
-    }
-    fs::write(
-        kit.join("runtime-dependencies.json"),
-        r#"{"formatVersion":1,"files":[]}"#,
-    )
-    .unwrap();
-    fs::write(
-        kit.join("manifest.json"),
-        r#"{"schema_version":1,"components":[{"name":"RetroArch"},{"name":"RmlUi"},{"name":"genesis_plus_gx"}]}"#,
-    )
-    .unwrap();
+    let kit = export_fixture::fixture_kit(root);
     let design = rominabox_desktop::repo::at("integrations/designs/native");
-    copy_tree(&design, &kit.join("designs/native"));
-    copy_tree(
-        &rominabox_desktop::repo::at("integrations/parts"),
-        &kit.join("parts"),
-    );
+    support::copy_tree(&design, &kit.join("designs/native"));
+    support::copy_tree(&rominabox_desktop::repo::at("integrations/parts"), &kit.join("parts"));
     fs::create_dir_all(kit.join("menu-assets")).unwrap();
     // We read the scene template for the controls from the kit's shared
     // menu-assets, not from the folder of the selected design.
     fs::copy(design.join("menu.rml"), kit.join("menu-assets/menu.rml")).unwrap();
-    // Every pad that the player can choose in the picker, because an export
-    // contains them all. Without a drawing for each, the player could choose a
-    // pad, such as the six-button Mega Drive, that we would never show.
     for entry in rominabox_desktop::controls::variants_for_system("megadrive").unwrap() {
         if !entry.image.is_empty() {
             fs::write(kit.join("menu-assets").join(&entry.image), []).unwrap();
@@ -107,42 +48,15 @@ fn fixture_kit(root: &Path) -> PathBuf {
     kit
 }
 
+/// A Mac export of a game with a menu, its keys `controls`, with advanced
+/// emulator access when `advanced`.
 fn export_request(root: &Path, advanced: bool, controls: Controls) -> ExportRequest {
-    let rom = root.join("sonic.bin");
-    fs::write(&rom, b"RIBtest").unwrap();
-    ExportRequest {
-        game: rominabox_desktop::game::Game {
-            rom,
-            title: "Recovery Keys".to_string(),
-            system: "megadrive".to_string(),
-            icon: None,
-            background: None,
-            show_menu: true,
-            start_at_menu: false,
-            theme: "native".to_string(),
-            palette: "blue".to_string(),
-            menu_sounds: "off".to_string(),
-            controls,
-            hotkeys: rominabox_desktop::builder::unstated::hotkeys(),
-            firmware: Vec::new(),
-            splash: false,
-            advanced_emulator_access: advanced,
-            intel_macs: false,
-            keep_playing_in_background: false,
-            autosave_on_quit: false,
-            menu_entries: None,
-            shaders: rominabox_desktop::shaders::ShaderSelection::default(),
-            include_achievements: false,
-            target: ExportTarget::Macos,
-            both_platforms: false,
-        },
-        zip: None,
-        output_dir: root.join("out"),
-        replace: false,
-        runtime_kit: fixture_kit(root),
-        core: None,
-        core_cache: None,
-    }
+    let mut request = export_fixture::export_request_from(root, fixture_kit(root));
+    request.game.title = "Recovery Keys".to_string();
+    request.game.show_menu = true;
+    request.game.advanced_emulator_access = advanced;
+    request.game.controls = controls;
+    request
 }
 
 fn embedded_runtime_config(plan: &str) -> String {

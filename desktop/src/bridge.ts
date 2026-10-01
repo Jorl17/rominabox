@@ -5,7 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Controls } from "./controls";
 import type { Hotkeys, Refusal } from "./hotkeys";
-import { SHADER_EXTENSIONS } from "./shaderFiles";
+import { SHADER_EXTENSIONS, baseName } from "./shaderFiles";
 
 export const native = isTauri();
 export type GameInfo = {
@@ -141,6 +141,13 @@ export function inspectGame(
   systemOverride?: string,
 ): Promise<GameInfo> {
   return invoke("inspect_game", { path, online, systemOverride });
+}
+// The name of an added shader file, from the engine, as for one without a
+// name in a command-line request. The browser walkthrough has no engine, so
+// there we show the name of the file.
+export function customShaderName(path: string): Promise<string> {
+  if (!native) return Promise.resolve(baseName(path));
+  return invoke("custom_shader_name", { path });
 }
 export type ShaderWarning = { path: string; sentence: string };
 // The browser walkthrough has no desktop shell, so we show none.

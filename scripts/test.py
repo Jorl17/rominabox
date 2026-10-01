@@ -226,6 +226,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_joypad_autoconfig.py")],
     ),
     Scope(
+        "preparation",
+        "that preparing a core or the controller profiles stages them whatever their licence texts say, naming a missing or changed text in a warning",
+        "that a real source archive or nightly holds what it should; every archive is made in a temporary folder and nothing reaches the network",
+        [PYTHON, str(ROOT / "scripts/test_preparation.py")],
+    ),
+    Scope(
         "licences",
         "that licenses/ holds a current entry for every third-party component: the player's libraries, the cores, the crates, the builder's npm packages, the fonts and the data the product carries; and that a missing, changed or unused entry, or a player build compiling a fork library with no entry, fails",
         "that a text read from the network is still what its URL serves, or that a component's declared licence is right; it reads no network, and the real player build only when build_kit.py makes a kit",
@@ -443,7 +449,7 @@ SCOPES = [
     ),
     Scope(
         "size",
-        "that an exported app stays under the size ceiling, and carries no library but its core",
+        "that the space an exported app takes on disk, as the file system allocates it (a Windows game unpacked, then forgotten by its own UNINSTALL), stays under the size ceiling, and that it carries no library but its core",
         "a cartridge's own size, or that the player was rebuilt; it measures the kit already on disk",
         [PYTHON, str(ROOT / "scripts/size_bundles.py")],
     ),

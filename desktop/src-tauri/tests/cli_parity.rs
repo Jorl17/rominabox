@@ -2,8 +2,8 @@
 //! command line for where we put games and downloads, the hotkeys check, the
 //! controller variants in the Controls step, a lookup in the builder's cache,
 //! the preview in the Menu step, the refusal of a project with a palette this
-//! build lacks, and the warnings on an author's filter that a Windows game may
-//! not load.
+//! build lacks, the warnings on an author's filter that a Windows game may not
+//! load, and the name of a filter nobody named.
 
 use rominabox_desktop::builder::{self, defaults, Places};
 use rominabox_desktop::game::Game;
@@ -71,7 +71,7 @@ fn cartridge(root: &Path) -> PathBuf {
 fn places_prints_where_the_builder_writes_games_and_keeps_downloads() {
     let places = Places::of(IDENTIFIER);
     let host = ExportTarget::of_host().expect("the tests run on a platform the builder makes games on");
-    let core_target = host.target().expect("the host platform has a core target");
+    let core_target = host.target();
     let mut printed = result("places", None);
     // We look for the kit beside the running program, and this test is not
     // that program, so here we only check that it is a kit.
@@ -266,4 +266,29 @@ fn shaders_check_prints_the_builders_filter_warnings() {
         serde_json::to_value(&builder).unwrap()
     );
     let _ = fs::remove_dir_all(&root);
+}
+
+/// When the request does not name an author's shader, we name it after its
+/// file, as we do for a file added in the Menu step of the builder.
+#[test]
+fn a_custom_shader_without_a_name_is_named_after_its_file() {
+    let root = Scratch::dir("rominabox-cli-shader-name");
+    let pass = "#if defined(VERTEX)\n#elif defined(FRAGMENT)\n#endif\n";
+    fs::write(root.join("CRT Royale.glsl"), pass).unwrap();
+    fs::write(root.join("pal-r57shell.GLSL"), pass).unwrap();
+    let request = json!({ "custom": [
+        { "path": root.join("CRT Royale.glsl") },
+        { "path": root.join("pal-r57shell.GLSL") },
+    ] });
+    let listed = result("shaders-check", Some(&request))["shaders"].clone();
+    let names: Vec<&str> = listed
+        .as_array()
+        .expect("the resolved shaders")
+        .iter()
+        .map(|shader| shader["name"].as_str().unwrap())
+        .collect();
+    assert!(names.contains(&"CRT Royale"), "{listed}");
+    assert!(names.contains(&"pal-r57shell"), "{listed}");
+    // We call the same function in the builder when the author adds a file.
+    assert_eq!(rominabox_desktop::shaders::named_after_file(&root.join("pal-r57shell.GLSL")), "pal-r57shell");
 }

@@ -359,7 +359,7 @@ fn a_slang_game_runs_glcore_and_every_other_game_gl() {
         fs::write(folder.join(file), text).unwrap();
         crate::shaders::ShaderSelection {
             custom: vec![crate::shaders::CustomShader {
-                name: "CRT".into(),
+                name: Some("CRT".into()),
                 path: folder.join(file),
             }],
             ..crate::shaders::ShaderSelection::default()

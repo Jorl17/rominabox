@@ -179,10 +179,7 @@ async fn run_export(
     let bundled = resource(&app, "runtime").map_err(shell)?;
     let places = places(&app);
     request.core = None;
-    request.core_cache = request
-        .game.target
-        .target()
-        .and_then(|target| places.core_cache(target).ok());
+    request.core_cache = places.core_cache(request.game.target.target()).ok();
     let cancelled = Arc::new(AtomicBool::new(false));
     {
         let mut active = state.0.lock().map_err(|e| shell(e.to_string()))?;
@@ -267,6 +264,13 @@ fn shader_warnings(
     selection: rominabox_desktop::shaders::ShaderSelection,
 ) -> Result<Vec<rominabox_desktop::shaders::ShaderWarning>, String> {
     rominabox_desktop::shaders::windows_warnings(&selection)
+}
+
+/// The name of a shader file that the author adds, as in `shaders-check` and
+/// in an export, for one without a name in the request.
+#[tauri::command]
+fn custom_shader_name(path: PathBuf) -> String {
+    rominabox_desktop::shaders::named_after_file(&path)
 }
 
 #[tauri::command]
@@ -431,6 +435,7 @@ fn main() {
             open_project,
             traveling_files,
             shader_warnings,
+            custom_shader_name,
             capture_pad_position,
             cancel_pad_capture
         ])
