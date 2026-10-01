@@ -27,3 +27,11 @@ describe("the shader files an author can add", () => {
     }
   });
 });
+
+describe("an added shader's name without the engine", () => {
+  it("is the file's own name, whichever separator its path uses", async () => {
+    const { customShaderName } = await import("./bridge");
+    expect(await customShaderName("C:\\filters\\crt.glsl")).toBe("crt.glsl");
+    expect(await customShaderName("/filters/pal.slangp")).toBe("pal.slangp");
+  });
+});
