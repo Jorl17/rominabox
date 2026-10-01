@@ -6,6 +6,9 @@ import { keyName } from "./keys";
  * generated `controls.json` and export no named types. We describe only what
  * we read in this scene, so the dependency is clear.
  */
+/** Which way a stick member points, or its click, as the catalog declares it. */
+export type StickDirection = "up" | "right" | "down" | "left" | "press";
+
 export type ControlDefinition = {
   id: string;
   label: string;
@@ -15,6 +18,8 @@ export type ControlDefinition = {
   calloutX: number;
   calloutY: number;
   group?: string;
+  /** A stick member's direction; absent for everything else. */
+  direction?: StickDirection;
 };
 
 export type ControlProfile = {
@@ -250,8 +255,9 @@ function StickStrip({
   members: ControlDefinition[];
   bindings: Record<string, { label?: string; key?: string }>;
 }) {
+  // The directions, not the click.
   const keys = members
-    .filter((control) => /_(plus|minus)$/.test(control.id))
+    .filter((control) => control.direction && control.direction !== "press")
     .map((control) => keyName(bindings[control.id]?.key || control.key))
     .join(" ");
 
