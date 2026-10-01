@@ -4,7 +4,7 @@
 //! separate override file for each game, so exporting again or relaunching
 //! never discards the player's bindings or labels.
 
-use crate::menu::key;
+use crate::menu::{file_name, key};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
@@ -12,6 +12,9 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 const MAX_LABEL_BYTES: usize = 80;
+
+/// The file in the menu's folder that we write the controls defaults to.
+pub const DEFAULTS_FILE: &str = file_name!(ControlsDefaults);
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -400,7 +400,9 @@ fn run() -> Result<(), String> {
             // the menu is the same in every renderer.
             //
             // For stage-theme `source` is the design. For stage-controls
-            // `source` is the controller artwork and `design` is the design.
+            // `source` is the controller artwork and `design` is the design,
+            // and we write the controls defaults beside the menu as in an
+            // export, so the menu has the game's controls.
             #[derive(Deserialize)]
             #[serde(rename_all = "camelCase", deny_unknown_fields)]
             struct Request {
@@ -454,10 +456,12 @@ fn run() -> Result<(), String> {
                 )
             };
             let defaults = menu::MenuRequest::new(design, artwork);
+            let system = request.system.clone().unwrap_or(defaults.system.clone());
+            let game_controls = request.controls.clone();
             menu::compose_menu(&menu::MenuRequest {
                 palette: request.palette.unwrap_or(defaults.palette.clone()),
                 background: request.background,
-                system: request.system.unwrap_or(defaults.system.clone()),
+                system: system.clone(),
                 controls: request.controls,
                 hotkeys: request.hotkeys,
                 menu_entries: request.menu_entries,
@@ -475,6 +479,13 @@ fn run() -> Result<(), String> {
                 ..defaults
             })?
             .write(&request.destination)?;
+            if command == "stage-controls" {
+                controls::write_defaults_config(
+                    &system,
+                    &game_controls,
+                    &request.destination.join(controls::DEFAULTS_FILE),
+                )?;
+            }
             println!(
                 "{}",
                 json!({ "type": "result", "result": {
