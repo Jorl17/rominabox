@@ -1224,6 +1224,26 @@
           "display": "block",
           "text": "Backspace",
           "class": "key"
+        },
+        "hotkey-quick-save-1": {
+          "display": "block",
+          "text": "f2",
+          "class": "key"
+        },
+        "hotkey-quick-load": {
+          "display": "none"
+        },
+        "hotkey-previous-slot": {
+          "display": "none"
+        },
+        "hotkey-next-slot": {
+          "display": "none"
+        },
+        "hotkeys-pager": {
+          "display": "block"
+        },
+        "hotkeys-page-count": {
+          "text": "1/2"
         }
       }
     },
@@ -1288,6 +1308,26 @@
         },
         "hotkeys-status": {
           "text": "CONFIRM: PRESS AN INPUT (10)"
+        },
+        "hotkey-quick-save-1": {
+          "display": "block",
+          "text": "f2",
+          "class": "key"
+        },
+        "hotkey-quick-load": {
+          "display": "none"
+        },
+        "hotkey-previous-slot": {
+          "display": "none"
+        },
+        "hotkey-next-slot": {
+          "display": "none"
+        },
+        "hotkeys-pager": {
+          "display": "block"
+        },
+        "hotkeys-page-count": {
+          "text": "1/2"
         }
       }
     },
@@ -1346,6 +1386,26 @@
         },
         "hotkeys-status": {
           "text": "MENU MUST KEEP A KEY"
+        },
+        "hotkey-quick-save-1": {
+          "display": "block",
+          "text": "f2",
+          "class": "key"
+        },
+        "hotkey-quick-load": {
+          "display": "none"
+        },
+        "hotkey-previous-slot": {
+          "display": "none"
+        },
+        "hotkey-next-slot": {
+          "display": "none"
+        },
+        "hotkeys-pager": {
+          "display": "block"
+        },
+        "hotkeys-page-count": {
+          "text": "1/2"
         }
       }
     }
