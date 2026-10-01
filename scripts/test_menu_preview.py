@@ -310,6 +310,32 @@ def screen_problem(design: str, area: Path) -> str:
     return ""
 
 
+def settings_problem(design: str, area: Path) -> str:
+    """Return an empty string when we draw the player settings in the preview
+    as in a game before we have a value from RetroArch: on Options, the volume
+    slider filled to its high end and the state of PLAY IN BACKGROUND in words,
+    each in the colour that no palette uses in its own picture. Drawn as
+    composed, they show an empty fill and no state."""
+    into = area / f"{design}-settings"
+    problem = render(design, palettes()[0], into, source=True)
+    if problem:
+        return problem
+    colour = "#{:02x}{:02x}{:02x}".format(*PICTURE)
+    for element, prop, what in (("volume-level-fill", "background-color", "the volume's fill"),
+                                ("background-play-state", "color", "PLAY IN BACKGROUND's state")):
+        drawn = into / f"settings-{element}.png"
+        completed = subprocess.run(
+            [str(RENDERER), str(into / "menu.rml"), str(drawn), "960", "600",
+             "--screen", "options", "--set", f"{element}:{prop}={colour}"],
+            capture_output=True, text=True, timeout=180,
+        )
+        if completed.returncode != 0 or not drawn.is_file():
+            return completed.stderr.strip() or f"{drawn} was not written"
+        if not picture_share(drawn):
+            return f"{what} is not drawn"
+    return ""
+
+
 def declared_footers(design_cfg: Path) -> dict[str, str]:
     """Return the footer of each screen, as declared in the composed design.cfg
     that we read in the player."""
@@ -341,7 +367,8 @@ def main() -> int:
                                 ("at twice the size", scale_problem),
                                 ("text as markup", markup_problem),
                                 ("a list in pages", paging_problem),
-                                ("a screen shown", screen_problem)):
+                                ("a screen shown", screen_problem),
+                                ("settings drawn", settings_problem)):
                 problem = check(design, area)
                 if problem:
                     print(f"  FAIL {design} {name}: {problem}", file=sys.stderr)
