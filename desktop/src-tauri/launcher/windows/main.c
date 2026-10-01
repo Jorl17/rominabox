@@ -25,6 +25,12 @@
 #include "unpack.h"
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 
+/* The longest path Windows takes, in UTF-16 units, with its terminator. */
+#define WIDE_PATH_CAP 32768
+/* FNV-1a, 64 bits, for the name of the mapping we keep for a running game. */
+#define FNV_OFFSET_BASIS 1469598103934665603ULL
+#define FNV_PRIME 1099511628211ULL
+
 #define RIB_CORE_FILE(platform, file) static const char core_##platform[] = file;
 #define RIB_WINDOWS_PART(name, path) static const char part_##name[] = path;
 #include "../launch_contract.inc"
@@ -54,7 +60,7 @@ static void own_path(wchar_t *path, DWORD capacity) {
 
 /* The folder this .exe is in, as UTF-8. */
 static void own_folder(char *out, size_t out_cap) {
-    wchar_t path[32768];
+    wchar_t path[WIDE_PATH_CAP];
     wchar_t *last;
     char *folder;
     own_path(path, sizeof path / sizeof path[0]);
@@ -73,7 +79,7 @@ static void own_folder(char *out, size_t out_cap) {
  * that folder and the launcher in it, set once before anything else. Empty
  * for a game laid out as a folder, which we run from where this program is. */
 static char unpacked_folder[LAUNCH_PATH_CAP];
-static wchar_t unpacked_program[32768];
+static wchar_t unpacked_program[WIDE_PATH_CAP];
 
 static void game_folder(char *out, size_t out_cap) {
     if (!unpacked_folder[0]) {
@@ -99,7 +105,7 @@ static void game_program(wchar_t *path, DWORD capacity) {
 /* The per-user application data folder, %LOCALAPPDATA%, or the folder that
  * a test sets in its place. */
 static char *local_application_data(void) {
-    static wchar_t named[32768];
+    static wchar_t named[WIDE_PATH_CAP];
     wchar_t *name = wide(RIB_ENV_TEST_USER_DATA);
     DWORD length = GetEnvironmentVariableW(name, named, sizeof named / sizeof named[0]);
     PWSTR found = NULL;
@@ -165,15 +171,15 @@ static BOOL CALLBACK bring_forward(HWND window, LPARAM player) {
 }
 
 static void one_game_per_data_folder(const char *data_dir) {
-    unsigned long long hash = 1469598103934665603ULL;
+    unsigned long long hash = FNV_OFFSET_BASIS;
     const unsigned char *cursor;
     wchar_t name[64];
     HANDLE mapping;
     DWORD player;
     /* A folder's name, however it is spelled: case and separators aside. */
     for (cursor = (const unsigned char *)data_dir; *cursor; cursor++)
-        hash = (hash ^ (unsigned char)(*cursor == '\\' ? '/' : tolower(*cursor))) * 1099511628211ULL;
-    swprintf(name, sizeof name / sizeof name[0], L"Local\\ROM-in-a-Box game %016llx", hash);
+        hash = (hash ^ (unsigned char)(*cursor == '\\' ? '/' : tolower(*cursor))) * FNV_PRIME;
+    swprintf(name, sizeof name / sizeof name[0], L"Local\\" ROMINABOX_NAME L" game %016llx", hash);
     mapping = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof *running_player, name);
     if (!mapping)
         return;
@@ -338,7 +344,7 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
     char accounts[LAUNCH_PATH_CAP];
     char previous[LAUNCH_PATH_CAP];
     char *user_data = local_application_data();
-    static wchar_t program[32768];
+    static wchar_t program[WIDE_PATH_CAP];
     wchar_t *line = _wcsdup(GetCommandLineW());
     wchar_t *user_data_wide = wide(user_data);
     PSID internet = NULL;
@@ -377,9 +383,9 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
     }
 
     SetEnvironmentVariableW(outside_user_data, user_data_wide);
-    SetEnvironmentVariableW(outside_opened_by_person, opened_by_explorer() ? L"1" : NULL);
+    SetEnvironmentVariableW(outside_opened_by_person, opened_by_explorer() ? L"" LAUNCH_SWITCH_ON : NULL);
     {
-        static wchar_t opened[32768];
+        static wchar_t opened[WIDE_PATH_CAP];
         own_path(opened, sizeof opened / sizeof opened[0]);
         SetEnvironmentVariableW(outside_program, opened);
     }
@@ -490,7 +496,7 @@ static void forget_if_asked(const LaunchGame *game) {
 /* The value passed in from outside, as UTF-8, which we remove from the
  * environment of the player. NULL when it was not set. */
 static char *from_outside(const wchar_t *name) {
-    static wchar_t value[32768];
+    static wchar_t value[WIDE_PATH_CAP];
     DWORD length = GetEnvironmentVariableW(name, value, sizeof value / sizeof value[0]);
     SetEnvironmentVariableW(name, NULL);
     if (length == 0 || length >= sizeof value / sizeof value[0])
@@ -544,7 +550,7 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     /* The game's window is in the player process, so a pin from it would
      * start the player alone. We give the window this program instead. */
     {
-        static wchar_t path[32768];
+        static wchar_t path[WIDE_PATH_CAP];
         wchar_t *name = wide(RIB_ENV_RELAUNCH);
         DWORD length = GetEnvironmentVariableW(outside_program, path, sizeof path / sizeof path[0]);
         SetEnvironmentVariableW(outside_program, NULL);
@@ -622,7 +628,7 @@ void rominabox_launch_tell(const char *message) {
     if (!rominabox_launch_tells_person(person_opened))
         return;
     if (MultiByteToWideChar(CP_UTF8, 0, message, -1, text, (int)(sizeof text / sizeof text[0])))
-        MessageBoxW(NULL, text, L"ROM-in-a-Box", MB_OK | MB_ICONERROR);
+        MessageBoxW(NULL, text, L"" ROMINABOX_NAME, MB_OK | MB_ICONERROR);
 }
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int show) {
@@ -633,7 +639,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int
     if (inside_sandbox()) {
         char *person = from_outside(outside_opened_by_person);
         char *outside = from_outside(outside_user_data);
-        person_opened = person && strcmp(person, "1") == 0;
+        person_opened = person && strcmp(person, LAUNCH_SWITCH_ON) == 0;
         return run(outside, outside, person_opened);
     }
     person_opened = opened_by_explorer();
@@ -645,7 +651,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int
         char folder[LAUNCH_PATH_CAP];
         char resources[LAUNCH_PATH_CAP];
         LaunchGame game;
-        wchar_t self[32768];
+        wchar_t self[WIDE_PATH_CAP];
         char *user_data = local_application_data();
         own_path(self, sizeof self / sizeof self[0]);
         /* Shown only when the game would play sound, so not in a quiet launch. */

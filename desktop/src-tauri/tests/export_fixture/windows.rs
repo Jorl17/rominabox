@@ -1,6 +1,9 @@
 //! The Windows kit we compile on Windows, for Windows.
 
-use super::kit_base;
+use super::{
+    kit_base, PLAYER_ICON_COLOUR, PLAYER_ICON_SCRIPT, PLAYER_ICON_SIZE, PROGRAM_THAT_ENDS, STAND_IN_CORE,
+    WINDOWS_JOYPAD_DRIVERS,
+};
 use std::{fs, path::Path, process::Command};
 
 /// Compiles `source` into the library `output`, linked with `with`.
@@ -37,7 +40,7 @@ pub fn icon_of(colour: [u8; 4], size: u32) -> Vec<u8> {
 /// Compiles a program that only ends, with the resources of `script` when
 /// there is one.
 pub fn program(output: &Path, script: Option<&str>) {
-    program_from(output, "int main(void) { return 0; }\n", script);
+    program_from(output, PROGRAM_THAT_ENDS, script);
 }
 
 /// Compiles the program `code`, with the resources of `script` when there is
@@ -69,16 +72,16 @@ pub fn program_from(output: &Path, code: &str, script: Option<&str>) {
 /// driver folder, and the Mega Drive core.
 pub fn windows_kit(root: &Path) -> std::path::PathBuf {
     let kit = kit_base(root);
-    fs::write(kit.join("bin/retroarch.ico"), icon_of([255, 0, 0, 255], 32)).unwrap();
-    program(&kit.join("bin/retroarch.exe"), Some("1 ICON \"retroarch.ico\"\n"));
+    fs::write(kit.join("bin/retroarch.ico"), icon_of(PLAYER_ICON_COLOUR, PLAYER_ICON_SIZE)).unwrap();
+    program(&kit.join("bin/retroarch.exe"), Some(PLAYER_ICON_SCRIPT));
     program(&kit.join("bin/launcher.exe"), None);
-    for driver in ["xinput", "dinput"] {
+    for driver in WINDOWS_JOYPAD_DRIVERS {
         fs::create_dir_all(kit.join("autoconfig").join(driver)).unwrap();
         fs::write(kit.join("autoconfig").join(driver).join("pad.cfg"), driver).unwrap();
     }
     library(
         &kit.join("cores/genesis_plus_gx_libretro.dll"),
-        "__declspec(dllexport) unsigned retro_api_version(void) { return 1; }\n",
+        STAND_IN_CORE,
         &[],
     );
     kit

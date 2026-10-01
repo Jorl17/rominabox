@@ -37,9 +37,25 @@ typedef struct {
 #define PATH_CAP LAUNCH_PATH_CAP
 #define LINE_CAP 8192
 #define MANAGED_CAP 64
+/* The longest name a managed folder in the plan may have. */
+#define MANAGED_NAME_CAP 128
+/* The largest launch plan the launcher reads. */
+#define PLAN_CAP (1024 * 1024)
+/* The most digits ROMINABOX_MAX_FRAMES may have. */
+#define FRAME_COUNT_DIGITS 6
+
+/* The config we write for RetroArch in the launcher, and the log of the
+ * launch, in the game's data folder. */
+#define CONFIG_FILE "retroarch.cfg"
+#define LAUNCH_LOG "logs/launch.log"
+
+/* A config line setting `key` to `value`, and the key with the line, in the
+ * form of the force_line arguments. */
+#define SETTING_LINE(key, value) key " = \"" value "\""
+#define SETTING(key, value) key, SETTING_LINE(key, value)
 
 void rominabox_launch_die(const char *message) {
-    fprintf(stderr, "ROM-in-a-Box: %s\n", message);
+    fprintf(stderr, ROMINABOX_NAME ": %s\n", message);
     rominabox_launch_tell(message);
     exit(1);
 }
@@ -106,7 +122,7 @@ static char *read_file(const char *path, size_t *length_out) {
     char *body;
     if (!file)
         return NULL;
-    if (fseek(file, 0, SEEK_END) != 0 || (length = ftell(file)) < 0 || length > 1024 * 1024) {
+    if (fseek(file, 0, SEEK_END) != 0 || (length = ftell(file)) < 0 || length > PLAN_CAP) {
         fclose(file);
         die("a launch file is unreadable or too large");
     }
@@ -365,7 +381,7 @@ static int stays_inside(const char *path) {
     return !climbs_out(path);
 }
 
-static void collect_managed(const char *plan, char managed[][128], size_t *count) {
+static void collect_managed(const char *plan, char managed[][MANAGED_NAME_CAP], size_t *count) {
     const char *cursor = plan;
     *count = 0;
     while (*cursor && !at_config(cursor)) {
@@ -375,7 +391,7 @@ static void collect_managed(const char *plan, char managed[][128], size_t *count
         if (length > field_len + 1 && strncmp(cursor, plan_Managed, field_len) == 0
             && cursor[field_len] == '\t') {
             size_t name_len = length - field_len - 1;
-            if (*count >= MANAGED_CAP || name_len >= 128)
+            if (*count >= MANAGED_CAP || name_len >= MANAGED_NAME_CAP)
                 die("too many managed directories");
             memcpy(managed[*count], cursor + field_len + 1, name_len);
             managed[*count][name_len] = '\0';
@@ -555,8 +571,8 @@ static int one_folder_of(const char *path, const char *folder) {
 }
 
 static void read_game_from(const char *plan, LaunchGame *game) {
-    char achievements[8] = "0";
-    char sandbox[8] = "0";
+    char achievements[8] = LAUNCH_SWITCH_OFF;
+    char sandbox[8] = LAUNCH_SWITCH_OFF;
     memset(game, 0, sizeof *game);
     if (!field(plan, plan_Identity, game->identity, sizeof game->identity) || strchr(game->identity, '/')
         || game->identity[0] == '\0')
@@ -564,9 +580,9 @@ static void read_game_from(const char *plan, LaunchGame *game) {
     if (!field(plan, plan_Title, game->title, sizeof game->title))
         game->title[0] = '\0';
     field(plan, plan_Achievements, achievements, sizeof achievements);
-    game->achievements = strcmp(achievements, "1") == 0;
+    game->achievements = strcmp(achievements, LAUNCH_SWITCH_ON) == 0;
     field(plan, plan_Sandbox, sandbox, sizeof sandbox);
-    game->sandbox = strcmp(sandbox, "1") == 0;
+    game->sandbox = strcmp(sandbox, LAUNCH_SWITCH_ON) == 0;
     field(plan, plan_AccountsDir, game->accounts_name, sizeof game->accounts_name);
     if (!field(plan, plan_DataDir, game->data_template, sizeof game->data_template))
         die("the launch plan has no data directory");
@@ -643,7 +659,7 @@ static void bring_previous_saves(const LaunchGame *game, const char *previous_us
     rominabox_game_data_folder(game, previous_user_data, old_dir, sizeof old_dir);
     if (strcmp(old_dir, data_dir) == 0)
         return;
-    join_path(marker, sizeof marker, data_dir, "retroarch.cfg");
+    join_path(marker, sizeof marker, data_dir, CONFIG_FILE);
     if (fs_exists(marker) || !fs_exists(old_dir))
         return;
     copy_tree(old_dir, data_dir);
@@ -662,7 +678,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     char start_at_menu[8];
     char advanced[8];
     char shader_initial[PATH_CAP];
-    char managed[MANAGED_CAP][128];
+    char managed[MANAGED_CAP][MANAGED_NAME_CAP];
     LaunchGame game;
     char *plan;
     const char *config_text;
@@ -757,7 +773,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     launch->quiet = rominabox_launch_is_quiet(
         places->opened_by_person, getenv(RIB_ENV_QUIET), getenv(ROMINABOX_SOUND_ENV));
     if (launch->quiet)
-        set_variable(launch, RIB_ENV_QUIET, "1");
+        set_variable(launch, RIB_ENV_QUIET, LAUNCH_SWITCH_ON);
     /* The window of a quiet run is never in front, and we take a screenshot
      * with the window unfocused. With pause_nonactive on, the console would
      * pause, so the run would never reach its frame limit, or the picture
@@ -766,42 +782,27 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     {
         const char *shot = getenv(RIB_ENV_MENU_SHOT);
         if ((shot && shot[0]) || launch->quiet)
-            force_line(
-                &lines,
-                &line_count,
-                &line_capacity,
-                "pause_nonactive",
-                "pause_nonactive = \"false\""
-            );
+            force_line(&lines, &line_count, &line_capacity, SETTING("pause_nonactive", "false"));
     }
     /* In a run driven by a menu script, the screens follow the script whatever
      * pads the host has, so we read no controller in such a run. Otherwise the
      * bindings of a connected pad would appear on the Controls screen. We set
      * this after the player files, so a controls.cfg cannot enable one again. */
     if (getenv(RIB_ENV_MENU_SCRIPT))
-        force_line(&lines, &line_count, &line_capacity,
-            "input_joypad_driver", "input_joypad_driver = \"null\"");
+        force_line(&lines, &line_count, &line_capacity, SETTING("input_joypad_driver", "null"));
     /* After the player files, so a controls.cfg cannot turn sound back on for
      * this launch. With audio_enable false, no audio driver is ever opened.
      * We replace the frozen driver line with null so the written config
      * contains no device, and do not write this into the player's file. */
     if (launch->quiet) {
-        force_line(&lines, &line_count, &line_capacity,
-            "audio_driver", "audio_driver = \"null\"");
-        force_line(&lines, &line_count, &line_capacity,
-            "audio_enable", "audio_enable = \"false\"");
-        force_line(&lines, &line_count, &line_capacity,
-            "audio_enable_menu", "audio_enable_menu = \"false\"");
-        force_line(&lines, &line_count, &line_capacity,
-            "audio_enable_menu_ok", "audio_enable_menu_ok = \"false\"");
-        force_line(&lines, &line_count, &line_capacity,
-            "audio_enable_menu_cancel", "audio_enable_menu_cancel = \"false\"");
-        force_line(&lines, &line_count, &line_capacity,
-            "audio_enable_menu_scroll", "audio_enable_menu_scroll = \"false\"");
-        force_line(&lines, &line_count, &line_capacity,
-            "audio_enable_menu_bgm", "audio_enable_menu_bgm = \"false\"");
-        force_line(&lines, &line_count, &line_capacity,
-            "audio_enable_menu_notice", "audio_enable_menu_notice = \"false\"");
+        force_line(&lines, &line_count, &line_capacity, SETTING("audio_driver", "null"));
+        force_line(&lines, &line_count, &line_capacity, SETTING("audio_enable", "false"));
+        force_line(&lines, &line_count, &line_capacity, SETTING("audio_enable_menu", "false"));
+        force_line(&lines, &line_count, &line_capacity, SETTING("audio_enable_menu_ok", "false"));
+        force_line(&lines, &line_count, &line_capacity, SETTING("audio_enable_menu_cancel", "false"));
+        force_line(&lines, &line_count, &line_capacity, SETTING("audio_enable_menu_scroll", "false"));
+        force_line(&lines, &line_count, &line_capacity, SETTING("audio_enable_menu_bgm", "false"));
+        force_line(&lines, &line_count, &line_capacity, SETTING("audio_enable_menu_notice", "false"));
     }
 
     /* We store the player's filter by its id and look for its preset in this
@@ -819,9 +820,9 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
         }
     }
     if (shader_preset[0])
-        append_setting(&lines, &line_count, &line_capacity, "video_shader_enable = \"true\"");
+        append_setting(&lines, &line_count, &line_capacity, SETTING_LINE("video_shader_enable", "true"));
 
-    join_path(launch->config_path, sizeof launch->config_path, data_dir, "retroarch.cfg");
+    join_path(launch->config_path, sizeof launch->config_path, data_dir, CONFIG_FILE);
     write_config(launch->config_path, lines, line_count);
     /* In the quiet check we run this binary to read the config from this run.
      * Going on would start the game, and without the switch the check would
@@ -835,9 +836,9 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
         fflush(stdout);
         _Exit(0);
     }
-    join_path(launch->log_path, sizeof launch->log_path, data_dir, "logs/launch.log");
+    join_path(launch->log_path, sizeof launch->log_path, data_dir, LAUNCH_LOG);
 
-    set_variable(launch, RIB_ENV_ACHIEVEMENTS, game.achievements ? "1" : "0");
+    set_variable(launch, RIB_ENV_ACHIEVEMENTS, game.achievements ? LAUNCH_SWITCH_ON : LAUNCH_SWITCH_OFF);
     set_variable(launch, RIB_ENV_DATA_DIR, data_dir);
     set_variable(launch, RIB_ENV_GAME_IDENTITY, game.identity);
     /* The folder for QUICK SIGN IN, only when the export lists one. It is in
@@ -852,13 +853,14 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
         else {
             set_variable(launch, RIB_ENV_ACCOUNTS_DIR, NULL);
             if (found)
-                fprintf(stderr, "ROM-in-a-Box: QUICK SIGN IN is unavailable: %s\n", strerror(errno));
+                fprintf(stderr, ROMINABOX_NAME ": QUICK SIGN IN is unavailable: %s\n", strerror(errno));
         }
     }
     set_variable(launch, RIB_ENV_TITLE, game.title);
     set_variable(launch, RIB_ENV_RML_ASSETS, assets);
-    set_variable(launch, RIB_ENV_ADVANCED_ACCESS, strcmp(advanced, "1") == 0 ? "1" : "0");
-    set_variable(launch, RIB_ENV_START_AT_MENU, strcmp(start_at_menu, "1") == 0 ? "1" : NULL);
+    set_variable(launch, RIB_ENV_ADVANCED_ACCESS,
+                 strcmp(advanced, LAUNCH_SWITCH_ON) == 0 ? LAUNCH_SWITCH_ON : LAUNCH_SWITCH_OFF);
+    set_variable(launch, RIB_ENV_START_AT_MENU, strcmp(start_at_menu, LAUNCH_SWITCH_ON) == 0 ? LAUNCH_SWITCH_ON : NULL);
     set_variable(launch, "LIBRETRO_SYSTEM_DIRECTORY", NULL);
     set_variable(launch, "LIBRETRO_DIRECTORY", NULL);
     set_variable(launch, "LIBRETRO_ASSETS_DIRECTORY", NULL);
@@ -880,17 +882,17 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
         add_argument(launch, shader_preset);
     }
     {
-        const char *verbose = getenv("ROMINABOX_VERBOSE");
-        const char *frames = getenv("ROMINABOX_MAX_FRAMES");
-        if (verbose && strcmp(verbose, "1") == 0)
+        const char *verbose = getenv(ROMINABOX_VERBOSE_ENV);
+        const char *frames = getenv(ROMINABOX_MAX_FRAMES_ENV);
+        if (verbose && strcmp(verbose, LAUNCH_SWITCH_ON) == 0)
             add_argument(launch, "--verbose");
         if (frames && frames[0]) {
             char frames_argument[32];
             const char *digit = frames;
             while (*digit >= '0' && *digit <= '9')
                 digit++;
-            if (*digit != '\0' || strlen(frames) > 6)
-                die("ROMINABOX_MAX_FRAMES is not a frame count");
+            if (*digit != '\0' || strlen(frames) > FRAME_COUNT_DIGITS)
+                die(ROMINABOX_MAX_FRAMES_ENV " is not a frame count");
             snprintf(frames_argument, sizeof frames_argument, "--max-frames=%s", frames);
             add_argument(launch, frames_argument);
         }

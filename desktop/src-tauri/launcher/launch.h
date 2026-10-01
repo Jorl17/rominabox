@@ -14,6 +14,14 @@
 #define LAUNCH_VARIABLES_CAP 32
 #define LAUNCH_ARGUMENTS_CAP 12
 
+/* The name of a game's launcher in the messages we show to a person. */
+#define ROMINABOX_NAME "ROM-in-a-Box"
+
+/* How we write a switch in the launch plan and in the variables we set for
+ * the player in a launcher. */
+#define LAUNCH_SWITCH_ON "1"
+#define LAUNCH_SWITCH_OFF "0"
+
 /* Platform locations, and facts that only the platform entry can provide. */
 typedef struct {
     /* The app's own files: the plan, the core, the menu. */
@@ -100,6 +108,12 @@ int rominabox_launch_is_quiet(int opened_by_person, const char *quiet, const cha
 /* A dry run, in which we write the game's config in the launcher and stop
  * before the player starts. We set it only in tests. */
 #define ROMINABOX_PLAN_ONLY_ENV "ROMINABOX_PLAN_ONLY"
+
+/* Set to LAUNCH_SWITCH_ON for a verbose RetroArch log. */
+#define ROMINABOX_VERBOSE_ENV "ROMINABOX_VERBOSE"
+
+/* The number of frames after which the RetroArch run ends. */
+#define ROMINABOX_MAX_FRAMES_ENV "ROMINABOX_MAX_FRAMES"
 
 void rominabox_launch_die(const char *message);
 

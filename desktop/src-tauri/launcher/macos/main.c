@@ -23,6 +23,18 @@
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 #include "arguments.h"
 
+/* launchd, the parent of what a person opens with a double-click or from
+ * the Dock. */
+#define LAUNCHD 1
+/* The Application Support folder of a home, as a format string with the home. */
+#define APPLICATION_SUPPORT_IN "%s/Library/Application Support"
+/* Where an app keeps its own files, inside its bundle. */
+#define BUNDLE_RESOURCES "Contents/Resources"
+/* How many folders we keep open at once when we remove a game's data. */
+#define FORGET_OPEN_FOLDERS 16
+/* Anyone may read the launch log, and only its owner may write it. */
+#define LOG_MODE 0644
+
 #define RIB_CORE_FILE(platform, file) static const char core_##platform[] = file;
 #include "../launch_contract.inc"
 
@@ -56,7 +68,7 @@ void rominabox_launch_tell(const char *message) {
     text = CFStringCreateWithCString(kCFAllocatorDefault, message, kCFStringEncodingUTF8);
     if (!text)
         return;
-    CFUserNotificationDisplayAlert(0, kCFUserNotificationStopAlertLevel, NULL, NULL, NULL, CFSTR("ROM-in-a-Box"),
+    CFUserNotificationDisplayAlert(0, kCFUserNotificationStopAlertLevel, NULL, NULL, NULL, CFSTR(ROMINABOX_NAME),
                                    text, NULL, NULL, NULL, NULL);
     CFRelease(text);
 }
@@ -81,7 +93,7 @@ static void forget_if_asked(void) {
     rominabox_launch_join(marker, sizeof marker, forget_folder, RIB_FORGET_MARKER);
     if (fs_exists(marker))
         /* Deepest first. We remove a link itself and never follow it. */
-        nftw(forget_folder, remove_entry, 16, FTW_DEPTH | FTW_PHYS);
+        nftw(forget_folder, remove_entry, FORGET_OPEN_FOLDERS, FTW_DEPTH | FTW_PHYS);
 }
 
 static char *forwarded_argv[LAUNCH_ARGUMENTS_CAP + 1];
@@ -104,7 +116,7 @@ static void prepare(void) {
 
     /* When a person double-clicks the game or opens it from the Dock, it
      * starts through launchd. Otherwise a script or a harness started it. */
-    person_opened = getppid() == 1;
+    person_opened = getppid() == LAUNCHD;
     if (_NSGetExecutablePath(executable, &exec_path_size) != 0)
         rominabox_launch_die("could not find the launcher");
     if (!realpath(executable, bundle))
@@ -123,7 +135,7 @@ static void prepare(void) {
             rominabox_launch_die("the launcher is not inside an app");
         *slash = '\0';
     }
-    rominabox_launch_join(resources, sizeof resources, bundle, "Contents/Resources");
+    rominabox_launch_join(resources, sizeof resources, bundle, BUNDLE_RESOURCES);
 
     places.resources = resources;
     places.core = core_Macos;
@@ -143,14 +155,14 @@ static void prepare(void) {
         if (!home || home[0] != '/')
             rominabox_launch_die("HOME is not an absolute path, so there is nowhere safe to keep this game's files");
         {
-            int wrote = snprintf(user_data, sizeof user_data, "%s/Library/Application Support", home);
+            int wrote = snprintf(user_data, sizeof user_data, APPLICATION_SUPPORT_IN, home);
             if (wrote < 0 || (size_t)wrote >= sizeof user_data)
                 rominabox_launch_die("the data directory does not fit");
         }
         /* QUICK SIGN IN's accounts are in the real home, which the sandbox's
          * HOME is not. */
         if (user && user->pw_dir && user->pw_dir[0] == '/') {
-            int wrote = snprintf(accounts_root, sizeof accounts_root, "%s/Library/Application Support", user->pw_dir);
+            int wrote = snprintf(accounts_root, sizeof accounts_root, APPLICATION_SUPPORT_IN, user->pw_dir);
             if (wrote > 0 && (size_t)wrote < sizeof accounts_root)
                 places.accounts_root = accounts_root;
         }
@@ -173,7 +185,7 @@ static void prepare(void) {
             unsetenv(launch.variables[index].name);
     }
 
-    log_fd = open(launch.log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    log_fd = open(launch.log_path, O_WRONLY | O_CREAT | O_APPEND, LOG_MODE);
     if (log_fd >= 0) {
         dup2(log_fd, STDOUT_FILENO);
         dup2(log_fd, STDERR_FILENO);
