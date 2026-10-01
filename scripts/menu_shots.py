@@ -387,8 +387,8 @@ def _forget_windows_game(program: Path) -> None:
     """Remove the sandbox registered for the Windows game `program`, which
     belongs to the system and is in the person's Packages folder, with the
     game's data. We register it in the launcher once the copy of the game is
-    complete, under the name in the copy. Everything else from the game is in
-    the process's per-user folder, removed with it (windows_pack.own_user_data)."""
+    complete, from the identity in its plan. Everything else from the game is
+    in the process's per-user folder, removed with it (windows_pack.own_user_data)."""
     folder = windows_pack.runtime_folder(program, os.environ)
     identity = IDENTITY.search(plan_text(folder)) if folder is not None else None
     if identity:

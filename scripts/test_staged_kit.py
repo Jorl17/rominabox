@@ -13,8 +13,9 @@ part appears in a shot without a new build of the kit.
 
 What this does NOT prove: that a game exported from the kit runs (the
 launched tests check that), or that we compile a change to the launcher's
-sources (that depends on ninja and on the kit's record of the sources of
-its launch library).
+sources. With ninja we compile a Windows launcher again when its inputs
+change, and we build a macOS launch library again when the digest of its
+sources changes.
 """
 
 from __future__ import annotations

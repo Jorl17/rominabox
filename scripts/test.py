@@ -279,7 +279,7 @@ SCOPES = [
     Scope(
         "stagedkit",
         "that the kit a launched test exports from carries the tree's shared menu parts and shader library, and that a second kit or a second plan tool compiles the game's launcher no more",
-        "that a game exported from the kit runs (the launched scopes), or that a change to the launcher's sources is compiled; ninja and the kit's record of its launch library's sources decide that",
+        "that a game exported from the kit runs (the launched scopes), or that a change to the launcher's sources is compiled; ninja compiles a Windows launcher again when its inputs change, and a macOS launch library is built again when the digest of its sources changes",
         [PYTHON, str(ROOT / "scripts/test_staged_kit.py")],
     ),
     Scope(
