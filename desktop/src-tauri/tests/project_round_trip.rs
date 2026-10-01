@@ -7,6 +7,7 @@ use rominabox_desktop::projects::{
 };
 use serde_json::{json, Value};
 use std::fs;
+use std::io::{Read, Write};
 use std::path::Path;
 
 fn picture(path: &Path, shade: u8) {
@@ -38,10 +39,14 @@ fn everything(root: &Path) -> Value {
         "palette": "amber",
         "menuSounds": "bell",
         "controls": { "bindings": { "a": { "label": "Jump", "key": "space" } } },
-        "menuControls": {
+        "hotkeys": {
             "menu": ["key:f1", "pad:home"],
             "confirm": ["key:enter"],
-            "back": ["key:backspace", "pad:b"]
+            "back": ["key:backspace", "pad:b"],
+            "quick-save": ["key:f5", "pad:select"],
+            "quick-load": ["key:f8"],
+            "previous-slot": [],
+            "next-slot": ["key:f12"]
         },
         "firmware": [root.join("bios.bin")],
         "splash": false,
@@ -117,4 +122,71 @@ fn saving_a_project_leaves_only_the_project_where_it_was_saved() {
         .collect();
     names.sort();
     assert_eq!(names, ["Every Setting.rominabox"]);
+}
+
+/// `archive`'s manifest in the older format without HOTKEYS: the menu's own
+/// hotkeys as `menuControls`, without the ones that act while the game plays,
+/// and its Options entry `menu-controls`.
+fn as_saved_before_hotkeys(archive: &Path) {
+    let mut zip = zip::ZipArchive::new(fs::File::open(archive).unwrap()).unwrap();
+    let mut members = Vec::new();
+    for index in 0..zip.len() {
+        let mut member = zip.by_index(index).unwrap();
+        let mut bytes = Vec::new();
+        member.read_to_end(&mut bytes).unwrap();
+        members.push((member.name().to_string(), bytes));
+    }
+    drop(zip);
+    let mut written = zip::ZipWriter::new(fs::File::create(archive).unwrap());
+    for (name, bytes) in members {
+        let bytes = if name == "manifest.json" {
+            let mut manifest: Value = serde_json::from_slice(&bytes).unwrap();
+            let game = manifest["game"].as_object_mut().unwrap();
+            let hotkeys = game.remove("hotkeys").unwrap();
+            game.insert(
+                "menuControls".into(),
+                json!({ "menu": hotkeys["menu"], "confirm": hotkeys["confirm"], "back": hotkeys["back"] }),
+            );
+            game.insert("menuEntries".into(), json!(["controls", "menu-controls"]));
+            serde_json::to_vec(&manifest).unwrap()
+        } else {
+            bytes
+        };
+        written.start_file(name, zip::write::SimpleFileOptions::default()).unwrap();
+        written.write_all(&bytes).unwrap();
+    }
+    written.finish().unwrap();
+}
+
+/// We open a project in the older manifest format, without HOTKEYS. Its menu
+/// controls become the menu hotkeys, the hotkeys for gameplay are the builder
+/// defaults, and its MENU CONTROLS entry becomes the HOTKEYS one.
+#[test]
+fn a_project_saved_with_menu_controls_opens_with_them_as_hotkeys() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-project-menu-controls");
+    let settings: Game = serde_json::from_value(everything(&root)).unwrap();
+    let archive = root.join("Before Hotkeys.rominabox");
+    save_project(&ProjectSaveRequest { archive_path: archive.clone(), settings }).unwrap();
+    as_saved_before_hotkeys(&archive);
+    let opened = open_project(&ProjectOpenRequest {
+        archive_path: archive,
+        extraction_dir: root.join("opened"),
+    })
+    .unwrap();
+    let opened = serde_json::to_value(&opened.settings).unwrap();
+    let defaults = serde_json::to_value(&rominabox_desktop::builder::defaults().hotkeys).unwrap();
+    assert_eq!(
+        opened["hotkeys"],
+        json!({
+            "menu": ["key:f1", "pad:home"],
+            "confirm": ["key:enter"],
+            "back": ["key:backspace", "pad:b"],
+            "quick-save": defaults["quick-save"],
+            "quick-load": defaults["quick-load"],
+            "previous-slot": defaults["previous-slot"],
+            "next-slot": defaults["next-slot"]
+        })
+    );
+    assert_eq!(opened["menuEntries"], json!(["controls", "hotkeys"]));
+    assert!(opened.get("menuControls").is_none(), "{opened}");
 }

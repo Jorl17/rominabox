@@ -3,8 +3,8 @@
 
 use super::app_files::player_defaults;
 use super::{Drivers, ErrorStage, ExportError, ExportRequest};
-use crate::hotkeys::isolated_hotkey_config;
 use crate::launch_contract::{plan_field, plan_mark, shipped, token, user_folder};
+use crate::meta_binds::isolated_meta_bind_config;
 use sha2::{Digest, Sha256};
 use std::ffi::OsStr;
 use std::fs;
@@ -220,7 +220,7 @@ notification_show_remap_load = "false"
 notification_show_config_override_load = "false"
 savestate_thumbnail_enable = "true"
 "#,
-        isolated_hotkey_config(request.game.advanced_emulator_access),
+        isolated_meta_bind_config(request.game.advanced_emulator_access),
         firmware = shipped!(Firmware).1,
         remaps = shipped!(Remaps).1,
         core_options = shipped!(CoreOptions).1,

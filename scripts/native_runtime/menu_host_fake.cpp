@@ -134,6 +134,14 @@ extern "C" bool rib_host_core_gl_context(void) { return false; }
 extern "C" bool rib_host_prepare_script_shot(void) { return false; }
 extern "C" void rib_host_end_after_script_shot(const char *) {}
 extern "C" void rib_host_script_finished(void) { host.script_finished = true; }
+/* Pressed until the release in a test. */
+extern "C" bool rib_host_script_press(const char *name)
+{
+   unsigned code = 0;
+   if (!rib_host_key_code(name, &code)) return false;
+   host.keys_down.emplace_back(name);
+   return true;
+}
 extern "C" void rib_host_apply_device(const char *id, unsigned device)
 {
    host.applied_device = id ? id : "";

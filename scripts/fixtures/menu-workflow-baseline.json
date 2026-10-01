@@ -61,22 +61,24 @@
       "controls"
     ]
   },
-  "disc/amber/menu-controls": {
+  "disc/amber/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -110,7 +112,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -118,7 +120,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "disc/amber/pause-menu": {
@@ -1723,6 +1725,326 @@
       "report:fullscreen"
     ]
   },
+  "disc/blue/hotkeys": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys"
+    ]
+  },
+  "disc/blue/hotkeys-capturing": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": true,
+        "capturing": [
+          "hotkey-confirm-add",
+          "hotkeys-cancel"
+        ],
+        "disabled": [
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-confirm-add"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CANCEL",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys",
+      "hotkey-confirm-add"
+    ]
+  },
+  "disc/blue/hotkeys-full": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkey-menu-add",
+          "hotkey-confirm-add",
+          "hotkey-back-add",
+          "hotkey-quick-save-add",
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-confirm-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys",
+      "key:down"
+    ]
+  },
+  "disc/blue/hotkeys-keyboard": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys"
+    ]
+  },
+  "disc/blue/hotkeys-second-page": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkeys-next"
+        ],
+        "focused": [
+          "hotkey-quick-load-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys",
+      "hotkeys-next"
+    ]
+  },
   "disc/blue/hover-then-key": {
     "files": {},
     "reports": {
@@ -2003,255 +2325,6 @@
     },
     "script": [
       "wait-ms:200"
-    ]
-  },
-  "disc/blue/menu-controls": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "menu-control-menu-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls"
-    ]
-  },
-  "disc/blue/menu-controls-capturing": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": true,
-        "capturing": [
-          "menu-control-confirm-add",
-          "menu-controls-cancel"
-        ],
-        "disabled": [],
-        "focused": [
-          "menu-control-confirm-add"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  CANCEL",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls",
-      "menu-control-confirm-add"
-    ]
-  },
-  "disc/blue/menu-controls-full": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [
-          "menu-control-menu-add",
-          "menu-control-confirm-add",
-          "menu-control-back-add"
-        ],
-        "focused": [
-          "menu-control-confirm-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls",
-      "key:down"
-    ]
-  },
-  "disc/blue/menu-controls-keyboard": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "menu-control-menu-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls"
     ]
   },
   "disc/blue/notice-leaving": {
@@ -5058,22 +5131,24 @@
       "controls"
     ]
   },
-  "disc/carbon/menu-controls": {
+  "disc/carbon/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -5107,7 +5182,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -5115,7 +5190,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "disc/carbon/pause-menu": {
@@ -5307,22 +5382,24 @@
       "controls"
     ]
   },
-  "disc/green/menu-controls": {
+  "disc/green/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -5356,7 +5433,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -5364,7 +5441,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "disc/green/pause-menu": {
@@ -5556,22 +5633,24 @@
       "controls"
     ]
   },
-  "disc/violet/menu-controls": {
+  "disc/violet/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -5605,7 +5684,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -5613,7 +5692,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "disc/violet/pause-menu": {
@@ -5805,22 +5884,24 @@
       "controls"
     ]
   },
-  "native/amber/menu-controls": {
+  "native/amber/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -5854,7 +5935,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -5862,7 +5943,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "native/amber/pause-menu": {
@@ -7467,6 +7548,326 @@
       "report:fullscreen"
     ]
   },
+  "native/blue/hotkeys": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys"
+    ]
+  },
+  "native/blue/hotkeys-capturing": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": true,
+        "capturing": [
+          "hotkey-confirm-add",
+          "hotkeys-cancel"
+        ],
+        "disabled": [
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-confirm-add"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CANCEL",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys",
+      "hotkey-confirm-add"
+    ]
+  },
+  "native/blue/hotkeys-full": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkey-menu-add",
+          "hotkey-confirm-add",
+          "hotkey-back-add",
+          "hotkey-quick-save-add",
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-confirm-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys",
+      "key:down"
+    ]
+  },
+  "native/blue/hotkeys-keyboard": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys"
+    ]
+  },
+  "native/blue/hotkeys-second-page": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkeys-next"
+        ],
+        "focused": [
+          "hotkey-quick-load-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys",
+      "hotkeys-next"
+    ]
+  },
   "native/blue/hover-then-key": {
     "files": {},
     "reports": {
@@ -7747,255 +8148,6 @@
     },
     "script": [
       "wait-ms:200"
-    ]
-  },
-  "native/blue/menu-controls": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "menu-control-menu-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls"
-    ]
-  },
-  "native/blue/menu-controls-capturing": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": true,
-        "capturing": [
-          "menu-control-confirm-add",
-          "menu-controls-cancel"
-        ],
-        "disabled": [],
-        "focused": [
-          "menu-control-confirm-add"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  CANCEL",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls",
-      "menu-control-confirm-add"
-    ]
-  },
-  "native/blue/menu-controls-full": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [
-          "menu-control-menu-add",
-          "menu-control-confirm-add",
-          "menu-control-back-add"
-        ],
-        "focused": [
-          "menu-control-confirm-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls",
-      "key:down"
-    ]
-  },
-  "native/blue/menu-controls-keyboard": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "menu-control-menu-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls"
     ]
   },
   "native/blue/notice-leaving": {
@@ -10828,22 +10980,24 @@
       "controls"
     ]
   },
-  "native/carbon/menu-controls": {
+  "native/carbon/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -10877,7 +11031,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -10885,7 +11039,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "native/carbon/pause-menu": {
@@ -11077,22 +11231,24 @@
       "controls"
     ]
   },
-  "native/green/menu-controls": {
+  "native/green/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -11126,7 +11282,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -11134,7 +11290,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "native/green/pause-menu": {
@@ -11326,22 +11482,24 @@
       "controls"
     ]
   },
-  "native/violet/menu-controls": {
+  "native/violet/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -11375,7 +11533,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -11383,7 +11541,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "native/violet/pause-menu": {
@@ -11575,22 +11733,24 @@
       "controls"
     ]
   },
-  "rominabox/amber/menu-controls": {
+  "rominabox/amber/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -11624,7 +11784,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -11632,7 +11792,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "rominabox/amber/pause-menu": {
@@ -13229,6 +13389,326 @@
       "report:fullscreen"
     ]
   },
+  "rominabox/blue/hotkeys": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys"
+    ]
+  },
+  "rominabox/blue/hotkeys-capturing": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": true,
+        "capturing": [
+          "hotkey-confirm-add",
+          "hotkeys-cancel"
+        ],
+        "disabled": [
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-confirm-add"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  CANCEL",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys",
+      "hotkey-confirm-add"
+    ]
+  },
+  "rominabox/blue/hotkeys-full": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkey-menu-add",
+          "hotkey-confirm-add",
+          "hotkey-back-add",
+          "hotkey-quick-save-add",
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-menu-5"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys",
+      "key:down"
+    ]
+  },
+  "rominabox/blue/hotkeys-keyboard": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
+        "focused": [
+          "hotkey-menu-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys"
+    ]
+  },
+  "rominabox/blue/hotkeys-second-page": {
+    "files": {},
+    "reports": {
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [
+          "hotkeys-next"
+        ],
+        "focused": [
+          "hotkey-quick-load-1"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "hotkeys",
+        "selected": [],
+        "showing": [],
+        "sliders": {
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "ESC  BACK",
+          "heading": "HOTKEYS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "hotkeys",
+      "hotkeys-next"
+    ]
+  },
   "rominabox/blue/hover-then-key": {
     "files": {},
     "reports": {
@@ -13509,255 +13989,6 @@
     },
     "script": [
       "wait-ms:200"
-    ]
-  },
-  "rominabox/blue/menu-controls": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "menu-control-menu-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls"
-    ]
-  },
-  "rominabox/blue/menu-controls-capturing": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": true,
-        "capturing": [
-          "menu-control-confirm-add",
-          "menu-controls-cancel"
-        ],
-        "disabled": [],
-        "focused": [
-          "menu-control-confirm-add"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  CANCEL",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls",
-      "menu-control-confirm-add"
-    ]
-  },
-  "rominabox/blue/menu-controls-full": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [
-          "menu-control-menu-add",
-          "menu-control-confirm-add",
-          "menu-control-back-add"
-        ],
-        "focused": [
-          "menu-control-menu-5"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls",
-      "key:down"
-    ]
-  },
-  "rominabox/blue/menu-controls-keyboard": {
-    "files": {},
-    "reports": {
-      "final": {
-        "bindsBox": false,
-        "captureActive": false,
-        "capturing": [],
-        "disabled": [],
-        "focused": [
-          "menu-control-menu-1"
-        ],
-        "leaving": [],
-        "menuOpen": true,
-        "on": [],
-        "profile": "megadrive",
-        "screen": "menu-controls",
-        "selected": [],
-        "showing": [],
-        "sliders": {
-          "volume-level": 1.0
-        },
-        "slots": [
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          },
-          {
-            "occupied": false,
-            "thumbnail": false
-          }
-        ],
-        "text": {
-          "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
-        },
-        "transferPending": false,
-        "volumeDb": 0.0
-      }
-    },
-    "script": [
-      "options",
-      "menu-controls"
     ]
   },
   "rominabox/blue/notice-leaving": {
@@ -16586,22 +16817,24 @@
       "controls"
     ]
   },
-  "rominabox/carbon/menu-controls": {
+  "rominabox/carbon/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -16635,7 +16868,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -16643,7 +16876,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "rominabox/carbon/pause-menu": {
@@ -16835,22 +17068,24 @@
       "controls"
     ]
   },
-  "rominabox/green/menu-controls": {
+  "rominabox/green/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -16884,7 +17119,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -16892,7 +17127,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "rominabox/green/pause-menu": {
@@ -17084,22 +17319,24 @@
       "controls"
     ]
   },
-  "rominabox/violet/menu-controls": {
+  "rominabox/violet/hotkeys": {
     "files": {},
     "reports": {
       "final": {
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "hotkeys-prev"
+        ],
         "focused": [
-          "menu-control-menu-1"
+          "hotkey-menu-1"
         ],
         "leaving": [],
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "menu-controls",
+        "screen": "hotkeys",
         "selected": [],
         "showing": [],
         "sliders": {
@@ -17133,7 +17370,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "MENU CONTROLS"
+          "heading": "HOTKEYS"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -17141,7 +17378,7 @@
     },
     "script": [
       "options",
-      "menu-controls"
+      "hotkeys"
     ]
   },
   "rominabox/violet/pause-menu": {

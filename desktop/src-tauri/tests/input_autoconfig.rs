@@ -10,7 +10,7 @@ mod export_fixture;
 
 use rominabox_desktop::{
     controls::{self, Controls},
-    hotkeys::{isolated_hotkey_config, HOTKEY_BINDS},
+    meta_binds::{isolated_meta_bind_config, META_BINDS},
     packaging::{ExportRequest, ExportTarget, MANAGED_DATA_DIRECTORIES},
 };
 use std::{
@@ -174,7 +174,7 @@ fn is_meta_bind_assignment(line: &str, names: &[String]) -> bool {
         return false;
     }
     let key = line.split_once('=').unwrap().0.trim();
-    if key == rominabox_desktop::menu_controls::home_button_key() {
+    if key == rominabox_desktop::hotkeys::home_button_key() {
         return false;
     }
     let Some(rest) = key.strip_prefix("input_") else {
@@ -301,8 +301,8 @@ fn walk_files(root: &Path, found: &mut Vec<PathBuf>) {
 /// check author overrides that reuse Space.
 #[test]
 fn advanced_access_reaches_fast_forward_on_the_keyboard_only() {
-    let ordinary = isolated_hotkey_config(false);
-    let advanced = isolated_hotkey_config(true);
+    let ordinary = isolated_meta_bind_config(false);
+    let advanced = isolated_meta_bind_config(true);
 
     assert_eq!(
         config_value(&ordinary, "input_toggle_fast_forward"),
@@ -359,7 +359,7 @@ fn advanced_access_reaches_fast_forward_on_the_keyboard_only() {
         "Space is the advanced toggle and is not a declared gameplay key"
     );
 
-    let advanced_entries: Vec<_> = HOTKEY_BINDS
+    let advanced_entries: Vec<_> = META_BINDS
         .iter()
         .filter(|bind| bind.advanced_key.is_some())
         .map(|bind| (bind.name, bind.advanced_key))
@@ -381,12 +381,12 @@ fn advanced_access_reaches_fast_forward_on_the_keyboard_only() {
 /// ifdef, after we remove duplicate names. We do not preprocess the macOS
 /// build, and this does not prove that no pad can reach a hotkey.
 #[test]
-fn hotkey_allow_list_is_unchanged_and_controller_variants_stay_nul() {
-    let policy: Vec<&str> = HOTKEY_BINDS.iter().map(|bind| bind.name).collect();
+fn meta_bind_allow_list_is_unchanged_and_controller_variants_stay_nul() {
+    let policy: Vec<&str> = META_BINDS.iter().map(|bind| bind.name).collect();
     assert_eq!(policy, pinned_meta_bind_names());
 
-    let advanced = isolated_hotkey_config(true);
-    for bind in HOTKEY_BINDS {
+    let advanced = isolated_meta_bind_config(true);
+    for bind in META_BINDS {
         for suffix in ["_btn", "_axis", "_mbtn"] {
             assert_eq!(
                 config_value(&advanced, &format!("input_{}{suffix}", bind.name)),
@@ -589,7 +589,7 @@ input_reset_btn = \"3\"
     ));
     let upstream = archive_member(&archive, "hid/DualSense Wireless Controller (PS5).cfg");
     assert_eq!(
-        profile_value(&upstream, &rominabox_desktop::menu_controls::home_button_key()),
+        profile_value(&upstream, &rominabox_desktop::hotkeys::home_button_key()),
         Some("12"),
         "the pin no longer contains the menu bind this test uses as proof"
     );
@@ -604,7 +604,7 @@ input_reset_btn = \"3\"
         "staged DualSense still has a meta bind:\n{staged}"
     );
     assert_eq!(
-        profile_value(&staged, &rominabox_desktop::menu_controls::home_button_key()),
+        profile_value(&staged, &rominabox_desktop::hotkeys::home_button_key()),
         Some("12"),
         "the staged DualSense keeps its PS button as the menu button:\n{staged}"
     );
@@ -732,7 +732,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
             palette: "blue".to_string(),
             menu_sounds: "off".to_string(),
             controls: Controls::default(),
-            menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
+            hotkeys: rominabox_desktop::builder::unstated::hotkeys(),
             firmware: Vec::new(),
             splash: false,
             advanced_emulator_access: true,
@@ -930,7 +930,7 @@ fn no_shipped_profile_can_bind_anything_but_gameplay() {
                 continue;
             };
             let key = key.trim();
-            if key == rominabox_desktop::menu_controls::home_button_key() {
+            if key == rominabox_desktop::hotkeys::home_button_key() {
                 continue;
             }
             for bind in forbidden {

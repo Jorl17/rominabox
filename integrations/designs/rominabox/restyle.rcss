@@ -51,8 +51,8 @@
 .list-row.focused, .list-row:active { border-color: design(highlight); }
 .list-row-icon, .list-row-wait { border-color: design(bevel-dark); }
 
-/* Menu controls. */
-.menu-control { border-color: design(surface); }
-.menu-control-chip { background-color: design(picture); border-color: design(picture); }
-.menu-control-chip.pad { background-color: design(focus); border-color: design(focus); }
-.menu-control-chip:hover, .menu-control-chip.focused { background-color: design(highlight); color: design(surface); border-color: design(highlight); }
+/* Hotkeys. */
+.hotkey { border-color: design(surface); }
+.hotkey-chip { background-color: design(picture); border-color: design(picture); }
+.hotkey-chip.pad { background-color: design(focus); border-color: design(focus); }
+.hotkey-chip:hover, .hotkey-chip.focused { background-color: design(highlight); color: design(surface); border-color: design(highlight); }

@@ -28,7 +28,7 @@ pub struct MenuRequest {
     pub controls: Controls,
     /// What opens the menu, and confirms and goes back in it, until the
     /// player changes them.
-    pub menu_controls: crate::menu_controls::MenuControls,
+    pub hotkeys: crate::hotkeys::Hotkeys,
     /// The full menu. Without it the game has only the splash, if any.
     pub show_menu: bool,
     pub splash: bool,
@@ -61,7 +61,7 @@ impl MenuRequest {
             background: None,
             system: "megadrive".into(),
             controls: Controls::default(),
-            menu_controls: crate::builder::unstated::menu_controls(),
+            hotkeys: crate::builder::unstated::hotkeys(),
             show_menu: true,
             splash: false,
             include_achievements: false,
@@ -317,13 +317,12 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     }
     let (menu, installed) = crate::lists::install(&manifest, &menu, &staged, &lists)?;
     super::contract::validate(&manifest, &menu, &staged.iter().collect::<Vec<_>>())?;
-    // The inputs that open the menu and confirm and go back in it, whether or
-    // not the game has MENU CONTROLS to change them. When it has, each row
-    // must show every binding from the defaults.
-    crate::menu_controls::fit(&request.menu_controls, &menu, &manifest.id)?;
+    // The hotkeys, whether or not the game has HOTKEYS to change them. Where
+    // it has, each row must show every default binding for its hotkey.
+    crate::hotkeys::fit(&request.hotkeys, &menu, &manifest.id)?;
     composition.put(
-        crate::menu_controls::DEFAULTS_FILE,
-        Content::Text(request.menu_controls.defaults_config()?),
+        crate::hotkeys::DEFAULTS_FILE,
+        Content::Text(request.hotkeys.defaults_config()?),
     );
     let cfg = declarations::write(&manifest, &staged, &installed, &settings, &menu)?;
     // We play a sound for a change of volume in every game with a volume
@@ -517,7 +516,7 @@ mod tests {
         assert!(staged.contains(">OPTIONS<") && staged.contains(">CONTROLS<"));
         let cfg = composed.text("design.cfg").unwrap();
         assert!(
-            cfg.contains("screens = \"pause options controls menu-controls uninstall\""),
+            cfg.contains("screens = \"pause options controls hotkeys uninstall\""),
             "{cfg}"
         );
         let mac = compose(MenuRequest {
@@ -525,7 +524,7 @@ mod tests {
             ..request("native")
         });
         let mac = mac.text("design.cfg").unwrap();
-        assert!(mac.contains("screens = \"pause options controls menu-controls reset\""), "{mac}");
+        assert!(mac.contains("screens = \"pause options controls hotkeys reset\""), "{mac}");
         assert!(cfg.contains("screen_button_options = \"options\""));
         assert!(cfg.contains("screen_button_controls = \"controls\""));
 
@@ -537,7 +536,7 @@ mod tests {
         assert!(!empty.contains("id=\"options\""), "no options button");
         assert!(!empty.contains("id=\"options-panel\""));
         assert!(
-            !empty.contains("id=\"menu-controls-panel\""),
+            !empty.contains("id=\"hotkeys-panel\""),
             "a screen the game does not get is not drawn"
         );
         assert!(

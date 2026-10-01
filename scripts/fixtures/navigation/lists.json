@@ -378,7 +378,7 @@
         "native": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "shaders",
           "achievements",
           "options-next"
@@ -393,7 +393,7 @@
         "rominabox": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "shaders",
           "achievements",
           "options-next"

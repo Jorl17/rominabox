@@ -1,19 +1,22 @@
-//! Only Escape is reserved. Q and F are ordinary gameplay keys in every mode.
+//! We reserve only the keys of hotkeys used during play, and Escape is one of
+//! them by default. Q and F are ordinary gameplay keys in every mode.
 //!
-//! Neither Q nor F is a hotkey, because the menu opened with Escape has Quit,
-//! and Alt+Enter is the fullscreen chord. Escape is the default for MENU in
-//! MENU CONTROLS, which we read in the menu from the export's
-//! `menu-controls-defaults.cfg`. The RetroArch menu toggle has no key.
+//! Neither Q nor F is a RetroArch meta bind, with or without advanced
+//! emulator access, because Quit is in the menu that the player opens with
+//! Escape, and Alt+Enter is the fullscreen chord. The player opens
+//! the menu with Escape because it is the default for MENU on the HOTKEYS
+//! screen, which we read in the menu from `hotkeys-defaults.cfg` in the
+//! export. RetroArch's own menu toggle has no key.
 //!
-//! In these tests we read generated config and call the authoring validator.
-//! We do not launch a player or open a window, and we do not prove that
-//! RetroArch performs the action bound to a key.
+//! In these tests we read generated config and the authoring validator. We
+//! do not launch a player or open a window, and we do not prove that
+//! pressing a key has the effect bound to it.
 
 mod export_fixture;
 
 use rominabox_desktop::{
-    controls::{self, Controls},
-    hotkeys::{isolated_hotkey_config, HOTKEY_BINDS},
+    controls::Controls,
+    meta_binds::{isolated_meta_bind_config, META_BINDS},
     packaging::{ExportRequest, ExportTarget},
 };
 use std::{
@@ -120,7 +123,7 @@ fn export_request(root: &Path, advanced: bool, controls: Controls) -> ExportRequ
             palette: "blue".to_string(),
             menu_sounds: "off".to_string(),
             controls,
-            menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
+            hotkeys: rominabox_desktop::builder::unstated::hotkeys(),
             firmware: Vec::new(),
             splash: false,
             advanced_emulator_access: advanced,
@@ -164,10 +167,10 @@ fn exported_menu(root: &Path, advanced: bool) -> String {
     let result = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {})
         .unwrap_or_else(|error| panic!("advanced={advanced}: export refused: {error:?}"));
     let defaults = fs::read_to_string(
-        result.app_path.join("Contents/Resources/menu-assets/menu-controls-defaults.cfg"),
+        result.app_path.join("Contents/Resources/menu-assets/hotkeys-defaults.cfg"),
     )
     .unwrap();
-    config_value(&defaults, "menu_control_menu").unwrap().to_string()
+    config_value(&defaults, "hotkey_menu").unwrap().to_string()
 }
 
 /// The runtime config and the default controls that we write in an export.
@@ -202,9 +205,9 @@ fn q_and_f() -> Controls {
     .unwrap()
 }
 
-/// Every RetroArch hotkey whose keyboard key is `key`.
-fn hotkeys_on<'a>(config: &'a str, key: &str) -> Vec<&'static str> {
-    HOTKEY_BINDS
+/// Every RetroArch meta bind whose keyboard key is `key`.
+fn meta_binds_on<'a>(config: &'a str, key: &str) -> Vec<&'static str> {
+    META_BINDS
         .iter()
         .map(|bind| bind.name)
         .filter(|name| config_value(config, &format!("input_{name}")) == Some(key))
@@ -248,7 +251,7 @@ fn a_default_export_binds_no_exit_key() {
 /// keypress to the core.
 #[test]
 #[cfg(target_os = "macos")]
-fn q_and_f_are_gameplay_keys_and_no_hotkey_in_every_mode() {
+fn q_and_f_are_gameplay_keys_and_no_meta_bind_in_every_mode() {
     for advanced in [false, true] {
         let (config, defaults) = export(advanced, q_and_f());
         assert_eq!(
@@ -263,9 +266,9 @@ fn q_and_f_are_gameplay_keys_and_no_hotkey_in_every_mode() {
         );
         for key in ["q", "f"] {
             assert_eq!(
-                hotkeys_on(&config, key),
+                meta_binds_on(&config, key),
                 Vec::<&str>::new(),
-                "advanced={advanced}: {key} is a gameplay key and no hotkey"
+                "advanced={advanced}: {key} is a gameplay key and no meta bind"
             );
         }
         assert_eq!(config_value(&config, "input_exit_emulator"), Some("nul"));
@@ -287,24 +290,26 @@ fn q_and_f_are_gameplay_keys_and_no_hotkey_in_every_mode() {
     }
 }
 
-/// The RetroArch menu toggle has no key, with or without advanced access. The
-/// menu opens with its MENU CONTROLS binding, Escape by default, so Escape is
-/// never a gameplay binding.
+/// RetroArch's menu toggle has no key, with or without advanced access. The
+/// player opens the menu with MENU on the HOTKEYS screen, Escape by default,
+/// so Escape is not a gameplay binding.
 ///
-/// The keyboard lines come from the hotkey policy in the launcher. This does
-/// not prove that a keypress opens the menu. In the export tests above we
+/// The keyboard lines come from the meta bind policy in the launcher. This
+/// does not prove that a keypress opens the menu. In the export tests above we
 /// read a written launcher and menu.
 #[test]
 fn escape_toggles_the_menu_in_both_modes_and_is_never_a_gameplay_key() {
     for advanced in [false, true] {
-        let config = isolated_hotkey_config(advanced);
+        let config = isolated_meta_bind_config(advanced);
         assert_eq!(
             config_value(&config, "input_menu_toggle"),
             Some("nul"),
             "advanced={advanced}"
         );
     }
-    let error = controls::validate_for_system("megadrive", &binding("escape"))
-        .expect_err("escape stays reserved");
-    assert!(error.contains("toggles the menu"), "{error}");
+    let error = rominabox_desktop::builder::unstated::hotkeys()
+        .check_for("megadrive", &binding("escape"))
+        .expect_err("escape stays reserved")
+        .to_string();
+    assert!(error.contains("bound to menu, which acts while the game plays"), "{error}");
 }

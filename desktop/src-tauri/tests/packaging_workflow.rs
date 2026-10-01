@@ -6,7 +6,7 @@ use export_fixture::{export_request, workspace};
 
 use rominabox_desktop::cores::{Response, Transport, Version};
 use rominabox_desktop::export_cores::CoreActivity;
-use rominabox_desktop::hotkeys::{isolated_hotkey_config, HOTKEY_BINDS};
+use rominabox_desktop::meta_binds::{isolated_meta_bind_config, META_BINDS};
 use rominabox_desktop::packaging::{
     ErrorStage, ExportRequest, ExportStage, ExportTarget, MANAGED_DATA_DIRECTORIES,
 };
@@ -78,7 +78,7 @@ fn an_export_writes_the_app_and_nothing_else() {
 }
 
 #[test]
-fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
+fn export_writes_the_reviewed_meta_bind_policy_and_managed_paths() {
     let root = workspace();
     let request = export_request(&root);
     let cancelled = AtomicBool::new(false);
@@ -87,11 +87,11 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
     let plan_path = result.app_path.join("Contents/Resources/launch.plan");
     let plan = fs::read_to_string(&plan_path).unwrap();
     let config = embedded_runtime_config(&plan);
-    let policy = isolated_hotkey_config(false);
+    let policy = isolated_meta_bind_config(false);
 
     assert!(
         config.contains(&policy),
-        "exported retroarch.cfg must embed the single hotkey policy"
+        "exported retroarch.cfg must embed the single meta bind policy"
     );
     assert_eq!(
         config_value(&config, "input_toggle_fast_forward"),
@@ -126,7 +126,7 @@ fn export_writes_the_reviewed_hotkey_policy_and_managed_paths() {
     }
     assert!(!plan.contains("export HOME="));
     assert_eq!(
-        HOTKEY_BINDS
+        META_BINDS
             .iter()
             .filter(|bind| bind.name == "toggle_fast_forward")
             .count(),

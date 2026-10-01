@@ -404,18 +404,18 @@ BIND_SUFFIXES = (
 
 def home_button_key(inc: Path | None = None) -> str:
     """Return the one meta line we keep in a profile. It sets the pad's own
-    menu button, which is Home in the player's MENU CONTROLS. We read that
-    bind from the player's declaration (`RIB_MENU_PAD_HOME` in
-    menu_controls.inc) instead of copying it."""
+    menu button, which is Home in the player's HOTKEYS. We read that bind
+    from the player's declaration (`RIB_HOTKEY_PAD_HOME` in hotkeys.inc)
+    instead of copying it."""
     path = inc or (
         Path(__file__).resolve().parent.parent
-        / "vendor/retroarch/menu/drivers/rmlui/menu_controls.inc"
+        / "vendor/retroarch/menu/drivers/rmlui/hotkeys.inc"
     )
     for line in path.read_text(encoding="utf-8").splitlines():
-        found = re.match(r'\s*RIB_MENU_PAD_HOME\("[^"]*",\s*"([^"]+)"', line)
+        found = re.match(r'\s*RIB_HOTKEY_PAD_HOME\("[^"]*",\s*"([^"]+)"', line)
         if found:
             return f"input_{found.group(1)}_btn"
-    raise RuntimeError(f"No RIB_MENU_PAD_HOME in {path}")
+    raise RuntimeError(f"No RIB_HOTKEY_PAD_HOME in {path}")
 
 
 def is_allowed_key(key: str) -> bool:

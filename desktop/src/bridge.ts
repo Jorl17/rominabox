@@ -4,7 +4,7 @@ import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Controls } from "./controls";
-import type { MenuControls, Refusal } from "./menuControls";
+import type { Hotkeys, Refusal } from "./hotkeys";
 import { SHADER_EXTENSIONS } from "./shaderFiles";
 
 export const native = isTauri();
@@ -47,7 +47,7 @@ export type ExportRequest = {
   palette: string;
   menuSounds: string;
   controls: Controls;
-  menuControls: MenuControls;
+  hotkeys: Hotkeys;
   /** The Options entries of the game, or null for those of the design. */
   menuEntries?: string[] | null;
   outputDir: string;
@@ -202,13 +202,16 @@ export function assessFirmware(
 ): Promise<FirmwareAssessment> {
   return invoke("assess_firmware", { system, files });
 }
-/** The rule that `menuControls` would break in the game's menu, as we would
- * reject it in the export, or null. We check none in the browser preview. */
-export function checkMenuControls(
-  menuControls: MenuControls,
+/** The rule that `hotkeys` would break in the game's menu, with the game's
+ * `controls` on `system`, as we would reject it in the export, or null. We
+ * check none in the browser preview. */
+export function checkHotkeys(
+  hotkeys: Hotkeys,
+  system: string,
+  controls: Controls,
 ): Promise<Refusal | null> {
   if (!native) return Promise.resolve(null);
-  return invoke("check_menu_controls", { menuControls }).then(
+  return invoke("check_hotkeys", { hotkeys, system, controls }).then(
     () => null,
     (refusal: Refusal) => refusal,
   );

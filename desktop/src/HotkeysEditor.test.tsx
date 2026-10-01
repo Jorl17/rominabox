@@ -9,6 +9,7 @@ const rust = vi.hoisted(() => ({
   presses: [] as string[],
   refusals: [] as object[],
   checked: [] as object[],
+  games: [] as object[],
 }));
 vi.mock("./bridge", () => ({
   capturePadPosition: () => {
@@ -16,14 +17,15 @@ vi.mock("./bridge", () => ({
     return next ? Promise.resolve(next) : new Promise(() => {});
   },
   cancelPadCapture: () => Promise.resolve(),
-  checkMenuControls: (menuControls: object) => {
-    rust.checked.push(menuControls);
+  checkHotkeys: (hotkeys: object, system: string, controls: object) => {
+    rust.checked.push(hotkeys);
+    rust.games.push({ system, controls });
     return Promise.resolve(rust.refusals.shift() ?? null);
   },
 }));
 import declared from "../defaults.json";
-import { MenuControlsEditor } from "./MenuControlsEditor";
-import type { MenuControls } from "./menuControls";
+import { HotkeysEditor } from "./HotkeysEditor";
+import type { Hotkeys } from "./hotkeys";
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
@@ -32,18 +34,30 @@ let cleanup = () => {};
 afterEach(() => {
   cleanup();
   rust.presses.length = rust.refusals.length = rust.checked.length = 0;
+  rust.games.length = 0;
 });
+
+/** A Mega Drive game whose C is on F2. */
+const game = {
+  system: "megadrive",
+  controls: { bindings: { a: { key: "f2" } } },
+};
 
 function show() {
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
-  const seen: { value: MenuControls } = { value: declared.menuControls };
+  const seen: { value: Hotkeys } = { value: declared.hotkeys };
   function Example() {
-    const [value, setValue] = useState<MenuControls>(declared.menuControls);
+    const [value, setValue] = useState<Hotkeys>(declared.hotkeys);
     seen.value = value;
     return (
-      <MenuControlsEditor value={value} onChange={setValue} busy={false} />
+      <HotkeysEditor
+        value={value}
+        onChange={setValue}
+        busy={false}
+        game={game}
+      />
     );
   }
   act(() => root.render(<Example />));
@@ -52,11 +66,11 @@ function show() {
     container.remove();
   };
   const row = (name: string) =>
-    [...container.querySelectorAll(".menu-control-row")].find(
-      (each) => each.querySelector(".menu-control-name")?.textContent === name,
+    [...container.querySelectorAll(".hotkey-row")].find(
+      (each) => each.querySelector(".hotkey-name")?.textContent === name,
     )!;
   const chips = (name: string) =>
-    [...row(name).querySelectorAll(".menu-control-chip")].map(
+    [...row(name).querySelectorAll(".hotkey-chip")].map(
       (chip) => chip.textContent,
     );
   const said = () => container.querySelector("[role=status]")?.textContent;
@@ -77,12 +91,16 @@ function press(code: string, key = code) {
   });
 }
 
-describe("the builder's menu controls", () => {
+describe("the builder's hotkeys", () => {
   it("starts from the builder's defaults, in the words the game shows", () => {
     const { chips } = show();
     expect(chips("Menu")).toEqual(["Escape", "Home", "L3 + R3"]);
     expect(chips("Confirm")).toEqual(["Enter", "Bottom button"]);
     expect(chips("Back")).toEqual(["Escape", "Right button"]);
+    expect(chips("Quick save")).toEqual(["F2"]);
+    expect(chips("Quick load")).toEqual(["F4"]);
+    expect(chips("Previous slot")).toEqual(["F6"]);
+    expect(chips("Next slot")).toEqual(["F7"]);
   });
 
   it("adds a key or a pad button pressed after +, and says no to a stick", async () => {
@@ -121,12 +139,12 @@ describe("the builder's menu controls", () => {
     );
     await settle();
     expect(view.said()).toBe("Use a key or a pad button.");
-    expect(view.seen.value.menu).toEqual(declared.menuControls.menu);
+    expect(view.seen.value.menu).toEqual(declared.hotkeys.menu);
   });
 
   it("keeps a change the game's rules refuse from happening, and says why", async () => {
     const view = show();
-    rust.refusals.push({ kind: "noKey", action: "menu" });
+    rust.refusals.push({ kind: "noKey", hotkey: "menu" });
     act(() =>
       view
         .row("Menu")
@@ -137,14 +155,14 @@ describe("the builder's menu controls", () => {
     );
     await settle();
     expect(rust.checked).toEqual([
-      { ...declared.menuControls, menu: ["pad:home", "pad:l3+r3"] },
+      { ...declared.hotkeys, menu: ["pad:home", "pad:l3+r3"] },
     ]);
     expect(view.said()).toBe("Menu needs a key.");
     expect(view.chips("Menu")).toEqual(["Escape", "Home", "L3 + R3"]);
 
     rust.refusals.push({
       kind: "shared",
-      action: "confirm",
+      hotkey: "confirm",
       other: "back",
       binding: "key:enter",
     });
@@ -163,9 +181,7 @@ describe("the builder's menu controls", () => {
   it("removes a binding with its ×, not with its words", async () => {
     const view = show();
     const enter = [
-      ...view
-        .row("Confirm")
-        .querySelectorAll<HTMLElement>(".menu-control-chip"),
+      ...view.row("Confirm").querySelectorAll<HTMLElement>(".hotkey-chip"),
     ].find((chip) => chip.textContent === "Enter")!;
     act(() => enter.click());
     await settle();
@@ -192,6 +208,47 @@ describe("the builder's menu controls", () => {
       (button) => button.textContent === "Reset to defaults",
     )!;
     act(() => reset.click());
-    expect(view.seen.value).toEqual(declared.menuControls);
+    expect(view.seen.value).toEqual(declared.hotkeys);
+  });
+
+  it("leaves a hotkey that acts while the game plays with no binding", async () => {
+    const view = show();
+    act(() =>
+      view
+        .row("Quick save")
+        .querySelector<HTMLButtonElement>(
+          "[aria-label='Remove F2 from Quick save']",
+        )!
+        .click(),
+    );
+    await settle();
+    expect(view.chips("Quick save")).toEqual([]);
+    expect(view.seen.value["quick-save"]).toEqual([]);
+    expect(view.said()).toBe("");
+  });
+
+  it("asks with the game's controls, and says when a key is the game's", async () => {
+    const view = show();
+    rust.refusals.push({
+      kind: "gameKey",
+      hotkey: "next-slot",
+      binding: "key:f2",
+      control: "a",
+      label: "C",
+    });
+    act(() =>
+      view
+        .row("Next slot")
+        .querySelector<HTMLButtonElement>("[aria-label='Add to Next slot']")!
+        .click(),
+    );
+    press("F2", "F2");
+    await settle();
+    expect(rust.games).toEqual([game]);
+    expect(rust.checked).toEqual([
+      { ...declared.hotkeys, "next-slot": ["key:f7", "key:f2"] },
+    ]);
+    expect(view.said()).toBe("F2 is the game's key for C.");
+    expect(view.chips("Next slot")).toEqual(["F7"]);
   });
 });

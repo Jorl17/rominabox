@@ -130,7 +130,7 @@
       "pageSize": 7
     }
   ],
-  "screenOrder": ["pause", "disc", "discs", "options", "controls", "menu-controls", "shaders"],
+  "screenOrder": ["pause", "disc", "discs", "options", "controls", "hotkeys", "shaders"],
   "words": {
     "slot": "BLOCK {slot}",
     "saving-slot": "SAVING BLOCK {slot}...",

@@ -25,7 +25,7 @@ fn settings(rom: PathBuf) -> Game {
         palette: "blue".into(),
         menu_sounds: "off".into(),
         controls: Controls::default(),
-        menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
+        hotkeys: rominabox_desktop::builder::unstated::hotkeys(),
         firmware: Vec::new(),
         splash: false,
         advanced_emulator_access: false,

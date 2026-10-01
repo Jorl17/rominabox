@@ -100,7 +100,7 @@ fn request(
             palette: "blue".to_string(),
             menu_sounds: "off".to_string(),
             controls: rominabox_desktop::controls::Controls::default(),
-            menu_controls: rominabox_desktop::builder::unstated::menu_controls(),
+            hotkeys: rominabox_desktop::builder::unstated::hotkeys(),
             firmware: Vec::new(),
             splash: false,
             advanced_emulator_access: false,

@@ -100,7 +100,7 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
             "discs",
             "options",
             "controls",
-            "menu-controls",
+            "hotkeys",
             "shaders",
             "achievements",
             "accounts",

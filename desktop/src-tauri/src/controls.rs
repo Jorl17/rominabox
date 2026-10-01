@@ -124,9 +124,10 @@ pub fn profile_for_system(system: &str) -> Result<ControlProfile, String> {
         .ok_or_else(|| "The generic controller profile is missing.".to_string())
 }
 
-/// Validates author-provided overrides against the selected controller layout.
+/// Validate the author's overrides against the selected controller layout.
 ///
-/// Escape is the only key a gameplay binding may not use, in every mode.
+/// A control may not use a key bound to a hotkey used during play. We refuse
+/// that in `crate::hotkeys`, where we declare which keys those are.
 pub fn validate_for_system(system: &str, controls: &Controls) -> Result<ControlProfile, String> {
     let profile = if let Some(id) = &controls.profile {
         let mut offered = variants_for_system(system)?;
@@ -214,7 +215,6 @@ pub fn write_defaults_config(
     destination: &Path,
 ) -> Result<ControlProfile, String> {
     let profile = validate_for_system(system, controls)?;
-    let values = effective_controls(&profile, controls);
     let mut config = format!("{} = \"{}\"\n", key!(ControlsProfile), profile.id);
     // The controllers that we offer in the picker in the game. We separate
     // the ids with spaces, because a controller id never contains one.
@@ -263,13 +263,7 @@ pub fn write_defaults_config(
     // a config file. We write it in `packaging::stage_controller_remap`.
     let declared = declared_controls(system, &profile)?;
     let placed = crate::pad_positions::place(&declared, &controls.bindings, &pad_positions()?)?;
-    for control in &declared {
-        let fallback = EffectiveControl {
-            label: control.label.clone(),
-            key: control.key.clone(),
-            mouse: None,
-        };
-        let value = values.get(&control.id).unwrap_or(&fallback);
+    for (control, value) in &every_control(&declared, &profile, controls) {
         // We bind a control's key and mouse button where we read the control.
         let slot = placed
             .iter()
@@ -301,6 +295,47 @@ pub fn write_defaults_config(
     fs::write(destination, config)
         .map_err(|error| format!("write controls defaults {}: {error}", destination.display()))?;
     Ok(profile)
+}
+
+/// Every control of every pad in the picker, for this game: the chosen pad's
+/// with the changes in `controls`, and the others as we declare them.
+fn every_control(
+    declared: &[ControlDefinition],
+    profile: &ControlProfile,
+    controls: &Controls,
+) -> Vec<(ControlDefinition, EffectiveControl)> {
+    let values = effective_controls(profile, controls);
+    declared
+        .iter()
+        .map(|control| {
+            let value = values.get(&control.id).cloned().unwrap_or_else(|| EffectiveControl {
+                label: control.label.clone(),
+                key: control.key.clone(),
+                mouse: None,
+            });
+            (control.clone(), value)
+        })
+        .collect()
+}
+
+/// A key for a control in the game, with the control's id and its label,
+/// on any pad in the picker.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GameplayKey {
+    pub control: String,
+    pub label: String,
+    pub key: String,
+}
+
+/// Every key for a control of the game `system` with `controls`, on every
+/// pad in its picker. A hotkey used during play may not have any of these
+/// keys (`crate::hotkeys`).
+pub fn gameplay_keys(system: &str, controls: &Controls) -> Result<Vec<GameplayKey>, String> {
+    let profile = validate_for_system(system, controls)?;
+    Ok(every_control(&declared_controls(system, &profile)?, &profile, controls)
+        .into_iter()
+        .map(|(control, value)| GameplayKey { control: control.id, label: value.label, key: value.key })
+        .collect())
 }
 
 #[derive(Clone, Debug)]
@@ -409,15 +444,8 @@ fn validate_label(id: &str, value: &str) -> Result<(), String> {
 }
 
 fn validate_key(id: &str, value: &str) -> Result<(), String> {
-    let Some(key) = retroarch_key(value) else {
+    if retroarch_key(value).is_none() {
         return Err(format!("key for {id} is not an allowed RetroArch key"));
-    };
-    // The player opens the menu, where Quit is, with Escape, so Escape is
-    // never a gameplay binding, by any name. We reserve no other key.
-    if Some(key) == retroarch_key("escape") {
-        return Err(format!(
-            "key for {id} toggles the menu and cannot be a gameplay binding"
-        ));
     }
     Ok(())
 }
@@ -642,18 +670,24 @@ mod tests {
         );
     }
 
-    // In RetroArch a name works in any case, and one letter is that letter's
-    // key. nul is no key, and Escape stays reserved for the menu in any spelling.
+    // In RetroArch a name matches in any case, and one letter is that letter's
+    // key. nul is no key. Escape is the default key of MENU in any spelling,
+    // and we refuse it as a key for the game in the hotkey checks.
     #[test]
     fn the_exporter_reads_a_name_as_retroarch_does() {
-        let names = ["Shift", "KP_PLUS", "Q", "q", "NUL", "Escape"];
+        let names = ["Shift", "KP_PLUS", "Q", "q", "NUL", "Escape", "ESCAPE"];
         assert_eq!(
             retroarch_reads(&names),
-            vec!["shift", "add", "q", "q", "nul", "escape"]
+            vec!["shift", "add", "q", "q", "nul", "escape", "escape"]
         );
+        let hotkeys = crate::builder::unstated::hotkeys();
         let accepted: Vec<&str> = names
             .into_iter()
-            .filter(|name| validate_for_system("megadrive", &binding(name).1).is_ok())
+            .filter(|name| {
+                let controls = binding(name).1;
+                validate_for_system("megadrive", &controls).is_ok()
+                    && hotkeys.check_for("megadrive", &controls).is_ok()
+            })
             .collect();
         assert_eq!(accepted, vec!["Shift", "KP_PLUS", "Q", "q"]);
     }

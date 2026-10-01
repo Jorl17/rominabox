@@ -270,7 +270,7 @@ int main(int argc, char **argv) {
    check(document.root()->GetElementById("unlock-detail")->GetInnerRML() == "5 points",
          "Unlock toast does not retain a stale upload status after acknowledgement");
    overlays.clear_notification();
-   overlays.notify({"A LONG ACHIEVEMENT TITLE", "5 points", ""});
+   overlays.notify({rib::Overlays::Notice::Achievement, "A LONG ACHIEVEMENT TITLE", "5 points", ""});
    capture("notification");
    rib::DesignDeclarations design;
    document.shutdown();
@@ -284,11 +284,11 @@ int main(int argc, char **argv) {
    check(!overlays.drawing(), "Stopping overlays clears the active notification");
    overlays.update(false);
    check(!overlay_frames, "Stopped overlays release closed-menu rendering on the next frame");
-   overlays.notify({"CLEAR", "5 points", ""});
+   overlays.notify({rib::Overlays::Notice::Achievement, "CLEAR", "5 points", ""});
    overlays.clear_notification();
    overlays.update(false);
    check(!overlay_frames, "Cleared notification releases closed-menu rendering");
-   overlays.notify({"EXPIRES", "5 points", ""});
+   overlays.notify({rib::Overlays::Notice::Achievement, "EXPIRES", "5 points", ""});
    host_time_us += 5000000;
    overlays.update(true);
    check(overlays.drawing() && overlay_frames, "A pending script keeps the render callback active after notification expiry");

@@ -11,7 +11,7 @@ pub mod export_cores;
 pub mod export_error;
 pub mod game;
 mod helper;
-pub mod hotkeys;
+pub mod meta_binds;
 pub mod icons;
 /// What we need for the builder's Windows installer. A Mac builder has no
 /// installer.
@@ -22,7 +22,7 @@ pub(crate) mod launch_contract;
 pub mod lists;
 pub mod mach_o;
 pub mod menu;
-pub mod menu_controls;
+pub mod hotkeys;
 pub mod metadata;
 pub mod pad_positions;
 pub mod pads;

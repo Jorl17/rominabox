@@ -95,9 +95,9 @@ static void press_and_release_inside_one_sample(void)
    expect_fire("escape down and up inside one sample toggles", 0, 1, &flushing, 1);
 }
 
-/* MENU may have several keys (MENU CONTROLS). A press of any of them counts
- * as the press, with the same rule. A key that is not bound to MENU does not
- * count, and a key held while another is pressed does not block the toggle. */
+/* MENU may have several keys (HOTKEYS). A press of any of them counts as the
+ * press, with the same rule. A key that is not bound to MENU does not count,
+ * and a key held while another is pressed does not block the toggle. */
 #define F1 282
 #define SPACE 32
 

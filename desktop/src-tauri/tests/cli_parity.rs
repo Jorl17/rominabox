@@ -1,9 +1,9 @@
-//! The command line uses the same functions as the backend commands of the
-//! builder for the folders for games and downloads, the menu controls check,
-//! the controller variants in the Controls step, a lookup in the builder
-//! cache, the preview in the Menu step, the error for a project with a
-//! palette that this build does not have, and the warnings for a filter from
-//! the author that may not load in a Windows game.
+//! We use the same functions in the builder's backend commands and in the
+//! command line for where we put games and downloads, the hotkeys check, the
+//! controller variants in the Controls step, a lookup in the builder's cache,
+//! the preview in the Menu step, the refusal of a project with a palette this
+//! build lacks, and the warnings on an author's filter that a Windows game may
+//! not load.
 
 use rominabox_desktop::builder::{self, defaults, Places};
 use rominabox_desktop::game::Game;
@@ -89,27 +89,41 @@ fn places_prints_where_the_builder_writes_games_and_keeps_downloads() {
     );
 }
 
-/// `check_menu_controls`, with the builder defaults for what a request leaves
-/// out, and the error of an export, with its sentence.
+/// `check_hotkeys` with the builder's defaults for what a request leaves
+/// out, and the refusal we give at export, with its sentence, for the rules
+/// of the hotkeys and, with a game, the rule its keys add.
 #[test]
-fn menu_controls_check_prints_the_controls_or_the_refusal() {
-    let declared = serde_json::to_value(&defaults().menu_controls).unwrap();
-    let kept = result("menu-controls-check", Some(&json!({ "menu": ["key:f1", "pad:home"] })));
-    assert_eq!(kept["menuControls"]["menu"], json!(["key:f1", "pad:home"]), "{kept}");
-    assert_eq!(kept["menuControls"]["confirm"], declared["confirm"], "{kept}");
-    assert_eq!(kept["menuControls"]["back"], declared["back"], "{kept}");
+fn hotkeys_check_prints_the_hotkeys_or_the_refusal() {
+    let declared = serde_json::to_value(&defaults().hotkeys).unwrap();
+    let kept = result("hotkeys-check", Some(&json!({ "hotkeys": { "menu": ["key:f1", "pad:home"] } })));
+    assert_eq!(kept["hotkeys"]["menu"], json!(["key:f1", "pad:home"]), "{kept}");
+    for hotkey in ["confirm", "back", "quick-save", "quick-load", "previous-slot", "next-slot"] {
+        assert_eq!(kept["hotkeys"][hotkey], declared[hotkey], "{hotkey}: {kept}");
+    }
 
     // The pad's right face button is already bound to BACK.
-    let (succeeded, lines, printed) = run("menu-controls-check", Some(&json!({ "confirm": ["key:enter", "pad:a"] })));
-    assert!(!succeeded, "{printed}");
-    let refused = lines.last().unwrap();
-    assert_eq!(refused["type"], "error", "{printed}");
-    assert_eq!(refused["refusal"]["kind"], "shared", "{printed}");
-    assert_eq!(refused["refusal"]["binding"], "pad:a", "{printed}");
-    assert!(
-        refused["message"].as_str().unwrap().contains("cannot share an input"),
-        "{printed}"
+    let refusal = |request: Value| {
+        let (succeeded, lines, printed) = run("hotkeys-check", Some(&request));
+        assert!(!succeeded, "{printed}");
+        let refused = lines.last().unwrap().clone();
+        assert_eq!(refused["type"], "error", "{printed}");
+        refused
+    };
+    let shared = refusal(json!({ "hotkeys": { "confirm": ["key:enter", "pad:a"] } }));
+    assert_eq!(shared["refusal"]["kind"], "shared", "{shared}");
+    assert_eq!(shared["refusal"]["binding"], "pad:a", "{shared}");
+    assert!(shared["message"].as_str().unwrap().contains("cannot share an input"), "{shared}");
+
+    // F2 for QUICK SAVE, which is also C in a Mega Drive game.
+    let game = json!({ "system": "megadrive", "controls": { "bindings": { "a": { "key": "f2" } } } });
+    let taken = refusal(game.clone());
+    assert_eq!(
+        taken["refusal"],
+        json!({ "kind": "gameKey", "binding": "key:f2", "hotkey": "quick-save", "control": "a", "label": "C" }),
+        "{taken}"
     );
+    let moved = result("hotkeys-check", Some(&json!({ "hotkeys": { "quick-save": ["key:f5"] }, "system": "megadrive", "controls": game["controls"] })));
+    assert_eq!(moved["hotkeys"]["quick-save"], json!(["key:f5"]), "{moved}");
 }
 
 /// In `inspect_game` we look in the builder's cache, which the author

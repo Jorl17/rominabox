@@ -35,7 +35,8 @@ ASSETS = BUILD / "assets"
 # ends on every platform.
 INTERACTION = BUILD / "test_rmlui_interaction"
 ORCHESTRATION = BUILD / "test_menu_orchestration"
-MENU_CONTROLS = BUILD / "test_menu_controls"
+HOTKEYS = BUILD / "test_hotkeys"
+PLAY_HOTKEYS = BUILD / "test_play_hotkeys"
 # A game folder whose name has the characters that we escape in the menu
 # before RmlUi gets a path, as a title can have on each platform.
 NAMED_FOLDERS = {"darwin": "Who Wants a Game?", "linux": "Who Wants a Game?", "win32": "100% Game"}
@@ -193,7 +194,7 @@ def orchestration_fixtures() -> None:
     config = declarations.read_text()
     # We add the screen of the fixture to the screens that the design
     # declares, which end with this platform's screen (UNINSTALL or RESET).
-    declared = re.search(r'^screens = "pause options controls menu-controls[^"]*"$', config, re.M)
+    declared = re.search(r'^screens = "pause options controls hotkeys[^"]*"$', config, re.M)
     assert declared, config
     assert 'screen_button_options = "options"' in config
     config = config.replace(declared.group(0), declared.group(0)[:-1] + ' fixture"', 1)
@@ -268,29 +269,33 @@ def orchestrate() -> None:
         raise SystemExit(f"stick capture failed in {', '.join(failed)}")
 
 
-def menu_controls() -> bool:
-    """MENU CONTROLS in every design: each staged twice by the exporter, with
+def hotkeys() -> bool:
+    """HOTKEYS in every design: each staged twice by the exporter, with
     the builder's defaults and with other ones, as a later export of the same
-    game would be, and run with a separate data folder."""
+    game would be, and run with a separate data folder. Then the hotkeys
+    that act while the game plays, on the first."""
     designs = [entry["id"] for entry in json.loads((ROOT / "desktop/designs.json").read_text())["designs"]]
     failed = []
     for design in designs:
         staged = {}
         for name, controls in (("first", None), ("later", {"confirm": ["key:space", "pad:x"]})):
-            assets = BUILD / f"menu-controls-{design}-{name}"
+            assets = BUILD / f"hotkeys-{design}-{name}"
             assets.mkdir(parents=True, exist_ok=True)
             ask("stage-controls", {
                 "system": "megadrive", "source": str(ROOT / "desktop/assets/controllers"),
                 "design": str(DESIGNS / design), "destination": str(assets), "palette": "blue",
-                **({"menuControls": controls} if controls else {}),
+                **({"hotkeys": controls} if controls else {}),
             }, stdout=subprocess.DEVNULL)
             staged[name] = assets
-        print(f"menu controls {design}", flush=True)
-        with scratch("rominabox-menu-controls-João-") as data:
-            if subprocess.run([str(MENU_CONTROLS), str(staged["first"]), str(staged["later"]), data]).returncode != 0:
+        print(f"hotkeys {design}", flush=True)
+        with scratch("rominabox-hotkeys-João-") as data:
+            if subprocess.run([str(HOTKEYS), str(staged["first"]), str(staged["later"]), data]).returncode != 0:
                 failed.append(design)
+        with scratch("rominabox-play-hotkeys-João-") as data:
+            if subprocess.run([str(PLAY_HOTKEYS), str(staged["first"]), data]).returncode != 0:
+                failed.append(f"{design} (play)")
     if failed:
-        print(f"FAIL menu controls in {', '.join(failed)}", file=sys.stderr)
+        print(f"FAIL hotkeys in {', '.join(failed)}", file=sys.stderr)
     return not failed
 
 
@@ -355,10 +360,12 @@ def main() -> int:
             ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
     stage_everything()
     orchestrate()
-    harness(MENU_CONTROLS, HERE / "test_menu_controls.cpp", HERE / "menu_host_fake.cpp",
+    harness(HOTKEYS, HERE / "test_hotkeys.cpp", HERE / "menu_host_fake.cpp",
             HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
-    controls_ok = menu_controls()
-    return 0 if row_edges_ok and controls_ok and styled_ok else 1
+    harness(PLAY_HOTKEYS, HERE / "test_play_hotkeys.cpp", HERE / "menu_host_fake.cpp",
+            HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
+    hotkeys_ok = hotkeys()
+    return 0 if row_edges_ok and hotkeys_ok and styled_ok else 1
 
 
 if __name__ == "__main__":

@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
    // While this popup waits behind another one, the colour badge can become
    // ready before it opens, and we do not refresh the list after that. The
    // popup must still open with the badge.
-   overlays.notify({"OTHER", "1 points", ""});
+   overlays.notify({rib::Overlays::Notice::Achievement, "OTHER", "1 points", ""});
    std::snprintf(service_rows[0].badge_path, sizeof(service_rows[0].badge_path), "%s", path.c_str());
    service_rows[0].badge = RIB_ACHIEVEMENT_BADGE_READY;
    ++session.revision;
@@ -76,6 +76,20 @@ int main(int argc, char **argv) {
    check(popup && !rib::hidden(popup) && badge && !rib::hidden(badge) &&
          badge->GetAttribute<Rml::String>("src", "") == path,
          "A queued popup whose colour badge is already on disk opens with it");
+
+   // We show the notice from a hotkey about the save slots in the same row,
+   // marked with its kind, and we do not draw on it a badge that arrives for
+   // an unlock that the notice replaced.
+   overlays.notify({rib::Overlays::Notice::Achievement, "SECOND STEP", "5 points", ""});
+   overlays.notify({rib::Overlays::Notice::Slot, "SAVED TO SLOT 2", "", ""});
+   overlays.show_badge(path);
+   document.settle();
+   check(popup && popup->GetAttribute<Rml::String>("data-notice", "") == "slot",
+         "A slot notice marks the row as one");
+   check(badge && rib::hidden(badge), "A slot notice that took an unlock's place is given no badge");
+   overlays.notify({rib::Overlays::Notice::Achievement, "THIRD STEP", "5 points", ""});
+   check(popup && popup->GetAttribute<Rml::String>("data-notice", "") == "achievement",
+         "An unlock marks the row as one");
 
    achievements.context_lost();
    document.shutdown();
