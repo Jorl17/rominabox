@@ -60,7 +60,8 @@
   "launched": [
     {"design": "native", "palette": "blue", "case": "controls-keys"},
     {"design": "disc", "palette": "blue", "case": "capture-timeout"},
-    {"design": "native", "palette": "blue", "case": "save-load"}
+    {"design": "native", "palette": "blue", "case": "save-load"},
+    {"design": "native", "palette": "blue", "case": "fullscreen-menu", "platforms": ["windows"]}
   ],
   "groups": [
     {
