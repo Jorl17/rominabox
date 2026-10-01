@@ -103,11 +103,13 @@ describe("the builder's controller scene", () => {
     const container = draw(profileNamed("megadrive"));
     await act(async () => {});
 
-    const drawn = [...container.querySelectorAll("circle")].map((ring) => ({
-      cx: Number(ring.getAttribute("cx")),
-      cy: Number(ring.getAttribute("cy")),
-      r: Number(ring.getAttribute("r")),
-    }));
+    const drawn = [...container.querySelectorAll("circle.controller-ring")].map(
+      (ring) => ({
+        cx: Number(ring.getAttribute("cx")),
+        cy: Number(ring.getAttribute("cy")),
+        r: Number(ring.getAttribute("r")),
+      }),
+    );
     const expected = megadriveLayout.controls.map((placed) => ({
       cx: placed.marker.x + placed.marker.width / 2,
       cy: placed.marker.y + placed.marker.height / 2,
@@ -125,6 +127,24 @@ describe("the builder's controller scene", () => {
     }
   });
 
+  it("draws every ring as a light line over a wider dark edge", async () => {
+    // A white ring alone would be hard to see on a pale pad, and the GameCube
+    // Control stick is white. With the edge beneath, it is visible on any pad.
+    const container = draw(profileNamed("gamecube"));
+    await act(async () => {});
+    const rings = [...container.querySelectorAll("circle.controller-ring")];
+    expect(rings.length).toBeGreaterThan(0);
+    for (const ring of rings) {
+      const edge = ring.previousElementSibling;
+      expect(edge?.getAttribute("class"), "a dark edge beneath the ring").toBe(
+        "controller-ring-edge",
+      );
+      for (const name of ["cx", "cy", "r"]) {
+        expect(edge?.getAttribute(name)).toBe(ring.getAttribute(name));
+      }
+    }
+  });
+
   it("puts every button marker on the artwork, not beside it", async () => {
     const container = draw(profileNamed("megadrive"));
     await act(async () => {});
@@ -137,7 +157,7 @@ describe("the builder's controller scene", () => {
 
     // The pad and the rings must use one frame. A ring outside the rectangle
     // of the artwork cannot be on a button.
-    const rings = [...container.querySelectorAll("circle")];
+    const rings = [...container.querySelectorAll("circle.controller-ring")];
     expect(rings.length).toBeGreaterThan(0);
     for (const ring of rings) {
       const x = Number(ring.getAttribute("cx"));

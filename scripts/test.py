@@ -358,6 +358,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/check_menu_edges.py")],
     ),
     Scope(
+        "rings",
+        "that a lit ring stands out from a pale pad all the way round: GameCube's Control stick hovered and focused, in every design",
+        "where the ring is (menu_scene in the exporter scope asks that), or how a ring looks on any other pad",
+        [PYTHON, str(ROOT / "scripts/check_ring_contrast.py"), str(SCRATCH / "ring-contrast")],
+    ),
+    Scope(
         "pictures",
         "that a badge still downloading draws a moving placeholder and a failed one a mark, in every design, and draws every Disc screen into work/feedback-pictures",
         "that the player sets those classes or keeps redrawing: the rows are written the way its list writes them, and the second moment is RmlUi's 0.1 s step",
