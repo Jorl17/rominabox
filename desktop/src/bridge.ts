@@ -153,20 +153,17 @@ export function shaderWarnings(selection: {
   return invoke("shader_warnings", { selection });
 }
 export type Traveling = { entry: string; files: string[] };
-// We ask with the console, as in the export, because a companion required
-// for one console is optional for another. Without it, the Also importing
-// line could list files that we do not copy in the export.
-export function travelingFiles(
-  path: string,
-  system: string,
-): Promise<Traveling> {
-  // The browser walkthrough has no desktop shell, but we must still use
-  // content::collect, because with a second copy of that rule in the page,
-  // the Also importing line and the export could list different files. In the
-  // walkthrough server we run the same command as in the shell.
-  if (native) return invoke("traveling_files", { path, system });
-  const query = new URLSearchParams({ path, system });
-  return fetch(`/__rominabox/traveling?${query}`).then(async (response) => {
+/**
+ * The browser walkthrough has no desktop shell. In its server we answer
+ * `question` with the same CLI command as in the shell, because with a second
+ * copy of a rule in the page, the page and the export could disagree.
+ */
+function askWalkthrough<T>(
+  question: string,
+  query: URLSearchParams,
+  unread: string,
+): Promise<T> {
+  return fetch(`/__rominabox/${question}?${query}`).then(async (response) => {
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as {
         message?: string;
@@ -176,11 +173,25 @@ export function travelingFiles(
       const message =
         body && typeof body.message === "string" && body.message
           ? body.message
-          : "The files that travel with this game could not be read.";
+          : unread;
       throw new Error(message);
     }
-    return response.json() as Promise<Traveling>;
+    return response.json() as Promise<T>;
   });
+}
+// We ask with the console, as in the export, because a companion required
+// for one console is optional for another. Without it, the Also importing
+// line could list files that we do not copy in the export.
+export function travelingFiles(
+  path: string,
+  system: string,
+): Promise<Traveling> {
+  if (native) return invoke("traveling_files", { path, system });
+  return askWalkthrough(
+    "traveling",
+    new URLSearchParams({ path, system }),
+    "The files that travel with this game could not be read.",
+  );
 }
 export const FirmwareNoticeKind = {
   Required: "required",
@@ -200,7 +211,14 @@ export function assessFirmware(
   system: string,
   files: string[],
 ): Promise<FirmwareAssessment> {
-  return invoke("assess_firmware", { system, files });
+  if (native) return invoke("assess_firmware", { system, files });
+  const query = new URLSearchParams({ system });
+  for (const file of files) query.append("file", file);
+  return askWalkthrough(
+    "firmware",
+    query,
+    "What this console needs could not be read.",
+  );
 }
 /** The rule that `hotkeys` would break in the game's menu, with the game's
  * `controls` on `system`, as we would reject it in the export, or null. We
