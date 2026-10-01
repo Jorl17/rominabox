@@ -230,6 +230,13 @@ void capture_look_and_ends(void *menu)
    check(inspect.has_class("hotkey-back-add", "capturing"), "the + being captured is marked capturing");
    check(!rib::hidden(view.document.root()->GetElementById("hotkeys-cancel")),
          "CANCEL shows while a binding is captured");
+   /* We draw one thing as focused, the waiting +. CANCEL, which is also
+    * marked capturing while the capture runs, looks the same as RESET. */
+   check(inspect.has_class("hotkey-back-add", "focused"), "the + being captured has focus");
+   check(inspect.property("hotkeys-cancel", "background-color") == inspect.property("hotkeys-reset", "background-color"),
+         "CANCEL is drawn as RESET during a capture, not as the focused +: its background is "
+         + inspect.property("hotkeys-cancel", "background-color") + ", RESET's "
+         + inspect.property("hotkeys-reset", "background-color"));
    expect_status("BACK: PRESS AN INPUT (9)", "a capture counts down in the row's own words");
    check(inspect.words("footer-hint") == "ESC  CANCEL", "the footer says how to cancel: " + inspect.words("footer-hint"));
    {
