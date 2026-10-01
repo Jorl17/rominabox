@@ -47,6 +47,12 @@ windows-sys = { workspace = true, features = [
 # For the local time in a zip's date field (packaging/archive.rs).
 libc = "0.2"
 
+[build-dependencies]
+serde_json.workspace = true
+# For giving the command line the builder's icon and version on Windows
+# (build.rs), the same crate as in Tauri's build step for the builder. MIT.
+tauri-winres = "0.3"
+
 [dev-dependencies]
 libc = "0.2.189"
 rominabox-scratch = { path = "../rominabox-scratch" }

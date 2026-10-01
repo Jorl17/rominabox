@@ -32,11 +32,11 @@ fn the_command_line_has_the_builders_icon_name_and_version() {
         .and_then(|entry| entry.as_table())
         .map_or(0, |table| table.entries().len());
     assert_eq!(held, sizes, "every size of the builder's icon");
-    let main = resources.get_main_icon().unwrap().expect("the command line has an icon");
-    assert!(
-        image::load_from_memory(main).unwrap().to_rgba8() == image::load_from_memory(&icon).unwrap().to_rgba8(),
-        "the command line's icon is the builder's"
-    );
+    // The first image of the icon, in the order of the directory in the .ico file.
+    let at = |offset: usize| u32::from_le_bytes(icon[offset..offset + 4].try_into().unwrap()) as usize;
+    let (length, start) = (at(6 + 8), at(6 + 12));
+    let first = resources.get_main_icon().unwrap().expect("the command line has an icon");
+    assert!(first == &icon[start..start + length], "the command line's icon is the builder's");
 
     let version = resources.get_version_info().unwrap().expect("the command line says what it is");
     let strings = &version.strings[0].strings;

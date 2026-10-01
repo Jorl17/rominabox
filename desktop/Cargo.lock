@@ -3299,6 +3299,7 @@ dependencies = [
  "serde_json",
  "sha1",
  "sha2 0.10.9",
+ "tauri-winres",
  "ureq",
  "windows-sys 0.59.0",
  "zip",
