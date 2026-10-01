@@ -104,11 +104,30 @@ def draw(document: Path, picture: Path, *changes: str) -> str:
 PICTURE = (255, 0, 255)
 
 
-def picture_share(image: Path) -> float:
-    from PIL import Image
+def picture_share(image: Path, colour: tuple[int, int, int] = PICTURE, within: int = 0) -> float:
+    """Return the share of `image` in `colour`, with each channel within `within`."""
+    from PIL import Image, ImageChops
 
-    pixels = list(Image.open(image).convert("RGB").getdata())
-    return sum(1 for pixel in pixels if pixel == PICTURE) / len(pixels)
+    picture = Image.open(image).convert("RGB")
+    masks = [channel.point(lambda value, wanted=wanted: 255 if abs(value - wanted) <= within else 0)
+             for channel, wanted in zip(picture.split(), colour)]
+    near = ImageChops.multiply(ImageChops.multiply(masks[0], masks[1]), masks[2])
+    return near.histogram()[255] / (picture.width * picture.height)
+
+
+# In the menu we multiply the author's picture by the screen colour of the
+# palette (integrations/parts/background.rcss), and round each channel of
+# that product in the renderer.
+TINT_ROUNDING = 2
+
+
+def drawn_picture(palette: str) -> tuple[int, int, int]:
+    """Return the author's picture, every pixel PICTURE, as we draw it in the
+    menu of `palette`."""
+    declared = json.loads((ROOT / "desktop/designs.json").read_text())
+    screen = next(entry["screen"] for entry in declared["palettes"] if entry["id"] == palette)
+    channels = [int(screen[index:index + 2], 16) for index in (1, 3, 5)]
+    return tuple(round(made * tint / 255) for made, tint in zip(PICTURE, channels))
 
 
 def background_picture(area: Path) -> Path:
@@ -140,7 +159,7 @@ def overlay_problem(design: str, area: Path) -> str:
     problem = draw(running, drawn)
     if problem:
         return f"the overlay did not draw: {problem}"
-    share = picture_share(drawn)
+    share = picture_share(drawn, drawn_picture(palettes()[0]), TINT_ROUNDING)
     if share:
         return f"{share:.1%} of the running game is covered by the menu's background picture"
     return ""
@@ -148,7 +167,8 @@ def overlay_problem(design: str, area: Path) -> str:
 
 def background_problem(design: str, area: Path) -> str:
     """Return an empty string when a game's background picture appears behind
-    this design's menu, and none appears for a game without one."""
+    this design's menu in the screen's colour, and none appears for a game
+    without one."""
     picture = background_picture(area)
     shares = {}
     for label, background in (("with", picture), ("without", None)):
@@ -156,7 +176,7 @@ def background_problem(design: str, area: Path) -> str:
         problem = render(design, palettes()[0], into, background)
         if problem:
             return f"{label} a background: {problem}"
-        shares[label] = picture_share(into / "preview.png")
+        shares[label] = picture_share(into / "preview.png", drawn_picture(palettes()[0]), TINT_ROUNDING)
     if shares["without"] != 0:
         return f"the picture shows in a game without one ({shares['without']:.1%})"
     if shares["with"] < 0.05:
