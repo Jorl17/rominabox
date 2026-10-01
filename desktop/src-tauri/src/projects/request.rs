@@ -21,6 +21,7 @@ impl Game {
             runtime_kit,
             core,
             core_cache: None,
+            accounts_folder: None,
         }
     }
 }

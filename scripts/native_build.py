@@ -26,11 +26,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import toolchain  # noqa: E402
+from core_source import DOWNLOADS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 RECIPE_PATH = ROOT / "scripts/native_runtime/player-recipe.json"
 FORK = ROOT / "vendor/retroarch"
-DOWNLOADS = ROOT / "work/downloads"
 
 
 def recipe() -> dict:
@@ -417,8 +417,8 @@ def platform_of(target: str) -> str:
 def platform_sources(directory: Path, platform: str) -> list[Path]:
     """The C sources in `directory` on `platform`: the shared ones at its top,
     and those in the folders listed for the platform in the recipe's
-    launcher.folders."""
-    folders = recipe()["launcher"]["folders"].get(platform)
+    platformFolders."""
+    folders = recipe()["platformFolders"].get(platform)
     if folders is None:
         raise SystemExit(f"the player recipe names no source folders for {platform}")
     return sorted(directory.glob("*.c")) + [source for folder in folders

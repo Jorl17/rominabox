@@ -292,6 +292,34 @@ def shared_directories_are_linked_and_removal_never_follows_them() -> None:
                   f"the canonical {relative.as_posix()} is untouched")
 
 
+def a_worktree_gets_the_cores_and_archives_the_scopes_read() -> None:
+    """In the exporter, shipped and menu tests we read cores from the core cache
+    and pinned archives from work/downloads, which are not in git, so we copy
+    both into a new worktree. We write into both during preparation, so in a
+    worktree we must not write into the checkout we made it from."""
+    import core_source
+
+    with tempfile.TemporaryDirectory() as directory:
+        canonical = Path(directory) / "canonical"
+        tree = Path(directory) / "tree"
+        tree.mkdir()
+        prepared = [
+            core_source.seeded_cache().relative_to(core_source.ROOT) / "cores" / "core.fixture",
+            core_source.DOWNLOADS.relative_to(core_source.ROOT) / "archive.fixture",
+        ]
+        for relative in prepared:
+            (canonical / relative).parent.mkdir(parents=True)
+            (canonical / relative).write_text("prepared", encoding="utf-8")
+        worktree.link_build_artifacts(tree, own_copy=False, canonical=canonical)
+        for relative in prepared:
+            check((tree / relative).is_file(), f"a new worktree has {relative.as_posix()}")
+            written = tree / relative.parent / "written.fixture"
+            if written.parent.is_dir():
+                written.write_text("the worktree's", encoding="utf-8")
+            check(not (canonical / relative.parent / written.name).exists(),
+                  f"what the worktree writes into {relative.parent.as_posix()} stays in the worktree")
+
+
 def removing_a_worktree_keeps_the_fork_commits_its_branch_needs() -> None:
     """Check that the submodule commits of a branch remain after its worktree goes.
 
@@ -629,31 +657,84 @@ def a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote() -> None:
         )
 
 
-def a_rebuilt_rmlui_archive_invalidates_the_menu_probe() -> None:
-    """Check that we relink an old probe after preparing the current RmlUi."""
+def build_probe(directory: Path, oldest_first: tuple[str, ...]) -> list[list[str]]:
+    """Return the compiles in menu_interaction.build() for a probe in `directory`
+    whose source, library and program were last written in the given order.
+    The program is the file written by the compiler for the probe's name."""
     from unittest.mock import patch
     import menu_interaction
+    import toolchain
 
+    named = directory / "probe"
+    files = {"source": directory / "probe.cpp", "library": directory / "librmlui.a",
+             "program": toolchain.executable(named)}
+    recipe = (Path(menu_interaction.__file__), menu_interaction.ROOT / "scripts/rmlui_paths.py")
+    stamp = max(path.stat().st_mtime for path in recipe) + 10
+    for offset, role in enumerate(oldest_first):
+        files[role].write_bytes(b"fixture")
+        os.utime(files[role], (stamp + offset, stamp + offset))
+    with (
+        patch.object(menu_interaction, "PROBE_SOURCE", files["source"]),
+        patch.object(menu_interaction, "PROBE", named),
+        patch.object(menu_interaction, "LIBRARY", files["library"]),
+        patch.object(menu_interaction.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "")) as run,
+    ):
+        menu_interaction.build()
+    return [call.args[0] for call in run.call_args_list if call.args[0][0] == "c++"]
+
+
+def a_rebuilt_rmlui_archive_invalidates_the_menu_probe() -> None:
+    """Check that we relink an old probe after preparing the current RmlUi."""
     with scratch.scratch() as made:
         directory = Path(made)
-        source, binary, library = (directory / name for name in ("probe.cpp", "probe", "librmlui.a"))
-        recipe = (Path(menu_interaction.__file__), menu_interaction.ROOT / "scripts/rmlui_paths.py")
-        stamp = max(path.stat().st_mtime for path in recipe) + 10
-        for path, modified in ((source, stamp), (binary, stamp + 1), (library, stamp + 2)):
-            path.write_bytes(b"fixture")
-            os.utime(path, (modified, modified))
-        with (
-            patch.object(menu_interaction, "PROBE_SOURCE", source),
-            patch.object(menu_interaction, "PROBE", binary),
-            patch.object(menu_interaction, "LIBRARY", library),
-            patch.object(menu_interaction.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "")) as run,
-        ):
-            menu_interaction.build()
-        compiles = [call.args[0] for call in run.call_args_list if call.args[0][0] == "c++"]
+        compiles = build_probe(directory, ("source", "program", "library"))
         check(
-            len(compiles) == 1 and str(library) in compiles[0],
+            len(compiles) == 1 and str(directory / "librmlui.a") in compiles[0],
             "the probe is relinked against a newer RmlUi archive even when its C++ source is unchanged",
         )
+        # A fresh checkout has no work/probe, so in build() we must not put the
+        # lock there and stop with FileNotFoundError.
+        check(
+            any(path.suffix == ".lock" for path in directory.iterdir()),
+            "a probe built somewhere else takes its lock with it, so a checkout where nothing has built the probe builds it",
+        )
+
+
+def an_up_to_date_menu_probe_is_not_compiled_again() -> None:
+    """The compiler output has the platform's program suffix, for example
+    rml_probe.exe on Windows. Without the suffix we would find nothing there
+    and compile the probe again on every run on Windows."""
+    with scratch.scratch() as made:
+        compiles = build_probe(Path(made), ("source", "library", "program"))
+        check(not compiles, "a probe newer than everything it is built from is not compiled again")
+
+
+def every_program_a_run_starts_is_given_its_python() -> None:
+    """In the Rust tests we run the Python helpers with ROMINABOX_PYTHON
+    (repo::python()). In scripts/test.py we must pass it to cargo too, or a
+    cargo scope would use whichever python is on PATH."""
+    import importlib.util
+    from unittest.mock import patch
+
+    spec = importlib.util.spec_from_file_location("test_runner", Path(__file__).resolve().parent / "test.py")
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    given: dict[str, str | None] = {}
+
+    def record(command, **kwargs):
+        given[Path(command[0]).name] = kwargs["env"].get("ROMINABOX_PYTHON")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    with scratch.scratch() as made, patch.dict(os.environ), patch.object(subprocess, "run", record):
+        # When we start this process from scripts/test.py, it is already set.
+        os.environ.pop("ROMINABOX_PYTHON", None)
+        # There is no manifest there, so we run cargo as given and do not replay it.
+        runner.execute(["cargo", "test", "--manifest-path", str(Path(made) / "Cargo.toml")])
+        runner.execute([sys.executable, "-c", "pass"])
+    check(
+        given == {"cargo": sys.executable, Path(sys.executable).name: sys.executable},
+        f"cargo and every other program a run starts are given the run's Python: {given}",
+    )
 
 
 def a_branch_with_a_slash_keeps_its_whole_name() -> None:
@@ -674,11 +755,14 @@ def a_branch_with_a_slash_keeps_its_whole_name() -> None:
 ANYWHERE = [
     removal_deletes_only_the_worktrees_own_accounts_folder,
     shared_directories_are_linked_and_removal_never_follows_them,
+    a_worktree_gets_the_cores_and_archives_the_scopes_read,
     a_branch_with_a_slash_keeps_its_whole_name,
     the_built_cli_follows_the_redirected_cargo_target,
     a_file_compiled_into_the_tool_counts_as_its_source,
     a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote,
+    every_program_a_run_starts_is_given_its_python,
     a_rebuilt_rmlui_archive_invalidates_the_menu_probe,
+    an_up_to_date_menu_probe_is_not_compiled_again,
     # We also run create() from inside a worktree, where we could check out an
     # old branch by mistake. If we skipped that case here, the tests would pass
     # on the checkout where the mistake happens.

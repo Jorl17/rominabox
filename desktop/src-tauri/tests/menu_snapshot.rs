@@ -169,6 +169,7 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
         runtime_kit: kit.to_path_buf(),
         core: None,
         core_cache: None,
+        accounts_folder: None,
     };
     match case.menu {
         Menu::Default => {}

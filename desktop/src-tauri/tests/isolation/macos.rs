@@ -48,6 +48,11 @@ pub fn resources_of(app: &Path) -> PathBuf {
     app.join("Contents/Resources")
 }
 
+/// The game's files where we read them at launch: inside the app.
+pub fn launched_resources_of(app: &Path) -> PathBuf {
+    resources_of(app)
+}
+
 pub fn home() -> PathBuf {
     PathBuf::from(std::env::var("HOME").unwrap())
 }

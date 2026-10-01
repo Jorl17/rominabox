@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import core_source  # noqa: E402
 import programs  # noqa: E402
 import toolchain  # noqa: E402
-from cargo_replay import cargo_test  # noqa: E402
+from cargo_replay import cargo_test, environment  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
 from player_support import modifications as support_modifications  # noqa: E402
 from player_support import snapshot as support_snapshot  # noqa: E402
@@ -352,8 +352,8 @@ SCOPES = [
     ),
     Scope(
         "player",
-        "that the built player refuses to start without an absolute data folder, with one starts and creates nothing beside itself, and on Windows declares UTF-8 as its code page",
-        "where a game's folders go once it runs; it only asks the player for its feature list, before any window or core",
+        "that the built player refuses to start without an absolute data folder, with one starts and creates nothing beside itself, and on Windows declares UTF-8 as its code page; and that a header gone from the fork since the build folder was built does not stop its next build, for each kind of source it compiles",
+        "where a game's folders go once it runs; it only asks the player for its feature list, before any window or core. The header check asks make what it would do, and does not build",
         [PYTHON, str(ROOT / "scripts/test_player.py")],
         skipped="opt-in: requires ROMINABOX_TEST_BUILD for a player built from the current fork commit",
     ),
@@ -581,22 +581,24 @@ SCOPES = [
 BY_NAME = {scope.name: scope for scope in SCOPES}
 
 
+# What we add to this process's environment for every program of a run, which
+# is the Python of this run, for the programs that are not Python (the Rust
+# tests' repo::python(), scripts/python.mjs).
+RUN_ENVIRONMENT = {"ROMINABOX_PYTHON": PYTHON}
+
+
 def execute(command: list[str], env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+    """`command`, given the run's environment and the scope's `env`."""
+    added = {**RUN_ENVIRONMENT, **(env or {})}
     if command and command[0] == "cargo" and "test" in command[:2]:
-        return cargo_test(command, ROOT, env)
+        return cargo_test(command, ROOT, added)
     program = command[0] if Path(command[0]).is_absolute() else programs.find(command[0])
     if program is None:
         return subprocess.CompletedProcess(command, 127, "", f"{command[0]} is not on PATH\n")
     return subprocess.run(
         [program, *command[1:]], cwd=ROOT, capture_output=True, text=True, errors="replace",
-        env={**with_python(), **(env or {})}, **programs.windowless(),
+        env=environment(added), **programs.windowless(),
     )
-
-
-def with_python() -> dict:
-    """Return this process's environment, with the Python of this run in
-    ROMINABOX_PYTHON for the programs that are not Python."""
-    return {**os.environ, "ROMINABOX_PYTHON": PYTHON}
 
 
 def run(scope: Scope) -> tuple[bool, float, str]:
