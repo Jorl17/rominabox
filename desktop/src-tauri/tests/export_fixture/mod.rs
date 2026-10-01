@@ -188,8 +188,15 @@ pub fn icon_of(colour: [u8; 4], size: u32) -> Vec<u8> {
 /// there is one.
 #[cfg(windows)]
 pub fn program(output: &Path, script: Option<&str>) {
+    program_from(output, "int main(void) { return 0; }\n", script);
+}
+
+/// Compiles the program `code`, with the resources of `script` when there is
+/// one.
+#[cfg(windows)]
+pub fn program_from(output: &Path, code: &str, script: Option<&str>) {
     let source = output.with_extension("c");
-    fs::write(&source, "int main(void) { return 0; }\n").unwrap();
+    fs::write(&source, code).unwrap();
     let mut compile = Command::new("cc");
     compile.args(["-O2", "-o"]).arg(output).arg(&source);
     if let Some(script) = script {

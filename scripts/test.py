@@ -448,6 +448,18 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "wingame",
+        "on Windows, a game made into one program, opened as a person opens it, with the launcher built from "
+        "this tree and a stand-in player: its first launch unpacks it whole, a second runs that copy without "
+        "unpacking it again, a file past 260 characters while it is unpacked still unpacks, a newer version "
+        "unpacks beside the older copy, which goes while the saves stay, and UNINSTALL removes the game's data, "
+        "its sandbox, what it kept before it had a sandbox and every unpacked copy, and keeps the program; on "
+        "macOS nothing, since a Mac game is not one program",
+        "the unpacking dialog, a real player or core, UNINSTALL chosen in a running game's menu (the forget "
+        "scope), or a disk that fills while a game unpacks",
+        ["cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "windows_game", "--", "--ignored"],
+    ),
+    Scope(
         "overlays",
         "that no controller callout or button anchor moved, across every illustrated profile",
         "that the positions are correct — only that they are unchanged since a human looked",
