@@ -654,6 +654,12 @@ def a_rebuilt_rmlui_archive_invalidates_the_menu_probe() -> None:
             len(compiles) == 1 and str(library) in compiles[0],
             "the probe is relinked against a newer RmlUi archive even when its C++ source is unchanged",
         )
+        # A fresh checkout has no work/probe, so in build() we must not put the
+        # lock there and stop with FileNotFoundError.
+        check(
+            any(path.suffix == ".lock" for path in directory.iterdir()),
+            "a probe built somewhere else takes its lock with it, so a checkout where nothing has built the probe builds it",
+        )
 
 
 def a_branch_with_a_slash_keeps_its_whole_name() -> None:
