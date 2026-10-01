@@ -16,6 +16,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <CoreFoundation/CoreFoundation.h>
+
 #include "../launch.h"
 #include "../portable_fs.h"
 #include "../../../../vendor/retroarch/rominabox_launch.h"
@@ -31,14 +33,29 @@ void rominabox_line_buffer_stdio(void)
 }
 
 static void die_errno(const char *message) {
-    fprintf(stderr, "ROM-in-a-Box: %s: %s\n", message, strerror(errno));
-    exit(1);
+    char said[512];
+    snprintf(said, sizeof said, "%s: %s", message, strerror(errno));
+    rominabox_launch_die(said);
 }
 
-/* We run a Mac game's launcher inside the player before there is a window,
- * so we write the reason a game cannot start to its error stream. */
+/* Whether a person opened this game, once we have found out. Until then we
+ * do not show a failure. */
+static int person_opened;
+
+/* We run a Mac game's launcher inside the player before there is a window or
+ * a run loop, so we show why a game cannot start in a CoreFoundation alert,
+ * and wait for the person who opened it. We never show an alert in a quiet
+ * run or a dry run. */
 void rominabox_launch_tell(const char *message) {
-    (void)message;
+    CFStringRef text;
+    if (!rominabox_launch_tells_person(person_opened))
+        return;
+    text = CFStringCreateWithCString(kCFAllocatorDefault, message, kCFStringEncodingUTF8);
+    if (!text)
+        return;
+    CFUserNotificationDisplayAlert(0, kCFUserNotificationStopAlertLevel, NULL, NULL, NULL, CFSTR("ROM-in-a-Box"),
+                                   text, NULL, NULL, NULL, NULL);
+    CFRelease(text);
 }
 
 /* When the player chooses RESET in the menu, we leave RIB_FORGET_MARKER in
@@ -82,6 +99,9 @@ static void prepare(void) {
     size_t index;
     int log_fd;
 
+    /* When a person double-clicks the game or opens it from the Dock, it
+     * starts through launchd. Otherwise a script or a harness started it. */
+    person_opened = getppid() == 1;
     if (_NSGetExecutablePath(executable, &exec_path_size) != 0)
         rominabox_launch_die("could not find the launcher");
     if (!realpath(executable, bundle))
@@ -139,9 +159,7 @@ static void prepare(void) {
                 places.previous_user_data = accounts_root;
         }
     }
-    /* When a person double-clicks the game or opens it from the Dock, it
-     * starts through launchd. Otherwise a script or a harness started it. */
-    places.opened_by_person = getppid() == 1;
+    places.opened_by_person = person_opened;
     rominabox_prepare_launch(&places, &launch);
 
     for (index = 0; index < launch.variable_count; index++) {

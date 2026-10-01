@@ -37,9 +37,13 @@ def windows_part(name: str) -> str:
 def compile_macos(directory: Path) -> tuple[Path, Path]:
     binary = directory / "Plan.app" / "Contents" / "MacOS" / "plan"
     binary.parent.mkdir(parents=True)
+    # The system libraries the launch library links, built from the same sources.
+    library = native_build.launch_library(native_build.kit_target(host_target()))
+    if library is None:
+        raise SystemExit(f"the player recipe declares no launch library for {host_target()}")
     made = subprocess.run(
         ["cc", "-DROMINABOX_PLAN_MAIN", "-O2", "-o", str(binary),
-         *map(str, native_build.launcher_sources("macos"))],
+         *map(str, native_build.launcher_sources("macos")), *library["libraries"]],
         capture_output=True, text=True,
     )
     if made.returncode != 0:

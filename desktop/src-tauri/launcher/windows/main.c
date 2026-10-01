@@ -617,7 +617,7 @@ static int person_opened;
  * run. */
 void rominabox_launch_tell(const char *message) {
     wchar_t text[1024];
-    if (!person_opened || getenv(RIB_ENV_QUIET) || getenv("ROMINABOX_PLAN_ONLY"))
+    if (!rominabox_launch_tells_person(person_opened))
         return;
     if (MultiByteToWideChar(CP_UTF8, 0, message, -1, text, (int)(sizeof text / sizeof text[0])))
         MessageBoxW(NULL, text, L"ROM-in-a-Box", MB_OK | MB_ICONERROR);

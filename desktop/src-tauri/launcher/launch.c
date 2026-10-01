@@ -65,6 +65,10 @@ void rominabox_launch_die(const char *message) {
     exit(1);
 }
 
+int rominabox_launch_tells_person(int opened_by_person) {
+    return opened_by_person && !getenv(RIB_ENV_QUIET) && !getenv(ROMINABOX_PLAN_ONLY_ENV);
+}
+
 static void die_errno(const char *message) {
     char said[512];
     snprintf(said, sizeof said, "%s: %s", message, strerror(errno));
@@ -890,7 +894,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
      * Going on would start the game, and without the switch the check would
      * open an audio device. Stop once the file is on disk, before we touch
      * anything outside the game's data. */
-    if (getenv("ROMINABOX_PLAN_ONLY")) {
+    if (getenv(ROMINABOX_PLAN_ONLY_ENV)) {
         /* And return the filter the game would start with, which we pass to
          * RetroArch as an argument rather than in the file. */
         if (shader_preset[0])
