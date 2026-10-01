@@ -13,6 +13,10 @@ pub mod game;
 mod helper;
 pub mod hotkeys;
 pub mod icons;
+/// What we need for the builder's Windows installer. A Mac builder has no
+/// installer.
+#[cfg(windows)]
+pub mod installation;
 pub mod kits;
 pub(crate) mod launch_contract;
 pub mod lists;

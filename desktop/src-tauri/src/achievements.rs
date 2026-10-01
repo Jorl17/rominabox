@@ -10,6 +10,10 @@ pub fn included(requested: bool, show_menu: bool) -> bool {
     requested && show_menu
 }
 
+/// The name of the folder with the QUICK SIGN IN accounts common to every game
+/// a person exported (`accounts_folder`).
+pub const SHARED_ACCOUNTS: &str = "ROM-in-a-Box Accounts";
+
 /// The QUICK SIGN IN folder, common to every game with achievements, by
 /// name, directly in the platform's per-user application data: Application
 /// Support outside the sandbox on macOS, `%LOCALAPPDATA%` on Windows. It is
@@ -23,11 +27,10 @@ pub fn accounts_folder(namespace: Option<&str>, named: Option<&str>) -> Result<S
     fn present(value: Option<&str>) -> Option<&str> {
         value.map(str::trim).filter(|value| !value.is_empty())
     }
-    const SHARED: &str = "ROM-in-a-Box Accounts";
     let folder = match (present(namespace), present(named)) {
         (_, Some(folder)) => folder.to_string(),
-        (Some(namespace), None) => format!("{SHARED}-{namespace}"),
-        (None, None) => return Ok(SHARED.to_string()),
+        (Some(namespace), None) => format!("{SHARED_ACCOUNTS}-{namespace}"),
+        (None, None) => return Ok(SHARED_ACCOUNTS.to_string()),
     };
     if folder.starts_with('.') || folder.contains(['/', '\\', ':', '\n', '\t']) {
         return Err(format!("'{folder}' is not a folder name for QUICK SIGN IN"));

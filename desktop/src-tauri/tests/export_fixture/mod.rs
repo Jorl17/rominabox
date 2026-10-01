@@ -157,7 +157,7 @@ pub fn export_request_from(root: &Path, runtime_kit: PathBuf) -> ExportRequest {
 mod windows;
 #[cfg(windows)]
 #[allow(unused_imports)]
-pub use windows::{icon_of, library, program, windows_kit};
+pub use windows::{icon_of, library, program, program_from, windows_kit};
 #[cfg(unix)]
 mod posix;
 #[cfg(unix)]

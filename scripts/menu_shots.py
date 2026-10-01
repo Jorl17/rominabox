@@ -657,11 +657,10 @@ def built_player() -> Path:
 
 
 def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
-    """A copy of the runtime kit at `kit` with `player` as its player (on
-    macOS with this tree's launch library attached), and Native and `design`
-    as they are in this tree, not as they were when we froze the kit. We
-    resolve both from this tree in the exporter, and copy Native into
-    menu-assets for the controller art of the old shot path."""
+    """A copy of the runtime kit at `kit` with `player` as its player, and the
+    launcher, Native and `design` as in this tree, not as when we froze the
+    kit. We resolve Native and the design from this tree in the exporter, and
+    copy Native into menu-assets for the controller art of the old shot path."""
     shutil.copytree(KIT, kit, symlinks=True)
     for package_name in dict.fromkeys(("native", design)):
         package = ROOT / "integrations/designs" / package_name
@@ -677,13 +676,19 @@ def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
     installed = kit / native_build.kit_file(host_target(), "player")
     shutil.copyfile(player, installed)
     installed.chmod(0o755)
-    # The launch library of a macOS kit, built from this tree and attached to
-    # this player, as we do for the player of the kit in scripts/build_kit.py.
+    # The launcher built from this tree: a macOS kit's launch library attached
+    # to this player (build_kit.py), or the program next to it (build_player.py).
     target_kit = native_build.kit_target(host_target())
     if native_build.launch_library(target_kit):
         workspace = kit.parent / "launch-library"
         workspace.mkdir()
         native_build.install_launch_library(kit, target_kit, workspace)
+    else:
+        built = native_build.build_launcher(kit.parent / "launcher", host_target(),
+                                            native_build.build_environment(host_target()), native_build.FORK)
+        if built is None:
+            raise SystemExit(f"the player recipe builds no launcher for {host_target()}")
+        shutil.copyfile(built, kit / native_build.kit_file(host_target(), "launcher"))
     return kit
 
 
@@ -762,6 +767,15 @@ def _build_a_game(
     return app, program
 
 
+_programs: dict[Path, Path] = {}
+
+
+def program_of(app: Path) -> Path | None:
+    """The single program we exported for a Windows game made with build_a_game,
+    which a person opens, or None for a game exported as a folder (macOS)."""
+    return _programs.get(app)
+
+
 @contextmanager
 def build_a_game(
     rom: Path,
@@ -789,6 +803,8 @@ def build_a_game(
     program = None
     try:
         app, program = _build_a_game(rom, workspace, run_dir, system, settings, design, palette, namespace)
+        if program is not None:
+            _programs[app] = program
         try:
             yield app
         except PlayerTimeout as error:
@@ -796,6 +812,8 @@ def build_a_game(
             if keep:
                 print(f"retained timed-out player's export for inspection: {run_dir}", file=sys.stderr)
             raise
+        finally:
+            _programs.pop(app, None)
     finally:
         # When the block ends, we remove everything a Windows game made on the
         # computer, the same as choosing UNINSTALL in the player.

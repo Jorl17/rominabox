@@ -448,6 +448,19 @@ SCOPES = [
         slow=True,
     ),
     Scope(
+        "wingame",
+        "on Windows, a game made into one program, opened as a person opens it, with the launcher built from "
+        "this tree and a stand-in player: its first launch unpacks it whole, a second runs that copy without "
+        "unpacking it again, a file past 260 characters while it is unpacked still unpacks, a newer version "
+        "unpacks beside the older copy, which goes while the saves stay, and UNINSTALL removes the game's data, "
+        "its sandbox, what it kept before it had a sandbox and every unpacked copy, and keeps the program; and "
+        "a program whose index names a folder outside the runtimes folder is refused, writing and removing "
+        "nothing; on macOS nothing, since a Mac game is not one program",
+        "the unpacking dialog, a real player or core, UNINSTALL chosen in a running game's menu (the forget "
+        "scope), or a disk that fills while a game unpacks",
+        ["cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "windows_game", "--", "--ignored"],
+    ),
+    Scope(
         "overlays",
         "that no controller callout or button anchor moved, across every illustrated profile",
         "that the positions are correct — only that they are unchanged since a human looked",
@@ -507,6 +520,28 @@ SCOPES = [
         "the platform's, whichever pads are plugged in",
         "that the script does anything (workflows-native), or that a physical pad works",
         [PYTHON, str(ROOT / "scripts/test_scripted_run.py")],
+        slow=True,
+        launches_games=True,
+    ),
+    Scope(
+        "splash",
+        "that a game with the splash waits while it is up, as long as the design declares and not much more: "
+        "in a quiet run of the exported test cartridge, the time from the menu's first frame to the menu "
+        "opening in a game that opens at its menu",
+        "what the splash looks like or that a window shows it (a quiet run's window is hidden), or how long a "
+        "person's launch takes to draw its first frame",
+        [PYTHON, str(ROOT / "scripts/test_splash_hold.py")],
+        slow=True,
+        launches_games=True,
+    ),
+    Scope(
+        "forget",
+        "that UNINSTALL on Windows and RESET on macOS, chosen in a running game's menu by the menu's script "
+        "driver, remove what the game keeps and keep the game: on Windows its sandbox, registered and with the "
+        "game's data, and its unpacked copy, the program staying; on macOS its data folder, the app staying",
+        "that a person's pointer or keys reach the button (the navigation scope), the screen's words, or the "
+        "builder's uninstaller; RESET has not been run on a Mac yet",
+        [PYTHON, str(ROOT / "scripts/test_forget_in_menu.py")],
         slow=True,
         launches_games=True,
     ),

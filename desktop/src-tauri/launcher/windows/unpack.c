@@ -19,6 +19,9 @@
 #include "unpack.h"
 #include "unpack_dialog.h"
 
+#define RIB_USER_FOLDER(name, path) static const char user_folder_##name[] = path;
+#include "../launch_contract.inc"
+
 #define TRAILER_SIZE 24
 #define END_BYTES (64u * 1024u)
 #define CHUNK (1u << 20)
@@ -111,6 +114,15 @@ static int stays_inside(const char *path) {
     }
 }
 
+/* A folder of its own directly inside the runtimes folder. We unpack a game
+ * only there, because when we unpack, we remove the folders beside it that
+ * are named for the same game. */
+static int in_runtimes(const char *runtime) {
+    size_t length = strlen(user_folder_Runtimes);
+    return stays_inside(runtime) && strncmp(runtime, user_folder_Runtimes, length) == 0 && runtime[length] == '/'
+           && !strchr(runtime + length + 1, '/');
+}
+
 static void read_at(HANDLE file, uint64_t offset, void *buffer, DWORD size) {
     LARGE_INTEGER where;
     DWORD got = 0;
@@ -172,7 +184,7 @@ static int find_pack(HANDLE file, Pack *pack) {
         if (entry->offset < pack->head_size)
             pack->head_size = entry->offset;
     }
-    if (!stays_inside(pack->runtime) || !stays_inside(pack->program) || strchr(pack->program, '/'))
+    if (!in_runtimes(pack->runtime) || !stays_inside(pack->program) || strchr(pack->program, '/'))
         broken();
     return 1;
 }
