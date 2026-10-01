@@ -109,16 +109,15 @@ def check(design: str, output: Path) -> list[str]:
     workspace = output / design
     staging = menu_states.stage(SYSTEM, workspace / "staged", None, "blue", design)
     document = (staging / "menu.rml").read_text()
-    shown = {"pause-panel": {"display": "none"}, "controls-panel": {"display": "block"}}
     states = {
-        "plain": shown,
-        "hovered": dict(shown, **{STICK: {"pseudo": "hover"}}),
-        "focused": dict(shown, **{STICK: {"class": "focused"}}),
+        "plain": {},
+        "hovered": {STICK: {"pseudo": "hover"}},
+        "focused": {STICK: {"class": "focused"}},
     }
     pictures = {}
     for name, overrides in states.items():
         _, _, _, error = menu_states.draw_state(
-            design, SYSTEM, "blue", name, {"describes": name, "set": overrides},
+            design, SYSTEM, "blue", name, {"describes": name, "screen": "controls", "set": overrides},
             staging, document, workspace,
         )
         if error:
