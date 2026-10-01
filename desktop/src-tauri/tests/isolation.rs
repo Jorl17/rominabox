@@ -9,6 +9,8 @@
 #![cfg(any(target_os = "macos", windows))]
 
 mod export_fixture;
+#[cfg(windows)]
+mod sandboxes;
 mod support;
 
 #[cfg(target_os = "macos")]
@@ -359,7 +361,7 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
          audio_volume = \"-17.8\"\n",
     )
     .unwrap();
-    let resources = platform::resources_of(&app).join("core-options/probe-core");
+    let resources = platform::launched_resources_of(&app).join("core-options/probe-core");
     fs::create_dir_all(&resources).unwrap();
     fs::write(resources.join("copied.cfg"), b"copied-from-kit\n").unwrap();
     fs::write(resources.join("kept.cfg"), b"from-kit\n").unwrap();
