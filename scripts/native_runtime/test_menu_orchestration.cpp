@@ -283,6 +283,15 @@ void a_filter_row_applies_its_filter(const char *native_assets, const char *data
 }
 
 
+/* The shared parts that every menu.rml links, next to menu.rcss, as we stage
+ * them in composition. */
+void copy_parts(const std::filesystem::path& native_assets, const std::filesystem::path& assets)
+{
+   namespace fs = std::filesystem;
+   fs::copy(native_assets / "parts", assets / "parts",
+         fs::copy_options::recursive | fs::copy_options::overwrite_existing);
+}
+
 bool replace_once(std::string& text, const std::string& from, const std::string& to)
 {
    const auto at = text.find(from);
@@ -301,6 +310,7 @@ std::string stage_disc_list(const char *native_assets, const char *data)
    for (const auto& entry : fs::directory_iterator(native_assets))
       if (entry.is_regular_file())
          fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   copy_parts(native_assets, assets);
    std::string rows;
    for (int index = 0; index < 8; ++index)
    {
@@ -419,6 +429,7 @@ std::string stage_pad_choice(const char *native_assets, const char *data)
          fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
    for (const char *support : {"menu.rcss", "Silkscreen-Regular.ttf"})
       fs::copy_file(native / support, assets / support, fs::copy_options::overwrite_existing);
+   copy_parts(native, assets);
    std::ofstream(assets / "controls-defaults.cfg") <<
       "controls_profile = \"megadrive\"\n"
       "controls_variants = \"megadrive megadrive6\"\n"
