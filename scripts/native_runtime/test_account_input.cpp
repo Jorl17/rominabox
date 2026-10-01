@@ -398,6 +398,31 @@ int main(int argc, char **argv) {
             "the menu reports when the list opens again, so a failed badge is retried");
    }
    {
+      /* A game with no achievements: once the session is on and the list has
+       * no rows, the list is empty, and we show the design's text for an empty
+       * list. We show it neither while loading nor while there are rows. */
+      auto *root = document.root();
+      auto *list = root->GetElementById("achievements-list");
+      auto none_shown = [&]() {
+         std::vector<Rml::Element*> found;
+         rib::collect(root->GetElementById("achievements-catalog"), "account-none", found);
+         return !found.empty() && !rib::hidden(found[0]);
+      };
+      const std::vector<rib_achievement_row_t> rows = service_rows;
+      service_rows.clear();
+      session.count = 0; session.status = RIB_ACHIEVEMENTS_LOADING; ++session.revision;
+      achievements.update(); document.settle();
+      check(list && !list->IsClassSet("empty") && !none_shown(),
+            "an empty list while loading does not say there are no achievements");
+      session.status = RIB_ACHIEVEMENTS_ACTIVE; ++session.revision;
+      achievements.update(); document.settle();
+      check(list && list->IsClassSet("empty"), "an active session with no achievements says its list is empty");
+      check(none_shown(), "the design shows that there are no achievements");
+      service_rows = rows; session.count = service_rows.size(); ++session.revision;
+      achievements.update(); document.settle();
+      check(list && !list->IsClassSet("empty") && !none_shown(), "a list with achievements is not empty");
+   }
+   {
       /* QUICK SIGN IN: we show the button while accounts are saved and list a
        * row for each. Choosing a row signs in with it, and FORGET removes it. */
       auto *root = document.root();
