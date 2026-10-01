@@ -146,6 +146,9 @@ fn short(text: &str, stage: ErrorStage) -> Result<u16, ExportError> {
 /// program, into the single program `destination`. We unpack the game into
 /// the folder `runtime` under the local application data, with the pack's
 /// id added, so we never unpack a new export over the copy that is running.
+/// How many characters of the pack's id we use in the folder name.
+pub(super) const PACK_ID_CHARS: usize = 8;
+
 pub(super) fn pack(
     folder: &Path,
     launcher: &Path,
@@ -198,7 +201,7 @@ pub(super) fn pack(
         id.update(entry.whole);
     }
     let id = format!("{:x}", id.finalize());
-    let runtime = format!("{runtime}-{}", &id[..8]);
+    let runtime = format!("{runtime}-{}", &id[..PACK_ID_CHARS]);
     let program = launcher
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())

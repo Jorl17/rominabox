@@ -381,6 +381,9 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .account-error { margin-top: 16dp; font-size: 13dp; color: #fff13d; }
 .account-catalog .list { position: relative; left: 0; top: 0; width: 100%; }
 .account-catalog .list-pager { position: relative; top: auto; margin-top: 12dp; }
+.account-none { display: none; padding-top: 140dp; text-align: center; color: #b4e6ff; }
+#achievements-list.empty ~ .account-none { display: block; }
+#achievements-list.empty .list-pager { display: none; }
 #achievements-panel .list-actions .list-back { left: auto; right: 0; width: 24%; }
 #achievements-panel .account-toggle { left: 0; width: 32%; }
 #achievements-panel .account-signout { left: 36%; width: 32%; }

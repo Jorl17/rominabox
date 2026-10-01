@@ -95,10 +95,21 @@ static void game_program(wchar_t *path, DWORD capacity) {
     wcscpy(path, unpacked_program);
 }
 
-/* The per-user application data folder, %LOCALAPPDATA%. */
+/* The per-user application data folder, %LOCALAPPDATA%, or the folder that
+ * a test sets in its place. */
 static char *local_application_data(void) {
+    static wchar_t named[32768];
+    wchar_t *name = wide(RIB_ENV_TEST_USER_DATA);
+    DWORD length = GetEnvironmentVariableW(name, named, sizeof named / sizeof named[0]);
     PWSTR found = NULL;
     char *path;
+    free(name);
+    if (length > 0 && length < sizeof named / sizeof named[0]) {
+        path = utf8(named);
+        if (!fs_is_absolute(path))
+            rominabox_launch_die(RIB_ENV_TEST_USER_DATA " is not an absolute path");
+        return path;
+    }
     if (FAILED(SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &found)))
         rominabox_launch_die("there is no per-user folder to keep this game's files in");
     path = utf8(found);
@@ -417,7 +428,10 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
  * in the game's data folder. Once the game has ended, we remove its sandbox,
  * with the saves and settings in the sandbox's folder, its data folder from
  * the older layout outside a sandbox, and every unpacked copy of it. The
- * program that the person opened stays. */
+ * program that the person opened stays. We run this outside the sandbox,
+ * with all of the person's rights, so we only remove the folder of the
+ * sandbox, a folder directly inside the games folder, or a copy unpacked
+ * beside the one that ran. */
 static void forget_if_asked(const LaunchGame *game) {
     char name[sizeof RIB_GAME_APP_ID_PREFIX + sizeof game->identity];
     char data[LAUNCH_PATH_CAP];
@@ -457,8 +471,7 @@ static void forget_if_asked(const LaunchGame *game) {
                 }
             }
         }
-        rominabox_game_data_folder(game, user_data, data, sizeof data);
-        {
+        if (rominabox_game_folder_to_forget(game, user_data, data, sizeof data) == 0) {
             wchar_t *before = wide(data);
             unpack_remove_tree(before);
             free(before);
@@ -604,7 +617,7 @@ static int person_opened;
  * run. */
 void rominabox_launch_tell(const char *message) {
     wchar_t text[1024];
-    if (!person_opened || getenv(RIB_ENV_QUIET) || getenv("ROMINABOX_PLAN_ONLY"))
+    if (!rominabox_launch_tells_person(person_opened))
         return;
     if (MultiByteToWideChar(CP_UTF8, 0, message, -1, text, (int)(sizeof text / sizeof text[0])))
         MessageBoxW(NULL, text, L"ROM-in-a-Box", MB_OK | MB_ICONERROR);

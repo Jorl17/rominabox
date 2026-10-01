@@ -4,7 +4,7 @@
 use super::app_files::player_defaults;
 use super::{Drivers, ErrorStage, ExportError, ExportRequest};
 use crate::hotkeys::isolated_hotkey_config;
-use crate::launch_contract::{plan_field, plan_mark, shipped, token};
+use crate::launch_contract::{plan_field, plan_mark, shipped, token, user_folder};
 use sha2::{Digest, Sha256};
 use std::ffi::OsStr;
 use std::fs;
@@ -73,8 +73,11 @@ pub(super) fn stable_identity(
         }
         hash.update(&buffer[..count]);
     }
-    Ok(format!("{:x}", hash.finalize())[..24].to_string())
+    Ok(format!("{:x}", hash.finalize())[..IDENTITY_CHARS].to_string())
 }
+
+/// How many characters a game's identity has.
+pub(super) const IDENTITY_CHARS: usize = 24;
 
 /// The writable directories we create and manage under each game's data root.
 pub const MANAGED_DATA_DIRECTORIES: &[&str] = &[
@@ -225,20 +228,21 @@ savestate_thumbnail_enable = "true"
     ))
 }
 
-/// The folder under the per-user data folder that contains all data of a game.
-const DATA_ROOT: &str = "ROM-in-a-Box";
-
+/// The game's data folder, one of the folders in the games folder, under
+/// the per-user data folder.
 fn game_data_template(identity: &str) -> String {
-    format!(
-        "{}/{DATA_ROOT}/Games/{identity}",
-        token!(UserData)
-    )
+    format!("{}/{}", token!(UserData), game_data_folder(identity))
+}
+
+/// The game's data folder, below the per-user data folder.
+pub(super) fn game_data_folder(identity: &str) -> String {
+    format!("{}/{identity}", user_folder!(Games))
 }
 
 /// Where we unpack a game made into one program (a Windows game,
 /// `windows_pack`), under the per-user data folder.
 pub(super) fn runtime_folder(identity: &str) -> String {
-    format!("{DATA_ROOT}/Runtimes/{identity}")
+    format!("{}/{identity}", user_folder!(Runtimes))
 }
 
 /// The shared QUICK SIGN IN folder for this export, when it has achievements.

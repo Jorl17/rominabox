@@ -12,6 +12,9 @@
 .account-error { margin-top: 16dp; font-size: 13dp; color: design(highlight); }
 .account-catalog .list { position: relative; left: 0; top: 0; width: 100%; }
 .account-catalog .list-pager { position: relative; top: auto; margin-top: 12dp; }
+.account-none { display: none; padding-top: 140dp; text-align: center; color: design(muted); }
+#achievements-list.empty ~ .account-none { display: block; }
+#achievements-list.empty .list-pager { display: none; }
 #achievements-panel .list-actions .list-back { left: auto; right: 0; width: 24%; }
 #achievements-panel .account-toggle { left: 0; width: 32%; }
 #achievements-panel .account-signout { left: 36%; width: 32%; }

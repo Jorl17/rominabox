@@ -50,10 +50,10 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
             def make_dir(*, prefix: str) -> str:
                 return real_mkdtemp(prefix=prefix, dir=parent)
 
-            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> Path:
+            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> tuple[Path, None]:
                 app = run_dir / "Game.app"
                 app.mkdir()
-                return app
+                return app, None
 
             with (
                 patch.object(menu_shots.tempfile, "mkdtemp", side_effect=make_dir),
@@ -69,10 +69,10 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
             def make_dir(*, prefix: str) -> str:
                 return real_mkdtemp(prefix=prefix, dir=parent)
 
-            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> Path:
+            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> tuple[Path, None]:
                 app = run_dir / "Game.app"
                 app.mkdir()
-                return app
+                return app, None
 
             with (
                 patch.object(menu_shots.tempfile, "mkdtemp", side_effect=make_dir),
@@ -89,10 +89,10 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
             def make_dir(*, prefix: str) -> str:
                 return real_mkdtemp(prefix=prefix, dir=parent)
 
-            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> Path:
+            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> tuple[Path, None]:
                 app = run_dir / "Game.app"
                 app.mkdir()
-                return app
+                return app, None
 
             with (
                 patch.object(menu_shots.tempfile, "mkdtemp", side_effect=make_dir),

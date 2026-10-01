@@ -1303,6 +1303,14 @@ select {
   font-size: 12px;
   margin-top: 6px;
 }
+/* An author's filter a Windows game may not load. */
+.shader-warning {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--warning);
+}
+
 .shader-detail {
   font-size: 11px;
   color: var(--muted);

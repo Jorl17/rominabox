@@ -48,14 +48,15 @@ def shared_launcher_sources() -> list[str]:
     return sorted(str(path) for path in {*LAUNCHER.glob("*.c"), *native_build.file_layer(platform)})
 
 
-def write_plan(resources: Path, data: Path, driver: str = FROZEN_DRIVER) -> None:
-    """Return a launch plan with only the export's driver in its config."""
+def write_plan(resources: Path, data: str, driver: str = FROZEN_DRIVER) -> None:
+    """Return a launch plan with only the export's driver in its config, and
+    its data in the folder `data` below the per-user folder."""
     resources.mkdir(parents=True, exist_ok=True)
     (resources / "launch.plan").write_bytes((
         "identity\tplan\n"
         "content\tcontent\n"
         "title\tPlan\n"
-        f"data_dir\t{data}\n"
+        f"data_dir\t$user_data/{data}\n"
         "managed\tlogs\n"
         "\n---config---\n"
         f'audio_driver = "{driver}"\n'
@@ -65,9 +66,12 @@ def write_plan(resources: Path, data: Path, driver: str = FROZEN_DRIVER) -> None
     ).encode("utf-8"))
 
 
-def run_plan(binary: Path, data: Path, quiet: bool = False, sound: bool = False) -> str:
+def run_plan(binary: Path, user_data: Path, data: str, quiet: bool = False, sound: bool = False) -> str:
+    """Return the config we write in a plan-only launch with `user_data` as the
+    per-user folder, into the folder `data` below it."""
     env = os.environ.copy()
     env["ROMINABOX_PLAN_ONLY"] = "1"
+    env[menu_shots.TEST_USER_DATA_ENV] = str(user_data)
     # The parent process of the harness is not launchd. We remove the variables,
     # so that a value left in this process cannot hide the default.
     env.pop(menu_shots.QUIET_ENV, None)
@@ -85,7 +89,7 @@ def run_plan(binary: Path, data: Path, quiet: bool = False, sound: bool = False)
         raise SystemExit(
             f"the launcher plan tool exited {ran.returncode}\n{ran.stderr[-400:]}"
         )
-    config = data / "retroarch.cfg"
+    config = user_data / data / "retroarch.cfg"
     if not config.is_file():
         raise SystemExit(f"the launcher wrote no config at {config}")
     return config.read_text()
@@ -108,9 +112,8 @@ def plan_check() -> list[str]:
         written = {}
         for name, quiet, sound in (("neither", False, False), ("sound", False, True),
                                    ("switch", True, False), ("both", True, True)):
-            data = root / name
-            write_plan(resources, data)
-            written[name] = run_plan(binary, data, quiet=quiet, sound=sound)
+            write_plan(resources, name)
+            written[name] = run_plan(binary, root, name, quiet=quiet, sound=sound)
     failures = []
     expected = {"neither": QUIET_DRIVER, "sound": FROZEN_DRIVER,
                 "switch": QUIET_DRIVER, "both": QUIET_DRIVER}

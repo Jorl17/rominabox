@@ -142,6 +142,16 @@ export function inspectGame(
 ): Promise<GameInfo> {
   return invoke("inspect_game", { path, online, systemOverride });
 }
+export type ShaderWarning = { path: string; sentence: string };
+// The browser walkthrough has no desktop shell, so we show none.
+export function shaderWarnings(selection: {
+  bundled: string[];
+  custom: { name: string; path: string }[];
+  initial: string | null;
+}): Promise<ShaderWarning[]> {
+  if (!native) return Promise.resolve([]);
+  return invoke("shader_warnings", { selection });
+}
 export type Traveling = { entry: string; files: string[] };
 // We ask with the console, as in the export, because a companion required
 // for one console is optional for another. Without it, the Also importing

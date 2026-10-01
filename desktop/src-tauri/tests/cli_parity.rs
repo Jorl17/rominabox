@@ -1,8 +1,9 @@
 //! The command line uses the same functions as the backend commands of the
 //! builder for the folders for games and downloads, the menu controls check,
 //! the controller variants in the Controls step, a lookup in the builder
-//! cache, the preview in the Menu step, and the error for a project with a
-//! palette that this build does not have.
+//! cache, the preview in the Menu step, the error for a project with a
+//! palette that this build does not have, and the warnings for a filter from
+//! the author that may not load in a Windows game.
 
 use rominabox_desktop::builder::{self, defaults, Places};
 use rominabox_desktop::game::Game;
@@ -231,4 +232,24 @@ fn project_open_refuses_a_palette_this_build_lacks() {
         "{printed}"
     );
     assert!(!root.path().join("opened").exists(), "the project was extracted");
+}
+
+/// For the same selection, we show the same warnings in the builder for an
+/// author's filter that a Windows game may not load as in `shaders-check`.
+#[test]
+fn shaders_check_prints_the_builders_filter_warnings() {
+    let root = Scratch::dir("rominabox-cli-shader-warnings");
+    let deep = format!("{}/pass.glsl", ["a-folder-of-twenty-c"; 8].join("/"));
+    fs::create_dir_all(root.join(&deep).parent().unwrap()).unwrap();
+    fs::write(root.join(&deep), "#if defined(VERTEX)\n#elif defined(FRAGMENT)\n#endif\n").unwrap();
+    fs::write(root.join("pal.glslp"), format!("shaders = 1\nshader0 = {deep}\n")).unwrap();
+    let request = json!({ "custom": [{ "name": "PAL", "path": root.join("pal.glslp") }] });
+    let selection: rominabox_desktop::shaders::ShaderSelection = serde_json::from_value(request.clone()).unwrap();
+    let builder = rominabox_desktop::shaders::windows_warnings(&selection).unwrap();
+    assert_eq!(builder.len(), 1, "the filter is deep enough to be warned about");
+    assert_eq!(
+        result("shaders-check", Some(&request))["warnings"],
+        serde_json::to_value(&builder).unwrap()
+    );
+    let _ = fs::remove_dir_all(&root);
 }
