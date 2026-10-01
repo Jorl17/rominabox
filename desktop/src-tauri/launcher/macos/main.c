@@ -183,9 +183,14 @@ static void prepare(void) {
     }
     if (chdir(launch.data_dir) != 0)
         die_errno(launch.data_dir);
-    if (strlen(launch.data_dir) < sizeof forget_folder) {
-        strcpy(forget_folder, launch.data_dir);
-        atexit(forget_if_asked);
+    /* On RESET we remove the data folder only when it is directly inside the
+     * games folder, as on Windows, because a game run without its sandbox,
+     * such as a test build, has all of the person's rights. */
+    {
+        LaunchGame game;
+        rominabox_read_game(resources, &game);
+        if (rominabox_game_folder_to_forget(&game, user_data, forget_folder, sizeof forget_folder) == 0)
+            atexit(forget_if_asked);
     }
 
     forwarded_argv[0] = strdup(executable);
