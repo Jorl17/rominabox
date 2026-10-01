@@ -847,8 +847,8 @@ pub fn pack_selection(
             .files
             .first()
             .ok_or_else(|| format!("could not pack shader '{name}'"))?;
-        // We name the packed file after its id in the game, so we keep the
-        // name as given and do not read it from the file again.
+        // We name the packed file after its id in the game, so we record the
+        // name in the project instead of reading it from that file.
         custom.name = Some(name);
         custom.path = PathBuf::from(format!("shaders/{}/{author}", item.id));
     }
