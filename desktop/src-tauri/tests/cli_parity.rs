@@ -71,7 +71,7 @@ fn cartridge(root: &Path) -> PathBuf {
 fn places_prints_where_the_builder_writes_games_and_keeps_downloads() {
     let places = Places::of(IDENTIFIER);
     let host = ExportTarget::of_host().expect("the tests run on a platform the builder makes games on");
-    let core_target = host.target().expect("the host platform has a core target");
+    let core_target = host.target();
     let mut printed = result("places", None);
     // We look for the kit beside the running program, and this test is not
     // that program, so here we only check that it is a kit.

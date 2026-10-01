@@ -88,13 +88,12 @@ impl ExportTarget {
 
     /// The target that we build this export for.
     ///
-    /// A Windows package uses the Windows core even on a Mac builder. A Mac
-    /// package is for the same kind of Mac as the builder, and a Mac package
-    /// made on another system is for Apple silicon, because the Mac kit's
-    /// player contains the code for every Mac. This is always `Some`, because
-    /// someone can make a Mac game on any platform.
-    pub fn target(&self) -> Option<Target> {
-        Some(self.target_on(Target::host()))
+    /// A Windows package contains the Windows core even on a Mac builder. A
+    /// Mac package is for the same kind of Mac as the builder, and a Mac
+    /// package made on another system is for Apple silicon, because the Mac
+    /// kit's player contains the code for every Mac.
+    pub fn target(&self) -> Target {
+        self.target_on(Target::host())
     }
 
     /// `target` for a builder running on `host`, or `None` for a machine that

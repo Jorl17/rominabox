@@ -179,10 +179,7 @@ async fn run_export(
     let bundled = resource(&app, "runtime").map_err(shell)?;
     let places = places(&app);
     request.core = None;
-    request.core_cache = request
-        .game.target
-        .target()
-        .and_then(|target| places.core_cache(target).ok());
+    request.core_cache = places.core_cache(request.game.target.target()).ok();
     let cancelled = Arc::new(AtomicBool::new(false));
     {
         let mut active = state.0.lock().map_err(|e| shell(e.to_string()))?;

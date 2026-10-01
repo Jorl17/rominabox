@@ -129,9 +129,7 @@ fn run() -> Result<(), String> {
         let places = builder::Places::of(builder::identifier());
         let target = packaging::ExportTarget::of_host();
         let core_cache = target
-            .as_ref()
-            .and_then(|platform| platform.target())
-            .map(|core_target| places.core_cache(core_target))
+            .map(|platform| places.core_cache(platform.target()))
             .transpose()?;
         println!(
             "{}",
