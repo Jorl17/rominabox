@@ -398,6 +398,18 @@ void what_retroarch_reads(void *menu)
          "a position QUICK SAVE holds stays one of the menu's buttons");
    click(menu, "hotkey-quick-save-2");
    expect_row("quick-save", {"f2"}, "QUICK SAVE's pad button removed");
+
+   /* In RetroArch a few keys are buttons of the menu pad, such as Space for
+    * Start. A key bound to a menu hotkey is only that hotkey, and RetroArch
+    * checks that here. QUICK SAVE acts only while the game plays. */
+   check(rib_rmlui_menu_hotkey_key(key_code("enter")) && rib_rmlui_menu_hotkey_key(key_code("escape")),
+         "CONFIRM's Enter and MENU's Escape are keys of the menu's hotkeys");
+   check(!rib_rmlui_menu_hotkey_key(key_code("space")) && !rib_rmlui_menu_hotkey_key(key_code("f2")),
+         "Space, which no hotkey holds, and QUICK SAVE's F2 are not");
+   capture(menu, "back", "key:space");
+   check(rib_rmlui_menu_hotkey_key(key_code("space")), "Space bound to BACK is a key of the menu's hotkeys");
+   click(menu, "hotkey-back-3");
+   check(!rib_rmlui_menu_hotkey_key(key_code("space")), "Space taken off BACK is not");
 }
 
 /* Seven rows fill two pages of the list in the design: the menu hotkeys and
