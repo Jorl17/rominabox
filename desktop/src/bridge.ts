@@ -297,12 +297,6 @@ export function exportFailure(reason: unknown): unknown {
 export function cancelExport(): Promise<void> {
   return invoke("cancel_export");
 }
-export function availableSystems(): Promise<string[]> {
-  return invoke("available_systems");
-}
-export function ensureCores(): Promise<unknown> {
-  return invoke("ensure_cores");
-}
 /** The platform we export for on this machine, or null where we cannot. */
 export function exportTarget(): Promise<ExportTarget | null> {
   return invoke("export_target");

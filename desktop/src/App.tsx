@@ -15,7 +15,6 @@ import {
 import { SYSTEMS, formatBytes, inspectRom } from "./inspection";
 import * as bridge from "./bridge";
 import { CustomShaderCards } from "./customShaders";
-import { canExport, whyNot } from "./consoles";
 import {
   afterExport,
   afterProgress,
@@ -173,7 +172,6 @@ function IconArt() {
 }
 export function App() {
   const [step, setStep] = useState(0);
-  const [supported, setSupported] = useState<Set<string>>(new Set());
   const [host, setHost] = useState<bridge.ExportTarget | null>(null);
   const [platform, setPlatform] = useState<Platform | null>(null);
   const exportTarget = platform === "both" ? host : (platform ?? host);
@@ -689,16 +687,12 @@ export function App() {
       });
   };
   useEffect(() => {
-    // The browser walkthrough has no kit and no backend, so we supply the
-    // answers of the desktop commands here: which consoles already have a
-    // core on disk, and which platform we export for.
+    // The browser walkthrough has no backend, so we supply the answer of the
+    // desktop command here: which platform we export for.
     if (bridge.native) return;
     const walkthrough = window as Window & {
-      __ROMINABOX_PREPARED__?: string[];
       __ROMINABOX_EXPORT_TARGET__?: bridge.ExportTarget;
     };
-    if (walkthrough.__ROMINABOX_PREPARED__)
-      setSupported(new Set(walkthrough.__ROMINABOX_PREPARED__));
     if (walkthrough.__ROMINABOX_EXPORT_TARGET__)
       setHost(walkthrough.__ROMINABOX_EXPORT_TARGET__);
   }, []);
@@ -729,13 +723,6 @@ export function App() {
       .catch(fail);
     bridge.defaultDestination().then(setDestination).catch(fail);
     bridge.exportTarget().then(setHost).catch(fail);
-    // Which cores are already on disk.
-    bridge
-      .availableSystems()
-      .then((ids) => {
-        if (!disposed) setSupported(new Set(ids));
-      })
-      .catch(fail);
     return () => {
       disposed = true;
       cleanups.forEach((fn) => fn());
@@ -1125,15 +1112,8 @@ export function App() {
                             Choose a console
                           </option>
                           {SYSTEMS.map((s) => (
-                            <option
-                              key={s.id}
-                              value={s.id}
-                              disabled={!canExport(supported, s.id)}
-                            >
+                            <option key={s.id} value={s.id}>
                               {s.name}
-                              {whyNot(supported, s.id)
-                                ? ` — ${whyNot(supported, s.id)}`
-                                : ""}
                             </option>
                           ))}
                         </select>

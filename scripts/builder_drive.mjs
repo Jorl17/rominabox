@@ -1039,20 +1039,11 @@ async function main() {
       viewport: { width: 1440, height: 900 },
     });
     page.setDefaultTimeout(20000);
-    // This answer has no Dreamcast core, as in the desktop app before we
-    // have downloaded flycast.
-    const systems = JSON.parse(
-      fs.readFileSync(path.join(ROOT, "desktop/systems.json"), "utf8"),
-    ).systems;
-    const prepared = systems
-      .map((system) => system.id)
-      .filter((id) => id !== "dreamcast");
     // On every machine we photograph a builder that exports for macOS, so the
     // pictures of the walkthrough are the same everywhere.
-    await page.addInitScript((ids) => {
-      window.__ROMINABOX_PREPARED__ = ids;
+    await page.addInitScript(() => {
       window.__ROMINABOX_EXPORT_TARGET__ = "macos";
-    }, prepared);
+    });
     await page.goto(`http://127.0.0.1:${address.port}/`, {
       waitUntil: "networkidle",
     });

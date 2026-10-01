@@ -148,20 +148,16 @@ fn run() -> Result<(), String> {
     match command.as_str() {
         "systems" => {
             let input = read_request()?;
+            // We can export every console, because we download a core
+            // for each export, so there is nothing to check in a kit.
             #[derive(Deserialize)]
-            #[serde(rename_all = "camelCase")]
-            struct Request {
-                runtime_kit: Option<PathBuf>,
-            }
-            let request: Request = serde_json::from_str(&input)
+            #[serde(deny_unknown_fields)]
+            struct Request {}
+            let Request {} = serde_json::from_str(&input)
                 .map_err(|e| format!("invalid systems request: {e}"))?;
-            let available = request
-                .runtime_kit
-                .as_deref()
-                .map(packaging::available_systems);
             println!(
                 "{}",
-                json!({"type":"result", "result":{"systems":systems::registry(), "available":available}})
+                json!({"type":"result", "result":{"systems":systems::registry()}})
             );
             Ok(())
         }

@@ -2,7 +2,6 @@
 //! and their shared parts: a request, and the launch plan we write for it.
 
 mod app_files;
-mod availability;
 mod identity;
 mod launch_plan;
 #[cfg(target_os = "macos")]
