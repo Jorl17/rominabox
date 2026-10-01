@@ -24,14 +24,18 @@ from core_source import host_target  # noqa: E402
 CONTRACT = Path(__file__).resolve().parent.parent / "desktop/src-tauri/launcher/launch_contract.inc"
 
 
-def windows_part(name: str) -> str:
-    """Where part `name` of a Windows game is beside its program, as declared
-    for the launcher in launch_contract.inc."""
-    found = re.search(rf'^RIB_WINDOWS_PART\({name}, "([^"]+)"\)', CONTRACT.read_text(encoding="utf-8"),
-                      re.MULTILINE)
+def declared(kind: str, name: str) -> str:
+    """The path declared in launch_contract.inc as `kind(name, "path")`, as we
+    read it in the launcher."""
+    found = re.search(rf'^{kind}\({name}, "([^"]+)"\)', CONTRACT.read_text(encoding="utf-8"), re.MULTILINE)
     if not found:
-        raise SystemExit(f"launch_contract.inc declares no Windows part {name}")
+        raise SystemExit(f"launch_contract.inc declares no {kind} {name}")
     return found.group(1)
+
+
+def windows_part(name: str) -> str:
+    """Where part `name` of a Windows game is beside its program."""
+    return declared("RIB_WINDOWS_PART", name)
 
 
 def compile_macos(directory: Path) -> tuple[Path, Path]:

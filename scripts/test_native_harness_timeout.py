@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from directory_links import link_directory
 import menu_shots
+import launcher_plan
 import menu_workflows
 import test_discs
 
@@ -264,6 +265,33 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
                 with self.assertRaisesRegex(SystemExit, "pre-existing unowned fixture files"):
                     menu_workflows.reset_fixture(Path("/fake/Fixture.app"))
             self.assertEqual(saved.read_bytes(), b"unowned save")
+
+    def test_claim_accepts_what_the_games_own_launch_applied(self) -> None:
+        # We launch a Windows game made into one program once to unpack it
+        # before we can find its storage, and in that launch we apply the
+        # remap of the export. We still refuse a remap that the player changed.
+        applied = launcher_plan.declared("RIB_GAME_DATA", "Applied")
+        for changed in (False, True):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as directory:
+                data = Path(directory).resolve()
+                remap = data / "remaps" / "Core" / "Core.rmp"
+                record = data / applied / "remaps" / "Core" / "Core.rmp"
+                for path in (remap, record):
+                    path.parent.mkdir(parents=True)
+                    path.write_text("input_libretro_device_p1 = 1\n")
+                if changed:
+                    remap.write_text("input_libretro_device_p1 = 5\n")
+                with (
+                    patch.object(menu_shots, "data_dir_of", return_value=data),
+                    patch.object(menu_shots, "storage_home", return_value=data),
+                    patch.object(menu_shots, "prepare_storage"),
+                ):
+                    if changed:
+                        with self.assertRaisesRegex(SystemExit, "pre-existing unowned fixture files"):
+                            menu_workflows.claim_fixture(Path("/fake/Fixture.app"))
+                    else:
+                        menu_workflows.claim_fixture(Path("/fake/Fixture.app"))
+                        self.assertTrue((data / "menu-workflow-owner").is_file())
 
     def test_empty_claim_then_reset_only_fixture_files(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -21,6 +21,7 @@
 #define RIB_PLAN_MARK(name, line) static const char plan_mark_##name[] = line;
 #define RIB_TOKEN(name, token) static const char token_##name[] = token;
 #define RIB_USER_FOLDER(name, path) static const char user_folder_##name[] = path;
+#define RIB_GAME_DATA(name, path) static const char game_data_##name[] = path;
 #include "launch_contract.inc"
 #define RIB_FILE(name, file) static const char menu_##name[] = file;
 #define RIB_DATA_FILE(name, file) static const char menu_data_##name[] = file;
@@ -792,7 +793,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
         char listed[PATH_CAP];
         char failed[PATH_CAP];
         size_t which;
-        join_path(applied_root, sizeof applied_root, data_dir, "applied");
+        join_path(applied_root, sizeof applied_root, data_dir, game_data_Applied);
         mkdir_p(applied_root);
         for (which = 0; which < sizeof settings / sizeof settings[0]; which++) {
             join_path(from, sizeof from, resources, settings[which].app);

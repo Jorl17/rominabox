@@ -17,6 +17,8 @@
  *                                           path
  * RIB_USER_FOLDER(name, "path")             a folder below the per-user data
  *                                           folder ($user_data)
+ * RIB_GAME_DATA(name, "path")               a folder the launcher keeps in a
+ *                                           game's data for itself
  * RIB_SHIPPED_SETTINGS(name, "app", "data") a folder the app ships, which the
  *                                           launcher applies to that folder in
  *                                           the game's data on every launch
@@ -43,6 +45,9 @@
 #endif
 #ifndef RIB_USER_FOLDER
 #define RIB_USER_FOLDER(name, path)
+#endif
+#ifndef RIB_GAME_DATA
+#define RIB_GAME_DATA(name, path)
 #endif
 #ifndef RIB_SHIPPED_SETTINGS
 #define RIB_SHIPPED_SETTINGS(name, app, data)
@@ -99,6 +104,10 @@ RIB_USER_FOLDER(Games, "ROM-in-a-Box/Games")
  * folders. */
 RIB_USER_FOLDER(Runtimes, "ROM-in-a-Box/Runtimes")
 
+/* What each launch applied from the export, at the path it applied it to:
+ * a later launch tells the player's changes from the export's by it. */
+RIB_GAME_DATA(Applied, "applied")
+
 /* The core's options, where RetroArch looks for them per game. */
 RIB_SHIPPED_SETTINGS(CoreOptions, "core-options", "config")
 RIB_SHIPPED_SETTINGS(Remaps, "remaps", "remaps")
@@ -112,5 +121,6 @@ RIB_SHIPPED_FILES(Firmware, "firmware", "system")
 #undef RIB_PLAN_MARK
 #undef RIB_TOKEN
 #undef RIB_USER_FOLDER
+#undef RIB_GAME_DATA
 #undef RIB_SHIPPED_SETTINGS
 #undef RIB_SHIPPED_FILES
