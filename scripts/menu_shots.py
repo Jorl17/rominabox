@@ -781,6 +781,7 @@ def build_a_game(
     run_dir = Path(tempfile.mkdtemp(prefix=f"rominabox-menu-shots-{run}-"))
     created = run_dir.lstat()
     keep = False
+    program = None
     try:
         app, program = _build_a_game(rom, workspace, run_dir, system, settings, design, palette, namespace)
         try:
