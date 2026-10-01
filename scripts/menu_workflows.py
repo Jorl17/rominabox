@@ -35,6 +35,7 @@ import subprocess
 from PIL import Image, ImageChops
 
 import menu_shots as shots
+import launcher_plan
 from make_test_rom import make_megadrive_rom
 
 ROOT = shots.ROOT
@@ -116,7 +117,18 @@ def claim_fixture(app: Path) -> None:
             raise SystemExit(f"refusing a link in fixture storage: {directory}")
         if directory.is_dir():
             existing += [path for path in directory.rglob("*") if not path.is_dir()]
-    unknown = [path for path in existing if path.exists() or shots.redirected(path)]
+    applied = data / launcher_plan.declared("RIB_GAME_DATA", "Applied")
+
+    def exported(path: Path) -> bool:
+        """A file applied from the export at the game's launch, which is byte for
+        byte the same in the launcher's record of what we applied. We launch a
+        Windows game made into one program once, to unpack it, before we can
+        find its storage."""
+        record = applied / path.relative_to(data)
+        return (not shots.redirected(path) and not shots.redirected(record) and record.is_file()
+                and path.is_file() and record.read_bytes() == path.read_bytes())
+
+    unknown = [path for path in existing if (path.exists() or shots.redirected(path)) and not exported(path)]
     if unknown:
         raise SystemExit("pre-existing unowned fixture files; no reset performed:\n"
                          + "\n".join(str(path) for path in unknown))
