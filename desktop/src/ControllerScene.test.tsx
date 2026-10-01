@@ -2,6 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ControllerScene } from "./ControllerScene";
+import { keyName } from "./keys";
 import registry from "../controls.json";
 import megadrivePlacement from "../assets/controllers/controller-megadrive.json";
 import ps1Placement from "../assets/controllers/controller-ps1.json";
@@ -163,6 +164,56 @@ describe("the builder's controller scene", () => {
         `${control.id} must not get a callout of its own`,
       ).toBe(false);
     }
+  });
+
+  it("lists a stick's directions by the direction each declares, not by its id", async () => {
+    // The catalog declares the direction of each member, so we do not infer
+    // it from a suffix such as _plus or _minus on the id.
+    const member = (id: string, key: string, direction: string) => ({
+      id,
+      label: id,
+      key,
+      x: 0,
+      y: 0,
+      calloutX: 0,
+      calloutY: 0,
+      group: "stick",
+      direction,
+    });
+    const profile = {
+      id: "made-up",
+      name: "Made-up pad",
+      image: "controller-made-up.png",
+      controls: [
+        member("north", "t", "up"),
+        member("east", "b", "right"),
+        member("south", "g", "down"),
+        member("west", "v", "left"),
+        member("click", "q", "press"),
+      ],
+    };
+    const strip = { x: 300, y: 300, width: 236, height: 62 };
+    const layout = {
+      scene: { x: 0, y: 0, width: 960, height: 380 },
+      controls: [],
+      groups: [{ name: "stick", strip, marker: null, leader: [] }],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () => (url.endsWith("-layout.json") ? layout : null),
+      })),
+    );
+    const container = draw(profile as never);
+    await act(async () => {});
+
+    const keys = container.querySelector(
+      ".controller-marker .controller-callout-key",
+    );
+    expect(keys?.textContent).toBe(
+      ["t", "b", "g", "v"].map((key) => keyName(key)).join(" "),
+    );
   });
 
   // The stored name is the RetroArch one (num2). In the picture we word it
