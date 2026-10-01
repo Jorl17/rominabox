@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import exported_game  # noqa: E402
 import menu_shots  # noqa: E402
 import toolchain  # noqa: E402
 
@@ -40,7 +41,7 @@ INITIAL = "phosphor"
 
 def shader_config(app: Path) -> dict[str, str]:
     """Return a map from id to preset path, in the order we stage the list."""
-    path = menu_shots.resources_of(app) / "menu-assets/shaders.cfg"
+    path = exported_game.resources_of(app) / "menu-assets/shaders.cfg"
     text = path.read_text(encoding="utf-8")
     ids: list[str] = []
     presets: dict[str, str] = {}
@@ -63,7 +64,7 @@ def running_id(app: Path, listed: dict[str, str]) -> str:
     read the file to know which filter is running, because we must not keep
     a second copy in the menu and read that instead.
     """
-    data = menu_shots.data_dir_of(app)
+    data = exported_game.data_dir_of(app)
     if data is None:
         raise SystemExit("the export has no data directory")
     choice = data / "shader-choice"
@@ -174,7 +175,7 @@ def main() -> int:
         if INITIAL not in listed or CHOSEN not in listed:
             raise SystemExit(f"the export is missing a shader: {list(listed)}")
 
-        data = menu_shots.data_dir_of(app)
+        data = exported_game.data_dir_of(app)
         if data is not None:
             choice = data / "shader-choice"
             if choice.is_file():

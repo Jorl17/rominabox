@@ -24,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import free_space  # noqa: E402
+import exported_game  # noqa: E402
 import menu_shots  # noqa: E402
 import native_build  # noqa: E402
 from core_source import core_source, host_target  # noqa: E402
@@ -50,14 +51,14 @@ def use_checkout_player(app: Path, workspace: Path) -> None:
 
 def install_player(app: Path, binary: Path, workspace: Path) -> None:
     entitlements = workspace / "entitlements.plist"
-    menu_shots.capture_export_entitlements(app, entitlements)
+    exported_game.macos.capture_export_entitlements(app, entitlements)
     retroarch = app / "Contents/MacOS/retroarch"
     retroarch.write_bytes(binary.read_bytes())
     retroarch.chmod(0o755)
     attaching = workspace / "attach-launcher"
     attaching.mkdir(parents=True, exist_ok=True)
     native_build.attach_launch_library(retroarch, native_build.kit_target(host_target()), attaching)
-    menu_shots.resign_replaced_player(app, entitlements)
+    exported_game.macos.resign_replaced_player(app, entitlements)
 
 
 def bundle_id(app: Path) -> str:
@@ -89,10 +90,10 @@ def apple_event_quit(app: Path) -> tuple[int | None, str, str]:
     which is the defect, also leaves a macOS crash report and its dialog.
     """
     identifier = bundle_id(app)
-    log = menu_shots.log_of(app)
+    log = exported_game.log_of(app)
     if log and log.exists():
         log.unlink()
-    player = menu_shots.launcher_of(app)
+    player = exported_game.launcher_of(app)
     bucket: list[str] = []
 
     def collect(stream) -> None:
@@ -111,7 +112,7 @@ def apple_event_quit(app: Path) -> tuple[int | None, str, str]:
             "ROMINABOX_MAX_FRAMES": "600000",
             "ROMINABOX_VERBOSE": "1",
             "ROMINABOX_GAME_BUNDLE_PREFIX": PREFIX,
-            menu_shots.quiet_env(): "1",
+            exported_game.quiet_env(): "1",
         },
     )
     reader = threading.Thread(target=collect, args=(process.stdout,), daemon=True)
@@ -143,11 +144,11 @@ def apple_event_quit(app: Path) -> tuple[int | None, str, str]:
             except subprocess.TimeoutExpired:
                 pass
         reader.join(timeout=5)
-    left = menu_shots.running_from(app)
+    left = exported_game.running_from(app)
     if left:
         quit_bundle(identifier)
         time.sleep(1)
-        left = menu_shots.running_from(app)
+        left = exported_game.running_from(app)
         if left:
             raise SystemExit(f"player still running after quit:\n{left}")
     written = log.read_text(errors="replace") if log and log.exists() else ""
@@ -289,9 +290,9 @@ def close_window(cartridge: Path, advanced: bool) -> str | None:
     settings = {"title": TITLE, "startAtMenu": False, "autosaveOnQuit": True,
                 "advancedEmulatorAccess": advanced}
     with menu_shots.build_a_game(cartridge, ROOT / "work/quit-gbc", "gbc", settings) as app:
-        launcher = menu_shots.launcher_of(app)
-        log = menu_shots.log_of(app)
-        data = menu_shots.data_dir_of(app)
+        launcher = exported_game.launcher_of(app)
+        log = exported_game.log_of(app)
+        data = exported_game.data_dir_of(app)
         if log and log.exists():
             log.unlink()
         process = subprocess.Popen(
@@ -300,7 +301,7 @@ def close_window(cartridge: Path, advanced: bool) -> str | None:
                 **os.environ,
                 "ROMINABOX_MAX_FRAMES": "2400",
                 "ROMINABOX_VERBOSE": "1",
-                menu_shots.quiet_env(): "1",
+                exported_game.quiet_env(): "1",
             },
         )
         labels: dict[str, str | None] = {}
@@ -339,15 +340,15 @@ TITLE = "Quit Cartridge"
 
 def main() -> int:
     require_disk(20.2)
-    if menu_shots.PLATFORM not in QUITS:
-        raise SystemExit(f"no quit is declared for {menu_shots.PLATFORM}")
+    if exported_game.PLATFORM not in QUITS:
+        raise SystemExit(f"no quit is declared for {exported_game.PLATFORM}")
     failed = False
 
     # We use the generated cartridge as "a game that boots", so no test
     # requires a commercial game.
     cartridge = ready("test-game")
     if cartridge is not None:
-        problem = QUITS[menu_shots.PLATFORM](cartridge)
+        problem = QUITS[exported_game.PLATFORM](cartridge)
         if problem:
             print(problem)
             failed = True

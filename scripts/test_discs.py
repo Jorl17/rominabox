@@ -55,6 +55,7 @@ from typing import Iterator
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import frame_harness  # noqa: E402
 import free_space  # noqa: E402
+import exported_game  # noqa: E402
 import menu_shots  # noqa: E402
 import player_support  # noqa: E402
 import prepare_runtime  # noqa: E402
@@ -412,7 +413,7 @@ def forget_tray_record(app: Path) -> None:
     This is a problem here, because the native launch has already written the
     record for this content path.
     """
-    data = menu_shots.data_dir_of(app)
+    data = exported_game.data_dir_of(app)
     if data is None:
         return
     saves = data / "saves"
@@ -425,7 +426,7 @@ def forget_tray_record(app: Path) -> None:
 
 
 def leftover_problem(app: Path) -> str | None:
-    left = menu_shots.running_from(app)
+    left = exported_game.running_from(app)
     return f"a player is still running:\n{left}" if left else None
 
 
@@ -435,30 +436,30 @@ def launch(app: Path, script: str, shot: Path | None, output_too: bool = False) 
     We report a timeout or a leftover process with its PID, and leave the
     process running so that someone can inspect it.
     """
-    if menu_shots.storage_home(app) is None:
+    if exported_game.storage_home(app) is None:
         raise SystemExit(f"{app.name} keeps its storage uncontained; refusing to launch")
-    log = menu_shots.log_of(app)
+    log = exported_game.log_of(app)
     if log and log.exists():
         log.unlink()
     forget_tray_record(app)
-    menu_shots.prepared_storage(app)
+    exported_game.prepared_storage(app)
     inside = shot
     if shot is not None:
         shot.parent.mkdir(parents=True, exist_ok=True)
         shot.unlink(missing_ok=True)
-        inside = menu_shots.shot_inside(app, shot)
+        inside = exported_game.shot_inside(app, shot)
     env = {
         **os.environ,
         "ROMINABOX_MAX_FRAMES": frame_limit(script),
-        menu_shots.SCRIPT_ENV: script,
-        menu_shots.quiet_env(): "1",
+        exported_game.SCRIPT_ENV: script,
+        exported_game.quiet_env(): "1",
     }
     if inside is not None:
         env["ROMINABOX_MENU_SHOT"] = str(inside.resolve())
     print(f"  {script}", flush=True)
     with tempfile.TemporaryFile(mode="w+t") as capture:
         process = subprocess.Popen(
-            [str(menu_shots.launcher_of(app))],
+            [str(exported_game.launcher_of(app))],
             stdout=capture,
             stderr=capture,
             text=True,
@@ -481,7 +482,7 @@ def launch(app: Path, script: str, shot: Path | None, output_too: bool = False) 
         output = capture.read()
     written = log.read_text(errors="replace") if log and log.exists() else ""
     if inside is not None and shot is not None:
-        menu_shots.carry_shot(inside, shot)
+        exported_game.carry_shot(inside, shot)
     left = leftover_problem(app)
     if left:
         raise menu_shots.PlayerTimeout(left, app)
@@ -538,7 +539,7 @@ def export_game(content: Path, design: str) -> Iterator[Path]:
 
 def assets_of(app: Path) -> Path:
     """Return the composed menu that we put in an export."""
-    return menu_shots.resources_of(app) / "menu-assets"
+    return exported_game.resources_of(app) / "menu-assets"
 
 
 def menu_asset(app: Path, name: str) -> str:
@@ -601,7 +602,7 @@ def near(pixel: tuple[int, ...], colour: tuple[int, int, int]) -> bool:
 
 
 def window_dp(app: Path) -> tuple[int, int]:
-    text = menu_shots.plan_text(app)
+    text = exported_game.plan_text(app)
     width = re.search(r'video_windowed_position_width = "(\d+)"', text)
     height = re.search(r'video_windowed_position_height = "(\d+)"', text)
     if not width or not height:
@@ -795,7 +796,7 @@ def exported_player(playlist: Path) -> list[str]:
     finally:
         sys.stdout = output.real
         for app in exported_apps:
-            left = menu_shots.running_from(app)
+            left = exported_game.running_from(app)
             if left:
                 found.append(f"a player is still running:\n{left}")
         after = player_support.snapshot()

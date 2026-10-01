@@ -28,6 +28,7 @@ import sys
 from contextlib import ExitStack
 from pathlib import Path
 
+import exported_game
 import menu_shots as shots
 from make_test_rom import make_megadrive_rom
 from menu_workflows import checkpoints
@@ -83,7 +84,7 @@ def main() -> int:
 
     with ExitStack() as stack:
         app = stack.enter_context(shots.build_a_game(rom, output / "build", settings=EXPORT))
-        data = shots.prepared_storage(app)
+        data = exported_game.prepared_storage(app)
         if data is None:
             raise SystemExit("the exported game keeps no data of its own")
         before = state_files(data)

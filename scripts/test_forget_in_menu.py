@@ -31,6 +31,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+import exported_game  # noqa: E402
 import menu_shots  # noqa: E402
 
 DESIGN = ROOT / "integrations/designs/native/design.json"
@@ -43,9 +44,9 @@ def button(role: str) -> str:
     platform, as declared in the design that the game is exported with."""
     for screen in json.loads(DESIGN.read_text(encoding="utf-8"))["screens"]:
         platforms = screen.get("platforms")
-        if screen["role"] == role and (not platforms or menu_shots.PLATFORM in platforms):
+        if screen["role"] == role and (not platforms or exported_game.PLATFORM in platforms):
             return screen["button"]
-    raise SystemExit(f"{DESIGN} declares no {role} screen for {menu_shots.PLATFORM}")
+    raise SystemExit(f"{DESIGN} declares no {role} screen for {exported_game.PLATFORM}")
 
 
 def element(name: str) -> str:
@@ -91,8 +92,8 @@ def windows_registered(sandbox: str) -> bool:
 def windows_kept(app: Path) -> dict:
     """Return the data of a Windows game on this computer. We read the names
     from the plan in its unpacked copy, so we call this while that copy exists."""
-    sandbox = menu_shots.storage_home(app)
-    data = menu_shots.data_dir_of(app)
+    sandbox = exported_game.storage_home(app)
+    data = exported_game.data_dir_of(app)
     return {
         "the sandbox's registration": lambda: windows_registered(sandbox.name),
         "the sandbox's folder": sandbox.is_dir,
@@ -103,7 +104,7 @@ def windows_kept(app: Path) -> dict:
 
 def macos_kept(app: Path) -> dict:
     """Return the data of a Mac game on this computer."""
-    return {"the game's data": menu_shots.data_dir_of(app).is_dir}
+    return {"the game's data": exported_game.data_dir_of(app).is_dir}
 
 
 # By platform, the data of a game on this computer, each item with what it
@@ -111,14 +112,14 @@ def macos_kept(app: Path) -> dict:
 KEPT = {"windows": windows_kept, "macos": macos_kept}
 OPENED = {
     "windows": menu_shots.program_of,
-    "macos": menu_shots.launcher_of,
+    "macos": exported_game.launcher_of,
 }
 
 
 def play(app: Path, opened: Path, script: list[str], shot: Path | None = None) -> str:
     """Run the game opened by `opened` once, quietly, with `script`, and return
     what it wrote to its error output."""
-    environment = {**os.environ, menu_shots.quiet_env(): "1", menu_shots.SCRIPT_ENV: ",".join(script)}
+    environment = {**os.environ, exported_game.quiet_env(): "1", exported_game.SCRIPT_ENV: ",".join(script)}
     environment.pop("ROMINABOX_MENU_SHOT", None)
     if shot is not None:
         environment["ROMINABOX_MENU_SHOT"] = str(shot)
@@ -139,21 +140,21 @@ def play(app: Path, opened: Path, script: list[str], shot: Path | None = None) -
 def main() -> int:
     import fetch_test_content
 
-    if menu_shots.PLATFORM not in KEPT:
-        raise SystemExit(f"what a game keeps is not declared for {menu_shots.PLATFORM}")
+    if exported_game.PLATFORM not in KEPT:
+        raise SystemExit(f"what a game keeps is not declared for {exported_game.PLATFORM}")
     cartridge, reason = fetch_test_content.locate("test-game")
     if cartridge is None:
         print(f"skipped: test-game not available ({reason})")
         return 0
     settings = {"title": "Forget In Menu", "startAtMenu": True}
     with menu_shots.build_a_game(cartridge, ROOT / "work/forget-in-menu", "gbc", settings) as app:
-        kept = KEPT[menu_shots.PLATFORM](app)
-        opened = OPENED[menu_shots.PLATFORM](app)
+        kept = KEPT[exported_game.PLATFORM](app)
+        opened = OPENED[exported_game.PLATFORM](app)
         # We play it once, as a person plays it before choosing to forget it.
         picture = ROOT / "work/test-output/forget-in-menu.png"
-        shot = menu_shots.shot_inside(app, picture)
+        shot = exported_game.shot_inside(app, picture)
         first = play(app, opened, ["wait:1"], shot)
-        menu_shots.carry_shot(shot, picture)
+        exported_game.carry_shot(shot, picture)
         missing = [name for name, there in kept.items() if not there()]
         if missing:
             print(first)
@@ -170,7 +171,7 @@ def main() -> int:
         if failures:
             print(forgot)
             return 1
-        print(f"{menu_shots.PLATFORM}: {' -> '.join(script)} removed {', '.join(kept)}; "
+        print(f"{exported_game.PLATFORM}: {' -> '.join(script)} removed {', '.join(kept)}; "
               f"{opened.name} stays")
     return 0
 

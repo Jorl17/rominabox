@@ -38,7 +38,7 @@ from core_source import core, host_target  # noqa: E402
 import native_build  # noqa: E402
 import prepare_runtime  # noqa: E402
 import windows_pack  # noqa: E402
-from menu_shots import QUIET_ENV  # noqa: E402
+from exported_game import QUIET_ENV  # noqa: E402
 
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 BUDGETS = ROOT / "scripts/fixtures/size-budgets.json"

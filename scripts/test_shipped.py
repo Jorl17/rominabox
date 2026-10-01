@@ -34,8 +34,8 @@ import native_build  # noqa: E402
 import scratch  # noqa: E402
 import toolchain  # noqa: E402
 from launcher_plan import compile_plan, windows_part  # noqa: E402
-import menu_shots  # noqa: E402
-from menu_shots import QUIET_ENV, SOUND_ENV, TEST_USER_DATA_ENV  # noqa: E402
+import exported_game  # noqa: E402
+from exported_game import QUIET_ENV, SOUND_ENV, TEST_USER_DATA_ENV  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 LAUNCHER = ROOT / "desktop/src-tauri/launcher"
@@ -448,7 +448,7 @@ def run_forget_places() -> list[str]:
     if sys.platform != "win32":
         return []
     failures = []
-    marker = menu_shots.launch_declaration("RIB_FORGET_MARKER")
+    marker = exported_game.launch_declaration("RIB_FORGET_MARKER")
     with scratch.scratch("rominabox-forget-places-") as made:
         root = Path(made)
         binary, resources = compile_plan(root)
@@ -513,7 +513,7 @@ def run_menu_sounds() -> list[str]:
         shutil.copytree(size_bundles.resources(app), resources, dirs_exist_ok=True)
         # The Windows game unpacked its files here, so we forget the game afterwards.
         if app.is_file():
-            menu_shots.forget_windows_game(app, size_bundles.namespace(name))
+            exported_game.forget(app, size_bundles.namespace(name))
         size_bundles.remove_owned(app.parent)
         # The export's data folder is below the per-user folder, which we set
         # here for this run. A game in its sandbox could not write here, so we
@@ -523,7 +523,7 @@ def run_menu_sounds() -> list[str]:
         exported = plan.read_text(encoding="utf-8")
         write(plan, "".join(line for line in exported.splitlines(keepends=True)
                             if not line.startswith("sandbox\t")))
-        data = Path(menu_shots.DATA_DIR.search(exported).group(1).replace("$user_data", str(root)))
+        data = exported_game.launch.data_dir(exported, root)
         home = root / "home"
         home.mkdir()
         launch(binary, home, root)

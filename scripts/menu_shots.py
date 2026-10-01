@@ -35,7 +35,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import shutil
 import stat
 import subprocess
@@ -46,6 +45,7 @@ from pathlib import Path
 from typing import Iterator
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import exported_game  # noqa: E402
 import native_build  # noqa: E402
 from core_source import host_target  # noqa: E402
 from directory_links import redirected  # noqa: E402
@@ -65,21 +65,6 @@ class PlayerTimeout(SystemExit):
     def __init__(self, message: str, app: Path) -> None:
         super().__init__(message)
         self.app = app
-
-
-DATA_DIR = re.compile(r'^data_dir\t(.+)$', re.MULTILINE)
-# The switch for a quiet automated launch, and the opt-out that a person
-# testing by hand can set. We take the names from here in harnesses, and in
-# the quiet tests we check them against the launcher (test_quiet.plan_check).
-QUIET_ENV = "ROMINABOX_QUIET"
-SOUND_ENV = "ROMINABOX_SOUND"
-# The menu script that we run in the player of a test build. In the launcher
-# we also give such a run no controller (checked in the quiet tests).
-SCRIPT_ENV = "ROMINABOX_MENU_SCRIPT"
-
-
-def quiet_env() -> str:
-    return QUIET_ENV
 
 
 def declared_palettes() -> list[str]:
@@ -117,327 +102,6 @@ def declared_shots() -> dict[str, dict]:
     }
 
 
-def _macos_launcher(app: Path) -> Path:
-    """The bundle's main executable, which is the sandboxed player."""
-    identifier = subprocess.run(
-        [
-            "/usr/bin/plutil",
-            "-extract",
-            "CFBundleExecutable",
-            "raw",
-            str(app / "Contents/Info.plist"),
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
-    executable = app / "Contents/MacOS" / identifier
-    if executable.is_file() and os.access(executable, os.X_OK):
-        return executable
-    raise SystemExit(f"no launcher inside {app}")
-
-
-def _windows_launcher(app: Path) -> Path:
-    """The game's own program, the one program at the top of its folder:
-    named for the game, in a folder named for the game or, unpacked, for its
-    identity."""
-    programs = sorted(app.glob("*.exe"))
-    if len(programs) == 1:
-        return programs[0]
-    raise SystemExit(f"no launcher inside {app}")
-
-
-def _macos_running(app: Path) -> str:
-    """Processes whose command line contains the app, one "pid command" per line."""
-    found = subprocess.run(["pgrep", "-fl", str(app)], capture_output=True, text=True, timeout=15)
-    return "\n".join(line for line in found.stdout.splitlines() if "pgrep" not in line)
-
-
-def _windows_running(app: Path) -> str:
-    """Processes whose program lies inside the game's folder, one "pid program"
-    per line."""
-    import ctypes
-    from ctypes import wintypes
-
-    psapi = ctypes.WinDLL("psapi")
-    kernel32 = ctypes.WinDLL("kernel32")
-    kernel32.OpenProcess.restype = wintypes.HANDLE
-    kernel32.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR,
-                                                    ctypes.POINTER(wintypes.DWORD)]
-    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
-    ids = (wintypes.DWORD * 4096)()
-    written = wintypes.DWORD()
-    if not psapi.EnumProcesses(ids, ctypes.sizeof(ids), ctypes.byref(written)):
-        raise SystemExit("could not list the running processes")
-    folder = app.resolve()
-    found = []
-    for pid in ids[: written.value // ctypes.sizeof(wintypes.DWORD)]:
-        process = kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
-        if not process:
-            continue
-        image = ctypes.create_unicode_buffer(32768)
-        size = wintypes.DWORD(len(image))
-        if kernel32.QueryFullProcessImageNameW(process, 0, image, ctypes.byref(size)):
-            if Path(image.value).resolve().is_relative_to(folder):
-                found.append(f"{pid} {image.value}")
-        kernel32.CloseHandle(process)
-    return "\n".join(found)
-
-
-def _macos_sandboxed(app: Path) -> bool:
-    signed = subprocess.run(
-        ["/usr/bin/codesign", "-d", "--entitlements", "-", str(app)],
-        capture_output=True,
-        text=True,
-    )
-    return "com.apple.security.app-sandbox" in signed.stdout + signed.stderr
-
-
-IDENTITY = re.compile(r'^identity\t(.+)$', re.MULTILINE)
-SANDBOX = re.compile(r'^sandbox\t1$', re.MULTILINE)
-
-
-def _windows_sandboxed(app: Path) -> bool:
-    """In a Windows game's launcher we set up the game's sandbox when the plan
-    has that option set, as it has in every export."""
-    return bool(SANDBOX.search(plan_text(app)))
-
-
-def _macos_prepare_storage(app: Path) -> None:
-    """Nothing. In the macOS tests we photograph a game's first launch with its
-    shot folder made beforehand, and the picture arrives."""
-
-
-def _windows_prepare_storage(app: Path) -> None:
-    """Register the game's sandbox with a plan-only launch before we write
-    anything into its storage. Registering a sandbox over an existing folder
-    empties that folder, including any shot folder we made there, so no
-    picture would arrive from a game's first shot."""
-    if not _windows_sandboxed(app):
-        return
-    subprocess.run(
-        [str(launcher_of(app))],
-        env=dict(os.environ, ROMINABOX_PLAN_ONLY="1", **{quiet_env(): "1"}),
-        stdin=subprocess.DEVNULL,
-        capture_output=True,
-        check=True,
-        timeout=60,
-    )
-
-
-def _windows_sandbox_folder(app: Path) -> Path:
-    """The sandbox folder of a Windows game, named as we name the sandbox in
-    the launcher: the application id prefix declared for the launcher and
-    the player in vendor/retroarch/rominabox_launch.h, and the game's identity.
-    Inside, the game's per-user folder is its AC folder."""
-    header = (ROOT / "vendor/retroarch/rominabox_launch.h").read_text(encoding="utf-8")
-    prefix = re.search(r'#define RIB_GAME_APP_ID_PREFIX "([^"]+)"', header)
-    identity = IDENTITY.search(plan_text(app))
-    if not prefix or not identity:
-        raise SystemExit(f"cannot name the sandbox of {app}")
-    return Path(os.environ["LOCALAPPDATA"]) / "Packages" / f"{prefix.group(1)}{identity.group(1)}"
-
-
-def home_for(app: Path) -> str:
-    """The HOME of the exported game.
-
-    In App Sandbox, HOME is inside the container. The plan's $user_data is
-    Application Support in that HOME, as we resolve it in the launcher.
-    """
-    if not sandboxed(app):
-        return str(Path.home())
-    identifier = subprocess.run(
-        [
-            "/usr/bin/plutil",
-            "-extract",
-            "CFBundleIdentifier",
-            "raw",
-            str(app / "Contents/Info.plist"),
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
-    return str(Path.home() / "Library/Containers" / identifier / "Data")
-
-
-# What differs with the platform of the game: its launcher, the folder for
-# its files, the per-user folder that $user_data stands for in the plan,
-# whether it is sandboxed, the folder that must contain its per-game storage
-# (in a sandbox, a macOS game's container or a Windows game's Packages
-# folder, and otherwise nothing on macOS and the games folder in the per-user
-# application data on Windows), and which processes of the game are still
-# running.
-APPS = {
-    "macos": {
-        "launcher": _macos_launcher,
-        "resources": lambda app: app / "Contents/Resources",
-        "user_data": lambda app: Path(home_for(app)) / "Library/Application Support",
-        "sandboxed": _macos_sandboxed,
-        "prepare_storage": _macos_prepare_storage,
-        "storage_home": lambda app: Path(home_for(app)) if _macos_sandboxed(app) else None,
-        "running": _macos_running,
-    },
-    "windows": {
-        "launcher": _windows_launcher,
-        "resources": lambda app: app / "Resources",
-        "user_data": lambda app: (_windows_sandbox_folder(app) / "AC" if _windows_sandboxed(app)
-                                  else Path(os.environ["LOCALAPPDATA"])),
-        "sandboxed": _windows_sandboxed,
-        "prepare_storage": _windows_prepare_storage,
-        "storage_home": lambda app: (_windows_sandbox_folder(app) if _windows_sandboxed(app)
-                                     else Path(os.environ["LOCALAPPDATA"]) / "ROM-in-a-Box" / "Games"),
-        "running": _windows_running,
-    },
-}
-PLATFORM = host_target().split("-", 1)[0]
-
-
-def _app() -> dict:
-    if PLATFORM not in APPS:
-        raise SystemExit(f"no exported game is declared for {PLATFORM}")
-    return APPS[PLATFORM]
-
-
-def launcher_of(app: Path) -> Path:
-    return _app()["launcher"](app)
-
-
-def sandboxed(app: Path) -> bool:
-    return _app()["sandboxed"](app)
-
-
-# The games whose storage we have prepared in this run, once each.
-_prepared: set[Path] = set()
-
-
-def prepare_storage(app: Path) -> None:
-    """The game's storage as it is after the first launch, before we write into
-    it from a harness."""
-    if app.resolve() in _prepared:
-        return
-    _app()["prepare_storage"](app)
-    _prepared.add(app.resolve())
-
-
-def prepared_storage(app: Path) -> Path | None:
-    """The game's own storage, prepared before we write into it from a
-    harness, or None for a game without one."""
-    data = data_dir_of(app)
-    if data is not None:
-        prepare_storage(app)
-    return data
-
-
-def shot_inside(app: Path, target: Path) -> Path:
-    """The path where we tell the game to write the picture for `target`.
-
-    A sandboxed game has write access only inside its own storage, not in
-    this repository. So the picture goes into the game's storage, and we
-    move it out with `carry_shot`. With a path in the tree, every shot would
-    end in "failed to open file for writing", because of the sandbox.
-    """
-    data = prepared_storage(app)
-    if data is None or not sandboxed(app):
-        return target
-    inside = data / "shots" / target.name
-    inside.parent.mkdir(parents=True, exist_ok=True)
-    inside.unlink(missing_ok=True)
-    return inside
-
-
-def carry_shot(inside: Path, target: Path) -> None:
-    """Move the picture from the game's own storage to `target`."""
-    if inside != target and inside.exists():
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(inside), str(target))
-
-
-def running_from(app: Path) -> str:
-    """The game's processes still running, one per line, or empty when none is."""
-    return _app()["running"](app)
-
-
-def storage_home(app: Path) -> Path | None:
-    """The folder a game's own storage must lie inside, or None when the
-    game's storage is not contained."""
-    return _app()["storage_home"](app)
-
-
-def resources_of(app: Path) -> Path:
-    """The folder of an exported game's own files."""
-    return _app()["resources"](app)
-
-
-def plan_text(app: Path) -> str:
-    path = resources_of(app) / "launch.plan"
-    if path.is_file():
-        return path.read_text(encoding="utf-8")
-    return ""
-
-
-def data_dir_of(app: Path) -> Path | None:
-    """The per-game storage, as we compute it in the launcher."""
-    found = DATA_DIR.search(plan_text(app))
-    if not found:
-        return None
-    return Path(found.group(1).replace("$user_data", str(_app()["user_data"](app))))
-
-
-def launch_declaration(name: str) -> str:
-    """A name the launcher and the player share, from rominabox_launch.h."""
-    header = (ROOT / "vendor/retroarch/rominabox_launch.h").read_text(encoding="utf-8")
-    found = re.search(rf'#define {name} "([^"]+)"', header)
-    if not found:
-        raise SystemExit(f"rominabox_launch.h declares no {name}")
-    return found.group(1)
-
-
-# The variable with a test's own per-user data folder, which we read in the
-# launcher in place of the person's. A plan's $user_data is below it.
-TEST_USER_DATA_ENV = launch_declaration("RIB_ENV_TEST_USER_DATA")
-
-
-def forget_windows_game(program: Path, namespace: str) -> None:
-    """Remove everything on this computer from the Windows game `program` with
-    the game's own UNINSTALL. We write the same marker as its menu into its
-    data folder and launch it, and before a core is loaded we remove in the
-    launcher the game's sandbox, its data and every unpacked copy
-    (forget_if_asked, launcher/windows/main.c). We also remove the
-    QUICK SIGN IN folder of a game exported under `namespace`, but keep the
-    shared one and the one for a worktree."""
-    environment = dict(os.environ, **{QUIET_ENV: "1"})
-    folder = windows_pack.unpacked(program, environment)
-    data = data_dir_of(folder)
-    accounts = re.search(r"^accounts_dir\t(.+)$", plan_text(folder), re.MULTILINE)
-    if data is not None:
-        data.mkdir(parents=True, exist_ok=True)
-        (data / launch_declaration("RIB_FORGET_MARKER")).write_bytes(b"")
-        subprocess.run(
-            [str(program)],
-            env=dict(environment, ROMINABOX_PLAN_ONLY="1"),
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            check=True,
-            timeout=600,
-            **windowless(),
-        )
-    if accounts and namespace and accounts.group(1).endswith(f"-{namespace}") \
-            and accounts.group(1) != os.environ.get("ROMINABOX_ACCOUNTS_FOLDER"):
-        local = Path(os.environ["LOCALAPPDATA"])
-        made = local / accounts.group(1)
-        if made.parent == local and made.is_dir() and not made.is_symlink():
-            shutil.rmtree(made)
-
-
-def log_of(app: Path) -> Path | None:
-    """The file to which we send the player's output in the launcher."""
-    data = data_dir_of(app)
-    if data is None:
-        return None
-    return data / "logs/launch.log"
-
-
 def take(app: Path, name: str, script: list[str], output: Path,
          config: dict | None = None, *, reset_settings: bool = True) -> str:
     """Run the game to a state and screenshot it. Empty string on success."""
@@ -448,12 +112,12 @@ def take(app: Path, name: str, script: list[str], output: Path,
     target.unlink(missing_ok=True)
     # What we delete for a shot is in the game's storage, and through a link
     # it would be the files of someone else.
-    data = prepared_storage(app)
+    data = exported_game.prepared_storage(app)
     if data is not None:
         for folder in (data, data / "logs", data / "remaps"):
             if redirected(folder):
                 return f"refusing a link in the game's storage: {folder}"
-    log = log_of(app)
+    log = exported_game.log_of(app)
     if log and log.exists():
         log.unlink()
 
@@ -491,24 +155,24 @@ def take(app: Path, name: str, script: list[str], output: Path,
             newline="\n",
         )
 
-    inside = shot_inside(app, target)
+    inside = exported_game.shot_inside(app, target)
 
     with (
         tempfile.TemporaryFile(mode="w+t") as stdout_capture,
         tempfile.TemporaryFile(mode="w+t") as stderr_capture,
     ):
         player = subprocess.Popen(
-            [str(launcher_of(app))],
+            [str(exported_game.launcher_of(app))],
             stdout=stdout_capture,
             stderr=stderr_capture,
             text=True,
             env=dict(
                 os.environ,
-                **{SCRIPT_ENV: ",".join(script)},
+                **{exported_game.SCRIPT_ENV: ",".join(script)},
                 ROMINABOX_MENU_SHOT=str(inside),
                 # No sound, and a transparent window. Without this, we would open
                 # CoreAudio during a shot and leave a window on the display.
-                **{quiet_env(): "1"},
+                **{exported_game.quiet_env(): "1"},
             ),
         )
         try:
@@ -526,7 +190,7 @@ def take(app: Path, name: str, script: list[str], output: Path,
             ) from None
         stderr_capture.seek(0)
         stderr = stderr_capture.read()
-    carry_shot(inside, target)
+    exported_game.carry_shot(inside, target)
     written = log.read_text(encoding="utf-8", errors="replace") if log and log.exists() else stderr
     # Copy the evidence next to its picture before we overwrite it next launch.
     (output / f"{name}.log").write_text(written, encoding="utf-8", newline="\n")
@@ -548,8 +212,6 @@ KIT = ROOT / "desktop/src-tauri/resources/runtime"
 # out of date or from another checkout. See scripts/built.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from built import cli as _cli  # noqa: E402
-import windows_pack  # noqa: E402
-from programs import windowless  # noqa: E402
 import player_build  # noqa: E402
 from core_source import core_source  # noqa: E402
 
@@ -583,49 +245,6 @@ def shot_bundle_prefix(_workspace: Path) -> str:
     if published:
         return published
     return SHOT_BUNDLE_PREFIX
-
-
-def capture_export_entitlements(app: Path, destination: Path) -> None:
-    """Save the sandbox we signed on export before replacing the player binary.
-
-    Replacing Contents/MacOS/retroarch discards that signature, and after
-    that there is nothing left to read and put back.
-    """
-    dumped = subprocess.run(
-        ["/usr/bin/codesign", "-d", "--entitlements", str(destination), "--xml", str(app)],
-        capture_output=True,
-    )
-    text = destination.read_text(encoding="utf-8") if destination.is_file() else ""
-    if dumped.returncode != 0 or "com.apple.security.app-sandbox" not in text:
-        detail = dumped.stderr.decode(errors="replace")[-400:]
-        raise SystemExit(
-            "the export is not sandboxed, so a shot would not be either\n" + detail
-        )
-
-
-def resign_replaced_player(app: Path, entitlements: Path) -> None:
-    """Sign the replacement with the entitlements we wrote on export.
-
-    Signing the new binary with a bare `codesign --sign -` drops the sandbox,
-    and `--preserve-metadata=entitlements` on the bundle does not restore it.
-    The game's storage would then be under
-    ~/Library/Application Support/ROM-in-a-Box instead of in a container.
-    """
-    if not entitlements.is_file():
-        raise SystemExit(f"no entitlements to re-sign with at {entitlements}")
-    library = app / "Contents/MacOS/librominabox-launch.dylib"
-    retroarch = launcher_of(app)
-    if library.is_file():
-        subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(library)], check=True)
-    subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(retroarch)], check=True)
-    subprocess.run(
-        [
-            "/usr/bin/codesign", "--force", "--sign", "-",
-            "--entitlements", str(entitlements),
-            str(app),
-        ],
-        check=True,
-    )
 
 
 def built_player() -> Path:
@@ -738,7 +357,7 @@ def _build_a_game(
         # visual baselines do not include the account menu entries.
         "includeAchievements": False,
         "outputDir": str(out),
-        "target": PLATFORM,
+        "target": exported_game.PLATFORM,
         "runtimeKit": str(kit),
         # The kit contains no cores. In an export we take the core from the local
         # core cache, as we do from the cache of the builder.
@@ -759,9 +378,8 @@ def _build_a_game(
     # A Windows game is one program, and in a harness we work on the folder
     # of its unpacked files.
     program = None
-    if app is not None and app.is_file() and PLATFORM == "windows":
-        program = app
-        app = windows_pack.unpacked(app, dict(os.environ, **{quiet_env(): "1"}))
+    if app is not None:
+        app, program = exported_game.unpacked(app)
     if app is None or not app.is_dir():
         raise SystemExit(f"the export wrote no app into {out}")
     return app, program
@@ -818,7 +436,7 @@ def build_a_game(
         # When the block ends, we remove everything a Windows game made on the
         # computer, the same as choosing UNINSTALL in the player.
         if not keep and program is not None:
-            forget_windows_game(program, shot_bundle_prefix(workspace) + namespace)
+            exported_game.forget(program, shot_bundle_prefix(workspace) + namespace)
         if not keep:
             current = run_dir.lstat()
             if (

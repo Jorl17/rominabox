@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import menu_shots  # noqa: E402
+import exported_game  # noqa: E402
 import retroarch_probe  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -39,9 +39,9 @@ CHECKS = {"windows": windows, "macos": macos}
 
 
 def main() -> int:
-    if menu_shots.PLATFORM not in CHECKS:
-        raise SystemExit(f"no DXGI presentation check is declared for {menu_shots.PLATFORM}")
-    return CHECKS[menu_shots.PLATFORM]()
+    if exported_game.PLATFORM not in CHECKS:
+        raise SystemExit(f"no DXGI presentation check is declared for {exported_game.PLATFORM}")
+    return CHECKS[exported_game.PLATFORM]()
 
 
 if __name__ == "__main__":
