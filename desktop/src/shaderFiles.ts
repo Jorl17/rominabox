@@ -13,10 +13,6 @@ export function isShaderFile(filePath: string): boolean {
   return extension.test(baseName(filePath));
 }
 
-export function shaderFileName(filePath: string): string {
-  return baseName(filePath).replace(extension, "") || "Shader";
-}
-
 /** The names a shader file may end in, as an author reads them. */
 export const SHADER_FORMATS = SHADER_EXTENSIONS.map((name) => `.${name}`);
 

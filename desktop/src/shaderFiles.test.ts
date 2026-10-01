@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SHADER_ACCEPT, isShaderFile, shaderFileName } from "./shaderFiles";
+import { SHADER_ACCEPT, isShaderFile } from "./shaderFiles";
 
 describe("the shader files an author can add", () => {
   it("takes GLSL and slang, as a pass or a preset", () => {
@@ -25,13 +25,5 @@ describe("the shader files an author can add", () => {
     ]) {
       expect(isShaderFile(name)).toBe(false);
     }
-  });
-
-  it("names a shader after its file", () => {
-    expect(shaderFileName("/shaders/pal/pal-r57shell.slangp")).toBe(
-      "pal-r57shell",
-    );
-    expect(shaderFileName("C:\\shaders\\crt.glsl")).toBe("crt");
-    expect(shaderFileName(".slang")).toBe("Shader");
   });
 });

@@ -142,6 +142,13 @@ export function inspectGame(
 ): Promise<GameInfo> {
   return invoke("inspect_game", { path, online, systemOverride });
 }
+// The name of an added shader file, from the engine, as for one without a
+// name in a command-line request. The browser walkthrough has no engine, so
+// there we show the name of the file.
+export function customShaderName(path: string): Promise<string> {
+  if (!native) return Promise.resolve(path.split(/[\/]/).pop() || path);
+  return invoke("custom_shader_name", { path });
+}
 export type ShaderWarning = { path: string; sentence: string };
 // The browser walkthrough has no desktop shell, so we show none.
 export function shaderWarnings(selection: {

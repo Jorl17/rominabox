@@ -137,11 +137,41 @@ pub struct ShaderSelection {
     pub initial: Option<String>,
 }
 
+/// A shader file the author added.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomShader {
-    pub name: String,
+    /// The name we show in the game's list. When it is missing or blank, we
+    /// use the name of the file ([`named_after_file`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
     pub path: PathBuf,
+}
+
+impl CustomShader {
+    /// The name we show in the game's list.
+    pub fn name(&self) -> String {
+        match self.name.as_deref().map(str::trim) {
+            Some(name) if !name.is_empty() => name.to_string(),
+            _ => named_after_file(&self.path),
+        }
+    }
+}
+
+/// The name of a shader file the author added without naming it, the same in
+/// the builder and on the command line. It is the file name without a shader
+/// extension (`crt.glsl` is "crt"), or "Shader" when that leaves nothing.
+pub fn named_after_file(path: &Path) -> String {
+    let shader = path.extension().and_then(|extension| extension.to_str()).is_some_and(|extension| {
+        Language::ALL.iter().any(|language| {
+            extension.eq_ignore_ascii_case(language.pass_extension())
+                || extension.eq_ignore_ascii_case(language.preset_extension())
+        })
+    });
+    let name = if shader { path.file_stem() } else { path.file_name() };
+    name.map(|name| name.to_string_lossy().trim().to_string())
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| "Shader".to_string())
 }
 
 impl ShaderSelection {
@@ -462,10 +492,7 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
     // Read the author's shaders first. Catalog presets follow their language.
     let mut authors = Vec::new();
     for custom in &selection.custom {
-        let name = custom.name.trim();
-        if name.is_empty() {
-            return Err("a custom shader needs a name".into());
-        }
+        let name = custom.name();
         if !custom.path.is_file() {
             return Err(format!(
                 "shader file does not exist: {}",
@@ -490,9 +517,9 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
     }
     // We take the language of the author's shader, or slang when a preset
     // exists only in slang, or else GLSL.
-    let named = authors.iter().map(|(name, _, author)| (*name, author.language));
+    let named = authors.iter().map(|(name, _, author)| (name.as_str(), author.language));
     let decided = match crate::shader_format::one_language(named)? {
-        Some(language) => Some((authors[0].0, language)),
+        Some(language) => Some((authors[0].0.as_str(), language)),
         None => chosen.iter().find_map(|preset| match &preset.made {
             Made::Files(files) if files.glsl.is_none() => {
                 Some((preset.name.as_str(), Language::Slang))
@@ -563,7 +590,7 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
             .map(|item| item.id.clone())
             .chain(LIBRARY_FOLDERS.map(String::from))
             .collect();
-        let id = unique_id(&slug(name)?, &taken);
+        let id = unique_id(&slug(&name)?, &taken);
         // We keep the author's file at its place among the files it lists.
         let layout = author.layout;
         let at = |name: String| match layout.folder.as_str() {
@@ -602,7 +629,7 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
             relative_preset: format!("shaders/{id}/{preset_file}"),
             library: None,
             id,
-            name: name.to_string(),
+            name,
             // We show a shader that the author added by its name alone.
             detail: String::new(),
             files,
@@ -802,10 +829,11 @@ pub fn pack_selection(
     let mut stored = selection.clone();
     let mut files = Vec::new();
     for custom in &mut stored.custom {
+        let name = custom.name();
         let item = resolved
             .iter()
-            .find(|item| item.name == custom.name.trim())
-            .ok_or_else(|| format!("could not pack shader '{}'", custom.name))?;
+            .find(|item| item.name == name)
+            .ok_or_else(|| format!("could not pack shader '{name}'"))?;
         for (source, name) in &item.files {
             let archive_name = format!("shaders/{}/{name}", item.id);
             if files.iter().any(|(existing, _)| existing == &archive_name) {
@@ -818,7 +846,10 @@ pub fn pack_selection(
         let (_, author) = item
             .files
             .first()
-            .ok_or_else(|| format!("could not pack shader '{}'", custom.name))?;
+            .ok_or_else(|| format!("could not pack shader '{name}'"))?;
+        // We name the packed file after its id in the game, so we keep the
+        // name as given and do not read it from the file again.
+        custom.name = Some(name);
         custom.path = PathBuf::from(format!("shaders/{}/{author}", item.id));
     }
     Ok((stored, files))

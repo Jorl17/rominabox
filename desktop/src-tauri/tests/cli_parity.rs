@@ -2,8 +2,8 @@
 //! command line for where we put games and downloads, the hotkeys check, the
 //! controller variants in the Controls step, a lookup in the builder's cache,
 //! the preview in the Menu step, the refusal of a project with a palette this
-//! build lacks, and the warnings on an author's filter that a Windows game may
-//! not load.
+//! build lacks, the warnings on an author's filter that a Windows game may not
+//! load, and the name of a filter nobody named.
 
 use rominabox_desktop::builder::{self, defaults, Places};
 use rominabox_desktop::game::Game;
@@ -289,4 +289,6 @@ fn a_custom_shader_without_a_name_is_named_after_its_file() {
         .collect();
     assert!(names.contains(&"CRT Royale"), "{listed}");
     assert!(names.contains(&"pal-r57shell"), "{listed}");
+    // We call the same function in the builder when the author adds a file.
+    assert_eq!(rominabox_desktop::shaders::named_after_file(&root.join("pal-r57shell.GLSL")), "pal-r57shell");
 }

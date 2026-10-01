@@ -269,6 +269,13 @@ fn shader_warnings(
     rominabox_desktop::shaders::windows_warnings(&selection)
 }
 
+/// The name of a shader file that the author adds, as in `shaders-check` and
+/// in an export, for one without a name in the request.
+#[tauri::command]
+fn custom_shader_name(path: PathBuf) -> String {
+    rominabox_desktop::shaders::named_after_file(&path)
+}
+
 #[tauri::command]
 fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let kit = resource(&app, "runtime")?;
@@ -431,6 +438,7 @@ fn main() {
             open_project,
             traveling_files,
             shader_warnings,
+            custom_shader_name,
             capture_pad_position,
             cancel_pad_capture
         ])
