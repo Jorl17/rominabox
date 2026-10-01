@@ -1,10 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use rominabox_desktop::export_error::{AuthorError, ErrorStage};
-use rominabox_desktop::target::Target;
 use rominabox_desktop::{
-    builder, controls, cores, hotkeys, icons, menu, metadata, packaging, pads, projects, systems,
-    traveling,
+    builder, controls, hotkeys, icons, menu, metadata, packaging, pads, projects, systems, traveling,
 };
 use serde_json::json;
 use std::{
@@ -179,10 +177,7 @@ async fn run_export(
     let bundled = resource(&app, "runtime").map_err(shell)?;
     let places = places(&app);
     request.core = None;
-    request.core_cache = request
-        .game.target
-        .target()
-        .and_then(|target| places.core_cache(target).ok());
+    request.core_cache = places.core_cache(request.game.target.target()).ok();
     let cancelled = Arc::new(AtomicBool::new(false));
     {
         let mut active = state.0.lock().map_err(|e| shell(e.to_string()))?;
@@ -239,17 +234,6 @@ fn places(app: &tauri::AppHandle) -> builder::Places {
     builder::Places::of(app.config().identifier.clone())
 }
 
-#[tauri::command]
-async fn ensure_cores(app: tauri::AppHandle) -> Result<Vec<cores::CoreInstall>, String> {
-    let target = Target::host().ok_or("this machine is not one the builder builds for")?;
-    let cache = places(&app).core_cache(target)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        cores::install_target(&cache, target, &cores::UreqTransport)
-    })
-    .await
-    .map_err(|error| error.to_string())
-}
-
 /// The platform for exports from this builder, which is the one it runs on.
 #[tauri::command]
 fn export_target() -> Option<packaging::ExportTarget> {
@@ -269,17 +253,11 @@ fn shader_warnings(
     rominabox_desktop::shaders::windows_warnings(&selection)
 }
 
+/// The name of a shader file that the author adds, as in `shaders-check` and
+/// in an export, for one without a name in the request.
 #[tauri::command]
-fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
-    let kit = resource(&app, "runtime")?;
-    let cache = Target::host().and_then(|target| places(&app).core_cache(target).ok());
-    Ok(
-        packaging::system_availability_in(&kit, cache.as_deref(), Target::host())
-            .into_iter()
-            .filter(|entry| entry.unavailable.is_none())
-            .map(|entry| entry.id)
-            .collect(),
-    )
+fn custom_shader_name(path: PathBuf) -> String {
+    rominabox_desktop::shaders::named_after_file(&path)
 }
 
 /// Wait for a press on a controller and return its pad position.
@@ -420,8 +398,6 @@ fn main() {
             image_preview,
             menu_preview,
             default_destination,
-            available_systems,
-            ensure_cores,
             export_target,
             assess_firmware,
             check_hotkeys,
@@ -431,6 +407,7 @@ fn main() {
             open_project,
             traveling_files,
             shader_warnings,
+            custom_shader_name,
             capture_pad_position,
             cancel_pad_capture
         ])

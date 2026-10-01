@@ -13,6 +13,7 @@ import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from built import cli as built_cli  # noqa: E402
 from core_source import DOWNLOADS, host_target, seeded_cache  # noqa: E402
 import joypad_autoconfig  # noqa: E402
 import licences  # noqa: E402
@@ -66,19 +67,17 @@ def partitioned_components(target: str) -> tuple[dict, dict]:
             "license": entry["license"]["spdx"],
             "corresponds_to_artifact": provenance["correspondsToArtifact"],
             "build": provenance.get("build") or {},
-            "downloads": provenance.get("downloads") or {},
         }
         # A recipe named osx compiles for this machine. With it, we would give
         # a Windows or Linux target the host executable under that platform's
-        # file name, so for those targets we use the pinned nightly.
+        # file name. For those targets we use the nightly in the download
+        # list, which is not built from the recipe's source.
         if provenance["origin"] == "built" and recipe_covers(record, target):
             built[cid] = record
-        elif record["downloads"].get(target):
-            if provenance["origin"] == "built":
-                record["corresponds_to_artifact"] = False
-            prebuilt[cid] = record
-        elif provenance["origin"] != "built":
-            prebuilt[cid] = record
+            continue
+        if provenance["origin"] == "built":
+            record["corresponds_to_artifact"] = False
+        prebuilt[cid] = record
     return built, prebuilt
 
 
@@ -143,8 +142,17 @@ def digest(path: Path) -> str:
     return value.hexdigest()
 
 
-def copy_license_from_source(archive: Path, candidates: tuple[str, ...], destination: Path) -> str:
-    """Extract a declared license from a pinned GitHub source snapshot."""
+def licence_warning(problem: str) -> None:
+    """Warn that a licence text is missing or changed, with the file name.
+    We continue preparing, because a licence is attribution and never a
+    reason to leave out the component it belongs to."""
+    print(licences.warning([problem]), file=sys.stderr, flush=True)
+
+
+def copy_license_from_source(archive: Path, candidates: tuple[str, ...], destination: Path) -> str | None:
+    """Extract a declared license from a pinned GitHub source snapshot.
+    Return the archive member it came from, or warn and return None when the
+    archive contains none of `candidates`."""
     with tarfile.open(archive) as package:
         files = [member for member in package.getmembers() if member.isfile()]
         for candidate in candidates:
@@ -157,18 +165,15 @@ def copy_license_from_source(archive: Path, candidates: tuple[str, ...], destina
                 continue
             destination.write_bytes(source.read())
             return member.name
-    raise RuntimeError(f"No declared license {candidates!r} in {archive}")
+    licence_warning(f"{destination.name}: none of {', '.join(candidates)} is in {archive.name}")
+    return None
 
 
-def prepare_prebuilt_core(
-    root: Path, component: str, spec: dict[str, object], target: str, downloads: Path | None = None
-) -> dict[str, object]:
-    """Stage one official buildbot core for a target, without executing it.
-
-    `downloads` is the folder where we keep the downloaded archives, and
-    `root/sources` when none is given.
-    """
-    downloads = downloads or root / "sources"
+def prepare_prebuilt_core(root: Path, component: str, spec: dict[str, object], target: str) -> dict[str, object]:
+    """Stage one official buildbot core for a macOS target into the prototype
+    kit without executing it, and keep the archives it came from in
+    `root/sources`."""
+    downloads = root / "sources"
     binary_name = str(spec["binary"])
     binary_archive = downloads / f"buildbot-{binary_name}.zip"
     binary_url = f"{buildbot_base(target)}/{binary_name}.zip"
@@ -181,43 +186,19 @@ def prepare_prebuilt_core(
         with package.open(binary_name) as source, binary.open("wb") as output:
             shutil.copyfileobj(source, output)
 
-    downloads = spec.get("downloads") or {}
-    pinned = downloads.get(target) or {}
-    # libretro replaces the file at `latest` in place. The hash recorded on the
-    # component identifies one nightly, and a file with another hash is a different core.
-    expected_archive = pinned.get("archiveSha256")
-    if expected_archive and digest(binary_archive) != expected_archive:
+    # We make the prototype kit on a Mac, where we read with lipo which
+    # processors the nightly is for. We do not compare it with a recorded
+    # hash, because libretro replaces `latest` in place.
+    architecture = subprocess.run(
+        ["/usr/bin/lipo", "-archs", str(binary)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split()
+    expected = target.rsplit("-", 1)[1]
+    if expected not in architecture:
         raise RuntimeError(
-            f"{component} archive for {target} is not the recorded nightly"
-        )
-    expected_binary = pinned.get("binarySha256")
-    if expected_binary and digest(binary) != expected_binary:
-        raise RuntimeError(
-            f"{component} binary for {target} is not the recorded nightly"
-        )
-
-    # lipo exists only on macOS. We accept a core for another target when its
-    # hash matches the recorded one, because then the bytes are the ones whose
-    # architecture we read when we recorded the hash. Without a recorded hash
-    # we have nothing to trust, and we do not stage the core.
-    if target.startswith("macos"):
-        architecture = subprocess.run(
-            ["/usr/bin/lipo", "-archs", str(binary)],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.split()
-        expected = target.rsplit("-", 1)[1]
-        if expected not in architecture:
-            raise RuntimeError(
-                f"Buildbot core for {target} is not {expected}: {binary}: {architecture}"
-            )
-    elif expected_binary:
-        architecture = [target.rsplit("-", 1)[1]]
-    else:
-        raise SystemExit(
-            f"Preparing {target} needs a recorded hash for that platform; "
-            "refusing to stage a core whose bytes were never verified."
+            f"Buildbot core for {target} is not {expected}: {binary}: {architecture}"
         )
 
     repo = str(spec["repo"])
@@ -282,7 +263,10 @@ def build_core(root: Path, name: str, spec: dict, downloads: Path) -> dict[str, 
     binary = root / "cores" / f"{name}_libretro.dylib"
     shutil.copy2(source / binary.name, binary)
     subprocess.run(["codesign", "--force", "--sign", "-", str(binary)], check=True)
-    shutil.copy2(source / license_file, root / "licenses" / f"{name}.txt")
+    if (source / license_file).is_file():
+        shutil.copy2(source / license_file, root / "licenses" / f"{name}.txt")
+    else:
+        licence_warning(f"{name}.txt: {license_file} is not in {archive.name}")
     if (root / "info").is_dir():
         (root / "info" / f"{name}_libretro.info").write_text(
             f'display_name = "{name}"\nsavestate = "true"\nsavestate_features = "serialized"\n'
@@ -300,6 +284,38 @@ def build_core(root: Path, name: str, spec: dict, downloads: Path) -> dict[str, 
             "license": "GPL-2.0-or-later" if name == "gambatte" else "Genesis Plus GX non-commercial",
         }
     )
+
+
+def seed_core_cache(target: str) -> Path:
+    """Fill the developer core cache for `target` as an export fills its own.
+
+    Compile the cores whose recipe compiles on this machine. Download each
+    other core as the builder does (`rominabox-cli cores`), taking the newest
+    nightly in the download list whatever its bytes, with its licence text
+    when we can fetch it. Also write `fetched.json`, so that during an export
+    we can tell when a nightly changed.
+    """
+    root = seeded_cache(target)
+    for name in ("cores", "licenses"):
+        (root / name).mkdir(parents=True, exist_ok=True)
+    built_cores, _ = partitioned_components(target)
+    for name, spec in built_cores.items():
+        build_core(root, name, spec, DOWNLOADS)
+    request = json.dumps({"cache": str(root), "target": target})
+    print(f"Downloading {target}'s cores into {root}", flush=True)
+    ran = subprocess.run([str(built_cli()), "cores"], input=request, capture_output=True, text=True)
+    events = [json.loads(line) for line in ran.stdout.splitlines() if line.startswith("{")]
+    installs = next((event["result"] for event in events if event.get("type") == "result"), None)
+    if ran.returncode != 0 or installs is None:
+        raise SystemExit(f"rominabox-cli cores failed:\n{(ran.stdout + ran.stderr)[-800:]}")
+    usable = ("present", "installed")
+    for install in installs:
+        if install["core"] in usable and install["license"] not in usable:
+            licence_warning(f"{install['component']}: its licence text could not be downloaded")
+    absent = [f"{install['component']} ({install['core']})" for install in installs if install["core"] not in usable]
+    if absent:
+        raise SystemExit(f"{len(absent)} core(s) could not be downloaded into {root}: {', '.join(absent)}")
+    return root
 
 
 # Pinned joypad profiles. In RetroArch, profiles come only from
@@ -512,8 +528,9 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
     Keep the downloaded archive in work/downloads. For export, stage only
     `<driver>/*.cfg` for each of `drivers`, without the meta/hotkey
     assignment lines. Beside the other component licences, store the
-    repository's licence entry for the profiles (licenses/data), which must
-    contain this archive's `COPYING`.
+    repository's licence entry for the profiles (licenses/data). When the
+    archive has no `COPYING`, or one that differs from that entry, give its
+    name in a warning and stage its profiles anyway.
     """
     if not drivers:
         raise RuntimeError("no joypad drivers to stage profiles for")
@@ -523,36 +540,32 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
     source_url = f"https://codeload.github.com/{JOYPAD_AUTOCONFIG_REPO}/tar.gz/{revision}"
     download(source_url, archive)
     licence_member = None
+    upstream_licence = None
     profiles: list[tuple[str, str, bytes]] = []
     with tarfile.open(archive) as package:
         for member in package.getmembers():
             if not member.isfile():
                 continue
-            profile = _profile(member.name, drivers)
-            if profile is None:
-                if Path(member.name).name == "COPYING" and len(Path(member.name).parts) == 2:
-                    source = package.extractfile(member)
-                    if source is None:
-                        continue
-                    licence_member = member.name
-                    entry = licences.entry("data", JOYPAD_AUTOCONFIG_COMPONENT)
-                    if licences.clean(licences.sources.decode(source.read())) not in licences.sections(entry).values():
-                        raise RuntimeError(f"{entry} does not hold {licence_member}; run scripts/licences.py")
-                    destination = root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE
-                    destination.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(entry, destination)
-                continue
             source = package.extractfile(member)
             if source is None:
                 continue
-            profiles.append((*profile, source.read()))
-    if licence_member is None:
-        raise RuntimeError(f"No COPYING member in {archive}")
-    licence_text = (root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE).read_text(encoding="utf-8")
-    if "Copyright (c) 2019 The RetroArch team" not in licence_text:
-        raise RuntimeError("Joypad autoconfig COPYING is missing the RetroArch MIT copyright")
-    if "Permission is hereby granted" not in licence_text:
-        raise RuntimeError("Joypad autoconfig COPYING is missing the MIT grant")
+            profile = _profile(member.name, drivers)
+            if profile is not None:
+                profiles.append((*profile, source.read()))
+            elif Path(member.name).name == "COPYING" and len(Path(member.name).parts) == 2:
+                licence_member = member.name
+                upstream_licence = licences.clean(licences.sources.decode(source.read()))
+    entry = licences.entry("data", JOYPAD_AUTOCONFIG_COMPONENT)
+    if not entry.is_file():
+        licence_warning(f"{entry.name}: licenses/data has no entry for the controller profiles")
+    else:
+        if licence_member is None:
+            licence_warning(f"{entry.name}: {archive.name} has no COPYING to compare it with")
+        elif upstream_licence not in licences.sections(entry).values():
+            licence_warning(f"{entry.name}: does not hold {licence_member} of {archive.name}")
+        destination = root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(entry, destination)
     # When upstream disabled a profile by commenting out its device name or an
     # id, no pad can match it in RetroArch, so we leave it out of the kit.
     disabled = [(driver, filename) for driver, filename, raw in profiles
@@ -670,16 +683,7 @@ def main() -> None:
     # For seeding we take the target as an argument and download what we cannot
     # build here, so seeding works on any machine. The kit below is for macOS.
     if args.seed_core_cache:
-        root = seeded_cache(target)
-        for name in ("cores", "licenses"):
-            (root / name).mkdir(parents=True, exist_ok=True)
-        built_cores, prebuilt_cores = partitioned_components(target)
-        for name, spec in built_cores.items():
-            build_core(root, name, spec, DOWNLOADS)
-        for component, spec in prebuilt_cores.items():
-            print(f"Preparing {component} from the official buildbot", flush=True)
-            prepare_prebuilt_core(root, component, spec, target, DOWNLOADS)
-        print(f"Local core source ready: {root}", flush=True)
+        print(f"Local core source ready: {seed_core_cache(target)}", flush=True)
         return
     if platform.system() != "Darwin":
         parser.error("This preparation recipe currently builds the macOS prototype kit.")

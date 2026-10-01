@@ -1,18 +1,19 @@
 """A Windows game, as we use it in a harness: one self-extracting program,
-unpacked into a folder under the per-user application data, with its own
-files in Resources and its storage in the folder of its sandbox."""
+unpacked into a folder under the per-user folder, with its own files in
+Resources and its storage in the folder of its sandbox. In a harness we open
+one in a per-user folder of the process (windows_pack.own_user_data)."""
 
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import sys
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import windows_pack  # noqa: E402
-from programs import windowless  # noqa: E402
 
 from . import launch  # noqa: E402
 
@@ -43,28 +44,27 @@ def sandboxed(app: Path) -> bool:
 
 def sandbox_folder(app: Path) -> Path:
     """The sandbox folder of a Windows game, named as we name the sandbox in
-    the launcher: the application id prefix declared for the launcher and
-    the player in vendor/retroarch/rominabox_launch.h, and the game's identity.
+    the launcher (windows_pack.sandbox_folder), for the identity in its plan.
     Inside, the game's per-user folder is its AC folder."""
     identity = launch.IDENTITY.search(_plan(app))
     if not identity:
         raise SystemExit(f"cannot name the sandbox of {app}")
-    prefix = launch.launch_declaration("RIB_GAME_APP_ID_PREFIX")
-    return Path(os.environ["LOCALAPPDATA"]) / "Packages" / f"{prefix}{identity.group(1)}"
+    return windows_pack.sandbox_folder(identity.group(1))
 
 
 def user_data(app: Path) -> Path:
     """The per-user folder the plan's $user_data stands for: the sandbox's AC
-    folder, or the per-user application data of a game without one."""
-    return sandbox_folder(app) / "AC" if sandboxed(app) else Path(os.environ["LOCALAPPDATA"])
+    folder, or the per-user folder for a game without one
+    (windows_pack.per_user_folder)."""
+    return sandbox_folder(app) / "AC" if sandboxed(app) else windows_pack.per_user_folder(os.environ)
 
 
 def storage_home(app: Path) -> Path:
     """The folder the game's storage lies inside: its sandbox's folder, or
-    the games folder of the per-user application data."""
+    the games folder in its per-user folder."""
     if sandboxed(app):
         return sandbox_folder(app)
-    return Path(os.environ["LOCALAPPDATA"]) / "ROM-in-a-Box" / "Games"
+    return windows_pack.per_user_folder(os.environ) / "ROM-in-a-Box" / "Games"
 
 
 def prepare_storage(app: Path) -> None:
@@ -115,42 +115,40 @@ def running(app: Path) -> str:
     return "\n".join(found)
 
 
-def unpacked(exported: Path) -> tuple[Path, Path | None]:
-    """A Windows game is one program: the folder it is unpacked into, which we
-    use in a harness, and the program a person opens. An export that is
-    already a folder is that folder alone."""
-    if not exported.is_file():
-        return exported, None
-    return windows_pack.unpacked(exported, dict(os.environ, **{launch.QUIET_ENV: "1"})), exported
+@contextmanager
+def opened(exported: Path) -> Iterator[tuple[Path, Callable[[], None]]]:
+    """A Windows game is one program, unpacked into a per-user folder of the
+    process (windows_pack.own_user_data). Return the folder it was unpacked
+    into, while the block runs, and `keep`. When the block ends, however it
+    ends, we remove the game's sandbox and, with the per-user folder,
+    everything else from the game, unless we called `keep` for a player that
+    may still be running. An export that is already a folder is that folder
+    alone."""
+    if exported.is_dir():
+        yield exported, lambda: None
+        return
+    with windows_pack.own_user_data() as keep_folder:
+        kept = False
+
+        def keep() -> None:
+            nonlocal kept
+            kept = True
+            keep_folder()
+
+        try:
+            yield windows_pack.unpacked(exported, dict(os.environ, **{launch.QUIET_ENV: "1"})), keep
+        finally:
+            if not kept:
+                _forget(exported)
 
 
-def forget(program: Path, namespace: str) -> None:
-    """Remove everything on this computer from the Windows game `program` with
-    the game's own UNINSTALL. We write the same marker as its menu into its
-    data folder and launch it, and before a core is loaded we remove in the
-    launcher the game's sandbox, its data and every unpacked copy
-    (forget_if_asked, launcher/windows/main.c). We also remove the
-    QUICK SIGN IN folder of a game exported under `namespace`, but keep the
-    shared one and the one for a worktree."""
-    environment = dict(os.environ, **{launch.QUIET_ENV: "1"})
-    folder = windows_pack.unpacked(program, environment)
-    data = launch.data_dir(_plan(folder), user_data(folder))
-    accounts = launch.ACCOUNTS_DIR.search(_plan(folder))
-    if data is not None:
-        data.mkdir(parents=True, exist_ok=True)
-        (data / launch.launch_declaration("RIB_FORGET_MARKER")).write_bytes(b"")
-        subprocess.run(
-            [str(program)],
-            env=dict(environment, ROMINABOX_PLAN_ONLY="1"),
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            check=True,
-            timeout=600,
-            **windowless(),
-        )
-    if accounts and namespace and accounts.group(1).endswith(f"-{namespace}") \
-            and accounts.group(1) != os.environ.get("ROMINABOX_ACCOUNTS_FOLDER"):
-        local = Path(os.environ["LOCALAPPDATA"])
-        made = local / accounts.group(1)
-        if made.parent == local and made.is_dir() and not made.is_symlink():
-            shutil.rmtree(made)
+def _forget(program: Path) -> None:
+    """Remove the sandbox of the Windows game `program`, which is in the
+    person's Packages folder with the game's data. We register it in the
+    launcher once the game's copy is complete, with the identity from its
+    plan. Everything else from the game is in the per-user folder of the
+    process, which we remove with it."""
+    folder = windows_pack.runtime_folder(program, os.environ)
+    identity = launch.IDENTITY.search(_plan(folder)) if folder is not None else None
+    if identity:
+        windows_pack.forget_sandbox(identity.group(1))

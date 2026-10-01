@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import os
 import subprocess
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 
@@ -72,16 +74,12 @@ def running(app: Path) -> str:
     return "\n".join(line for line in found.stdout.splitlines() if "pgrep" not in line)
 
 
-def unpacked(exported: Path) -> tuple[Path, Path | None]:
-    """A macOS game is its bundle: the folder we use in a harness, with no
-    separate program."""
-    return exported, None
-
-
-def forget(program: Path, namespace: str) -> None:
-    """Refuse, because we never export a macOS game as a separate program, so
-    `unpacked` has none to forget. Its bundle goes with its folder."""
-    raise SystemExit(f"a macOS game has no program to forget: {program} ({namespace})")
+@contextmanager
+def opened(exported: Path) -> Iterator[tuple[Path, Callable[[], None]]]:
+    """A macOS game is its bundle, the folder we use in a harness while the
+    block runs. Nothing is unpacked, and the game's data is in its container,
+    so we remove nothing when the block ends and `keep` has nothing to keep."""
+    yield exported, lambda: None
 
 
 def capture_export_entitlements(app: Path, destination: Path) -> None:

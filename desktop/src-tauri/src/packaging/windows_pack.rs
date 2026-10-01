@@ -142,13 +142,13 @@ fn short(text: &str, stage: ErrorStage) -> Result<u16, ExportError> {
     u16::try_from(text.len()).map_err(|_| ExportError::new(stage, format!("a name is too long to pack: {text}")))
 }
 
+/// How many characters of the pack's id we use in the folder name.
+pub(super) const PACK_ID_CHARS: usize = 8;
+
 /// Pack the Windows game laid out in `folder`, with `launcher` as its
 /// program, into the single program `destination`. We unpack the game into
 /// the folder `runtime` under the local application data, with the pack's
 /// id added, so we never unpack a new export over the copy that is running.
-/// How many characters of the pack's id we use in the folder name.
-pub(super) const PACK_ID_CHARS: usize = 8;
-
 pub(super) fn pack(
     folder: &Path,
     launcher: &Path,

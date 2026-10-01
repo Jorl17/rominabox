@@ -14,11 +14,10 @@ mod support;
 use rominabox_desktop::{
     content,
     controls::{self, Controls},
-    packaging::{self, SystemAvailability, Unavailable},
-    systems,
+    packaging, systems,
 };
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 fn scratch() -> rominabox_scratch::Scratch {
     rominabox_scratch::Scratch::dir("rominabox-ps1")
@@ -26,71 +25,6 @@ fn scratch() -> rominabox_scratch::Scratch {
 
 fn ps1() -> &'static systems::System {
     systems::find("ps1").expect("PlayStation is declared")
-}
-
-/// A kit with a stand-in for a core that does not exist yet.
-///
-/// The bytes are empty on purpose. We test resolution and staging with it,
-/// and it is not a core that runs or evidence that one works.
-fn kit_with_stub_core(root: &Path) -> PathBuf {
-    let kit = root.join("runtime-kit");
-    fs::create_dir_all(kit.join("cores")).unwrap();
-    fs::create_dir_all(kit.join("licenses")).unwrap();
-    let core = ps1().cores.first().expect("a declared core");
-    fs::write(
-        kit.join("cores")
-            .join(core.artifact().expect("an artifact for this target")),
-        [],
-    )
-    .unwrap();
-    fs::write(kit.join("licenses").join(&core.license_file), []).unwrap();
-    kit
-}
-
-fn availability(kit: &Path) -> SystemAvailability {
-    packaging::system_availability(kit)
-        .into_iter()
-        .find(|entry| entry.id == "ps1")
-        .expect("every declared console is reported")
-}
-
-#[test]
-fn playstation_is_declared_but_not_claimed_as_shipped_support() {
-    // We keep intent apart from availability so that we can describe and
-    // recognise PS1 without a build that claims it can export one.
-    let root = scratch();
-    let empty = root.join("empty-kit");
-    fs::create_dir_all(empty.join("cores")).unwrap();
-    fs::create_dir_all(empty.join("licenses")).unwrap();
-
-    let reported = availability(&empty);
-    assert_eq!(reported.component, None);
-    match reported.unavailable {
-        Some(Unavailable::NoPreparedCore { ref tried }) => {
-            assert!(
-                tried.iter().any(|reason| reason.contains("pcsx_rearmed")),
-                "the reason must name the core that is missing: {tried:?}"
-            );
-        }
-        other => panic!("expected a missing core, got {other:?}"),
-    }
-    assert!(!packaging::available_systems(&empty).contains(&"ps1".to_string()));
-}
-
-#[test]
-fn a_prepared_artifact_is_all_that_stands_between_declared_and_available() {
-    // Only the artifact is missing for PS1 to become available. There is no
-    // exporter branch, staging list or registration for it.
-    let root = scratch();
-    let kit = kit_with_stub_core(&root);
-    let reported = availability(&kit);
-    assert_eq!(
-        reported.component.as_deref(),
-        Some("pcsx_rearmed"),
-        "resolution should select the declared component once its files exist"
-    );
-    assert_eq!(reported.unavailable, None);
-    assert!(packaging::available_systems(&kit).contains(&"ps1".to_string()));
 }
 
 #[test]

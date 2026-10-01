@@ -2,14 +2,14 @@
 //!
 //! We declare Genesis Plus GX in the Mega Drive package, and Master System,
 //! Sega CD, Game Gear and SG-1000 only name it. These tests follow the builder
-//! steps of an export (system lookup, controller defaults, theme staging and
-//! kit availability), so a package that only parses does not pass.
+//! steps of an export (system lookup, controller defaults and theme staging),
+//! so a package that only parses does not pass.
 
 mod support;
 
 use rominabox_desktop::{
     controls::{self, Controls},
-    packaging, systems,
+    systems,
 };
 use std::{
     collections::BTreeSet,
@@ -17,8 +17,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// The consoles whose preferred core is the one Genesis Plus GX definition,
-/// in registry order, which is the order of `available_systems`.
+/// Consoles whose preferred core is the one Genesis Plus GX definition.
 const GENESIS_PLUS_GX_CONSOLES: [&str; 5] =
     ["megadrive", "segacd", "mastersystem", "gamegear", "sg1000"];
 
@@ -92,10 +91,9 @@ fn mastersystem_resolves_by_id_and_every_declared_alias() {
 
 #[test]
 fn mastersystem_selects_the_same_genesis_plus_gx_component_as_the_other_sega_consoles() {
-    // Master System has no core of its own. We offer a console for export
-    // when the artifact and licence of its preferred core are in the kit, so
-    // one Genesis Plus GX file must make all five consoles available. A
-    // private copy, or a different artifact with the same id, would not.
+    // Master System has no core of its own. We download one Genesis Plus GX
+    // file once for all five consoles. With a private copy, or a different
+    // artifact under the same id, we would download it again.
     let mastersystem = resolve("mastersystem");
     assert_eq!(mastersystem.cores.len(), 1, "no fallback core");
     let shared = mastersystem
@@ -113,26 +111,6 @@ fn mastersystem_selects_the_same_genesis_plus_gx_component_as_the_other_sega_con
         assert_eq!(core.license_file, shared.license_file, "{id} licence file");
         assert_eq!(core.capabilities, shared.capabilities, "{id} capabilities");
     }
-
-    let root = scratch();
-    let kit = root.join("runtime-kit");
-    fs::create_dir_all(kit.join("cores")).unwrap();
-    fs::create_dir_all(kit.join("licenses")).unwrap();
-    fs::write(
-        kit.join("cores")
-            .join(shared.artifact().expect("an artifact for this target")),
-        b"core",
-    )
-    .unwrap();
-    fs::write(kit.join("licenses").join(&shared.license_file), b"license").unwrap();
-
-    assert_eq!(
-        packaging::available_systems(&kit),
-        GENESIS_PLUS_GX_CONSOLES
-            .iter()
-            .map(|id| (*id).to_string())
-            .collect::<Vec<_>>()
-    );
 }
 
 #[test]

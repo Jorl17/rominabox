@@ -165,6 +165,15 @@ pub struct Control {
     pub callout_y: Option<i32>,
 }
 
+/// What a profile declares about one group of its controls: a stick.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ControlGroup {
+    /// The stick's name on the pad, as we show it in its box and the builder's
+    /// table, for example "C-stick" for the second GameCube stick.
+    pub title: String,
+}
+
 /// A pad layout. Exactly one package contains it, and any console that uses
 /// it refers to it by id.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -191,6 +200,9 @@ pub struct ControllerProfile {
     )]
     pub core_device: Option<u32>,
     pub controls: Vec<Control>,
+    /// Every group a control names, by that name, and nothing else.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub groups: BTreeMap<String, ControlGroup>,
 }
 
 /// One core option that we set so the picture shows the core's own pixels.
@@ -216,7 +228,7 @@ pub struct CoreComponent {
     pub id: String,
     pub name: String,
     /// Target triple -> artifact filename inside a prepared kit.
-    pub artifacts: std::collections::BTreeMap<String, String>,
+    pub artifacts: BTreeMap<String, String>,
     pub license: ComponentLicense,
     /// Capabilities that this build has, for example `chd`. In an export we
     /// check the selected artifact, never the console name.
@@ -261,8 +273,7 @@ pub struct CoreComponent {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ComponentProvenance {
-    /// `built` when we compile it, `libretro-buildbot` when we download it.
-    pub origin: String,
+    pub origin: Origin,
     pub repository: String,
     pub revision: String,
     /// Paths to try, in order, when extracting the licence from that snapshot.
@@ -277,24 +288,6 @@ pub struct ComponentProvenance {
     /// builder we read the licence from this branch instead.
     #[serde(default, rename = "branch", skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
-    /// SHA-256 of the licence text in the first candidate path that exists.
-    ///
-    /// We compare it in `scripts/prepare_runtime.py` when we stage a kit. We
-    /// leave it out of the builder's download list, because libretro replaces
-    /// the buildbot files in place and we would reject the new file.
-    #[serde(
-        default,
-        rename = "licenseSha256",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub license_sha256: Option<String>,
-    /// Measurements we compare in `scripts/prepare_runtime.py` to stage a kit.
-    ///
-    /// We do not read them in the builder. The buildbot directory is `latest`,
-    /// which libretro replaces in place, and with a hash recorded here we would
-    /// refuse the new file.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub downloads: BTreeMap<String, PinnedDownload>,
     /// How we build it, for components we compile ourselves.
     ///
     /// What the artifact supports depends on these flags, so we keep them with
@@ -304,21 +297,15 @@ pub struct ComponentProvenance {
     pub build: Option<BuildRecipe>,
 }
 
-/// One measured buildbot artifact.
-///
-/// We compare these hashes in `scripts/prepare_runtime.py` when we stage a
-/// kit, and leave them out of the builder's download list.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct PinnedDownload {
-    #[serde(rename = "archiveSha256")]
-    pub archive_sha256: String,
-    #[serde(rename = "binarySha256")]
-    pub binary_sha256: String,
-    #[serde(rename = "archiveBytes")]
-    pub archive_bytes: u64,
-    #[serde(rename = "binaryBytes")]
-    pub binary_bytes: u64,
+/// Where a core's artifact comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Origin {
+    /// We compile it from `revision`, where its recipe covers the machine.
+    #[serde(rename = "built")]
+    Built,
+    /// We download libretro's nightly.
+    #[serde(rename = "libretro-buildbot")]
+    LibretroBuildbot,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

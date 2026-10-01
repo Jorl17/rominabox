@@ -209,5 +209,13 @@
       "x": 553,
       "y": 228
     }
-  ]
+  ],
+  "groups": {
+    "l_stick": {
+      "title": "Left stick"
+    },
+    "r_stick": {
+      "title": "Right stick"
+    }
+  }
 }

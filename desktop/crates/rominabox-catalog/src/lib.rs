@@ -10,10 +10,11 @@
 //! not. We never use a default in place of a missing declaration.
 
 pub mod model;
+mod sticks;
 
 use model::{
-    Console, Control, ControllerProfile, CoreComponent, Presentation, SheetParser, StickDirection,
-    is_control_id, PAD_POSITIONS, SCHEMA_VERSION,
+    Console, ControllerProfile, CoreComponent, Presentation, SheetParser, is_control_id,
+    PAD_POSITIONS, SCHEMA_VERSION,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -308,6 +309,7 @@ impl Catalog {
                     callout_y: None,
                 })
                 .collect(),
+            groups: BTreeMap::new(),
         };
         self.profiles
             .insert(profile.id.clone(), (profile, PathBuf::from("<built-in>")));
@@ -565,42 +567,8 @@ impl Catalog {
                         format!("control '{}' is declared twice", control.id),
                     ));
                 }
-                if control.group.is_none() && control.direction.is_some() {
-                    problems.push(Diagnostic::new(
-                        "control.direction_outside_stick",
-                        &package,
-                        format!("{id}.controls.{}", control.id),
-                        "only a member of a stick has a direction",
-                    ));
-                }
             }
-            // Each member of a stick points one way, once, in the order in
-            // which we capture them in the menu.
-            let mut sticks: BTreeMap<&str, Vec<&Control>> = BTreeMap::new();
-            for control in &profile.controls {
-                if let Some(group) = &control.group {
-                    sticks.entry(group.as_str()).or_default().push(control);
-                }
-            }
-            for (stick, members) in &sticks {
-                let directions: Vec<StickDirection> =
-                    members.iter().filter_map(|member| member.direction).collect();
-                if directions.len() != members.len() {
-                    problems.push(Diagnostic::new(
-                        "control.stick_direction_missing",
-                        &package,
-                        format!("{id}.controls[group={stick}]"),
-                        "every member of a stick has a direction: up, right, down, left or press",
-                    ));
-                } else if directions.windows(2).any(|pair| pair[0] >= pair[1]) {
-                    problems.push(Diagnostic::new(
-                        "control.stick_direction_order",
-                        &package,
-                        format!("{id}.controls[group={stick}]"),
-                        "a stick declares each direction once, in the order up, right, down, left, press",
-                    ));
-                }
-            }
+            sticks::check(id, &package, profile, problems);
 
             match &profile.presentation {
                 Presentation::Illustrated { image } => {
@@ -1021,6 +989,10 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
             })
             .collect();
         entry.insert("controls".into(), Value::Array(controls));
+        // We leave it out when empty, so a profile without a stick has no field.
+        if !profile.groups.is_empty() {
+            entry.insert("groups".into(), json!(profile.groups));
+        }
         if let Some(device) = profile.core_device {
             entry.insert("coreDevice".into(), json!(device));
         }
@@ -1062,9 +1034,6 @@ fn core_pins(catalog: &Catalog) -> Result<String, String> {
         let Some(provenance) = &component.provenance else {
             continue;
         };
-        if provenance.downloads.is_empty() {
-            continue;
-        }
         let Some(license_path) = provenance.license_candidates.first() else {
             return Err(format!("{id} has no licence path"));
         };
@@ -1073,13 +1042,11 @@ fn core_pins(catalog: &Catalog) -> Result<String, String> {
                 "{id} has no branch for the licence that travels with the nightly"
             ));
         };
-        let mut artifacts = Map::new();
-        for target in provenance.downloads.keys() {
-            let Some(filename) = component.artifacts.get(target) else {
-                continue;
-            };
-            artifacts.insert(target.clone(), json!({ "filename": filename }));
-        }
+        let artifacts: Map<String, Value> = component
+            .artifacts
+            .iter()
+            .map(|(target, filename)| (target.clone(), json!({ "filename": filename })))
+            .collect();
         cores.push(json!({
             "component": id,
             "repository": provenance.repository,

@@ -5,7 +5,6 @@
 use super::{resolve_cached, ErrorStage, ExportError, ExportRequest};
 use crate::content;
 use crate::controls;
-use crate::menu::file_name;
 use std::fs;
 use std::path::Path;
 
@@ -62,7 +61,7 @@ pub fn stage_menu(
     let profile = controls::write_defaults_config(
         &request.game.system,
         &request.game.controls,
-        &menu_assets.join(file_name!(ControlsDefaults)),
+        &menu_assets.join(controls::DEFAULTS_FILE),
     )
     .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     if request.game.splash {

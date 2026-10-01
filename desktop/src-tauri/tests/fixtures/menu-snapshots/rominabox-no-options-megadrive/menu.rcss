@@ -72,6 +72,10 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .control-hit { position: absolute; box-sizing: border-box; width: 42dp; height: 42dp; background-color: transparent; border: 2dp transparent; border-radius: 21dp; }
 .control-callout:hover .control-hit, .control-group:hover .control-hit { border-color: #ffffff; }
 .control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: #fff13d; }
+/* A lit ring has a crisp dark edge outside and inside, so it is visible on a
+ * pale pad as well as on a dark one. */
+.control-callout:hover .control-hit, .control-group:hover .control-hit,
+.control-callout.focused .control-hit, .control-group.focused .control-hit { box-shadow: #020b27 0dp 0dp 0dp 1dp, #020b27 0dp 0dp 0dp 1dp inset; }
 .control-callout { position: absolute; width: 196dp; height: 50dp; padding: 0; border: 2dp #75b2e4; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
 .control-callout:hover { border-color: #ffffff; z-index: 2; }
 /* We draw a callout 54dp high with its border, the least distance between
@@ -142,7 +146,10 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .slot:active .slot-label { color: #fff13d; }
 
 .menu-action { color: #ffffff; background-color: #061a48; border-color: #75b2e4; }
-.menu-action:hover, .menu-action.focused, .menu-action.capturing { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
+/* The control being captured has the focus and is the only yellow element.
+ * CANCEL also has the capturing class while we wait for an input, but it
+ * stays an ordinary button. */
+.menu-action:hover, .menu-action.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
 .menu-action:active { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 
@@ -399,7 +406,7 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 
 /* Buttons, pager arrows and option entries. */
 .menu-action, .list-pager-prev, .list-pager-next { background-color: #061a48; border-color: #061a48; }
-.menu-action:hover, .menu-action.focused, .menu-action.capturing,
+.menu-action:hover, .menu-action.focused,
 .list-pager-prev:hover, .list-pager-next:hover, .list-pager-prev.focused, .list-pager-next.focused { background-color: #fff13d; color: #061a48; border-color: #fff13d; }
 .menu-action:active { border-color: #fff13d; }
 .menu-action.disabled, .menu-action:disabled, .list-pager-prev.disabled, .list-pager-next.disabled { background-color: #092754; border-color: #092754; }
@@ -415,8 +422,9 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 #volume-control { border-color: #061a48; }
 #volume-control .slider-track { border-color: #020b27; }
 .slider-thumb { background-color: #ffffff; border-color: #ffffff; }
-.slider:hover .slider-thumb { border-color: #ffffff; }
-.slider.focused .slider-thumb, .slider.focused:hover .slider-thumb, .slider.dragging .slider-thumb, .slider:active .slider-thumb { background-color: #fff13d; border-color: #fff13d; }
+.slider:hover .slider-thumb { border-color: #fff13d; }
+.slider.focused .slider-thumb, .slider.focused:hover .slider-thumb { background-color: #fff13d; border-color: #fff13d; }
+.slider.dragging .slider-thumb, .slider:active .slider-thumb { background-color: #fff13d; border-color: #ffffff; }
 
 /* Controls. The pixel font has only capitals, but these words are in mixed
  * case in the console data, and here they look like the button labels. */

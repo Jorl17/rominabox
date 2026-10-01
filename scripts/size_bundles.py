@@ -5,14 +5,16 @@ The kit contains no cores. As in the builder, we take the Mega Drive core from
 the local core source (scripts/core_source.py) as the export's core cache. The
 ROM is a few bytes that we write in the work directory, so the size is that of
 the player and the one core the game uses. A real Game Boy Advance ROM adds
-its own size. We check the game's files on disk for this machine's platform
-against scripts/fixtures/size-budgets.json. On macOS that is the bundle. On
-Windows it is the files unpacked from the game's one program, as listed in
-its index, and we print the size of the download beside it. At
-export we write that app and nothing else. On macOS we export one more game,
-which also runs on Intel Macs. Its player and core contain code for both
-processors, it has its own ceiling, and its Intel core comes from the core
-source's macos-x86_64 folder, beside the folder for this Mac.
+its own size. We check the space the game's files take on disk for this
+machine's platform, in the whole blocks or clusters of the file system,
+against scripts/fixtures/size-budgets.json. A game of many small files
+leaves most of those blocks empty. On macOS we measure the bundle. On Windows
+we measure the files unpacked from the game's one program, and then remove
+the game with its own UNINSTALL. We print their bytes, and the size of the
+Windows download, beside it. At export we write that app and nothing else.
+On macOS we export one more game, which also runs on Intel Macs. Its player
+and core contain code for both processors, it has its own ceiling, and its
+Intel core comes from the macos-x86_64 folder of the core source.
 
 We also refuse libraries the app should not contain. On macOS, the video
 encoders can take a cartridge export past 50 MB, and with a budget alone we
@@ -24,6 +26,7 @@ every library but the game's core, because the player is one program.
 
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import shutil
@@ -35,15 +38,15 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from built import cli  # noqa: E402
 from core_source import core, host_target  # noqa: E402
+import exported_game  # noqa: E402
+import menu_shots  # noqa: E402
 import native_build  # noqa: E402
 import prepare_runtime  # noqa: E402
 import windows_pack  # noqa: E402
-from exported_game import QUIET_ENV  # noqa: E402
 
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 BUDGETS = ROOT / "scripts/fixtures/size-budgets.json"
 WORK = ROOT / "work/size-bundles"
-DESIGN = ROOT / "integrations/designs/native"
 
 
 def remove_owned(path: Path) -> None:
@@ -56,12 +59,46 @@ def remove_owned(path: Path) -> None:
         shutil.rmtree(resolved)
 
 
+def posix_allocated(file: Path) -> int:
+    """Return the space used by `file` on a macOS or Linux volume, in blocks."""
+    return file.lstat().st_blocks * 512
+
+
+class FileStandardInfo(ctypes.Structure):
+    """The FILE_STANDARD_INFO structure of GetFileInformationByHandleEx."""
+    _fields_ = [("AllocationSize", ctypes.c_longlong), ("EndOfFile", ctypes.c_longlong),
+                ("NumberOfLinks", ctypes.c_ulong), ("DeletePending", ctypes.c_ubyte),
+                ("Directory", ctypes.c_ubyte)]
+
+
+def windows_allocated(file: Path) -> int:
+    """Return the space used by `file` on a Windows volume in NTFS, which is
+    whole clusters, except for a file small enough to fit in its own record."""
+    import msvcrt
+    standard_info = 1  # FileStandardInfo, of FILE_INFO_BY_HANDLE_CLASS
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    info = FileStandardInfo()
+    with file.open("rb") as opened:
+        handle = ctypes.c_void_p(msvcrt.get_osfhandle(opened.fileno()))
+        if not kernel.GetFileInformationByHandleEx(handle, standard_info, ctypes.byref(info), ctypes.sizeof(info)):
+            raise ctypes.WinError(ctypes.get_last_error())
+    return info.AllocationSize
+
+
+def files(path: Path) -> list[Path]:
+    """Every file under `path`."""
+    return [Path(folder) / name for folder, _, names in os.walk(path) for name in names]
+
+
 def du(path: Path) -> int:
-    total = 0
-    for dirpath, _, names in os.walk(path):
-        for name in names:
-            total += (Path(dirpath) / name).stat().st_size
-    return total
+    """Return the disk space used by everything under `path` on this platform."""
+    allocated = PLATFORMS[PLATFORM]["allocated"]
+    return sum(allocated(file) for file in files(path))
+
+
+def apparent(path: Path) -> int:
+    """The bytes of everything under `path`."""
+    return sum(file.lstat().st_size for file in files(path))
 
 
 def macos_libraries(app: Path) -> list[str]:
@@ -81,33 +118,33 @@ def windows_libraries(program: Path) -> list[str]:
             if path.endswith(".dll") and path != "Resources/game-core.dll"]
 
 
-def windows_installed(program: Path) -> int:
-    """Return a Windows game's files after we unpack its program, which are
-    the launcher and everything packed after it."""
-    pack = windows_pack.packed(program)
-    return pack.launcher_bytes + sum(size for _, size in pack.files)
+def windows_installed(program: Path, _name: str) -> tuple[int, int]:
+    """Return the space used by a Windows game's unpacked files, and their
+    bytes. After we measure them, we remove everything created for the game
+    (exported_game.opened)."""
+    with exported_game.opened(program) as (folder, _keep):
+        return du(folder), apparent(folder)
 
 
-def windows_resources(program: Path) -> Path:
-    """Return the folder of a Windows game's own files. We fill it by running
-    the game's program with its silent option."""
-    return windows_pack.unpacked(program, dict(os.environ, **{QUIET_ENV: "1"})) / "Resources"
+def macos_installed(app: Path, _name: str) -> tuple[int, int]:
+    """Return the disk space used by a macOS app, and its bytes."""
+    return du(app), apparent(app)
 
 
-# For each platform, where an app has its own files, the check of the
-# libraries in an app, and the games we make only on this platform, each with
-# its budget and the other target whose core we also include in it.
+# For each platform, the size of an installed app, the check of the libraries
+# in an app, and the games we make only on this platform, each with its budget
+# and the other target whose core we also include in it.
 PLATFORMS = {
     "macos": {
-        "resources": lambda app: app / "Contents" / "Resources",
-        "installed": du,
+        "allocated": posix_allocated,
+        "installed": macos_installed,
         "libraries": macos_libraries,
         "more": {
             "featured-intel": ({"intelMacs": True}, "intel_macs_installed_bytes", "macos-x86_64"),
         },
     },
     "windows": {
-        "resources": windows_resources,
+        "allocated": windows_allocated,
         "installed": windows_installed,
         "libraries": windows_libraries,
         "more": {},
@@ -133,11 +170,6 @@ def require_core_beside(cache: Path, target: str) -> None:
             f"{artifact} for {target} is not at {beside}. Seed it with: "
             f"python3 scripts/prepare_runtime.py --seed-core-cache --target {target}"
         )
-
-
-def resources(app: Path) -> Path:
-    """Return the folder of an exported app's own files."""
-    return PLATFORMS[PLATFORM]["resources"](app)
 
 
 def namespace(name: str) -> str:
@@ -202,11 +234,9 @@ def main() -> int:
     rom.write_bytes(b"RIBsize")
     kit = WORK / "kit"
     remove_owned(kit)
-    shutil.copytree(KIT, kit, symlinks=True)
+    # The kit's player, with the launcher and the assets from the tree.
+    menu_shots.staged_kit(kit)
     cache = core_cache()
-    for document in DESIGN.iterdir():
-        if document.is_file():
-            shutil.copyfile(document, kit / "designs/native" / document.name)
 
     command = cli()
     bundles = {
@@ -229,9 +259,9 @@ def main() -> int:
         if extras:
             print(f"  {name} wrote more than the app: {', '.join(extras)}")
             failed = True
-        installed = platform["installed"](app)
+        installed, written = platform["installed"](app, name)
         download = f"  download {app.stat().st_size}" if app.is_file() else ""
-        print(f"  {name:<14} app {installed:8d}  of {ceiling}{download}")
+        print(f"  {name:<14} on disk {installed:8d}  of {ceiling}  (bytes {written}){download}")
         if installed > ceiling:
             print(f"  {name} app {installed} exceeds {ceiling}")
             failed = True

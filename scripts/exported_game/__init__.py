@@ -6,27 +6,24 @@ functions: the launcher, the folder of the game's own files, the per-user
 folder that the plan's $user_data stands for, whether the game runs in a
 sandbox, the folder that must contain its per-game storage, how we prepare
 that storage before writing into it from a harness, which of its processes
-are still running, and the folder we use in a harness. Here we choose the
-module for the platform we export games for on this machine.
+are still running, and the folder we use in a harness while the game is
+open, with what we remove afterwards. Here we choose the module for the
+platform we export games for on this machine.
 """
 
 from __future__ import annotations
 
 import shutil
 import sys
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core_source import host_target  # noqa: E402
 
 from . import launch, macos, windows  # noqa: E402
-from .launch import (  # noqa: E402,F401
-    QUIET_ENV,
-    SCRIPT_ENV,
-    SOUND_ENV,
-    TEST_USER_DATA_ENV,
-    launch_declaration,
-)
+from .launch import QUIET_ENV, SCRIPT_ENV, SOUND_ENV  # noqa: E402,F401
 
 PLATFORM = host_target().split("-", 1)[0]
 # The module for each platform we export games for.
@@ -85,15 +82,12 @@ def running_from(app: Path) -> str:
     return platform().running(app)
 
 
-def unpacked(exported: Path) -> tuple[Path, Path | None]:
-    """What we wrote in an export, as we use it in a harness: the game's folder,
-    and the one program a person opens when we exported the game as one."""
-    return platform().unpacked(exported)
-
-
-def forget(program: Path, namespace: str) -> None:
-    """Remove everything on this computer from the game exported as `program`."""
-    platform().forget(program, namespace)
+def opened(exported: Path) -> AbstractContextManager[tuple[Path, Callable[[], None]]]:
+    """The folder of the game we exported to `exported`, as we use it in a
+    harness while the block runs, and `keep`. When the block ends, however it
+    ends, we remove everything from the game on this computer, unless we
+    called `keep` for a player of the game that may still be running."""
+    return platform().opened(exported)
 
 
 # The games whose storage we have prepared in this run, once each.

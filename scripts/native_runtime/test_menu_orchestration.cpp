@@ -283,6 +283,22 @@ void a_filter_row_applies_its_filter(const char *native_assets, const char *data
 }
 
 
+/* The fixture folder `name` in `data`: the files in `from`, and the shared
+ * parts that every menu.rml links, from `native`, next to menu.rcss, as we
+ * stage them in composition. */
+std::filesystem::path stage_fixture(const std::filesystem::path& from,
+      const std::filesystem::path& native, const char *data, const char *name)
+{
+   namespace fs = std::filesystem;
+   const fs::path assets = fs::path(data) / name;
+   fs::create_directories(assets);
+   for (const auto& entry : fs::directory_iterator(from))
+      if (entry.is_regular_file())
+         fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   fs::copy(native / "parts", assets / "parts", fs::copy_options::recursive | fs::copy_options::overwrite_existing);
+   return assets;
+}
+
 bool replace_once(std::string& text, const std::string& from, const std::string& to)
 {
    const auto at = text.find(from);
@@ -296,11 +312,7 @@ bool replace_once(std::string& text, const std::string& from, const std::string&
 std::string stage_disc_list(const char *native_assets, const char *data)
 {
    namespace fs = std::filesystem;
-   const fs::path assets = fs::path(data) / "disc-list-assets";
-   fs::create_directories(assets);
-   for (const auto& entry : fs::directory_iterator(native_assets))
-      if (entry.is_regular_file())
-         fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   const fs::path assets = stage_fixture(native_assets, native_assets, data, "disc-list-assets");
    std::string rows;
    for (int index = 0; index < 8; ++index)
    {
@@ -412,11 +424,7 @@ std::string stage_pad_choice(const char *native_assets, const char *data)
 {
    namespace fs = std::filesystem;
    const fs::path native(native_assets);
-   const fs::path assets = fs::path(data) / "pad-choice-assets";
-   fs::create_directories(assets);
-   for (const auto& entry : fs::directory_iterator(native / "stage" / "megadrive"))
-      if (entry.is_regular_file())
-         fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   const fs::path assets = stage_fixture(native / "stage" / "megadrive", native, data, "pad-choice-assets");
    for (const char *support : {"menu.rcss", "Silkscreen-Regular.ttf"})
       fs::copy_file(native / support, assets / support, fs::copy_options::overwrite_existing);
    std::ofstream(assets / "controls-defaults.cfg") <<
@@ -487,13 +495,18 @@ bool buttons_name_slot(int slot)
    return fact_in("save", "chosen-slot") == wanted && fact_in("load", "chosen-slot") == wanted;
 }
 
-void chosen_slot_shows_on_save_and_load(const char *native_assets)
+/* A game opens on the slot that the player chose last, so each design is a
+ * separate game with a new data folder, and it opens on slot 1. */
+void chosen_slot_shows_on_save_and_load(const char *native_assets, const char *data)
 {
    for (const char *design : {"native", "disc"})
    {
       const std::string assets = design_assets(native_assets, design);
       check(std::filesystem::is_regular_file(assets + "/menu.rml"), "the design is staged");
+      const std::string data_dir = std::string(data) + "/chosen-slot-" + design;
+      std::filesystem::create_directories(data_dir);
       test_setenv("ROMINABOX_RML_ASSETS", assets.c_str());
+      test_setenv("ROMINABOX_DATA_DIR", data_dir.c_str());
       host.slot_occupied = true;
       void *menu = open_menu();
       if (!menu) continue;
@@ -556,6 +569,7 @@ void chosen_slot_shows_on_save_and_load(const char *native_assets)
    }
    host.slot_occupied = false;
    test_setenv("ROMINABOX_RML_ASSETS", native_assets);
+   test_setenv("ROMINABOX_DATA_DIR", data);
 }
 
 void pad_changes_and_reset_apply_together(const char *native_assets, const char *data)
@@ -664,10 +678,14 @@ void an_idle_menu_builds_nothing(const char *native_assets)
 /* A save over a slot that already has a picture. RetroArch reports the save
  * (save_state_cb) before it writes the new screenshot, so at the report the
  * slot still has the picture of the previous save, and the new one arrives a
- * few frames later. We show it in the open menu once it is there. */
+ * few frames later. We show it in the open menu once it is there. This is a
+ * separate game in which no slot was chosen, so it saves to slot 1. */
 void a_save_over_a_picture_shows_the_new_one(const char *data)
 {
    const std::string picture = std::string(data) + "/resave-slot-1.png";
+   const std::string data_dir = std::string(data) + "/resave-data";
+   std::filesystem::create_directories(data_dir);
+   test_setenv("ROMINABOX_DATA_DIR", data_dir.c_str());
    write_file(picture, "the first save's picture");
    host.slot_occupied = true;
    host.thumbnail = picture;
@@ -692,6 +710,7 @@ void a_save_over_a_picture_shows_the_new_one(const char *data)
    std::remove(picture.c_str());
    host.slot_occupied = false;
    host.thumbnail.clear();
+   test_setenv("ROMINABOX_DATA_DIR", data);
 }
 }
 
@@ -968,7 +987,7 @@ int main(int argc, char **argv)
    fixes::a_filter_row_applies_its_filter(argv[1], argv[2]);
    fixes::binds_open_sooner_on_hover();
    fixes::pad_changes_and_reset_apply_together(argv[1], argv[2]);
-   fixes::chosen_slot_shows_on_save_and_load(argv[1]);
+   fixes::chosen_slot_shows_on_save_and_load(argv[1], argv[2]);
    fixes::a_save_over_a_picture_shows_the_new_one(argv[2]);
    fixes::a_menu_load_writes_the_volume_only_off_a_position();
    fixes::a_drag_cut_short_by_closing_is_kept(argv[2]);

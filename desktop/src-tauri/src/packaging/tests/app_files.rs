@@ -23,6 +23,7 @@ fn the_emulated_device_is_written_as_a_remap_not_a_config_line() {
         image: String::new(),
         core_device: Some(517),
         controls: Vec::new(),
+        groups: Default::default(),
     };
     let core = crate::systems::Core {
         artifacts: Default::default(),
@@ -57,6 +58,7 @@ fn a_profile_with_no_declared_device_writes_nothing() {
         image: String::new(),
         core_device: None,
         controls: Vec::new(),
+        groups: Default::default(),
     };
     let core = crate::systems::Core {
         artifacts: Default::default(),
@@ -169,6 +171,7 @@ fn a_declared_device_with_no_library_name_is_refused() {
         image: String::new(),
         core_device: Some(513),
         controls: Vec::new(),
+        groups: Default::default(),
     };
     let core = crate::systems::Core {
         artifacts: Default::default(),

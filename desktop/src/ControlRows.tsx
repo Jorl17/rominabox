@@ -189,21 +189,23 @@ export function ControlRow({
  */
 export function StickRows({
   group,
+  title,
   members,
   context,
 }: {
   group: string;
+  /** The name of the stick on the pad. */
+  title: string;
   members: Control[];
   context: RowContext;
 }) {
   const capture = context.capture;
   const binding = !!capture && capture.stop === group;
-  const name = stickName(members) || group;
   return (
     <>
       <tr className={`stick-row${binding ? " capturing" : ""}`}>
         <th scope="rowgroup" colSpan={2}>
-          {name}
+          {title}
         </th>
         <td>
           <div className="control-key-field">
@@ -212,7 +214,7 @@ export function StickRows({
               type="button"
               className="binding-button stick-bind"
               disabled={context.busy}
-              aria-label={`Bind ${name}, one direction after another`}
+              aria-label={`Bind ${title}, one direction after another`}
               onClick={() =>
                 context.bind(
                   group,
@@ -221,7 +223,7 @@ export function StickRows({
               }
             >
               {binding
-                ? `${name}: ${capture.step + 1} of ${members.length}`
+                ? `${title}: ${capture.step + 1} of ${members.length}`
                 : "Bind stick"}
             </button>
             {binding && !context.pending && <CancelButton context={context} />}
@@ -261,15 +263,4 @@ export function StickRows({
       })}
     </>
   );
-}
-
-/** The name the directions of a stick share: "Left stick" of "Left stick up". */
-function stickName(members: Control[]): string {
-  const words = members.map((member) => member.label.split(" "));
-  const shared: string[] = [];
-  for (const [index, word] of (words[0] ?? []).entries()) {
-    if (!words.every((label) => label[index] === word)) break;
-    shared.push(word);
-  }
-  return shared.join(" ");
 }

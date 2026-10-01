@@ -2,17 +2,13 @@
 //! export, which we write from the stand-in kit with a compiled runtime stub.
 
 use super::config_value;
-use crate::{export_fixture, support};
+use crate::{export_fixture, export_fixture::workspace, support};
 use rominabox_desktop::{controls::Controls, meta_binds::META_BINDS, packaging::ExportRequest};
 use std::{
     fs,
     path::{Path, PathBuf},
     sync::atomic::AtomicBool,
 };
-
-fn workspace() -> rominabox_scratch::Scratch {
-    rominabox_scratch::Scratch::dir("rominabox-recovery")
-}
 
 /// The stand-in macOS kit with the Native design, the parts we compose it
 /// with, and a picture for every pad that the player can choose.

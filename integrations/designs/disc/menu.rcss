@@ -87,6 +87,10 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .control-hit { position: absolute; box-sizing: border-box; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 1dp transparent; border-radius: design(marker-radius)dp; }
 .control-callout:hover .control-hit, .control-group:hover .control-hit { border-color: design(edge); border-width: 2dp; }
 .control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: design(highlight); border-width: 2dp; margin-left: -3dp; }
+/* A lit ring has a crisp dark edge outside and inside, so it is visible on a
+ * pale pad as well as on a dark one. */
+.control-callout:hover .control-hit, .control-group:hover .control-hit,
+.control-callout.focused .control-hit, .control-group.focused .control-hit { box-shadow: design(bevel-dark) 0dp 0dp 0dp 1dp, design(bevel-dark) 0dp 0dp 0dp 1dp inset; }
 /* The thicker left edge of the focused box moves its content to the right.
  * The ring and the area for the pointer stay on the button. */
 .control-callout.focused .control-reach, .control-group.focused .control-reach { margin-left: -3dp; }
@@ -132,7 +136,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 
 .menu-action { color: design(ink); background-color: design(surface); border-width: 1dp; border-color: design(rule); }
 .menu-action:hover { background-color: design(highlight); color: design(slot-label); border-color: design(highlight); }
-.menu-action.focused, .menu-action.capturing { background-color: design(focus); color: design(ink); border-color: design(highlight); border-left-width: 4dp; }
+/* The focus is on the control being captured. CANCEL also has the capturing
+ * class while we wait for a capture, but stays an ordinary button next to it. */
+.menu-action.focused { background-color: design(focus); color: design(ink); border-color: design(highlight); border-left-width: 4dp; }
 .menu-action:active { background-color: design(focus); color: design(highlight); border-color: design(ink); }
 .menu-action.disabled, .menu-action:disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
 

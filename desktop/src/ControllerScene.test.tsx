@@ -2,13 +2,16 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ControllerScene } from "./ControllerScene";
+import { keyName } from "./keys";
 import registry from "../controls.json";
 import megadrivePlacement from "../assets/controllers/controller-megadrive.json";
 import ps1Placement from "../assets/controllers/controller-ps1.json";
 import n64Placement from "../assets/controllers/controller-n64.json";
+import gamecubePlacement from "../assets/controllers/controller-gamecube.json";
 import megadriveLayout from "../public/controllers/controller-megadrive-layout.json";
 import ps1Layout from "../public/controllers/controller-ps1-layout.json";
 import n64Layout from "../public/controllers/controller-n64-layout.json";
+import gamecubeLayout from "../public/controllers/controller-gamecube-layout.json";
 
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
@@ -60,6 +63,7 @@ describe("the builder's controller scene", () => {
     const staged = {
       ps1: [ps1Placement, ps1Layout],
       n64: [n64Placement, n64Layout],
+      gamecube: [gamecubePlacement, gamecubeLayout],
       megadrive: [megadrivePlacement, megadriveLayout],
     };
     vi.stubGlobal(
@@ -99,11 +103,13 @@ describe("the builder's controller scene", () => {
     const container = draw(profileNamed("megadrive"));
     await act(async () => {});
 
-    const drawn = [...container.querySelectorAll("circle")].map((ring) => ({
-      cx: Number(ring.getAttribute("cx")),
-      cy: Number(ring.getAttribute("cy")),
-      r: Number(ring.getAttribute("r")),
-    }));
+    const drawn = [...container.querySelectorAll("circle.controller-ring")].map(
+      (ring) => ({
+        cx: Number(ring.getAttribute("cx")),
+        cy: Number(ring.getAttribute("cy")),
+        r: Number(ring.getAttribute("r")),
+      }),
+    );
     const expected = megadriveLayout.controls.map((placed) => ({
       cx: placed.marker.x + placed.marker.width / 2,
       cy: placed.marker.y + placed.marker.height / 2,
@@ -121,6 +127,24 @@ describe("the builder's controller scene", () => {
     }
   });
 
+  it("draws every ring as a light line over a wider dark edge", async () => {
+    // A white ring alone would be hard to see on a pale pad, and the GameCube
+    // Control stick is white. With the edge beneath, it is visible on any pad.
+    const container = draw(profileNamed("gamecube"));
+    await act(async () => {});
+    const rings = [...container.querySelectorAll("circle.controller-ring")];
+    expect(rings.length).toBeGreaterThan(0);
+    for (const ring of rings) {
+      const edge = ring.previousElementSibling;
+      expect(edge?.getAttribute("class"), "a dark edge beneath the ring").toBe(
+        "controller-ring-edge",
+      );
+      for (const name of ["cx", "cy", "r"]) {
+        expect(edge?.getAttribute(name)).toBe(ring.getAttribute(name));
+      }
+    }
+  });
+
   it("puts every button marker on the artwork, not beside it", async () => {
     const container = draw(profileNamed("megadrive"));
     await act(async () => {});
@@ -133,7 +157,7 @@ describe("the builder's controller scene", () => {
 
     // The pad and the rings must use one frame. A ring outside the rectangle
     // of the artwork cannot be on a button.
-    const rings = [...container.querySelectorAll("circle")];
+    const rings = [...container.querySelectorAll("circle.controller-ring")];
     expect(rings.length).toBeGreaterThan(0);
     for (const ring of rings) {
       const x = Number(ring.getAttribute("cx"));
@@ -154,7 +178,9 @@ describe("the builder's controller scene", () => {
     const labels = [...container.querySelectorAll("text")].map(
       (node) => node.textContent ?? "",
     );
-    expect(labels.filter((text) => text.includes("STICK")).length).toBe(2);
+    expect(
+      labels.filter((text) => text === "Left stick" || text === "Right stick"),
+    ).toEqual(["Left stick", "Right stick"]);
     for (const control of profileNamed("ps1").controls.filter((c) =>
       Boolean((c as { group?: string }).group),
     )) {
@@ -163,6 +189,68 @@ describe("the builder's controller scene", () => {
         `${control.id} must not get a callout of its own`,
       ).toBe(false);
     }
+  });
+
+  it("titles each stick as its pad names it", async () => {
+    // The title is the label of the group, not its id, so the GameCube
+    // C-stick does not appear as R STICK.
+    const container = draw(profileNamed("gamecube"));
+    await act(async () => {});
+    const labels = [
+      ...container.querySelectorAll(".controller-callout-label"),
+    ].map((node) => node.textContent);
+    expect(labels).toContain("Control stick");
+    expect(labels).toContain("C-stick");
+  });
+
+  it("lists a stick's directions by the direction each declares, not by its id", async () => {
+    // The catalog declares the direction of each member, so we do not infer
+    // it from a suffix such as _plus or _minus on the id.
+    const member = (id: string, key: string, direction: string) => ({
+      id,
+      label: id,
+      key,
+      x: 0,
+      y: 0,
+      calloutX: 0,
+      calloutY: 0,
+      group: "stick",
+      direction,
+    });
+    const profile = {
+      id: "made-up",
+      name: "Made-up pad",
+      image: "controller-made-up.png",
+      controls: [
+        member("north", "t", "up"),
+        member("east", "b", "right"),
+        member("south", "g", "down"),
+        member("west", "v", "left"),
+        member("click", "q", "press"),
+      ],
+    };
+    const strip = { x: 300, y: 300, width: 236, height: 62 };
+    const layout = {
+      scene: { x: 0, y: 0, width: 960, height: 380 },
+      controls: [],
+      groups: [{ name: "stick", strip, marker: null, leader: [] }],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () => (url.endsWith("-layout.json") ? layout : null),
+      })),
+    );
+    const container = draw(profile as never);
+    await act(async () => {});
+
+    const keys = container.querySelector(
+      ".controller-marker .controller-callout-key",
+    );
+    expect(keys?.textContent).toBe(
+      ["t", "b", "g", "v"].map((key) => keyName(key)).join(" "),
+    );
   });
 
   // The stored name is the RetroArch one (num2). In the picture we word it

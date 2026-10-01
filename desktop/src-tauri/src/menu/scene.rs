@@ -96,7 +96,7 @@ fn bind_list_markup(
     let page_size = manifest.list_page_size;
     let mut slots = 4usize;
     for profile in profiles {
-        let mut groups: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+        let mut groups: BTreeMap<&str, usize> = BTreeMap::new();
         for control in &profile.controls {
             if let Some(name) = control.group.as_deref() {
                 *groups.entry(name).or_default() += 1;
@@ -174,7 +174,7 @@ fn scene_markup(
     // bind. Otherwise each of the eight analogue directions of the PlayStation
     // DualShock would need a callout, and both gutters are already full with
     // seven 54 dp callouts.
-    let placed_scene = crate::scene_layout::layout(&profile.controls, metrics);
+    let placed_scene = crate::scene_layout::layout(profile, metrics);
     markup.push_str(&control_group_markup(
         &placed_scene.groups,
         illustrated,
@@ -394,7 +394,7 @@ fn control_group_markup(
 <div id="{binding_id}{name}" class="control-assignment"></div>{ring}
 </button>
 "#,
-            crate::lists::rml_text(&group_title(name)),
+            crate::lists::rml_text(&group.title),
             group_id = contract!(ControlGroupPrefix),
             group_class = contract!(ControlGroup),
             binding_id = contract!(ControlGroupBindingPrefix),
@@ -403,23 +403,6 @@ fn control_group_markup(
         ));
     }
     markup
-}
-
-/// A stick's box's title, from its group's name.
-fn group_title(name: &str) -> String {
-    name.replace('_', " ").to_uppercase()
-}
-
-/// The title of every stick box on the scene of `profile`, by group name, for
-/// drawing the scene beside the menu. We write the bindings of a box in the
-/// game, from the bindings it has.
-pub fn scene_titles(profile: &crate::controls::ControlProfile) -> BTreeMap<String, String> {
-    profile
-        .controls
-        .iter()
-        .filter_map(|item| item.group.as_deref())
-        .map(|group| (group.to_string(), group_title(group)))
-        .collect()
 }
 
 /// A control's callout: its label, and an empty place for its bindings,

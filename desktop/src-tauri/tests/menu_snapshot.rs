@@ -88,40 +88,14 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-/// The menu kit plus stand-ins for everything else an
-/// export needs: a runtime that only returns, and cores that are a few bytes.
+/// The Mac kit we make export tests from (`export_fixture::fixture_kit`),
+/// with the files we read to compose the menu, the shader library, a
+/// stand-in core for each console and a player with achievements.
 #[cfg(target_os = "macos")]
 fn export_kit(root: &Path) -> PathBuf {
-    let kit = support::kit(root);
+    let kit = export_fixture::fixture_kit(root);
+    support::with_menu_assets(&kit);
     support::with_shader_library(&kit);
-    for directory in [
-        "bin",
-        "cores",
-        "Frameworks",
-        "licenses/native",
-        "provenance/native-rmlui",
-    ] {
-        fs::create_dir_all(kit.join(directory)).unwrap();
-    }
-    let source = root.join("retroarch.c");
-    fs::write(
-        &source,
-        "int rarch_main(int c, char **v, void *d){(void)c;(void)v;(void)d;return 0;}\nint main(void){return rarch_main(0,0,0);}\n",
-    )
-    .unwrap();
-    let status = std::process::Command::new("cc")
-        .args(["-Oz", "-Wl,-headerpad_max_install_names", "-o"])
-        .arg(kit.join("bin/retroarch"))
-        .arg(&source)
-        .status()
-        .unwrap();
-    assert!(status.success(), "could not compile the runtime stub");
-    export_fixture::write_launch_library_stub(&kit);
-    fs::write(
-        kit.join("licenses/NATIVE-DEPENDENCIES.txt"),
-        "NATIVE-DEPENDENCIES.txt",
-    )
-    .unwrap();
     for system in SYSTEMS {
         let core = rominabox_desktop::systems::find(system)
             .and_then(|system| system.preferred_core())
@@ -129,11 +103,6 @@ fn export_kit(root: &Path) -> PathBuf {
         fs::write(kit.join("cores").join(core.artifact().unwrap()), b"core").unwrap();
         fs::write(kit.join("licenses").join(&core.license_file), b"licence").unwrap();
     }
-    fs::write(
-        kit.join("runtime-dependencies.json"),
-        r#"{"formatVersion":1,"files":[]}"#,
-    )
-    .unwrap();
     fs::write(
         kit.join("manifest.json"),
         r#"{"schema_version":1,"components":[{"name":"RetroArch","capabilities":{"achievements":true}},{"name":"RmlUi"}]}"#,
@@ -200,6 +169,7 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
         runtime_kit: kit.to_path_buf(),
         core: None,
         core_cache: None,
+        accounts_folder: None,
     };
     match case.menu {
         Menu::Default => {}

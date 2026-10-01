@@ -6,6 +6,9 @@ import { keyName } from "./keys";
  * generated `controls.json` and export no named types. We describe only what
  * we read in this scene, so the dependency is clear.
  */
+/** Which way a stick member points, or its click, as the catalog declares it. */
+export type StickDirection = "up" | "right" | "down" | "left" | "press";
+
 export type ControlDefinition = {
   id: string;
   label: string;
@@ -15,6 +18,8 @@ export type ControlDefinition = {
   calloutX: number;
   calloutY: number;
   group?: string;
+  /** A stick member's direction; absent for everything else. */
+  direction?: StickDirection;
 };
 
 export type ControlProfile = {
@@ -49,7 +54,13 @@ type Run = Rect;
 type Layout = {
   scene: Rect;
   controls: { id: string; marker: Rect; callout: Rect; leader: Run[] }[];
-  groups: { name: string; strip: Rect; marker: Rect | null; leader: Run[] }[];
+  groups: {
+    name: string;
+    title: string;
+    strip: Rect;
+    marker: Rect | null;
+    leader: Run[];
+  }[];
 };
 
 /**
@@ -210,12 +221,7 @@ function Marker({
           className="controller-leader"
         />
       ))}
-      <circle
-        cx={placed.marker.x + placed.marker.width / 2}
-        cy={placed.marker.y + placed.marker.height / 2}
-        r={placed.marker.width / 2}
-        className="controller-ring"
-      />
+      <Ring marker={placed.marker} />
       <rect
         x={placed.callout.x}
         y={placed.callout.y}
@@ -241,17 +247,36 @@ function Marker({
   );
 }
 
+/**
+ * The ring over a button: a light line between two dark edges, so it is
+ * visible on a pale pad as well as on a dark one.
+ */
+function Ring({ marker }: { marker: Rect }) {
+  const at = {
+    cx: marker.x + marker.width / 2,
+    cy: marker.y + marker.height / 2,
+    r: marker.width / 2,
+  };
+  return (
+    <>
+      <circle {...at} className="controller-ring-edge" />
+      <circle {...at} className="controller-ring" />
+    </>
+  );
+}
+
 function StickStrip({
   placed,
   members,
   bindings,
 }: {
-  placed: { name: string; strip: Rect; marker: Rect | null; leader: Run[] };
+  placed: Layout["groups"][number];
   members: ControlDefinition[];
   bindings: Record<string, { label?: string; key?: string }>;
 }) {
+  // The directions, not the click.
   const keys = members
-    .filter((control) => /_(plus|minus)$/.test(control.id))
+    .filter((control) => control.direction && control.direction !== "press")
     .map((control) => keyName(bindings[control.id]?.key || control.key))
     .join(" ");
 
@@ -267,14 +292,7 @@ function StickStrip({
           className="controller-leader"
         />
       ))}
-      {placed.marker ? (
-        <circle
-          cx={placed.marker.x + placed.marker.width / 2}
-          cy={placed.marker.y + placed.marker.height / 2}
-          r={placed.marker.width / 2}
-          className="controller-ring"
-        />
-      ) : null}
+      {placed.marker ? <Ring marker={placed.marker} /> : null}
       <rect
         x={placed.strip.x}
         y={placed.strip.y}
@@ -287,7 +305,7 @@ function StickStrip({
         y={placed.strip.y + 26}
         className="controller-callout-label"
       >
-        {placed.name.replace(/_/g, " ").toUpperCase()}
+        {placed.title}
       </text>
       <text
         x={placed.strip.x + 12}

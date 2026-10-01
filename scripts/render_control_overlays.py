@@ -191,7 +191,7 @@ def render(profile: dict, destination: Path, colours: dict) -> Path:
         route(group["leader"])
         if group["marker"]:
             ring(group["marker"])
-        box(group["strip"], geometry["titles"][group["name"]], "")
+        box(group["strip"], group["title"], "")
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     canvas.convert("RGB").save(destination)

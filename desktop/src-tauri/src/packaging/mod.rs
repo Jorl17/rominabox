@@ -5,15 +5,13 @@
 //!
 //! The export itself is here. What we write the same way for every platform
 //! is in `app_files` and `launch_plan`, and the packager of each platform is
-//! in a separate file (`macos`, `windows`). `availability` covers which
-//! consoles we can export with a kit, `export_core` the core files we ship
-//! in a game and their source, `slices` the processors of the code in a Mac
-//! app, and `archive` the zip for a Mac game made on Windows.
+//! in a separate file (`macos`, `windows`). `export_core` covers the core
+//! files we ship in a game and their source, `slices` the processors of the
+//! code in a Mac app, and `archive` the zip for a Mac game made on Windows.
 
 mod app_files;
 pub mod archive;
 mod both;
-mod availability;
 mod export_core;
 mod launch_plan;
 mod macos;
@@ -43,10 +41,6 @@ use app_files::{
     stage_controller_remap, stage_firmware, stage_legal_materials, stage_pixel_options, tree_size,
 };
 pub use app_files::{menu_request, stage_menu};
-pub use availability::{
-    available_systems, system_availability, system_availability_for, system_availability_in,
-    SystemAvailability, Unavailable,
-};
 use export_core::{export_core, prepare_core, resolve_cached, shipped_cores, ExportCore};
 use launch_plan::{isolation_namespace, stable_identity, write_launch_plan};
 pub use both::export_for_both;
@@ -88,13 +82,12 @@ impl ExportTarget {
 
     /// The target that we build this export for.
     ///
-    /// A Windows package uses the Windows core even on a Mac builder. A Mac
-    /// package is for the same kind of Mac as the builder, and a Mac package
-    /// made on another system is for Apple silicon, because the Mac kit's
-    /// player contains the code for every Mac. This is always `Some`, because
-    /// someone can make a Mac game on any platform.
-    pub fn target(&self) -> Option<Target> {
-        Some(self.target_on(Target::host()))
+    /// A Windows package contains the Windows core even on a Mac builder. A
+    /// Mac package is for the same kind of Mac as the builder, and a Mac
+    /// package made on another system is for Apple silicon, because the Mac
+    /// kit's player contains the code for every Mac.
+    pub fn target(&self) -> Target {
+        self.target_on(Target::host())
     }
 
     /// `target` for a builder running on `host`, or `None` for a machine that
@@ -232,6 +225,11 @@ pub struct ExportRequest {
     /// When this is absent, we fetch nothing and the core must be in the kit.
     #[serde(default)]
     pub core_cache: Option<PathBuf>,
+    /// The folder of shared QUICK SIGN IN accounts for a game with
+    /// achievements. When absent, we use the folder in ROMINABOX_ACCOUNTS_FOLDER,
+    /// or else the one that `achievements::accounts_folder` returns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accounts_folder: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

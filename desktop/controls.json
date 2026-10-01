@@ -1088,6 +1088,14 @@
           "direction": "press"
         }
       ],
+      "groups": {
+        "l_stick": {
+          "title": "Left stick"
+        },
+        "r_stick": {
+          "title": "Right stick"
+        }
+      },
       "coreDevice": 517
     },
     {
@@ -1268,7 +1276,12 @@
           "group": "l_stick",
           "direction": "left"
         }
-      ]
+      ],
+      "groups": {
+        "l_stick": {
+          "title": "Stick"
+        }
+      }
     },
     {
       "id": "gamecube",
@@ -1474,7 +1487,15 @@
           "group": "r_stick",
           "direction": "left"
         }
-      ]
+      ],
+      "groups": {
+        "l_stick": {
+          "title": "Control stick"
+        },
+        "r_stick": {
+          "title": "C-stick"
+        }
+      }
     },
     {
       "id": "dreamcast",
@@ -1627,7 +1648,12 @@
           "group": "l_stick",
           "direction": "left"
         }
-      ]
+      ],
+      "groups": {
+        "l_stick": {
+          "title": "Stick"
+        }
+      }
     },
     {
       "id": "ps1-analog",
@@ -1874,6 +1900,14 @@
           "direction": "press"
         }
       ],
+      "groups": {
+        "l_stick": {
+          "title": "Left stick"
+        },
+        "r_stick": {
+          "title": "Right stick"
+        }
+      },
       "coreDevice": 261
     },
     {

@@ -20,6 +20,8 @@ const require = createRequire(
 const { chromium } = require("playwright-core");
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+/** The folder for the game files we drop during the walk. */
+const SHOTS = path.join(ROOT, "work/test-output/builder-shots");
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -36,10 +38,10 @@ function argument(name) {
   return index === -1 ? null : process.argv[index + 1];
 }
 
-let travelingCli = null;
+let cli = null;
 
 function exporter() {
-  if (travelingCli) return travelingCli;
+  if (cli) return cli;
   const found = spawnSync(
     python(),
     [
@@ -52,42 +54,50 @@ function exporter() {
     const detail = `${found.stderr || ""}${found.stdout || ""}`.trim();
     throw new Error(detail.slice(-800) || "the exporter could not be built");
   }
-  travelingCli = found.stdout.trim().split("\n").pop();
-  return travelingCli;
+  cli = found.stdout.trim().split("\n").pop();
+  return cli;
 }
 
-function askTraveling(filePath, system) {
-  const run = spawnSync(exporter(), ["content"], {
-    input: JSON.stringify({ rom: filePath, system: system || null }),
+/** The CLI output of `command` for `request`, as the shell would return it. */
+function ask(command, request) {
+  const run = spawnSync(exporter(), [command], {
+    input: JSON.stringify(request),
     encoding: "utf8",
     timeout: 30000,
   });
   const body = `${run.stdout || ""}`.trim();
   const line = body.split("\n").filter(Boolean).pop();
-  if (!line) {
-    throw new Error((run.stderr || "content returned nothing").slice(-800));
-  }
+  if (!line) throw new Error((run.stderr || `${command} returned nothing`).slice(-800));
   const parsed = JSON.parse(line);
   if (run.status !== 0 || parsed.type === "error") {
-    throw new Error(parsed.message || (run.stderr || "content failed").slice(-800));
+    throw new Error(parsed.message || (run.stderr || `${command} failed`).slice(-800));
   }
   return parsed.result;
 }
 
+/**
+ * The requests we send here from the browser build instead of to the
+ * desktop shell. We answer each with the CLI command behind the shell's answer.
+ */
+const ANSWERS = {
+  "/__rominabox/traveling": (query) =>
+    ask("content", { rom: query.get("path") || "", system: query.get("system") || null }),
+  "/__rominabox/firmware": (query) =>
+    ask("firmware", { system: query.get("system") || "", files: query.getAll("file") }),
+};
+
 function serve(root) {
   const server = createServer((request, response) => {
     const url = new URL(request.url, "http://127.0.0.1");
-    if (url.pathname === "/__rominabox/traveling") {
+    const answer = ANSWERS[url.pathname];
+    if (answer) {
       try {
-        const result = askTraveling(
-          url.searchParams.get("path") || "",
-          url.searchParams.get("system") || "",
-        );
+        const result = answer(url.searchParams);
         response.writeHead(200, { "Content-Type": "application/json" });
         response.end(JSON.stringify(result));
       } catch (error) {
         const message = String(error.message || error);
-        console.error(`TRAVELING ${message}`);
+        console.error(`${url.pathname} ${message}`);
         response.writeHead(422, { "Content-Type": "application/json" });
         response.end(JSON.stringify({ message }));
       }
@@ -119,11 +129,10 @@ function serve(root) {
 }
 
 function writeRom() {
-  const directory = path.join(ROOT, "work/test-output/builder-shots");
-  fs.mkdirSync(directory, { recursive: true });
+  fs.mkdirSync(SHOTS, { recursive: true });
   // The file name is not the game's name. The title on the details step must
   // come from the header at 0x150, or we would show "game" for this drop.
-  const file = path.join(directory, "game.md");
+  const file = path.join(SHOTS, "game.md");
   const data = Buffer.alloc(512);
   data.write("SEGA", 0x100, "ascii");
   data.write("SONIC THE HEDGEHOG", 336, "ascii");
@@ -131,31 +140,42 @@ function writeRom() {
   return file;
 }
 
+/**
+ * Every pad, with a console that leads to it in the walk, and a stand-in game
+ * file that we open in the builder as that console: an extension no other
+ * console uses, and not a sheet we would read. We never pick a console for
+ * which the details step requires a BIOS.
+ */
 function profiles() {
-  const controls = JSON.parse(
-    fs.readFileSync(path.join(ROOT, "desktop/controls.json"), "utf8"),
+  const read = (name) =>
+    JSON.parse(fs.readFileSync(path.join(ROOT, "desktop", name), "utf8"));
+  const systems = read("systems.json").systems;
+  const claims = (extension) =>
+    systems.filter((system) => system.extensions.includes(extension)).length;
+  const standIn = (system) => {
+    const sheets = (system.sheets || []).map((sheet) => sheet.extension);
+    const extension = system.extensions.find(
+      (candidate) => claims(candidate) === 1 && !sheets.includes(candidate),
+    );
+    return extension && path.join(SHOTS, system.id, `game.${extension}`);
+  };
+  const reachable = systems.filter(
+    (system) =>
+      !(system.firmware || []).some((need) => need.minimum > 0) &&
+      standIn(system),
   );
-  const systems = JSON.parse(
-    fs.readFileSync(path.join(ROOT, "desktop/systems.json"), "utf8"),
-  ).systems;
-  const firmware = new Set(
-    systems.filter((system) => system.firmware).map((system) => system.id),
-  );
-  return controls.profiles.map((profile) => {
-    let candidates = profile.systems.filter((id) => !firmware.has(id));
-    if (profile.id === "retropad") {
-      candidates = systems
-        .filter(
-          (system) =>
-            system.controllerProfile === "retropad" && !firmware.has(system.id),
-        )
-        .map((system) => system.id);
-    }
+  return read("controls.json").profiles.map((profile) => {
+    const system = reachable.find((candidate) =>
+      profile.id === "retropad"
+        ? candidate.controllerProfile === "retropad"
+        : profile.systems.includes(candidate.id),
+    );
     return {
       id: profile.id,
       name: profile.name,
       image: profile.image,
-      system: candidates[0] ?? null,
+      system: system?.id ?? null,
+      standIn: system ? standIn(system) : null,
     };
   });
 }
@@ -170,9 +190,8 @@ async function downloadNotice(page, out) {
   // A Mega Drive ROM is not a Dreamcast game. When someone chooses Dreamcast
   // for it, we refuse and keep the console, so we read the step for a file
   // valid for Dreamcast, whose core is not on disk. Then we put the Mega Drive game back.
-  const directory = path.join(ROOT, "work/test-output/builder-shots");
-  fs.mkdirSync(directory, { recursive: true });
-  const cdi = path.join(directory, "game.cdi");
+  fs.mkdirSync(SHOTS, { recursive: true });
+  const cdi = path.join(SHOTS, "game.cdi");
   fs.writeFileSync(cdi, Buffer.from("not a real disc"));
   await page.goto(new URL("/", page.url()).href, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Choose a game" }).waitFor();
@@ -253,10 +272,7 @@ async function dropRom(page, rom) {
 // name on the details step, not while someone drags. A cartridge, just below,
 // is one file, and the page must show that.
 async function checkWhatTravels(page, out) {
-  const directory = path.join(
-    ROOT,
-    "work/test-output/builder-shots/ape-escape",
-  );
+  const directory = path.join(SHOTS, "ape-escape");
   fs.mkdirSync(directory, { recursive: true });
   const chd = path.join(directory, "Ape Escape.chd");
   const sbi = path.join(directory, "Ape Escape.sbi");
@@ -317,10 +333,7 @@ async function checkWhatTravels(page, out) {
   // A sheet lists its tracks inside the file. The Also importing line must
   // show every name that collect returns, however many there are, not only a
   // sibling.
-  const sheetDir = path.join(
-    ROOT,
-    "work/test-output/builder-shots/sheet-tracks",
-  );
+  const sheetDir = path.join(SHOTS, "sheet-tracks");
   fs.mkdirSync(sheetDir, { recursive: true });
   const tracks = ["track01.bin", "track02.bin", "track03.raw"];
   for (const name of tracks) {
@@ -360,10 +373,7 @@ async function checkWhatTravels(page, out) {
 
   // Here someone drops track 3 of a disc, the .bin. The layout in the same
   // folder lists that .bin, so the Also importing line must be the layout's.
-  const trackDir = path.join(
-    ROOT,
-    "work/test-output/builder-shots/dropped-track",
-  );
+  const trackDir = path.join(SHOTS, "dropped-track");
   fs.mkdirSync(trackDir, { recursive: true });
   // In the browser preview we reject a bare .bin before asking what goes
   // with it ("Choose a supported game file."). In the built app we resolve
@@ -411,10 +421,7 @@ async function checkWhatTravels(page, out) {
 
   // Track file names as they appear in dumps. Each contains the game's name,
   // which is already on the line above, so the Also importing line must not repeat it.
-  const longDir = path.join(
-    ROOT,
-    "work/test-output/builder-shots/long-tracks",
-  );
+  const longDir = path.join(SHOTS, "long-tracks");
   fs.mkdirSync(longDir, { recursive: true });
   const stem = "Sonic Adventure 2 (Europe) (En,Ja,Fr,De,Es)";
   const longTracks = [1, 2, 3].map(
@@ -482,7 +489,7 @@ async function checkWhatTravels(page, out) {
     return false;
   }
 
-  const manyDir = path.join(ROOT, "work/test-output/builder-shots/many-tracks");
+  const manyDir = path.join(SHOTS, "many-tracks");
   fs.mkdirSync(manyDir, { recursive: true });
   const many = Array.from({ length: 6 }, (_, index) => `track${index + 1}.bin`);
   for (const name of many) {
@@ -554,7 +561,7 @@ async function checkWhatTravels(page, out) {
 
   // We refuse a CloneCD sheet without a .sub for PC Engine CD. We must show
   // that on the page, and must not present the sheet as a one-file game.
-  const ccdDir = path.join(ROOT, "work/test-output/builder-shots/pce-ccd");
+  const ccdDir = path.join(SHOTS, "pce-ccd");
   fs.mkdirSync(ccdDir, { recursive: true });
   fs.writeFileSync(path.join(ccdDir, "game.ccd"), "[CloneCD]\n");
   fs.writeFileSync(path.join(ccdDir, "game.img"), "data");
@@ -1039,20 +1046,11 @@ async function main() {
       viewport: { width: 1440, height: 900 },
     });
     page.setDefaultTimeout(20000);
-    // This answer has no Dreamcast core, as in the desktop app before we
-    // have downloaded flycast.
-    const systems = JSON.parse(
-      fs.readFileSync(path.join(ROOT, "desktop/systems.json"), "utf8"),
-    ).systems;
-    const prepared = systems
-      .map((system) => system.id)
-      .filter((id) => id !== "dreamcast");
     // On every machine we photograph a builder that exports for macOS, so the
     // pictures of the walkthrough are the same everywhere.
-    await page.addInitScript((ids) => {
-      window.__ROMINABOX_PREPARED__ = ids;
+    await page.addInitScript(() => {
       window.__ROMINABOX_EXPORT_TARGET__ = "macos";
-    }, prepared);
+    });
     await page.goto(`http://127.0.0.1:${address.port}/`, {
       waitUntil: "networkidle",
     });
@@ -1586,21 +1584,23 @@ async function main() {
     const seen = new Set(["megadrive"]);
     for (const profile of profiles()) {
       if (!profile.system || seen.has(profile.id)) continue;
-      await page.getByRole("button", { name: "Details", exact: true }).click();
+      fs.mkdirSync(path.dirname(profile.standIn), { recursive: true });
+      fs.writeFileSync(profile.standIn, Buffer.from("not a real game"));
+      await page.goto(new URL("/", page.url()).href, {
+        waitUntil: "networkidle",
+      });
+      await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+      await dropRom(page, profile.standIn);
       await page.getByRole("heading", { name: "Game details" }).waitFor();
+      // We read this once the lookup has replaced the file name with the game's.
+      await page.waitForFunction(() => document.querySelector(".fields input")?.value);
+      // A stand-in has no header, so for a console we tell apart by its header,
+      // as Game Boy from Game Boy Color, we choose the console as a person would.
       const select = page.locator(".fields select");
-      await select.selectOption(profile.system);
-      await page.waitForTimeout(200);
-      // When this console does not accept the extension, we keep the previous
-      // console and Next stays available, and the pad on screen is not this profile's.
+      if (!(await select.inputValue())) await select.selectOption(profile.system);
       const kept = await select.inputValue();
-      const blocked = await page
-        .getByRole("button", { name: "Next", exact: true })
-        .isDisabled();
-      if (blocked || kept !== profile.system) {
-        console.log(
-          `UNREACHABLE ${profile.id} via ${profile.system} (console is ${kept})`,
-        );
+      if (kept !== profile.system) {
+        console.error(`${profile.standIn} was opened as ${kept}`);
         continue;
       }
       await clickNext(page);
@@ -1637,9 +1637,10 @@ async function main() {
         seen.add(item.id);
       }
     }
-    for (const profile of profiles()) {
-      if (!seen.has(profile.id)) console.log(`UNREACHABLE ${profile.id}`);
-    }
+    // We photograph every pad through the builder, or stop the walk with an error.
+    const missed = profiles().filter((profile) => !seen.has(profile.id));
+    for (const profile of missed) console.error(`UNREACHABLE ${profile.id}`);
+    if (missed.length) code = 1;
   } finally {
     await browser.close();
     await new Promise((resolve) => server.close(resolve));

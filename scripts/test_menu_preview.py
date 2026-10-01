@@ -104,11 +104,30 @@ def draw(document: Path, picture: Path, *changes: str) -> str:
 PICTURE = (255, 0, 255)
 
 
-def picture_share(image: Path) -> float:
-    from PIL import Image
+def picture_share(image: Path, colour: tuple[int, int, int] = PICTURE, within: int = 0) -> float:
+    """Return the share of `image` in `colour`, with each channel within `within`."""
+    from PIL import Image, ImageChops
 
-    pixels = list(Image.open(image).convert("RGB").getdata())
-    return sum(1 for pixel in pixels if pixel == PICTURE) / len(pixels)
+    picture = Image.open(image).convert("RGB")
+    masks = [channel.point(lambda value, wanted=wanted: 255 if abs(value - wanted) <= within else 0)
+             for channel, wanted in zip(picture.split(), colour)]
+    near = ImageChops.multiply(ImageChops.multiply(masks[0], masks[1]), masks[2])
+    return near.histogram()[255] / (picture.width * picture.height)
+
+
+# In the menu we multiply the author's picture by the screen colour of the
+# palette (integrations/parts/background.rcss), and round each channel of
+# that product in the renderer.
+TINT_ROUNDING = 2
+
+
+def drawn_picture(palette: str) -> tuple[int, int, int]:
+    """Return the author's picture, every pixel PICTURE, as we draw it in the
+    menu of `palette`."""
+    declared = json.loads((ROOT / "desktop/designs.json").read_text())
+    screen = next(entry["screen"] for entry in declared["palettes"] if entry["id"] == palette)
+    channels = [int(screen[index:index + 2], 16) for index in (1, 3, 5)]
+    return tuple(round(made * tint / 255) for made, tint in zip(PICTURE, channels))
 
 
 def background_picture(area: Path) -> Path:
@@ -140,7 +159,7 @@ def overlay_problem(design: str, area: Path) -> str:
     problem = draw(running, drawn)
     if problem:
         return f"the overlay did not draw: {problem}"
-    share = picture_share(drawn)
+    share = picture_share(drawn, drawn_picture(palettes()[0]), TINT_ROUNDING)
     if share:
         return f"{share:.1%} of the running game is covered by the menu's background picture"
     return ""
@@ -148,7 +167,8 @@ def overlay_problem(design: str, area: Path) -> str:
 
 def background_problem(design: str, area: Path) -> str:
     """Return an empty string when a game's background picture appears behind
-    this design's menu, and none appears for a game without one."""
+    this design's menu in the screen's colour, and none appears for a game
+    without one."""
     picture = background_picture(area)
     shares = {}
     for label, background in (("with", picture), ("without", None)):
@@ -156,7 +176,7 @@ def background_problem(design: str, area: Path) -> str:
         problem = render(design, palettes()[0], into, background)
         if problem:
             return f"{label} a background: {problem}"
-        shares[label] = picture_share(into / "preview.png")
+        shares[label] = picture_share(into / "preview.png", drawn_picture(palettes()[0]), TINT_ROUNDING)
     if shares["without"] != 0:
         return f"the picture shows in a game without one ({shares['without']:.1%})"
     if shares["with"] < 0.05:
@@ -254,10 +274,10 @@ def paging_problem(design: str, area: Path) -> str:
 
 def screen_problem(design: str, area: Path) -> str:
     """Return an empty string when `--screen` shows a screen as the player
-    does, with only its panel and its own footer. We draw Pause and Options
-    with the Pause panel in the colour no palette uses, then the Options
-    panel, then the footer in that colour. Options must hide Pause and show
-    its own panel, and different footer words must give different footers.
+    does, with only its panel and its own footer. We draw Options with the
+    Pause CONTINUE in the colour no palette uses, then its own CONTROLS, and
+    Pause and Options with the footer in it. Options must hide Pause and show
+    its own entries, and different footer words must give different footers.
     A picture of Options once kept the Pause footer."""
     into = area / f"{design}-screen"
     problem = render(design, palettes()[0], into, source=True)
@@ -265,8 +285,8 @@ def screen_problem(design: str, area: Path) -> str:
         return problem
     colour = "#{:02x}{:02x}{:02x}".format(*PICTURE)
     shares = {}
-    for screen, element, prop in (("options", "pause-panel", "background-color"),
-                                  ("options", "options-panel", "background-color"),
+    for screen, element, prop in (("options", "resume", "background-color"),
+                                  ("options", "controls", "background-color"),
                                   ("pause", "footer-hint", "color"),
                                   ("options", "footer-hint", "color")):
         drawn = into / f"screen-{screen}-{element}.png"
@@ -278,15 +298,41 @@ def screen_problem(design: str, area: Path) -> str:
         if completed.returncode != 0 or not drawn.is_file():
             return completed.stderr.strip() or f"{drawn} was not written"
         shares[(screen, element)] = picture_share(drawn)
-    if shares[("options", "pause-panel")]:
-        return "Options shown, Pause's panel still shows"
-    if not shares[("options", "options-panel")]:
-        return "Options shown, its panel does not show"
+    if shares[("options", "resume")]:
+        return "Options shown, Pause's CONTINUE still shows"
+    if not shares[("options", "controls")]:
+        return "Options shown, its CONTROLS does not show"
     footers = declared_footers(into / "design.cfg")
     if footers.get("pause") != footers.get("options") \
             and shares[("pause", "footer-hint")] == shares[("options", "footer-hint")]:
         return (f"Options' footer ({footers.get('options')}) draws as Pause's "
                 f"({footers.get('pause')})")
+    return ""
+
+
+def settings_problem(design: str, area: Path) -> str:
+    """Return an empty string when we draw the player settings in the preview
+    as in a game before we have a value from RetroArch: on Options, the volume
+    slider filled to its high end and the state of PLAY IN BACKGROUND in words,
+    each in the colour that no palette uses in its own picture. Drawn as
+    composed, they show an empty fill and no state."""
+    into = area / f"{design}-settings"
+    problem = render(design, palettes()[0], into, source=True)
+    if problem:
+        return problem
+    colour = "#{:02x}{:02x}{:02x}".format(*PICTURE)
+    for element, prop, what in (("volume-level-fill", "background-color", "the volume's fill"),
+                                ("background-play-state", "color", "PLAY IN BACKGROUND's state")):
+        drawn = into / f"settings-{element}.png"
+        completed = subprocess.run(
+            [str(RENDERER), str(into / "menu.rml"), str(drawn), "960", "600",
+             "--screen", "options", "--set", f"{element}:{prop}={colour}"],
+            capture_output=True, text=True, timeout=180,
+        )
+        if completed.returncode != 0 or not drawn.is_file():
+            return completed.stderr.strip() or f"{drawn} was not written"
+        if not picture_share(drawn):
+            return f"{what} is not drawn"
     return ""
 
 
@@ -321,7 +367,8 @@ def main() -> int:
                                 ("at twice the size", scale_problem),
                                 ("text as markup", markup_problem),
                                 ("a list in pages", paging_problem),
-                                ("a screen shown", screen_problem)):
+                                ("a screen shown", screen_problem),
+                                ("settings drawn", settings_problem)):
                 problem = check(design, area)
                 if problem:
                     print(f"  FAIL {design} {name}: {problem}", file=sys.stderr)

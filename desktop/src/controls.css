@@ -222,6 +222,13 @@
   stroke: var(--palette-edge, #75b2e4);
   stroke-width: 1.5;
 }
+/* A ring is a light line between two dark edges. We draw the edge circle
+   wider, beneath it, so the ring is visible on a pale pad as on a dark one. */
+.controller-ring-edge {
+  fill: none;
+  stroke: var(--palette-bevel-dark, #020b27);
+  stroke-width: 5;
+}
 .controller-ring {
   fill: none;
   stroke: #ffffff;

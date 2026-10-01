@@ -135,7 +135,7 @@ fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_keys() {
     let refused = |hotkeys: &Hotkeys, controls: &Controls| hotkeys.check_for("megadrive", controls).unwrap_err();
     assert_eq!(
         refused(&defaults, &keyed("a", "f2")),
-        Refusal::GameKey {
+        Refusal::GameInput {
             binding: Binding::Key("f2".into()),
             hotkey: named("quick-save"),
             control: "a".into(),
@@ -149,7 +149,7 @@ fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_keys() {
     let start = hotkeys(serde_json::json!({ "quick-load": ["key:enter"], "confirm": ["key:space"] })).unwrap();
     assert_eq!(
         refused(&start, &Controls::default()),
-        Refusal::GameKey {
+        Refusal::GameInput {
             binding: Binding::Key("enter".into()),
             hotkey: named("quick-load"),
             control: "start".into(),
@@ -161,6 +161,62 @@ fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_keys() {
         .unwrap()
         .check_for("megadrive", &keyed("b", "escape"))
         .unwrap();
+}
+
+/// We refuse a pad button as we refuse a key. A hotkey used during play may
+/// have no position that the game uses, after the author moved its controls,
+/// on any pad in the game. A chord is not one position, so MENU's L3+R3 is
+/// allowed, and Home is no position at all.
+#[test]
+fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_pad_buttons() {
+    let refused = |json, controls: &Controls| {
+        hotkeys(json).unwrap().check_for("megadrive", controls).unwrap_err().to_string()
+    };
+    // We read Mega Drive A from the left button.
+    let left = refused(serde_json::json!({ "quick-save": ["key:f2", "pad:y"] }), &Controls::default());
+    assert!(left.contains("pad:y is bound to quick-save") && left.contains("for y (A)"), "{left}");
+    // The six-button pad's Mode is Select, which the three-button pad lacks.
+    let mode = refused(serde_json::json!({ "next-slot": ["pad:select"] }), &Controls::default());
+    assert!(mode.contains("pad:select is bound to next-slot") && mode.contains("for select (Mode)"), "{mode}");
+    // A moved from the left button to L2, so L2 is the game's and left is free.
+    let moved = Controls {
+        profile: None,
+        bindings: [("y".to_string(), ControlOverride { pad: Some("l2".into()), ..Default::default() })].into(),
+    };
+    let l2 = refused(serde_json::json!({ "quick-load": ["pad:l2"] }), &moved);
+    assert!(l2.contains("pad:l2 is bound to quick-load") && l2.contains("for y (A)"), "{l2}");
+    hotkeys(serde_json::json!({ "quick-load": ["pad:y"] })).unwrap().check_for("megadrive", &moved).unwrap();
+    // The defaults are Home, and L3 and R3 held together, unused by any Mega Drive pad.
+    crate::builder::unstated::hotkeys().check_for("megadrive", &Controls::default()).unwrap();
+    hotkeys(serde_json::json!({ "quick-save": ["pad:l3+r3"], "menu": ["key:escape", "pad:home"] }))
+        .unwrap()
+        .check_for("megadrive", &Controls::default())
+        .unwrap();
+}
+
+/// In the Controls step of the builder, the author binds a stick direction by
+/// direction, and we check the hotkeys before each. Between two directions,
+/// half an axis has moved, which we refuse on export for another reason. Even
+/// then, we report only the conflicts of hotkeys with the game's inputs.
+#[test]
+fn the_games_inputs_are_checked_while_a_stick_is_half_moved() {
+    let half = Controls {
+        profile: None,
+        bindings: [("l_x_minus", "b"), ("b", "l_x_minus")]
+            .map(|(control, pad)| (control.to_string(), ControlOverride { pad: Some(pad.into()), ..Default::default() }))
+            .into(),
+    };
+    assert!(crate::controls::validate_for_system("ps1", &half).is_err());
+    crate::builder::unstated::hotkeys().check_for("ps1", &half).unwrap();
+    assert_eq!(
+        hotkeys(serde_json::json!({ "quick-save": ["key:z"] })).unwrap().check_for("ps1", &half).unwrap_err(),
+        Refusal::GameInput {
+            binding: Binding::Key("z".into()),
+            hotkey: named("quick-save"),
+            control: "b".into(),
+            label: "Cross".into()
+        }
+    );
 }
 
 /// We tell the builder the rule and the hotkeys, so that we can word the
@@ -179,7 +235,7 @@ fn a_refusal_names_the_rule_and_the_hotkeys_for_the_builder() {
     let game_key = crate::builder::unstated::hotkeys().check_for("megadrive", &keyed("y", "f7")).unwrap_err();
     assert_eq!(
         serde_json::to_value(game_key).unwrap(),
-        serde_json::json!({ "kind": "gameKey", "binding": "key:f7", "hotkey": "next-slot", "control": "y", "label": "A" })
+        serde_json::json!({ "kind": "gameInput", "binding": "key:f7", "hotkey": "next-slot", "control": "y", "label": "A" })
     );
 }
 

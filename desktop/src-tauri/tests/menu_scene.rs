@@ -50,7 +50,7 @@ fn a_sticks_ring_is_where_the_scene_layout_puts_it() {
         for profile in controls::variants_for_system("ps1").unwrap() {
             let scene = fs::read_to_string(destination.join(format!("scene-{}.rml", profile.id)))
                 .unwrap_or_else(|error| panic!("{design}/{}: {error}", profile.id));
-            let layout = scene_layout::layout(&profile.controls, metrics);
+            let layout = scene_layout::layout(&profile, metrics);
             for group in &layout.groups {
                 let Some(marker) = group.marker else { continue };
                 let anchor = profile
@@ -130,7 +130,7 @@ fn no_leader_crosses_a_stick_box_on_any_pad() {
     let mut boxes = 0;
     for (design, metrics) in design_metrics() {
         for profile in illustrated_profiles() {
-            let layout = scene_layout::layout(&profile.controls, metrics);
+            let layout = scene_layout::layout(&profile, metrics);
             let runs = layout
                 .controls
                 .iter()
@@ -162,4 +162,117 @@ fn no_leader_crosses_a_stick_box_on_any_pad() {
     }
     assert!(boxes > 0, "no pad with a stick was checked");
     assert!(crossings.is_empty(), "{}", crossings.join("\n"));
+}
+
+/// The text of the element with `id`'s first `control-label`, from the
+/// composed scene.
+fn box_title<'a>(scene: &'a str, id: &str) -> Option<&'a str> {
+    let inside = stop_markup(scene, id)?;
+    let label = inside.split("class=\"control-label\">").nth(1)?;
+    label.split('<').next()
+}
+
+/// A stick's box shows the name its pad gives the stick. The group's id is
+/// not that name: GameCube's C-stick has the id of a right stick, and a pad
+/// with one stick has the id of a left stick.
+#[test]
+fn a_sticks_box_reads_the_name_its_pad_gives_it() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-stick-titles");
+    let kit = kit(&root);
+    let expected = [
+        ("gamecube", "l_stick", "Control stick"),
+        ("gamecube", "r_stick", "C-stick"),
+        ("dreamcast", "l_stick", "Stick"),
+        ("n64", "l_stick", "Stick"),
+        ("ps1", "l_stick", "Left stick"),
+        ("ps1", "r_stick", "Right stick"),
+    ];
+    let mut wrong = Vec::new();
+    for design in designs() {
+        for (system, group, title) in expected {
+            let destination = root.join(&design).join(system);
+            let composed = support::compose_for(&kit, &design, system, &destination);
+            let id = format!("control-group-{group}");
+            let read = box_title(&composed.menu, &id);
+            if read != Some(title) {
+                wrong.push(format!("{design}/{system}: #{id} reads {read:?}, not {title:?}"));
+            }
+        }
+    }
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+/// Whether a leader run passes inside the ring drawn over a button: the
+/// circle that fills `marker`. A run that only touches it does not.
+fn through_ring(run: &scene_layout::Segment, marker: &scene_layout::Rect) -> bool {
+    let radius = marker.width / 2;
+    let (x, y) = (marker.x + radius, marker.y + radius);
+    let nearest_x = x.clamp(run.x, run.x + run.width);
+    let nearest_y = y.clamp(run.y, run.y + run.height);
+    (nearest_x - x).pow(2) + (nearest_y - y).pow(2) < radius * radius
+}
+
+/// Whether two runs lie along each other: both horizontal or both vertical,
+/// closer than `apart` across, over a shared stretch.
+fn along(first: &scene_layout::Segment, second: &scene_layout::Segment, apart: i32) -> bool {
+    let shared = |a0: i32, a1: i32, b0: i32, b1: i32| a0.max(b0) < a1.min(b1);
+    match (first.height == 0, second.height == 0) {
+        (true, true) => {
+            (first.y - second.y).abs() < apart
+                && shared(first.x, first.x + first.width, second.x, second.x + second.width)
+        }
+        (false, false) => {
+            (first.x - second.x).abs() < apart
+                && shared(first.y, first.y + first.height, second.y, second.y + second.height)
+        }
+        _ => false,
+    }
+}
+
+/// No leader runs through the ring over another button, and no two leaders
+/// run along each other. The cases include GameCube's B near the C-stick's
+/// ring, and Dreamcast's stick near D-pad Left's line and ring.
+#[test]
+fn no_leader_runs_through_another_ring_or_along_another_leader() {
+    let mut faults = Vec::new();
+    let mut checked = 0;
+    for (design, metrics) in design_metrics() {
+        // Runs closer than a leader's own breadth read as one line.
+        let apart = 4;
+        for profile in illustrated_profiles() {
+            let layout = scene_layout::layout(&profile, metrics);
+            let drawn: Vec<(String, scene_layout::Rect, &Vec<scene_layout::Segment>)> = layout
+                .controls
+                .iter()
+                .map(|placed| (placed.id.clone(), placed.marker, &placed.leader))
+                .chain(layout.groups.iter().filter_map(|group| {
+                    group.marker.map(|marker| (group.name.clone(), marker, &group.leader))
+                }))
+                .collect();
+            checked += drawn.len();
+            for (owner, _, leader) in &drawn {
+                for run in leader.iter() {
+                    for (other, marker, other_leader) in &drawn {
+                        if other == owner {
+                            continue;
+                        }
+                        if through_ring(run, marker) {
+                            faults.push(format!(
+                                "{design}/{}: {owner}'s run at {},{} {}x{} goes through {other}'s ring",
+                                profile.id, run.x, run.y, run.width, run.height
+                            ));
+                        }
+                        if other_leader.iter().any(|theirs| along(run, theirs, apart)) {
+                            faults.push(format!(
+                                "{design}/{}: {owner}'s run at {},{} {}x{} lies along {other}'s leader",
+                                profile.id, run.x, run.y, run.width, run.height
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert!(checked > 0, "no leader was checked");
+    assert!(faults.is_empty(), "{} faults:\n{}", faults.len(), faults.join("\n"));
 }
