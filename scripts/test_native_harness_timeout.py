@@ -293,6 +293,15 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
                         menu_workflows.claim_fixture(Path("/fake/Fixture.app"))
                         self.assertTrue((data / "menu-workflow-owner").is_file())
 
+    def test_every_case_of_one_export_runs_before_the_next_export(self) -> None:
+        # The designs alternate in the table. Their exports are one game, and
+        # launching one on Windows removes the other export's unpacked copy.
+        cases = [{"key": "native/a", "export": {"design": "native"}},
+                 {"key": "disc/b", "export": {"design": "disc"}},
+                 {"key": "native/c", "export": {"design": "native"}}]
+        self.assertEqual([case["key"] for case in menu_workflows.in_export_order(cases)],
+                         ["native/a", "native/c", "disc/b"])
+
     def test_empty_claim_then_reset_only_fixture_files(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             data = Path(directory).resolve()

@@ -263,6 +263,15 @@ def picture_problem(picture: Path, reference: Path) -> str | None:
     return f"{over} pixel(s) differ from the reference by up to {largest} levels"
 
 
+def in_export_order(cases: list[dict]) -> list[dict]:
+    """The cases, with every case of one export before the first of the next.
+    Two exports of the fixture are one game with one identity, and when we
+    launch a Windows game we keep only its unpacked copy, so running a case
+    between two cases of another export would remove that export's copy."""
+    exports = list(dict.fromkeys(json.dumps(case["export"], sort_keys=True) for case in cases))
+    return sorted(cases, key=lambda case: exports.index(json.dumps(case["export"], sort_keys=True)))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--record", action="store_true", help="replace the launched cases' baseline entries")
@@ -295,7 +304,7 @@ def main() -> int:
     results: dict[str, dict] = {}
     with ExitStack() as exports:
         games: dict[str, Path] = {}
-        for case in cases:
+        for case in in_export_order(cases):
             key = json.dumps(case["export"], sort_keys=True)
             if key not in games:
                 games[key] = exports.enter_context(shots.build_a_game(rom, output, settings=case["export"]))
