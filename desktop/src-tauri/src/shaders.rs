@@ -98,6 +98,12 @@ impl LibraryPreset {
 /// `shaders`. No other shader folder may use their names.
 const LIBRARY_FOLDERS: [&str; 2] = ["glsl", "slang"];
 
+/// Where the shader library is in a runtime kit, from which we take the
+/// files of a catalog preset.
+pub fn kit_library(kit: &Path) -> PathBuf {
+    kit.join("shaders")
+}
+
 /// The shader library's folder for a language's presets.
 fn library_folder(language: Language) -> &'static str {
     match language {

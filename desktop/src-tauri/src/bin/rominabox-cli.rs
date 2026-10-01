@@ -459,6 +459,11 @@ fn run() -> Result<(), String> {
                 menu_entries: request.menu_entries,
                 include_achievements: request.include_achievements,
                 shaders: request.shaders,
+                // We take a catalog preset's files from the kit of this command,
+                // as we take them in an export from the kit we make it from.
+                shader_library: builder::runtime_kit()
+                    .map(|kit| shaders::kit_library(&kit))
+                    .unwrap_or_default(),
                 discs: request.discs.unwrap_or(defaults.discs),
                 settings: rominabox_desktop::player_settings::Defaults {
                     keep_playing_in_background: request.keep_playing_in_background,
