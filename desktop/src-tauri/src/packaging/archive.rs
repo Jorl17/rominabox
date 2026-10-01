@@ -181,6 +181,72 @@ mod tests {
         assert!(ran.success(), "the unpacked program does not run");
     }
 
+    /// The time on this computer's clock `seconds` after 1970. We ask the
+    /// tools of the system for it instead of working it out here.
+    fn system_clock_shows(seconds: u64) -> (u16, u8, u8, u8, u8, u8) {
+        use std::process::Command;
+        #[cfg(unix)]
+        const FIELDS: &str = "%Y %m %d %H %M %S";
+        #[cfg(windows)]
+        let asked = Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command"])
+            .arg(format!(
+                "[DateTimeOffset]::FromUnixTimeSeconds({seconds}).ToLocalTime().ToString('yyyy MM dd HH mm ss')"
+            ))
+            .output();
+        #[cfg(target_os = "linux")]
+        let asked = Command::new("date")
+            .arg("-d")
+            .arg(format!("@{seconds}"))
+            .arg(format!("+{FIELDS}"))
+            .output();
+        // On macOS and the BSDs, -r gives the instant.
+        #[cfg(all(unix, not(target_os = "linux")))]
+        let asked = Command::new("date")
+            .arg("-r")
+            .arg(seconds.to_string())
+            .arg(format!("+{FIELDS}"))
+            .output();
+        let shown = String::from_utf8(asked.unwrap().stdout).unwrap();
+        let parts: Vec<u16> = shown.split_whitespace().map(|part| part.parse().unwrap()).collect();
+        assert_eq!(parts.len(), 6, "{shown:?}");
+        let part = |index: usize| parts[index] as u8;
+        (parts[0], part(1), part(2), part(3), part(4), part(5))
+    }
+
+    /// We record the time when each file changed as an instant in the
+    /// extended timestamp field, for unzip, ditto, 7-Zip and libarchive, and
+    /// as local time on this computer in the date field of the zip, because
+    /// that field is local time for every zip tool.
+    #[test]
+    fn a_file_keeps_when_it_changed() {
+        let seconds = 1_790_586_896; // 2026-09-28 09:14:56 UTC
+        let root = rominabox_scratch::Scratch::dir("rominabox-zip-times");
+        let file = root.path().join("game.bin");
+        fs::write(&file, b"cartridge").unwrap();
+        File::options()
+            .write(true)
+            .open(&file)
+            .unwrap()
+            .set_modified(UNIX_EPOCH + std::time::Duration::from_secs(seconds))
+            .unwrap();
+        let zip = root.path().join("Game.zip");
+        write_zip(&[(&file, "game.bin")], &zip).unwrap();
+        let mut archive = zip::ZipArchive::new(File::open(&zip).unwrap()).unwrap();
+        let entry = archive.by_name("game.bin").unwrap();
+        let instant = entry.extra_data_fields().find_map(|field| match field {
+            zip::extra_fields::ExtraField::ExtendedTimestamp(stamp) => stamp.mod_time(),
+            _ => None,
+        });
+        assert_eq!(instant, Some(seconds as u32), "the instant it changed");
+        let shown = entry.last_modified().unwrap();
+        assert_eq!(
+            (shown.year(), shown.month(), shown.day(), shown.hour(), shown.minute(), shown.second()),
+            system_clock_shows(seconds),
+            "the date field is this computer's clock"
+        );
+    }
+
     #[test]
     fn a_date_is_the_same_date_in_a_zip() {
         let time = UNIX_EPOCH + std::time::Duration::from_secs(1_790_586_896); // 2026-09-28 09:14:56 UTC
