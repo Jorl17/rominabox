@@ -130,6 +130,19 @@ pub fn profile_for_system(system: &str) -> Result<ControlProfile, String> {
 /// play. We refuse that in `crate::hotkeys`, where we declare which inputs
 /// those are.
 pub fn validate_for_system(system: &str, controls: &Controls) -> Result<ControlProfile, String> {
+    let profile = chosen_profile(system, controls)?;
+    crate::pad_positions::place(
+        &declared_controls(system, &profile)?,
+        &controls.bindings,
+        &pad_positions()?,
+    )?;
+    Ok(profile)
+}
+
+/// The pad chosen in `controls` for `system`, or the console's default pad,
+/// after we check the labels and keys in `controls`. We check the positions
+/// of its controls in `validate_for_system`.
+fn chosen_profile(system: &str, controls: &Controls) -> Result<ControlProfile, String> {
     let profile = if let Some(id) = &controls.profile {
         let mut offered = variants_for_system(system)?;
         offered.extend(registry()?.profiles.into_iter().filter(|profile| profile.id == "retropad"));
@@ -141,11 +154,6 @@ pub fn validate_for_system(system: &str, controls: &Controls) -> Result<ControlP
         profile_for_system(system)?
     };
     validate_for_profile(&profile, controls)?;
-    crate::pad_positions::place(
-        &declared_controls(system, &profile)?,
-        &controls.bindings,
-        &pad_positions()?,
-    )?;
     Ok(profile)
 }
 
@@ -304,7 +312,6 @@ struct Played {
 /// with the changes in `controls`, and the others as we declare them.
 fn every_control(system: &str, profile: &ControlProfile, controls: &Controls) -> Result<Vec<Played>, String> {
     let declared = declared_controls(system, profile)?;
-    let placed = crate::pad_positions::place(&declared, &controls.bindings, &pad_positions()?)?;
     let values = effective_controls(profile, controls);
     Ok(declared
         .into_iter()
@@ -314,10 +321,7 @@ fn every_control(system: &str, profile: &ControlProfile, controls: &Controls) ->
                 key: control.key.clone(),
                 mouse: None,
             });
-            let slot = placed
-                .iter()
-                .find(|entry| entry.control == control.id)
-                .map_or_else(|| control.id.clone(), |entry| entry.slot.clone());
+            let slot = crate::pad_positions::chosen(&control.id, &controls.bindings).to_string();
             Played { control, value, slot }
         })
         .collect())
@@ -334,11 +338,12 @@ pub struct GameInput {
     pub position: String,
 }
 
-/// Every input of the game `system` with `controls`, on every pad that the
-/// player can choose. A hotkey used during play must not use any of these
-/// inputs (`crate::hotkeys`).
+/// Every input for a control of the game `system` with `controls`, on every
+/// pad in its picker. A hotkey used during play may not have any of these
+/// (`crate::hotkeys`). We read each control where the author put it, even
+/// before `validate_for_system` has checked that the positions agree.
 pub fn game_inputs(system: &str, controls: &Controls) -> Result<Vec<GameInput>, String> {
-    let profile = validate_for_system(system, controls)?;
+    let profile = chosen_profile(system, controls)?;
     Ok(every_control(system, &profile, controls)?
         .into_iter()
         .map(|Played { control, value, slot }| GameInput {
