@@ -109,7 +109,7 @@ fn run() -> Result<(), String> {
                 "shaders": { "request": [], "result": "Catalog presets an author can bundle" },
                 "designs": { "request": [], "result": "The menu designs (theme ids), palettes and sound packs an export can name" },
                 "defaults": { "request": [], "result": "The builder's settings, which a request leaves out" },
-                "shaders-check": { "request": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "optional id" }, "result": "Resolved shaders, or an error" },
+                "shaders-check": { "request": { "bundled": ["catalog id"], "custom": [{ "name": "string", "path": "path" }], "initial": "optional id" }, "result": "Resolved shaders, and warnings for the author's filters a Windows game may not load, or an error" },
                 "project-open": { "request": ["archivePath", "extractionDir"], "result": "OpenProject" },
                 "volume-markup": { "request": ["design"], "result": { "markup": "the volume control, in the design's slider, with an arrow either side" } },
                 "design-screens": { "request": ["design"], "result": { "screens": "the design's screens as the menu resolves them, Native's merged with its own, in design.json's words" } }
@@ -553,6 +553,7 @@ fn run() -> Result<(), String> {
             let selection: shaders::ShaderSelection = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid shader selection: {error}"))?;
             let resolved = shaders::resolve(&selection)?;
+            let warnings = shaders::windows_warnings(&selection)?;
             let presets: Vec<_> = resolved
                 .iter()
                 .map(|item| {
@@ -566,7 +567,7 @@ fn run() -> Result<(), String> {
                 .collect();
             println!(
                 "{}",
-                json!({ "type": "result", "result": { "shaders": presets } })
+                json!({ "type": "result", "result": { "shaders": presets, "warnings": warnings } })
             );
             Ok(())
         }

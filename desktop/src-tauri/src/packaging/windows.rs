@@ -10,6 +10,28 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
+/// The longest per-user data folder that we unpack a Windows game under, for
+/// a local account name of twenty characters, the longest Windows allows.
+pub const LONGEST_LOCAL_APP_DATA: &str = r"C:\Users\fcporto-campeao-2026\AppData\Local";
+
+/// The longest path that can be opened on Windows, whatever the program.
+pub const LONGEST_PATH: usize = 259;
+
+/// The longest possible path of `inside`, a path among the menu assets, in an
+/// unpacked Windows game, under the longest per-user data folder.
+pub fn longest_menu_asset_path(inside: &Path) -> String {
+    let runtime = format!(
+        "{}-{}",
+        super::launch_plan::runtime_folder(&"0".repeat(super::launch_plan::IDENTITY_CHARS)),
+        "0".repeat(super::windows_pack::PACK_ID_CHARS)
+    );
+    let path = Path::new(&runtime)
+        .join(windows_part!(Resources))
+        .join(app_file!(MenuAssets))
+        .join(inside);
+    format!("{LONGEST_LOCAL_APP_DATA}\\{}", path.to_string_lossy()).replace('/', "\\")
+}
+
 /// A Windows game: one program, the launcher, with the game packed inside it
 /// (`windows_pack`). We first lay it out as the folder it unpacks into, with
 /// the launcher next to `Resources`, the game's files, and `Runtime`, the

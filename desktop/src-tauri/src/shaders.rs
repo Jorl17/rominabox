@@ -164,6 +164,13 @@ pub struct ResolvedShader {
     written: Vec<(String, String)>,
 }
 
+impl ResolvedShader {
+    /// Where we stage its files, among the game's menu assets.
+    fn folder(&self) -> PathBuf {
+        Path::new("shaders").join(&self.id)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct StagedShaders {
     /// The screen and its rows, which we write into the menu with
@@ -354,6 +361,51 @@ fn unfiltered() -> ResolvedShader {
 /// Check a selection. Return nothing for an empty one, which is the usual case.
 pub fn resolve(selection: &ShaderSelection) -> Result<Vec<ResolvedShader>, String> {
     Ok(resolved(selection)?.1)
+}
+
+/// A filter from the author that a Windows game may fail to load, because one
+/// of its files would be at a path longer than Windows can open. The player
+/// then sees the game without a filter.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ShaderWarning {
+    /// The filter, as the selection names it.
+    pub path: PathBuf,
+    pub sentence: String,
+}
+
+/// The author's filters in `selection` with files too deep for Windows, at
+/// the paths they have in an unpacked game under the longest per-user data
+/// folder. We only warn, and make the game either way.
+pub fn windows_warnings(selection: &ShaderSelection) -> Result<Vec<ShaderWarning>, String> {
+    let mut warnings = Vec::new();
+    for item in resolve(selection)? {
+        // A filter from the author is one that has files. The file in
+        // the selection comes first.
+        let Some((own, _)) = item.files.first() else {
+            continue;
+        };
+        let deepest = item
+            .files
+            .iter()
+            .map(|(_, name)| {
+                let read = crate::packaging::longest_menu_asset_path(&item.folder().join(name));
+                (name, read.encode_utf16().count())
+            })
+            .max_by_key(|(_, length)| *length);
+        if let Some((name, length)) = deepest {
+            if length > crate::packaging::LONGEST_PATH {
+                warnings.push(ShaderWarning {
+                    path: own.clone(),
+                    sentence: format!(
+                        "On Windows this filter may not load, and the game would run without it: \
+                         \u{201c}{name}\u{201d} sits too deep among its folders."
+                    ),
+                });
+            }
+        }
+    }
+    Ok(warnings)
 }
 
 /// The video driver for a game with this selection. We choose it from the
@@ -657,7 +709,7 @@ pub fn stage(
             .join(" ")
     });
     for item in &resolved {
-        let directory = Path::new("shaders").join(&item.id);
+        let directory = item.folder();
         for (source, name) in &item.files {
             files.push((directory.join(name), Content::Copy(source.clone())));
         }

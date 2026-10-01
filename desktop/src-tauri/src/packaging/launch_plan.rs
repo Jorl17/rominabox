@@ -73,8 +73,11 @@ pub(super) fn stable_identity(
         }
         hash.update(&buffer[..count]);
     }
-    Ok(format!("{:x}", hash.finalize())[..24].to_string())
+    Ok(format!("{:x}", hash.finalize())[..IDENTITY_CHARS].to_string())
 }
+
+/// How many characters a game's identity has.
+pub(super) const IDENTITY_CHARS: usize = 24;
 
 /// The writable directories we create and manage under each game's data root.
 pub const MANAGED_DATA_DIRECTORIES: &[&str] = &[

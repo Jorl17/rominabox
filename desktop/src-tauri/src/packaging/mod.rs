@@ -51,6 +51,7 @@ use export_core::{export_core, prepare_core, resolve_cached, shipped_cores, Expo
 use launch_plan::{isolation_namespace, stable_identity, write_launch_plan};
 pub use both::export_for_both;
 pub use launch_plan::MANAGED_DATA_DIRECTORIES;
+pub use windows::{longest_menu_asset_path, LONGEST_LOCAL_APP_DATA, LONGEST_PATH};
 use macos::MacosPackager;
 pub use macos::freeze_macos_executable;
 use windows::WindowsPackager;

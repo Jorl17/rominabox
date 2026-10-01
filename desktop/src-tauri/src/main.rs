@@ -257,6 +257,14 @@ fn traveling_files(path: PathBuf, system: Option<String>) -> Result<traveling::T
     traveling::files_for(&path, system.as_deref())
 }
 
+/// The author's filters that a Windows game cannot load, as in `shaders-check`.
+#[tauri::command]
+fn shader_warnings(
+    selection: rominabox_desktop::shaders::ShaderSelection,
+) -> Result<Vec<rominabox_desktop::shaders::ShaderWarning>, String> {
+    rominabox_desktop::shaders::windows_warnings(&selection)
+}
+
 #[tauri::command]
 fn available_systems(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let kit = resource(&app, "runtime")?;
@@ -379,6 +387,7 @@ fn main() {
             save_project,
             open_project,
             traveling_files,
+            shader_warnings,
             capture_pad_position,
             cancel_pad_capture
         ])

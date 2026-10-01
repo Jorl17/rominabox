@@ -9,7 +9,7 @@ mod export_fixture;
 mod support;
 
 use export_fixture::{export_request_from, library, unpack, windows_kit, workspace};
-use rominabox_desktop::packaging::{ErrorStage, ExportTarget};
+use rominabox_desktop::packaging::{ErrorStage, ExportTarget, LONGEST_LOCAL_APP_DATA, LONGEST_PATH};
 use editpe::constants::{RT_GROUP_ICON, RT_ICON};
 use editpe::{Image, ResourceEntryName};
 use std::{fs, path::Path, process::Command, sync::atomic::AtomicBool};
@@ -210,14 +210,9 @@ fn a_core_that_needs_a_library_windows_lacks_is_refused() {
     assert_eq!(names(&request.output_dir), Vec::<String>::new());
 }
 
-/// On Windows, no program can open a path longer than 259 characters. We set
-/// up the game's folder under the local application data of the person, which
-/// is longest for a local account with the longest name allowed, twenty
-/// characters.
-const LONGEST_LOCAL_APP_DATA: &str = r"C:\Users\fcporto-campeao-2026\AppData\Local";
-
-/// In a game with every shader in the catalogue, in either language, every
-/// file we unpack is within that limit, in the folder we read it from.
+/// A game with every shader in the catalogue, in either language. Every file
+/// we unpack from it stays within the longest path that Windows can open, at
+/// the place it will be read from, under the longest per-user data folder.
 #[test]
 fn every_file_of_a_game_with_every_shader_fits_windows_path_limit() {
     let root = workspace();
@@ -257,7 +252,7 @@ fn every_file_of_a_game_with_every_shader_fits_windows_path_limit() {
                 }
                 let inside = path.strip_prefix(&game).unwrap().to_string_lossy().into_owned();
                 let read_from = format!("{LONGEST_LOCAL_APP_DATA}\\{}\\{inside}", runtime.replace('/', "\\"));
-                assert!(read_from.len() <= 259, "{} characters: {read_from}", read_from.len());
+                assert!(read_from.len() <= LONGEST_PATH, "{} characters: {read_from}", read_from.len());
             }
         }
     }
