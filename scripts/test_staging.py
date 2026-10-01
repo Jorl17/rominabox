@@ -44,7 +44,19 @@ def staged_as_sources() -> list[str]:
         retired = kit / "sound-packs" / "retired-pack"
         retired.mkdir(parents=True)
         (retired / "ok.wav").write_bytes(b"old")
+        # Files from a design, a design's document or a shared part that we
+        # renamed or removed, left in a kit staged before.
+        left = [kit / "designs" / "native" / "screen-retired.rml",
+                kit / "designs" / "retired-design" / "design.json",
+                kit / "parts" / "retired-part.rml"]
+        for path in left:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("old", encoding="utf-8")
         kit_assets.stage(kit)
+        wrong += [f"{path.relative_to(kit).as_posix()}: no longer in the repository, still in the kit"
+                  for path in left if path.exists()]
+        if (kit / "designs" / "retired-design").exists():
+            wrong.append("designs/retired-design: a design the repository no longer has is still in the kit")
         for design in sorted(p for p in kit_assets.DESIGNS.iterdir() if p.is_dir()):
             wrong += same_files(design, kit / "designs" / design.name)
         wrong += same_files(kit_assets.PARTS, kit / "parts")
@@ -194,7 +206,8 @@ KIT = ROOT / "desktop/src-tauri/resources/runtime"
 
 
 def staged_copy_is_current(source: Path, staged: Path, name: str) -> list[str]:
-    """Return the files missing from the kit's copy of a directory, or older there."""
+    """Return the files missing from the kit's copy of a directory, older there
+    than in the source, or no longer in the source."""
     if not staged.is_dir():
         return [f"{name}: not in the kit at all"]
     stale: list[str] = []
@@ -204,6 +217,9 @@ def staged_copy_is_current(source: Path, staged: Path, name: str) -> list[str]:
             stale.append(f"{name}/{document.name}: missing from the kit")
         elif beside.read_bytes() != document.read_bytes():
             stale.append(f"{name}/{document.name}: the kit's copy is older")
+    for staged_file in sorted(p for p in staged.iterdir() if p.is_file()):
+        if not (source / staged_file.name).is_file():
+            stale.append(f"{name}/{staged_file.name}: in the kit, no longer in the repository")
     return stale
 
 
