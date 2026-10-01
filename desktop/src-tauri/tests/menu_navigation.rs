@@ -30,7 +30,13 @@
 
 mod support;
 
-use rominabox_desktop::{controls::Controls, repo, shaders::ShaderSelection, themes};
+use rominabox_desktop::{
+    controls::Controls,
+    menu::ScreenRole,
+    repo,
+    shaders::ShaderSelection,
+    themes,
+};
 use serde_json::Value;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -40,17 +46,32 @@ use std::{
     process::{Command, Stdio},
 };
 
-/// The pads available to a case, by name: the system and the controller we
-/// export the composition with.
-/// Each menu available to a case: the console, its pad, and an Options entry
-/// we leave out of the game, when a case requires entries that fill a page.
-const MENUS: [(&str, &str, Option<&str>, Option<&str>); 5] = [
-    ("md3", "megadrive", None, None),
-    ("md6", "megadrive", Some("megadrive6"), None),
-    ("gb", "gbc", None, None),
-    ("ps1-analog", "ps1", Some("ps1-analog"), None),
-    ("md3-without-hotkeys", "megadrive", None, Some("hotkeys")),
+/// The pads that a case can ask for, by name: the system and the controller
+/// that we export the composition with.
+/// Each menu that a case can name: the console, its pad, and the Options
+/// entries that we leave out of the game, by the roles of their screens, for
+/// a case whose entries must fill a page exactly.
+const MENUS: [(&str, &str, Option<&str>, &[ScreenRole]); 5] = [
+    ("md3", "megadrive", None, &[]),
+    ("md6", "megadrive", Some("megadrive6"), &[]),
+    ("gb", "gbc", None, &[]),
+    ("ps1-analog", "ps1", Some("ps1-analog"), &[]),
+    (
+        "md3-without-hotkeys-or-forget",
+        "megadrive",
+        None,
+        &[ScreenRole::Hotkeys, ScreenRole::Forget],
+    ),
 ];
+
+/// The filters we bundle in every composed menu: the rows that the filter
+/// list cases go through, after NONE.
+const BUNDLED_FILTERS: [&str; 2] = ["scanlines", "phosphor"];
+
+/// The Options entry for each role in one composed menu, by the role's
+/// word, written as `@<role>` in a case. Some depend on the platform, for
+/// example the forget screen is UNINSTALL on Windows and RESET on a Mac.
+type RoleEntries = BTreeMap<&'static str, String>;
 
 /// The designs a table must cover: registered ones, then hypothetical ones.
 fn all_designs() -> (Vec<String>, Vec<String>) {
@@ -63,27 +84,29 @@ fn all_designs() -> (Vec<String>, Vec<String>) {
     (registered, support::hypothetical_designs())
 }
 
-/// The menu composed from one design and pad, with every Options entry in
-/// the design except `leaves_out`, and the bundled shaders and achievements,
-/// as in a full export.
+/// The menu we compose for one design and pad, as in a full export: every
+/// Options entry of the design except those of the roles in `leaves_out`,
+/// the bundled filters and achievements. Return it with each role's entry.
 fn compose(
     kit: &Path,
     design: &str,
     system: &str,
     profile: Option<&str>,
-    leaves_out: Option<&str>,
+    leaves_out: &[ScreenRole],
     to: &Path,
-) {
+) -> RoleEntries {
     let staged = themes::staged_design(kit, design);
-    let entries: Vec<String> = rominabox_desktop::menu::declared_screens(&staged)
-        .unwrap()
-        .into_iter()
-        .filter(|screen| screen.option_label.is_some() && Some(screen.id.as_str()) != leaves_out)
-        .map(|screen| screen.id)
+    let screens = rominabox_desktop::menu::declared_screens(&staged).unwrap();
+    let left_out = |screen: &rominabox_desktop::menu::Screen| {
+        screen.role.is_some_and(|role| leaves_out.contains(&role))
+    };
+    let entries: Vec<String> = screens
+        .iter()
+        .filter(|screen| screen.option_label.is_some() && !left_out(screen))
+        .map(|screen| screen.id.clone())
         .collect();
-    let catalog = rominabox_desktop::shaders::catalog().unwrap();
     let shaders = ShaderSelection {
-        bundled: catalog.iter().map(|entry| entry.id.clone()).collect(),
+        bundled: BUNDLED_FILTERS.iter().map(|id| id.to_string()).collect(),
         custom: Vec::new(),
         initial: None,
     };
@@ -102,7 +125,6 @@ fn compose(
         // We compose the disc list only for a game of several discs, and the
         // fake host gives the number of discs of the running game, even one.
         discs: 7,
-        shader_library: rominabox_desktop::shaders::kit_library(kit),
         ..rominabox_desktop::menu::MenuRequest::new(&staged, kit.join("menu-assets"))
     };
     rominabox_desktop::menu::compose_menu(&request)
@@ -114,6 +136,43 @@ fn compose(
         &to.join("controls-defaults.cfg"),
     )
     .unwrap();
+    screens
+        .iter()
+        .filter(|screen| screen.ships_for(request.target) && !left_out(screen))
+        .filter_map(|screen| Some((screen.role?.name(), screen.button.clone())))
+        .collect()
+}
+
+/// Return `case` for a menu whose entries for each role are `entries`, with
+/// every `@<role>` replaced by that role's entry. A role without an entry in
+/// the menu is an error in the case, not a missing element.
+fn for_menu(case: &Value, entries: &RoleEntries) -> Value {
+    let resolve = |text: &str| {
+        let mut text = text.to_owned();
+        for (role, button) in entries {
+            text = text.replace(&format!("@{role}"), button);
+        }
+        assert!(
+            !text.contains('@'),
+            "{}: '{text}' names a role this menu has no entry for",
+            case["name"]
+        );
+        text
+    };
+    fn walk(value: &Value, resolve: &dyn Fn(&str) -> String) -> Value {
+        match value {
+            Value::String(text) => Value::String(resolve(text)),
+            Value::Array(items) => Value::Array(items.iter().map(|item| walk(item, resolve)).collect()),
+            Value::Object(fields) => Value::Object(
+                fields
+                    .iter()
+                    .map(|(key, value)| (resolve(key), walk(value, resolve)))
+                    .collect(),
+            ),
+            other => other.clone(),
+        }
+    }
+    walk(case, &resolve)
 }
 
 /// One case table, `scripts/fixtures/navigation/<name>.json`.
@@ -320,7 +379,6 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
     let keep = std::env::var_os("ROMINABOX_NAVIGATION_KEEP").map(PathBuf::from);
     let root = keep.clone().unwrap_or_else(|| scratch.to_path_buf());
     let kit = support::kit_with_hypothetical(&root);
-    support::with_shader_library(&kit);
 
     // Compose only what the tables ask for.
     let mut wanted: BTreeSet<(String, String)> = BTreeSet::new();
@@ -337,13 +395,13 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
             }
         }
     }
-    let mut composed: BTreeMap<(String, String), PathBuf> = BTreeMap::new();
+    let mut composed: BTreeMap<(String, String), (PathBuf, RoleEntries)> = BTreeMap::new();
     for (design, menu) in wanted {
         let (_, system, profile, leaves_out) =
             MENUS.iter().find(|(name, _, _, _)| *name == menu).unwrap();
         let to = root.join("composed").join(format!("{design}-{menu}"));
-        compose(&kit, &design, system, *profile, *leaves_out, &to);
-        composed.insert((design, menu), to);
+        let entries = compose(&kit, &design, system, *profile, leaves_out, &to);
+        composed.insert((design, menu), (to, entries));
     }
 
     let mut failures = Vec::new();
@@ -356,7 +414,7 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
     let designs: BTreeSet<&String> = tables.iter().flat_map(|table| &table.designs).collect();
     for design in designs {
         let mut script = String::new();
-        let mut index: Vec<(&Table, &Value)> = Vec::new();
+        let mut index: Vec<(&Table, Value)> = Vec::new();
         for table in &tables {
             if !table.designs.contains(design) {
                 continue;
@@ -364,6 +422,8 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
             for case in &table.cases {
                 let name = case["name"].as_str().unwrap();
                 let menu = case["menu"].as_str().unwrap_or("md3");
+                let (assets, entries) = &composed[&(design.clone(), menu.to_owned())];
+                let case = &for_menu(case, entries);
                 assert!(
                     !expected(case, design).as_object().unwrap().is_empty(),
                     "{}: {name}: no expectation for {design}",
@@ -375,10 +435,7 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
                     .join(format!("{}", index.len()));
                 fs::create_dir_all(&data).unwrap();
                 script.push_str(&format!("case {}/{name}\n", table.name));
-                script.push_str(&format!(
-                    "assets {}\n",
-                    composed[&(design.clone(), menu.to_owned())].display()
-                ));
+                script.push_str(&format!("assets {}\n", assets.display()));
                 script.push_str(&format!("data {}\n", data.display()));
                 if let Some(setup) = case.get("setup").and_then(Value::as_object) {
                     for (key, value) in setup {
@@ -401,7 +458,7 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
                     script.push_str(&format!("step {}\n", step.as_str().unwrap()));
                 }
                 script.push_str("run\n");
-                index.push((table, case));
+                index.push((table, case.clone()));
             }
         }
         let results = run_driver(&driver, &script);
@@ -413,6 +470,7 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
             index.len()
         );
         for ((table, case), result) in index.into_iter().zip(results) {
+            let case = &case;
             let name = format!("{}/{}", table.name, case["name"].as_str().unwrap());
             assert_eq!(
                 result["case"].as_str(),
@@ -621,7 +679,6 @@ fn a_slot_picture_takes_the_games_shape_where_the_design_marks_it() {
     let scratch = rominabox_scratch::Scratch::dir("rominabox-game-shape");
     let root = scratch.to_path_buf();
     let kit = support::kit_with_hypothetical(&root);
-    support::with_shader_library(&kit);
     let (_, system, profile, leaves_out) = MENUS[0];
     let (four_three, wide) = (SHAPES[0], SHAPES[1]);
     let mut failures = Vec::new();

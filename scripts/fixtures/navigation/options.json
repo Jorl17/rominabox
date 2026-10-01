@@ -38,7 +38,7 @@
         "disc": [
           "volume-level",
           "background-play",
-          "achievements"
+          "@forget"
         ],
         "rominabox": [
           "volume-level",
@@ -118,9 +118,9 @@
         "native": [
           "volume-level",
           "controls",
+          "@forget",
           "background-play",
-          "options-prev",
-          "options-back"
+          "controls"
         ],
         "options-columns": [
           "volume-level",
@@ -139,9 +139,9 @@
         "rominabox": [
           "volume-level",
           "controls",
+          "@forget",
           "background-play",
-          "options-prev",
-          "options-back"
+          "controls"
         ]
       }
     },
@@ -200,7 +200,7 @@
           "volume-level",
           "controls",
           "shaders",
-          "background-play",
+          "@forget",
           "options-back",
           "options-back"
         ],
@@ -239,6 +239,7 @@
           "key:down",
           "key:ok",
           "key:up",
+          "key:up",
           "key:up"
         ],
         "disc": [
@@ -264,6 +265,7 @@
           "key:down",
           "key:ok",
           "key:up",
+          "key:up",
           "key:up"
         ]
       },
@@ -277,6 +279,7 @@
           "options-next",
           "options-prev",
           "background-play",
+          "@forget",
           "discs"
         ],
         "options-columns": [
@@ -302,6 +305,7 @@
           "options-next",
           "options-prev",
           "background-play",
+          "@forget",
           "discs"
         ]
       }
@@ -319,6 +323,7 @@
           "key:down",
           "key:down",
           "key:right",
+          "key:down",
           "key:down"
         ],
         "options-columns": [
@@ -326,13 +331,13 @@
           "key:down",
           "key:down",
           "key:down",
+          "key:right",
           "key:right"
         ],
         "disc": [
           "options",
           "key:up",
-          "key:up",
-          "key:up"
+          "key:right"
         ],
         "rominabox": [
           "options",
@@ -341,6 +346,7 @@
           "key:down",
           "key:down",
           "key:right",
+          "key:down",
           "key:down"
         ]
       },
@@ -351,6 +357,7 @@
           "hotkeys",
           "shaders",
           "achievements",
+          "@forget",
           "background-play",
           "rumble"
         ],
@@ -358,14 +365,14 @@
           "volume-level",
           "controls",
           "shaders",
+          "@forget",
           "background-play",
           "rumble"
         ],
         "disc": [
           "volume-level",
-          "rumble",
           "background-play",
-          "achievements"
+          "rumble"
         ],
         "rominabox": [
           "volume-level",
@@ -373,6 +380,7 @@
           "hotkeys",
           "shaders",
           "achievements",
+          "@forget",
           "background-play",
           "rumble"
         ]
@@ -380,7 +388,7 @@
     },
     {
       "name": "a switch the game does not use leaves no page behind",
-      "menu": "md3-without-hotkeys",
+      "menu": "md3-without-hotkeys-or-forget",
       "steps": [
         "options",
         "key:down",
@@ -476,6 +484,7 @@
           "key:up",
           "key:up",
           "key:up",
+          "key:up",
           "key:up"
         ],
         "rominabox": [
@@ -511,6 +520,7 @@
         "disc": [
           "volume-level",
           "background-play",
+          "@forget",
           "achievements",
           "shaders",
           "hotkeys",
@@ -575,6 +585,9 @@
           }
         ],
         "disc": [
+          {
+            "options-page-count": "1/1"
+          },
           {
             "options-page-count": "1/1"
           },
@@ -667,30 +680,30 @@
           "controls",
           "discs",
           "discs",
-          "background-play",
+          "@forget",
           "controls"
         ],
         "options-columns": [
           "volume-level",
           "controls",
           "hotkeys",
-          "rumble",
+          "background-play",
           "options-back",
           "options-back",
           "options-back"
         ],
         "disc": [
           "volume-level",
+          "background-play",
           "rumble",
-          "rumble",
-          "rumble"
+          "controls"
         ],
         "rominabox": [
           "volume-level",
           "controls",
           "discs",
           "discs",
-          "background-play",
+          "@forget",
           "controls"
         ]
       },
@@ -720,8 +733,12 @@
           [
             "move"
           ],
-          [],
-          []
+          [
+            "move"
+          ],
+          [
+            "move"
+          ]
         ],
         "rominabox": [
           [
