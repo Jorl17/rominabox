@@ -414,7 +414,7 @@ SCOPES = [
     ),
     Scope(
         "icons",
-        "that every ROM-in-a-Box icon (the builder's .icns, .ico and header picture, and a game's icon without artwork) still matches a fresh render of logo.svg",
+        "that every ROM-in-a-Box icon (the builder's .icns, .ico and header picture, a game's icon without artwork, and the splash a game shows at startup) still matches a fresh render of logo.svg",
         "that the icon looks right, or how macOS draws it; only that the files have not diverged from the drawing",
         [PYTHON, str(ROOT / "scripts/render_icons.py"), "--check"],
         slow=True,
