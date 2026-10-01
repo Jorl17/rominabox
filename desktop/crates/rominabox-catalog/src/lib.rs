@@ -22,37 +22,9 @@ use std::path::{Component, Path, PathBuf};
 /// The folder of the packages, relative to the repository root.
 pub const PACKAGE_ROOT: &str = "integrations/consoles";
 
-/// The checkout whose packages we read in this process.
-///
-/// Checkouts can share one cargo target directory, and whether we rebuild
-/// there depends on a fingerprint of the sources. Two checkouts at the same
-/// commit have the same sources but different paths, and
-/// `env!("CARGO_MANIFEST_DIR")` puts the path into the binary. So we could
-/// run a binary built in one checkout in another and read the wrong packages.
-///
-/// The root is the checkout the process runs in. We set `ROMINABOX_REPO` in
-/// `scripts/test.py`, and fall back to the compiled path for a run by hand.
-///
-/// This crate is standalone so that it is never part of a parent workspace,
-/// and for that reason it cannot import `repo.rs` from the desktop crate. In
-/// `scripts/test_repo_root.py` we reject any file with code that resolves
-/// paths outside its crate without reading the environment first.
+/// The checkout whose packages we read in this process: the one where we
+/// compiled this crate, because each checkout has its own cargo target.
 pub fn repo_root() -> std::path::PathBuf {
-    if let Ok(declared) = std::env::var("ROMINABOX_REPO") {
-        if !declared.is_empty() {
-            return std::path::PathBuf::from(declared);
-        }
-    }
-    // The checkout in which someone runs the binary. We may have compiled the
-    // binary in another checkout that shares the cargo target.
-    let here = std::env::current_dir().ok();
-    if let Some(root) = here
-        .iter()
-        .flat_map(|dir| dir.ancestors())
-        .find(|dir| dir.join("integrations/consoles").is_dir())
-    {
-        return root.to_path_buf();
-    }
     // desktop/crates/rominabox-catalog -> repository root
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..")
 }

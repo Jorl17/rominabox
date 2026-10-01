@@ -48,9 +48,8 @@ def harness(output: Path, *sources: Path) -> None:
 
 @functools.cache
 def cli() -> str:
-    # We build it here and check that it comes from this checkout. When
-    # worktrees share one cargo target, the binary next to the manifest may be
-    # stale or from another checkout. See scripts/built.py.
+    # The binary of this checkout, built again when its sources are newer. See
+    # scripts/built.py.
     found = subprocess.check_output([PYTHON, str(SCRIPTS / "built.py")], text=True).strip()
     if not Path(found).is_file():
         raise SystemExit(f"build the CLI first: {' '.join(cli_build())}")

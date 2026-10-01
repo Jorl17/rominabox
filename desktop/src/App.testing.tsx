@@ -3,8 +3,8 @@
 // it. Import this in a test file before anything that imports ./App or
 // ./bridge, so the stand-ins are in place first.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve, sep } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -131,27 +131,7 @@ function cliBinary(): string {
   const roots: string[] = [];
   if (process.env.CARGO_TARGET_DIR) roots.push(process.env.CARGO_TARGET_DIR);
   const here = dirname(fileURLToPath(import.meta.url));
-  // A copy in this checkout. Checkouts that share a cargo target overwrite its
-  // binary at each build, so the binary is not stable.
-  const privateCopy = resolve(here, "../../work/bios-cli", name);
-  if (existsSync(privateCopy)) return privateCopy;
   roots.push(resolve(here, "../src-tauri/target"));
-  try {
-    const git = readFileSync(resolve(here, "../../.git"), "utf8");
-    const match = git.match(/^gitdir:\s*(.+)$/m);
-    if (match) {
-      const gitdir = resolve(
-        dirname(resolve(here, "../../.git")),
-        match[1].trim(),
-      );
-      const common = gitdir.includes(`${sep}worktrees${sep}`)
-        ? resolve(gitdir, "../..")
-        : gitdir;
-      roots.push(join(common, "shared-cargo-target"));
-    }
-  } catch {
-    // In a normal checkout the cargo output is under src-tauri/target.
-  }
   for (const root of roots) {
     for (const profile of ["debug", "release"]) {
       const candidate = join(root, profile, name);

@@ -188,15 +188,9 @@ def _save(plan: Plan, digest: str, output: str) -> None:
     )
 
 
-def belongs_to(cwd: Path, env: dict[str, str] | None = None) -> dict:
-    """Tell a test binary which checkout it runs against.
-
-    The path compiled into a binary is that of the checkout it was built in,
-    and all worktrees share one cargo target, so a checkout can get a binary
-    built in another. Without this, we would read the console packages of
-    the other checkout in the test.
-    """
-    return {**os.environ, "ROMINABOX_REPO": str(cwd), **(env or {})}
+def environment(env: dict[str, str] | None = None) -> dict:
+    """This process's environment, with the variables we add for the scope."""
+    return {**os.environ, **(env or {})}
 
 
 def _replay(binaries: list[dict], harness: list[str], cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
@@ -211,7 +205,7 @@ def _replay(binaries: list[dict], harness: list[str], cwd: Path, env: dict[str, 
             capture_output=True,
             text=True,
             errors="replace",
-            env=belongs_to(cwd, env),
+            env=environment(env),
             **programs.windowless(),
         )
         stdout.append(ran.stdout)
@@ -226,7 +220,7 @@ def cargo_test(command: list[str], cwd: Path, env: dict[str, str] | None = None)
     if plan is None or not plan.manifest.is_file():
         return subprocess.run(
             command, cwd=cwd, capture_output=True, text=True, errors="replace",
-            env=belongs_to(cwd, env), **programs.windowless(),
+            env=environment(env), **programs.windowless(),
         )
     digest = source_digest(plan.manifest)
     saved = _load(plan, digest)
@@ -237,7 +231,7 @@ def cargo_test(command: list[str], cwd: Path, env: dict[str, str] | None = None)
     with CARGO_LOCK:
         ran = subprocess.run(
             visible, cwd=cwd, capture_output=True, text=True, errors="replace",
-            env=belongs_to(cwd, env), **programs.windowless(),
+            env=environment(env), **programs.windowless(),
         )
     if ran.returncode == 0:
         _save(plan, digest, ran.stdout + ran.stderr)
