@@ -23,3 +23,21 @@ pub fn python() -> String {
         if cfg!(windows) { "python" } else { "python3" }.to_string()
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::{Component, Path};
+
+    fn has_parent_step(path: &Path) -> bool {
+        path.components().any(|part| part == Component::ParentDir)
+    }
+
+    #[test]
+    fn the_repository_paths_have_no_parent_steps() {
+        let root = super::root();
+        assert!(!has_parent_step(&root), "{}", root.display());
+        let inside = super::at("desktop/src-tauri/resources");
+        assert!(!has_parent_step(&inside), "{}", inside.display());
+        assert!(root.join("AGENTS.md").is_file(), "{}", root.display());
+    }
+}
