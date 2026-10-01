@@ -252,6 +252,52 @@ def paging_problem(design: str, area: Path) -> str:
     return ""
 
 
+def screen_problem(design: str, area: Path) -> str:
+    """Return an empty string when `--screen` shows a screen as the player
+    does, with only its panel and its own footer. We draw Pause and Options
+    with the Pause panel in the colour no palette uses, then the Options
+    panel, then the footer in that colour. Options must hide Pause and show
+    its own panel, and different footer words must give different footers.
+    A picture of Options once kept the Pause footer."""
+    into = area / f"{design}-screen"
+    problem = render(design, palettes()[0], into, source=True)
+    if problem:
+        return problem
+    colour = "#{:02x}{:02x}{:02x}".format(*PICTURE)
+    shares = {}
+    for screen, element, prop in (("options", "pause-panel", "background-color"),
+                                  ("options", "options-panel", "background-color"),
+                                  ("pause", "footer-hint", "color"),
+                                  ("options", "footer-hint", "color")):
+        drawn = into / f"screen-{screen}-{element}.png"
+        completed = subprocess.run(
+            [str(RENDERER), str(into / "menu.rml"), str(drawn), "960", "600",
+             "--screen", screen, "--set", f"{element}:{prop}={colour}"],
+            capture_output=True, text=True, timeout=180,
+        )
+        if completed.returncode != 0 or not drawn.is_file():
+            return completed.stderr.strip() or f"{drawn} was not written"
+        shares[(screen, element)] = picture_share(drawn)
+    if shares[("options", "pause-panel")]:
+        return "Options shown, Pause's panel still shows"
+    if not shares[("options", "options-panel")]:
+        return "Options shown, its panel does not show"
+    footers = declared_footers(into / "design.cfg")
+    if footers.get("pause") != footers.get("options") \
+            and shares[("pause", "footer-hint")] == shares[("options", "footer-hint")]:
+        return (f"Options' footer ({footers.get('options')}) draws as Pause's "
+                f"({footers.get('pause')})")
+    return ""
+
+
+def declared_footers(design_cfg: Path) -> dict[str, str]:
+    """Return the footer of each screen, as declared in the composed design.cfg
+    that we read in the player."""
+    return {found.group(1): found.group(2) for found in
+            re.finditer(r'^screen_footer_([a-z-]+) = "(.*)"$',
+                        design_cfg.read_text(encoding="utf-8"), re.MULTILINE)}
+
+
 def main() -> int:
     if not RENDERER.is_file():
         raise SystemExit(f"no offscreen renderer at {RENDERER}")
@@ -274,7 +320,8 @@ def main() -> int:
                                 ("over the game", overlay_problem),
                                 ("at twice the size", scale_problem),
                                 ("text as markup", markup_problem),
-                                ("a list in pages", paging_problem)):
+                                ("a list in pages", paging_problem),
+                                ("a screen shown", screen_problem)):
                 problem = check(design, area)
                 if problem:
                     print(f"  FAIL {design} {name}: {problem}", file=sys.stderr)
