@@ -47,6 +47,24 @@ def harness(output: Path, *sources: Path) -> None:
                     "--define", "HAVE_AUDIOMIXER", *map(str, sources)], check=True)
 
 
+# The RmlUi message when a document links a style sheet that does not exist.
+# RmlUi continues without the sheet, so a case staged without one runs a menu
+# that no export has, and passes.
+MISSING_SHEET = "Failed to load style sheet"
+
+
+def ran_whole(command: list[str]) -> bool:
+    """Run `command`, a headless menu program, and pass its error output
+    through. Return true when it passed and RmlUi loaded every style sheet
+    that its documents link."""
+    ran = subprocess.run(command, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
+    sys.stderr.write(ran.stderr)
+    missing = [line.strip() for line in ran.stderr.splitlines() if MISSING_SHEET in line]
+    for line in missing:
+        print(f"FAIL {Path(command[0]).name} {command[1]}: {line}", file=sys.stderr)
+    return ran.returncode == 0 and not missing
+
+
 @functools.cache
 def cli() -> str:
     # The binary of this checkout, built again when its sources are newer. See
@@ -254,16 +272,17 @@ def orchestrate() -> None:
     # in folders with non-ASCII names like a player's, which we pass to the
     # program as arguments.
     with scratch("rominabox-menu-orchestration-João-") as data:
-        subprocess.run([str(ORCHESTRATION), str(BUILD / "placement-native"), data], check=True)
+        if not ran_whole([str(ORCHESTRATION), str(BUILD / "placement-native"), data]):
+            raise SystemExit("the menu orchestration cases failed")
     with scratch("rominabox-menu-capacity-João-") as data:
-        subprocess.run([str(ORCHESTRATION), "--capacity",
-                        str(BUILD / "placement-native/stage/ps1-analog"), data], check=True)
+        if not ran_whole([str(ORCHESTRATION), "--capacity", str(BUILD / "placement-native/stage/ps1-analog"), data]):
+            raise SystemExit("the menu capacity case failed")
     # A stick waiting to be rebound, on the PlayStation analogue pad, in
     # every design.
     failed = []
     for staged in sorted(BUILD.glob("placement-*/stage/ps1-analog")):
         with scratch("rominabox-menu-stick-capture-João-") as data:
-            if subprocess.run([str(ORCHESTRATION), "--stick-capture", str(staged), data]).returncode != 0:
+            if not ran_whole([str(ORCHESTRATION), "--stick-capture", str(staged), data]):
                 failed.append(staged.parent.parent.name)
     if failed:
         raise SystemExit(f"stick capture failed in {', '.join(failed)}")
