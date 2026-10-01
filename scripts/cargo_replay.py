@@ -8,8 +8,9 @@ last run are the same tests, so on a later run we execute them directly.
 The stamp is a hash of the crate's rust sources, its manifests, the manifest
 and lockfile of its workspace, and every file embedded in those sources with
 include_str! or include_bytes!. We leave out a file that a test opens at
-runtime, because we read its current copy in the test. With an embedded file left out, we would run a binary that
-still has the previous copy, and the test would pass for the wrong reason.
+runtime, because we read its current copy in the test. With an embedded
+file left out, we would run a binary that still has the previous copy, and
+the test would pass for the wrong reason.
 
 We keep stamps in work/ and never commit them. We do not stamp a failed
 cargo run, because the run ends at the first failing target and the list of
