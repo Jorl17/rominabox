@@ -4,7 +4,7 @@
     "desktop/crates/rominabox-catalog/src/lib.rs": 1118,
     "desktop/src-tauri/src/content.rs": 1679,
     "desktop/src-tauri/src/metadata.rs": 1815,
-    "desktop/src/App.tsx": 1728,
+    "desktop/src/App.tsx": 1723,
     "scripts/builder_drive.mjs": 1660,
     "scripts/native_runtime/test_rmlui_interaction.cpp": 1913
   }
