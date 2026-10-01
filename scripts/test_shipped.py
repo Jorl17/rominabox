@@ -35,7 +35,8 @@ import scratch  # noqa: E402
 import toolchain  # noqa: E402
 from launcher_plan import compile_plan, windows_part  # noqa: E402
 import menu_shots  # noqa: E402
-from menu_shots import QUIET_ENV, SOUND_ENV, TEST_USER_DATA_ENV  # noqa: E402
+from launch_header import TEST_USER_DATA_ENV, launch_declaration  # noqa: E402
+from menu_shots import QUIET_ENV, SOUND_ENV  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 LAUNCHER = ROOT / "desktop/src-tauri/launcher"
@@ -448,7 +449,7 @@ def run_forget_places() -> list[str]:
     if sys.platform != "win32":
         return []
     failures = []
-    marker = menu_shots.launch_declaration("RIB_FORGET_MARKER")
+    marker = launch_declaration("RIB_FORGET_MARKER")
     with scratch.scratch("rominabox-forget-places-") as made:
         root = Path(made)
         binary, resources = compile_plan(root)
@@ -502,19 +503,23 @@ def run_menu_sounds() -> list[str]:
         rom = root / "stand-in.bin"
         rom.write_bytes(b"RIBsounds")
         name = "shipped-menu-sounds"
+        # We unpack the game with the launcher from the tree, and it contains
+        # the packs from the tree, not those from the last build of the kit.
         app = size_bundles.export(
-            size_bundles.cli(), name, size_bundles.KIT,
+            size_bundles.cli(), name, menu_shots.staged_kit(root / "kit"),
             size_bundles.core_cache(), rom, {"menuSounds": "blip"},
         )
-        shipped = size_bundles.resources(app) / "assets" / "sounds"
-        if not (shipped / "ok.wav").is_file():
-            return [f"the export shipped no pack at {shipped}"]
-        binary, resources = compile_plan(root)
-        shutil.copytree(size_bundles.resources(app), resources, dirs_exist_ok=True)
-        # The Windows game unpacked its files here, so we forget the game afterwards.
-        if app.is_file():
-            menu_shots.forget_windows_game(app, size_bundles.namespace(name))
-        size_bundles.remove_owned(app.parent)
+        # We remove the game's files, and what we made to unpack them,
+        # however this ends.
+        try:
+            with menu_shots.game_folder(app) as folder:
+                shipped = menu_shots.resources_of(folder) / "assets" / "sounds"
+                if not (shipped / "ok.wav").is_file():
+                    return [f"the export shipped no pack at {shipped}"]
+                binary, resources = compile_plan(root)
+                shutil.copytree(menu_shots.resources_of(folder), resources, dirs_exist_ok=True)
+        finally:
+            size_bundles.remove_owned(app.parent)
         # The export's data folder is below the per-user folder, which we set
         # here for this run. A game in its sandbox could not write here, so we
         # run the plan tool outside it, as we run an unsigned Mac one whatever
