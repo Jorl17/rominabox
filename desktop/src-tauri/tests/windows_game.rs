@@ -1,13 +1,14 @@
-//! A Windows game made into one program, opened as a person opens it. At the
-//! first launch we unpack it under the local application data, at a later
-//! launch we run that copy, a newer version replaces the older copy, a file
-//! whose path passes 260 characters while we unpack it still unpacks, and
-//! choosing UNINSTALL removes everything the game keeps on this computer. We
-//! build the launcher from this tree. In the stand-in player we only write
-//! the folder it ran in to the launch log and end.
+//! A Windows game made into one program, opened as a person opens it. We
+//! unpack it under the local application data on its first launch and run
+//! that copy on later launches. We replace an older copy with a newer
+//! version, still unpack a file whose path passes Windows' 260 characters
+//! during unpacking, remove everything the game stores on this computer on
+//! UNINSTALL, and refuse a program whose index lists a folder outside the
+//! runtimes folder. The launcher is the real one, built from this tree. In
+//! the stand-in player we only write the folder it ran from into the launch
+//! log, and exit.
 //!
-//! We mark them ignored so the exporter tests launch nothing, and run them in
-//! the wingame scope.
+//! We ignore them in the exporter tests and run them in the wingame tests.
 #![cfg(windows)]
 
 mod export_fixture;

@@ -190,10 +190,24 @@ impl Installation {
     }
 
     /// Remove every game's sandbox, with its registration and folder, every
-    /// game's data and unpacked copies, the shared accounts of QUICK SIGN IN,
-    /// and the builder's own folders, and remove the command line's folder from
-    /// the Path. Report what we could not remove, and go on after each failure.
+    /// game's data and unpacked copies, the accounts shared by QUICK SIGN IN,
+    /// and the builder's folders, and take the command line's folder off the
+    /// Path. Name everything we could not remove, and continue past it. Remove
+    /// nothing when a per-user folder is not absolute, or when the identifier
+    /// is not the name of one folder.
     pub fn uninstalled(&self) -> (bool, Vec<String>) {
+        let one_folder = matches!(
+            Path::new(&self.identifier).components().collect::<Vec<_>>()[..],
+            [std::path::Component::Normal(_)]
+        );
+        if !self.local.is_absolute() || !self.roaming.is_absolute() || !one_folder {
+            return (false, vec![format!(
+                "anything: {} and {} must be absolute, and {:?} one folder's name",
+                self.local.display(),
+                self.roaming.display(),
+                self.identifier
+            )]);
+        }
         let mut failures = Vec::new();
         let prefix = sandbox_prefix();
         let packages = self.local.join("Packages");
