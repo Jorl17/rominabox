@@ -107,6 +107,32 @@ fn the_plugin_and_its_skill_declare_what_claude_code_reads() {
     }
 }
 
+/// Where the command line is in the macOS builder bundle, from
+/// tauri.conf.json. It is `<productName>.app/Contents/Resources/`, the folder
+/// that `resources/bin/` maps to, and the name of the command line.
+fn command_line_in_the_mac_bundle() -> String {
+    let config = json(&at("desktop/src-tauri/tauri.conf.json"));
+    let product = config["productName"].as_str().expect("tauri.conf.json has a productName");
+    let folder = config["bundle"]["resources"]["resources/bin/"]
+        .as_str()
+        .expect("the bundle maps resources/bin/ to a folder of its resources");
+    let program = std::path::Path::new(env!("CARGO_BIN_EXE_rominabox-cli"));
+    let name = program.file_stem().unwrap().to_string_lossy();
+    format!("{product}.app/Contents/Resources/{folder}{name}")
+}
+
+#[test]
+fn every_skill_gives_the_command_line_inside_the_mac_app() {
+    // Someone puts the Mac builder in Applications, and we do not add its
+    // command line to the path, so the skill must say where it is.
+    let expected = format!("/Applications/{}", command_line_in_the_mac_bundle());
+    for (_, folder) in plugins() {
+        for (name, skill) in skills(&folder) {
+            assert!(skill.contains(&format!("`{expected}`")), "{name} does not give `{expected}` for a Mac");
+        }
+    }
+}
+
 /// Every command `skill` names, with the request it shows for it, if any.
 fn commands(skill: &str) -> Vec<(String, Option<String>)> {
     let mut named = Vec::new();

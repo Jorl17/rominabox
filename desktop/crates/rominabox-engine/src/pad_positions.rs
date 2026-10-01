@@ -24,6 +24,12 @@ pub struct Placed {
     pub slot: String,
 }
 
+/// The position we read `control` from, according to `chosen`: where the
+/// author moved it, or its own. We check that the positions agree in `place`.
+pub fn chosen<'a>(control: &'a str, chosen: &'a BTreeMap<String, ControlOverride>) -> &'a str {
+    chosen.get(control).and_then(|value| value.pad.as_deref()).unwrap_or(control)
+}
+
 /// Every declared control's position: the author's choice, or its own.
 ///
 /// No two controls may share a position, and a stick direction left where
@@ -47,21 +53,10 @@ pub fn place(
     };
     let mut placed: Vec<Placed> = Vec::new();
     for control in declared {
-        let slot = match chosen
-            .get(&control.id)
-            .and_then(|value| value.pad.as_deref())
-        {
-            None => control.id.clone(),
-            Some(pad) => {
-                let Some(position) = positions.iter().find(|position| position.id == pad) else {
-                    return Err(format!(
-                        "{pad} is not a position on the pad (for {})",
-                        control.id
-                    ));
-                };
-                position.id.clone()
-            }
-        };
+        let slot = self::chosen(&control.id, chosen).to_string();
+        if slot != control.id && !positions.iter().any(|position| position.id == slot) {
+            return Err(format!("{slot} is not a position on the pad (for {})", control.id));
+        }
         if let Some(other) = placed.iter().find(|other| other.slot == slot) {
             return Err(format!(
                 "{} and {} are both on {}",

@@ -227,9 +227,7 @@ pub fn complete_export(mut request: Map<String, Value>) -> Result<Completed<Expo
         request.insert("runtimeKit".into(), json!(kit_for(&target, &own, &places)?));
     }
     if !request.contains_key("coreCache") {
-        if let Some(platform) = target.target() {
-            request.insert("coreCache".into(), json!(places.core_cache(platform)?));
-        }
+        request.insert("coreCache".into(), json!(places.core_cache(target.target())?));
     }
     let request = serde_json::from_value(Value::Object(request))
         .map_err(|error| format!("invalid export request: {error}"))?;

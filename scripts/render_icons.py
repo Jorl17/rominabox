@@ -19,6 +19,8 @@ colour from `desktop/designs.json` and `desktop/defaults.json`. The outputs:
                                       icon before the author picks one)
   desktop/assets/default-icon.png     a game without artwork, the full-bleed
                                       square, which we keep whole at export
+  desktop/assets/branding/logo.png    the splash at the start of a game, the
+                                      drawing alone on a clear background
 
 At small sizes we draw the lines heavier, as icon sets do, because at 16 and
 32 pixels the logo's own line weight is a hairline.
@@ -47,6 +49,9 @@ ROOT = Path(__file__).resolve().parent.parent
 LOGO = ROOT / "desktop/assets/branding/logo.svg"
 ICONS = ROOT / "desktop/src-tauri/icons"
 DEFAULT_ICON = ROOT / "desktop/assets/default-icon.png"
+SPLASH = ROOT / "desktop/assets/branding/logo.png"
+# The side of the splash. In the game we scale it to the window.
+SPLASH_SIZE = 512
 MASTER = 1024
 # The position of the drawing in its 256-unit viewBox, so we centre it by what
 # is drawn and not by the empty margin around it.
@@ -173,6 +178,11 @@ def render(into: Path, containers: bool = True) -> dict[str, Path]:
         default.parent.mkdir(parents=True, exist_ok=True)
         square(MASTER, scratch).save(default)
         written["default"] = default
+
+        splash = into / SPLASH.relative_to(ROOT)
+        splash.parent.mkdir(parents=True, exist_ok=True)
+        logo(SPLASH_SIZE, 1.0, scratch).save(splash)
+        written["splash"] = splash
     return written
 
 
@@ -189,7 +199,7 @@ def main() -> int:
     drifted = []
     with tempfile.TemporaryDirectory(prefix="rominabox-icons-check-") as made:
         fresh = render(Path(made), containers=False)
-        for name in ("header", "large", "default"):
+        for name in ("header", "large", "default", "splash"):
             shipped = ROOT / fresh[name].relative_to(made)
             why = compare(shipped, fresh[name]) if shipped.is_file() else "missing"
             if why:

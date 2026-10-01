@@ -15,7 +15,6 @@ import {
 import { SYSTEMS, formatBytes, inspectRom } from "./inspection";
 import * as bridge from "./bridge";
 import { CustomShaderCards } from "./customShaders";
-import { canExport, whyNot } from "./consoles";
 import {
   afterExport,
   afterProgress,
@@ -24,7 +23,8 @@ import {
 } from "./CoreFetchNotice";
 import designs from "../designs.json";
 import declared from "../defaults.json";
-import { ControlsEditor, emptyControls, type Controls } from "./controls";
+import { emptyControls, type Controls } from "./controls";
+import { ControlsSection } from "./ControlsSection";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
@@ -32,14 +32,12 @@ import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import appIcon from "../src-tauri/icons/icon.png";
 import largeIcon from "../src-tauri/icons/icon-large.png";
-import { HotkeysEditor } from "./HotkeysEditor";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
   NOT_A_SHADER_FILE,
   SHADER_ACCEPT,
   SHADER_FORMATS,
   isShaderFile,
-  shaderFileName,
 } from "./shaderFiles";
 // The same pictures as in the exported game, rendered from the GLSL of each
 // shader with scripts/render_shader_previews.py. We read them as a directory
@@ -173,7 +171,6 @@ function IconArt() {
 }
 export function App() {
   const [step, setStep] = useState(0);
-  const [supported, setSupported] = useState<Set<string>>(new Set());
   const [host, setHost] = useState<bridge.ExportTarget | null>(null);
   const [platform, setPlatform] = useState<Platform | null>(null);
   const exportTarget = platform === "both" ? host : (platform ?? host);
@@ -645,12 +642,12 @@ export function App() {
     );
     setShaderInitial((current) => (current === shader.name ? null : current));
   }
-  function addCustomShader(filePath: string) {
+  async function addCustomShader(filePath: string) {
     if (!isShaderFile(filePath)) {
       setError(NOT_A_SHADER_FILE);
       return;
     }
-    const name = shaderFileName(filePath);
+    const name = await bridge.customShaderName(filePath);
     setCustomShaders((current) => {
       if (current.some((item) => item.path === filePath)) return current;
       return [...current, { name, path: filePath }];
@@ -664,7 +661,7 @@ export function App() {
     }
     try {
       const path = await bridge.pickShader();
-      if (path) addCustomShader(path);
+      if (path) await addCustomShader(path);
     } catch (e) {
       fail(e);
     }
@@ -681,7 +678,7 @@ export function App() {
     }
     if (target === "icon" || target === "background")
       loadPicture(target, paths[0]).catch(fail);
-    else if (target === "shader") addCustomShader(paths[0]);
+    else if (target === "shader") addCustomShader(paths[0]).catch(fail);
     else if (step === 0)
       choose({
         path: paths[0],
@@ -689,16 +686,12 @@ export function App() {
       });
   };
   useEffect(() => {
-    // The browser walkthrough has no kit and no backend, so we supply the
-    // answers of the desktop commands here: which consoles already have a
-    // core on disk, and which platform we export for.
+    // The browser walkthrough has no backend, so we supply the answer of the
+    // desktop command here: which platform we export for.
     if (bridge.native) return;
     const walkthrough = window as Window & {
-      __ROMINABOX_PREPARED__?: string[];
       __ROMINABOX_EXPORT_TARGET__?: bridge.ExportTarget;
     };
-    if (walkthrough.__ROMINABOX_PREPARED__)
-      setSupported(new Set(walkthrough.__ROMINABOX_PREPARED__));
     if (walkthrough.__ROMINABOX_EXPORT_TARGET__)
       setHost(walkthrough.__ROMINABOX_EXPORT_TARGET__);
   }, []);
@@ -729,13 +722,6 @@ export function App() {
       .catch(fail);
     bridge.defaultDestination().then(setDestination).catch(fail);
     bridge.exportTarget().then(setHost).catch(fail);
-    // Which cores are already on disk.
-    bridge
-      .availableSystems()
-      .then((ids) => {
-        if (!disposed) setSupported(new Set(ids));
-      })
-      .catch(fail);
     return () => {
       disposed = true;
       cleanups.forEach((fn) => fn());
@@ -1125,15 +1111,8 @@ export function App() {
                             Choose a console
                           </option>
                           {SYSTEMS.map((s) => (
-                            <option
-                              key={s.id}
-                              value={s.id}
-                              disabled={!canExport(supported, s.id)}
-                            >
+                            <option key={s.id} value={s.id}>
                               {s.name}
-                              {whyNot(supported, s.id)
-                                ? ` — ${whyNot(supported, s.id)}`
-                                : ""}
                             </option>
                           ))}
                         </select>
@@ -1367,25 +1346,15 @@ export function App() {
                 </div>
               )}
 
-              <details className="advanced author-controls">
-                <summary>
-                  <ChevronRight size={16} />
-                  Controls
-                </summary>
-                <ControlsEditor
-                  system={draft.system}
-                  value={controls}
-                  onChange={setControls}
-                />
-                {draft.showMenu && (
-                  <HotkeysEditor
-                    value={draft.hotkeys}
-                    busy={!!busy}
-                    onChange={(value) => update("hotkeys", value)}
-                    game={{ system: draft.system, controls }}
-                  />
-                )}
-              </details>
+              <ControlsSection
+                system={draft.system}
+                controls={controls}
+                onControls={setControls}
+                hotkeys={draft.hotkeys}
+                onHotkeys={(value) => update("hotkeys", value)}
+                withHotkeys={draft.showMenu}
+                busy={!!busy}
+              />
               <details className="advanced picture-filters">
                 <summary>
                   <ChevronRight size={16} />
@@ -1436,7 +1405,7 @@ export function App() {
                         const file = event.dataTransfer.files[0];
                         if (!file) return;
                         const dropped = file as File & { path?: string };
-                        addCustomShader(dropped.path || file.name);
+                        addCustomShader(dropped.path || file.name).catch(fail);
                       }}
                     >
                       <span>
@@ -1456,7 +1425,7 @@ export function App() {
                     data-shader
                     onChange={(event) => {
                       const file = event.target.files?.[0];
-                      if (file) addCustomShader(file.name);
+                      if (file) addCustomShader(file.name).catch(fail);
                       event.target.value = "";
                     }}
                   />

@@ -236,6 +236,34 @@ fn a_console_referencing_an_undeclared_component_is_rejected() {
     assert_sole(&root, "reference.missing_component", "disc", "cores");
 }
 
+/// A core comes from a build of ours or from libretro's nightly. Any other
+/// origin is a typo, which we would have taken for a download in preparation.
+#[test]
+fn a_component_from_an_unknown_origin_is_rejected() {
+    let (root, package) = one("cartridge");
+    write_console(&package, &plain("cartridge"));
+    write_json(
+        &package.join("components/core.json"),
+        &json!({
+            "schemaVersion": 1,
+            "id": "core",
+            "name": "core",
+            "artifacts": { "windows-x86_64": "core_libretro.dll" },
+            "license": { "spdx": "GPL-2.0", "file": "core.txt" },
+            "capabilities": [],
+            "provenance": {
+                "origin": "buildbot",
+                "repository": "libretro/core",
+                "revision": "0000000000000000000000000000000000000000",
+                "branch": "master",
+                "licenseCandidates": ["COPYING"],
+                "correspondsToArtifact": false
+            }
+        }),
+    );
+    assert_sole(&root, "parse.invalid_json", "cartridge", "components/core.json");
+}
+
 #[test]
 fn a_default_profile_must_be_among_the_declared_variants() {
     let (root, package) = one("md");
@@ -308,16 +336,20 @@ fn stick_member(id: &str, direction: Option<&str>) -> Value {
     member
 }
 
+/// A generic pad of `members`, with a title for its stick.
+fn stick_pad(members: Vec<Value>) -> Value {
+    let mut pad = generic("pad", members);
+    pad["groups"] = json!({ "l_stick": { "title": "Stick" } });
+    pad
+}
+
 #[test]
 fn a_stick_member_without_a_direction_is_rejected() {
     let (root, package) = one("pad");
     write_console(&package, &offering("pad", "pad"));
     write_profile(
         &package,
-        &generic(
-            "pad",
-            vec![stick_member("l_y_minus", Some("up")), stick_member("l_x_plus", None)],
-        ),
+        &stick_pad(vec![stick_member("l_y_minus", Some("up")), stick_member("l_x_plus", None)]),
     );
     assert_sole(&root, "control.stick_direction_missing", "pad", "pad.controls[group=l_stick]");
 }
@@ -328,12 +360,36 @@ fn a_stick_declares_its_directions_once_in_capture_order() {
     write_console(&package, &offering("pad", "pad"));
     write_profile(
         &package,
-        &generic(
-            "pad",
-            vec![stick_member("l_y_plus", Some("down")), stick_member("l_y_minus", Some("up"))],
-        ),
+        &stick_pad(vec![stick_member("l_y_plus", Some("down")), stick_member("l_y_minus", Some("up"))]),
     );
     assert_sole(&root, "control.stick_direction_order", "pad", "pad.controls[group=l_stick]");
+}
+
+/// We show a stick's title in its box and in the builder's table, so
+/// every stick must have one, and a blank title counts as none.
+#[test]
+fn a_stick_without_a_title_is_rejected() {
+    let members = || vec![stick_member("l_y_minus", Some("up")), stick_member("l_x_plus", Some("right"))];
+    for groups in [json!(null), json!({ "l_stick": { "title": "  " } })] {
+        let (root, package) = one("pad");
+        write_console(&package, &offering("pad", "pad"));
+        let mut pad = generic("pad", members());
+        if !groups.is_null() {
+            pad["groups"] = groups;
+        }
+        write_profile(&package, &pad);
+        assert_sole(&root, "controller.group_untitled", "pad", "pad.groups.l_stick");
+    }
+}
+
+#[test]
+fn a_title_for_a_stick_the_pad_does_not_have_is_rejected() {
+    let (root, package) = one("pad");
+    write_console(&package, &offering("pad", "pad"));
+    let mut pad = stick_pad(vec![stick_member("l_y_minus", Some("up"))]);
+    pad["groups"]["r_stick"] = json!({ "title": "C-stick" });
+    write_profile(&package, &pad);
+    assert_sole(&root, "controller.group_unused", "pad", "pad.groups.r_stick");
 }
 
 #[test]

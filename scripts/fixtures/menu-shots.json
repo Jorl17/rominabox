@@ -115,7 +115,8 @@
         "wait:60"
       ],
       "startAtMenu": false,
-      "splash": true
+      "splash": true,
+      "inMotion": true
     },
     "boot-3-notice": {
       "script": [
@@ -198,7 +199,7 @@
     "hotkeys-full": {
       "script": ["options", "hotkeys", "key:down"],
       "hotkeys": {
-        "menu": ["key:escape", "pad:home", "pad:l3+r3", "key:rctrl", "pad:start"],
+        "menu": ["key:escape", "pad:home", "pad:l3+r3", "key:rctrl", "pad:r3"],
         "confirm": ["key:enter", "pad:a", "key:space", "pad:x", "key:backspace"],
         "back": ["key:escape", "pad:b", "key:ctrl", "pad:y", "pad:select"],
         "quick-save": ["key:f2", "pad:l2", "key:f5", "pad:r2", "key:f8"]

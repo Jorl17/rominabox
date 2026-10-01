@@ -230,7 +230,7 @@ describe("the builder's hotkeys", () => {
   it("asks with the game's controls, and says when a key is the game's", async () => {
     const view = show();
     rust.refusals.push({
-      kind: "gameKey",
+      kind: "gameInput",
       hotkey: "next-slot",
       binding: "key:f2",
       control: "a",
@@ -250,5 +250,29 @@ describe("the builder's hotkeys", () => {
     ]);
     expect(view.said()).toBe("F2 is the game's key for C.");
     expect(view.chips("Next slot")).toEqual(["F7"]);
+  });
+
+  it("says when a pad button is the game's", async () => {
+    const view = show();
+    rust.refusals.push({
+      kind: "gameInput",
+      hotkey: "quick-save",
+      binding: "pad:y",
+      control: "y",
+      label: "A",
+    });
+    rust.presses.push("y");
+    act(() =>
+      view
+        .row("Quick save")
+        .querySelector<HTMLButtonElement>("[aria-label='Add to Quick save']")!
+        .click(),
+    );
+    await settle();
+    expect(rust.checked).toEqual([
+      { ...declared.hotkeys, "quick-save": ["key:f2", "pad:y"] },
+    ]);
+    expect(view.said()).toBe("Left button is the game's button for A.");
+    expect(view.chips("Quick save")).toEqual(["F2"]);
   });
 });

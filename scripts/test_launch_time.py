@@ -19,6 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+import exported_game  # noqa: E402
 import menu_shots  # noqa: E402
 
 RUNS = 6
@@ -33,8 +34,8 @@ def main() -> int:
         return 0
     settings = {"title": "Launch Time", "startAtMenu": False}
     with menu_shots.build_a_game(cartridge, ROOT / "work/launch-time", "gbc", settings) as app:
-        launcher = menu_shots.launcher_of(app)
-        log = menu_shots.log_of(app)
+        launcher = exported_game.launcher_of(app)
+        log = exported_game.log_of(app)
         times: list[float] = []
         for _ in range(RUNS):
             if log and log.exists():
@@ -46,7 +47,7 @@ def main() -> int:
                 # Verbose, so that each run's log shows the game loaded. We write
                 # no such lines when a person launches the game.
                 env={**os.environ, "ROMINABOX_MAX_FRAMES": "1", "ROMINABOX_VERBOSE": "1",
-                     menu_shots.quiet_env(): "1"},
+                     exported_game.quiet_env(): "1"},
             ).returncode
             times.append(time.perf_counter() - started)
             text = log.read_text(errors="replace") if log and log.exists() else ""
@@ -56,7 +57,7 @@ def main() -> int:
                 return 1
     warm = sorted(times[1:])
     print(
-        f"{menu_shots.PLATFORM}: first run {times[0]:.2f} s; then median {warm[len(warm) // 2]:.2f} s "
+        f"{exported_game.PLATFORM}: first run {times[0]:.2f} s; then median {warm[len(warm) // 2]:.2f} s "
         f"(from {warm[0]:.2f} to {warm[-1]:.2f} s over {len(warm)} runs)"
     )
     return 0

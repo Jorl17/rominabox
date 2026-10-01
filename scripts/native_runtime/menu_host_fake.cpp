@@ -81,6 +81,10 @@ extern "C" bool rib_host_key_code(const char *name, unsigned *code)
    *code = 1 + (unsigned)(found - key_names.begin());
    return true;
 }
+extern "C" bool rib_host_bind_key(unsigned, unsigned *code)
+{
+   return code && rib_host_key_code(host.bound_key.c_str(), code);
+}
 extern "C" bool rib_host_key_down(unsigned code)
 {
    return code >= 1 && code <= key_names.size() && held(host.keys_down, key_names[code - 1]);

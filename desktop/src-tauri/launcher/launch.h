@@ -131,7 +131,4 @@ int rominabox_launch_tells_person(int opened_by_person);
  * when the result does not fit. */
 void rominabox_launch_join(char *out, size_t out_cap, const char *left, const char *right);
 
-/* Makes `path` and every folder above it that is missing. */
-void rominabox_launch_make_directories(const char *path);
-
 #endif

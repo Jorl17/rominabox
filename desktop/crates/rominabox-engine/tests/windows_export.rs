@@ -6,6 +6,7 @@
 #![cfg(windows)]
 
 mod export_fixture;
+mod sandboxes;
 mod support;
 
 use export_fixture::{export_request_from, library, unpack, windows_kit, workspace};
@@ -259,9 +260,9 @@ fn every_file_of_a_game_with_every_shader_fits_windows_path_limit() {
 }
 
 /// When a game's program is damaged, we show an error and stop, and remove
-/// everything we unpacked in the person's application data. Otherwise every
-/// launch would leave another partly unpacked copy there. The launcher is the
-/// real one, built from this tree.
+/// everything we unpacked in the per-user folder. Otherwise every launch would
+/// leave another partly unpacked copy there. The launcher is the real one,
+/// built from this tree, and the per-user folder is the test's own.
 #[test]
 fn a_damaged_game_leaves_nothing_of_its_unpack_behind() {
     let root = workspace();
@@ -288,24 +289,19 @@ fn a_damaged_game_leaves_nothing_of_its_unpack_behind() {
     bytes[index - 1] ^= 0xFF;
     fs::write(&result.app_path, &bytes).unwrap();
 
+    let user_data = root.join("user-data");
+    fs::create_dir_all(&user_data).unwrap();
     let ran = Command::new(&result.app_path)
+        .env(sandboxes::declared("RIB_ENV_TEST_USER_DATA"), &user_data)
         .env("ROMINABOX_QUIET", "1")
         .env("ROMINABOX_PLAN_ONLY", "1")
         .output()
         .unwrap();
-    let runtimes = Path::new(&std::env::var("LOCALAPPDATA").unwrap()).join("ROM-in-a-Box/Runtimes");
-    let name = Path::new(&runtime).file_name().unwrap().to_string_lossy().into_owned();
-    let left: Vec<_> = fs::read_dir(&runtimes)
-        .into_iter()
-        .flatten()
-        .map(|entry| entry.unwrap().path())
-        .filter(|path| path.file_name().unwrap().to_string_lossy().starts_with(&name))
-        .collect();
-    // What this game left behind, created during this run.
-    for path in &left {
-        fs::remove_dir_all(path).unwrap();
-    }
+    let runtimes = user_data.join(&runtime).parent().unwrap().to_path_buf();
     assert_eq!(ran.status.code(), Some(1));
+    // We unpacked the game into the test's folder, where the new folders remain.
+    assert!(runtimes.is_dir(), "{} was not made", runtimes.display());
+    let left: Vec<_> = fs::read_dir(&runtimes).unwrap().map(|entry| entry.unwrap().path()).collect();
     assert!(String::from_utf8_lossy(&ran.stderr).contains("damaged"), "{}", String::from_utf8_lossy(&ran.stderr));
     assert_eq!(left, Vec::<std::path::PathBuf>::new());
 }

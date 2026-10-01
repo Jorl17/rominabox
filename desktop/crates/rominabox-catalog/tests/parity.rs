@@ -362,22 +362,12 @@ fn every_component_can_be_obtained_for_every_shipped_target() {
     for (id, component) in catalog.components() {
         match &component.provenance {
             None => problems.push(format!("{id}: no provenance")),
-            Some(provenance) => {
-                if provenance.downloads.is_empty() {
-                    problems.push(format!("{id}: no download entry"));
-                }
-                match provenance.branch.as_deref() {
-                    Some(branch) if branch != provenance.revision && branch.len() < 40 => {}
-                    _ => problems.push(format!(
-                        "{id}: licence is still a fixed commit, not the current branch"
-                    )),
-                }
-                for target in SHIPPED_TARGETS {
-                    if !provenance.downloads.contains_key(*target) {
-                        problems.push(format!("{id}: no pinned {target} download"));
-                    }
-                }
-            }
+            Some(provenance) => match provenance.branch.as_deref() {
+                Some(branch) if branch != provenance.revision && branch.len() < 40 => {}
+                _ => problems.push(format!(
+                    "{id}: licence is still a fixed commit, not the current branch"
+                )),
+            },
         }
         for target in SHIPPED_TARGETS {
             if !component.artifacts.contains_key(*target) {

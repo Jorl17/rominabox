@@ -87,6 +87,10 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .control-hit { position: absolute; box-sizing: border-box; width: 30dp; height: 30dp; background-color: transparent; border: 1dp transparent; border-radius: 15dp; }
 .control-callout:hover .control-hit, .control-group:hover .control-hit { border-color: #75b2e4; border-width: 2dp; }
 .control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: #fff13d; border-width: 2dp; margin-left: -3dp; }
+/* A lit ring has a crisp dark edge outside and inside, so it is visible on a
+ * pale pad as well as on a dark one. */
+.control-callout:hover .control-hit, .control-group:hover .control-hit,
+.control-callout.focused .control-hit, .control-group.focused .control-hit { box-shadow: #020b27 0dp 0dp 0dp 1dp, #020b27 0dp 0dp 0dp 1dp inset; }
 /* The thicker left edge of the focused box moves its content to the right.
  * The ring and the area for the pointer stay on the button. */
 .control-callout.focused .control-reach, .control-group.focused .control-reach { margin-left: -3dp; }
@@ -132,7 +136,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 
 .menu-action { color: #ffffff; background-color: #061a48; border-width: 1dp; border-color: #476eab; }
 .menu-action:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
-.menu-action.focused, .menu-action.capturing { background-color: #193e88; color: #ffffff; border-color: #fff13d; border-left-width: 4dp; }
+/* The focus is on the control being captured. CANCEL also has the capturing
+ * class while we wait for a capture, but stays an ordinary button next to it. */
+.menu-action.focused { background-color: #193e88; color: #ffffff; border-color: #fff13d; border-left-width: 4dp; }
 .menu-action:active { background-color: #193e88; color: #fff13d; border-color: #ffffff; }
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 

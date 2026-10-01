@@ -22,6 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+import exported_game  # noqa: E402
 import menu_shots  # noqa: E402
 
 # The verbose log line for each controller driver started in RetroArch.
@@ -38,10 +39,10 @@ def started_drivers(launcher: Path, log: Path, script: str | None) -> list[str]:
     if log.exists():
         log.unlink()
     env = {**os.environ, "ROMINABOX_MAX_FRAMES": "1", "ROMINABOX_VERBOSE": "1",
-           menu_shots.quiet_env(): "1"}
-    env.pop(menu_shots.SCRIPT_ENV, None)
+           exported_game.quiet_env(): "1"}
+    env.pop(exported_game.SCRIPT_ENV, None)
     if script is not None:
-        env[menu_shots.SCRIPT_ENV] = script
+        env[exported_game.SCRIPT_ENV] = script
     code = subprocess.run([str(launcher)], timeout=60, env=env).returncode
     text = log.read_text(encoding="utf-8", errors="replace") if log.exists() else ""
     if code != 0 or "[Content] Loading content file" not in text:
@@ -59,15 +60,15 @@ def main() -> int:
         return 0
     settings = {"title": "Scripted Run", "startAtMenu": False}
     with menu_shots.build_a_game(cartridge, ROOT / "work/scripted-run", "gbc", settings) as app:
-        launcher = menu_shots.launcher_of(app)
-        log = menu_shots.log_of(app)
+        launcher = exported_game.launcher_of(app)
+        log = exported_game.log_of(app)
         if log is None:
             raise SystemExit(f"the export at {app} names no data folder for its log")
         scripted = started_drivers(launcher, log, SCRIPT)
         plain = started_drivers(launcher, log, None)
     failures = []
     if scripted != [NO_CONTROLLERS]:
-        failures.append(f"a run {menu_shots.SCRIPT_ENV} drives started controller driver(s) {scripted}, "
+        failures.append(f"a run {exported_game.SCRIPT_ENV} drives started controller driver(s) {scripted}, "
                         f"not only {NO_CONTROLLERS!r}")
     if not plain or NO_CONTROLLERS in plain:
         failures.append(f"a run without a menu script started controller driver(s) {plain}, "
@@ -76,7 +77,7 @@ def main() -> int:
         print(f"FAIL {failure}")
     if failures:
         return 1
-    print(f"{menu_shots.PLATFORM}: a scripted run starts {scripted[0]!r}; a plain one {plain[0]!r}")
+    print(f"{exported_game.PLATFORM}: a scripted run starts {scripted[0]!r}; a plain one {plain[0]!r}")
     return 0
 
 

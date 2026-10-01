@@ -56,6 +56,9 @@ impl VideoDriver {
 }
 
 impl Language {
+    /// Every shader language for an exported game.
+    pub const ALL: [Language; 2] = [Language::Glsl, Language::Slang];
+
     /// The driver for a game whose shaders are in this language. For a game
     /// with no shaders we use the GLSL driver.
     pub fn video_driver(self) -> VideoDriver {

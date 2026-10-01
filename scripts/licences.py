@@ -281,10 +281,12 @@ def toolchain_differences(components: list[Component], installation: Path | None
 
 
 def warning(missing: list[str]) -> str:
-    """What we print in a kit build or a check about missing licence texts."""
-    return ("WARNING: licence texts are missing. Nothing was left out or refused; the player "
-            "keeps every library it uses. Add these to licenses/ (scripts/licences.json, then "
-            "python3 scripts/licences.py) so the games carry them:\n  " + "\n  ".join(missing))
+    """What we print in a kit build, a preparation or a check about licence
+    texts that are missing or changed."""
+    return ("WARNING: licence texts are missing or changed. Nothing was left out or refused; "
+            "everything they belong to is used all the same. Bring licenses/ up to date "
+            "(scripts/licences.json, then python3 scripts/licences.py) so the games carry them:\n  "
+            + "\n  ".join(missing))
 
 
 def main() -> int:

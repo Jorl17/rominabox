@@ -1,8 +1,10 @@
 //! The Windows part of the isolation tests: the stand-in kit with the shipped
 //! launcher, how we start a game, where a game's data is in its sandbox (an
 //! AppContainer), and how we tell that an export has the sandbox (from its
-//! launch plan, because we set up the sandbox in the launcher).
+//! launch plan, because we set up the sandbox in the launcher). A Windows
+//! game is one program, which we unpack on its first launch.
 
+use crate::sandboxes::{self, wide};
 use rominabox_engine::packaging::ExportTarget;
 use std::{
     fs,
@@ -33,15 +35,6 @@ extern "system" {
     fn CreateFileMappingW(file: isize, attributes: *const u8, protect: u32, high: u32, low: u32, name: *const u16)
         -> isize;
     fn CloseHandle(handle: isize) -> i32;
-}
-
-#[link(name = "userenv")]
-extern "system" {
-    fn DeleteAppContainerProfile(name: *const u16) -> i32;
-}
-
-fn wide(text: &str) -> Vec<u16> {
-    text.encode_utf16().chain(std::iter::once(0)).collect()
 }
 
 /// The stand-in kit with the shipped launcher, because we set up the sandbox
@@ -77,34 +70,35 @@ pub fn use_probe_as_player(kit: &Path) {
     assert!(status.success(), "the sandbox probe failed to compile");
 }
 
-/// The program a person opens.
+/// The program a person opens: the game itself.
 pub fn launcher_of(app: &Path) -> PathBuf {
-    app.join(format!("{}.exe", app.file_name().unwrap().to_string_lossy()))
+    app.to_path_buf()
 }
 
+/// The game's files, which we unpack as on its first launch, into a folder
+/// beside its program.
 pub fn resources_of(app: &Path) -> PathBuf {
-    app.join("Resources")
+    let unpacked = app.with_extension("unpacked");
+    if !unpacked.is_dir() {
+        crate::export_fixture::unpack(app, &unpacked);
+    }
+    unpacked.join("Resources")
+}
+
+/// The game's files where we read them at launch: in the copy that we unpack
+/// on the first launch under the per-user application data.
+pub fn launched_resources_of(app: &Path) -> PathBuf {
+    let runtime = crate::export_fixture::unpack(app, &app.with_extension("unpacked"));
+    user_data().join(runtime).join("Resources")
 }
 
 /// The per-user application data outside any sandbox.
 pub fn user_data() -> PathBuf {
-    PathBuf::from(std::env::var("LOCALAPPDATA").unwrap())
-}
-
-/// The name of the sandbox, as we make it in the launcher: the application
-/// id prefix declared in the launcher and the player, then the game's identity.
-fn sandbox_name(identity: &str) -> String {
-    let header = fs::read_to_string(crate::repo_at("vendor/retroarch/rominabox_launch.h")).unwrap();
-    let prefix = header
-        .lines()
-        .find_map(|line| line.strip_prefix("#define RIB_GAME_APP_ID_PREFIX \""))
-        .and_then(|rest| rest.strip_suffix('"'))
-        .expect("rominabox_launch.h declares the application id prefix");
-    format!("{prefix}{identity}")
+    sandboxes::local()
 }
 
 pub fn container_for(identity: &str) -> PathBuf {
-    user_data().join("Packages").join(sandbox_name(identity))
+    sandboxes::sandbox_folder(identity)
 }
 
 /// Where the sandboxed game's per-user folder is.
@@ -135,27 +129,10 @@ pub fn mentions(text: &str, path: &Path) -> bool {
     text.to_lowercase().contains(&path.to_str().unwrap().to_lowercase())
 }
 
-/// A sandbox that we registered for the test's game, which we remove with its
-/// folder when the test ends.
-pub struct Sandbox(String);
-
-impl Drop for Sandbox {
-    fn drop(&mut self) {
-        let name = wide(&self.0);
-        unsafe {
-            DeleteAppContainerProfile(name.as_ptr());
-        }
-        // A folder that the test made where the folder of an unregistered
-        // sandbox would be.
-        let folder = user_data().join("Packages").join(&self.0);
-        if folder.is_dir() && folder.file_name().and_then(|name| name.to_str()) == Some(self.0.as_str()) {
-            let _ = fs::remove_dir_all(&folder);
-        }
-    }
-}
-
-pub fn sandbox_for(identity: &str) -> Sandbox {
-    Sandbox(sandbox_name(identity))
+/// Everything of the test's game on this computer, including its sandbox and
+/// its unpacked copy, which we remove when the test ends.
+pub fn sandbox_for(identity: &str) -> sandboxes::Kept {
+    sandboxes::kept(identity)
 }
 
 /// A file on the host that a game must not read, and a place beside it where

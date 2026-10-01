@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from directory_links import link_directory
+import exported_game
 import menu_shots
 import launcher_plan
 import menu_workflows
@@ -51,10 +52,10 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
             def make_dir(*, prefix: str) -> str:
                 return real_mkdtemp(prefix=prefix, dir=parent)
 
-            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> tuple[Path, None]:
+            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> Path:
                 app = run_dir / "Game.app"
                 app.mkdir()
-                return app, None
+                return app
 
             with (
                 patch.object(menu_shots.tempfile, "mkdtemp", side_effect=make_dir),
@@ -70,10 +71,10 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
             def make_dir(*, prefix: str) -> str:
                 return real_mkdtemp(prefix=prefix, dir=parent)
 
-            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> tuple[Path, None]:
+            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> Path:
                 app = run_dir / "Game.app"
                 app.mkdir()
-                return app, None
+                return app
 
             with (
                 patch.object(menu_shots.tempfile, "mkdtemp", side_effect=make_dir),
@@ -90,10 +91,10 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
             def make_dir(*, prefix: str) -> str:
                 return real_mkdtemp(prefix=prefix, dir=parent)
 
-            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> tuple[Path, None]:
+            def fake_export(_rom: Path, _workspace: Path, run_dir: Path, *_args: object) -> Path:
                 app = run_dir / "Game.app"
                 app.mkdir()
-                return app, None
+                return app
 
             with (
                 patch.object(menu_shots.tempfile, "mkdtemp", side_effect=make_dir),
@@ -118,10 +119,10 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
                 return FakeCompletedPlayer()
 
             with (
-                patch.object(menu_shots, "launcher_of", return_value=Path("/fake/launcher")),
-                patch.object(menu_shots, "log_of", return_value=None),
-                patch.object(menu_shots, "data_dir_of", return_value=None),
-                patch.object(menu_shots, "quiet_env", return_value="ROMINABOX_QUIET"),
+                patch.object(exported_game, "launcher_of", return_value=Path("/fake/launcher")),
+                patch.object(exported_game, "log_of", return_value=None),
+                patch.object(exported_game, "data_dir_of", return_value=None),
+                patch.object(exported_game, "quiet_env", return_value="ROMINABOX_QUIET"),
                 patch.object(menu_shots.subprocess, "Popen", side_effect=launch),
             ):
                 problem = menu_shots.take(
@@ -134,10 +135,10 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
         player = FakePlayer()
         with tempfile.TemporaryDirectory() as directory:
             with (
-                patch.object(menu_shots, "launcher_of", return_value=Path("/fake/launcher")),
-                patch.object(menu_shots, "log_of", return_value=None),
-                patch.object(menu_shots, "data_dir_of", return_value=None),
-                patch.object(menu_shots, "quiet_env", return_value="ROMINABOX_QUIET"),
+                patch.object(exported_game, "launcher_of", return_value=Path("/fake/launcher")),
+                patch.object(exported_game, "log_of", return_value=None),
+                patch.object(exported_game, "data_dir_of", return_value=None),
+                patch.object(exported_game, "quiet_env", return_value="ROMINABOX_QUIET"),
                 patch.object(menu_shots.subprocess, "Popen", return_value=player) as popen,
                 patch.object(
                     menu_shots.subprocess,
@@ -158,7 +159,7 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
 
     def test_disc_leftover_reports_process_without_quitting(self) -> None:
         with (
-            patch.object(menu_shots, "running_from", return_value="4242 /fake/launcher"),
+            patch.object(exported_game, "running_from", return_value="4242 /fake/launcher"),
             patch.object(test_discs.subprocess, "run") as run,
         ):
             problem = test_discs.leftover_problem(Path("/fake/Game.app"))
@@ -169,10 +170,10 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
     def test_disc_timeout_reports_pid_without_signaling(self) -> None:
         player = FakePlayer()
         with (
-            patch.object(menu_shots, "storage_home", return_value=Path("/fake")),
-            patch.object(menu_shots, "log_of", return_value=None),
-            patch.object(menu_shots, "launcher_of", return_value=Path("/fake/launcher")),
-            patch.object(menu_shots, "quiet_env", return_value="ROMINABOX_QUIET"),
+            patch.object(exported_game, "storage_home", return_value=Path("/fake")),
+            patch.object(exported_game, "log_of", return_value=None),
+            patch.object(exported_game, "launcher_of", return_value=Path("/fake/launcher")),
+            patch.object(exported_game, "quiet_env", return_value="ROMINABOX_QUIET"),
             patch.object(test_discs, "forget_tray_record"),
             patch.object(test_discs, "leftover_problem", return_value="4242 /fake/launcher"),
             patch.object(test_discs.subprocess, "Popen", return_value=player) as popen,
@@ -218,9 +219,9 @@ class HarnessLinkTest(unittest.TestCase):
             link_directory(data / "logs", elsewhere)
             problem = None
             with (
-                patch.object(menu_shots, "data_dir_of", return_value=data),
-                patch.object(menu_shots, "log_of", return_value=data / "logs" / "launch.log"),
-                patch.object(menu_shots, "launcher_of", return_value=Path("/fake/launcher")),
+                patch.object(exported_game, "data_dir_of", return_value=data),
+                patch.object(exported_game, "log_of", return_value=data / "logs" / "launch.log"),
+                patch.object(exported_game, "launcher_of", return_value=Path("/fake/launcher")),
                 patch.object(menu_shots.subprocess, "Popen", side_effect=GameStarted),
             ):
                 try:
@@ -245,8 +246,8 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
                     sandbox.mkdir()
                     link_directory(sandbox / "Games", elsewhere)
                 with (
-                    patch.object(menu_shots, "data_dir_of", return_value=sandbox / "Games" / "fixture"),
-                    patch.object(menu_shots, "storage_home", return_value=sandbox),
+                    patch.object(exported_game, "data_dir_of", return_value=sandbox / "Games" / "fixture"),
+                    patch.object(exported_game, "storage_home", return_value=sandbox),
                 ):
                     with self.assertRaisesRegex(SystemExit, "link in fixture storage"):
                         menu_workflows.claim_fixture(Path("/fake/Fixture.app"))
@@ -259,8 +260,8 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
             saved = data / "states" / "menu.state1"
             saved.write_bytes(b"unowned save")
             with (
-                patch.object(menu_shots, "data_dir_of", return_value=data),
-                patch.object(menu_shots, "storage_home", return_value=data),
+                patch.object(exported_game, "data_dir_of", return_value=data),
+                patch.object(exported_game, "storage_home", return_value=data),
             ):
                 with self.assertRaisesRegex(SystemExit, "pre-existing unowned fixture files"):
                     menu_workflows.reset_fixture(Path("/fake/Fixture.app"))
@@ -282,9 +283,9 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
                 if changed:
                     remap.write_text("input_libretro_device_p1 = 5\n")
                 with (
-                    patch.object(menu_shots, "data_dir_of", return_value=data),
-                    patch.object(menu_shots, "storage_home", return_value=data),
-                    patch.object(menu_shots, "prepare_storage"),
+                    patch.object(exported_game, "data_dir_of", return_value=data),
+                    patch.object(exported_game, "storage_home", return_value=data),
+                    patch.object(exported_game, "prepare_storage"),
                 ):
                     if changed:
                         with self.assertRaisesRegex(SystemExit, "pre-existing unowned fixture files"):
@@ -311,9 +312,9 @@ class WorkflowFixtureOwnershipTest(unittest.TestCase):
                 self.assertFalse((data / "menu-workflow-owner").exists())
 
             with (
-                patch.object(menu_shots, "data_dir_of", return_value=data),
-                patch.object(menu_shots, "storage_home", return_value=data),
-                patch.object(menu_shots, "prepare_storage", side_effect=prepare) as prepared,
+                patch.object(exported_game, "data_dir_of", return_value=data),
+                patch.object(exported_game, "storage_home", return_value=data),
+                patch.object(exported_game, "prepare_storage", side_effect=prepare) as prepared,
             ):
                 menu_workflows.claim_fixture(Path("/fake/Fixture.app"))
                 prepared.assert_called_once()

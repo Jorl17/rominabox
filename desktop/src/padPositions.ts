@@ -49,6 +49,17 @@ export function moveTo(
   return moved;
 }
 
+/** `bindings` with each control in `moved` read from its new position. */
+export function withPads<T extends { pad?: string }>(
+  bindings: Record<string, T | undefined>,
+  moved: Record<string, string | undefined>,
+): Record<string, T | undefined> {
+  const next = { ...bindings };
+  for (const [id, pad] of Object.entries(moved))
+    next[id] = { ...next[id], pad } as T;
+  return next;
+}
+
 /**
  * The controls that would have no input in the game, and why. RetroArch reads
  * the axis of a stick as a whole, so a direction left in place stops working

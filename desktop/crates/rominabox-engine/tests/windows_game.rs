@@ -17,7 +17,7 @@ mod support;
 
 use export_fixture::{export_request_from, program_from, unpack, windows_kit, workspace};
 use rominabox_engine::packaging::{ExportRequest, ExportTarget};
-use sandboxes::{declared, registered, sandbox_name};
+use sandboxes::{copies, declared, kept, local, previous_data, registered, runtimes, sandbox_folder};
 use std::{
     collections::BTreeMap,
     ffi::OsStr,
@@ -44,35 +44,6 @@ const STAND_IN: &str = "#include <stdio.h>\n#include <windows.h>\n\
 /// The length of `path` as Windows counts it, in UTF-16 units.
 fn length(path: &Path) -> usize {
     OsStr::encode_wide(path.as_os_str()).count()
-}
-
-fn local() -> PathBuf {
-    PathBuf::from(std::env::var("LOCALAPPDATA").expect("Windows names the local application data"))
-}
-
-fn runtimes() -> PathBuf {
-    local().join("ROM-in-a-Box").join("Runtimes")
-}
-
-fn sandbox_folder(identity: &str) -> PathBuf {
-    local().join("Packages").join(sandbox_name(identity))
-}
-
-/// The data folder of a game exported in the older layout, outside a sandbox.
-fn previous_data(identity: &str) -> PathBuf {
-    local().join("ROM-in-a-Box").join("Games").join(identity)
-}
-
-/// The game's unpacked copies, and the leftovers of any unpacking beside them.
-fn copies(identity: &str) -> Vec<String> {
-    let mut found: Vec<String> = fs::read_dir(runtimes())
-        .into_iter()
-        .flatten()
-        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
-        .filter(|name| name.starts_with(&format!("{identity}-")))
-        .collect();
-    found.sort();
-    found
 }
 
 /// A kit with the launcher from this tree and the stand-in player.
@@ -124,10 +95,6 @@ fn export(request: &ExportRequest, root: &Path) -> Game {
             .unwrap_or_else(|| panic!("the plan has no {name}\n{plan}"))
     };
     let identity = field("identity");
-    assert!(
-        identity.len() == 24 && identity.bytes().all(|byte| byte.is_ascii_hexdigit()),
-        "an identity this test can remove things by: {identity}"
-    );
     // Inside the sandbox the per-user folder is the sandbox's AC folder.
     let data_dir = field("data_dir");
     let below = data_dir.strip_prefix("$user_data").unwrap_or(&data_dir);
@@ -139,49 +106,6 @@ fn export(request: &ExportRequest, root: &Path) -> Game {
         identity,
         runtime: runtime.rsplit('/').next().unwrap().to_string(),
         data,
-    }
-}
-
-/// Everything that the games of a test store on this computer. When the test
-/// ends, we remove it by the names we use in the launcher, whatever is left.
-struct Kept {
-    identity: String,
-    /// The folders above the game's that were not there when the test began.
-    new_parents: Vec<PathBuf>,
-}
-
-fn kept(identity: &str) -> Kept {
-    let parents = [runtimes(), previous_data(identity).parent().unwrap().to_path_buf(), local().join("ROM-in-a-Box")];
-    let kept = Kept {
-        identity: identity.to_string(),
-        new_parents: parents.into_iter().filter(|parent| !parent.exists()).collect(),
-    };
-    assert!(copies(identity).is_empty(), "{identity} has unpacked copies from an earlier run");
-    assert!(
-        !sandbox_folder(identity).exists() && !registered(identity),
-        "{identity} has a sandbox from an earlier run"
-    );
-    kept
-}
-
-impl Drop for Kept {
-    fn drop(&mut self) {
-        sandboxes::unregister(&self.identity);
-        let sandbox = sandbox_folder(&self.identity);
-        if sandbox.is_dir() {
-            let _ = fs::remove_dir_all(&sandbox);
-        }
-        for copy in copies(&self.identity) {
-            let _ = fs::remove_dir_all(runtimes().join(copy));
-        }
-        let previous = previous_data(&self.identity);
-        if previous.is_dir() {
-            let _ = fs::remove_dir_all(&previous);
-        }
-        // Only when empty, because a game of another test may be in one.
-        for parent in &self.new_parents {
-            let _ = fs::remove_dir(parent);
-        }
     }
 }
 
@@ -357,6 +281,30 @@ fn a_newer_version_unpacks_into_a_folder_of_its_own_and_the_older_copy_goes() {
         [player_in(&runtimes().join(&older.runtime)), player_in(&runtimes().join(&newer.runtime))]
     );
     assert_eq!(fs::read(&save).unwrap(), b"the player's save");
+}
+
+/// In a test we give the launcher a per-user folder of the test's own in place
+/// of the person's. We unpack the game there, outside its sandbox, and the
+/// game's data is in the sandbox's folder, as Windows reports it inside,
+/// because nothing inside the sandbox can open the test's folder.
+#[test]
+#[ignore = "launches a stand-in game in its sandbox; the wingame scope runs it"]
+fn a_game_given_a_tests_per_user_folder_unpacks_there_and_plays_in_its_sandbox() {
+    let root = workspace();
+    let kit = kit(&root);
+    let game = export(&request(&root, &kit, "Own Folder", "out"), &root);
+    let _kept = kept(&game.identity);
+    // It exists, as a person's per-user folder always does.
+    let user_data = root.join("user data");
+    fs::create_dir_all(&user_data).unwrap();
+
+    let launched = launch_in(&game.program, &root, Some(&user_data));
+    assert_eq!(launched.code, Some(PLAYED), "{}", launched.errors);
+    let copy = user_data.join("ROM-in-a-Box").join("Runtimes").join(&game.runtime);
+    assert!(copy.is_dir(), "it did not unpack into the test's folder");
+    assert_eq!(copies(&game.identity), Vec::<String>::new(), "it unpacked into the person's folder");
+    assert!(game.data.join("retroarch.cfg").is_file(), "its data is not in its sandbox's folder");
+    assert_eq!(ran_at(&game), [player_in(&copy)]);
 }
 
 /// When the player chooses UNINSTALL in the game's menu, we leave a marker in

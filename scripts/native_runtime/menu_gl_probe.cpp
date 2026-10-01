@@ -37,16 +37,6 @@
 #include <string>
 #include <vector>
 
-#if defined(__APPLE__)
-/* The legacy header declares neither, and the core profile exports both. */
-extern "C" void glGenVertexArrays(GLsizei n, GLuint *arrays);
-extern "C" void glDeleteVertexArrays(GLsizei n, const GLuint *arrays);
-#elif defined(_WIN32)
-/* They are declared in the loader in platform.h. */
-#else
-#error "the menu GL probe has no GL entry points declared for this platform"
-#endif
-
 namespace {
 
 enum class Leftover

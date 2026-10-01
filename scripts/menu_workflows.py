@@ -34,6 +34,7 @@ import subprocess
 
 from PIL import Image, ImageChops
 
+import exported_game
 import menu_shots as shots
 import launcher_plan
 from make_test_rom import make_megadrive_rom
@@ -66,8 +67,8 @@ def reset_fixture(app: Path) -> None:
     are diagnostic saves we can make again, not user content.
     """
     claim_fixture(app)
-    data = shots.data_dir_of(app)
-    if data is None or shots.storage_home(app) is None:
+    data = exported_game.data_dir_of(app)
+    if data is None or exported_game.storage_home(app) is None:
         raise SystemExit("the generated fixture must have contained game storage")
     session = data / "achievements.session"
     if session.exists() or shots.redirected(session):
@@ -88,10 +89,10 @@ def reset_fixture(app: Path) -> None:
 
 def claim_fixture(app: Path) -> None:
     """Claim empty fixture storage once, and refuse unknown menu data already there."""
-    data = shots.data_dir_of(app)
+    data = exported_game.data_dir_of(app)
     # The folder that contains a game's storage on each platform: a sandboxed
     # macOS game's container, or the games folder in Windows' per-user data.
-    sandbox = shots.storage_home(app)
+    sandbox = exported_game.storage_home(app)
     if data is None or shots.redirected(data) or sandbox is None:
         raise SystemExit("the fixture requires its own contained game storage")
     if not data.is_relative_to(sandbox):
@@ -136,14 +137,14 @@ def claim_fixture(app: Path) -> None:
     # writing the marker, because at the first launch of a Windows game we
     # register its sandbox, which empties its storage and would remove a
     # marker written earlier.
-    shots.prepare_storage(app)
+    exported_game.prepare_storage(app)
     data.mkdir(parents=True, exist_ok=True)
     marker.write_text(owner, encoding="utf-8", newline="\n")
 
 
 def persisted(app: Path, table: dict) -> dict[str, str]:
     """The files listed in the table, from the game's data, as written by the player."""
-    data = shots.data_dir_of(app)
+    data = exported_game.data_dir_of(app)
     assert data is not None
     # Each export has a separate temporary directory. Canonicalize only this
     # exact app prefix, and keep all filenames, relative paths and other bytes
@@ -290,7 +291,7 @@ def main() -> int:
     # We run a launched case with a list of platforms only on those platforms,
     # because going fullscreen on a Mac takes over the whole screen.
     cases = [declared(table, item["design"], item["palette"], item["case"]) for item in table["launched"]
-             if shots.PLATFORM in item.get("platforms", [shots.PLATFORM])]
+             if exported_game.PLATFORM in item.get("platforms", [exported_game.PLATFORM])]
     if not cases:
         raise SystemExit("the table launches no case")
     output = arguments.output.resolve()

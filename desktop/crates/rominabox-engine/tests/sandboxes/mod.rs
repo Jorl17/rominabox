@@ -1,8 +1,9 @@
 //! The sandbox (AppContainer) of a Windows game, which we register, find and
 //! remove in the tests. We name it from the game's identity, as in the launcher.
+//! We also remove everything else that a game stores on this computer.
 #![allow(dead_code)]
 
-use std::ffi::c_void;
+use std::{ffi::c_void, fs, path::PathBuf};
 
 #[link(name = "userenv")]
 extern "system" {
@@ -100,4 +101,83 @@ pub fn registered(identity: &str) -> bool {
         }
     }
     found
+}
+
+/// The per-user application data outside any sandbox.
+pub fn local() -> PathBuf {
+    PathBuf::from(std::env::var("LOCALAPPDATA").expect("Windows names the local application data"))
+}
+
+/// The folder into which we unpack a Windows game made into one program.
+pub fn runtimes() -> PathBuf {
+    local().join("ROM-in-a-Box").join("Runtimes")
+}
+
+/// The folder of the game's sandbox.
+pub fn sandbox_folder(identity: &str) -> PathBuf {
+    local().join("Packages").join(sandbox_name(identity))
+}
+
+/// The data folder of a game exported in the older layout, outside a sandbox.
+pub fn previous_data(identity: &str) -> PathBuf {
+    local().join("ROM-in-a-Box").join("Games").join(identity)
+}
+
+/// The game's unpacked copies, and the leftovers of any unpacking beside them.
+pub fn copies(identity: &str) -> Vec<String> {
+    let mut found: Vec<String> = fs::read_dir(runtimes())
+        .into_iter()
+        .flatten()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|name| name.starts_with(&format!("{identity}-")))
+        .collect();
+    found.sort();
+    found
+}
+
+/// Everything that the games of a test store on this computer. When the test
+/// ends, we remove it by the names we use in the launcher, whatever is left.
+pub struct Kept {
+    identity: String,
+    /// The folders above the game's that were not there when the test began.
+    new_parents: Vec<PathBuf>,
+}
+
+pub fn kept(identity: &str) -> Kept {
+    assert!(
+        identity.len() == 24 && identity.bytes().all(|byte| byte.is_ascii_hexdigit()),
+        "an identity this test can remove things by: {identity}"
+    );
+    let parents = [runtimes(), previous_data(identity).parent().unwrap().to_path_buf(), local().join("ROM-in-a-Box")];
+    let kept = Kept {
+        identity: identity.to_string(),
+        new_parents: parents.into_iter().filter(|parent| !parent.exists()).collect(),
+    };
+    assert!(copies(identity).is_empty(), "{identity} has unpacked copies from an earlier run");
+    assert!(
+        !sandbox_folder(identity).exists() && !registered(identity),
+        "{identity} has a sandbox from an earlier run"
+    );
+    kept
+}
+
+impl Drop for Kept {
+    fn drop(&mut self) {
+        unregister(&self.identity);
+        let sandbox = sandbox_folder(&self.identity);
+        if sandbox.is_dir() {
+            let _ = fs::remove_dir_all(&sandbox);
+        }
+        for copy in copies(&self.identity) {
+            let _ = fs::remove_dir_all(runtimes().join(copy));
+        }
+        let previous = previous_data(&self.identity);
+        if previous.is_dir() {
+            let _ = fs::remove_dir_all(&previous);
+        }
+        // Only when empty, because a game of another test may be in one.
+        for parent in &self.new_parents {
+            let _ = fs::remove_dir(parent);
+        }
+    }
 }

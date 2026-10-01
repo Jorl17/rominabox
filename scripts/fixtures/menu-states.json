@@ -11,47 +11,30 @@
     "",
     "'pseudo' sets a real pseudo-class, so a hover state renders the design's",
     "own :hover rule rather than a second rule written for the screenshot.",
+    "A list sets each of its values: a control being captured has both",
+    "'focused' and 'capturing', as in the player.",
     "",
     "A state names elements by id, or by position \u2014 'controls-device-list>1' is the second option in the picker, whatever that console calls it, so one declaration renders on every console. scripts/menu_states.py refuses",
     "a state whose elements are not in the document, and refuses two states that",
     "render the same picture \u2014 declaring a state the design does not actually",
     "draw differently is how three of these were the same image.",
     "",
+    "A state names the screen it is on ('screen'), which the offscreen renderer",
+    "shows as the player shows it: its panel alone, its heading and its footer",
+    "(rml-preview --screen). 'set' holds only what the state changes on it.",
+    "",
     "Adding a screen means adding entries here. Nothing else changes."
   ],
   "states": {
     "pause-menu": {
       "describes": "the menu as it opens, before anything is chosen",
-      "set": {
-        "pause-panel": {
-          "display": "block"
-        },
-        "options-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "none"
-        }
-      }
+      "screen": "pause",
+      "set": {}
     },
     "options": {
       "describes": "the options screen, listing what this game bundled",
+      "screen": "options",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "options-panel": {
-          "display": "block"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "heading": {
-          "text": "OPTIONS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "volume-level-fill": {
           "width": "456px"
         },
@@ -62,147 +45,102 @@
     },
     "controls": {
       "describes": "the controls screen, with the pad and its callouts",
-      "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        }
-      }
+      "screen": "controls",
+      "set": {}
     },
     "picker-hovered": {
       "describes": "the pointer on the closed picker, before it opens",
+      "screen": "controls",
+      "needs": "controls-device-list",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-device-list": {
           "display": "none"
         },
         "controls-device-current": {
           "pseudo": "hover"
         }
-      },
-      "needs": "controls-device-list"
+      }
     },
     "picker-pressed": {
       "describes": "the closed picker held down, before the list appears",
+      "screen": "controls",
+      "needs": "controls-device-list",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-device-list": {
           "display": "none"
         },
         "controls-device-current": {
           "pseudo": "active"
         }
-      },
-      "needs": "controls-device-list"
+      }
     },
     "picker-open": {
       "describes": "the picker open, listing what the author included",
+      "screen": "controls",
+      "needs": "controls-device-list",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-device-list": {
           "display": "block"
         }
-      },
-      "needs": "controls-device-list"
+      }
     },
     "picker-hover-selected": {
       "describes": "the pointer on the option already in use",
+      "screen": "controls",
+      "needs": "controls-device-list",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-device-list": {
           "display": "block"
         },
         "controls-device-list>0": {
           "pseudo": "hover"
         }
-      },
-      "needs": "controls-device-list"
+      }
     },
     "picker-hover-unselected": {
       "describes": "the pointer on an option that is not in use",
+      "screen": "controls",
+      "needs": "controls-device-list",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-device-list": {
           "display": "block"
         },
         "controls-device-list>1": {
           "pseudo": "hover"
         }
-      },
-      "needs": "controls-device-list"
+      }
     },
     "picker-keyboard": {
       "describes": "an option reached by the arrow keys rather than the pointer",
+      "screen": "controls",
+      "needs": "controls-device-list",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-device-list": {
           "display": "block"
         },
         "controls-device-list>1": {
           "class": "focused"
         }
-      },
-      "needs": "controls-device-list"
+      }
     },
     "picker-option-pressed": {
       "describes": "an option held down, before the button is released",
+      "screen": "controls",
+      "needs": "controls-device-list",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-device-list": {
           "display": "block"
         },
         "controls-device-list>1": {
           "pseudo": "active"
         }
-      },
-      "needs": "controls-device-list"
+      }
     },
     "picker-dragged-outside": {
       "describes": "held down, pointer dragged off the list; releasing must not choose",
+      "screen": "controls",
+      "needs": "controls-device-list",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-device-list": {
           "display": "block"
         },
@@ -212,18 +150,12 @@
         "control-up": {
           "pseudo": "hover"
         }
-      },
-      "needs": "controls-device-list"
+      }
     },
     "control-focused": {
       "describes": "a control selected for rebinding, ring and callout lit",
+      "screen": "controls",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "control-up": {
           "class": "focused"
         }
@@ -231,42 +163,24 @@
     },
     "capturing": {
       "describes": "a button being captured, when CANCEL joins the action row",
+      "screen": "controls",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "PRESS A KEY"
         },
         "control-up": {
-          "class": "focused"
+          "class": ["focused", "capturing"]
         }
       }
     },
     "volume-low": {
       "describes": "volume at the quiet end, which is as far down as it goes",
+      "screen": "options",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "options-panel": {
-          "display": "block"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "heading": {
-          "text": "OPTIONS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "volume-level-fill": {
           "width": "0px"
         },
@@ -277,22 +191,8 @@
     },
     "volume-step": {
       "describes": "one position down from normal, which is one arrow press",
+      "screen": "options",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "options-panel": {
-          "display": "block"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "heading": {
-          "text": "OPTIONS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "volume-level-fill": {
           "width": "405px"
         },
@@ -303,22 +203,8 @@
     },
     "volume-focused": {
       "describes": "the slider reached by the arrow keys, still at normal",
+      "screen": "options",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "options-panel": {
-          "display": "block"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "heading": {
-          "text": "OPTIONS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "volume-level-fill": {
           "width": "456px"
         },
@@ -332,22 +218,8 @@
     },
     "volume-dragging": {
       "describes": "the slider held, which is not the same as focused",
+      "screen": "options",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "options-panel": {
-          "display": "block"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "heading": {
-          "text": "OPTIONS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "volume-level-fill": {
           "width": "456px"
         },
@@ -361,22 +233,8 @@
     },
     "volume-hover": {
       "describes": "the pointer on the slider, which is not the keyboard",
+      "screen": "options",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "options-panel": {
-          "display": "block"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "heading": {
-          "text": "OPTIONS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "volume-level-fill": {
           "width": "456px"
         },
@@ -390,22 +248,8 @@
     },
     "volume-arrow": {
       "describes": "the pointer on the arrow that lowers the volume",
+      "screen": "options",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "options-panel": {
-          "display": "block"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "heading": {
-          "text": "OPTIONS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "volume-level-fill": {
           "width": "456px"
         },
@@ -419,22 +263,8 @@
     },
     "volume-long": {
       "describes": "labels longer than LOW, HIGH and CONTROLS, and then longer still",
+      "screen": "options",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "options-panel": {
-          "display": "block"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "heading": {
-          "text": "OPTIONS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "volume-level-fill": {
           "width": "456px"
         },
@@ -457,13 +287,8 @@
     },
     "binds-closed": {
       "describes": "the pointer is on a control and the list has not opened yet",
+      "screen": "controls",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "control-up": {
           "pseudo": "hover"
         },
@@ -480,13 +305,8 @@
     },
     "binds-pointer": {
       "describes": "the list open because the pointer is on the control",
+      "screen": "controls",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "control-up": {
           "pseudo": "hover"
         },
@@ -533,13 +353,8 @@
     },
     "binds-keyboard": {
       "describes": "the same list, opened because the control was reached with the arrow keys",
+      "screen": "controls",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "control-up": {
           "class": "focused"
         },
@@ -586,13 +401,8 @@
     },
     "binds-line-hover": {
       "describes": "the pointer on one line of the open list",
+      "screen": "controls",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "control-up": {
           "pseudo": "hover"
         },
@@ -642,13 +452,8 @@
     },
     "binds-line-pressed": {
       "describes": "a line held down, before it is released",
+      "screen": "controls",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "control-up": {
           "pseudo": "hover"
         },
@@ -698,13 +503,8 @@
     },
     "binds-line-dragged": {
       "describes": "a line held down and the pointer dragged off it before release",
+      "screen": "controls",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "control-binds": {
           "display": "block",
           "left": "220dp",
@@ -754,13 +554,8 @@
     },
     "binds-overflow": {
       "describes": "more bindings than fit on one page, so the rest are on the next",
+      "screen": "controls",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "control-up": {
           "pseudo": "hover"
         },
@@ -837,16 +632,12 @@
     },
     "stick-up": {
       "describes": "a stick being captured, its up mark blinking",
+      "screen": "controls",
       "needs": "control-group-l_stick",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "LEFT STICK UP: PRESS AN INPUT (5)"
@@ -861,16 +652,12 @@
     },
     "stick-right": {
       "describes": "a stick being captured, its right mark blinking",
+      "screen": "controls",
       "needs": "control-group-l_stick",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "LEFT STICK RIGHT: PRESS AN INPUT (5)"
@@ -885,16 +672,12 @@
     },
     "stick-down": {
       "describes": "a stick being captured, its down mark blinking",
+      "screen": "controls",
       "needs": "control-group-l_stick",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "LEFT STICK DOWN: PRESS AN INPUT (5)"
@@ -909,16 +692,12 @@
     },
     "stick-left": {
       "describes": "a stick being captured, its left mark blinking",
+      "screen": "controls",
       "needs": "control-group-l_stick",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "LEFT STICK LEFT: PRESS AN INPUT (5)"
@@ -933,16 +712,12 @@
     },
     "stick-press": {
       "describes": "a stick being captured, its press mark blinking",
+      "screen": "controls",
       "needs": "control-group-l_stick",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "block"
-        },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "LEFT STICK PRESS: PRESS AN INPUT (5)"
@@ -957,22 +732,8 @@
     },
     "hotkeys": {
       "describes": "HOTKEYS with the builder's defaults, on its first page: each hotkey and its bindings, keys raised and pad inputs set in",
+      "screen": "hotkeys",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "hotkeys-panel": {
-          "display": "block"
-        },
-        "heading": {
-          "text": "HOTKEYS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "hotkey-menu-1": {
           "display": "block",
           "text": "Escape",
@@ -1032,22 +793,8 @@
     },
     "hotkeys-full": {
       "describes": "every row holding as many bindings as it shows, with the longest words, each + dark",
+      "screen": "hotkeys",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "hotkeys-panel": {
-          "display": "block"
-        },
-        "heading": {
-          "text": "HOTKEYS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "hotkey-menu-1": {
           "display": "block",
           "text": "Escape",
@@ -1179,22 +926,8 @@
     },
     "hotkeys-keyboard": {
       "describes": "a keyboard player's bindings, keys only, a key focused",
+      "screen": "hotkeys",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "hotkeys-panel": {
-          "display": "block"
-        },
-        "heading": {
-          "text": "HOTKEYS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "hotkey-menu-1": {
           "display": "block",
           "text": "Escape",
@@ -1249,22 +982,8 @@
     },
     "hotkeys-capturing": {
       "describes": "CONFIRM's + waiting for an input, when CANCEL joins the action row and the status counts down",
+      "screen": "hotkeys",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "hotkeys-panel": {
-          "display": "block"
-        },
-        "heading": {
-          "text": "HOTKEYS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  CANCEL"
-        },
         "hotkey-menu-1": {
           "display": "block",
           "text": "Escape",
@@ -1301,10 +1020,11 @@
           "class": "pad"
         },
         "hotkey-confirm-add": {
-          "class": "capturing"
+          "class": ["focused", "capturing"]
         },
         "hotkeys-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "hotkeys-status": {
           "text": "CONFIRM: PRESS AN INPUT (10)"
@@ -1333,22 +1053,8 @@
     },
     "hotkeys-refused": {
       "describes": "a removal refused, the status saying why, the chip still focused",
+      "screen": "hotkeys",
       "set": {
-        "pause-panel": {
-          "display": "none"
-        },
-        "controls-panel": {
-          "display": "none"
-        },
-        "hotkeys-panel": {
-          "display": "block"
-        },
-        "heading": {
-          "text": "HOTKEYS"
-        },
-        "footer-hint": {
-          "text": "[ESC]  BACK"
-        },
         "hotkey-menu-1": {
           "display": "block",
           "text": "Escape",

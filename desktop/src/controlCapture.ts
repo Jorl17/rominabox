@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CAPTURE_SECONDS, listen, type Pressed } from "./bindingCapture";
-import { moveTo, positionName } from "./padPositions";
+import { moveTo, positionName, withPads } from "./padPositions";
 
 type Control = { id: string; label: string; key: string };
 type Binding = { key?: string; pad?: string };
@@ -16,12 +16,13 @@ export type Capture = {
 };
 
 /**
- * Binding by pressing, as on the game's Controls screen: one wait per control
- * for a key or a pad press, and a stick's directions one after another in
- * their declared order, each saved as soon as it is pressed. For a key that
+ * Binding by pressing, as on the Controls screen of the game: one wait per
+ * control for a key or a pad press, and the directions of a stick one after
+ * another in their declared order, each saved as soon as it is pressed. We
+ * do not take an input that the hotkeys reject (`refuses`). For a key that
  * another control uses, we ask first. We swap a pad position with the control
- * that had it, and the author cannot take a position another offered pad uses.
- * Stopping partway keeps what was pressed, and we say so.
+ * that had it, and the author cannot take a position that another offered
+ * pad uses. Stopping partway keeps what was pressed, and we say so.
  */
 export function useControlCapture({
   controls,
@@ -29,6 +30,7 @@ export function useControlCapture({
   bindings,
   setKey,
   movePads,
+  refuses,
   say,
   ended,
 }: {
@@ -37,6 +39,9 @@ export function useControlCapture({
   bindings: Bindings;
   setKey: (id: string, key: string) => void;
   movePads: (moved: Record<string, string | undefined>) => void;
+  /** Why we reject the controls bound as `bindings` because of the hotkeys,
+   * or null. */
+  refuses: (bindings: Bindings) => Promise<string | null>;
   say: (message: string) => void;
   /** Called when a capture is over, to put focus back on its button. */
   ended: (stop: string) => void;
@@ -77,11 +82,25 @@ export function useControlCapture({
       });
     else end("done");
   }
-  function take(input: Pressed) {
+  /** Whether we still wait for the control of `current` after an answer. */
+  function stillWaiting(current: Capture) {
+    const now = latest.current.capture;
+    return !!now && now.stop === current.stop && now.step === current.step;
+  }
+  async function take(input: Pressed) {
     const { capture: current, bindings: now, controls: all } = latest.current;
     if (!current) return;
     const member = current.members[current.step];
     if (input.kind === "key") {
+      const refused = await refuses({
+        ...now,
+        [member]: { ...now[member], key: input.key },
+      });
+      if (!stillWaiting(current)) return;
+      if (refused) {
+        end("stopped", refused);
+        return;
+      }
       const conflicts = all
         .filter(
           (control) =>
@@ -108,6 +127,12 @@ export function useControlCapture({
       end("stopped", `${positionName(input.position)} is taken.`);
       return;
     }
+    const refused = await refuses(withPads(now, moved));
+    if (!stillWaiting(current)) return;
+    if (refused) {
+      end("stopped", refused);
+      return;
+    }
     movePads(moved);
     advance();
   }
@@ -117,7 +142,7 @@ export function useControlCapture({
   useEffect(() => {
     if (!waiting) return;
     return listen({
-      pressed: take,
+      pressed: (input) => void take(input),
       cancelled: () => end("stopped"),
       timedOut: () => end("stopped"),
       tick: (seconds) =>

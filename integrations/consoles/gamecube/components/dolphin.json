@@ -22,33 +22,6 @@
       "LICENSES/GPL-2.0-or-later.txt",
       "COPYING"
     ],
-    "correspondsToArtifact": false,
-    "licenseSha256": "aaf135472f81c5b4a0dca9367e5bb5e9750032b5bebe5442b36e4c0a47430df3",
-    "downloads": {
-      "linux-x86_64": {
-        "archiveSha256": "7aebbfb425e3e2f52d3691891acc8231a74cecacaf4e318bfe4a9381c1eff08e",
-        "binarySha256": "ea4125b680709826f7ff2de515c122ecc792420f8f79f4c80939bb4926eb2bf1",
-        "archiveBytes": 6502428,
-        "binaryBytes": 16557648
-      },
-      "macos-arm64": {
-        "archiveSha256": "694c40744608c7f974be4783b69ff15ce46e622cad7fe55e614b12eae6d2c063",
-        "binarySha256": "c41313b756112c41cd60b73cca75fb80a935a6860e4c2834f7ecb0e7e8369f12",
-        "archiveBytes": 5917476,
-        "binaryBytes": 15592472
-      },
-      "macos-x86_64": {
-        "archiveSha256": "5468bea574cb688617287d91c035bdd7aed99535979096fc8cedce04a74c1178",
-        "binarySha256": "01ceba5a6428f209c1697905d59ac93ccf049319dbb6002c31535da318e9b002",
-        "archiveBytes": 7590243,
-        "binaryBytes": 22256144
-      },
-      "windows-x86_64": {
-        "archiveSha256": "c97592c2e67ba2b1693498463d421a68dfd45590e8010f95ddbadd08716777a7",
-        "binarySha256": "249ae38bb20d4953d1612d087d8ef9596c72fa8e63373c986594db50fcb90c2e",
-        "archiveBytes": 7575263,
-        "binaryBytes": 18890172
-      }
-    }
+    "correspondsToArtifact": false
   }
 }

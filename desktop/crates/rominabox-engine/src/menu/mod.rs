@@ -13,6 +13,7 @@ mod document;
 pub(crate) mod inc;
 mod manifest;
 mod scene;
+pub mod script;
 mod stage;
 mod tokens;
 pub mod words;
@@ -28,7 +29,6 @@ pub use manifest::{
     base_design, declared_overlays, declared_screens, scene_metrics, Binds, Documents, Font,
     Manifest, Overlay, SceneMetrics, Screen, ScreenPlace, ScreenRole,
 };
-pub use scene::scene_titles;
 pub use stage::{compose_menu, render_preview, Composition, MenuRequest, PreviewRequest, DOCUMENT};
 
 /// One file of a composition.

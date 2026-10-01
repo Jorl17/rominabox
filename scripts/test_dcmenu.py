@@ -36,120 +36,53 @@ RETROARCH = ROOT / "vendor/retroarch"
 DRIVERS = RETROARCH / "menu/drivers"
 NATIVE = ROOT / "scripts/native_runtime"
 PROBE = ROOT / "work/dcmenu-probe"
-LAUNCHER = ROOT / "desktop/src-tauri/launcher/macos/main.c"
+# The place in the macOS launcher where we point its output at launch.log.
+LAUNCHER_POSIX = ROOT / "desktop/src-tauri/launcher/posix"
 LINE = PROBE / "line.txt"
-
-
-def extract_line_buffer() -> str:
-    source = LAUNCHER.read_text()
-    signature = "void rominabox_line_buffer_stdio(void)"
-    start = source.find(signature)
-    if start < 0:
-        raise SystemExit("launcher has no rominabox_line_buffer_stdio")
-    brace = source.find("{", start)
-    depth = 0
-    for index in range(brace, len(source)):
-        if source[index] == "{":
-            depth += 1
-        elif source[index] == "}":
-            depth -= 1
-            if depth == 0:
-                return source[start:index + 1]
-    raise SystemExit("rominabox_line_buffer_stdio has no closing brace")
 
 
 def check_log_line() -> bool:
     if native_build.is_windows(rmlui_paths.TARGET):
-        # We fork and redirect output in the same way as the macOS launcher,
-        # in one process. On Windows the player runs in a separate process
-        # with a log handle from its launcher, and we flush each line in
-        # RetroArch's logger. We do not test the Windows case here.
+        # In the macOS launcher we point the output of the launcher process
+        # at the log. On Windows the player runs in a separate process with a
+        # log handle from its launcher, and we flush each line in RetroArch's
+        # logger. We do not test the Windows case here.
         print("not on Windows: this checks the macOS launcher's in-process log redirection")
         return True
-    text = LAUNCHER.read_text()
-    dup = text.find("dup2(log_fd, STDOUT_FILENO)")
-    call = text.find("rominabox_line_buffer_stdio()", dup if dup >= 0 else 0)
-    if dup < 0 or call < 0 or call > dup + 400:
-        print("FAIL launcher does not line-buffer launch.log")
-        return False
-
     PROBE.mkdir(parents=True, exist_ok=True)
-    if LINE.exists():
-        LINE.unlink()
-    program = r"""
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/wait.h>
-
-__BODY__
-
-int main(int argc, char **argv) {
-    if (argc == 3 && strcmp(argv[1], "child") == 0) {
-        int fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        if (fd < 0)
-            return 2;
-        if (dup2(fd, STDOUT_FILENO) < 0 || dup2(fd, STDERR_FILENO) < 0)
-            return 2;
-        if (fd > STDERR_FILENO)
-            close(fd);
-        rominabox_line_buffer_stdio();
-        printf("menu line\n");
-        _exit(0);
-    }
-    pid_t child = fork();
-    if (child < 0)
-        return 2;
-    if (child == 0) {
-        execl(argv[0], argv[0], "child", argv[1], (char *)NULL);
-        _exit(2);
-    }
-    int status = 1;
-    waitpid(child, &status, 0);
-    FILE *file = fopen(argv[1], "r");
-    char body[64] = {0};
-    if (file) {
-        if (!fgets(body, sizeof body, file))
-            body[0] = '\0';
-        fclose(file);
-    }
-    if (strstr(body, "menu line") == NULL) {
-        printf("FAIL a log line never reached the file\n");
-        return 1;
-    }
-    printf("ok a log line reached the file before exit\n");
-    return 0;
-}
-""".replace("__BODY__", extract_line_buffer())
-    source = PROBE / "log_lines.c"
     binary = PROBE / "log_lines"
-    source.write_text(program)
     compiled = subprocess.run(
-        ["cc", "-o", str(binary), str(source)],
+        ["cc", "-Wall", "-Wextra", "-Werror", f"-I{LAUNCHER_POSIX}", "-o", str(binary),
+         str(NATIVE / "log_lines_probe.c"), str(LAUNCHER_POSIX / "log_output.c")],
         capture_output=True, text=True,
     )
     if compiled.returncode != 0:
         print(compiled.stderr)
         print("FAIL log line check did not compile")
         return False
-    ran = subprocess.run(
-        [str(binary), str(LINE)],
-        capture_output=True, text=True, timeout=20,
-    )
-    sys.stdout.write(ran.stdout)
-    sys.stderr.write(ran.stderr)
     if LINE.exists():
         LINE.unlink()
-    return ran.returncode == 0
+    ran = subprocess.run([str(binary), str(LINE)], capture_output=True, text=True, timeout=20)
+    sys.stdout.write(ran.stdout)
+    sys.stderr.write(ran.stderr)
+    written = LINE.read_text() if LINE.exists() else ""
+    if LINE.exists():
+        LINE.unlink()
+    if ran.returncode != 0:
+        print(f"FAIL the log line probe exited with {ran.returncode}")
+        return False
+    if "menu line" not in written:
+        print("FAIL a log line never reached the file")
+        return False
+    print("ok a log line reached the file before exit")
+    return True
 
 
 def probe_platform() -> tuple[list[Path], list[Path], list[str]]:
     """Return the OpenGL context in which we draw in the probe, which is the
-    renderer draws in, as the recipe declares it for this target. Its
-    sources, the fork's C sources it links, and its flags. Everything the
-    probe checks is menu_gl_probe.cpp, shared.
+    context of the builder's preview renderer as declared in the recipe for
+    this target: its sources, the C sources of the fork that we link, and its
+    flags. Every check of the probe is in the shared menu_gl_probe.cpp.
     """
     declared = native_build.recipe()["preview"].get(rmlui_paths.TARGET)
     if declared is None:

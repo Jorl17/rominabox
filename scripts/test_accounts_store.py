@@ -3,12 +3,13 @@
     python3 scripts/test_accounts_store.py
 
 We compile `desktop/src-tauri/accounts` with the launcher's `portable_fs` and
-run `scripts/accounts_store_test.c` in a new folder under work/test-output, to
-test the store's rules, how we keep an account private (file modes on macOS
-and Linux, a sealed token on Windows), unsafe names, the launcher's folder,
-and several processes changing one folder at once. We run the test on the
-machine where we build it. On a Mac with zig we also compile the store for
-Windows, which shows only that the Windows code compiles.
+run `scripts/accounts_store_test/` (its shared cases, and the platform's file,
+chosen as for the launcher) in a new folder under work/test-output, to test
+the store's rules, how we keep an account private (file modes on macOS and
+Linux, a sealed token on Windows), unsafe names, the launcher's folder, and
+several processes changing one folder at once. We run the test on the machine
+where we build it. On a Mac with zig we also compile the store for Windows,
+which shows only that the Windows code compiles.
 """
 
 from __future__ import annotations
@@ -25,6 +26,9 @@ import native_build  # noqa: E402
 import toolchain  # noqa: E402
 
 ACCOUNTS = native_build.accounts_folder()
+# The shared cases of the test, and in posix/ and windows/ the cases that
+# differ on each platform.
+TEST = ROOT / "scripts/accounts_store_test"
 # The player's root, which contains rominabox_launch.h, as in the player build.
 PLAYER = ROOT / "vendor/retroarch"
 OUTPUT = ROOT / "work/test-output"
@@ -48,7 +52,7 @@ def main() -> int:
     platform = core_source.host_target().split("-", 1)[0]
     subprocess.run(
         [toolchain.describe()["cc"], "-std=gnu99", "-O1", "-g", *WARNINGS, f"-I{ACCOUNTS}", f"-I{PLAYER}",
-         str(ROOT / "scripts/accounts_store_test.c"), *map(str, sources(platform)), "-o", str(binary),
+         *map(str, native_build.platform_sources(TEST, platform)), *map(str, sources(platform)), "-o", str(binary),
          *LIBRARIES[platform]],
         check=True,
     )

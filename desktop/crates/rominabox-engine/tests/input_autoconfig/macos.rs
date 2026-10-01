@@ -513,6 +513,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         runtime_kit: kit,
         core: None,
         core_cache: None,
+        accounts_folder: None,
     };
     let cancelled = AtomicBool::new(false);
     let result = rominabox_engine::packaging::export_game(&request, &cancelled, |_| {}).unwrap();

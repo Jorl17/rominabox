@@ -1563,9 +1563,7 @@
         "selected": [
           "slot-1"
         ],
-        "showing": [
-          "notice"
-        ],
+        "showing": [],
         "sliders": {
           "volume-level": 1.0
         },
@@ -1621,9 +1619,7 @@
         "selected": [
           "slot-1"
         ],
-        "showing": [
-          "notice"
-        ],
+        "showing": [],
         "sliders": {
           "volume-level": 1.0
         },
@@ -1719,6 +1715,7 @@
       }
     },
     "script": [
+      "wait-overlays",
       "report:windowed",
       "fullscreen",
       "wait:30",
@@ -7542,6 +7539,7 @@
       }
     },
     "script": [
+      "wait-overlays",
       "report:windowed",
       "fullscreen",
       "wait:30",
@@ -13391,6 +13389,7 @@
       }
     },
     "script": [
+      "wait-overlays",
       "report:windowed",
       "fullscreen",
       "wait:30",

@@ -2,9 +2,10 @@
 write in a launch without starting a game.
 
 With ROMINABOX_PLAN_ONLY we prepare the game's data folder and config in the
-launcher and exit before a core is loaded. We build it for this machine and
-put it where an exported game has its program, beside the folder with its
-own files.
+launcher and exit before a core is loaded. We build it for this machine in
+this checkout's folder for that build (native_build.tree_build), and copy it
+to where an exported game has its program, beside the folder with its own
+files.
 """
 
 from __future__ import annotations
@@ -12,13 +13,11 @@ from __future__ import annotations
 import os
 import re
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import native_build  # noqa: E402
-import toolchain  # noqa: E402
 from core_source import host_target  # noqa: E402
 
 CONTRACT = Path(__file__).resolve().parent.parent / "desktop/src-tauri/launcher/launch_contract.inc"
@@ -38,6 +37,11 @@ def windows_part(name: str) -> str:
     return declared("RIB_WINDOWS_PART", name)
 
 
+# The plan tools built in this process. We build the macOS one in the first
+# case of a run and copy it in every later case.
+_built: set[Path] = set()
+
+
 def compile_macos(directory: Path) -> tuple[Path, Path]:
     binary = directory / "Plan.app" / "Contents" / "MacOS" / "plan"
     binary.parent.mkdir(parents=True)
@@ -45,23 +49,21 @@ def compile_macos(directory: Path) -> tuple[Path, Path]:
     library = native_build.launch_library(native_build.kit_target(host_target()))
     if library is None:
         raise SystemExit(f"the player recipe declares no launch library for {host_target()}")
-    made = subprocess.run(
-        ["cc", "-DROMINABOX_PLAN_MAIN", "-O2", "-o", str(binary),
-         *map(str, native_build.launcher_sources("macos")), *library["libraries"]],
-        capture_output=True, text=True,
-    )
-    if made.returncode != 0:
-        raise SystemExit(made.stderr[-600:] or "the launcher plan tool did not compile")
+    with native_build.tree_build(f"plan-{host_target()}") as folder:
+        tool = folder / "plan"
+        if folder not in _built:
+            native_build.run(["cc", "-DROMINABOX_PLAN_MAIN", "-O2", "-o", str(tool),
+                              *map(str, native_build.launcher_sources("macos")), *library["libraries"]],
+                             folder, dict(os.environ))
+            _built.add(folder)
+        shutil.copy2(tool, binary)
     return binary, binary.parents[1] / "Resources"
 
 
 def compile_windows(directory: Path) -> tuple[Path, Path]:
-    toolchain.activate()
-    built = native_build.build_launcher(directory, host_target(), dict(os.environ), native_build.FORK)
+    """The game's launcher, as in the kit, which is the plan tool."""
     game = directory / "Plan"
-    game.mkdir()
-    binary = game / "Plan.exe"
-    shutil.copy2(built, binary)
+    binary = native_build.tree_launcher(native_build.kit_target(host_target()), game / "Plan.exe")
     return binary, game / "Resources"
 
 

@@ -11,7 +11,7 @@
 //! the menu for each pad input. We keep the player's changes in `hotkeys.cfg`
 //! in the game's data and write it only from the menu, never on export.
 
-use crate::controls::GameplayKey;
+use crate::controls::GameInput;
 use crate::menu::{file_name, key};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
@@ -292,10 +292,11 @@ pub enum Refusal {
     Twice { hotkey: Hotkey, binding: Binding },
     /// `binding` is in both `hotkey` and `other`, which may not share one.
     Shared { binding: Binding, hotkey: Hotkey, other: Hotkey },
-    /// `binding`, a key of `hotkey`, which the player uses during play, is
-    /// also the key of the game's `control`, which we show as `label`.
-    GameKey { binding: Binding, hotkey: Hotkey, control: String, label: String },
-    /// We could not read the game's keys, for the reason in `message`.
+    /// `binding`, a key or pad button of `hotkey`, which the player uses
+    /// during play, is also an input for the game's `control`, which we show
+    /// as `label`.
+    GameInput { binding: Binding, hotkey: Hotkey, control: String, label: String },
+    /// We could not read the game's inputs, for the reason in `message`.
     Controls { message: String },
 }
 
@@ -314,11 +315,12 @@ impl fmt::Display for Refusal {
                 "hotkeys: {} is bound to both {hotkey:?} and {other:?}, which cannot share an input",
                 binding.text()
             ),
-            Refusal::GameKey { binding, hotkey, control, label } => write!(
+            Refusal::GameInput { binding, hotkey, control, label } => write!(
                 formatter,
                 "hotkeys: {} is bound to {hotkey:?}, which acts while the game plays, and is the \
-                 game's key for {control} ({label})",
-                binding.text()
+                 game's {} for {control} ({label})",
+                binding.text(),
+                if binding.is_key() { "key" } else { "button" }
             ),
             Refusal::Controls { message } => write!(formatter, "hotkeys: {message}"),
         }
@@ -361,17 +363,27 @@ impl Hotkeys {
         Ok(())
     }
 
-    /// `check`, then the rule for the game's keys: a hotkey used during play
-    /// may have none of the keys in `game`, or a press would do both. Keys are
-    /// the same when they are one key in RetroArch.
-    pub fn check_with(&self, game: &[GameplayKey]) -> Result<(), Refusal> {
+    /// `check`, then the rule for the game's inputs: a hotkey used during play
+    /// may have none of the keys in `game` and none of the pad positions for
+    /// the game, or a press would do both. Keys are the same when they are one
+    /// key in RetroArch. We check a pad binding only when it is one position,
+    /// so a chord of several, such as MENU's L3+R3, and Home are allowed.
+    pub fn check_with(&self, game: &[GameInput]) -> Result<(), Refusal> {
         self.check()?;
         for hotkey in Hotkey::all().filter(|hotkey| hotkey.acts().in_game()) {
             for binding in self.of(hotkey) {
-                let Binding::Key(name) = binding else { continue };
-                let read = crate::controls::retroarch_key(name);
-                if let Some(taken) = game.iter().find(|key| crate::controls::retroarch_key(&key.key) == read) {
-                    return Err(Refusal::GameKey {
+                let taken = match binding {
+                    Binding::Key(name) => {
+                        let read = crate::controls::retroarch_key(name);
+                        game.iter().find(|input| crate::controls::retroarch_key(&input.key) == read)
+                    }
+                    Binding::Pad(inputs) => match inputs.as_slice() {
+                        [PadInput::Position(position)] => game.iter().find(|input| &input.position == position),
+                        _ => None,
+                    },
+                };
+                if let Some(taken) = taken {
+                    return Err(Refusal::GameInput {
                         binding: binding.clone(),
                         hotkey,
                         control: taken.control.clone(),
@@ -383,9 +395,9 @@ impl Hotkeys {
         Ok(())
     }
 
-    /// `check_with` the keys of the game for `system`, with `controls`.
+    /// `check_with` the inputs of the game for `system`, with `controls`.
     pub fn check_for(&self, system: &str, controls: &crate::controls::Controls) -> Result<(), Refusal> {
-        let game = crate::controls::gameplay_keys(system, controls)
+        let game = crate::controls::game_inputs(system, controls)
             .map_err(|message| Refusal::Controls { message })?;
         self.check_with(&game)
     }

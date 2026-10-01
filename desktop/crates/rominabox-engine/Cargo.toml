@@ -33,13 +33,19 @@ ruzstd = "0.8"
 
 [target.'cfg(windows)'.dependencies]
 # For the installer steps we run in the builder (src/installation.rs): the
-# person's Path in the registry, and the games' sandboxes.
+# person's Path in the registry and the games' sandboxes. Also for the local
+# time in a zip's date field (packaging/archive.rs).
 windows-sys = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Security_Isolation",
     "Win32_System_Registry",
+    "Win32_System_Time",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+[target.'cfg(unix)'.dependencies]
+# For the local time in a zip's date field (packaging/archive.rs).
+libc = "0.2"
 
 [dev-dependencies]
 libc = "0.2.189"

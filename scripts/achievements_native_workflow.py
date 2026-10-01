@@ -24,6 +24,7 @@ import time
 import zlib
 from urllib.parse import parse_qs
 
+import exported_game
 import menu_shots as shots
 from achievements_native_rom import make_achievement_rom
 
@@ -180,15 +181,15 @@ def reaching_the_service(app: Path) -> None:
     """The game, able to reach the fake service. Where the sandbox blocks it
     (SANDBOX_REACHES_LOOPBACK), we run it outside the sandbox, with a launch
     plan without the line that requests one."""
-    if shots.PLATFORM not in SANDBOX_REACHES_LOOPBACK:
-        raise SystemExit(f"whether a sandboxed game reaches loopback is not declared for {shots.PLATFORM}")
-    if SANDBOX_REACHES_LOOPBACK[shots.PLATFORM]:
+    if exported_game.PLATFORM not in SANDBOX_REACHES_LOOPBACK:
+        raise SystemExit(f"whether a sandboxed game reaches loopback is not declared for {exported_game.PLATFORM}")
+    if SANDBOX_REACHES_LOOPBACK[exported_game.PLATFORM]:
         return
-    plan = shots.resources_of(app) / "launch.plan"
+    plan = exported_game.resources_of(app) / "launch.plan"
     lines = plan.read_text(encoding="utf-8").splitlines(keepends=True)
     plan.write_text("".join(line for line in lines if not line.startswith("sandbox\t")),
                     encoding="utf-8", newline="")
-    if shots.sandboxed(app):
+    if exported_game.sandboxed(app):
         raise AssertionError(f"{app} still asks for its sandbox")
 
 
@@ -199,8 +200,8 @@ def owner_of(rom: bytes) -> str:
 
 
 def owned_storage(app: Path, rom: bytes) -> Path:
-    data = shots.data_dir_of(app)
-    home = shots.storage_home(app)
+    data = exported_game.data_dir_of(app)
+    home = exported_game.storage_home(app)
     if not data or home is None:
         raise AssertionError("native fixture requires contained per-game storage")
     home = home.resolve()
@@ -226,7 +227,7 @@ def owned_storage(app: Path, rom: bytes) -> Path:
     # We decided whose storage it is from what was there. We prepare it in the
     # game before we write the marker and the session, because registering the
     # sandbox at the first launch of a Windows game empties its storage.
-    shots.prepare_storage(app)
+    exported_game.prepare_storage(app)
     data.mkdir(parents=True, exist_ok=True)
     marker.write_text(owner)
     return data
@@ -238,7 +239,7 @@ def leave_storage(data: Path, rom: bytes) -> None:
     player, which a test run must leave as it was. We remove the storage
     after the cases, and only when it has the marker of this test. In
     a sandbox it is the sandbox folder, which we keep for the next run."""
-    if SANDBOX_REACHES_LOOPBACK[shots.PLATFORM]:
+    if SANDBOX_REACHES_LOOPBACK[exported_game.PLATFORM]:
         return
     marker = data / OWNER_MARKER
     if shots.redirected(data) or shots.redirected(marker) or not marker.is_file() \

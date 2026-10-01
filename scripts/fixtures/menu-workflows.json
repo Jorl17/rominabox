@@ -60,7 +60,8 @@
   "launched": [
     {"design": "native", "palette": "blue", "case": "controls-keys"},
     {"design": "disc", "palette": "blue", "case": "capture-timeout"},
-    {"design": "native", "palette": "blue", "case": "save-load"}
+    {"design": "native", "palette": "blue", "case": "save-load"},
+    {"design": "native", "palette": "blue", "case": "fullscreen-menu", "platforms": ["windows"]}
   ],
   "groups": [
     {
@@ -105,7 +106,7 @@
       "export": {"shaders": {"bundled": ["scanlines", "phosphor"], "initial": "phosphor"}},
       "cases": [
         {"name": "pause-keys", "script": ["report:opened", "key:up", "report:grid", "key:right", "report:right", "key:down", "report:row", "key:left", "report:left"]},
-        {"name": "fullscreen-menu", "script": ["report:windowed", "fullscreen", "wait:30", "report:fullscreen"], "inMotion": true},
+        {"name": "fullscreen-menu", "script": ["wait-overlays", "report:windowed", "fullscreen", "wait:30", "report:fullscreen"], "inMotion": true},
         {"name": "options-keys", "script": ["options", "report:options", "key:left", "report:volume", "key:down", "report:entry", "key:ok", "report:opened", "key:cancel"]},
         {"name": "controls-keys", "script": ["options", "controls", "report:first", "key:down", "key:right", "report:moved", "key:up", "report:previous", "key:start", "report:reset"]},
         {"name": "hover-then-key", "script": ["options", "controls", "hover:control-a", "report:hover", "key:left", "report:key", "hover:heading", "wait:2", "report:left"]},

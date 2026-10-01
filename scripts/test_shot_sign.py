@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import exported_game  # noqa: E402
 import menu_shots  # noqa: E402
 import scratch  # noqa: E402
 import player_support  # noqa: E402
@@ -85,12 +86,12 @@ def the_replaced_player_keeps_the_export_sandbox() -> None:
             check=True,
         )
         captured = directory / "entitlements.plist"
-        menu_shots.capture_export_entitlements(app, captured)
+        exported_game.macos.capture_export_entitlements(app, captured)
         # A fresh build, copied over the signed player as in menu_shots.
         source.write_text("int main(void){return 1;}\n")
         subprocess.run(["cc", "-Oz", "-o", str(binary), str(source)], check=True)
         player.write_bytes(binary.read_bytes())
-        menu_shots.resign_replaced_player(app, captured)
+        exported_game.macos.resign_replaced_player(app, captured)
         signed = entitlement_text(player)
         check(
             "com.apple.security.app-sandbox" in signed and MARKER in signed,
@@ -166,10 +167,10 @@ def the_suite_names_a_file_a_run_rewrote() -> None:
 
 
 def main() -> int:
-    if menu_shots.PLATFORM not in KEEPS_THE_SANDBOX:
-        raise SystemExit(f"no shot sandbox check is declared for {menu_shots.PLATFORM}")
+    if exported_game.PLATFORM not in KEEPS_THE_SANDBOX:
+        raise SystemExit(f"no shot sandbox check is declared for {exported_game.PLATFORM}")
     for test in (
-        KEEPS_THE_SANDBOX[menu_shots.PLATFORM],
+        KEEPS_THE_SANDBOX[exported_game.PLATFORM],
         shots_reuse_one_bundle_namespace,
         the_suite_names_a_path_created_under_the_real_support_directory,
         the_suite_names_a_file_a_run_rewrote,

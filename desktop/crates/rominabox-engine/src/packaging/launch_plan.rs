@@ -250,7 +250,10 @@ pub(super) fn accounts_folder(request: &ExportRequest) -> Result<Option<String>,
     if !crate::achievements::included(request.game.include_achievements, request.game.show_menu) {
         return Ok(None);
     }
-    let named = std::env::var("ROMINABOX_ACCOUNTS_FOLDER").ok();
+    let named = request
+        .accounts_folder
+        .clone()
+        .or_else(|| std::env::var("ROMINABOX_ACCOUNTS_FOLDER").ok());
     crate::achievements::accounts_folder(isolation_namespace().as_deref(), named.as_deref())
         .map(Some)
         .map_err(|message| ExportError::new(ErrorStage::Configure, message))

@@ -29,6 +29,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+import exported_game  # noqa: E402
 import menu_shots  # noqa: E402
 
 DESIGN = ROOT / "integrations/designs/native/design.json"
@@ -58,12 +59,12 @@ def declared_seconds() -> float:
 def timed_lines(app: Path, shot: Path) -> list[tuple[float, str]]:
     """Return each line of the launch log of one quiet run, with the seconds
     from the start of the run to the arrival of the line."""
-    log = menu_shots.log_of(app)
+    log = exported_game.log_of(app)
     log.unlink(missing_ok=True)
-    environment = {**os.environ, menu_shots.quiet_env(): "1", "ROMINABOX_VERBOSE": "1",
-                   menu_shots.SCRIPT_ENV: SCRIPT, "ROMINABOX_MENU_SHOT": str(shot)}
+    environment = {**os.environ, exported_game.quiet_env(): "1", "ROMINABOX_VERBOSE": "1",
+                   exported_game.SCRIPT_ENV: SCRIPT, "ROMINABOX_MENU_SHOT": str(shot)}
     started = time.perf_counter()
-    player = subprocess.Popen([str(menu_shots.launcher_of(app))], env=environment, stdin=subprocess.DEVNULL,
+    player = subprocess.Popen([str(exported_game.launcher_of(app))], env=environment, stdin=subprocess.DEVNULL,
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     lines: list[tuple[float, str]] = []
     read = 0
@@ -97,9 +98,9 @@ def main() -> int:
     settings = {"title": "Splash Hold", "startAtMenu": True, "splash": True}
     with menu_shots.build_a_game(cartridge, ROOT / "work/splash-hold", "gbc", settings) as app:
         picture = ROOT / "work/test-output/splash-hold.png"
-        shot = menu_shots.shot_inside(app, picture)
+        shot = exported_game.shot_inside(app, picture)
         lines = timed_lines(app, shot)
-        menu_shots.carry_shot(shot, picture)
+        exported_game.carry_shot(shot, picture)
     starts = next((when for when, line in lines if SCRIPT_STARTS in line), None)
     step = next((when for when, line in lines if FIRST_STEP in line), None)
     if starts is None or step is None:
@@ -107,7 +108,7 @@ def main() -> int:
         print("FAIL the log does not say when the menu's first frame was and when the menu opened")
         return 1
     held = step - starts
-    print(f"{menu_shots.PLATFORM}: the menu opened {held:.3f}s after its first frame; "
+    print(f"{exported_game.PLATFORM}: the menu opened {held:.3f}s after its first frame; "
           f"the design keeps the splash up {declared:.3f}s")
     if not declared <= held <= declared + SLACK_SECONDS:
         print(f"FAIL the game waited {held:.3f}s for a splash declared for {declared:.3f}s")

@@ -3,10 +3,10 @@
 A launch by a person is unaffected. A shot, a quit run, and the isolation
 and autoconfig launches are quiet. In the launcher we make every launch
 quiet when its parent is not Launch Services. In a harness we can also set
-the switch declared in menu_shots. In the plan check we compile the launcher,
-write the config and exit before a core is loaded, so no audio opens. The
-check also shows that the launcher and the harness use the same names for
-the switch and its opt-out, which we never read from the launcher.
+the switch declared in exported_game. In the plan check we compile the
+launcher, write the config and exit before a core is loaded, so no audio
+opens. The check also shows that the launcher and the harness use the same
+names for the switch and its opt-out, which we never read from the launcher.
 
     python3 scripts/test_quiet.py
 """
@@ -20,12 +20,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import free_space  # noqa: E402
-import menu_shots  # noqa: E402
+import exported_game  # noqa: E402
 import native_build  # noqa: E402
 import scratch  # noqa: E402
 import toolchain  # noqa: E402
 from core_source import host_target  # noqa: E402
 from launcher_plan import compile_plan  # noqa: E402
+from launch_header import TEST_USER_DATA_ENV  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -70,15 +71,15 @@ def run_plan(binary: Path, user_data: Path, data: str, quiet: bool = False, soun
     per-user folder, into the folder `data` below it."""
     env = os.environ.copy()
     env["ROMINABOX_PLAN_ONLY"] = "1"
-    env[menu_shots.TEST_USER_DATA_ENV] = str(user_data)
+    env[TEST_USER_DATA_ENV] = str(user_data)
     # The parent process of the harness is not launchd. We remove the variables,
     # so that a value left in this process cannot hide the default.
-    env.pop(menu_shots.QUIET_ENV, None)
-    env.pop(menu_shots.SOUND_ENV, None)
+    env.pop(exported_game.QUIET_ENV, None)
+    env.pop(exported_game.SOUND_ENV, None)
     if quiet:
-        env[menu_shots.QUIET_ENV] = "1"
+        env[exported_game.QUIET_ENV] = "1"
     if sound:
-        env[menu_shots.SOUND_ENV] = "1"
+        env[exported_game.SOUND_ENV] = "1"
     ran = subprocess.run(
         [str(binary)],
         env=env,
@@ -122,7 +123,7 @@ def plan_check() -> list[str]:
         quiet = driver == QUIET_DRIVER
         if got != driver or (quiet and enabled != "false"):
             failures.append(
-                f"a launch with {name} ({menu_shots.QUIET_ENV}, {menu_shots.SOUND_ENV}) wrote "
+                f"a launch with {name} ({exported_game.QUIET_ENV}, {exported_game.SOUND_ENV}) wrote "
                 f"audio_driver={got!r} audio_enable={enabled!r}, not {driver!r}"
                 + (" disabled" if quiet else "")
             )
@@ -131,7 +132,7 @@ def plan_check() -> list[str]:
         paused = _config_value(written[name], "pause_nonactive")
         if paused != ("false" if quiet else "true"):
             failures.append(
-                f"a launch with {name} ({menu_shots.QUIET_ENV}, {menu_shots.SOUND_ENV}) wrote "
+                f"a launch with {name} ({exported_game.QUIET_ENV}, {exported_game.SOUND_ENV}) wrote "
                 f"pause_nonactive={paused!r}"
             )
     return failures
@@ -223,10 +224,10 @@ def window_visibility_check() -> list[str]:
 
     We check the drawn picture itself in the exported-game workflows.
     """
-    if menu_shots.PLATFORM not in WINDOW_PROBES:
-        raise SystemExit(f"no quiet window probe is declared for {menu_shots.PLATFORM}")
+    if exported_game.PLATFORM not in WINDOW_PROBES:
+        raise SystemExit(f"no quiet window probe is declared for {exported_game.PLATFORM}")
     with scratch.scratch("rominabox-quiet-window-") as made:
-        binary = WINDOW_PROBES[menu_shots.PLATFORM](Path(made) / "window-visibility")
+        binary = WINDOW_PROBES[exported_game.PLATFORM](Path(made) / "window-visibility")
         checked = subprocess.run(
             [str(binary)], capture_output=True, text=True, timeout=15,
         )

@@ -176,5 +176,13 @@
       "direction": "left"
     }
   ],
+  "groups": {
+    "l_stick": {
+      "title": "Control stick"
+    },
+    "r_stick": {
+      "title": "C-stick"
+    }
+  },
   "presentationOrder": 10
 }

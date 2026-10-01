@@ -5,16 +5,12 @@ export const SHADER_EXTENSIONS = ["glsl", "glslp", "slang", "slangp"];
 
 const extension = new RegExp(`\\.(${SHADER_EXTENSIONS.join("|")})$`, "i");
 
-function baseName(filePath: string): string {
+export function baseName(filePath: string): string {
   return filePath.split(/[\\/]/).pop() ?? "";
 }
 
 export function isShaderFile(filePath: string): boolean {
   return extension.test(baseName(filePath));
-}
-
-export function shaderFileName(filePath: string): string {
-  return baseName(filePath).replace(extension, "") || "Shader";
 }
 
 /** The names a shader file may end in, as an author reads them. */

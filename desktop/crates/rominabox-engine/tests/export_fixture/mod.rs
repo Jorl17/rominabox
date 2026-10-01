@@ -148,6 +148,7 @@ pub fn export_request_from(root: &Path, runtime_kit: PathBuf) -> ExportRequest {
         runtime_kit,
         core: None,
         core_cache: None,
+        accounts_folder: None,
     }
 }
 

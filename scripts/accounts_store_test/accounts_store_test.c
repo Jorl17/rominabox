@@ -4,9 +4,12 @@
  * In the last case we run several processes against one folder at once and
  * then check that nothing was lost and nothing was left half-written.
  *
- * We note what differs by platform where it differs: how we make a temporary
- * folder and a second process, and how we keep an account private (the
- * folder modes on macOS and Linux, a token sealed to the user on Windows). */
+ * What differs by platform is in a file for each platform (platform.h): how
+ * we make a temporary folder and a second process, and how we keep an
+ * account private (the folder modes on macOS and Linux, a token sealed to
+ * the user on Windows). */
+#include "platform.h"
+
 #include "accounts.h"
 #include "sealed.h"
 #include "../launcher/accounts_folder.h"
@@ -19,45 +22,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <utime.h>
-
-#ifdef _WIN32
-#include <direct.h>
-#include <io.h>
-#include <process.h>
-#define F_OK 0
-#else
-#include <sys/wait.h>
-#include <unistd.h>
-#endif
 
 #define GAME_A "aaaaaaaaaaaaaaaaaaaaaaaa"
 #define GAME_B "bbbbbbbbbbbbbbbbbbbbbbbb"
 
 static char root[1024];
-static char folder[1100];
+char test_folder[1100];
 static const char *self;
-
-static void set_variable(const char *name, const char *value)
-{
-#ifdef _WIN32
-   /* An empty value removes the variable. */
-   assert(_putenv_s(name, value ? value : "") == 0);
-#else
-   assert(value ? setenv(name, value, 1) == 0 : unsetenv(name) == 0);
-#endif
-}
-
-static void make_folder(const char *path)
-{
-#ifdef _WIN32
-   assert(_mkdir(path) == 0);
-#else
-   assert(mkdir(path, 0700) == 0);
-#endif
-}
 
 static size_t listed(rib_saved_account_t *accounts, size_t capacity)
 {
@@ -83,19 +56,16 @@ static int entries(const char *path)
 
 static void path_of(char *out, size_t size, const char *relative)
 {
-   snprintf(out, size, "%s/%s", folder, relative);
+   snprintf(out, size, "%s/%s", test_folder, relative);
 }
 
-#ifndef _WIN32
-static mode_t mode_of(const char *relative)
+/* `relative` inside the case's folder, for a check that takes a path. */
+static const char *at(const char *relative)
 {
-   char path[1400];
-   struct stat info;
+   static char path[1400];
    path_of(path, sizeof path, relative);
-   assert(stat(path, &info) == 0);
-   return info.st_mode & 0777;
+   return path;
 }
-#endif
 
 /* Sets when a game last signed in, so ordering does not depend on the clock. */
 static void signed_in_at(const char *key, const char *game, long seconds)
@@ -109,12 +79,12 @@ static void signed_in_at(const char *key, const char *game, long seconds)
 }
 
 /* Each case starts in a folder of its own inside this run's temporary one. */
-static void reset(void)
+void test_reset(void)
 {
    static int cases;
-   snprintf(folder, sizeof folder, "%s/accounts-%d", root, ++cases);
-   make_folder(folder);
-   set_variable("ROMINABOX_ACCOUNTS_DIR", folder);
+   snprintf(test_folder, sizeof test_folder, "%s/accounts-%d", root, ++cases);
+   test_make_folder(test_folder);
+   test_set_variable("ROMINABOX_ACCOUNTS_DIR", test_folder);
 }
 
 /* Everything under `path`, which belongs to this run. We make no link here,
@@ -137,12 +107,7 @@ static void remove_run_folder(void)
    const char *name = strrchr(root, '/');
    assert(name && !strncmp(name, "/rominabox-accounts-test-", 25) && strlen(name) == 31);
    assert(fs_is_directory(root));
-#ifndef _WIN32
-   {
-      struct stat info;
-      assert(lstat(root, &info) == 0 && S_ISDIR(info.st_mode) && info.st_uid == getuid());
-   }
-#endif
+   test_check_own_folder(root);
    assert(fs_list(root, remove_entry, root) == 0);
    assert(fs_remove_directory(root) == 0);
 }
@@ -171,38 +136,18 @@ static bool stored_token(const char *text, const char *names, char *plain, size_
 static void unavailable_without_a_named_folder(void)
 {
    rib_saved_account_t accounts[4];
-   set_variable("ROMINABOX_ACCOUNTS_DIR", NULL);
+   test_set_variable("ROMINABOX_ACCOUNTS_DIR", NULL);
    assert(!rib_accounts_available());
    assert(!rib_accounts_remember("joao", "Joao", "token-1", GAME_A));
    assert(listed(accounts, 4) == 0);
-   set_variable("ROMINABOX_ACCOUNTS_DIR", "relative/accounts");
+   test_set_variable("ROMINABOX_ACCOUNTS_DIR", "relative/accounts");
    assert(!rib_accounts_available());
-   set_variable("ROMINABOX_ACCOUNTS_DIR", "/nonexistent/rominabox-accounts");
+   test_set_variable("ROMINABOX_ACCOUNTS_DIR", "/nonexistent/rominabox-accounts");
    assert(!rib_accounts_available());
    assert(!rib_accounts_remember("joao", "Joao", "token-1", GAME_A));
-   set_variable("ROMINABOX_ACCOUNTS_DIR", folder);
+   test_set_variable("ROMINABOX_ACCOUNTS_DIR", test_folder);
    assert(rib_accounts_available());
 }
-
-#ifdef _WIN32
-/* A folder named like a share, \\server\name, is as absolute as one under a
- * drive letter. In the launcher we make the accounts folder in a per-user
- * folder that may be on a share, and we must accept it in the store. \\?\ is
- * the local form of such a name. */
-static void a_share_path_names_the_folder(void)
-{
-   char share[1400];
-   size_t index;
-   reset();
-   snprintf(share, sizeof share, "\\\\?\\%s", folder);
-   for (index = 0; share[index]; ++index)
-      if (share[index] == '/')
-         share[index] = '\\';
-   set_variable("ROMINABOX_ACCOUNTS_DIR", share);
-   assert(rib_accounts_available());
-   set_variable("ROMINABOX_ACCOUNTS_DIR", folder);
-}
-#endif
 
 static void a_sign_in_is_listed_privately(void)
 {
@@ -211,7 +156,7 @@ static void a_sign_in_is_listed_privately(void)
    char text[512] = {0};
    char plain[256];
    FILE *file;
-   reset();
+   test_reset();
    assert(rib_accounts_remember("joao", "Joao", "token-1", GAME_A));
    assert(listed(accounts, 4) == 1);
    assert(!strcmp(accounts[0].username, "joao"));
@@ -222,24 +167,18 @@ static void a_sign_in_is_listed_privately(void)
    assert(file && fread(text, 1, sizeof text - 1, file) > 0);
    fclose(file);
    assert(stored_token(text, "joao\nJoao\n", plain, sizeof plain) && !strcmp(plain, "token-1"));
-#ifdef _WIN32
-   /* Sealed to this Windows user: the file does not contain the token. */
-   assert(!strstr(text, "token-1"));
-#else
-   /* The folder's modes are the protection, and the token is as given. */
-   assert(!strcmp(text, "joao\nJoao\ntoken-1\n"));
-   assert(mode_of(JOAO) == 0700);
-   assert(mode_of(JOAO "/games") == 0700);
-   assert(mode_of(JOAO "/session") == 0600);
-   assert(mode_of(JOAO "/games/" GAME_A) == 0600);
-   assert(mode_of("lock") == 0600);
-#endif
+   test_check_token_kept(text, "token-1");
+   test_check_private_folder(at(JOAO));
+   test_check_private_folder(at(JOAO "/games"));
+   test_check_private_file(at(JOAO "/session"));
+   test_check_private_file(at(JOAO "/games/" GAME_A));
+   test_check_private_file(at("lock"));
 }
 
 static void different_accounts_live_side_by_side(void)
 {
    rib_saved_account_t accounts[4];
-   reset();
+   test_reset();
    assert(rib_accounts_remember("joao", "Joao", "token-1", GAME_A));
    assert(rib_accounts_remember("kid", "Kid", "token-2", GAME_B));
    signed_in_at(JOAO, GAME_A, 1000);
@@ -256,19 +195,19 @@ static void different_accounts_live_side_by_side(void)
 static void one_name_in_any_case_is_one_account(void)
 {
    rib_saved_account_t accounts[4];
-   reset();
+   test_reset();
    assert(rib_accounts_remember("joao", "Joao", "token-1", GAME_A));
    assert(rib_accounts_remember("JOAO", "Joao", "token-2", GAME_B));
    assert(listed(accounts, 4) == 1);
    assert(!strcmp(accounts[0].token, "token-2"));
-   assert(entries(folder) == 2); /* the lock and one account */
+   assert(entries(test_folder) == 2); /* the lock and one account */
 }
 
 static void the_last_game_to_sign_out_removes_it(void)
 {
    rib_saved_account_t accounts[4];
    char account[1400];
-   reset();
+   test_reset();
    assert(rib_accounts_remember("joao", "Joao", "token-1", GAME_A));
    assert(rib_accounts_remember("joao", "Joao", "token-1", GAME_B));
    assert(rib_accounts_forget("joao", GAME_A));
@@ -278,7 +217,8 @@ static void the_last_game_to_sign_out_removes_it(void)
    assert(rib_accounts_forget("joao", GAME_B));
    assert(listed(accounts, 4) == 0);
    path_of(account, sizeof account, JOAO);
-   assert(access(account, F_OK) != 0 && errno == ENOENT);
+   errno = 0;
+   assert(entries(account) == -1 && errno == ENOENT);
    /* Signing out of an account nobody saved is not an error. */
    assert(rib_accounts_forget("kid", GAME_A));
 }
@@ -286,20 +226,20 @@ static void the_last_game_to_sign_out_removes_it(void)
 static void a_rejected_token_goes_only_while_it_is_the_saved_one(void)
 {
    rib_saved_account_t accounts[4];
-   reset();
+   test_reset();
    assert(rib_accounts_remember("joao", "Joao", "token-1", GAME_A));
    assert(rib_accounts_remember("joao", "Joao", "token-2", GAME_B));
    assert(rib_accounts_drop_if("joao", "token-1"));
    assert(listed(accounts, 4) == 1 && !strcmp(accounts[0].token, "token-2"));
    assert(rib_accounts_drop_if("joao", "token-2"));
    assert(listed(accounts, 4) == 0);
-   assert(entries(folder) == 1); /* only the lock */
+   assert(entries(test_folder) == 1); /* only the lock */
 }
 
 static void forget_removes_it_for_every_game(void)
 {
    rib_saved_account_t accounts[4];
-   reset();
+   test_reset();
    assert(rib_accounts_remember("joao", "Joao", "token-1", GAME_A));
    assert(rib_accounts_remember("joao", "Joao", "token-1", GAME_B));
    assert(rib_accounts_remember("kid", "Kid", "token-2", GAME_B));
@@ -313,11 +253,12 @@ static void forget_removes_it_for_every_game(void)
 static void a_name_never_becomes_a_path(void)
 {
    rib_saved_account_t accounts[4];
-   reset();
+   test_reset();
    assert(rib_accounts_remember("../../escape", "Escape", "token-1", GAME_A));
    assert(rib_accounts_remember("a/b\\c", "Slash", "token-2", GAME_A));
-   assert(entries(folder) == 3);
-   assert(access("/tmp/escape", F_OK) != 0);
+   assert(entries(test_folder) == 3);
+   /* Where "../../escape" would land if the path were not contained. */
+   assert(!fs_exists(at("../../escape")) && !fs_exists("/tmp/escape"));
    assert(listed(accounts, 4) == 2);
    assert(!rib_accounts_remember("two\nlines", "Joao", "token-1", GAME_A));
    assert(!rib_accounts_remember("joao", "Two\nlines", "token-1", GAME_A));
@@ -334,7 +275,7 @@ static void a_damaged_session_is_not_listed(void)
    rib_saved_account_t accounts[4];
    char session[1400];
    FILE *file;
-   reset();
+   test_reset();
    assert(rib_accounts_remember("joao", "Joao", "token-1", GAME_A));
    path_of(session, sizeof session, JOAO "/session");
    file = fopen(session, "wb");
@@ -351,20 +292,15 @@ static void a_damaged_session_is_not_listed(void)
 static void the_launcher_makes_exactly_the_named_folder(void)
 {
    char app_data[1200], out[1400], expected[1400];
-   reset();
-   snprintf(app_data, sizeof app_data, "%s/Application Support", folder);
-   make_folder(app_data);
+   test_reset();
+   snprintf(app_data, sizeof app_data, "%s/Application Support", test_folder);
+   test_make_folder(app_data);
    assert(rominabox_accounts_folder(app_data, "ROM-in-a-Box Accounts", out, sizeof out) == 0);
    snprintf(expected, sizeof expected, "%s/ROM-in-a-Box Accounts", app_data);
    fs_native_path(expected);
    assert(!strcmp(out, expected));
    assert(fs_is_directory(out));
-#ifndef _WIN32
-   {
-      struct stat info;
-      assert(stat(out, &info) == 0 && (info.st_mode & 0777) == 0700);
-   }
-#endif
+   test_check_private_folder(out);
    /* At the second launch the folder is already there. */
    assert(rominabox_accounts_folder(app_data, "ROM-in-a-Box Accounts", out, sizeof out) == 0);
    assert(rominabox_accounts_folder(app_data, "../escape", out, sizeof out) != 0);
@@ -412,15 +348,15 @@ static void writer(int index)
       if (!rib_accounts_remember(names[index % 4], names[index % 4], token, game))
       {
          fprintf(stderr, "writer %d, round %d: signing in failed: %s\n", index, round, strerror(errno));
-         _exit(10);
+         _Exit(10);
       }
       if ((round < ROUNDS - 1 || index % 2 == 0) && !rib_accounts_forget(names[index % 4], game))
       {
          fprintf(stderr, "writer %d, round %d: signing out failed: %s\n", index, round, strerror(errno));
-         _exit(11);
+         _Exit(11);
       }
    }
-   _exit(0);
+   _Exit(0);
 }
 
 /* A session file exactly as a writer finished it: the name twice and a token
@@ -457,48 +393,16 @@ static void reader(void)
          fclose(file);
          text[size] = '\0';
          if (!whole_session(text, names[key]))
-            _exit(20);
+            _Exit(20);
       }
-   _exit(0);
+   _Exit(0);
 }
 
-/* Process `index` of a case: a writer, or the reader when it is WRITERS. On
- * macOS and Linux it is this process forked. On Windows, where there is no
- * fork, it is this program started again with the index, and it reads the
- * folder from the environment it inherits. */
-static intptr_t start_process(int index)
+void test_run_process(int index)
 {
-#ifdef _WIN32
-   char argument[16];
-   intptr_t process;
-   snprintf(argument, sizeof argument, "%d", index);
-   process = _spawnl(_P_NOWAIT, self, self, "--process", argument, NULL);
-   assert(process != -1);
-   return process;
-#else
-   pid_t child = fork();
-   assert(child >= 0);
-   if (child == 0)
-   {
-      if (index == WRITERS)
-         reader();
-      writer(index);
-   }
-   return child;
-#endif
-}
-
-/* Its exit code, or -1 when it did not exit on its own. */
-static int finish_process(intptr_t process)
-{
-   int status;
-#ifdef _WIN32
-   assert(_cwait(&status, process, 0) == process);
-   return status;
-#else
-   assert(waitpid((pid_t)process, &status, 0) == (pid_t)process);
-   return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
-#endif
+   if (index == WRITERS)
+      reader();
+   writer(index);
 }
 
 static void games_at_the_same_time_lose_nothing(void)
@@ -506,12 +410,12 @@ static void games_at_the_same_time_lose_nothing(void)
    intptr_t children[WRITERS + 1];
    rib_saved_account_t accounts[8];
    int index, key;
-   reset();
+   test_reset();
    for (index = 0; index <= WRITERS; ++index)
-      children[index] = start_process(index);
+      children[index] = test_start_process(self, index);
    for (index = 0; index <= WRITERS; ++index)
    {
-      const int code = finish_process(children[index]);
+      const int code = test_finish_process(children[index]);
       if (code != 0)
       {
          fprintf(stderr, "process %d failed with %d\n", index, code);
@@ -528,38 +432,29 @@ static void games_at_the_same_time_lose_nothing(void)
       path_of(path, sizeof path, relative);
       assert(entries(path) == (key % 2 ? 2 : -1));
    }
-   assert(entries(folder) == 3); /* the lock, bravo and delta */
+   assert(entries(test_folder) == 3); /* the lock, bravo and delta */
 }
 
 int main(int argc, char **argv)
 {
    self = argv[0];
-   /* A writer or the reader of the case above, started again on Windows. */
+   /* A writer or the reader of the case above, started again on a platform
+    * without fork (test_start_process). */
    if (argc == 3 && !strcmp(argv[1], "--process"))
    {
-      const int index = atoi(argv[2]);
       const char *named = getenv("ROMINABOX_ACCOUNTS_DIR");
-      assert(named && strlen(named) < sizeof folder);
-      strcpy(folder, named);
-      if (index == WRITERS)
-         reader();
-      writer(index);
+      assert(named && strlen(named) < sizeof test_folder);
+      strcpy(test_folder, named);
+      test_run_process(atoi(argv[2]));
    }
    /* The folder to work in, from the runner: work/test-output. */
    assert(argc == 2);
    snprintf(root, sizeof root, "%s/rominabox-accounts-test-XXXXXX", argv[1]);
-#ifdef _WIN32
-   assert(_mktemp_s(root, strlen(root) + 1) == 0);
-   make_folder(root);
-#else
-   assert(argv[1][0] == '/' && mkdtemp(root));
-#endif
-   reset();
+   test_make_run_folder(root);
+   test_reset();
 
    unavailable_without_a_named_folder();
-#ifdef _WIN32
-   a_share_path_names_the_folder();
-#endif
+   test_platform_cases();
    a_sign_in_is_listed_privately();
    different_accounts_live_side_by_side();
    one_name_in_any_case_is_one_account();
@@ -572,6 +467,6 @@ int main(int argc, char **argv)
    games_at_the_same_time_lose_nothing();
 
    remove_run_folder();
-   puts("accounts store: 11 cases passed");
+   puts("accounts store: every case passed");
    return 0;
 }

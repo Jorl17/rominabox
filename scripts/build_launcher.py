@@ -7,19 +7,17 @@ where it is.
 We build a Windows kit's launcher beside the player in scripts/build_player.py
 and a macOS kit's launch library in scripts/build_kit.py. For tests that
 require the launcher but not a whole player or kit, we build it here with the
-same recipe and functions.
+same recipe and functions, in this checkout's folder for that build
+(native_build.tree_build), and give the tests a copy.
 """
 
 from __future__ import annotations
 
-import os
 import sys
-import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import native_build  # noqa: E402
-import toolchain  # noqa: E402
 from core_source import host_target  # noqa: E402
 
 
@@ -32,16 +30,9 @@ def main() -> int:
     if not destination.is_absolute():
         raise SystemExit("the folder must be an absolute path")
     destination.mkdir(parents=True, exist_ok=False)
-    target = host_target()
-    toolchain.activate()
-    kit = native_build.kit_target(target)
-    if native_build.launch_library(kit):
-        built = native_build.build_launch_library(destination, kit)
-    else:
-        built = native_build.build_launcher(destination, target, dict(os.environ), native_build.FORK)
-    if built is None:
-        raise SystemExit(f"the player recipe builds no launcher for {target}")
-    print(built)
+    kit = native_build.kit_target(host_target())
+    files = native_build.recipe()["kit"][kit]["files"]
+    print(native_build.tree_launcher(kit, destination / Path(files["launcher"]["at"]).name))
     return 0
 
 
@@ -51,8 +42,7 @@ def install_in_kit(kit_folder: Path) -> int:
     kit = native_build.kit_target(host_target())
     if not native_build.launch_library(kit):
         raise SystemExit(f"a {kit} kit's launcher is built with its player, not into a kit")
-    with tempfile.TemporaryDirectory(prefix="rominabox-launcher-") as workspace:
-        native_build.install_launch_library(kit_folder.resolve(), kit, Path(workspace))
+    native_build.install_tree_launcher(kit_folder.resolve(), kit)
     print(kit_folder / native_build.kit_file(host_target(), "launcher"))
     return 0
 

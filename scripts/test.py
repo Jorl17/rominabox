@@ -32,7 +32,7 @@ import core_source  # noqa: E402
 import programs  # noqa: E402
 import toolchain  # noqa: E402
 from built import MANIFEST as ENGINE_MANIFEST  # noqa: E402
-from cargo_replay import cargo_test  # noqa: E402
+from cargo_replay import cargo_test, environment  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
 from player_support import modifications as support_modifications  # noqa: E402
 from player_support import snapshot as support_snapshot  # noqa: E402
@@ -195,8 +195,8 @@ SCOPES = [
     ),
     Scope(
         "typing",
-        "that a key typed into the menu's text entry is never also a button of the menu's pad, and that Backspace is B otherwise; RetroArch's own function that reads the keyboard for the menu, handed a held key",
-        "whether the menu says it is typing (the navigation scope asks the real menu), or that a physical keyboard delivers the key; the rest of RetroArch is stand-ins that stop the program if reached",
+        "that a key typed into the menu's text entry, or one a hotkey of the menu is bound to, is never also a button of the menu's pad, and that Backspace is B and Space Start otherwise; RetroArch's own function that reads the keyboard for the menu, handed a held key",
+        "whether the menu says it is typing or which keys its hotkeys hold (the navigation and bridge scopes ask the real menu), or that a physical keyboard delivers the key; the rest of RetroArch is stand-ins that stop the program if reached",
         [PYTHON, str(ROOT / "scripts/test_menu_typing.py")],
     ),
     Scope(
@@ -229,6 +229,12 @@ SCOPES = [
         "that every hid profile the pin declares is staged, and that RetroArch's match rules would accept it",
         "that a physical pad's buttons match those numbers; nothing here opens a device",
         [PYTHON, str(ROOT / "scripts/test_joypad_autoconfig.py")],
+    ),
+    Scope(
+        "preparation",
+        "that preparing a core or the controller profiles stages them whatever their licence texts say, naming a missing or changed text in a warning",
+        "that a real source archive or nightly holds what it should; every archive is made in a temporary folder and nothing reaches the network",
+        [PYTHON, str(ROOT / "scripts/test_preparation.py")],
     ),
     Scope(
         "licences",
@@ -280,6 +286,12 @@ SCOPES = [
         "that replacing the shot player keeps the sandbox the export signed, and that every shot shares one bundle namespace",
         "that a picture was taken; that is menu_shots, and this does not launch a game",
         [PYTHON, str(ROOT / "scripts/test_shot_sign.py")],
+    ),
+    Scope(
+        "stagedkit",
+        "that the kit a launched test exports from carries the tree's shared menu parts and shader library, and that a second kit or a second plan tool compiles the game's launcher no more",
+        "that a game exported from the kit runs (the launched scopes), or that a change to the launcher's sources is compiled; ninja compiles a Windows launcher again when its inputs change, and a macOS launch library is built again when the digest of its sources changes",
+        [PYTHON, str(ROOT / "scripts/test_staged_kit.py")],
     ),
     Scope(
         "achievement-client",
@@ -341,7 +353,7 @@ SCOPES = [
     ),
     Scope(
         "hotkeys",
-        "in the exported test player, that QUICK SAVE writes the slot the menu has selected, its state and its picture, that PREVIOUS SLOT and NEXT SLOT step it round the six slots, that QUICK LOAD of an empty slot loads nothing and of a saved one loads it, that each says so in the notice row, and that the menu shows the slot they chose",
+        "in the exported test player, that QUICK SAVE writes the slot the menu has selected, its state and its picture, that PREVIOUS SLOT and NEXT SLOT step it round the six slots, that QUICK LOAD of an empty slot loads nothing and of a saved one loads it, that each says so in the notice row, that the menu shows the slot they chose, and that the next launch starts on it",
         "that a physical keyboard's press reaches the menu (the script holds the key where the menu reads the keyboard), sound, or window focus; the screen's own rules are the bridge scope's",
         [PYTHON, str(ROOT / "scripts/test_play_hotkeys.py"), str(SCRATCH / "play-hotkeys")],
         env={"ROMINABOX_GAME_BUNDLE_PREFIX": f"{os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.hotkeys"},
@@ -350,9 +362,19 @@ SCOPES = [
         launches_games=True,
     ),
     Scope(
+        "cleanup",
+        "on Windows, that a launched test whose real export fails part-way, as the game is built, while it is open, or in the shipped scope's menu sounds case, leaves nothing of the game in the person's ROM-in-a-Box folders, no sandbox and no temporary folder",
+        "that a game plays (no player starts: each launch is plan-only), or anything on macOS, whose games unpack nothing and keep their data in their containers",
+        [PYTHON, str(ROOT / "scripts/test_launched_cleanup.py")],
+        env={"ROMINABOX_GAME_BUNDLE_PREFIX": f"{os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.cleanup"},
+        slow=True,
+        skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player",
+        launches_games=True,
+    ),
+    Scope(
         "player",
-        "that the built player refuses to start without an absolute data folder, with one starts and creates nothing beside itself, and on Windows declares UTF-8 as its code page",
-        "where a game's folders go once it runs; it only asks the player for its feature list, before any window or core",
+        "that the built player refuses to start without an absolute data folder, with one starts and creates nothing beside itself, and on Windows declares UTF-8 as its code page; and that a header gone from the fork since the build folder was built does not stop its next build, for each kind of source it compiles",
+        "where a game's folders go once it runs; it only asks the player for its feature list, before any window or core. The header check asks make what it would do, and does not build",
         [PYTHON, str(ROOT / "scripts/test_player.py")],
         skipped="opt-in: requires ROMINABOX_TEST_BUILD for a player built from the current fork commit",
     ),
@@ -361,6 +383,12 @@ SCOPES = [
         "that a photographed open list and a photographed focused control have all four outline edges painted",
         "where the list was placed, or that the boxes in the bridge agree; it only reads the picture",
         [PYTHON, str(ROOT / "scripts/check_menu_edges.py")],
+    ),
+    Scope(
+        "rings",
+        "that a lit ring stands out from a pale pad all the way round: GameCube's Control stick hovered and focused, in every design",
+        "where the ring is (menu_scene in the exporter scope asks that), or how a ring looks on any other pad",
+        [PYTHON, str(ROOT / "scripts/check_ring_contrast.py"), str(SCRATCH / "ring-contrast")],
     ),
     Scope(
         "pictures",
@@ -373,6 +401,13 @@ SCOPES = [
         "that the controller picker lands in the same place on every console that offers one",
         "that the place is a good one — only that it is the same one, whichever pad is drawn",
         [PYTHON, str(ROOT / "scripts/menu_states.py"), "--fixed-place", str(SCRATCH / "picker-place")],
+        slow=True,
+    ),
+    Scope(
+        "states",
+        "that every declared state of the menu draws, in every design and palette, on the screen it names, and that no two states draw the same picture, so a player can tell each one apart",
+        "that a state looks good, or that the player reaches it at the right moment; for that a person looks at the pictures `python scripts/menu_states.py work/menu-states` draws",
+        [PYTHON, str(ROOT / "scripts/menu_states.py"), str(SCRATCH / "menu-states")],
         slow=True,
     ),
     Scope(
@@ -412,7 +447,7 @@ SCOPES = [
     ),
     Scope(
         "icons",
-        "that every ROM-in-a-Box icon (the builder's .icns, .ico and header picture, and a game's icon without artwork) still matches a fresh render of logo.svg",
+        "that every ROM-in-a-Box icon (the builder's .icns, .ico and header picture, a game's icon without artwork, and the splash a game shows at startup) still matches a fresh render of logo.svg",
         "that the icon looks right, or how macOS draws it; only that the files have not diverged from the drawing",
         [PYTHON, str(ROOT / "scripts/render_icons.py"), "--check"],
         slow=True,
@@ -440,7 +475,7 @@ SCOPES = [
     ),
     Scope(
         "size",
-        "that an exported app stays under the size ceiling, and carries no library but its core",
+        "that the space an exported app takes on disk, as the file system allocates it (a Windows game unpacked, then forgotten by its own UNINSTALL), stays under the size ceiling, and that it carries no library but its core",
         "a cartridge's own size, or that the player was rebuilt; it measures the kit already on disk",
         [PYTHON, str(ROOT / "scripts/size_bundles.py")],
     ),
@@ -571,22 +606,24 @@ SCOPES = [
 BY_NAME = {scope.name: scope for scope in SCOPES}
 
 
+# What we add to this process's environment for every program of a run, which
+# is the Python of this run, for the programs that are not Python (the Rust
+# tests' repo::python(), scripts/python.mjs).
+RUN_ENVIRONMENT = {"ROMINABOX_PYTHON": PYTHON}
+
+
 def execute(command: list[str], env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+    """`command`, given the run's environment and the scope's `env`."""
+    added = {**RUN_ENVIRONMENT, **(env or {})}
     if command and command[0] == "cargo" and "test" in command[:2]:
-        return cargo_test(command, ROOT, env)
+        return cargo_test(command, ROOT, added)
     program = command[0] if Path(command[0]).is_absolute() else programs.find(command[0])
     if program is None:
         return subprocess.CompletedProcess(command, 127, "", f"{command[0]} is not on PATH\n")
     return subprocess.run(
         [program, *command[1:]], cwd=ROOT, capture_output=True, text=True, errors="replace",
-        env={**with_python(), **(env or {})}, **programs.windowless(),
+        env=environment(added), **programs.windowless(),
     )
-
-
-def with_python() -> dict:
-    """Return this process's environment, with the Python of this run in
-    ROMINABOX_PYTHON for the programs that are not Python."""
-    return {**os.environ, "ROMINABOX_PYTHON": PYTHON}
 
 
 def run(scope: Scope) -> tuple[bool, float, str]:

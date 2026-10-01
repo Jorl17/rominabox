@@ -4,7 +4,6 @@
  * main its arguments through the trampoline in the frozen executable. */
 #include <dirent.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <ftw.h>
 #include <limits.h>
 #include <mach-o/dyld.h>
@@ -20,6 +19,7 @@
 
 #include "../launch.h"
 #include "../portable_fs.h"
+#include "../posix/log_output.h"
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 #include "arguments.h"
 
@@ -32,20 +32,9 @@
 #define BUNDLE_RESOURCES "Contents/Resources"
 /* How many folders we keep open at once when we remove a game's data. */
 #define FORGET_OPEN_FOLDERS 16
-/* Anyone may read the launch log, and only its owner may write it. */
-#define LOG_MODE 0644
 
 #define RIB_CORE_FILE(platform, file) static const char core_##platform[] = file;
 #include "../launch_contract.inc"
-
-/* stdout is fully buffered when it is not a terminal. In the launcher we
- * point it at launch.log, so when the player is killed, or still running when
- * someone reads the log, RetroArch's lines stay in that buffer. */
-void rominabox_line_buffer_stdio(void)
-{
-    setvbuf(stdout, NULL, _IOLBF, 0);
-    setvbuf(stderr, NULL, _IOLBF, 0);
-}
 
 static void die_errno(const char *message) {
     char said[512];
@@ -112,7 +101,6 @@ static void prepare(void) {
     LaunchPlaces places = {0};
     Launch launch;
     size_t index;
-    int log_fd;
 
     /* When a person double-clicks the game or opens it from the Dock, it
      * starts through launchd. Otherwise a script or a harness started it. */
@@ -185,14 +173,9 @@ static void prepare(void) {
             unsetenv(launch.variables[index].name);
     }
 
-    log_fd = open(launch.log_path, O_WRONLY | O_CREAT | O_APPEND, LOG_MODE);
-    if (log_fd >= 0) {
-        dup2(log_fd, STDOUT_FILENO);
-        dup2(log_fd, STDERR_FILENO);
-        if (log_fd > STDERR_FILENO)
-            close(log_fd);
-        rominabox_line_buffer_stdio();
-    }
+    /* We send the player's lines to launch.log. When we cannot open the log,
+     * they stay where they were. */
+    rominabox_output_to_log(launch.log_path);
     if (launch.quiet) {
         fprintf(stdout, "[RIB] quiet: audio driver null, output disabled\n");
         fflush(stdout);
