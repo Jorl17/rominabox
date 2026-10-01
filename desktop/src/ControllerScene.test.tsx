@@ -7,9 +7,11 @@ import registry from "../controls.json";
 import megadrivePlacement from "../assets/controllers/controller-megadrive.json";
 import ps1Placement from "../assets/controllers/controller-ps1.json";
 import n64Placement from "../assets/controllers/controller-n64.json";
+import gamecubePlacement from "../assets/controllers/controller-gamecube.json";
 import megadriveLayout from "../public/controllers/controller-megadrive-layout.json";
 import ps1Layout from "../public/controllers/controller-ps1-layout.json";
 import n64Layout from "../public/controllers/controller-n64-layout.json";
+import gamecubeLayout from "../public/controllers/controller-gamecube-layout.json";
 
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
@@ -61,6 +63,7 @@ describe("the builder's controller scene", () => {
     const staged = {
       ps1: [ps1Placement, ps1Layout],
       n64: [n64Placement, n64Layout],
+      gamecube: [gamecubePlacement, gamecubeLayout],
       megadrive: [megadrivePlacement, megadriveLayout],
     };
     vi.stubGlobal(
@@ -164,6 +167,18 @@ describe("the builder's controller scene", () => {
         `${control.id} must not get a callout of its own`,
       ).toBe(false);
     }
+  });
+
+  it("titles each stick as its pad names it", async () => {
+    // The title is the label of the group, not its id, so the GameCube
+    // C-stick does not appear as R STICK.
+    const container = draw(profileNamed("gamecube"));
+    await act(async () => {});
+    const labels = [
+      ...container.querySelectorAll(".controller-callout-label"),
+    ].map((node) => node.textContent);
+    expect(labels).toContain("Control stick");
+    expect(labels).toContain("C-stick");
   });
 
   it("lists a stick's directions by the direction each declares, not by its id", async () => {

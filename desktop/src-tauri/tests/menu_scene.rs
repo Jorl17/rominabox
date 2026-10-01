@@ -163,3 +163,41 @@ fn no_leader_crosses_a_stick_box_on_any_pad() {
     assert!(boxes > 0, "no pad with a stick was checked");
     assert!(crossings.is_empty(), "{}", crossings.join("\n"));
 }
+
+/// The text of the element with `id`'s first `control-label`, from the
+/// composed scene.
+fn box_title<'a>(scene: &'a str, id: &str) -> Option<&'a str> {
+    let inside = stop_markup(scene, id)?;
+    let label = inside.split("class=\"control-label\">").nth(1)?;
+    label.split('<').next()
+}
+
+/// A stick's box shows the name its pad gives the stick. The group's id is
+/// not that name: GameCube's C-stick has the id of a right stick, and a pad
+/// with one stick has the id of a left stick.
+#[test]
+fn a_sticks_box_reads_the_name_its_pad_gives_it() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-stick-titles");
+    let kit = kit(&root);
+    let expected = [
+        ("gamecube", "l_stick", "Control stick"),
+        ("gamecube", "r_stick", "C-stick"),
+        ("dreamcast", "l_stick", "Stick"),
+        ("n64", "l_stick", "Stick"),
+        ("ps1", "l_stick", "Left stick"),
+        ("ps1", "r_stick", "Right stick"),
+    ];
+    let mut wrong = Vec::new();
+    for design in designs() {
+        for (system, group, title) in expected {
+            let destination = root.join(&design).join(system);
+            let composed = support::compose_for(&kit, &design, system, &destination);
+            let id = format!("control-group-{group}");
+            let read = box_title(&composed.menu, &id);
+            if read != Some(title) {
+                wrong.push(format!("{design}/{system}: #{id} reads {read:?}, not {title:?}"));
+            }
+        }
+    }
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
