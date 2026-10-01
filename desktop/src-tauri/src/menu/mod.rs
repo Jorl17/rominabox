@@ -13,6 +13,7 @@ mod document;
 pub(crate) mod inc;
 mod manifest;
 mod scene;
+pub mod script;
 mod stage;
 mod tokens;
 pub mod words;

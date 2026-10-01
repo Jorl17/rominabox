@@ -26,7 +26,7 @@
 
 mod support;
 
-use rominabox_desktop::{packaging, player_settings, repo, shaders, themes};
+use rominabox_desktop::{menu, packaging, player_settings, repo, shaders, themes};
 use serde_json::{json, Map, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -51,10 +51,6 @@ struct Case {
     /// Checkpoints that may have nothing focused while the menu is open.
     unfocused: BTreeSet<String>,
 }
-
-/// The steps of the script driver that are neither `name:value` nor an
-/// element to click (`menu/drivers/rmlui/script.cpp`): menu toggle and Alt+Enter.
-const SCRIPT_COMMANDS: [&str; 2] = ["toggle", "fullscreen"];
 
 fn read_json(relative: &str) -> Value {
     let path = repo::at(relative);
@@ -271,7 +267,7 @@ fn named_ids(expected: &Value, script: &[String]) -> BTreeSet<String> {
     for step in script {
         if let Some(id) = step.strip_prefix("hover:") {
             ids.insert(id.to_owned());
-        } else if !step.contains(':') && !SCRIPT_COMMANDS.contains(&step.as_str()) {
+        } else if !step.contains(':') && !menu::script::commands().contains(&step.as_str()) {
             // Every other bare step clicks an element, or sets a slider (id@fraction).
             ids.insert(step.split('@').next().unwrap().to_owned());
         }
