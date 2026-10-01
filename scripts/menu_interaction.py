@@ -32,9 +32,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 # We link the probe with the same archive as the player build.
 import file_lock  # noqa: E402
 import rmlui_paths  # noqa: E402
+import toolchain  # noqa: E402
 from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
 from built import cli  # noqa: E402
 
+# The name we compile the probe as. The program file has the platform's
+# suffix (`program`).
 PROBE = ROOT / "work/probe/rml_probe"
 PROBE_SOURCE = ROOT / "scripts/native_runtime/rml_probe.cpp"
 DESIGN = ROOT / "integrations/designs/native"
@@ -75,6 +78,11 @@ SCENARIO = [
 ]
 
 
+def program() -> Path:
+    """The probe's program file, with the platform's suffix."""
+    return toolchain.executable(PROBE)
+
+
 def build() -> None:
     """Rebuild when the probe, build recipe or linked RmlUi archive changes."""
     if not LIBRARY.is_file():
@@ -91,7 +99,8 @@ def build() -> None:
     # build the probe.
     with PROBE.with_name(PROBE.name + ".lock").open("a") as handle:
         file_lock.hold_exclusively(handle)
-        if PROBE.exists() and PROBE.stat().st_mtime >= max(path.stat().st_mtime for path in inputs):
+        built = program()
+        if built.exists() and built.stat().st_mtime >= max(path.stat().st_mtime for path in inputs):
             return
         flags = rmlui_paths.freetype("--cflags", "--libs")
         subprocess.run(
@@ -114,7 +123,7 @@ def run() -> str:
     for entry in SCENARIO:
         steps += ["--step", entry]
     result = subprocess.run(
-        [str(PROBE), "--document", str(DOCUMENT), "--size", "960x600", *steps],
+        [str(program()), "--document", str(DOCUMENT), "--size", "960x600", *steps],
         capture_output=True,
         text=True,
     )
