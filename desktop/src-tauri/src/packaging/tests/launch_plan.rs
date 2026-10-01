@@ -1,5 +1,5 @@
 use super::*;
-use crate::hotkeys::{isolated_hotkey_config, HOTKEY_BINDS};
+use crate::meta_binds::{isolated_meta_bind_config, META_BINDS};
 use crate::packaging::launch_plan::isolated_runtime_config;
 
 #[test]
@@ -112,13 +112,13 @@ fn exported_config_neutralizes_default_space_fast_forward() {
                 && !line.starts_with("input_quit_gamepad")
                 && line.contains(" = \"space\"")
         }),
-        "no RetroArch hotkey may keep the default Space binding:\n{config}"
+        "no RetroArch meta bind may keep the default Space binding:\n{config}"
     );
 }
 
 #[test]
 fn advanced_emulator_access_reaches_fast_forward_without_dropping_a_bind() {
-    let advanced_tier: Vec<_> = HOTKEY_BINDS
+    let advanced_tier: Vec<_> = META_BINDS
         .iter()
         .filter(|bind| bind.advanced_key.is_some())
         .map(|bind| (bind.name, bind.advanced_key.unwrap()))
@@ -197,7 +197,7 @@ fn advanced_emulator_access_reaches_fast_forward_without_dropping_a_bind() {
         Some("0")
     );
     assert_eq!(config_value(&config, "input_quit_gamepad_combo"), Some("0"));
-    assert!(config.contains(&isolated_hotkey_config(true)));
+    assert!(config.contains(&isolated_meta_bind_config(true)));
 }
 
 /// The player still opens the menu with Escape and quits a game from it.

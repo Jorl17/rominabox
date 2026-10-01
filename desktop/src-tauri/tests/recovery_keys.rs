@@ -13,7 +13,7 @@ mod export_fixture;
 
 use rominabox_desktop::{
     controls::{self, Controls},
-    hotkeys::{isolated_hotkey_config, HOTKEY_BINDS},
+    meta_binds::{isolated_meta_bind_config, META_BINDS},
     packaging::{ExportRequest, ExportTarget},
 };
 use std::{
@@ -202,9 +202,9 @@ fn q_and_f() -> Controls {
     .unwrap()
 }
 
-/// Every RetroArch hotkey whose keyboard key is `key`.
-fn hotkeys_on<'a>(config: &'a str, key: &str) -> Vec<&'static str> {
-    HOTKEY_BINDS
+/// Every RetroArch meta bind whose keyboard key is `key`.
+fn meta_binds_on<'a>(config: &'a str, key: &str) -> Vec<&'static str> {
+    META_BINDS
         .iter()
         .map(|bind| bind.name)
         .filter(|name| config_value(config, &format!("input_{name}")) == Some(key))
@@ -248,7 +248,7 @@ fn a_default_export_binds_no_exit_key() {
 /// keypress to the core.
 #[test]
 #[cfg(target_os = "macos")]
-fn q_and_f_are_gameplay_keys_and_no_hotkey_in_every_mode() {
+fn q_and_f_are_gameplay_keys_and_no_meta_bind_in_every_mode() {
     for advanced in [false, true] {
         let (config, defaults) = export(advanced, q_and_f());
         assert_eq!(
@@ -263,9 +263,9 @@ fn q_and_f_are_gameplay_keys_and_no_hotkey_in_every_mode() {
         );
         for key in ["q", "f"] {
             assert_eq!(
-                hotkeys_on(&config, key),
+                meta_binds_on(&config, key),
                 Vec::<&str>::new(),
-                "advanced={advanced}: {key} is a gameplay key and no hotkey"
+                "advanced={advanced}: {key} is a gameplay key and no meta bind"
             );
         }
         assert_eq!(config_value(&config, "input_exit_emulator"), Some("nul"));
@@ -291,13 +291,13 @@ fn q_and_f_are_gameplay_keys_and_no_hotkey_in_every_mode() {
 /// menu opens with its MENU CONTROLS binding, Escape by default, so Escape is
 /// never a gameplay binding.
 ///
-/// The keyboard lines come from the hotkey policy in the launcher. This does
-/// not prove that a keypress opens the menu. In the export tests above we
-/// read a written launcher and menu.
+/// The keyboard lines come from the meta bind policy in the launcher. This
+/// does not prove that a keypress opens the menu. In the export tests above
+/// we read a written launcher and menu.
 #[test]
 fn escape_toggles_the_menu_in_both_modes_and_is_never_a_gameplay_key() {
     for advanced in [false, true] {
-        let config = isolated_hotkey_config(advanced);
+        let config = isolated_meta_bind_config(advanced);
         assert_eq!(
             config_value(&config, "input_menu_toggle"),
             Some("nul"),

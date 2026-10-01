@@ -1,4 +1,5 @@
-//! The RetroArch hotkeys that we write in an exported game.
+//! The RetroArch meta binds that we write for an exported game. These are
+//! the RetroArch hotkeys, and we turn every one of them off.
 
 /// RetroArch meta-bind policy for exported games.
 ///
@@ -27,255 +28,255 @@
 /// author set `advancedEmulatorAccess`, and it never replaces the button,
 /// axis or mouse `nul`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct HotkeyBind {
+pub struct MetaBind {
     pub name: &'static str,
     /// The keyboard key we use only when advanced emulator access is on.
     /// `None` means that this bind has no advanced key.
     pub advanced_key: Option<&'static str>,
 }
 
-pub const HOTKEY_BINDS: &[HotkeyBind] = &[
-    HotkeyBind {
+pub const META_BINDS: &[MetaBind] = &[
+    MetaBind {
         name: "enable_hotkey",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "menu_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "exit_emulator",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "close_content",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "reset",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "toggle_fast_forward",
         // This is the desktop default, and we declare no gameplay key on Space.
         advanced_key: Some("space"),
     },
-    HotkeyBind {
+    MetaBind {
         name: "hold_fast_forward",
         // `l` is the desktop default and the DualShock right-stick-right key.
         advanced_key: Some("l"),
     },
-    HotkeyBind {
+    MetaBind {
         name: "toggle_slowmotion",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "hold_slowmotion",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "rewind",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "pause_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "frame_advance",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "audio_mute",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "volume_up",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "volume_down",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "load_state",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "save_state",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "state_slot_increase",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "state_slot_decrease",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "play_replay",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "record_replay",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "halt_replay",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "save_replay_checkpoint",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "prev_replay_checkpoint",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "next_replay_checkpoint",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "replay_slot_increase",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "replay_slot_decrease",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "disk_eject_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "disk_next",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "disk_prev",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "shader_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "shader_hold",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "shader_next",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "shader_prev",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "cheat_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "cheat_index_plus",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "cheat_index_minus",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "screenshot",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "recording_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "streaming_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "turbo_fire_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "grab_mouse_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "game_focus_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "toggle_fullscreen",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "desktop_menu_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "toggle_vrr_runloop",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "runahead_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "preempt_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "video_filter_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "fps_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "toggle_statistics",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "ai_service",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "netplay_ping_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "netplay_host_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "netplay_game_watch",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "netplay_player_chat",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "netplay_fade_chat_toggle",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "overlay_next",
         advanced_key: None,
     },
-    HotkeyBind {
+    MetaBind {
         name: "osk_toggle",
         advanced_key: None,
     },
 ];
 
-impl HotkeyBind {
+impl MetaBind {
     pub fn keyboard_value(self, advanced: bool) -> &'static str {
         match self.advanced_key {
             Some(key) if advanced => key,
@@ -284,15 +285,15 @@ impl HotkeyBind {
     }
 }
 
-/// Render the exported hotkey policy. Callers must not keep a second list.
+/// Render the exported meta bind policy. Callers must not keep a second list.
 ///
-/// With `advanced` we write `advanced_key` for the binds that have one, the
-/// two fast-forward keys. We do not change button, axis or mouse. RetroArch's
-/// menu toggle has no key and its gamepad combo is off, because the inputs on
-/// MENU CONTROLS open the menu.
-pub fn isolated_hotkey_config(advanced: bool) -> String {
+/// With `advanced` set, we write `advanced_key` for the binds that have one,
+/// the two fast-forward keys, and leave button, axis and mouse unchanged. The
+/// RetroArch menu toggle has no key and its gamepad combo is off, because
+/// MENU CONTROLS defines the inputs that open the menu.
+pub fn isolated_meta_bind_config(advanced: bool) -> String {
     let mut config = String::new();
-    for bind in HOTKEY_BINDS {
+    for bind in META_BINDS {
         let key = bind.keyboard_value(advanced);
         config.push_str(&format!("input_{} = \"{key}\"\n", bind.name));
         config.push_str(&format!("input_{}_btn = \"nul\"\n", bind.name));
@@ -338,11 +339,11 @@ mod tests {
     #[test]
     fn hotkey_policy_matches_pinned_retroarch_meta_binds() {
         let declared = retroarch_meta_binds();
-        let policy: Vec<&str> = HOTKEY_BINDS.iter().map(|bind| bind.name).collect();
+        let policy: Vec<&str> = META_BINDS.iter().map(|bind| bind.name).collect();
         assert_eq!(
             policy,
             declared.iter().map(|(name, _)| name.as_str()).collect::<Vec<_>>(),
-            "HOTKEY_BINDS must list every meta bind the fork's RetroArch declares, in its order"
+            "META_BINDS must list every meta bind the fork's RetroArch declares, in its order"
         );
         // We write every one because RetroArch has defaults for these, and a
         // game would get those defaults for any bind we left out.

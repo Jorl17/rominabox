@@ -10,7 +10,7 @@ mod export_fixture;
 
 use rominabox_desktop::{
     controls::{self, Controls},
-    hotkeys::{isolated_hotkey_config, HOTKEY_BINDS},
+    meta_binds::{isolated_meta_bind_config, META_BINDS},
     packaging::{ExportRequest, ExportTarget, MANAGED_DATA_DIRECTORIES},
 };
 use std::{
@@ -301,8 +301,8 @@ fn walk_files(root: &Path, found: &mut Vec<PathBuf>) {
 /// check author overrides that reuse Space.
 #[test]
 fn advanced_access_reaches_fast_forward_on_the_keyboard_only() {
-    let ordinary = isolated_hotkey_config(false);
-    let advanced = isolated_hotkey_config(true);
+    let ordinary = isolated_meta_bind_config(false);
+    let advanced = isolated_meta_bind_config(true);
 
     assert_eq!(
         config_value(&ordinary, "input_toggle_fast_forward"),
@@ -359,7 +359,7 @@ fn advanced_access_reaches_fast_forward_on_the_keyboard_only() {
         "Space is the advanced toggle and is not a declared gameplay key"
     );
 
-    let advanced_entries: Vec<_> = HOTKEY_BINDS
+    let advanced_entries: Vec<_> = META_BINDS
         .iter()
         .filter(|bind| bind.advanced_key.is_some())
         .map(|bind| (bind.name, bind.advanced_key))
@@ -381,12 +381,12 @@ fn advanced_access_reaches_fast_forward_on_the_keyboard_only() {
 /// ifdef, after we remove duplicate names. We do not preprocess the macOS
 /// build, and this does not prove that no pad can reach a hotkey.
 #[test]
-fn hotkey_allow_list_is_unchanged_and_controller_variants_stay_nul() {
-    let policy: Vec<&str> = HOTKEY_BINDS.iter().map(|bind| bind.name).collect();
+fn meta_bind_allow_list_is_unchanged_and_controller_variants_stay_nul() {
+    let policy: Vec<&str> = META_BINDS.iter().map(|bind| bind.name).collect();
     assert_eq!(policy, pinned_meta_bind_names());
 
-    let advanced = isolated_hotkey_config(true);
-    for bind in HOTKEY_BINDS {
+    let advanced = isolated_meta_bind_config(true);
+    for bind in META_BINDS {
         for suffix in ["_btn", "_axis", "_mbtn"] {
             assert_eq!(
                 config_value(&advanced, &format!("input_{}{suffix}", bind.name)),
