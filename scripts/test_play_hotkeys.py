@@ -9,8 +9,9 @@ slot round the six, the last before the first and the first after the last.
 QUICK LOAD (F4) loads nothing from an empty slot and reports that, and loads
 the saved one. The menu, when opened, shows the slot chosen with the hotkeys.
 We read each step from the player's checkpoints: the words in the notice row,
-the slots as in the menu, and the selection. A second run ends on a notice,
-for its picture.
+the slots as in the menu, and the selection. In a second run, after we launch
+the game again, we start on the slot chosen in the first run, and QUICK SAVE
+saves there. That run ends on the notice, for its picture.
 
 Use an explicit committed native build, with the worktree environment loaded:
     ROMINABOX_TEST_BUILD=/absolute/build python3 scripts/test_play_hotkeys.py [OUTPUT]
@@ -37,9 +38,11 @@ OUTPUT = ROOT / "work/test-output/play-hotkeys"
 # We play the game from the start and open the menu only at the end.
 EXPORT = {"title": "Play Hotkeys", "startAtMenu": False, "splash": False}
 # We hold a key down for two frames, then wait the frames that a slot change
-# takes to show. A save or a load is a RetroArch task, so we give it time.
+# takes to show. We give a save or a load in RetroArch one second, which is
+# enough for this cartridge. We read its notice while it is up, because a
+# slot notice stays on the row only briefly (RIB_NOTICE, document_contract.inc).
 STEP = "wait:6"
-TASK = "wait-ms:2000"
+TASK = "wait-ms:1000"
 SCRIPT = [
     "wait-ms:1000", "report:start",
     "press:f2", TASK, "report:saved",
@@ -49,7 +52,7 @@ SCRIPT = [
     "press:f6", STEP, "press:f4", TASK, "report:loaded",
     "press:f7", STEP, "press:f7", STEP, "toggle", "wait-ms:500", "report:menu",
 ]
-NOTICE_SCRIPT = ["wait-ms:1000", "press:f2", TASK]
+NOTICE_SCRIPT = ["wait-ms:1000", "press:f2", TASK, "report:relaunched"]
 
 
 def notice(report: dict) -> str:
@@ -128,9 +131,17 @@ def main() -> int:
             picture = next(data.rglob(name))
             check(picture.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n", f"{name} is a PNG")
 
+        # After the new launch, QUICK SAVE saves to slot 3, which was chosen
+        # in the first run.
         failure = shots.take(app, "play-hotkeys-notice", NOTICE_SCRIPT, output, reset_settings=True)
         if failure:
             failures.append(f"the notice run failed: {failure}")
+        else:
+            relaunched = checkpoints(output / "play-hotkeys-notice.log")["relaunched"]
+            check(notice(relaunched) == "SAVED TO SLOT 3",
+                  f"F2 on the next launch says {notice(relaunched)!r}, not SAVED TO SLOT 3")
+            check([name for name in state_files(data) if name.endswith(".state3")],
+                  f"the next launch saved to slot 3: {state_files(data)}")
 
     for message in failures:
         print(f"FAIL {message}", file=sys.stderr)

@@ -336,7 +336,7 @@ SCOPES = [
     ),
     Scope(
         "hotkeys",
-        "in the exported test player, that QUICK SAVE writes the slot the menu has selected, its state and its picture, that PREVIOUS SLOT and NEXT SLOT step it round the six slots, that QUICK LOAD of an empty slot loads nothing and of a saved one loads it, that each says so in the notice row, and that the menu shows the slot they chose",
+        "in the exported test player, that QUICK SAVE writes the slot the menu has selected, its state and its picture, that PREVIOUS SLOT and NEXT SLOT step it round the six slots, that QUICK LOAD of an empty slot loads nothing and of a saved one loads it, that each says so in the notice row, that the menu shows the slot they chose, and that the next launch starts on it",
         "that a physical keyboard's press reaches the menu (the script holds the key where the menu reads the keyboard), sound, or window focus; the screen's own rules are the bridge scope's",
         [PYTHON, str(ROOT / "scripts/test_play_hotkeys.py"), str(SCRATCH / "play-hotkeys")],
         env={"ROMINABOX_GAME_BUNDLE_PREFIX": f"{os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.hotkeys"},
