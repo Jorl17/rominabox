@@ -213,6 +213,20 @@ void the_menu_shows_the_chosen_slot(void *menu)
    frame(menu);
    open_menu(menu, false);
 }
+
+/* The next launch starts on the slot chosen last, and QUICK SAVE saves to
+ * it, as before the game was closed. */
+void the_next_launch_keeps_the_chosen_slot(void *menu)
+{
+   check(selected() == 3, "the next launch starts on slot 3, the slot chosen last, not "
+         + std::to_string(selected()));
+   const int saves = host.saves_started;
+   press(menu, "f2");
+   check(host.saves_started == saves + 1 && host.selected_slot == 3,
+         "QUICK SAVE on the next launch saves to slot 3, not " + std::to_string(host.selected_slot));
+   rib_rmlui_notify_state_task("", 3, true, true);
+   play(menu);
+}
 }
 
 int main(int argc, char **argv)
@@ -246,6 +260,16 @@ int main(int argc, char **argv)
    the_menus_own_save_has_no_notice(menu);
    nothing_acts_while_the_menu_is_open(menu);
    the_menu_shows_the_chosen_slot(menu);
+   rib_menu_destroy(menu);
+
+   /* The game closed and opened again, on the same data. */
+   menu = rib_menu_create();
+   check(menu != nullptr, "the menu is made again");
+   if (!menu)
+      return 1;
+   frame(menu);
+   play(menu);
+   the_next_launch_keeps_the_chosen_slot(menu);
    rib_menu_destroy(menu);
 
    if (failures)
