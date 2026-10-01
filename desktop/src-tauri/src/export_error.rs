@@ -26,6 +26,9 @@ pub enum ErrorStage {
     Export,
     /// We could not download a required core. The message is for the author.
     Cores,
+    /// The core imports a library that the target system does not include, so
+    /// the game would not start. The message for the author lists each one.
+    CoreLibraries,
     /// We could not put the new app in place of the old one, or move the old
     /// one back. The path is where the old app is now.
     Replace,
@@ -57,6 +60,7 @@ impl ErrorStage {
             Self::Refused => "refused",
             Self::Export => "export",
             Self::Cores => "cores",
+            Self::CoreLibraries => "core-libraries",
             Self::Validate => "validate",
             Self::Stage => "stage",
             Self::Image => "image",
@@ -192,7 +196,7 @@ impl ExportError {
             _ => {}
         }
         match self.stage {
-            ErrorStage::Refused | ErrorStage::Cores => self.message.clone(),
+            ErrorStage::Refused | ErrorStage::Cores | ErrorStage::CoreLibraries => self.message.clone(),
             ErrorStage::Replace => format!(
                 "The new app could not replace the old one. The old app is still in {}, as \u{201c}{}\u{201d}.",
                 folder(),

@@ -201,6 +201,7 @@ fn a_core_that_needs_a_library_windows_lacks_is_refused() {
 
     // The fault is in the downloaded core, not in the builder, so we tell the
     // author the library, and do not ask them to reinstall ROM-in-a-Box.
+    assert_eq!(error.stage, ErrorStage::CoreLibraries);
     assert_eq!(
         error.sentence(),
         "The emulator for this console needs helper.dll, which Windows does not include, \

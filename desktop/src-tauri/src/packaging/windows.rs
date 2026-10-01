@@ -100,10 +100,11 @@ impl Packager for WindowsPackager {
             Ok(())
         } else {
             Err(ExportError::new(
-                ErrorStage::Dependencies,
+                ErrorStage::CoreLibraries,
                 format!(
-                    "The core needs libraries Windows does not have: {}",
-                    foreign.join(", ")
+                    "The emulator for this console needs {}, which Windows does not include, so the game \
+                     would not start. Try again later: a newer version of the emulator may not need it.",
+                    spoken(&foreign)
                 ),
             ))
         }
@@ -174,5 +175,15 @@ impl Packager for WindowsPackager {
             + tree_size(&self.core)?
             + tree_size(&self.resources.join(app_file!(MenuAssets)))?
             + tree_size(&self.resources.join(shipped!(Autoconfig).0))?)
+    }
+}
+
+
+/// `names` as a list in a sentence: "a", "a and b", "a, b and c".
+fn spoken(names: &[String]) -> String {
+    match names {
+        [] => String::new(),
+        [only] => only.clone(),
+        [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
     }
 }
