@@ -163,6 +163,37 @@ fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_keys() {
         .unwrap();
 }
 
+/// We refuse a pad button as we refuse a key. A hotkey used during play may
+/// have no position that the game uses, after the author moved its controls,
+/// on any pad in the game. A chord is not one position, so MENU's L3+R3 is
+/// allowed, and Home is no position at all.
+#[test]
+fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_pad_buttons() {
+    let refused = |json, controls: &Controls| {
+        hotkeys(json).unwrap().check_for("megadrive", controls).unwrap_err().to_string()
+    };
+    // We read Mega Drive A from the left button.
+    let left = refused(serde_json::json!({ "quick-save": ["key:f2", "pad:y"] }), &Controls::default());
+    assert!(left.contains("pad:y is bound to quick-save") && left.contains("for y (A)"), "{left}");
+    // The six-button pad's Mode is Select, which the three-button pad lacks.
+    let mode = refused(serde_json::json!({ "next-slot": ["pad:select"] }), &Controls::default());
+    assert!(mode.contains("pad:select is bound to next-slot") && mode.contains("for select (Mode)"), "{mode}");
+    // A moved from the left button to L2, so L2 is the game's and left is free.
+    let moved = Controls {
+        profile: None,
+        bindings: [("y".to_string(), ControlOverride { pad: Some("l2".into()), ..Default::default() })].into(),
+    };
+    let l2 = refused(serde_json::json!({ "quick-load": ["pad:l2"] }), &moved);
+    assert!(l2.contains("pad:l2 is bound to quick-load") && l2.contains("for y (A)"), "{l2}");
+    hotkeys(serde_json::json!({ "quick-load": ["pad:y"] })).unwrap().check_for("megadrive", &moved).unwrap();
+    // The defaults are Home, and L3 and R3 held together, unused by any Mega Drive pad.
+    crate::builder::unstated::hotkeys().check_for("megadrive", &Controls::default()).unwrap();
+    hotkeys(serde_json::json!({ "quick-save": ["pad:l3+r3"], "menu": ["key:escape", "pad:home"] }))
+        .unwrap()
+        .check_for("megadrive", &Controls::default())
+        .unwrap();
+}
+
 /// We tell the builder the rule and the hotkeys, so that we can word the
 /// problem there. We refuse in the builder whatever the export would refuse.
 #[test]
