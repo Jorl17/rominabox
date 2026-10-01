@@ -43,6 +43,7 @@ from pathlib import Path
 
 from directory_links import link_directory, redirected
 from folder_lock import Lock
+import core_source
 import player_support
 
 def _canonical() -> Path:
@@ -246,6 +247,12 @@ COPIED_ARTIFACTS = [
     # the canonical checkout.
     Path("desktop/src-tauri/resources/preview"),
     Path("desktop/src-tauri/resources/bin"),
+    # The cores that we run in the exporter, shipped and menu tests, and the
+    # pinned archives with licences or sources for preparation. Neither is in
+    # git, and we cannot run those tests without them. We write into both
+    # during preparation (--seed-core-cache, a download), so we copy them.
+    core_source.CORE_CACHE.relative_to(core_source.ROOT),
+    core_source.DOWNLOADS.relative_to(core_source.ROOT),
 ]
 
 # We only ever read these, so we share them at no cost and save a lot of

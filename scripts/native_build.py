@@ -26,11 +26,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import toolchain  # noqa: E402
+from core_source import DOWNLOADS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 RECIPE_PATH = ROOT / "scripts/native_runtime/player-recipe.json"
 FORK = ROOT / "vendor/retroarch"
-DOWNLOADS = ROOT / "work/downloads"
 
 
 def recipe() -> dict:

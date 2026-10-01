@@ -18,6 +18,8 @@ VARIABLE = "ROMINABOX_CORE_SOURCE"
 # Archives we download during preparation to read a licence or profiles from.
 # We never copy them into the runtime kit.
 DOWNLOADS = ROOT / "work/downloads"
+# The developer core cache, a folder per target (`seeded_cache`).
+CORE_CACHE = ROOT / "work/core-cache"
 
 
 def host_target() -> str:
@@ -34,7 +36,7 @@ def host_target() -> str:
 
 def seeded_cache(target: str | None = None) -> Path:
     """The developer cache that we write with `--seed-core-cache` for `target`."""
-    return ROOT / "work/core-cache" / (target or host_target())
+    return CORE_CACHE / (target or host_target())
 
 
 def core_source() -> Path:
