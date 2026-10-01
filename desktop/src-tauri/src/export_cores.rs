@@ -82,8 +82,8 @@ pub struct Wanted<'a> {
     pub platform: Target,
     /// The cache we fetch it into, the one for the cores of `platform`.
     pub cache: &'a Path,
-    /// The core and its licence are already present, in the cache or the kit.
-    /// We read this only for a core that is not in the download list.
+    /// The core is already in the cache or the kit. We check this only for a
+    /// core that is not in the download list.
     pub present: bool,
 }
 
@@ -101,7 +101,11 @@ pub fn prepare(
         match cores::assess(core.cache, core.platform, core.component, transport) {
             Some(Need::Download) => downloads.push(core),
             Some(Need::Update) => updates.push(core),
-            Some(Need::UseCache) => {}
+            // We fetch a missing licence text for a cached core when we can,
+            // and use the core either way.
+            Some(Need::UseCache) => {
+                let _ = cores::install_component(core.cache, core.platform, core.component, transport);
+            }
             None if core.present => {}
             None => missing += 1,
         }

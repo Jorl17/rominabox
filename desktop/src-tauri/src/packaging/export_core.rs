@@ -125,9 +125,8 @@ where
         .iter()
         .filter_map(|build| {
             let cache = build.cache.as_deref()?;
-            let present = [build.artifact_relative(), resolved.licence_relative()]
-                .iter()
-                .all(|relative| resolve_cached(&request.runtime_kit, Some(cache), relative).is_file());
+            // We check only the core, because its licence text changes nothing.
+            let present = resolve_cached(&request.runtime_kit, Some(cache), &build.artifact_relative()).is_file();
             Some(crate::export_cores::Wanted {
                 component: &resolved.core.component,
                 platform: build.platform,

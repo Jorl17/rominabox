@@ -361,6 +361,36 @@ fn a_cached_core_is_used_without_a_word_when_the_check_fails() {
     assert_eq!(table.downloads.borrow().len(), fetched);
 }
 
+/// Nothing depends on a licence text. We use a cached core without its text
+/// like any cached core, with no message and no download.
+#[test]
+fn a_cached_core_without_its_licence_text_is_used_without_a_word() {
+    let root = workspace();
+    let mut request = dreamcast_request(&root);
+    let table = Table::flycast("flycast_libretro.dylib", b"cached", "\"1\"");
+    export_with(&mut request, &table).1.unwrap();
+    let mut folders = vec![request.core_cache.clone().unwrap()];
+    let mut removed = 0;
+    while let Some(folder) = folders.pop() {
+        for entry in fs::read_dir(&folder).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                folders.push(path);
+            } else if path.parent().unwrap().ends_with("licenses") {
+                fs::remove_file(&path).unwrap();
+                removed += 1;
+            }
+        }
+    }
+    assert_eq!(removed, 1, "the cache held no licence text to remove");
+    table.unreachable();
+    let fetched = table.downloads.borrow().len();
+    let (said, shipped) = export_with(&mut request, &table);
+    assert_eq!(said, []);
+    assert_eq!(shipped.unwrap(), b"cached");
+    assert_eq!(table.downloads.borrow().len(), fetched);
+}
+
 #[test]
 fn a_missing_core_that_cannot_be_downloaded_stops_the_export_before_anything_is_built() {
     let root = workspace();

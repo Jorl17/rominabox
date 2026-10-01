@@ -279,7 +279,7 @@ pub fn install_component(
 /// What we must do on export before we can take one core from the cache.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Need {
-    /// The core or its licence is not in the cache.
+    /// The core is not in the cache.
     Download,
     /// The server has a newer nightly than the cached one.
     Update,
@@ -355,9 +355,8 @@ impl<'a> Located<'a> {
     }
 
     fn assess(&self, cache: &Path, transport: &dyn Transport) -> Need {
-        let cached = cache.join("cores").join(self.core_file).is_file()
-            && cache.join("licenses").join(self.licence_file).is_file();
-        if !cached {
+        // Only the core counts, whether or not its licence text is cached.
+        if !cache.join("cores").join(self.core_file).is_file() {
             return Need::Download;
         }
         let Some(server) = self

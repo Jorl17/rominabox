@@ -5,19 +5,19 @@ use crate::target::Target;
 use serde::Serialize;
 use std::path::Path;
 
-/// Return the canonical systems that this runtime kit can export. We read the
-/// capability from the declared core and legal files, and for this check we
-/// search no global RetroArch path and load no core.
+/// Return the canonical systems that we can export with this runtime kit.
+/// We judge from the declared core files, without searching any global
+/// RetroArch path or loading any core.
 /// Why we cannot offer a declared console in this build.
 ///
-/// We keep a reason that a developer can act on for every console that we
-/// leave out, even when the list for the user stays short.
+/// For each console we leave out, we give a reason that a developer can act
+/// on, even though the list that people see stays short.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase", tag = "reason")]
 pub enum Unavailable {
     /// We declare no core at all, so the game cannot run.
     NoCoreDeclared,
-    /// Every declared core is missing its artifact or its licence text.
+    /// The artifact is missing for every declared core.
     NoPreparedCore { tried: Vec<String> },
 }
 
@@ -91,8 +91,8 @@ pub fn system_availability_in(
         .collect()
 }
 
-/// Whether the file and licence of one core are in the cache or the kit for
-/// a target, or else the name of what is missing.
+/// Whether the file of one core is in the cache or the kit for a target, or
+/// the name of what is missing.
 pub(super) fn core_readiness(
     runtime_kit: &Path,
     cache: Option<&Path>,
