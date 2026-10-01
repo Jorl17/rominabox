@@ -414,14 +414,31 @@ def platform_of(target: str) -> str:
     raise SystemExit(f"no platform named for {target}")
 
 
-def launcher_sources(platform: str) -> list[Path]:
-    """The launcher's C sources on `platform`: the shared ones at the top of
-    LAUNCHER, and those in the folders listed in the recipe for the platform."""
+def platform_sources(directory: Path, platform: str) -> list[Path]:
+    """The C sources in `directory` on `platform`: the shared ones at its top,
+    and those in the folders listed for the platform in the recipe's
+    launcher.folders."""
     folders = recipe()["launcher"]["folders"].get(platform)
     if folders is None:
-        raise SystemExit(f"the player recipe names no launcher folders for {platform}")
-    return sorted(LAUNCHER.glob("*.c")) + [source for folder in folders
-                                           for source in sorted((LAUNCHER / folder).glob("*.c"))]
+        raise SystemExit(f"the player recipe names no source folders for {platform}")
+    return sorted(directory.glob("*.c")) + [source for folder in folders
+                                            for source in sorted((directory / folder).glob("*.c"))]
+
+
+def launcher_sources(platform: str) -> list[Path]:
+    """The launcher's C sources on `platform`."""
+    return platform_sources(LAUNCHER, platform)
+
+
+def accounts_folder() -> Path:
+    """Where the QUICK SIGN IN store's sources are."""
+    return ROOT / recipe()["accounts"]["folder"]
+
+
+def accounts_sources(platform: str) -> list[Path]:
+    """The QUICK SIGN IN store's C sources on `platform`, laid out as the
+    launcher's are."""
+    return platform_sources(accounts_folder(), platform)
 
 
 def file_layer(platform: str) -> list[Path]:
@@ -435,7 +452,7 @@ def copy_accounts(destination: Path, target: str) -> Path:
     store) and the file layer below it, in their folders under
     desktop/src-tauri."""
     accounts = destination / "rominabox-accounts"
-    sources = [ROOT / relative for relative in recipe()["accounts"]["sources"]]
+    sources = [*accounts_sources(platform_of(target)), *sorted(accounts_folder().glob("*.h"))]
     copies = set()
     for source in [*sources, LAUNCHER / "portable_fs.h", *file_layer(platform_of(target))]:
         copy = accounts / source.relative_to(DESKTOP)
@@ -598,7 +615,8 @@ def build_preview(destination: Path, target: str, environment: dict[str, str], r
     fork = destination / "retroarch"
     archive, headers, defines = rmlui_linking(fork / "Makefile.common", destination / recipe()["rmlui"]["source"])
     context = platform["context"]
-    own = [ROOT / name for name in (*declared["sources"], *context["sources"])]
+    context_sources = [ROOT / name for name in context["sources"]]
+    own = [*(ROOT / name for name in declared["sources"]), ROOT / platform["entry"], *context_sources]
     forked = [fork / name for name in (*recipe()["fileLayer"]["sources"], *declared["forkSources"],
                                        *context["forkSources"])]
     freetype = subprocess.run([resolve("pkg-config", environment), "--cflags", "--libs", "freetype2"],
@@ -610,7 +628,7 @@ def build_preview(destination: Path, target: str, environment: dict[str, str], r
     for index, source in enumerate([*own, *forked]):
         language = {".c": ["cc", "-std=gnu99"], ".cpp": ["c++", "-std=c++17"],
                     ".mm": ["c++", "-std=c++17", "-x", "objective-c++"]}[source.suffix]
-        extra = context["flags"] if source in own[len(declared["sources"]):] else []
+        extra = context["flags"] if source in context_sources else []
         steps.append(compile_step(folder / "objects", index, source,
                                   [*language, *compiler_flags(target), "-O2", *defines, *includes, *freetype, *extra]))
     objects = [step.output for step in steps]

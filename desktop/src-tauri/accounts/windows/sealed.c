@@ -1,9 +1,11 @@
-#include "sealed.h"
+#ifndef _WIN32
+#error "windows/sealed.c seals a token with DPAPI on Windows; the player recipe names each platform's"
+#endif
+
+#include "../sealed.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-#ifdef _WIN32
 
 #include <windows.h>
 #include <wincrypt.h>
@@ -64,19 +66,3 @@ bool rib_unseal(const char *sealed, char *out, size_t capacity) {
     LocalFree(plain.pbData);
     return fits;
 }
-
-#else
-
-bool rib_seal(const char *token, char *out, size_t capacity) {
-    size_t length = strlen(token);
-    if (length >= capacity)
-        return false;
-    memcpy(out, token, length + 1);
-    return true;
-}
-
-bool rib_unseal(const char *sealed, char *out, size_t capacity) {
-    return rib_seal(sealed, out, capacity);
-}
-
-#endif
