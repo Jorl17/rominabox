@@ -41,7 +41,7 @@
       "native": ["key:right", "key:right", "report:pause-entry", "key:ok",
                  "key:down", "key:down", "key:down", "key:down", "report:options-entry", "key:ok"],
       "disc": ["key:down", "key:down", "key:down", "report:pause-entry", "key:ok",
-               "key:up", "key:up", "report:options-entry", "key:ok"]
+               "key:up", "key:up", "key:up", "report:options-entry", "key:ok"]
     }
   },
   "headless": {

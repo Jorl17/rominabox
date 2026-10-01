@@ -170,6 +170,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -501,6 +502,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -682,6 +684,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok"
@@ -858,6 +861,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok"
     ]
@@ -1031,6 +1035,7 @@
       "key:down",
       "report:pause-entry",
       "key:ok",
+      "key:up",
       "key:up",
       "key:up",
       "report:options-entry",
@@ -1364,6 +1369,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -1545,6 +1551,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok"
@@ -1721,6 +1728,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok"
     ]
@@ -1894,6 +1902,7 @@
       "key:down",
       "report:pause-entry",
       "key:ok",
+      "key:up",
       "key:up",
       "key:up",
       "report:options-entry",
@@ -2227,6 +2236,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -2408,6 +2418,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok"
@@ -2584,6 +2595,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok"
     ]
@@ -2757,6 +2769,7 @@
       "key:down",
       "report:pause-entry",
       "key:ok",
+      "key:up",
       "key:up",
       "key:up",
       "report:options-entry",
@@ -3090,6 +3103,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -3271,6 +3285,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok"
@@ -3447,6 +3462,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok"
     ]
@@ -3620,6 +3636,7 @@
       "key:down",
       "report:pause-entry",
       "key:ok",
+      "key:up",
       "key:up",
       "key:up",
       "report:options-entry",
@@ -3953,6 +3970,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok",
@@ -4134,6 +4152,7 @@
       "key:ok",
       "key:up",
       "key:up",
+      "key:up",
       "report:options-entry",
       "key:ok",
       "key:ok"
@@ -4308,6 +4327,7 @@
       "key:down",
       "report:pause-entry",
       "key:ok",
+      "key:up",
       "key:up",
       "key:up",
       "report:options-entry",

@@ -4141,7 +4141,7 @@
   },
   "disc/blue/shader-keys": {
     "files": {
-      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/scanlines/scanlines.glslp\n"
+      "shader-choice": "scanlines\n"
     },
     "reports": {
       "back": {
@@ -4482,7 +4482,7 @@
   },
   "disc/blue/shaders-phosphor": {
     "files": {
-      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/phosphor/phosphor.glslp\n"
+      "shader-choice": "phosphor\n"
     },
     "reports": {
       "final": {
@@ -4547,7 +4547,7 @@
   },
   "disc/blue/shaders-scanlines": {
     "files": {
-      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/scanlines/scanlines.glslp\n"
+      "shader-choice": "scanlines\n"
     },
     "reports": {
       "final": {
@@ -8269,7 +8269,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "volume-level"
         ],
@@ -9976,7 +9978,7 @@
   },
   "native/blue/shader-keys": {
     "files": {
-      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/scanlines/scanlines.glslp\n"
+      "shader-choice": "scanlines\n"
     },
     "reports": {
       "back": {
@@ -10321,7 +10323,7 @@
   },
   "native/blue/shaders-phosphor": {
     "files": {
-      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/phosphor/phosphor.glslp\n"
+      "shader-choice": "phosphor\n"
     },
     "reports": {
       "final": {
@@ -10386,7 +10388,7 @@
   },
   "native/blue/shaders-scanlines": {
     "files": {
-      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/scanlines/scanlines.glslp\n"
+      "shader-choice": "scanlines\n"
     },
     "reports": {
       "final": {
@@ -10458,7 +10460,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "volume-level"
         ],
@@ -10803,7 +10807,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "volume-level"
         ],
@@ -10865,7 +10871,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "volume-level"
         ],
@@ -14110,7 +14118,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "volume-level"
         ],
@@ -15813,7 +15823,7 @@
   },
   "rominabox/blue/shader-keys": {
     "files": {
-      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/scanlines/scanlines.glslp\n"
+      "shader-choice": "scanlines\n"
     },
     "reports": {
       "back": {
@@ -16158,7 +16168,7 @@
   },
   "rominabox/blue/shaders-phosphor": {
     "files": {
-      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/phosphor/phosphor.glslp\n"
+      "shader-choice": "phosphor\n"
     },
     "reports": {
       "final": {
@@ -16223,7 +16233,7 @@
   },
   "rominabox/blue/shaders-scanlines": {
     "files": {
-      "shader-choice": "$APP/Contents/Resources/menu-assets/shaders/scanlines/scanlines.glslp\n"
+      "shader-choice": "scanlines\n"
     },
     "reports": {
       "final": {
@@ -16295,7 +16305,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "volume-level"
         ],
@@ -16640,7 +16652,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "volume-level"
         ],
@@ -16702,7 +16716,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "volume-level"
         ],
