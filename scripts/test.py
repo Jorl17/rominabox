@@ -134,6 +134,9 @@ SCOPES = [
         "the Rust exporter and player-facing declarations: staging, isolation, controls, capabilities, and that a command with no request does not read stdin",
         "that an exported game runs; every fixture core is a stand-in that is never loaded",
         ["cargo", "test", "--quiet", *CARGO_ENGINE],
+        # In disc_layout and the other layout tests we measure and hover over a
+        # composed menu through the RmlUi probe (tests/support), linked with RmlUi.
+        prepare=RMLUI_PREPARE,
     ),
     Scope(
         "picture",
