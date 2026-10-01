@@ -30,7 +30,7 @@ import sys
 from pathlib import Path
 
 import programs
-from built import cli_build
+from built import ENGINE, cli_build
 
 ROOT = Path(__file__).resolve().parent.parent
 TRACKS = [
@@ -153,7 +153,7 @@ def merge(track: str) -> int:
     # the binary must exist in the tree under test. Without it we get an empty
     # error that looks like a fault of the branch.
     print(f"  building the exporter in {where.name} ...", flush=True)
-    built = subprocess.run(cli_build(where / "desktop/src-tauri/Cargo.toml"), cwd=where,
+    built = subprocess.run(cli_build(where / ENGINE / "Cargo.toml"), cwd=where,
                            capture_output=True, text=True)
     if built.returncode != 0:
         print(f"  {track} does not build:\n{built.stderr[-1200:]}", file=sys.stderr)

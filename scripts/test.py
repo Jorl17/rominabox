@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import core_source  # noqa: E402
 import programs  # noqa: E402
 import toolchain  # noqa: E402
+from built import MANIFEST as ENGINE_MANIFEST  # noqa: E402
 from cargo_replay import cargo_test  # noqa: E402
 from player_support import additions as support_additions  # noqa: E402
 from player_support import modifications as support_modifications  # noqa: E402
@@ -47,7 +48,8 @@ PRINT_LOCK = threading.Lock()
 
 PYTHON = programs.PYTHON
 
-CARGO_DESKTOP = ["--manifest-path", str(ROOT / "desktop/src-tauri/Cargo.toml")]
+# The engine and the command line. There are no tests in the builder's window code.
+CARGO_ENGINE = ["--manifest-path", str(ENGINE_MANIFEST)]
 CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog/Cargo.toml")]
 # bridge, dcmenu and menu link one RmlUi. We declare it in each scope that
 # uses it, or in a checkout where nobody has compiled it the scope fails.
@@ -131,7 +133,7 @@ SCOPES = [
         "exporter",
         "the Rust exporter and player-facing declarations: staging, isolation, controls, capabilities, and that a command with no request does not read stdin",
         "that an exported game runs; every fixture core is a stand-in that is never loaded",
-        ["cargo", "test", "--quiet", *CARGO_DESKTOP],
+        ["cargo", "test", "--quiet", *CARGO_ENGINE],
     ),
     Scope(
         "picture",
@@ -312,7 +314,7 @@ SCOPES = [
         "navigation",
         "arrow keys, pointer, focus and their sounds on every screen of every registered design and of the hypothetical layouts, driven through the real menu C++ on composed documents, and that a save slot's picture takes the game's shape where a design marks it",
         "physical keyboards, pads or mice, audible sound, or how a highlight looks; a fake RetroArch host stands in for the player and nothing is drawn",
-        ["cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_navigation", "--", "--include-ignored"],
+        ["cargo", "test", "--quiet", *CARGO_ENGINE, "--test", "menu_navigation", "--", "--include-ignored"],
         prepare=RMLUI_PREPARE + [headless_driver(NAVIGATION_DRIVER, "scripts/native_runtime/menu_nav_driver.cpp")],
         env={"ROMINABOX_NAVIGATION_DRIVER": str(NAVIGATION_DRIVER)},
     ),
@@ -320,7 +322,7 @@ SCOPES = [
         "workflows",
         "every menu workflow case (keys, pointer, controls, capture, volume, shaders, saves, overlays, accounts) in both designs and every palette, replayed through the fork's own script driver and report on menus composed as an export composes them, compared checkpoint by checkpoint and file by file with what the launched player recorded",
         "anything drawn, audible cues, RetroArch's bind descriptions and remap files, or physical input; the fake host stands in for RetroArch, and the workflows-native scope launches a few cases for real",
-        ["cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "menu_workflows", "--", "--include-ignored", "--nocapture"],
+        ["cargo", "test", "--quiet", *CARGO_ENGINE, "--test", "menu_workflows", "--", "--include-ignored", "--nocapture"],
         prepare=RMLUI_PREPARE + [headless_driver(WORKFLOW_DRIVER, "scripts/native_runtime/menu_workflow_driver.cpp")],
         env={"ROMINABOX_WORKFLOW_DRIVER": str(WORKFLOW_DRIVER)},
     ),
@@ -384,8 +386,7 @@ SCOPES = [
         [
             "cargo",
             "test",
-            "--manifest-path",
-            str(ROOT / "desktop/src-tauri/Cargo.toml"),
+            *CARGO_ENGINE,
             "--lib",
             "measure::",
             "--",
@@ -447,8 +448,7 @@ SCOPES = [
         [
             "cargo",
             "test",
-            "--manifest-path",
-            str(ROOT / "desktop/src-tauri/Cargo.toml"),
+            *CARGO_ENGINE,
             "--test",
             "isolation",
             "--",
@@ -468,7 +468,7 @@ SCOPES = [
         "nothing; on macOS nothing, since a Mac game is not one program",
         "the unpacking dialog, a real player or core, UNINSTALL chosen in a running game's menu (the forget "
         "scope), or a disk that fills while a game unpacks",
-        ["cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "windows_game", "--", "--ignored"],
+        ["cargo", "test", "--quiet", *CARGO_ENGINE, "--test", "windows_game", "--", "--ignored"],
     ),
     Scope(
         "overlays",

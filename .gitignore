@@ -29,8 +29,8 @@ worktree.local.json
 /desktop/public/controllers/
 /desktop/node_modules
 
-# Cargo build output; each worktree has its own.
-/desktop/src-tauri/target
+# Cargo build output of the builder's workspace; each worktree has its own.
+/desktop/target
 
 # C object files from ad-hoc compiles; build steps write theirs under work/.
 *.o

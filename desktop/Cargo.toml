@@ -1,0 +1,25 @@
+# The Rust workspace of the builder, with one lockfile and one target for
+# its two packages.
+#
+# crates/rominabox-engine  the code behind the builder and the command line,
+#                          and the command line itself (rominabox-cli)
+# src-tauri                the builder's window: Tauri, its configuration and
+#                          main.rs, from which we call the engine
+#
+# Whenever a file we bundle with the builder changes (the runtime kit, the
+# command line copied into resources/bin), we run the Tauri build script and
+# rebuild the package that contains it. Only src-tauri contains that script,
+# so after a new kit we compile main.rs and nothing of the engine.
+#
+# rominabox-catalog and rominabox-scratch are standalone packages with their
+# own [workspace] tables, so they are not part of this one.
+[workspace]
+members = ["src-tauri", "crates/rominabox-engine"]
+exclude = ["crates/rominabox-catalog", "crates/rominabox-scratch"]
+resolver = "2"
+
+# We declare the dependencies of both packages once, and add features per package.
+[workspace.dependencies]
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "tiff", "webp"] }
+serde_json = "1"
+windows-sys = "0.59"

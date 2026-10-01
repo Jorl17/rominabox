@@ -8,7 +8,7 @@
     "A case that `continues` another starts from the game data that case left, as the next launch of the same game does; every other case starts from none.",
     "A checkpoint taken with the menu open has something focused; a case lists in `unfocused` any checkpoint where nothing focused is what the player sees.",
     "",
-    "`python3 scripts/test.py workflows` replays every case headlessly (desktop/src-tauri/tests/menu_workflows.rs). `python3 scripts/test.py workflows-native` launches the exported player for the `launched` cases only.",
+    "`python3 scripts/test.py workflows` replays every case headlessly (desktop/crates/rominabox-engine/tests/menu_workflows.rs). `python3 scripts/test.py workflows-native` launches the exported player for the `launched` cases only.",
     "`frame` is the drawable the launched player recorded these at: a 960x600 window on a display of two pixels per point. `game` is the generated Mega Drive cartridge every case exports.",
     "`persisted` names the files in the game's data that are recorded, as patterns under that directory; a path into the menu is written as it is inside the app, under `menuAssets`.",
     "`headless` says what only a launched player knows, and why; both runners compare, and the headless one records, those fields reduced to whether they are there. Nothing is drawn headlessly: a picture is the launched runner's alone, and the states scope photographs the menu.",

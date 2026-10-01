@@ -2,7 +2,7 @@
  * plan's fields, the files beside it, and what the launcher does with them.
  * Declared once, here. The launcher includes it (main.c, player_settings.c);
  * the exporter reads it as the launcher's compiler does
- * (desktop/src-tauri/src/launch_contract.rs), so a name either side spells
+ * (desktop/crates/rominabox-engine/src/launch_contract.rs), so a name either side spells
  * differently stops its build instead of exporting a game that cannot start.
  *
  * RIB_APP_FILE(name, "path")                in the app's own files (Resources)

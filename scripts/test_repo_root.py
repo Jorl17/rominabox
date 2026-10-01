@@ -36,7 +36,7 @@ HOME_PLACE = re.compile(
 )
 # Tests and the scripts that run them, as they are in git. The source of a
 # crate is not a test, and a patch is a record that we keep.
-TESTS_AND_SCRIPTS = ["scripts", "desktop/src-tauri/tests", "desktop/crates", "desktop/src"]
+TESTS_AND_SCRIPTS = ["scripts", "desktop/crates", "desktop/src"]
 COMMENT_STARTS = ("//", "#", "/*", "*", "--", "<!--")
 
 # bridge, dcmenu and menu must not contain a directory that is not part of

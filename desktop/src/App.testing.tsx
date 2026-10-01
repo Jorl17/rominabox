@@ -131,7 +131,7 @@ function cliBinary(): string {
   const roots: string[] = [];
   if (process.env.CARGO_TARGET_DIR) roots.push(process.env.CARGO_TARGET_DIR);
   const here = dirname(fileURLToPath(import.meta.url));
-  roots.push(resolve(here, "../src-tauri/target"));
+  roots.push(resolve(here, "../target"));
   for (const root of roots) {
     for (const profile of ["debug", "release"]) {
       const candidate = join(root, profile, name);

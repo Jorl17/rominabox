@@ -13,5 +13,5 @@ endings, which are LF, each file at its path in its pack:
 
 catalog.json names each preset and credits its authors, and a game that
 bundles one carries those credits beside it. Each file keeps its own notice.
-desktop/src-tauri/examples/import_shaders.rs fills the library from those
+desktop/crates/rominabox-engine/examples/import_shaders.rs fills the library from those
 commits.

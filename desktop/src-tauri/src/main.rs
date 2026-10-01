@@ -1,8 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use rominabox_desktop::export_error::{AuthorError, ErrorStage};
-use rominabox_desktop::target::Target;
-use rominabox_desktop::{
+use rominabox_engine::export_error::{AuthorError, ErrorStage};
+use rominabox_engine::target::Target;
+use rominabox_engine::{
     builder, controls, cores, hotkeys, icons, menu, metadata, packaging, pads, projects, systems,
     traveling,
 };
@@ -264,9 +264,9 @@ fn traveling_files(path: PathBuf, system: Option<String>) -> Result<traveling::T
 /// The author's filters that a Windows game cannot load, as in `shaders-check`.
 #[tauri::command]
 fn shader_warnings(
-    selection: rominabox_desktop::shaders::ShaderSelection,
-) -> Result<Vec<rominabox_desktop::shaders::ShaderWarning>, String> {
-    rominabox_desktop::shaders::windows_warnings(&selection)
+    selection: rominabox_engine::shaders::ShaderSelection,
+) -> Result<Vec<rominabox_engine::shaders::ShaderWarning>, String> {
+    rominabox_engine::shaders::windows_warnings(&selection)
 }
 
 #[tauri::command]
@@ -360,7 +360,7 @@ fn sharp_window_icon(window: &tauri::WebviewWindow) {
 /// and removes FOLDER from the Path.
 #[cfg(windows)]
 fn installer_request(identifier: &str) -> Option<i32> {
-    use rominabox_desktop::installation::{announce_environment, Installation, ENVIRONMENT};
+    use rominabox_engine::installation::{announce_environment, Installation, ENVIRONMENT};
     let arguments: Vec<PathBuf> = std::env::args_os().skip(1).map(PathBuf::from).collect();
     let installation = |local: &PathBuf, roaming: &PathBuf, command_line: &PathBuf| Installation {
         local: local.clone(),

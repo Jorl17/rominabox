@@ -1,7 +1,7 @@
 """A Windows game made into one program, as we use it in a harness.
 
 A Windows export is one `.exe`, the launcher with the rest of the game packed
-after it, in the layout from desktop/src-tauri/src/packaging/windows_pack.rs.
+after it, in the layout from desktop/crates/rominabox-engine/src/packaging/windows_pack.rs.
 On its first launch the game unpacks into its folder under the per-user
 application data and runs from there. In a harness we read and write the
 game as that folder. With `unpacked` we let the game unpack itself, with a

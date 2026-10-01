@@ -21,15 +21,19 @@ from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Callable
 
+from built import WORKSPACE as BUILDER_WORKSPACE
+
 ROOT = Path(__file__).resolve().parent.parent
 DECLARED = ROOT / "scripts/licences.json"
 FORK = ROOT / "vendor/retroarch"
 FORK_SOURCE = "https://github.com/Jorl17/rominabox-retroarch"
 CORE_PINS = ROOT / "desktop/core-pins.json"
 NPM_LOCK = ROOT / "desktop/package-lock.json"
-# The builder's Cargo workspace. The crates in desktop/crates are
-# workspaces of their own, each named for its package.
-BUILDER_WORKSPACE = "desktop/src-tauri"
+# The builder's package, whose dependencies include the engine's and the
+# command line's: they share the builder's Cargo workspace, BUILDER_WORKSPACE.
+# The other crates in desktop/crates are workspaces of their own, each named
+# for its package.
+BUILDER_PACKAGE = BUILDER_WORKSPACE / "src-tauri"
 # The targets the builder is compiled for: macOS on either processor, and
 # Windows with the MSVC toolchain (.cargo/config.toml).
 BUILDER_TARGETS = ("aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-pc-windows-msvc")
@@ -365,12 +369,24 @@ def cores() -> list[Component]:
 
 # Crates --------------------------------------------------------------------
 
+def builder_members() -> set[Path]:
+    """The packages of the builder's Cargo workspace, which the builder's
+    listing covers."""
+    root = ROOT / BUILDER_WORKSPACE
+    document = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8"))
+    return {(root / member).resolve() for member in document["workspace"]["members"]}
+
+
 def workspaces() -> dict[Path, str]:
-    """The builder's workspace and every crate in desktop/crates, and what
-    each one is. A crate with no lockfile must have no dependencies, because
-    we could not list them without writing one."""
-    found = {ROOT / BUILDER_WORKSPACE: "the builder"}
+    """The builder's package and every crate in desktop/crates outside the
+    builder's workspace, and what each one is. Such a crate with no lockfile
+    must have no dependencies, because we could not list them without
+    writing one."""
+    found = {ROOT / BUILDER_PACKAGE: "the builder"}
+    members = builder_members()
     for manifest in sorted((ROOT / "desktop/crates").glob("*/Cargo.toml")):
+        if manifest.parent.resolve() in members:
+            continue
         document = tomllib.loads(manifest.read_text(encoding="utf-8"))
         if not (manifest.parent / "Cargo.lock").is_file():
             if any(key.endswith("dependencies") and key != "dev-dependencies" and value

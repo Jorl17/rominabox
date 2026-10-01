@@ -1,14 +1,14 @@
 """Run `cargo test` binaries again when their sources have not changed.
 
-With a warm cache, `cargo test` of the desktop crate takes about ten seconds
+With a warm cache, `cargo test` of the engine crate takes about ten seconds
 before any test runs, and the tests themselves take under a second. That
 time goes into checking that the build is up to date. The binaries from the
 last run are the same tests, so on a later run we execute them directly.
 
-The stamp is a hash of the crate's rust sources, its manifests, and every
-file embedded in those sources with include_str! or include_bytes!. We leave
-out a file that a test opens at runtime, because we read its current copy
-in the test. With an embedded file left out, we would run a binary that
+The stamp is a hash of the crate's rust sources, its manifests, the manifest
+and lockfile of its workspace, and every file embedded in those sources with
+include_str! or include_bytes!. We leave out a file that a test opens at
+runtime, because we read its current copy in the test. With an embedded file left out, we would run a binary that
 still has the previous copy, and the test would pass for the wrong reason.
 
 We keep stamps in work/ and never commit them. We do not stamp a failed
@@ -25,6 +25,7 @@ import re
 import subprocess
 import sys
 import threading
+import tomllib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -105,10 +106,29 @@ def _package_files(package: Path) -> list[Path]:
     return files
 
 
+def _declares_workspace(manifest: Path) -> bool:
+    return manifest.is_file() and "workspace" in tomllib.loads(manifest.read_text(encoding="utf-8"))
+
+
+def workspace_files(package: Path) -> list[Path]:
+    """The manifest and lockfile of the workspace that `package` belongs to,
+    when that workspace's root is above it. They pin the package's
+    dependencies and declare those it inherits. For a package that is its
+    own workspace, both files are beside its sources."""
+    if _declares_workspace(package / "Cargo.toml"):
+        return []
+    for folder in package.parents:
+        if _declares_workspace(folder / "Cargo.toml"):
+            return [folder / "Cargo.toml", folder / "Cargo.lock"]
+        if folder == ROOT:
+            break
+    return []
+
+
 def source_digest(manifest: Path) -> str:
     """Hash of everything that can change what the test binaries contain."""
     package = manifest.parent
-    files = _package_files(package)
+    files = _package_files(package) + workspace_files(package)
     # A path dependency, such as rominabox-scratch, is outside the package. We
     # hash its sources as well, so after a change to it the stamp no longer
     # matches and we rebuild the binary.
