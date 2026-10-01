@@ -121,6 +121,7 @@ fn request(
         runtime_kit: kit,
         core: None,
         core_cache: None,
+        accounts_folder: None,
     }
 }
 
@@ -468,7 +469,6 @@ fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it
         "{} or its neighbour is left over from an earlier run",
         accounts.display()
     );
-    std::env::set_var("ROMINABOX_ACCOUNTS_FOLDER", FOLDER);
 
     let root = scratch();
     let kit = platform::fixture_kit(&root);
@@ -483,6 +483,9 @@ fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it
     let mut settings = request(&root, b"rominabox-isolation-accounts-v1", "Accounts Probe", kit, "megadrive");
     settings.game.show_menu = true;
     settings.game.include_achievements = true;
+    // Name it in the request, not in the process environment, because we read
+    // the environment in every export, and we export in other tests meanwhile.
+    settings.accounts_folder = Some(FOLDER.to_string());
     let app = export(&settings);
     let other = export(&request(
         &root.join("other"),
@@ -522,7 +525,6 @@ fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it
     if accounts.is_dir() && accounts.file_name().and_then(|name| name.to_str()) == Some(FOLDER) {
         fs::remove_dir_all(&accounts).unwrap();
     }
-    std::env::remove_var("ROMINABOX_ACCOUNTS_FOLDER");
 
     assert!(status.success(), "probe launch failed\n{log}");
     assert!(log.contains("ACCOUNTS_ALLOWED"), "the accounts folder was not usable\n{log}");

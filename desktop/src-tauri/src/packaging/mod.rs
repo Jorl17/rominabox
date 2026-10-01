@@ -232,6 +232,11 @@ pub struct ExportRequest {
     /// When this is absent, we fetch nothing and the core must be in the kit.
     #[serde(default)]
     pub core_cache: Option<PathBuf>,
+    /// The folder of shared QUICK SIGN IN accounts for a game with
+    /// achievements. When absent, we use the folder in ROMINABOX_ACCOUNTS_FOLDER,
+    /// or else the one that `achievements::accounts_folder` returns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accounts_folder: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

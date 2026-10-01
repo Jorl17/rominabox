@@ -44,6 +44,7 @@ fn request(splash: bool) -> ExportRequest {
         runtime_kit: PathBuf::from("runtime"),
         core: None,
         core_cache: None,
+        accounts_folder: None,
     }
 }
 

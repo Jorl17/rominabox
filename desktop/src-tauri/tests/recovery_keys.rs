@@ -142,6 +142,7 @@ fn export_request(root: &Path, advanced: bool, controls: Controls) -> ExportRequ
         runtime_kit: fixture_kit(root),
         core: None,
         core_cache: None,
+        accounts_folder: None,
     }
 }
 
