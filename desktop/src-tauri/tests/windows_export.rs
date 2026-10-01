@@ -199,8 +199,13 @@ fn a_core_that_needs_a_library_windows_lacks_is_refused() {
     let error = rominabox_desktop::packaging::export_game(&request, &cancelled, |_| {})
         .expect_err("a game whose core cannot load must not be made");
 
-    assert_eq!(error.stage, ErrorStage::Dependencies);
-    assert!(error.message.contains("helper.dll"), "{}", error.message);
+    // The fault is in the downloaded core, not in the builder, so we tell the
+    // author the library, and do not ask them to reinstall ROM-in-a-Box.
+    assert_eq!(
+        error.sentence(),
+        "The emulator for this console needs helper.dll, which Windows does not include, \
+         so the game would not start. Try again later: a newer version of the emulator may not need it."
+    );
     assert_eq!(names(&request.output_dir), Vec::<String>::new());
 }
 
