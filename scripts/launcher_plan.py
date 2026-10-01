@@ -10,6 +10,7 @@ own files.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import native_build  # noqa: E402
 import toolchain  # noqa: E402
 from core_source import host_target  # noqa: E402
+
+CONTRACT = Path(__file__).resolve().parent.parent / "desktop/src-tauri/launcher/launch_contract.inc"
+
+
+def windows_part(name: str) -> str:
+    """Where part `name` of a Windows game is beside its program, as declared
+    for the launcher in launch_contract.inc."""
+    found = re.search(rf'^RIB_WINDOWS_PART\({name}, "([^"]+)"\)', CONTRACT.read_text(encoding="utf-8"),
+                      re.MULTILINE)
+    if not found:
+        raise SystemExit(f"launch_contract.inc declares no Windows part {name}")
+    return found.group(1)
 
 
 def compile_macos(directory: Path) -> tuple[Path, Path]:

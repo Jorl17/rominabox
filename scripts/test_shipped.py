@@ -32,7 +32,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import native_build  # noqa: E402
 import scratch  # noqa: E402
-from launcher_plan import compile_plan  # noqa: E402
+import toolchain  # noqa: E402
+from launcher_plan import compile_plan, windows_part  # noqa: E402
 import menu_shots  # noqa: E402
 from menu_shots import QUIET_ENV, SOUND_ENV, TEST_USER_DATA_ENV  # noqa: E402
 
@@ -366,8 +367,10 @@ def run_plan_places() -> list[str]:
 
     We refuse the content path when it starts at a root or climbs out with
     `..`, and apply the same rule to every managed folder and to the data
-    folder below $user_data. For a refused plan we stop before we make
-    anything, so the place in the plan is never created.
+    folder below $user_data. The data folder must be a folder below
+    $user_data, so we refuse an absolute one and the per-user folder itself.
+    For a refused plan we stop before we make anything, so the place in the
+    plan is never created.
     """
     failures = []
     with scratch.scratch("rominabox-plan-places-") as made:
@@ -382,6 +385,9 @@ def run_plan_places() -> list[str]:
         # Each case contains the data folder, the managed folders, and where we
         # would write if we followed it.
         cases = {
+            "an absolute data folder": (str(root / "absolute-data"), ("logs",), root / "absolute-data"),
+            "the per-user folder itself": ("$user_data/", ("logs",), user_data),
+            "the per-user folder by its `.`": ("$user_data/.", ("logs",), user_data),
             "a data folder climbing out of $user_data": (
                 "$user_data/../escaped-user-data", ("logs",), root / "escaped-user-data"),
             "a managed folder climbing out": (data, ("logs", "../escaped-managed"), user_data / "escaped-managed"),
@@ -412,6 +418,70 @@ def run_plan_places() -> list[str]:
                 failures.append(f"an export's plan in {label} was refused: {ran.stderr.strip()[-300:]}")
             elif not (games / "retroarch.cfg").is_file() or not (games / "overlays/keyboards").is_dir():
                 failures.append(f"an export's plan in {label} did not make its data folder at {games}")
+    return failures
+
+
+def stand_in_player(path: Path) -> None:
+    """Return a program in place of the player that ends at once, with no window."""
+    toolchain.activate()
+    source = path.with_name("stand-in-player.c")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write(source, "int main(void) { return 0; }\n")
+    built = subprocess.run([toolchain.describe()["cc"], "-O2", "-static", "-o", str(path), str(source)],
+                           capture_output=True, text=True)
+    if built.returncode != 0:
+        raise SystemExit(built.stderr[-600:] or "the stand-in player did not compile")
+
+
+def run_forget_places() -> list[str]:
+    """Check that UNINSTALL removes the game's folder in the ROM-in-a-Box games
+    folder, and nothing else.
+
+    In the program of a Windows game we remove the game's data folder after
+    the player ends, outside the game's sandbox and with all of the person's
+    rights (forget_if_asked, launcher/windows/main.c). Whatever folder the
+    plan contains, we only remove a folder of the games folder below the
+    per-user folder. We use a stand-in player that ends at once, and a quiet
+    launch. On a Mac we remove the game's folder inside its sandbox when the
+    player exits, so this check is for Windows only.
+    """
+    if sys.platform != "win32":
+        return []
+    failures = []
+    marker = menu_shots.launch_declaration("RIB_FORGET_MARKER")
+    with scratch.scratch("rominabox-forget-places-") as made:
+        root = Path(made)
+        binary, resources = compile_plan(root)
+        stand_in_player(binary.parent / windows_part("Player"))
+        user_data = root / "user-data"
+        games = user_data / "ROM-in-a-Box" / "Games"
+        # Each case contains the plan's data folder, the folder in it, and
+        # whether UNINSTALL removes it. The game's folder comes first, to show
+        # that the launch reached the removal at all.
+        cases = {
+            "the game's folder in the games folder": ("$user_data/ROM-in-a-Box/Games/plan", games / "plan", True),
+            "a folder beside the games folder": ("$user_data/ROM-in-a-Box/kept", games.parent / "kept", False),
+            "a folder outside ROM-in-a-Box": ("$user_data/kept", user_data / "kept", False),
+            "the games folder itself": ("$user_data/ROM-in-a-Box/Games", games, False),
+            "an absolute folder": (str(root / "absolute"), root / "absolute", False),
+        }
+        for label, (data_dir, folder, removed) in cases.items():
+            folder.mkdir(parents=True, exist_ok=True)
+            write(folder / marker, "")
+            write(folder / "the-persons-file", "kept\n")
+            ship_plan(resources, data_dir)
+            env = os.environ.copy()
+            env.pop("ROMINABOX_PLAN_ONLY", None)
+            env.pop(SOUND_ENV, None)
+            env[QUIET_ENV] = "1"
+            env[TEST_USER_DATA_ENV] = str(user_data)
+            ran = subprocess.run([str(binary)], env=env, stdin=subprocess.DEVNULL, capture_output=True,
+                                 text=True, timeout=60)
+            said = f" (exit {ran.returncode}: {ran.stderr.strip()[-300:]})"
+            if removed and folder.exists():
+                failures.append(f"{label}: UNINSTALL left {folder}{said}")
+            if not removed and not (folder / "the-persons-file").is_file():
+                failures.append(f"{label}: UNINSTALL removed {folder}{said}")
     return failures
 
 
@@ -493,7 +563,8 @@ def windows_build(directory: Path) -> list[str]:
 
 
 def main() -> int:
-    failures = run() + run_player_settings() + run_shader_choice() + run_plan_places() + run_menu_sounds()
+    failures = (run() + run_player_settings() + run_shader_choice() + run_plan_places() + run_forget_places()
+                + run_menu_sounds())
     with scratch.scratch("rominabox-core-options-windows-") as made:
         failures += windows_build(Path(made))
     for failure in failures:
