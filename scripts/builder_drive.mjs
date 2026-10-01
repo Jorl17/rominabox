@@ -1628,9 +1628,10 @@ async function main() {
         seen.add(item.id);
       }
     }
-    for (const profile of profiles()) {
-      if (!seen.has(profile.id)) console.log(`UNREACHABLE ${profile.id}`);
-    }
+    // We photograph every pad through the builder, or stop the walk with an error.
+    const missed = profiles().filter((profile) => !seen.has(profile.id));
+    for (const profile of missed) console.error(`UNREACHABLE ${profile.id}`);
+    if (missed.length) code = 1;
   } finally {
     await browser.close();
     await new Promise((resolve) => server.close(resolve));
