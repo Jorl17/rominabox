@@ -44,8 +44,29 @@ def controller_assets() -> list[str]:
 
 
 def copy_tree(source: Path, destination: Path) -> None:
+    """Make `destination` a copy of `source`, with every file in it and none it
+    no longer has, so no renamed or removed document is left in the kit. We
+    remove only files, not links, inside `destination`, and the folders that
+    leaves empty."""
     destination.mkdir(parents=True, exist_ok=True)
     shutil.copytree(source, destination, dirs_exist_ok=True)
+    # Deepest first, so we visit a folder after its contents.
+    for staged in sorted(destination.rglob("*"), reverse=True):
+        if staged.is_symlink() or (source / staged.relative_to(destination)).exists():
+            continue
+        if staged.is_file():
+            staged.unlink()
+        elif staged.is_dir() and not any(staged.iterdir()):
+            staged.rmdir()
+
+
+def retire(folder: Path, kept: set[str]) -> None:
+    """Remove every folder, not link, directly in `folder` and not in `kept`: a
+    design or a sound pack that the repository no longer has."""
+    for staged in sorted(folder.iterdir()):
+        if (staged.parent == folder and staged.is_dir() and not staged.is_symlink()
+                and staged.name and staged.name not in kept):
+            shutil.rmtree(staged)
 
 
 def stage(kit: Path) -> None:
@@ -73,6 +94,7 @@ def stage(kit: Path) -> None:
         raise SystemExit(f"Missing design package: {DESIGNS / 'native'}")
     for design in designs:
         copy_tree(design, kit / "designs" / design.name)
+    retire(kit / "designs", {design.name for design in designs})
 
     # When we compose a menu, we link and fill in the shared parts of every
     # design, and look for them beside the designs directory: <kit>/parts next
@@ -100,11 +122,7 @@ def stage(kit: Path) -> None:
     staging = kit / "sound-packs"
     staging.mkdir(parents=True, exist_ok=True)
     packs = {pack.name for pack in SOUNDS.iterdir() if pack.is_dir()}
-    for staged in sorted(staging.iterdir()):
-        # We only ever remove a folder, not a link, directly in the kit's sound-packs.
-        if (staged.parent == staging and staged.is_dir() and not staged.is_symlink()
-                and staged.name and staged.name not in packs):
-            shutil.rmtree(staged)
+    retire(staging, packs)
     for pack in sorted(packs):
         (staging / pack).mkdir(exist_ok=True)
         for cue in CUES:
@@ -118,12 +136,7 @@ def stage(kit: Path) -> None:
     # as in the repository. We remove a file that the library no longer has.
     if not SHADERS.is_dir():
         raise SystemExit(f"Missing shader library: {SHADERS}")
-    library = kit / "shaders"
-    copy_tree(SHADERS, library)
-    for staged in sorted(library.rglob("*")):
-        if (staged.is_file() and not staged.is_symlink()
-                and not (SHADERS / staged.relative_to(library)).is_file()):
-            staged.unlink()
+    copy_tree(SHADERS, kit / "shaders")
 
     (kit / "branding").mkdir(exist_ok=True)
     shutil.copy2(BRANDING / "logo.png", kit / "branding" / "logo.png")
