@@ -194,10 +194,10 @@ fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_pad_buttons()
         .unwrap();
 }
 
-/// In the builder's Controls step, the author binds a stick one direction at a
-/// time, and we check the hotkeys before each. Between two directions half an
-/// axis is moved, which we refuse in the export for its own reason. The hotkey
-/// check must still cover the game's inputs then, and only those.
+/// In the Controls step of the builder, the author binds a stick direction by
+/// direction, and we check the hotkeys before each. Between two directions,
+/// half an axis has moved, which we refuse on export for another reason. Even
+/// then, we report only the conflicts of hotkeys with the game's inputs.
 #[test]
 fn the_games_inputs_are_checked_while_a_stick_is_half_moved() {
     let half = Controls {

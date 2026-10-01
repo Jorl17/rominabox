@@ -230,8 +230,8 @@ void capture_look_and_ends(void *menu)
    check(inspect.has_class("hotkey-back-add", "capturing"), "the + being captured is marked capturing");
    check(!rib::hidden(view.document.root()->GetElementById("hotkeys-cancel")),
          "CANCEL shows while a binding is captured");
-   /* We draw one thing as focused, the waiting +. CANCEL, which is also
-    * marked capturing while the capture runs, looks the same as RESET. */
+   /* We draw one thing as focused, the waiting +. CANCEL, which also has
+    * the capturing class while the capture runs, looks the same as RESET. */
    check(inspect.has_class("hotkey-back-add", "focused"), "the + being captured has focus");
    check(inspect.property("hotkeys-cancel", "background-color") == inspect.property("hotkeys-reset", "background-color"),
          "CANCEL is drawn as RESET during a capture, not as the focused +: its background is "
@@ -408,7 +408,7 @@ void what_retroarch_reads(void *menu)
 
    /* In RetroArch a few keys are buttons of the menu pad, such as Space for
     * Start. A key bound to a menu hotkey is only that hotkey, and RetroArch
-    * checks that here. QUICK SAVE acts only while the game plays. */
+    * reads that here. QUICK SAVE acts only while the game plays. */
    check(rib_rmlui_menu_hotkey_key(key_code("enter")) && rib_rmlui_menu_hotkey_key(key_code("escape")),
          "CONFIRM's Enter and MENU's Escape are keys of the menu's hotkeys");
    check(!rib_rmlui_menu_hotkey_key(key_code("space")) && !rib_rmlui_menu_hotkey_key(key_code("f2")),
