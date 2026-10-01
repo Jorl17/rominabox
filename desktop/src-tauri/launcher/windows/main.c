@@ -383,6 +383,15 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
     }
 
     SetEnvironmentVariableW(outside_user_data, user_data_wide);
+    /* A test's own per-user folder replaces the person's, and we pass it
+     * inside only as outside_user_data. Inside, Windows reports the sandbox's
+     * folder as the per-user folder, and nothing in the sandbox can open the
+     * test's folder. */
+    {
+        wchar_t *test_user_data = wide(RIB_ENV_TEST_USER_DATA);
+        SetEnvironmentVariableW(test_user_data, NULL);
+        free(test_user_data);
+    }
     SetEnvironmentVariableW(outside_opened_by_person, opened_by_explorer() ? L"" LAUNCH_SWITCH_ON : NULL);
     {
         static wchar_t opened[WIDE_PATH_CAP];

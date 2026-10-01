@@ -283,6 +283,22 @@ void a_filter_row_applies_its_filter(const char *native_assets, const char *data
 }
 
 
+/* The fixture folder `name` in `data`: the files in `from`, and the shared
+ * parts that every menu.rml links, from `native`, next to menu.rcss, as we
+ * stage them in composition. */
+std::filesystem::path stage_fixture(const std::filesystem::path& from,
+      const std::filesystem::path& native, const char *data, const char *name)
+{
+   namespace fs = std::filesystem;
+   const fs::path assets = fs::path(data) / name;
+   fs::create_directories(assets);
+   for (const auto& entry : fs::directory_iterator(from))
+      if (entry.is_regular_file())
+         fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   fs::copy(native / "parts", assets / "parts", fs::copy_options::recursive | fs::copy_options::overwrite_existing);
+   return assets;
+}
+
 bool replace_once(std::string& text, const std::string& from, const std::string& to)
 {
    const auto at = text.find(from);
@@ -296,11 +312,7 @@ bool replace_once(std::string& text, const std::string& from, const std::string&
 std::string stage_disc_list(const char *native_assets, const char *data)
 {
    namespace fs = std::filesystem;
-   const fs::path assets = fs::path(data) / "disc-list-assets";
-   fs::create_directories(assets);
-   for (const auto& entry : fs::directory_iterator(native_assets))
-      if (entry.is_regular_file())
-         fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   const fs::path assets = stage_fixture(native_assets, native_assets, data, "disc-list-assets");
    std::string rows;
    for (int index = 0; index < 8; ++index)
    {
@@ -412,11 +424,7 @@ std::string stage_pad_choice(const char *native_assets, const char *data)
 {
    namespace fs = std::filesystem;
    const fs::path native(native_assets);
-   const fs::path assets = fs::path(data) / "pad-choice-assets";
-   fs::create_directories(assets);
-   for (const auto& entry : fs::directory_iterator(native / "stage" / "megadrive"))
-      if (entry.is_regular_file())
-         fs::copy_file(entry.path(), assets / entry.path().filename(), fs::copy_options::overwrite_existing);
+   const fs::path assets = stage_fixture(native / "stage" / "megadrive", native, data, "pad-choice-assets");
    for (const char *support : {"menu.rcss", "Silkscreen-Regular.ttf"})
       fs::copy_file(native / support, assets / support, fs::copy_options::overwrite_existing);
    std::ofstream(assets / "controls-defaults.cfg") <<

@@ -11,6 +11,7 @@ player, its libraries and the licences for each platform in the kit tool.
 
 from __future__ import annotations
 
+import functools
 import os
 import shutil
 import subprocess
@@ -30,9 +31,11 @@ SHADERS = ROOT / "integrations/shaders/library"
 CUES = ("up", "down", "ok", "cancel")
 
 
+@functools.cache
 def controller_assets() -> list[str]:
     """The controller pictures declared in the catalog, so nobody who adds a
-    console has to remember to extend a list here."""
+    console has to remember to extend a list here. We ask cargo once per
+    process, also in a run where we stage a kit for every exported game."""
     listed = subprocess.run(
         ["cargo", "run", "--quiet", "--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog/Cargo.toml"),
          "--bin", "rominabox-catalog", "--", "assets"],

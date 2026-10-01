@@ -37,7 +37,6 @@ import json
 import os
 import re
 import shutil
-import stat
 import subprocess
 import sys
 import tempfile
@@ -46,9 +45,12 @@ from pathlib import Path
 from typing import Iterator
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import kit_assets  # noqa: E402
 import native_build  # noqa: E402
+import windows_pack  # noqa: E402
 from core_source import host_target  # noqa: E402
 from directory_links import redirected  # noqa: E402
+from scratch import remove_made, scratch_run  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SHOTS = ROOT / "scripts/fixtures/menu-shots.json"
@@ -226,16 +228,13 @@ def _windows_prepare_storage(app: Path) -> None:
 
 
 def _windows_sandbox_folder(app: Path) -> Path:
-    """The sandbox folder of a Windows game, named as we name the sandbox in
-    the launcher: the application id prefix declared for the launcher and
-    the player in vendor/retroarch/rominabox_launch.h, and the game's identity.
-    Inside, the game's per-user folder is its AC folder."""
-    header = (ROOT / "vendor/retroarch/rominabox_launch.h").read_text(encoding="utf-8")
-    prefix = re.search(r'#define RIB_GAME_APP_ID_PREFIX "([^"]+)"', header)
+    """The folder for a sandboxed game on Windows, with the name of the sandbox
+    as in the launcher (windows_pack.sandbox_folder). Inside it, the AC folder
+    is the game's per-user folder."""
     identity = IDENTITY.search(plan_text(app))
-    if not prefix or not identity:
+    if not identity:
         raise SystemExit(f"cannot name the sandbox of {app}")
-    return Path(os.environ["LOCALAPPDATA"]) / "Packages" / f"{prefix.group(1)}{identity.group(1)}"
+    return windows_pack.sandbox_folder(identity.group(1))
 
 
 def home_for(app: Path) -> str:
@@ -282,11 +281,11 @@ APPS = {
         "launcher": _windows_launcher,
         "resources": lambda app: app / "Resources",
         "user_data": lambda app: (_windows_sandbox_folder(app) / "AC" if _windows_sandboxed(app)
-                                  else Path(os.environ["LOCALAPPDATA"])),
+                                  else windows_pack.per_user_folder(os.environ)),
         "sandboxed": _windows_sandboxed,
         "prepare_storage": _windows_prepare_storage,
         "storage_home": lambda app: (_windows_sandbox_folder(app) if _windows_sandboxed(app)
-                                     else Path(os.environ["LOCALAPPDATA"]) / "ROM-in-a-Box" / "Games"),
+                                     else windows_pack.per_user_folder(os.environ) / "ROM-in-a-Box" / "Games"),
         "running": _windows_running,
     },
 }
@@ -384,50 +383,16 @@ def data_dir_of(app: Path) -> Path | None:
     return Path(found.group(1).replace("$user_data", str(_app()["user_data"](app))))
 
 
-def launch_declaration(name: str) -> str:
-    """A name the launcher and the player share, from rominabox_launch.h."""
-    header = (ROOT / "vendor/retroarch/rominabox_launch.h").read_text(encoding="utf-8")
-    found = re.search(rf'#define {name} "([^"]+)"', header)
-    if not found:
-        raise SystemExit(f"rominabox_launch.h declares no {name}")
-    return found.group(1)
-
-
-# The variable with a test's own per-user data folder, which we read in the
-# launcher in place of the person's. A plan's $user_data is below it.
-TEST_USER_DATA_ENV = launch_declaration("RIB_ENV_TEST_USER_DATA")
-
-
-def forget_windows_game(program: Path, namespace: str) -> None:
-    """Remove everything on this computer from the Windows game `program` with
-    the game's own UNINSTALL. We write the same marker as its menu into its
-    data folder and launch it, and before a core is loaded we remove in the
-    launcher the game's sandbox, its data and every unpacked copy
-    (forget_if_asked, launcher/windows/main.c). We also remove the
-    QUICK SIGN IN folder of a game exported under `namespace`, but keep the
-    shared one and the one for a worktree."""
-    environment = dict(os.environ, **{QUIET_ENV: "1"})
-    folder = windows_pack.unpacked(program, environment)
-    data = data_dir_of(folder)
-    accounts = re.search(r"^accounts_dir\t(.+)$", plan_text(folder), re.MULTILINE)
-    if data is not None:
-        data.mkdir(parents=True, exist_ok=True)
-        (data / launch_declaration("RIB_FORGET_MARKER")).write_bytes(b"")
-        subprocess.run(
-            [str(program)],
-            env=dict(environment, ROMINABOX_PLAN_ONLY="1"),
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            check=True,
-            timeout=600,
-            **windowless(),
-        )
-    if accounts and namespace and accounts.group(1).endswith(f"-{namespace}") \
-            and accounts.group(1) != os.environ.get("ROMINABOX_ACCOUNTS_FOLDER"):
-        local = Path(os.environ["LOCALAPPDATA"])
-        made = local / accounts.group(1)
-        if made.parent == local and made.is_dir() and not made.is_symlink():
-            shutil.rmtree(made)
+def forget_windows_game(program: Path) -> None:
+    """Remove the sandbox registered for the Windows game `program`, which
+    belongs to the system and is in the person's Packages folder, with the
+    game's data. We register it in the launcher once the copy of the game is
+    complete, from the identity in its plan. Everything else from the game is
+    in the process's per-user folder, removed with it (windows_pack.own_user_data)."""
+    folder = windows_pack.runtime_folder(program, os.environ)
+    identity = IDENTITY.search(plan_text(folder)) if folder is not None else None
+    if identity:
+        windows_pack.forget_sandbox(identity.group(1))
 
 
 def log_of(app: Path) -> Path | None:
@@ -548,8 +513,6 @@ KIT = ROOT / "desktop/src-tauri/resources/runtime"
 # out of date or from another checkout. See scripts/built.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from built import cli as _cli  # noqa: E402
-import windows_pack  # noqa: E402
-from programs import windowless  # noqa: E402
 import player_build  # noqa: E402
 from core_source import core_source  # noqa: E402
 
@@ -656,39 +619,19 @@ def built_player() -> Path:
     return player_build.player_in(build)
 
 
-def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
-    """A copy of the runtime kit at `kit` with `player` as its player, and the
-    launcher, Native and `design` as in this tree, not as when we froze the
-    kit. We resolve Native and the design from this tree in the exporter, and
-    copy Native into menu-assets for the controller art of the old shot path."""
+def staged_kit(kit: Path, player: Path | None = None) -> Path:
+    """A copy of the runtime kit at `kit` with `player` as its player, or
+    the kit's player, and the launcher and every asset of a kit from the
+    repository (kit_assets.stage) as they are in this tree, not as they were
+    when we made the kit."""
     shutil.copytree(KIT, kit, symlinks=True)
-    for package_name in dict.fromkeys(("native", design)):
-        package = ROOT / "integrations/designs" / package_name
-        if not package.is_dir():
-            raise SystemExit(f"no design package at {package}")
-        staged_design = kit / "designs" / package_name
-        staged_design.mkdir(parents=True, exist_ok=True)
-        for document in package.iterdir():
-            if document.is_file():
-                shutil.copyfile(document, staged_design / document.name)
-                if package_name == "native":
-                    shutil.copyfile(document, kit / "menu-assets" / document.name)
-    installed = kit / native_build.kit_file(host_target(), "player")
-    shutil.copyfile(player, installed)
-    installed.chmod(0o755)
-    # The launcher built from this tree: a macOS kit's launch library attached
-    # to this player (build_kit.py), or the program next to it (build_player.py).
-    target_kit = native_build.kit_target(host_target())
-    if native_build.launch_library(target_kit):
-        workspace = kit.parent / "launch-library"
-        workspace.mkdir()
-        native_build.install_launch_library(kit, target_kit, workspace)
-    else:
-        built = native_build.build_launcher(kit.parent / "launcher", host_target(),
-                                            native_build.build_environment(host_target()), native_build.FORK)
-        if built is None:
-            raise SystemExit(f"the player recipe builds no launcher for {host_target()}")
-        shutil.copyfile(built, kit / native_build.kit_file(host_target(), "launcher"))
+    kit_assets.stage(kit)
+    if player is not None:
+        installed = kit / native_build.kit_file(host_target(), "player")
+        shutil.copyfile(player, installed)
+        installed.chmod(0o755)
+    # After the player, because we attach a macOS kit's launch library to it.
+    native_build.install_tree_launcher(kit, native_build.kit_target(host_target()))
     return kit
 
 
@@ -701,9 +644,9 @@ def _build_a_game(
     design: str = "native",
     palette: str = "blue",
     namespace: str = "",
-) -> tuple[Path, Path | None]:
-    """Export a game from the tree as it is now, and return the app, or on
-    Windows the single program of the export.
+) -> Path:
+    """Export a game from the tree as it is now, and return what we exported:
+    the app of a Mac game, or the single program of a Windows game.
 
     To take a picture of a change by hand, someone has to assemble a kit,
     remember which pieces are out of date, export, and replace the player
@@ -716,10 +659,10 @@ def _build_a_game(
     """
     settings = dict(settings or {})
     # In a shot, or in the palette loop, we can set the theme and the palette
-    # like any other export setting. We copy the package for that export.
+    # like any other export setting.
     design = str(settings.get("theme", design))
     palette = str(settings.get("palette", palette))
-    kit = staged_kit(run_dir / "kit", built_player(), design)
+    kit = staged_kit(run_dir / "kit", built_player())
 
     out = run_dir / "exported"
     out.mkdir(parents=True)
@@ -755,16 +698,10 @@ def _build_a_game(
     if result.returncode != 0:
         raise SystemExit(f"could not export a game to shoot:\n{result.stdout[-900:]}")
     written = [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
-    app = next((Path(event["result"]["appPath"]) for event in written if event.get("type") == "result"), None)
-    # A Windows game is one program, and in a harness we work on the folder
-    # of its unpacked files.
-    program = None
-    if app is not None and app.is_file() and PLATFORM == "windows":
-        program = app
-        app = windows_pack.unpacked(app, dict(os.environ, **{quiet_env(): "1"}))
-    if app is None or not app.is_dir():
-        raise SystemExit(f"the export wrote no app into {out}")
-    return app, program
+    exported = next((Path(event["result"]["appPath"]) for event in written if event.get("type") == "result"), None)
+    if exported is None or not exported.exists():
+        raise SystemExit(f"the export wrote no game into {out}")
+    return exported
 
 
 _programs: dict[Path, Path] = {}
@@ -777,6 +714,37 @@ def program_of(app: Path) -> Path | None:
 
 
 @contextmanager
+def game_folder(exported: Path) -> Iterator[Path]:
+    """The folder of the game we exported at `exported`, for the duration of
+    the block. For a game in the form of a folder, a Mac app, this is that
+    folder, and the game's files are in its container. A game in the form of
+    one program, a Windows game, is unpacked into the process's per-user
+    folder (windows_pack.own_user_data). When the block ends, however it
+    ends, we remove its sandbox and with that per-user folder everything else
+    from it, unless a player of it that timed out may still be running."""
+    if exported.is_dir():
+        yield exported
+        return
+    with windows_pack.own_user_data() as keep:
+        retained = False
+        try:
+            app = windows_pack.unpacked(exported, dict(os.environ, **{quiet_env(): "1"}))
+            _programs[app] = exported
+            try:
+                yield app
+            except PlayerTimeout as error:
+                retained = error.app == app
+                raise
+            finally:
+                _programs.pop(app, None)
+        finally:
+            if retained:
+                keep()
+            else:
+                forget_windows_game(exported)
+
+
+@contextmanager
 def build_a_game(
     rom: Path,
     workspace: Path,
@@ -786,7 +754,8 @@ def build_a_game(
     palette: str = "blue",
     namespace: str = "",
 ) -> Iterator[Path]:
-    """Keep one generated export only until the end of the block.
+    """Keep one generated export, and the files of its game (game_folder),
+    only until the end of the block, however it ends.
 
     `namespace` is the end of the game's bundle prefix, so games with the same
     content made at once (one per design) have separate storage.
@@ -794,40 +763,22 @@ def build_a_game(
     The app may still be in use by a player that timed out. In that case
     only, keep the temporary directory and print its location for inspection.
     """
-    run = os.environ.get("ROMINABOX_SCRATCH_RUN", "direct")
-    if not run or "/" in run or "\\" in run or ".." in run:
-        raise ValueError(f"scratch run id must be one path component, got {run!r}")
-    run_dir = Path(tempfile.mkdtemp(prefix=f"rominabox-menu-shots-{run}-"))
+    run_dir = Path(tempfile.mkdtemp(prefix=f"rominabox-menu-shots-{scratch_run()}-"))
     created = run_dir.lstat()
     keep = False
-    program = None
     try:
-        app, program = _build_a_game(rom, workspace, run_dir, system, settings, design, palette, namespace)
-        if program is not None:
-            _programs[app] = program
-        try:
-            yield app
-        except PlayerTimeout as error:
-            keep = error.app == app
-            if keep:
-                print(f"retained timed-out player's export for inspection: {run_dir}", file=sys.stderr)
-            raise
-        finally:
-            _programs.pop(app, None)
+        exported = _build_a_game(rom, workspace, run_dir, system, settings, design, palette, namespace)
+        with game_folder(exported) as app:
+            try:
+                yield app
+            except PlayerTimeout as error:
+                keep = error.app == app
+                if keep:
+                    print(f"retained timed-out player's export for inspection: {run_dir}", file=sys.stderr)
+                raise
     finally:
-        # When the block ends, we remove everything a Windows game made on the
-        # computer, the same as choosing UNINSTALL in the player.
-        if not keep and program is not None:
-            forget_windows_game(program, shot_bundle_prefix(workspace) + namespace)
         if not keep:
-            current = run_dir.lstat()
-            if (
-                not stat.S_ISDIR(current.st_mode)
-                or current.st_dev != created.st_dev
-                or current.st_ino != created.st_ino
-            ):
-                raise RuntimeError(f"temporary export changed ownership: {run_dir}")
-            shutil.rmtree(run_dir)
+            remove_made(run_dir, created)
 
 
 def main() -> int:

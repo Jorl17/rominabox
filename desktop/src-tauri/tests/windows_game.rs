@@ -283,6 +283,30 @@ fn a_newer_version_unpacks_into_a_folder_of_its_own_and_the_older_copy_goes() {
     assert_eq!(fs::read(&save).unwrap(), b"the player's save");
 }
 
+/// In a test we give the launcher a per-user folder of the test's own in place
+/// of the person's. We unpack the game there, outside its sandbox, and the
+/// game's data is in the sandbox's folder, as Windows reports it inside,
+/// because nothing inside the sandbox can open the test's folder.
+#[test]
+#[ignore = "launches a stand-in game in its sandbox; the wingame scope runs it"]
+fn a_game_given_a_tests_per_user_folder_unpacks_there_and_plays_in_its_sandbox() {
+    let root = workspace();
+    let kit = kit(&root);
+    let game = export(&request(&root, &kit, "Own Folder", "out"), &root);
+    let _kept = kept(&game.identity);
+    // It exists, as a person's per-user folder always does.
+    let user_data = root.join("user data");
+    fs::create_dir_all(&user_data).unwrap();
+
+    let launched = launch_in(&game.program, &root, Some(&user_data));
+    assert_eq!(launched.code, Some(PLAYED), "{}", launched.errors);
+    let copy = user_data.join("ROM-in-a-Box").join("Runtimes").join(&game.runtime);
+    assert!(copy.is_dir(), "it did not unpack into the test's folder");
+    assert_eq!(copies(&game.identity), Vec::<String>::new(), "it unpacked into the person's folder");
+    assert!(game.data.join("retroarch.cfg").is_file(), "its data is not in its sandbox's folder");
+    assert_eq!(ran_at(&game), [player_in(&copy)]);
+}
+
 /// When the player chooses UNINSTALL in the game's menu, we leave a marker in
 /// the game's data folder and close the game. In the launcher we then remove
 /// the game's sandbox and its data, the data from before the sandbox, and

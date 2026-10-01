@@ -26,6 +26,7 @@ import scratch  # noqa: E402
 import toolchain  # noqa: E402
 from core_source import host_target  # noqa: E402
 from launcher_plan import compile_plan  # noqa: E402
+from launch_header import TEST_USER_DATA_ENV  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -70,7 +71,7 @@ def run_plan(binary: Path, user_data: Path, data: str, quiet: bool = False, soun
     per-user folder, into the folder `data` below it."""
     env = os.environ.copy()
     env["ROMINABOX_PLAN_ONLY"] = "1"
-    env[menu_shots.TEST_USER_DATA_ENV] = str(user_data)
+    env[TEST_USER_DATA_ENV] = str(user_data)
     # The parent process of the harness is not launchd. We remove the variables,
     # so that a value left in this process cannot hide the default.
     env.pop(menu_shots.QUIET_ENV, None)

@@ -38,15 +38,14 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from built import cli  # noqa: E402
 from core_source import core, host_target  # noqa: E402
+import menu_shots  # noqa: E402
 import native_build  # noqa: E402
 import prepare_runtime  # noqa: E402
 import windows_pack  # noqa: E402
-from menu_shots import QUIET_ENV, forget_windows_game  # noqa: E402
 
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
 BUDGETS = ROOT / "scripts/fixtures/size-budgets.json"
 WORK = ROOT / "work/size-bundles"
-DESIGN = ROOT / "integrations/designs/native"
 
 
 def remove_owned(path: Path) -> None:
@@ -118,15 +117,17 @@ def windows_libraries(program: Path) -> list[str]:
             if path.endswith(".dll") and path != "Resources/game-core.dll"]
 
 
-def windows_installed(program: Path, name: str) -> tuple[int, int]:
+def windows_installed(program: Path, _name: str) -> tuple[int, int]:
     """Return the space used by a Windows game's unpacked files, and their
-    bytes. Then remove the game's sandbox, data and unpacked copy with its
-    own UNINSTALL."""
-    try:
-        folder = windows_pack.unpacked(program, dict(os.environ, **{QUIET_ENV: "1"}))
-        return du(folder), apparent(folder)
-    finally:
-        forget_windows_game(program, namespace(name))
+    bytes. We unpack it into a per-user folder of this process, then remove
+    that folder with everything created there, and the sandbox registered
+    for the game."""
+    with windows_pack.own_user_data():
+        try:
+            folder = windows_pack.unpacked(program, dict(os.environ, **{menu_shots.QUIET_ENV: "1"}))
+            return du(folder), apparent(folder)
+        finally:
+            menu_shots.forget_windows_game(program)
 
 
 def macos_installed(app: Path, _name: str) -> tuple[int, int]:
@@ -134,18 +135,11 @@ def macos_installed(app: Path, _name: str) -> tuple[int, int]:
     return du(app), apparent(app)
 
 
-def windows_resources(program: Path) -> Path:
-    """Return the folder of a Windows game's own files. We fill it by running
-    the game's program with its silent option."""
-    return windows_pack.unpacked(program, dict(os.environ, **{QUIET_ENV: "1"})) / "Resources"
-
-
-# For each platform, where an app has its own files, the check of the
-# libraries in an app, and the games we make only on this platform, each with
-# its budget and the other target whose core we also include in it.
+# For each platform, the size of an installed app, the check of the libraries
+# in an app, and the games we make only on this platform, each with its budget
+# and the other target whose core we also include in it.
 PLATFORMS = {
     "macos": {
-        "resources": lambda app: app / "Contents" / "Resources",
         "allocated": posix_allocated,
         "installed": macos_installed,
         "libraries": macos_libraries,
@@ -154,7 +148,6 @@ PLATFORMS = {
         },
     },
     "windows": {
-        "resources": windows_resources,
         "allocated": windows_allocated,
         "installed": windows_installed,
         "libraries": windows_libraries,
@@ -181,11 +174,6 @@ def require_core_beside(cache: Path, target: str) -> None:
             f"{artifact} for {target} is not at {beside}. Seed it with: "
             f"python3 scripts/prepare_runtime.py --seed-core-cache --target {target}"
         )
-
-
-def resources(app: Path) -> Path:
-    """Return the folder of an exported app's own files."""
-    return PLATFORMS[PLATFORM]["resources"](app)
 
 
 def namespace(name: str) -> str:
@@ -250,11 +238,9 @@ def main() -> int:
     rom.write_bytes(b"RIBsize")
     kit = WORK / "kit"
     remove_owned(kit)
-    shutil.copytree(KIT, kit, symlinks=True)
+    # The kit's player, with the launcher and the assets from the tree.
+    menu_shots.staged_kit(kit)
     cache = core_cache()
-    for document in DESIGN.iterdir():
-        if document.is_file():
-            shutil.copyfile(document, kit / "designs/native" / document.name)
 
     command = cli()
     bundles = {
