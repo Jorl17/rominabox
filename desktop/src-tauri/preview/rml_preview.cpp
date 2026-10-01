@@ -1,7 +1,7 @@
 /* The builder's menu preview. We draw a composed menu into a picture with
  * the player's own RmlUi renderer, off screen, with nothing shown.
  *
- *   rml-preview DOCUMENT OUTPUT WIDTH HEIGHT [--set ID:NAME=VALUE]...
+ *   rml-preview DOCUMENT OUTPUT WIDTH HEIGHT [--screen ID] [--set ID:NAME=VALUE]...
  *
  * DOCUMENT is the menu we composed in the exporter (menu::render_preview),
  * beside its design.cfg, style sheet, fonts and pictures. We write OUTPUT as
@@ -14,7 +14,16 @@
  * sets a class, `pseudo` a pseudo-class, `text` the element's content as
  * markup, as we write it inside the element in the exporter (an options
  * button's label is a span), and any other NAME a property. In the picture
- * tests we draw a menu's states this way (scripts/fixtures/menu-states.json). */
+ * tests we draw a menu's states this way (scripts/fixtures/menu-states.json).
+ *
+ * With --screen we show the design's screen of that id as in the player
+ * (screen_display.hpp), with its panel alone, its heading and its footer.
+ * Without it, we draw the document as it was composed, showing Pause.
+ *
+ * We read the design as in the player (load_design), with its fonts, its
+ * words and its screens. Once we have shown the screen and made the changes,
+ * we split every list into pages by the player's own rules (paging.hpp),
+ * from its first page, as in the menu when it loads. */
 
 #include "rml_preview.h"
 #include "gl_context.h"
@@ -23,22 +32,52 @@
 #include "rmlui/document_contract.hpp"
 #include "rmlui/elements.hpp"
 #include "rmlui/file_layer.hpp"
+#include "rmlui/paging.hpp"
+#include "rmlui/screen_display.hpp"
+#include "rmlui/words.hpp"
 #include "rmlui/render/platform.h"
 #include "rmlui/render/rmlui_gl.h"
 #include "third_party/lodepng.h"
 
 #include <RmlUi/Core.h>
-#include <file/config_file.h>
 #include <streams/file_stream.h>
 
 #include <algorithm>
+#include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
+
+/* The messages about a design from the design reader, which RetroArch would
+ * log. We write them to the preview's error output. */
+static void log_line(const char *format, va_list args)
+{
+   std::vfprintf(stderr, format, args);
+}
+extern "C" void RARCH_LOG(const char *format, ...)
+{
+   va_list args;
+   va_start(args, format);
+   log_line(format, args);
+   va_end(args);
+}
+extern "C" void RARCH_WARN(const char *format, ...)
+{
+   va_list args;
+   va_start(args, format);
+   log_line(format, args);
+   va_end(args);
+}
+extern "C" void RARCH_ERR(const char *format, ...)
+{
+   va_list args;
+   va_start(args, format);
+   log_line(format, args);
+   va_end(args);
+}
 
 namespace {
 
@@ -58,25 +97,6 @@ struct Quiet : Rml::SystemInterface
    }
 };
 
-/* The fonts declared in the design, read from design.cfg as in the player. */
-std::vector<std::string> design_fonts(const std::filesystem::path& folder)
-{
-   const std::string path = (folder / rib::files::Design).u8string();
-   std::vector<std::string> fonts;
-   config_file_t *config = config_file_new_from_path_to_string(path.c_str());
-   if (!config)
-      return fonts;
-   char *value = nullptr;
-   if (config_get_string(config, rib::keys::Fonts, &value) && value)
-   {
-      std::istringstream words(value);
-      for (std::string word; words >> word;)
-         fonts.push_back((folder / std::filesystem::u8path(word)).u8string());
-   }
-   free(value);
-   config_file_free(config);
-   return fonts;
-}
 
 /* One --set: an element, what to change on it and the value. */
 struct Change
@@ -118,7 +138,7 @@ bool apply(Rml::ElementDocument *document, const Change& change)
 }
 
 int render(const std::string& document_path, const std::string& output, int width, int height,
-      const std::vector<Change>& changes)
+      const std::string& screen, const std::vector<Change>& changes)
 {
    if (width <= 0 || height <= 0)
    {
@@ -141,10 +161,14 @@ int render(const std::string& document_path, const std::string& output, int widt
    int failed = 0;
    if (!Rml::Initialise())
       failed = 3;
-   /* The design's fonts, loaded as in the player, with the first as the
-    * fallback for any glyph missing from a face. */
+   /* The design, read as in the player: its words, and its fonts, with the
+    * first as the fallback for any glyph missing from a face. */
    const auto folder = std::filesystem::u8path(document_path).parent_path();
-   const std::vector<std::string> fonts = design_fonts(folder);
+   const rib::DesignDeclarations design = rib::load_design(folder.u8string().c_str());
+   rib::use_words(design.words);
+   std::vector<std::string> fonts;
+   for (const std::string& font : design.fonts)
+      fonts.push_back((folder / std::filesystem::u8path(font)).u8string());
    if (!failed && fonts.empty())
    {
       std::fprintf(stderr, "the design declares no fonts\n");
@@ -174,14 +198,32 @@ int render(const std::string& document_path, const std::string& output, int widt
       std::fprintf(stderr, "could not load %s\n", document_path.c_str());
       failed = 4;
    }
+   if (!failed && !screen.empty())
+   {
+      const auto& screens = design.screens;
+      const auto wanted = std::find_if(screens.begin(), screens.end(),
+            [&](const rib::ScreenDeclaration& declared) { return declared.id == screen; });
+      if (wanted == screens.end())
+      {
+         std::fprintf(stderr, "the design declares no screen %s\n", screen.c_str());
+         failed = 2;
+      }
+      else
+         rib::display_screen(document, screens, *wanted);
+   }
    for (const Change& change : changes)
       if (!failed && !apply(document, change))
          failed = 2;
+   if (!failed)
+      rib::paging::split_all(document);
    /* The footer's hint, written as in the player (Screens::set_footer_hint).
-    * We make the key in brackets an element of its own. */
+    * We make the key in brackets an element of its own. We write it so for a
+    * footer that still has the words it was composed or set with. A footer
+    * written when we showed a screen already contains its key. */
    if (!failed)
       if (Rml::Element *hint = document->GetElementById(rib::document_contract::FooterHint))
-         rib::write_hint(hint, rib::words_of(hint));
+         if (!rib::find_class(hint, rib::document_contract::HintKey))
+            rib::write_hint(hint, rib::words_of(hint));
 
    /* We draw into a framebuffer of our own, because a window that is never
     * shown has no pixels to read back. */
@@ -251,19 +293,26 @@ int render(const std::string& document_path, const std::string& output, int widt
 int run(const std::vector<std::string>& arguments)
 {
    std::vector<Change> changes;
+   std::string screen;
    bool understood = arguments.size() >= 5 && (arguments.size() - 5) % 2 == 0;
    for (size_t index = 5; understood && index < arguments.size(); index += 2)
    {
+      if (arguments[index] == "--screen" && screen.empty())
+      {
+         screen = arguments[index + 1];
+         understood = !screen.empty();
+         continue;
+      }
       Change change;
       understood = arguments[index] == "--set" && parse_change(arguments[index + 1], change);
       changes.push_back(change);
    }
    if (!understood)
    {
-      std::fprintf(stderr, "usage: rml-preview DOCUMENT OUTPUT WIDTH HEIGHT [--set ID:NAME=VALUE]...\n"
+      std::fprintf(stderr, "usage: rml-preview DOCUMENT OUTPUT WIDTH HEIGHT [--screen ID] [--set ID:NAME=VALUE]...\n"
             "NAME is class, pseudo, text (the element's content, as markup) or a property\n");
       return 2;
    }
    return render(arguments[1], arguments[2], std::atoi(arguments[3].c_str()),
-         std::atoi(arguments[4].c_str()), changes);
+         std::atoi(arguments[4].c_str()), screen, changes);
 }

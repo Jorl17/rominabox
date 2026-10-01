@@ -221,6 +221,10 @@
     ],
     "forkSources": [
       "menu/drivers/rmlui/file_layer.cpp",
+      "menu/drivers/rmlui/declarations.cpp",
+      "menu/drivers/rmlui/paging.cpp",
+      "menu/drivers/rmlui/screen_display.cpp",
+      "menu/drivers/rmlui/words.cpp",
       "menu/drivers/rmlui/render/rmlui_gl.cpp",
       "menu/drivers/rmlui/render/rmlui_gl3.cpp",
       "menu/drivers/third_party/lodepng.cpp",

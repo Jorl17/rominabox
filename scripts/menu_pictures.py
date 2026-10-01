@@ -61,8 +61,11 @@ def staged(design: str) -> Path:
     })
 
 
-def draw(document: Path, target: Path, width: int, shown: dict[str, str]) -> None:
-    flags: list[str] = []
+def draw(document: Path, target: Path, width: int, shown: dict[str, str],
+         screen: str | None = None) -> None:
+    """`document` drawn into `target`, showing `screen` as in the player
+    (its panel, heading and footer), with the changes in `shown`."""
+    flags: list[str] = ["--screen", screen] if screen else []
     for element, value in shown.items():
         flags += ["--set", f"{element}:{value}"]
     result = subprocess.run(
@@ -71,11 +74,6 @@ def draw(document: Path, target: Path, width: int, shown: dict[str, str]) -> Non
     )
     if result.returncode != 0:
         raise SystemExit(f"could not draw {target.name}: {result.stderr.strip()[:300]}")
-
-
-def showing(panel: str) -> dict[str, str]:
-    """Show one screen in place of Pause, as when switching panels in the player."""
-    return {"pause-panel": "display=none", panel: "display=block"}
 
 
 # ---- badges ---------------------------------------------------------------
@@ -149,7 +147,7 @@ def badges(design: str, staging: Path) -> list[str]:
     Image.new("RGB", (64, 64), (200, 120, 40)).save(staging / "badge-ready.png")
     document = (staging / "menu.rml").read_text()
     stylesheet = (staging / "menu.rcss").read_text()
-    shown = {**showing("achievements-panel"), "achievements-catalog": "display=block",
+    shown = {"achievements-catalog": "display=block",
              "achievements-signed-out": "display=none", "heading": "text=ACHIEVEMENTS"}
     rows = [("achievement-1", "DOWNLOADED", "ready"), ("achievement-2", "DOWNLOADING", "loading")]
 
@@ -157,7 +155,7 @@ def badges(design: str, staging: Path) -> list[str]:
         source = staging / f"badges-{name}.rml"
         source.write_text(markup)
         target = folder / f"badges-{design}-{name}.png"
-        draw(source, target, WIDTHS[0], shown)
+        draw(source, target, WIDTHS[0], shown, screen="achievements")
         return target
 
     listed = with_rows(document, rows, "badge-ready.png")
@@ -187,27 +185,13 @@ def badges(design: str, staging: Path) -> list[str]:
 
 # ---- Disc -----------------------------------------------------------------
 
-def headings(design: str) -> dict[str, str]:
-    """Each screen's heading, from the design and then Native, as composed."""
-    found: dict[str, str] = {}
-    for package in (design, "native"):
-        declared = json.loads((ROOT / "integrations/designs" / package / "design.json").read_text())
-        for screen in declared.get("screens", []):
-            if "heading" in screen:
-                found.setdefault(screen["id"], screen["heading"])
-    return found
-
-
 def disc_screens(staging: Path) -> None:
     document = (staging / "menu.rml").read_text()
-    titles = headings("disc")
     for screen in sorted(set(re.findall(r'id="([a-z]+)-back"', document))):
-        panel = f"{screen}-panel"
-        if f'id="{panel}"' not in document:
+        if f'id="{screen}-panel"' not in document:
             continue
         for width in WIDTHS:
-            shown = {**showing(panel), "heading": f"text={titles.get(screen, screen.upper())}"}
-            draw(staging / "menu.rml", OUTPUT / f"disc-{screen}-{width}.png", width, shown)
+            draw(staging / "menu.rml", OUTPUT / f"disc-{screen}-{width}.png", width, {}, screen=screen)
 
 
 def main() -> int:
