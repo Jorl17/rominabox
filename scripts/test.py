@@ -524,6 +524,17 @@ SCOPES = [
         launches_games=True,
     ),
     Scope(
+        "splash",
+        "that a game with the splash waits while it is up, as long as the design declares and not much more: "
+        "in a quiet run of the exported test cartridge, the time from the menu's first frame to the menu "
+        "opening in a game that opens at its menu",
+        "what the splash looks like or that a window shows it (a quiet run's window is hidden), or how long a "
+        "person's launch takes to draw its first frame",
+        [PYTHON, str(ROOT / "scripts/test_splash_hold.py")],
+        slow=True,
+        launches_games=True,
+    ),
+    Scope(
         "forget",
         "that UNINSTALL on Windows and RESET on macOS, chosen in a running game's menu by the menu's script "
         "driver, remove what the game keeps and keep the game: on Windows its sandbox, registered and with the "
