@@ -4,7 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 
 // We read the controller on the Rust side. Here we answer as a pad would:
 // each wait returns the next queued press, or goes on waiting with none.
-const pad = vi.hoisted(() => ({ presses: [] as string[], asked: 0 }));
+// We check the hotkey rules there too. Here each check returns the next
+// queued refusal, or no refusal with none queued.
+const pad = vi.hoisted(() => ({
+  presses: [] as string[],
+  asked: 0,
+  refusals: [] as object[],
+  checked: [] as object[],
+}));
 vi.mock("./bridge", () => ({
   capturePadPosition: () => {
     pad.asked += 1;
@@ -12,8 +19,13 @@ vi.mock("./bridge", () => ({
     return next ? Promise.resolve(next) : new Promise(() => {});
   },
   cancelPadCapture: () => Promise.resolve(),
+  checkHotkeys: (hotkeys: object, system: string, controls: object) => {
+    pad.checked.push({ hotkeys, system, controls });
+    return Promise.resolve(pad.refusals.shift() ?? null);
+  },
 }));
 import { ControlsEditor, emptyControls } from "./controls";
+import { defaultHotkeys } from "./hotkeys";
 import registry from "../controls.json";
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
@@ -27,7 +39,14 @@ function renderEditor(system = "atari2600") {
   const root = createRoot(container);
   function Example() {
     const [value, setValue] = useState(emptyControls);
-    return <ControlsEditor system={system} value={value} onChange={setValue} />;
+    return (
+      <ControlsEditor
+        system={system}
+        value={value}
+        onChange={setValue}
+        hotkeys={defaultHotkeys}
+      />
+    );
   }
   act(() => root.render(<Example />));
   return {
@@ -479,6 +498,75 @@ describe("controller authoring", () => {
       press("Escape");
       expect(container.textContent).toContain("Saved Left stick up.");
     } finally {
+      cleanup();
+    }
+  });
+});
+
+// A hotkey that works while the game runs must not use a key or pad button of
+// the game. We reject one in the export, when saving a project and in the
+// Hotkeys section, and also when a control is bound to it.
+describe("the hotkeys' inputs", () => {
+  const keyOf = (container: HTMLElement, button: string) =>
+    bindingButton(container, button).querySelector(".binding-key")
+      ?.textContent;
+
+  it("refuses a key a hotkey that acts while the game plays holds", async () => {
+    pad.refusals.push({
+      kind: "gameInput",
+      hotkey: "quick-save",
+      binding: "key:f2",
+      control: "a",
+      label: "C",
+    });
+    const { container, cleanup } = renderEditor("megadrive");
+    try {
+      click(bindingButton(container, "C"));
+      press("F2", "F2");
+      await settle();
+      expect(keyOf(container, "C")).toBe("C");
+      expect(container.textContent).toContain(
+        "F2 is already Quick save's. Binding unchanged.",
+      );
+      expect(pad.checked).toEqual([
+        {
+          hotkeys: defaultHotkeys,
+          system: "megadrive",
+          controls: { bindings: { a: { key: "f2" } } },
+        },
+      ]);
+    } finally {
+      pad.refusals.length = pad.checked.length = 0;
+      cleanup();
+    }
+  });
+
+  it("refuses a pad button a hotkey that acts while the game plays holds, pressed or chosen", async () => {
+    const r2 = {
+      kind: "gameInput",
+      hotkey: "quick-save",
+      binding: "pad:r2",
+      control: "a",
+      label: "C",
+    };
+    pad.refusals.push(r2, r2);
+    pad.presses = ["r2"];
+    const { container, cleanup } = renderEditor("megadrive");
+    try {
+      click(bindingButton(container, "C"));
+      await settle();
+      expect(padSelect(container, "C")!.value).toBe("a");
+      expect(container.textContent).toContain(
+        "R2 is already Quick save's. Binding unchanged.",
+      );
+      choose(padSelect(container, "C")!, "r2");
+      await settle();
+      expect(padSelect(container, "C")!.value).toBe("a");
+      expect(container.textContent).toContain("R2 is already Quick save's.");
+      expect(pad.checked).toHaveLength(2);
+    } finally {
+      pad.presses = [];
+      pad.refusals.length = pad.checked.length = 0;
       cleanup();
     }
   });
