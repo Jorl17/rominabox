@@ -346,8 +346,8 @@ SCOPES = [
     ),
     Scope(
         "player",
-        "that the built player refuses to start without an absolute data folder, with one starts and creates nothing beside itself, and on Windows declares UTF-8 as its code page",
-        "where a game's folders go once it runs; it only asks the player for its feature list, before any window or core",
+        "that the built player refuses to start without an absolute data folder, with one starts and creates nothing beside itself, and on Windows declares UTF-8 as its code page; and that a header gone from the fork since the build folder was built does not stop its next build, for each kind of source it compiles",
+        "where a game's folders go once it runs; it only asks the player for its feature list, before any window or core. The header check asks make what it would do, and does not build",
         [PYTHON, str(ROOT / "scripts/test_player.py")],
         skipped="opt-in: requires ROMINABOX_TEST_BUILD for a player built from the current fork commit",
     ),
