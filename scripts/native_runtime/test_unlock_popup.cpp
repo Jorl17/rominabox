@@ -91,6 +91,31 @@ int main(int argc, char **argv) {
    check(popup && popup->GetAttribute<Rml::String>("data-notice", "") == "achievement",
          "An unlock marks the row as one");
 
+   // A slot notice stays in the row for less time than an unlock. An unlock
+   // earned while a slot notice is shown waits, and opens when the notice
+   // goes two seconds later. The unlock then stays longer than that. (The
+   // designs draw a slot notice only over the game, so while the menu is
+   // open we check the row for which notice it has.)
+   const auto notice = [&] { return popup ? popup->GetAttribute<Rml::String>("data-notice", "") : ""; };
+   const auto unlocked = [&] {
+      auto *title = document.root()->GetElementById("unlock-title");
+      return popup && !rib::hidden(popup) && notice() == "achievement" && title
+            && title->GetInnerRML() == "FOURTH STEP";
+   };
+   overlays.clear_notification();
+   overlays.notify({rib::Overlays::Notice::Slot, "SLOT 3", "", ""});
+   pending_unlock = {}; pending_unlock.id = 124; pending_unlock.points = 5;
+   std::snprintf(pending_unlock.title, sizeof(pending_unlock.title), "FOURTH STEP");
+   achievements.update(); document.settle();
+   check(notice() == "slot", "An unlock waits while a slot notice is up");
+   host_time_us += 2000000;
+   overlays.update(false);
+   achievements.update(); document.settle();
+   check(unlocked(), "Two seconds after a slot notice, the unlock queued behind it shows");
+   host_time_us += 2000000;
+   overlays.update(false); document.settle();
+   check(unlocked(), "Two seconds on, the unlock still shows");
+
    achievements.context_lost();
    document.shutdown();
    std::printf("unlock popup: %d failures\n", failures);
