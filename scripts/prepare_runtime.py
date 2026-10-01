@@ -143,8 +143,17 @@ def digest(path: Path) -> str:
     return value.hexdigest()
 
 
-def copy_license_from_source(archive: Path, candidates: tuple[str, ...], destination: Path) -> str:
-    """Extract a declared license from a pinned GitHub source snapshot."""
+def licence_warning(problem: str) -> None:
+    """Warn that a licence text is missing or changed, with the file name.
+    We continue preparing, because a licence is attribution and never a
+    reason to leave out the component it belongs to."""
+    print(licences.warning([problem]), file=sys.stderr, flush=True)
+
+
+def copy_license_from_source(archive: Path, candidates: tuple[str, ...], destination: Path) -> str | None:
+    """Extract a declared license from a pinned GitHub source snapshot.
+    Return the archive member it came from, or warn and return None when the
+    archive contains none of `candidates`."""
     with tarfile.open(archive) as package:
         files = [member for member in package.getmembers() if member.isfile()]
         for candidate in candidates:
@@ -157,7 +166,8 @@ def copy_license_from_source(archive: Path, candidates: tuple[str, ...], destina
                 continue
             destination.write_bytes(source.read())
             return member.name
-    raise RuntimeError(f"No declared license {candidates!r} in {archive}")
+    licence_warning(f"{destination.name}: none of {', '.join(candidates)} is in {archive.name}")
+    return None
 
 
 def prepare_prebuilt_core(
@@ -282,7 +292,10 @@ def build_core(root: Path, name: str, spec: dict, downloads: Path) -> dict[str, 
     binary = root / "cores" / f"{name}_libretro.dylib"
     shutil.copy2(source / binary.name, binary)
     subprocess.run(["codesign", "--force", "--sign", "-", str(binary)], check=True)
-    shutil.copy2(source / license_file, root / "licenses" / f"{name}.txt")
+    if (source / license_file).is_file():
+        shutil.copy2(source / license_file, root / "licenses" / f"{name}.txt")
+    else:
+        licence_warning(f"{name}.txt: {license_file} is not in {archive.name}")
     if (root / "info").is_dir():
         (root / "info" / f"{name}_libretro.info").write_text(
             f'display_name = "{name}"\nsavestate = "true"\nsavestate_features = "serialized"\n'
@@ -512,8 +525,9 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
     Keep the downloaded archive in work/downloads. For export, stage only
     `<driver>/*.cfg` for each of `drivers`, without the meta/hotkey
     assignment lines. Beside the other component licences, store the
-    repository's licence entry for the profiles (licenses/data), which must
-    contain this archive's `COPYING`.
+    repository's licence entry for the profiles (licenses/data). When the
+    archive has no `COPYING`, or one that differs from that entry, give its
+    name in a warning and stage its profiles anyway.
     """
     if not drivers:
         raise RuntimeError("no joypad drivers to stage profiles for")
@@ -523,36 +537,32 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
     source_url = f"https://codeload.github.com/{JOYPAD_AUTOCONFIG_REPO}/tar.gz/{revision}"
     download(source_url, archive)
     licence_member = None
+    upstream_licence = None
     profiles: list[tuple[str, str, bytes]] = []
     with tarfile.open(archive) as package:
         for member in package.getmembers():
             if not member.isfile():
                 continue
-            profile = _profile(member.name, drivers)
-            if profile is None:
-                if Path(member.name).name == "COPYING" and len(Path(member.name).parts) == 2:
-                    source = package.extractfile(member)
-                    if source is None:
-                        continue
-                    licence_member = member.name
-                    entry = licences.entry("data", JOYPAD_AUTOCONFIG_COMPONENT)
-                    if licences.clean(licences.sources.decode(source.read())) not in licences.sections(entry).values():
-                        raise RuntimeError(f"{entry} does not hold {licence_member}; run scripts/licences.py")
-                    destination = root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE
-                    destination.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(entry, destination)
-                continue
             source = package.extractfile(member)
             if source is None:
                 continue
-            profiles.append((*profile, source.read()))
-    if licence_member is None:
-        raise RuntimeError(f"No COPYING member in {archive}")
-    licence_text = (root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE).read_text(encoding="utf-8")
-    if "Copyright (c) 2019 The RetroArch team" not in licence_text:
-        raise RuntimeError("Joypad autoconfig COPYING is missing the RetroArch MIT copyright")
-    if "Permission is hereby granted" not in licence_text:
-        raise RuntimeError("Joypad autoconfig COPYING is missing the MIT grant")
+            profile = _profile(member.name, drivers)
+            if profile is not None:
+                profiles.append((*profile, source.read()))
+            elif Path(member.name).name == "COPYING" and len(Path(member.name).parts) == 2:
+                licence_member = member.name
+                upstream_licence = licences.clean(licences.sources.decode(source.read()))
+    entry = licences.entry("data", JOYPAD_AUTOCONFIG_COMPONENT)
+    if not entry.is_file():
+        licence_warning(f"{entry.name}: licenses/data has no entry for the controller profiles")
+    else:
+        if licence_member is None:
+            licence_warning(f"{entry.name}: {archive.name} has no COPYING to compare it with")
+        elif upstream_licence not in licences.sections(entry).values():
+            licence_warning(f"{entry.name}: does not hold {licence_member} of {archive.name}")
+        destination = root / "licenses" / JOYPAD_AUTOCONFIG_LICENSE_FILE
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(entry, destination)
     # When upstream disabled a profile by commenting out its device name or an
     # id, no pad can match it in RetroArch, so we leave it out of the kit.
     disabled = [(driver, filename) for driver, filename, raw in profiles
