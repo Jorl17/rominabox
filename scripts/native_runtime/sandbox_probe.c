@@ -56,6 +56,9 @@ static void accounts_attempt(void) {
     }
 }
 
+/* RetroArch's network command port. */
+#define NETWORK_COMMAND_PORT 55355
+
 #if defined(_WIN32)
 #include "windows/sandbox_attempts.h"
 #elif defined(__APPLE__) || defined(__unix__)

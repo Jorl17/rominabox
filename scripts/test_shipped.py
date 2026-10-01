@@ -538,10 +538,9 @@ def run_menu_sounds() -> list[str]:
     return []
 
 
-# The modules that a Windows launcher will share, beside its file layer. We
-# cannot run them on Windows here, but we check that they compile there, so
-# that no POSIX-only call can slip in.
-PORTABLE = ("launch.c", "shipped_settings.c", "shipped_files.c", "accounts_folder.c", "player_settings.c")
+# The modules that a Windows launcher shares, with its file layer and path
+# rules. We cannot run them on Windows here, but we check that they compile
+# there, so that no POSIX-only call can slip in.
 
 
 def windows_build(directory: Path) -> list[str]:
@@ -550,7 +549,7 @@ def windows_build(directory: Path) -> list[str]:
         print("core options: Windows build not checked, zig is not installed")
         return []
     failures = []
-    for source in [*(LAUNCHER / name for name in PORTABLE), *native_build.file_layer("windows")]:
+    for source in native_build.launch_sources("windows"):
         name = source.relative_to(LAUNCHER).as_posix()
         built = subprocess.run(
             [zig, "cc", "-target", "x86_64-windows-gnu", "-Wall", "-Wextra", "-Werror",

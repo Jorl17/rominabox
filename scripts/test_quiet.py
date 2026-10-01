@@ -37,15 +37,14 @@ FROZEN_DRIVER = "frozen-by-the-export"
 QUIET_DRIVER = "null"
 
 
-LAUNCHER = ROOT / "desktop/src-tauri/launcher"
 FORK = ROOT / "vendor/retroarch"
 
 
 def shared_launcher_sources() -> list[str]:
     """Return the launcher sources common to every platform, with this machine's
-    file layer, without an entry point."""
+    file layer and path rules, without an entry point."""
     platform = host_target().split("-", 1)[0]
-    return sorted(str(path) for path in {*LAUNCHER.glob("*.c"), *native_build.file_layer(platform)})
+    return sorted(str(path) for path in native_build.launch_sources(platform))
 
 
 def write_plan(resources: Path, data: str, driver: str = FROZEN_DRIVER) -> None:

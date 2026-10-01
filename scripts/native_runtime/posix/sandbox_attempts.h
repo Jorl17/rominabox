@@ -28,7 +28,7 @@ static void network_command_attempt(void) {
     struct sockaddr_in address;
     memset(&address, 0, sizeof address);
     address.sin_family = AF_INET;
-    address.sin_port = htons(55355);
+    address.sin_port = htons(NETWORK_COMMAND_PORT);
     address.sin_addr.s_addr = htonl(INADDR_ANY);
     if (udp < 0 || bind(udp, (struct sockaddr *)&address, sizeof address) != 0)
         printf("UDP_DENIED\n");

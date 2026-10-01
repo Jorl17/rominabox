@@ -151,6 +151,20 @@ pub fn export_request_from(root: &Path, runtime_kit: PathBuf) -> ExportRequest {
     }
 }
 
+/// The icon in the player of a Windows kit, as group 1, as in RetroArch,
+/// which is a square of one colour, and the resource script that lists
+/// it.
+const PLAYER_ICON_COLOUR: [u8; 4] = [255, 0, 0, 255];
+const PLAYER_ICON_SIZE: u32 = 32;
+const PLAYER_ICON_SCRIPT: &str = "1 ICON \"retroarch.ico\"\n";
+/// A Windows program that only ends: a kit's launcher, and its player.
+const PROGRAM_THAT_ENDS: &str = "int main(void) { return 0; }\n";
+/// The Mega Drive core of a Windows kit, a library with only its libretro
+/// API version.
+const STAND_IN_CORE: &str = "__declspec(dllexport) unsigned retro_api_version(void) { return 1; }\n";
+/// The joypad drivers a Windows kit has a controller profile folder for.
+const WINDOWS_JOYPAD_DRIVERS: [&str; 2] = ["xinput", "dinput"];
+
 // A Windows kit, which we compile with the toolchain's cc on Windows and with
 // zig on macOS and Linux, each in a separate file.
 #[cfg(windows)]
