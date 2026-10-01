@@ -221,12 +221,7 @@ function Marker({
           className="controller-leader"
         />
       ))}
-      <circle
-        cx={placed.marker.x + placed.marker.width / 2}
-        cy={placed.marker.y + placed.marker.height / 2}
-        r={placed.marker.width / 2}
-        className="controller-ring"
-      />
+      <Ring marker={placed.marker} />
       <rect
         x={placed.callout.x}
         y={placed.callout.y}
@@ -249,6 +244,24 @@ function Marker({
         {binding}
       </text>
     </g>
+  );
+}
+
+/**
+ * The ring over a button: a light line between two dark edges, so it is
+ * visible on a pale pad as well as on a dark one.
+ */
+function Ring({ marker }: { marker: Rect }) {
+  const at = {
+    cx: marker.x + marker.width / 2,
+    cy: marker.y + marker.height / 2,
+    r: marker.width / 2,
+  };
+  return (
+    <>
+      <circle {...at} className="controller-ring-edge" />
+      <circle {...at} className="controller-ring" />
+    </>
   );
 }
 
@@ -279,14 +292,7 @@ function StickStrip({
           className="controller-leader"
         />
       ))}
-      {placed.marker ? (
-        <circle
-          cx={placed.marker.x + placed.marker.width / 2}
-          cy={placed.marker.y + placed.marker.height / 2}
-          r={placed.marker.width / 2}
-          className="controller-ring"
-        />
-      ) : null}
+      {placed.marker ? <Ring marker={placed.marker} /> : null}
       <rect
         x={placed.strip.x}
         y={placed.strip.y}

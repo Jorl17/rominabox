@@ -72,6 +72,10 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .control-hit { position: absolute; box-sizing: border-box; width: design(marker-diameter)dp; height: design(marker-diameter)dp; background-color: transparent; border: 2dp transparent; border-radius: design(marker-radius)dp; }
 .control-callout:hover .control-hit, .control-group:hover .control-hit { border-color: design(ink); }
 .control-callout.focused .control-hit, .control-group.focused .control-hit { border-color: design(highlight); }
+/* A lit ring has a crisp dark edge outside and inside, so it is visible on a
+ * pale pad as well as on a dark one. */
+.control-callout:hover .control-hit, .control-group:hover .control-hit,
+.control-callout.focused .control-hit, .control-group.focused .control-hit { box-shadow: design(bevel-dark) 0dp 0dp 0dp 1dp, design(bevel-dark) 0dp 0dp 0dp 1dp inset; }
 .control-callout { position: absolute; width: design(callout-width)dp; height: design(callout-height)dp; padding: 0; border: 2dp design(edge); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
 .control-callout:hover { border-color: design(ink); z-index: 2; }
 /* We draw a callout 54dp high with its border, the least distance between
