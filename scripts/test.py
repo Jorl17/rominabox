@@ -523,6 +523,17 @@ SCOPES = [
         launches_games=True,
     ),
     Scope(
+        "forget",
+        "that UNINSTALL on Windows and RESET on macOS, chosen in a running game's menu by the menu's script "
+        "driver, remove what the game keeps and keep the game: on Windows its sandbox, registered and with the "
+        "game's data, and its unpacked copy, the program staying; on macOS its data folder, the app staying",
+        "that a person's pointer or keys reach the button (the navigation scope), the screen's words, or the "
+        "builder's uninstaller; RESET has not been run on a Mac yet",
+        [PYTHON, str(ROOT / "scripts/test_forget_in_menu.py")],
+        slow=True,
+        launches_games=True,
+    ),
+    Scope(
         "quiet",
         "quiet launch decisions, null audio, transparent windows, hands-on opt-outs, and safe native timeout handling",
         "actual GL presentation or hands-on focus/fullscreen; the window probe never orders its window in",
