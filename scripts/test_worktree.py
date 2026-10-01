@@ -681,6 +681,34 @@ def an_up_to_date_menu_probe_is_not_compiled_again() -> None:
         check(not compiles, "a probe newer than everything it is built from is not compiled again")
 
 
+def every_program_a_run_starts_is_given_its_python() -> None:
+    """In the Rust tests we run the Python helpers with ROMINABOX_PYTHON
+    (repo::python()). In scripts/test.py we must pass it to cargo too, or a
+    cargo scope would use whichever python is on PATH."""
+    import importlib.util
+    from unittest.mock import patch
+
+    spec = importlib.util.spec_from_file_location("test_runner", Path(__file__).resolve().parent / "test.py")
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    given: dict[str, str | None] = {}
+
+    def record(command, **kwargs):
+        given[Path(command[0]).name] = kwargs["env"].get("ROMINABOX_PYTHON")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    with scratch.scratch() as made, patch.dict(os.environ), patch.object(subprocess, "run", record):
+        # When we start this process from scripts/test.py, it is already set.
+        os.environ.pop("ROMINABOX_PYTHON", None)
+        # There is no manifest there, so we run cargo as given and do not replay it.
+        runner.execute(["cargo", "test", "--manifest-path", str(Path(made) / "Cargo.toml")])
+        runner.execute([sys.executable, "-c", "pass"])
+    check(
+        given == {"cargo": sys.executable, Path(sys.executable).name: sys.executable},
+        f"cargo and every other program a run starts are given the run's Python: {given}",
+    )
+
+
 def a_branch_with_a_slash_keeps_its_whole_name() -> None:
     """Check that we read the branch name menu/nav back in remove(), and not nav."""
     import worktree
@@ -703,6 +731,7 @@ ANYWHERE = [
     the_built_cli_follows_the_redirected_cargo_target,
     a_file_compiled_into_the_tool_counts_as_its_source,
     a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote,
+    every_program_a_run_starts_is_given_its_python,
     a_rebuilt_rmlui_archive_invalidates_the_menu_probe,
     an_up_to_date_menu_probe_is_not_compiled_again,
     # We also run create() from inside a worktree, where we could check out an
