@@ -31,8 +31,9 @@
 #volume-control { border-color: design(surface); }
 #volume-control .slider-track { border-color: design(bevel-dark); }
 .slider-thumb { background-color: design(ink); border-color: design(ink); }
-.slider:hover .slider-thumb { border-color: design(ink); }
-.slider.focused .slider-thumb, .slider.focused:hover .slider-thumb, .slider.dragging .slider-thumb, .slider:active .slider-thumb { background-color: design(highlight); border-color: design(highlight); }
+.slider:hover .slider-thumb { border-color: design(highlight); }
+.slider.focused .slider-thumb, .slider.focused:hover .slider-thumb { background-color: design(highlight); border-color: design(highlight); }
+.slider.dragging .slider-thumb, .slider:active .slider-thumb { background-color: design(highlight); border-color: design(ink); }
 
 /* Controls. The pixel font has only capitals, but these words are in mixed
  * case in the console data, and here they look like the button labels. */
