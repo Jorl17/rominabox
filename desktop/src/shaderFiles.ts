@@ -5,7 +5,7 @@ export const SHADER_EXTENSIONS = ["glsl", "glslp", "slang", "slangp"];
 
 const extension = new RegExp(`\\.(${SHADER_EXTENSIONS.join("|")})$`, "i");
 
-function baseName(filePath: string): string {
+export function baseName(filePath: string): string {
   return filePath.split(/[\\/]/).pop() ?? "";
 }
 
