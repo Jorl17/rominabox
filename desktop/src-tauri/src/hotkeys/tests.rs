@@ -194,6 +194,31 @@ fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_pad_buttons()
         .unwrap();
 }
 
+/// In the builder's Controls step, the author binds a stick one direction at a
+/// time, and we check the hotkeys before each. Between two directions half an
+/// axis is moved, which we refuse in the export for its own reason. The hotkey
+/// check must still cover the game's inputs then, and only those.
+#[test]
+fn the_games_inputs_are_checked_while_a_stick_is_half_moved() {
+    let half = Controls {
+        profile: None,
+        bindings: [("l_x_minus", "b"), ("b", "l_x_minus")]
+            .map(|(control, pad)| (control.to_string(), ControlOverride { pad: Some(pad.into()), ..Default::default() }))
+            .into(),
+    };
+    assert!(crate::controls::validate_for_system("ps1", &half).is_err());
+    crate::builder::unstated::hotkeys().check_for("ps1", &half).unwrap();
+    assert_eq!(
+        hotkeys(serde_json::json!({ "quick-save": ["key:z"] })).unwrap().check_for("ps1", &half).unwrap_err(),
+        Refusal::GameInput {
+            binding: Binding::Key("z".into()),
+            hotkey: named("quick-save"),
+            control: "b".into(),
+            label: "Cross".into()
+        }
+    );
+}
+
 /// We tell the builder the rule and the hotkeys, so that we can word the
 /// problem there. We refuse in the builder whatever the export would refuse.
 #[test]
