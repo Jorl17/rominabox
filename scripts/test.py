@@ -453,8 +453,9 @@ SCOPES = [
         "this tree and a stand-in player: its first launch unpacks it whole, a second runs that copy without "
         "unpacking it again, a file past 260 characters while it is unpacked still unpacks, a newer version "
         "unpacks beside the older copy, which goes while the saves stay, and UNINSTALL removes the game's data, "
-        "its sandbox, what it kept before it had a sandbox and every unpacked copy, and keeps the program; on "
-        "macOS nothing, since a Mac game is not one program",
+        "its sandbox, what it kept before it had a sandbox and every unpacked copy, and keeps the program; and "
+        "a program whose index names a folder outside the runtimes folder is refused, writing and removing "
+        "nothing; on macOS nothing, since a Mac game is not one program",
         "the unpacking dialog, a real player or core, UNINSTALL chosen in a running game's menu (the forget "
         "scope), or a disk that fills while a game unpacks",
         ["cargo", "test", "--quiet", *CARGO_DESKTOP, "--test", "windows_game", "--", "--ignored"],
