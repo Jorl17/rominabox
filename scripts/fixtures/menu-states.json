@@ -11,6 +11,8 @@
     "",
     "'pseudo' sets a real pseudo-class, so a hover state renders the design's",
     "own :hover rule rather than a second rule written for the screenshot.",
+    "A list sets each of its values: a control being captured is 'focused' and",
+    "'capturing' at once, as the player marks it.",
     "",
     "A state names elements by id, or by position \u2014 'controls-device-list>1' is the second option in the picker, whatever that console calls it, so one declaration renders on every console. scripts/menu_states.py refuses",
     "a state whose elements are not in the document, and refuses two states that",
@@ -239,13 +241,14 @@
           "display": "block"
         },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "PRESS A KEY"
         },
         "control-up": {
-          "class": "focused"
+          "class": ["focused", "capturing"]
         }
       }
     },
@@ -846,7 +849,8 @@
           "display": "block"
         },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "LEFT STICK UP: PRESS AN INPUT (5)"
@@ -870,7 +874,8 @@
           "display": "block"
         },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "LEFT STICK RIGHT: PRESS AN INPUT (5)"
@@ -894,7 +899,8 @@
           "display": "block"
         },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "LEFT STICK DOWN: PRESS AN INPUT (5)"
@@ -918,7 +924,8 @@
           "display": "block"
         },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "LEFT STICK LEFT: PRESS AN INPUT (5)"
@@ -942,7 +949,8 @@
           "display": "block"
         },
         "controls-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "controls-status": {
           "text": "LEFT STICK PRESS: PRESS AN INPUT (5)"
@@ -1301,10 +1309,11 @@
           "class": "pad"
         },
         "hotkey-confirm-add": {
-          "class": "capturing"
+          "class": ["focused", "capturing"]
         },
         "hotkeys-cancel": {
-          "display": "block"
+          "display": "block",
+          "class": "capturing"
         },
         "hotkeys-status": {
           "text": "CONFIRM: PRESS AN INPUT (10)"

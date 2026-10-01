@@ -202,6 +202,17 @@ def consoles_offering_a_picker() -> list[str]:
     return sorted(system for system, count in counted.items() if count > 1)
 
 
+def set_flags(found: str, properties: dict) -> list[str]:
+    """The renderer's --set flags for the overrides of one element. For a list
+    value we set each of its values, so that during a capture a control is
+    both focused and capturing."""
+    flags: list[str] = []
+    for prop, value in properties.items():
+        for each in value if isinstance(value, list) else [value]:
+            flags += ["--set", f"{found}:{prop}={each}"]
+    return flags
+
+
 def render(staging: Path, target: Path, overrides: dict[str, dict]) -> None:
     """Render the controls screen with these element overrides applied."""
     document = (staging / "menu.rml").read_text()
@@ -210,8 +221,7 @@ def render(staging: Path, target: Path, overrides: dict[str, dict]) -> None:
         found = resolve(document, element)
         if found is None:
             raise SystemExit(f"{staging}: nothing named {element} in the document")
-        for prop, value in properties.items():
-            flags += ["--set", f"{found}:{prop}={value}"]
+        flags += set_flags(found, properties)
     result = subprocess.run(
         [str(PREVIEW), str(staging / "menu.rml"), str(target),
          str(SIZE[0]), str(SIZE[1]), *flags],
@@ -583,8 +593,7 @@ def draw_state(design: str, system: str, palette: str, name: str, state: dict, s
     for element_id, (properties, _) in wanted.items():
         if resolved[element_id] is None:
             continue
-        for prop, value in properties.items():
-            overrides += ["--set", f"{resolved[element_id]}:{prop}={value}"]
+        overrides += set_flags(resolved[element_id], properties)
 
     target = output / f"{name}.png"
     result = subprocess.run(
