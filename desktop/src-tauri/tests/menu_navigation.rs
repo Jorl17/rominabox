@@ -102,6 +102,9 @@ fn compose(
         // We compose the disc list only for a game of several discs, and the
         // fake host gives the number of discs of the running game, even one.
         discs: 7,
+        // We bundle every catalog shader, and when we compose we take the
+        // libretro shaders from the library.
+        shader_library: repo::at("integrations/shaders/library"),
         ..rominabox_desktop::menu::MenuRequest::new(&staged, kit.join("menu-assets"))
     };
     rominabox_desktop::menu::compose_menu(&request)
