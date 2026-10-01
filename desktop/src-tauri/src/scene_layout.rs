@@ -1,12 +1,16 @@
 //! Where everything on the controller scene goes.
 //!
-//! This is the only placement code for the scene. We draw it in the exporter,
-//! and request it from the builder and the overlay renderer. To change how
-//! we route a leader line, change this file and nowhere else.
+//! This is the only implementation of the scene layout. We draw it in the
+//! exporter and read it in the builder and the overlay renderer, so every
+//! leader line starts at the same edge in all three. To change how we route
+//! a leader, change this file and its `routes`, and nowhere else.
 
 use crate::controls::{ControlDefinition, ControlProfile, StickDirection};
 use crate::menu::SceneMetrics;
+use routes::{Axis, End, Scene};
 use serde::Serialize;
+
+mod routes;
 
 /// A rectangle on the scene, in the scene's own coordinates.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -93,38 +97,16 @@ fn inner_edge(callout_x: i32, metrics: SceneMetrics) -> i32 {
     }
 }
 
-fn horizontal(at_y: i32, from_x: i32, to_x: i32) -> Segment {
-    Segment {
-        x: from_x.min(to_x),
-        y: at_y,
-        width: (from_x - to_x).abs(),
-        height: 0,
-    }
-}
-
-fn vertical(at_x: i32, from_y: i32, to_y: i32) -> Segment {
-    Segment {
-        x: at_x,
-        y: from_y.min(to_y),
-        width: 0,
-        height: (from_y - to_y).abs(),
-    }
-}
-
-/// The route from a callout to its button.
-///
-/// From the callout's inner edge along the callout's own midline, then up or
-/// down the button's column, in two segments that form an L.
-///
-/// We use this route in every export. We define it only here, so a change to
-/// it is one edit.
+/// The L from a callout to its button: out of the callout's inner edge
+/// along the callout's own midline, then up or down the button's column.
+/// The route we use when we find no clear one. We find the others in
+/// [`routes`].
 fn leader(control: &ControlDefinition, metrics: SceneMetrics) -> Vec<Segment> {
-    let edge = inner_edge(control.callout_x, metrics);
-    let midline = midline(control, metrics);
-    vec![
-        horizontal(midline, edge, control.x),
-        vertical(control.x, midline, control.y),
-    ]
+    routes::runs(&[
+        (inner_edge(control.callout_x, metrics), midline(control, metrics)),
+        (control.x, midline(control, metrics)),
+        (control.x, control.y),
+    ])
 }
 
 fn midline(control: &ControlDefinition, metrics: SceneMetrics) -> i32 {
@@ -143,70 +125,39 @@ fn crosses(run: &Segment, painted: &Rect) -> bool {
     }
 }
 
-/// The route from a callout to its button when the L would cross a stick's
-/// box: out along the midline to halfway between the callout and the box, up
-/// or down beside the box to clear it, across to the button's column, and on
-/// to the button.
-///
-/// It passes the box halfway between the box and the nearest thing on that
-/// side of it the run would otherwise crowd: another leader's run across the
-/// same span, or the button itself.
-fn around(
-    control: &ControlDefinition,
-    obstacle: &Rect,
-    others: &[Vec<Segment>],
-    metrics: SceneMetrics,
-) -> Vec<Segment> {
-    let edge = inner_edge(control.callout_x, metrics);
-    let near = if edge < obstacle.x { obstacle.x } else { obstacle.x + obstacle.width };
-    let beside = (edge + near) / 2;
-    let span = (beside.min(control.x), beside.max(control.x));
-    let across = |run: &&Segment| {
-        run.height == 0 && run.x < span.1 && span.0 < run.x + run.width
-    };
-    let above = control.y < obstacle.y;
-    let clear = if above {
-        let nearest = others
-            .iter()
-            .flatten()
-            .filter(across)
-            .map(|run| run.y)
-            .filter(|y| *y < obstacle.y)
-            .fold(control.y, i32::max);
-        (nearest + obstacle.y) / 2
-    } else {
-        let bottom = obstacle.y + obstacle.height;
-        let nearest = others
-            .iter()
-            .flatten()
-            .filter(across)
-            .map(|run| run.y)
-            .filter(|y| *y > bottom)
-            .fold(control.y, i32::min);
-        (nearest + bottom) / 2
-    };
-    let midline = midline(control, metrics);
-    vec![
-        horizontal(midline, edge, beside),
-        vertical(beside, midline, clear),
-        horizontal(clear, beside, control.x),
-        vertical(control.x, clear, control.y),
-    ]
-}
-
-/// The route from a stick to its box: down the stick's column to the top of
-/// the box, then along that edge to the box when the stick is beside it
-/// instead of above it. It stops where the box's painted edge begins. We draw
-/// the leader over the box, so a run along the box's border would cover that
-/// border.
+/// The straight drop from a stick to its box: down the stick's column to
+/// the top of the box, then along that edge to the box when the stick is
+/// beside it. We use it for a stick's leader when we find no clear route.
 fn stick_leader(anchor: &ControlDefinition, strip: Rect, metrics: SceneMetrics) -> Vec<Segment> {
-    let mut route = vec![vertical(anchor.x, anchor.y, strip.y)];
     let painted = strip.width + 2 * metrics.group_border;
     let edge = anchor.x.clamp(strip.x, strip.x + painted);
-    if edge != anchor.x {
-        route.push(horizontal(strip.y, anchor.x, edge));
+    routes::runs(&[(anchor.x, anchor.y), (anchor.x, strip.y), (edge, strip.y)])
+}
+
+/// Where a stick's leader may meet its box: on the side of the box that
+/// faces the stick, anywhere along it but its corners.
+fn stick_ends(anchor: &ControlDefinition, painted: &Rect, scene: &Scene) -> Vec<End> {
+    let (left, top) = (painted.x, painted.y);
+    let (right, bottom) = (left + painted.width, top + painted.height);
+    let along = |axis: Axis, from: i32, to: i32| scene.turns(axis, (from + to) / 2, (from + 1, to - 1));
+    let mut ends = Vec::new();
+    for (faces, row) in [(anchor.y < top, top), (anchor.y > bottom, bottom)] {
+        if faces {
+            ends.extend(along(Axis::Across, left, right).into_iter().map(|x| End {
+                at: (x, row),
+                last: Some(Axis::Down),
+            }));
+        }
     }
-    route
+    for (faces, column) in [(anchor.x < left, left), (anchor.x > right, right)] {
+        if faces {
+            ends.extend(along(Axis::Down, top, bottom).into_iter().map(|y| End {
+                at: (column, y),
+                last: Some(Axis::Across),
+            }));
+        }
+    }
+    ends
 }
 
 /// Where each stick's box goes when its pad profile gives no place: side by
@@ -349,30 +300,81 @@ pub fn layout(profile: &ControlProfile, metrics: SceneMetrics) -> SceneLayout {
         .collect();
     let mut reaches = (0..buttons.len()).map(|button| reach(button, &buttons, metrics));
 
-    // Every leader follows the L unless the L would cross a stick's box. Then
-    // it goes around the box, clear of the Ls beside it.
-    let direct: Vec<Vec<Segment>> = drawn.iter().map(|c| leader(c, metrics)).collect();
-    let placements = drawn
+    let bounds = Rect {
+        x: 0,
+        y: 0,
+        width: metrics.scene_width,
+        height: metrics.scene_height,
+    };
+    let callout = |control: &ControlDefinition| Rect {
+        x: control.callout_x,
+        y: control.callout_y,
+        width: metrics.callout_width,
+        height: metrics.callout_height,
+    };
+    // Every ring and box on the pad, by the control or stick it is for, for
+    // the leaders to keep clear of.
+    let mut scene = Scene {
+        bounds,
+        rings: drawn
+            .iter()
+            .map(|control| (control.id.clone(), marker(control.x, control.y, metrics)))
+            .chain(names.iter().zip(&anchors).filter_map(|(name, anchor)| {
+                anchor.map(|anchor| ((*name).to_string(), marker(anchor.x, anchor.y, metrics)))
+            }))
+            .collect(),
+        boxes: drawn
+            .iter()
+            .map(|control| (control.id.clone(), painted(&callout(control), metrics.callout_border)))
+            .chain(names.iter().zip(&boxes).map(|(name, painted)| ((*name).to_string(), *painted)))
+            .collect(),
+        runs: Vec::new(),
+    };
+
+    // We route the sticks first, because they have the fewest ways to their
+    // boxes, then every control in the pad's order, clear of earlier leaders.
+    let stick_leaders: Vec<Vec<Segment>> = names
         .iter()
-        .zip(&direct)
-        .map(|(control, route)| {
-            let obstacle = boxes
-                .iter()
-                .find(|obstacle| route.iter().any(|run| crosses(run, obstacle)));
+        .zip(&anchors)
+        .zip(&strips)
+        .map(|((name, anchor), strip)| {
+            let Some(anchor) = anchor else {
+                return Vec::new();
+            };
+            let ends = stick_ends(anchor, &painted(strip, metrics.group_border), &scene);
+            let route = scene.route(
+                name,
+                (anchor.x, anchor.y),
+                None,
+                &ends,
+                stick_leader(anchor, *strip, metrics),
+            );
+            scene.runs.extend(route.iter().map(|run| ((*name).to_string(), *run)));
+            route
+        })
+        .collect();
+    let placements: Vec<Placement> = drawn
+        .iter()
+        .map(|control| {
+            let from = (inner_edge(control.callout_x, metrics), midline(control, metrics));
+            let end = End {
+                at: (control.x, control.y),
+                last: None,
+            };
+            let route = scene.route(
+                &control.id,
+                from,
+                Some(Axis::Across),
+                &[end],
+                leader(control, metrics),
+            );
+            scene.runs.extend(route.iter().map(|run| (control.id.clone(), *run)));
             Placement {
                 id: control.id.clone(),
                 marker: marker(control.x, control.y, metrics),
                 reach: reaches.next().expect("a reach for every drawn control"),
-                callout: Rect {
-                    x: control.callout_x,
-                    y: control.callout_y,
-                    width: metrics.callout_width,
-                    height: metrics.callout_height,
-                },
-                leader: match obstacle {
-                    Some(obstacle) => around(control, obstacle, &direct, metrics),
-                    None => route.clone(),
-                },
+                callout: callout(control),
+                leader: route,
             }
         })
         .collect();
@@ -381,7 +383,8 @@ pub fn layout(profile: &ControlProfile, metrics: SceneMetrics) -> SceneLayout {
         .iter()
         .zip(strips)
         .zip(anchors)
-        .map(|((name, strip), anchor)| {
+        .zip(stick_leaders)
+        .map(|(((name, strip), anchor), leader)| {
             let reach = anchor.map(|_| reaches.next().expect("a reach for every stick's anchor"));
             let ring = anchor.map(|anchor| marker(anchor.x, anchor.y, metrics));
             let members = controls
@@ -398,21 +401,14 @@ pub fn layout(profile: &ControlProfile, metrics: SceneMetrics) -> SceneLayout {
                 anchor: anchor.map(|anchor| anchor.id.clone()),
                 marker: ring,
                 reach,
-                leader: anchor
-                    .map(|anchor| stick_leader(anchor, strip, metrics))
-                    .unwrap_or_default(),
+                leader,
                 marks: ring.map(|ring| marks(members, ring)).unwrap_or_default(),
             }
         })
         .collect();
 
     SceneLayout {
-        scene: Rect {
-            x: 0,
-            y: 0,
-            width: metrics.scene_width,
-            height: metrics.scene_height,
-        },
+        scene: bounds,
         controls: placements,
         groups,
     }
@@ -421,6 +417,15 @@ pub fn layout(profile: &ControlProfile, metrics: SceneMetrics) -> SceneLayout {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+fn vertical(at_x: i32, from_y: i32, to_y: i32) -> Segment {
+    Segment {
+        x: at_x,
+        y: from_y.min(to_y),
+        width: 0,
+        height: (from_y - to_y).abs(),
+    }
+}
 
     fn metrics() -> SceneMetrics {
         SceneMetrics {
@@ -575,67 +580,121 @@ mod tests {
         assert_eq!(group.leader, vec![vertical(420, 200, group.strip.y)]);
     }
 
-    /// For a stick beside its box, the leader turns along the box's top edge
-    /// and stops where the painted edge begins, on whichever side it is.
-    #[test]
-    fn a_stick_beside_its_box_turns_to_the_near_painted_edge() {
-        let metrics = metrics();
-        let left = layout(&pad(stick(100)), metrics).groups[0].clone();
-        assert_eq!(
-            left.leader,
-            vec![
-                vertical(100, 200, left.strip.y),
-                horizontal(left.strip.y, 100, left.strip.x),
-            ]
-        );
-        let right = layout(&pad(stick(900)), metrics).groups[0].clone();
-        let painted_right = right.strip.x + metrics.group_width + 2 * metrics.group_border;
-        assert_eq!(
-            right.leader,
-            vec![
-                vertical(900, 200, right.strip.y),
-                horizontal(right.strip.y, 900, painted_right),
-            ]
-        );
+    /// Whether `point` lies on `run`.
+    fn on_run(point: (i32, i32), run: &Segment) -> bool {
+        (run.x..=run.x + run.width).contains(&point.0) && (run.y..=run.y + run.height).contains(&point.1)
     }
 
-    /// A leader whose L would pass through a stick's box goes around it: it
-    /// leaves the callout the same way, turns up beside the box, crosses
-    /// halfway between the box and the leader above it, and meets the button
-    /// the same way.
-    #[test]
-    fn a_leader_that_would_cross_a_box_goes_around_it() {
-        let metrics = metrics();
-        let callout = |id: &str, x: i32, y: i32, callout_y: i32| ControlDefinition {
+    /// Whether `route` is one line from `from` to `to`: each run starts where
+    /// the one before it ends.
+    fn joins(route: &[Segment], from: (i32, i32), to: (i32, i32)) -> bool {
+        let mut here = from;
+        for run in route {
+            let ends = [(run.x, run.y), (run.x + run.width, run.y + run.height)];
+            let Some(next) = ends.iter().find(|end| **end != here && on_run(here, run)) else {
+                return false;
+            };
+            here = *next;
+        }
+        here == to
+    }
+
+    /// How near `route` comes to `centre`.
+    fn nearest(route: &[Segment], centre: (i32, i32)) -> f64 {
+        route
+            .iter()
+            .map(|run| {
+                let dx = centre.0.clamp(run.x, run.x + run.width) - centre.0;
+                let dy = centre.1.clamp(run.y, run.y + run.height) - centre.1;
+                f64::from(dx * dx + dy * dy).sqrt()
+            })
+            .fold(f64::INFINITY, f64::min)
+    }
+
+    fn button(id: &str, at: (i32, i32), callout: (i32, i32)) -> ControlDefinition {
+        ControlDefinition {
             id: id.to_string(),
             label: id.to_string(),
             key: String::new(),
             group: None,
             direction: None,
-            x,
-            y,
-            callout_x: 16,
-            callout_y,
-        };
+            x: at.0,
+            y: at.1,
+            callout_x: callout.0,
+            callout_y: callout.1,
+        }
+    }
+
+    /// For a stick beside its box, the leader crosses above the box and goes
+    /// down to its top edge, away from its corners, on the stick's side.
+    #[test]
+    fn a_stick_beside_its_box_drops_onto_its_top() {
+        let metrics = metrics();
+        for x in [100, 900] {
+            let group = layout(&pad(stick(x)), metrics).groups[0].clone();
+            let painted = painted(&group.strip, metrics.group_border);
+            let last = group.leader.last().expect("a leader");
+            let landing = (last.x, group.strip.y);
+            assert_eq!(group.leader.len(), 2, "{x}: across, then down: {:?}", group.leader);
+            assert_eq!(last.width, 0, "{x}: it lands going down");
+            assert!(painted.x < landing.0 && landing.0 < painted.x + painted.width, "{x}: {landing:?}");
+            assert!(joins(&group.leader, (x, 200), landing), "{x}: {:?}", group.leader);
+        }
+    }
+
+    /// A leader whose L would pass through a stick's box goes around it, and
+    /// one whose L is clear keeps it.
+    #[test]
+    fn a_leader_that_would_cross_a_box_goes_around_it() {
+        let metrics = metrics();
         let mut controls = stick(420);
-        controls.push(callout("down", 323, 174, 270));
-        controls.push(callout("select", 430, 156, 324));
+        controls.push(button("down", (323, 174), (16, 270)));
+        controls.push(button("select", (430, 156), (16, 324)));
         let layout = layout(&pad(controls.clone()), metrics);
-        let strip = layout.groups[0].strip;
-        let down = &layout.controls[0];
-        let select = &layout.controls[1];
+        let strip = painted(&layout.groups[0].strip, metrics.group_border);
+        let (down, select) = (&layout.controls[0], &layout.controls[1]);
         assert_eq!(down.leader, leader(&controls[2], metrics), "down's L is clear");
-        let edge = 16 + 196 + 2 * 2;
-        let beside = (edge + strip.x) / 2;
-        let clear = (down.leader[0].y + strip.y) / 2;
-        assert_eq!(
-            select.leader,
-            vec![
-                horizontal(350, edge, beside),
-                vertical(beside, 350, clear),
-                horizontal(clear, beside, 430),
-                vertical(430, clear, 156),
-            ]
-        );
+        assert!(select.leader.iter().all(|run| !crosses(run, &strip)), "{:?}", select.leader);
+        assert!(joins(&select.leader, (16 + 196 + 2 * 2, 350), (430, 156)), "{:?}", select.leader);
+    }
+
+    /// A leader whose L runs through the ring over another button turns
+    /// around it, as GameCube's B does around the C-stick's ring.
+    #[test]
+    fn a_leader_turns_around_a_ring_in_its_way() {
+        let metrics = metrics();
+        let controls = vec![
+            button("c", (557, 226), (744, 0)),
+            button("b", (570, 146), (744, 315)),
+        ];
+        let b = layout(&pad(controls), metrics).controls[1].clone();
+        assert_ne!(b.leader, leader(&button("b", (570, 146), (744, 315)), metrics));
+        assert!(nearest(&b.leader, (557, 226)) >= 21.0, "{:?}", b.leader);
+        assert!(joins(&b.leader, (744, 341), (570, 146)), "{:?}", b.leader);
+    }
+
+    /// A stick's leader keeps off the leaders and rings below it, such as
+    /// the Dreamcast's D-pad Left line and ring.
+    #[test]
+    fn a_sticks_leader_keeps_off_the_leader_and_ring_below_it() {
+        let metrics = metrics();
+        let mut controls = stick(351);
+        controls[1].y = 126;
+        controls.push(button("left", (352, 207), (16, 126)));
+        let layout = layout(&pad(controls), metrics);
+        let (stick, left) = (&layout.groups[0], &layout.controls[0]);
+        assert!(nearest(&stick.leader, (352, 207)) >= 21.0, "{:?}", stick.leader);
+        for run in &stick.leader {
+            for other in &left.leader {
+                let side_by_side = (run.width == 0) == (other.width == 0);
+                let apart = if run.width == 0 { (run.x - other.x).abs() } else { (run.y - other.y).abs() };
+                let shared = if run.width == 0 {
+                    run.y.max(other.y) < (run.y + run.height).min(other.y + other.height)
+                } else {
+                    run.x.max(other.x) < (run.x + run.width).min(other.x + other.width)
+                };
+                assert!(!(side_by_side && shared && apart < 4), "{run:?} lies along {other:?}");
+            }
+        }
     }
 }
