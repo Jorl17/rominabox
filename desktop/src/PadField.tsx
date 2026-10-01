@@ -5,6 +5,8 @@ type Control = { id: string; label: string };
 /**
  * The pad position we read a control from, chosen by name, to move a control
  * without a controller at hand. To set it by a press, use the Bind button.
+ * We reject a position that another offered pad uses, and pass the rest to
+ * `onMove` to apply.
  */
 export function PadField({
   control,
@@ -31,7 +33,6 @@ export function PadField({
       return;
     }
     onMove(moved);
-    onMessage("Pad updated.");
   }
   return (
     <label>

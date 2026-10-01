@@ -1,10 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import registry from "../controls.json";
+import * as bridge from "./bridge";
 import { ControllerScene } from "./ControllerScene";
 import { ControlRow, StickRows, type RowContext } from "./ControlRows";
-import { useControlCapture } from "./controlCapture";
+import { useControlCapture, type Bindings } from "./controlCapture";
+import { refusalWords, type Hotkeys } from "./hotkeys";
 import { mouseButtons } from "./mouse";
-import { stopped } from "./padPositions";
+import { stopped, withPads } from "./padPositions";
 import { PadField } from "./PadField";
 import systemRegistry from "../systems.json";
 import "./controls.css";
@@ -23,15 +25,21 @@ export type Controls = {
 };
 export const emptyControls = (): Controls => ({ bindings: {} });
 
-/** Author defaults: each control's label, key, pad position and mouse button. */
+/**
+ * Author defaults: each control's label, key, pad position and mouse button.
+ * A control must not use a key or pad button of a hotkey that works while the
+ * game runs. We check that against `hotkeys` with the export rules.
+ */
 export function ControlsEditor({
   system,
   value,
   onChange,
+  hotkeys,
 }: {
   system: string;
   value: Controls;
   onChange: (controls: Controls) => void;
+  hotkeys: Hotkeys;
 }) {
   const systemDefinition = systemRegistry.systems.find(
     (s) =>
@@ -61,8 +69,8 @@ export function ControlsEditor({
   const [message, setMessage] = useState("");
   const buttons = useRef<Record<string, HTMLButtonElement | null>>({});
   const restoreFocus = useRef<string | null>(null);
-  const state = useRef({ value, onChange });
-  state.current = { value, onChange };
+  const state = useRef({ value, onChange, hotkeys });
+  state.current = { value, onChange, hotkeys };
 
   function patch(id: string, update: Partial<ControlOverride>) {
     const current = state.current;
@@ -76,10 +84,32 @@ export function ControlsEditor({
   }
   function movePads(moved: Record<string, string | undefined>) {
     const current = state.current;
-    const bindings = { ...current.value.bindings };
-    for (const [id, pad] of Object.entries(moved))
-      bindings[id] = { ...bindings[id], pad };
-    current.onChange({ ...current.value, bindings });
+    current.onChange({
+      ...current.value,
+      bindings: withPads(current.value.bindings, moved) as Controls["bindings"],
+    });
+  }
+  /** Why we reject the controls bound as `bindings` because of the hotkeys,
+   * in words for the author. Here we check only that no hotkey uses an input
+   * of the game, and leave other rules to the Hotkeys section and export. */
+  async function refuses(bindings: Bindings): Promise<string | null> {
+    const current = state.current;
+    const refusal = await bridge.checkHotkeys(current.hotkeys, system, {
+      ...current.value,
+      bindings: bindings as Controls["bindings"],
+    });
+    return refusal?.kind === "gameInput" ? refusalWords(refusal) : null;
+  }
+  async function choosePads(moved: Record<string, string | undefined>) {
+    const refused = await refuses(
+      withPads(state.current.value.bindings, moved),
+    );
+    if (refused) {
+      setMessage(refused);
+      return;
+    }
+    movePads(moved);
+    setMessage("Pad updated.");
   }
   const binding = useControlCapture({
     controls: profile.controls,
@@ -87,6 +117,7 @@ export function ControlsEditor({
     bindings: value.bindings,
     setKey: (id, key) => patch(id, { key }),
     movePads,
+    refuses,
     say: setMessage,
     ended: (stop) => {
       restoreFocus.current = stop;
@@ -131,7 +162,7 @@ export function ControlsEditor({
           movable={profile.controls}
           fixed={others}
           disabled={busy}
-          onMove={movePads}
+          onMove={(moved) => void choosePads(moved)}
           onMessage={setMessage}
         />
         <label>

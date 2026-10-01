@@ -1,6 +1,6 @@
 import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // We read the controller on the Rust side. Here we answer as a pad would:
 // each wait returns the next queued press, or goes on waiting with none.
@@ -30,6 +30,9 @@ import registry from "../controls.json";
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+afterEach(() => {
+  pad.refusals.length = pad.checked.length = 0;
+});
 
 // A console that uses the 16-control retropad fallback. ps1 has a separate
 // illustrated profile.
@@ -104,6 +107,12 @@ function press(code: string, key = code) {
   );
 }
 
+/** A key pressed while we wait for a control, and the hotkey check result. */
+async function pressed(code: string, key = code) {
+  press(code, key);
+  await settle();
+}
+
 function padSelect(container: HTMLElement, button: string) {
   return row(container, button).querySelector(
     `[aria-label="${button} pad"]`,
@@ -151,7 +160,7 @@ describe("controller authoring", () => {
       ).toBe(input.key);
   });
 
-  it("captures a row keyboard binding directly without opening hidden panels", () => {
+  it("captures a row keyboard binding directly without opening hidden panels", async () => {
     const { container, cleanup } = renderEditor();
     try {
       expect(container.querySelector("svg.controller-scene")).toBeNull();
@@ -163,7 +172,7 @@ describe("controller authoring", () => {
       click(l2);
       expect(l2.textContent).toMatch(/Press an input…\s*10/);
       expect(container.querySelector("details[open]")).toBeNull();
-      press("Space", " ");
+      await pressed("Space", " ");
       expect(bindingButton(container, "L2").textContent).toContain("Space");
       expect(container.querySelector("details[open]")).toBeNull();
     } finally {
@@ -172,14 +181,14 @@ describe("controller authoring", () => {
   });
 
   // Only Escape is reserved: it cancels here and opens the game's menu.
-  it("binds Q and F like any other key", () => {
+  it("binds Q and F like any other key", async () => {
     const { container, cleanup } = renderEditor();
     try {
       click(bindingButton(container, "L2"));
-      press("KeyQ", "q");
+      await pressed("KeyQ", "q");
       expect(bindingButton(container, "L2").textContent).toContain("Q");
       click(bindingButton(container, "R2"));
-      press("KeyF", "f");
+      await pressed("KeyF", "f");
       expect(bindingButton(container, "R2").textContent).toContain("F");
       expect(container.textContent).not.toContain("reserved");
     } finally {
@@ -188,7 +197,7 @@ describe("controller authoring", () => {
   });
 
   // We store RetroArch names (shift, num7), and show the author the key.
-  it("words a captured modifier and number as the keys that were pressed", () => {
+  it("words a captured modifier and number as the keys that were pressed", async () => {
     const { container, cleanup } = renderEditor();
     const shown = (button: string) =>
       bindingButton(container, button).querySelector(".binding-key")
@@ -196,10 +205,10 @@ describe("controller authoring", () => {
     try {
       expect(shown("L3")).toBe("1");
       click(bindingButton(container, "L2"));
-      press("ShiftLeft", "Shift");
+      await pressed("ShiftLeft", "Shift");
       expect(shown("L2")).toBe("Left Shift");
       click(bindingButton(container, "R2"));
-      press("Digit7", "7");
+      await pressed("Digit7", "7");
       expect(shown("R2")).toBe("7");
     } finally {
       cleanup();
@@ -225,11 +234,11 @@ describe("controller authoring", () => {
     }
   });
 
-  it("restores author keyboard defaults from a row without opening panels", () => {
+  it("restores author keyboard defaults from a row without opening panels", async () => {
     const { container, cleanup } = renderEditor();
     try {
       click(bindingButton(container, "L2"));
-      press("Space", " ");
+      await pressed("Space", " ");
       expect(bindingButton(container, "L2").textContent).toContain("Space");
       const reset = [...container.querySelectorAll("button")].find(
         (button) => button.textContent?.trim() === "Reset to defaults",
@@ -262,7 +271,7 @@ describe("controller authoring", () => {
     }
   });
 
-  it("keeps shared overrides when switching Mega Drive variants", () => {
+  it("keeps shared overrides when switching Mega Drive variants", async () => {
     const { container, cleanup } = renderEditor("megadrive");
     try {
       const variant = container.querySelector(
@@ -274,7 +283,7 @@ describe("controller authoring", () => {
       ]);
       enterText(actionInput(container, "A"), "Jump");
       click(bindingButton(container, "Start"));
-      press("KeyZ", "z");
+      await pressed("KeyZ", "z");
       expect(container.textContent).toMatch(/also controls/);
       const confirm = [...container.querySelectorAll("button")].find(
         (button) => button.textContent?.trim() === "Use for both",
@@ -292,10 +301,11 @@ describe("controller authoring", () => {
     }
   });
 
-  it("moves a control onto another's pad position by swapping them", () => {
+  it("moves a control onto another's pad position by swapping them", async () => {
     const { container, cleanup } = renderEditor("megadrive");
     try {
       choose(padSelect(container, "C")!, "b");
+      await settle();
       expect(padSelect(container, "C")!.value).toBe("b");
       expect(padSelect(container, "B")!.value).toBe("a");
       expect(container.textContent).toContain("Pad updated.");
@@ -399,20 +409,20 @@ describe("controller authoring", () => {
       expect(stickMember(container, "Left stick up").textContent).toMatch(
         /Press an input…\s*10/,
       );
-      press("KeyY", "y");
+      await pressed("KeyY", "y");
       expect(row(container, "Left stick up").className).not.toContain(
         "capturing",
       );
       expect(row(container, "Left stick right").className).toContain(
         "capturing",
       );
-      press("KeyM", "m");
-      press("KeyN", "n");
-      press("KeyH", "h");
+      await pressed("KeyM", "m");
+      await pressed("KeyN", "n");
+      await pressed("KeyH", "h");
       expect(row(container, "Left stick press").className).toContain(
         "capturing",
       );
-      press("KeyU", "u");
+      await pressed("KeyU", "u");
       expect(container.textContent).toContain("Binding updated.");
       expect(stickMember(container, "Left stick up").textContent).toBe(
         "YLeft stick up",
@@ -481,12 +491,12 @@ describe("controller authoring", () => {
     }
   });
 
-  it("asks before a stick's key takes another control's, then goes on", () => {
+  it("asks before a stick's key takes another control's, then goes on", async () => {
     const { container, cleanup } = renderEditor("ps1");
     try {
       click(buttonNamed(container, "Bind stick"));
       // Z is Cross's key.
-      press("KeyZ", "z");
+      await pressed("KeyZ", "z");
       expect(container.textContent).toContain("Z also controls Cross.");
       click(buttonNamed(container, "Use for both"));
       expect(stickMember(container, "Left stick up").textContent).toBe(
@@ -508,8 +518,7 @@ describe("controller authoring", () => {
 // Hotkeys section, and also when a control is bound to it.
 describe("the hotkeys' inputs", () => {
   const keyOf = (container: HTMLElement, button: string) =>
-    bindingButton(container, button).querySelector(".binding-key")
-      ?.textContent;
+    bindingButton(container, button).querySelector(".binding-key")?.textContent;
 
   it("refuses a key a hotkey that acts while the game plays holds", async () => {
     pad.refusals.push({
@@ -536,7 +545,21 @@ describe("the hotkeys' inputs", () => {
         },
       ]);
     } finally {
-      pad.refusals.length = pad.checked.length = 0;
+      cleanup();
+    }
+  });
+
+  // We reject a stick moved between two of its directions in the export, and
+  // the Hotkeys section has separate rules. Neither stops a key here.
+  it("takes a key whatever else the hotkeys' check says", async () => {
+    pad.refusals.push({ kind: "controls", message: "A stick is half moved." });
+    const { container, cleanup } = renderEditor("megadrive");
+    try {
+      click(bindingButton(container, "C"));
+      await pressed("KeyQ", "q");
+      expect(keyOf(container, "C")).toBe("Q");
+      expect(pad.checked).toHaveLength(1);
+    } finally {
       cleanup();
     }
   });
@@ -566,7 +589,6 @@ describe("the hotkeys' inputs", () => {
       expect(pad.checked).toHaveLength(2);
     } finally {
       pad.presses = [];
-      pad.refusals.length = pad.checked.length = 0;
       cleanup();
     }
   });
