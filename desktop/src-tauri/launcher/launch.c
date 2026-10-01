@@ -20,6 +20,7 @@
 #define RIB_PLAN_FIELD(name, field) static const char plan_##name[] = field;
 #define RIB_PLAN_MARK(name, line) static const char plan_mark_##name[] = line;
 #define RIB_TOKEN(name, token) static const char token_##name[] = token;
+#define RIB_USER_FOLDER(name, path) static const char user_folder_##name[] = path;
 #include "launch_contract.inc"
 #define RIB_FILE(name, file) static const char menu_##name[] = file;
 #define RIB_DATA_FILE(name, file) static const char menu_data_##name[] = file;
@@ -398,8 +399,8 @@ static int climbs_out(const char *path) {
 }
 
 /* `path` stays inside the folder it is joined to: it does not start at a
- * root and never climbs out with `..`. We apply this to the content path,
- * each managed folder and the data folder below $user_data. */
+ * root and never climbs out with `..`. We apply this to the content path
+ * and each managed folder. */
 static int stays_inside(const char *path) {
     if (is_separator(path[0]))
         return 0;
@@ -554,15 +555,66 @@ static char *read_plan(const char *resources) {
     return plan;
 }
 
-/* An export's data folder is $user_data and a path that stays inside it. A
- * plan may instead contain an absolute folder, as in the tests that keep a
- * game's data in their own place, but never a path that climbs out of it. */
-static int data_folder_stays_inside(const char *folder) {
-    if (starts_with(folder, token_UserData)) {
-        const char *below = folder + strlen(token_UserData);
-        return is_separator(below[0]) && stays_inside(below + 1);
+/* `part`, `length` bytes of a path, is the name of a folder inside the one
+ * before it. It is not empty, `.` or `..`, and on Windows it contains no
+ * drive or stream separator (`:`) and does not end in `.` or a space, which
+ * Windows drops. */
+static int plain_part(const char *part, size_t length) {
+    if (length == 0)
+        return 0;
+#if defined(_WIN32)
+    return !memchr(part, ':', length) && part[length - 1] != '.' && part[length - 1] != ' ';
+#elif defined(__APPLE__) || defined(__unix__)
+    return !(length == 1 && part[0] == '.') && !(length == 2 && part[0] == '.' && part[1] == '.');
+#else
+#error "the launcher has no plain path parts declared for this platform"
+#endif
+}
+
+/* `path` is one plain part or more: a folder inside the one it is joined
+ * to, and never that folder itself. */
+static int plain_parts(const char *path) {
+    const char *part = path;
+    for (;;) {
+        const char *end = part;
+        while (*end && !is_separator(*end))
+            end++;
+        if (!plain_part(part, (size_t)(end - part)))
+            return 0;
+        if (!*end)
+            return 1;
+        part = end + 1;
     }
-    return fs_is_absolute(folder) && !climbs_out(folder);
+}
+
+/* The path below the per-user folder in a plan's data folder, or NULL when
+ * the plan contains anything else. In an export we write $user_data and plain
+ * parts below it. We refuse an absolute folder, a part that climbs out, and
+ * the per-user folder itself. */
+static const char *data_folder_below(const char *folder) {
+    const char *below;
+    if (!starts_with(folder, token_UserData))
+        return NULL;
+    below = folder + strlen(token_UserData);
+    if (!is_separator(below[0]) || !plain_parts(below + 1))
+        return NULL;
+    return below + 1;
+}
+
+/* `path` is the parts of `folder`, with `/` for this platform's separators,
+ * and one plain part after them, so it is a folder directly in `folder`. */
+static int one_folder_of(const char *path, const char *folder) {
+    size_t index;
+    for (index = 0; folder[index]; index++)
+        if (folder[index] == '/' ? !is_separator(path[index]) : path[index] != folder[index])
+            return 0;
+    if (!is_separator(path[index]))
+        return 0;
+    path += index + 1;
+    for (index = 0; path[index]; index++)
+        if (is_separator(path[index]))
+            return 0;
+    return plain_part(path, index);
 }
 
 static void read_game_from(const char *plan, LaunchGame *game) {
@@ -581,7 +633,7 @@ static void read_game_from(const char *plan, LaunchGame *game) {
     field(plan, plan_AccountsDir, game->accounts_name, sizeof game->accounts_name);
     if (!field(plan, plan_DataDir, game->data_template, sizeof game->data_template))
         die("the launch plan has no data directory");
-    if (!data_folder_stays_inside(game->data_template))
+    if (!data_folder_below(game->data_template))
         die("the launch plan's data directory leaves its folder");
 }
 
@@ -592,20 +644,20 @@ void rominabox_read_game(const char *resources, LaunchGame *game) {
 }
 
 void rominabox_game_data_folder(const LaunchGame *game, const char *user_data, char *out, size_t out_cap) {
+    const char *below = data_folder_below(game->data_template);
     if (!user_data || !fs_is_absolute(user_data))
         die("there is no per-user folder to keep this game's files in");
-    if (starts_with(game->data_template, token_UserData)) {
-        int wrote = snprintf(out, out_cap, "%s%s", user_data, game->data_template + strlen(token_UserData));
-        if (wrote < 0 || (size_t)wrote >= out_cap)
-            die("the data directory does not fit");
-    } else if (fs_is_absolute(game->data_template)) {
-        snprintf(out, out_cap, "%s", game->data_template);
-    } else {
-        die("the data directory is not absolute");
-    }
-    fs_native_path(out);
-    if (!fs_is_absolute(out))
-        die("the data directory is not absolute");
+    if (!below)
+        die("the launch plan's data directory leaves its folder");
+    join_path(out, out_cap, user_data, below);
+}
+
+int rominabox_game_folder_to_forget(const LaunchGame *game, const char *user_data, char *out, size_t out_cap) {
+    const char *below = data_folder_below(game->data_template);
+    if (!below || !one_folder_of(below, user_folder_Games))
+        return -1;
+    rominabox_game_data_folder(game, user_data, out, out_cap);
+    return 0;
 }
 
 typedef struct {

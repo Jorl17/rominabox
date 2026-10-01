@@ -15,6 +15,8 @@
  * RIB_TOKEN(name, "$token")                 a place, in a config line or the
  *                                           data_dir; the launcher writes the
  *                                           path
+ * RIB_USER_FOLDER(name, "path")             a folder below the per-user data
+ *                                           folder ($user_data)
  * RIB_SHIPPED_SETTINGS(name, "app", "data") a folder the app ships, which the
  *                                           launcher applies to that folder in
  *                                           the game's data on every launch
@@ -38,6 +40,9 @@
 #endif
 #ifndef RIB_TOKEN
 #define RIB_TOKEN(name, token)
+#endif
+#ifndef RIB_USER_FOLDER
+#define RIB_USER_FOLDER(name, path)
 #endif
 #ifndef RIB_SHIPPED_SETTINGS
 #define RIB_SHIPPED_SETTINGS(name, app, data)
@@ -86,6 +91,14 @@ RIB_TOKEN(ResourcesDir, "$resources_dir")
  * plan's data_dir. Each platform's launcher says where it is. */
 RIB_TOKEN(UserData, "$user_data")
 
+/* Each game's data folder is one of Games' own folders, named for the game:
+ * the plan's data_dir names it below $user_data. It is the only folder the
+ * launcher removes when the player asks to forget the game. */
+RIB_USER_FOLDER(Games, "ROM-in-a-Box/Games")
+/* A Windows game made into one program unpacks into one of Runtimes' own
+ * folders. */
+RIB_USER_FOLDER(Runtimes, "ROM-in-a-Box/Runtimes")
+
 /* The core's options, where RetroArch looks for them per game. */
 RIB_SHIPPED_SETTINGS(CoreOptions, "core-options", "config")
 RIB_SHIPPED_SETTINGS(Remaps, "remaps", "remaps")
@@ -98,5 +111,6 @@ RIB_SHIPPED_FILES(Firmware, "firmware", "system")
 #undef RIB_PLAN_FIELD
 #undef RIB_PLAN_MARK
 #undef RIB_TOKEN
+#undef RIB_USER_FOLDER
 #undef RIB_SHIPPED_SETTINGS
 #undef RIB_SHIPPED_FILES

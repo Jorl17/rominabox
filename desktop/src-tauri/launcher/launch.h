@@ -74,6 +74,12 @@ void rominabox_read_game(const char *resources, LaunchGame *game);
 /* The game's data folder when `user_data` is the per-user folder. */
 void rominabox_game_data_folder(const LaunchGame *game, const char *user_data, char *out, size_t out_cap);
 
+/* The game's data folder when `user_data` is the per-user folder, for
+ * removal. 0 when it is directly inside the games folder (RIB_USER_FOLDER
+ * Games, launch_contract.inc), and -1, with `out` untouched, for any other
+ * folder, which we never remove. */
+int rominabox_game_folder_to_forget(const LaunchGame *game, const char *user_data, char *out, size_t out_cap);
+
 /* Do everything before RetroArch starts. Stop the process with a message on
  * any failure, because a game without its plan or its data folder must not
  * start at all. */

@@ -428,7 +428,10 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
  * in the game's data folder. Once the game has ended, we remove its sandbox,
  * with the saves and settings in the sandbox's folder, its data folder from
  * the older layout outside a sandbox, and every unpacked copy of it. The
- * program that the person opened stays. */
+ * program that the person opened stays. We run this outside the sandbox,
+ * with all of the person's rights, so we only remove the folder of the
+ * sandbox, a folder directly inside the games folder, or a copy unpacked
+ * beside the one that ran. */
 static void forget_if_asked(const LaunchGame *game) {
     char name[sizeof RIB_GAME_APP_ID_PREFIX + sizeof game->identity];
     char data[LAUNCH_PATH_CAP];
@@ -468,8 +471,7 @@ static void forget_if_asked(const LaunchGame *game) {
                 }
             }
         }
-        rominabox_game_data_folder(game, user_data, data, sizeof data);
-        {
+        if (rominabox_game_folder_to_forget(game, user_data, data, sizeof data) == 0) {
             wchar_t *before = wide(data);
             unpack_remove_tree(before);
             free(before);
