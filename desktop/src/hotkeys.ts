@@ -65,7 +65,7 @@ export type Refusal =
   | { kind: "twice"; hotkey: string; binding: string }
   | { kind: "shared"; hotkey: string; other: string; binding: string }
   | {
-      kind: "gameKey";
+      kind: "gameInput";
       hotkey: string;
       binding: string;
       control: string;
@@ -73,8 +73,11 @@ export type Refusal =
     }
   | { kind: "controls"; message: string };
 
-/** A refusal as the author reads it, having changed `changed`. */
-export function refusalWords(refusal: Refusal, changed: string): string {
+/**
+ * A refusal as the author reads it, having changed the hotkey `changed`, or
+ * a control of the game when there is none.
+ */
+export function refusalWords(refusal: Refusal, changed?: string): string {
   switch (refusal.kind) {
     case "noBinding":
       return `${hotkeyName(refusal.hotkey)} needs a binding.`;
@@ -87,8 +90,13 @@ export function refusalWords(refusal: Refusal, changed: string): string {
         refusal.hotkey === changed ? refusal.other : refusal.hotkey;
       return `${bindingWords(refusal.binding)} is already ${hotkeyName(holder)}'s.`;
     }
-    case "gameKey":
-      return `${bindingWords(refusal.binding)} is the game's key for ${refusal.label}.`;
+    case "gameInput": {
+      const words = bindingWords(refusal.binding);
+      if (refusal.hotkey !== changed)
+        return `${words} is already ${hotkeyName(refusal.hotkey)}'s.`;
+      const what = refusal.binding.startsWith(keyPrefix) ? "key" : "button";
+      return `${words} is the game's ${what} for ${refusal.label}.`;
+    }
     case "controls":
       return refusal.message;
   }

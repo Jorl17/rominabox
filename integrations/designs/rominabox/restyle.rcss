@@ -15,7 +15,7 @@
 
 /* Buttons, pager arrows and option entries. */
 .menu-action, .list-pager-prev, .list-pager-next { background-color: design(surface); border-color: design(surface); }
-.menu-action:hover, .menu-action.focused, .menu-action.capturing,
+.menu-action:hover, .menu-action.focused,
 .list-pager-prev:hover, .list-pager-next:hover, .list-pager-prev.focused, .list-pager-next.focused { background-color: design(highlight); color: design(surface); border-color: design(highlight); }
 .menu-action:active { border-color: design(highlight); }
 .menu-action.disabled, .menu-action:disabled, .list-pager-prev.disabled, .list-pager-next.disabled { background-color: design(well-edge); border-color: design(well-edge); }

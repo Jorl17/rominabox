@@ -119,7 +119,7 @@ fn hotkeys_check_prints_the_hotkeys_or_the_refusal() {
     let taken = refusal(game.clone());
     assert_eq!(
         taken["refusal"],
-        json!({ "kind": "gameKey", "binding": "key:f2", "hotkey": "quick-save", "control": "a", "label": "C" }),
+        json!({ "kind": "gameInput", "binding": "key:f2", "hotkey": "quick-save", "control": "a", "label": "C" }),
         "{taken}"
     );
     let moved = result("hotkeys-check", Some(&json!({ "hotkeys": { "quick-save": ["key:f5"] }, "system": "megadrive", "controls": game["controls"] })));

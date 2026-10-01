@@ -142,7 +142,10 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .slot:active .slot-label { color: #fff13d; }
 
 .menu-action { color: #ffffff; background-color: #061a48; border-color: #75b2e4; }
-.menu-action:hover, .menu-action.focused, .menu-action.capturing { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
+/* The control being captured has the focus and is the only yellow element.
+ * CANCEL also has the capturing class while we wait for an input, but it
+ * stays an ordinary button. */
+.menu-action:hover, .menu-action.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
 .menu-action:active { border-top-color: #041738; border-left-color: #041738; border-bottom-color: #ffffff; border-right-color: #ffffff; }
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 

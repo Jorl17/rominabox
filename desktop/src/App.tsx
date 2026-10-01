@@ -24,7 +24,8 @@ import {
 } from "./CoreFetchNotice";
 import designs from "../designs.json";
 import declared from "../defaults.json";
-import { ControlsEditor, emptyControls, type Controls } from "./controls";
+import { emptyControls, type Controls } from "./controls";
+import { ControlsSection } from "./ControlsSection";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
@@ -32,7 +33,6 @@ import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import appIcon from "../src-tauri/icons/icon.png";
 import largeIcon from "../src-tauri/icons/icon-large.png";
-import { HotkeysEditor } from "./HotkeysEditor";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
   NOT_A_SHADER_FILE,
@@ -1366,25 +1366,15 @@ export function App() {
                 </div>
               )}
 
-              <details className="advanced author-controls">
-                <summary>
-                  <ChevronRight size={16} />
-                  Controls
-                </summary>
-                <ControlsEditor
-                  system={draft.system}
-                  value={controls}
-                  onChange={setControls}
-                />
-                {draft.showMenu && (
-                  <HotkeysEditor
-                    value={draft.hotkeys}
-                    busy={!!busy}
-                    onChange={(value) => update("hotkeys", value)}
-                    game={{ system: draft.system, controls }}
-                  />
-                )}
-              </details>
+              <ControlsSection
+                system={draft.system}
+                controls={controls}
+                onControls={setControls}
+                hotkeys={draft.hotkeys}
+                onHotkeys={(value) => update("hotkeys", value)}
+                withHotkeys={draft.showMenu}
+                busy={!!busy}
+              />
               <details className="advanced picture-filters">
                 <summary>
                   <ChevronRight size={16} />

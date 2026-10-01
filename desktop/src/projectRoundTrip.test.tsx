@@ -56,7 +56,7 @@ const everySetting = {
     menu: ["key:f1", "pad:home"],
     confirm: ["key:enter"],
     back: ["key:backspace", "pad:b"],
-    "quick-save": ["key:f5", "pad:select"],
+    "quick-save": ["key:f5", "pad:r2"],
     "quick-load": ["key:f8"],
     "previous-slot": [],
     "next-slot": ["key:f12"],

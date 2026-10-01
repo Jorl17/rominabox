@@ -190,8 +190,8 @@ SCOPES = [
     ),
     Scope(
         "typing",
-        "that a key typed into the menu's text entry is never also a button of the menu's pad, and that Backspace is B otherwise; RetroArch's own function that reads the keyboard for the menu, handed a held key",
-        "whether the menu says it is typing (the navigation scope asks the real menu), or that a physical keyboard delivers the key; the rest of RetroArch is stand-ins that stop the program if reached",
+        "that a key typed into the menu's text entry, or one a hotkey of the menu is bound to, is never also a button of the menu's pad, and that Backspace is B and Space Start otherwise; RetroArch's own function that reads the keyboard for the menu, handed a held key",
+        "whether the menu says it is typing or which keys its hotkeys hold (the navigation and bridge scopes ask the real menu), or that a physical keyboard delivers the key; the rest of RetroArch is stand-ins that stop the program if reached",
         [PYTHON, str(ROOT / "scripts/test_menu_typing.py")],
     ),
     Scope(
@@ -342,7 +342,7 @@ SCOPES = [
     ),
     Scope(
         "hotkeys",
-        "in the exported test player, that QUICK SAVE writes the slot the menu has selected, its state and its picture, that PREVIOUS SLOT and NEXT SLOT step it round the six slots, that QUICK LOAD of an empty slot loads nothing and of a saved one loads it, that each says so in the notice row, and that the menu shows the slot they chose",
+        "in the exported test player, that QUICK SAVE writes the slot the menu has selected, its state and its picture, that PREVIOUS SLOT and NEXT SLOT step it round the six slots, that QUICK LOAD of an empty slot loads nothing and of a saved one loads it, that each says so in the notice row, that the menu shows the slot they chose, and that the next launch starts on it",
         "that a physical keyboard's press reaches the menu (the script holds the key where the menu reads the keyboard), sound, or window focus; the screen's own rules are the bridge scope's",
         [PYTHON, str(ROOT / "scripts/test_play_hotkeys.py"), str(SCRATCH / "play-hotkeys")],
         env={"ROMINABOX_GAME_BUNDLE_PREFIX": f"{os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.hotkeys"},

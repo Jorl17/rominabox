@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import registry from "../controls.json";
 import systemRegistry from "../systems.json";
 import { ControlsEditor, emptyControls, type Controls } from "./controls";
+import { defaultHotkeys } from "./hotkeys";
 import "./style.css";
 
 // Every console with a dedicated pad, and one that falls back to the
@@ -39,7 +40,12 @@ function Preview() {
           ))}
         </select>
       </label>
-      <ControlsEditor system={system} value={controls} onChange={setControls} />
+      <ControlsEditor
+        system={system}
+        value={controls}
+        onChange={setControls}
+        hotkeys={defaultHotkeys}
+      />
     </main>
   );
 }

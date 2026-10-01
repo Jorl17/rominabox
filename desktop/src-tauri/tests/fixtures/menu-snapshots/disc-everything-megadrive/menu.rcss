@@ -132,7 +132,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 
 .menu-action { color: #ffffff; background-color: #061a48; border-width: 1dp; border-color: #476eab; }
 .menu-action:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
-.menu-action.focused, .menu-action.capturing { background-color: #193e88; color: #ffffff; border-color: #fff13d; border-left-width: 4dp; }
+/* The focus is on the control being captured. CANCEL also has the capturing
+ * class while we wait for a capture, but stays an ordinary button next to it. */
+.menu-action.focused { background-color: #193e88; color: #ffffff; border-color: #fff13d; border-left-width: 4dp; }
 .menu-action:active { background-color: #193e88; color: #fff13d; border-color: #ffffff; }
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 

@@ -3,10 +3,14 @@
  * runloop calls once a frame, called with one key held.
  *
  * While the menu is open, RetroArch reads a few keys as buttons of the menu
- * pad: Return is A, Backspace is B, the arrows are the d-pad. The menu text
- * entry receives the same keys as they are typed. A key typed into the menu
- * text entry is text and never also a button, so a Backspace typed into
- * QUICK SIGN IN does not leave the form.
+ * pad: Return is A, Backspace is B, Space is Start, the arrows are the d-pad.
+ * The menu text entry receives the same keys as they are typed. A key typed
+ * into the menu text entry is text and never also a button, so a Backspace
+ * typed into QUICK SIGN IN does not leave the form.
+ *
+ * A key bound to a hotkey that acts in the menu (HOTKEYS) is only that hotkey
+ * and none of those buttons. Space bound to BACK goes back, and its release
+ * is not Start, which saves on the pause screen.
  *
  * RetroArch is not started. We answer here the calls that the function makes
  * into the menu, and retroarch_unreached.c stubs the rest of RetroArch. */
@@ -23,6 +27,7 @@
 
 static unsigned held;
 static bool typing;
+static unsigned bound;
 static struct menu_state menu;
 
 /* The menu is open, with no on-screen keyboard showing. */
@@ -30,6 +35,8 @@ struct menu_state *menu_state_get_ptr(void) { return &menu; }
 bool menu_input_dialog_get_display_kb(void) { return false; }
 /* Whether the menu's text entry has the keyboard. */
 bool rib_rmlui_typing(void) { return typing; }
+/* Whether a hotkey that acts in the menu is bound to the key `code`. */
+bool rib_rmlui_menu_hotkey_key(unsigned code) { return code == bound; }
 
 static int16_t keyboard(void *data, const input_device_driver_t *joypad,
       const input_device_driver_t *sec_joypad, rarch_joypad_info_t *joypad_info,
@@ -73,6 +80,24 @@ int main(void)
       ++failures;
    }
 
+   /* Space is Start while no menu hotkey is bound to it. When it is bound to
+    * one, such as BACK, it is no button at all. */
+   bits = read_with(RETROK_SPACE);
+   if (!BIT256_GET(bits, RETRO_DEVICE_ID_JOYPAD_START))
+   {
+      fprintf(stderr, "FAIL: with no hotkey bound to it, Space is not the menu's Start\n");
+      ++failures;
+   }
+   bound = RETROK_SPACE;
+   bits = read_with(RETROK_SPACE);
+   if (bits_any_set(bits.data, ARRAY_SIZE(bits.data)))
+   {
+      fprintf(stderr, "FAIL: Space, bound to a hotkey of the menu, is also a button of the menu's pad%s\n",
+            BIT256_GET(bits, RETRO_DEVICE_ID_JOYPAD_START) ? ": Start, which saves on the pause screen" : "");
+      ++failures;
+   }
+   bound = 0;
+
    /* While the text entry has the keyboard, no key is a button. */
    typing = true;
    for (key = RETROK_BACKSPACE; key < RETROK_LAST; ++key)
@@ -89,6 +114,6 @@ int main(void)
       }
    }
    if (!failures)
-      printf("menu typing: a typed key is never the menu's pad; Backspace is B otherwise\n");
+      printf("menu typing: a typed key, or one a hotkey of the menu is bound to, is never the menu's pad; Backspace is B otherwise\n");
    return failures ? 1 : 0;
 }
