@@ -263,12 +263,24 @@ struct Launched {
 /// Open the game quietly, as in a harness, so that there is no dialog or
 /// sound, and without anything that a test may have set for another launch.
 fn launch(program: &Path, root: &Path) -> Launched {
+    launch_in(program, root, None)
+}
+
+/// Open the game as in `launch`, with `user_data`, when there is one, in
+/// place of the person's per-user folder.
+fn launch_in(program: &Path, root: &Path, user_data: Option<&Path>) -> Launched {
     static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let errors = root.join(format!(
         "launch-{}.err",
         NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     ));
-    let mut child = Command::new(program)
+    let mut command = Command::new(program);
+    let test_user_data = declared("RIB_ENV_TEST_USER_DATA");
+    match user_data {
+        Some(folder) => command.env(&test_user_data, folder),
+        None => command.env_remove(&test_user_data),
+    };
+    let mut child = command
         .env("ROMINABOX_QUIET", "1")
         .env_remove("ROMINABOX_PLAN_ONLY")
         .env_remove("ROMINABOX_MENU_SCRIPT")
@@ -426,7 +438,7 @@ fn a_newer_version_unpacks_into_a_folder_of_its_own_and_the_older_copy_goes() {
 fn uninstall_removes_the_games_data_its_sandbox_and_every_unpacked_copy() {
     let root = workspace();
     let kit = kit(&root);
-    let game = export(&request(&root, &kit, "Uninstalled", "out"), &root);
+    let game = export(&request(&root, &kit, "Forgotten", "out"), &root);
     let _kept = kept(&game.identity);
     let first = launch(&game.program, &root);
     assert_eq!(first.code, Some(PLAYED), "{}", first.errors);
@@ -448,4 +460,63 @@ fn uninstall_removes_the_games_data_its_sandbox_and_every_unpacked_copy() {
     assert!(!previous_data(&game.identity).exists(), "what the game kept before its sandbox is still there");
     assert!(game.program.is_file(), "the program the person opened is gone");
     assert!(!registered(&game.identity), "the game's sandbox is still registered");
+}
+
+/// A copy of the program `program` whose index lists `runtime` as the folder
+/// to unpack the game into, written to `copy`.
+fn naming(program: &Path, copy: &Path, runtime: &str) {
+    let mut bytes = fs::read(program).unwrap();
+    let trailer = bytes.len() - 24;
+    let start = u64::from_le_bytes(bytes[trailer..trailer + 8].try_into().unwrap()) as usize;
+    let index = bytes[start..trailer].to_vec();
+    // "RIBPACK1", then the runtime folder's length and its name.
+    let named = u16::from_le_bytes([index[8], index[9]]) as usize;
+    let mut rewritten = index[..8].to_vec();
+    rewritten.extend((runtime.len() as u16).to_le_bytes());
+    rewritten.extend(runtime.as_bytes());
+    rewritten.extend(&index[10 + named..]);
+    bytes.truncate(start);
+    bytes.extend(&rewritten);
+    bytes.extend((start as u64).to_le_bytes());
+    bytes.extend((rewritten.len() as u64).to_le_bytes());
+    bytes.extend(b"RIBTAIL1");
+    fs::write(copy, bytes).unwrap();
+}
+
+/// We treat a program as damaged when its index lists an unpacking folder
+/// that is not directly inside the runtimes folder, as when its bytes are
+/// damaged, and refuse it before we write or remove anything. When we unpack,
+/// we remove the older versions beside the new folder that are named for the
+/// same game, so we would otherwise unpack and remove anywhere the index
+/// lists. We run this in a per-user folder of the test's own.
+#[test]
+#[ignore = "launches a stand-in game; the wingame scope runs it"]
+fn a_program_naming_a_folder_outside_the_runtimes_folder_is_refused_and_removes_nothing() {
+    let root = workspace();
+    let kit = kit(&root);
+    let game = export(&request(&root, &kit, "Elsewhere", "out"), &root);
+    let _kept = kept(&game.identity);
+    let user_data = root.join("user data");
+    for (index, elsewhere) in [
+        format!("Elsewhere/{}", game.runtime),
+        format!("ROM-in-a-Box/Games/{}", game.runtime),
+        format!("ROM-in-a-Box/Runtimes/deeper/{}", game.runtime),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let program = root.join(format!("elsewhere-{index}.exe"));
+        naming(&game.program, &program, &elsewhere);
+        let target = user_data.join(&elsewhere);
+        // Another version of the same game beside the folder in the index.
+        let beside = target.with_file_name(format!("{}-beside", game.identity));
+        fs::create_dir_all(&beside).unwrap();
+        fs::write(beside.join("kept"), b"kept").unwrap();
+
+        let launched = launch_in(&program, &root, Some(&user_data));
+        assert_eq!(fs::read(beside.join("kept")).ok().as_deref(), Some(&b"kept"[..]), "it removed {}", beside.display());
+        assert!(!target.exists(), "it unpacked into {elsewhere}");
+        assert_eq!(launched.code, Some(1), "{elsewhere}: {}", launched.errors);
+        assert!(launched.errors.contains("damaged"), "{elsewhere}: {}", launched.errors);
+    }
 }
