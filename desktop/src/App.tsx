@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { SYSTEMS, formatBytes, inspectRom } from "./inspection";
 import * as bridge from "./bridge";
-import { CustomShaderCard, useShaderWarnings } from "./customShaders";
+import { CustomShaderCards } from "./customShaders";
 import { canExport, whyNot } from "./consoles";
 import {
   afterExport,
@@ -195,7 +195,6 @@ export function App() {
     { name: string; path: string }[]
   >([]);
   const [shaderInitial, setShaderInitial] = useState<string | null>(null);
-  const shaderWarnings = useShaderWarnings(bundledShaders, customShaders, shaderInitial);
   const [firmwareAssessment, setFirmwareAssessment] =
     useState<bridge.FirmwareAssessment | null>(null);
   const [controls, setControls] = useState<Controls>(emptyControls);
@@ -1419,14 +1418,10 @@ export function App() {
                         </button>
                       );
                     })}
-                    {customShaders.map((shader) => (
-                      <CustomShaderCard
-                        key={shader.path}
-                        shader={shader}
-                        warning={shaderWarnings[shader.path]}
-                        onRemove={() => removeCustomShader(shader)}
-                      />
-                    ))}
+                    <CustomShaderCards
+                      selection={[bundledShaders, customShaders, shaderInitial]}
+                      onRemove={removeCustomShader}
+                    />
                     <button
                       type="button"
                       className="shader-card shader-add"

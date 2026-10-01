@@ -5,7 +5,7 @@ type CustomShader = { name: string; path: string };
 
 /** The author's filters that a Windows game may fail to load, by path, from
  * the shader check in the shell, because a file would be too deep to open. */
-export function useShaderWarnings(
+function useShaderWarnings(
   bundled: string[],
   custom: CustomShader[],
   initial: string | null,
@@ -15,7 +15,9 @@ export function useShaderWarnings(
   const selection = JSON.stringify({ bundled, custom, initial });
   useEffect(() => {
     let current = true;
-    const asked = JSON.parse(selection) as Parameters<typeof bridge.shaderWarnings>[0];
+    const asked = JSON.parse(selection) as Parameters<
+      typeof bridge.shaderWarnings
+    >[0];
     if (asked.custom.length === 0) {
       setWarnings({});
       return;
@@ -24,7 +26,11 @@ export function useShaderWarnings(
       .shaderWarnings(asked)
       .then((found) => {
         if (current)
-          setWarnings(Object.fromEntries(found.map((warning) => [warning.path, warning.sentence])));
+          setWarnings(
+            Object.fromEntries(
+              found.map((warning) => [warning.path, warning.sentence]),
+            ),
+          );
       })
       // When we reject a selection here, we reject it again, with the reason,
       // when we make the game.
@@ -38,8 +44,32 @@ export function useShaderWarnings(
   return warnings;
 }
 
+/** The author's filters among the chosen ones, each with a warning when a
+ * Windows game may not load it. Clicking one removes it. */
+export function CustomShaderCards({
+  selection: [bundled, custom, initial],
+  onRemove,
+}: {
+  selection: [string[], CustomShader[], string | null];
+  onRemove: (shader: CustomShader) => void;
+}) {
+  const warnings = useShaderWarnings(bundled, custom, initial);
+  return (
+    <>
+      {custom.map((shader) => (
+        <CustomShaderCard
+          key={shader.path}
+          shader={shader}
+          warning={warnings[shader.path]}
+          onRemove={() => onRemove(shader)}
+        />
+      ))}
+    </>
+  );
+}
+
 /** An author's filter among the chosen ones: a click removes it. */
-export function CustomShaderCard({
+function CustomShaderCard({
   shader,
   warning,
   onRemove,
@@ -49,7 +79,12 @@ export function CustomShaderCard({
   onRemove: () => void;
 }) {
   return (
-    <button type="button" className="shader-card chosen" aria-pressed={true} onClick={onRemove}>
+    <button
+      type="button"
+      className="shader-card chosen"
+      aria-pressed={true}
+      onClick={onRemove}
+    >
       <span className="shader-name">{shader.name}</span>
       {warning && <small className="shader-warning">{warning}</small>}
     </button>
