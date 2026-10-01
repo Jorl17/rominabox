@@ -4,15 +4,16 @@ Cmd-Q, the menu bar Quit, closing the last window and an Apple Event quit
 all lead to applicationShouldTerminate. If we returned NSTerminateNow,
 exit() would run on that stack, and the Flycast static destructors would
 abort while its threads were still running. So in the draw observer we run
-main_exit before exit. We export the generated cartridge, launch it under
-lldb and send the Apple Event, so that a regression shows up as the abort
-and not as a changed string.
+main_exit before exit. We export the generated cartridge, launch it and
+send the Apple Event, so that a regression shows up as the abort, in the
+exit status of the player, and not as a changed string.
 """
 
 from __future__ import annotations
 
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -78,12 +79,14 @@ def quit_bundle(identifier: str) -> None:
     )
 
 
-def apple_event_quit(app: Path) -> tuple[str, str]:
-    """Run under lldb and quit with an Apple Event once the core is loaded.
+def apple_event_quit(app: Path) -> tuple[int | None, str, str]:
+    """Run the game, quit it with an Apple Event once the core is loaded, and
+    return the player's exit status, its output before the log, and its log.
 
-    We set the frame limit in the player, so a missed quit cannot leave it
-    open. Under lldb we stop at the abort and kill the process, so the crash
-    dialog never appears.
+    With the frame limit in the player, a missed quit cannot leave it open.
+    We run it without a debugger, because a debugger started over SSH has no
+    permission to debug, and the exit status also shows an abort. An abort,
+    which is the defect, also leaves a macOS crash report and its dialog.
     """
     identifier = bundle_id(app)
     log = menu_shots.log_of(app)
@@ -96,20 +99,7 @@ def apple_event_quit(app: Path) -> tuple[str, str]:
         bucket.append(stream.read())
 
     process = subprocess.Popen(
-        [
-            "lldb",
-            "--batch",
-            "-o",
-            "process handle SIGBUS SIGSEGV -s false -n false -p true",
-            "-o",
-            "run",
-            "-k",
-            "bt",
-            "-k",
-            "process kill",
-            "--",
-            str(player),
-        ],
+        [str(player)],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -161,24 +151,21 @@ def apple_event_quit(app: Path) -> tuple[str, str]:
         if left:
             raise SystemExit(f"player still running after quit:\n{left}")
     written = log.read_text(errors="replace") if log and log.exists() else ""
-    return "".join(bucket), written
+    return process.returncode, "".join(bucket), written
 
 
-def judge_debugger(name: str, debugger: str, log: str) -> str | None:
-    """Return an empty string when the player exited 0 under lldb, or the abort text."""
-    tail = debugger[-2000:]
-    log_tail = "\n".join(log.splitlines()[-30:])
-    if "SIGABRT" in debugger or "abort()" in debugger:
-        print(tail)
-        print("--- log ---")
-        print(log_tail)
+def judge_exit(name: str, code: int | None, output: str, log: str) -> str | None:
+    """Return an empty string when the player exited 0. An abort is the defect."""
+    if code == 0:
+        return None
+    print(output[-2000:])
+    print("--- log ---")
+    print("\n".join(log.splitlines()[-30:]))
+    if code == -signal.SIGABRT:
+        # Its crash report, with the stack, is the newest retroarch-*.ips in
+        # ~/Library/Logs/DiagnosticReports.
         return f"{name}: quit aborted in the loaded core"
-    if "exited with status = 0" not in debugger:
-        print(tail)
-        print("--- log ---")
-        print(log_tail)
-        return f"{name}: player did not exit 0"
-    return None
+    return f"{name}: player did not exit 0 (exit {code})"
 
 
 def judge(name: str, log: str, apple_event: bool) -> str | None:
@@ -271,8 +258,8 @@ def exported(rom: Path, title: str, system: str, workspace: Path) -> Path:
 
 def macos_quit(cartridge: Path) -> str | None:
     app = exported(cartridge, TITLE, "gbc", ROOT / "work/quit-gbc")
-    debugger, log = apple_event_quit(app)
-    return judge_debugger("cartridge apple-event", debugger, log) or judge(
+    code, output, log = apple_event_quit(app)
+    return judge_exit("cartridge apple-event", code, output, log) or judge(
         "cartridge apple-event", log, apple_event=True
     )
 
@@ -342,10 +329,7 @@ def close_window(cartridge: Path, advanced: bool) -> str | None:
     }
     if labels != expected:
         return f"{name}: the window tells the taskbar {labels}, not {expected}"
-    if code != 0:
-        print("\n".join(written.splitlines()[-30:]))
-        return f"{name}: player did not exit 0 (exit {code})"
-    return judge(name, written, apple_event=False)
+    return judge_exit(name, code, "", written) or judge(name, written, apple_event=False)
 
 
 # How a person quits a running game, on each platform of the quit tests.
