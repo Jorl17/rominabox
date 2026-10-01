@@ -442,7 +442,7 @@ SCOPES = [
     ),
     Scope(
         "size",
-        "that an exported app stays under the size ceiling, and carries no library but its core",
+        "that the space an exported app takes on disk, as the file system allocates it (a Windows game unpacked, then forgotten by its own UNINSTALL), stays under the size ceiling, and that it carries no library but its core",
         "a cartridge's own size, or that the player was rebuilt; it measures the kit already on disk",
         [PYTHON, str(ROOT / "scripts/size_bundles.py")],
     ),
