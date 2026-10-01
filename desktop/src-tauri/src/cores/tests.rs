@@ -474,6 +474,27 @@ fn a_changed_nightly_is_an_update_and_an_unchanged_one_is_not() {
     let _ = fs::remove_dir_all(&dir);
 }
 
+/// The licence text does not count. We use and update a cached core without
+/// its licence text as any other, and do not download it again.
+#[test]
+fn a_cached_core_without_its_licence_text_is_still_cached() {
+    let dir = cached_flycast("\"1\"");
+    let pins = flycast_pins();
+    let located = Located::find(&pins, Target::MacosArm64, "flycast").unwrap();
+    fs::remove_file(dir.join("licenses").join(located.licence_file)).unwrap();
+    let same = Scripted {
+        heads: HashMap::from([(FLYCAST_ZIP.into(), tagged("\"1\""))]),
+        ..Default::default()
+    };
+    assert_eq!(located.assess(&dir, &same), Need::UseCache);
+    let changed = Scripted {
+        heads: HashMap::from([(FLYCAST_ZIP.into(), tagged("\"2\""))]),
+        ..Default::default()
+    };
+    assert_eq!(located.assess(&dir, &changed), Need::Update);
+    let _ = fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn a_check_that_cannot_reach_the_server_uses_the_cache() {
     let dir = cached_flycast("\"1\"");
