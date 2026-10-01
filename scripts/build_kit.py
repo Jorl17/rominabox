@@ -22,7 +22,6 @@ import hashlib
 import json
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -79,8 +78,7 @@ def main() -> int:
     # copied. For a Windows kit we build it with the player and only copy it.
     library = native_build.launch_library(target)
     if library:
-        with tempfile.TemporaryDirectory(prefix="rominabox-kit-") as workspace:
-            native_build.install_launch_library(kit, target, Path(workspace))
+        native_build.install_tree_launcher(kit, target)
     # We write every native licence again below, so the kit contains only the
     # licences of libraries the player links. We remove the existing files
     # first, because on a case-insensitive file system we would otherwise

@@ -46,6 +46,7 @@ from pathlib import Path
 from typing import Iterator
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import kit_assets  # noqa: E402
 import native_build  # noqa: E402
 from core_source import host_target  # noqa: E402
 from directory_links import redirected  # noqa: E402
@@ -656,39 +657,18 @@ def built_player() -> Path:
     return player_build.player_in(build)
 
 
-def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
-    """A copy of the runtime kit at `kit` with `player` as its player, and the
-    launcher, Native and `design` as in this tree, not as when we froze the
-    kit. We resolve Native and the design from this tree in the exporter, and
-    copy Native into menu-assets for the controller art of the old shot path."""
+def staged_kit(kit: Path, player: Path) -> Path:
+    """A copy of the runtime kit at `kit` with `player` as its player, and
+    the launcher and every asset of a kit from the repository
+    (kit_assets.stage) as they are in this tree, not as they were when we
+    made the kit."""
     shutil.copytree(KIT, kit, symlinks=True)
-    for package_name in dict.fromkeys(("native", design)):
-        package = ROOT / "integrations/designs" / package_name
-        if not package.is_dir():
-            raise SystemExit(f"no design package at {package}")
-        staged_design = kit / "designs" / package_name
-        staged_design.mkdir(parents=True, exist_ok=True)
-        for document in package.iterdir():
-            if document.is_file():
-                shutil.copyfile(document, staged_design / document.name)
-                if package_name == "native":
-                    shutil.copyfile(document, kit / "menu-assets" / document.name)
+    kit_assets.stage(kit)
     installed = kit / native_build.kit_file(host_target(), "player")
     shutil.copyfile(player, installed)
     installed.chmod(0o755)
-    # The launcher built from this tree: a macOS kit's launch library attached
-    # to this player (build_kit.py), or the program next to it (build_player.py).
-    target_kit = native_build.kit_target(host_target())
-    if native_build.launch_library(target_kit):
-        workspace = kit.parent / "launch-library"
-        workspace.mkdir()
-        native_build.install_launch_library(kit, target_kit, workspace)
-    else:
-        built = native_build.build_launcher(kit.parent / "launcher", host_target(),
-                                            native_build.build_environment(host_target()), native_build.FORK)
-        if built is None:
-            raise SystemExit(f"the player recipe builds no launcher for {host_target()}")
-        shutil.copyfile(built, kit / native_build.kit_file(host_target(), "launcher"))
+    # After the player, because we attach a macOS kit's launch library to it.
+    native_build.install_tree_launcher(kit, native_build.kit_target(host_target()))
     return kit
 
 
@@ -716,10 +696,10 @@ def _build_a_game(
     """
     settings = dict(settings or {})
     # In a shot, or in the palette loop, we can set the theme and the palette
-    # like any other export setting. We copy the package for that export.
+    # like any other export setting.
     design = str(settings.get("theme", design))
     palette = str(settings.get("palette", palette))
-    kit = staged_kit(run_dir / "kit", built_player(), design)
+    kit = staged_kit(run_dir / "kit", built_player())
 
     out = run_dir / "exported"
     out.mkdir(parents=True)

@@ -20,11 +20,15 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import urllib.request
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import file_lock  # noqa: E402
 import toolchain  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -541,14 +545,64 @@ def launch_library_sources(kit: str) -> str:
     return digest.hexdigest()
 
 
-def install_launch_library(kit_folder: Path, kit: str, workspace: Path) -> None:
-    """The kit's launch library, built from the tree into the kit at
-    `kit_folder`, and attached to the kit's player there."""
+# Where we keep the launcher for kits and tests, built from this checkout's
+# sources, in a folder for each kit. We build a Windows kit's launcher there
+# with ninja, compiling again only what changed, and a macOS kit's launch
+# library only when the digest of its sources changed. So in a run with many
+# exports, or in a later run, we compile nothing again.
+TREE_BUILDS = ROOT / "work/tree-builds"
+
+
+@contextmanager
+def tree_build(name: str) -> Iterator[Path]:
+    """The folder in this checkout for the build `name`, locked by this process
+    until the block ends, because we run test scopes in parallel, and we must
+    not copy a program in one while writing it in another."""
+    TREE_BUILDS.mkdir(parents=True, exist_ok=True)
+    with (TREE_BUILDS / f"{name}.lock").open("a") as handle:
+        file_lock.hold_exclusively(handle)
+        folder = TREE_BUILDS / name
+        folder.mkdir(exist_ok=True)
+        yield folder
+
+
+def kept_launcher(folder: Path, kit: str) -> Path:
+    """The launcher for a kit for `kit`, built from this checkout's sources in
+    `folder`, locked with tree_build: a Windows kit's program, or a macOS kit's
+    launch library before we attach it to a player."""
+    library = launch_library(kit)
+    if library is None:
+        built = build_launcher(folder, kit, build_environment(kit), FORK)
+        if built is None:
+            raise SystemExit(f"the player recipe builds no launcher for {kit}")
+        return built
+    built = folder / library["output"]
+    record = folder / "sources.sha256"
+    wanted = launch_library_sources(kit)
+    if not built.is_file() or not record.is_file() or record.read_text(encoding="utf-8") != wanted:
+        build_launch_library(folder, kit)
+        record.write_text(wanted, encoding="utf-8")
+    return built
+
+
+def tree_launcher(kit: str, destination: Path) -> Path:
+    """The launcher for a kit for `kit`, built from this checkout's sources and
+    copied to the file `destination`."""
+    with tree_build(kit) as folder:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(kept_launcher(folder, kit), destination)
+    return destination
+
+
+def install_tree_launcher(kit_folder: Path, kit: str) -> None:
+    """The kit for `kit` at `kit_folder`, given the launcher built from this
+    checkout's sources: a Windows kit's program next to its player, or a macOS
+    kit's launch library, attached to the kit's player there."""
     files = recipe()["kit"][kit]["files"]
-    library = build_launch_library(workspace, kit)
-    (kit_folder / files["launcher"]["at"]).parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(library, kit_folder / files["launcher"]["at"])
-    attach_launch_library(kit_folder / files["player"]["at"], kit, workspace)
+    tree_launcher(kit, kit_folder / files["launcher"]["at"])
+    if launch_library(kit):
+        with tempfile.TemporaryDirectory(prefix="rominabox-launcher-") as workspace:
+            attach_launch_library(kit_folder / files["player"]["at"], kit, Path(workspace))
 
 
 def attach_launch_library(player: Path, kit: str, workspace: Path) -> None:
