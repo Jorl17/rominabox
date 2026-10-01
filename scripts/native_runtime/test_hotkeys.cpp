@@ -472,6 +472,40 @@ void a_full_row(void *menu)
    click(menu, "hotkey-confirm-3");
 }
 
+/* A hotkey that acts while the game plays cannot use any input of the game,
+ * or one press would do both: no key bound to a game control, and no pad
+ * button bound to one alone. MENU also acts while the game plays. CONFIRM and
+ * BACK act only in the menu, where the game is paused, so they may. Every
+ * control of the fake game is on host.bound_key, and the first is Up. */
+void the_games_inputs_are_not_the_hotkeys_of_play(void *menu)
+{
+   const std::string game_key = "key:" + host.bound_key;
+   capture(menu, "quick-save", game_key.c_str());
+   expect_status("THE GAME USES THAT FOR Up", "a key the game reads, for QUICK SAVE");
+   expect_row("quick-save", {"f2"}, "a key the game reads, for QUICK SAVE");
+   capture(menu, "menu", game_key.c_str());
+   expect_status("THE GAME USES THAT FOR Up", "a key the game reads, for MENU");
+   expect_row("menu", {"Escape", "Home", "L3+R3"}, "a key the game reads, for MENU");
+   /* We read Mega Drive A from the left button. */
+   capture(menu, "next-slot", "pad:y");
+   expect_status("THE GAME USES THAT FOR A", "a pad button the game reads, for NEXT SLOT");
+   expect_row("next-slot", {"f7"}, "a pad button the game reads, for NEXT SLOT");
+   capture(menu, "confirm", "pad:y");
+   expect_row("confirm", {"Enter", "Right button", "Left button"}, "a pad button the game reads, for CONFIRM");
+   click(menu, "hotkey-confirm-3");
+
+   /* A key that a swap would give to MENU: when CONFIRM takes the only key of
+    * MENU, MENU would get the keys of CONFIRM, and the game reads one of them. */
+   capture(menu, "menu", "key:f1");
+   click(menu, "hotkey-menu-1");
+   capture(menu, "confirm", game_key.c_str());
+   capture(menu, "confirm", "key:f1");
+   expect_status("THE GAME USES THAT FOR Up", "a swap that gives MENU a key the game reads");
+   expect_row("menu", {"Home", "L3+R3", "f1"}, "a refused swap");
+   expect_row("confirm", {"Enter", "Right button", host.bound_key}, "a refused swap");
+   click(menu, "hotkey-confirm-3");
+}
+
 /* Pressing RESET restores the defaults of the latest export of the game:
  * CONFIRM from the later one, and MENU and BACK, unchanged from the first. */
 void reset(void *menu)
@@ -514,6 +548,7 @@ int main(int argc, char **argv)
    a_full_row(menu);
    pages(menu);
    the_hotkeys_of_play_keep_nothing(menu);
+   the_games_inputs_are_not_the_hotkeys_of_play(menu);
    close(menu);
 
    /* At the next launch we read the player's file. The swap is still there
