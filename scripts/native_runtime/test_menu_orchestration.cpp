@@ -947,7 +947,14 @@ int main(int argc, char **argv)
       frame(menu);
       check(view.document.root()->IsClassSet("overlay"),
             "a document built again while the game runs draws only its overlays");
+      /* Something was drawn over the game (its splash, a notice) and then the
+       * menu opened. The screen entered while the document showed only
+       * overlays, where nothing can take focus, and focus must still reach an
+       * element of the screen. */
       host.menu_open = true;
+      rib_menu_toggle(menu, true);
+      frame(menu);
+      check(focused("resume"), "a menu opened after the game drew over itself starts on CONTINUE");
       rib_menu_destroy(menu);
    }
 
