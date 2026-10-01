@@ -254,8 +254,8 @@
 .controller-marker.selected .controller-ring {
   stroke: var(--palette-highlight, #fff13d);
 }
-/* The author's defaults for the actions of the menu: one row of chips each,
-   in a box like the pad's, with its own heading and Reset. */
+/* The author's defaults for the hotkeys: one row of chips each, in a box
+   like the pad's, with its own heading and Reset. */
 .hotkeys {
   margin-top: 20px;
   border: 2px solid var(--ink);
@@ -275,8 +275,10 @@
 .hotkeys .control-message:not(:empty) {
   border-top: 1px solid var(--ink);
 }
+/* Wide enough for the longest name, Previous slot, so every row's chips
+   start in one column. */
 .hotkey-name {
-  min-width: 6em;
+  min-width: 8em;
   font-weight: 600;
 }
 /* A binding: its words, and an × that removes it. Only the × is pressed. */
