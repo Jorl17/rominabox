@@ -77,6 +77,17 @@ pub struct ControlProfile {
     /// The libretro device subclass for the core, absent for the standard joypad.
     pub core_device: Option<u32>,
     pub controls: Vec<ControlDefinition>,
+    /// Each stick, by the group named in its members. In the catalog we
+    /// refuse a stick without a group.
+    #[serde(default)]
+    pub groups: BTreeMap<String, ControlGroup>,
+}
+
+/// What a profile declares about a stick, as written in `controls.json`.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct ControlGroup {
+    /// The stick's name on this pad, for its box title and the table heading.
+    pub title: String,
 }
 
 /// The direction of a stick member, or its click, as we declare and check it

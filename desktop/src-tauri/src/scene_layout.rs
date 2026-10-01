@@ -4,7 +4,7 @@
 //! and request it from the builder and the overlay renderer. To change how
 //! we route a leader line, change this file and nowhere else.
 
-use crate::controls::{ControlDefinition, StickDirection};
+use crate::controls::{ControlDefinition, ControlProfile, StickDirection};
 use crate::menu::SceneMetrics;
 use serde::Serialize;
 
@@ -46,6 +46,8 @@ pub struct Placement {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct GroupPlacement {
     pub name: String,
+    /// The stick's name, as declared in the pad profile.
+    pub title: String,
     pub strip: Rect,
     /// The member that has the group's position on the pad, if one does.
     pub anchor: Option<String>,
@@ -295,7 +297,9 @@ fn reach(button: usize, buttons: &[(i32, i32)], metrics: SceneMetrics) -> Rect {
     }
 }
 
-pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLayout {
+/// Where everything on `profile`'s scene goes, in a frame of `metrics`.
+pub fn layout(profile: &ControlProfile, metrics: SceneMetrics) -> SceneLayout {
+    let controls = profile.controls.as_slice();
     let drawn: Vec<&ControlDefinition> =
         controls.iter().filter(|c| c.group.is_none()).collect();
 
@@ -385,6 +389,11 @@ pub fn layout(controls: &[ControlDefinition], metrics: SceneMetrics) -> SceneLay
                 .filter(|control| control.group.as_deref() == Some(*name));
             GroupPlacement {
                 name: (*name).to_string(),
+                title: profile
+                    .groups
+                    .get(*name)
+                    .map(|group| group.title.clone())
+                    .expect("the catalog titles every stick"),
                 strip,
                 anchor: anchor.map(|anchor| anchor.id.clone()),
                 marker: ring,
@@ -426,6 +435,20 @@ mod tests {
             group_border: 2,
             group_gap: 16,
             group_bottom_margin: 12,
+        }
+    }
+
+    /// A pad of `controls`, its one stick titled.
+    fn pad(controls: Vec<ControlDefinition>) -> ControlProfile {
+        ControlProfile {
+            id: "pad".into(),
+            name: "Pad".into(),
+            systems: Vec::new(),
+            image: String::new(),
+            core_device: None,
+            controls,
+            groups: [("l_stick".to_string(), crate::controls::ControlGroup { title: "Stick".into() })]
+                .into(),
         }
     }
 
@@ -487,7 +510,7 @@ mod tests {
             Some((420, 200)),
             &[("up", Up), ("right", Right), ("down", Down), ("left", Left), ("press", Press)],
         );
-        let group = layout(&stick, metrics()).groups[0].clone();
+        let group = layout(&pad(stick), metrics()).groups[0].clone();
         assert_eq!(group.marker, Some(Rect { x: 399, y: 179, width: 42, height: 42 }));
         assert_eq!(
             group.marks,
@@ -509,9 +532,9 @@ mod tests {
         let mut stick = members(Some((420, 200)), &[("up", Up), ("right", Right)]);
         stick[0].callout_x = 230;
         stick[0].callout_y = 240;
-        let group = layout(&stick, metrics()).groups[0].clone();
+        let group = layout(&pad(stick), metrics()).groups[0].clone();
         assert_eq!((group.strip.x, group.strip.y), (230, 240));
-        let default = layout(&members(Some((420, 200)), &[("up", Up), ("right", Right)]), metrics())
+        let default = layout(&pad(members(Some((420, 200)), &[("up", Up), ("right", Right)])), metrics())
             .groups[0]
             .strip;
         assert_ne!((default.x, default.y), (230, 240), "without one it keeps the bottom centre");
@@ -525,7 +548,7 @@ mod tests {
             Some((420, 200)),
             &[("up", Up), ("right", Right), ("down", Down), ("left", Left)],
         );
-        let marks = layout(&stick, metrics()).groups[0].marks.clone();
+        let marks = layout(&pad(stick), metrics()).groups[0].marks.clone();
         assert_eq!(
             marks.iter().map(|mark| mark.direction).collect::<Vec<_>>(),
             vec![Up, Right, Down, Left]
@@ -537,7 +560,7 @@ mod tests {
     fn a_stick_off_the_pad_has_no_marks() {
         use StickDirection::*;
         let stick = members(None, &[("up", Up), ("right", Right), ("press", Press)]);
-        let group = layout(&stick, metrics()).groups[0].clone();
+        let group = layout(&pad(stick), metrics()).groups[0].clone();
         assert_eq!(group.marker, None);
         assert!(group.marks.is_empty());
     }
@@ -546,7 +569,7 @@ mod tests {
     /// A run along the box's top border would cover that border.
     #[test]
     fn a_stick_above_its_box_drops_onto_it_and_runs_along_nothing() {
-        let layout = layout(&stick(420), metrics());
+        let layout = layout(&pad(stick(420)), metrics());
         let group = &layout.groups[0];
         assert!(group.strip.x < 420 && 420 < group.strip.x + group.strip.width);
         assert_eq!(group.leader, vec![vertical(420, 200, group.strip.y)]);
@@ -557,7 +580,7 @@ mod tests {
     #[test]
     fn a_stick_beside_its_box_turns_to_the_near_painted_edge() {
         let metrics = metrics();
-        let left = layout(&stick(100), metrics).groups[0].clone();
+        let left = layout(&pad(stick(100)), metrics).groups[0].clone();
         assert_eq!(
             left.leader,
             vec![
@@ -565,7 +588,7 @@ mod tests {
                 horizontal(left.strip.y, 100, left.strip.x),
             ]
         );
-        let right = layout(&stick(900), metrics).groups[0].clone();
+        let right = layout(&pad(stick(900)), metrics).groups[0].clone();
         let painted_right = right.strip.x + metrics.group_width + 2 * metrics.group_border;
         assert_eq!(
             right.leader,
@@ -597,7 +620,7 @@ mod tests {
         let mut controls = stick(420);
         controls.push(callout("down", 323, 174, 270));
         controls.push(callout("select", 430, 156, 324));
-        let layout = layout(&controls, metrics);
+        let layout = layout(&pad(controls.clone()), metrics);
         let strip = layout.groups[0].strip;
         let down = &layout.controls[0];
         let select = &layout.controls[1];

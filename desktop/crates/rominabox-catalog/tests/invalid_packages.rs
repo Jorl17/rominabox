@@ -308,16 +308,20 @@ fn stick_member(id: &str, direction: Option<&str>) -> Value {
     member
 }
 
+/// A generic pad of `members`, with a title for its stick.
+fn stick_pad(members: Vec<Value>) -> Value {
+    let mut pad = generic("pad", members);
+    pad["groups"] = json!({ "l_stick": { "title": "Stick" } });
+    pad
+}
+
 #[test]
 fn a_stick_member_without_a_direction_is_rejected() {
     let (root, package) = one("pad");
     write_console(&package, &offering("pad", "pad"));
     write_profile(
         &package,
-        &generic(
-            "pad",
-            vec![stick_member("l_y_minus", Some("up")), stick_member("l_x_plus", None)],
-        ),
+        &stick_pad(vec![stick_member("l_y_minus", Some("up")), stick_member("l_x_plus", None)]),
     );
     assert_sole(&root, "control.stick_direction_missing", "pad", "pad.controls[group=l_stick]");
 }
@@ -328,12 +332,36 @@ fn a_stick_declares_its_directions_once_in_capture_order() {
     write_console(&package, &offering("pad", "pad"));
     write_profile(
         &package,
-        &generic(
-            "pad",
-            vec![stick_member("l_y_plus", Some("down")), stick_member("l_y_minus", Some("up"))],
-        ),
+        &stick_pad(vec![stick_member("l_y_plus", Some("down")), stick_member("l_y_minus", Some("up"))]),
     );
     assert_sole(&root, "control.stick_direction_order", "pad", "pad.controls[group=l_stick]");
+}
+
+/// We show a stick's title in its box and in the builder's table, so
+/// every stick must have one, and a blank title counts as none.
+#[test]
+fn a_stick_without_a_title_is_rejected() {
+    let members = || vec![stick_member("l_y_minus", Some("up")), stick_member("l_x_plus", Some("right"))];
+    for groups in [json!(null), json!({ "l_stick": { "title": "  " } })] {
+        let (root, package) = one("pad");
+        write_console(&package, &offering("pad", "pad"));
+        let mut pad = generic("pad", members());
+        if !groups.is_null() {
+            pad["groups"] = groups;
+        }
+        write_profile(&package, &pad);
+        assert_sole(&root, "controller.group_untitled", "pad", "pad.groups.l_stick");
+    }
+}
+
+#[test]
+fn a_title_for_a_stick_the_pad_does_not_have_is_rejected() {
+    let (root, package) = one("pad");
+    write_console(&package, &offering("pad", "pad"));
+    let mut pad = stick_pad(vec![stick_member("l_y_minus", Some("up"))]);
+    pad["groups"]["r_stick"] = json!({ "title": "C-stick" });
+    write_profile(&package, &pad);
+    assert_sole(&root, "controller.group_unused", "pad", "pad.groups.r_stick");
 }
 
 #[test]

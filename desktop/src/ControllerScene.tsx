@@ -54,7 +54,13 @@ type Run = Rect;
 type Layout = {
   scene: Rect;
   controls: { id: string; marker: Rect; callout: Rect; leader: Run[] }[];
-  groups: { name: string; strip: Rect; marker: Rect | null; leader: Run[] }[];
+  groups: {
+    name: string;
+    title: string;
+    strip: Rect;
+    marker: Rect | null;
+    leader: Run[];
+  }[];
 };
 
 /**
@@ -251,7 +257,7 @@ function StickStrip({
   members,
   bindings,
 }: {
-  placed: { name: string; strip: Rect; marker: Rect | null; leader: Run[] };
+  placed: Layout["groups"][number];
   members: ControlDefinition[];
   bindings: Record<string, { label?: string; key?: string }>;
 }) {
@@ -293,7 +299,7 @@ function StickStrip({
         y={placed.strip.y + 26}
         className="controller-callout-label"
       >
-        {placed.name.replace(/_/g, " ").toUpperCase()}
+        {placed.title}
       </text>
       <text
         x={placed.strip.x + 12}

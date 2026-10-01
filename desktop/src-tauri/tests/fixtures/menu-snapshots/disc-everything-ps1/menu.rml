@@ -18,13 +18,13 @@
 <div id="controller-scene"><img id="controller-image" src="controller-ps1.png"/>
 <div class="control-leader vertical" style="left:402dp;top:228dp;height:100dp;"/>
 <button id="control-group-l_stick" class="control-group" style="left:264dp;top:328dp;">
-<div class="control-label">L STICK</div>
+<div class="control-label">Left stick</div>
 <div id="control-group-binding-l_stick" class="control-assignment"></div><div id="control-hit-l3" class="control-hit" style="left:122dp;top:-116dp;pointer-events:none;"/><div id="control-reach-l3" class="control-reach" style="position:absolute;left:127dp;top:-111dp;width:20dp;height:20dp;"/><div id="control-direction-l_y_minus" class="control-direction direction-up" style="position:absolute;left:137dp;top:-116dp;pointer-events:none;"/><div id="control-direction-l_x_plus" class="control-direction direction-right" style="position:absolute;left:152dp;top:-101dp;pointer-events:none;"/><div id="control-direction-l_y_plus" class="control-direction direction-down" style="position:absolute;left:137dp;top:-86dp;pointer-events:none;"/><div id="control-direction-l_x_minus" class="control-direction direction-left" style="position:absolute;left:122dp;top:-101dp;pointer-events:none;"/><div id="control-direction-l3" class="control-direction direction-press" style="position:absolute;left:137dp;top:-101dp;pointer-events:none;"/>
 </button>
 
 <div class="control-leader vertical" style="left:553dp;top:228dp;height:100dp;"/>
 <button id="control-group-r_stick" class="control-group" style="left:486dp;top:328dp;">
-<div class="control-label">R STICK</div>
+<div class="control-label">Right stick</div>
 <div id="control-group-binding-r_stick" class="control-assignment"></div><div id="control-hit-r3" class="control-hit" style="left:51dp;top:-116dp;pointer-events:none;"/><div id="control-reach-r3" class="control-reach" style="position:absolute;left:56dp;top:-111dp;width:20dp;height:20dp;"/><div id="control-direction-r_y_minus" class="control-direction direction-up" style="position:absolute;left:66dp;top:-116dp;pointer-events:none;"/><div id="control-direction-r_x_plus" class="control-direction direction-right" style="position:absolute;left:81dp;top:-101dp;pointer-events:none;"/><div id="control-direction-r_y_plus" class="control-direction direction-down" style="position:absolute;left:66dp;top:-86dp;pointer-events:none;"/><div id="control-direction-r_x_minus" class="control-direction direction-left" style="position:absolute;left:51dp;top:-101dp;pointer-events:none;"/><div id="control-direction-r3" class="control-direction direction-press" style="position:absolute;left:66dp;top:-101dp;pointer-events:none;"/>
 </button>
 

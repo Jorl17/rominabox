@@ -50,7 +50,7 @@ fn a_sticks_ring_is_where_the_scene_layout_puts_it() {
         for profile in controls::variants_for_system("ps1").unwrap() {
             let scene = fs::read_to_string(destination.join(format!("scene-{}.rml", profile.id)))
                 .unwrap_or_else(|error| panic!("{design}/{}: {error}", profile.id));
-            let layout = scene_layout::layout(&profile.controls, metrics);
+            let layout = scene_layout::layout(&profile, metrics);
             for group in &layout.groups {
                 let Some(marker) = group.marker else { continue };
                 let anchor = profile
@@ -130,7 +130,7 @@ fn no_leader_crosses_a_stick_box_on_any_pad() {
     let mut boxes = 0;
     for (design, metrics) in design_metrics() {
         for profile in illustrated_profiles() {
-            let layout = scene_layout::layout(&profile.controls, metrics);
+            let layout = scene_layout::layout(&profile, metrics);
             let runs = layout
                 .controls
                 .iter()

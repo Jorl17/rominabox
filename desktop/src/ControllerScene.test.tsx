@@ -158,7 +158,9 @@ describe("the builder's controller scene", () => {
     const labels = [...container.querySelectorAll("text")].map(
       (node) => node.textContent ?? "",
     );
-    expect(labels.filter((text) => text.includes("STICK")).length).toBe(2);
+    expect(
+      labels.filter((text) => text === "Left stick" || text === "Right stick"),
+    ).toEqual(["Left stick", "Right stick"]);
     for (const control of profileNamed("ps1").controls.filter((c) =>
       Boolean((c as { group?: string }).group),
     )) {

@@ -241,6 +241,7 @@ export function ControlsEditor({
               <StickRows
                 key={group}
                 group={group}
+                title={stickTitle(profile, group)}
                 members={profile.controls.filter(
                   (member) => "group" in member && member.group === group,
                 )}
@@ -255,4 +256,17 @@ export function ControlsEditor({
       </span>
     </div>
   );
+}
+
+/** The name of stick `group` in `profile`, from its catalog entry. */
+function stickTitle(
+  profile: (typeof registry.profiles)[number],
+  group: string,
+): string {
+  const groups: Record<string, { title: string } | undefined> =
+    profile.groups ?? {};
+  const title = groups[group]?.title;
+  // We reject a stick without one in the catalog.
+  if (!title) throw new Error(`${profile.id} has no title for ${group}`);
+  return title;
 }

@@ -165,6 +165,15 @@ pub struct Control {
     pub callout_y: Option<i32>,
 }
 
+/// What a profile declares about one group of its controls: a stick.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ControlGroup {
+    /// The stick's name on the pad, as we show it in its box and the builder's
+    /// table, for example "C-stick" for the second GameCube stick.
+    pub title: String,
+}
+
 /// A pad layout. Exactly one package contains it, and any console that uses
 /// it refers to it by id.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -191,6 +200,9 @@ pub struct ControllerProfile {
     )]
     pub core_device: Option<u32>,
     pub controls: Vec<Control>,
+    /// Every group a control names, by that name, and nothing else.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub groups: BTreeMap<String, ControlGroup>,
 }
 
 /// One core option that we set so the picture shows the core's own pixels.
