@@ -36,7 +36,6 @@ from rmlui_paths import HEADER_DIRS, LIBRARY  # noqa: E402
 from built import cli  # noqa: E402
 
 PROBE = ROOT / "work/probe/rml_probe"
-PROBE_LOCK = ROOT / "work/probe/rml_probe.lock"
 PROBE_SOURCE = ROOT / "scripts/native_runtime/rml_probe.cpp"
 DESIGN = ROOT / "integrations/designs/native"
 ASSETS = ROOT / "work/probe/menu-assets"
@@ -88,7 +87,9 @@ def build() -> None:
     # We run test scopes together, and use the probe in several. On Windows we
     # cannot overwrite a running program, so we check and build the probe only
     # in the process that has the lock, and use the result in the others.
-    with PROBE_LOCK.open("a") as handle:
+    # The lock is beside the probe, in the folder we made above, wherever we
+    # build the probe.
+    with PROBE.with_name(PROBE.name + ".lock").open("a") as handle:
         file_lock.hold_exclusively(handle)
         if PROBE.exists() and PROBE.stat().st_mtime >= max(path.stat().st_mtime for path in inputs):
             return
