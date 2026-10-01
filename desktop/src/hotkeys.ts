@@ -65,7 +65,7 @@ export type Refusal =
   | { kind: "twice"; hotkey: string; binding: string }
   | { kind: "shared"; hotkey: string; other: string; binding: string }
   | {
-      kind: "gameKey";
+      kind: "gameInput";
       hotkey: string;
       binding: string;
       control: string;
@@ -87,8 +87,10 @@ export function refusalWords(refusal: Refusal, changed: string): string {
         refusal.hotkey === changed ? refusal.other : refusal.hotkey;
       return `${bindingWords(refusal.binding)} is already ${hotkeyName(holder)}'s.`;
     }
-    case "gameKey":
-      return `${bindingWords(refusal.binding)} is the game's key for ${refusal.label}.`;
+    case "gameInput": {
+      const what = refusal.binding.startsWith(keyPrefix) ? "key" : "button";
+      return `${bindingWords(refusal.binding)} is the game's ${what} for ${refusal.label}.`;
+    }
     case "controls":
       return refusal.message;
   }

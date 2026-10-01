@@ -126,8 +126,9 @@ pub fn profile_for_system(system: &str) -> Result<ControlProfile, String> {
 
 /// Validate the author's overrides against the selected controller layout.
 ///
-/// A control may not use a key bound to a hotkey used during play. We refuse
-/// that in `crate::hotkeys`, where we declare which keys those are.
+/// A control may not use a key or pad position bound to a hotkey used during
+/// play. We refuse that in `crate::hotkeys`, where we declare which inputs
+/// those are.
 pub fn validate_for_system(system: &str, controls: &Controls) -> Result<ControlProfile, String> {
     let profile = if let Some(id) = &controls.profile {
         let mut offered = variants_for_system(system)?;
@@ -261,21 +262,15 @@ pub fn write_defaults_config(
     // We do not write the emulated device here, because
     // `input_libretro_device_p1` takes effect only in a remap file, never in
     // a config file. We write it in `packaging::stage_controller_remap`.
-    let declared = declared_controls(system, &profile)?;
-    let placed = crate::pad_positions::place(&declared, &controls.bindings, &pad_positions()?)?;
-    for (control, value) in &every_control(&declared, &profile, controls) {
+    for Played { control, value, slot } in &every_control(system, &profile, controls)? {
         // We bind a control's key and mouse button where we read the control.
-        let slot = placed
-            .iter()
-            .find(|entry| entry.control == control.id)
-            .map_or(control.id.as_str(), |entry| entry.slot.as_str());
         config.push_str(&format!(
             "{} = \"{}\"\ninput_player1_{slot} = \"{}\"\n",
             key!(ControlLabel, &control.id),
             escape_config_value(&value.label),
             escape_config_value(&value.key),
         ));
-        if slot != control.id {
+        if *slot != control.id {
             config.push_str(&format!(
                 "{} = \"{slot}\"\n",
                 key!(ControlPosition, &control.id)
@@ -297,44 +292,61 @@ pub fn write_defaults_config(
     Ok(profile)
 }
 
+/// A control of a pad in the picker, as it is for this game, and the pad
+/// position we read it from, either its default or where the author moved it.
+struct Played {
+    control: ControlDefinition,
+    value: EffectiveControl,
+    slot: String,
+}
+
 /// Every control of every pad in the picker, for this game: the chosen pad's
 /// with the changes in `controls`, and the others as we declare them.
-fn every_control(
-    declared: &[ControlDefinition],
-    profile: &ControlProfile,
-    controls: &Controls,
-) -> Vec<(ControlDefinition, EffectiveControl)> {
+fn every_control(system: &str, profile: &ControlProfile, controls: &Controls) -> Result<Vec<Played>, String> {
+    let declared = declared_controls(system, profile)?;
+    let placed = crate::pad_positions::place(&declared, &controls.bindings, &pad_positions()?)?;
     let values = effective_controls(profile, controls);
-    declared
-        .iter()
+    Ok(declared
+        .into_iter()
         .map(|control| {
             let value = values.get(&control.id).cloned().unwrap_or_else(|| EffectiveControl {
                 label: control.label.clone(),
                 key: control.key.clone(),
                 mouse: None,
             });
-            (control.clone(), value)
+            let slot = placed
+                .iter()
+                .find(|entry| entry.control == control.id)
+                .map_or_else(|| control.id.clone(), |entry| entry.slot.clone());
+            Played { control, value, slot }
         })
-        .collect()
+        .collect())
 }
 
-/// A key for a control in the game, with the control's id and its label,
-/// on any pad in the picker.
+/// The inputs for one control of the game, on any pad in the picker: its
+/// key and the pad position we read it from, with the control's id and the
+/// label we show for it.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GameplayKey {
+pub struct GameInput {
     pub control: String,
     pub label: String,
     pub key: String,
+    pub position: String,
 }
 
-/// Every key for a control of the game `system` with `controls`, on every
-/// pad in its picker. A hotkey used during play may not have any of these
-/// keys (`crate::hotkeys`).
-pub fn gameplay_keys(system: &str, controls: &Controls) -> Result<Vec<GameplayKey>, String> {
+/// Every input of the game `system` with `controls`, on every pad that the
+/// player can choose. A hotkey used during play must not use any of these
+/// inputs (`crate::hotkeys`).
+pub fn game_inputs(system: &str, controls: &Controls) -> Result<Vec<GameInput>, String> {
     let profile = validate_for_system(system, controls)?;
-    Ok(every_control(&declared_controls(system, &profile)?, &profile, controls)
+    Ok(every_control(system, &profile, controls)?
         .into_iter()
-        .map(|(control, value)| GameplayKey { control: control.id, label: value.label, key: value.key })
+        .map(|Played { control, value, slot }| GameInput {
+            control: control.id,
+            label: value.label,
+            key: value.key,
+            position: slot,
+        })
         .collect())
 }
 

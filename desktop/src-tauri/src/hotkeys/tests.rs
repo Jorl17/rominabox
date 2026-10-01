@@ -135,7 +135,7 @@ fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_keys() {
     let refused = |hotkeys: &Hotkeys, controls: &Controls| hotkeys.check_for("megadrive", controls).unwrap_err();
     assert_eq!(
         refused(&defaults, &keyed("a", "f2")),
-        Refusal::GameKey {
+        Refusal::GameInput {
             binding: Binding::Key("f2".into()),
             hotkey: named("quick-save"),
             control: "a".into(),
@@ -149,7 +149,7 @@ fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_keys() {
     let start = hotkeys(serde_json::json!({ "quick-load": ["key:enter"], "confirm": ["key:space"] })).unwrap();
     assert_eq!(
         refused(&start, &Controls::default()),
-        Refusal::GameKey {
+        Refusal::GameInput {
             binding: Binding::Key("enter".into()),
             hotkey: named("quick-load"),
             control: "start".into(),
@@ -210,7 +210,7 @@ fn a_refusal_names_the_rule_and_the_hotkeys_for_the_builder() {
     let game_key = crate::builder::unstated::hotkeys().check_for("megadrive", &keyed("y", "f7")).unwrap_err();
     assert_eq!(
         serde_json::to_value(game_key).unwrap(),
-        serde_json::json!({ "kind": "gameKey", "binding": "key:f7", "hotkey": "next-slot", "control": "y", "label": "A" })
+        serde_json::json!({ "kind": "gameInput", "binding": "key:f7", "hotkey": "next-slot", "control": "y", "label": "A" })
     );
 }
 
