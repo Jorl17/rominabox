@@ -21,9 +21,11 @@
  * Without it, we draw the document as it was composed, showing Pause.
  *
  * We read the design as in the player (load_design), with its fonts, its
- * words and its screens. Once we have shown the screen and made the changes,
- * we split every list into pages by the player's own rules (paging.hpp),
- * from its first page, as in the menu when it loads. */
+ * words, its screens and its settings. We draw the settings as at the start
+ * of a game, at the values declared in its export (setting_display.hpp), and
+ * before the changes, so a change can still set them otherwise. Once we have
+ * made the changes, we split every list into pages by the player's own rules
+ * (paging.hpp), from its first page, as in the menu when it loads. */
 
 #include "rml_preview.h"
 #include "gl_context.h"
@@ -34,6 +36,7 @@
 #include "rmlui/file_layer.hpp"
 #include "rmlui/paging.hpp"
 #include "rmlui/screen_display.hpp"
+#include "rmlui/setting_display.hpp"
 #include "rmlui/words.hpp"
 #include "rmlui/render/platform.h"
 #include "rmlui/render/rmlui_gl.h"
@@ -47,6 +50,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -80,6 +84,17 @@ extern "C" void RARCH_ERR(const char *format, ...)
 }
 
 namespace {
+
+/* The sliders in the preview. We draw them, and keep no state for keys or a
+ * pointer to move them. */
+struct Sliders : rib::SliderPainter
+{
+   std::map<std::string, rib::SliderPainted> painted;
+   void paint_slider(Rml::Element *slider, float fraction) override
+   {
+      rib::draw_slider(slider, fraction, painted[slider->GetId()]);
+   }
+};
 
 struct Quiet : Rml::SystemInterface
 {
@@ -211,6 +226,15 @@ int render(const std::string& document_path, const std::string& output, int widt
       else
          rib::display_screen(document, screens, *wanted);
    }
+   /* Show the screen first, because we measure a slider from its laid-out
+    * track. We treat each setting as one the game uses. */
+   if (!failed)
+   {
+      document->Show();
+      Sliders sliders;
+      for (const rib::SettingDeclaration& setting : design.settings)
+         rib::paint_setting(document, setting, setting.default_value, true, sliders);
+   }
    for (const Change& change : changes)
       if (!failed && !apply(document, change))
          failed = 2;
@@ -231,7 +255,6 @@ int render(const std::string& document_path, const std::string& output, int widt
    std::vector<unsigned char> encoded;
    if (!failed)
    {
-      document->Show();
       context->Update();
       glGenFramebuffers(1, &framebuffer);
       glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);

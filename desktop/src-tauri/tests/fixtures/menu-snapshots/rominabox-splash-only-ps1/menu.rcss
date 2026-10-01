@@ -415,8 +415,9 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 #volume-control { border-color: #061a48; }
 #volume-control .slider-track { border-color: #020b27; }
 .slider-thumb { background-color: #ffffff; border-color: #ffffff; }
-.slider:hover .slider-thumb { border-color: #ffffff; }
-.slider.focused .slider-thumb, .slider.focused:hover .slider-thumb, .slider.dragging .slider-thumb, .slider:active .slider-thumb { background-color: #fff13d; border-color: #fff13d; }
+.slider:hover .slider-thumb { border-color: #fff13d; }
+.slider.focused .slider-thumb, .slider.focused:hover .slider-thumb { background-color: #fff13d; border-color: #fff13d; }
+.slider.dragging .slider-thumb, .slider:active .slider-thumb { background-color: #fff13d; border-color: #ffffff; }
 
 /* Controls. The pixel font has only capitals, but these words are in mixed
  * case in the console data, and here they look like the button labels. */

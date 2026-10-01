@@ -142,10 +142,13 @@ fn setting_lines(text: &mut String, setting: &PlayerSetting) -> Result<(), Strin
     match setting.kind {
         Kind::Level { values } => {
             let values: Vec<String> = values.iter().map(|value| setting.text(*value)).collect();
-            line(text, &key!(SettingValues, id), &values.join(" "))
+            line(text, &key!(SettingValues, id), &values.join(" "))?;
         }
-        Kind::Switch { inverted } => line(text, &key!(SettingInverted, id), &inverted.to_string()),
+        Kind::Switch { inverted } => line(text, &key!(SettingInverted, id), &inverted.to_string())?,
     }
+    // The value at the start of the game. We draw it in the menu until we get
+    // the key from RetroArch, and in the preview of the builder.
+    line(text, &key!(SettingDefault, id), &setting.text(setting.default))
 }
 
 /// The declarations for `markup`, the finished document.

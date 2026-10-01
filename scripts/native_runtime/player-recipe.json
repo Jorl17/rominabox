@@ -224,6 +224,7 @@
       "menu/drivers/rmlui/declarations.cpp",
       "menu/drivers/rmlui/paging.cpp",
       "menu/drivers/rmlui/screen_display.cpp",
+      "menu/drivers/rmlui/setting_display.cpp",
       "menu/drivers/rmlui/words.cpp",
       "menu/drivers/rmlui/render/rmlui_gl.cpp",
       "menu/drivers/rmlui/render/rmlui_gl3.cpp",
