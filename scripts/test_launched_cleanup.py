@@ -30,6 +30,7 @@ import scratch  # noqa: E402
 import temp_entries  # noqa: E402
 import test_shipped  # noqa: E402
 import windows_pack  # noqa: E402
+from launch_header import TEST_USER_DATA_ENV  # noqa: E402
 from make_test_rom import make_megadrive_rom  # noqa: E402
 
 FAILURES: list[str] = []
@@ -52,11 +53,13 @@ def failing_part_way(name: str, run: Callable[[Callable[[], None]], object], unp
     stamp = os.environ["ROMINABOX_SCRATCH_RUN"]
     temporary = temp_entries.snapshot()
     games: list[tuple[str, Path]] = []
+    own: list[Path] = []
 
     def fail() -> None:
         for folder in unpacks:
             games.append((menu_shots.IDENTITY.search(menu_shots.plan_text(folder)).group(1),
                           menu_shots.storage_home(folder)))
+        own.append(Path(os.environ[TEST_USER_DATA_ENV]))
         raise MadeToFail(name)
 
     try:
@@ -71,6 +74,7 @@ def failing_part_way(name: str, run: Callable[[Callable[[], None]], object], unp
         left += [str(path) for path in (person / "Games" / identity, sandbox) if path.exists()]
         check(not left, f"{name}: nothing of {identity} is left" + (f": {', '.join(left)}" if left else ""))
     leftover = [entry for entry in temp_entries.additions(temporary, temp_entries.snapshot()) if stamp in entry]
+    leftover += [str(folder) for folder in own if folder.exists()]
     check(not leftover, f"{name}: no temporary folder is left" + (f": {', '.join(leftover)}" if leftover else ""))
 
 

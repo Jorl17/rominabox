@@ -30,7 +30,7 @@ from pathlib import Path
 
 from launch_header import TEST_USER_DATA_ENV, launch_declaration
 from programs import windowless
-from scratch import remove_made, scratch_run
+from scratch import remove_made
 
 TRAILER = struct.Struct("<QQ8s")
 
@@ -183,7 +183,10 @@ def own_user_data() -> Iterator[Callable[[], None]]:
     state = _OwnUserData
     with state.lock:
         if state.blocks == 0:
-            state.folder = Path(tempfile.mkdtemp(prefix=f"rominabox-user-data-{scratch_run()}-"))
+            # A short name, because the deepest file in a game, a CRT Royale
+            # texture, is 197 characters below the per-user folder, and in the
+            # player we open no path longer than 260. A stamp would exceed that.
+            state.folder = Path(tempfile.mkdtemp(prefix="rominabox-"))
             state.made = state.folder.lstat()
             state.before = os.environ.get(TEST_USER_DATA_ENV)
             state.kept = False
