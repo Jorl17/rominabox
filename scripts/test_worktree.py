@@ -629,29 +629,39 @@ def a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote() -> None:
         )
 
 
-def a_rebuilt_rmlui_archive_invalidates_the_menu_probe() -> None:
-    """Check that we relink an old probe after preparing the current RmlUi."""
+def build_probe(directory: Path, oldest_first: tuple[str, ...]) -> list[list[str]]:
+    """Return the compiles in menu_interaction.build() for a probe in `directory`
+    whose source, library and program were last written in the given order.
+    The program is the file written by the compiler for the probe's name."""
     from unittest.mock import patch
     import menu_interaction
+    import toolchain
 
+    named = directory / "probe"
+    files = {"source": directory / "probe.cpp", "library": directory / "librmlui.a",
+             "program": toolchain.executable(named)}
+    recipe = (Path(menu_interaction.__file__), menu_interaction.ROOT / "scripts/rmlui_paths.py")
+    stamp = max(path.stat().st_mtime for path in recipe) + 10
+    for offset, role in enumerate(oldest_first):
+        files[role].write_bytes(b"fixture")
+        os.utime(files[role], (stamp + offset, stamp + offset))
+    with (
+        patch.object(menu_interaction, "PROBE_SOURCE", files["source"]),
+        patch.object(menu_interaction, "PROBE", named),
+        patch.object(menu_interaction, "LIBRARY", files["library"]),
+        patch.object(menu_interaction.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "")) as run,
+    ):
+        menu_interaction.build()
+    return [call.args[0] for call in run.call_args_list if call.args[0][0] == "c++"]
+
+
+def a_rebuilt_rmlui_archive_invalidates_the_menu_probe() -> None:
+    """Check that we relink an old probe after preparing the current RmlUi."""
     with scratch.scratch() as made:
         directory = Path(made)
-        source, binary, library = (directory / name for name in ("probe.cpp", "probe", "librmlui.a"))
-        recipe = (Path(menu_interaction.__file__), menu_interaction.ROOT / "scripts/rmlui_paths.py")
-        stamp = max(path.stat().st_mtime for path in recipe) + 10
-        for path, modified in ((source, stamp), (binary, stamp + 1), (library, stamp + 2)):
-            path.write_bytes(b"fixture")
-            os.utime(path, (modified, modified))
-        with (
-            patch.object(menu_interaction, "PROBE_SOURCE", source),
-            patch.object(menu_interaction, "PROBE", binary),
-            patch.object(menu_interaction, "LIBRARY", library),
-            patch.object(menu_interaction.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "")) as run,
-        ):
-            menu_interaction.build()
-        compiles = [call.args[0] for call in run.call_args_list if call.args[0][0] == "c++"]
+        compiles = build_probe(directory, ("source", "program", "library"))
         check(
-            len(compiles) == 1 and str(library) in compiles[0],
+            len(compiles) == 1 and str(directory / "librmlui.a") in compiles[0],
             "the probe is relinked against a newer RmlUi archive even when its C++ source is unchanged",
         )
         # A fresh checkout has no work/probe, so in build() we must not put the
@@ -660,6 +670,15 @@ def a_rebuilt_rmlui_archive_invalidates_the_menu_probe() -> None:
             any(path.suffix == ".lock" for path in directory.iterdir()),
             "a probe built somewhere else takes its lock with it, so a checkout where nothing has built the probe builds it",
         )
+
+
+def an_up_to_date_menu_probe_is_not_compiled_again() -> None:
+    """The compiler output has the platform's program suffix, for example
+    rml_probe.exe on Windows. Without the suffix we would find nothing there
+    and compile the probe again on every run on Windows."""
+    with scratch.scratch() as made:
+        compiles = build_probe(Path(made), ("source", "library", "program"))
+        check(not compiles, "a probe newer than everything it is built from is not compiled again")
 
 
 def a_branch_with_a_slash_keeps_its_whole_name() -> None:
@@ -685,6 +704,7 @@ ANYWHERE = [
     a_file_compiled_into_the_tool_counts_as_its_source,
     a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote,
     a_rebuilt_rmlui_archive_invalidates_the_menu_probe,
+    an_up_to_date_menu_probe_is_not_compiled_again,
     # We also run create() from inside a worktree, where we could check out an
     # old branch by mistake. If we skipped that case here, the tests would pass
     # on the checkout where the mistake happens.
