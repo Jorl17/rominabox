@@ -115,7 +115,8 @@
         "wait:60"
       ],
       "startAtMenu": false,
-      "splash": true
+      "splash": true,
+      "inMotion": true
     },
     "boot-3-notice": {
       "script": [
