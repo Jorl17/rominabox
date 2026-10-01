@@ -204,8 +204,8 @@ def consoles_offering_a_picker() -> list[str]:
 
 def set_flags(found: str, properties: dict) -> list[str]:
     """The renderer's --set flags for the overrides of one element. For a list
-    value we set each of its values, so that during a capture a control is
-    both focused and capturing."""
+    value we set each of its values, as for a control being captured, which
+    has both focused and capturing."""
     flags: list[str] = []
     for prop, value in properties.items():
         for each in value if isinstance(value, list) else [value]:
