@@ -254,10 +254,10 @@ def paging_problem(design: str, area: Path) -> str:
 
 def screen_problem(design: str, area: Path) -> str:
     """Return an empty string when `--screen` shows a screen as the player
-    does, with only its panel and its own footer. We draw Pause and Options
-    with the Pause panel in the colour no palette uses, then the Options
-    panel, then the footer in that colour. Options must hide Pause and show
-    its own panel, and different footer words must give different footers.
+    does, with only its panel and its own footer. We draw Options with the
+    Pause CONTINUE in the colour no palette uses, then its own CONTROLS, and
+    Pause and Options with the footer in it. Options must hide Pause and show
+    its own entries, and different footer words must give different footers.
     A picture of Options once kept the Pause footer."""
     into = area / f"{design}-screen"
     problem = render(design, palettes()[0], into, source=True)
@@ -265,8 +265,8 @@ def screen_problem(design: str, area: Path) -> str:
         return problem
     colour = "#{:02x}{:02x}{:02x}".format(*PICTURE)
     shares = {}
-    for screen, element, prop in (("options", "pause-panel", "background-color"),
-                                  ("options", "options-panel", "background-color"),
+    for screen, element, prop in (("options", "resume", "background-color"),
+                                  ("options", "controls", "background-color"),
                                   ("pause", "footer-hint", "color"),
                                   ("options", "footer-hint", "color")):
         drawn = into / f"screen-{screen}-{element}.png"
@@ -278,10 +278,10 @@ def screen_problem(design: str, area: Path) -> str:
         if completed.returncode != 0 or not drawn.is_file():
             return completed.stderr.strip() or f"{drawn} was not written"
         shares[(screen, element)] = picture_share(drawn)
-    if shares[("options", "pause-panel")]:
-        return "Options shown, Pause's panel still shows"
-    if not shares[("options", "options-panel")]:
-        return "Options shown, its panel does not show"
+    if shares[("options", "resume")]:
+        return "Options shown, Pause's CONTINUE still shows"
+    if not shares[("options", "controls")]:
+        return "Options shown, its CONTROLS does not show"
     footers = declared_footers(into / "design.cfg")
     if footers.get("pause") != footers.get("options") \
             and shares[("pause", "footer-hint")] == shares[("options", "footer-hint")]:
