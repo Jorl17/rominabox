@@ -657,12 +657,10 @@ def built_player() -> Path:
 
 
 def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
-    """A copy of the runtime kit at `kit` with `player` as its player, the
-    launcher as we build it from this tree (on macOS the launch library,
-    attached to the player, and on Windows the launcher program), and Native
-    and `design` as they are in this tree, not as they were when we froze the
-    kit. We resolve both from this tree in the exporter, and copy Native into
-    menu-assets for the controller art of the old shot path."""
+    """A copy of the runtime kit at `kit` with `player` as its player, and the
+    launcher, Native and `design` as in this tree, not as when we froze the
+    kit. We resolve Native and the design from this tree in the exporter, and
+    copy Native into menu-assets for the controller art of the old shot path."""
     shutil.copytree(KIT, kit, symlinks=True)
     for package_name in dict.fromkeys(("native", design)):
         package = ROOT / "integrations/designs" / package_name
@@ -678,10 +676,8 @@ def staged_kit(kit: Path, player: Path, design: str = "native") -> Path:
     installed = kit / native_build.kit_file(host_target(), "player")
     shutil.copyfile(player, installed)
     installed.chmod(0o755)
-    # The launch library of a macOS kit, built from this tree and attached to
-    # this player, as we do for the player of the kit in scripts/build_kit.py.
-    # For a kit with a launcher program next to the player (Windows), that
-    # program, built from this tree as in scripts/build_player.py.
+    # The launcher built from this tree: a macOS kit's launch library attached
+    # to this player (build_kit.py), or the program next to it (build_player.py).
     target_kit = native_build.kit_target(host_target())
     if native_build.launch_library(target_kit):
         workspace = kit.parent / "launch-library"
@@ -771,7 +767,6 @@ def _build_a_game(
     return app, program
 
 
-# For each Windows game made with build_a_game, the single program we exported.
 _programs: dict[Path, Path] = {}
 
 
