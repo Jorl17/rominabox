@@ -8,6 +8,7 @@
 //! links between consoles and profiles always match in both directions.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 /// We raise this when a field changes meaning. We reject a package that
 /// declares a version unknown to this build, and never read it in part.
@@ -227,7 +228,7 @@ pub struct CoreComponent {
     pub id: String,
     pub name: String,
     /// Target triple -> artifact filename inside a prepared kit.
-    pub artifacts: std::collections::BTreeMap<String, String>,
+    pub artifacts: BTreeMap<String, String>,
     pub license: ComponentLicense,
     /// Capabilities that this build has, for example `chd`. In an export we
     /// check the selected artifact, never the console name.
