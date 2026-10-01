@@ -22,8 +22,16 @@ pub fn copy_tree(from: &Path, to: &Path) {
     }
 }
 
+/// A kit with only the files we read when we compose a menu.
 pub fn kit(root: &Path) -> PathBuf {
     let kit = root.join("kit");
+    with_menu_assets(&kit);
+    kit
+}
+
+/// The designs, their parts, the controller pictures and the branding from
+/// which we compose a menu, staged into `kit` in the layout of a kit.
+pub fn with_menu_assets(kit: &Path) {
     copy_tree(
         &rominabox_desktop::repo::at("integrations/designs"),
         &kit.join("designs"),
@@ -40,7 +48,6 @@ pub fn kit(root: &Path) -> PathBuf {
         &rominabox_desktop::repo::at("desktop/assets/branding"),
         &kit.join("branding"),
     );
-    kit
 }
 
 /// `kit` with the shader library from which we take libretro's presets in an
