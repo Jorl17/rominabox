@@ -2,11 +2,16 @@
 //! Each checkout has its own cargo target, so that is also the checkout in
 //! which its tests run.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-/// The repository in which we compiled this crate.
+/// The repository this crate was compiled in: two folders above
+/// `desktop/src-tauri`.
 pub fn root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("the crate lives at desktop/src-tauri inside the repository")
+        .to_path_buf()
 }
 
 /// A path inside the repository of this run.
