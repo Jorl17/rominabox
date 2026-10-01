@@ -56,8 +56,7 @@ fn stay_quiet(command: &mut Command) {
     command.env("ROMINABOX_QUIET", "1");
 }
 
-/// A path in the checkout of this run, not in the checkout where the binary
-/// was built. Several checkouts can share one cargo target, so they can differ.
+/// A path in the checkout this run belongs to.
 fn repo_at(relative: &str) -> PathBuf {
     rominabox_desktop::repo::at(relative)
 }

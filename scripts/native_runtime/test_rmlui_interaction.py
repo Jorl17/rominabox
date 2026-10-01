@@ -48,9 +48,8 @@ def harness(output: Path, *sources: Path) -> None:
 
 @functools.cache
 def cli() -> str:
-    # We build it here and check that it comes from this checkout. When
-    # worktrees share one cargo target, the binary next to the manifest may be
-    # stale or from another checkout. See scripts/built.py.
+    # The binary of this checkout, built again when its sources are newer. See
+    # scripts/built.py.
     found = subprocess.check_output([PYTHON, str(SCRIPTS / "built.py")], text=True).strip()
     if not Path(found).is_file():
         raise SystemExit(f"build the CLI first: {' '.join(cli_build())}")
@@ -351,8 +350,9 @@ def main() -> int:
     if not placements():
         return 1
     orchestration_fixtures()
-    harness(ORCHESTRATION, HERE / "test_menu_orchestration.cpp", HERE / "menu_host_fake.cpp",
-            HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
+    harness(ORCHESTRATION, HERE / "test_menu_orchestration.cpp", HERE / "test_menu_player_settings.cpp",
+            HERE / "menu_host_fake.cpp", HERE / "text_test_host.cpp",
+            ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
     stage_everything()
     orchestrate()
     harness(MENU_CONTROLS, HERE / "test_menu_controls.cpp", HERE / "menu_host_fake.cpp",

@@ -16,6 +16,7 @@
  * button's label is a span), and any other NAME a property. In the picture
  * tests we draw a menu's states this way (scripts/fixtures/menu-states.json). */
 
+#include "rml_preview.h"
 #include "gl_context.h"
 
 #include "rmlui/declarations.h"
@@ -245,6 +246,8 @@ int render(const std::string& document_path, const std::string& output, int widt
    return failed;
 }
 
+}
+
 int run(const std::vector<std::string>& arguments)
 {
    std::vector<Change> changes;
@@ -264,32 +267,3 @@ int run(const std::vector<std::string>& arguments)
    return render(arguments[1], arguments[2], std::atoi(arguments[3].c_str()),
          std::atoi(arguments[4].c_str()), changes);
 }
-
-}
-
-/* The arguments as UTF-8. On Windows, main receives them in the ANSI code
- * page, which cannot represent every folder name, so we use the wide entry. */
-#if defined(_WIN32)
-#include <windows.h>
-
-int wmain(int argc, wchar_t **argv)
-{
-   std::vector<std::string> arguments;
-   for (int index = 0; index < argc; index++)
-   {
-      const int size = WideCharToMultiByte(CP_UTF8, 0, argv[index], -1, nullptr, 0, nullptr, nullptr);
-      std::string argument(size > 0 ? (size_t)size - 1 : 0, '\0');
-      if (size > 1)
-         WideCharToMultiByte(CP_UTF8, 0, argv[index], -1, &argument[0], size, nullptr, nullptr);
-      arguments.push_back(argument);
-   }
-   return run(arguments);
-}
-#elif defined(__APPLE__) || defined(__unix__)
-int main(int argc, char **argv)
-{
-   return run(std::vector<std::string>(argv, argv + argc));
-}
-#else
-#error "rml-preview has no entry declared for this platform"
-#endif

@@ -24,20 +24,20 @@ import core_source  # noqa: E402
 import native_build  # noqa: E402
 import toolchain  # noqa: E402
 
-ACCOUNTS = ROOT / "desktop/src-tauri/accounts"
+ACCOUNTS = native_build.accounts_folder()
 # The player's root, which contains rominabox_launch.h, as in the player build.
 PLAYER = ROOT / "vendor/retroarch"
 OUTPUT = ROOT / "work/test-output"
 WARNINGS = ["-Wall", "-Wextra", "-Werror"]
-# What we link into the store on each platform. In sealed.c we seal tokens
-# with DPAPI, which is in crypt32 on Windows.
+# What we link into the store on each platform. In windows/sealed.c we seal
+# tokens with DPAPI, which is in crypt32 on Windows.
 LIBRARIES = {"macos": [], "windows": ["-lcrypt32"]}
 
 
 def sources(platform: str) -> list[Path]:
     """Return the store for `platform`, with the launcher's file layer and
     folder code that it depends on."""
-    return [ACCOUNTS / "accounts.c", ACCOUNTS / "sealed.c", *native_build.file_layer(platform),
+    return [*native_build.accounts_sources(platform), *native_build.file_layer(platform),
             native_build.LAUNCHER / "accounts_folder.c"]
 
 

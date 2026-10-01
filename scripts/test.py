@@ -239,8 +239,8 @@ SCOPES = [
     ),
     Scope(
         "reporoot",
-        "that nothing finds the repository by the path it was compiled in, that no test or script uses a place in one person's home, that every script building against RmlUi uses the declared one, and that no script or test names the removed experiment tree",
-        "that the rule is right, or that a binary really came from elsewhere; it reads how each place asks",
+        "that no test or script uses a place in one person's home, that every script building against RmlUi uses the declared one and the picture scopes the packaged preview renderer, and that no script or test names the removed experiment tree",
+        "that a place it accepts holds what a test needs; it reads how each place is named and asks each script what it uses",
         [PYTHON, str(ROOT / "scripts/test_repo_root.py")],
         # In it we ask the menu harness what it compiles with, FreeType included.
         prepare=RMLUI_PREPARE,
@@ -531,19 +531,14 @@ def execute(command: list[str], env: dict[str, str] | None = None) -> subprocess
         return subprocess.CompletedProcess(command, 127, "", f"{command[0]} is not on PATH\n")
     return subprocess.run(
         [program, *command[1:]], cwd=ROOT, capture_output=True, text=True, errors="replace",
-        env={**running_here(), **(env or {})}, **programs.windowless(),
+        env={**with_python(), **(env or {})}, **programs.windowless(),
     )
 
 
-def running_here() -> dict:
-    """Tell the tests which checkout they belong to.
-
-    A path compiled into a binary is that of the checkout where it was built.
-    Every worktree uses one cargo target, so one checkout can get a test
-    binary built in another, and the tests would then read the other
-    checkout's console packages.
-    """
-    return {**os.environ, "ROMINABOX_REPO": str(ROOT), "ROMINABOX_PYTHON": PYTHON}
+def with_python() -> dict:
+    """Return this process's environment, with the Python of this run in
+    ROMINABOX_PYTHON for the programs that are not Python."""
+    return {**os.environ, "ROMINABOX_PYTHON": PYTHON}
 
 
 def run(scope: Scope) -> tuple[bool, float, str]:

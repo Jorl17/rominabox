@@ -37,8 +37,7 @@ def main() -> int:
         RETROARCH / "cheevos/rominabox.c",
         RETROARCH / "cheevos/rominabox_catalog.c",
         RETROARCH / "cheevos/rominabox_storage.c",
-        test_accounts_store.ACCOUNTS / "accounts.c",
-        test_accounts_store.ACCOUNTS / "sealed.c",
+        *native_build.accounts_sources(platform),
         *native_build.file_layer(platform),
         RCHEEVOS / "src/rc_client.c",
         RCHEEVOS / "src/rc_compat.c",
@@ -52,7 +51,7 @@ def main() -> int:
     subprocess.run(
         [toolchain.describe()["cc"], "-std=gnu99", "-O0", "-g", "-Wno-deprecated-declarations", "-DRC_NO_THREADS",
          f"-I{RETROARCH}", f"-I{RETROARCH / 'deps'}", f"-I{RETROARCH / 'libretro-common/include'}",
-         f"-I{RCHEEVOS / 'include'}", f"-I{ROOT / 'desktop/src-tauri/accounts'}",
+         f"-I{RCHEEVOS / 'include'}", f"-I{native_build.accounts_folder()}",
          f"-I{ROOT / 'desktop/src-tauri/launcher'}", f"-I{ROOT / 'scripts'}",
          *map(str, sources), "-o", str(binary), *test_accounts_store.LIBRARIES[platform]],
         check=True,

@@ -116,13 +116,8 @@
     "comment-windows": "Os: the player's own code is optimised for size, which makes it smaller without slowing emulation, because the core does the work. RmlUi stays Release: built MinSizeRel it requires a std::string constructor the static C++ runtime does not have. -ffunction-sections with --gc-sections makes the player larger with this toolchain."
   },
   "accounts": {
-    "comment": "ROM-in-a-Box's own sources the player compiles, the QUICK SIGN IN store. scripts/native_build.py hands them over with the launcher's file layer they are built on (portable_fs), as the target's platform has it, and the fork compiles every C file it is handed.",
-    "sources": [
-      "desktop/src-tauri/accounts/accounts.c",
-      "desktop/src-tauri/accounts/accounts.h",
-      "desktop/src-tauri/accounts/sealed.c",
-      "desktop/src-tauri/accounts/sealed.h"
-    ]
+    "comment": "ROM-in-a-Box's own sources the player compiles, the QUICK SIGN IN store: those at the top of `folder`, which every platform shares, and the platform's own in the folders launcher.folders names for it (sealed.c: windows/ seals a token with DPAPI, posix/ keeps it as it is). scripts/native_build.py hands them over, with the headers at the top, and the launcher's file layer they are built on (portable_fs), as the target's platform has it, and the fork compiles every C file it is handed.",
+    "folder": "desktop/src-tauri/accounts"
   },
   "capabilities": {
     "comment": "A function each player must have, read from the linked player before it is stripped: the achievements client, and RetroArch's TLS socket layer, which achievements reach their service through. The player links no library outside the system, so its TLS is the one built into it.",
@@ -220,7 +215,7 @@
     ]
   },
   "preview": {
-    "comment": "The builder's menu preview, rml-preview: the player's own RmlUi renderer drawing a composed menu into a picture, in an OpenGL context on a window never shown, built beside the player from the same fork, RmlUi and FreeType, and with the file layer above. 'sources' are the repository's, 'forkSources' the fork's; a target adds its OpenGL context. The menu GL probe (test_dcmenu.py) draws in the same context. It links FreeType statically, as the player does, so it is copied into the builder's resources alone. It is built for the builder's own processor only, never joined into a universal file.",
+    "comment": "The builder's menu preview, rml-preview: the player's own RmlUi renderer drawing a composed menu into a picture, in an OpenGL context on a window never shown, built beside the player from the same fork, RmlUi and FreeType, and with the file layer above. 'sources' are the repository's, 'forkSources' the fork's; a target adds its entry, which reads the program's arguments as that platform passes them, and its OpenGL context. The menu GL probe (test_dcmenu.py) draws in the same context. It links FreeType statically, as the player does, so it is copied into the builder's resources alone. It is built for the builder's own processor only, never joined into a universal file.",
     "sources": [
       "desktop/src-tauri/preview/rml_preview.cpp"
     ],
@@ -235,6 +230,7 @@
     ],
     "macos-arm64": {
       "output": "rml-preview",
+      "entry": "desktop/src-tauri/preview/posix/main.cpp",
       "context": {
         "sources": ["desktop/src-tauri/preview/gl_context_macos.mm"],
         "forkSources": [],
@@ -245,6 +241,7 @@
     },
     "windows-x86_64": {
       "output": "rml-preview.exe",
+      "entry": "desktop/src-tauri/preview/windows/main.cpp",
       "context": {
         "sources": ["desktop/src-tauri/preview/gl_context_windows.cpp"],
         "forkSources": ["libretro-common/glsym/rglgen.c", "libretro-common/glsym/glsym_gl.c"],

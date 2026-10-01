@@ -6,7 +6,7 @@ platform. A rename can point the staging at a missing directory, and the
 failure then comes on the next build, far from the change. So we stage into
 a scratch kit and compare each staged file with its source. We also check
 that the checkout's kit is current, and that in the builder's build tool
-(scripts/build_builder.py) we look for Cargo's output in the shared target.
+(scripts/build_builder.py) we look for Cargo's output where Cargo writes it.
 
     python3 scripts/test_staging.py
 """
@@ -141,8 +141,8 @@ def main() -> int:
     if not signed:
         print("  ok   the builder signs its Mach-O files, whatever `file` says of the others")
 
-    # Cargo may write into the shared target outside this checkout. For the
-    # builder we must use the same target directory as in the other build
+    # With CARGO_TARGET_DIR, Cargo's output may be outside this checkout. For
+    # the builder we must use the same target directory as in the other build
     # scripts, for the permission pass, the CLI copy and the final app bundle.
     looked = builder_finds_cargo_output()
     for entry in looked:

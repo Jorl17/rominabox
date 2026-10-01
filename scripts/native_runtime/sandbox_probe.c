@@ -11,20 +11,9 @@
 #include <string.h>
 
 #if defined(_WIN32)
-#include <winsock2.h>
-#include <windows.h>
-#include <io.h>
-#define probe_open _open
-#define probe_close _close
-#define probe_unlink _unlink
+#include "windows/sandbox_probe.h"
 #elif defined(__APPLE__) || defined(__unix__)
-#include <netinet/in.h>
-#include <sys/mman.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#define probe_open open
-#define probe_close close
-#define probe_unlink unlink
+#include "posix/sandbox_probe.h"
 #else
 #error "the sandbox probe has no checks declared for this platform"
 #endif
@@ -68,87 +57,9 @@ static void accounts_attempt(void) {
 }
 
 #if defined(_WIN32)
-/* Inside a Windows sandbox, the per-user folders belong to the sandbox. */
-static void print_homes(void) {
-    const char *local = getenv("LOCALAPPDATA");
-    const char *temp = getenv("TEMP");
-    printf("HOME=%s\n", local ? local : "");
-    printf("TMPDIR=%s\n", temp ? temp : "");
-}
-
-/* Shared memory created by the host, opened by its name in the host. A
- * sandbox has separate named objects, so the host's are out of reach. */
-static void shared_memory_attempt(void) {
-    const char *name = getenv("ROMINABOX_PROBE_SHM");
-    HANDLE shared;
-    if (!name || !name[0]) {
-        printf("SHM_UNSET\n");
-        return;
-    }
-    shared = OpenFileMappingA(FILE_MAP_READ, FALSE, name);
-    printf(shared ? "SHM_ALLOWED\n" : "SHM_DENIED\n");
-    if (shared)
-        CloseHandle(shared);
-}
-
-/* The network command port. A program in a Windows sandbox may bind it, but
- * nothing from outside reaches it, which we check by sending datagrams. */
-static void network_command_attempt(void) {
-    WSADATA wsa;
-    SOCKET udp;
-    struct sockaddr_in address;
-    DWORD wait = 4000;
-    char datagram[64];
-    int received = 0;
-    WSAStartup(MAKEWORD(2, 2), &wsa);
-    udp = socket(AF_INET, SOCK_DGRAM, 0);
-    memset(&address, 0, sizeof address);
-    address.sin_family = AF_INET;
-    address.sin_port = htons(55355);
-    address.sin_addr.s_addr = htonl(INADDR_ANY);
-    if (udp != INVALID_SOCKET && bind(udp, (struct sockaddr *)&address, sizeof address) == 0) {
-        setsockopt(udp, SOL_SOCKET, SO_RCVTIMEO, (const char *)&wait, sizeof wait);
-        received = recv(udp, datagram, sizeof datagram, 0) > 0;
-    }
-    printf(received ? "UDP_ALLOWED\n" : "UDP_DENIED\n");
-    if (udp != INVALID_SOCKET)
-        closesocket(udp);
-    WSACleanup();
-}
+#include "windows/sandbox_attempts.h"
 #elif defined(__APPLE__) || defined(__unix__)
-static void print_homes(void) {
-    const char *home = getenv("HOME");
-    const char *tmp = getenv("TMPDIR");
-    printf("HOME=%s\n", home ? home : "");
-    printf("TMPDIR=%s\n", tmp ? tmp : "");
-}
-
-static void shared_memory_attempt(void) {
-    int shared = shm_open("/rominabox-isolation-probe", O_CREAT | O_RDWR, 0600);
-    if (shared < 0) {
-        printf("SHM_DENIED\n");
-    } else {
-        printf("SHM_ALLOWED\n");
-        close(shared);
-        shm_unlink("/rominabox-isolation-probe");
-    }
-}
-
-/* The network command port. Binding it fails in the macOS sandbox. */
-static void network_command_attempt(void) {
-    int udp = socket(AF_INET, SOCK_DGRAM, 0);
-    struct sockaddr_in address;
-    memset(&address, 0, sizeof address);
-    address.sin_family = AF_INET;
-    address.sin_port = htons(55355);
-    address.sin_addr.s_addr = htonl(INADDR_ANY);
-    if (udp < 0 || bind(udp, (struct sockaddr *)&address, sizeof address) != 0)
-        printf("UDP_DENIED\n");
-    else
-        printf("UDP_ALLOWED\n");
-    if (udp >= 0)
-        close(udp);
-}
+#include "posix/sandbox_attempts.h"
 #endif
 
 int rarch_main(int argc, char **argv, void *data) {

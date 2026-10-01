@@ -75,20 +75,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|menu-controls-check|project-save|project-open|volume-markup|design-screens|shaders|shaders-check|designs|defaults|places|cores|schemas|where|freeze-macos-executable>\n       rominabox-cli export GAME [FOLDER]\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport makes the game that dropping GAME into the builder makes, in FOLDER or the builder's; a request on stdin can say more, and whatever it leaves out is the builder's. Before it starts it prints what the builder's details step shows: the lookup, the files that travel with the game and the BIOS assessment.\nproject-save completes its game as export does.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ndesigns lists the menu designs, palettes and sound packs. defaults prints the settings a request leaves out, places the folders and platform it leaves to the builder.\npreview draws the builder's menu preview; menu-controls-check checks menu controls as export does.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
-        return Ok(());
-    }
-    // The checkout from which we built this binary.
-    //
-    // Checkouts can use one cargo target directory, and then
-    // release/rominabox-cli is a single file, replaced by the last build from
-    // any checkout. A caller could then photograph a menu, stage a design or
-    // measure an export with another checkout's code.
-    //
-    // We compile in the manifest directory, so we can print the origin of the
-    // binary, and a caller can reject a binary from another checkout.
-    if command == "where" {
-        println!("{}", env!("CARGO_MANIFEST_DIR"));
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|menu-controls-check|project-save|project-open|volume-markup|design-screens|shaders|shaders-check|designs|defaults|places|cores|schemas|freeze-macos-executable>\n       rominabox-cli export GAME [FOLDER]\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport makes the game that dropping GAME into the builder makes, in FOLDER or the builder's; a request on stdin can say more, and whatever it leaves out is the builder's. Before it starts it prints what the builder's details step shows: the lookup, the files that travel with the game and the BIOS assessment.\nproject-save completes its game as export does.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ndesigns lists the menu designs, palettes and sound packs. defaults prints the settings a request leaves out, places the folders and platform it leaves to the builder.\npreview draws the builder's menu preview; menu-controls-check checks menu controls as export does.\ncores fetches the download list for one target into cache.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     if command == "schemas" {

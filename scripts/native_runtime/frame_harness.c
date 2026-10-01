@@ -53,49 +53,9 @@
 /* Load the core in the usual way for a library on each platform, and open
  * files by their UTF-8 paths. */
 #if defined(_WIN32)
-typedef HMODULE core_library;
-
-static core_library open_core(const char *path)
-{
-    wchar_t *wide = test_environment_wide(path);
-    HMODULE library = LoadLibraryW(wide);
-    free(wide);
-    if (!library) fprintf(stderr, "cannot load %s: error %lu\n", path, GetLastError());
-    return library;
-}
-
-static void *core_symbol(core_library library, const char *name)
-{
-    return (void *)GetProcAddress(library, name);
-}
-
-static void close_core(core_library library) { FreeLibrary(library); }
-
-static FILE *open_file(const char *path, const char *mode)
-{
-    wchar_t *wide_path = test_environment_wide(path), *wide_mode = test_environment_wide(mode);
-    FILE *file = _wfopen(wide_path, wide_mode);
-    free(wide_path);
-    free(wide_mode);
-    return file;
-}
+#include "windows/frame_harness.h"
 #elif defined(__APPLE__) || defined(__unix__)
-#include <dlfcn.h>
-
-typedef void *core_library;
-
-static core_library open_core(const char *path)
-{
-    void *library = dlopen(path, RTLD_NOW | RTLD_LOCAL);
-    if (!library) fprintf(stderr, "%s\n", dlerror());
-    return library;
-}
-
-static void *core_symbol(core_library library, const char *name) { return dlsym(library, name); }
-
-static void close_core(core_library library) { dlclose(library); }
-
-static FILE *open_file(const char *path, const char *mode) { return fopen(path, mode); }
+#include "posix/frame_harness.h"
 #else
 #error "frame_harness declares no way to load a core on this platform"
 #endif

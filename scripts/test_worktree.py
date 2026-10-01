@@ -384,34 +384,13 @@ def removing_a_worktree_keeps_the_fork_commits_its_branch_needs() -> None:
         )
 
 
-def a_checkout_is_its_folder_however_its_path_is_spelled() -> None:
-    """On Windows the output of `where` for the CLI has backslashes, and the
-    checkout path in MSYS2's Python has forward slashes, for the same folder.
-    Compared as text, we would refuse this checkout's CLI in the builder build."""
-    import built  # noqa: PLC0415
-
-    with tempfile.TemporaryDirectory() as directory:
-        folder = Path(directory).resolve()
-        other = folder / "other"
-        other.mkdir()
-        spellings = sorted({str(folder), str(folder).replace("\\", "/")})
-        for said in spellings:
-            for mine in spellings:
-                check(built.same_folder(said, mine), f"{said} names the checkout {mine}")
-        check(not built.same_folder(str(other), str(folder)), "another folder is another checkout")
-        check(not built.same_folder(None, str(folder)), "a binary that will not say belongs to no checkout")
-
-
 def the_built_cli_follows_the_redirected_cargo_target() -> None:
-    """Check where four scripts find cargo's output, which moves in a worktree.
+    """Check where four scripts find cargo's output, which CARGO_TARGET_DIR moves.
 
     A fixed `desktop/src-tauri/target/release` path in a script is correct only
-    while nothing redirects cargo. Inside a worktree we always redirect it to
-    the shared store, so with such a path we would look in a directory without
-    cargo's output and report the tool as missing.
-
-    We answer this now with scripts/built.py, where we also refuse a binary
-    built in another checkout, which the path alone cannot show.
+    while nothing redirects cargo. With a redirect, we would look in a directory
+    without cargo's output and report the tool as missing. We resolve the
+    location with scripts/built.py.
     """
     import built  # noqa: PLC0415 — imported here so this file loads without it
 
@@ -695,7 +674,6 @@ def a_branch_with_a_slash_keeps_its_whole_name() -> None:
 ANYWHERE = [
     removal_deletes_only_the_worktrees_own_accounts_folder,
     shared_directories_are_linked_and_removal_never_follows_them,
-    a_checkout_is_its_folder_however_its_path_is_spelled,
     a_branch_with_a_slash_keeps_its_whole_name,
     the_built_cli_follows_the_redirected_cargo_target,
     a_file_compiled_into_the_tool_counts_as_its_source,
