@@ -23,6 +23,7 @@ by the exporter, as we set it in the picture tests.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -211,6 +212,46 @@ def markup_problem(design: str, area: Path) -> str:
     return ""
 
 
+def paging_problem(design: str, area: Path) -> str:
+    """Return an empty string when we split a list into pages in the preview as
+    in the player, from the first page and with the pager showing. We give the
+    composed Options list a page size of one, so CONTROLS fills the first page
+    and HOTKEYS is on the second. We paint each in the colour that no palette
+    uses in its own picture, and the pager too. Without pages, HOTKEYS appears
+    in the preview, and in the Disc design its last entries ran over the
+    volume row."""
+    into = area / f"{design}-paging"
+    problem = render(design, palettes()[0], into, source=True)
+    if problem:
+        return problem
+    menu = (into / "menu.rml").read_text(encoding="utf-8")
+    sized = re.subn(r'(id="options-list" class="list" data-page-size=")\d+"', r'\g<1>1"', menu)
+    if sized[1] != 1:
+        return "the composed menu has no single Options list with a page size"
+    document = into / "paging.rml"
+    document.write_text(sized[0], encoding="utf-8")
+    colour = "#{:02x}{:02x}{:02x}".format(*PICTURE)
+    shown = ["--set", "pause-panel:display=none", "--set", "options-panel:display=block"]
+    seen = {}
+    for element in ("controls", "hotkeys", "options-pager"):
+        drawn = into / f"paging-{element}.png"
+        completed = subprocess.run(
+            [str(RENDERER), str(document), str(drawn), "960", "600", *shown,
+             "--set", f"{element}:background-color={colour}"],
+            capture_output=True, text=True, timeout=180,
+        )
+        if completed.returncode != 0 or not drawn.is_file():
+            return completed.stderr.strip() or f"{drawn} was not written"
+        seen[element] = picture_share(drawn) > 0
+    if not seen["controls"]:
+        return "CONTROLS, on the first page, does not show"
+    if seen["hotkeys"]:
+        return "HOTKEYS, on the second page, shows: the list is drawn unsplit"
+    if not seen["options-pager"]:
+        return "the pager of a list of several pages does not show"
+    return ""
+
+
 def main() -> int:
     if not RENDERER.is_file():
         raise SystemExit(f"no offscreen renderer at {RENDERER}")
@@ -232,7 +273,8 @@ def main() -> int:
             for name, check in (("background", background_problem),
                                 ("over the game", overlay_problem),
                                 ("at twice the size", scale_problem),
-                                ("text as markup", markup_problem)):
+                                ("text as markup", markup_problem),
+                                ("a list in pages", paging_problem)):
                 problem = check(design, area)
                 if problem:
                     print(f"  FAIL {design} {name}: {problem}", file=sys.stderr)
