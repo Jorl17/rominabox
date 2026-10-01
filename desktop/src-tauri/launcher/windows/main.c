@@ -95,10 +95,21 @@ static void game_program(wchar_t *path, DWORD capacity) {
     wcscpy(path, unpacked_program);
 }
 
-/* The per-user application data folder, %LOCALAPPDATA%. */
+/* The per-user application data folder, %LOCALAPPDATA%, or the folder that
+ * a test sets in its place. */
 static char *local_application_data(void) {
+    static wchar_t named[32768];
+    wchar_t *name = wide(RIB_ENV_TEST_USER_DATA);
+    DWORD length = GetEnvironmentVariableW(name, named, sizeof named / sizeof named[0]);
     PWSTR found = NULL;
     char *path;
+    free(name);
+    if (length > 0 && length < sizeof named / sizeof named[0]) {
+        path = utf8(named);
+        if (!fs_is_absolute(path))
+            rominabox_launch_die(RIB_ENV_TEST_USER_DATA " is not an absolute path");
+        return path;
+    }
     if (FAILED(SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &found)))
         rominabox_launch_die("there is no per-user folder to keep this game's files in");
     path = utf8(found);

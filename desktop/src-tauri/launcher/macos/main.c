@@ -74,6 +74,7 @@ static void prepare(void) {
     char accounts_root[LAUNCH_PATH_CAP];
     char user_data[LAUNCH_PATH_CAP];
     const char *home = getenv("HOME");
+    const char *test_user_data = getenv(RIB_ENV_TEST_USER_DATA);
     uint32_t exec_path_size = sizeof executable;
     struct passwd *user = getpwuid(getuid());
     LaunchPlaces places = {0};
@@ -102,34 +103,45 @@ static void prepare(void) {
     rominabox_launch_join(resources, sizeof resources, bundle, "Contents/Resources");
 
     places.resources = resources;
-    /* A game's data is in its HOME's Application Support: inside the
-     * sandbox, HOME is the game's container. */
-    if (!home || home[0] != '/')
-        rominabox_launch_die("HOME is not an absolute path, so there is nowhere safe to keep this game's files");
-    {
-        int wrote = snprintf(user_data, sizeof user_data, "%s/Library/Application Support", home);
-        if (wrote < 0 || (size_t)wrote >= sizeof user_data)
-            rominabox_launch_die("the data directory does not fit");
-    }
     places.user_data = user_data;
-    /* QUICK SIGN IN's accounts are in the real home, which the sandbox's
-     * HOME is not. */
-    if (user && user->pw_dir && user->pw_dir[0] == '/') {
-        int wrote = snprintf(accounts_root, sizeof accounts_root, "%s/Library/Application Support", user->pw_dir);
-        if (wrote > 0 && (size_t)wrote < sizeof accounts_root)
-            places.accounts_root = accounts_root;
+    if (test_user_data && test_user_data[0]) {
+        /* A test's own folder replaces every per-user folder, for the game's
+         * data and for QUICK SIGN IN, and there is no earlier data location. */
+        if (test_user_data[0] != '/')
+            rominabox_launch_die(RIB_ENV_TEST_USER_DATA " is not an absolute path");
+        if (strlen(test_user_data) >= sizeof user_data)
+            rominabox_launch_die("the data directory does not fit");
+        strcpy(user_data, test_user_data);
+        places.accounts_root = user_data;
+    } else {
+        /* A game's data is in its HOME's Application Support: inside the
+         * sandbox, HOME is the game's container. */
+        if (!home || home[0] != '/')
+            rominabox_launch_die("HOME is not an absolute path, so there is nowhere safe to keep this game's files");
+        {
+            int wrote = snprintf(user_data, sizeof user_data, "%s/Library/Application Support", home);
+            if (wrote < 0 || (size_t)wrote >= sizeof user_data)
+                rominabox_launch_die("the data directory does not fit");
+        }
+        /* QUICK SIGN IN's accounts are in the real home, which the sandbox's
+         * HOME is not. */
+        if (user && user->pw_dir && user->pw_dir[0] == '/') {
+            int wrote = snprintf(accounts_root, sizeof accounts_root, "%s/Library/Application Support", user->pw_dir);
+            if (wrote > 0 && (size_t)wrote < sizeof accounts_root)
+                places.accounts_root = accounts_root;
+        }
+        /* A game exported in the older layout kept its data in the real
+         * home. Inside the sandbox, HOME is the container. */
+        if (places.accounts_root) {
+            char real_home[LAUNCH_PATH_CAP];
+            char real_user[LAUNCH_PATH_CAP];
+            if (!realpath(home, real_home) || !realpath(user->pw_dir, real_user) || strcmp(real_home, real_user) != 0)
+                places.previous_user_data = accounts_root;
+        }
     }
     /* When a person double-clicks the game or opens it from the Dock, it
      * starts through launchd. Otherwise a script or a harness started it. */
     places.opened_by_person = getppid() == 1;
-    /* A game exported in the older layout kept its data in the real
-     * home. Inside the sandbox, HOME is the container. */
-    if (places.accounts_root) {
-        char real_home[LAUNCH_PATH_CAP];
-        char real_user[LAUNCH_PATH_CAP];
-        if (!realpath(home, real_home) || !realpath(user->pw_dir, real_user) || strcmp(real_home, real_user) != 0)
-            places.previous_user_data = accounts_root;
-    }
     rominabox_prepare_launch(&places, &launch);
 
     for (index = 0; index < launch.variable_count; index++) {
