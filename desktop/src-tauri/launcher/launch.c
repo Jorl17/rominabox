@@ -112,10 +112,6 @@ void rominabox_launch_join(char *out, size_t out_cap, const char *left, const ch
     join_path(out, out_cap, left, right);
 }
 
-void rominabox_launch_make_directories(const char *path) {
-    mkdir_p(path);
-}
-
 static char *read_file(const char *path, size_t *length_out) {
     FILE *file = fs_open(path, "rb");
     long length = 0;
