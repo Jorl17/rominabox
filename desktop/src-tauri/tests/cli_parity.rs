@@ -267,3 +267,26 @@ fn shaders_check_prints_the_builders_filter_warnings() {
     );
     let _ = fs::remove_dir_all(&root);
 }
+
+/// When the request does not name an author's shader, we name it after its
+/// file, as we do for a file added in the Menu step of the builder.
+#[test]
+fn a_custom_shader_without_a_name_is_named_after_its_file() {
+    let root = Scratch::dir("rominabox-cli-shader-name");
+    let pass = "#if defined(VERTEX)\n#elif defined(FRAGMENT)\n#endif\n";
+    fs::write(root.join("CRT Royale.glsl"), pass).unwrap();
+    fs::write(root.join("pal-r57shell.GLSL"), pass).unwrap();
+    let request = json!({ "custom": [
+        { "path": root.join("CRT Royale.glsl") },
+        { "path": root.join("pal-r57shell.GLSL") },
+    ] });
+    let listed = result("shaders-check", Some(&request))["shaders"].clone();
+    let names: Vec<&str> = listed
+        .as_array()
+        .expect("the resolved shaders")
+        .iter()
+        .map(|shader| shader["name"].as_str().unwrap())
+        .collect();
+    assert!(names.contains(&"CRT Royale"), "{listed}");
+    assert!(names.contains(&"pal-r57shell"), "{listed}");
+}
