@@ -41,16 +41,22 @@ ruzstd = "0.8"
 [target.'cfg(windows)'.dependencies]
 # The small icon of the builder window, loaded at the size shown on the
 # screen. The installer tasks in the builder (src/installation.rs), for the
-# person's Path in the registry and the games' sandboxes.
+# person's Path in the registry and the games' sandboxes. The local time in
+# the date field of a zip (packaging/archive.rs).
 windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_Security_Isolation",
     "Win32_System_LibraryLoader",
     "Win32_System_Registry",
+    "Win32_System_Time",
     "Win32_UI_Controls",
     "Win32_UI_HiDpi",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+[target.'cfg(unix)'.dependencies]
+# For the local time in a zip's date field (packaging/archive.rs).
+libc = "0.2"
 
 [dev-dependencies]
 libc = "0.2.189"

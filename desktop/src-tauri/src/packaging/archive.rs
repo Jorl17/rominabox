@@ -12,13 +12,18 @@ use crate::mach_o;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
-use zip::write::SimpleFileOptions;
+use std::time::UNIX_EPOCH;
+use zip::write::FullFileOptions;
 use zip::{CompressionMethod, DateTime, ZipWriter};
 
 const PROGRAM: u32 = 0o755;
 const DATA: u32 = 0o644;
 const FOLDER: u32 = 0o755;
+/// The id of the extended timestamp field (`UT`), with times in seconds since
+/// 1970, which name an instant and so take priority over the date field.
+const EXTENDED_TIMESTAMP: u16 = 0x5455;
+/// Its flag for "the modification time follows".
+const MODIFIED: u8 = 1;
 
 /// Write `destination`, a zip that contains each of `roots`, a folder with
 /// everything in it or a file, under the given name, such as `("…/Game.app",
@@ -39,9 +44,19 @@ pub fn write_zip(roots: &[(&Path, &str)], destination: &Path) -> Result<(), Expo
 /// name order.
 fn add<W: Write + io::Seek>(zip: &mut ZipWriter<W>, path: &Path, name: &str) -> io::Result<()> {
     let metadata = fs::symlink_metadata(path)?;
-    let options = SimpleFileOptions::default()
+    let changed = metadata
+        .modified()
+        .ok()
+        .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+        .map_or(0, |since| since.as_secs());
+    let mut options = FullFileOptions::default()
         .compression_method(CompressionMethod::Deflated)
-        .last_modified_time(dos_time(metadata.modified().unwrap_or(UNIX_EPOCH)));
+        .last_modified_time(dos_time(changed));
+    let mut stamp = vec![MODIFIED];
+    stamp.extend_from_slice(&u32::try_from(changed).unwrap_or(u32::MAX).to_le_bytes());
+    options
+        .add_extra_data(EXTENDED_TIMESTAMP, stamp.into_boxed_slice(), false)
+        .map_err(io::Error::other)?;
     if metadata.file_type().is_symlink() {
         return Err(io::Error::other(format!(
             "{} is a link, which a zip made here does not carry",
@@ -49,7 +64,7 @@ fn add<W: Write + io::Seek>(zip: &mut ZipWriter<W>, path: &Path, name: &str) -> 
         )));
     }
     if metadata.is_dir() {
-        zip.add_directory(name, options.unix_permissions(FOLDER))?;
+        zip.add_directory(name, options.clone().unix_permissions(FOLDER))?;
         let mut entries = fs::read_dir(path)?
             .map(|entry| entry.map(|entry| entry.file_name()))
             .collect::<io::Result<Vec<_>>>()?;
@@ -80,41 +95,73 @@ fn mode_of(head: &[u8]) -> u32 {
     }
 }
 
-/// `time` in the form of a zip date, in whole seconds of UTC. For a time
-/// before 1980, which a zip cannot store, we use the first zip date.
-fn dos_time(time: SystemTime) -> DateTime {
-    let seconds = time
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |since| since.as_secs());
-    // Days since 1970 to a civil date (Howard Hinnant's algorithm).
-    let days = (seconds / 86_400) as i64 + 719_468;
-    let era = days.div_euclid(146_097);
-    let of_era = days - era * 146_097;
-    let year_of_era = (of_era - of_era / 1460 + of_era / 36_524 - of_era / 146_096) / 365;
-    let of_year = of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
-    let shifted_month = (5 * of_year + 2) / 153;
-    let day = of_year - (153 * shifted_month + 2) / 5 + 1;
-    let month = if shifted_month < 10 {
-        shifted_month + 3
-    } else {
-        shifted_month - 9
-    };
-    let year = year_of_era + era * 400 + i64::from(month <= 2);
-    let clock = seconds % 86_400;
-    u16::try_from(year)
-        .ok()
-        .and_then(|year| {
-            DateTime::from_date_and_time(
-                year,
-                month as u8,
-                day as u8,
-                (clock / 3600) as u8,
-                (clock % 3600 / 60) as u8,
-                (clock % 60) as u8,
-            )
-            .ok()
+/// `seconds` after 1970 in the date field of a zip, as local time on this
+/// computer, because that field is local time in every zip tool. For a time
+/// before 1980, which the field cannot store, we use its first date.
+fn dos_time(seconds: u64) -> DateTime {
+    local_clock(seconds)
+        .and_then(|(year, month, day, hour, minute, second)| {
+            DateTime::from_date_and_time(year, month, day, hour, minute, second).ok()
         })
         .unwrap_or_default()
+}
+
+/// The time on this computer's clock `seconds` after 1970, in the time zone
+/// of that moment: year, month, day, hour, minute and second.
+#[cfg(windows)]
+fn local_clock(seconds: u64) -> Option<(u16, u8, u8, u8, u8, u8)> {
+    use windows_sys::Win32::Foundation::{FILETIME, SYSTEMTIME};
+    use windows_sys::Win32::System::Time::{FileTimeToSystemTime, SystemTimeToTzSpecificLocalTime};
+    /// Seconds from 1601, where a FILETIME starts, to 1970.
+    const FROM_1601: u64 = 11_644_473_600;
+    /// A FILETIME counts tenths of a microsecond.
+    const TICKS_PER_SECOND: u64 = 10_000_000;
+    let ticks = seconds
+        .checked_add(FROM_1601)?
+        .checked_mul(TICKS_PER_SECOND)?;
+    let file = FILETIME {
+        dwLowDateTime: ticks as u32,
+        dwHighDateTime: (ticks >> 32) as u32,
+    };
+    // SAFETY: SYSTEMTIME is plain integers, for which zero is valid.
+    let (mut utc, mut local): (SYSTEMTIME, SYSTEMTIME) = unsafe { std::mem::zeroed() };
+    // SAFETY: every pointer is to a local in scope, of the type that the call
+    // takes, and a null zone means the computer's time zone.
+    let converted = unsafe {
+        FileTimeToSystemTime(&file, &mut utc) != 0
+            && SystemTimeToTzSpecificLocalTime(std::ptr::null(), &utc, &mut local) != 0
+    };
+    converted.then(|| {
+        (
+            local.wYear,
+            local.wMonth as u8,
+            local.wDay as u8,
+            local.wHour as u8,
+            local.wMinute as u8,
+            local.wSecond as u8,
+        )
+    })
+}
+
+/// The time on this computer's clock `seconds` after 1970, in the time zone
+/// of that moment: year, month, day, hour, minute and second.
+#[cfg(unix)]
+fn local_clock(seconds: u64) -> Option<(u16, u8, u8, u8, u8, u8)> {
+    let time = libc::time_t::try_from(seconds).ok()?;
+    // SAFETY: tm is plain integers and pointers, for which zero is valid.
+    let mut clock: libc::tm = unsafe { std::mem::zeroed() };
+    // SAFETY: both point to locals in scope, and localtime_r writes only `clock`.
+    if unsafe { libc::localtime_r(&time, &mut clock) }.is_null() {
+        return None;
+    }
+    Some((
+        u16::try_from(clock.tm_year + 1900).ok()?,
+        u8::try_from(clock.tm_mon + 1).ok()?,
+        u8::try_from(clock.tm_mday).ok()?,
+        u8::try_from(clock.tm_hour).ok()?,
+        u8::try_from(clock.tm_min).ok()?,
+        u8::try_from(clock.tm_sec).ok()?,
+    ))
 }
 
 #[cfg(test)]
@@ -208,7 +255,10 @@ mod tests {
             .arg(format!("+{FIELDS}"))
             .output();
         let shown = String::from_utf8(asked.unwrap().stdout).unwrap();
-        let parts: Vec<u16> = shown.split_whitespace().map(|part| part.parse().unwrap()).collect();
+        let parts: Vec<u16> = shown
+            .split_whitespace()
+            .map(|part| part.parse().unwrap())
+            .collect();
         assert_eq!(parts.len(), 6, "{shown:?}");
         let part = |index: usize| parts[index] as u8;
         (parts[0], part(1), part(2), part(3), part(4), part(5))
@@ -241,27 +291,21 @@ mod tests {
         assert_eq!(instant, Some(seconds as u32), "the instant it changed");
         let shown = entry.last_modified().unwrap();
         assert_eq!(
-            (shown.year(), shown.month(), shown.day(), shown.hour(), shown.minute(), shown.second()),
+            (
+                shown.year(),
+                shown.month(),
+                shown.day(),
+                shown.hour(),
+                shown.minute(),
+                shown.second()
+            ),
             system_clock_shows(seconds),
             "the date field is this computer's clock"
         );
     }
 
     #[test]
-    fn a_date_is_the_same_date_in_a_zip() {
-        let time = UNIX_EPOCH + std::time::Duration::from_secs(1_790_586_896); // 2026-09-28 09:14:56 UTC
-        let written = dos_time(time);
-        assert_eq!(
-            (
-                written.year(),
-                written.month(),
-                written.day(),
-                written.hour(),
-                written.minute(),
-                written.second()
-            ),
-            (2026, 9, 28, 9, 14, 56)
-        );
-        assert_eq!(dos_time(UNIX_EPOCH), DateTime::default());
+    fn a_time_before_1980_is_the_first_date_a_zip_holds() {
+        assert_eq!(dos_time(0), DateTime::default());
     }
 }
