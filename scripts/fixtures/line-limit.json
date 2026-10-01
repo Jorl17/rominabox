@@ -3,7 +3,6 @@
   "files": {
     "desktop/crates/rominabox-catalog/src/lib.rs": 1152,
     "desktop/src-tauri/src/content.rs": 1679,
-    "desktop/src-tauri/src/cores.rs": 1195,
     "desktop/src-tauri/src/metadata.rs": 1815,
     "desktop/src/App.test.tsx": 1006,
     "desktop/src/App.tsx": 1729,
