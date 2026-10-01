@@ -102,6 +102,7 @@ fn compose(
         // We compose the disc list only for a game of several discs, and the
         // fake host gives the number of discs of the running game, even one.
         discs: 7,
+        shader_library: rominabox_desktop::shaders::kit_library(kit),
         ..rominabox_desktop::menu::MenuRequest::new(&staged, kit.join("menu-assets"))
     };
     rominabox_desktop::menu::compose_menu(&request)
@@ -319,6 +320,7 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
     let keep = std::env::var_os("ROMINABOX_NAVIGATION_KEEP").map(PathBuf::from);
     let root = keep.clone().unwrap_or_else(|| scratch.to_path_buf());
     let kit = support::kit_with_hypothetical(&root);
+    support::with_shader_library(&kit);
 
     // Compose only what the tables ask for.
     let mut wanted: BTreeSet<(String, String)> = BTreeSet::new();
@@ -619,6 +621,7 @@ fn a_slot_picture_takes_the_games_shape_where_the_design_marks_it() {
     let scratch = rominabox_scratch::Scratch::dir("rominabox-game-shape");
     let root = scratch.to_path_buf();
     let kit = support::kit_with_hypothetical(&root);
+    support::with_shader_library(&kit);
     let (_, system, profile, leaves_out) = MENUS[0];
     let (four_three, wide) = (SHAPES[0], SHAPES[1]);
     let mut failures = Vec::new();
