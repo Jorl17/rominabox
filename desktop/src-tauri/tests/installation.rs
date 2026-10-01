@@ -221,3 +221,31 @@ fn uninstalling_removes_every_games_sandbox_data_and_copies_the_accounts_and_the
     assert_eq!(failures, Vec::<String>::new());
     assert!(!local.join("ROM-in-a-Box").exists());
 }
+
+/// From the installer we expect the person's two absolute folders and the
+/// builder's identifier, and we refuse anything else before we remove
+/// anything. Otherwise an empty identifier would name the per-user folder.
+#[test]
+fn an_uninstall_given_a_folder_that_is_not_absolute_or_an_identifier_that_is_not_a_name_removes_nothing() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-installation");
+    let key = ScratchKey::new("refused");
+    // We remove neither folder on uninstall: one is in the per-user folder,
+    // the other beside it. An identifier for a folder elsewhere is for a
+    // folder that this test made.
+    let canaries = [root.join(r"Local\Another Program\settings.dat"), root.join(r"Elsewhere\kept")];
+    let elsewhere = root.join("Elsewhere").to_string_lossy().into_owned();
+    for identifier in ["", ".", "..", r"a\b", &elsewhere] {
+        canaries.iter().for_each(|canary| file(canary));
+        let mut refused = installation(&root, &key);
+        refused.identifier = identifier.into();
+        let (changed, failures) = refused.uninstalled();
+        for canary in &canaries {
+            assert!(canary.is_file(), "{identifier:?} removed {}", canary.display());
+        }
+        assert!(!changed && failures.len() == 1, "{identifier:?}: {failures:?}");
+    }
+    let mut relative = installation(&root, &key);
+    relative.local = PathBuf::from("Local");
+    let (_, failures) = relative.uninstalled();
+    assert_eq!(failures.len(), 1, "{failures:?}");
+}
