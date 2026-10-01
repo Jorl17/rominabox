@@ -781,6 +781,9 @@ def build_a_game(
     run_dir = Path(tempfile.mkdtemp(prefix=f"rominabox-menu-shots-{run}-"))
     created = run_dir.lstat()
     keep = False
+    # Unset until we have exported the game. After a failed export there is no
+    # program to forget, and we still remove its folder.
+    program = None
     try:
         app, program = _build_a_game(rom, workspace, run_dir, system, settings, design, palette, namespace)
         try:
