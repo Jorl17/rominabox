@@ -142,7 +142,10 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .slot:active .slot-label { color: design(highlight); }
 
 .menu-action { color: design(ink); background-color: design(surface); border-color: design(edge); }
-.menu-action:hover, .menu-action.focused, .menu-action.capturing { background-color: design(highlight); color: design(surface); border-color: design(ink); }
+/* The control being captured has the focus and is the only yellow element.
+ * In the player we mark CANCEL as capturing too while the capture runs, but
+ * it stays an ordinary button. */
+.menu-action:hover, .menu-action.focused { background-color: design(highlight); color: design(surface); border-color: design(ink); }
 .menu-action:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 .menu-action.disabled, .menu-action:disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
 
