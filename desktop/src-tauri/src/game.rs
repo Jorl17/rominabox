@@ -5,7 +5,7 @@
 
 use crate::controls;
 use crate::packaging::ExportTarget;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::path::PathBuf;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -30,11 +30,12 @@ pub struct Game {
     /// changes separately, in the managed data folder of the exported game.
     #[serde(default)]
     pub controls: controls::Controls,
-    /// The inputs to open the menu, and to confirm and go back in it, until
-    /// the player changes them on MENU CONTROLS. For an action left out, we
-    /// use the builder's default.
-    #[serde(default = "crate::builder::unstated::menu_controls")]
-    pub menu_controls: crate::menu_controls::MenuControls,
+    /// The hotkeys to open the menu, confirm and go back in it, and save, load
+    /// and change the slot during play, until the player changes them on
+    /// HOTKEYS. For a hotkey left out we use the builder's default. We accept
+    /// `menuControls` as an alias for this field in saved projects.
+    #[serde(default = "crate::builder::unstated::hotkeys", alias = "menuControls")]
+    pub hotkeys: crate::hotkeys::Hotkeys,
     /// The firmware files the author chose. On export we never look for
     /// firmware in global RetroArch locations.
     #[serde(default)]
@@ -57,7 +58,7 @@ pub struct Game {
     pub autosave_on_quit: bool,
     /// The Options entries we offer in this game. When absent, we use the
     /// design's defaults. With an empty list, we show no Options button.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "menu_entries")]
     pub menu_entries: Option<Vec<String>>,
     /// The shader presets we bundle into the game. Usually there are none,
     /// and then the game has no shader screen and no preset.
@@ -74,4 +75,21 @@ pub struct Game {
     /// A Mac game also runs on Intel Macs. Ignored for a Windows game.
     #[serde(default = "crate::builder::unstated::intel_macs")]
     pub intel_macs: bool,
+}
+
+/// Options entries by their screens' ids. We accept `menu-controls` as an
+/// alias for the HOTKEYS entry in saved projects.
+fn menu_entries<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<Vec<String>>, D::Error> {
+    const RENAMED: [(&str, &str); 1] = [("menu-controls", "hotkeys")];
+    Ok(Option::<Vec<String>>::deserialize(deserializer)?.map(|entries| {
+        entries
+            .into_iter()
+            .map(|entry| {
+                RENAMED
+                    .iter()
+                    .find(|(old, _)| *old == entry)
+                    .map_or(entry.clone(), |(_, new)| new.to_string())
+            })
+            .collect()
+    }))
 }

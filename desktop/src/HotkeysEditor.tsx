@@ -2,33 +2,38 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import * as bridge from "./bridge";
 import { CAPTURE_SECONDS, listen } from "./bindingCapture";
+import type { Controls } from "./controls";
 import {
-  actionName,
   bindingOf,
   bindingWords,
-  defaultMenuControls,
-  menuActions,
+  defaultHotkeys,
+  hotkeyIds,
+  hotkeyName,
   refusalWords,
-  type MenuAction,
-  type MenuControls,
-} from "./menuControls";
+  type Hotkey,
+  type Hotkeys,
+} from "./hotkeys";
 
 /**
- * The inputs to open the game's menu, and confirm and go back in it, until the
- * player changes them on MENU CONTROLS. A press is a key or a pad button, as
- * in the capture in the game, and we apply the export rules.
+ * The game's hotkeys until the player changes them on HOTKEYS: the inputs to
+ * open the menu, confirm and go back in it, and to save, load and change the
+ * slot while the game runs. A press is a key or a pad button, as in the
+ * capture in the game. We apply the export rules, with the controls of
+ * `game`, whose keys a hotkey that works while the game runs must not use.
  */
-export function MenuControlsEditor({
+export function HotkeysEditor({
   value,
   onChange,
   busy,
+  game,
 }: {
-  value: MenuControls;
-  onChange: (next: MenuControls) => void;
+  value: Hotkeys;
+  onChange: (next: Hotkeys) => void;
   busy: boolean;
+  game: { system: string; controls: Controls };
 }) {
   const [waiting, setWaiting] = useState<{
-    action: MenuAction;
+    hotkey: Hotkey;
     seconds: number;
   } | null>(null);
   const [said, setSaid] = useState("");
@@ -40,24 +45,24 @@ export function MenuControlsEditor({
     stop.current = null;
     setWaiting(null);
   }
-  async function propose(next: MenuControls, changed: MenuAction) {
-    const refusal = await bridge.checkMenuControls(next);
+  async function propose(next: Hotkeys, changed: Hotkey) {
+    const refusal = await bridge.checkHotkeys(next, game.system, game.controls);
     setSaid(refusal ? refusalWords(refusal, changed) : "");
     if (!refusal) onChange(next);
   }
-  function add(action: MenuAction) {
+  function add(hotkey: Hotkey) {
     end();
     setSaid("");
-    setWaiting({ action, seconds: CAPTURE_SECONDS });
+    setWaiting({ hotkey, seconds: CAPTURE_SECONDS });
     stop.current = listen({
       pressed: (input) => {
         end();
         const binding = bindingOf(input);
         if (!binding) setSaid("Use a key or a pad button.");
-        else if (!value[action].includes(binding))
+        else if (!value[hotkey].includes(binding))
           void propose(
-            { ...value, [action]: [...value[action], binding] },
-            action,
+            { ...value, [hotkey]: [...value[hotkey], binding] },
+            hotkey,
           );
       },
       cancelled: end,
@@ -69,9 +74,9 @@ export function MenuControlsEditor({
   }
 
   return (
-    <div className="menu-controls">
+    <div className="hotkeys">
       <div className="controls-toolbar">
-        <strong>Menu controls</strong>
+        <strong>Hotkeys</strong>
         <button
           type="button"
           className="text-button"
@@ -79,30 +84,30 @@ export function MenuControlsEditor({
           onClick={() => {
             end();
             setSaid("");
-            onChange(defaultMenuControls);
+            onChange(defaultHotkeys);
           }}
         >
           Reset to defaults
         </button>
       </div>
-      {menuActions.map((action) => (
-        <div className="menu-control-row" key={action}>
-          <span className="menu-control-name">{actionName(action)}</span>
-          {value[action].map((binding) => (
-            <span className="menu-control-chip" key={binding}>
+      {hotkeyIds.map((hotkey) => (
+        <div className="hotkey-row" key={hotkey}>
+          <span className="hotkey-name">{hotkeyName(hotkey)}</span>
+          {value[hotkey].map((binding) => (
+            <span className="hotkey-chip" key={binding}>
               {bindingWords(binding)}
               <button
                 type="button"
-                className="menu-control-remove"
+                className="hotkey-remove"
                 disabled={busy}
-                aria-label={`Remove ${bindingWords(binding)} from ${actionName(action)}`}
+                aria-label={`Remove ${bindingWords(binding)} from ${hotkeyName(hotkey)}`}
                 onClick={() =>
                   void propose(
                     {
                       ...value,
-                      [action]: value[action].filter((one) => one !== binding),
+                      [hotkey]: value[hotkey].filter((one) => one !== binding),
                     },
-                    action,
+                    hotkey,
                   )
                 }
               >
@@ -110,7 +115,7 @@ export function MenuControlsEditor({
               </button>
             </span>
           ))}
-          {waiting?.action === action ? (
+          {waiting?.hotkey === hotkey ? (
             <>
               <span className="binding-text">
                 Press an input… {waiting.seconds}
@@ -124,8 +129,8 @@ export function MenuControlsEditor({
               type="button"
               className="secondary"
               disabled={busy || !!waiting}
-              aria-label={`Add to ${actionName(action)}`}
-              onClick={() => add(action)}
+              aria-label={`Add to ${hotkeyName(hotkey)}`}
+              onClick={() => add(hotkey)}
             >
               <Plus size={14} aria-hidden="true" />
             </button>

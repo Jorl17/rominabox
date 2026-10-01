@@ -103,14 +103,14 @@
       }
     },
     {
-      "id": "menu-controls",
-      "role": "menu-controls",
-      "panel": "menu-controls-panel",
-      "heading": "MENU CONTROLS",
+      "id": "hotkeys",
+      "role": "hotkeys",
+      "panel": "hotkeys-panel",
+      "heading": "HOTKEYS",
       "footer": "[ESC]  BACK",
-      "button": "menu-controls",
+      "button": "hotkeys",
       "option": {
-        "label": "MENU CONTROLS",
+        "label": "HOTKEYS",
         "default": true
       }
     },

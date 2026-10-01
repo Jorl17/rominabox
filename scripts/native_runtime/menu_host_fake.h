@@ -32,11 +32,10 @@ struct FakeHost
    int captures_started = 0;
    int captures_cancelled = 0;
 
-   /* The menu's own actions. The keys and pad inputs pressed now, by a key's
-    * name in a RetroArch config and a pad input's id, and the result of a
-    * capture for each, in the binding format of menu_controls.inc. Any name
-    * is a key, and the pad inputs are the positions on the standard pad and
-    * home. */
+   /* The hotkeys. The keys and pad inputs pressed now, by a key's name in a
+    * RetroArch config and a pad input's id, and the result of a capture for
+    * each, in the binding format of hotkeys.inc. Any name is a key, and the
+    * pad inputs are the positions on the standard pad and home. */
    std::vector<std::string> keys_down, pads_down;
    std::string captured_input;
    int input_captures_started = 0;

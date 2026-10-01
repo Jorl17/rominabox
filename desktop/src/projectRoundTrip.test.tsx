@@ -52,10 +52,14 @@ const everySetting = {
   palette: "amber",
   menuSounds: "bell",
   controls: { bindings: { a: { label: "Jump", key: "space" } } },
-  menuControls: {
+  hotkeys: {
     menu: ["key:f1", "pad:home"],
     confirm: ["key:enter"],
     back: ["key:backspace", "pad:b"],
+    "quick-save": ["key:f5", "pad:select"],
+    "quick-load": ["key:f8"],
+    "previous-slot": [],
+    "next-slot": ["key:f12"],
   },
   firmware: ["/opened/firmware/bios.bin"],
   splash: false,

@@ -3,7 +3,8 @@
 use rominabox_desktop::export_error::{AuthorError, ErrorStage};
 use rominabox_desktop::target::Target;
 use rominabox_desktop::{
-    builder, cores, icons, menu, menu_controls, metadata, packaging, pads, projects, systems, traveling,
+    builder, controls, cores, hotkeys, icons, menu, metadata, packaging, pads, projects, systems,
+    traveling,
 };
 use serde_json::json;
 use std::{
@@ -220,13 +221,16 @@ fn assess_firmware(
     Ok(systems::assess_firmware(system, &files))
 }
 
-/// Whether the menu controls follow the rules of the game's menu, or else the
-/// error that we would show in an export.
+/// Whether the hotkeys follow the rules of the game's menu, for the game
+/// `system` with `controls`, or else the error that we would show in an
+/// export.
 #[tauri::command]
-fn check_menu_controls(
-    menu_controls: menu_controls::MenuControls,
-) -> Result<(), menu_controls::Refusal> {
-    menu_controls.check()
+fn check_hotkeys(
+    hotkeys: hotkeys::Hotkeys,
+    system: String,
+    controls: controls::Controls,
+) -> Result<(), hotkeys::Refusal> {
+    hotkeys.check_for(&system, &controls)
 }
 
 /// The folder for this builder's downloads, which we find in the same way for
@@ -373,7 +377,7 @@ fn main() {
             ensure_cores,
             export_target,
             assess_firmware,
-            check_menu_controls,
+            check_hotkeys,
             export_game,
             cancel_export,
             save_project,

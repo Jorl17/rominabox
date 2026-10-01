@@ -1,11 +1,12 @@
-/* MENU CONTROLS through the production menu, with its document and file
- * layer, on a menu composed by an export: what we show on the screen, adding
- * a binding with the same capture as in Controls, removing one, the rules
- * that nobody can break, the swap, RESET, what survives a relaunch and a
- * later export, and what the menu actions become in RetroArch input. Only
- * the RetroArch host commands are fake.
+/* HOTKEYS through the production menu, with its document and file layer, on
+ * a menu composed by an export: what we show on the screen on each page,
+ * adding a binding with the same capture as in Controls, removing one, the
+ * rules that nobody can break, the swap, RESET, what survives a relaunch and
+ * a later export, and what the menu hotkeys become in RetroArch input. Only
+ * the RetroArch host commands are fake. test_play_hotkeys covers what the
+ * hotkeys that act while the game plays do.
  *
- *   test_menu_controls ASSETS OTHER_ASSETS DATA
+ *   test_hotkeys ASSETS OTHER_ASSETS DATA
  *
  * ASSETS is a composed Native menu with the builder's defaults. OTHER_ASSETS
  * is the same menu exported again with other defaults (CONFIRM Space and the
@@ -39,7 +40,7 @@ void check(bool condition, const std::string& message)
 {
    if (!condition)
    {
-      std::fprintf(stderr, "FAIL menu controls: %s\n", message.c_str());
+      std::fprintf(stderr, "FAIL hotkeys: %s\n", message.c_str());
       ++failures;
    }
 }
@@ -63,7 +64,7 @@ void *open(const char *assets)
    rib_menu_toggle(menu, true);
    frame(menu);
    click(menu, "options");
-   click(menu, "menu-controls");
+   click(menu, "hotkeys");
    return menu;
 }
 
@@ -73,18 +74,19 @@ void close(void *menu)
    rib_menu_destroy(menu);
 }
 
-/* The chips of a row as shown, in order: the words of each visible chip. */
-std::vector<std::string> row(const char *action)
+/* The chips of a row as we show them in the menu, in order: the words of
+ * each visible chip, on whichever page the row is. */
+std::vector<std::string> row(const char *hotkey)
 {
    std::vector<std::string> shown;
    for (int chip = 1; chip <= 5; ++chip)
    {
-      const std::string id = std::string("menu-control-") + action + "-" + std::to_string(chip);
+      const std::string id = std::string("hotkey-") + hotkey + "-" + std::to_string(chip);
       Rml::Element *element = view.document.root()->GetElementById(id);
-      if (!element || rib::hidden(element))
+      if (!element || rib::display_none(element))
          continue;
       /* The words on a chip, besides anything else the design draws in it. */
-      Rml::Element *words = rib::find_class(element, "menu-control-words");
+      Rml::Element *words = rib::find_class(element, "hotkey-words");
       shown.push_back(words ? words->GetInnerRML() : inspect.text(id.c_str()));
    }
    return shown;
@@ -98,14 +100,14 @@ std::string joined(const std::vector<std::string>& words)
    return text;
 }
 
-void expect_row(const char *action, const std::vector<std::string>& expected, const char *when)
+void expect_row(const char *hotkey, const std::vector<std::string>& expected, const char *when)
 {
-   const std::vector<std::string> shown = row(action);
-   check(shown == expected, std::string(when) + ": " + action + " shows [" + joined(shown)
+   const std::vector<std::string> shown = row(hotkey);
+   check(shown == expected, std::string(when) + ": " + hotkey + " shows [" + joined(shown)
          + "], expected [" + joined(expected) + "]");
 }
 
-std::string status() { return inspect.text("menu-controls-status"); }
+std::string status() { return inspect.text("hotkeys-status"); }
 
 void expect_status(const char *expected, const char *when)
 {
@@ -113,13 +115,13 @@ void expect_status(const char *expected, const char *when)
          + "\", expected \"" + expected + "\"");
 }
 
-/* The capture of + on `action`, answered with `input`. */
-void capture(void *menu, const char *action, const char *input)
+/* The capture of + on `hotkey`, answered with `input`. */
+void capture(void *menu, const char *hotkey, const char *input)
 {
    const int before = host.input_captures_started;
-   click(menu, (std::string("menu-control-") + action + "-add").c_str());
+   click(menu, (std::string("hotkey-") + hotkey + "-add").c_str());
    check(host.input_captures_started == before + 1,
-         std::string("+ on ") + action + " starts a capture");
+         std::string("+ on ") + hotkey + " starts a capture");
    host.captured_input = input;
    host.capture_result = RIB_CAPTURE_CAPTURED;
    frame(menu);
@@ -130,7 +132,7 @@ std::string player_file()
 {
    void *bytes = nullptr;
    int64_t size = 0;
-   const std::string path = data + "/menu-controls.cfg";
+   const std::string path = data + "/hotkeys.cfg";
    if (!filestream_read_file(path.c_str(), &bytes, &size))
       return std::string();
    std::string text(static_cast<const char*>(bytes), (size_t)size);
@@ -184,15 +186,19 @@ void act(void *menu, const Pressed& pressed)
 
 void defaults_and_words(void *menu)
 {
-   check(view.document.has_element("menu-controls"), "Options offers MENU CONTROLS");
+   check(view.document.has_element("hotkeys"), "Options offers HOTKEYS");
    expect_row("menu", {"Escape", "Home", "L3+R3"}, "the defaults");
    expect_row("confirm", {"Enter", "Bottom button"}, "the defaults");
    expect_row("back", {"Escape", "Right button"}, "the defaults");
-   check(inspect.has_class("menu-control-menu-1", "key") && !inspect.has_class("menu-control-menu-1", "pad"),
+   expect_row("quick-save", {"f2"}, "the defaults");
+   expect_row("quick-load", {"f4"}, "the defaults");
+   expect_row("previous-slot", {"f6"}, "the defaults");
+   expect_row("next-slot", {"f7"}, "the defaults");
+   check(inspect.has_class("hotkey-menu-1", "key") && !inspect.has_class("hotkey-menu-1", "pad"),
          "a key's chip is marked key");
-   check(inspect.has_class("menu-control-menu-2", "pad") && !inspect.has_class("menu-control-menu-2", "key"),
+   check(inspect.has_class("hotkey-menu-2", "pad") && !inspect.has_class("hotkey-menu-2", "key"),
          "a pad input's chip is marked pad");
-   check(!inspect.has_class("menu-control-menu-add", "disabled"), "a row with room keeps + usable");
+   check(!inspect.has_class("hotkey-menu-add", "disabled"), "a row with room keeps + usable");
    check(player_file().empty(), "the defaults are not the player's until they change one");
 }
 
@@ -201,28 +207,28 @@ void add_and_remove(void *menu)
    capture(menu, "menu", "key:f1");
    expect_row("menu", {"Escape", "Home", "L3+R3", "f1"}, "a key captured for MENU");
    expect_status("BINDING SAVED", "a key captured for MENU");
-   check(player_file().find("menu_control_menu = \"key:escape pad:home pad:l3+r3 key:f1\"") != std::string::npos,
+   check(player_file().find("hotkey_menu = \"key:escape pad:home pad:l3+r3 key:f1\"") != std::string::npos,
          "the player's file holds MENU's new list: " + player_file());
-   check(inspect.has_class("menu-control-menu-add", "focused"), "focus stays on + after a capture");
+   check(inspect.has_class("hotkey-menu-add", "focused"), "focus stays on + after a capture");
 
-   click(menu, "menu-control-menu-4");
+   click(menu, "hotkey-menu-4");
    expect_row("menu", {"Escape", "Home", "L3+R3"}, "a chip chosen");
    expect_status("BINDING REMOVED", "a chip chosen");
-   check(inspect.has_class("menu-control-menu-3", "focused"),
+   check(inspect.has_class("hotkey-menu-3", "focused"),
          "removing the last chip leaves focus on the one before it");
 
    /* We capture pad inputs by their position on the standard pad, and show
     * a chord in the words for each position. */
    capture(menu, "confirm", "pad:x");
    expect_row("confirm", {"Enter", "Bottom button", "Top button"}, "a pad button captured");
-   click(menu, "menu-control-confirm-3");
+   click(menu, "hotkey-confirm-3");
 }
 
 void capture_look_and_ends(void *menu)
 {
-   click(menu, "menu-control-back-add");
-   check(inspect.has_class("menu-control-back-add", "capturing"), "the + being captured is marked capturing");
-   check(!rib::hidden(view.document.root()->GetElementById("menu-controls-cancel")),
+   click(menu, "hotkey-back-add");
+   check(inspect.has_class("hotkey-back-add", "capturing"), "the + being captured is marked capturing");
+   check(!rib::hidden(view.document.root()->GetElementById("hotkeys-cancel")),
          "CANCEL shows while a binding is captured");
    expect_status("BACK: PRESS AN INPUT (9)", "a capture counts down in the row's own words");
    check(inspect.words("footer-hint") == "ESC  CANCEL", "the footer says how to cancel: " + inspect.words("footer-hint"));
@@ -233,8 +239,8 @@ void capture_look_and_ends(void *menu)
    rib_menu_key(menu, RIB_KEY_CANCEL);
    frame(menu);
    expect_status("BINDING UNCHANGED", "the menu's back key during a capture");
-   check(!inspect.has_class("menu-control-back-add", "capturing")
-         && rib::hidden(view.document.root()->GetElementById("menu-controls-cancel")),
+   check(!inspect.has_class("hotkey-back-add", "capturing")
+         && rib::hidden(view.document.root()->GetElementById("hotkeys-cancel")),
          "a cancelled capture looks done");
    check(inspect.words("footer-hint") == "ESC  BACK", "the footer is the screen's again");
 
@@ -245,11 +251,11 @@ void capture_look_and_ends(void *menu)
    capture(menu, "back", "");
    expect_status("USE A KEY OR A PAD BUTTON", "an input that is no key and no pad input");
 
-   click(menu, "menu-control-back-add");
-   click(menu, "menu-controls-cancel");
+   click(menu, "hotkey-back-add");
+   click(menu, "hotkeys-cancel");
    expect_status("BINDING UNCHANGED", "CANCEL");
 
-   click(menu, "menu-control-back-add");
+   click(menu, "hotkey-back-add");
    host.capture_result = RIB_CAPTURE_TIMED_OUT;
    frame(menu);
    host.capture_result = RIB_CAPTURE_PENDING;
@@ -258,17 +264,17 @@ void capture_look_and_ends(void *menu)
    capture(menu, "back", "key:backspace");
    capture(menu, "back", "key:backspace");
    expect_status("BINDING UNCHANGED", "a binding the row already holds");
-   click(menu, "menu-control-back-3");
+   click(menu, "hotkey-back-3");
 }
 
 void nobody_is_locked_out(void *menu)
 {
-   click(menu, "menu-control-menu-1");
+   click(menu, "hotkey-menu-1");
    expect_status("MENU MUST KEEP A KEY", "removing MENU's only key");
    expect_row("menu", {"Escape", "Home", "L3+R3"}, "a refused removal");
 
-   click(menu, "menu-control-confirm-2");
-   click(menu, "menu-control-confirm-1");
+   click(menu, "hotkey-confirm-2");
+   click(menu, "hotkey-confirm-1");
    expect_status("CONFIRM MUST KEEP A BINDING", "removing CONFIRM's last binding");
    expect_row("confirm", {"Enter"}, "a refused removal");
 
@@ -289,7 +295,7 @@ void nobody_is_locked_out(void *menu)
 void a_clicked_plus_takes_the_next_press(void *menu)
 {
    const int before = host.input_captures_started;
-   check(view.document.element_center("menu-control-confirm-add", &host.pointer.x, &host.pointer.y),
+   check(view.document.element_center("hotkey-confirm-add", &host.pointer.x, &host.pointer.y),
          "+ is on screen");
    host.pointer.pressed = true;
    frame(menu);
@@ -298,42 +304,42 @@ void a_clicked_plus_takes_the_next_press(void *menu)
    check(host.input_captures_started == before + 1, "a click on + starts a capture");
    frame(menu);
    check(host.capture_accepts_pointer, "the click let go, the capture takes the next press");
-   click(menu, "menu-controls-cancel");
+   click(menu, "hotkeys-cancel");
    host.pointer = {};
    frame(menu);
 }
 
 /* The input that ends a capture is still held when we bind it, so it acts as
- * its new action only after a release and a new press. When it is bound to
+ * its new hotkey only after a release and a new press. When it is bound to
  * MENU, its release must not close the screen, and when it is bound to
  * CONFIRM, it must not press the focused element. */
 void the_input_that_binds_acts_once_let_go(void *menu)
 {
-   host.keys_down = {"f2"};
-   capture(menu, "confirm", "key:f2");
-   expect_row("confirm", {"Enter", "Bottom button", "f2"}, "F2 captured for CONFIRM");
-   check(!press({"f2"}, {}).ok, "F2, still held from its capture, does not confirm");
+   host.keys_down = {"f9"};
+   capture(menu, "confirm", "key:f9");
+   expect_row("confirm", {"Enter", "Bottom button", "f9"}, "F9 captured for CONFIRM");
+   check(!press({"f9"}, {}).ok, "F9, still held from its capture, does not confirm");
    press({}, {});
-   check(press({"f2"}, {}).ok, "let go and pressed again, F2 confirms");
-   click(menu, "menu-control-confirm-3");
+   check(press({"f9"}, {}).ok, "let go and pressed again, F9 confirms");
+   click(menu, "hotkey-confirm-3");
 
-   host.keys_down = {"f3"};
-   capture(menu, "menu", "key:f3");
-   const unsigned f3 = key_code("f3");
-   const std::vector<unsigned> held = press({"f3"}, {}).menu_keys;
-   check(std::find(held.begin(), held.end(), f3) == held.end(),
-         "F3, still held from its capture, is not yet one of MENU's keys");
+   host.keys_down = {"f10"};
+   capture(menu, "menu", "key:f10");
+   const unsigned f10 = key_code("f10");
+   const std::vector<unsigned> held = press({"f10"}, {}).menu_keys;
+   check(std::find(held.begin(), held.end(), f10) == held.end(),
+         "F10, still held from its capture, is not yet one of MENU's keys");
    press({}, {});
    const std::vector<unsigned> later = press({}, {}).menu_keys;
-   check(std::find(later.begin(), later.end(), f3) != later.end(), "let go, F3 is one of MENU's keys");
-   click(menu, "menu-control-menu-4");
+   check(std::find(later.begin(), later.end(), f10) != later.end(), "let go, F10 is one of MENU's keys");
+   click(menu, "hotkey-menu-4");
 
    host.pads_down = {"x"};
    capture(menu, "back", "pad:x");
    check(!press({}, {"x"}).cancel, "a pad button still held from its capture does not go back");
    press({}, {});
    check(press({}, {"x"}).cancel, "let go and pressed again, it goes back");
-   click(menu, "menu-control-back-3");
+   click(menu, "hotkey-back-3");
    expect_row("confirm", {"Enter", "Bottom button"}, "after the held inputs");
    expect_row("back", {"Escape", "Right button"}, "after the held inputs");
 }
@@ -354,14 +360,14 @@ void swapped_buttons_drive_the_menu(void *menu)
    check(bottom.cancel && !bottom.ok, "after the swap the bottom button is cancel");
    check(press({"enter"}, {}).ok, "Enter still confirms");
 
-   /* Navigating with them: pressing the bottom button leaves MENU CONTROLS for
+   /* Navigating with them: pressing the bottom button leaves HOTKEYS for
     * Options, and the right button presses the focused element there. */
    act(menu, bottom);
    check(view.screens.current() == "options", "the bottom button goes back to Options, on "
          + view.screens.current());
-   view.focus.set("menu-controls");
+   view.focus.set("hotkeys");
    act(menu, right);
-   check(view.screens.current() == "menu-controls", "the right button opens the focused entry, on "
+   check(view.screens.current() == "hotkeys", "the right button opens the focused entry, on "
          + view.screens.current());
 }
 
@@ -376,15 +382,66 @@ void what_retroarch_reads(void *menu)
    check(!escape.cancel, "Escape, which MENU also holds, is not BACK's as well");
    check(escape.menu_keys.size() == 1 && escape.menu_keys[0] == key_code("escape"),
          "MENU's keys are Escape alone");
-   /* A position bound to a menu action is only that action: L3 does not
-    * reach the menu as L3, and Start, which no action is bound to, does. */
-   const uint32_t l3_and_start = (1u << RETRO_DEVICE_ID_JOYPAD_L3) | (1u << RETRO_DEVICE_ID_JOYPAD_START);
+   /* A position bound to a menu hotkey is only that hotkey: L3 no longer
+    * reaches the menu as L3, and Start, which no hotkey is bound to, still
+    * does. Select, bound to QUICK SAVE, acts only while the game plays, so
+    * in the menu it is still Select. */
+   capture(menu, "quick-save", "pad:select");
+   const uint32_t pressed = (1u << RETRO_DEVICE_ID_JOYPAD_L3) | (1u << RETRO_DEVICE_ID_JOYPAD_START)
+         | (1u << RETRO_DEVICE_ID_JOYPAD_SELECT);
    host.pads_down.clear();
-   uint32_t buttons = l3_and_start;
+   uint32_t buttons = pressed;
    rib_rmlui_menu_buttons(&buttons, RETRO_DEVICE_ID_JOYPAD_A, RETRO_DEVICE_ID_JOYPAD_B);
    check(!(buttons & (1u << RETRO_DEVICE_ID_JOYPAD_L3)) && (buttons & (1u << RETRO_DEVICE_ID_JOYPAD_START)),
-         "a position MENU holds is taken out of the menu's buttons; one no action holds stays");
-   (void)menu;
+         "a position MENU holds is taken out of the menu's buttons; one no hotkey holds stays");
+   check(buttons & (1u << RETRO_DEVICE_ID_JOYPAD_SELECT),
+         "a position QUICK SAVE holds stays one of the menu's buttons");
+   click(menu, "hotkey-quick-save-2");
+   expect_row("quick-save", {"f2"}, "QUICK SAVE's pad button removed");
+}
+
+/* Seven rows fill two pages of the list in the design: the menu hotkeys and
+ * QUICK SAVE on the first, the slot hotkeys on the second, turned with the
+ * pager of the list. */
+void pages(void *menu)
+{
+   const auto shown = [](const char *id) {
+      Rml::Element *element = view.document.root()->GetElementById(id);
+      return element && !rib::hidden(element);
+   };
+   check(shown("hotkey-menu") && shown("hotkey-quick-save") && !shown("hotkey-quick-load"),
+         "the first page shows MENU to QUICK SAVE, and not QUICK LOAD");
+   check(shown("hotkeys-pager") && inspect.words("hotkeys-page-count") == "1/2",
+         "the pager shows, on 1/2: " + inspect.words("hotkeys-page-count"));
+   click(menu, "hotkeys-next");
+   check(!shown("hotkey-menu") && shown("hotkey-quick-load") && shown("hotkey-next-slot"),
+         "the second page shows QUICK LOAD to NEXT SLOT");
+   check(inspect.words("hotkeys-page-count") == "2/2", "the pager says 2/2: " + inspect.words("hotkeys-page-count"));
+}
+
+/* QUICK SAVE, QUICK LOAD, PREVIOUS SLOT and NEXT SLOT may be left with no
+ * binding. When another hotkey takes a binding from one of them, we move the
+ * binding and do not swap, so a hotkey left with nothing gets nothing back. */
+void the_hotkeys_of_play_keep_nothing(void *menu)
+{
+   click(menu, "hotkey-next-slot-1");
+   expect_status("BINDING REMOVED", "NEXT SLOT's only binding removed");
+   expect_row("next-slot", {}, "NEXT SLOT's only binding removed");
+   check(inspect.has_class("hotkey-next-slot-add", "focused"), "focus goes to NEXT SLOT's + when it has none");
+   check(player_file().find("hotkey_next-slot = \"\"") != std::string::npos,
+         "the player's file holds NEXT SLOT with nothing: " + player_file());
+
+   capture(menu, "previous-slot", "key:f4");
+   expect_status("TAKEN FROM QUICK LOAD", "QUICK LOAD's key captured for PREVIOUS SLOT");
+   expect_row("previous-slot", {"f6", "f4"}, "QUICK LOAD's key captured for PREVIOUS SLOT");
+   expect_row("quick-load", {}, "QUICK LOAD's only key taken");
+
+   click(menu, "hotkey-previous-slot-2");
+   capture(menu, "quick-load", "key:f4");
+   capture(menu, "next-slot", "key:f7");
+   expect_row("quick-load", {"f4"}, "put back");
+   expect_row("previous-slot", {"f6"}, "put back");
+   expect_row("next-slot", {"f7"}, "put back");
 }
 
 void a_full_row(void *menu)
@@ -392,38 +449,38 @@ void a_full_row(void *menu)
    capture(menu, "menu", "key:f1");
    capture(menu, "menu", "pad:select");
    expect_row("menu", {"Escape", "Home", "L3+R3", "f1", "Select"}, "a row filled");
-   check(inspect.has_class("menu-control-menu-add", "disabled"), "a full row's + is disabled");
+   check(inspect.has_class("hotkey-menu-add", "disabled"), "a full row's + is disabled");
    const int before = host.input_captures_started;
-   click(menu, "menu-control-menu-add");
+   click(menu, "hotkey-menu-add");
    check(host.input_captures_started == before, "a full row's + starts no capture");
-   click(menu, "menu-control-menu-5");
-   click(menu, "menu-control-menu-4");
+   click(menu, "hotkey-menu-5");
+   click(menu, "hotkey-menu-4");
 
    /* CONFIRM is full and has one pad button. If BACK takes it, CONFIRM has
     * none and would get both of BACK's, but there is no room for them. */
-   capture(menu, "confirm", "key:f2");
-   capture(menu, "confirm", "key:f3");
-   capture(menu, "confirm", "key:f4");
+   capture(menu, "confirm", "key:f9");
+   capture(menu, "confirm", "key:f10");
+   capture(menu, "confirm", "key:f11");
    capture(menu, "back", "pad:y");
    capture(menu, "back", "pad:a");
    expect_status("NO ROOM IN CONFIRM", "a swap that would overfill a row");
-   expect_row("confirm", {"Enter", "Right button", "f2", "f3", "f4"}, "a refused swap");
+   expect_row("confirm", {"Enter", "Right button", "f9", "f10", "f11"}, "a refused swap");
    expect_row("back", {"Escape", "Bottom button", "Left button"}, "a refused swap");
-   click(menu, "menu-control-back-3");
-   click(menu, "menu-control-confirm-5");
-   click(menu, "menu-control-confirm-4");
-   click(menu, "menu-control-confirm-3");
+   click(menu, "hotkey-back-3");
+   click(menu, "hotkey-confirm-5");
+   click(menu, "hotkey-confirm-4");
+   click(menu, "hotkey-confirm-3");
 }
 
 /* Pressing RESET restores the defaults of the latest export of the game:
  * CONFIRM from the later one, and MENU and BACK, unchanged from the first. */
 void reset(void *menu)
 {
-   click(menu, "menu-controls-reset");
+   click(menu, "hotkeys-reset");
    expect_status("DEFAULTS RESTORED", "RESET");
    expect_row("confirm", {"Space", "Top button"}, "RESET");
    expect_row("back", {"Escape", "Right button"}, "RESET");
-   check(!path_is_valid((data + "/menu-controls.cfg").c_str()), "RESET removes the player's file");
+   check(!path_is_valid((data + "/hotkeys.cfg").c_str()), "RESET removes the player's file");
 }
 }
 
@@ -444,7 +501,7 @@ int main(int argc, char **argv)
    void *menu = open(argv[1]);
    if (!menu)
       return 1;
-   check(view.screens.current() == "menu-controls", "Options opens MENU CONTROLS");
+   check(view.screens.current() == "hotkeys", "Options opens HOTKEYS");
    defaults_and_words(menu);
    add_and_remove(menu);
    capture_look_and_ends(menu);
@@ -455,6 +512,8 @@ int main(int argc, char **argv)
    swapped_buttons_drive_the_menu(menu);
    what_retroarch_reads(menu);
    a_full_row(menu);
+   pages(menu);
+   the_hotkeys_of_play_keep_nothing(menu);
    close(menu);
 
    /* At the next launch we read the player's file. The swap is still there
@@ -475,15 +534,15 @@ int main(int argc, char **argv)
    close(menu);
 
    /* We set aside a player's file that would lock the player out. */
-   const std::string broken = "menu_control_menu = \"pad:home\"\n";
-   filestream_write_file((data + "/menu-controls.cfg").c_str(), broken.data(), (int64_t)broken.size());
+   const std::string broken = "hotkey_menu = \"pad:home\"\n";
+   filestream_write_file((data + "/hotkeys.cfg").c_str(), broken.data(), (int64_t)broken.size());
    menu = open(argv[1]);
    expect_row("menu", {"Escape", "Home", "L3+R3"}, "a player's file with no key for MENU");
    close(menu);
 
    if (failures)
-      std::fprintf(stderr, "menu controls: %d failures\n", failures);
+      std::fprintf(stderr, "hotkeys: %d failures\n", failures);
    else
-      std::printf("menu controls: every case passed\n");
+      std::printf("hotkeys: every case passed\n");
    return failures ? 1 : 0;
 }

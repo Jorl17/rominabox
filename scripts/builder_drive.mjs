@@ -1551,13 +1551,13 @@ async function main() {
       animations: "disabled",
     });
     await shootEditor(page, path.join(out, "controllers/megadrive.png"));
-    // Menu controls, then with the pointer on an ×, the only way to remove one.
-    const menuControls = page.locator(".menu-controls");
+    // Hotkeys, then with the pointer on an ×, the only way to remove one.
+    const hotkeys = page.locator(".hotkeys");
     const menuShot = (name) =>
-      menuControls.screenshot({ path: path.join(out, name), animations: "disabled" });
-    await menuShot("12-menu-controls.png");
-    await menuControls.locator(".menu-control-remove").first().hover();
-    await menuShot("12-menu-controls-hover.png");
+      hotkeys.screenshot({ path: path.join(out, name), animations: "disabled" });
+    await menuShot("12-hotkeys.png");
+    await hotkeys.locator(".hotkey-remove").first().hover();
+    await menuShot("12-hotkeys-hover.png");
 
     await clickNext(page);
     await page.getByRole("heading", { name: "Export your game" }).waitFor();

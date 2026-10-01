@@ -1,32 +1,34 @@
 //! The RetroArch meta binds that we write for an exported game. These are
 //! the RetroArch hotkeys, and we turn every one of them off.
 
-/// RetroArch meta-bind policy for exported games.
+/// The RetroArch meta binds that we write for exported games.
 ///
-/// This is the only bind list, and it covers every `DECLARE_META_BIND` in
-/// the pinned RetroArch `configuration.c`, which we compile and read in its
-/// test (`scripts/native_runtime/meta_binds.c`). The desktop defaults in
-/// `config.def.keybinds.h` and `retroarch.cfg` bind Space to
-/// `toggle_fast_forward`, Escape to quit and F1 to the stock menu, so we
+/// This is the only list of binds. It contains every `DECLARE_META_BIND` in
+/// the pinned RetroArch `configuration.c`, and in its test we compile that
+/// file and read the binds (`scripts/native_runtime/meta_binds.c`). The
+/// desktop defaults in `config.def.keybinds.h` and `retroarch.cfg` bind Space
+/// to `toggle_fast_forward`, Escape to quit and F1 to the stock menu, so we
 /// write every meta bind in an export to keep those defaults out.
 ///
 /// Every bind is `nul` on the keyboard, the buttons, the axes and the mouse.
-/// The player opens the menu with the inputs on MENU CONTROLS
-/// (`crate::menu_controls`), by default Escape, the pad's Home and L3+R3. We
-/// keep RetroArch's own menu toggle and its gamepad combo off, so that they
-/// cannot open the menu. With a `nul` user joykey, an autoconfig bind still
-/// applies. Shipped profiles contain one meta line, `input_menu_toggle_btn`,
-/// from which we find each pad's Home in the menu, and we drop the RetroArch
-/// toggle bit from it before we handle input in the menu. `input_player1_*`
-/// gameplay keys are not declared here. They come from the player's controls
-/// file, which we merge in the launcher.
+/// The player opens the menu with HOTKEYS (`crate::hotkeys`), by default
+/// Escape, the Home button of a pad and L3+R3, so we turn off the RetroArch
+/// menu toggle and its gamepad combo. A `nul` user joykey still falls back to
+/// an autoconfig bind. The profiles we ship keep one meta line,
+/// `input_menu_toggle_btn`, from which we read the Home button of each pad in
+/// the menu, and we clear the RetroArch toggle bit that it sets before we
+/// handle input in the menu. The player saves and loads a state and changes
+/// its slot with QUICK SAVE, QUICK LOAD, PREVIOUS SLOT and NEXT SLOT in
+/// HOTKEYS, on the current slot in the menu, by default with F2, F4, F6 and
+/// F7. We do not declare the `input_player1_*` gameplay keys here. They come
+/// from the player's controls file, which we merge in the launcher.
 ///
-/// Quit and fullscreen have no key in any mode, so `q` and `f` stay gameplay
-/// keys. The fork's Alt+Enter is the fullscreen chord.
+/// Quit and fullscreen have no key in any mode, so `q` and `f` remain
+/// gameplay keys. In the fork, the player presses Alt+Enter for fullscreen.
 ///
-/// `advanced_key` is a second keyboard tier. We write it only when the
-/// author set `advancedEmulatorAccess`, and it never replaces the button,
-/// axis or mouse `nul`.
+/// `advanced_key` is a second keyboard key. We write it only when the author
+/// set `advancedEmulatorAccess`, and we still write `nul` for the button,
+/// axis and mouse.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MetaBind {
     pub name: &'static str,
@@ -285,12 +287,12 @@ impl MetaBind {
     }
 }
 
-/// Render the exported meta bind policy. Callers must not keep a second list.
+/// Produce the meta binds for an export. Keep no second list of them.
 ///
-/// With `advanced` set, we write `advanced_key` for the binds that have one,
-/// the two fast-forward keys, and leave button, axis and mouse unchanged. The
-/// RetroArch menu toggle has no key and its gamepad combo is off, because
-/// MENU CONTROLS defines the inputs that open the menu.
+/// With `advanced`, we write `advanced_key` for the binds that have one, the
+/// two fast-forward keys, and leave the button, axis and mouse unchanged.
+/// The RetroArch menu toggle has no key and its gamepad combo is off,
+/// because the player opens the menu with the keys set in HOTKEYS.
 pub fn isolated_meta_bind_config(advanced: bool) -> String {
     let mut config = String::new();
     for bind in META_BINDS {

@@ -310,12 +310,12 @@ pub fn validate(manifest: &Manifest, document: &str, shipped: &[&Screen]) -> Res
             });
         }
     }
-    // MENU CONTROLS has a row for every action declared in the player.
+    // HOTKEYS has a row for every hotkey declared in the player.
     if let Some(screen) = shipped
         .iter()
-        .find(|screen| screen.role == Some(ScreenRole::MenuControls))
+        .find(|screen| screen.role == Some(ScreenRole::Hotkeys))
     {
-        if let Some(id) = crate::menu_controls::required_ids()
+        if let Some(id) = crate::hotkeys::required_ids()
             .into_iter()
             .find(|id| !has_id(document, id))
         {

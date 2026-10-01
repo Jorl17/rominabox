@@ -329,6 +329,14 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #unlock-kicker { font-size: 12dp; color: #fff13d; }
 #unlock-title { font-size: 18dp; color: #ffffff; margin-top: 4dp; }
 #unlock-detail { font-size: 12dp; color: #b4e6ff; margin-top: 4dp; }
+/* The result of a hotkey on the save slots during play, in the same notice,
+ * with only its words and no kicker, badge or second line. */
+#unlock-row[data-notice=slot] #unlock-kicker, #unlock-row[data-notice=slot] #unlock-detail { display: none; }
+#unlock-row[data-notice=slot] #unlock-words { margin-left: 0; }
+#unlock-row[data-notice=slot] #unlock-title { margin-top: 0; }
+/* The open menu contains the slots, so a notice about them is only for play. */
+#unlock-row[data-notice=slot] { display: none; }
+body.overlay #unlock-row[data-notice=slot] { display: block; }
 /* Accounts on QUICK SIGN IN: FORGET opposite BACK, lit while it is on. */
 #accounts-panel .list-actions .account-forget { left: auto; right: 0; width: 196dp; }
 .account-forget.on { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
@@ -336,29 +344,36 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #accounts-list .list-row.line { height: 64dp; margin-bottom: 8dp; }
 #accounts-list .list-row.line .list-row-title { left: 0; right: 0; height: 64dp; line-height: 64dp; font-size: 24dp; text-align: center; }
 
-/* MENU CONTROLS: one panel for each action of the menu, with its name on the
- * left and its bindings as keycaps, followed by +. A key is a raised cap and
- * a pad input is a cap set into the panel, so the player can tell them apart
- * without words. Up to five caps fit in two lines of the panel, and the + of
- * a full row is dark. */
-#menu-control-rows { position: absolute; left: 56dp; top: 84dp; width: 840dp; }
-.menu-control { position: relative; height: 104dp; margin-bottom: 14dp; background-color: #061a48; border: 3dp #75b2e4; }
-.menu-control-label { position: absolute; left: 20dp; top: 0; width: 170dp; height: 104dp; line-height: 104dp; font-size: 24dp; color: #fff13d; }
-.menu-control-chips { position: absolute; left: 196dp; right: 12dp; top: 10dp; height: 84dp; display: flex; flex-wrap: wrap; align-content: center; align-items: center; column-gap: 10dp; row-gap: 8dp; }
-.menu-control-chip, .menu-control-add { box-sizing: border-box; height: 38dp; line-height: 32dp; font-family: Silkscreen; font-size: 15dp; text-align: center; white-space: nowrap; }
-.menu-control-chip { padding: 0 12dp; text-transform: uppercase; color: #ffffff; background-color: #0865bf; border-width: 3dp; border-top-color: #9edaff; border-left-color: #9edaff; border-right-color: #020b27; border-bottom-color: #020b27; }
-.menu-control-chip.pad { background-color: #193e88; border-top-color: #020b27; border-left-color: #020b27; border-right-color: #9edaff; border-bottom-color: #9edaff; }
-.menu-control-chip:hover, .menu-control-chip.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
-.menu-control-add { width: 38dp; padding: 0; font-size: 22dp; border-width: 3dp; }
-.menu-control-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
+/* HOTKEYS: one panel for each hotkey, with its name on the left and its
+ * bindings as keycaps, followed by +. A key is a raised cap and a pad input
+ * is a cap set into the panel, so the player can tell them apart without
+ * words. Up to five caps fit in two lines, and the + of a full row is dark.
+ * A page has four panels, as in Options, and the pager is on the row of
+ * buttons, between RESET DEFAULTS and CANCEL. */
+#hotkey-rows { position: absolute; left: 56dp; top: 84dp; width: 840dp; }
+.hotkey { position: relative; height: 82dp; margin-bottom: 8dp; background-color: #061a48; border: 3dp #75b2e4; }
+.hotkey-label { position: absolute; left: 20dp; top: 0; width: 170dp; height: 82dp; display: flex; align-items: center; line-height: 28dp; font-size: 24dp; color: #fff13d; }
+.hotkey-chips { position: absolute; left: 196dp; right: 12dp; top: 3dp; height: 76dp; display: flex; flex-wrap: wrap; align-content: center; align-items: center; column-gap: 10dp; row-gap: 6dp; }
+.hotkey-chip, .hotkey-add { box-sizing: border-box; height: 35dp; line-height: 29dp; font-family: Silkscreen; font-size: 15dp; text-align: center; white-space: nowrap; }
+.hotkey-chip { padding: 0 12dp; text-transform: uppercase; color: #ffffff; background-color: #0865bf; border-width: 3dp; border-top-color: #9edaff; border-left-color: #9edaff; border-right-color: #020b27; border-bottom-color: #020b27; }
+.hotkey-chip.pad { background-color: #193e88; border-top-color: #020b27; border-left-color: #020b27; border-right-color: #9edaff; border-bottom-color: #9edaff; }
+.hotkey-chip:hover, .hotkey-chip.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
+.hotkey-add { width: 35dp; padding: 0; font-size: 22dp; border-width: 3dp; }
+.hotkey-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
 /* The mark for "choosing this binding removes it". */
-.menu-control-mark { margin-left: 10dp; }
-#menu-controls-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
-#menu-controls-actions button { position: absolute; top: 0; font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
-#menu-controls-back { left: 0; width: 124dp; }
-#menu-controls-reset { left: 148dp; width: 256dp; }
-#menu-controls-cancel { right: 0; width: 160dp; }
-#menu-controls-status { position: absolute; top: 537dp; width: 100%; font-size: 16dp; color: #fff13d; text-align: center; }
+.hotkey-mark { margin-left: 10dp; }
+#hotkeys-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
+#hotkeys-actions button { position: absolute; top: 0; font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
+#hotkeys-back { left: 0; width: 124dp; }
+#hotkeys-reset { left: 148dp; width: 256dp; }
+#hotkeys-cancel { right: 0; width: 160dp; }
+#hotkeys-status { position: absolute; top: 537dp; width: 100%; font-size: 16dp; color: #fff13d; text-align: center; }
+/* The row of buttons, 480dp down the screen, is 396dp below the panels. */
+#hotkey-rows .list-pager { top: 396dp; height: 38dp; }
+#hotkey-rows .list-pager-prev, #hotkey-rows .list-pager-next, #hotkey-rows .list-pager-count { height: 38dp; line-height: 34dp; }
+#hotkey-rows .list-pager-prev { left: 424dp; }
+#hotkey-rows .list-pager-count { left: 488dp; width: 100dp; }
+#hotkey-rows .list-pager-next { left: 596dp; }
 /* UNINSTALL and RESET: what happens, what stays, then keep the game or forget it. */
 .forget-copy { position: absolute; left: 56dp; top: 170dp; width: 840dp; font-size: 18dp; line-height: 32dp; }
 .forget-stays { top: 280dp; color: #fff13d; }
@@ -420,11 +435,11 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .list-row.focused, .list-row:active { border-color: #fff13d; }
 .list-row-icon, .list-row-wait { border-color: #020b27; }
 
-/* Menu controls. */
-.menu-control { border-color: #061a48; }
-.menu-control-chip { background-color: #0865bf; border-color: #0865bf; }
-.menu-control-chip.pad { background-color: #193e88; border-color: #193e88; }
-.menu-control-chip:hover, .menu-control-chip.focused { background-color: #fff13d; color: #061a48; border-color: #fff13d; }
+/* Hotkeys. */
+.hotkey { border-color: #061a48; }
+.hotkey-chip { background-color: #0865bf; border-color: #0865bf; }
+.hotkey-chip.pad { background-color: #193e88; border-color: #193e88; }
+.hotkey-chip:hover, .hotkey-chip.focused { background-color: #fff13d; color: #061a48; border-color: #fff13d; }
 
 .account-screen .account-summary { height: 44dp; line-height: 32dp; font-size: 15dp; color: #fff13d; }
 .account-state { float: right; padding-right: 8dp; }

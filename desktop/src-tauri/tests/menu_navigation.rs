@@ -49,7 +49,7 @@ const MENUS: [(&str, &str, Option<&str>, Option<&str>); 5] = [
     ("md6", "megadrive", Some("megadrive6"), None),
     ("gb", "gbc", None, None),
     ("ps1-analog", "ps1", Some("ps1-analog"), None),
-    ("md3-without-menu-controls", "megadrive", None, Some("menu-controls")),
+    ("md3-without-hotkeys", "megadrive", None, Some("hotkeys")),
 ];
 
 /// The designs a table must cover: registered ones, then hypothetical ones.

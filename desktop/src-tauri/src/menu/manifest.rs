@@ -206,7 +206,7 @@ pub enum ScreenRole {
     Achievements,
     Discs,
     Accounts,
-    MenuControls,
+    Hotkeys,
     /// UNINSTALL on Windows or RESET on a Mac, to forget the game after asking.
     Forget,
 }
@@ -220,7 +220,7 @@ impl ScreenRole {
         ScreenRole::Achievements,
         ScreenRole::Discs,
         ScreenRole::Accounts,
-        ScreenRole::MenuControls,
+        ScreenRole::Hotkeys,
         ScreenRole::Forget,
     ];
 

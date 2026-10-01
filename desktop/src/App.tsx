@@ -31,7 +31,7 @@ import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import appIcon from "../src-tauri/icons/icon.png";
 import largeIcon from "../src-tauri/icons/icon-large.png";
-import { MenuControlsEditor } from "./MenuControlsEditor";
+import { HotkeysEditor } from "./HotkeysEditor";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
   NOT_A_SHADER_FILE,
@@ -489,7 +489,7 @@ export function App() {
       autosaveOnQuit: draft.autosaveOnQuit,
       advancedEmulatorAccess: draft.advancedEmulatorAccess,
       intelMacs: draft.intelMacs,
-      menuControls: draft.menuControls,
+      hotkeys: draft.hotkeys,
       menuEntries: draft.menuEntries,
       shaders: {
         bundled: bundledShaders,
@@ -549,7 +549,7 @@ export function App() {
         autosaveOnQuit: settings.autosaveOnQuit ?? false,
         advancedEmulatorAccess: settings.advancedEmulatorAccess ?? false,
         intelMacs: settings.intelMacs,
-        menuControls: settings.menuControls,
+        hotkeys: settings.hotkeys,
         menuEntries: settings.menuEntries ?? null,
         startAtMenu: settings.startAtMenu,
       });
@@ -1377,10 +1377,11 @@ export function App() {
                   onChange={setControls}
                 />
                 {draft.showMenu && (
-                  <MenuControlsEditor
-                    value={draft.menuControls}
+                  <HotkeysEditor
+                    value={draft.hotkeys}
                     busy={!!busy}
-                    onChange={(value) => update("menuControls", value)}
+                    onChange={(value) => update("hotkeys", value)}
+                    game={{ system: draft.system, controls }}
                   />
                 )}
               </details>

@@ -274,6 +274,14 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #unlock-kicker { font-size: 11dp; color: #fff13d; }
 #unlock-title { font-size: 16dp; color: #ffffff; margin-top: 3dp; }
 #unlock-detail { font-size: 11dp; color: #b4e6ff; margin-top: 3dp; }
+/* The result of a hotkey on the save slots during play, in the same notice,
+ * with only its words and no kicker, badge or second line. */
+#unlock-row[data-notice=slot] #unlock-kicker, #unlock-row[data-notice=slot] #unlock-detail { display: none; }
+#unlock-row[data-notice=slot] #unlock-words { margin-left: 0; }
+#unlock-row[data-notice=slot] #unlock-title { margin-top: 0; }
+/* The open menu contains the slots, so a notice about them is only for play. */
+#unlock-row[data-notice=slot] { display: none; }
+body.overlay #unlock-row[data-notice=slot] { display: block; }
 
 /* Arrow moves that the layout alone would get wrong. BACK is right of the
  * volume and the entries are nearer, so Up from it would skip the volume, and
@@ -287,32 +295,34 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #accounts-list .list-row.line { height: 56dp; margin-bottom: 6dp; }
 #accounts-list .list-row.line .list-row-title { left: 0; right: 0; height: 56dp; line-height: 56dp; font-size: 20dp; text-align: center; }
 
-/* MENU CONTROLS, drawn like Options in the index. Each menu action is on a
- * line above a rule, with its name, then its bindings as flat tags and + at
- * the end. A key is a filled tag and a pad input an outlined one, so the two
- * look different without a label. A line with five long tags wraps. */
-#menu-control-rows { position: absolute; left: 24dp; top: 56dp; width: 912dp; }
-.menu-control { position: relative; height: 104dp; margin-bottom: 8dp; border-width: 0 0 1dp 0; border-color: #476eab; }
-.menu-control-label { position: absolute; left: 16dp; top: 0; width: 160dp; height: 104dp; line-height: 104dp; font-size: 18dp; color: #ffffff; }
-.menu-control-chips { position: absolute; left: 180dp; right: 0; top: 14dp; height: 76dp; display: flex; flex-wrap: wrap; align-content: center; align-items: center; column-gap: 8dp; row-gap: 8dp; }
-.menu-control-chip, .menu-control-add { box-sizing: border-box; height: 34dp; line-height: 32dp; font-family: Silkscreen; font-size: 13dp; white-space: nowrap; }
-.menu-control-chip { padding: 0 12dp; text-align: left; text-transform: uppercase; }
-.menu-control-chip.pad { background-color: transparent; border-color: #75b2e4; }
-.menu-control-chip.pad:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
-.menu-control-chip.pad.focused { background-color: #193e88; color: #ffffff; border-color: #fff13d; }
-.menu-control-add { width: 34dp; padding: 0; text-align: center; font-size: 16dp; }
+/* HOTKEYS, drawn like Options in the index. Each hotkey is on a line above
+ * a rule, with its name, then its bindings as flat tags and + at the end. A
+ * key is a filled tag and a pad input an outlined one, so the two look
+ * different without a label. A line with five long tags wraps. Four lines to
+ * a page, and the pager at the left of the button row as in every Disc list. */
+#hotkey-rows { position: absolute; left: 24dp; top: 56dp; width: 912dp; }
+.hotkey { position: relative; height: 96dp; margin-bottom: 8dp; border-width: 0 0 1dp 0; border-color: #476eab; }
+.hotkey-label { position: absolute; left: 16dp; top: 0; width: 160dp; height: 96dp; display: flex; align-items: center; line-height: 24dp; font-size: 18dp; color: #ffffff; }
+.hotkey-chips { position: absolute; left: 180dp; right: 0; top: 10dp; height: 76dp; display: flex; flex-wrap: wrap; align-content: center; align-items: center; column-gap: 8dp; row-gap: 8dp; }
+.hotkey-chip, .hotkey-add { box-sizing: border-box; height: 34dp; line-height: 32dp; font-family: Silkscreen; font-size: 13dp; white-space: nowrap; }
+.hotkey-chip { padding: 0 12dp; text-align: left; text-transform: uppercase; }
+.hotkey-chip.pad { background-color: transparent; border-color: #75b2e4; }
+.hotkey-chip.pad:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
+.hotkey-chip.pad.focused { background-color: #193e88; color: #ffffff; border-color: #fff13d; }
+.hotkey-add { width: 34dp; padding: 0; text-align: center; font-size: 16dp; }
 /* Right at the end of a line stays there, because BACK, far down the right
  * edge, is not the next binding. */
-.menu-control-add { nav-right: none; }
-.menu-control-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
+.hotkey-add { nav-right: none; }
+.hotkey-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
 /* The mark for "choosing this binding removes it". */
-.menu-control-mark { margin-left: 8dp; }
-#menu-controls-actions { position: absolute; left: 360dp; top: 508dp; width: 584dp; height: 38dp; }
-#menu-controls-actions button { position: absolute; top: 0; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 13dp; border-width: 1dp; text-align: center; }
-#menu-controls-back { left: 406dp; width: 176dp; font-size: 14dp; }
-#menu-controls-reset { left: 0; width: 180dp; }
-#menu-controls-cancel { left: 192dp; width: 110dp; }
-#menu-controls-status { position: absolute; left: 24dp; top: 548dp; width: 700dp; font-size: 13dp; color: #b4e6ff; text-align: left; }
+.hotkey-mark { margin-left: 8dp; }
+#hotkeys-actions { position: absolute; left: 360dp; top: 508dp; width: 584dp; height: 38dp; }
+#hotkeys-actions button { position: absolute; top: 0; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 13dp; border-width: 1dp; text-align: center; }
+#hotkeys-back { left: 406dp; width: 176dp; font-size: 14dp; }
+#hotkeys-reset { left: 0; width: 180dp; }
+#hotkeys-cancel { left: 192dp; width: 110dp; }
+#hotkeys-status { position: absolute; left: 24dp; top: 548dp; width: 700dp; font-size: 13dp; color: #b4e6ff; text-align: left; }
+#hotkey-rows .list-pager { top: 452dp; }
 
 .account-screen .account-summary { height: 44dp; line-height: 32dp; font-size: 15dp; color: #fff13d; }
 .account-state { float: right; padding-right: 8dp; }

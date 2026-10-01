@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
    // While this popup waits behind another one, the colour badge can become
    // ready before it opens, and we do not refresh the list after that. The
    // popup must still open with the badge.
-   overlays.notify({"OTHER", "1 points", ""});
+   overlays.notify({rib::Overlays::Notice::Achievement, "OTHER", "1 points", ""});
    std::snprintf(service_rows[0].badge_path, sizeof(service_rows[0].badge_path), "%s", path.c_str());
    service_rows[0].badge = RIB_ACHIEVEMENT_BADGE_READY;
    ++session.revision;

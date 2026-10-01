@@ -453,6 +453,10 @@ fn validate_choices(settings: &Game) -> Result<(), String> {
         settings.menu_entries.as_deref(),
     )?;
     controls::validate_for_system(&settings.system, &settings.controls)?;
+    settings
+        .hotkeys
+        .check_for(&settings.system, &settings.controls)
+        .map_err(|refusal| refusal.to_string())?;
     Ok(())
 }
 

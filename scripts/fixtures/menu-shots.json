@@ -9,6 +9,8 @@
     "slider fifteen percent of the way across.",
     "A step written \"wait:120\" waits that many frames instead, which is how",
     "anything on a clock is photographed at a chosen moment.",
+    "A step written \"press:f7\" holds that key down for two frames, as the menu",
+    "reads the keyboard: how the hotkeys that act while the game plays are pressed.",
     "",
     "A shot that needs a different game says so beside its script: what is drawn",
     "over a running game does not exist in an export that opens at the menu,",
@@ -183,24 +185,27 @@
       ],
       "includeAchievements": true
     },
-    "menu-controls": ["options", "menu-controls"],
-    "menu-controls-capturing": ["options", "menu-controls", "menu-control-confirm-add"],
-    "menu-controls-keyboard": {
-      "script": ["options", "menu-controls"],
-      "menuControls": {
+    "hotkeys": ["options", "hotkeys"],
+    "hotkeys-capturing": ["options", "hotkeys", "hotkey-confirm-add"],
+    "hotkeys-keyboard": {
+      "script": ["options", "hotkeys"],
+      "hotkeys": {
         "menu": ["key:escape", "key:f1"],
         "confirm": ["key:enter", "key:space"],
         "back": ["key:escape", "key:backspace"]
       }
     },
-    "menu-controls-full": {
-      "script": ["options", "menu-controls", "key:down"],
-      "menuControls": {
-        "menu": ["key:escape", "pad:home", "pad:l3+r3", "key:rshift", "pad:start"],
+    "hotkeys-full": {
+      "script": ["options", "hotkeys", "key:down"],
+      "hotkeys": {
+        "menu": ["key:escape", "pad:home", "pad:l3+r3", "key:rctrl", "pad:start"],
         "confirm": ["key:enter", "pad:a", "key:space", "pad:x", "key:backspace"],
-        "back": ["key:escape", "pad:b", "key:ctrl", "pad:y", "pad:select"]
+        "back": ["key:escape", "pad:b", "key:ctrl", "pad:y", "pad:select"],
+        "quick-save": ["key:f2", "pad:l2", "key:f5", "pad:r2", "key:f8"]
       }
     },
+    "hotkeys-second-page": ["options", "hotkeys", "hotkeys-next"],
+    "notice-slot": { "script": ["wait-ms:5500", "press:f7", "wait:30"], "startAtMenu": false },
     "shaders-royale": {
       "script": ["options", "shaders"],
       "shaders": { "bundled": ["crt-royale", "crt-lottes", "zfast-crt"], "initial": "crt-royale" }

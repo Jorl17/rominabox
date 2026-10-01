@@ -125,7 +125,7 @@
         "options-columns": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "achievements",
           "shaders"
         ],
@@ -189,7 +189,7 @@
         "native": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "shaders",
           "achievements",
           "options-next",
@@ -215,7 +215,7 @@
         "rominabox": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "shaders",
           "achievements",
           "options-next",
@@ -271,7 +271,7 @@
         "native": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "shaders",
           "achievements",
           "options-next",
@@ -296,7 +296,7 @@
         "rominabox": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "shaders",
           "achievements",
           "options-next",
@@ -348,7 +348,7 @@
         "native": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "shaders",
           "achievements",
           "background-play",
@@ -370,7 +370,7 @@
         "rominabox": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "shaders",
           "achievements",
           "background-play",
@@ -380,7 +380,7 @@
     },
     {
       "name": "a switch the game does not use leaves no page behind",
-      "menu": "md3-without-menu-controls",
+      "menu": "md3-without-hotkeys",
       "steps": [
         "options",
         "key:down",
@@ -493,7 +493,7 @@
         "native": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "shaders",
           "achievements",
           "options-next",
@@ -503,7 +503,7 @@
         "options-columns": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "achievements",
           "shaders",
           "discs"
@@ -513,13 +513,13 @@
           "background-play",
           "achievements",
           "shaders",
-          "menu-controls",
+          "hotkeys",
           "controls"
         ],
         "rominabox": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "shaders",
           "achievements",
           "options-next",
@@ -673,7 +673,7 @@
         "options-columns": [
           "volume-level",
           "controls",
-          "menu-controls",
+          "hotkeys",
           "rumble",
           "options-back",
           "options-back",
@@ -766,7 +766,9 @@
         ],
         "disc": [
           "options",
+          "press:options-next",
           "hover:rumble",
+          "press:options-prev",
           "hover:controls"
         ],
         "rominabox": [
@@ -794,7 +796,9 @@
         ],
         "disc": [
           "volume-level",
+          "options-prev",
           "rumble",
+          "options-next",
           "controls"
         ],
         "rominabox": [

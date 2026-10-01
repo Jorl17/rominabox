@@ -18,7 +18,7 @@ pub(crate) mod launch_contract;
 pub mod lists;
 pub mod mach_o;
 pub mod menu;
-pub mod menu_controls;
+pub mod hotkeys;
 pub mod metadata;
 pub mod pad_positions;
 pub mod pads;

@@ -256,31 +256,31 @@
 }
 /* The author's defaults for the actions of the menu: one row of chips each,
    in a box like the pad's, with its own heading and Reset. */
-.menu-controls {
+.hotkeys {
   margin-top: 20px;
   border: 2px solid var(--ink);
   background: var(--paper);
   color: var(--ink);
 }
-.menu-control-row {
+.hotkey-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
 }
-.menu-control-row + .menu-control-row {
+.hotkey-row + .hotkey-row {
   border-top: 1px solid var(--ink);
 }
-.menu-controls .control-message:not(:empty) {
+.hotkeys .control-message:not(:empty) {
   border-top: 1px solid var(--ink);
 }
-.menu-control-name {
+.hotkey-name {
   min-width: 6em;
   font-weight: 600;
 }
 /* A binding: its words, and an × that removes it. Only the × is pressed. */
-.menu-control-chip {
+.hotkey-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -289,14 +289,14 @@
   font-size: 12px;
   font-weight: 700;
 }
-.menu-control-remove {
+.hotkey-remove {
   display: grid;
   place-items: center;
   padding: 4px;
   background: none;
   color: var(--muted);
 }
-.menu-control-remove:hover:not(:disabled) {
+.hotkey-remove:hover:not(:disabled) {
   background: var(--ink);
   color: var(--paper);
 }

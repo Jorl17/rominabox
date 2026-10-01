@@ -1,0 +1,174 @@
+{
+  "designs": [
+    "native",
+    "disc",
+    "rominabox"
+  ],
+  "cases": [
+    {
+      "name": "HOTKEYS opens on MENU's first binding",
+      "steps": [
+        "options",
+        "hotkeys"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "hotkey-menu-1"
+        ]
+      }
+    },
+    {
+      "name": "along a row to its +, and on to the next page at the end of it",
+      "steps": [
+        "options",
+        "hotkeys",
+        "key:right",
+        "key:right",
+        "key:right",
+        "key:right"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "hotkey-menu-1",
+          "hotkey-menu-2",
+          "hotkey-menu-3",
+          "hotkey-menu-add",
+          "hotkey-quick-load-1"
+        ]
+      },
+      "text": {
+        "*": [
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "2/2"
+          }
+        ]
+      }
+    },
+    {
+      "name": "down the four rows of the first page to the buttons' row",
+      "steps": [
+        "options",
+        "hotkeys",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:down"
+      ],
+      "focused": {
+        "native": [
+          "volume-level",
+          "hotkey-menu-1",
+          "hotkey-confirm-1",
+          "hotkey-back-1",
+          "hotkey-quick-save-1",
+          "hotkeys-reset",
+          "hotkeys-reset"
+        ],
+        "rominabox": [
+          "volume-level",
+          "hotkey-menu-1",
+          "hotkey-confirm-1",
+          "hotkey-back-1",
+          "hotkey-quick-save-1",
+          "hotkeys-reset",
+          "hotkeys-reset"
+        ],
+        "disc": [
+          "volume-level",
+          "hotkey-menu-1",
+          "hotkey-confirm-1",
+          "hotkey-back-1",
+          "hotkey-quick-save-1",
+          "hotkeys-next",
+          "hotkeys-next"
+        ]
+      }
+    },
+    {
+      "name": "Left at the start of the second page turns back to the first",
+      "steps": [
+        "options",
+        "hotkeys",
+        "key:down",
+        "key:down",
+        "key:down",
+        "key:right",
+        "key:right",
+        "key:left"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "hotkey-menu-1",
+          "hotkey-confirm-1",
+          "hotkey-back-1",
+          "hotkey-quick-save-1",
+          "hotkey-quick-save-add",
+          "hotkey-quick-load-1",
+          "hotkey-menu-1"
+        ]
+      },
+      "text": {
+        "*": [
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "2/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          }
+        ]
+      }
+    },
+    {
+      "name": "back leaves for Options, onto the entry that opened it",
+      "steps": [
+        "options",
+        "hotkeys",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "hotkey-menu-1",
+          "hotkeys"
+        ]
+      }
+    }
+  ]
+}
