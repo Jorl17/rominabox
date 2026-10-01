@@ -292,6 +292,34 @@ def shared_directories_are_linked_and_removal_never_follows_them() -> None:
                   f"the canonical {relative.as_posix()} is untouched")
 
 
+def a_worktree_gets_the_cores_and_archives_the_scopes_read() -> None:
+    """In the exporter, shipped and menu tests we read cores from the core cache
+    and pinned archives from work/downloads, which are not in git, so we copy
+    both into a new worktree. We write into both during preparation, so in a
+    worktree we must not write into the checkout we made it from."""
+    import core_source
+
+    with tempfile.TemporaryDirectory() as directory:
+        canonical = Path(directory) / "canonical"
+        tree = Path(directory) / "tree"
+        tree.mkdir()
+        prepared = [
+            core_source.seeded_cache().relative_to(core_source.ROOT) / "cores" / "core.fixture",
+            core_source.DOWNLOADS.relative_to(core_source.ROOT) / "archive.fixture",
+        ]
+        for relative in prepared:
+            (canonical / relative).parent.mkdir(parents=True)
+            (canonical / relative).write_text("prepared", encoding="utf-8")
+        worktree.link_build_artifacts(tree, own_copy=False, canonical=canonical)
+        for relative in prepared:
+            check((tree / relative).is_file(), f"a new worktree has {relative.as_posix()}")
+            written = tree / relative.parent / "written.fixture"
+            if written.parent.is_dir():
+                written.write_text("the worktree's", encoding="utf-8")
+            check(not (canonical / relative.parent / written.name).exists(),
+                  f"what the worktree writes into {relative.parent.as_posix()} stays in the worktree")
+
+
 def removing_a_worktree_keeps_the_fork_commits_its_branch_needs() -> None:
     """Check that the submodule commits of a branch remain after its worktree goes.
 
@@ -727,6 +755,7 @@ def a_branch_with_a_slash_keeps_its_whole_name() -> None:
 ANYWHERE = [
     removal_deletes_only_the_worktrees_own_accounts_folder,
     shared_directories_are_linked_and_removal_never_follows_them,
+    a_worktree_gets_the_cores_and_archives_the_scopes_read,
     a_branch_with_a_slash_keeps_its_whole_name,
     the_built_cli_follows_the_redirected_cargo_target,
     a_file_compiled_into_the_tool_counts_as_its_source,
