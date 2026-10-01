@@ -39,10 +39,14 @@ editpe = { version = "0.2.4", default-features = false, features = ["std"] }
 ruzstd = "0.8"
 
 [target.'cfg(windows)'.dependencies]
-# The small icon of the builder window, loaded at the size shown on the screen.
+# The small icon of the builder window, loaded at the size shown on the
+# screen. The installer tasks in the builder (src/installation.rs), for the
+# person's Path in the registry and the games' sandboxes.
 windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
+    "Win32_Security_Isolation",
     "Win32_System_LibraryLoader",
+    "Win32_System_Registry",
     "Win32_UI_Controls",
     "Win32_UI_HiDpi",
     "Win32_UI_WindowsAndMessaging",

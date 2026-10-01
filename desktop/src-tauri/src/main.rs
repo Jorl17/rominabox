@@ -348,7 +348,46 @@ fn sharp_window_icon(window: &tauri::WebviewWindow) {
     }
 }
 
+/// The tasks of the Windows installer in the builder (installation.rs), done
+/// before a window opens. Returns the exit code once done, or None for an
+/// ordinary start. `--add-to-path FOLDER` adds the command line's folder to
+/// the person's Path. `--uninstall-cleanup LOCAL ROAMING FOLDER` removes the
+/// builder's and the games' files in the per-user folders LOCAL and ROAMING,
+/// and removes FOLDER from the Path.
+#[cfg(windows)]
+fn installer_request(identifier: &str) -> Option<i32> {
+    use rominabox_desktop::installation::{announce_environment, Installation, ENVIRONMENT};
+    let arguments: Vec<PathBuf> = std::env::args_os().skip(1).map(PathBuf::from).collect();
+    let installation = |local: &PathBuf, roaming: &PathBuf, command_line: &PathBuf| Installation {
+        local: local.clone(),
+        roaming: roaming.clone(),
+        identifier: identifier.to_string(),
+        command_line: command_line.clone(),
+        environment: ENVIRONMENT.to_string(),
+    };
+    let (changed, failures) = match (arguments.first()?.to_str()?, &arguments[1..]) {
+        ("--add-to-path", [folder]) => match installation(&PathBuf::new(), &PathBuf::new(), folder).installed() {
+            Ok(changed) => (changed, Vec::new()),
+            Err(error) => (false, vec![format!("the Path: {error}")]),
+        },
+        ("--uninstall-cleanup", [local, roaming, folder]) => installation(local, roaming, folder).uninstalled(),
+        _ => return None,
+    };
+    if changed {
+        announce_environment();
+    }
+    for failure in &failures {
+        eprintln!("ROM-in-a-Box: could not change {failure}");
+    }
+    Some(i32::from(!failures.is_empty()))
+}
+
 fn main() {
+    let context = tauri::generate_context!();
+    #[cfg(windows)]
+    if let Some(code) = installer_request(&context.config().identifier) {
+        std::process::exit(code);
+    }
     tauri::Builder::default()
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
@@ -391,6 +430,6 @@ fn main() {
             capture_pad_position,
             cancel_pad_capture
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("failed to run ROM-in-a-Box desktop shell");
 }
