@@ -417,8 +417,8 @@ def platform_of(target: str) -> str:
 def platform_sources(directory: Path, platform: str) -> list[Path]:
     """The C sources in `directory` on `platform`: the shared ones at its top,
     and those in the folders listed for the platform in the recipe's
-    launcher.folders."""
-    folders = recipe()["launcher"]["folders"].get(platform)
+    platformFolders."""
+    folders = recipe()["platformFolders"].get(platform)
     if folders is None:
         raise SystemExit(f"the player recipe names no source folders for {platform}")
     return sorted(directory.glob("*.c")) + [source for folder in folders
