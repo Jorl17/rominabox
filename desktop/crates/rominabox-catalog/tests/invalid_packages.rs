@@ -236,6 +236,34 @@ fn a_console_referencing_an_undeclared_component_is_rejected() {
     assert_sole(&root, "reference.missing_component", "disc", "cores");
 }
 
+/// A core comes from a build of ours or from libretro's nightly. Any other
+/// origin is a typo, which we would have taken for a download in preparation.
+#[test]
+fn a_component_from_an_unknown_origin_is_rejected() {
+    let (root, package) = one("cartridge");
+    write_console(&package, &plain("cartridge"));
+    write_json(
+        &package.join("components/core.json"),
+        &json!({
+            "schemaVersion": 1,
+            "id": "core",
+            "name": "core",
+            "artifacts": { "windows-x86_64": "core_libretro.dll" },
+            "license": { "spdx": "GPL-2.0", "file": "core.txt" },
+            "capabilities": [],
+            "provenance": {
+                "origin": "buildbot",
+                "repository": "libretro/core",
+                "revision": "0000000000000000000000000000000000000000",
+                "branch": "master",
+                "licenseCandidates": ["COPYING"],
+                "correspondsToArtifact": false
+            }
+        }),
+    );
+    assert_sole(&root, "parse.invalid_json", "cartridge", "components/core.json");
+}
+
 #[test]
 fn a_default_profile_must_be_among_the_declared_variants() {
     let (root, package) = one("md");

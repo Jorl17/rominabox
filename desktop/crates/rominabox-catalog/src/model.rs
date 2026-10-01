@@ -260,8 +260,7 @@ pub struct CoreComponent {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ComponentProvenance {
-    /// `built` when we compile it, `libretro-buildbot` when we download it.
-    pub origin: String,
+    pub origin: Origin,
     pub repository: String,
     pub revision: String,
     /// Paths to try, in order, when extracting the licence from that snapshot.
@@ -283,6 +282,17 @@ pub struct ComponentProvenance {
     /// `HAVE_CHD=0` there is no CHD support for any Sega console.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build: Option<BuildRecipe>,
+}
+
+/// Where a core's artifact comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Origin {
+    /// We compile it from `revision`, where its recipe covers the machine.
+    #[serde(rename = "built")]
+    Built,
+    /// We download libretro's nightly.
+    #[serde(rename = "libretro-buildbot")]
+    LibretroBuildbot,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
