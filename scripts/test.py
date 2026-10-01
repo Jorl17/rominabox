@@ -351,6 +351,16 @@ SCOPES = [
         launches_games=True,
     ),
     Scope(
+        "cleanup",
+        "on Windows, that a launched test whose real export fails part-way, as the game is built, while it is open, or in the shipped scope's menu sounds case, leaves nothing of the game in the person's ROM-in-a-Box folders, no sandbox and no temporary folder",
+        "that a game plays (no player starts: each launch is plan-only), or anything on macOS, whose games unpack nothing and keep their data in their containers",
+        [PYTHON, str(ROOT / "scripts/test_launched_cleanup.py")],
+        env={"ROMINABOX_GAME_BUNDLE_PREFIX": f"{os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.cleanup"},
+        slow=True,
+        skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player",
+        launches_games=True,
+    ),
+    Scope(
         "player",
         "that the built player refuses to start without an absolute data folder, with one starts and creates nothing beside itself, and on Windows declares UTF-8 as its code page",
         "where a game's folders go once it runs; it only asks the player for its feature list, before any window or core",
