@@ -441,6 +441,13 @@ def accounts_sources(platform: str) -> list[Path]:
     return platform_sources(accounts_folder(), platform)
 
 
+def launch_sources(platform: str) -> list[Path]:
+    """The launcher's C sources for preparing a launch on `platform`, without
+    its entry: the shared ones, and the platform's file layer and path rules."""
+    return [source for source in launcher_sources(platform)
+            if source.parent == LAUNCHER or source.name in ("portable_fs.c", "paths.c")]
+
+
 def file_layer(platform: str) -> list[Path]:
     """The C sources of the launcher's file layer (portable_fs.h) on
     `platform`: the sources common to every platform, and those for it."""

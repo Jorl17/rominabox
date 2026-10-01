@@ -18,6 +18,8 @@
 typedef struct {
     /* The app's own files: the plan, the core, the menu. */
     const char *resources;
+    /* The core among them, with this platform's library naming. */
+    const char *core;
     /* The per-user application data folder the plan's $user_data stands
      * for, absolute. */
     const char *user_data;

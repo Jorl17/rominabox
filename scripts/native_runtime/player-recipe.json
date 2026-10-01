@@ -143,7 +143,7 @@
     ]
   },
   "launcher": {
-    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher, and those in the folders `folders` names for the target's platform: its entry, in the folder named for the platform, and its file layer, portable_fs, in posix/ (the calls macOS and Linux share) or windows/. A macOS kit carries its launcher as a library the player loads (launchLibrary).",
+    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher, and those in the folders `folders` names for the target's platform: its entry, in the folder named for the platform, and its file layer, portable_fs, and the way a launch plan's paths read, paths.c, in posix/ (what macOS and Linux share) or windows/. A macOS kit carries its launcher as a library the player loads (launchLibrary).",
     "folders": {"macos": ["macos", "posix"], "windows": ["windows"]},
     "windows-x86_64": {
       "output": "launcher.exe",

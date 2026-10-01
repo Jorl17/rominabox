@@ -25,6 +25,7 @@
 #include "unpack.h"
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 
+#define RIB_CORE_FILE(platform, file) static const char core_##platform[] = file;
 #define RIB_WINDOWS_PART(name, path) static const char part_##name[] = path;
 #include "../launch_contract.inc"
 
@@ -525,6 +526,7 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     rominabox_launch_join(resources, sizeof resources, folder, part_Resources);
     rominabox_launch_join(player, sizeof player, folder, part_Player);
     places.resources = resources;
+    places.core = core_Windows;
     places.user_data = user_data;
     places.accounts_root = accounts_root;
     places.previous_user_data = previous_user_data;

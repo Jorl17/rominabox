@@ -23,6 +23,9 @@
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 #include "arguments.h"
 
+#define RIB_CORE_FILE(platform, file) static const char core_##platform[] = file;
+#include "../launch_contract.inc"
+
 /* stdout is fully buffered when it is not a terminal. In the launcher we
  * point it at launch.log, so when the player is killed, or still running when
  * someone reads the log, RetroArch's lines stay in that buffer. */
@@ -123,6 +126,7 @@ static void prepare(void) {
     rominabox_launch_join(resources, sizeof resources, bundle, "Contents/Resources");
 
     places.resources = resources;
+    places.core = core_Macos;
     places.user_data = user_data;
     if (test_user_data && test_user_data[0]) {
         /* A test's own folder replaces every per-user folder, for the game's
