@@ -28,33 +28,6 @@
       "LICENSE.txt"
     ],
     "correspondsToArtifact": true,
-    "licenseSha256": "642c163624269243d1f6b29d759d4e3a2d161bdc272c90d82ecbeec82ae26755",
-    "downloads": {
-      "linux-x86_64": {
-        "archiveSha256": "a0d5c69bdec1285382cc420f54ed7c7ed0965a134cd43d6bc5a421bcf5d7ecc2",
-        "binarySha256": "30abab06a9e1cfc26766a864fab83ee986cec1d6156c48dec13f9d03b46b2a6c",
-        "archiveBytes": 1307835,
-        "binaryBytes": 12832952
-      },
-      "macos-arm64": {
-        "archiveSha256": "1d666bc4a2f7e96030c19d5cfdf867ea65648686e6217690bc3d7cf58973fe6b",
-        "binarySha256": "4936447a9d1b85f45ef2b5d5e2b63e7a5e8f65c18ca5b42839cfc53645e55543",
-        "archiveBytes": 868642,
-        "binaryBytes": 9040096
-      },
-      "macos-x86_64": {
-        "archiveSha256": "92e56d02a0499dcc3a9b51db7952530387e16129572c1284f81d3ca4d03a1ef3",
-        "binarySha256": "09ee46286575f5b3e5718e0895410573f3bf84c4c62920d6aa7cd12e356b222f",
-        "archiveBytes": 937025,
-        "binaryBytes": 9395216
-      },
-      "windows-x86_64": {
-        "archiveSha256": "0fee62ef16a835973f943e7e3278e24533b18d14f839771f9ad96edd600b7676",
-        "binarySha256": "52acac35e71e2e95497f46d807c3caf721c97616fcecfe8f35cd0624f63c98a4",
-        "archiveBytes": 944182,
-        "binaryBytes": 8940475
-      }
-    },
     "build": {
       "makefile": "Makefile.libretro",
       "platform": "osx",

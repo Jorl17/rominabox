@@ -31,33 +31,6 @@
       "COPYING",
       "LICENSE"
     ],
-    "correspondsToArtifact": false,
-    "licenseSha256": "0efb4db8000c609bd2f06e61fcbc59af05519d122f5b3597b7c493224946c61d",
-    "downloads": {
-      "linux-x86_64": {
-        "archiveSha256": "28435b07f374eaf765a0df8b50b71bfc9c8910c1fd8b8756d525300987dc66c9",
-        "binarySha256": "1f265f3c41a366f21a93571331e9fee4d254593717fcfc14a82a396a5c2ec127",
-        "archiveBytes": 723574,
-        "binaryBytes": 2168040
-      },
-      "macos-arm64": {
-        "archiveSha256": "af029def077932152bbe13c72d09f8a2f8d8f17c98f31b390f90bf353c4c1c69",
-        "binarySha256": "61509e4c1296e3ec0bf988b1dc09f6bb5f2b49df32ef3653fdd2cb5dd8fee1fb",
-        "archiveBytes": 486621,
-        "binaryBytes": 1393240
-      },
-      "macos-x86_64": {
-        "archiveSha256": "bcce5e83c32b72995b7e931f8415579e2b220b793a62d6978b9ea204e1bc83cf",
-        "binarySha256": "1b1bcf5c6ff9195cc19e6c6f1723b7f63a3933bac920edef6f70372dc1605b87",
-        "archiveBytes": 575678,
-        "binaryBytes": 1697424
-      },
-      "windows-x86_64": {
-        "archiveSha256": "44eb855ed88379dd5a6e393f03c768040580144db94f814dd28784c64e3976ba",
-        "binarySha256": "72b97ff416998c602748054fe745609e76bab434f5f3352b01d92ccd7edfc8da",
-        "archiveBytes": 820182,
-        "binaryBytes": 7003648
-      }
-    }
+    "correspondsToArtifact": false
   }
 }
