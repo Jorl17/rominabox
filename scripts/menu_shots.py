@@ -384,13 +384,18 @@ def data_dir_of(app: Path) -> Path | None:
     return Path(found.group(1).replace("$user_data", str(_app()["user_data"](app))))
 
 
-def _launch_declaration(name: str) -> str:
+def launch_declaration(name: str) -> str:
     """A name the launcher and the player share, from rominabox_launch.h."""
     header = (ROOT / "vendor/retroarch/rominabox_launch.h").read_text(encoding="utf-8")
     found = re.search(rf'#define {name} "([^"]+)"', header)
     if not found:
         raise SystemExit(f"rominabox_launch.h declares no {name}")
     return found.group(1)
+
+
+# The variable with a test's own per-user data folder, which we read in the
+# launcher in place of the person's. A plan's $user_data is below it.
+TEST_USER_DATA_ENV = launch_declaration("RIB_ENV_TEST_USER_DATA")
 
 
 def forget_windows_game(program: Path, namespace: str) -> None:
@@ -407,7 +412,7 @@ def forget_windows_game(program: Path, namespace: str) -> None:
     accounts = re.search(r"^accounts_dir\t(.+)$", plan_text(folder), re.MULTILINE)
     if data is not None:
         data.mkdir(parents=True, exist_ok=True)
-        (data / _launch_declaration("RIB_FORGET_MARKER")).write_bytes(b"")
+        (data / launch_declaration("RIB_FORGET_MARKER")).write_bytes(b"")
         subprocess.run(
             [str(program)],
             env=dict(environment, ROMINABOX_PLAN_ONLY="1"),
@@ -781,6 +786,7 @@ def build_a_game(
     run_dir = Path(tempfile.mkdtemp(prefix=f"rominabox-menu-shots-{run}-"))
     created = run_dir.lstat()
     keep = False
+    program = None
     try:
         app, program = _build_a_game(rom, workspace, run_dir, system, settings, design, palette, namespace)
         try:

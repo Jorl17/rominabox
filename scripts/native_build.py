@@ -493,7 +493,8 @@ def build_launch_library(destination: Path, kit: str) -> Path:
     processors = [flag for part in slices(kit) for flag in ("-arch", architecture_of(part).value)]
     run(["cc", *processors, f"-mmacosx-version-min={deployment_target(kit)}", *declared["flags"],
          f"-Wl,-install_name,{declared['loadedFrom']}/{declared['output']}",
-         "-o", str(output), *map(str, launcher_sources(platform_of(kit)))], destination, build_environment(kit))
+         "-o", str(output), *map(str, launcher_sources(platform_of(kit))), *declared["libraries"]],
+        destination, build_environment(kit))
     return output
 
 

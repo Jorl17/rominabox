@@ -4,7 +4,7 @@
 //! no Apple tool, so someone can make a Mac game on any system (`crate::mach_o`).
 
 use super::app_files::{copy_file, make_executable, tree_size};
-use super::launch_plan::accounts_folder;
+use super::launch_plan::{accounts_folder, game_data_folder};
 use super::slices::{self, Arch};
 use super::{check_cancelled, kit_file, ErrorStage, ExportError, ExportRequest, Packager};
 use crate::icons;
@@ -251,7 +251,7 @@ fn sandbox_entitlements(identity: &str, accounts: Option<&str>) -> Entitlements 
         .with("com.apple.security.device.bluetooth", Value::Bool(true))
         .with(
             "com.apple.security.temporary-exception.files.home-relative-path.read-only",
-            Value::Strings(vec![format!("/Library/Application Support/ROM-in-a-Box/Games/{identity}/")]),
+            Value::Strings(vec![format!("/Library/Application Support/{}/", game_data_folder(identity))]),
         );
     if let Some(folder) = accounts {
         entitlements = entitlements.with(

@@ -196,11 +196,12 @@
     }
   },
   "launchLibrary": {
-    "comment": "On macOS the launcher is a library the player loads before its main: it prepares the launch and hands main the arguments (launcher/macos/arguments.c), from the launcher's sources for the platform (launcher.folders). It is built when the macOS kit is made (scripts/build_kit.py), for every slice of the kit's player and the platform's deployment target, and attached to each slice of the kit's player then (scripts/native_runtime/inject_dylib.c): nothing about it depends on a game. The kit carries it as its launcher; an export copies the two, thinned for a game that runs on Apple silicon alone, and signs them.",
+    "comment": "On macOS the launcher is a library the player loads before its main: it prepares the launch and hands main the arguments (launcher/macos/arguments.c), from the launcher's sources for the platform (launcher.folders). It is built when the macOS kit is made (scripts/build_kit.py), for every slice of the kit's player and the platform's deployment target, and attached to each slice of the kit's player then (scripts/native_runtime/inject_dylib.c): nothing about it depends on a game. The kit carries it as its launcher; an export copies the two, thinned for a game that runs on Apple silicon alone, and signs them. 'libraries' are the system's it links, for the library and for the plan tool built from the same sources (scripts/launcher_plan.py): CoreFoundation puts up the alert that tells a person why a game cannot start.",
     "macos-universal": {
       "output": "librominabox-launch.dylib",
       "loadedFrom": "@executable_path",
-      "flags": ["-Oz", "-dynamiclib", "-Wl,-dead_strip"]
+      "flags": ["-Oz", "-dynamiclib", "-Wl,-dead_strip"],
+      "libraries": ["-framework", "CoreFoundation"]
     }
   },
   "fileLayer": {

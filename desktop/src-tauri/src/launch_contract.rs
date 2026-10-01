@@ -61,6 +61,14 @@ macro_rules! token {
 }
 pub(crate) use token;
 
+/// `user_folder!(Name)`: a folder below the per-user data folder.
+macro_rules! user_folder {
+    ($name:ident) => {
+        const { $crate::launch_contract::declared(&["RIB_USER_FOLDER"], stringify!($name), 1) }
+    };
+}
+pub(crate) use user_folder;
+
 /// `shipped!(Name)`: a folder we ship in the app, and the folder in the
 /// game's data to which we apply it in the launcher.
 macro_rules! shipped {
