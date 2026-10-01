@@ -202,8 +202,9 @@ def consoles_offering_a_picker() -> list[str]:
     return sorted(system for system, count in counted.items() if count > 1)
 
 
-def render(staging: Path, target: Path, overrides: dict[str, dict]) -> None:
-    """Render the controls screen with these element overrides applied."""
+def render(staging: Path, target: Path, screen: str, overrides: dict[str, dict]) -> None:
+    """Render `screen` as in the player, with these element overrides
+    applied."""
     document = (staging / "menu.rml").read_text()
     flags: list[str] = []
     for element, properties in overrides.items():
@@ -214,7 +215,7 @@ def render(staging: Path, target: Path, overrides: dict[str, dict]) -> None:
             flags += ["--set", f"{found}:{prop}={value}"]
     result = subprocess.run(
         [str(PREVIEW), str(staging / "menu.rml"), str(target),
-         str(SIZE[0]), str(SIZE[1]), *flags],
+         str(SIZE[0]), str(SIZE[1]), "--screen", screen, *flags],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -287,8 +288,9 @@ def fixed_place(output: Path, record: bool = False) -> int:
         # We check against the screen at its busiest. CANCEL appears only while a
         # button is being captured, and it is in the action row, so without it
         # we could not see the picker over it.
+        controls = declared_states()["controls"]
         shown = dict(
-            declared_states()["controls"]["set"],
+            controls["set"],
             **{"controls-cancel": {"display": "block"}},
         )
         hidden = dict(shown, **{"controls-device": {"display": "none"}})
@@ -297,9 +299,9 @@ def fixed_place(output: Path, record: bool = False) -> int:
         without = output / f"{console}-without.png"
         with_it = output / f"{console}-closed.png"
         with_list = output / f"{console}-open.png"
-        render(staging, without, hidden)
-        render(staging, with_it, shown)
-        render(staging, with_list, opened)
+        render(staging, without, controls["screen"], hidden)
+        render(staging, with_it, controls["screen"], shown)
+        render(staging, with_list, controls["screen"], opened)
 
         closed = difference_box(without, with_it)
         opened_box = difference_box(with_it, with_list)
@@ -424,7 +426,7 @@ def every_variant(output: Path) -> int:
         target_png = output / f"{console}-{variant}.png"
         result = subprocess.run(
             [str(PREVIEW), str(staging / "menu.rml"), str(target_png),
-             str(SIZE[0]), str(SIZE[1]), *overrides],
+             str(SIZE[0]), str(SIZE[1]), "--screen", state["screen"], *overrides],
             capture_output=True, text=True,
         )
         if result.returncode != 0:
@@ -594,6 +596,8 @@ def draw_state(design: str, system: str, palette: str, name: str, state: dict, s
             str(target),
             str(SIZE[0]),
             str(SIZE[1]),
+            "--screen",
+            state["screen"],
             *overrides,
         ],
         capture_output=True,
