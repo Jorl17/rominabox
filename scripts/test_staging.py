@@ -90,8 +90,8 @@ def builder_finds_cargo_output() -> list[str]:
         if build_builder.cargo_output() != (build_builder.TAURI / "elsewhere").resolve():
             wrong.append("a relative CARGO_TARGET_DIR is not resolved from Cargo's working directory")
         del os.environ["CARGO_TARGET_DIR"]
-        if build_builder.cargo_output() != (build_builder.TAURI / "target").resolve():
-            wrong.append("with no CARGO_TARGET_DIR the builder does not look beside its manifest")
+        if build_builder.cargo_output() != (ROOT / "desktop/target").resolve():
+            wrong.append("with no CARGO_TARGET_DIR the builder does not look in its workspace's target")
     finally:
         if saved is None:
             os.environ.pop("CARGO_TARGET_DIR", None)

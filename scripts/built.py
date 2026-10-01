@@ -14,29 +14,37 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-MANIFEST = ROOT / "desktop/src-tauri/Cargo.toml"
+# The builder's Rust workspace (desktop/Cargo.toml), relative to a checkout.
+# The engine and command line are in a package beside the builder's window
+# (desktop/src-tauri), so we rebuild only the window when a bundled resource changes.
+WORKSPACE = Path("desktop")
+ENGINE = WORKSPACE / "crates/rominabox-engine"
+MANIFEST = ROOT / ENGINE / "Cargo.toml"
 # Executables have the .exe suffix on Windows and no suffix on POSIX systems.
 NAME = "rominabox-cli.exe" if os.name == "nt" else "rominabox-cli"
 
 
 def cli_build(manifest: Path = MANIFEST) -> list[str]:
     """The command to build the command line from `manifest`, with the features
-    we pass in the Tauri build, so that the builder, the command line and the
-    tests use one compile of the crate instead of each undoing the others'."""
-    return ["cargo", "build", "--release", "--manifest-path", str(manifest),
+    of its dependencies resolved over the whole workspace and the feature we
+    pass in the Tauri build. The engine then has the same features for the
+    command line as for the builder, and we compile it once instead of twice."""
+    return ["cargo", "build", "--release", "--manifest-path", str(manifest), "--workspace",
             "--features", "tauri/custom-protocol", "--bin", "rominabox-cli"]
 
 
 def target_dir() -> Path:
     """The cargo target folder, which is not always beside the manifest."""
     shared = os.environ.get("CARGO_TARGET_DIR")
-    return Path(shared) if shared else ROOT / "desktop/src-tauri/target"
+    return Path(shared) if shared else ROOT / WORKSPACE / "target"
 
 
+# The sources of the command line: the crates, its own among them, and the
+# manifests of the workspace, which declare its dependencies and features.
 SOURCES = [
-    Path("desktop/src-tauri/src"),
-    Path("desktop/src-tauri/Cargo.toml"),
-    Path("desktop/crates"),
+    WORKSPACE / "crates",
+    WORKSPACE / "Cargo.toml",
+    WORKSPACE / "src-tauri/Cargo.toml",
 ]
 
 # `include_str!("../../controls.json")` and similar macros: files that are not

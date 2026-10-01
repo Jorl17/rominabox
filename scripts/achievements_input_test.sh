@@ -18,4 +18,4 @@ if [ "$(uname -s)" = Darwin ]; then
     scripts/native_runtime/test_text_composition.mm "$host" "$service" scripts/native_runtime/text_test_host.cpp
   probes="$probes:$build/composition"
 fi
-ROMINABOX_INPUT_PROBE="$probes" cargo test --manifest-path desktop/src-tauri/Cargo.toml --test design_composition live_achievements -- --nocapture
+ROMINABOX_INPUT_PROBE="$probes" cargo test --manifest-path desktop/crates/rominabox-engine/Cargo.toml --test design_composition live_achievements -- --nocapture

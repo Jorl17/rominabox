@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "id": "controls-reset-first",
+  "name": "Controls reset first",
+  "description": "Hypothetical: its pad screen starts on RESET DEFAULTS, which it marks autofocus. Everything else is Native's."
+}

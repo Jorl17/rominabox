@@ -432,7 +432,7 @@ def the_built_cli_follows_the_redirected_cargo_target() -> None:
         )
         os.environ.pop("CARGO_TARGET_DIR")
         check(
-            built.target_dir() == built.ROOT / "desktop/src-tauri/target",
+            built.target_dir() == built.ROOT / "desktop/target",
             "with nothing redirecting it, the checkout's own target directory",
         )
     finally:
@@ -609,8 +609,10 @@ def a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote() -> None:
     """
     import cargo_replay
 
-    root = Path(__file__).resolve().parent.parent
-    manifest = root / "desktop/src-tauri/Cargo.toml"
+    import built
+
+    root = built.ROOT
+    manifest = built.MANIFEST
     plan = cargo_replay.Plan(manifest, True, ["measure::"])
     with tempfile.TemporaryDirectory() as tmp:
         stamps = Path(tmp)
@@ -655,6 +657,38 @@ def a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote() -> None:
             not stamp.exists(),
             "a failed cargo test drops the stamp of the binary it rewrote",
         )
+
+
+def the_workspace_lockfile_counts_as_a_members_source() -> None:
+    """A member's dependencies are pinned in its workspace's lockfile.
+
+    The engine is a member of the workspace in desktop/Cargo.toml, whose
+    Cargo.lock and [workspace.dependencies] are above the engine's folder.
+    If we hashed only the package's folder, we would replay test binaries
+    built against the previous versions of its dependencies.
+    """
+    import built
+    import cargo_replay
+
+    with scratch.scratch() as temporary:
+        workspace = Path(temporary)
+        (workspace / "Cargo.toml").write_text('[workspace]\nmembers = ["member"]\n')
+        (workspace / "Cargo.lock").write_text("version = 4\n")
+        member = workspace / "member"
+        (member / "src").mkdir(parents=True)
+        (member / "Cargo.toml").write_text('[package]\nname = "member"\nversion = "0.1.0"\n')
+        (member / "src/lib.rs").write_text("")
+        before = cargo_replay.source_digest(member / "Cargo.toml")
+        (workspace / "Cargo.lock").write_text("version = 4\n# another dependency version\n")
+        locked = cargo_replay.source_digest(member / "Cargo.toml")
+        (workspace / "Cargo.toml").write_text('[workspace]\nmembers = ["member"]\n[workspace.dependencies]\n')
+        declared = cargo_replay.source_digest(member / "Cargo.toml")
+    check(before != locked, "a change to the workspace's Cargo.lock changes a member's digest")
+    check(locked != declared, "a change to the workspace's Cargo.toml changes a member's digest")
+    check(
+        built.ROOT / "desktop/Cargo.lock" in cargo_replay.workspace_files(built.MANIFEST.parent),
+        "the engine's digest covers desktop/Cargo.lock",
+    )
 
 
 def build_probe(directory: Path, oldest_first: tuple[str, ...]) -> list[list[str]]:
@@ -760,6 +794,7 @@ ANYWHERE = [
     the_built_cli_follows_the_redirected_cargo_target,
     a_file_compiled_into_the_tool_counts_as_its_source,
     a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote,
+    the_workspace_lockfile_counts_as_a_members_source,
     every_program_a_run_starts_is_given_its_python,
     a_rebuilt_rmlui_archive_invalidates_the_menu_probe,
     an_up_to_date_menu_probe_is_not_compiled_again,

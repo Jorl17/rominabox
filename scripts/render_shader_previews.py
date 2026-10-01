@@ -47,7 +47,7 @@ from programs import windowless  # noqa: E402
 # Every fourth pixel of that preview is a pixel of the card.
 CARD_SCALE = 4
 # The video driver we use for each shader language, as in an exported game
-# (desktop/src-tauri/src/shader_format.rs).
+# (desktop/crates/rominabox-engine/src/shader_format.rs).
 DRIVERS = {"glsl": "gl", "slang": "glcore"}
 
 # The same tolerances as for the controller artwork, for the same reason. We

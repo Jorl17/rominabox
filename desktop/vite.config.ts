@@ -26,7 +26,7 @@ export default defineConfig({
     port: Number(process.env.ROMINABOX_VITE_PORT ?? 1420),
     strictPort: true,
     watch: {
-      ignored: ["**/src-tauri/**"],
+      ignored: ["**/src-tauri/**", "**/crates/**", "**/target/**"],
     },
   },
   build: {

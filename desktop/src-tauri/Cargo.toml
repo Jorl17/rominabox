@@ -3,61 +3,24 @@ name = "rominabox-desktop"
 version = "0.1.0"
 description = "ROM-in-a-Box desktop shell"
 edition = "2021"
-default-run = "rominabox-desktop"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+rominabox-engine = { path = "../crates/rominabox-engine" }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
-chd = "0.3"
-crc32fast = "1.5"
-datary = "0.3"
-# The per-user folders for the builder's caches, for the command line. In the
-# builder we find them through Tauri's path resolver, built on the same crate.
-dirs = "6"
-# Canonical paths without Windows' verbatim \\?\ prefix whenever the ordinary form
-# is the same path, so the paths we show read as the author wrote them.
-dunce = "1.0"
-md-5 = "0.11"
-image = { version = "0.25", default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "tiff", "webp"] }
-percent-encoding = "2.3"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-# For reading a controller in the builder's "press on controller" (src/pads.rs).
-gilrs = "0.11"
-sha1 = "0.11"
-sha2 = "0.10"
-ureq = "2.12"
-zip = { version = "2.4", default-features = false, features = ["deflate"] }
-icns = { version = "0.4", default-features = false, features = ["pngio"] }
-# For writing a Windows game's icon and version into its programs. BSD-2-Clause.
-editpe = { version = "0.2.4", default-features = false, features = ["std"] }
-# For packing a Windows game into one program (packaging/windows_pack.rs). MIT.
-ruzstd = "0.8"
+image.workspace = true
+serde_json.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-# The small icon of the builder window, loaded at the size shown on the
-# screen. The installer tasks in the builder (src/installation.rs), for the
-# person's Path in the registry and the games' sandboxes. The local time in
-# the date field of a zip (packaging/archive.rs).
-windows-sys = { version = "0.59", features = [
+# The small icon of the builder window, loaded at the size shown on the screen.
+windows-sys = { workspace = true, features = [
     "Win32_Foundation",
-    "Win32_Security_Isolation",
     "Win32_System_LibraryLoader",
-    "Win32_System_Registry",
-    "Win32_System_Time",
     "Win32_UI_Controls",
     "Win32_UI_HiDpi",
     "Win32_UI_WindowsAndMessaging",
 ] }
-
-[target.'cfg(unix)'.dependencies]
-# For the local time in a zip's date field (packaging/archive.rs).
-libc = "0.2"
-
-[dev-dependencies]
-libc = "0.2.189"
-rominabox-scratch = { path = "../crates/rominabox-scratch" }

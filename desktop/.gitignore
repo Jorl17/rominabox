@@ -1,7 +1,7 @@
 node_modules/
 dist/
 vite-build/
-src-tauri/target/
+target/
 crates/*/target/
 src-tauri/gen/
 

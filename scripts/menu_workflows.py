@@ -1,14 +1,14 @@
 """Launch the exported player for the menu workflow cases marked `launched`.
 
 We replay every case in scripts/fixtures/menu-workflows.json headlessly in
-the `workflows` tests (desktop/src-tauri/tests/menu_workflows.rs). Here we run
-the cases listed under `launched` in the table, one launch each, in the
-exported player, and compare them with the same baselines: every checkpoint
-from the script driver of the player, the files written by its menu, and
-the picture. We leave out what the `headless` section of the table lists, so
-the record is the same for both runners. We compare the picture only here,
-with its reference in scripts/fixtures/menu-workflow-pictures, allowing the
-one level by which graphics cards can round differently.
+the `workflows` tests (desktop/crates/rominabox-engine/tests/menu_workflows.rs).
+Here we run the cases listed under `launched` in the table, one launch each,
+in the exported player, and compare them with the same baselines: every
+checkpoint from the script driver of the player, the files written by its
+menu, and the picture. We leave out what the `headless` section of the table
+lists, so the record is the same for both runners. We compare the picture
+only here, with its reference in scripts/fixtures/menu-workflow-pictures,
+allowing the one level by which graphics cards can round differently.
 
 Use an explicit committed native build, with the worktree environment loaded:
     ROMINABOX_TEST_BUILD=/absolute/build python3 scripts/menu_workflows.py
