@@ -336,6 +336,27 @@ DUALSENSE_PROFILES = {
     "sdl2": "PS5 Controller.cfg",
 }
 
+# In SDL, every recognised pad has the same button numbers (the SDL game
+# controller buttons), A 0, B 1, Back 4, Guide 5 and Start 6, which a RetroArch
+# profile binds as b, a, select and start. When a profile with that layout has
+# no menu button, we make the Guide its menu button so that its pad has Home,
+# because the upstream Xbox profiles have none. We leave a profile in the
+# pad's own numbering as it is, because there 5 could be any button.
+SDL_LAYOUT = {"input_b_btn": "0", "input_a_btn": "1", "input_select_btn": "4", "input_start_btn": "6"}
+SDL_GUIDE = "5"
+
+
+def with_sdl_guide(text: str) -> tuple[str, bool]:
+    """Return `text`, an sdl2 profile, with the SDL Guide as its menu button
+    when it uses the SDL numbering and has none, and whether we added one."""
+    def bound(key: str) -> str | None:
+        found = re.search(rf'^\s*{re.escape(key)}\s*=\s*"([^"]*)"', text, re.MULTILINE)
+        return found.group(1) if found else None
+    if bound(home_button_key()) is not None or any(bound(key) != value for key, value in SDL_LAYOUT.items()):
+        return text, False
+    return f'{text.rstrip(chr(10))}\n{home_button_key()} = "{SDL_GUIDE}"\n', True
+
+
 _PLAYER_PREFIX = re.compile(r"^player\d+_")
 _ALT_SUFFIX = re.compile(r"_alt\d+$")
 _META_BIND_SUFFIXES = ("_btn_label", "_axis_label", "_btn", "_axis", "_mbtn")
@@ -590,6 +611,7 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
                 child.unlink()
 
     removed_lines = 0
+    homes_given = 0
     upstream_bytes = 0
     staged_bytes = 0
     dualsense_files: dict[str, list[str]] = {driver: [] for driver in drivers}
@@ -605,6 +627,9 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
             if "=" in line and not line.strip().startswith("#")
         ):
             raise RuntimeError(f"meta bind survived staging in {filename}")
+        if driver == "sdl2":
+            stripped, given = with_sdl_guide(stripped)
+            homes_given += given
         payload = stripped.encode("utf-8")
         (root / "autoconfig" / driver / filename).write_bytes(payload)
         staged_bytes += len(payload)
@@ -631,13 +656,14 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
             "the exported player's controller driver reads. Profiles upstream disabled, which "
             "name no device and no complete pair of ids, are not staged. "
             "Meta-bind lines are removed at staging, but for the pad's own menu button, which "
-            "the menu reads as Home. SDL3 gamecontrollerdb.cfg is not shipped."
+            "the menu reads as Home. An sdl2 profile laid out in SDL's numbering that names no "
+            "menu button is given SDL's Guide, button 5, as one. SDL3 gamecontrollerdb.cfg is not shipped."
         ),
     }
     _record_joypad_component(root, record)
     print(
         f"Joypad autoconfig {revision}: {len(profiles)} {'/'.join(drivers)} profiles, "
-        f"{len(disabled)} disabled ones left out, {removed_lines} meta lines removed, {staged_bytes} staged bytes "
+        f"{len(disabled)} disabled ones left out, {removed_lines} meta lines removed, {homes_given} homes given, {staged_bytes} staged bytes "
         f"(upstream {upstream_bytes} bytes, archive {archive.stat().st_size} bytes)",
         flush=True,
     )

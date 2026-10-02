@@ -1,4 +1,4 @@
-//! Checks that run only on a Mac: the hid profiles in a macOS export, the
+//! Checks that run only on a Mac: the profiles in a macOS export, the
 //! pinned upstream set they come from, and the copy we make at launch.
 
 use super::{config_value, pinned_meta_bind_names, scratch};
@@ -602,9 +602,9 @@ fn export_ships_the_profiles_and_the_launcher_seeds_them() {
     let game_dir = container
         .join("Data/Library/Application Support/ROM-in-a-Box/Games")
         .join(identity);
-    let kit_hid = resources.join("autoconfig/hid");
-    let seeded_hid = game_dir.join("autoconfig/hid");
-    let mut kit_profiles: Vec<_> = fs::read_dir(&kit_hid)
+    let kit_sdl2 = resources.join("autoconfig/sdl2");
+    let seeded_sdl2 = game_dir.join("autoconfig/sdl2");
+    let mut kit_profiles: Vec<_> = fs::read_dir(&kit_sdl2)
         .unwrap()
         .map(|entry| entry.unwrap().path())
         .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("cfg"))
@@ -612,19 +612,19 @@ fn export_ships_the_profiles_and_the_launcher_seeds_them() {
     kit_profiles.sort();
     assert!(
         !kit_profiles.is_empty(),
-        "the kit has to ship hid profiles for the seed to copy"
+        "the kit has to ship sdl2 profiles for the seed to copy"
     );
     for kit_profile in &kit_profiles {
         let name = kit_profile.file_name().unwrap();
-        let seeded = seeded_hid.join(name);
+        let seeded = seeded_sdl2.join(name);
         assert_eq!(
             fs::read(&seeded).unwrap_or_else(|error| panic!("{}: {error}", seeded.display())),
             fs::read(kit_profile).unwrap(),
-            "the launcher has to copy every hid profile into the directory the config names"
+            "the launcher has to copy every sdl2 profile into the directory the config names"
         );
     }
     let written = fs::read_to_string(game_dir.join("retroarch.cfg")).unwrap();
-    let autoconfig_dir = seeded_hid.parent().unwrap();
+    let autoconfig_dir = seeded_sdl2.parent().unwrap();
     assert_eq!(
         config_value(&written, "joypad_autoconfig_dir"),
         Some(autoconfig_dir.to_str().unwrap()),
