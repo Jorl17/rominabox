@@ -1,5 +1,4 @@
 use super::*;
-use crate::controls::Controls;
 use crate::packaging::ExportTarget;
 
 fn fixture(name: &str) -> rominabox_scratch::Scratch {

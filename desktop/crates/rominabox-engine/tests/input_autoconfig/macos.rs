@@ -3,10 +3,7 @@
 
 use super::{config_value, pinned_meta_bind_names, scratch};
 use crate::{export_fixture, support};
-use rominabox_engine::{
-    controls::Controls,
-    packaging::{ExportRequest, ExportTarget, MANAGED_DATA_DIRECTORIES},
-};
+use rominabox_engine::packaging::{ExportRequest, ExportTarget, MANAGED_DATA_DIRECTORIES};
 use std::{
     fs,
     path::{Path, PathBuf},

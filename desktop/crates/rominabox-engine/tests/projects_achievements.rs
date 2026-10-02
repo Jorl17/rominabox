@@ -1,11 +1,9 @@
 use rominabox_engine::achievements;
-use rominabox_engine::controls::Controls;
 use rominabox_engine::packaging::ExportTarget;
 use rominabox_engine::game::Game;
 use rominabox_engine::projects::{
     open_project, save_project, ProjectOpenRequest, ProjectSaveRequest,
 };
-use rominabox_engine::shaders::ShaderSelection;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
