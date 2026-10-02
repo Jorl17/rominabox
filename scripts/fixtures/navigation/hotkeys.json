@@ -169,6 +169,49 @@
           "hotkeys"
         ]
       }
+    },
+    {
+      "name": "the pointer turns HOTKEYS' pages at the pager",
+      "steps": [
+        "options",
+        "hotkeys",
+        "hover:hotkeys-next",
+        "press:hotkeys-next",
+        "hover:hotkeys-prev",
+        "press:hotkeys-prev"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "hotkey-menu-1",
+          "hotkeys-next",
+          "hotkeys-prev",
+          "hotkeys-prev",
+          "hotkeys-next"
+        ]
+      },
+      "text": {
+        "*": [
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          },
+          {
+            "hotkeys-page-count": "2/2"
+          },
+          {
+            "hotkeys-page-count": "2/2"
+          },
+          {
+            "hotkeys-page-count": "1/2"
+          }
+        ]
+      }
     }
   ]
 }
