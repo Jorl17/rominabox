@@ -195,7 +195,7 @@ SCOPES = [
     ),
     Scope(
         "typing",
-        "that a key typed into the menu's text entry, or one a hotkey of the menu is bound to, is never also a button of the menu's pad, and that Backspace is B and Space Start otherwise; RetroArch's own function that reads the keyboard for the menu, handed a held key",
+        "that in the menu the keyboard presses only the arrows of the menu's pad: no key the game's controls hold, none of RetroArch's other menu keys, no key typed into the text entry and no key a hotkey of the menu is bound to, while the game's keys are its buttons as it plays; RetroArch's own function that reads the keyboard for the menu, handed a held key",
         "whether the menu says it is typing or which keys its hotkeys hold (the navigation and bridge scopes ask the real menu), or that a physical keyboard delivers the key; the rest of RetroArch is stand-ins that stop the program if reached",
         [PYTHON, str(ROOT / "scripts/test_menu_typing.py")],
     ),
