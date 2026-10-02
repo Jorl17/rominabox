@@ -43,6 +43,28 @@
       "-DFT_DISABLE_ZLIB=ON"
     ]
   },
+  "sdl2": {
+    "comment": "SDL2, which the Mac player reads controllers through (drivers.macos.joypad): it drives each model's rumble, the DualSense's included, which RetroArch's own HID driver does not. Built from its pinned release for each Mac slice and linked into the player statically, with only its controller parts (the fork compiles no SDL video driver on the Mac); what else it links, all of it the system's, is read from the sdl2.pc it installs. configure finds it through INCLUDES and LDFLAGS (scripts/native_build.py, sdl2_environment).",
+    "platforms": ["macos"],
+    "url": "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz",
+    "sha256": "5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165",
+    "directory": "SDL2-2.32.10",
+    "build": "build-sdl2",
+    "prefix": "sdl2",
+    "cmake": [
+      "-DCMAKE_BUILD_TYPE=MinSizeRel",
+      "-DSDL_SHARED=OFF",
+      "-DSDL_STATIC=ON",
+      "-DSDL_TEST=OFF",
+      "-DSDL_AUDIO=OFF",
+      "-DSDL_VIDEO=OFF",
+      "-DSDL_RENDER=OFF",
+      "-DSDL_POWER=OFF",
+      "-DSDL_JOYSTICK=ON",
+      "-DSDL_HAPTIC=ON",
+      "-DSDL_HIDAPI=ON"
+    ]
+  },
   "configure": {
     "common": [
       "--enable-opengl",
@@ -61,7 +83,6 @@
       "--disable-libusb",
       "--disable-qt",
       "--disable-sdl",
-      "--disable-sdl2",
       "--disable-test_drivers",
       "--disable-ffmpeg",
       "--disable-cg",
@@ -74,14 +95,16 @@
       "--disable-metal",
       "--enable-coreaudio",
       "--enable-hid",
-      "--disable-mfi"
+      "--disable-mfi",
+      "--enable-sdl2"
     ],
     "windows": [
       "--disable-d3d9",
       "--disable-d3d10",
       "--disable-d3d11",
       "--disable-d3d12",
-      "--disable-winmm"
+      "--disable-winmm",
+      "--disable-sdl2"
     ],
     "comment": "Two OpenGL drivers, one player for every game: gl runs GLSL shaders, glcore (opengl_core) runs slang, compiled with the fork's own glslang and SPIRV-Cross (builtinglslang). glslang and SPIRV-Cross are left for configure to settle: --enable-glslang makes it look for a system glslang and stop. A game's shader language picks the driver (shader_format.rs). TLS is RetroArch's own mbedTLS (deps/mbedtls), built into the player on every platform; configure would otherwise take a system mbedTLS it finds, which on a Mac is Homebrew's and exists for one processor only.",
     "environment": {
@@ -131,7 +154,7 @@
   },
   "drivers": {
     "comment": "What an exported game's player is told to use, per platform: its audio driver, its controller driver, and the controller profile folders RetroArch reads. A pad's profiles are read from the folder named for the driver it was connected under; on Windows that driver connects XInput pads as xinput and every other pad as dinput. The exporter writes audio and joypad into the game's settings; scripts/build_kit.py stages joypadProfiles from the pinned autoconfig archive (scripts/prepare_runtime.py).",
-    "macos": {"audio": "coreaudio", "joypad": "hid", "joypadProfiles": ["hid"]},
+    "macos": {"audio": "coreaudio", "joypad": "sdl2", "joypadProfiles": ["sdl2"]},
     "windows": {"audio": "wasapi", "joypad": "xinput", "joypadProfiles": ["xinput", "dinput"]}
   },
   "systemLibraries": {

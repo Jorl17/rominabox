@@ -287,7 +287,7 @@ fn isolated_config_points_mutable_paths_at_the_managed_data_dir() {
 #[test]
 fn each_platform_player_is_told_its_own_drivers() {
     for (target, audio, joypad) in [
-        (ExportTarget::Macos, "coreaudio", "hid"),
+        (ExportTarget::Macos, "coreaudio", "sdl2"),
         (ExportTarget::Windows, "wasapi", "xinput"),
     ] {
         let mut value = request(false);

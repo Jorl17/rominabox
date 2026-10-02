@@ -392,6 +392,57 @@ def freetype_environment(destination: Path) -> dict[str, str]:
     return {"PKG_CONFIG_LIBDIR": str(freetype_prefix(destination) / "lib" / "pkgconfig")}
 
 
+def builds_sdl2(target: str) -> bool:
+    """Whether we read controllers through SDL2 in `target`'s player, as set in the recipe."""
+    return platform_of(require_target(target)) in recipe()["sdl2"]["platforms"]
+
+
+def sdl2_prefix(destination: Path) -> Path:
+    """Where the SDL2 built in `destination` is installed."""
+    return destination / recipe()["sdl2"]["prefix"]
+
+
+def build_sdl2(destination: Path, target: str, jobs: int) -> None:
+    """SDL2 built from its pinned release for `target` and installed in
+    `destination`, for a target with SDL2 in its recipe."""
+    if not builds_sdl2(target):
+        return
+    sdl2 = recipe()["sdl2"]
+    prefix = sdl2_prefix(destination)
+    # We build it again when the recipe's SDL2 changes, and then we compile
+    # only what that change affects with cmake and ninja.
+    stamp = prefix / "recipe.json"
+    wanted = json.dumps({**sdl2, "target": cmake_flags(target)}, sort_keys=True)
+    if stamp.is_file() and stamp.read_text(encoding="utf-8") == wanted:
+        return
+    source = destination / sdl2["directory"]
+    if not source.is_dir():
+        archive = download(sdl2["url"], sdl2["sha256"])
+        with tarfile.open(archive) as tar:
+            tar.extractall(destination, filter="data")
+    environment = build_environment(target)
+    build = destination / sdl2["build"]
+    run(["cmake", "-S", str(source), "-B", str(build), "-G", "Ninja",
+         f"-DCMAKE_INSTALL_PREFIX={prefix}", *sdl2["cmake"], *cmake_flags(target)], destination, environment)
+    run(["cmake", "--build", str(build), "--parallel", str(jobs)], destination, environment)
+    run(["cmake", "--install", str(build)], destination, environment)
+    stamp.write_text(wanted, encoding="utf-8")
+
+
+def sdl2_environment(destination: Path, target: str) -> dict[str, str]:
+    """The settings for the SDL2 built in `destination` in configure: its
+    header folder in INCLUDES, in configure's form (without the leading /),
+    and in LDFLAGS the folder of the library and the libraries listed in its
+    installed sdl2.pc. -lSDL2 is already added in configure."""
+    if not builds_sdl2(target):
+        return {}
+    prefix = sdl2_prefix(destination)
+    described = (prefix / "lib" / "pkgconfig" / "sdl2.pc").read_text(encoding="utf-8").splitlines()
+    libs = next(line for line in described if line.startswith("Libs:"))[len("Libs:"):]
+    flags = [flag for flag in libs.replace("${libdir}", str(prefix / "lib")).split() if flag != "-lSDL2"]
+    return {"INCLUDES": str(prefix / "include").lstrip("/"), "LDFLAGS": " ".join(flags)}
+
+
 def build_rmlui(destination: Path, target: str, jobs: int) -> Path:
     """RmlUi built statically at the recipe's commit; returns its build directory."""
     rmlui = recipe()["rmlui"]

@@ -210,18 +210,18 @@ fn walk_files(root: &Path, found: &mut Vec<PathBuf>) {
     }
 }
 
-/// The staged hid directory contains a profile with the DualSense ids.
+/// The staged sdl2 directory contains the one DualSense profile.
 ///
-/// `1356/3302` are the decimal Sony vendor id and DualSense product id, as
-/// in the RetroArch log line `[Autoconf] ... not configured`. We set the hid
-/// driver in the export, so the profiles come from `autoconfig/hid/`. There
-/// must be exactly one staged profile with that pair. We do not check that a
-/// pad is attached, that IOHID reports those ids, or that the buttons match.
+/// `1356/3302` are the decimal Sony vendor id and DualSense product id. On a
+/// Mac we read pads through SDL2, so the profiles come from
+/// `autoconfig/sdl2/`. There must be exactly one staged profile with that
+/// pair. We do not check that a pad is attached, that SDL reports those ids,
+/// or that the button numbers match a physical DualSense.
 #[test]
-fn staged_hid_profile_matches_the_logged_dualsense_ids() {
+fn staged_sdl2_profile_matches_the_dualsense_ids() {
     let resources = runtime_resources();
     assert!(
-        resources.join("autoconfig/hid").is_dir(),
+        resources.join("autoconfig/sdl2").is_dir(),
         "stage joypad autoconfig into the runtime kit before this test"
     );
     let mut matches = Vec::new();
@@ -236,16 +236,16 @@ fn staged_hid_profile_matches_the_logged_dualsense_ids() {
     assert_eq!(
         matches.len(),
         1,
-        "one hid profile must own 1356/3302; scan order would otherwise pick a tie: {matches:?}"
+        "one sdl2 profile must own 1356/3302; scan order would otherwise pick a tie: {matches:?}"
     );
     let text = fs::read_to_string(&matches[0]).unwrap();
-    assert_eq!(profile_value(&text, "input_driver"), Some("hid"));
-    assert_eq!(profile_value(&text, "input_b_btn"), Some("1"));
+    assert_eq!(profile_value(&text, "input_driver"), Some("sdl2"));
+    assert_eq!(profile_value(&text, "input_b_btn"), Some("0"));
     assert!(
         matches[0]
             .components()
-            .any(|component| component.as_os_str() == "hid"),
-        "the profile has to sit in the hid driver directory RetroArch scans"
+            .any(|component| component.as_os_str() == "sdl2"),
+        "the profile has to sit in the sdl2 driver directory RetroArch scans"
     );
 }
 
@@ -509,7 +509,7 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
         config_value(config, "joypad_autoconfig_dir"),
         Some("$data_dir/autoconfig")
     );
-    assert_eq!(config_value(config, "input_joypad_driver"), Some("hid"));
+    assert_eq!(config_value(config, "input_joypad_driver"), Some("sdl2"));
     assert!(MANAGED_DATA_DIRECTORIES.contains(&"autoconfig"));
     assert!(plan.contains("managed\tautoconfig\n"));
     assert_eq!(
