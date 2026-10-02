@@ -102,7 +102,8 @@ fn export_writes_the_reviewed_meta_bind_policy_and_managed_paths() {
         Some("nul")
     );
     assert_eq!(config_value(&config, "input_menu_toggle"), Some("nul"));
-    // Fullscreen is Alt+Enter, so f stays a gameplay key.
+    // Fullscreen comes from the window (Alt+Enter on Windows), so f stays a
+    // gameplay key.
     assert_eq!(
         config_value(&config, "input_toggle_fullscreen"),
         Some("nul")

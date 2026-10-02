@@ -3,7 +3,8 @@
 //!
 //! Neither Q nor F is a RetroArch meta bind, with or without advanced
 //! emulator access, because Quit is in the menu that the player opens with
-//! Escape, and Alt+Enter is the fullscreen chord. The player opens
+//! Escape, and fullscreen is a function of the window (Alt+Enter on
+//! Windows). The player opens
 //! the menu with Escape because it is the default for MENU on the HOTKEYS
 //! screen, which we read in the menu from `hotkeys-defaults.cfg` in the
 //! export. RetroArch's own menu toggle has no key.

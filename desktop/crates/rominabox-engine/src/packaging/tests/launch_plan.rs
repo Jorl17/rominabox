@@ -147,8 +147,8 @@ fn advanced_emulator_access_reaches_fast_forward_without_dropping_a_bind() {
         !ordinary_config.contains(" = \"space\""),
         "a normal export must not write the advanced Space binding"
     );
-    // The player quits from the menu and goes fullscreen with Alt+Enter, so
-    // q and f remain gameplay keys.
+    // The player quits from the menu and uses the window for fullscreen
+    // (Alt+Enter on Windows), so q and f remain gameplay keys.
     assert_eq!(
         config_value(&ordinary_config, "input_exit_emulator"),
         Some("nul")

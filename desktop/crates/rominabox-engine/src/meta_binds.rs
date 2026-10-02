@@ -24,7 +24,8 @@
 /// from the player's controls file, which we merge in the launcher.
 ///
 /// Quit and fullscreen have no key in any mode, so `q` and `f` remain
-/// gameplay keys. In the fork, the player presses Alt+Enter for fullscreen.
+/// gameplay keys. On Windows the player presses Alt+Enter in the fork for
+/// fullscreen, and on a Mac the player uses the fullscreen control of macOS.
 ///
 /// `advanced_key` is a second keyboard key. We write it only when the author
 /// set `advancedEmulatorAccess`, and we still write `nul` for the button,
