@@ -28,6 +28,8 @@ export type ExportRequest = {
   system: string;
   icon: string | null;
   background: string | null;
+  /** The background picture drawn in the palette's screen colour. */
+  tintBackground: boolean;
   showMenu: boolean;
   includeAchievements: boolean;
   startAtMenu: boolean;
@@ -273,11 +275,13 @@ export async function readImage(path: string): Promise<Picture> {
 }
 export async function menuPreview(
   background: string | null,
+  tintBackground: boolean,
   palette: string,
   design: string,
 ): Promise<string> {
   const bytes = await invoke<number[]>("menu_preview", {
     background,
+    tintBackground,
     palette,
     design,
   });

@@ -21,29 +21,11 @@ fn project_round_trip_preserves_cue_and_tracks() {
     save_project(&ProjectSaveRequest {
         archive_path: archive_path.clone(),
         settings: Game {
-            rom: source.join("disc.cue"),
-            title: "Disc game".to_string(),
-            system: "segacd".to_string(),
-            icon: None,
-            background: None,
             show_menu: false,
-            start_at_menu: false,
-            theme: "native".to_string(),
-            palette: "blue".to_string(),
-            menu_sounds: "off".to_string(),
-            controls: Controls::default(),
-            hotkeys: crate::builder::unstated::hotkeys(),
-            firmware: Vec::new(),
+            theme: "native".into(),
             splash: false,
-            advanced_emulator_access: false,
-            keep_playing_in_background: false,
-            autosave_on_quit: false,
-            menu_entries: None,
-            shaders: crate::shaders::ShaderSelection::default(),
             include_achievements: false,
-            target: ExportTarget::Macos,
-            both_platforms: false,
-            intel_macs: false,
+            ..Game::new(source.join("disc.cue"), "Disc game", "segacd", ExportTarget::Macos)
         },
     })
     .unwrap();
@@ -89,29 +71,12 @@ fn project_round_trip_preserves_background_play_and_quit_autosave() {
 
 fn settings(rom: PathBuf, advanced_emulator_access: bool) -> Game {
     Game {
-        rom,
-        title: "Access game".to_string(),
-        system: "megadrive".to_string(),
-        icon: None,
-        background: None,
         show_menu: false,
-        start_at_menu: false,
-        theme: "native".to_string(),
-        palette: "blue".to_string(),
-        menu_sounds: "off".to_string(),
-        controls: Controls::default(),
-        hotkeys: crate::builder::unstated::hotkeys(),
-        firmware: Vec::new(),
+        theme: "native".into(),
         splash: false,
         advanced_emulator_access,
-        keep_playing_in_background: false,
-        autosave_on_quit: false,
-        menu_entries: None,
-        shaders: crate::shaders::ShaderSelection::default(),
         include_achievements: false,
-        target: ExportTarget::Macos,
-        both_platforms: false,
-        intel_macs: false,
+        ..Game::new(rom, "Access game", "megadrive", ExportTarget::Macos)
     }
 }
 

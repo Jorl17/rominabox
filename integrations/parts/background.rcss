@@ -1,15 +1,19 @@
-/* The picture the author chose for behind the menu. For a game with one, we
- * ship it as background.png beside the document and mark #screen
- * with-background when we compose. A design can restyle
- * #screen.with-background to draw it differently. The path is from parts/.
- *
- * We multiply the picture by the colour of the screen: its white becomes
- * that colour and everything else darker, so the heading, the status and
- * the footer, drawn on the screen, are as readable on any picture as on the
- * plain screen. */
+/* The picture the author chose for behind the menu, as the author made it.
+ * For a game with one, we ship it as background.png beside the document and
+ * mark #screen with-background when we compose. A design can restyle
+ * #screen.with-background to draw it differently. The path is from parts/. */
 #screen.with-background
 {
 	decorator: image("../background.png" cover);
+}
+
+/* When the author asks for a tint, we also mark #screen tinted-background
+ * when we compose, and multiply the picture by the colour of the screen: its
+ * white becomes that colour and everything else darker, so the heading, the
+ * status and the footer, drawn on the screen, are as readable on any picture
+ * as on the plain screen. */
+#screen.with-background.tinted-background
+{
 	image-color: design(screen);
 }
 

@@ -10,7 +10,6 @@ import {
   Plus,
   Save,
   TriangleAlert,
-  X,
 } from "lucide-react";
 import { SYSTEMS, formatBytes, inspectRom } from "./inspection";
 import * as bridge from "./bridge";
@@ -30,6 +29,7 @@ import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
+import { BackgroundPicker } from "./BackgroundPicker";
 import appIcon from "../src-tauri/icons/icon.png";
 import largeIcon from "../src-tauri/icons/icon-large.png";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
@@ -475,20 +475,12 @@ export function App() {
   }
   function exportRequest(): bridge.ExportRequest {
     return {
+      // Every setting of the draft, as desktop/defaults.json declares them.
+      ...draft,
       rom: selection!.path,
       title: draft.title.trim(),
-      system: draft.system,
       icon: icon?.path || null,
       background: background?.path || null,
-      showMenu: draft.showMenu,
-      includeAchievements: draft.includeAchievements,
-      splash: draft.splash,
-      keepPlayingInBackground: draft.keepPlayingInBackground,
-      autosaveOnQuit: draft.autosaveOnQuit,
-      advancedEmulatorAccess: draft.advancedEmulatorAccess,
-      intelMacs: draft.intelMacs,
-      hotkeys: draft.hotkeys,
-      menuEntries: draft.menuEntries,
       shaders: {
         bundled: bundledShaders,
         custom: customShaders,
@@ -537,20 +529,13 @@ export function App() {
         path: settings.rom,
         name: settings.rom.split(/[\\/]/).pop() || settings.title,
       });
-      setDraft({
-        title: settings.title,
-        system: settings.system,
-        showMenu: settings.showMenu,
-        includeAchievements: settings.includeAchievements,
-        splash: settings.splash ?? false,
-        keepPlayingInBackground: settings.keepPlayingInBackground ?? false,
-        autosaveOnQuit: settings.autosaveOnQuit ?? false,
-        advancedEmulatorAccess: settings.advancedEmulatorAccess ?? false,
-        intelMacs: settings.intelMacs,
-        hotkeys: settings.hotkeys,
-        menuEntries: settings.menuEntries ?? null,
-        startAtMenu: settings.startAtMenu,
-      });
+      // Each draft setting from the project, or else the declared default.
+      const draftKeys = Object.keys(defaults) as (keyof Draft)[];
+      setDraft(
+        Object.fromEntries(
+          draftKeys.map((key) => [key, settings[key] ?? defaults[key]]),
+        ) as Draft,
+      );
       setPalette(settings.palette);
       setPlatform(settings.bothPlatforms ? "both" : settings.target);
       // A project contains the design it was saved with, and in the check
@@ -804,7 +789,12 @@ export function App() {
     setPreviewBusy(true);
     setPreviewError("");
     bridge
-      .menuPreview(background?.path || null, palette, design)
+      .menuPreview(
+        background?.path || null,
+        draft.tintBackground,
+        palette,
+        design,
+      )
       .then((url) => {
         if (cancelled) URL.revokeObjectURL(url);
         else {
@@ -823,7 +813,14 @@ export function App() {
     };
     // The design too. We draw the picture beside the chooser from the chosen
     // design, so it matches what we export.
-  }, [step, draft.showMenu, background?.path, palette, design]);
+  }, [
+    step,
+    draft.showMenu,
+    background?.path,
+    draft.tintBackground,
+    palette,
+    design,
+  ]);
   function imageDrop(e: React.DragEvent, target: "icon" | "background") {
     e.preventDefault();
     e.stopPropagation();
@@ -1297,36 +1294,17 @@ export function App() {
                         <MenuSoundPreview pack={menuSounds} />
                       </div>
 
-                      <div className="customize-row">
-                        <div
-                          className="background-picker"
-                          data-drop="background"
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => imageDrop(e, "background")}
-                        >
-                          <button
-                            className="secondary"
-                            onClick={() => choosePicture("background")}
-                          >
-                            <FileImage size={17} />
-                            {background
-                              ? "Change background"
-                              : "Add background"}
-                          </button>
-                          {background && (
-                            <button
-                              className="icon-button"
-                              aria-label="Remove background"
-                              onClick={() => {
-                                imageGeneration.current.background++;
-                                setBackground(null);
-                              }}
-                            >
-                              <X size={18} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <BackgroundPicker
+                        chosen={!!background}
+                        onChoose={() => choosePicture("background")}
+                        onDrop={(e) => imageDrop(e, "background")}
+                        onRemove={() => {
+                          imageGeneration.current.background++;
+                          setBackground(null);
+                        }}
+                        tint={draft.tintBackground}
+                        onTint={(value) => update("tintBackground", value)}
+                      />
                     </details>
                   </div>
                 </div>

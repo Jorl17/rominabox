@@ -14,29 +14,9 @@ use zip::{CompressionMethod, ZipWriter};
 
 fn settings(rom: PathBuf) -> Game {
     Game {
-        rom,
-        title: "Achievement project".into(),
-        system: "megadrive".into(),
-        icon: None,
-        background: None,
-        show_menu: true,
-        start_at_menu: false,
         theme: "native".into(),
-        palette: "blue".into(),
-        menu_sounds: "off".into(),
-        controls: Controls::default(),
-        hotkeys: rominabox_engine::builder::unstated::hotkeys(),
-        firmware: Vec::new(),
         splash: false,
-        advanced_emulator_access: false,
-        keep_playing_in_background: false,
-        autosave_on_quit: false,
-        menu_entries: None,
-        shaders: ShaderSelection::default(),
-        include_achievements: true,
-        target: ExportTarget::Macos,
-        both_platforms: false,
-        intel_macs: false,
+        ..Game::new(rom, "Achievement project", "megadrive", ExportTarget::Macos)
     }
 }
 

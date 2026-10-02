@@ -45,6 +45,7 @@ const everySetting = {
   system: "megadrive",
   icon: "/opened/assets/icon.png",
   background: "/opened/assets/background.png",
+  tintBackground: true,
   showMenu: true,
   startAtMenu: true,
   theme: "disc",

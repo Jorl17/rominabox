@@ -16,6 +16,11 @@ pub struct Game {
     pub system: String,
     pub icon: Option<PathBuf>,
     pub background: Option<PathBuf>,
+    /// Draw the background picture in the palette's screen colour, so that the
+    /// menu's text is readable on any picture. Without it, we show the picture
+    /// as the author made it.
+    #[serde(default = "crate::builder::unstated::tint_background")]
+    pub tint_background: bool,
     #[serde(default = "crate::builder::unstated::show_menu")]
     pub show_menu: bool,
     #[serde(default = "crate::builder::unstated::start_at_menu")]
@@ -75,6 +80,20 @@ pub struct Game {
     /// A Mac game also runs on Intel Macs. Ignored for a Windows game.
     #[serde(default = "crate::builder::unstated::intel_macs")]
     pub intel_macs: bool,
+}
+
+impl Game {
+    /// The game of `rom`, with the builder's default for every setting,
+    /// as for a request with only these, from the same declaration.
+    pub fn new(rom: impl Into<PathBuf>, title: &str, system: &str, target: ExportTarget) -> Game {
+        serde_json::from_value(serde_json::json!({
+            "rom": rom.into(),
+            "title": title,
+            "system": system,
+            "target": target,
+        }))
+        .expect("a game states its rom, title, system and target; the rest is declared")
+    }
 }
 
 /// Options entries by their screens' ids. We accept `menu-controls` as an

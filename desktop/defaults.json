@@ -10,6 +10,7 @@
   "intelMacs": false,
   "theme": "rominabox",
   "palette": "blue",
+  "tintBackground": false,
   "menuSounds": "off",
   "hotkeys": {
     "menu": ["key:escape", "pad:home", "pad:l3+r3"],

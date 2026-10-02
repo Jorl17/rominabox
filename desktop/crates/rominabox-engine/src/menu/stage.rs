@@ -24,6 +24,8 @@ pub struct MenuRequest {
     pub artwork: PathBuf,
     pub palette: String,
     pub background: Option<PathBuf>,
+    /// The background picture drawn in the screen's colour.
+    pub tint_background: bool,
     pub system: String,
     pub controls: Controls,
     /// What opens the menu, and confirms and goes back in it, until the
@@ -59,6 +61,7 @@ impl MenuRequest {
             artwork: artwork.into(),
             palette: "blue".into(),
             background: None,
+            tint_background: false,
             system: "megadrive".into(),
             controls: Controls::default(),
             hotkeys: crate::builder::unstated::hotkeys(),
@@ -338,7 +341,8 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     }
     let mut menu = parts(&mut composition, &manifest, &values, &menu)?;
     // The author picks the picture and the design places it (by default
-    // behind #screen, with the shared part, unless the design restyles it).
+    // behind #screen, with the shared part, unless the design restyles it,
+    // in the screen's colour where the author asked for a tint).
     if let Some(image_path) = &request.background {
         let image = crate::icons::read_image(image_path).map_err(|e| e.sentence())?;
         let mut png = Vec::new();
@@ -348,6 +352,9 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
             .map_err(|e| e.to_string())?;
         composition.put("background.png", Content::Bytes(png));
         menu = document::add_class(&menu, contract!(Screen), "with-background");
+        if request.tint_background {
+            menu = document::add_class(&menu, contract!(Screen), "tinted-background");
+        }
     }
 
     let mut stylesheet = stylesheet;
@@ -385,6 +392,8 @@ pub struct PreviewRequest {
     pub output_dir: PathBuf,
     pub palette: String,
     pub background: Option<PathBuf>,
+    #[serde(default)]
+    pub tint_background: bool,
     pub width: u32,
     pub height: u32,
 }
@@ -407,6 +416,7 @@ pub fn render_preview(request: &PreviewRequest) -> Result<PathBuf, String> {
     compose_menu(&MenuRequest {
         palette: request.palette.clone(),
         background: request.background.clone(),
+        tint_background: request.tint_background,
         ..MenuRequest::new(design, &request.assets)
     })?
     .write(&request.output_dir)?;

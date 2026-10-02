@@ -23,6 +23,7 @@ pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuR
     crate::menu::MenuRequest {
         palette: request.game.palette.clone(),
         background: request.game.background.clone(),
+        tint_background: request.game.tint_background,
         system: request.game.system.clone(),
         controls: request.game.controls.clone(),
         hotkeys: request.game.hotkeys.clone(),

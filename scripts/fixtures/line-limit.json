@@ -4,7 +4,7 @@
     "desktop/crates/rominabox-catalog/src/lib.rs": 1085,
     "desktop/crates/rominabox-engine/src/content.rs": 1679,
     "desktop/crates/rominabox-engine/src/metadata.rs": 1815,
-    "desktop/src/App.tsx": 1693,
+    "desktop/src/App.tsx": 1671,
     "scripts/builder_drive.mjs": 1660,
     "scripts/native_runtime/test_rmlui_interaction.cpp": 1913
   }

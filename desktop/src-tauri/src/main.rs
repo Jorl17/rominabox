@@ -78,6 +78,7 @@ async fn image_preview(path: PathBuf) -> Result<Vec<u8>, String> {
 async fn menu_preview(
     app: tauri::AppHandle,
     background: Option<PathBuf>,
+    tint_background: Option<bool>,
     palette: Option<String>,
     design: Option<String>,
 ) -> Result<Vec<u8>, String> {
@@ -99,6 +100,9 @@ async fn menu_preview(
     }
     if let Some(background) = background {
         stated.insert("background".into(), json!(background));
+    }
+    if let Some(tint) = tint_background {
+        stated.insert("tintBackground".into(), json!(tint));
     }
     let request = builder::complete_preview(stated, &|relative| resource(&app, relative))?;
     tauri::async_runtime::spawn_blocking(move || {

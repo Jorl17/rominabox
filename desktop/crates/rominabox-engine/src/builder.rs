@@ -44,6 +44,9 @@ pub struct Defaults {
     pub intel_macs: bool,
     pub theme: String,
     pub palette: String,
+    /// Draw the author's background picture in the palette's screen colour, so
+    /// the menu text is readable on any picture. Off, we show it as it is.
+    pub tint_background: bool,
     pub menu_sounds: String,
     /// The hotkeys, until the player changes them on HOTKEYS.
     #[serde(deserialize_with = "crate::hotkeys::read_defaults")]
@@ -95,6 +98,9 @@ pub mod unstated {
     }
     pub fn palette() -> String {
         defaults().palette.clone()
+    }
+    pub fn tint_background() -> bool {
+        defaults().tint_background
     }
     pub fn menu_sounds() -> String {
         defaults().menu_sounds.clone()
