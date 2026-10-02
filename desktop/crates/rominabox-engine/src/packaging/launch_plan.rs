@@ -153,6 +153,7 @@ cheevos_test_unofficial = "false"
 cheevos_start_active = "false"
 cheevos_unlock_sound_enable = "false"
 input_joypad_driver = "{joypad}"
+input_max_users = "{pads}"
 all_users_control_menu = "{all_users_control_menu}"
 menu_driver = "{menu_driver}"
 menu_pause_libretro = "true"
@@ -224,6 +225,7 @@ notification_show_config_override_load = "false"
 savestate_thumbnail_enable = "true"
 "#,
         isolated_meta_bind_config(request.game.advanced_emulator_access),
+        pads = crate::pad_positions::PADS,
         firmware = shipped!(Firmware).1,
         remaps = shipped!(Remaps).1,
         core_options = shipped!(CoreOptions).1,

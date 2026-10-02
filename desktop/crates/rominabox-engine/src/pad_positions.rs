@@ -97,10 +97,9 @@ pub fn place(
     Ok(placed)
 }
 
-/// The number of pads: RetroArch's `input_max_users`, which is eight on a
-/// desktop (`DEFAULT_INPUT_MAX_USERS`, config.def.h) and which we do not
-/// change in an export. In a remap, pad numbers start at 1, as in
-/// `input_playerN_` and `input_remap_port_pN`.
+/// The number of pads in an exported game, RetroArch's default on a desktop.
+/// We set `input_max_users` to it in the runtime config. In a remap, pad
+/// numbers start at 1, as in `input_playerN_` and `input_remap_port_pN`.
 pub const PADS: u32 = 8;
 
 /// The remap lines that give the core each moved control from pad `pad`,
