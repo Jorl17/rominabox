@@ -1,6 +1,16 @@
 """Generate an original animated Game Boy diagnostic cartridge, with no downloaded game content."""
 
+from enum import IntEnum
 from pathlib import Path
+
+
+class GameBoyCartridge(IntEnum):
+    """A Game Boy cartridge's type, as its header declares it at 0x147."""
+
+    ROM_ONLY = 0x00
+    # MBC5 with a rumble motor, as in Pokemon Pinball. Bit 3 of a write to
+    # 0x4000-0x4FFF turns on the motor, and then player 1's pad rumbles.
+    MBC5_RUMBLE = 0x1C
 
 
 def make_megadrive_rom() -> bytes:
@@ -51,8 +61,10 @@ def make_megadrive_rom() -> bytes:
     return bytes(rom)
 
 
-def make_rom() -> bytes:
-    """Create a 32 KiB cartridge showing moving colored stripes."""
+def make_rom(rumble: bool = False) -> bytes:
+    """Create a 32 KiB cartridge showing moving colored stripes, whose colours
+    swap while A is held. With `rumble`, a rumble cartridge whose motor also
+    runs while A is held, and only then."""
     rom = bytearray(32768)
     rom[0x100:0x104] = bytes([0, 0xC3, 0x50, 0x01])
     # Fixed cartridge-header logo bytes required by the Game Boy boot protocol.
@@ -61,6 +73,7 @@ def make_rom() -> bytes:
     )
     rom[0x134:0x140] = b"ROM IN A BOX"
     rom[0x143] = 0x80
+    rom[0x147] = GameBoyCartridge.MBC5_RUMBLE if rumble else GameBoyCartridge.ROM_ONLY
     code = bytearray()
     labels: dict[str, int] = {}
     jumps: list[tuple[int, str]] = []
@@ -98,10 +111,16 @@ def make_rom() -> bytes:
     emit(0xF0, 0x43, 0x3C, 0xE0, 0x43)  # scroll once per frame
     emit(0x3E, 0x10, 0xE0, 0x00, 0xF0, 0x00, 0xCB, 0x47)
     emit(0x3E, 0xE4)
+    if rumble:
+        emit(0x06, 0x00)  # B=motor off; LD keeps BIT's Z
     jump(0x20, "palette")
     emit(0x3E, 0x1B)
+    if rumble:
+        emit(0x06, 0x08)  # A held: B=motor on, bit 3
     mark("palette")
     emit(0xE0, 0x47)
+    if rumble:
+        emit(0x78, 0xEA, 0x00, 0x40)  # the motor, once a frame: LD A,B; LD (4000),A
     mark("end_vblank")
     emit(0xF0, 0x44, 0xFE, 144)
     jump(0x30, "end_vblank")
@@ -126,7 +145,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
     parser.add_argument("--system", choices=("gbc", "megadrive"), default="gbc")
+    parser.add_argument("--rumble", action="store_true", help="gbc: a rumble cartridge whose motor runs while A is held")
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_bytes(make_megadrive_rom() if args.system == "megadrive" else make_rom())
+    args.output.write_bytes(make_megadrive_rom() if args.system == "megadrive" else make_rom(args.rumble))
     print(args.output)
