@@ -188,8 +188,8 @@ pub(crate) fn skeleton(manifest: &Manifest, staged: &[Screen]) -> Result<String,
         if !placed.insert(id) {
             return Err(format!("Screen '{id}' occurs twice in {}", order.display()));
         }
-        if staged.iter().any(|screen| screen.id == id) {
-            expanded.push_str(&manifest.fragment(&format!("screen-{id}.rml"))?);
+        if let Some(screen) = staged.iter().find(|screen| screen.id == id) {
+            expanded.push_str(&screen_markup(manifest, screen)?);
         }
         remaining = &after[end + "-->".len()..];
     }
@@ -223,13 +223,45 @@ fn place_screens(
         if !manifest.screens.iter().any(|screen| screen.id == id) {
             return Err(format!("Screen '{id}' in {} is not declared", source.display()));
         }
-        if staged.iter().any(|screen| screen.id == id) {
-            placed.push_str(&manifest.fragment(&format!("screen-{id}.rml"))?);
+        if let Some(screen) = staged.iter().find(|screen| screen.id == id) {
+            placed.push_str(&screen_markup(manifest, screen)?);
         }
         remaining = &after[end + "-->".len()..];
     }
     placed.push_str(remaining);
     Ok(placed)
+}
+
+/// The markers in a screen's file for the start and end of the rows we page.
+const ROWS: &str = "<!--ROWS-->";
+const ROWS_END: &str = "<!--/ROWS-->";
+
+/// A screen's markup: its file, with the rows between `<!--ROWS-->` and
+/// `<!--/ROWS-->` turned into the screen's list, in pages of the declared
+/// size, by the same code as every list (`lists::paged`). That gives the
+/// list, its page and its pager, which we page in the player like Options.
+fn screen_markup(manifest: &Manifest, screen: &Screen) -> Result<String, String> {
+    let file = format!("screen-{}.rml", screen.id);
+    let markup = manifest.fragment(&file)?;
+    let Some(start) = markup.find(ROWS) else {
+        return Ok(markup);
+    };
+    let after = &markup[start + ROWS.len()..];
+    let end = after
+        .find(ROWS_END)
+        .ok_or_else(|| format!("{file} opens {ROWS} and does not close it"))?;
+    let rest = &after[end + ROWS_END.len()..];
+    if rest.contains(ROWS) {
+        return Err(format!("{file} marks rows more than once; a screen has one list"));
+    }
+    let list = crate::lists::paged(
+        &crate::lists::list_id(&screen.id),
+        "",
+        &screen.id,
+        &after[..end],
+        screen.list_page_size.unwrap_or(manifest.list_page_size),
+    );
+    Ok(format!("{}{list}{rest}", &markup[..start]))
 }
 
 /// The page when the menu opens on Pause, with the declared heading of Pause

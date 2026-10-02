@@ -357,7 +357,7 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
  * words. Up to five caps fit in two lines, and the + of a full row is dark.
  * A page has four panels, as in Options, and the pager is on the row of
  * buttons, between RESET DEFAULTS and CANCEL. */
-#hotkey-rows { position: absolute; left: 56dp; top: 84dp; width: 840dp; }
+#hotkeys-list { position: absolute; left: 56dp; top: 84dp; width: 840dp; }
 .hotkey { position: relative; height: 82dp; margin-bottom: 8dp; background-color: #061a48; border: 3dp #75b2e4; }
 .hotkey-label { position: absolute; left: 20dp; top: 0; width: 170dp; height: 82dp; display: flex; align-items: center; line-height: 28dp; font-size: 24dp; color: #fff13d; }
 .hotkey-chips { position: absolute; left: 196dp; right: 12dp; top: 3dp; height: 76dp; display: flex; flex-wrap: wrap; align-content: center; align-items: center; column-gap: 10dp; row-gap: 6dp; }
@@ -369,18 +369,20 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 .hotkey-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
 /* The mark for "choosing this binding removes it". */
 .hotkey-mark { margin-left: 10dp; }
-#hotkeys-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
+#hotkeys-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; pointer-events: none; }
+/* The row is on one strip with the pager arrows: only its buttons get the pointer. */
+#hotkeys-actions button { pointer-events: auto; }
 #hotkeys-actions button { position: absolute; top: 0; font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
 #hotkeys-back { left: 0; width: 124dp; }
 #hotkeys-reset { left: 148dp; width: 256dp; }
 #hotkeys-cancel { right: 0; width: 160dp; }
 #hotkeys-status { position: absolute; top: 537dp; width: 100%; font-size: 16dp; color: #fff13d; text-align: center; }
 /* The row of buttons, 480dp down the screen, is 396dp below the panels. */
-#hotkey-rows .list-pager { top: 396dp; height: 38dp; }
-#hotkey-rows .list-pager-prev, #hotkey-rows .list-pager-next, #hotkey-rows .list-pager-count { height: 38dp; line-height: 34dp; }
-#hotkey-rows .list-pager-prev { left: 424dp; }
-#hotkey-rows .list-pager-count { left: 488dp; width: 100dp; }
-#hotkey-rows .list-pager-next { left: 596dp; }
+#hotkeys-list .list-pager { top: 396dp; height: 38dp; }
+#hotkeys-list .list-pager-prev, #hotkeys-list .list-pager-next, #hotkeys-list .list-pager-count { height: 38dp; line-height: 34dp; }
+#hotkeys-list .list-pager-prev { left: 424dp; }
+#hotkeys-list .list-pager-count { left: 488dp; width: 100dp; }
+#hotkeys-list .list-pager-next { left: 596dp; }
 /* UNINSTALL and RESET: what happens, what stays, then keep the game or forget it. */
 .forget-copy { position: absolute; left: 56dp; top: 170dp; width: 840dp; font-size: 18dp; line-height: 32dp; }
 .forget-stays { top: 280dp; color: #fff13d; }

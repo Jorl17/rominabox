@@ -109,6 +109,7 @@
       "heading": "HOTKEYS",
       "footer": "[ESC]  BACK",
       "button": "hotkeys",
+      "pageSize": 4,
       "option": {
         "label": "HOTKEYS",
         "default": true

@@ -306,7 +306,7 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
  * key is a filled tag and a pad input an outlined one, so the two look
  * different without a label. A line with five long tags wraps. Four lines to
  * a page, and the pager at the left of the button row as in every Disc list. */
-#hotkey-rows { position: absolute; left: 24dp; top: 56dp; width: 912dp; }
+#hotkeys-list { position: absolute; left: 24dp; top: 56dp; width: 912dp; }
 .hotkey { position: relative; height: 96dp; margin-bottom: 8dp; border-width: 0 0 1dp 0; border-color: design(rule); }
 .hotkey-label { position: absolute; left: 16dp; top: 0; width: 160dp; height: 96dp; display: flex; align-items: center; line-height: 24dp; font-size: 18dp; color: design(ink); }
 .hotkey-chips { position: absolute; left: 180dp; right: 0; top: 10dp; height: 76dp; display: flex; flex-wrap: wrap; align-content: center; align-items: center; column-gap: 8dp; row-gap: 8dp; }
@@ -328,4 +328,4 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 #hotkeys-reset { left: 0; width: 180dp; }
 #hotkeys-cancel { left: 192dp; width: 110dp; }
 #hotkeys-status { position: absolute; left: 24dp; top: 548dp; width: 700dp; font-size: 13dp; color: design(muted); text-align: left; }
-#hotkey-rows .list-pager { top: 452dp; }
+#hotkeys-list .list-pager { top: 452dp; }
