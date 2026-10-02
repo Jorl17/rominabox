@@ -538,6 +538,48 @@ fn a_designs_words_name_the_settings_and_mark_the_lists() {
     }
 }
 
+/// UNINSTALL on Windows and RESET on a Mac remove the game's data, so in
+/// every design, on both, the entry is the last row of Options, after the
+/// design's other entries and after the switches we add after those.
+#[test]
+fn forgetting_the_game_is_the_last_options_row() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-forget-last");
+    let kit = support::kit(&root);
+    for design in support::designs() {
+        let staged = themes::staged_design(&kit, &design);
+        for target in [packaging::ExportTarget::Windows, packaging::ExportTarget::Macos] {
+            let forget = menu::declared_screens(&staged)
+                .unwrap()
+                .into_iter()
+                .find(|screen| screen.role == Some(menu::ScreenRole::Forget) && screen.ships_for(target))
+                .unwrap_or_else(|| panic!("{design} forgets no game on {target:?}"));
+            let composed = root.join(format!("{design}-{target:?}"));
+            menu::compose_menu(&menu::MenuRequest {
+                target,
+                ..menu::MenuRequest::new(staged.clone(), kit.join("menu-assets"))
+            })
+            .unwrap_or_else(|error| panic!("{design} on {target:?}: {error}"))
+            .write(&composed)
+            .unwrap();
+            let document = fs::read_to_string(composed.join("menu.rml")).unwrap();
+            let list = &document[document.find("id=\"options-list\"").expect("an Options list")..];
+            let list = &list[..list.find("id=\"options-pager\"").unwrap_or(list.len())];
+            let rows: Vec<&str> = list
+                .match_indices("<button")
+                .filter_map(|(at, _)| {
+                    let tag = &list[at..at + list[at..].find('>')?];
+                    tag.split("id=\"").nth(1)?.split('"').next()
+                })
+                .collect();
+            assert_eq!(
+                rows.last().copied(),
+                Some(forget.button.as_str()),
+                "{design} on {target:?}: the Options rows are {rows:?}"
+            );
+        }
+    }
+}
+
 /// The Options entry of the disc list starts hidden and disabled, which we
 /// write at composition on the design's entry template. When the template
 /// has a style, we keep it and add the hiding to it, because an element with

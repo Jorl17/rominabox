@@ -87,7 +87,8 @@ class Pad:
         time.sleep(seconds)
 
     def rumble(self, milliseconds: int) -> tuple[int, int] | None:
-        """Return the rumble requested from the pad within `milliseconds`."""
+        """Return the next motor setting within `milliseconds` as (large, small),
+        with (0, 0) for a stop. The first value can be the previous setting."""
         answer = self._ask(f"rumble {milliseconds}").split()
         return None if answer[1] == "none" else (int(answer[1]), int(answer[2]))
 

@@ -177,7 +177,9 @@ static void check_pad(IDirectInput8A *through, const GUID *guid) {
    printf("pad relay: rumble effect answered 0x%08lx\n", (unsigned long)answered);
    CHECK(SUCCEEDED(answered) == (effect != NULL), "an effect's answer and the effect disagree");
    if (effect) {
-      parameters.dwGain = 5000;
+      /* The weakest rumble possible, so a connected controller that we rumble
+       * through the launcher does not shake during a test. */
+      parameters.dwGain = 1;
       CHECK(IDirectInputEffect_SetParameters(effect, &parameters, DIEP_GAIN | DIEP_START) == DI_OK,
             "starting the rumble failed");
       CHECK(IDirectInputEffect_Stop(effect) == DI_OK, "stopping the rumble failed");

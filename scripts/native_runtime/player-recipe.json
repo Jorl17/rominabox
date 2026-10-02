@@ -44,7 +44,7 @@
     ]
   },
   "sdl2": {
-    "comment": "SDL2, which the Mac player reads controllers through (drivers.macos.joypad): it drives each model's rumble, the DualSense's included, which RetroArch's own HID driver does not. Built from its pinned release for each Mac slice and linked into the player statically, with only its controller parts (the fork compiles no SDL video driver on the Mac); what else it links, all of it the system's, is read from the sdl2.pc it installs. configure finds it through INCLUDES and LDFLAGS (scripts/native_build.py, sdl2_environment).",
+    "comment": "SDL2, which the Mac player reads controllers through (drivers.macos.joypad): it drives each model's rumble, the DualSense's included, which RetroArch's own HID driver does not. The Windows launcher links it too (launcher.sdl2): it reads a sandboxed game's controllers through DirectInput for the game, and DirectInput cannot rumble a DualSense or an Xbox pad, so the launcher rumbles them through SDL (desktop/src-tauri/launcher/windows/pad_relay.c). Built from its pinned release for each slice and linked statically, with only its controller parts (the fork compiles no SDL video driver on the Mac); what else it links, all of it the system's, is read from the sdl2.pc it installs. configure finds it through INCLUDES and LDFLAGS (scripts/native_build.py, sdl2_environment).",
     "platforms": ["macos"],
     "url": "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz",
     "sha256": "5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165",
@@ -171,9 +171,10 @@
     ]
   },
   "launcher": {
-    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher, and those in the folders platformFolders names for the target's platform: its entry, in the folder named for the platform, and its file layer, portable_fs, and the way a launch plan's paths read, paths.c, in posix/ (what macOS and Linux share) or windows/. A macOS kit carries its launcher as a library the player loads (launchLibrary).",
+    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher, and those in the folders platformFolders names for the target's platform: its entry, in the folder named for the platform, and its file layer, portable_fs, and the way a launch plan's paths read, paths.c, in posix/ (what macOS and Linux share) or windows/. A macOS kit carries its launcher as a library the player loads (launchLibrary). sdl2: whether the launcher links the recipe's SDL2, built for the target beside it.",
     "windows-x86_64": {
       "output": "launcher.exe",
+      "sdl2": true,
       "flags": [
         "-std=gnu99",
         "-O2",

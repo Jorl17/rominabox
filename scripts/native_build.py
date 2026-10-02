@@ -402,11 +402,20 @@ def sdl2_prefix(destination: Path) -> Path:
     return destination / recipe()["sdl2"]["prefix"]
 
 
+def sdl2_source(destination: Path) -> Path:
+    """The recipe's SDL2 release, unpacked in `destination` once."""
+    sdl2 = recipe()["sdl2"]
+    source = destination / sdl2["directory"]
+    if not source.is_dir():
+        with tarfile.open(download(sdl2["url"], sdl2["sha256"])) as tar:
+            tar.extractall(destination, filter="data")
+    return source
+
+
 def build_sdl2(destination: Path, target: str, jobs: int) -> None:
     """SDL2 built from its pinned release for `target` and installed in
-    `destination`, for a target with SDL2 in its recipe."""
-    if not builds_sdl2(target):
-        return
+    `destination`, for a target with SDL2 in its recipe: for a player where we
+    read controllers through it (builds_sdl2), or a launcher linked with it."""
     sdl2 = recipe()["sdl2"]
     prefix = sdl2_prefix(destination)
     # We build it again when the recipe's SDL2 changes, and then we compile
@@ -415,11 +424,7 @@ def build_sdl2(destination: Path, target: str, jobs: int) -> None:
     wanted = json.dumps({**sdl2, "target": cmake_flags(target)}, sort_keys=True)
     if stamp.is_file() and stamp.read_text(encoding="utf-8") == wanted:
         return
-    source = destination / sdl2["directory"]
-    if not source.is_dir():
-        archive = download(sdl2["url"], sdl2["sha256"])
-        with tarfile.open(archive) as tar:
-            tar.extractall(destination, filter="data")
+    source = sdl2_source(destination)
     environment = build_environment(target)
     build = destination / sdl2["build"]
     run(["cmake", "-S", str(source), "-B", str(build), "-G", "Ninja",
@@ -437,10 +442,26 @@ def sdl2_environment(destination: Path, target: str) -> dict[str, str]:
     if not builds_sdl2(target):
         return {}
     prefix = sdl2_prefix(destination)
-    described = (prefix / "lib" / "pkgconfig" / "sdl2.pc").read_text(encoding="utf-8").splitlines()
+    return {"INCLUDES": make_path(prefix / "include", target).lstrip("/"),
+            "LDFLAGS": " ".join(sdl2_libraries(destination))}
+
+
+def sdl2_include(destination: Path) -> str:
+    """The compiler flag for the headers of the SDL2 built in `destination`, in
+    the form that SDL programs include them (<SDL.h>)."""
+    return f"-I{sdl2_prefix(destination) / 'include' / 'SDL2'}"
+
+
+def sdl2_libraries(destination: Path) -> list[str]:
+    """What we link next to -lSDL2 for the SDL2 built in `destination`, as
+    listed in its sdl2.pc: the library folder and the system's libraries
+    (-lSDL2 first). On Windows the .pc also lists SDL's main and the windowed
+    subsystem for programs started through SDL, which ours are not."""
+    described = (sdl2_prefix(destination) / "lib" / "pkgconfig" / "sdl2.pc").read_text(encoding="utf-8").splitlines()
     libs = next(line for line in described if line.startswith("Libs:"))[len("Libs:"):]
-    flags = [flag for flag in libs.replace("${libdir}", str(prefix / "lib")).split() if flag != "-lSDL2"]
-    return {"INCLUDES": str(prefix / "include").lstrip("/"), "LDFLAGS": " ".join(flags)}
+    own = {"-lSDL2", "-lSDL2main", "-mwindows"}
+    return [flag for flag in libs.replace("${libdir}", (sdl2_prefix(destination) / "lib").as_posix()).split()
+            if flag not in own]
 
 
 def build_rmlui(destination: Path, target: str, jobs: int) -> Path:
@@ -541,11 +562,16 @@ def build_launcher(destination: Path, target: str, environment: dict[str, str], 
            for source in launcher_sources(platform_of(target))]
     theirs = [(fork / source, ["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w", *forked["flags"], *includes])
               for source in forked["sources"]]
+    sdl2 = []
+    if launcher.get("sdl2"):
+        build_sdl2(destination, target, os.cpu_count() or 1)
+        own = [(source, [*compiler, sdl2_include(destination)]) for source, compiler in own]
+        sdl2 = ["-lSDL2", *sdl2_libraries(destination)]
     steps = [compile_step(folder / "objects", index, source, compiler)
              for index, (source, compiler) in enumerate([*own, *theirs])]
     objects = [step.output for step in steps]
     steps.append(Step(output, objects, ["cc", *compiler_flags(target), *launcher["flags"], "-o", str(output),
-                                        *map(str, objects), *launcher["libraries"]]))
+                                        *map(str, objects), *sdl2, *launcher["libraries"]]))
     ninja(folder, steps, environment)
     return output
 

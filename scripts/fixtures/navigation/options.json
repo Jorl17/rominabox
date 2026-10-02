@@ -37,8 +37,8 @@
         ],
         "disc": [
           "volume-level",
-          "background-play",
-          "@forget"
+          "@forget",
+          "background-play"
         ],
         "rominabox": [
           "volume-level",
@@ -118,8 +118,8 @@
         "native": [
           "volume-level",
           "controls",
-          "@forget",
           "background-play",
+          "@forget",
           "controls"
         ],
         "options-columns": [
@@ -139,8 +139,8 @@
         "rominabox": [
           "volume-level",
           "controls",
-          "@forget",
           "background-play",
+          "@forget",
           "controls"
         ]
       }
@@ -200,7 +200,7 @@
           "volume-level",
           "controls",
           "shaders",
-          "@forget",
+          "background-play",
           "options-back",
           "options-back"
         ],
@@ -278,8 +278,8 @@
           "achievements",
           "options-next",
           "options-prev",
-          "background-play",
           "@forget",
+          "background-play",
           "discs"
         ],
         "options-columns": [
@@ -304,8 +304,8 @@
           "achievements",
           "options-next",
           "options-prev",
-          "background-play",
           "@forget",
+          "background-play",
           "discs"
         ]
       }
@@ -337,7 +337,7 @@
         "disc": [
           "options",
           "key:up",
-          "key:right"
+          "key:up"
         ],
         "rominabox": [
           "options",
@@ -357,22 +357,22 @@
           "hotkeys",
           "shaders",
           "achievements",
-          "@forget",
           "background-play",
-          "rumble"
+          "rumble",
+          "@forget"
         ],
         "options-columns": [
           "volume-level",
           "controls",
           "shaders",
-          "@forget",
           "background-play",
-          "rumble"
+          "rumble",
+          "@forget"
         ],
         "disc": [
           "volume-level",
-          "background-play",
-          "rumble"
+          "rumble",
+          "background-play"
         ],
         "rominabox": [
           "volume-level",
@@ -380,9 +380,9 @@
           "hotkeys",
           "shaders",
           "achievements",
-          "@forget",
           "background-play",
-          "rumble"
+          "rumble",
+          "@forget"
         ]
       }
     },
@@ -507,7 +507,7 @@
           "achievements",
           "options-next",
           "options-prev",
-          "background-play"
+          "@forget"
         ],
         "options-columns": [
           "volume-level",
@@ -519,8 +519,8 @@
         ],
         "disc": [
           "volume-level",
-          "background-play",
           "@forget",
+          "background-play",
           "achievements",
           "shaders",
           "hotkeys",
@@ -534,7 +534,7 @@
           "achievements",
           "options-next",
           "options-prev",
-          "background-play"
+          "@forget"
         ]
       },
       "text": {
@@ -680,22 +680,22 @@
           "controls",
           "discs",
           "discs",
-          "@forget",
+          "background-play",
           "controls"
         ],
         "options-columns": [
           "volume-level",
           "controls",
           "hotkeys",
-          "background-play",
+          "rumble",
           "options-back",
           "options-back",
           "options-back"
         ],
         "disc": [
           "volume-level",
-          "background-play",
           "rumble",
+          "@forget",
           "controls"
         ],
         "rominabox": [
@@ -703,7 +703,7 @@
           "controls",
           "discs",
           "discs",
-          "@forget",
+          "background-play",
           "controls"
         ]
       },
@@ -784,7 +784,7 @@
         "disc": [
           "options",
           "press:options-next",
-          "hover:rumble",
+          "hover:@forget",
           "press:options-prev",
           "hover:controls"
         ],
@@ -814,7 +814,7 @@
         "disc": [
           "volume-level",
           "options-prev",
-          "rumble",
+          "@forget",
           "options-next",
           "controls"
         ],

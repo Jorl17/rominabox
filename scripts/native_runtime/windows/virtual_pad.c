@@ -7,8 +7,9 @@
  * standard output:
  *   plug              plugs the pad in: "plugged SLOT", SLOT from XInput
  *   hold INPUT...     keeps exactly these inputs down, none for none: "held"
- *   rumble MS         waits up to MS milliseconds for a game to request
- *                     rumble: "rumble LARGE SMALL" (0-255), or "rumble none"
+ *   rumble MS         waits up to MS milliseconds for a game to set the
+ *                     motors: "rumble LARGE SMALL" (0-255, a stop is 0 0),
+ *                     or "rumble none"
  *   unplug            "unplugged"
  * INPUT is a button, a trigger or a stick direction, by the names below. We
  * never leave a pad behind: at the end of standard input, or when this
@@ -203,10 +204,8 @@ static void rumble(DWORD milliseconds) {
         }
         GetOverlappedResult(bus, &overlapped, &returned, FALSE);
         CloseHandle(overlapped.hEvent);
-        if (asked.LargeMotor || asked.SmallMotor) {
-            printf("rumble %u %u\n", asked.LargeMotor, asked.SmallMotor);
-            return;
-        }
+        printf("rumble %u %u\n", asked.LargeMotor, asked.SmallMotor);
+        return;
     }
     printf("rumble none\n");
 }
