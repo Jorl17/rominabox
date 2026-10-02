@@ -50,8 +50,9 @@
  * elements with the `focused` class), what is marked as capturing a binding
  * (the `capturing` class), the visible screen panel, the requested sounds,
  * whether we report to RetroArch that a text entry in the menu has the
- * keyboard, the attributes on the document and the boxes requested in the
- * case. Print one JSON line per case for the caller to judge.
+ * keyboard, the attributes on the document, the boxes requested in the case,
+ * and every visible menu action the pointer cannot reach at its middle.
+ * Print one JSON line per case for the caller to judge.
  *
  * We record sounds in the fake host and play nothing. */
 #include "rmlui/menu_api.h"
@@ -201,6 +202,44 @@ std::string boxes(const std::vector<std::string>& selectors)
    return out + "}";
 }
 
+/* Every visible menu action whose middle the pointer does not reach, by id,
+ * with the element under the pointer there instead, which is neither the
+ * action nor inside it. The pointer still reaches a box with nothing drawn,
+ * so it can miss an action that is visible. In the player we mark an action
+ * beside an open dialog, because the pointer is meant to miss it. */
+std::string covered()
+{
+   Rml::Context *context = view.document.get_context();
+   context->Update();
+   const auto beside_dialog = [](Rml::Element *element) {
+      for (Rml::Element *at = element; at; at = at->GetParentNode())
+         if (at->IsClassSet(rib::document_contract::NavOutside)) return true;
+      return false;
+   };
+   const auto named = [](Rml::Element *element) {
+      if (!element) return std::string("nothing");
+      return element->GetTagName() + (element->GetId().empty() ? "" : "#" + element->GetId())
+            + (element->GetClassNames().empty() ? "" : "." + element->GetClassNames());
+   };
+   std::string out = "{";
+   rib::walk(view.document.root(), [&](Rml::Element *element) {
+      if (rib::display_none(element)) return rib::Walk::SkipChildren;
+      if (!element->IsClassSet(rib::document_contract::MenuAction) || element->GetId().empty()
+            || rib::hidden(element) || beside_dialog(element))
+         return rib::Walk::Continue;
+      const Rml::Vector2f size = element->GetBox().GetSize(Rml::BoxArea::Border);
+      if (size.x <= 0 || size.y <= 0) return rib::Walk::Continue;
+      const Rml::Vector2f middle = element->GetAbsoluteOffset(Rml::BoxArea::Border) + size * 0.5f;
+      Rml::Element *hit = context->GetElementAtPoint(middle);
+      bool reached = false;
+      for (Rml::Element *at = hit; at && !reached; at = at->GetParentNode())
+         reached = at == element;
+      if (!reached) out += (out.size() > 1 ? "," : "") + json(element->GetId()) + ":" + json(named(hit));
+      return rib::Walk::Continue;
+   });
+   return out + "}";
+}
+
 /* Every attribute on the document, by name. */
 std::string document_attributes()
 {
@@ -227,7 +266,7 @@ std::string observe(const std::vector<std::string>& screen_panels,
          + ",\"screen\":" + json(screen) + ",\"sounds\":" + sounds
          + ",\"typing\":" + (rib_rmlui_typing() ? "true" : "false")
          + ",\"text\":" + words(text) + ",\"document\":" + document_attributes()
-         + ",\"boxes\":" + boxes(selectors) + "}";
+         + ",\"boxes\":" + boxes(selectors) + ",\"covered\":" + covered() + "}";
 }
 
 bool step(void *menu, const std::string& text)

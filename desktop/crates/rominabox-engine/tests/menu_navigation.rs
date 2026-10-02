@@ -496,6 +496,21 @@ fn arrows_pointer_and_focus_follow_every_composed_layout() {
                 ));
                 continue;
             }
+            // In every case, the player must be able to click every action
+            // that we show at its middle. A shown action that does nothing
+            // when clicked, as on a pager such as the HOTKEYS one, fails.
+            for (index, step) in steps.iter().enumerate() {
+                if let Some(covered) = step["covered"].as_object().filter(|covered| !covered.is_empty()) {
+                    for (action, instead) in covered {
+                        failures.push(format!(
+                            "{label}: after step {} ({}), the pointer at #{action}'s middle reaches {} instead",
+                            index + 1,
+                            steps_for(case, design)[index],
+                            instead.as_str().unwrap_or("?")
+                        ));
+                    }
+                }
+            }
             let expect = expected(case, design);
             let seen = observed(&steps, &expect);
             let marker = case.get("red").and_then(|red| for_design(red, design));
