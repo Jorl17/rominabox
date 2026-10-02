@@ -333,6 +333,7 @@ JOYPAD_AUTOCONFIG_COMPONENT = "retroarch-joypad-autoconfig"
 DUALSENSE_PROFILES = {
     "hid": "DualSense Wireless Controller (PS5).cfg",
     "dinput": "DualSense5.cfg",
+    "sdl2": "PS5 Controller.cfg",
 }
 
 _PLAYER_PREFIX = re.compile(r"^player\d+_")

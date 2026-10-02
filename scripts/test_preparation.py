@@ -30,6 +30,14 @@ DUALSENSE_PROFILE = (
     'input_product_id = "3302"\n'
     'input_b_btn = "1"\n'
 )
+# The profile of the same pad for the SDL2 driver, under another name.
+SDL2_DUALSENSE_PROFILE = (
+    'input_driver = "sdl2"\n'
+    'input_device = "PS5 Controller"\n'
+    'input_vendor_id = "1356"\n'
+    'input_product_id = "3302"\n'
+    'input_b_btn = "0"\n'
+)
 
 
 def check(condition: bool, message: str) -> None:
@@ -78,7 +86,8 @@ def profiles_archive(root: Path, copying: str | None) -> Path:
     when staging."""
     revision = prepare_runtime.JOYPAD_AUTOCONFIG_REVISION
     top = f"retroarch-joypad-autoconfig-{revision}"
-    members = {f"{top}/hid/{prepare_runtime.DUALSENSE_PROFILES['hid']}": DUALSENSE_PROFILE}
+    members = {f"{top}/hid/{prepare_runtime.DUALSENSE_PROFILES['hid']}": DUALSENSE_PROFILE,
+               f"{top}/sdl2/{prepare_runtime.DUALSENSE_PROFILES['sdl2']}": SDL2_DUALSENSE_PROFILE}
     if copying is not None:
         members[f"{top}/COPYING"] = copying
     return tar_gz(root / f"{prepare_runtime.JOYPAD_AUTOCONFIG_COMPONENT}-{revision}.tar.gz", members)
@@ -121,10 +130,34 @@ def an_archive_without_a_licence_is_a_warning() -> None:
         check("COPYING" in said, f"the warning names the missing COPYING: {said.strip()!r}")
 
 
+def a_driver_no_longer_staged_leaves_no_profiles() -> None:
+    """Check that a kit staged for one controller driver and then for another
+    contains only the profiles of the second, and not a folder left from the
+    first."""
+    with scratch.scratch("rominabox-preparation-") as folder:
+        root = Path(folder)
+        downloads = root / "downloads"
+        downloads.mkdir()
+        profiles_archive(downloads, "The upstream licence.\n")
+        kit = root / "kit"
+        (kit / "licenses").mkdir(parents=True)
+        pinned = prepare_runtime.DOWNLOADS
+        prepare_runtime.DOWNLOADS = downloads
+        try:
+            for drivers in (["hid"], ["sdl2"]):
+                _, _said, raised = warned(lambda: prepare_runtime.stage_joypad_autoconfig(kit, drivers))
+                check(raised is None, f"staging {drivers} succeeds (raised {raised!r})")
+        finally:
+            prepare_runtime.DOWNLOADS = pinned
+        folders = sorted(path.name for path in (kit / "autoconfig").iterdir())
+        check(folders == ["sdl2"], f"the kit holds the sdl2 profiles only, not {folders}")
+
+
 def main() -> int:
     a_source_archive_without_its_licence_is_a_warning()
     a_changed_upstream_licence_is_a_warning()
     an_archive_without_a_licence_is_a_warning()
+    a_driver_no_longer_staged_leaves_no_profiles()
     if FAILURES:
         print(f"\n{len(FAILURES)} preparation problem(s)")
         return 1
