@@ -199,6 +199,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_menu_typing.py")],
     ),
     Scope(
+        "lastpad",
+        "which pad a core's rumble reaches, from RetroArch's own rumble interface and pad reading in the fork: with every pad player 1, the pad that last pressed a button, the pad it leaves told 0 for both motors and the new one the strengths the core set, gain applied once, with no move for a held button, a stick or the keyboard, and no rumble for a player no pad plays as; with one pad per player, the pad RetroArch gave each player, as upstream, whatever is pressed",
+        "that a physical pad rumbles or stops when told 0 (the joypad driver is a stand-in), or that an export plays every pad as player 1 (the exporter scope reads that through the remap loader and the input layer)",
+        [PYTHON, str(ROOT / "scripts/test_last_pad.py")],
+    ),
+    Scope(
         "staging",
         "that the runtime-kit staging script names paths that exist, after any rename, and that this checkout's kit carries a launch library built from the launcher's sources as they are",
         "that the script runs or produces a correct kit; it builds a whole application",

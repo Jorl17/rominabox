@@ -24,6 +24,7 @@
     "identification": 5.4,
     "isolation": 32.0,
     "joypad": 0.3,
+    "lastpad": 0.5,
     "launchtime": 3.3,
     "licences": 5.3,
     "linelimit": 1.8,
