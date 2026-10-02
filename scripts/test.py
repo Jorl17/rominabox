@@ -199,6 +199,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_menu_typing.py")],
     ),
     Scope(
+        "menupad",
+        "that in the menu a controller navigates by its profile: the d-pad's own Left is the menu's Left after the game's controls moved Left to another button, which is no button of the menu, while that button is the game's Left as it plays; RetroArch's own function that reads the menu's pad, handed a held button",
+        "a physical controller, or the menu reacting to the press (the navigation scope); the joypad driver and the rest of RetroArch are stand-ins",
+        [PYTHON, str(ROOT / "scripts/test_menu_pad.py")],
+    ),
+    Scope(
         "lastpad",
         "which pad a core's rumble reaches, from RetroArch's own rumble interface and pad reading in the fork: with every pad player 1, the pad that last pressed a button, the pad it leaves told 0 for both motors and the new one the strengths the core set, gain applied once, with no move for a held button, a stick or the keyboard, and no rumble for a player no pad plays as; with one pad per player, the pad RetroArch gave each player, as upstream, whatever is pressed",
         "that a physical pad rumbles or stops when told 0 (the joypad driver is a stand-in), or that an export plays every pad as player 1 (the exporter scope reads that through the remap loader and the input layer)",
