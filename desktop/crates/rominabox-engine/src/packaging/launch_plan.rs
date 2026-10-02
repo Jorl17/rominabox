@@ -129,6 +129,8 @@ pub(super) fn isolated_runtime_config(request: &ExportRequest) -> Result<String,
     } else {
         "false"
     };
+    // The player can use every pad that plays as player 1 in the RetroArch menu.
+    let all_users_control_menu = request.game.every_pad_is_player_one;
     let (data, resources) = (token!(DataDir), token!(ResourcesDir));
     let Drivers { audio, joypad, .. } = request.game.target.drivers();
     let assets = if menu_sounds {
@@ -151,6 +153,7 @@ cheevos_test_unofficial = "false"
 cheevos_start_active = "false"
 cheevos_unlock_sound_enable = "false"
 input_joypad_driver = "{joypad}"
+all_users_control_menu = "{all_users_control_menu}"
 menu_driver = "{menu_driver}"
 menu_pause_libretro = "true"
 menu_show_start_screen = "false"

@@ -67,6 +67,7 @@ const everySetting = {
   advancedEmulatorAccess: true,
   keepPlayingInBackground: true,
   autosaveOnQuit: true,
+  everyPadIsPlayerOne: false,
   menuEntries: ["controls"],
   shaders: {
     bundled: ["scanlines", "phosphor"],

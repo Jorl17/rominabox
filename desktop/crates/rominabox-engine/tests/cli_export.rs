@@ -214,6 +214,7 @@ fn a_game_alone_is_exported_as_the_builder_makes_it() {
     assert_eq!(game["includeAchievements"], builder.include_achievements, "{game}");
     assert_eq!(game["keepPlayingInBackground"], builder.keep_playing_in_background, "{game}");
     assert_eq!(game["autosaveOnQuit"], builder.autosave_on_quit, "{game}");
+    assert_eq!(game["everyPadIsPlayerOne"], builder.every_pad_is_player_one, "{game}");
     assert_eq!(game["advancedEmulatorAccess"], builder.advanced_emulator_access, "{game}");
     assert_eq!(game["theme"], builder.theme, "{game}");
     assert_eq!(game["palette"], builder.palette, "{game}");

@@ -53,6 +53,21 @@ describe("App workflow", () => {
     expect(restored.checked).toBe(true);
   });
 
+  it("makes every controller player 1 unless the author turns it off", async () => {
+    await openMenu();
+    const every = checkbox("Every controller is player 1");
+    expect(every.checked).toBe(true);
+    expect(
+      every.closest("details")?.querySelector("summary")?.textContent?.trim(),
+    ).toBe("Advanced");
+    act(() => click(every));
+    expect(every.checked).toBe(false);
+
+    act(() => click(button("Next")));
+    act(() => click(button("Back")));
+    expect(checkbox("Every controller is player 1").checked).toBe(false);
+  });
+
   it("gives picture filters their own section and one way to say selected", async () => {
     await openMenu();
     const text = (element: Element | null | undefined) =>

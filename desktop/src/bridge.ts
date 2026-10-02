@@ -36,6 +36,8 @@ export type ExportRequest = {
   splash: boolean;
   keepPlayingInBackground: boolean;
   autosaveOnQuit: boolean;
+  /** Every connected pad plays as player 1. */
+  everyPadIsPlayerOne: boolean;
   advancedEmulatorAccess: boolean;
   /** A Mac app also runs on Intel Macs. */
   intelMacs: boolean;

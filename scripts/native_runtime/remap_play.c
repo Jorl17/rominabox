@@ -1,4 +1,4 @@
-/* What a core reads when the player presses something in an exported game,
+/* What a core reads when a player presses something in an exported game,
  * with the code in the fork: the input layer (input_driver_poll, where we
  * apply a remap, and input_driver_state_wrapper, which a core calls), the
  * remap loader (input_remapping_load_file in configuration.c) and the bind
@@ -10,15 +10,18 @@
  * the pad from its input_player1_<position> lines, as we bind them in the
  * game menu (rib_host_load_bind in host.c). REMAP is the exported .rmp, or
  * "none". Each PRESS is `key:NAME`, a key by its name in the RetroArch
- * config, or `pad:POSITION`, the input of the pad at that position of the
- * standard pad: its button, or for a stick direction its axis moved all the
- * way. The pad is a stand-in whose autoconfig profile puts button N at the
- * position that RetroArch numbers N and the sticks on axes 0 to 3, as in the
- * profile of every physical pad.
+ * config, or `pad:POSITION`, the input of the first pad at that position of
+ * the standard pad: its button, or for a stick direction its axis moved all
+ * the way. `padN:POSITION` is the same for the Nth pad. Each pad is a
+ * stand-in whose autoconfig profile puts button N at the position that
+ * RetroArch numbers N and the sticks on axes 0 to 3, as in the profile of
+ * every physical pad, connected at a separate port. RetroArch reads as many
+ * ports as it does by default (input_max_users).
  *
  * The output is what the core reads, one line each, by position name: a
  * button read as pressed (`b`), and a stick axis read away from centre, as
- * the direction and how far (`l_x_minus 32767`).
+ * the direction and how far (`l_x_minus 32767`). Player 1 comes first, then
+ * each other player, as `playerN b`.
  *
  * RetroArch does not start. The keyboard is a stand-in that reports which
  * keys are down, as every input driver does for RetroArch. The rest of
@@ -29,32 +32,35 @@
 #include <libretro.h>
 #include <file/config_file.h>
 #include "configuration.h"
+#include "config.def.h"
 #include "runloop.h"
 #include "input/input_driver.h"
 #include "input/input_keymaps.h"
 #include "input/input_remapping.h"
 
-enum { POSITIONS = RARCH_ANALOG_BIND_LIST_END, AXES = 4 };
+enum { POSITIONS = RARCH_ANALOG_BIND_LIST_END, AXES = 4, PADS = DEFAULT_INPUT_MAX_USERS };
 
 static bool keys[RETROK_LAST];
-static uint32_t buttons;
-static int16_t axes[AXES];
+static uint32_t buttons[PADS];
+static int16_t axes[PADS][AXES];
 static runloop_state_t runloop;
 
 runloop_state_t *runloop_state_get_ptr(void) { return &runloop; }
 
-/* The pad. */
-static int32_t pad_button(unsigned port, uint16_t joykey)
+/* The pads, by their index in the joypad driver. */
+static int32_t pad_button(unsigned pad, uint16_t joykey)
 {
-   return joykey < 32 && (buttons & (1u << joykey));
+   return pad < PADS && joykey < 32 && (buttons[pad] & (1u << joykey));
 }
 
-static int16_t pad_axis(unsigned port, uint32_t joyaxis)
+static int16_t pad_axis(unsigned pad, uint32_t joyaxis)
 {
-   if (AXIS_NEG_GET(joyaxis) < AXES && axes[AXIS_NEG_GET(joyaxis)] < 0)
-      return axes[AXIS_NEG_GET(joyaxis)];
-   if (AXIS_POS_GET(joyaxis) < AXES && axes[AXIS_POS_GET(joyaxis)] > 0)
-      return axes[AXIS_POS_GET(joyaxis)];
+   if (pad >= PADS)
+      return 0;
+   if (AXIS_NEG_GET(joyaxis) < AXES && axes[pad][AXIS_NEG_GET(joyaxis)] < 0)
+      return axes[pad][AXIS_NEG_GET(joyaxis)];
+   if (AXIS_POS_GET(joyaxis) < AXES && axes[pad][AXIS_POS_GET(joyaxis)] > 0)
+      return axes[pad][AXIS_POS_GET(joyaxis)];
    return 0;
 }
 
@@ -66,15 +72,15 @@ static int16_t pad_state(rarch_joypad_info_t *info, const struct retro_keybind *
    {
       const uint16_t joykey = binds[id].joykey != NO_BTN ? binds[id].joykey : info->auto_binds[id].joykey;
       const uint32_t joyaxis = binds[id].joyaxis != AXIS_NONE ? binds[id].joyaxis : info->auto_binds[id].joyaxis;
-      if ((joykey != NO_BTN && pad_button(port, joykey))
+      if ((joykey != NO_BTN && pad_button(info->joy_idx, joykey))
             || (joyaxis != AXIS_NONE
-               && abs(pad_axis(port, joyaxis)) / 32768.0f > info->axis_threshold))
+               && abs(pad_axis(info->joy_idx, joyaxis)) / 32768.0f > info->axis_threshold))
          pressed |= 1 << id;
    }
    return pressed;
 }
 
-static bool pad_query(unsigned pad) { return pad == 0; }
+static bool pad_query(unsigned pad) { return pad < PADS; }
 static void pad_poll(void) { }
 static const char *pad_name(unsigned pad) { return "stand-in"; }
 
@@ -147,13 +153,13 @@ static void bind_positions(config_file_t *config)
    }
 }
 
-/* The stand-in pad's profile: button N at position N, the sticks on axes. */
-static void profile_pad(void)
+/* A stand-in pad's profile: button N at position N, the sticks on axes. */
+static void profile_pad(unsigned pad)
 {
    unsigned index;
    for (index = 0; index < POSITIONS; ++index)
    {
-      struct retro_keybind *bind = &input_autoconf_binds[0][index];
+      struct retro_keybind *bind = &input_autoconf_binds[pad][index];
       bind->valid = true;
       if (index < RARCH_FIRST_CUSTOM_BIND)
          bind->joykey = index;
@@ -179,22 +185,29 @@ static void press(const char *what)
       }
       keys[key] = true;
    }
-   else if (!strncmp(what, "pad:", 4))
+   else if (!strncmp(what, "pad", 3) && strchr(what, ':'))
    {
-      const int at = position(what + 4);
+      const char *name = strchr(what, ':') + 1;
+      const int pad = name == what + 4 ? 0 : atoi(what + 3) - 1;
+      const int at = position(name);
+      if (pad < 0 || pad >= PADS)
+      {
+         fprintf(stderr, "no pad %s\n", what);
+         exit(2);
+      }
       if (at < RARCH_FIRST_CUSTOM_BIND)
-         buttons |= 1u << at;
+         buttons[pad] |= 1u << at;
       else
       {
          unsigned axis;
          int sign;
          stick(at, &axis, &sign);
-         axes[axis] = (int16_t)(sign * 0x7fff);
+         axes[pad][axis] = (int16_t)(sign * 0x7fff);
       }
    }
    else
    {
-      fprintf(stderr, "press key:NAME or pad:POSITION, not %s\n", what);
+      fprintf(stderr, "press key:NAME, pad:POSITION or padN:POSITION, not %s\n", what);
       exit(2);
    }
 }
@@ -204,7 +217,7 @@ int main(int argc, char **argv)
    settings_t *settings;
    input_driver_state_t *input = input_state_get_ptr();
    config_file_t *controls;
-   unsigned id, stick_index, axis;
+   unsigned id, stick_index, axis, player;
    int index;
 
    if (argc < 3)
@@ -214,14 +227,18 @@ int main(int argc, char **argv)
    }
    retroarch_config_init();
    settings = config_get_ptr();
-   settings->uints.input_max_users = 1;
+   settings->uints.input_max_users = DEFAULT_INPUT_MAX_USERS;
    settings->bools.input_remap_binds_enable = true;
    settings->floats.input_axis_threshold = 0.5f;
    settings->floats.input_analog_sensitivity = 1.0f;
    settings->ints.input_turbo_bind = -1;
-   settings->uints.input_libretro_device[0] = RETRO_DEVICE_JOYPAD;
    input_config_reset();
-   profile_pad();
+   for (player = 0; player < PADS; ++player)
+   {
+      settings->uints.input_joypad_index[player] = player;
+      settings->uints.input_libretro_device[player] = RETRO_DEVICE_JOYPAD;
+      profile_pad(player);
+   }
    input->current_driver = &keyboard;
    input->current_data = &keyboard;
    input->primary_joypad = &pad;
@@ -249,17 +266,23 @@ int main(int argc, char **argv)
       press(argv[index]);
    input_driver_poll();
 
-   for (id = 0; id < RARCH_FIRST_CUSTOM_BIND; ++id)
-      if (input_driver_state_wrapper(0, RETRO_DEVICE_JOYPAD, 0, id))
-         printf("%s\n", input_config_bind_map_get_base(id));
-   for (stick_index = 0; stick_index < 2; ++stick_index)
-      for (axis = 0; axis < 2; ++axis)
-      {
-         const int16_t value = input_driver_state_wrapper(0, RETRO_DEVICE_ANALOG, stick_index, axis);
-         unsigned minus, plus;
-         input_conv_analog_id_to_bind_id(stick_index, axis, minus, plus);
-         if (value)
-            printf("%s %d\n", input_config_bind_map_get_base(value < 0 ? minus : plus), abs(value));
-      }
+   for (player = 0; player < PADS; ++player)
+   {
+      char who[16] = "";
+      if (player)
+         snprintf(who, sizeof(who), "player%u ", player + 1);
+      for (id = 0; id < RARCH_FIRST_CUSTOM_BIND; ++id)
+         if (input_driver_state_wrapper(player, RETRO_DEVICE_JOYPAD, 0, id))
+            printf("%s%s\n", who, input_config_bind_map_get_base(id));
+      for (stick_index = 0; stick_index < 2; ++stick_index)
+         for (axis = 0; axis < 2; ++axis)
+         {
+            const int16_t value = input_driver_state_wrapper(player, RETRO_DEVICE_ANALOG, stick_index, axis);
+            unsigned minus, plus;
+            input_conv_analog_id_to_bind_id(stick_index, axis, minus, plus);
+            if (value)
+               printf("%s%s %d\n", who, input_config_bind_map_get_base(value < 0 ? minus : plus), abs(value));
+         }
+   }
    return 0;
 }

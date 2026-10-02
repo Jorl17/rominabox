@@ -1,7 +1,7 @@
-//! What the core receives when the player presses something in an exported
+//! What the core receives when a player presses something in an exported
 //! game. We write the controls file and the remap with
 //! `write_defaults_config` and `remap_file`, and apply them with the fork's
-//! own input layer (`scripts/native_runtime/remap_play.c`). The pad is a
+//! own input layer (`scripts/native_runtime/remap_play.c`). Each pad is a
 //! stand-in, mapped to the standard pad through its autoconfig profile, and
 //! the keyboard is a stand-in with a list of the keys that are down.
 
@@ -25,14 +25,20 @@ struct Game {
 }
 
 impl Game {
+    /// The export default, unless the author chooses otherwise: every pad
+    /// is player 1.
     fn exported(system: &str, chosen: &Controls) -> Self {
+        Self::exported_with(system, chosen, true)
+    }
+
+    fn exported_with(system: &str, chosen: &Controls, every_pad_is_player_one: bool) -> Self {
         let folder = Scratch::dir("rominabox-remap-play");
         let controls = folder.path().join("controls-defaults.cfg");
         let profile = controls::write_defaults_config(system, chosen, &controls).unwrap();
-        let moved = controls::placement(system, chosen)
-            .and_then(|placed| super::remap_lines(&placed, &controls::pad_positions()?))
-            .unwrap();
-        let remap = match super::remap_file(&profile, &moved) {
+        let placed = controls::placement(system, chosen).unwrap();
+        let positions = controls::pad_positions().unwrap();
+        let file = super::remap_file(&profile, &placed, &positions, every_pad_is_player_one).unwrap();
+        let remap = match file {
             text if text.is_empty() => "none".to_string(),
             text => {
                 let path = folder.path().join("game.rmp");
@@ -48,7 +54,8 @@ impl Game {
         }
     }
 
-    /// The remap RetroArch would get if we skipped the placement checks.
+    /// The remap RetroArch would get for the first pad alone if we skipped
+    /// the placement checks.
     fn exported_unchecked(system: &str, pairs: &[(&str, &str)]) -> Self {
         let game = Self::exported(system, &Controls::default());
         let profile = controls::profile_for_system(system).unwrap();
@@ -63,17 +70,25 @@ impl Game {
                     .map_or(control.id.clone(), |(_, slot)| slot.to_string()),
             })
             .collect();
-        let lines = super::remap_lines(&placed, &controls::pad_positions().unwrap()).unwrap();
+        let positions = controls::pad_positions().unwrap();
         let path = game._folder.path().join("unchecked.rmp");
-        fs::write(&path, super::remap_file(&profile, &lines)).unwrap();
+        fs::write(&path, super::remap_file(&profile, &placed, &positions, false).unwrap()).unwrap();
         Self {
             remap: path.display().to_string(),
             ..game
         }
     }
 
+    /// What the core receives for `press`: player 1's input, then each other
+    /// player's input as `playerN <what>`.
     fn reads(&self, press: &str) -> Vec<String> {
-        self.probe.lines(&[&self.controls, &self.remap, press])
+        self.reads_all(&[press])
+    }
+
+    fn reads_all(&self, presses: &[&str]) -> Vec<String> {
+        let mut arguments = vec![self.controls.as_str(), self.remap.as_str()];
+        arguments.extend(presses);
+        self.probe.lines(&arguments)
     }
 }
 
@@ -101,7 +116,14 @@ fn a_stick_bound_to_keys_is_pushed_by_them() {
         ]),
     );
     let remap = fs::read_to_string(&game.remap).unwrap();
-    assert_eq!(remap, "input_libretro_device_p1 = \"517\"\n", "keys move nothing on the pad");
+    let ports: String = (2..=super::PADS)
+        .map(|pad| format!("input_remap_port_p{pad} = \"0\"\n"))
+        .collect();
+    assert_eq!(
+        remap,
+        "input_libretro_device_p1 = \"517\"\n".to_string() + &ports,
+        "keys move nothing on the pad"
+    );
     assert_eq!(game.reads("key:y"), ["l_y_minus 32767"]);
     assert_eq!(game.reads("key:m"), ["l_x_plus 32767"]);
     assert_eq!(game.reads("key:n"), ["l_y_plus 32767"]);
@@ -183,4 +205,31 @@ fn swapped_buttons_are_read_where_they_moved() {
     assert_eq!(game.reads("pad:a"), ["b"]);
     assert_eq!(game.reads("key:c"), ["a"]);
     assert_eq!(game.reads("key:x"), ["b"]);
+}
+
+/// Every pad is player 1 by default. A press on the second pad counts for
+/// player 1, a moved control is in the same place as on the first pad, and
+/// player 2 gets nothing. Two pads at once count as player 1 pressing both.
+#[test]
+fn every_pad_plays_as_player_one_with_its_controls_moved() {
+    let mut chosen = Controls::default();
+    chosen.bindings = moved(&[("a", "b"), ("b", "a")]);
+    let game = Game::exported("megadrive", &chosen);
+    assert_eq!(game.reads("pad2:b"), ["a"]);
+    assert_eq!(game.reads("pad2:a"), ["b"]);
+    assert_eq!(game.reads("pad8:start"), ["start"]);
+    assert_eq!(game.reads_all(&["pad:up", "pad3:b"]), ["up", "a"]);
+    assert_eq!(game.reads("pad:b"), ["a"]);
+}
+
+/// With the option off, each pad is a separate player. The second pad is
+/// player 2, with its own positions, and player 1 gets nothing from it.
+#[test]
+fn without_every_pad_player_one_the_second_pad_is_player_two() {
+    let mut chosen = Controls::default();
+    chosen.bindings = moved(&[("a", "b"), ("b", "a")]);
+    let game = Game::exported_with("megadrive", &chosen, false);
+    assert_eq!(game.reads("pad2:b"), ["player2 b"]);
+    assert_eq!(game.reads("pad2:start"), ["player2 start"]);
+    assert_eq!(game.reads("pad:b"), ["a"]);
 }

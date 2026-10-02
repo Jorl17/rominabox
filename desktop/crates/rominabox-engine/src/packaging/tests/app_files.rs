@@ -35,7 +35,7 @@ fn the_emulated_device_is_written_as_a_remap_not_a_config_line() {
         pixels: Vec::new(),
     };
     let remaps = root.join("remaps");
-    stage_controller_remap(&profile, "", &core, &remaps).expect("a remap is written");
+    stage_controller_remap(&profile, &[], false, &core, &remaps).expect("a remap is written");
 
     // The directory name is the library name of the core, not its component
     // id, because in config_load_remap the path comes from the artifact.
@@ -47,7 +47,8 @@ fn the_emulated_device_is_written_as_a_remap_not_a_config_line() {
     );
 }
 
-/// A pad that is the core's default device needs no remap at all.
+/// A pad that is the core's default device, with each pad a separate
+/// player, gets no remap at all.
 #[test]
 fn a_profile_with_no_declared_device_writes_nothing() {
     let root = scratch_dir();
@@ -70,7 +71,7 @@ fn a_profile_with_no_declared_device_writes_nothing() {
         pixels: Vec::new(),
     };
     let remaps = root.join("remaps");
-    stage_controller_remap(&profile, "", &core, &remaps)
+    stage_controller_remap(&profile, &[], false, &core, &remaps)
         .expect("nothing to do is not an error");
     assert!(!remaps.exists(), "no remap directory should be created");
 }
@@ -100,10 +101,72 @@ fn a_moved_control_is_written_into_the_remap() {
         pixels: Vec::new(),
     };
     let remaps = root.join("remaps");
-    let moved = "input_player1_btn_b = \"8\"\ninput_player1_btn_a = \"0\"\n";
-    stage_controller_remap(&default_device, moved, &core, &remaps).expect("a remap is written");
+    stage_controller_remap(&default_device, &swapped_c_and_b(), false, &core, &remaps)
+        .expect("a remap is written");
     let text = fs::read_to_string(remaps.join("Genesis Plus GX/Genesis Plus GX.rmp")).unwrap();
-    assert_eq!(text, moved);
+    assert_eq!(text, "input_player1_btn_a = \"0\"\ninput_player1_btn_b = \"8\"\n");
+}
+
+/// The Mega Drive's C moved onto the bottom button, and B onto C's.
+fn swapped_c_and_b() -> Vec<crate::pad_positions::Placed> {
+    let chosen: controls::Controls = serde_json::from_value(serde_json::json!({
+        "bindings": { "a": { "pad": "b" }, "b": { "pad": "a" } }
+    }))
+    .unwrap();
+    controls::placement("megadrive", &chosen).unwrap()
+}
+
+/// Every pad as player 1 is a port map in RetroArch, which has an effect only
+/// in a remap. So we write a remap even with nothing moved on the default pad,
+/// with pads 2 to 8 as player 1, and we move a control on every pad, because
+/// in RetroArch each pad has separate lines for its controls.
+#[test]
+fn every_pad_is_player_one_in_the_remap_and_moves_its_controls_on_each() {
+    let root = scratch_dir();
+    let profile = controls::ControlProfile {
+        core_device: None,
+        ..controls::profile_for_system("megadrive").unwrap()
+    };
+    let core = crate::systems::Core {
+        artifacts: Default::default(),
+        component: "genesis_plus_gx".into(),
+        license: String::new(),
+        license_file: String::new(),
+        capabilities: Vec::new(),
+        library_name: Some("Genesis Plus GX".into()),
+        pixels: Vec::new(),
+    };
+    let ports: String = (2..=8)
+        .map(|pad| format!("input_remap_port_p{pad} = \"0\"\n"))
+        .collect();
+    let remaps = root.join("nothing-moved");
+    stage_controller_remap(&profile, &[], true, &core, &remaps).expect("a remap is written");
+    let text = fs::read_to_string(remaps.join("Genesis Plus GX/Genesis Plus GX.rmp")).unwrap();
+    assert_eq!(text, ports);
+
+    let remaps = root.join("moved");
+    stage_controller_remap(&profile, &swapped_c_and_b(), true, &core, &remaps)
+        .expect("a remap is written");
+    let text = fs::read_to_string(remaps.join("Genesis Plus GX/Genesis Plus GX.rmp")).unwrap();
+    let moved: String = (1..=8)
+        .map(|pad| format!("input_player{pad}_btn_a = \"0\"\ninput_player{pad}_btn_b = \"8\"\n"))
+        .collect();
+    assert_eq!(text, ports + &moved);
+}
+
+/// We ship a remap while every pad is player 1, which is the default unless
+/// the author turns it off. A remap has an effect in RetroArch only in the
+/// folder named after the library name of the core, so we declare for every
+/// core the name in its artifact, or nobody could export its console's games.
+#[test]
+fn every_core_names_the_folder_its_remap_goes_in() {
+    let nameless: Vec<String> = crate::systems::registry()
+        .iter()
+        .flat_map(|system| system.cores.iter().map(move |core| (system, core)))
+        .filter(|(_, core)| core.library_name.is_none())
+        .map(|(system, core)| format!("{} ({})", core.component, system.id))
+        .collect();
+    assert!(nameless.is_empty(), "no libraryName: {nameless:?}");
 }
 
 /// We write picture options to the per-core options file of RetroArch.
@@ -182,7 +245,7 @@ fn a_declared_device_with_no_library_name_is_refused() {
         library_name: None,
         pixels: Vec::new(),
     };
-    let error = stage_controller_remap(&profile, "", &core, &root.join("remaps"))
+    let error = stage_controller_remap(&profile, &[], false, &core, &root.join("remaps"))
         .expect_err("silently shipping the wrong pad is the defect being prevented");
     let message = error.to_string();
     assert!(

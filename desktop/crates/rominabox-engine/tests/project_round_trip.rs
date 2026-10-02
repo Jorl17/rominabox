@@ -54,6 +54,7 @@ fn everything(root: &Path) -> Value {
         "advancedEmulatorAccess": true,
         "keepPlayingInBackground": true,
         "autosaveOnQuit": true,
+        "everyPadIsPlayerOne": false,
         "menuEntries": ["controls"],
         "shaders": {
             "bundled": ["scanlines", "phosphor"],
