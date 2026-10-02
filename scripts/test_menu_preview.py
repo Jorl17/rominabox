@@ -48,7 +48,7 @@ def palettes() -> list[str]:
 
 
 def render(design: str, palette: str, into: Path, background: Path | None = None,
-           source: bool = False, size: tuple[int, int] = (960, 600)) -> str:
+           source: bool = False, size: tuple[int, int] = (960, 600), tint: bool = False) -> str:
     """Return an empty string when the drawing worked, otherwise the reason.
 
     We draw from the kit, as the builder does, because a design missing from
@@ -66,6 +66,8 @@ def render(design: str, palette: str, into: Path, background: Path | None = None
     }
     if background is not None:
         request["background"] = str(background)
+    if tint:
+        request["tintBackground"] = True
     asked = subprocess.run(
         [str(_cli()), "preview"],
         input=json.dumps(request),
@@ -115,15 +117,15 @@ def picture_share(image: Path, colour: tuple[int, int, int] = PICTURE, within: i
     return near.histogram()[255] / (picture.width * picture.height)
 
 
-# In the menu we multiply the author's picture by the screen colour of the
-# palette (integrations/parts/background.rcss), and round each channel of
-# that product in the renderer.
+# When the author of a menu chooses it, we multiply the author's picture by
+# the screen colour of the palette (integrations/parts/background.rcss), and
+# round each channel of that product in the renderer.
 TINT_ROUNDING = 2
 
 
-def drawn_picture(palette: str) -> tuple[int, int, int]:
-    """Return the author's picture, every pixel PICTURE, as we draw it in the
-    menu of `palette`."""
+def tinted_picture(palette: str) -> tuple[int, int, int]:
+    """Return the author's picture, every pixel PICTURE, as we draw it tinted
+    in the menu of `palette`."""
     declared = json.loads((ROOT / "desktop/designs.json").read_text())
     screen = next(entry["screen"] for entry in declared["palettes"] if entry["id"] == palette)
     channels = [int(screen[index:index + 2], 16) for index in (1, 3, 5)]
@@ -159,7 +161,7 @@ def overlay_problem(design: str, area: Path) -> str:
     problem = draw(running, drawn)
     if problem:
         return f"the overlay did not draw: {problem}"
-    share = picture_share(drawn, drawn_picture(palettes()[0]), TINT_ROUNDING)
+    share = picture_share(drawn)
     if share:
         return f"{share:.1%} of the running game is covered by the menu's background picture"
     return ""
@@ -167,20 +169,26 @@ def overlay_problem(design: str, area: Path) -> str:
 
 def background_problem(design: str, area: Path) -> str:
     """Return an empty string when a game's background picture appears behind
-    this design's menu in the screen's colour, and none appears for a game
-    without one."""
+    this design's menu as made, or in the screen's colour when the author
+    chose a tint, and none appears for a game without one."""
     picture = background_picture(area)
+    tinted = tinted_picture(palettes()[0])
     shares = {}
-    for label, background in (("with", picture), ("without", None)):
+    for label, background, tint in (("with", picture, False), ("tinted", picture, True),
+                                    ("without", None, False)):
         into = area / f"{design}-background-{label}"
-        problem = render(design, palettes()[0], into, background)
+        problem = render(design, palettes()[0], into, background, tint=tint)
         if problem:
-            return f"{label} a background: {problem}"
-        shares[label] = picture_share(into / "preview.png", drawn_picture(palettes()[0]), TINT_ROUNDING)
-    if shares["without"] != 0:
-        return f"the picture shows in a game without one ({shares['without']:.1%})"
-    if shares["with"] < 0.05:
-        return f"only {shares['with']:.1%} of the menu shows the background picture"
+            return f"{label}: {problem}"
+        drawn = into / "preview.png"
+        shares[label] = (picture_share(drawn), picture_share(drawn, tinted, TINT_ROUNDING))
+    if shares["without"] != (0, 0):
+        return f"the picture shows in a game without one ({max(shares['without']):.1%})"
+    if shares["with"][0] < 0.05:
+        return f"only {shares['with'][0]:.1%} of the menu shows the background picture as the author made it"
+    if shares["tinted"][0] or shares["tinted"][1] < 0.05:
+        return (f"asked for tinted, {shares['tinted'][1]:.1%} of the menu shows the picture tinted "
+                f"and {shares['tinted'][0]:.1%} as the author made it")
     return ""
 
 
