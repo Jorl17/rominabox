@@ -8,6 +8,7 @@
     "macos-x86_64": "mednafen_pce_fast_libretro.dylib",
     "windows-x86_64": "mednafen_pce_fast_libretro.dll"
   },
+  "libraryName": "Beetle PCE Fast",
   "license": {
     "spdx": "GPL-2.0",
     "file": "beetle_pce_fast.txt"

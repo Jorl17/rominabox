@@ -8,6 +8,7 @@
     "macos-x86_64": "mednafen_wswan_libretro.dylib",
     "windows-x86_64": "mednafen_wswan_libretro.dll"
   },
+  "libraryName": "Beetle WonderSwan",
   "license": {
     "spdx": "GPL-2.0",
     "file": "beetle_cygne.txt"

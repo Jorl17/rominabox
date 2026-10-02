@@ -8,6 +8,7 @@
     "macos-x86_64": "mednafen_ngp_libretro.dylib",
     "windows-x86_64": "mednafen_ngp_libretro.dll"
   },
+  "libraryName": "Beetle NeoPop",
   "license": {
     "spdx": "GPL-2.0",
     "file": "beetle_neopop.txt"

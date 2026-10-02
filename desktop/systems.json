@@ -231,7 +231,7 @@
           "license": "GPL-2.0",
           "licenseFile": "gambatte.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Gambatte"
         }
       ],
       "controllerProfile": "gameboy",
@@ -263,7 +263,7 @@
           "license": "GPL-2.0",
           "licenseFile": "gambatte.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Gambatte"
         }
       ],
       "controllerProfile": "gameboy",
@@ -295,7 +295,7 @@
           "license": "MPL-2.0",
           "licenseFile": "mgba.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "mGBA"
         }
       ],
       "controllerProfile": "gba",
@@ -365,7 +365,7 @@
           "license": "Non-commercial",
           "licenseFile": "snes9x.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Snes9x"
         }
       ],
       "controllerProfile": "snes",
@@ -409,7 +409,7 @@
           "license": "GPL-2.0",
           "licenseFile": "mupen64plus_next.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Mupen64Plus-Next"
         }
       ],
       "controllerProfile": "n64",
@@ -545,7 +545,7 @@
           "license": "GPL-2.0",
           "licenseFile": "flycast.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Flycast"
         }
       ],
       "controllerProfile": "dreamcast",
@@ -587,7 +587,7 @@
           "license": "GPL-2.0-or-later",
           "licenseFile": "dolphin.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "dolphin-emu"
         }
       ],
       "controllerProfile": "gamecube",
@@ -637,7 +637,7 @@
           "license": "GPL-3.0",
           "licenseFile": "pcsx2.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "LRPS2"
         }
       ],
       "controllerProfile": "ps1",
@@ -666,7 +666,7 @@
           "license": "GPL-2.0",
           "licenseFile": "stella.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Stella"
         }
       ],
       "controllerProfile": "retropad",
@@ -694,7 +694,7 @@
           "license": "GPL-2.0",
           "licenseFile": "a5200.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "a5200"
         }
       ],
       "controllerProfile": "retropad",
@@ -722,7 +722,7 @@
           "license": "GPL-2.0",
           "licenseFile": "prosystem.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "ProSystem"
         }
       ],
       "controllerProfile": "retropad",
@@ -755,7 +755,7 @@
           "license": "Zlib",
           "licenseFile": "handy.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Handy"
         }
       ],
       "controllerProfile": "retropad",
@@ -799,7 +799,7 @@
             "m3u",
             "toc"
           ],
-          "libraryName": null
+          "libraryName": "Beetle PCE Fast"
         }
       ],
       "controllerProfile": "retropad",
@@ -868,7 +868,7 @@
             "m3u",
             "toc"
           ],
-          "libraryName": null
+          "libraryName": "Beetle PCE Fast"
         }
       ],
       "firmware": [
@@ -907,7 +907,7 @@
           "license": "GPL-2.0",
           "licenseFile": "beetle_neopop.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Beetle NeoPop"
         }
       ],
       "controllerProfile": "retropad",
@@ -936,7 +936,7 @@
           "license": "GPL-2.0",
           "licenseFile": "beetle_neopop.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Beetle NeoPop"
         }
       ],
       "controllerProfile": "retropad",
@@ -964,7 +964,7 @@
           "license": "GPL-2.0",
           "licenseFile": "beetle_cygne.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Beetle WonderSwan"
         }
       ],
       "controllerProfile": "retropad",
@@ -992,7 +992,7 @@
           "license": "GPL-2.0",
           "licenseFile": "beetle_cygne.txt",
           "capabilities": [],
-          "libraryName": null
+          "libraryName": "Beetle WonderSwan"
         }
       ],
       "controllerProfile": "retropad",

@@ -8,6 +8,7 @@
     "macos-x86_64": "mupen64plus_next_libretro.dylib",
     "windows-x86_64": "mupen64plus_next_libretro.dll"
   },
+  "libraryName": "Mupen64Plus-Next",
   "license": {
     "spdx": "GPL-2.0",
     "file": "mupen64plus_next.txt"

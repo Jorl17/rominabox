@@ -8,6 +8,7 @@
     "macos-x86_64": "mgba_libretro.dylib",
     "windows-x86_64": "mgba_libretro.dll"
   },
+  "libraryName": "mGBA",
   "license": {
     "spdx": "MPL-2.0",
     "file": "mgba.txt"

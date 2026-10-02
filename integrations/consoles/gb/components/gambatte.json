@@ -8,6 +8,7 @@
     "macos-x86_64": "gambatte_libretro.dylib",
     "windows-x86_64": "gambatte_libretro.dll"
   },
+  "libraryName": "Gambatte",
   "license": {
     "spdx": "GPL-2.0",
     "file": "gambatte.txt"

@@ -8,6 +8,7 @@
     "macos-x86_64": "pcsx2_libretro.dylib",
     "windows-x86_64": "pcsx2_libretro.dll"
   },
+  "libraryName": "LRPS2",
   "license": {
     "spdx": "GPL-3.0",
     "file": "pcsx2.txt"

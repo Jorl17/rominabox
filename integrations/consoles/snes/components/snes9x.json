@@ -8,6 +8,7 @@
     "macos-x86_64": "snes9x_libretro.dylib",
     "windows-x86_64": "snes9x_libretro.dll"
   },
+  "libraryName": "Snes9x",
   "license": {
     "spdx": "Non-commercial",
     "file": "snes9x.txt"

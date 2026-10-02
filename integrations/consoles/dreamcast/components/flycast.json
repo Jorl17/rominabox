@@ -8,6 +8,7 @@
     "macos-x86_64": "flycast_libretro.dylib",
     "windows-x86_64": "flycast_libretro.dll"
   },
+  "libraryName": "Flycast",
   "license": {
     "spdx": "GPL-2.0",
     "file": "flycast.txt"
