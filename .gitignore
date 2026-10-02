@@ -6,15 +6,8 @@ Thumbs.db
 /work/
 /local-content/
 /downloads/
-/dist/
-/build/
 .venv/
 __pycache__/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-*.spec
-*.egg-info/
 
 *.rominabox
 /desktop/src-tauri/resources/runtime
