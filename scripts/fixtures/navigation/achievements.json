@@ -481,7 +481,7 @@
       }
     },
     {
-      "name": "a press on the unsynced dialog's text keeps the arrows in it",
+      "name": "a press on the unsynced dialog's text changes nothing, and the arrows stay in it",
       "setup": {
         "achievements": "active",
         "rows": 3,
@@ -502,7 +502,7 @@
           "achievement-1",
           "achievements-keep-session",
           "achievements-end-session",
-          "achievements-keep-session",
+          "achievements-end-session",
           "achievements-end-session",
           "achievements-keep-session"
         ]

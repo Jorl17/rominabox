@@ -8,6 +8,20 @@
  * In the menu we mark the focused stop `.focused`. Style that, not :focus,
  * which also matches every ancestor. */
 
+/* Only what a player uses responds to the pointer: the stops and their parts,
+ * and what is only for the pointer or what the player listens to (a volume
+ * arrow, a toggle, a switch). A box around or beside them (a row of buttons,
+ * a pager, a status line) never catches a press meant for what is under it,
+ * and a press on empty space reaches nothing. */
+body, body *
+{
+	pointer-events: none;
+}
+.volume-arrow, .toggle, .switch
+{
+	pointer-events: auto;
+}
+
 /* The stops. */
 .menu-action, .slot, .list-row, .option-entry, .slider, .list-control,
 .list-pager-prev, .list-pager-next, .account-input, .control-callout,
@@ -15,14 +29,17 @@
 {
 	tab-index: auto;
 	nav: auto;
+	pointer-events: auto;
 }
 
-/* Pressing the label or picture of a stop focuses the stop. */
+/* Pressing the label or picture of a stop is pressing the stop, and focuses
+ * it, wherever the design places them. */
 .menu-action *, .slot *, .list-row *, .option-entry *, .slider *,
 .list-control *, .control-callout *, .control-group *,
 .control-picker-current *, .control-picker-option *
 {
 	focus: none;
+	pointer-events: auto;
 }
 
 /* Left and Right on a row turn the page of the list and never leave it. */
@@ -40,8 +57,13 @@
 	tab-index: none;
 }
 
-/* Everything outside an open dialog or controller picker. */
+/* Everything outside an open dialog or controller picker: no stop, and no
+ * target for the pointer. */
 .nav-outside
 {
 	focus: none;
+}
+.nav-outside, .nav-outside *
+{
+	pointer-events: none;
 }
