@@ -260,7 +260,7 @@ fn staged_sdl2_profile_matches_the_dualsense_ids() {
 /// staged profile, and that the DualSense menu line of the pinned archive is
 /// in the staged file. We do not check the PS button on hardware.
 #[test]
-fn shipped_profiles_strip_meta_binds_including_ones_upstream_hid_lacks() {
+fn shipped_profiles_strip_meta_binds_including_ones_upstream_lacks() {
     let names = pinned_meta_bind_names();
     let planted = "\
 input_driver = \"hid\"
@@ -329,7 +329,7 @@ input_reset_btn = \"3\"
 
     let resources = runtime_resources();
     let profiles = autoconfig_profiles(&resources);
-    assert!(!profiles.is_empty(), "staged hid profiles are required");
+    assert!(!profiles.is_empty(), "staged profiles are required");
     for path in &profiles {
         let text = fs::read_to_string(path).unwrap();
         let hits: Vec<_> = text
@@ -348,14 +348,14 @@ input_reset_btn = \"3\"
     let archive = rominabox_engine::repo::at(&format!(
         "work/downloads/retroarch-joypad-autoconfig-{revision}.tar.gz"
     ));
-    let upstream = archive_member(&archive, "hid/DualSense Wireless Controller (PS5).cfg");
+    let upstream = archive_member(&archive, "sdl2/PS5 Controller.cfg");
     assert_eq!(
         profile_value(&upstream, &rominabox_engine::hotkeys::home_button_key()),
-        Some("12"),
+        Some("5"),
         "the pin no longer contains the menu bind this test uses as proof"
     );
     let staged = fs::read_to_string(
-        resources.join("autoconfig/hid/DualSense Wireless Controller (PS5).cfg"),
+        resources.join("autoconfig/sdl2/PS5 Controller.cfg"),
     )
     .unwrap();
     assert!(
@@ -366,11 +366,11 @@ input_reset_btn = \"3\"
     );
     assert_eq!(
         profile_value(&staged, &rominabox_engine::hotkeys::home_button_key()),
-        Some("12"),
+        Some("5"),
         "the staged DualSense keeps its PS button as the menu button:\n{staged}"
     );
-    assert_eq!(profile_value(&staged, "input_b_btn"), Some("1"));
-    assert!(upstream.contains("input_b_btn = \"1\""));
+    assert_eq!(profile_value(&staged, "input_b_btn"), Some("0"));
+    assert!(upstream.contains("input_b_btn = \"0\""));
 }
 
 /// We ship the profiles with the upstream MIT notice and the pinned revision.
@@ -422,7 +422,7 @@ fn joypad_autoconfig_licence_and_provenance_match_the_pin() {
 /// exits right after the copy. We do not check that a later launch keeps an
 /// edited profile, or that a pad matches a profile.
 #[test]
-fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
+fn export_ships_the_profiles_and_the_launcher_seeds_them() {
     let resources = runtime_resources();
     let root = scratch();
     let kit = root.join("runtime-kit");
@@ -533,11 +533,11 @@ fn export_ships_hid_profiles_and_the_launcher_seeds_them() {
     assert!(bundled_profiles.len() > 1);
     let bundled_dualsense = bundled_profiles
         .iter()
-        .find(|path| path.ends_with("hid/DualSense Wireless Controller (PS5).cfg"))
+        .find(|path| path.ends_with("sdl2/PS5 Controller.cfg"))
         .expect("export contains the DualSense profile");
     assert_eq!(
         fs::read(bundled_dualsense).unwrap(),
-        fs::read(resources.join("autoconfig/hid/DualSense Wireless Controller (PS5).cfg")).unwrap()
+        fs::read(resources.join("autoconfig/sdl2/PS5 Controller.cfg")).unwrap()
     );
     let names = pinned_meta_bind_names();
     for path in &bundled_profiles {

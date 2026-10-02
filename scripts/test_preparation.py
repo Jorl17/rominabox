@@ -153,11 +153,49 @@ def a_driver_no_longer_staged_leaves_no_profiles() -> None:
         check(folders == ["sdl2"], f"the kit holds the sdl2 profiles only, not {folders}")
 
 
+def an_sdl_profile_without_home_is_given_the_guide() -> None:
+    """In SDL every recognised pad has the same numbering, with Guide as 5. When
+    a profile with that numbering has no menu button, we give it the Guide, so
+    its pad has Home. Upstream's Xbox profiles have none. We leave a profile in
+    the pad's own numbering, where 5 could be any button, as it is."""
+    revision = prepare_runtime.JOYPAD_AUTOCONFIG_REVISION
+    top = f"retroarch-joypad-autoconfig-{revision}"
+    standard = ('input_driver = "sdl2"\ninput_device = "Xbox Series X Controller"\n'
+                'input_b_btn = "0"\ninput_a_btn = "1"\ninput_select_btn = "4"\ninput_start_btn = "6"\n'
+                '#input_menu_toggle_btn = "5"\n')
+    own = ('input_driver = "sdl2"\ninput_device = "Old USB Pad"\n'
+           'input_b_btn = "2"\ninput_a_btn = "1"\ninput_select_btn = "8"\ninput_start_btn = "9"\n')
+    with scratch.scratch("rominabox-preparation-") as folder:
+        root = Path(folder)
+        downloads = root / "downloads"
+        downloads.mkdir()
+        tar_gz(downloads / f"{prepare_runtime.JOYPAD_AUTOCONFIG_COMPONENT}-{revision}.tar.gz", {
+            f"{top}/sdl2/{prepare_runtime.DUALSENSE_PROFILES['sdl2']}": SDL2_DUALSENSE_PROFILE,
+            f"{top}/sdl2/Xbox Series X Controller.cfg": standard,
+            f"{top}/sdl2/Old USB Pad.cfg": own,
+            f"{top}/COPYING": "The upstream licence.\n",
+        })
+        kit = root / "kit"
+        (kit / "licenses").mkdir(parents=True)
+        pinned = prepare_runtime.DOWNLOADS
+        prepare_runtime.DOWNLOADS = downloads
+        try:
+            _, _said, raised = warned(lambda: prepare_runtime.stage_joypad_autoconfig(kit, ["sdl2"]))
+        finally:
+            prepare_runtime.DOWNLOADS = pinned
+        check(raised is None, f"staging succeeds (raised {raised!r})")
+        xbox = (kit / "autoconfig/sdl2/Xbox Series X Controller.cfg").read_text(encoding="utf-8")
+        check('\ninput_menu_toggle_btn = "5"\n' in xbox, f"the Xbox profile is given the Guide as Home:\n{xbox}")
+        old = (kit / "autoconfig/sdl2/Old USB Pad.cfg").read_text(encoding="utf-8")
+        check("input_menu_toggle_btn" not in old, f"the pad in its own numbering is left as it is:\n{old}")
+
+
 def main() -> int:
     a_source_archive_without_its_licence_is_a_warning()
     a_changed_upstream_licence_is_a_warning()
     an_archive_without_a_licence_is_a_warning()
     a_driver_no_longer_staged_leaves_no_profiles()
+    an_sdl_profile_without_home_is_given_the_guide()
     if FAILURES:
         print(f"\n{len(FAILURES)} preparation problem(s)")
         return 1

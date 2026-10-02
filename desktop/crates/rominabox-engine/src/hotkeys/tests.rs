@@ -293,23 +293,24 @@ fn home_on(profile: &str, button: u32) -> Vec<String> {
 
 /// Home is the menu button on each pad, as named in its RetroArch profile:
 /// the PS button on a DualSense and Guide on an Xbox pad. Both count as Home
-/// while someone holds them. We keep that line in every profile we ship. Any
-/// other button is its position on the standard pad from its profile (an
-/// Xbox pad's A is the bottom button), and never Home.
+/// while someone holds them. We keep that line in every profile we ship, and
+/// upstream's SDL profiles for Xbox pads name none. On macOS, Guide is 5 in
+/// SDL on both pads. Any other button is its position on the standard pad
+/// from its profile (an Xbox pad's A is the bottom button), and never Home.
 #[test]
 #[cfg(target_os = "macos")]
 fn a_dualsense_and_an_xbox_pad_each_have_home() {
     assert_eq!(
-        home_on("hid/DualSense Wireless Controller (PS5).cfg", 12),
-        ["home 12", "held 1", "captured home"]
+        home_on("sdl2/PS5 Controller.cfg", 5),
+        ["home 5", "held 1", "captured home"]
     );
     assert_eq!(
-        home_on("hid/Xbox Wireless Controller.cfg", 15),
-        ["home 15", "held 1", "captured home"]
+        home_on("sdl2/Xbox Series X Controller.cfg", 5),
+        ["home 5", "held 1", "captured home"]
     );
     assert_eq!(
-        home_on("hid/Xbox Wireless Controller.cfg", 0),
-        ["home 15", "held 0", "captured b"]
+        home_on("sdl2/Xbox Series X Controller.cfg", 0),
+        ["home 5", "held 0", "captured b"]
     );
 }
 
