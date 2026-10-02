@@ -576,6 +576,11 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
         if not any(staged == driver for staged, _filename, _raw in profiles):
             raise RuntimeError(f"No {driver} profiles in {archive}")
 
+    # We stage no profiles for a driver the player is not configured to use.
+    if (root / "autoconfig").is_dir():
+        for folder in (root / "autoconfig").iterdir():
+            if folder.is_dir() and folder.name not in drivers:
+                shutil.rmtree(folder)
     for driver in drivers:
         destination_dir = root / "autoconfig" / driver
         destination_dir.mkdir(parents=True, exist_ok=True)
