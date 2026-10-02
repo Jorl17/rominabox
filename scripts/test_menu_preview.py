@@ -6,7 +6,7 @@ preview could not be rendered." for every design, for example with this error:
 
     this design has no <!--BINDS--> for the binds on a control.
 
-    python3 scripts/test_menu_preview.py
+    uv run python scripts/test_menu_preview.py
 
 We render here and do not compare pictures. We check the appearance of a menu
 in the states tests. Here we check that we can draw in the builder the design

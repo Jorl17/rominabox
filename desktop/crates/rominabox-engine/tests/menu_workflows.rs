@@ -477,12 +477,12 @@ fn run_drivers(driver: &Path, cases: &[String]) -> Vec<Value> {
 }
 
 #[test]
-#[ignore = "needs the headless driver: python3 scripts/test.py workflows"]
+#[ignore = "needs the headless driver: uv run python scripts/test.py workflows"]
 fn every_workflow_case_reports_what_the_launched_player_recorded() {
     let driver = std::env::var_os("ROMINABOX_WORKFLOW_DRIVER")
         .map(PathBuf::from)
         .expect(
-            "ROMINABOX_WORKFLOW_DRIVER names the driver; run `python3 scripts/test.py workflows`",
+            "ROMINABOX_WORKFLOW_DRIVER names the driver; run `uv run python scripts/test.py workflows`",
         );
     let table = read_json("scripts/fixtures/menu-workflows.json");
     let registry = themes::registry().unwrap();

@@ -4,7 +4,7 @@ A stale object in the cache is worse than no cache, because the tests then
 pass against code that is no longer there. So we test each rule with small C
 files made here, in a temporary directory, and never with the menu sources.
 
-    python3 scripts/native_runtime/test_menu_harness.py
+    uv run python scripts/native_runtime/test_menu_harness.py
 """
 
 from __future__ import annotations

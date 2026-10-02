@@ -9,7 +9,7 @@ size of the scene comes from the design.
 
 The pictures are at 2x, the scale of the shipped ones.
 
-    python3 scripts/render_control_overlays.py OUTPUT_DIR
+    uv run python scripts/render_control_overlays.py OUTPUT_DIR
 """
 
 from __future__ import annotations

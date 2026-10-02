@@ -8,7 +8,7 @@ the script that takes a picture of the menu as it opens. Here we compile the
 reader into a small program and start it with each case in its environment,
 in the same way as we start the player from the launcher.
 
-    python3 scripts/test_environment_reader.py
+    uv run python scripts/test_environment_reader.py
 """
 
 from __future__ import annotations

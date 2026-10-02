@@ -9,7 +9,7 @@ the controller driver started in RetroArch, whatever is plugged in. We
 expect RetroArch's null driver for the scripted run, and the platform's
 driver for the other.
 
-    python3 scripts/test_scripted_run.py
+    uv run python scripts/test_scripted_run.py
 """
 
 from __future__ import annotations

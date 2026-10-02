@@ -1,7 +1,7 @@
 """Check that licenses/ contains the licence of every third-party component,
 and that the check fails when one is missing.
 
-    python3 scripts/test_licences.py
+    uv run python scripts/test_licences.py
 
 The folder in the repository must pass `scripts/licences.py --check`. We
 show the failures on a copy of it in a temporary directory: an entry

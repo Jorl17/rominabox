@@ -14,7 +14,7 @@ and unrelated tests fail.
 .gitignore does not help once a path is tracked, so the three paths were
 committed even though .gitignore listed them.
 
-    python3 scripts/test_no_symlinks.py
+    uv run python scripts/test_no_symlinks.py
 
 This does not prove that the ignore rules are right, or that a worktree has the
 right links. It only proves that git contains no links.

@@ -10,7 +10,7 @@ package. Removing the file for a pad is enough. The match score is then zero,
 and the log has "not configured". We check the DualSense that we test the
 product with in every driver folder where we match pads by their ids.
 
-    python3 scripts/test_joypad_autoconfig.py
+    uv run python scripts/test_joypad_autoconfig.py
 
 We open no device and launch no player, and we do not check the button
 numbers against a physical pad.

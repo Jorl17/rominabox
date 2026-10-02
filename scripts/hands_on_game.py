@@ -3,7 +3,7 @@ we look up each ROM online and give it the builder's settings, as in the
 exporter's `export` for a ROM alone, and use a player built from the fork
 as it is now.
 
-    python3 scripts/hands_on_game.py PLAYER_BUILD OUTPUT ROM...
+    uv run python scripts/hands_on_game.py PLAYER_BUILD OUTPUT ROM...
 
 PLAYER_BUILD is a player we ship (scripts/build_player.py with no test
 switch). We put it in place of the kit's player, as we do with a test player

@@ -1,6 +1,6 @@
 """Check that we report a missing test file as a visible skip, not as a pass or a failure.
 
-    python3 scripts/test_fetch_content.py
+    uv run python scripts/test_fetch_content.py
 """
 
 from __future__ import annotations

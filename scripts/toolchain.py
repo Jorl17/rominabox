@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import core_source  # noqa: E402
 
 # What we compile native test programs with on each platform. In scripts in
-# any language we read it here (`python3 scripts/toolchain.py describe`)
+# any language we read it here (`uv run python scripts/toolchain.py describe`)
 # instead of naming a compiler or a flag. With `memoryChecks`, a test program
 # stops at its first bad memory access. `supportLibraries` are the libraries
 # required at link time by the shared test headers in scripts/native_runtime.

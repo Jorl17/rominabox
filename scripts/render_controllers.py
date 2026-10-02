@@ -11,8 +11,8 @@ straight into the canvas would stretch them. We scale each pad proportionally,
 by its own factor between 1.31 and 1.73, and position it. `placement.json`
 contains that placement, derived from the shipped artwork.
 
-    python3 scripts/render_controllers.py            # regenerate every PNG
-    python3 scripts/render_controllers.py --check    # fail if any has drifted
+    uv run python scripts/render_controllers.py            # regenerate every PNG
+    uv run python scripts/render_controllers.py --check    # fail if any has drifted
 
 The SVG is the source and the PNG is output. With `--check` we catch a PNG
 that someone edited directly.
@@ -293,10 +293,10 @@ def main() -> int:
                 f"be: {', '.join(sorted(set(drifted)))}.\n"
                 "DRIFTED or MISSING means the PNG no longer matches its SVG, and "
                 "the SVG is the source:\n"
-                "  python3 scripts/render_controllers.py\n"
+                "  uv run python scripts/render_controllers.py\n"
                 "EDITED means the shipped file changed since a person last looked "
                 "at it. Look, then:\n"
-                "  python3 scripts/render_controllers.py --record",
+                "  uv run python scripts/render_controllers.py --record",
                 file=sys.stderr,
             )
             return 1
@@ -306,7 +306,7 @@ def main() -> int:
     print(f"\nrendered {len(sources)} controllers at {width * SCALE}x{height * SCALE}")
     print(
         "Look at them, then record what now ships:\n"
-        "  python3 scripts/render_controllers.py --record"
+        "  uv run python scripts/render_controllers.py --record"
     )
     return 0
 

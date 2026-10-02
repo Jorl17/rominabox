@@ -11,7 +11,7 @@ on the other, run it on the core selected in the catalogue for that
 extension, and count colours along the edge. Two colours is a hard edge.
 Anything else was resampled.
 
-    python3 scripts/picture_edges.py
+    uv run python scripts/picture_edges.py
 """
 
 from __future__ import annotations

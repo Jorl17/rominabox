@@ -18,7 +18,7 @@ We compile the launcher as a plan tool, with which we prepare the data
 directory and exit before any core or window exists. On macOS this is the
 plan entry, and on Windows the game's launcher, stopped by ROMINABOX_PLAN_ONLY.
 
-    python3 scripts/test_shipped.py
+    uv run python scripts/test_shipped.py
 """
 
 from __future__ import annotations

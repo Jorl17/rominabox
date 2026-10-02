@@ -343,11 +343,11 @@ fn run_driver(driver: &Path, script: &str) -> Vec<Value> {
 }
 
 #[test]
-#[ignore = "needs the headless driver: python3 scripts/test.py navigation"]
+#[ignore = "needs the headless driver: uv run python scripts/test.py navigation"]
 fn arrows_pointer_and_focus_follow_every_composed_layout() {
     let driver = std::env::var_os("ROMINABOX_NAVIGATION_DRIVER")
         .map(PathBuf::from)
-        .expect("ROMINABOX_NAVIGATION_DRIVER names the driver; run `python3 scripts/test.py navigation`");
+        .expect("ROMINABOX_NAVIGATION_DRIVER names the driver; run `uv run python scripts/test.py navigation`");
     let (registered, hypothetical) = all_designs();
     let tables = tables();
 
@@ -686,11 +686,11 @@ fn picture_problems(design: &str, label: &str, aspect: f64, seen: &SlotSeen) -> 
 /// that changes ratio when the menu opens again. The document contains the
 /// ratio. In a design without marks, the box is the one from its stylesheet.
 #[test]
-#[ignore = "needs the headless driver: python3 scripts/test.py navigation"]
+#[ignore = "needs the headless driver: uv run python scripts/test.py navigation"]
 fn a_slot_picture_takes_the_games_shape_where_the_design_marks_it() {
     let driver = std::env::var_os("ROMINABOX_NAVIGATION_DRIVER")
         .map(PathBuf::from)
-        .expect("ROMINABOX_NAVIGATION_DRIVER names the driver; run `python3 scripts/test.py navigation`");
+        .expect("ROMINABOX_NAVIGATION_DRIVER names the driver; run `uv run python scripts/test.py navigation`");
     let scratch = rominabox_scratch::Scratch::dir("rominabox-game-shape");
     let root = scratch.to_path_buf();
     let kit = support::kit_with_hypothetical(&root);

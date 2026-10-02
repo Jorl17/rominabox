@@ -8,7 +8,7 @@ launcher, write the config and exit before a core is loaded, so no audio
 opens. The check also shows that the launcher and the harness use the same
 names for the switch and its opt-out, which we never read from the launcher.
 
-    python3 scripts/test_quiet.py
+    uv run python scripts/test_quiet.py
 """
 
 from __future__ import annotations

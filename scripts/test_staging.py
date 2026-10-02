@@ -8,7 +8,7 @@ a scratch kit and compare each staged file with its source. We also check
 that the checkout's kit is current, and that in the builder's build tool
 (scripts/build_builder.py) we look for Cargo's output where Cargo writes it.
 
-    python3 scripts/test_staging.py
+    uv run python scripts/test_staging.py
 """
 
 from __future__ import annotations
@@ -186,13 +186,13 @@ def main() -> int:
             f"\n{len(stale)} staged design file(s) are older than the design they "
             "came from, so the builder and an exported game draw something the "
             "tests never render. Restage:\n"
-            "  python3 scripts/kit_assets.py",
+            "  uv run python scripts/kit_assets.py",
         )
         return 1
     if launcher:
         print(
             "\nEvery export would ship the kit's older launcher. Make the kit again:\n"
-            "  python3 scripts/build_kit.py <the player build it was made from>",
+            "  uv run python scripts/build_kit.py <the player build it was made from>",
         )
         return 1
     print("\nthe kit's assets stage as their sources, and this checkout's kit, its launch library too, is current")

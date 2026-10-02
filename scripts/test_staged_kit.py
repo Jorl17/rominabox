@@ -9,7 +9,7 @@ three seconds on Windows. We also stage the shared parts and the shader
 library from the tree, as well as the menu designs, so that a change to a
 part appears in a shot without a new build of the kit.
 
-    python3 scripts/test_staged_kit.py
+    uv run python scripts/test_staged_kit.py
 
 What this does NOT prove: that a game exported from the kit runs (the
 launched tests check that), or that we compile a change to the launcher's

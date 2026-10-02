@@ -6,7 +6,7 @@ the presenter, and a Windows capture of the window must show it upright, also
 after a resize. The window stays outside the desktop. We present this way
 only on Windows, and on macOS we show a fullscreen game through AppKit.
 
-    python3 scripts/test_wgl_dxgi.py
+    uv run python scripts/test_wgl_dxgi.py
 """
 
 from __future__ import annotations

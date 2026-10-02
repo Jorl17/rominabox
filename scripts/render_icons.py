@@ -1,7 +1,7 @@
 """Render every ROM-in-a-Box icon from the one drawing.
 
-    python3 scripts/render_icons.py            # render them all
-    python3 scripts/render_icons.py --check    # fail if one has drifted
+    uv run python scripts/render_icons.py            # render them all
+    uv run python scripts/render_icons.py --check    # fail if one has drifted
 
 The source is the splash logo, `desktop/assets/branding/logo.svg`, white line
 art that we draw on the screen colour of the default palette. We read that
@@ -208,7 +208,7 @@ def main() -> int:
             if not shipped.is_file():
                 drifted.append(f"{shipped.relative_to(ROOT)}: missing")
     if drifted:
-        print("icons that no longer match logo.svg (run python3 scripts/render_icons.py):")
+        print("icons that no longer match logo.svg (run uv run python scripts/render_icons.py):")
         print("\n".join(f"  {line}" for line in drifted))
         return 1
     print("every icon matches logo.svg")

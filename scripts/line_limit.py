@@ -1,7 +1,7 @@
 """Stop a commit that makes one of our own source files too long for a
 reader.
 
-    python3 scripts/line_limit.py
+    uv run python scripts/line_limit.py
 
 We run it in .githooks/pre-commit over what is staged in the repository where
 it runs. A hand-written source file may be at most LIMIT lines. LIST contains

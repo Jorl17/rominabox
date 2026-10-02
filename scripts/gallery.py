@@ -20,8 +20,8 @@ From each checkout we collect two things and nothing else:
     identical ones. A checkout without changes to the menu's appearance adds
     nothing, and one with a new screen or pad adds exactly what changed.
 
-    python3 scripts/gallery.py                 # collect
-    python3 scripts/gallery.py --check         # is anything claimed but absent?
+    uv run python scripts/gallery.py                 # collect
+    uv run python scripts/gallery.py --check         # is anything claimed but absent?
 
 This does not show that a picture is correct, or that a photograph came from
 an exported game and not from the offscreen renderer. It shows that every
@@ -296,7 +296,7 @@ def check() -> int:
             "\nA report points at a picture that is not there, a picture a track "
             "produced never arrived, or the same picture is in here many times "
             "over, which is how the last two galleries buried the work:"
-            "\n  python3 scripts/gallery.py",
+            "\n  uv run python scripts/gallery.py",
             file=sys.stderr,
         )
         return 1

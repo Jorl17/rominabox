@@ -11,8 +11,8 @@ a game. It is not linked into the player, so it can fall behind when that
 function changes. We fail the test when a profile we ship would no longer
 pass the rules as they stand.
 
-    python3 scripts/joypad_autoconfig.py list
-    python3 scripts/joypad_autoconfig.py match --name "DualSense Wireless Controller" --vendor 1356 --product 3302
+    uv run python scripts/joypad_autoconfig.py list
+    uv run python scripts/joypad_autoconfig.py match --name "DualSense Wireless Controller" --vendor 1356 --product 3302
 
 With both commands we read the staged folder of each driver in exports from
 this machine, or one ``--directory``. ``match`` exits 0 when, in some folder,

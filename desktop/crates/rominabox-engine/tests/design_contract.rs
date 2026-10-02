@@ -379,7 +379,7 @@ fn controller_artwork_is_not_a_designs_to_own() {
         missing.is_empty(),
         "the kit's shared menu-assets is missing controller artwork the builder \
          offers, so exporting those consoles fails: {missing:?}. Restage with \
-         python3 scripts/kit_assets.py"
+         uv run python scripts/kit_assets.py"
     );
     let design = repo_root().join("integrations/designs/native");
     let owned: Vec<_> = std::fs::read_dir(&design)

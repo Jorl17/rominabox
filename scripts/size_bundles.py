@@ -21,7 +21,7 @@ encoders can take a cartridge export past 50 MB, and with a budget alone we
 could miss them if something else shrank to make room. On Windows we refuse
 every library but the game's core, because the player is one program.
 
-    python3 scripts/size_bundles.py
+    uv run python scripts/size_bundles.py
 """
 
 from __future__ import annotations
@@ -168,7 +168,7 @@ def require_core_beside(cache: Path, target: str) -> None:
     if not beside.is_file():
         raise SystemExit(
             f"{artifact} for {target} is not at {beside}. Seed it with: "
-            f"python3 scripts/prepare_runtime.py --seed-core-cache --target {target}"
+            f"uv run python scripts/prepare_runtime.py --seed-core-cache --target {target}"
         )
 
 

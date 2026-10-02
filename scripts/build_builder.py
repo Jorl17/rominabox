@@ -2,7 +2,7 @@
 its menu preview renderer and its command line inside. We only build here,
 and never start the builder or an emulator.
 
-    python3 scripts/build_builder.py
+    uv run python scripts/build_builder.py
 
 Build the kit and the preview renderer first: scripts/build_player.py for a
 player that ships, then scripts/build_kit.py with that build. What differs

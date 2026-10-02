@@ -1,6 +1,6 @@
 """Test the pre-commit line limit on repositories that we make for the test.
 
-    python3 scripts/test_line_limit.py
+    uv run python scripts/test_line_limit.py
 
 In each case we make a git repository in a temporary directory, commit a
 starting state, stage a change and run scripts/line_limit.py there, as in

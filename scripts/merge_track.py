@@ -4,9 +4,9 @@ We merge a branch when its suite is green and the whole suite is still green
 with the branch merged into the target tree. We run both checks here, so we
 never merge a branch without running its tests in that tree.
 
-    python3 scripts/merge_track.py options          # check, then merge
-    python3 scripts/merge_track.py options --check  # say whether it is ready
-    python3 scripts/merge_track.py --all --check    # every track at once
+    uv run python scripts/merge_track.py options          # check, then merge
+    uv run python scripts/merge_track.py options --check  # say whether it is ready
+    uv run python scripts/merge_track.py --all --check    # every track at once
 
 The reasons for rejecting a branch, and why each one is important:
 

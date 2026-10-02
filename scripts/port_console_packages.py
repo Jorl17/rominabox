@@ -16,7 +16,7 @@ We classify the support intent of each console: a console is `enabled` only
 if its declared core artifact is present in the runtime kit, and otherwise
 `planned`.
 
-    python3 scripts/port_console_packages.py
+    uv run python scripts/port_console_packages.py
 """
 
 from __future__ import annotations

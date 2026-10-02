@@ -7,10 +7,10 @@ the QUICK SIGN IN accounts folder, and a cargo target. None of those
 collisions produces an error. Each one produces a plausible wrong answer,
 the worst being a screenshot of a build from the other checkout.
 
-    python3 scripts/worktree.py create feature-x     # make one, in ../rominabox-worktrees/
-    python3 scripts/worktree.py adopt               # from inside an existing one
-    python3 scripts/worktree.py list                # what exists, and its resources
-    python3 scripts/worktree.py remove feature-x    # and clean up after it
+    uv run python scripts/worktree.py create feature-x     # make one, in ../rominabox-worktrees/
+    uv run python scripts/worktree.py adopt               # from inside an existing one
+    uv run python scripts/worktree.py list                # what exists, and its resources
+    uv run python scripts/worktree.py remove feature-x    # and clean up after it
 
 Isolation is opt-in. With no `worktree.local.json` in a checkout, nothing
 changes: the port is 1420, the identifiers have no suffix, and
@@ -350,7 +350,7 @@ def create(suffix: str, branch: str | None, own_runtime: bool) -> int:
         offset = allocate_offset(None)
         local = write_local(path, suffix, offset)
     print(f"\n{path}\n{describe(local)}")
-    print(f"\n  cd {path} && eval \"$(python3 scripts/worktree.py env)\"")
+    print(f"\n  cd {path} && eval \"$(uv run python scripts/worktree.py env)\"")
     return 0
 
 

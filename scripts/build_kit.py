@@ -1,7 +1,7 @@
 """Make a target's runtime kit, from which builders package games, from a player
 build, and install the builder's menu preview renderer that we build beside it.
 
-    python3 scripts/build_kit.py BUILD [KIT]    # default KIT: desktop/src-tauri/resources/runtime
+    uv run python scripts/build_kit.py BUILD [KIT]    # default KIT: desktop/src-tauri/resources/runtime
 
 BUILD is a directory we made with scripts/build_player.py for a player we
 ship, not a test build. Its build-info.json contains the target, which for

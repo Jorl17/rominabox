@@ -9,8 +9,8 @@ model with it. We drive the actual `menu.rml` through RmlUi with synthetic
 input and no renderer (no window, no OpenGL, no RetroArch), and write the
 resulting RmlUi state as JSON Lines.
 
-    python3 scripts/menu_interaction.py --record   # write the baseline
-    python3 scripts/menu_interaction.py --check    # fail on any difference
+    uv run python scripts/menu_interaction.py --record   # write the baseline
+    uv run python scripts/menu_interaction.py --check    # fail on any difference
 
 We record hit testing and event dispatch: which element is under the pointer,
 and the classes on the elements that we style in a design. The defects are in
@@ -88,7 +88,7 @@ def build() -> None:
     if not LIBRARY.is_file():
         raise SystemExit(
             f"RmlUi is not built at {LIBRARY}.\n"
-            "python3 scripts/prepare_rmlui.py"
+            "uv run python scripts/prepare_rmlui.py"
         )
     inputs = (PROBE_SOURCE, Path(__file__), ROOT / "scripts/rmlui_paths.py", LIBRARY)
     PROBE.parent.mkdir(parents=True, exist_ok=True)

@@ -15,7 +15,7 @@ saves there. That run ends on the notice, for its picture.
 
 We run the test player of this checkout, built from the committed fork
 (player_build.selected_build):
-    python3 scripts/test_play_hotkeys.py [OUTPUT]
+    uv run python scripts/test_play_hotkeys.py [OUTPUT]
 
 This does not prove that a key press on a physical keyboard reaches the menu
 (in the script we hold the key where we read the keyboard for the menu),

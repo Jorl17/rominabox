@@ -12,8 +12,8 @@ allowing the one level by which graphics cards can round differently.
 
 We run the test player of this checkout, built from the committed fork
 (player_build.selected_build):
-    python3 scripts/menu_workflows.py
-    python3 scripts/menu_workflows.py --record
+    uv run python scripts/menu_workflows.py
+    uv run python scripts/menu_workflows.py --record
 
 We use menu_shots for export, launch, capture and lifetime management, and
 keep the picture, script and checkpoint log of every case. With --record we

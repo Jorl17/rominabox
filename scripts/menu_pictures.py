@@ -1,7 +1,7 @@
 """Pictures of selected menu screens, drawn offscreen, and
 what the pictures themselves must show.
 
-    python3 scripts/menu_pictures.py          # draw into work/feedback-pictures and check
+    uv run python scripts/menu_pictures.py          # draw into work/feedback-pictures and check
 
 Badges. A badge is either downloading or shown, and a player never sees
 "not fetched". A downloading badge must appear as an animated placeholder.

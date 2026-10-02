@@ -1,6 +1,6 @@
 """Test the controller relay of a sandboxed Windows game with DirectInput.
 
-    python3 scripts/test_pad_relay.py
+    uv run python scripts/test_pad_relay.py
 
 We compile the launcher side (`desktop/src-tauri/launcher/windows/pad_relay.c`)
 and the DirectInput stand-in of the player

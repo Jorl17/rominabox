@@ -18,12 +18,12 @@ When the menu has settled, we write the picture and quit the game, so
 nothing stays open. When an id is not in the document, we stop the run
 instead of taking a picture of the wrong screen.
 
-    python3 scripts/menu_shots.py --app "/path/to/Game.app"
-    python3 scripts/menu_shots.py --rom game.md --design disc --palette carbon
-    python3 scripts/menu_shots.py --rom game.md --palette amber
-    python3 scripts/menu_shots.py --rom game.md --every-palette
-    python3 scripts/menu_shots.py --rom game.md --only pause-menu,options
-    python3 scripts/menu_shots.py --app "/path/to/Game.app" --check
+    uv run python scripts/menu_shots.py --app "/path/to/Game.app"
+    uv run python scripts/menu_shots.py --rom game.md --design disc --palette carbon
+    uv run python scripts/menu_shots.py --rom game.md --palette amber
+    uv run python scripts/menu_shots.py --rom game.md --every-palette
+    uv run python scripts/menu_shots.py --rom game.md --only pause-menu,options
+    uv run python scripts/menu_shots.py --app "/path/to/Game.app" --check
 
 This does not test window placement, focus or fullscreen behaviour, which
 a person has to check. Here we test only what is on screen in the game.

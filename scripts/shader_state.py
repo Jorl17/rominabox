@@ -11,7 +11,7 @@ In the second launch we open the shader screen, and the row marked ON must
 be the preset running in that launch. We take the picture of the menu from
 inside the game.
 
-    python3 scripts/shader_state.py
+    uv run python scripts/shader_state.py
 """
 
 from __future__ import annotations

@@ -10,8 +10,8 @@ list such as `bin|cue|chd|iso`. In the frontend we pass the core only files
 with those extensions. In a compiled core, that string is the closest thing
 to a machine-readable list of capabilities.
 
-    python3 scripts/core_capabilities.py CORE [CORE ...]
-    python3 scripts/core_capabilities.py --check      # every core in the local core source
+    uv run python scripts/core_capabilities.py CORE [CORE ...]
+    uv run python scripts/core_capabilities.py --check      # every core in the local core source
 
 Reading a string is weaker evidence than loading the core and asking it, but
 it is far stronger than trusting a project's reputation, and we do not have

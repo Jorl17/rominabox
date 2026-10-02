@@ -1,7 +1,7 @@
 """Test the managed account boundary with the real rcheevos client and
 evaluator, against a synthetic in-process service, with no RetroArch window.
 
-    python3 scripts/test_achievements_client.py
+    uv run python scripts/test_achievements_client.py
 
 We compile scripts/achievements_runtime_client_test.c with the fork's
 cheevos/rominabox*.c, the shared accounts store, rcheevos and libretro's file

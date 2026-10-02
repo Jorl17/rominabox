@@ -1,6 +1,6 @@
 """Build the shared accounts store and test it on real files.
 
-    python3 scripts/test_accounts_store.py
+    uv run python scripts/test_accounts_store.py
 
 We compile `desktop/src-tauri/accounts` with the launcher's `portable_fs` and
 run `scripts/accounts_store_test/` (its shared cases, and the platform's file,

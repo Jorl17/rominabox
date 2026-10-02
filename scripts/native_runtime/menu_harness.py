@@ -4,8 +4,8 @@ We list the menu's sources once, in the HAVE_RMLUI block of
 vendor/retroarch/Makefile.common. We read that block here, so a new menu file
 is added only there and we compile it into every harness.
 
-    python3 scripts/native_runtime/menu_harness.py build OUT [--define NAME]... [--framework NAME]... SOURCE...
-    python3 scripts/native_runtime/menu_harness.py sources
+    uv run python scripts/native_runtime/menu_harness.py build OUT [--define NAME]... [--framework NAME]... SOURCE...
+    uv run python scripts/native_runtime/menu_harness.py sources
 
 With `build` we compile the menu into an archive and link OUT from the given
 test sources, that archive, libretro's file layer (through which we read the
@@ -307,7 +307,7 @@ def headless(defines: list[str]) -> Toolchain:
 
 def build(output: Path, sources: list[Path], defines: list[str], frameworks: list[str]) -> str:
     if not rmlui_paths.LIBRARY.is_file():
-        raise SystemExit(f"missing {rmlui_paths.LIBRARY} (python3 scripts/prepare_rmlui.py)")
+        raise SystemExit(f"missing {rmlui_paths.LIBRARY} (uv run python scripts/prepare_rmlui.py)")
     started = time.monotonic()
     toolchain = headless(defines)
     identity = toolchain.identity()

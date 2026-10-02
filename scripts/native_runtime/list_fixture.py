@@ -7,7 +7,7 @@ it before the unlock row, where we put our own list screens. The bind list
 is the one we compose, and we name two of its rows so that we can measure
 the row edge.
 
-    python3 scripts/native_runtime/list_fixture.py MENU_RML [--actions]
+    uv run python scripts/native_runtime/list_fixture.py MENU_RML [--actions]
 """
 
 from __future__ import annotations

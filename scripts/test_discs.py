@@ -32,8 +32,8 @@ that we hide, and we turn a paged list to the page of the focused entry, so
 a hidden entry cannot pass for one shown on another page. With
 `--without-player` we run only the cores in the frame harness.
 
-    python3 scripts/test_discs.py
-    python3 scripts/test_discs.py --without-player
+    uv run python scripts/test_discs.py
+    uv run python scripts/test_discs.py --without-player
 """
 
 from __future__ import annotations

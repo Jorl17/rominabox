@@ -1,7 +1,7 @@
 """Pack a runtime kit into the archive that a builder on the other platform
 downloads, and print the entry for it in `desktop/kits.json`.
 
-    python3 scripts/pack_kit.py KIT ARCHIVE.zip
+    uv run python scripts/pack_kit.py KIT ARCHIVE.zip
 
 KIT is a kit made with scripts/build_kit.py (desktop/src-tauri/resources/runtime
 on the machine that built it). The archive has the files of the kit at its

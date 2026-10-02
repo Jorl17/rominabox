@@ -1,6 +1,6 @@
 """Build the player (the RetroArch fork with the RmlUi menu) into a build folder.
 
-    uv run python scripts/build_player.py /absolute/build/folder         # the host's target
+    uv run python scripts/build_player.py /absolute/build/folder         # this machine's target
     uv run python scripts/build_player.py --target windows-x86_64 DIR
     uv run python scripts/build_player.py --target macos-universal DIR   # the macOS kit's player
 

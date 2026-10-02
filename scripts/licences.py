@@ -1,10 +1,10 @@
 """The licence text of every third-party component ROM-in-a-Box uses or
 ships, in one place: licenses/ at the repository root, one file per component.
 
-    python3 scripts/licences.py                          # write what changed (reads the network for it)
-    python3 scripts/licences.py --refresh                # read every text again, network ones included
-    python3 scripts/licences.py --check                  # offline: fail on a missing, stale or unused entry
-    python3 scripts/licences.py --check --player-build DIR
+    uv run python scripts/licences.py                          # write what changed (reads the network for it)
+    uv run python scripts/licences.py --refresh                # read every text again, network ones included
+    uv run python scripts/licences.py --check                  # offline: fail on a missing, stale or unused entry
+    uv run python scripts/licences.py --check --player-build DIR
 
 Each entry contains the component, the version the repository uses, where it
 comes from and what uses it, then each licence text under the place we read
@@ -57,8 +57,8 @@ Each file names the component, the version the repository uses, where it
 comes from, the licence it declares and what uses it, then each licence text,
 headed by where it was read.
 
-  python3 scripts/licences.py            # write this folder again
-  python3 scripts/licences.py --check    # fail on a missing, stale or unused entry
+  uv run python scripts/licences.py            # write this folder again
+  uv run python scripts/licences.py --check    # fail on a missing, stale or unused entry
 """
 
 
@@ -115,11 +115,11 @@ def check_entries(folder: Path, components: list[Component]) -> list[str]:
                 problems.append(f"{relative.as_posix()}: {error}")
                 continue
             if path.read_text(encoding="utf-8") != wanted:
-                problems.append(f"{relative.as_posix()}: differs from its source; run python3 scripts/licences.py")
+                problems.append(f"{relative.as_posix()}: differs from its source; run uv run python scripts/licences.py")
             continue
         if not current(path, component):
             problems.append(f"{relative.as_posix()}: names another version or source than the repository pins, "
-                            "or holds no text; run python3 scripts/licences.py")
+                            "or holds no text; run uv run python scripts/licences.py")
     return problems
 
 
@@ -140,7 +140,7 @@ def check(folder: Path = OUT, components: list[Component] | None = None) -> list
     for path in sorted(folder.rglob("*")):
         relative = path.relative_to(folder)
         if path.is_file() and relative not in seen and relative != Path("README.txt"):
-            problems.append(f"{relative.as_posix()}: no component the repository uses; run python3 scripts/licences.py")
+            problems.append(f"{relative.as_posix()}: no component the repository uses; run uv run python scripts/licences.py")
     for component in native_components():
         path = component.declared.get("path")
         if path and not sources.fork_has(path):
@@ -285,7 +285,7 @@ def warning(missing: list[str]) -> str:
     texts that are missing or changed."""
     return ("WARNING: licence texts are missing or changed. Nothing was left out or refused; "
             "everything they belong to is used all the same. Bring licenses/ up to date "
-            "(scripts/licences.json, then python3 scripts/licences.py) so the games carry them:\n  "
+            "(scripts/licences.json, then uv run python scripts/licences.py) so the games carry them:\n  "
             + "\n  ".join(missing))
 
 

@@ -240,7 +240,7 @@ fn read_cached(path: &Path, url: &str) -> Vec<u8> {
              The measurement runs offline, against catalogues and picture lists \
              fetched once. It does not call anyone's API while testing.\n\
              To fetch what is missing:\n\
-             \x20 ROMINABOX_REFRESH_CATALOGUES=1 python3 scripts/test.py identification",
+             \x20 ROMINABOX_REFRESH_CATALOGUES=1 uv run python scripts/test.py identification",
             path.display()
         );
     }

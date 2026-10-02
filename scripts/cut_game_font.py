@@ -6,7 +6,7 @@ take a fixed Bold (700, the weight of the builder's wordmark) of that same
 file, limited to Latin-1: printable ASCII, the · and × in the menus, and the
 accented letters of game and achievement names:
 
-    python3 scripts/cut_game_font.py
+    uv run python scripts/cut_game_font.py
 """
 
 from pathlib import Path

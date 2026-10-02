@@ -14,5 +14,5 @@ Each file names the component, the version the repository uses, where it
 comes from, the licence it declares and what uses it, then each licence text,
 headed by where it was read.
 
-  python3 scripts/licences.py            # write this folder again
-  python3 scripts/licences.py --check    # fail on a missing, stale or unused entry
+  uv run python scripts/licences.py            # write this folder again
+  uv run python scripts/licences.py --check    # fail on a missing, stale or unused entry

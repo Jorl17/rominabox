@@ -8,7 +8,7 @@ take the ring from where the pictures differ. At every few degrees round its
 circle, the lit picture must differ in brightness from the plain one by a
 clear step somewhere across the ring's line.
 
-    python3 scripts/check_ring_contrast.py [OUTPUT]
+    uv run python scripts/check_ring_contrast.py [OUTPUT]
 
 This does not show that the ring is in the right place (menu_scene), or how
 it looks on any pad but GameCube's.

@@ -3,7 +3,7 @@
 We bundle no cores with the builder, and download each one when an export
 requires it. A developer cache in the builder's layout (`cores/`, `licenses/`)
 replaces that download cache, so we never reach the network in tests with an
-actual core. We fill it with `python3 scripts/prepare_runtime.py --seed-core-cache`,
+actual core. We fill it with `uv run python scripts/prepare_runtime.py --seed-core-cache`,
 and in `scripts/test.py` we set ROMINABOX_CORE_SOURCE to it for every scope.
 """
 
@@ -51,6 +51,6 @@ def core(filename: str) -> Path:
     if not path.is_file():
         raise SystemExit(
             f"{filename} is not in the local core source {core_source()}. "
-            "Seed it with: python3 scripts/prepare_runtime.py --seed-core-cache"
+            "Seed it with: uv run python scripts/prepare_runtime.py --seed-core-cache"
         )
     return path

@@ -6,7 +6,7 @@ the network is down, the URL is gone, or the bytes differ from those in the
 manifest, we skip the tests that require it and print the reason. A missing
 disc does not mean a broken exporter, and a silent skip would hide the test.
 
-    python3 scripts/fetch_test_content.py --scope quit
+    uv run python scripts/fetch_test_content.py --scope quit
 """
 
 from __future__ import annotations

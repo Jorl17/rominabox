@@ -10,7 +10,7 @@ list, which we print before any window or core, so we open no window here.
 
 We ask the test player of this checkout, built from the committed fork
 (player_build.selected_build):
-    python3 scripts/test_player.py
+    uv run python scripts/test_player.py
 """
 
 from __future__ import annotations

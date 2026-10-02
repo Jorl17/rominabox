@@ -1,8 +1,8 @@
 """Build the game's launcher for this machine into a new folder, and print
 where it is.
 
-    python3 scripts/build_launcher.py /absolute/new/folder
-    python3 scripts/build_launcher.py --kit KIT    # macOS: into KIT, attached to its player
+    uv run python scripts/build_launcher.py /absolute/new/folder
+    uv run python scripts/build_launcher.py --kit KIT    # macOS: into KIT, attached to its player
 
 We build a Windows kit's launcher beside the player in scripts/build_player.py
 and a macOS kit's launch library in scripts/build_kit.py. For tests that

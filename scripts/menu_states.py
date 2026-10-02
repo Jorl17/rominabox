@@ -5,7 +5,7 @@ is legible, whether an open list covers the callout arrows, or whether a
 selected option is clearly selected. Only a picture shows these, and
 without this script we would have to launch a game to see one.
 
-    python3 scripts/menu_states.py work/menu-states
+    uv run python scripts/menu_states.py work/menu-states
 
 The states are in `scripts/fixtures/menu-states.json`, where we declare them
 once. We draw every design in `desktop/designs.json` for the console we
@@ -376,7 +376,7 @@ def fixed_place(output: Path, record: bool = False) -> int:
             "closed control is in a free band; its list opens into the scene, "
             "and what it lands on is something the player was reading.\n"
             "If this is deliberate, look at the pictures and re-record:\n"
-            "  python3 scripts/menu_states.py --fixed-place --record work/menu-states-fixed",
+            "  uv run python scripts/menu_states.py --fixed-place --record work/menu-states-fixed",
             file=sys.stderr,
         )
         return 1

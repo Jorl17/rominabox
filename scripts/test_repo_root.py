@@ -5,7 +5,7 @@ keeps their games. Every script that builds against RmlUi must use the
 declared RmlUi, the picture tests must render with the helper in the builder
 package, and no script may contain the removed experiment tree.
 
-    python3 scripts/test_repo_root.py
+    uv run python scripts/test_repo_root.py
 
 What this does NOT prove: that a place we accept contains what a test uses.
 """

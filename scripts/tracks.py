@@ -3,8 +3,8 @@
 We report the state of every worktree, so that someone notices a stopped
 one without having to remember to look.
 
-    python3 scripts/tracks.py            # one line per worktree, problems first
-    python3 scripts/tracks.py --quiet    # only the worktrees that need attention
+    uv run python scripts/tracks.py            # one line per worktree, problems first
+    uv run python scripts/tracks.py --quiet    # only the worktrees that need attention
 
 We only report and never act. Merging, restarting and removing stay manual.
 """

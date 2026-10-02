@@ -5,7 +5,7 @@ failures produce no error: two checkouts that use the same port, a lock that
 does not serialise, or two checkouts that build into one cargo target.
 Because we get no message for any of those, we check them here.
 
-    python3 scripts/test_worktree.py
+    uv run python scripts/test_worktree.py
 
 We run these against this repository, but we create nothing outside a
 temporary directory and never touch the canonical checkout's data.

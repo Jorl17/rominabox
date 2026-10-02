@@ -4,9 +4,9 @@ We make the picture of a filter by applying the filter, so every preset in
 the catalogue has a preview, a change to a fragment changes its preview, and
 a shader that an author supplies can have a preview too.
 
-    python3 scripts/render_shader_previews.py            # regenerate every preview
-    python3 scripts/render_shader_previews.py --check    # fail if any has drifted
-    python3 scripts/render_shader_previews.py --library  # redraw libretro's presets
+    uv run python scripts/render_shader_previews.py            # regenerate every preview
+    uv run python scripts/render_shader_previews.py --check    # fail if any has drifted
+    uv run python scripts/render_shader_previews.py --library  # redraw libretro's presets
 
 We take the GLSL from the exporter, so we compile the same GLSL as in an
 exported game and not a copy of it. Rendering requires the Chrome already on
@@ -285,7 +285,7 @@ def main() -> int:
             print(
                 f"\n{len(drifted) + len(extra)} preview(s) do not match the shaders "
                 "that make them. The shader is the source. Regenerate with:\n"
-                "  python3 scripts/render_shader_previews.py",
+                "  uv run python scripts/render_shader_previews.py",
                 file=sys.stderr,
             )
             return 1

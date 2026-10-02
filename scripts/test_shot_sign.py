@@ -8,7 +8,7 @@ create a new container each time, and we must not delete those in a script.
 This applies only to macOS. A Windows game's sandbox is in its launch plan,
 which stays the same when we replace the player (see the isolation tests).
 
-    python3 scripts/test_shot_sign.py
+    uv run python scripts/test_shot_sign.py
 """
 
 from __future__ import annotations

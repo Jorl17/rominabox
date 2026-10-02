@@ -1,6 +1,6 @@
 """Stage the runtime kit's own assets from this checkout, for every platform.
 
-    python3 scripts/kit_assets.py [KIT]      # default: desktop/src-tauri/resources/runtime
+    uv run python scripts/kit_assets.py [KIT]      # default: desktop/src-tauri/resources/runtime
 
 What we read from the kit on export besides the player: every menu design,
 the shared parts we compose them with, the controller pictures, the menu
@@ -84,7 +84,7 @@ def stage(kit: Path) -> None:
             "Staging into it would change that checkout's kit, and every worktree linked to\n"
             "it. If this worktree needs its own kit, which it does if it is changing a\n"
             "design or the fork, ask for one:\n\n"
-            "  python3 scripts/worktree.py create <name> --own-runtime\n"
+            "  uv run python scripts/worktree.py create <name> --own-runtime\n"
         )
     kit.mkdir(parents=True, exist_ok=True)
 

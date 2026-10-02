@@ -9,7 +9,7 @@ we link native_runtime/retroarch_unreached.c into every probe. It has a weak
 stand-in for every other name, which a definition in a linked source
 overrides, and reaching a stand-in stops the program with the stand-in's name.
 
-    python3 scripts/retroarch_probe.py OUTPUT PROGRAM.c SOURCE... [-DNAME...]
+    uv run python scripts/retroarch_probe.py OUTPUT PROGRAM.c SOURCE... [-DNAME...]
 
 We compile PROGRAM.c with the SOURCEs, named relative to vendor/retroarch,
 into the directory OUTPUT, and print the program's path. With -DNAME we
