@@ -36,7 +36,7 @@ bool menu_input_dialog_get_display_kb(void) { return false; }
 bool rib_rmlui_typing(void) { return false; }
 bool rib_rmlui_menu_hotkey_key(unsigned code) { (void)code; return false; }
 /* Whether ROM-in-a-Box's menu is open. */
-bool rib_rmlui_reads_keyboard(void) { return menu.flags & MENU_ST_FLAG_ALIVE; }
+bool rib_rmlui_reads_input(void) { return menu.flags & MENU_ST_FLAG_ALIVE; }
 settings_t *config_get_ptr(void) { return &settings; }
 
 /* A controller as reported by the joypad drivers of the platforms

@@ -40,7 +40,7 @@ bool rib_rmlui_typing(void) { return typing; }
 /* Whether a hotkey that acts in the menu is bound to the key `code`. */
 bool rib_rmlui_menu_hotkey_key(unsigned code) { return code == bound; }
 /* Whether ROM-in-a-Box's menu is open. */
-bool rib_rmlui_reads_keyboard(void) { return menu.flags & MENU_ST_FLAG_ALIVE; }
+bool rib_rmlui_reads_input(void) { return menu.flags & MENU_ST_FLAG_ALIVE; }
 /* The game's controller, which the function requests while the game plays. */
 settings_t *config_get_ptr(void) { return &settings; }
 
