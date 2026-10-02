@@ -35,7 +35,7 @@ pub fn python() -> std::process::Command {
         Some(interpreter) => std::process::Command::new(interpreter),
         None => {
             let mut uv = std::process::Command::new("uv");
-            uv.args(["run", "--locked", "--project"]).arg(root()).arg("python");
+            uv.args(["run", "--locked", "--exact", "--project"]).arg(root()).arg("python");
             uv
         }
     }

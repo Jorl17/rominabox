@@ -13,7 +13,7 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 // python(...args) returns the whole command.
 export function python(...args) {
   if (process.env.ROMINABOX_PYTHON) return [process.env.ROMINABOX_PYTHON, ...args];
-  return ["uv", "run", "--locked", "--project", ROOT, "python", ...args];
+  return ["uv", "run", "--locked", "--exact", "--project", ROOT, "python", ...args];
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
