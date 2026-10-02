@@ -16,6 +16,7 @@ from __future__ import annotations
 import shutil
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import licences  # noqa: E402
@@ -80,6 +81,11 @@ def main() -> int:
         check(names(problems, "crates/left-behind-0.1.0.txt", "no component"),
               "an entry no component uses fails the check", shown)
         check(len(problems) == 4, "and nothing else does", shown)
+        # Licences are for attribution, so we only warn about these problems
+        # and fail nothing.
+        with patch.object(licences, "OUT", folder), patch.object(sys, "argv", ["licences.py", "--check"]):
+            status = licences.main()
+        check(status == 0, "a check that finds them fails nothing", f"exit status {status}")
 
         # We warn about a library with no entry and still keep it in the kit.
         unheard = fake_build(Path(temporary) / "unheard", ["deps/mbedtls/aes.c", "deps/unheard-of/lib.c"])

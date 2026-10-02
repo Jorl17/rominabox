@@ -296,7 +296,7 @@ def main() -> int:
     parser.add_argument("--refresh", action="store_true", help="read every text again, those on the network too")
     arguments = parser.parse_args()
     if arguments.check:
-        problems = check()
+        problems = check(OUT)
         for problem in problems:
             print(problem)
         if arguments.player_build is not None:
