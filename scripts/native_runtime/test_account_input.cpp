@@ -109,7 +109,9 @@ int main(int argc, char **argv) {
    cancel_button->Focus();
    entry.physical(true, RETROK_RETURN, '\r', 0);
    check(cancel.count == 1 && submit.count == 0, "Enter activates the focused Cancel button");
-   // Alt+Enter is the fullscreen chord, never the form's Enter.
+#if !defined(__APPLE__)
+   // On Windows and Linux Alt+Enter is the fullscreen chord, never the
+   // form's Enter.
    check(!entry.physical(true, RETROK_RETURN, '\r', RETROKMOD_ALT) && cancel.count == 1 && submit.count == 0,
          "the sign-in form leaves Alt+Return to the fullscreen chord");
    check(!entry.physical(false, RETROK_RETURN, 0, RETROKMOD_ALT),
@@ -117,6 +119,7 @@ int main(int argc, char **argv) {
    submit_button->Focus();
    check(!entry.physical(true, RETROK_KP_ENTER, '\r', RETROKMOD_ALT) && submit.count == 0,
          "the keypad's Alt+Enter is not the form's either");
+#endif
    entry.disable();
    check(!entry.physical(true, RETROK_a, 'a', 0), "Closed form releases keyboard routing");
    check(!entry.typing(), "Closed form lets go of the keyboard");
@@ -241,8 +244,10 @@ int main(int argc, char **argv) {
    username = dynamic_cast<Rml::ElementFormControlInput*>(document.root()->GetElementById("achievement-username"));
    check(username->GetValue().empty(), "Modal text does not reach the underlying username");
    capture("confirmation");
+#if !defined(__APPLE__)
    check(!achievements.physical(true, RETROK_RETURN, '\r', RETROKMOD_ALT) && achievements.modal() && quits == 0,
          "the confirmation leaves Alt+Return to the fullscreen chord");
+#endif
    achievements.physical(true, RETROK_ESCAPE, 0, 0);
    check(!achievements.modal(), "Physical Escape cancels the pending-upload confirmation");
    check(document.get_context()->GetFocusElement() == username, "Escape restores the form's focused field");
