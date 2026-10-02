@@ -8,6 +8,7 @@
     "macos-x86_64": "a5200_libretro.dylib",
     "windows-x86_64": "a5200_libretro.dll"
   },
+  "libraryName": "a5200",
   "license": {
     "spdx": "GPL-2.0",
     "file": "a5200.txt"

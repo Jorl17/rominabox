@@ -61,6 +61,12 @@ pub struct Game {
     /// game. The author makes one choice for both.
     #[serde(default = "crate::builder::unstated::autosave_on_quit")]
     pub autosave_on_quit: bool,
+    /// Every connected pad is player 1 from the moment the game starts, and
+    /// can open and use the menu. We send the rumble to the last pad on which
+    /// someone pressed a button. When off, each pad is a separate player, for
+    /// a game with a second player.
+    #[serde(default = "crate::builder::unstated::every_pad_is_player_one")]
+    pub every_pad_is_player_one: bool,
     /// The Options entries we offer in this game. When absent, we use the
     /// design's defaults. With an empty list, we show no Options button.
     #[serde(default, deserialize_with = "menu_entries")]

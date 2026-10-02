@@ -267,8 +267,39 @@ fn the_defaults_file_holds_each_list_and_every_pad_inputs_words() {
 fn home_on(profile: &str, button: u32) -> Vec<String> {
     let staged = crate::repo::builder_resources().join("runtime/autoconfig").join(profile);
     assert!(staged.is_file(), "the kit stages {}", staged.display());
-    crate::retroarch_probe::Probe::build(
+    pad_home().lines(&[staged.to_str().unwrap(), &button.to_string()])
+}
+
+/// As `home_on`, with `button` held on pad `pad` (from 1) of a Mega Drive
+/// game, with the remap we write on export, with or without every pad as
+/// player 1, loaded with the RetroArch remap loader.
+fn home_on_pad(profile: &str, button: u32, pad: u32, every_pad_is_player_one: bool) -> Vec<String> {
+    let staged = crate::repo::builder_resources().join("runtime/autoconfig").join(profile);
+    assert!(staged.is_file(), "the kit stages {}", staged.display());
+    let folder = rominabox_scratch::Scratch::dir("rominabox-pad-home-remap");
+    let remap = folder.path().join("Genesis Plus GX.rmp");
+    let written = crate::pad_positions::remap_file(
+        &crate::controls::profile_for_system("megadrive").unwrap(),
+        &[],
+        &crate::controls::pad_positions().unwrap(),
+        every_pad_is_player_one,
+    )
+    .unwrap();
+    std::fs::write(&remap, written).unwrap();
+    pad_home().lines(&[
+        staged.to_str().unwrap(),
+        &button.to_string(),
+        &pad.to_string(),
+        remap.to_str().unwrap(),
+    ])
+}
+
+/// The remap loader is the one in the player, which we build with
+/// `HAVE_CONFIGFILE`.
+fn pad_home() -> crate::retroarch_probe::Probe {
+    crate::retroarch_probe::Probe::build_defining(
         "pad_home",
+        crate::retroarch_probe::CONFIGURED,
         &[
             "configuration.c",
             "input/input_driver.c",
@@ -288,7 +319,6 @@ fn home_on(profile: &str, button: u32) -> Vec<String> {
             "libretro-common/time/rtime.c",
         ],
     )
-    .lines(&[staged.to_str().unwrap(), &button.to_string()])
 }
 
 /// Home is the menu button on each pad, as named in its RetroArch profile:
@@ -312,6 +342,29 @@ fn a_dualsense_and_an_xbox_pad_each_have_home() {
         home_on("sdl2/Xbox Series X Controller.cfg", 0),
         ["home 5", "held 0", "captured b"]
     );
+}
+
+/// The profile of an Xbox pad as staged on this platform, and its Home
+/// button.
+#[cfg(target_os = "macos")]
+const XBOX_HOME: (&str, u32) = ("sdl2/Xbox Series X Controller.cfg", 5);
+#[cfg(windows)]
+const XBOX_HOME: (&str, u32) = ("xinput/XBOX Series Controller.cfg", 10);
+
+/// Every pad is player 1 in a game unless the author turns that off. When it
+/// is on, Home on the second pad, or on the last pad in RetroArch, opens the
+/// menu as Home on the first pad does. When it is off, the second pad is
+/// player 2, and its Home does not open the menu.
+#[test]
+#[cfg(any(target_os = "macos", windows))]
+fn home_on_any_pad_that_plays_as_player_one_is_the_menus() {
+    let (profile, home) = XBOX_HOME;
+    let held = |pad: u32, every_pad: bool| home_on_pad(profile, home, pad, every_pad)[1].clone();
+    assert_eq!(held(2, true), "held 1");
+    assert_eq!(held(crate::pad_positions::PADS, true), "held 1");
+    assert_eq!(held(1, true), "held 1");
+    assert_eq!(held(2, false), "held 0");
+    assert_eq!(held(1, false), "held 1");
 }
 
 #[test]

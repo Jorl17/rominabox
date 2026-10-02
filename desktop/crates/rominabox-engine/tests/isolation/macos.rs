@@ -15,7 +15,7 @@ pub const TARGET: ExportTarget = ExportTarget::Macos;
 /// The log line for an opened sound device.
 pub const AUDIO_DEVICE_LOG: &str = "[CoreAudio]";
 /// The log line for a gamepad that the game can see.
-pub const GAMEPAD_LOG: &str = "[IOHID] Port ";
+pub const GAMEPAD_LOG: &str = "[SDL] Pad #";
 /// The log line when we keep a quiet game out of the Dock.
 pub const QUIET_WINDOW_LOG: Option<&str> = Some("[RIB] quiet activation accessory");
 

@@ -30,6 +30,7 @@ import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import { BackgroundPicker } from "./BackgroundPicker";
+import { AdvancedOptions } from "./AdvancedOptions";
 import appIcon from "../src-tauri/icons/icon.png";
 import largeIcon from "../src-tauri/icons/icon-large.png";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
@@ -1437,18 +1438,7 @@ export function App() {
                   )}
                 </div>
               </details>
-              <details className="advanced">
-                <summary>
-                  <ChevronRight size={16} />
-                  Advanced
-                </summary>
-                <Checkbox
-                  label="Advanced emulator access"
-                  checked={draft.advancedEmulatorAccess}
-                  onChange={(value) => update("advancedEmulatorAccess", value)}
-                  help="Restore RetroArch's native menus. Ordinary exports keep About, Hide, Quit and standard window actions."
-                />
-              </details>
+              <AdvancedOptions settings={draft} update={update} />
             </>
           ) : (
             <>

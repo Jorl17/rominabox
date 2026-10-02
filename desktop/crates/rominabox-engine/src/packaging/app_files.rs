@@ -237,18 +237,25 @@ pub(super) fn firmware_destination_name(source: &Path, system: &crate::systems::
 ///
 /// So we write the file to the path in `config_load_remap`,
 /// `<remap dir>/<library name>/<library name>.rmp`, with the libretro library
-/// name of the artifact. `moved` contains the lines that
-/// `pad_positions::remap_lines` returns for the author's controls.
+/// name of the artifact. It contains the lines that
+/// `pad_positions::remap_file` returns for `profile`, the author's controls
+/// as `placed`, and whether every pad plays as player 1, which also has an
+/// effect only in a remap.
 pub(super) fn stage_controller_remap(
     profile: &controls::ControlProfile,
-    moved: &str,
+    placed: &[crate::pad_positions::Placed],
+    every_pad_is_player_one: bool,
     core: &crate::systems::Core,
     remaps: &Path,
 ) -> Result<(), ExportError> {
-    let contents = crate::pad_positions::remap_file(profile, moved);
+    let contents = controls::pad_positions()
+        .and_then(|positions| {
+            crate::pad_positions::remap_file(profile, placed, &positions, every_pad_is_player_one)
+        })
+        .map_err(|error| ExportError::new(ErrorStage::Stage, error))?;
     if contents.is_empty() {
-        // Most pads are the core's default device, with nothing moved, and
-        // need no remap at all.
+        // A pad that is the core's default device, with nothing moved and
+        // each pad a separate player, gets no remap at all.
         return Ok(());
     }
     let Some(library) = core.library_name.as_deref() else {

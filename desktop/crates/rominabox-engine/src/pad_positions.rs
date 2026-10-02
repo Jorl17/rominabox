@@ -97,53 +97,73 @@ pub fn place(
     Ok(placed)
 }
 
-/// The remap lines that give the core each moved control, one line for each
-/// position that changed. We unmap a position that one control left and no
-/// other control took, so we read the control only from its new position.
-/// Empty when the author moved nothing.
-pub fn remap_lines(placed: &[Placed], positions: &[PadPosition]) -> Result<String, String> {
+/// The number of pads in an exported game, RetroArch's default on a desktop.
+/// We set `input_max_users` to it in the runtime config. In a remap, pad
+/// numbers start at 1, as in `input_playerN_` and `input_remap_port_pN`.
+pub const PADS: u32 = 8;
+
+/// The remap lines that give the core each moved control from pad `pad`,
+/// one for each position that changed. We unmap a position that one control
+/// left and no other control took, so we read the control only from its new
+/// position. Empty when the author moved nothing.
+pub fn remap_lines(placed: &[Placed], positions: &[PadPosition], pad: u32) -> Result<String, String> {
     let is_position = |id: &str| positions.iter().any(|position| position.id == id);
     let mut lines = String::new();
     for entry in placed.iter().filter(|entry| entry.slot != entry.control) {
         lines.push_str(&format!(
             "{} = \"{}\"\n",
-            remap_key(&entry.slot)?,
+            remap_key(&entry.slot, pad)?,
             bind_number(&entry.control)?
         ));
     }
     for entry in placed.iter().filter(|entry| entry.slot != entry.control) {
         let left = &entry.control;
         if is_position(left) && !placed.iter().any(|other| &other.slot == left) {
-            lines.push_str(&format!("{} = \"-1\"\n", remap_key(left)?));
+            lines.push_str(&format!("{} = \"-1\"\n", remap_key(left, pad)?));
         }
     }
     Ok(lines)
 }
 
-/// The remap file we put in an export: the emulated device, when the pad
-/// profile has one, then `moved`, the lines from `remap_lines`. Empty when
-/// there is neither.
-pub fn remap_file(profile: &ControlProfile, moved: &str) -> String {
-    let device = profile
+/// The remap file we put in an export. It contains the emulated device, when
+/// the pad profile has one. With `every_pad_is_player_one`, we map every pad
+/// after the first to player 1 (RetroArch's port map, `input_remap_port_pN`,
+/// where 0 is player 1). It also contains the moved controls, `remap_lines`,
+/// for each pad used by player 1, because in RetroArch each pad has its own
+/// remap lines. Empty when there is none of these.
+pub fn remap_file(
+    profile: &ControlProfile,
+    placed: &[Placed],
+    positions: &[PadPosition],
+    every_pad_is_player_one: bool,
+) -> Result<String, String> {
+    let pads = if every_pad_is_player_one { PADS } else { 1 };
+    let mut file = profile
         .core_device
         .map(|device| format!("input_libretro_device_p1 = \"{device}\"\n"))
         .unwrap_or_default();
-    device + moved
+    for pad in 2..=pads {
+        file.push_str(&format!("input_remap_port_p{pad} = \"0\"\n"));
+    }
+    for pad in 1..=pads {
+        file.push_str(&remap_lines(placed, positions, pad)?);
+    }
+    Ok(file)
 }
 
-/// The key for a position in a remap file, spelled as in RetroArch's remap
-/// loader (`input_remapping_load_file`, configuration.c). A button's key is
-/// `input_player1_btn_<position>` and a stick direction's key is
-/// `input_player1_stk_<stick>_<axis><sign>`.
-fn remap_key(position: &str) -> Result<String, String> {
+/// The key for a position on pad `pad` in a remap file, spelled as in
+/// RetroArch's remap loader (`input_remapping_load_file`, configuration.c).
+/// A button's key is `input_player<pad>_btn_<position>` and a stick
+/// direction's key is `input_player<pad>_stk_<stick>_<axis><sign>`.
+fn remap_key(position: &str, pad: u32) -> Result<String, String> {
     let stick = |sign: &str, symbol: &str| {
         position
             .strip_suffix(sign)
-            .map(|axis| format!("input_player1_stk_{axis}{symbol}"))
+            .map(|axis| format!("input_player{pad}_stk_{axis}{symbol}"))
     };
     match stick("_plus", "+").or_else(|| stick("_minus", "-")) {
         Some(key) => Ok(key),
-        None if joypad_ids().contains_key(position) => Ok(format!("input_player1_btn_{position}")),
+        None if joypad_ids().contains_key(position) => Ok(format!("input_player{pad}_btn_{position}")),
         None => Err(format!("RetroArch's remap has no position {position}")),
     }
 }
@@ -256,12 +276,12 @@ mod tests {
         assert_eq!(bind_number("l_x_plus"), Ok(16));
         assert_eq!(bind_number("l_y_minus"), Ok(19));
         assert_eq!(bind_number("r_y_minus"), Ok(23));
-        assert_eq!(remap_key("b").as_deref(), Ok("input_player1_btn_b"));
-        assert_eq!(remap_key("l_x_minus").as_deref(), Ok("input_player1_stk_l_x-"));
-        assert_eq!(remap_key("r_y_plus").as_deref(), Ok("input_player1_stk_r_y+"));
+        assert_eq!(remap_key("b", 1).as_deref(), Ok("input_player1_btn_b"));
+        assert_eq!(remap_key("l_x_minus", 1).as_deref(), Ok("input_player1_stk_l_x-"));
+        assert_eq!(remap_key("r_y_plus", 1).as_deref(), Ok("input_player1_stk_r_y+"));
         for position in pad_positions().unwrap() {
             assert!(bind_number(&position.id).is_ok(), "{}", position.id);
-            assert!(remap_key(&position.id).is_ok(), "{}", position.id);
+            assert!(remap_key(&position.id, 1).is_ok(), "{}", position.id);
         }
     }
 
@@ -284,7 +304,7 @@ mod tests {
             ("b".into(), "a".into(), "y".into())
         );
         assert_eq!(
-            remap_lines(&placed, &positions).unwrap(),
+            remap_lines(&placed, &positions, 1).unwrap(),
             "input_player1_btn_a = \"0\"\ninput_player1_btn_b = \"8\"\n"
         );
     }
@@ -294,7 +314,7 @@ mod tests {
         let positions = pad_positions().unwrap();
         let placed = placed("megadrive", &[("a", "x")]).unwrap();
         assert_eq!(
-            remap_lines(&placed, &positions).unwrap(),
+            remap_lines(&placed, &positions, 1).unwrap(),
             "input_player1_btn_x = \"8\"\ninput_player1_btn_a = \"-1\"\n"
         );
     }
@@ -304,7 +324,7 @@ mod tests {
         let positions = pad_positions().unwrap();
         let placed = placed("megadrive", &[]).unwrap();
         assert!(placed.iter().all(|entry| entry.slot == entry.control));
-        assert_eq!(remap_lines(&placed, &positions).unwrap(), "");
+        assert_eq!(remap_lines(&placed, &positions, 1).unwrap(), "");
     }
 
     #[test]
@@ -336,7 +356,7 @@ mod tests {
             ],
         )
         .unwrap();
-        let lines = remap_lines(&placed, &positions).unwrap();
+        let lines = remap_lines(&placed, &positions, 1).unwrap();
         for line in [
             "input_player1_btn_up = \"19\"",
             "input_player1_stk_l_y- = \"4\"",
@@ -386,7 +406,7 @@ mod tests {
             ],
         )
         .unwrap();
-        let lines = remap_lines(&placed, &positions).unwrap();
+        let lines = remap_lines(&placed, &positions, 1).unwrap();
         for line in [
             "input_player1_stk_r_x- = \"17\"",
             "input_player1_stk_l_x- = \"21\"",

@@ -38,6 +38,8 @@ pub struct Defaults {
     pub splash: bool,
     pub keep_playing_in_background: bool,
     pub autosave_on_quit: bool,
+    /// Every connected pad is for player 1.
+    pub every_pad_is_player_one: bool,
     pub advanced_emulator_access: bool,
     /// A Mac game also runs on Intel Macs, because its player, core and
     /// launcher contain Intel code beside the Apple silicon code.
@@ -86,6 +88,9 @@ pub mod unstated {
     }
     pub fn autosave_on_quit() -> bool {
         defaults().autosave_on_quit
+    }
+    pub fn every_pad_is_player_one() -> bool {
+        defaults().every_pad_is_player_one
     }
     pub fn advanced_emulator_access() -> bool {
         defaults().advanced_emulator_access

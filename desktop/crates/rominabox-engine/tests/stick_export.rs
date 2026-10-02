@@ -78,6 +78,14 @@ fn lines(text: &str) -> Vec<&str> {
     text.lines().collect()
 }
 
+/// In a game's remap, pads 2 to 8 control player 1. This is the default
+/// unless the author turns it off.
+fn every_pad_player_one() -> String {
+    (2..=rominabox_engine::pad_positions::PADS)
+        .map(|pad| format!("input_remap_port_p{pad} = \"0\"\n"))
+        .collect()
+}
+
 #[test]
 fn a_stick_bound_to_keys_reaches_the_game_as_its_capture_stores_them() {
     let root = workspace();
@@ -108,7 +116,7 @@ fn a_stick_bound_to_keys_reaches_the_game_as_its_capture_stores_them() {
     assert!(!defaults.contains("rib_position_"), "keys move nothing:\n{defaults}");
     assert_eq!(
         found(&app, "PCSX-ReARMed.rmp"),
-        "input_libretro_device_p1 = \"517\"\n",
+        "input_libretro_device_p1 = \"517\"\n".to_string() + &every_pad_player_one(),
         "the remap carries the DualShock and nothing moved"
     );
 }
@@ -141,16 +149,21 @@ fn a_stick_moved_onto_the_d_pad_reaches_the_game_with_its_remap() {
     }
     let remap = found(&app, "PCSX-ReARMed.rmp");
     let remapped = lines(&remap);
-    for line in [
-        "input_libretro_device_p1 = \"517\"",
-        "input_player1_btn_up = \"19\"",
-        "input_player1_stk_l_y- = \"4\"",
-        "input_player1_btn_left = \"17\"",
-        "input_player1_stk_l_x- = \"6\"",
-    ] {
-        assert!(remapped.contains(&line), "no {line} in\n{remap}");
+    assert!(remap.starts_with(&("input_libretro_device_p1 = \"517\"\n".to_string() + &every_pad_player_one())));
+    // We move the stick on every pad, each with its own lines.
+    for pad in 1..=rominabox_engine::pad_positions::PADS {
+        for line in [
+            format!("input_player{pad}_btn_up = \"19\""),
+            format!("input_player{pad}_stk_l_y- = \"4\""),
+            format!("input_player{pad}_btn_left = \"17\""),
+            format!("input_player{pad}_stk_l_x- = \"6\""),
+        ] {
+            assert!(remapped.contains(&line.as_str()), "no {line} in\n{remap}");
+        }
+        let own = format!("input_player{pad}_");
+        assert_eq!(remapped.iter().filter(|line| line.starts_with(&own)).count(), 8, "{remap}");
     }
-    assert_eq!(remapped.len(), 9, "{remap}");
+    assert_eq!(remapped.len(), 1 + 7 + 8 * 8, "{remap}");
 }
 
 #[test]

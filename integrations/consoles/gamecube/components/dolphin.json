@@ -8,6 +8,7 @@
     "macos-x86_64": "dolphin_libretro.dylib",
     "windows-x86_64": "dolphin_libretro.dll"
   },
+  "libraryName": "dolphin-emu",
   "license": {
     "spdx": "GPL-2.0-or-later",
     "file": "dolphin.txt"

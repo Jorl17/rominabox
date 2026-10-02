@@ -8,6 +8,7 @@
     "macos-x86_64": "handy_libretro.dylib",
     "windows-x86_64": "handy_libretro.dll"
   },
+  "libraryName": "Handy",
   "license": {
     "spdx": "Zlib",
     "file": "handy.txt"

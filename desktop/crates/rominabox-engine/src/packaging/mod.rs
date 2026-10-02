@@ -510,12 +510,12 @@ where
         collected_content.discs,
         &resources.join(app_file!(MenuAssets)),
     )?;
-    let moved = controls::placement(&request.game.system, &request.game.controls)
-        .and_then(|placed| crate::pad_positions::remap_lines(&placed, &controls::pad_positions()?))
+    let placed = controls::placement(&request.game.system, &request.game.controls)
         .map_err(|error| ExportError::new(ErrorStage::Stage, error))?;
     stage_controller_remap(
         &controls_profile,
-        &moved,
+        &placed,
+        request.game.every_pad_is_player_one,
         selected_core,
         &resources.join(shipped!(Remaps).0),
     )?;
@@ -595,6 +595,7 @@ where
         "advancedEmulatorAccess": request.game.advanced_emulator_access,
         "keepPlayingInBackground": request.game.keep_playing_in_background,
         "autosaveOnQuit": request.game.autosave_on_quit,
+        "everyPadIsPlayerOne": request.game.every_pad_is_player_one,
         "menuEntries": request.game.menu_entries,
         "includeAchievements": crate::achievements::included(request.game.include_achievements, request.game.show_menu),
     });

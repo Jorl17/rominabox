@@ -6,6 +6,7 @@
   "splash": true,
   "keepPlayingInBackground": false,
   "autosaveOnQuit": false,
+  "everyPadIsPlayerOne": true,
   "advancedEmulatorAccess": false,
   "intelMacs": false,
   "theme": "rominabox",

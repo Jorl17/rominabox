@@ -321,6 +321,24 @@ fn splash_without_menu_uses_rmlui_but_disables_menu_shortcuts() {
     assert!(script.contains("input_menu_toggle_gamepad_combo = \"0\""));
 }
 
+/// With every pad as player 1, the default unless the author turns it off,
+/// the player can use any pad in the RetroArch menu too. When it is off, only
+/// the first pad works there, as in plain RetroArch. In both cases, RetroArch
+/// has as many pads as the remap has as player 1.
+#[test]
+fn every_pad_drives_retroarchs_menu_while_every_pad_is_player_one() {
+    let mut settings = request(false);
+    assert!(settings.game.every_pad_is_player_one, "a game makes every pad player 1 by default");
+    let on = embedded_runtime_config(&write_test_launcher(settings.clone()));
+    assert_eq!(config_value(&on, "all_users_control_menu"), Some("true"));
+    let pads = crate::pad_positions::PADS.to_string();
+    assert_eq!(config_value(&on, "input_max_users"), Some(pads.as_str()));
+    settings.game.every_pad_is_player_one = false;
+    let off = embedded_runtime_config(&write_test_launcher(settings));
+    assert_eq!(config_value(&off, "all_users_control_menu"), Some("false"));
+    assert_eq!(config_value(&off, "input_max_users"), Some(pads.as_str()));
+}
+
 #[test]
 fn export_request_defaults_advanced_emulator_access_off() {
     let request: ExportRequest = serde_json::from_value(serde_json::json!({

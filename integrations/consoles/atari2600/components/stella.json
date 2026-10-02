@@ -8,6 +8,7 @@
     "macos-x86_64": "stella_libretro.dylib",
     "windows-x86_64": "stella_libretro.dll"
   },
+  "libraryName": "Stella",
   "license": {
     "spdx": "GPL-2.0",
     "file": "stella.txt"
