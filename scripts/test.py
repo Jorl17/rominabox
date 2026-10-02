@@ -127,13 +127,14 @@ SCOPES = [
         "catalog",
         "console packages parse, validate and generate the shipped registries",
         "that the generated data is correct for any real console, only that it is self-consistent",
-        ["cargo", "test", "--quiet", *CARGO_CATALOG],
+        # We run every test file, so a failure in one cannot hide another.
+        ["cargo", "test", "--quiet", "--no-fail-fast", *CARGO_CATALOG],
     ),
     Scope(
         "exporter",
         "the Rust exporter and player-facing declarations: staging, isolation, controls, capabilities, and that a command with no request does not read stdin",
         "that an exported game runs; every fixture core is a stand-in that is never loaded",
-        ["cargo", "test", "--quiet", *CARGO_ENGINE],
+        ["cargo", "test", "--quiet", "--no-fail-fast", *CARGO_ENGINE],
         # In disc_layout and the other layout tests we measure and hover over a
         # composed menu through the RmlUi probe (tests/support), linked with RmlUi.
         prepare=RMLUI_PREPARE,

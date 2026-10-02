@@ -5,10 +5,12 @@
 # Apple's Python 3.9 and no cargo, node or pyenv. The overlay digests depend
 # on the Pillow version, so the interpreter must be the same one.
 # Pass only scope names, --list or --all, or one of these alone:
-#   --build-player        build the player and its preview into
+#   --build-player        build the player we make the kit from (on a Mac
+#                         the universal one) and its preview into
 #                         work/mac-build with scripts/build_player.py, then
-#                         install the preview with scripts/build_kit.py. In a
-#                         second build we compile only what changed.
+#                         make the kit and install the preview with
+#                         scripts/build_kit.py. In a second build we compile
+#                         only what changed.
 #   --build-test-player   build a test-only player (menu script driver and
 #                         achievements test host) into work/mac-test-build,
 #                         again compiling only what changed
@@ -41,8 +43,9 @@ player_build="$PWD/work/mac-build"
 test_build="$PWD/work/mac-test-build"
 
 if [[ $# -eq 1 && "$1" == "--build-player" ]]; then
-  print -u2 "run-tests: building into $player_build"
-  python3 scripts/build_player.py "$player_build"
+  kit_target=$(python3 -c 'import sys; sys.path.insert(0, "scripts"); import core_source, native_build; print(native_build.kit_target(core_source.host_target()))')
+  print -u2 "run-tests: building $kit_target into $player_build"
+  python3 scripts/build_player.py --target "$kit_target" "$player_build"
   exec python3 scripts/build_kit.py "$player_build"
 fi
 

@@ -1,8 +1,8 @@
 //! A Windows game made on another platform, for example with the builder on
-//! a Mac. It has the same folder, core, controller profiles and launch plan
-//! as from a Windows builder, and we write the game's icon and name into its
-//! programs. The programs are real Windows programs, compiled for Windows
-//! with zig. We run them only in the tests on Windows
+//! a Mac. It is the same program as from a Windows builder, with the same
+//! core, controller profiles and launch plan, and we write the game's icon and
+//! name into its programs. The programs are real Windows programs, compiled
+//! for Windows with zig. We run them only in the tests on Windows
 //! (`windows_export.rs`).
 #![cfg(not(windows))]
 
@@ -10,7 +10,7 @@ mod export_fixture;
 
 use editpe::constants::{RT_GROUP_ICON, RT_ICON};
 use editpe::{Image, ResourceEntryName};
-use export_fixture::{export_request_from, windows_kit_here as windows_kit, workspace};
+use export_fixture::{export_request_from, unpack, windows_kit_here as windows_kit, workspace};
 use rominabox_engine::packaging::ExportTarget;
 use std::{fs, path::Path, sync::atomic::AtomicBool};
 
@@ -24,7 +24,7 @@ fn names(directory: &Path) -> Vec<String> {
 }
 
 #[test]
-fn a_windows_game_made_here_is_the_folder_a_windows_builder_makes() {
+fn a_windows_game_made_here_is_the_program_a_windows_builder_makes() {
     let root = workspace();
     let mut request = export_request_from(&root, windows_kit(&root));
     request.game.target = ExportTarget::Windows;
@@ -36,8 +36,11 @@ fn a_windows_game_made_here_is_the_folder_a_windows_builder_makes() {
     let cancelled = AtomicBool::new(false);
     let result = rominabox_engine::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
 
-    let game = request.output_dir.join("Hotkey Isolation");
-    assert_eq!(result.app_path, game);
+    // One program, containing the game that we unpack on its first launch.
+    assert_eq!(names(&request.output_dir), ["Hotkey Isolation.exe"]);
+    assert_eq!(result.app_path, request.output_dir.join("Hotkey Isolation.exe"));
+    let game = root.join("unpacked");
+    unpack(&result.app_path, &game);
     assert_eq!(names(&game), ["Hotkey Isolation.exe", "Resources", "Runtime"]);
     assert_eq!(names(&game.join("Runtime")), ["retroarch.exe"]);
     let resources = game.join("Resources");
@@ -53,7 +56,7 @@ fn a_windows_game_made_here_is_the_folder_a_windows_builder_makes() {
     let plan = fs::read_to_string(resources.join("launch.plan")).unwrap();
     assert!(plan.contains("input_joypad_driver = \"xinput\""), "{plan}");
 
-    for program in [game.join("Hotkey Isolation.exe"), game.join("Runtime/retroarch.exe")] {
+    for program in [result.app_path.clone(), game.join("Runtime/retroarch.exe")] {
         let image = Image::parse_file(&program).unwrap();
         let resources = image.resource_directory().expect("the program has resources");
         let table = |kind: u16| {

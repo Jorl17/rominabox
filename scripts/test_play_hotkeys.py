@@ -65,6 +65,19 @@ def state_files(data: Path) -> list[str]:
     return sorted(path.name for path in data.rglob("*.state*") if path.is_file())
 
 
+def files_in(data: Path) -> set[Path]:
+    """Return every file in the game's data."""
+    return {path for path in data.rglob("*") if path.is_file() and not path.is_symlink()}
+
+
+def remove_new(data: Path, before: set[Path]) -> None:
+    """Remove the files that a run wrote into the game's data (its states and
+    the remembered slot), so that the next run starts from the same data as
+    this one."""
+    for path in files_in(data) - before:
+        path.unlink()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path, nargs="?", default=OUTPUT)
@@ -93,6 +106,7 @@ def main() -> int:
         before = state_files(data)
         if before:
             raise SystemExit(f"the game's data already holds states, which this does not remove: {before}")
+        stack.callback(remove_new, data, files_in(data))
 
         failure = shots.take(app, "play-hotkeys", SCRIPT, output, reset_settings=True)
         if failure:

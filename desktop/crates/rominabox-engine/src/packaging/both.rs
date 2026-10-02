@@ -1,7 +1,7 @@
 //! One download for both platforms. We make the game for Mac and for Windows,
 //! each with the ordinary export, and zip both into `<title>.zip`, with
-//! `Mac/<title>.app` and `Windows/<title>`. In the zip, the Mac programs stay
-//! executable on whichever system we make it (`archive`).
+//! `Mac/<title>.app` and `Windows/<title>.exe`. In the zip, the Mac programs
+//! stay executable on whichever system we make it (`archive`).
 
 use super::{archive, emit, export_game, ErrorStage, ExportError, ExportProgress, ExportRequest, ExportResult};
 use super::{ExportStage, ExportTarget, OwnedStaging};

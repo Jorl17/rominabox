@@ -174,6 +174,8 @@ class NativeHarnessTimeoutTest(unittest.TestCase):
             patch.object(exported_game, "log_of", return_value=None),
             patch.object(exported_game, "launcher_of", return_value=Path("/fake/launcher")),
             patch.object(exported_game, "quiet_env", return_value="ROMINABOX_QUIET"),
+            # We would otherwise run codesign on the fake player below.
+            patch.object(exported_game, "prepared_storage"),
             patch.object(test_discs, "forget_tray_record"),
             patch.object(test_discs, "leftover_problem", return_value="4242 /fake/launcher"),
             patch.object(test_discs.subprocess, "Popen", return_value=player) as popen,

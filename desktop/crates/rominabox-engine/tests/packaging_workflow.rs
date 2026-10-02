@@ -362,7 +362,8 @@ fn a_cached_core_is_used_without_a_word_when_the_check_fails() {
 }
 
 /// Nothing depends on a licence text. We use a cached core without its text
-/// like any cached core, with no message and no download.
+/// like any cached core, with no message, and do not download the core
+/// again. When we can, we fetch only its text.
 #[test]
 fn a_cached_core_without_its_licence_text_is_used_without_a_word() {
     let root = workspace();
@@ -388,7 +389,11 @@ fn a_cached_core_without_its_licence_text_is_used_without_a_word() {
     let (said, shipped) = export_with(&mut request, &table);
     assert_eq!(said, []);
     assert_eq!(shipped.unwrap(), b"cached");
-    assert_eq!(table.downloads.borrow().len(), fetched);
+    let tried = table.downloads.borrow()[fetched..].to_vec();
+    assert!(
+        tried.iter().all(|url| url.ends_with("/LICENSE")),
+        "only the licence text is fetched again: {tried:?}"
+    );
 }
 
 #[test]

@@ -1,12 +1,13 @@
 //! One download for both platforms. We zip the game made for Mac and for
-//! Windows as `<title>.zip`, with `Mac/<title>.app` and `Windows/<title>`.
-//! Unpacked on a Mac, the Mac game is signed and its programs are
-//! executable, and the Windows game is the folder we make in a Windows builder.
+//! Windows as `<title>.zip`, with `Mac/<title>.app` and
+//! `Windows/<title>.exe`. Unpacked on a Mac, the Mac game is signed and its
+//! programs are executable, and the Windows game is the one program we make
+//! in a Windows builder.
 #![cfg(target_os = "macos")]
 
 mod export_fixture;
 
-use export_fixture::{export_request_from, fixture_kit, windows_kit_here, workspace};
+use export_fixture::{export_request_from, fixture_kit, unpack, windows_kit_here, workspace};
 use rominabox_engine::packaging::{export_for_both, ErrorStage, ExportTarget};
 use std::os::unix::fs::PermissionsExt;
 use std::{fs, path::PathBuf, process::Command, sync::atomic::AtomicBool};
@@ -61,7 +62,9 @@ fn both_platforms_are_one_zip_holding_each_game() {
         "{}",
         String::from_utf8_lossy(&verified.stderr)
     );
-    let windows = unzipped.join("Windows/Hotkey Isolation");
+    let program = unzipped.join("Windows/Hotkey Isolation.exe");
+    let windows = root.join("windows-unpacked");
+    unpack(&program, &windows);
     assert!(windows.join("Hotkey Isolation.exe").is_file());
     assert!(windows.join("Runtime/retroarch.exe").is_file());
     assert!(windows.join("Resources/game-core.dll").is_file());
