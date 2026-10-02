@@ -15,4 +15,4 @@ comes from, the licence it declares and what uses it, then each licence text,
 headed by where it was read.
 
   uv run python scripts/licences.py            # write this folder again
-  uv run python scripts/licences.py --check    # fail on a missing, stale or unused entry
+  uv run python scripts/licences.py --check    # warn of a missing, stale or unused entry

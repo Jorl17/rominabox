@@ -237,7 +237,7 @@ SCOPES = [
     ),
     Scope(
         "licences",
-        "that licenses/ holds a current entry for every third-party component: the player's libraries, the cores, the crates, the builder's npm packages, the fonts and the data the product carries; and that a missing, changed or unused entry, or a player build compiling a fork library with no entry, fails",
+        "that licenses/ holds a current entry for every third-party component: the player's libraries, the cores, the crates, the builder's npm packages, the fonts and the data the product carries; and that a missing, changed or unused entry, or a player build compiling a fork library with no entry, is named in a warning that fails nothing",
         "that a text read from the network is still what its URL serves, or that a component's declared licence is right; it reads no network, and the real player build only when build_kit.py makes a kit",
         [PYTHON, str(ROOT / "scripts/test_licences.py")],
     ),

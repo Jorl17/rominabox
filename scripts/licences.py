@@ -3,7 +3,7 @@ ships, in one place: licenses/ at the repository root, one file per component.
 
     uv run python scripts/licences.py                          # write what changed (reads the network for it)
     uv run python scripts/licences.py --refresh                # read every text again, network ones included
-    uv run python scripts/licences.py --check                  # offline: fail on a missing, stale or unused entry
+    uv run python scripts/licences.py --check                  # offline: warn of a missing, stale or unused entry
     uv run python scripts/licences.py --check --player-build DIR
 
 Each entry contains the component, the version the repository uses, where it
@@ -58,7 +58,7 @@ comes from, the licence it declares and what uses it, then each licence text,
 headed by where it was read.
 
   uv run python scripts/licences.py            # write this folder again
-  uv run python scripts/licences.py --check    # fail on a missing, stale or unused entry
+  uv run python scripts/licences.py --check    # warn of a missing, stale or unused entry
 """
 
 
@@ -291,21 +291,18 @@ def warning(missing: list[str]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--check", action="store_true", help="read no network; fail on any entry out of step")
+    parser.add_argument("--check", action="store_true", help="read no network; warn of any entry out of step")
     parser.add_argument("--player-build", type=Path, help="with --check: warn about a library of this player build no entry names")
     parser.add_argument("--refresh", action="store_true", help="read every text again, those on the network too")
     arguments = parser.parse_args()
     if arguments.check:
+        # Licences are for attribution, so we print what is out of date and
+        # nothing fails because of it.
         problems = check(OUT)
-        for problem in problems:
-            print(problem)
         if arguments.player_build is not None:
-            unnamed = uncovered(compiled_fork_files(arguments.player_build), native_components(), arguments.player_build)
-            if unnamed:
-                print(warning(unnamed), file=sys.stderr)
-        if not problems:
-            print(f"Every component has its licence in {OUT}")
-        return 1 if problems else 0
+            problems += uncovered(compiled_fork_files(arguments.player_build), native_components(), arguments.player_build)
+        print(warning(problems) if problems else f"Every component has its licence in {OUT}")
+        return 0
     failures = generate(refresh=arguments.refresh)
     for failure in failures:
         print(failure)

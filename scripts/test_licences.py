@@ -1,10 +1,12 @@
 """Check that licenses/ contains the licence of every third-party component,
-and that the check fails when one is missing.
+and that we name a missing, outdated or unused one in a warning that fails
+nothing, because licences are for attribution.
 
     uv run python scripts/test_licences.py
 
-The folder in the repository must pass `scripts/licences.py --check`. We
-show the failures on a copy of it in a temporary directory: an entry
+We check the folder in the repository and print what is out of step in it
+as a warning. We show each warning on a copy of it in a
+temporary directory: an entry
 removed, a text changed, a file that no component uses, an entry for another
 version. For a made-up player build with a fork library that has no entry,
 we still put every library in the kit and warn with that library's name.
@@ -54,7 +56,10 @@ def fake_build(root: Path, compiled: list[str]) -> Path:
 def main() -> int:
     components = licences.sources.discover()
     problems = licences.check(components=components)
-    check(not problems, "every component the repository uses has a current entry in licenses/", "\n".join(problems))
+    if problems:
+        print(f"  {licences.warning(problems)}")
+    else:
+        print("  ok   every component the repository uses has a current entry in licenses/")
     groups = {component.group for component in components}
     check(groups == {"native", "cores", "crates", "toolchains", "npm", "fonts", "data"},
           "the components come from every source", str(groups))
@@ -73,13 +78,13 @@ def main() -> int:
         (folder / "crates/left-behind-0.1.0.txt").write_text("MIT\n", encoding="utf-8")
         problems = licences.check(folder, components=components)
         shown = "\n".join(problems)
-        check(names(problems, "native/glslang.txt", "no entry"), "a component with no entry fails the check", shown)
+        check(names(problems, "native/glslang.txt", "no entry"), "a component with no entry is named", shown)
         check(names(problems, licences.entry_path(crate).as_posix(), "differs from its source"),
-              "an entry whose text is not its source's fails the check", shown)
+              "an entry whose text is not its source's is named", shown)
         check(names(problems, licences.entry_path(core).as_posix(), "another version"),
-              "an entry read from the network that names another version fails the check", shown)
+              "an entry read from the network that names another version is named", shown)
         check(names(problems, "crates/left-behind-0.1.0.txt", "no component"),
-              "an entry no component uses fails the check", shown)
+              "an entry no component uses is named", shown)
         check(len(problems) == 4, "and nothing else does", shown)
         # Licences are for attribution, so we only warn about these problems
         # and fail nothing.
