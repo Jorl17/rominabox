@@ -1,8 +1,9 @@
 """The player build for a launched test, and the player inside it.
 
-A test that launches the player gets the exact build from
-ROMINABOX_TEST_BUILD. That build must come from the current fork, or the
-test proves something about older code.
+A launched test runs the test player of this checkout, which we build from
+the current fork commit, or the build in ROMINABOX_TEST_BUILD, which we refuse
+unless it was built from that same commit. Either way the test proves
+something about the code in the tree, not about a build somebody made by hand.
 """
 
 from __future__ import annotations
@@ -12,14 +13,18 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import core_source  # noqa: E402
 import native_build  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-HOW = "build one with python3 scripts/build_player.py <absolute dir> and name it in ROMINABOX_TEST_BUILD"
+# The test player of this checkout: one folder, built again in place, so after
+# the first build we compile only what changed in the fork.
+TEST_BUILD = ROOT / "work/test-player"
+# A test player has the menu script driver, which we use in every launched
+# test to drive the menu, and sends achievements only to a loopback host.
+TEST_SWITCHES = {"ROMINABOX_MENU_SCRIPT_BUILD": "1", "ROMINABOX_ACHIEVEMENTS_TEST_BUILD": "1"}
 
 
 def info(build: Path) -> dict:
@@ -49,22 +54,20 @@ def runs_scripts(build: Path) -> bool:
     return record.is_file() and info(build).get("capabilities", {}).get("menuScript") is True
 
 
-def newest_script_build(builds: Iterable[Path], revision: str) -> Path | None:
-    """The newest of `builds` that a launched test can run: built from the fork
-    commit `revision`, with the menu script driver, and containing its player.
-    A build from another commit proves nothing about the code of this one."""
-    usable = [build for build in builds
-              if runs_scripts(build) and info(build).get("retroarchCommit") == revision
-              and player_in(build).is_file()]
-    return max(usable, key=lambda build: player_in(build).stat().st_mtime, default=None)
-
-
 def selected_build() -> Path:
-    """The build in ROMINABOX_TEST_BUILD, refused unless it is from the current fork."""
+    """The build in ROMINABOX_TEST_BUILD, refused unless it is from the current
+    fork, or else the test player of this checkout, built now. We then put the
+    test player in ROMINABOX_TEST_BUILD, so the programs started from here run
+    it and build nothing."""
     selected = os.environ.get("ROMINABOX_TEST_BUILD")
-    if not selected:
-        raise SystemExit(f"no player build selected; {HOW}")
-    return current_build(Path(selected))
+    if selected:
+        return current_build(Path(selected))
+    built = subprocess.run([sys.executable, str(ROOT / "scripts/build_player.py"), str(TEST_BUILD)],
+                           env={**os.environ, **TEST_SWITCHES}, capture_output=True, text=True, errors="replace")
+    if built.returncode != 0:
+        raise SystemExit(f"could not build the test player in {TEST_BUILD}:\n{(built.stdout + built.stderr)[-4000:]}")
+    os.environ["ROMINABOX_TEST_BUILD"] = str(TEST_BUILD)
+    return current_build(TEST_BUILD)
 
 
 def current_build(named: Path) -> Path:

@@ -249,30 +249,17 @@ def shot_bundle_prefix(_workspace: Path) -> str:
 
 
 def built_player() -> Path:
-    """The player for a launched test: one built in this checkout with the
-    script driver of the menu.
+    """The player for a launched test: the test player from player_build,
+    built from the fork as it is committed now.
 
     A shot must show the fork as it is now, not as it was when we froze the
-    kit, and after a change to the player we build it in this checkout. Each
-    checkout has a separate build directory, so in a worktree where we built
-    the player, the shots show that player. We drive the menu with a script
-    in every launched test, and only a test build has the driver, so we never
-    fall back to the player in the kit, which is the one we ship in games.
+    kit. We drive the menu with a script in every launched test, and only a
+    test build has the driver, so we never fall back to the player in the
+    kit, which is the one we ship in games.
     """
-    how = (
-        "build one with ROMINABOX_MENU_SCRIPT_BUILD=1 python3 "
-        "scripts/build_player.py <absolute dir>"
-    )
-    if os.environ.get("ROMINABOX_TEST_BUILD"):
-        build = player_build.selected_build()
-        if not player_build.runs_scripts(build):
-            raise SystemExit(f"{build} has no menu script driver; {how}")
-        return player_build.player_in(build)
-    revision = player_build.current_revision()
-    build = player_build.newest_script_build((ROOT / "work").glob("fork-build-*"), revision)
-    if build is None:
-        raise SystemExit(f"no player that runs menu scripts in work/fork-build-* was built "
-                         f"from the fork's {revision[:10]}; {how}")
+    build = player_build.selected_build()
+    if not player_build.runs_scripts(build):
+        raise SystemExit(f"{build} has no menu script driver; build it with ROMINABOX_MENU_SCRIPT_BUILD=1")
     return player_build.player_in(build)
 
 

@@ -13,8 +13,9 @@ the slots as in the menu, and the selection. In a second run, after we launch
 the game again, we start on the slot chosen in the first run, and QUICK SAVE
 saves there. That run ends on the notice, for its picture.
 
-Use an explicit committed native build, with the worktree environment loaded:
-    ROMINABOX_TEST_BUILD=/absolute/build python3 scripts/test_play_hotkeys.py [OUTPUT]
+We run the test player of this checkout, built from the committed fork
+(player_build.selected_build):
+    python3 scripts/test_play_hotkeys.py [OUTPUT]
 
 This does not prove that a key press on a physical keyboard reaches the menu
 (in the script we hold the key where we read the keyboard for the menu),
@@ -82,10 +83,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path, nargs="?", default=OUTPUT)
     arguments = parser.parse_args()
-    if not os.environ.get("ROMINABOX_TEST_BUILD"):
-        raise SystemExit("select the exact committed player with ROMINABOX_TEST_BUILD")
-    if not os.environ.get("ROMINABOX_GAME_BUNDLE_PREFIX", "").startswith("app.rominabox.game.wt-"):
-        raise SystemExit("load scripts/worktree.py env before running the generated game")
     shots.built_player()
     output = arguments.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -99,7 +96,7 @@ def main() -> int:
             failures.append(message)
 
     with ExitStack() as stack:
-        app = stack.enter_context(shots.build_a_game(rom, output / "build", settings=EXPORT))
+        app = stack.enter_context(shots.build_a_game(rom, output / "build", settings=EXPORT, namespace=".hotkeys"))
         data = exported_game.prepared_storage(app)
         if data is None:
             raise SystemExit("the exported game keeps no data of its own")

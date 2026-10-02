@@ -1,7 +1,8 @@
 """Exercise managed achievements through the exported native player.
 
-Requires a RetroArch build compiled with RIB_ACHIEVEMENTS_TEST in both C and
-C++ sources, with only ROMINABOX_RA_TEST_HOST=http://127.0.0.1:PORT allowed.
+We run the test player of this checkout (player_build.selected_build),
+compiled with RIB_ACHIEVEMENTS_TEST in both C and C++ sources, with only
+ROMINABOX_RA_TEST_HOST=http://127.0.0.1:PORT allowed.
 We use the quiet, self-terminating native launch of menu_shots, which opens a
 transparent window briefly. Run only when native launches have been approved.
 """
@@ -32,6 +33,7 @@ from achievements_native_rom import make_achievement_rom
 ROOT = Path(__file__).resolve().parent.parent
 CHECKPOINT = re.compile(r"\[RIB\] checkpoint (\S+) (\{.*\})")
 TEST_MARKER = b"ROMINABOX_RA_TEST_HOST"
+NAMESPACE = ".achievements-native"
 
 # Whether a game in its sandbox can reach the fake service of this test on
 # 127.0.0.1, on each platform. In the macOS sandbox, a game with network
@@ -313,32 +315,22 @@ def main() -> None:
     parser.add_argument("--output", type=Path,
                         default=ROOT / "work/test-output/achievements-native")
     args = parser.parse_args()
-    if not os.environ.get("ROMINABOX_GAME_BUNDLE_PREFIX"):
-        parser.error("run eval \"$(python3 scripts/worktree.py env)\" first")
-    selected = os.environ.get("ROMINABOX_TEST_BUILD")
-    if not selected:
-        parser.error("ROMINABOX_TEST_BUILD must name the exact test build")
-    build_info = json.loads((Path(selected) / "build-info.json").read_text())
-    if build_info.get("testOnly") is not True:
-        parser.error("the selected build is not marked testOnly")
     player = shots.built_player()
     if TEST_MARKER not in player.read_bytes():
-        parser.error("ROMINABOX_TEST_BUILD must name the exact test-guarded RetroArch build")
+        parser.error(f"{player} has no loopback achievements host; build it with ROMINABOX_ACHIEVEMENTS_TEST_BUILD=1")
 
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     rom_bytes = make_achievement_rom()
     rom = output / "achievement-native.md"
     rom.write_bytes(rom_bytes)
-    # Separate this deterministic fixture from the ordinary screenshot identity.
-    os.environ["ROMINABOX_GAME_BUNDLE_PREFIX"] += ".achievements-native"
-
     with fixture_service() as service:
         os.environ["ROMINABOX_RA_TEST_HOST"] = f"http://127.0.0.1:{service.server_port}"
+        # Apart from the ordinary screenshot identity.
         with shots.build_a_game(rom, output, settings={
             "includeAchievements": True, "autosaveOnQuit": True,
             "keepPlayingInBackground": True,
-        }) as app:
+        }, namespace=NAMESPACE) as app:
             reaching_the_service(app)
             data = owned_storage(app, rom_bytes)
             session(data, True)
@@ -386,7 +378,8 @@ def main() -> None:
             leave_storage(data, rom_bytes)
 
         service.clear()
-        with shots.build_a_game(rom, output, settings={"includeAchievements": False}) as excluded_app:
+        with shots.build_a_game(rom, output, settings={"includeAchievements": False},
+                                namespace=NAMESPACE) as excluded_app:
             excluded = run_case(excluded_app, output, "excluded", [
                 "report:excluded", "resume", "wait:400", "report:after",
             ])

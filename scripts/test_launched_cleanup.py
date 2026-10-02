@@ -9,7 +9,7 @@ we make an export fail on purpose at such a point and then look for what
 was left: anything new or changed in the person's ROM-in-a-Box folders, the
 game's sandbox, and the temporary folders of the run.
 
-    ROMINABOX_TEST_BUILD=/absolute/build python scripts/test_launched_cleanup.py
+    python scripts/test_launched_cleanup.py
 
 We do not check that a game plays (the launched tests), or what is left
 after a Mac game, which we never unpack and whose data is in its container.
@@ -83,8 +83,6 @@ def main() -> int:
     if exported_game.PLATFORM != "windows":
         print(f"{exported_game.PLATFORM}: a game unpacks nothing and registers nothing outside its container")
         return 0
-    if not os.environ.get("ROMINABOX_TEST_BUILD"):
-        raise SystemExit("select the exact committed player with ROMINABOX_TEST_BUILD")
     os.environ.setdefault("ROMINABOX_SCRATCH_RUN", f"cleanup-{os.getpid()}")
     menu_shots.built_player()
     real_unpacked = windows_pack.unpacked
@@ -108,11 +106,13 @@ def main() -> int:
                 raise AssertionError("unreachable")
 
             with mock.patch.object(windows_pack, "unpacked", unpack_then_fail):
-                with menu_shots.build_a_game(rom, workspace, settings={"title": "Cleanup While Building"}):
+                with menu_shots.build_a_game(rom, workspace, settings={"title": "Cleanup While Building"},
+                                           namespace=".cleanup"):
                     pass
 
         def playing(fail: Callable[[], None]) -> None:
-            with menu_shots.build_a_game(rom, workspace, settings={"title": "Cleanup While Playing"}):
+            with menu_shots.build_a_game(rom, workspace, settings={"title": "Cleanup While Playing"},
+                                       namespace=".cleanup"):
                 fail()
 
         def shipping(fail: Callable[[], None]) -> None:

@@ -8,7 +8,9 @@ A game must only use the absolute data folder that we give in
 ROMINABOX_DATA_DIR in its launcher. We ask the player only for its feature
 list, which we print before any window or core, so we open no window here.
 
-    ROMINABOX_TEST_BUILD=/absolute/build python3 scripts/test_player.py
+We ask the test player of this checkout, built from the committed fork
+(player_build.selected_build):
+    python3 scripts/test_player.py
 """
 
 from __future__ import annotations

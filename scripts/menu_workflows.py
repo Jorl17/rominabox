@@ -10,9 +10,10 @@ lists, so the record is the same for both runners. We compare the picture
 only here, with its reference in scripts/fixtures/menu-workflow-pictures,
 allowing the one level by which graphics cards can round differently.
 
-Use an explicit committed native build, with the worktree environment loaded:
-    ROMINABOX_TEST_BUILD=/absolute/build python3 scripts/menu_workflows.py
-    ROMINABOX_TEST_BUILD=/absolute/build python3 scripts/menu_workflows.py --record
+We run the test player of this checkout, built from the committed fork
+(player_build.selected_build):
+    python3 scripts/menu_workflows.py
+    python3 scripts/menu_workflows.py --record
 
 We use menu_shots for export, launch, capture and lifetime management, and
 keep the picture, script and checkpoint log of every case. With --record we
@@ -278,11 +279,7 @@ def main() -> int:
     parser.add_argument("--record", action="store_true", help="replace the launched cases' baseline entries")
     parser.add_argument("--output", type=Path, default=OUTPUT)
     arguments = parser.parse_args()
-    if not os.environ.get("ROMINABOX_TEST_BUILD"):
-        raise SystemExit("select the exact committed player with ROMINABOX_TEST_BUILD")
-    if not os.environ.get("ROMINABOX_GAME_BUNDLE_PREFIX", "").startswith("app.rominabox.game.wt-"):
-        raise SystemExit("load scripts/worktree.py env before running the generated fixture")
-    player = shots.built_player()  # validates build-info against this fork's HEAD
+    player = shots.built_player()
     dirty = subprocess.check_output(["git", "-C", str(ROOT / "vendor/retroarch"),
                                      "status", "--porcelain", "--untracked-files=no"], text=True)
     if dirty:
@@ -308,7 +305,8 @@ def main() -> int:
         for case in in_export_order(cases):
             key = json.dumps(case["export"], sort_keys=True)
             if key not in games:
-                games[key] = exports.enter_context(shots.build_a_game(rom, output, settings=case["export"]))
+                games[key] = exports.enter_context(shots.build_a_game(rom, output, settings=case["export"],
+                                                                         namespace=".workflows"))
             destination = output / case["key"].rsplit("/", 1)[0]
             destination.mkdir(parents=True, exist_ok=True)
             results[case["key"]] = capture(games[key], destination, case, table)

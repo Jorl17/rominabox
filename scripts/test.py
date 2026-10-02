@@ -29,6 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import core_source  # noqa: E402
+import player_build  # noqa: E402
 import programs  # noqa: E402
 import toolchain  # noqa: E402
 from built import MANIFEST as ENGINE_MANIFEST  # noqa: E402
@@ -55,12 +56,7 @@ CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog
 # uses it, or in a checkout where nobody has compiled it the scope fails.
 RMLUI_PREPARE = [[PYTHON, str(ROOT / "scripts/prepare_rmlui.py")]]
 
-# For the launched workflow cases we select a committed player explicitly and
-# use isolated storage, in a namespace apart from the other native scopes.
 WORKFLOW_COMMAND = [PYTHON, str(ROOT / "scripts/menu_workflows.py")]
-WORKFLOW_ENV = {
-    "ROMINABOX_GAME_BUNDLE_PREFIX": f"{os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.workflows",
-}
 
 
 # What we link into a headless menu driver beside the cached menu objects,
@@ -97,9 +93,9 @@ class Scope:
         command: list[str],
         slow: bool = False,
         prepare: list[list[str]] | None = None,
-        skipped: str | None = None,
         env: dict[str, str] | None = None,
         launches_games: bool = False,
+        runs_player: bool = False,
     ):
         self.name = name
         self.covers = covers
@@ -112,8 +108,10 @@ class Scope:
         # sandbox, data folder and log. We run them one at a time, so in
         # launchtime we also never time a machine busy with other games.
         self.launches_games = launches_games
-        # Why we leave a scope out of an ordinary run. We still run it when named.
-        self.skipped = skipped
+        # We run this checkout's test player here, built once before any scope
+        # starts (player_build.selected_build), as in every scope that
+        # launches a game.
+        self.runs_player = runs_player or launches_games
         # What we must stage before the scope runs. We declare it here because
         # without the declaration, a scope with generated input would work only
         # in a checkout where someone had generated it, and fail everywhere else.
@@ -258,13 +256,6 @@ SCOPES = [
         prepare=RMLUI_PREPARE,
     ),
     Scope(
-        "testplayer",
-        "that a launched test, given no build by name, runs the newest player built from the fork as "
-        "it is now with the menu's script driver, never a newer build of another commit",
-        "that such a build exists or runs; it reads build records it makes in a temporary folder",
-        [PYTHON, str(ROOT / "scripts/test_player_choice.py")],
-    ),
-    Scope(
         "fixtures",
         "that a test file this repository does not generate is fetched or skipped out loud, and that the generated cartridge is ready",
         "that a fetched disc boots; the quit scope launches one, and only when the file is actually there",
@@ -306,7 +297,6 @@ SCOPES = [
         "a real RetroAchievements account, physical keyboard/controller behavior, or on Windows the sandbox's part in signing in (the isolation scope and a hand check cover that)",
         [PYTHON, str(ROOT / "scripts/achievements_native_workflow.py")],
         slow=True,
-        skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD pointing to a test-only achievements build",
         launches_games=True,
     ),
     Scope(
@@ -347,9 +337,7 @@ SCOPES = [
         "the few workflow cases menu-workflows.json marks `launched`, in the exported player itself: one per design and a save and load through RetroArch's own state task, compared with the same baselines as the headless replay, and each picture",
         "audible cues, physical input or native focus/fullscreen; inspect the captured images directly too",
         WORKFLOW_COMMAND + ["--output", str(SCRATCH / "menu-workflows")],
-        env=WORKFLOW_ENV,
         slow=True,
-        skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player",
         launches_games=True,
     ),
     Scope(
@@ -357,9 +345,7 @@ SCOPES = [
         "in the exported test player, that QUICK SAVE writes the slot the menu has selected, its state and its picture, that PREVIOUS SLOT and NEXT SLOT step it round the six slots, that QUICK LOAD of an empty slot loads nothing and of a saved one loads it, that each says so in the notice row, that the menu shows the slot they chose, and that the next launch starts on it",
         "that a physical keyboard's press reaches the menu (the script holds the key where the menu reads the keyboard), sound, or window focus; the screen's own rules are the bridge scope's",
         [PYTHON, str(ROOT / "scripts/test_play_hotkeys.py"), str(SCRATCH / "play-hotkeys")],
-        env={"ROMINABOX_GAME_BUNDLE_PREFIX": f"{os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.hotkeys"},
         slow=True,
-        skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player",
         launches_games=True,
     ),
     Scope(
@@ -367,9 +353,7 @@ SCOPES = [
         "on Windows, that a launched test whose real export fails part-way, as the game is built, while it is open, or in the shipped scope's menu sounds case, leaves nothing of the game in the person's ROM-in-a-Box folders, no sandbox and no temporary folder",
         "that a game plays (no player starts: each launch is plan-only), or anything on macOS, whose games unpack nothing and keep their data in their containers",
         [PYTHON, str(ROOT / "scripts/test_launched_cleanup.py")],
-        env={"ROMINABOX_GAME_BUNDLE_PREFIX": f"{os.environ.get('ROMINABOX_GAME_BUNDLE_PREFIX', '')}.cleanup"},
         slow=True,
-        skipped="opt-in native launch: requires worktree.py env and ROMINABOX_TEST_BUILD for the exact committed player",
         launches_games=True,
     ),
     Scope(
@@ -377,7 +361,8 @@ SCOPES = [
         "that the built player refuses to start without an absolute data folder, with one starts and creates nothing beside itself, and on Windows declares UTF-8 as its code page; and that a header gone from the fork since the build folder was built does not stop its next build, for each kind of source it compiles",
         "where a game's folders go once it runs; it only asks the player for its feature list, before any window or core. The header check asks make what it would do, and does not build",
         [PYTHON, str(ROOT / "scripts/test_player.py")],
-        skipped="opt-in: requires ROMINABOX_TEST_BUILD for a player built from the current fork commit",
+        slow=True,
+        runs_player=True,
     ),
     Scope(
         "edges",
@@ -666,8 +651,6 @@ def main() -> int:
     if arguments.list:
         for scope in SCOPES:
             mark = " (slow)" if scope.slow else ""
-            if scope.skipped:
-                mark += f" (skipped unless named: {scope.skipped})"
             print(f"{scope.name}{mark}\n  covers    {scope.covers}\n  does not  {scope.not_covered}\n")
         return 0
 
@@ -687,13 +670,9 @@ def main() -> int:
             raise SystemExit(f"unknown scope(s): {', '.join(unknown)}; try --list")
         selected = [BY_NAME[name] for name in arguments.scopes]
     elif arguments.all:
-        selected = [scope for scope in SCOPES if not scope.skipped]
+        selected = list(SCOPES)
     else:
-        selected = [scope for scope in SCOPES if not scope.slow and not scope.skipped]
-    if not arguments.scopes:
-        for scope in SCOPES:
-            if scope.skipped:
-                print(f"skipped {scope.name}: {scope.skipped}")
+        selected = [scope for scope in SCOPES if not scope.slow]
 
     SCRATCH.mkdir(parents=True, exist_ok=True)
     # We put this stamp in every scratch directory of this run. A diff of
@@ -704,6 +683,13 @@ def main() -> int:
     # and we read a real core for a test from the local core source.
     os.environ["ROMINABOX_OFFLINE"] = "1"
     os.environ.setdefault(core_source.VARIABLE, str(core_source.core_source()))
+    # We build it once, before any scope starts, and give its path to every
+    # scope in ROMINABOX_TEST_BUILD, so we never build it again in a scope.
+    if any(scope.runs_player for scope in selected):
+        print("building the test player", flush=True)
+        built = time.monotonic()
+        player_build.selected_build()
+        print(f"test player {os.environ['ROMINABOX_TEST_BUILD']} ({time.monotonic() - built:0.1f}s)", flush=True)
     support_before = support_snapshot()
     temp_before = temp_snapshot()
     recorded: dict[str, tuple[bool, float]] = {}
