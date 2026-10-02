@@ -47,8 +47,9 @@
  *   run                   run the case
  *
  * After every step, record what the player sees highlighted (visible
- * elements with the `focused` class), what is marked as capturing a binding
- * (the `capturing` class), the visible screen panel, the requested sounds,
+ * elements with the `focused` class), what is marked as chosen (the
+ * `selected` class), what is marked as capturing a binding (the
+ * `capturing` class), the visible screen panel, the requested sounds,
  * whether we report to RetroArch that a text entry in the menu has the
  * keyboard, the attributes on the document, the boxes requested in the case,
  * and every visible menu action the pointer cannot reach at its middle.
@@ -262,7 +263,8 @@ std::string observe(const std::vector<std::string>& screen_panels,
       sounds += (index > heard ? "," : "") + json(sound_name(host.sounds[index]));
    sounds += "]";
    heard = host.sounds.size();
-   return "{\"focused\":" + marked(rib::document_contract::Focused) + ",\"capturing\":" + marked(rib::document_contract::Capturing)
+   return "{\"focused\":" + marked(rib::document_contract::Focused) + ",\"selected\":" + marked(rib::document_contract::Selected)
+         + ",\"capturing\":" + marked(rib::document_contract::Capturing)
          + ",\"screen\":" + json(screen) + ",\"sounds\":" + sounds
          + ",\"typing\":" + (rib_rmlui_typing() ? "true" : "false")
          + ",\"text\":" + words(text) + ",\"document\":" + document_attributes()
