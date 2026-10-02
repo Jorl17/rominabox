@@ -141,20 +141,24 @@ static BOOL CALLBACK found_pad(const DIDEVICEINSTANCEA *device, void *context) {
     return DIENUM_CONTINUE;
 }
 
-/* Read every controller once, as in RetroArch's joypad driver. When we cannot
- * poll a controller, even after we acquire it again, its state stays empty. */
+/* Read one controller, as in RetroArch's joypad driver. When we cannot poll
+ * the controller, even after we acquire it again, its state stays empty. */
+static void read_pad(PadRelay *relay, DWORD index) {
+    rib_pad_relay_pad *pad = &relay->view->pads[index];
+    IDirectInputDevice8A *device = relay->devices[index];
+    memset(&pad->state, 0, sizeof pad->state);
+    pad->result = DI_OK;
+    if (FAILED(IDirectInputDevice8_Poll(device))
+        && (FAILED(IDirectInputDevice8_Acquire(device)) || FAILED(IDirectInputDevice8_Poll(device))))
+        return;
+    pad->result = IDirectInputDevice8_GetDeviceState(device, sizeof pad->state, &pad->state);
+}
+
+/* Read every controller once. */
 static void read_pads(PadRelay *relay) {
     DWORD index;
-    for (index = 0; index < relay->pad_count; index++) {
-        rib_pad_relay_pad *pad = &relay->view->pads[index];
-        IDirectInputDevice8A *device = relay->devices[index];
-        memset(&pad->state, 0, sizeof pad->state);
-        pad->result = DI_OK;
-        if (FAILED(IDirectInputDevice8_Poll(device))
-            && (FAILED(IDirectInputDevice8_Acquire(device)) || FAILED(IDirectInputDevice8_Poll(device))))
-            continue;
-        pad->result = IDirectInputDevice8_GetDeviceState(device, sizeof pad->state, &pad->state);
-    }
+    for (index = 0; index < relay->pad_count; index++)
+        read_pad(relay, index);
 }
 
 /* The effect described in `carried`, in DirectInput's form. Its pointers
@@ -225,6 +229,16 @@ static HRESULT set_range(IDirectInputDevice8A *device, const rib_pad_relay_ask *
     range.lMin = ask->range_min;
     range.lMax = ask->range_max;
     return IDirectInputDevice8_SetProperty(device, DIPROP_RANGE, &range.diph);
+}
+
+/* Set an axis's range and read the controller again in it, because the game
+ * may still have a state from the last read, in the old range, and use it
+ * before its next request. */
+static HRESULT set_range_and_read(PadRelay *relay, const rib_pad_relay_ask *ask) {
+    HRESULT answered = set_range(relay->devices[ask->pad], ask);
+    if (SUCCEEDED(answered))
+        read_pad(relay, ask->pad);
+    return answered;
 }
 
 /* Make a constant force in the controller's first free slot, and return that
@@ -299,7 +313,7 @@ static HRESULT do_ask(PadRelay *relay, const rib_pad_relay_ask *ask, DWORD *slot
         read_pads(relay);
         return DI_OK;
     case RIB_PAD_RELAY_SET_RANGE:
-        return pad ? set_range(relay->devices[ask->pad], ask) : DIERR_INVALIDPARAM;
+        return pad ? set_range_and_read(relay, ask) : DIERR_INVALIDPARAM;
     case RIB_PAD_RELAY_MAKE_EFFECT:
         return pad && carried ? make_effect(relay, ask, slot) : DIERR_INVALIDPARAM;
     case RIB_PAD_RELAY_SET_EFFECT:
