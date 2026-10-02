@@ -124,6 +124,68 @@
       }
     },
     {
+      "name": "moving onto a slot highlights it; OK chooses it",
+      "steps": [
+        "slot-1",
+        "key:down",
+        "key:ok"
+      ],
+      "focused": {
+        "native": [
+          "slot-1",
+          "slot-4",
+          "slot-4"
+        ],
+        "sparse": [
+          "slot-1",
+          "slot-4",
+          "slot-4"
+        ],
+        "rominabox": [
+          "slot-1",
+          "slot-4",
+          "slot-4"
+        ],
+        "disc": [
+          "slot-1",
+          "slot-3",
+          "slot-3"
+        ],
+        "pause-column": [
+          "slot-1",
+          "slot-2",
+          "slot-2"
+        ]
+      },
+      "selected": {
+        "native": [
+          "slot-1",
+          "slot-1",
+          "slot-4"
+        ],
+        "sparse": [
+          "slot-1",
+          "slot-1",
+          "slot-4"
+        ],
+        "rominabox": [
+          "slot-1",
+          "slot-1",
+          "slot-4"
+        ],
+        "disc": [
+          "slot-1",
+          "slot-1",
+          "slot-3"
+        ],
+        "pause-column": [
+          "slot-1",
+          "slot-1",
+          "slot-2"
+        ]
+      }
+    },
+    {
       "name": "right along the buttons",
       "steps": [
         "key:right",

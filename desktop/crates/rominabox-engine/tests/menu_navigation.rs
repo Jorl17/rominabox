@@ -258,6 +258,7 @@ fn named_ids(case: &Value, design: &str) -> BTreeSet<String> {
         }
     };
     add(for_design(&case["focused"], design));
+    add(for_design(&case["selected"], design));
     add(for_design(&case["capturing"], design));
     ids.extend(text_ids(case, design));
     for step in steps_for(case, design) {
@@ -288,7 +289,7 @@ fn text_ids(case: &Value, design: &str) -> Vec<String> {
 /// The step results expected in a case for a design, in the driver's format.
 fn expected(case: &Value, design: &str) -> Value {
     let mut out = serde_json::Map::new();
-    for field in ["focused", "capturing", "screen", "sounds", "typing", "text"] {
+    for field in ["focused", "selected", "capturing", "screen", "sounds", "typing", "text"] {
         if let Some(value) = case.get(field).and_then(|value| for_design(value, design)) {
             out.insert(field.to_owned(), value.clone());
         }
