@@ -119,7 +119,7 @@ fn the_launch_trampoline_hands_main_its_arguments_on_both_processors() {
             "#include <stdio.h>\nint kept = 1;\nint main(int argc, char **argv) {\n  printf(\"%d\", argc);\n  for (int i = 0; i < argc; i++) printf(\" %s\", argv[i]);\n  printf(\"\\n\");\n  return kept - 1;\n}\n",
         )],
     );
-    let attached = Command::new(crate::repo::python())
+    let attached = crate::repo::python()
         .arg(crate::repo::at("scripts/build_launcher.py"))
         .arg("--kit")
         .arg(&kit)

@@ -62,7 +62,7 @@ pub fn write_launch_library_stub(kit: &Path) {
 /// player as in scripts/build_kit.py, for a test that runs the exported
 /// game's launcher.
 pub fn attach_real_launcher(kit: &Path) {
-    let output = Command::new(rominabox_engine::repo::python())
+    let output = rominabox_engine::repo::python()
         .arg(rominabox_engine::repo::at("scripts/build_launcher.py"))
         .arg("--kit")
         .arg(kit)

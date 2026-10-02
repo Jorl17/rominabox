@@ -9,7 +9,7 @@ dependencies = ["PySide6-Essentials>=6.8,<6.10", "pydantic>=2.10,<3", "Pillow>=1
 rominabox = "rominabox.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8,<10", "pytest-qt>=4.4,<5", "ruff>=0.11", "mypy>=1.15", "pyinstaller>=6.12,<7", "types-Pillow"]
+dev = ["pytest>=8,<10", "pytest-qt>=4.4,<5", "ruff>=0.11", "mypy>=1.15", "pyinstaller>=6.12,<7", "types-Pillow", "fonttools>=4.61,<5"]
 
 [build-system]
 requires = ["hatchling"]

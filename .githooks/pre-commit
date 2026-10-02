@@ -6,5 +6,5 @@
 #   git commit --no-verify   skips it, deliberately and visibly.
 set -e
 root=$(git rev-parse --show-toplevel)
-. "$root/.githooks/python.sh"
-exec "$python" "$root/scripts/line_limit.py"
+. "$root/scripts/python.sh"
+py "$root/scripts/line_limit.py"

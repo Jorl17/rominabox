@@ -44,7 +44,7 @@ impl Probe {
     /// every source, as in the player's build.
     pub fn build_defining(name: &str, defined: &[&str], sources: &[&str]) -> Self {
         let scratch = Scratch::dir(&format!("rominabox-{name}"));
-        let built = Command::new(crate::repo::python())
+        let built = crate::repo::python()
             .arg(crate::repo::at("scripts/retroarch_probe.py"))
             .arg(scratch.path())
             .arg(crate::repo::at(&format!("scripts/native_runtime/{name}.c")))

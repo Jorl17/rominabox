@@ -42,14 +42,11 @@ let cli = null;
 
 function exporter() {
   if (cli) return cli;
-  const found = spawnSync(
-    python(),
-    [
-      "-c",
-      "import sys; sys.path.insert(0, 'scripts'); from built import cli; print(cli())",
-    ],
-    { cwd: ROOT, encoding: "utf8", timeout: 240000 },
+  const [program, ...args] = python(
+    "-c",
+    "import sys; sys.path.insert(0, 'scripts'); from built import cli; print(cli())",
   );
+  const found = spawnSync(program, args, { cwd: ROOT, encoding: "utf8", timeout: 240000 });
   if (found.status !== 0) {
     const detail = `${found.stderr || ""}${found.stdout || ""}`.trim();
     throw new Error(detail.slice(-800) || "the exporter could not be built");

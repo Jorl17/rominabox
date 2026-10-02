@@ -4,11 +4,11 @@ The tests are in five places, with five test runners, and while working you
 rarely need all of them. After a change to a controller declaration you can
 skip the frontend tests, and after a React change the ten overlay renders.
 
-    python3 scripts/test.py                 # the fast scopes
-    python3 scripts/test.py catalog         # one scope
-    python3 scripts/test.py catalog menu    # several
-    python3 scripts/test.py --all           # everything, including slow
-    python3 scripts/test.py --list          # what exists and what it covers
+    uv run python scripts/test.py                 # the fast scopes
+    uv run python scripts/test.py catalog         # one scope
+    uv run python scripts/test.py catalog menu    # several
+    uv run python scripts/test.py --all           # everything, including slow
+    uv run python scripts/test.py --list          # what exists and what it covers
 
 Run with --list to see what each scope tests and what it leaves out. Passing
 the fast scopes does not show that a game runs. In the isolation scope we run

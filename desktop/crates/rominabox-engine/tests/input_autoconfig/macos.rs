@@ -150,7 +150,7 @@ if removed < 1:
     raise SystemExit("stripper removed nothing")
 sys.stdout.write(stripped)
 "#;
-    let output = Command::new(support::python())
+    let output = support::python()
         .arg("-c")
         .arg(script)
         .arg(repo_root().join("scripts/prepare_runtime.py"))

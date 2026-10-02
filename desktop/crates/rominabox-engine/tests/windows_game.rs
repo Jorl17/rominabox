@@ -49,7 +49,7 @@ fn length(path: &Path) -> usize {
 /// A kit with the launcher from this tree and the stand-in player.
 fn kit(root: &Path) -> PathBuf {
     let kit = windows_kit(root);
-    let built = Command::new(rominabox_engine::repo::python())
+    let built = rominabox_engine::repo::python()
         .arg(rominabox_engine::repo::at("scripts/build_launcher.py"))
         .arg(root.join("launcher"))
         .output()

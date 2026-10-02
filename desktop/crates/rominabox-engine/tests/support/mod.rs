@@ -180,7 +180,7 @@ pub fn rml_probe() -> PathBuf {
 }
 
 fn build_rml_probe() -> PathBuf {
-    let output = Command::new(python())
+    let output = python()
         .current_dir(rominabox_engine::repo::root())
         .args([
             "-c",
@@ -190,7 +190,7 @@ fn build_rml_probe() -> PathBuf {
         .expect("the test Python runs");
     assert!(
         output.status.success(),
-        "could not build the RmlUi probe (python3 scripts/prepare_rmlui.py first): {}{}",
+        "could not build the RmlUi probe (uv run python scripts/prepare_rmlui.py first): {}{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );

@@ -267,7 +267,7 @@ fn every_file_of_a_game_with_every_shader_fits_windows_path_limit() {
 fn a_damaged_game_leaves_nothing_of_its_unpack_behind() {
     let root = workspace();
     let kit = windows_kit(&root);
-    let built = Command::new(rominabox_engine::repo::python())
+    let built = rominabox_engine::repo::python()
         .arg(rominabox_engine::repo::at("scripts/build_launcher.py"))
         .arg(root.join("launcher"))
         .output()

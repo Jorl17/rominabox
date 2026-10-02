@@ -7,5 +7,6 @@ import { python } from "./python.mjs";
 const declaration = fileURLToPath(new URL("./toolchain.py", import.meta.url));
 
 export function toolchain() {
-  return JSON.parse(execFileSync(python(), [declaration, "describe"], { encoding: "utf8" }));
+  const [program, ...args] = python(declaration, "describe");
+  return JSON.parse(execFileSync(program, args, { encoding: "utf8" }));
 }

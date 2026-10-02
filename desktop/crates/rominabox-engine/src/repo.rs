@@ -26,14 +26,19 @@ pub fn builder_resources() -> PathBuf {
     at("desktop/src-tauri/resources")
 }
 
-/// The Python we run helper scripts with: the one used to start
-/// `scripts/test.py` (`ROMINABOX_PYTHON`), or else the platform's usual name.
-/// On Windows that is `python`, because there `python3` is the Microsoft
-/// Store stub. On macOS, Linux and other POSIX systems it is `python3`.
-pub fn python() -> String {
-    std::env::var("ROMINABOX_PYTHON").unwrap_or_else(|_| {
-        if cfg!(windows) { "python" } else { "python3" }.to_string()
-    })
+/// A command for the Python we run helper scripts with, followed by the
+/// script and its arguments. We use the interpreter used to start
+/// `scripts/test.py` (`ROMINABOX_PYTHON`), or else uv's, with the version in
+/// `.python-version` and the packages in `uv.lock`, as in the README.
+pub fn python() -> std::process::Command {
+    match std::env::var_os("ROMINABOX_PYTHON") {
+        Some(interpreter) => std::process::Command::new(interpreter),
+        None => {
+            let mut uv = std::process::Command::new("uv");
+            uv.args(["run", "--locked", "--project"]).arg(root()).arg("python");
+            uv
+        }
+    }
 }
 
 #[cfg(test)]

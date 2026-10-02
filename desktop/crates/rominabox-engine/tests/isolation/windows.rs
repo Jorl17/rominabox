@@ -42,7 +42,7 @@ extern "system" {
 pub fn fixture_kit(root: &Path) -> PathBuf {
     let kit = crate::export_fixture::windows_kit(root);
     let build = root.join("launcher-build");
-    let built = Command::new(crate::support::python())
+    let built = crate::support::python()
         .arg(crate::repo_at("scripts/build_launcher.py"))
         .arg(&build)
         .output()

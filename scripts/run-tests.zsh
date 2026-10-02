@@ -1,9 +1,8 @@
 #!/bin/zsh
-# Run scripts/test.py as from an interactive terminal and the pre-push hook,
-# with plain python3, through pyenv when it is installed. Over SSH, a command
-# runs without ~/.zprofile or ~/.zshrc, so without this script we would get
-# Apple's Python 3.9 and no cargo, node or pyenv. The overlay digests depend
-# on the Pillow version, so the interpreter must be the same one.
+# Run scripts/test.py as in the README and the pre-push hook, with uv's
+# Python, with the version in .python-version and the packages pinned in
+# uv.lock (scripts/python.sh). Over SSH, a command runs without ~/.zprofile
+# or ~/.zshrc, so without this script we would get no cargo, node or uv.
 # Pass only scope names, --list or --all, or one of these alone:
 #   --build-player        build the player we make the kit from (on a Mac
 #                         the universal one) and its preview into
@@ -28,26 +27,26 @@ fi
 if [[ -d ~/.local/bin ]]; then
   path=(~/.local/bin $path)
 fi
-if [[ -d ~/.pyenv/shims ]]; then
-  path=(~/.pyenv/shims $path)
-fi
 
 cd "${0:A:h}/.."
-print -u2 "run-tests: $(command -v python3) $(python3 --version 2>&1)"
+root=$PWD
+. scripts/python.sh
+print -u2 "run-tests: $(py -c 'import sys; print(sys.executable, sys.version.split()[0])')"
 
 # One folder for the kit's player, so we compile only what changed.
 player_build="$PWD/work/mac-build"
 
 if [[ $# -eq 1 && "$1" == "--build-player" ]]; then
-  kit_target=$(python3 -c 'import sys; sys.path.insert(0, "scripts"); import core_source, native_build; print(native_build.kit_target(core_source.host_target()))')
+  kit_target=$(py -c 'import sys; sys.path.insert(0, "scripts"); import core_source, native_build; print(native_build.kit_target(core_source.host_target()))')
   print -u2 "run-tests: building $kit_target into $player_build"
-  python3 scripts/build_player.py --target "$kit_target" "$player_build"
-  exec python3 scripts/build_kit.py "$player_build"
+  py scripts/build_player.py --target "$kit_target" "$player_build"
+  py scripts/build_kit.py "$player_build"
+  exit
 fi
 
 if [[ $# -eq 1 && "$1" == "--push-main" ]]; then
-  # main to GitHub, fast-forward only, with the pre-push hook running under
-  # the python3 above, as from an interactive terminal.
+  # main to GitHub, fast-forward only, with the tools for the pre-push hook on
+  # PATH from the setup above.
   exec git push origin main
 fi
 
@@ -59,7 +58,8 @@ if [[ $# -ge 2 && "$1" == "--hands-on-game" ]]; then
   fi
   output="$PWD/work/hands-on-$(date +%Y%m%d-%H%M%S)"
   print -u2 "run-tests: exporting with $player_build into $output"
-  exec python3 scripts/hands_on_game.py "$player_build" "$output" "$@"
+  py scripts/hands_on_game.py "$player_build" "$output" "$@"
+  exit
 fi
 
 for arg in "$@"; do
@@ -69,4 +69,4 @@ for arg in "$@"; do
   fi
 done
 
-exec python3 scripts/test.py "$@"
+py scripts/test.py "$@"
