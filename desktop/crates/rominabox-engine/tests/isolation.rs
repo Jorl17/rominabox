@@ -22,11 +22,25 @@ mod platform;
 
 use rominabox_engine::packaging::ExportRequest;
 use std::{
+    collections::BTreeSet,
     fs,
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    sync::Mutex,
     time::{Duration, Instant},
 };
+
+/// The sandbox of a game that a test made, which we remove when the test
+/// ends. Only one test may make a given game. Two tests that export the same
+/// game (same content, console and title) would share its sandbox, and we
+/// would remove it at the end of the first while the other still used it. A
+/// second test with the same game in one run fails here, in either order.
+fn own_sandbox(identity: &str) -> platform::Sandbox {
+    static OWNED: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
+    let first = OWNED.lock().unwrap().insert(identity.to_string());
+    assert!(first, "another test in this run made the game {identity}; give each test a game of its own");
+    platform::sandbox_for(identity)
+}
 
 /// A game folder that the test makes where games kept their data before they
 /// had a sandbox. We remove it when the test ends.
@@ -276,8 +290,8 @@ fn sandboxed_export_cannot_reach_the_host_or_another_game() {
     fs::create_dir_all(root.join("other")).unwrap();
     let identity = identity_of(&app);
     let other_identity = identity_of(&other);
-    let _container = platform::sandbox_for(&identity);
-    let _other_container = platform::sandbox_for(&other_identity);
+    let _container = own_sandbox(&identity);
+    let _other_container = own_sandbox(&other_identity);
     let previous_game = previous_game_folder(&identity);
     if previous_game.exists() {
         let marker = previous_game.join("saves/migrated-marker");
@@ -461,8 +475,8 @@ fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it
     fs::create_dir_all(root.join("other")).unwrap();
     let identity = identity_of(&app);
     let other_identity = identity_of(&other);
-    let _container = platform::sandbox_for(&identity);
-    let _other_container = platform::sandbox_for(&other_identity);
+    let _container = own_sandbox(&identity);
+    let _other_container = own_sandbox(&other_identity);
     platform::prepare_storage(&other);
     let other_secret = platform::data_dir_for(&other_identity).join("secret.txt");
     fs::create_dir_all(other_secret.parent().unwrap()).unwrap();
@@ -512,7 +526,7 @@ fn author_background_play_survives_an_old_controls_file() {
         "megadrive",
     ));
     let identity = identity_of(&app);
-    let _container = platform::sandbox_for(&identity);
+    let _container = own_sandbox(&identity);
     platform::prepare_storage(&app);
     let data = platform::data_dir_for(&identity);
     fs::create_dir_all(&data).unwrap();
@@ -580,7 +594,7 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
         "megadrive",
     ));
     let identity = identity_of(&app);
-    let _container = platform::sandbox_for(&identity);
+    let _container = own_sandbox(&identity);
     let host = previous_game_folder(&identity).join("retroarch.cfg");
     let before = fs::metadata(&host)
         .ok()
@@ -686,7 +700,7 @@ fn a_zipped_mac_game_unzips_verifies_and_runs() {
 
 fn loads_a_core_stays_quiet_and_sees_a_gamepad(app: &Path) {
     let identity = identity_of(app);
-    let _container = platform::sandbox_for(&identity);
+    let _container = own_sandbox(&identity);
 
     platform::assert_keeps_the_sandbox(&app);
 

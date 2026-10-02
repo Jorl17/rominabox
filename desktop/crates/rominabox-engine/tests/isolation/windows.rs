@@ -131,7 +131,9 @@ pub fn mentions(text: &str, path: &Path) -> bool {
 
 /// Everything of the test's game on this computer, including its sandbox and
 /// its unpacked copy, which we remove when the test ends.
-pub fn sandbox_for(identity: &str) -> sandboxes::Kept {
+pub type Sandbox = sandboxes::Kept;
+
+pub fn sandbox_for(identity: &str) -> Sandbox {
     sandboxes::kept(identity)
 }
 
