@@ -1,6 +1,6 @@
 {
   "comment": "installed_bytes is the size target for the featured export on disk. Every game's player carries glcore, slang and their compilers, so a game can bundle slang shaders.",
   "installed_bytes": 25000000,
-  "comment-intel-macs": "A game that also runs on Intel Macs carries Apple silicon's and Intel's player and core, so it has a ceiling of its own.",
-  "intel_macs_installed_bytes": 46000000
+  "comment-intel-macs": "A game that also runs on Intel Macs carries Apple silicon's and Intel's player and core, so it has a ceiling of its own. Each processor's player also carries SDL2 for its controllers.",
+  "intel_macs_installed_bytes": 47000000
 }
