@@ -238,6 +238,19 @@ int main(void)
    }
    expect("every pad player 1: the core rumbles player 2, whom no pad plays as", "");
 
+   /* Opening the menu stops the rumble on every pad (CMD_EVENT_RUMBLE_STOP).
+    * A button press on a pad afterwards, in the menu or after it, starts
+    * nothing, because we stopped the last strengths from the core. */
+   start(one_player, 100);
+   input_set_rumble_state(0, RETRO_RUMBLE_STRONG, 30000);
+   input_set_rumble_state(0, RETRO_RUMBLE_WEAK, 10000);
+   input_driver_stop_rumble();
+   told[0] = '\0';
+   buttons[1] = 1 << RETRO_DEVICE_ID_JOYPAD_B;
+   frame();
+   expect("every pad player 1, the rumble stopped: the second pad presses B",
+         "pad 0 strong 0\npad 0 weak 0\npad 1 strong 0\npad 1 weak 0\n");
+
    /* We scale the strength from the core by the RetroArch rumble gain once,
     * both when we pass it to the new pad and when it was set. */
    start(one_player, 50);
