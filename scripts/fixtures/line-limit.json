@@ -6,6 +6,6 @@
     "desktop/crates/rominabox-engine/src/metadata.rs": 1815,
     "desktop/src/App.tsx": 1661,
     "scripts/builder_drive.mjs": 1657,
-    "scripts/native_runtime/test_rmlui_interaction.cpp": 1913
+    "scripts/native_runtime/test_rmlui_interaction.cpp": 1912
   }
 }

@@ -22,7 +22,7 @@
 
 /* Save slots. */
 .slot { border-color: design(surface); }
-.slot.focused, [data-focus=save] .slot.selected, [data-focus=load] .slot.selected, .slot:active { border-color: design(highlight); }
+.slot.focused, .slot:active { border-color: design(highlight); }
 .slot-label { background-color: design(surface); }
 .slot-picture { border-color: design(picture); }
 .slot.disabled, .slot.disabled:hover { border-color: design(well-edge); }

@@ -469,16 +469,17 @@ void click_captures_once(void *menu, const char *control, const char *id, const 
 
 /* After a pad change the picker has one toggle listener and opens. Reset
  * restores the 3-button labels together with the 3-button picture. */
-/* We mark the slot that SAVE and LOAD use only while one of them has focus.
- * With the pointer over a slot we highlight it without choosing it. A click
- * or an arrow key onto a slot chooses it. We check every registered design. */
-bool slot_marked(int slot, int unmarked)
+/* We mark the slot that SAVE and LOAD use whatever has focus, and not in the
+ * same way as focus. The pointer or an arrow key onto a slot highlights it
+ * without choosing it, and a click or OK chooses it. We check every
+ * registered design against a plain slot, neither highlighted nor chosen. */
+bool unlike_plain(const std::string& part, const char *property, int slot, int plain)
 {
-   const std::string id = "slot-" + std::to_string(slot);
-   const std::string plain = "slot-" + std::to_string(unmarked);
-   return std::string(inspect.property(id.c_str(), "border-top-color"))
-         != inspect.property(plain.c_str(), "border-top-color");
+   return std::string(inspect.property((part + std::to_string(slot)).c_str(), property))
+         != inspect.property((part + std::to_string(plain)).c_str(), property);
 }
+bool slot_highlighted(int slot, int plain) { return unlike_plain("slot-", "border-top-color", slot, plain); }
+bool slot_chosen(int slot, int plain) { return unlike_plain("slot-label-", "background-color", slot, plain); }
 
 /* The text of a button for a fact that the design placed in it. */
 std::string fact_in(const char *button, const char *fact)
@@ -513,35 +514,27 @@ void chosen_slot_shows_on_save_and_load(const char *native_assets, const char *d
       const std::string name = design;
       const auto say = [&](const char *what) { return (name + ": " + what); };
 
-      check(focused("resume") && !slot_marked(1, 6),
-            say("the chosen slot is plain while CONTINUE has focus").c_str());
+      check(focused("resume") && slot_chosen(1, 6) && !slot_highlighted(1, 6),
+            say("the chosen slot is marked, not highlighted, while CONTINUE has focus").c_str());
       check(buttons_name_slot(1), say("SAVE and LOAD name the chosen slot").c_str());
       hover_and_frame(menu, "slot-5");
-      check(focused("slot-5") && slot_marked(5, 6) && !slot_marked(1, 6),
-            say("the pointer over a slot highlights that slot").c_str());
+      check(focused("slot-5") && slot_highlighted(5, 6) && !slot_chosen(5, 6) && slot_chosen(1, 6),
+            say("the pointer over a slot highlights it without choosing it").c_str());
       hover_and_frame(menu, "slot-2");
-      check(focused("slot-2") && slot_marked(2, 6) && !slot_marked(5, 6),
+      check(focused("slot-2") && slot_highlighted(2, 6) && !slot_highlighted(5, 6),
             say("the highlight follows the pointer from slot to slot").c_str());
       hover_and_frame(menu, "save");
-      check(slot_marked(1, 6) && !slot_marked(2, 6) && !slot_marked(5, 6),
-            say("SAVE shows the chosen slot; passing over others did not choose them").c_str());
+      check(slot_chosen(1, 6) && !slot_chosen(2, 6) && !slot_chosen(5, 6),
+            say("passing over slots did not choose them").c_str());
       check(buttons_name_slot(1), say("passing over slots does not change what SAVE and LOAD name").c_str());
       click_and_frame(menu, "slot-3");
-      hover_and_frame(menu, "save");
-      check(slot_marked(3, 6) && !slot_marked(1, 6),
-            say("a clicked slot is the one SAVE shows").c_str());
+      check(slot_chosen(3, 6) && !slot_chosen(1, 6), say("a clicked slot is the chosen one").c_str());
       check(buttons_name_slot(3), say("SAVE and LOAD name a clicked slot").c_str());
-      hover_and_frame(menu, "quit");
-      check(!slot_marked(3, 6), say("leaving SAVE hides it again").c_str());
       click_and_frame(menu, "slot-1");
-      hover_and_frame(menu, "load");
-      check(focused("load") && slot_marked(1, 6) && !slot_marked(3, 6),
-            say("LOAD shows the slot it loads").c_str());
 
-      /* Keys only: after every press we mark the chosen slot exactly when
-       * SAVE or LOAD has focus, and a slot reached by key is the chosen one. */
+      /* Keys only: after every press slot 1 stays the chosen one, and only
+       * the slot with focus is highlighted. */
       hover_and_frame(menu, "resume");
-      int chosen = 1;
       bool slot_then_save = false;
       bool on_slot = false;
       for (const rib_key key : {RIB_KEY_UP, RIB_KEY_LEFT, RIB_KEY_DOWN, RIB_KEY_RIGHT,
@@ -550,21 +543,25 @@ void chosen_slot_shows_on_save_and_load(const char *native_assets, const char *d
          rib_menu_key(menu, key);
          frame(menu);
          const std::string at = view.focus.current_id();
-         if (at.rfind("slot-", 0) == 0)
-         {
-            chosen = std::atoi(at.c_str() + 5);
-            on_slot = true;
-         }
-         check(buttons_name_slot(chosen), say("SAVE and LOAD name a slot reached by key").c_str());
-         const bool aiming = at == "save" || at == "load";
-         slot_then_save = slot_then_save || (on_slot && aiming);
-         const int unmarked = chosen == 6 ? 5 : 6;
+         on_slot = on_slot || at.rfind("slot-", 0) == 0;
+         check(buttons_name_slot(1), say("an arrow onto a slot does not change what SAVE and LOAD name").c_str());
+         slot_then_save = slot_then_save || (on_slot && (at == "save" || at == "load"));
+         const int plain = at == "slot-6" ? 5 : 6;
          for (int slot = 1; slot <= 6; ++slot)
-            if ("slot-" + std::to_string(slot) != at && slot != unmarked)
-               check(slot_marked(slot, unmarked) == (aiming && slot == chosen),
-                     say("by keys, only SAVE and LOAD show the chosen slot").c_str());
+            if (slot != plain)
+            {
+               check(slot_chosen(slot, plain) == (slot == 1),
+                     say("by keys, the chosen slot stays marked and no other is").c_str());
+               check(slot_highlighted(slot, plain) == ("slot-" + std::to_string(slot) == at),
+                     say("by keys, only the slot with focus is highlighted").c_str());
+            }
       }
       check(slot_then_save, say("the keys reached a slot and then SAVE or LOAD").c_str());
+      view.focus.set("slot-4");
+      rib_menu_key(menu, RIB_KEY_OK);
+      frame(menu);
+      check(focused("slot-4") && slot_chosen(4, 6) && !slot_chosen(1, 6) && buttons_name_slot(4),
+            say("OK on a slot chooses it").c_str());
       rib_menu_destroy(menu);
    }
    host.slot_occupied = false;

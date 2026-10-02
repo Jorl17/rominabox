@@ -1416,16 +1416,19 @@ int main(int argc, char **argv)
    CHECK(view.hovered.kind == RIB_RMLUI_ACTION_RESUME,
          "hover is independent of keyboard focus");
 
-   /* The focused element is named in the document, and the design marks the
-    * slot that SAVE and LOAD use only while one of them has focus. Elsewhere
-    * it looks like any slot, so nobody can mistake it for the cursor. */
+   /* The focused element is named in the document. The design marks the slot
+    * that SAVE and LOAD use whatever has focus, and not with the focus border,
+    * so nobody can mistake it for the cursor. */
    view.slots.set_selected_slot(4);
    view.focus.set("resume");
    view.pointer_move(1, 1);
    view.follow_pointer();
    const std::string plain_border = inspect.property("slot-2", "border-top-color");
+   CHECK(inspect.property("slot-label-4", "background-color")
+            != inspect.property("slot-label-2", "background-color"),
+         "the chosen slot is marked while CONTINUE has focus");
    CHECK(inspect.property("slot-4", "border-top-color") == plain_border,
-         "the chosen slot looks like any other while CONTINUE has focus");
+         "the chosen slot's mark is not the focus border");
    view.focus.set("save");
    CHECK(view.document.root()->GetAttribute<Rml::String>("data-focus", "") == "save",
          "the document names the focused element");
@@ -1433,18 +1436,14 @@ int main(int argc, char **argv)
    view.focus.paint();
    CHECK(!view.document.root()->HasAttribute("data-focus"),
          "the name goes when nothing has focus");
-   view.focus.set("save");
-   CHECK(inspect.property("slot-4", "border-top-color") != plain_border,
-         "SAVE shows the slot it saves to");
    move_to_id("quit");
    view.follow_pointer();
-   CHECK(view.document.root()->GetAttribute<Rml::String>("data-focus", "") == "quit"
-         && inspect.property("slot-4", "border-top-color") == plain_border,
-         "the pointer leaving SAVE for QUIT hides it again");
+   CHECK(view.document.root()->GetAttribute<Rml::String>("data-focus", "") == "quit",
+         "the pointer onto QUIT names it");
    move_to_id("save");
    view.follow_pointer();
-   CHECK(inspect.property("slot-4", "border-top-color") != plain_border,
-         "the pointer onto SAVE shows it");
+   CHECK(view.document.root()->GetAttribute<Rml::String>("data-focus", "") == "save",
+         "the pointer back onto SAVE names it");
    move_to_id("slot-4");
    view.focus.set("slot-4");
    const std::string focused_border = inspect.property("slot-4", "border-top-color");
