@@ -79,7 +79,7 @@ def observed_device() -> joypad.Device:
 
 
 def the_staged_set_is_the_pinned_directory(driver: str) -> list[joypad.Profile]:
-    declared = pinned_names(driver)
+    declared = pinned_names(driver) | {path.name for path in prepare_runtime.own_joypad_profiles(driver)}
     staged = {path.name for path in (joypad.STAGED / driver).glob("*.cfg")}
     missing = sorted(declared - staged)
     extra = sorted(staged - declared)
@@ -189,6 +189,17 @@ def shared_ids_are_reported_as_a_tie(profiles: list[joypad.Profile]) -> None:
         )
 
 
+def the_retrobit_saturn_pad_gets_its_own_profile(profiles: list[joypad.Profile]) -> None:
+    """Retro-bit's USB Saturn controller has the ids of the upstream Tribute64
+    profile. We apply the ROM-in-a-Box profile with the name of the pad, so its
+    Home button opens the menu and does not act as Start."""
+    winners = joypad.score_all(joypad.Device("Retro-bit Controller", 9571, 1397), profiles)
+    check(
+        [item.profile.path.name for item in winners[:1]] == ["Retro-bit Saturn Controller USB DInput.cfg"],
+        f"the Retro-bit Saturn controller gets its own profile, got {[item.profile.path.name for item in winners]}",
+    )
+
+
 def an_unknown_pad_matches_nothing(profiles: list[joypad.Profile]) -> None:
     device = joypad.Device(name="not a controller we ship", vendor=1, product=2)
     check(joypad.score_all(device, profiles) == [], "an unknown vendor and product is not configured")
@@ -280,6 +291,8 @@ def main() -> int:
             removing_that_profile_scores_zero(profiles)
         every_profile_matches_a_device_that_reports_its_ids(driver, profiles)
         shared_ids_are_reported_as_a_tie(profiles)
+        if driver == "dinput":
+            the_retrobit_saturn_pad_gets_its_own_profile(profiles)
         an_unknown_pad_matches_nothing(profiles)
     check(
         any(driver in prepare_runtime.DUALSENSE_PROFILES for driver in drivers),

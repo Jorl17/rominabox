@@ -326,6 +326,15 @@ JOYPAD_AUTOCONFIG_REPO = "libretro/retroarch-joypad-autoconfig"
 JOYPAD_AUTOCONFIG_REVISION = "1c6d74cef79b56a3a5dc283b1b0b2e4af73376ff"
 JOYPAD_AUTOCONFIG_LICENSE_FILE = "retroarch-joypad-autoconfig.txt"
 JOYPAD_AUTOCONFIG_COMPONENT = "retroarch-joypad-autoconfig"
+# Our own profiles, in the same driver folders, for a pad with no upstream
+# profile, or whose ids an upstream profile uses for another pad.
+OWN_JOYPAD_PROFILES = Path(__file__).resolve().parent.parent / "integrations/joypad-profiles"
+
+
+def own_joypad_profiles(driver: str) -> list[Path]:
+    """Return our own profiles for `driver`."""
+    return sorted((OWN_JOYPAD_PROFILES / driver).glob("*.cfg"))
+
 
 # We test with a DualSense (1356/3302), so under each driver where a pad is
 # identified by its ids, this profile must be the only one that matches it. In
