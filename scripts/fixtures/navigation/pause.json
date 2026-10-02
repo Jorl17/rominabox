@@ -391,6 +391,43 @@
           []
         ]
       }
+    },
+    {
+      "name": "after the menu closes and opens again, the arrows still move from CONTINUE",
+      "steps": {
+        "native": [
+          "menu:close",
+          "menu:open",
+          "key:right"
+        ],
+        "rominabox": [
+          "menu:close",
+          "menu:open",
+          "key:right"
+        ],
+        "sparse": [
+          "menu:close",
+          "menu:open",
+          "key:right"
+        ],
+        "disc": [
+          "menu:close",
+          "menu:open",
+          "key:down"
+        ],
+        "pause-column": [
+          "menu:close",
+          "menu:open",
+          "key:down"
+        ]
+      },
+      "focused": {
+        "*": [
+          null,
+          "resume",
+          "save"
+        ]
+      }
     }
   ]
 }
