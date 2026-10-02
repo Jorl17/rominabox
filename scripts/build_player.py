@@ -107,7 +107,8 @@ def build_slice(destination: Path, target: str, commit: str, switches: dict[str,
 
     native_build.write_if_changed(retroarch / "configure.mk", native_build.configure_makefile(target).encode("utf-8"))
 
-    native_build.build_sdl2(destination, target, jobs)
+    if native_build.builds_sdl2(target):
+        native_build.build_sdl2(destination, target, jobs)
     environment = {**native_build.build_environment(target), **native_build.freetype_environment(destination),
                    **native_build.sdl2_environment(destination, target)}
     native_build.run(["make", "-f", "configure.mk"], retroarch, environment)

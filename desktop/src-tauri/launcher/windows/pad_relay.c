@@ -2,7 +2,11 @@
  * thread we use DirectInput and a window of our own, and find the controllers
  * as in RetroArch's joypad driver each time the game builds its list. We wait
  * on that thread until a request arrives from the game, then perform it on
- * the controllers and reply. Once a frame, the request is to read them all. */
+ * the controllers and reply. Once a frame, the request is to read them all.
+ *
+ * DirectInput cannot rumble a DualSense or an Xbox pad, so on the thread we
+ * also use SDL's joysticks. For a controller that SDL can rumble, the game's
+ * rumble effects drive SDL's motors instead of DirectInput's. */
 #define WIN32_LEAN_AND_MEAN
 #define DIRECTINPUT_VERSION 0x0800
 #include <windows.h>
@@ -11,6 +15,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define SDL_MAIN_HANDLED
+#include <SDL.h>
 
 #include "pad_relay.h"
 #include "../../../../vendor/retroarch/rominabox_launch.h"
@@ -34,7 +41,67 @@ struct PadRelay {
     DWORD pad_count;
     IDirectInputDevice8A *devices[RIB_PAD_RELAY_PADS];
     IDirectInputEffect *effects[RIB_PAD_RELAY_PADS][RIB_PAD_RELAY_EFFECTS];
+    /* Each controller's model, DirectInput's MAKELONG(vendor, product). */
+    DWORD models[RIB_PAD_RELAY_PADS];
+    /* Whether SDL's joysticks started, each controller in SDL when SDL can
+     * rumble it, the motor for each of its effects, and the levels of the
+     * motors, low frequency then high. */
+    int sdl;
+    SDL_Joystick *rumblers[RIB_PAD_RELAY_PADS];
+    int motors[RIB_PAD_RELAY_PADS][RIB_PAD_RELAY_EFFECTS];
+    Uint16 levels[RIB_PAD_RELAY_PADS][2];
 };
+
+/* The motor for an effect: no SDL motor (we make the effect in DirectInput),
+ * or one of SDL's two, which match the effects along X (strong rumble) and
+ * along Y (weak rumble) in RetroArch's joypad driver. */
+enum { NO_MOTOR, LOW_FREQUENCY_MOTOR, HIGH_FREQUENCY_MOTOR };
+
+/* SDL's joysticks, on this thread, for rumble. SDL's DirectInput backend
+ * requires a window from SDL's video, and we build this SDL without video.
+ * Also, we read DirectInput's controllers on this thread for the game. With
+ * raw input, an Xbox pad rumbles through SDL only after a press, and we read
+ * no presses with this SDL, while with XInput the rumble works at once. The
+ * window of this thread is never in front. */
+static int start_sdl(void) {
+    SDL_SetHint(SDL_HINT_DIRECTINPUT_ENABLED, "0");
+    SDL_SetHint(SDL_HINT_JOYSTICK_RAWINPUT, "0");
+    SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+    return SDL_Init(SDL_INIT_JOYSTICK) == 0;
+}
+
+/* The SDL controller for the `index`th DirectInput controller, when rumble
+ * works through SDL. Among the controllers of that model in SDL's list, it is
+ * the one with as many before it as in DirectInput's list. */
+static SDL_Joystick *rumbler_for(PadRelay *relay, DWORD index) {
+    DWORD model = relay->models[index];
+    DWORD before = 0;
+    DWORD seen = 0;
+    DWORD earlier;
+    int listed;
+    if (!relay->sdl)
+        return NULL;
+    for (earlier = 0; earlier < index; earlier++)
+        before += relay->models[earlier] == model;
+    SDL_JoystickUpdate();
+    for (listed = 0; listed < SDL_NumJoysticks(); listed++) {
+        SDL_Joystick *found;
+        if (SDL_JoystickGetDeviceVendor(listed) != LOWORD(model)
+            || SDL_JoystickGetDeviceProduct(listed) != HIWORD(model) || seen++ != before)
+            continue;
+        found = SDL_JoystickOpen(listed);
+        if (found && SDL_JoystickHasRumble(found))
+            return found;
+        if (found)
+            SDL_JoystickClose(found);
+        return NULL;
+    }
+    return NULL;
+}
+
+static void rumble(PadRelay *relay, DWORD pad) {
+    SDL_JoystickRumble(relay->rumblers[pad], relay->levels[pad][0], relay->levels[pad][1], 0);
+}
 
 typedef struct {
     rib_pad_relay_pad *pad;
@@ -68,6 +135,8 @@ static BOOL CALLBACK found_pad(const DIDEVICEINSTANCEA *device, void *context) {
     axes.pad->axis_count = axes.count;
     IDirectInputDevice8_Acquire(opened);
     relay->devices[index] = opened;
+    relay->models[index] = device->guidProduct.Data1;
+    relay->rumblers[index] = rumbler_for(relay, index);
     relay->view->pad_count = ++relay->pad_count;
     return DIENUM_CONTINUE;
 }
@@ -115,6 +184,12 @@ static void uncarry_effect(const rib_pad_relay_effect *carried, DIEFFECT *effect
 
 static void drop_effect(PadRelay *relay, DWORD pad, DWORD slot) {
     IDirectInputEffect *effect = relay->effects[pad][slot];
+    int motor = relay->motors[pad][slot];
+    if (motor != NO_MOTOR) {
+        relay->motors[pad][slot] = NO_MOTOR;
+        relay->levels[pad][motor - LOW_FREQUENCY_MOTOR] = 0;
+        rumble(relay, pad);
+    }
     if (!effect)
         return;
     IDirectInputEffect_Release(effect);
@@ -132,6 +207,9 @@ static void list_pads(PadRelay *relay) {
         IDirectInputDevice8_Unacquire(relay->devices[index]);
         IDirectInputDevice8_Release(relay->devices[index]);
         relay->devices[index] = NULL;
+        if (relay->rumblers[index])
+            SDL_JoystickClose(relay->rumblers[index]);
+        relay->rumblers[index] = NULL;
     }
     relay->pad_count = 0;
     relay->view->pad_count = 0;
@@ -158,10 +236,14 @@ static HRESULT make_effect(PadRelay *relay, const rib_pad_relay_ask *ask, DWORD 
     DIENVELOPE envelope;
     DICONSTANTFORCE force;
     for (*slot = 0; *slot < RIB_PAD_RELAY_EFFECTS; (*slot)++)
-        if (!relay->effects[ask->pad][*slot])
+        if (!relay->effects[ask->pad][*slot] && relay->motors[ask->pad][*slot] == NO_MOTOR)
             break;
     if (*slot == RIB_PAD_RELAY_EFFECTS)
         return DIERR_DEVICEFULL;
+    if (relay->rumblers[ask->pad]) {
+        relay->motors[ask->pad][*slot] = ask->effect.axes[0] == DIJOFS_X ? LOW_FREQUENCY_MOTOR : HIGH_FREQUENCY_MOTOR;
+        return DI_OK;
+    }
     uncarry_effect(&ask->effect, &effect, axes, directions, &envelope, &force);
     return IDirectInputDevice8_CreateEffect(relay->devices[ask->pad], &GUID_ConstantForce, &effect,
                                             &relay->effects[ask->pad][*slot], NULL);
@@ -183,8 +265,32 @@ static HRESULT do_ask(PadRelay *relay, const rib_pad_relay_ask *ask, DWORD *slot
     int pad = ask->pad < relay->pad_count;
     IDirectInputEffect *effect = pad && ask->item < RIB_PAD_RELAY_EFFECTS ? relay->effects[ask->pad][ask->item] : NULL;
     int carried = ask->effect.axis_count <= RIB_PAD_RELAY_EFFECT_AXES;
+    int motor = pad && ask->item < RIB_PAD_RELAY_EFFECTS ? relay->motors[ask->pad][ask->item] : NO_MOTOR;
     if (!relay->input)
         return DIERR_NOTINITIALIZED;
+    /* For an effect on an SDL motor, we set the motor to the effect's gain
+     * when it starts, and to zero when it stops or is released. */
+    if (motor != NO_MOTOR) {
+        switch (ask->what) {
+        case RIB_PAD_RELAY_SET_EFFECT:
+            if (!(ask->flags & DIEP_START))
+                return DI_OK;
+            relay->levels[ask->pad][motor - LOW_FREQUENCY_MOTOR] =
+                (Uint16)((ask->effect.gain > DI_FFNOMINALMAX ? DI_FFNOMINALMAX : ask->effect.gain) * 65535u
+                         / DI_FFNOMINALMAX);
+            rumble(relay, ask->pad);
+            return DI_OK;
+        case RIB_PAD_RELAY_STOP_EFFECT:
+            relay->levels[ask->pad][motor - LOW_FREQUENCY_MOTOR] = 0;
+            rumble(relay, ask->pad);
+            return DI_OK;
+        case RIB_PAD_RELAY_DROP_EFFECT:
+            drop_effect(relay, ask->pad, ask->item);
+            return DI_OK;
+        default:
+            break;
+        }
+    }
     switch (ask->what) {
     case RIB_PAD_RELAY_LIST:
         list_pads(relay);
@@ -236,6 +342,9 @@ static DWORD WINAPI answer(void *context) {
     if (relay->window)
         DirectInput8Create(instance, DIRECTINPUT_VERSION, &IID_IDirectInput8A, (void **)&relay->input, NULL);
     SetEvent(relay->ready);
+    /* After we let the game start, because this would otherwise delay it. We
+     * answer the game's first request only after this. */
+    relay->sdl = start_sdl();
 
     waits[0] = relay->request;
     waits[1] = relay->stop;
@@ -260,7 +369,11 @@ static DWORD WINAPI answer(void *context) {
             drop_effect(relay, index, slot);
         IDirectInputDevice8_Unacquire(relay->devices[index]);
         IDirectInputDevice8_Release(relay->devices[index]);
+        if (relay->rumblers[index])
+            SDL_JoystickClose(relay->rumblers[index]);
     }
+    if (relay->sdl)
+        SDL_Quit();
     if (relay->input)
         IDirectInput8_Release(relay->input);
     if (relay->window)
