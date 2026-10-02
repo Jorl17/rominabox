@@ -588,8 +588,8 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
     let root = scratch();
     let app = export(&request(
         &root,
-        b"rominabox-background-play-author-v1",
-        "Background Play",
+        b"rominabox-isolation-unsandboxed-v1",
+        "Unsandboxed Launch",
         platform::fixture_kit(&root),
         "megadrive",
     ));
@@ -640,9 +640,9 @@ fn an_unsandboxed_launch_does_not_write_the_account_game_directory() {
     );
 }
 
-/// Export the generated cartridge from the builder's kit and the core cache,
-/// and return the export and the folder we export it into.
-fn the_test_cartridge() -> (rominabox_scratch::Scratch, ExportRequest) {
+/// Export the generated cartridge as `title` from the builder's kit and the
+/// core cache, and return the export and the folder we export it into.
+fn the_test_cartridge(title: &str) -> (rominabox_scratch::Scratch, ExportRequest) {
     let rom = repo_at("scripts/fixtures/test-game.gbc");
     assert!(
         rom.is_file(),
@@ -651,7 +651,7 @@ fn the_test_cartridge() -> (rominabox_scratch::Scratch, ExportRequest) {
     let kit = rominabox_engine::repo::builder_resources().join("runtime");
     let root = scratch();
     fs::copy(&rom, root.join("game.bin")).unwrap();
-    let mut settings = request(&root, b"", "Sandbox Game", kit, "gbc");
+    let mut settings = request(&root, b"", title, kit, "gbc");
     // The kit contains no cores, so at export we take them from a core cache:
     // the one for the developer core source named in scripts/test.py, or else
     // the seeded one (scripts/core_source.py).
@@ -668,7 +668,7 @@ fn the_test_cartridge() -> (rominabox_scratch::Scratch, ExportRequest) {
 #[test]
 #[ignore = "runs an exported core for a few frames, then exits"]
 fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
-    let (_root, settings) = the_test_cartridge();
+    let (_root, settings) = the_test_cartridge("Sandbox Game");
     loads_a_core_stays_quiet_and_sees_a_gamepad(&export(&settings));
 }
 
@@ -680,15 +680,15 @@ fn exported_game_loads_a_core_stays_quiet_and_sees_a_gamepad() {
 #[cfg(target_os = "macos")]
 #[ignore = "runs an exported core for a few frames, then exits"]
 fn a_zipped_mac_game_unzips_verifies_and_runs() {
-    let (root, mut settings) = the_test_cartridge();
+    let (root, mut settings) = the_test_cartridge("Zipped Game");
     settings.zip = Some(true);
     let zip = export(&settings);
-    assert_eq!(zip.file_name().and_then(|name| name.to_str()), Some("Sandbox Game.zip"));
+    assert_eq!(zip.file_name().and_then(|name| name.to_str()), Some("Zipped Game.zip"));
     assert_eq!(fs::read_dir(&settings.output_dir).unwrap().count(), 1, "the zip is all an export leaves");
     let unzipped = root.join("unzipped");
     let status = Command::new("/usr/bin/ditto").args(["-x", "-k"]).arg(&zip).arg(&unzipped).status().unwrap();
     assert!(status.success());
-    let app = unzipped.join("Sandbox Game.app");
+    let app = unzipped.join("Zipped Game.app");
     let verified = Command::new("/usr/bin/codesign")
         .args(["--verify", "--deep", "--strict", "-vv"])
         .arg(&app)
