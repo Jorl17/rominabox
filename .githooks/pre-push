@@ -7,5 +7,9 @@
 #   git push --no-verify   skips it.
 set -e
 root=$(git rev-parse --show-toplevel)
+# Git runs a hook with GIT_DIR set, which in a worktree names the parent's
+# git folder, and `git -C` with that GIT_DIR set reads the wrong repository.
+# The suite locates each repository from its own folder.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX
 . "$root/scripts/python.sh"
 py "$root/scripts/test.py" --all
