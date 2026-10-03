@@ -6,6 +6,8 @@ src-tauri/resources/
 controls.json
 systems.json
 designs.json
+# Written by scripts/patch_corpus.py, which a rewrite would leave reformatted.
+crates/rominabox-engine/tests/fixtures/patches/corpus/corpus.json
 
 # C declarations (X-macro .inc files), which prettier would read as HTML.
 *.inc
