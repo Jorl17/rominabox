@@ -3,10 +3,38 @@
 declare const process: { env: Record<string, string | undefined> };
 
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { defineConfig, type Plugin } from "vitest/config";
+
+/** The repository licences at /licenses/ in the browser preview, where we
+ * read them for the About dialog. In the app we read the bundled copy. Paths
+ * here are relative to this folder, where Vite and Vitest run. */
+function licences(): Plugin {
+  return {
+    name: "licences",
+    configureServer(server) {
+      server.middlewares.use("/licenses/", (request, response, next) => {
+        const file = decodeURIComponent((request.url ?? "").replace(/^\//, ""));
+        if (!/^[a-z0-9-]+(\/[A-Za-z0-9._+-]+)?\.(json|txt)$/.test(file))
+          return next();
+        readFile(`../licenses/${file}`).then(
+          (body) => response.end(body),
+          () => next(),
+        );
+      });
+    },
+  };
+}
+
+/** ROM-in-a-Box's web address, the engine package's homepage. */
+const website = /^homepage = "([^"]+)"/m.exec(
+  readFileSync("crates/rominabox-engine/Cargo.toml", "utf-8"),
+)![1];
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), licences()],
+  define: { __WEBSITE__: JSON.stringify(website) },
   clearScreen: false,
   server: {
     fs: {

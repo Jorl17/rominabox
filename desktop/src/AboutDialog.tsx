@@ -3,6 +3,7 @@ import {
   aboutComponents,
   appVersion,
   licenceText,
+  openWebsite,
   type Component,
 } from "./bridge";
 
@@ -34,9 +35,6 @@ function Entry({ component }: { component: Component }) {
         <span className="about-title">{component.title}</span>
         <span className="about-licence">{component.licence}</span>
       </summary>
-      {component.version && (
-        <p className="about-version">{component.version}</p>
-      )}
       <pre className="about-text">{text ?? "Loading…"}</pre>
     </details>
   );
@@ -66,6 +64,12 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
         }}
       >
         <h2 id="about-heading">ROM-in-a-Box {version}</h2>
+        <button
+          className="text-button about-website"
+          onClick={() => openWebsite()}
+        >
+          {__WEBSITE__.replace(/^https?:\/\//, "")}
+        </button>
         <p>Made from these components. Open one to read its licence.</p>
         <div className="about-list">
           {components === null && <p>Loading…</p>}

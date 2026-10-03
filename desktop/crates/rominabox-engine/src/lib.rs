@@ -54,3 +54,11 @@ mod windows_program;
 
 #[cfg(test)]
 mod measure;
+
+/// The ROM-in-a-Box web address, which is the engine package's homepage.
+pub const WEBSITE: &str = env!("CARGO_PKG_HOMEPAGE");
+
+/// The web address without its scheme, `www.rominabox.app`.
+pub fn website_name() -> &'static str {
+    WEBSITE.trim_start_matches("https://")
+}

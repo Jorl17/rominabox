@@ -335,11 +335,13 @@ fn a_game_carries_every_licence_the_kit_holds_for_its_player() {
             ("Silkscreen", "fonts/silkscreen.txt"),
         ]
     );
-    assert!(fs::read_to_string(licenses.join("README.txt")).unwrap().contains("index.json"));
+    let readme = fs::read_to_string(licenses.join("README.txt")).unwrap();
+    assert!(readme.contains("index.json") && readme.contains(crate::WEBSITE), "{readme}");
 
     let credits = legal::credits_html(&licenses).unwrap();
     assert!(credits.contains("<td>Genesis Plus GX</td><td>GPL-3.0</td>"), "{credits}");
     assert!(credits.contains("MIT &amp; &lt;Zlib&gt;"), "a licence name is escaped: {credits}");
+    assert!(credits.contains(&format!("href=\"{}\"", crate::WEBSITE)), "{credits}");
     assert!(credits.contains(">native/rmlui.txt</pre>"), "the texts follow the table: {credits}");
 }
 

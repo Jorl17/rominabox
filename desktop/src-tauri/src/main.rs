@@ -259,6 +259,13 @@ fn licence_text(app: tauri::AppHandle, file: String) -> Result<String, String> {
     rominabox_engine::licences::text(&resource(&app, "licenses")?, &file)
 }
 
+/// ROM-in-a-Box's web address, opened in the browser.
+#[tauri::command]
+fn open_website(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener().open_url(rominabox_engine::WEBSITE, None::<&str>).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn traveling_files(
     path: PathBuf,
@@ -424,6 +431,7 @@ fn main() {
             export_target,
             about_components,
             licence_text,
+            open_website,
             assess_firmware,
             check_hotkeys,
             export_game,

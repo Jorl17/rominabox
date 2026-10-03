@@ -454,14 +454,25 @@ export type Component = {
   licence: string;
   file: string;
 };
-/** Every component, for the About dialog; none in the browser preview. */
+/** Every component, for the About dialog: the bundled index in the app, the
+ * repository's in the browser preview. */
 export function aboutComponents(): Promise<Component[]> {
-  return native ? invoke("about_components") : Promise.resolve([]);
+  if (native) return invoke("about_components");
+  return fetch("/licenses/index.json").then((response) =>
+    response.ok ? response.json() : [],
+  );
 }
 export function licenceText(file: string): Promise<string> {
-  return invoke("licence_text", { file });
+  if (native) return invoke("licence_text", { file });
+  return fetch(`/licenses/${file}`).then((response) => response.text());
 }
 /** The builder's version; empty in the browser preview. */
 export function appVersion(): Promise<string> {
   return native ? getVersion() : Promise.resolve("");
+}
+/** ROM-in-a-Box's web address, in the browser. */
+export function openWebsite(): Promise<void> {
+  if (native) return invoke("open_website");
+  window.open(__WEBSITE__, "_blank", "noopener");
+  return Promise.resolve();
 }

@@ -887,6 +887,14 @@ progress::-webkit-progress-value {
   max-width: 640px;
   width: 100%;
 }
+.pop-up.pop-up-about h2 {
+  font-size: 20px;
+  margin-bottom: 0;
+}
+.about-website {
+  color: var(--accent);
+  padding: 0 0 8px;
+}
 .about-list {
   max-height: 60vh;
   overflow-y: auto;
@@ -900,32 +908,43 @@ progress::-webkit-progress-value {
   text-transform: uppercase;
   margin: 12px 0 4px;
 }
+/* A row opens to its licence: the arrow turns down while it is open. */
 .about-entry summary {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   padding: 3px 0;
   cursor: pointer;
+  list-style: none;
+}
+.about-entry summary::-webkit-details-marker {
+  display: none;
+}
+.about-title::before {
+  content: "▸";
+  display: inline-block;
+  width: 14px;
+  color: var(--muted);
+}
+.about-entry[open] .about-title::before {
+  content: "▾";
 }
 .about-licence {
   color: var(--muted);
   text-align: right;
 }
-.about-version {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 0 0 4px;
-  overflow-wrap: anywhere;
-}
 .about-text {
   font-size: 11px;
   font-weight: 400;
+  line-height: 1.45;
   white-space: pre-wrap;
   max-height: 260px;
   overflow-y: auto;
-  background: var(--panel);
-  padding: 8px;
-  margin: 0 0 8px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--muted) 12%, var(--paper));
+  border: 2px solid var(--ink);
+  padding: 8px 10px;
+  margin: 4px 0 10px 14px;
 }
 /* The patch pop-ups have more text than the export ones, so they are larger. */
 .pop-up.pop-up-large {

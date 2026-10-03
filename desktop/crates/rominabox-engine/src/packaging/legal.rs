@@ -64,15 +64,22 @@ pub fn copy_entries(runtime_kit: &Path, licenses: &Path, rows: &mut [Row]) -> Re
     Ok(())
 }
 
-pub const README: &str = "\
-The licences of the software this game is made from.
+/// The text of the README next to the licences of a game.
+fn readme_text() -> String {
+    format!(
+        "\
+The licences of the software this game is made from. The game was made with
+ROM-in-a-Box, {website}
 
 index.json lists each component with its licence and the file in this folder
 that holds the licence text: the emulator core, the player and the libraries
 it links (native/), the controller profiles and artwork (data/) and the fonts
 of the game's menu (fonts/). NATIVE-DEPENDENCIES.txt lists the player's
 components with the versions it was built from.
-";
+",
+        website = crate::WEBSITE
+    )
+}
 
 /// Write a game's index and README beside its entries.
 pub fn write_index(licenses: &Path, rows: &[Row]) -> Result<(), ExportError> {
@@ -80,7 +87,7 @@ pub fn write_index(licenses: &Path, rows: &[Row]) -> Result<(), ExportError> {
     fs::write(&index, serde_json::to_vec_pretty(rows).unwrap())
         .map_err(|error| ExportError::io(ErrorStage::Stage, &index, error))?;
     let readme = licenses.join("README.txt");
-    fs::write(&readme, README).map_err(|error| ExportError::io(ErrorStage::Stage, &readme, error))
+    fs::write(&readme, readme_text()).map_err(|error| ExportError::io(ErrorStage::Stage, &readme, error))
 }
 
 fn escape(text: &str) -> String {
@@ -92,9 +99,11 @@ fn escape(text: &str) -> String {
 /// game's `licenses` folder.
 pub fn credits_html(licenses: &Path) -> Result<String, ExportError> {
     let rows = crate::licences::read_index(licenses).map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
-    let mut page = String::from(
+    let mut page = format!(
         "<html><body style=\"font-family: -apple-system, sans-serif; font-size: 11px\">\
-         <p>Made with ROM-in-a-Box.</p><p><b>Licences</b></p><table>",
+         <p>Made with ROM-in-a-Box: <a href=\"{website}\">{shown}</a></p><p><b>Licences</b></p><table>",
+        website = crate::WEBSITE,
+        shown = crate::website_name(),
     );
     for row in &rows {
         page += &format!("<tr><td>{}</td><td>{}</td></tr>", escape(&row.title), escape(&row.licence));

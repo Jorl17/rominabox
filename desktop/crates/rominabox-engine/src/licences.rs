@@ -105,7 +105,7 @@ pub fn list(
         })
         .collect();
     Some(crate::lists::List {
-        prompt: texts_at(target).into(),
+        prompt: format!("{}\n{}", crate::website_name().to_uppercase(), texts_at(target)),
         screen,
         content: crate::lists::ListContent::Static(items),
     })
@@ -152,6 +152,7 @@ mod tests {
             }
             assert!(menu.contains(">Part &amp; 6<"), "{name} does not write a title as text");
             assert!(menu.contains(r"ROM-IN-A-BOX\RUNTIMES"), "{name} does not say where the texts are");
+            assert!(menu.contains("WWW.ROMINABOX.APP"), "{name} does not give the web address");
             // ABOUT is the last entry of Options, after the switches too.
             // Only UNINSTALL comes after it.
             let at = |id: &str| menu.find(&format!("id=\"{id}\"")).unwrap_or_else(|| panic!("{name} has no {id}"));
