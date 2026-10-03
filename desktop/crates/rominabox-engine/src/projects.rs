@@ -135,7 +135,11 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
     let manifest = ProjectManifest {
         format_version: FORMAT_VERSION,
         game: Game {
-            rom: PathBuf::from(archive_content_name(&content.entrypoint)?),
+            // The game file as the author dropped it. We store a compressed disc
+            // compressed, even when we decompress it at export.
+            rom: PathBuf::from(archive_content_name(
+                content.files.iter().find(|file| file.role == content::FileRole::Game).map_or(&content.entrypoint, |game| &game.relative),
+            )?),
             icon: icon_asset.clone().map(PathBuf::from),
             background: background_asset.clone().map(PathBuf::from),
             firmware: firmware_assets.iter().map(PathBuf::from).collect(),
@@ -154,6 +158,7 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
                     .chain(patch_assets.iter().cloned().map(Ok))
                     .map(|name| name.map(PathBuf::from))
                     .collect::<Result<_, _>>()?,
+                decompress: request.settings.files.decompress,
             },
             ..request.settings.clone()
         },
@@ -179,7 +184,7 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
     for (file, name) in content.files.iter().zip(&manifest.assets.content) {
         match &file.staging {
             content::Staging::Bytes(bytes) => write_bytes(&mut writer, name, bytes, options)?,
-            content::Staging::Copy | content::Staging::Patched(_) => {
+            content::Staging::Copy | content::Staging::Patched(_) | content::Staging::Unpacked(_) => {
                 write_path(&mut writer, name, &file.source, MAX_ASSET_BYTES, options)?
             }
         }
@@ -271,6 +276,7 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
         files: content::GameFiles {
             left_out: Vec::new(),
             added: stored.files.added.iter().map(|name| root.join(name)).collect(),
+            decompress: stored.files.decompress,
         },
         ..stored
     };

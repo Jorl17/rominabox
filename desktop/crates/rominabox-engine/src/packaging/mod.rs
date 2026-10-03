@@ -37,7 +37,7 @@ use crate::controls;
 pub use crate::export_error::{ErrorStage, ExportError};
 
 use app_files::{
-    copy_content_file, firmware_destination_name, stage_bundled_autoconfig,
+    compressed_refusal, copy_content_file, firmware_destination_name, stage_bundled_autoconfig,
     stage_controller_remap, stage_firmware, stage_legal_materials, stage_pixel_options, tree_size,
 };
 pub use app_files::{menu_request, stage_menu};
@@ -500,6 +500,9 @@ where
     packager.place_core(&shipped_cores(request, resolved, targets), &core, &system.name)?;
     let collected_content = content::collect_with(&request.game.rom, Some(&system.id), &request.game.files)
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
+    if let Some(compressed) = collected_content.compressed.as_ref().filter(|compressed| !compressed.included) {
+        return Err(compressed_refusal(compressed, &request.game.rom));
+    }
     let content_directory = resources.join("content");
     for file in &collected_content.files {
         copy_content_file(file, &content_directory)?;
@@ -589,7 +592,7 @@ where
         "runtime": "RetroArch",
         "core": packager.core_file(),
         "coreSource": resolved.and_then(|export_core| export_core.builds.first()).map_or("", |build| build.artifact_name),
-        "content": collected_content.files.iter().map(|file| launch_path(&request.game.target, &file.relative)).collect::<Vec<_>>(),
+        "content": collected_content.files.iter().flat_map(content::ContentFile::written).map(|path| launch_path(&request.game.target, &path)).collect::<Vec<_>>(),
         "rom": launch_path(&request.game.target, &rom_relative),
         "firmware": request.game.firmware.iter().filter_map(|path| firmware_destination_name(path, system)).collect::<Vec<_>>(),
         "splash": request.game.splash,

@@ -38,6 +38,23 @@ pub struct Traveling {
     /// The files the author added, including a patch dropped on its own. This
     /// is the game's `files.added`.
     pub added: Vec<PathBuf>,
+    /// When the game is a compressed disc with patches, the question whether
+    /// to include them, which means decompressing it.
+    pub compressed: Option<Compressed>,
+}
+
+/// Patches for a compressed disc, which go with the game only if we
+/// decompress it. We ask the author, with the size for each answer.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Compressed {
+    /// The compressed game file.
+    pub game: String,
+    pub patches: Vec<String>,
+    pub without_bytes: u64,
+    pub with_bytes: u64,
+    /// Whether the author chose to include them.
+    pub included: bool,
 }
 
 impl Traveling {
@@ -75,12 +92,21 @@ pub fn files_with(dropped: &Path, system: Option<&str>, choices: &GameFiles) -> 
             .map(|name| name.to_string_lossy().into_owned())
             .collect()
     };
+    let compressed = set.compressed.as_ref().map(|compressed| Compressed {
+        game: entry.file_name().unwrap_or_default().to_string_lossy().into_owned(),
+        patches: names(&compressed.patches),
+        without_bytes: compressed.without_bytes,
+        with_bytes: compressed.with_bytes,
+        included: compressed.included,
+    });
     Ok(Traveling {
         entry,
         files,
-        patches: names(&set.patches()),
+        // We also list the patches for which the author has not answered yet.
+        patches: compressed.as_ref().map_or_else(|| names(&set.patches()), |compressed| compressed.patches.clone()),
         refused: names(&set.refused_patches),
         added: choices.added,
+        compressed,
     })
 }
 

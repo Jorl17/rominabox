@@ -63,7 +63,7 @@ fn a_patch_beside_the_game_can_be_left_out() {
     let game = root.join("Tiny Blast (USA).md");
     fs::write(&game, ORIGINAL).unwrap();
     fs::write(root.join("Director's Cut.bps"), bps(ORIGINAL, PATCHED)).unwrap();
-    let left_out = GameFiles { left_out: vec!["Director's Cut.bps".into()], added: Vec::new() };
+    let left_out = GameFiles { left_out: vec!["Director's Cut.bps".into()], added: Vec::new(), ..GameFiles::default() };
     assert!(files_with(&game, Some("megadrive"), &left_out).unwrap().patches.is_empty());
 }
 
@@ -80,12 +80,12 @@ fn a_companion_the_console_brings_can_be_left_out_and_one_it_needs_cannot() {
     assert!(roles.contains(&("Disc.sbi".into(), FileRole::Companion { required: false })), "{roles:?}");
     assert!(roles.contains(&("Disc.bin".into(), FileRole::Named)), "{roles:?}");
 
-    let without = GameFiles { left_out: vec!["Disc.sbi".into()], added: Vec::new() };
+    let without = GameFiles { left_out: vec!["Disc.sbi".into()], added: Vec::new(), ..GameFiles::default() };
     assert!(!files_with(&cue, Some("ps1"), &without).unwrap().names().contains(&"Disc.sbi".to_string()));
 
     fs::write(root.join("Game.ccd"), "[CloneCD]\n").unwrap();
     fs::write(root.join("Game.img"), b"image").unwrap();
-    let needed = GameFiles { left_out: vec!["Game.img".into()], added: Vec::new() };
+    let needed = GameFiles { left_out: vec!["Game.img".into()], added: Vec::new(), ..GameFiles::default() };
     let refused = files_with(&root.join("Game.ccd"), Some("ps1"), &needed).unwrap_err();
     assert!(refused.contains("Game.img cannot be left out"), "{refused}");
 }
@@ -101,7 +101,7 @@ fn an_added_file_travels_and_an_added_patch_that_does_not_apply_is_named() {
     let wrong = elsewhere.join("Wrong game.bps");
     fs::write(&wrong, bps(b"some other game entirely", PATCHED)).unwrap();
 
-    let choices = GameFiles { left_out: Vec::new(), added: vec![manual, wrong] };
+    let choices = GameFiles { left_out: Vec::new(), added: vec![manual, wrong], ..GameFiles::default() };
     let traveling = files_with(&game, Some("megadrive"), &choices).unwrap();
     let added: Vec<&str> = traveling
         .files

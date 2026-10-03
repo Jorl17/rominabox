@@ -1,6 +1,7 @@
 pub mod achievements;
 pub mod artwork;
 pub mod builder;
+pub mod chd_disc;
 pub mod cores;
 pub mod content;
 pub mod controls;

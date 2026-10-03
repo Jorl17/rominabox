@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import * as bridge from "./bridge";
 import { alsoImporting } from "./AlsoImporting";
-
-const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
+import { CompressedPatchQuestion } from "./CompressedPatch";
+import { leavingOut } from "./travelingFiles";
 
 /** The name of each kind of file on the list. */
 function kind(role: bridge.FileRole): string {
@@ -82,11 +82,8 @@ export function GameFilesList(props: FilesProps & { names: string[] }) {
     const listed = await choose(props, next);
     if (listed) setListing(listed);
   }
-  // We remove an added file from the added ones, and leave out any other.
   function leaveOut(name: string) {
-    const added = files.added.filter((path) => baseName(path) !== name);
-    if (added.length !== files.added.length) change({ ...files, added });
-    else change({ ...files, leftOut: [...files.leftOut, name] });
+    change(leavingOut(files, [name]));
   }
   function putBack(name: string) {
     change({
@@ -113,6 +110,7 @@ export function GameFilesList(props: FilesProps & { names: string[] }) {
   );
   return (
     <div className="traveling" data-traveling>
+      <CompressedPatchQuestion {...props} />
       <p>{names[0]}</p>
       {line && (
         <button

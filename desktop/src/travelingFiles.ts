@@ -24,3 +24,21 @@ export async function filesThatTravel(
     };
   return { files: alone, entry: filePath, added: listed.added };
 }
+
+const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
+
+/**
+ * `files` with each of `names` left out. We remove a file the author added
+ * from the added ones, and leave out any other by name, so it can come back.
+ */
+export function leavingOut(
+  files: bridge.GameFiles,
+  names: string[],
+): bridge.GameFiles {
+  const named = (path: string) => names.includes(baseName(path));
+  const added = files.added.filter((path) => !named(path));
+  const beside = names.filter(
+    (name) => !files.added.some((path) => baseName(path) === name),
+  );
+  return { ...files, added, leftOut: [...files.leftOut, ...beside] };
+}

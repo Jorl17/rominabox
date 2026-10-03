@@ -173,14 +173,30 @@ export type FileRole =
   | { kind: "companion"; required: boolean }
   | { kind: "added" };
 export type TravelingFile = { name: string; role: FileRole };
-/** What the author left out of, and added to, the files of a game. */
-export type GameFiles = { leftOut: string[]; added: string[] };
+/**
+ * What the author left out of, and added to, the files of a game, and
+ * whether they chose to decompress a compressed disc to include its patches.
+ */
+export type GameFiles = {
+  leftOut: string[];
+  added: string[];
+  decompress?: boolean;
+};
+/** Patches for a compressed disc, and the game's size without and with. */
+export type Compressed = {
+  game: string;
+  patches: string[];
+  withoutBytes: number;
+  withBytes: number;
+  included: boolean;
+};
 export type Traveling = {
   entry: string;
   files: TravelingFile[];
   patches: string[];
   refused: string[];
   added: string[];
+  compressed?: Compressed | null;
 };
 /** The game file, the files copied with it, then the patches applied to it. */
 export function travelingNames(traveling: Traveling): string[] {

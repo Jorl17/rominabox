@@ -871,6 +871,12 @@ progress::-webkit-progress-value {
   font-size: 16px;
   margin-bottom: 6px;
 }
+.pop-up .pop-up-sizes {
+  margin-top: 10px;
+}
+.pop-up-sizes span {
+  white-space: nowrap;
+}
 .pop-up-actions {
   display: flex;
   justify-content: flex-end;

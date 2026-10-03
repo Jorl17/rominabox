@@ -180,7 +180,32 @@ pub(super) fn copy_content_file(
         content::Staging::Bytes(bytes) => fs::write(&destination, bytes)
             .map_err(|error| ExportError::io(ErrorStage::Stage, &destination, error)),
         content::Staging::Patched(patches) => stage_patched(&file.source, patches, &destination),
+        content::Staging::Unpacked(unpacked) => stage_unpacked(&file.source, unpacked, parent),
     }
+}
+
+/// Write out a compressed disc next to where it would have gone: its sheet
+/// and each track, patched when it has patches. For a patched track, we first
+/// write the unpatched track next to it and remove that after patching.
+fn stage_unpacked(chd: &Path, unpacked: &content::Unpacked, folder: &Path) -> Result<(), ExportError> {
+    let sheet = folder.join(&unpacked.disc.sheet_name);
+    fs::write(&sheet, unpacked.disc.sheet()).map_err(|error| ExportError::io(ErrorStage::Stage, &sheet, error))?;
+    for (track, patches) in unpacked.disc.tracks.iter().zip(&unpacked.patches) {
+        let destination = folder.join(&track.name);
+        let written = if patches.is_empty() { destination.clone() } else { folder.join(format!("{}.unpacked", track.name)) };
+        let write = || -> std::io::Result<()> {
+            let mut out = std::io::BufWriter::new(fs::File::create(&written)?);
+            crate::chd_disc::write_track(chd, track, &mut out)?;
+            std::io::Write::flush(&mut out)
+        };
+        write().map_err(|error| ExportError::io(ErrorStage::Stage, &written, error))?;
+        if !patches.is_empty() {
+            let patched = stage_patched(&written, patches, &destination);
+            let _ = fs::remove_file(&written);
+            patched?;
+        }
+    }
+    Ok(())
 }
 
 /// Make the game with its patches applied, at its place in the exported game.
@@ -434,4 +459,20 @@ pub(super) fn tree_size(path: &Path) -> Result<u64, ExportError> {
         total += tree_size(&entry.path())?;
     }
     Ok(total)
+}
+
+/// Why we do not export a game with patches for a compressed disc until the
+/// author has chosen whether to include them.
+pub(super) fn compressed_refusal(compressed: &content::CompressedPatches, game: &Path) -> ExportError {
+    let name = |path: &Path| path.file_name().unwrap_or_default().to_string_lossy().into_owned();
+    let patches: Vec<String> = compressed.patches.iter().map(|patch| format!("\"{}\"", name(patch))).collect();
+    ExportError::new(
+        ErrorStage::Refused,
+        format!(
+            "{} {} \"{}\", which is compressed. Choose whether to include the patch, which decompresses the game, or leave it out.",
+            patches.join(", "),
+            if patches.len() == 1 { "changes" } else { "change" },
+            name(game)
+        ),
+    )
 }

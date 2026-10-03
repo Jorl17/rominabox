@@ -147,14 +147,18 @@ struct Game {
 enum Crc {
     /// The original's, which we read from its file when we apply a patch.
     OfFile(PathBuf),
+    /// A track of a compressed disc, which we decompress for a patch.
+    OfChdTrack(PathBuf, Box<crate::chd_disc::Track>),
     Known(u32),
     Unknown,
 }
 
 impl Game {
     fn crc(&mut self) -> io::Result<Option<u32>> {
-        if let Crc::OfFile(path) = &self.crc {
-            self.crc = Crc::Known(file_crc(path)?);
+        match &self.crc {
+            Crc::OfFile(path) => self.crc = Crc::Known(file_crc(path)?),
+            Crc::OfChdTrack(path, track) => self.crc = Crc::Known(crate::chd_disc::track_crc(path, track)?),
+            Crc::Known(_) | Crc::Unknown => {}
         }
         Ok(match self.crc {
             Crc::Known(crc) => Some(crc),
@@ -304,22 +308,44 @@ fn fit(start: &PatchStart, format: PatchFormat, named_for_game: bool, game: &mut
 /// patch found beside the game belongs when what it states proves that it is
 /// for this game. A patch the author chose belongs unless it states otherwise.
 pub fn belonging(game: &Path, offered: &[(PathBuf, Offered)]) -> Result<Belonging, String> {
-    let mut ordered: Vec<&(PathBuf, Offered)> = offered.iter().collect();
-    ordered.sort_by_key(|(path, _)| path.file_name().map(|name| name.to_string_lossy().to_lowercase()));
     let size = fs::metadata(game).map_err(|error| format!("read {}: {error}", game.display()))?.len();
-    let game_stem = game.file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or_default();
-    let mut current = Game {
+    let current = Game {
         size: Some(size),
         crc: Crc::OfFile(game.to_path_buf()),
         name: game.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default(),
     };
+    belonging_from(current, game, offered)
+}
+
+/// The patches in `offered` that belong to `track` of the compressed disc
+/// `chd`, by the same rules as [`belonging`] for a file, where the track
+/// counts as the file we write it out to.
+pub fn belonging_to_track(
+    chd: &Path,
+    track: &crate::chd_disc::Track,
+    offered: &[(PathBuf, Offered)],
+) -> Result<Belonging, String> {
+    let current = Game {
+        size: Some(track.bytes()),
+        crc: Crc::OfChdTrack(chd.to_path_buf(), Box::new(track.clone())),
+        name: track.name.clone(),
+    };
+    belonging_from(current, chd, offered)
+}
+
+/// The patches in `offered` that belong to `current`. `source` is the file
+/// we read for it, and we name it in the error when we cannot read it.
+fn belonging_from(mut current: Game, source: &Path, offered: &[(PathBuf, Offered)]) -> Result<Belonging, String> {
+    let mut ordered: Vec<&(PathBuf, Offered)> = offered.iter().collect();
+    ordered.sort_by_key(|(path, _)| path.file_name().map(|name| name.to_string_lossy().to_lowercase()));
+    let game_stem = Path::new(&current.name).file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or_default();
     let mut found = Belonging::default();
     for (path, how) in ordered {
         let start = read_start(path).map_err(|error| format!("read {}: {error}", path.display()))?;
         let named_for_game = path.file_stem().is_some_and(|stem| stem.to_string_lossy() == game_stem);
         let fit = match PatchFormat::of(&start.head) {
             Some(format) => fit(&start, format, named_for_game, &mut current)
-                .map_err(|error| format!("read {}: {error}", game.display()))?,
+                .map_err(|error| format!("read {}: {error}", source.display()))?,
             None => Fit::Disproved,
         };
         let next = match (fit, how) {

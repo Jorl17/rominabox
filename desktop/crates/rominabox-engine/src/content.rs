@@ -30,6 +30,9 @@ pub enum Staging {
     Bytes(Vec<u8>),
     /// `source` with these patches applied, in order (crate::patches).
     Patched(Vec<PathBuf>),
+    /// `source`, a compressed disc, which we write out as its tracks and a
+    /// sheet, with each patch applied to the track it belongs to.
+    Unpacked(Box<patched::Unpacked>),
 }
 
 /// Why a file goes with the game, and so whether the author may leave it out.
@@ -59,6 +62,10 @@ pub struct GameFiles {
     /// game (crate::patches), and copy any other file beside the game.
     #[serde(default)]
     pub added: Vec<PathBuf>,
+    /// Whether the author chose to include patches for a compressed disc,
+    /// which we then export decompressed.
+    #[serde(default)]
+    pub decompress: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -71,6 +78,8 @@ pub struct ContentSet {
     pub patched_name: Option<String>,
     /// Patches the author added that do not apply to this game.
     pub refused_patches: Vec<PathBuf>,
+    /// Patches for a compressed disc, and what including them costs.
+    pub compressed: Option<patched::CompressedPatches>,
 }
 
 /// Find every file referenced from `entrypoint`, without leaving its
@@ -149,14 +158,20 @@ pub fn collect_with(
         }
         _ => 1,
     };
-    let belonging =
+    let (belonging, compressed) =
         patched::patch_game_files(&root, &entrypoint, sheet_parser(&extension, &systems), choices, &mut files)?;
+    // We start a compressed disc written out as tracks from its sheet.
+    let entrypoint = match files.first().map(|game| &game.staging) {
+        Some(Staging::Unpacked(unpacked)) => entry_relative.with_file_name(&unpacked.disc.sheet_name),
+        _ => entry_relative,
+    };
     Ok(ContentSet {
-        entrypoint: entry_relative,
+        entrypoint,
         files,
         discs,
         patched_name: belonging.made,
         refused_patches: belonging.refused,
+        compressed,
     })
 }
 
@@ -951,5 +966,6 @@ fn validate_relative_content_path(path: &Path) -> Result<(), String> {
 }
 
 mod patched;
+pub use patched::{CompressedPatches, Unpacked};
 #[cfg(test)]
 mod tests;
