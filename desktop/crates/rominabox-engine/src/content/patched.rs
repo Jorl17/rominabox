@@ -54,14 +54,16 @@ pub(super) fn patch_game_files(
     if offered.is_empty() || files.is_empty() {
         return Ok(Staged::default());
     }
-    let (ppf, offered): (Vec<_>, Vec<_>) = offered.into_iter().partition(|(path, _)| patches::is_ppf(path));
-    let (runtime, refused) = played_patch(entrypoint, playstation, ppf);
+    // On PlayStation we leave a PPF to the emulator. On other consoles we
+    // apply it when exporting, like any other patch.
+    let (ppf, offered): (Vec<_>, Vec<_>) =
+        offered.into_iter().partition(|(path, _)| playstation && patches::is_ppf(path));
+    let runtime = played_patches(entrypoint, ppf);
     let mut staged = if sheet.is_none() && extension_of(&files[0].source) == "chd" {
         patch_compressed(&offered, choices.decompress, &mut files[0])?
     } else {
         Staged { belonging: patch_files(root, entrypoint, sheet, offered, files)?, ..Staged::default() }
     };
-    staged.belonging.refused.extend(refused);
     staged.runtime = runtime;
     Ok(staged)
 }
@@ -75,22 +77,15 @@ pub(super) struct Staged {
     pub runtime: Vec<PathBuf>,
 }
 
-/// The PPF patches among `ppf` that we leave to the PlayStation emulator to
-/// apply while the game runs, and the ones we refuse. These are the ones
-/// beside the game with the game's name, and the ones the author chose. We
-/// merge them into one PPF when exporting. On another console we apply no
-/// PPF, and we refuse one that the author chose.
-fn played_patch(entrypoint: &Path, playstation: bool, ppf: Vec<(PathBuf, Offered)>) -> (Vec<PathBuf>, Vec<PathBuf>) {
+/// The PPF patches among `ppf` that we leave to the PlayStation emulator:
+/// those beside the game with the game's name, and those the author chose.
+/// We merge them into one PPF when exporting.
+fn played_patches(entrypoint: &Path, ppf: Vec<(PathBuf, Offered)>) -> Vec<PathBuf> {
     let stem = entrypoint.file_stem().unwrap_or_default();
-    let (mut played, mut refused) = (Vec::new(), Vec::new());
-    for (path, how) in ppf {
-        if playstation && (how == Offered::Chosen || path.file_stem() == Some(stem)) {
-            played.push(path);
-        } else if how == Offered::Chosen {
-            refused.push(path);
-        }
-    }
-    (played, refused)
+    ppf.into_iter()
+        .filter(|(path, how)| *how == Offered::Chosen || path.file_stem() == Some(stem))
+        .map(|(path, _)| path)
+        .collect()
 }
 
 /// The patches we apply to the game's files, either to the game file or to

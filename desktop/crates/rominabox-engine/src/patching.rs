@@ -209,6 +209,12 @@ impl From<io::Error> for FileFailure {
 /// the patch changes are in memory. We refuse a file already at `made` and
 /// leave it as it is, and remove a `made` we created when the patch fails.
 pub fn apply_file(patch: &[u8], game: &Path, made: &Path) -> Result<(), FileFailure> {
+    // PPF is not one of the RetroArch formats, so we write its bytes into a
+    // copy of the game (crate::ppf).
+    if crate::ppf::is_ppf(patch) {
+        let records = crate::ppf::records(patch).map_err(|_| FileFailure::Patch(PatchError::NotAPatch))?;
+        return crate::ppf::apply(&records, game, made).map_err(FileFailure::Io);
+    }
     let format = PatchFormat::of(patch).ok_or(FileFailure::Patch(PatchError::NotAPatch))?;
     let source = File::open(game)?;
     // With these maps we assume that nothing else changes the files while we

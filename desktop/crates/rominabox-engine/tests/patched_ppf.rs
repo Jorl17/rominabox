@@ -109,12 +109,13 @@ fn a_ppf_for_a_disc_whose_serial_cannot_be_read_refuses_the_export() {
 }
 
 #[test]
-fn a_ppf_the_author_chose_for_another_console_is_refused() {
+fn a_ppf_the_author_chose_for_another_console_is_applied_at_export() {
     let root = workspace();
     let request = export_request(&root);
     fs::write(root.join("Fix.ppf"), ppf(1, b"X")).unwrap();
     let chosen = GameFiles { added: vec![root.join("Fix.ppf")], ..GameFiles::default() };
     let set = content::collect_with(&request.game.rom, Some("megadrive"), &chosen).unwrap();
     assert!(set.played_patches.is_empty());
-    assert_eq!(names(&set.refused_patches), ["Fix.ppf"]);
+    assert!(set.refused_patches.is_empty());
+    assert_eq!(names(&set.patches()), ["Fix.ppf"]);
 }

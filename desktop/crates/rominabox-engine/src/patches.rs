@@ -29,14 +29,11 @@ use crate::patching::PatchFormat;
 /// The file extensions of patch files.
 const PATCH_EXTENSIONS: [&str; 6] = ["ips", "ups", "bps", "xdelta", "vcdiff", "ppf"];
 
-/// Whether `path` is a PPF patch, by its header: `PPF10`, `PPF20` or
-/// `PPF30`. PPF is a format for PlayStation discs, and a PPF applies in the
-/// PlayStation emulator while the game runs, so we do not apply it here.
+/// Whether `path` is a PPF patch, by its header (crate::ppf). PPF is for
+/// PlayStation discs, and a PPF applies in their emulator while the game runs.
 pub fn is_ppf(path: &Path) -> bool {
     let mut head = [0u8; 5];
-    File::open(path).and_then(|mut file| file.read_exact(&mut head)).is_ok()
-        && &head[..3] == b"PPF"
-        && matches!(&head[3..], b"10" | b"20" | b"30")
+    File::open(path).and_then(|mut file| file.read_exact(&mut head)).is_ok() && crate::ppf::is_ppf(&head)
 }
 
 /// Whether a file is a patch, by its extension: the RetroArch extensions,
@@ -356,6 +353,11 @@ fn belonging_from(mut current: Game, source: &Path, offered: &[(PathBuf, Offered
         let fit = match PatchFormat::of(&start.head) {
             Some(format) => fit(&start, format, named_for_game, &mut current)
                 .map_err(|error| format!("read {}: {error}", source.display()))?,
+            // Like IPS, a PPF states no game.
+            None if crate::ppf::is_ppf(&start.head) => {
+                let next = Game { size: None, crc: Crc::Unknown, name: current.name.clone() };
+                if named_for_game { Fit::Proved(next) } else { Fit::Possible(next) }
+            }
             None => Fit::Disproved,
         };
         let next = match (fit, how) {
