@@ -1,0 +1,530 @@
+{
+ "about": "Written by scripts/patch_corpus.py; read by tests/patch_corpus.rs.",
+ "cases": [
+  {
+   "patch": "ips-first-byte.ips",
+   "seed": 1000,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "6c32c7ec605010c56167cb9f54fef7c6152302cbde17d4d4b500c542eff737b0"
+   }
+  },
+  {
+   "patch": "ips-last-byte.ips",
+   "seed": 1000,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "2ae32f9d066f884a6799e943db556980a7e65e3d4883184b8a5d66088f06c520"
+   }
+  },
+  {
+   "patch": "ips-larger.ips",
+   "seed": 1000,
+   "size": 6000,
+   "target": {
+    "size": 8797,
+    "sha256": "96c190fc595f9b062c5e4ad2cc7bc7877c65978e94969ae48cc9f66fe8d9c393"
+   }
+  },
+  {
+   "patch": "ips-smaller.ips",
+   "seed": 1000,
+   "size": 6000,
+   "target": {
+    "size": 4000,
+    "sha256": "e33cd954838188143c034577f314a0b440bff1834c71698600f8e94fd4aebfe1"
+   }
+  },
+  {
+   "patch": "ips-unchanged.ips",
+   "seed": 1000,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "ed86b3d7a148b6d360a563cc35f35ea29da5578331affe4f436be3c1259887a2"
+   }
+  },
+  {
+   "patch": "ips-from-nothing.ips",
+   "seed": 1000,
+   "size": 0,
+   "target": {
+    "size": 500,
+    "sha256": "21c0fddbacccd24273fc1a45bc0de723d0372e8a2bee5776268a70ccdfa14858"
+   }
+  },
+  {
+   "patch": "ips-random-0.ips",
+   "seed": 1001,
+   "size": 2000,
+   "target": {
+    "size": 2000,
+    "sha256": "b4fa938e7d06aeaa3cac12f352d670efea61c659ae4c4e7da9275255ab6b6139"
+   }
+  },
+  {
+   "patch": "ips-random-1.ips",
+   "seed": 1002,
+   "size": 3500,
+   "target": {
+    "size": 3610,
+    "sha256": "eeba73f045da1e8921e45c6babb26fad4c9fcb34499fc49080aa6696d09b18c3"
+   }
+  },
+  {
+   "patch": "ips-random-2.ips",
+   "seed": 1003,
+   "size": 5000,
+   "target": {
+    "size": 4915,
+    "sha256": "6d8cd16b1240c9aef2fe713cf6fab8783104ed42611249cab41fcf0092431bf3"
+   }
+  },
+  {
+   "patch": "ips-random-3.ips",
+   "seed": 1004,
+   "size": 6500,
+   "target": {
+    "size": 6387,
+    "sha256": "9e6d487496d8198da2da94083bf5b277165e3822882f6abb7d58f956a26a490a"
+   }
+  },
+  {
+   "patch": "ups-first-byte.ups",
+   "seed": 1100,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "400601af3edc0708e74d910d440d7ac1394bf843b0290445213b7343d4930189"
+   }
+  },
+  {
+   "patch": "ups-last-byte.ups",
+   "seed": 1100,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "f03854a1875a728146871a9f8d84a6cba1e85c4d40f52f7c44eadc11cda9c7e5"
+   }
+  },
+  {
+   "patch": "ups-larger.ups",
+   "seed": 1100,
+   "size": 6000,
+   "target": {
+    "size": 9103,
+    "sha256": "53ebbf3571674d6f57fbbdd2de767370dcd0c2bad152f2482d7330eb940ca36a"
+   }
+  },
+  {
+   "patch": "ups-smaller.ups",
+   "seed": 1100,
+   "size": 6000,
+   "target": {
+    "size": 4000,
+    "sha256": "8dd5bf04f1df8c31deb12fdda2f3912566b2c07522e29b5c4c5f79b748084fc3"
+   }
+  },
+  {
+   "patch": "ups-unchanged.ups",
+   "seed": 1100,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "0c57dab4b0f026fc442eef7208a6c7bd7f9693b9ac4d3435b01a9ec45043fcd9"
+   }
+  },
+  {
+   "patch": "ups-from-nothing.ups",
+   "seed": 1100,
+   "size": 0,
+   "target": {
+    "size": 500,
+    "sha256": "a61afb15a93f56c78c391f6d04dcffc5d87fa693b16a8ce9af3b26ac1ea687db"
+   }
+  },
+  {
+   "patch": "ups-random-0.ups",
+   "seed": 1101,
+   "size": 2000,
+   "target": {
+    "size": 2259,
+    "sha256": "63f0cbf50c192df370e48dab95d3b533d50960d2d9c052ee35bf9bfd2fca1eb7"
+   }
+  },
+  {
+   "patch": "ups-random-1.ups",
+   "seed": 1102,
+   "size": 3500,
+   "target": {
+    "size": 3756,
+    "sha256": "8a15ee076ce21e999f3807d4cbb55e684e48d6dec46da54003cbe27defb32b44"
+   }
+  },
+  {
+   "patch": "ups-random-2.ups",
+   "seed": 1103,
+   "size": 5000,
+   "target": {
+    "size": 4771,
+    "sha256": "3796fc8f66160e4208ecdcb8220294b35b32734a8ca90ef7bae43ebd5f95274f"
+   }
+  },
+  {
+   "patch": "ups-random-3.ups",
+   "seed": 1104,
+   "size": 6500,
+   "target": {
+    "size": 7150,
+    "sha256": "9d528d6ed0819048707f91407402493f8b0df5912fb97ce949df68acbd7ca8e0"
+   }
+  },
+  {
+   "patch": "ups-another-game.ups",
+   "seed": 1100,
+   "size": 6000,
+   "flip": 3000,
+   "refused": true
+  },
+  {
+   "patch": "bps-first-byte.bps",
+   "seed": 1200,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "9020dc2fc591afed9c5b8a51f62cf5a377c393b727b3535deff5dc061ba8520b"
+   }
+  },
+  {
+   "patch": "bps-last-byte.bps",
+   "seed": 1200,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "2dda4db6d262cc07d759d72a4eb32f7de42874d9b9354cade1a42a3ab69e4906"
+   }
+  },
+  {
+   "patch": "bps-larger.bps",
+   "seed": 1200,
+   "size": 6000,
+   "target": {
+    "size": 9257,
+    "sha256": "057b1b8ba56530a4c2feee33bfe6c57bed1b71dbd958a5e47caf62b28627e442"
+   }
+  },
+  {
+   "patch": "bps-smaller.bps",
+   "seed": 1200,
+   "size": 6000,
+   "target": {
+    "size": 4000,
+    "sha256": "98a8264b55b1e0dc558ba32445ccf43b77628835673cd7657debd98890ffdc75"
+   }
+  },
+  {
+   "patch": "bps-unchanged.bps",
+   "seed": 1200,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "72b6fc80ef60457f00acedb7bb54b2816a4c7debc93b8716782d611ff3228988"
+   }
+  },
+  {
+   "patch": "bps-from-nothing.bps",
+   "seed": 1200,
+   "size": 0,
+   "target": {
+    "size": 500,
+    "sha256": "10e75ada8b93e7792cf4913d0c7d653e1e30cf859ac3a2eba55becad9b8e8306"
+   }
+  },
+  {
+   "patch": "bps-random-0.bps",
+   "seed": 1201,
+   "size": 2000,
+   "target": {
+    "size": 2189,
+    "sha256": "1fa1abe0e0e87576ca3d3193fa8680b78da9052514ed1eff77195115df4252a9"
+   }
+  },
+  {
+   "patch": "bps-random-1.bps",
+   "seed": 1202,
+   "size": 3500,
+   "target": {
+    "size": 3548,
+    "sha256": "daa674cee9a2b6bc64f177cea18b082672d27109fce93b7d01c7ac77b1370a2d"
+   }
+  },
+  {
+   "patch": "bps-random-2.bps",
+   "seed": 1203,
+   "size": 5000,
+   "target": {
+    "size": 4658,
+    "sha256": "ea223d898e919edb899b329fc6dc4c77a2f3d19ed724f9ff348447e798f1f75a"
+   }
+  },
+  {
+   "patch": "bps-random-3.bps",
+   "seed": 1204,
+   "size": 6500,
+   "target": {
+    "size": 6523,
+    "sha256": "2d67950e47298896eac517776df14f216773af165f211f0f2ba7b0a49fe2533f"
+   }
+  },
+  {
+   "patch": "bps-another-game.bps",
+   "seed": 1200,
+   "size": 6000,
+   "flip": 3000,
+   "refused": true
+  },
+  {
+   "patch": "xdelta-first-byte.xdelta",
+   "seed": 1300,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "4aca0f56e83ed8c61c85ce268ec51a010335145d187134d610928c1e96164a74"
+   }
+  },
+  {
+   "patch": "xdelta-last-byte.xdelta",
+   "seed": 1300,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "594985dec41425ee8a15f933ea54680de679bc4e82f4e1b47635794ac6c7c9a1"
+   }
+  },
+  {
+   "patch": "xdelta-larger.xdelta",
+   "seed": 1300,
+   "size": 6000,
+   "target": {
+    "size": 8864,
+    "sha256": "d74997df2ffe188b5072237ed76b447b1142ab298b7fbb4d82fca10b8fa426a7"
+   }
+  },
+  {
+   "patch": "xdelta-smaller.xdelta",
+   "seed": 1300,
+   "size": 6000,
+   "target": {
+    "size": 4000,
+    "sha256": "ef3b60b5d5d59ecc92f9f9bad2d5588d8e0e2bbf7cee83ccb627f61d151f0f5f"
+   }
+  },
+  {
+   "patch": "xdelta-unchanged.xdelta",
+   "seed": 1300,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "69457106afec0880be8a4e9f4ea96f2a590f63e2d914f82047a2a74bca68a3f5"
+   }
+  },
+  {
+   "patch": "xdelta-from-nothing.xdelta",
+   "seed": 1300,
+   "size": 0,
+   "target": {
+    "size": 500,
+    "sha256": "7b6b3e5c79e741ebfe07c355459d6c2928da6af02da0ef9a4b8b4603db4466f1"
+   }
+  },
+  {
+   "patch": "xdelta-random-0.xdelta",
+   "seed": 1301,
+   "size": 2000,
+   "target": {
+    "size": 2062,
+    "sha256": "31537e748a0805e581df3d565055821acd066a3da1212d6d27367017a2ef7c66"
+   }
+  },
+  {
+   "patch": "xdelta-random-1.xdelta",
+   "seed": 1302,
+   "size": 3500,
+   "target": {
+    "size": 4051,
+    "sha256": "d80ed0cfcb76218c3b49faf8cd4d121048cb8b326f9b03368924d6255435e866"
+   }
+  },
+  {
+   "patch": "xdelta-random-2.xdelta",
+   "seed": 1303,
+   "size": 5000,
+   "target": {
+    "size": 4789,
+    "sha256": "40a381dc06283391da981232d7d428fd0764e15c0cbf42e94584f38b3889aa44"
+   }
+  },
+  {
+   "patch": "xdelta-random-3.xdelta",
+   "seed": 1304,
+   "size": 6500,
+   "target": {
+    "size": 7119,
+    "sha256": "1837486f534cbe5947be503109026bd9b12414cfd225ffe3be15f712ab63407d"
+   }
+  },
+  {
+   "patch": "xdelta-another-game.xdelta",
+   "seed": 1300,
+   "size": 6000,
+   "flip": 3000,
+   "refused": true
+  },
+  {
+   "patch": "xdelta-plain-first-byte.xdelta",
+   "seed": 1400,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "75aeeb7d87d0b0c7c76931ef6f34366f47e173fd1a23c6dfe428fa0a752ddfb0"
+   }
+  },
+  {
+   "patch": "xdelta-plain-last-byte.xdelta",
+   "seed": 1400,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "4a934f5537f41e83361c99cf068f82fef400f5c93beb46eb621308462d7624b1"
+   }
+  },
+  {
+   "patch": "xdelta-plain-larger.xdelta",
+   "seed": 1400,
+   "size": 6000,
+   "target": {
+    "size": 9001,
+    "sha256": "ed5711fcc93b0de9746b19178ce1e044cedfaab8561268d47bd62315a709354a"
+   }
+  },
+  {
+   "patch": "xdelta-plain-smaller.xdelta",
+   "seed": 1400,
+   "size": 6000,
+   "target": {
+    "size": 4000,
+    "sha256": "f6fde90c9cd46bd977018e34902b3a4c97dd877e79d8c59bec0366bf7d53e149"
+   }
+  },
+  {
+   "patch": "xdelta-plain-unchanged.xdelta",
+   "seed": 1400,
+   "size": 6000,
+   "target": {
+    "size": 6000,
+    "sha256": "d8d92455a58c30f150ae7456e0108a1cb0074698d638f0271db25fab4fe784d0"
+   }
+  },
+  {
+   "patch": "xdelta-plain-from-nothing.xdelta",
+   "seed": 1400,
+   "size": 0,
+   "target": {
+    "size": 500,
+    "sha256": "473fcbf0490c4187ff154f5835efb7be5e591eecf75c4fc8ebd7d5359d56f7e8"
+   }
+  },
+  {
+   "patch": "xdelta-plain-random-0.xdelta",
+   "seed": 1401,
+   "size": 2000,
+   "target": {
+    "size": 2323,
+    "sha256": "0a6b703bb9d55fe5580f0be7b6f5edb1e24e9c55394804133ec6c1ffa33d0790"
+   }
+  },
+  {
+   "patch": "xdelta-plain-random-1.xdelta",
+   "seed": 1402,
+   "size": 3500,
+   "target": {
+    "size": 3040,
+    "sha256": "4d65122df317584858ec743ee069c9557f76f95adaf58eb61fc0db89e2521cfe"
+   }
+  },
+  {
+   "patch": "xdelta-plain-random-2.xdelta",
+   "seed": 1403,
+   "size": 5000,
+   "target": {
+    "size": 4886,
+    "sha256": "c033c1d8fd0cc771b3e1ab975a0f507ec50f3ff3323352e34e49a8a933ac70aa"
+   }
+  },
+  {
+   "patch": "xdelta-plain-random-3.xdelta",
+   "seed": 1404,
+   "size": 6500,
+   "target": {
+    "size": 7024,
+    "sha256": "f07f35d48b271ccbb4fe9cd14bb7cd808b9c701ddfc7edcf56b653d72d9839a8"
+   }
+  },
+  {
+   "patch": "xdelta-window-boundaries.xdelta",
+   "seed": 5000,
+   "size": 65659,
+   "target": {
+    "size": 65659,
+    "sha256": "b81391ddeb37925e0be889b2f5db4cc5598ddd4f72cb91530939e676f13fdf9f"
+   }
+  },
+  {
+   "patch": "xdelta-windows-shifted.xdelta",
+   "seed": 5000,
+   "size": 65659,
+   "target": {
+    "size": 66659,
+    "sha256": "11a8f1f9fe40dea5edd3d35528025046667e86ba9e3ed8ba94c8fd7b68cb7e4b"
+   }
+  },
+  {
+   "patch": "xdelta-windows-larger.xdelta",
+   "seed": 5000,
+   "size": 65659,
+   "target": {
+    "size": 83214,
+    "sha256": "24d1dcf3556352bb776257395534bc9d042a1acb274beff920f1de8d2f02b214"
+   }
+  },
+  {
+   "patch": "xdelta-plain-window-boundaries.xdelta",
+   "seed": 5001,
+   "size": 65659,
+   "target": {
+    "size": 65659,
+    "sha256": "596fdefe36e7f08b2089baf17de8f1e1cfbb8a8795f0f09c6861b039177c0517"
+   }
+  },
+  {
+   "patch": "xdelta-plain-windows-shifted.xdelta",
+   "seed": 5001,
+   "size": 65659,
+   "target": {
+    "size": 66659,
+    "sha256": "fb68dde6bcc81f706e2b3d9ca64cc9bc4fed0969c5d56366774eee3392e45543"
+   }
+  },
+  {
+   "patch": "xdelta-plain-windows-larger.xdelta",
+   "seed": 5001,
+   "size": 65659,
+   "target": {
+    "size": 82437,
+    "sha256": "3eec071d81d7fdba62b6fdace886fdc08c938650741b710fbedef5e8d93e67bd"
+   }
+  }
+ ]
+}
