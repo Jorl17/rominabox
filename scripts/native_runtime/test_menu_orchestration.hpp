@@ -41,14 +41,7 @@ inline void check(bool condition, const char *message)
    }
 }
 
-/* One pass of RetroArch's loop with the menu open: the video driver draws
- * the menu's frame. */
-inline void frame(void *menu)
-{
-   host.drawing = true;
-   rib_menu_frame(menu, 960, 600);
-   host.drawing = false;
-}
+inline void frame(void *menu) { rib::test::loop_pass(menu, 960, 600); }
 
 inline void click_and_frame(void *menu, const char *id)
 {

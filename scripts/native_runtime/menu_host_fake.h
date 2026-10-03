@@ -4,6 +4,7 @@
  * achievements service are separate boundaries with their own fakes. */
 #pragma once
 #include "rmlui/host.h"
+#include "rmlui/menu_api.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -105,4 +106,14 @@ struct FakeHost
 };
 
 extern FakeHost host;
+
+/* One pass of the RetroArch loop with the menu: we carry out the player's
+ * requests between frames, then draw the menu's frame in the video driver. */
+inline void loop_pass(void *menu, int width, int height)
+{
+   rib_menu_update(menu);
+   host.drawing = true;
+   rib_menu_frame(menu, width, height);
+   host.drawing = false;
+}
 }

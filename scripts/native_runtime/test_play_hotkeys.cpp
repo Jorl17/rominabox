@@ -37,7 +37,7 @@ void check(bool condition, const std::string& message)
    }
 }
 
-void frame(void *menu) { rib_menu_frame(menu, 960, 600); }
+void frame(void *menu) { rib::test::loop_pass(menu, 960, 600); }
 
 /* One frame of the game with `keys` held, as in the RetroArch run loop: read
  * the hotkeys, then draw. */

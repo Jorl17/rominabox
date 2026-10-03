@@ -212,7 +212,7 @@ void run_case(const Case& run)
    std::string missing = "[]";
    while (frames < kFrameLimit && !host.script_finished && !host.quit)
    {
-      rib_menu_frame(menu, run.width, run.height);
+      rib::test::loop_pass(menu, run.width, run.height);
       ++frames;
       host.clock_us += kFrameUs;
       if (!loaded && rib::menu_view().document.root())

@@ -140,7 +140,7 @@ rib::View& view = rib::menu_view();
 void frame(void *menu)
 {
    host.clock_us += 16000;
-   rib_menu_frame(menu, 960, 600);
+   rib::test::loop_pass(menu, 960, 600);
 }
 
 /* The visible elements with a state class, as one id, a list, or null. */

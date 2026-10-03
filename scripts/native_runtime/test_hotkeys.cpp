@@ -45,7 +45,7 @@ void check(bool condition, const std::string& message)
    }
 }
 
-void frame(void *menu) { rib_menu_frame(menu, 960, 600); }
+void frame(void *menu) { rib::test::loop_pass(menu, 960, 600); }
 
 void click(void *menu, const char *id)
 {
