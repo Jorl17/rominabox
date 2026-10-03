@@ -871,6 +871,62 @@ progress::-webkit-progress-value {
   font-size: 16px;
   margin-bottom: 6px;
 }
+/* The header's end: the edition, then About. */
+.header-end {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.about-button {
+  color: var(--paper);
+  font-weight: 700;
+}
+/* About: every component in a list that scrolls, each opening to its
+   licence text. */
+.pop-up.pop-up-about {
+  max-width: 640px;
+  width: 100%;
+}
+.about-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  margin: 12px 0 16px;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+.about-list h3 {
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 12px 0 4px;
+}
+.about-entry summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.about-licence {
+  color: var(--muted);
+  text-align: right;
+}
+.about-version {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+.about-text {
+  font-size: 11px;
+  font-weight: 400;
+  white-space: pre-wrap;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--panel);
+  padding: 8px;
+  margin: 0 0 8px;
+}
 /* The patch pop-ups have more text than the export ones, so they are larger. */
 .pop-up.pop-up-large {
   max-width: 520px;

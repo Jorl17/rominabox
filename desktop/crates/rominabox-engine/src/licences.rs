@@ -1,16 +1,20 @@
-//! The components we ship in a game, each with its licence, as we list them
-//! in its licence index (packaging/legal.rs) and on its ABOUT screen.
+//! Components and their licences, as listed in a licence index. We write the
+//! index of the repository with scripts/licences.py and show it in About in
+//! the builder. We write the index of a kit and of a game in
+//! packaging/legal.rs and show the game's index on its ABOUT screen.
 
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Component, Path};
 
-/// The index file beside the licence entries, in a kit and in a game.
+/// The index file beside the licence entries.
 pub const INDEX: &str = "index.json";
 
-/// One component we ship in a game.
+/// One component and its licence.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Row {
-    /// native, data, fonts or cores.
+    /// native, data, fonts, cores, crates, npm or toolchains.
     #[serde(default)]
     pub group: String,
     pub title: String,
@@ -21,6 +25,24 @@ pub struct Row {
     /// the game contains no text for the component.
     #[serde(default)]
     pub file: String,
+}
+
+/// The rows of the index in `folder`.
+pub fn read_index(folder: &Path) -> Result<Vec<Row>, String> {
+    let path = folder.join(INDEX);
+    let text = fs::read(&path).map_err(|error| format!("could not read {}: {error}", path.display()))?;
+    serde_json::from_slice(&text).map_err(|error| format!("invalid {}: {error}", path.display()))
+}
+
+/// Read the licence text in `file` from `folder`. We refuse a path that is
+/// absolute or that steps out of the folder.
+pub fn text(folder: &Path, file: &str) -> Result<String, String> {
+    let relative = Path::new(file);
+    if file.is_empty() || !relative.components().all(|part| matches!(part, Component::Normal(_))) {
+        return Err(format!("{file} is not a licence entry"));
+    }
+    let path = folder.join(relative);
+    fs::read_to_string(&path).map_err(|error| format!("could not read {}: {error}", path.display()))
 }
 
 /// The line under the ABOUT list in a game made for `target`, with the
@@ -123,6 +145,28 @@ mod tests {
                 assert!(at(entry) < about, "{name}: {entry} comes after ABOUT");
             }
             assert!(about < at("uninstall"), "{name}: UNINSTALL comes before ABOUT");
+        }
+    }
+
+    /// In the repository's index, which we show in About in the builder,
+    /// every row has a title and a licence, and we can open its text.
+    #[test]
+    fn every_row_of_the_repositorys_index_opens_its_text() {
+        let folder = crate::repo::at("licenses");
+        let rows = read_index(&folder).unwrap();
+        assert!(rows.len() > 100, "{}", rows.len());
+        for row in &rows {
+            assert!(!row.title.is_empty() && !row.licence.is_empty(), "{row:?}");
+            let body = text(&folder, &row.file).unwrap_or_else(|error| panic!("{error}"));
+            assert!(!body.trim().is_empty(), "{} is empty", row.file);
+        }
+    }
+
+    #[test]
+    fn a_text_outside_the_folder_is_refused() {
+        let folder = crate::repo::at("licenses");
+        for file in ["../README.md", "/etc/passwd", r"C:\Windows\win.ini", "native/../../README.md", ""] {
+            assert!(text(&folder, file).is_err(), "{file} was read");
         }
     }
 

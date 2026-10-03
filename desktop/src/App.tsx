@@ -27,6 +27,7 @@ import { ControlsSection } from "./ControlsSection";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
+import { AppHeader } from "./AppHeader";
 import { AddGameFiles, GameFilesList } from "./GameFilesList";
 import { StartupOptions } from "./StartupOptions";
 import { filesThatTravel } from "./travelingFiles";
@@ -34,7 +35,6 @@ import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import { BackgroundPicker } from "./BackgroundPicker";
 import { AdvancedOptions } from "./AdvancedOptions";
-import appIcon from "../src-tauri/icons/icon.png";
 import largeIcon from "../src-tauri/icons/icon-large.png";
 import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
@@ -847,15 +847,7 @@ export function App() {
   };
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div className="wordmark">
-          <img className="brand-mark" src={appIcon} alt="" />
-          <span>ROM-in-a-Box</span>
-        </div>
-        <span className="edition">
-          {bridge.native ? "GAME APP BUILDER" : "BROWSER PREVIEW"}
-        </span>
-      </header>
+      <AppHeader />
       <main>
         <nav className="steps" aria-label="Progress">
           {steps.map((name, i) => (

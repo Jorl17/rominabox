@@ -36,7 +36,8 @@
     "resources": {
       "resources/runtime/": "runtime/",
       "resources/preview/": "preview/",
-      "resources/bin/": "bin/"
+      "resources/bin/": "bin/",
+      "../../licenses/": "licenses/"
     },
     "windows": {
       "webviewInstallMode": { "type": "downloadBootstrapper" },

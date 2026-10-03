@@ -22,9 +22,8 @@ fn kit_rows(runtime_kit: &Path) -> Result<Vec<Row>, ExportError> {
             format!("the runtime kit has no {}; build it again with scripts/build_kit.py", path.display()),
         ));
     }
-    let text = fs::read(&path).map_err(|error| ExportError::io(ErrorStage::Stage, &path, error))?;
-    serde_json::from_slice(&text)
-        .map_err(|error| ExportError::new(ErrorStage::Stage, format!("invalid {}: {error}", path.display())))
+    crate::licences::read_index(&runtime_kit.join("licenses"))
+        .map_err(|message| ExportError::new(ErrorStage::Stage, message))
 }
 
 /// The rows of a game: its core, then the entries in the kit for every game
@@ -91,10 +90,7 @@ fn escape(text: &str) -> String {
 /// component with its licence, then each licence text, which we read from the
 /// game's `licenses` folder.
 pub fn credits_html(licenses: &Path) -> Result<String, ExportError> {
-    let index = licenses.join(INDEX);
-    let text = fs::read(&index).map_err(|error| ExportError::io(ErrorStage::Stage, &index, error))?;
-    let rows: Vec<Row> = serde_json::from_slice(&text)
-        .map_err(|error| ExportError::new(ErrorStage::Stage, format!("invalid {}: {error}", index.display())))?;
+    let rows = crate::licences::read_index(licenses).map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     let mut page = String::from(
         "<html><body style=\"font-family: -apple-system, sans-serif; font-size: 11px\">\
          <p>Made with ROM-in-a-Box.</p><p><b>Licences</b></p><table>",
@@ -105,7 +101,7 @@ pub fn credits_html(licenses: &Path) -> Result<String, ExportError> {
     page += "</table><p>The licence texts follow. They are also in this app, in \
              Contents/Resources/Legal/Licenses.</p>";
     for row in rows.iter().filter(|row| !row.file.is_empty()) {
-        let body = fs::read_to_string(licenses.join(&row.file)).unwrap_or_default();
+        let body = crate::licences::text(licenses, &row.file).unwrap_or_default();
         page += &format!(
             "<p><b>{}</b></p><pre style=\"font-size: 10px; white-space: pre-wrap\">{}</pre>",
             escape(&row.title),

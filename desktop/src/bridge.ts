@@ -3,6 +3,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getVersion } from "@tauri-apps/api/app";
 import type { Controls } from "./controls";
 import type { Hotkeys, Refusal } from "./hotkeys";
 import { SHADER_EXTENSIONS, baseName } from "./shaderFiles";
@@ -442,4 +443,24 @@ export function saveProject(
 }
 export function openProject(archivePath: string): Promise<OpenProject> {
   return invoke("open_project", { archivePath });
+}
+/** One component of the builder and its games, as listed in the bundled
+ * licence index. `file` is the name of its licence text. */
+export type Component = {
+  group: string;
+  title: string;
+  version: string;
+  licence: string;
+  file: string;
+};
+/** Every component, for the About dialog; none in the browser preview. */
+export function aboutComponents(): Promise<Component[]> {
+  return native ? invoke("about_components") : Promise.resolve([]);
+}
+export function licenceText(file: string): Promise<string> {
+  return invoke("licence_text", { file });
+}
+/** The builder's version; empty in the browser preview. */
+export function appVersion(): Promise<string> {
+  return native ? getVersion() : Promise.resolve("");
 }

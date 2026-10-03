@@ -246,6 +246,19 @@ fn export_target() -> Option<packaging::ExportTarget> {
     packaging::ExportTarget::of_host()
 }
 
+/// Every component the builder and its games are made from, with its
+/// licence, for the About dialog.
+#[tauri::command]
+fn about_components(app: tauri::AppHandle) -> Result<Vec<rominabox_engine::licences::Row>, String> {
+    rominabox_engine::licences::read_index(&resource(&app, "licenses")?)
+}
+
+/// One component's licence text, from the file listed in its row.
+#[tauri::command]
+fn licence_text(app: tauri::AppHandle, file: String) -> Result<String, String> {
+    rominabox_engine::licences::text(&resource(&app, "licenses")?, &file)
+}
+
 #[tauri::command]
 fn traveling_files(
     path: PathBuf,
@@ -409,6 +422,8 @@ fn main() {
             menu_preview,
             default_destination,
             export_target,
+            about_components,
+            licence_text,
             assess_firmware,
             check_hotkeys,
             export_game,
