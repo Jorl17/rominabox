@@ -83,7 +83,10 @@ def main() -> int:
     if exported_game.PLATFORM != "windows":
         print(f"{exported_game.PLATFORM}: a game unpacks nothing and registers nothing outside its container")
         return 0
-    os.environ.setdefault("ROMINABOX_SCRATCH_RUN", f"cleanup-{os.getpid()}")
+    # A stamp of its own inside the suite's stamp, so that we still find
+    # anything left here. The other tests of the suite make folders with the
+    # suite's stamp while we look for the stamp of these cases.
+    os.environ["ROMINABOX_SCRATCH_RUN"] = f"{os.environ.get('ROMINABOX_SCRATCH_RUN', 'direct')}-cleanup{os.getpid()}"
     menu_shots.built_player()
     real_unpacked = windows_pack.unpacked
     unpacks: list[Path] = []
