@@ -272,20 +272,20 @@ fn a_game_carries_every_licence_the_kit_holds_for_its_player() {
     for name in shipped.iter().chain(&["fonts/science-gothic.txt"]) {
         fs::write(kit.join("licenses").join(name), name).unwrap();
     }
-    let row = |group: &str, title: &str, file: &str| legal::Row {
-        group: group.into(),
+    let row = |group: legal::Group, title: &str, file: &str| legal::Row {
+        group,
         title: title.into(),
         version: "1".into(),
         licence: "MIT & <Zlib>".into(),
         file: file.into(),
     };
     let kit_rows = vec![
-        row("native", "RetroArch", "native/retroarch.txt"),
-        row("native", "RmlUi", "native/rmlui.txt"),
-        row("native", "glslang", "native/glslang.txt"),
-        row("data", "Joypad profiles", "data/retroarch-joypad-autoconfig.txt"),
-        row("fonts", "Silkscreen", "fonts/silkscreen.txt"),
-        row("fonts", "Science Gothic", "fonts/science-gothic.txt"),
+        row(legal::Group::Native, "RetroArch", "native/retroarch.txt"),
+        row(legal::Group::Native, "RmlUi", "native/rmlui.txt"),
+        row(legal::Group::Native, "glslang", "native/glslang.txt"),
+        row(legal::Group::Data, "Joypad profiles", "data/retroarch-joypad-autoconfig.txt"),
+        row(legal::Group::Fonts, "Silkscreen", "fonts/silkscreen.txt"),
+        row(legal::Group::Fonts, "Science Gothic", "fonts/science-gothic.txt"),
     ];
     fs::write(kit.join("licenses/index.json"), serde_json::to_vec(&kit_rows).unwrap()).unwrap();
     fs::write(kit.join("licenses/genesis_plus_gx.txt"), "core").unwrap();

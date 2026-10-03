@@ -9,7 +9,7 @@
 //! the in-game ABOUT screen and in the About panel of a Mac game.
 
 use super::{ErrorStage, ExportError};
-pub use crate::licences::{Row, INDEX};
+pub use crate::licences::{Group, Row, INDEX};
 use std::fs;
 use std::path::Path;
 
@@ -31,16 +31,16 @@ fn kit_rows(runtime_kit: &Path) -> Result<Vec<Row>, ExportError> {
 /// menu design among `fonts` (their families).
 pub fn game_rows(runtime_kit: &Path, core: &crate::systems::Core, fonts: &[String]) -> Result<Vec<Row>, ExportError> {
     let mut rows = vec![Row {
-        group: "cores".into(),
+        group: Group::Cores,
         title: core.library_name.clone().unwrap_or_else(|| core.component.clone()),
         version: String::new(),
         licence: core.license.clone(),
         file: core.license_file.clone(),
     }];
-    rows.extend(kit_rows(runtime_kit)?.into_iter().filter(|row| match row.group.as_str() {
-        "native" | "data" => true,
-        "fonts" => fonts.contains(&row.title),
-        _ => false,
+    rows.extend(kit_rows(runtime_kit)?.into_iter().filter(|row| match row.group {
+        Group::Native | Group::Data => true,
+        Group::Fonts => fonts.contains(&row.title),
+        Group::Cores | Group::Crates | Group::Npm | Group::Toolchains => false,
     }));
     Ok(rows)
 }
@@ -48,8 +48,9 @@ pub fn game_rows(runtime_kit: &Path, core: &crate::systems::Core, fonts: &[Strin
 /// Copy the entries in the kit for `rows` into `licenses`, and leave a row
 /// without a file when the kit has no text for it.
 pub fn copy_entries(runtime_kit: &Path, licenses: &Path, rows: &mut [Row]) -> Result<(), ExportError> {
-    for row in rows.iter_mut().filter(|row| row.group != "cores" && !row.file.is_empty()) {
-        let source = runtime_kit.join("licenses").join(&row.file);
+    for row in rows.iter_mut().filter(|row| row.group != Group::Cores && !row.file.is_empty()) {
+        let source = crate::licences::entry(&runtime_kit.join("licenses"), &row.file)
+            .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
         if !source.is_file() {
             row.file.clear();
             continue;

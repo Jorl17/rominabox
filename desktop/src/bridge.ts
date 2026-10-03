@@ -447,7 +447,8 @@ export function openProject(archivePath: string): Promise<OpenProject> {
 /** One component of the builder and its games, as listed in the bundled
  * licence index. `file` is the name of its licence text. */
 export type Component = {
-  group: string;
+  group:
+    "native" | "cores" | "data" | "fonts" | "crates" | "npm" | "toolchains";
   title: string;
   version: string;
   licence: string;

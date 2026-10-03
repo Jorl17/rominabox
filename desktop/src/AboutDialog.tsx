@@ -7,7 +7,7 @@ import {
 } from "./bridge";
 
 /** The groups of the licence index, in the order of the dialog. */
-const GROUPS: [string, string][] = [
+const GROUPS: [Component["group"], string][] = [
   ["native", "Game player"],
   ["cores", "Emulator cores"],
   ["data", "Data"],

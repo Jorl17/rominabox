@@ -60,9 +60,11 @@ impl Menu {
             Menu::Everything => ["Genesis Plus GX", "RetroArch"]
                 .into_iter()
                 .map(|title| rominabox_engine::licences::Row {
+                    group: rominabox_engine::licences::Group::Native,
                     title: title.into(),
+                    version: String::new(),
                     licence: "GPL-3.0-or-later".into(),
-                    ..Default::default()
+                    file: String::new(),
                 })
                 .collect(),
             Menu::Default | Menu::NoOptions | Menu::SplashOnly => Vec::new(),

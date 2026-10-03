@@ -5,18 +5,32 @@
 
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 
 /// The index file beside the licence entries.
 pub const INDEX: &str = "index.json";
 
 /// One component and its licence.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+/// Where a component belongs: a group of the licence index, and the folder
+/// of its entries in licenses/.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Group {
+    /// The player and the libraries linked into it.
+    Native,
+    Cores,
+    /// Data we ship in games, such as the controller profiles.
+    Data,
+    Fonts,
+    Crates,
+    Npm,
+    Toolchains,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Row {
-    /// native, data, fonts, cores, crates, npm or toolchains.
-    #[serde(default)]
-    pub group: String,
+    pub group: Group,
     pub title: String,
     #[serde(default)]
     pub version: String,
@@ -34,14 +48,19 @@ pub fn read_index(folder: &Path) -> Result<Vec<Row>, String> {
     serde_json::from_slice(&text).map_err(|error| format!("invalid {}: {error}", path.display()))
 }
 
-/// Read the licence text in `file` from `folder`. We refuse a path that is
-/// absolute or that steps out of the folder.
-pub fn text(folder: &Path, file: &str) -> Result<String, String> {
+/// The path in `folder` of the licence text in `file`. We refuse a path that
+/// is absolute or that steps out of the folder.
+pub fn entry(folder: &Path, file: &str) -> Result<PathBuf, String> {
     let relative = Path::new(file);
     if file.is_empty() || !relative.components().all(|part| matches!(part, Component::Normal(_))) {
         return Err(format!("{file} is not a licence entry"));
     }
-    let path = folder.join(relative);
+    Ok(folder.join(relative))
+}
+
+/// The licence text `file` names, read from `folder`.
+pub fn text(folder: &Path, file: &str) -> Result<String, String> {
+    let path = entry(folder, file)?;
     fs::read_to_string(&path).map_err(|error| format!("could not read {}: {error}", path.display()))
 }
 
@@ -98,7 +117,7 @@ mod tests {
     use crate::menu::{compose_menu, MenuRequest};
 
     fn row(title: &str, licence: &str) -> Row {
-        Row { title: title.into(), licence: licence.into(), ..Row::default() }
+        Row { group: Group::Native, title: title.into(), version: String::new(), licence: licence.into(), file: String::new() }
     }
 
     /// In every design we list the game's components on an ABOUT screen in

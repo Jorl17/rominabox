@@ -108,7 +108,7 @@ pub(super) fn stage_legal_materials(
     let core_licence = resolve_cached(runtime_kit, cache, licence);
     if core_licence.is_file() {
         copy_file(&core_licence, &licenses.join(&core.license_file))?;
-    } else if let Some(row) = rows.iter_mut().find(|row| row.group == "cores") {
+    } else if let Some(row) = rows.iter_mut().find(|row| row.group == super::legal::Group::Cores) {
         row.file.clear();
     }
     // The licence of the controller profiles, which we stage with them in
