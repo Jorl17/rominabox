@@ -1,6 +1,7 @@
 """Check that in a game's player we use only its data folder, refuse to start
 without one, and read the arguments as UTF-8 on Windows, and that a header
-removed from the fork does not stop the next build of an earlier build folder.
+removed from the fork, or a source rewritten in another language, does not
+stop the next build of an earlier build folder.
 
 Stock RetroArch fails open. With no folder given, the Windows build created
 about 25 folders beside the program and would read the user's configuration.
@@ -24,6 +25,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import core_source  # noqa: E402
 import native_build  # noqa: E402
 import player_build  # noqa: E402
 
@@ -140,11 +142,62 @@ def a_removed_header_does_not_stop_the_next_build(build: Path) -> int:
     return failures
 
 
+def a_rewritten_source_is_compiled_again() -> int:
+    """Check that we compile an object again from the new source when we have
+    rewritten its source in another language in the fork.
+
+    When a source such as upstream's shader_gl3.cpp becomes shader_gl3.c, the
+    object has the same name and its dependency file still lists the .cpp, so
+    make can stop the next build of an earlier build folder with "No rule to
+    make target". We check out a fork of two commits, where in the second we
+    rewrite a .cpp as a .c, into a build folder as in build_player.py. The
+    folder contains an object of the .cpp and one of a source in both commits,
+    and we then move it to the second commit.
+    """
+    git = ["git", "-c", "user.name=test", "-c", "user.email=test@example.invalid", "-c", "core.autocrlf=false"]
+    with tempfile.TemporaryDirectory(prefix="rominabox-rewritten-source-") as temporary:
+        fork = Path(temporary) / "fork"
+        (fork / "gfx").mkdir(parents=True)
+        subprocess.run([*git, "init", "--quiet", str(fork)], check=True)
+        (fork / "gfx/kept.c").write_text("int kept;\n", encoding="utf-8")
+        (fork / "gfx/shader.cpp").write_text("int shader;\n", encoding="utf-8")
+        subprocess.run([*git, "-C", str(fork), "add", "--all"], check=True)
+        subprocess.run([*git, "-C", str(fork), "commit", "--quiet", "-m", "C++"], check=True)
+        before = subprocess.run([*git, "-C", str(fork), "rev-parse", "HEAD"], check=True,
+                                capture_output=True, text=True).stdout.strip()
+        (fork / "gfx/shader.cpp").rename(fork / "gfx/shader.c")
+        subprocess.run([*git, "-C", str(fork), "add", "--all"], check=True)
+        subprocess.run([*git, "-C", str(fork), "commit", "--quiet", "-m", "C"], check=True)
+        after = subprocess.run([*git, "-C", str(fork), "rev-parse", "HEAD"], check=True,
+                               capture_output=True, text=True).stdout.strip()
+
+        build = Path(temporary) / "build"
+        build.mkdir()
+        subprocess.run([*git, "clone", "--quiet", "--bare", str(fork), str(build / "fork.git")], check=True)
+        target = core_source.host_target()
+        native_build.checkout_fork(before, build, target)
+        objects = build / "retroarch/obj-unix/release/gfx"
+        objects.mkdir(parents=True)
+        for name, source in (("kept", "gfx/kept.c"), ("shader", "gfx/shader.cpp")):
+            (objects / f"{name}.o").write_bytes(b"object")
+            (objects / f"{name}.d").write_text(f"obj-unix/release/gfx/{name}.o: {source} \\\n gfx/shared.h\n",
+                                               encoding="utf-8", newline="\n")
+        native_build.checkout_fork(after, build, target)
+        left = sorted(path.name for path in objects.iterdir())
+    if left != ["kept.d", "kept.o"]:
+        print(f"FAIL moved to a commit that rewrote gfx/shader.cpp as gfx/shader.c, the build folder holds {left}, "
+              "not only kept.d and kept.o: make would stop at the .cpp its dependency file names")
+        return 1
+    print("ok an object of a source the fork rewrote in another language is compiled again; the others are kept")
+    return 0
+
+
 def main() -> int:
     build = player_build.selected_build()
     source = player_build.player_in(build)
     failures = utf8_arguments(build, source)
     failures += a_removed_header_does_not_stop_the_next_build(build)
+    failures += a_rewritten_source_is_compiled_again()
     with tempfile.TemporaryDirectory(prefix="rominabox-data-root-") as temporary:
         # The player alone in a folder, so that we see anything created beside it.
         folder = Path(temporary) / "bin"
