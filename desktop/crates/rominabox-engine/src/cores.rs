@@ -182,11 +182,11 @@ struct PinnedCore {
     #[serde(rename = "licenseFile")]
     license_file: String,
     #[serde(rename = "licensePath")]
-    license_path: String,
+    license_path: Option<String>,
     /// The branch whose tip we read the licence from. We use a branch and not
     /// a commit, because the nightly can be newer than any recorded commit.
     #[serde(rename = "licenseRef")]
-    license_ref: String,
+    license_ref: Option<String>,
     artifacts: std::collections::BTreeMap<String, PinnedArtifact>,
 }
 
@@ -341,16 +341,20 @@ impl<'a> Located<'a> {
                 .map(|base| format!("{base}/{folder}/latest/{}.zip", artifact.filename))
                 .collect(),
             licence_file: &core.license_file,
-            licence_urls: pins
-                .license_mirrors
-                .iter()
-                .map(|pattern| {
-                    pattern
-                        .replace("{repository}", &core.repository)
-                        .replace("{ref}", &core.license_ref)
-                        .replace("{path}", &core.license_path)
-                })
-                .collect(),
+            // We fetch a core even when its package lists no licence.
+            licence_urls: match (&core.license_ref, &core.license_path) {
+                (Some(license_ref), Some(license_path)) => pins
+                    .license_mirrors
+                    .iter()
+                    .map(|pattern| {
+                        pattern
+                            .replace("{repository}", &core.repository)
+                            .replace("{ref}", license_ref)
+                            .replace("{path}", license_path)
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            },
         })
     }
 

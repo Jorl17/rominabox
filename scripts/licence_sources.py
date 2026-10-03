@@ -357,6 +357,8 @@ def cores() -> list[Component]:
     found = []
     for core in json.loads(CORE_PINS.read_text(encoding="utf-8"))["cores"]:
         repository, ref, path = core["repository"], core["licenseRef"], core["licensePath"]
+        if not ref or not path:
+            continue
 
         def read(repository=repository, ref=ref, path=path) -> list[Text]:
             return [branch_text(repository, ref, path)]
