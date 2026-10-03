@@ -332,6 +332,23 @@ def checkout_fork(commit: str, destination: Path, target: str) -> None:
     subprocess.run(["git", f"--git-dir={repository}", f"--work-tree={source}",
                     *(part for setting in settings for part in ("-c", setting)),
                     "checkout", "--quiet", "--force", "--detach", commit], check=True)
+    forget_removed_sources(source)
+
+
+def forget_removed_sources(source: Path) -> None:
+    """Remove each object from an earlier build in `source` whose source is no
+    longer in the fork, with its dependency file, so that we compile it again
+    from its current source. The source of the object is first in a dependency
+    file, so for example after upstream rewrote shader_gl3.cpp as shader_gl3.c,
+    the object kept its name and the build stopped at the .cpp with "No rule to
+    make target". A removed header requires nothing here, because in the fork's
+    makefile each header has a separate rule (-MP)."""
+    for dependencies in source.glob("obj-*/**/*.d"):
+        rule = dependencies.read_text(encoding="utf-8", errors="replace").replace("\\\n", " ")
+        named = rule.partition(":")[2].split()
+        if named and not (source / named[0]).exists():
+            dependencies.with_suffix(".o").unlink(missing_ok=True)
+            dependencies.unlink()
 
 
 def fetch_rmlui(destination: Path) -> Path:
