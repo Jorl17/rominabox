@@ -332,6 +332,23 @@ def checkout_fork(commit: str, destination: Path, target: str) -> None:
     subprocess.run(["git", f"--git-dir={repository}", f"--work-tree={source}",
                     *(part for setting in settings for part in ("-c", setting)),
                     "checkout", "--quiet", "--force", "--detach", commit], check=True)
+    forget_removed_sources(source)
+
+
+def forget_removed_sources(source: Path) -> None:
+    """Remove each object from an earlier build in `source` whose source is no
+    longer in the fork, with its dependency file, so that we compile it again
+    from its current source. The source of the object is first in a dependency
+    file, so for example after upstream rewrote shader_gl3.cpp as shader_gl3.c,
+    the object kept its name and the build stopped at the .cpp with "No rule to
+    make target". A removed header requires nothing here, because in the fork's
+    makefile each header has a separate rule (-MP)."""
+    for dependencies in source.glob("obj-*/**/*.d"):
+        rule = dependencies.read_text(encoding="utf-8", errors="replace").replace("\\\n", " ")
+        named = rule.partition(":")[2].split()
+        if named and not (source / named[0]).exists():
+            dependencies.with_suffix(".o").unlink(missing_ok=True)
+            dependencies.unlink()
 
 
 def fetch_rmlui(destination: Path) -> Path:
@@ -402,14 +419,20 @@ def sdl2_prefix(destination: Path) -> Path:
     return destination / recipe()["sdl2"]["prefix"]
 
 
-def sdl2_source(destination: Path) -> Path:
-    """The recipe's SDL2 release, unpacked in `destination` once."""
-    sdl2 = recipe()["sdl2"]
-    source = destination / sdl2["directory"]
+def release_source(destination: Path, name: str) -> Path:
+    """The recipe's pinned release of the library `name`, unpacked in
+    `destination` once."""
+    release = recipe()[name]
+    source = destination / release["directory"]
     if not source.is_dir():
-        with tarfile.open(download(sdl2["url"], sdl2["sha256"])) as tar:
+        with tarfile.open(download(release["url"], release["sha256"])) as tar:
             tar.extractall(destination, filter="data")
     return source
+
+
+def sdl2_source(destination: Path) -> Path:
+    """The recipe's SDL2 release, unpacked in `destination` once."""
+    return release_source(destination, "sdl2")
 
 
 def build_sdl2(destination: Path, target: str, jobs: int) -> None:
@@ -547,21 +570,25 @@ def copy_accounts(destination: Path, target: str) -> Path:
     return accounts
 
 
-def build_launcher(destination: Path, target: str, environment: dict[str, str], fork: Path) -> Path | None:
+def build_launcher(destination: Path, target: str, environment: dict[str, str]) -> Path | None:
     """The game's launcher, for a target where we build it next to the player,
-    built into `destination`, with the parts from the RetroArch fork read
-    from `fork`: the fork checked out for a player build, or the checkout's."""
+    built into `destination`, with the libraries listed for it in the recipe
+    built next to it."""
     launcher = recipe()["launcher"].get(require_target(target))
     if launcher is None:
         return None
     folder = destination / "launcher"
     output = folder / launcher["output"]
-    forked = launcher.get("fork", {"includes": [], "flags": [], "sources": []})
-    includes = [f"-I{fork / path}" for path in forked["includes"]]
+    includes = []
+    theirs = []
+    if launcher.get("zstd"):
+        zstd = recipe()["zstd"]
+        source = release_source(destination, "zstd")
+        includes = [f"-I{source / path}" for path in zstd["includes"]]
+        theirs = [(source / name, ["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w", *zstd["flags"], *includes])
+                  for name in zstd["sources"]]
     own = [(source, ["cc", *compiler_flags(target), *launcher["flags"], *includes])
            for source in launcher_sources(platform_of(target))]
-    theirs = [(fork / source, ["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w", *forked["flags"], *includes])
-              for source in forked["sources"]]
     sdl2 = []
     if launcher.get("sdl2"):
         build_sdl2(destination, target, os.cpu_count() or 1)
@@ -649,7 +676,7 @@ def kept_launcher(folder: Path, kit: str) -> Path:
     launch library before we attach it to a player."""
     library = launch_library(kit)
     if library is None:
-        built = build_launcher(folder, kit, build_environment(kit), FORK)
+        built = build_launcher(folder, kit, build_environment(kit))
         if built is None:
             raise SystemExit(f"the player recipe builds no launcher for {kit}")
         return built

@@ -1034,14 +1034,6 @@ fn core_pins(catalog: &Catalog) -> Result<String, String> {
         let Some(provenance) = &component.provenance else {
             continue;
         };
-        let Some(license_path) = provenance.license_candidates.first() else {
-            return Err(format!("{id} has no licence path"));
-        };
-        let Some(license_ref) = provenance.branch.as_deref() else {
-            return Err(format!(
-                "{id} has no branch for the licence that travels with the nightly"
-            ));
-        };
         let artifacts: Map<String, Value> = component
             .artifacts
             .iter()
@@ -1051,8 +1043,8 @@ fn core_pins(catalog: &Catalog) -> Result<String, String> {
             "component": id,
             "repository": provenance.repository,
             "licenseFile": component.license.file,
-            "licensePath": license_path,
-            "licenseRef": license_ref,
+            "licensePath": provenance.license_candidates.first(),
+            "licenseRef": provenance.branch,
             "artifacts": Value::Object(artifacts),
         }));
     }

@@ -46,7 +46,8 @@ def main() -> int:
         *sorted((RCHEEVOS / "src/rapi").glob("*.c")),
         RETROARCH / "libretro-common/utils/md5.c",
         # libretro's file layer, which we use to check the player's storage folders.
-        *FILE_LAYER,
+        # In the test we replace the CPU clock and features (features_cpu.c).
+        *[source for source in FILE_LAYER if source.name != "features_cpu.c"],
     ]
     subprocess.run(
         [toolchain.describe()["cc"], "-std=gnu99", "-O0", "-g", "-Wno-deprecated-declarations", "-DRC_NO_THREADS",

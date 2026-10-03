@@ -210,8 +210,8 @@ fn one_core_failing_does_not_stop_the_next() {
                 component: "a".into(),
                 repository: "libretro/a".into(),
                 license_file: "a.txt".into(),
-                license_path: "COPYING".into(),
-                license_ref: "master".into(),
+                license_path: Some("COPYING".into()),
+                license_ref: Some("master".into()),
                 artifacts: std::collections::BTreeMap::from([(
                     "macos-arm64".into(),
                     PinnedArtifact {
@@ -223,8 +223,8 @@ fn one_core_failing_does_not_stop_the_next() {
                 component: "b".into(),
                 repository: "libretro/b".into(),
                 license_file: "b.txt".into(),
-                license_path: "COPYING".into(),
-                license_ref: "develop".into(),
+                license_path: Some("COPYING".into()),
+                license_ref: Some("develop".into()),
                 artifacts: std::collections::BTreeMap::from([(
                     "macos-arm64".into(),
                     PinnedArtifact {
@@ -278,8 +278,8 @@ fn a_licence_that_was_never_recorded_is_kept() {
             component: "flycast".into(),
             repository: "flyinghead/flycast".into(),
             license_file: "flycast.txt".into(),
-            license_path: "LICENSE".into(),
-            license_ref: "master".into(),
+            license_path: Some("LICENSE".into()),
+            license_ref: Some("master".into()),
             artifacts: std::collections::BTreeMap::from([(
                 "macos-arm64".into(),
                 PinnedArtifact {
@@ -354,8 +354,8 @@ fn flycast_pins() -> PinSet {
             component: "flycast".into(),
             repository: "flyinghead/flycast".into(),
             license_file: "flycast.txt".into(),
-            license_path: "LICENSE".into(),
-            license_ref: "master".into(),
+            license_path: Some("LICENSE".into()),
+            license_ref: Some("master".into()),
             artifacts: std::collections::BTreeMap::from([(
                 "macos-arm64".into(),
                 PinnedArtifact {

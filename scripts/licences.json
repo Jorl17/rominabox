@@ -23,6 +23,11 @@
       "texts": [{"member": "LICENSE.TXT"}, {"member": "docs/FTL.TXT"}, {"member": "docs/GPLv2.TXT"}]
     },
     {
+      "name": "zstd", "title": "Zstandard", "licence": "BSD-3-Clause OR GPL-2.0-only", "pin": "zstd", "platforms": ["windows"],
+      "usedBy": "the launcher, in every exported Windows game",
+      "texts": [{"member": "LICENSE"}, {"member": "COPYING"}]
+    },
+    {
       "name": "glslang", "title": "glslang", "licence": "BSD-3-Clause AND others", "pin": "fork", "path": "deps/glslang",
       "usedBy": "the player's slang shader compiler, in every exported game",
       "note": "The fork's glslang is from June 2018 and carries its licences in file headers only. Upstream wrote LICENSE.txt, collecting them, in December 2018; this is its first version.",
