@@ -26,6 +26,11 @@ pub struct ContentSet {
     pub files: Vec<ContentFile>,
     /// How many discs the game has: the entries of a playlist, or else one.
     pub discs: usize,
+    /// The patches we apply to the game file, in order (crate::patches). The
+    /// staged bytes of the game file are then the patched game.
+    pub patches: Vec<PathBuf>,
+    /// The file name of the patched game, when a patch gives one.
+    pub patched_name: Option<String>,
 }
 
 /// Find every file referenced from `entrypoint`, without leaving its
@@ -95,11 +100,36 @@ pub fn collect_for(entrypoint: &Path, system_id: Option<&str>) -> Result<Content
         }
         _ => 1,
     };
+    let patched = patch_game_file(&entrypoint, &root, &mut files)?;
     Ok(ContentSet {
         entrypoint: entry_relative,
         files,
         discs,
+        patches: patched.as_ref().map(|patched| patched.patches.clone()).unwrap_or_default(),
+        patched_name: patched.and_then(|patched| patched.made),
     })
+}
+
+/// A game that is one file, with the patches beside it that belong to it. We
+/// apply them and put the patched game in the export in place of the file.
+/// We never apply a patch to a sheet, which only lists the tracks.
+fn patch_game_file(
+    entrypoint: &Path,
+    root: &Path,
+    files: &mut [ContentFile],
+) -> Result<Option<crate::patches::Patched>, String> {
+    let Some(game) = files.first_mut().filter(|file| file.staged_bytes.is_none()) else {
+        return Ok(None);
+    };
+    let beside: Vec<_> = crate::patches::in_folder(root)
+        .into_iter()
+        .map(|path| (path, crate::patches::Offered::Beside))
+        .collect();
+    let patched = crate::patches::apply_belonging(entrypoint, &beside)?;
+    if let Some(patched) = &patched {
+        game.staged_bytes = Some(patched.bytes.clone());
+    }
+    Ok(patched)
 }
 
 /// The path that `path` resolves to, after following any symbolic link.

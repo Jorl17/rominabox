@@ -21,6 +21,9 @@ pub struct Traveling {
     /// then name something we do not copy.
     pub entry: PathBuf,
     pub files: Vec<String>,
+    /// The patches that go with the game, by file name, which we apply to it
+    /// at export.
+    pub patches: Vec<String>,
 }
 
 pub fn files_for(dropped: &Path, system: Option<&str>) -> Result<Traveling, String> {
@@ -37,7 +40,13 @@ pub fn files_for(dropped: &Path, system: Option<&str>) -> Result<Traveling, Stri
                 .join("/")
         })
         .collect();
-    Ok(Traveling { entry, files })
+    let patches = set
+        .patches
+        .iter()
+        .filter_map(|patch| patch.file_name())
+        .map(|name| name.to_string_lossy().into_owned())
+        .collect();
+    Ok(Traveling { entry, files, patches })
 }
 
 #[cfg(test)]

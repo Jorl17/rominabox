@@ -163,7 +163,11 @@ export function shaderWarnings(selection: {
   if (!native) return Promise.resolve([]);
   return invoke("shader_warnings", { selection });
 }
-export type Traveling = { entry: string; files: string[] };
+export type Traveling = { entry: string; files: string[]; patches?: string[] };
+/** The game file, the files copied with it, then the patches applied to it. */
+export function travelingNames(traveling: Traveling): string[] {
+  return [...traveling.files, ...(traveling.patches ?? [])];
+}
 /**
  * The browser walkthrough has no desktop shell. In its server we answer
  * `question` with the same CLI command as in the shell, because with a second

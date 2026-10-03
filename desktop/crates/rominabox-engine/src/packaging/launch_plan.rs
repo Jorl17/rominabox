@@ -28,8 +28,9 @@ pub(super) fn isolation_namespace() -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-/// The identity of a game, from which we name its data folder, its sandbox and its
-/// app ID: the console, the title and the ROM's bytes. When the author
+/// The identity of a game, from which we name its data folder, its sandbox
+/// and its app ID: the console, the title and the ROM's bytes, or those of
+/// the patched game when the game comes with patches. When the author
 /// exports the same game again with the same title, the player keeps the
 /// saves, and the same ROM under another title is a separate game.
 ///
@@ -38,6 +39,7 @@ pub(super) fn isolation_namespace() -> Option<String> {
 /// other test in this binary shares.
 pub(super) fn stable_identity(
     rom: &Path,
+    patched: Option<&[u8]>,
     system: &str,
     title: &str,
     namespace: Option<&str>,
@@ -63,6 +65,11 @@ pub(super) fn stable_identity(
     hash.update(b"\0");
     hash.update(title.trim().as_bytes());
     hash.update(b"\0");
+    // A patched game is a separate game, with separate saves and storage.
+    if let Some(patched) = patched {
+        hash.update(patched);
+        return Ok(format!("{:x}", hash.finalize())[..IDENTITY_CHARS].to_string());
+    }
     let mut buffer = [0u8; 1024 * 128];
     loop {
         let count = file

@@ -27,6 +27,7 @@ import { ControlsSection } from "./ControlsSection";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
+import { AlsoImporting } from "./AlsoImporting";
 import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import { BackgroundPicker } from "./BackgroundPicker";
@@ -88,31 +89,6 @@ const defaults = {
   ...declaredDraft,
 };
 type Draft = typeof defaults;
-
-// We name three tracks. Six is more than a handful, so we show a count.
-const NAMED_COMPANIONS = 5;
-
-function alsoImporting(files: string[]): string | null {
-  if (files.length < 2) return null;
-  const extras = files.slice(1);
-  if (extras.length > NAMED_COMPANIONS) {
-    return `Also importing ${extras.length} files`;
-  }
-  const dot = files[0].lastIndexOf(".");
-  const stem = dot > 0 ? files[0].slice(0, dot) : files[0];
-  const named = extras.map((name) => {
-    if (!stem || !name.startsWith(stem)) return name;
-    const rest = name.slice(stem.length).trim();
-    return rest || name;
-  });
-  return `Also importing: ${named.join(", ")}`;
-}
-
-function AlsoImporting({ files }: { files: string[] }) {
-  const also = alsoImporting(files);
-  if (!also) return null;
-  return <p className="traveling-also">{also}</p>;
-}
 
 function StartupOptions({
   draft,
@@ -274,7 +250,7 @@ export function App() {
         system,
       );
       if (request !== generation.current) return;
-      setTraveling(traveled.files);
+      setTraveling(bridge.travelingNames(traveled));
     } catch (e) {
       if (request !== generation.current) return;
       // We rejected the set in the exporter. A one-file line would describe a
@@ -431,7 +407,7 @@ export function App() {
       }
       if (request !== generation.current) return;
       if (traveled) {
-        setTraveling(traveled.files);
+        setTraveling(bridge.travelingNames(traveled));
         const entryName = traveled.entry.split(/[\\/]/).pop();
         if (traveled.entry && entryName && entryName !== selection.name) {
           const entry = traveled.entry;
@@ -556,7 +532,7 @@ export function App() {
           filename,
           settings.system,
         );
-        setTraveling(traveled.files);
+        setTraveling(bridge.travelingNames(traveled));
       } catch (e) {
         setTraveling([]);
         fail(e);
