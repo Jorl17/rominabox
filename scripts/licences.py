@@ -29,6 +29,7 @@ in a warning, so that someone adds it here.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -45,6 +46,8 @@ The licence text of every third-party component ROM-in-a-Box uses or ships,
 one file per component. scripts/licences.py writes this folder from each
 component's own source; do not edit it by hand.
 
+  index.json   one row per component (title, version, licence, file), which the
+               About views of the builder and of every game list
   native/      the player and what it links; a game carries those its player uses
   cores/       the libretro cores the builder downloads for an export
   crates/      the Rust crates the builder and its tools build with
@@ -60,6 +63,23 @@ headed by where it was read.
   uv run python scripts/licences.py            # write this folder again
   uv run python scripts/licences.py --check    # warn of a missing, stale or unused entry
 """
+
+
+INDEX = "index.json"
+
+
+def index_rows(components: list[Component]) -> list[dict]:
+    """One row per component, as the About views list them: the index the
+    builder, a kit and every exported game carry beside the entries."""
+    return [{"group": component.group, "name": component.name, "title": component.title,
+             "version": component.version, "licence": component.licence, "usedBy": component.used_by,
+             "file": entry_path(component).as_posix()}
+            for component in sorted(components, key=lambda c: (c.group, c.title.lower(), c.name))]
+
+
+def write_index(folder: Path, components: list[Component]) -> None:
+    (folder / INDEX).write_text(json.dumps(index_rows(components), indent=1, ensure_ascii=False) + "\n",
+                                encoding="utf-8", newline="\n")
 
 
 def entry_path(component: Component) -> Path:
@@ -137,9 +157,12 @@ def check(folder: Path = OUT, components: list[Component] | None = None) -> list
     problems += check_entries(folder, components)
     if not (folder / "README.txt").is_file() or (folder / "README.txt").read_text(encoding="utf-8") != README:
         problems.append("README.txt: differs from what scripts/licences.py writes")
+    index = folder / INDEX
+    if not index.is_file() or json.loads(index.read_text(encoding="utf-8")) != index_rows(components):
+        problems.append(f"{INDEX}: differs from the components; run uv run python scripts/licences.py")
     for path in sorted(folder.rglob("*")):
         relative = path.relative_to(folder)
-        if path.is_file() and relative not in seen and relative != Path("README.txt"):
+        if path.is_file() and relative not in seen and relative not in (Path("README.txt"), Path(INDEX)):
             problems.append(f"{relative.as_posix()}: no component the repository uses; run uv run python scripts/licences.py")
     for component in native_components():
         path = component.declared.get("path")
@@ -180,6 +203,7 @@ def generate(folder: Path = OUT, refresh: bool = False) -> list[str]:
         (folder / relative).parent.mkdir(parents=True, exist_ok=True)
         (folder / relative).write_text(render(component, texts), encoding="utf-8", newline="\n")
     (folder / "README.txt").write_text(README, encoding="utf-8", newline="\n")
+    write_index(folder, components)
     wanted = {entry_path(component) for component in components} | {Path("README.txt")}
     for path in sorted(folder.rglob("*.txt")):
         if path.is_file() and path.relative_to(folder) not in wanted and folder in path.parents:

@@ -1,7 +1,8 @@
-stella
+Stella
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/libretro/stella2014-libretro
+Licence:  GPL-2.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
 ==> https://raw.githubusercontent.com/libretro/stella2014-libretro/7d1361e407e63f29e52892655069e5fb4096e691/stella/license.txt <==

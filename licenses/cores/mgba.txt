@@ -1,10 +1,11 @@
-mgba
+mGBA
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/mgba-emu/mgba
+Licence:  MPL-2.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
-==> https://raw.githubusercontent.com/mgba-emu/mgba/83846bb3b77a6103ed18e5bfebeb11c60975c8cb/LICENSE <==
+==> https://raw.githubusercontent.com/mgba-emu/mgba/c3c8e5e813f245028de118a56734e1dc0f35ce2a/LICENSE <==
 
 Mozilla Public License Version 2.0
 ==================================

@@ -1,10 +1,11 @@
-flycast
+Flycast
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/flyinghead/flycast
+Licence:  GPL-2.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
-==> https://raw.githubusercontent.com/flyinghead/flycast/ea087b9140ff5a3b1809e090da0f8d644ee2db95/LICENSE <==
+==> https://raw.githubusercontent.com/flyinghead/flycast/59ed35a7ea7c1940d4c8ac221a662d0e6d6dc9ea/LICENSE <==
 
                     GNU GENERAL PUBLIC LICENSE
                        Version 2, June 1991

@@ -1,7 +1,8 @@
-beetle_cygne
+Beetle WonderSwan
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/libretro/beetle-wswan-libretro
+Licence:  GPL-2.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
 ==> https://raw.githubusercontent.com/libretro/beetle-wswan-libretro/4b01295838ea89e3f1355bbe4cb5cf98aa6108cd/COPYING <==

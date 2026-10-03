@@ -1,10 +1,11 @@
-pcsx2
+LRPS2
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/libretro/ps2
+Licence:  GPL-3.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
-==> https://raw.githubusercontent.com/libretro/ps2/59e32a0b205eabbde45cb898480f8b63e022f454/COPYING.GPLv3 <==
+==> https://raw.githubusercontent.com/libretro/ps2/6eabf2242d451ee2e6d52b1e3f10efb77143ed05/COPYING.GPLv3 <==
 
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007

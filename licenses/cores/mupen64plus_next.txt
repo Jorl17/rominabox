@@ -1,10 +1,11 @@
-mupen64plus_next
+Mupen64Plus-Next
 
 Version:  the buildbot's nightly build; licence from develop
 Source:   https://github.com/libretro/mupen64plus-libretro-nx
+Licence:  GPL-2.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
-==> https://raw.githubusercontent.com/libretro/mupen64plus-libretro-nx/6752836de8b224febfd5708444755b77712ac939/LICENSE <==
+==> https://raw.githubusercontent.com/libretro/mupen64plus-libretro-nx/12edd2c74a517ff86dfa8cfc71ad75e4c10486d5/LICENSE <==
 
                     GNU GENERAL PUBLIC LICENSE
                        Version 2, June 1991

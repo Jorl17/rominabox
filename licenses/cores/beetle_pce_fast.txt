@@ -1,10 +1,11 @@
-beetle_pce_fast
+Beetle PCE Fast
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/libretro/beetle-pce-fast-libretro
+Licence:  GPL-2.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
-==> https://raw.githubusercontent.com/libretro/beetle-pce-fast-libretro/1c693c630121366f0b819d785762f1ce5b3a68d0/COPYING <==
+==> https://raw.githubusercontent.com/libretro/beetle-pce-fast-libretro/3f946f277aef3aa99a95551618bbcd1dd2bda0d9/COPYING <==
 
 		    GNU GENERAL PUBLIC LICENSE
 		       Version 2, June 1991

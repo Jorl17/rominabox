@@ -2,6 +2,7 @@ a5200
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/libretro/a5200
+Licence:  GPL-2.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
 ==> https://raw.githubusercontent.com/libretro/a5200/40c6f2f1ad4a3145b328d5baaf010fae6c7e752b/License.txt <==

@@ -15,6 +15,7 @@ We read nothing from the network and do not change licenses/.
 
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -86,6 +87,15 @@ def main() -> int:
         check(names(problems, "crates/left-behind-0.1.0.txt", "no component"),
               "an entry no component uses is named", shown)
         check(len(problems) == 4, "and nothing else does", shown)
+        rows = json.loads((folder / licences.INDEX).read_text(encoding="utf-8"))
+        (folder / licences.INDEX).write_text(json.dumps(rows[1:]), encoding="utf-8")
+        problems = licences.check(folder, components=components)
+        check(names(problems, licences.INDEX, "differs from the components"),
+              "an index that lacks a component's row is named", "\n".join(problems))
+        rows = licences.index_rows(components)
+        check(all(row["title"] and row["licence"] and (licences.OUT / row["file"]).is_file() for row in rows),
+              "every index row has a title, a licence name and its entry",
+              ", ".join(row["file"] for row in rows if not (row["title"] and row["licence"]))[:300])
         # Licences are for attribution, so we only warn about these problems
         # and fail nothing.
         with patch.object(licences, "OUT", folder), patch.object(sys, "argv", ["licences.py", "--check"]):

@@ -354,19 +354,24 @@ def declared_components(group: str, entries: list[dict]) -> list[Component]:
 def cores() -> list[Component]:
     """Every core we can download in the builder, with the licence we download
     beside it: the text on the branch of the core's repository."""
+    declared = {}
+    for path in (ROOT / "integrations/consoles").glob("*/components/*.json"):
+        component = json.loads(path.read_text(encoding="utf-8"))
+        declared[component["id"]] = component
     found = []
     for core in json.loads(CORE_PINS.read_text(encoding="utf-8"))["cores"]:
         repository, ref, path = core["repository"], core["licenseRef"], core["licensePath"]
         if not ref or not path:
             continue
+        component = declared.get(core["component"], {})
 
         def read(repository=repository, ref=ref, path=path) -> list[Text]:
             return [branch_text(repository, ref, path)]
         found.append(Component(
-            "cores", core["component"], core["component"], f"the buildbot's nightly build; licence from {ref}",
-            f"https://github.com/{repository}",
+            "cores", core["component"], component.get("libraryName", core["component"]),
+            f"the buildbot's nightly build; licence from {ref}", f"https://github.com/{repository}",
             "games exported with this core: the builder downloads it, with this licence, when an export needs it",
-            read, False))
+            read, False, licence=component.get("license", {}).get("spdx", "")))
     return found
 
 

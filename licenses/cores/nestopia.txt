@@ -1,10 +1,11 @@
-nestopia
+Nestopia
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/libretro/nestopia
+Licence:  GPL-2.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
-==> https://raw.githubusercontent.com/libretro/nestopia/8f00f500912a847062de432e38765c7285483e62/COPYING <==
+==> https://raw.githubusercontent.com/libretro/nestopia/b9fdc9c4e6d374abacd1a678ae46ec7f963ef59a/COPYING <==
 
 		    GNU GENERAL PUBLIC LICENSE
 		       Version 2, June 1991

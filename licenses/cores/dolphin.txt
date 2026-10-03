@@ -1,7 +1,8 @@
-dolphin
+dolphin-emu
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/libretro/dolphin
+Licence:  GPL-2.0-or-later
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
 ==> https://raw.githubusercontent.com/libretro/dolphin/4d23cf151640eb810cb1b8e9d9fc922cf59c0b87/LICENSES/GPL-2.0-or-later.txt <==

@@ -1,7 +1,8 @@
-snes9x
+Snes9x
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/snes9xgit/snes9x
+Licence:  Non-commercial
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
 ==> https://raw.githubusercontent.com/snes9xgit/snes9x/1bcc369e89f08243e0a462882fb1f3e42e51de3a/LICENSE <==

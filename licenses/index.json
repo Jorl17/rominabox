@@ -1,0 +1,3584 @@
+[
+ {
+  "group": "cores",
+  "name": "a5200",
+  "title": "a5200",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/a5200.txt"
+ },
+ {
+  "group": "cores",
+  "name": "beetle_neopop",
+  "title": "Beetle NeoPop",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/beetle_neopop.txt"
+ },
+ {
+  "group": "cores",
+  "name": "beetle_pce_fast",
+  "title": "Beetle PCE Fast",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/beetle_pce_fast.txt"
+ },
+ {
+  "group": "cores",
+  "name": "beetle_cygne",
+  "title": "Beetle WonderSwan",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/beetle_cygne.txt"
+ },
+ {
+  "group": "cores",
+  "name": "dolphin",
+  "title": "dolphin-emu",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0-or-later",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/dolphin.txt"
+ },
+ {
+  "group": "cores",
+  "name": "flycast",
+  "title": "Flycast",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/flycast.txt"
+ },
+ {
+  "group": "cores",
+  "name": "gambatte",
+  "title": "Gambatte",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/gambatte.txt"
+ },
+ {
+  "group": "cores",
+  "name": "genesis_plus_gx",
+  "title": "Genesis Plus GX",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "Non-commercial",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/genesis_plus_gx.txt"
+ },
+ {
+  "group": "cores",
+  "name": "handy",
+  "title": "Handy",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "Zlib",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/handy.txt"
+ },
+ {
+  "group": "cores",
+  "name": "pcsx2",
+  "title": "LRPS2",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-3.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/pcsx2.txt"
+ },
+ {
+  "group": "cores",
+  "name": "mgba",
+  "title": "mGBA",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "MPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/mgba.txt"
+ },
+ {
+  "group": "cores",
+  "name": "mupen64plus_next",
+  "title": "Mupen64Plus-Next",
+  "version": "the buildbot's nightly build; licence from develop",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/mupen64plus_next.txt"
+ },
+ {
+  "group": "cores",
+  "name": "nestopia",
+  "title": "Nestopia",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/nestopia.txt"
+ },
+ {
+  "group": "cores",
+  "name": "pcsx_rearmed",
+  "title": "PCSX-ReARMed",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/pcsx_rearmed.txt"
+ },
+ {
+  "group": "cores",
+  "name": "prosystem",
+  "title": "ProSystem",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/prosystem.txt"
+ },
+ {
+  "group": "cores",
+  "name": "snes9x",
+  "title": "Snes9x",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "Non-commercial",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/snes9x.txt"
+ },
+ {
+  "group": "cores",
+  "name": "stella",
+  "title": "Stella",
+  "version": "the buildbot's nightly build; licence from master",
+  "licence": "GPL-2.0",
+  "usedBy": "games exported with this core: the builder downloads it, with this licence, when an export needs it",
+  "file": "cores/stella.txt"
+ },
+ {
+  "group": "crates",
+  "name": "adler2-2.0.1",
+  "title": "adler2",
+  "version": "2.0.1",
+  "licence": "0BSD OR MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/adler2-2.0.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "aho-corasick-1.1.5",
+  "title": "aho-corasick",
+  "version": "1.1.5",
+  "licence": "Unlicense OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/aho-corasick-1.1.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "alloc-no-stdlib-2.0.4",
+  "title": "alloc-no-stdlib",
+  "version": "2.0.4",
+  "licence": "BSD-3-Clause",
+  "usedBy": "the builder",
+  "file": "crates/alloc-no-stdlib-2.0.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "alloc-stdlib-0.2.4",
+  "title": "alloc-stdlib",
+  "version": "0.2.4",
+  "licence": "BSD-3-Clause",
+  "usedBy": "the builder",
+  "file": "crates/alloc-stdlib-0.2.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "anyhow-1.0.104",
+  "title": "anyhow",
+  "version": "1.0.104",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/anyhow-1.0.104.txt"
+ },
+ {
+  "group": "crates",
+  "name": "arrayvec-0.7.8",
+  "title": "arrayvec",
+  "version": "0.7.8",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/arrayvec-0.7.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "autocfg-1.5.1",
+  "title": "autocfg",
+  "version": "1.5.1",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/autocfg-1.5.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "base64-0.21.7",
+  "title": "base64",
+  "version": "0.21.7",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/base64-0.21.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "base64-0.22.1",
+  "title": "base64",
+  "version": "0.22.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/base64-0.22.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "base64-0.23.1",
+  "title": "base64",
+  "version": "0.23.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/base64-0.23.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "bit-set-0.8.0",
+  "title": "bit-set",
+  "version": "0.8.0",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/bit-set-0.8.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "bit-vec-0.8.0",
+  "title": "bit-vec",
+  "version": "0.8.0",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/bit-vec-0.8.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "bitflags-1.3.2",
+  "title": "bitflags",
+  "version": "1.3.2",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/bitflags-1.3.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "bitflags-2.13.2",
+  "title": "bitflags",
+  "version": "2.13.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/bitflags-2.13.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "bitreader-0.3.11",
+  "title": "bitreader",
+  "version": "0.3.11",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/bitreader-0.3.11.txt"
+ },
+ {
+  "group": "crates",
+  "name": "block-buffer-0.10.4",
+  "title": "block-buffer",
+  "version": "0.10.4",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/block-buffer-0.10.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "block-buffer-0.12.1",
+  "title": "block-buffer",
+  "version": "0.12.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/block-buffer-0.12.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "block2-0.6.2",
+  "title": "block2",
+  "version": "0.6.2",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/block2-0.6.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "brotli-8.0.4",
+  "title": "brotli",
+  "version": "8.0.4",
+  "licence": "BSD-3-Clause AND MIT",
+  "usedBy": "the builder",
+  "file": "crates/brotli-8.0.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "brotli-decompressor-5.0.3",
+  "title": "brotli-decompressor",
+  "version": "5.0.3",
+  "licence": "BSD-3-Clause/MIT",
+  "usedBy": "the builder",
+  "file": "crates/brotli-decompressor-5.0.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "bs58-0.5.1",
+  "title": "bs58",
+  "version": "0.5.1",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/bs58-0.5.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "bumpalo-3.20.3",
+  "title": "bumpalo",
+  "version": "3.20.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/bumpalo-3.20.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "bytemuck-1.25.2",
+  "title": "bytemuck",
+  "version": "1.25.2",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/bytemuck-1.25.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "byteorder-1.5.0",
+  "title": "byteorder",
+  "version": "1.5.0",
+  "licence": "Unlicense OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/byteorder-1.5.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "byteorder-lite-0.1.0",
+  "title": "byteorder-lite",
+  "version": "0.1.0",
+  "licence": "Unlicense OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/byteorder-lite-0.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "bytes-1.12.1",
+  "title": "bytes",
+  "version": "1.12.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/bytes-1.12.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "camino-1.2.6",
+  "title": "camino",
+  "version": "1.2.6",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/camino-1.2.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cargo-platform-0.1.9",
+  "title": "cargo-platform",
+  "version": "0.1.9",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/cargo-platform-0.1.9.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cargo_metadata-0.19.2",
+  "title": "cargo_metadata",
+  "version": "0.19.2",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/cargo_metadata-0.19.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cargo_toml-0.22.3",
+  "title": "cargo_toml",
+  "version": "0.22.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/cargo_toml-0.22.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cc-1.4.7",
+  "title": "cc",
+  "version": "1.4.7",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/cc-1.4.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cfb-0.7.3",
+  "title": "cfb",
+  "version": "0.7.3",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/cfb-0.7.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cfg-if-1.0.5",
+  "title": "cfg-if",
+  "version": "1.0.5",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/cfg-if-1.0.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "chd-0.3.4",
+  "title": "chd",
+  "version": "0.3.4",
+  "licence": "BSD-3-Clause",
+  "usedBy": "the builder",
+  "file": "crates/chd-0.3.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "chrono-0.4.45",
+  "title": "chrono",
+  "version": "0.4.45",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/chrono-0.4.45.txt"
+ },
+ {
+  "group": "crates",
+  "name": "claxon-0.4.3",
+  "title": "claxon",
+  "version": "0.4.3",
+  "licence": "Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/claxon-0.4.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "color_quant-1.1.0",
+  "title": "color_quant",
+  "version": "1.1.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/color_quant-1.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "const-oid-0.10.2",
+  "title": "const-oid",
+  "version": "0.10.2",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/const-oid-0.10.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cookie-0.18.2",
+  "title": "cookie",
+  "version": "0.18.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/cookie-0.18.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "core-foundation-0.10.1",
+  "title": "core-foundation",
+  "version": "0.10.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/core-foundation-0.10.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "core-foundation-sys-0.8.7",
+  "title": "core-foundation-sys",
+  "version": "0.8.7",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/core-foundation-sys-0.8.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "core-graphics-0.25.0",
+  "title": "core-graphics",
+  "version": "0.25.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/core-graphics-0.25.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "core-graphics-types-0.2.0",
+  "title": "core-graphics-types",
+  "version": "0.2.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/core-graphics-types-0.2.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cpufeatures-0.2.17",
+  "title": "cpufeatures",
+  "version": "0.2.17",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/cpufeatures-0.2.17.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cpufeatures-0.3.1",
+  "title": "cpufeatures",
+  "version": "0.3.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/cpufeatures-0.3.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "crc-3.4.0",
+  "title": "crc",
+  "version": "3.4.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/crc-3.4.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "crc-catalog-2.5.0",
+  "title": "crc-catalog",
+  "version": "2.5.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/crc-catalog-2.5.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "crc32fast-1.5.2",
+  "title": "crc32fast",
+  "version": "1.5.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/crc32fast-1.5.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "crossbeam-channel-0.5.17",
+  "title": "crossbeam-channel",
+  "version": "0.5.17",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/crossbeam-channel-0.5.17.txt"
+ },
+ {
+  "group": "crates",
+  "name": "crossbeam-utils-0.8.23",
+  "title": "crossbeam-utils",
+  "version": "0.8.23",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/crossbeam-utils-0.8.23.txt"
+ },
+ {
+  "group": "crates",
+  "name": "crypto-common-0.1.7",
+  "title": "crypto-common",
+  "version": "0.1.7",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/crypto-common-0.1.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "crypto-common-0.2.2",
+  "title": "crypto-common",
+  "version": "0.2.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/crypto-common-0.2.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cssparser-0.36.0",
+  "title": "cssparser",
+  "version": "0.36.0",
+  "licence": "MPL-2.0",
+  "usedBy": "the builder",
+  "file": "crates/cssparser-0.36.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "cssparser-macros-0.6.1",
+  "title": "cssparser-macros",
+  "version": "0.6.1",
+  "licence": "MPL-2.0",
+  "usedBy": "the builder",
+  "file": "crates/cssparser-macros-0.6.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "ctor-0.8.0",
+  "title": "ctor",
+  "version": "0.8.0",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/ctor-0.8.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "ctor-proc-macro-0.0.7",
+  "title": "ctor-proc-macro",
+  "version": "0.0.7",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/ctor-proc-macro-0.0.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "darling-0.24.1",
+  "title": "darling",
+  "version": "0.24.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/darling-0.24.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "darling_core-0.24.1",
+  "title": "darling_core",
+  "version": "0.24.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/darling_core-0.24.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "darling_macro-0.24.1",
+  "title": "darling_macro",
+  "version": "0.24.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/darling_macro-0.24.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "datary-0.3.0",
+  "title": "datary",
+  "version": "0.3.0",
+  "licence": "Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/datary-0.3.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "debug-ignore-1.0.5",
+  "title": "debug-ignore",
+  "version": "1.0.5",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/debug-ignore-1.0.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "defmt-1.1.1",
+  "title": "defmt",
+  "version": "1.1.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/defmt-1.1.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "defmt-macros-1.1.1",
+  "title": "defmt-macros",
+  "version": "1.1.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/defmt-macros-1.1.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "defmt-parser-1.0.0",
+  "title": "defmt-parser",
+  "version": "1.0.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/defmt-parser-1.0.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "deranged-0.5.8",
+  "title": "deranged",
+  "version": "0.5.8",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/deranged-0.5.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "derive_more-2.1.1",
+  "title": "derive_more",
+  "version": "2.1.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/derive_more-2.1.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "derive_more-impl-2.1.1",
+  "title": "derive_more-impl",
+  "version": "2.1.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/derive_more-impl-2.1.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "digest-0.10.7",
+  "title": "digest",
+  "version": "0.10.7",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/digest-0.10.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "digest-0.11.3",
+  "title": "digest",
+  "version": "0.11.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/digest-0.11.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dirs-6.0.0",
+  "title": "dirs",
+  "version": "6.0.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/dirs-6.0.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dirs-sys-0.5.0",
+  "title": "dirs-sys",
+  "version": "0.5.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/dirs-sys-0.5.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dispatch2-0.3.1",
+  "title": "dispatch2",
+  "version": "0.3.1",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/dispatch2-0.3.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "displaydoc-0.2.7",
+  "title": "displaydoc",
+  "version": "0.2.7",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/displaydoc-0.2.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dom_query-0.27.0",
+  "title": "dom_query",
+  "version": "0.27.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/dom_query-0.27.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dpi-0.1.2",
+  "title": "dpi",
+  "version": "0.1.2",
+  "licence": "Apache-2.0 AND MIT",
+  "usedBy": "the builder",
+  "file": "crates/dpi-0.1.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dtoa-1.0.11",
+  "title": "dtoa",
+  "version": "1.0.11",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/dtoa-1.0.11.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dtoa-short-0.3.5",
+  "title": "dtoa-short",
+  "version": "0.3.5",
+  "licence": "MPL-2.0",
+  "usedBy": "the builder",
+  "file": "crates/dtoa-short-0.3.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dtor-0.3.0",
+  "title": "dtor",
+  "version": "0.3.0",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/dtor-0.3.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dtor-proc-macro-0.0.6",
+  "title": "dtor-proc-macro",
+  "version": "0.0.6",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/dtor-proc-macro-0.0.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dunce-1.0.5",
+  "title": "dunce",
+  "version": "1.0.5",
+  "licence": "CC0-1.0 OR MIT-0 OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/dunce-1.0.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "dyn-clone-1.0.20",
+  "title": "dyn-clone",
+  "version": "1.0.20",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/dyn-clone-1.0.20.txt"
+ },
+ {
+  "group": "crates",
+  "name": "editpe-0.2.4",
+  "title": "editpe",
+  "version": "0.2.4",
+  "licence": "BSD-2-Clause",
+  "usedBy": "the builder",
+  "file": "crates/editpe-0.2.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "embed-resource-3.0.11",
+  "title": "embed-resource",
+  "version": "3.0.11",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/embed-resource-3.0.11.txt"
+ },
+ {
+  "group": "crates",
+  "name": "embed_plist-1.2.2",
+  "title": "embed_plist",
+  "version": "1.2.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/embed_plist-1.2.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "equivalent-1.0.2",
+  "title": "equivalent",
+  "version": "1.0.2",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/equivalent-1.0.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "erased-serde-0.4.10",
+  "title": "erased-serde",
+  "version": "0.4.10",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/erased-serde-0.4.10.txt"
+ },
+ {
+  "group": "crates",
+  "name": "fastrand-2.5.0",
+  "title": "fastrand",
+  "version": "2.5.0",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/fastrand-2.5.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "fax-0.2.7",
+  "title": "fax",
+  "version": "0.2.7",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/fax-0.2.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "fdeflate-0.3.7",
+  "title": "fdeflate",
+  "version": "0.3.7",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/fdeflate-0.3.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "find-msvc-tools-0.1.13",
+  "title": "find-msvc-tools",
+  "version": "0.1.13",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/find-msvc-tools-0.1.13.txt"
+ },
+ {
+  "group": "crates",
+  "name": "flate2-1.1.10",
+  "title": "flate2",
+  "version": "1.1.10",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/flate2-1.1.10.txt"
+ },
+ {
+  "group": "crates",
+  "name": "fnv-1.0.7",
+  "title": "fnv",
+  "version": "1.0.7",
+  "licence": "Apache-2.0 / MIT",
+  "usedBy": "the builder",
+  "file": "crates/fnv-1.0.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "foldhash-0.2.0",
+  "title": "foldhash",
+  "version": "0.2.0",
+  "licence": "Zlib",
+  "usedBy": "the builder",
+  "file": "crates/foldhash-0.2.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "foreign-types-0.5.0",
+  "title": "foreign-types",
+  "version": "0.5.0",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/foreign-types-0.5.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "foreign-types-macros-0.2.4",
+  "title": "foreign-types-macros",
+  "version": "0.2.4",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/foreign-types-macros-0.2.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "foreign-types-shared-0.3.1",
+  "title": "foreign-types-shared",
+  "version": "0.3.1",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/foreign-types-shared-0.3.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "form_urlencoded-1.2.2",
+  "title": "form_urlencoded",
+  "version": "1.2.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/form_urlencoded-1.2.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "generic-array-0.14.7",
+  "title": "generic-array",
+  "version": "0.14.7",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/generic-array-0.14.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "getrandom-0.2.17",
+  "title": "getrandom",
+  "version": "0.2.17",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/getrandom-0.2.17.txt"
+ },
+ {
+  "group": "crates",
+  "name": "getrandom-0.3.4",
+  "title": "getrandom",
+  "version": "0.3.4",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/getrandom-0.3.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "getrandom-0.4.3",
+  "title": "getrandom",
+  "version": "0.4.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/getrandom-0.4.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "gif-0.14.2",
+  "title": "gif",
+  "version": "0.14.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/gif-0.14.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "gilrs-0.11.2",
+  "title": "gilrs",
+  "version": "0.11.2",
+  "licence": "Apache-2.0/MIT",
+  "usedBy": "the builder",
+  "file": "crates/gilrs-0.11.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "gilrs-core-0.6.8",
+  "title": "gilrs-core",
+  "version": "0.6.8",
+  "licence": "Apache-2.0/MIT",
+  "usedBy": "the builder",
+  "file": "crates/gilrs-core-0.6.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "glob-0.3.4",
+  "title": "glob",
+  "version": "0.3.4",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/glob-0.3.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "half-2.7.1",
+  "title": "half",
+  "version": "2.7.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/half-2.7.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "hashbrown-0.12.3",
+  "title": "hashbrown",
+  "version": "0.12.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/hashbrown-0.12.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "hashbrown-0.17.1",
+  "title": "hashbrown",
+  "version": "0.17.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/hashbrown-0.17.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "heck-0.5.0",
+  "title": "heck",
+  "version": "0.5.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/heck-0.5.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "hex-0.4.3",
+  "title": "hex",
+  "version": "0.4.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/hex-0.4.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "html5ever-0.38.0",
+  "title": "html5ever",
+  "version": "0.38.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/html5ever-0.38.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "http-1.5.0",
+  "title": "http",
+  "version": "1.5.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/http-1.5.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "hybrid-array-0.4.15",
+  "title": "hybrid-array",
+  "version": "0.4.15",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/hybrid-array-0.4.15.txt"
+ },
+ {
+  "group": "crates",
+  "name": "iana-time-zone-0.1.65",
+  "title": "iana-time-zone",
+  "version": "0.1.65",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/iana-time-zone-0.1.65.txt"
+ },
+ {
+  "group": "crates",
+  "name": "icns-0.4.0",
+  "title": "icns",
+  "version": "0.4.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/icns-0.4.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "ico-0.5.0",
+  "title": "ico",
+  "version": "0.5.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/ico-0.5.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "icu_collections-2.3.0",
+  "title": "icu_collections",
+  "version": "2.3.0",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/icu_collections-2.3.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "icu_locale_core-2.3.0",
+  "title": "icu_locale_core",
+  "version": "2.3.0",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/icu_locale_core-2.3.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "icu_normalizer-2.3.0",
+  "title": "icu_normalizer",
+  "version": "2.3.0",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/icu_normalizer-2.3.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "icu_normalizer_data-2.3.0",
+  "title": "icu_normalizer_data",
+  "version": "2.3.0",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/icu_normalizer_data-2.3.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "icu_properties-2.3.0",
+  "title": "icu_properties",
+  "version": "2.3.0",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/icu_properties-2.3.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "icu_properties_data-2.3.0",
+  "title": "icu_properties_data",
+  "version": "2.3.0",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/icu_properties_data-2.3.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "icu_provider-2.3.1",
+  "title": "icu_provider",
+  "version": "2.3.1",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/icu_provider-2.3.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "ident_case-1.0.1",
+  "title": "ident_case",
+  "version": "1.0.1",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/ident_case-1.0.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "idna-1.1.0",
+  "title": "idna",
+  "version": "1.1.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/idna-1.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "idna_adapter-1.2.2",
+  "title": "idna_adapter",
+  "version": "1.2.2",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/idna_adapter-1.2.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "image-0.25.10",
+  "title": "image",
+  "version": "0.25.10",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/image-0.25.10.txt"
+ },
+ {
+  "group": "crates",
+  "name": "image-webp-0.2.4",
+  "title": "image-webp",
+  "version": "0.2.4",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/image-webp-0.2.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "indexmap-1.9.3",
+  "title": "indexmap",
+  "version": "1.9.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/indexmap-1.9.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "indexmap-2.14.2",
+  "title": "indexmap",
+  "version": "2.14.2",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/indexmap-2.14.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "infer-0.19.0",
+  "title": "infer",
+  "version": "0.19.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/infer-0.19.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "itoa-1.0.18",
+  "title": "itoa",
+  "version": "1.0.18",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/itoa-1.0.18.txt"
+ },
+ {
+  "group": "crates",
+  "name": "jiff-0.2.37",
+  "title": "jiff",
+  "version": "0.2.37",
+  "licence": "Unlicense OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/jiff-0.2.37.txt"
+ },
+ {
+  "group": "crates",
+  "name": "jiff-core-0.1.1",
+  "title": "jiff-core",
+  "version": "0.1.1",
+  "licence": "Unlicense OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/jiff-core-0.1.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "jiff-tzdb-0.1.8",
+  "title": "jiff-tzdb",
+  "version": "0.1.8",
+  "licence": "Unlicense OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/jiff-tzdb-0.1.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "jiff-tzdb-platform-0.1.3",
+  "title": "jiff-tzdb-platform",
+  "version": "0.1.3",
+  "licence": "Unlicense OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/jiff-tzdb-platform-0.1.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "json-patch-3.0.1",
+  "title": "json-patch",
+  "version": "3.0.1",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/json-patch-3.0.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "jsonptr-0.6.3",
+  "title": "jsonptr",
+  "version": "0.6.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/jsonptr-0.6.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "keyboard-types-0.7.0",
+  "title": "keyboard-types",
+  "version": "0.7.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/keyboard-types-0.7.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "libc-0.2.189",
+  "title": "libc",
+  "version": "0.2.189",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/libc-0.2.189.txt"
+ },
+ {
+  "group": "crates",
+  "name": "litemap-0.8.3",
+  "title": "litemap",
+  "version": "0.8.3",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/litemap-0.8.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "lock_api-0.4.14",
+  "title": "lock_api",
+  "version": "0.4.14",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/lock_api-0.4.14.txt"
+ },
+ {
+  "group": "crates",
+  "name": "log-0.4.34",
+  "title": "log",
+  "version": "0.4.34",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/log-0.4.34.txt"
+ },
+ {
+  "group": "crates",
+  "name": "lzma-rs-perf-exp-0.2.1",
+  "title": "lzma-rs-perf-exp",
+  "version": "0.2.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/lzma-rs-perf-exp-0.2.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "markup5ever-0.38.0",
+  "title": "markup5ever",
+  "version": "0.38.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/markup5ever-0.38.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "md-5-0.11.0",
+  "title": "md-5",
+  "version": "0.11.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/md-5-0.11.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "memchr-2.8.3",
+  "title": "memchr",
+  "version": "2.8.3",
+  "licence": "Unlicense OR MIT",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/memchr-2.8.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "memmap2-0.9.11",
+  "title": "memmap2",
+  "version": "0.9.11",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/memmap2-0.9.11.txt"
+ },
+ {
+  "group": "crates",
+  "name": "mime-0.3.17",
+  "title": "mime",
+  "version": "0.3.17",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/mime-0.3.17.txt"
+ },
+ {
+  "group": "crates",
+  "name": "miniz_oxide-0.8.9",
+  "title": "miniz_oxide",
+  "version": "0.8.9",
+  "licence": "MIT OR Zlib OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/miniz_oxide-0.8.9.txt"
+ },
+ {
+  "group": "crates",
+  "name": "miniz_oxide-0.9.1",
+  "title": "miniz_oxide",
+  "version": "0.9.1",
+  "licence": "MIT OR Zlib OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/miniz_oxide-0.9.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "mio-1.2.3",
+  "title": "mio",
+  "version": "1.2.3",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/mio-1.2.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "moxcms-0.8.1",
+  "title": "moxcms",
+  "version": "0.8.1",
+  "licence": "BSD-3-Clause OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/moxcms-0.8.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "muda-0.19.3",
+  "title": "muda",
+  "version": "0.19.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/muda-0.19.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "new_debug_unreachable-1.0.6",
+  "title": "new_debug_unreachable",
+  "version": "1.0.6",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/new_debug_unreachable-1.0.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "num-conv-0.2.2",
+  "title": "num-conv",
+  "version": "0.2.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/num-conv-0.2.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "num-derive-0.4.2",
+  "title": "num-derive",
+  "version": "0.4.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/num-derive-0.4.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "num-traits-0.2.19",
+  "title": "num-traits",
+  "version": "0.2.19",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/num-traits-0.2.19.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-0.6.4",
+  "title": "objc2",
+  "version": "0.6.4",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-0.6.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-app-kit-0.3.2",
+  "title": "objc2-app-kit",
+  "version": "0.3.2",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-app-kit-0.3.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-core-foundation-0.3.2",
+  "title": "objc2-core-foundation",
+  "version": "0.3.2",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-core-foundation-0.3.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-core-graphics-0.3.2",
+  "title": "objc2-core-graphics",
+  "version": "0.3.2",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-core-graphics-0.3.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-encode-4.1.0",
+  "title": "objc2-encode",
+  "version": "4.1.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-encode-4.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-exception-helper-0.1.1",
+  "title": "objc2-exception-helper",
+  "version": "0.1.1",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-exception-helper-0.1.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-foundation-0.3.2",
+  "title": "objc2-foundation",
+  "version": "0.3.2",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-foundation-0.3.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-io-kit-0.3.2",
+  "title": "objc2-io-kit",
+  "version": "0.3.2",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-io-kit-0.3.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-io-surface-0.3.2",
+  "title": "objc2-io-surface",
+  "version": "0.3.2",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-io-surface-0.3.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-quartz-core-0.3.2",
+  "title": "objc2-quartz-core",
+  "version": "0.3.2",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-quartz-core-0.3.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "objc2-web-kit-0.3.2",
+  "title": "objc2-web-kit",
+  "version": "0.3.2",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-web-kit-0.3.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "once_cell-1.21.4",
+  "title": "once_cell",
+  "version": "1.21.4",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/once_cell-1.21.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "open-5.4.4",
+  "title": "open",
+  "version": "5.4.4",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/open-5.4.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "option-ext-0.2.0",
+  "title": "option-ext",
+  "version": "0.2.0",
+  "licence": "MPL-2.0",
+  "usedBy": "the builder",
+  "file": "crates/option-ext-0.2.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "parking_lot-0.12.5",
+  "title": "parking_lot",
+  "version": "0.12.5",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/parking_lot-0.12.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "parking_lot_core-0.9.12",
+  "title": "parking_lot_core",
+  "version": "0.9.12",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/parking_lot_core-0.9.12.txt"
+ },
+ {
+  "group": "crates",
+  "name": "percent-encoding-2.3.2",
+  "title": "percent-encoding",
+  "version": "2.3.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/percent-encoding-2.3.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "phf-0.13.1",
+  "title": "phf",
+  "version": "0.13.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/phf-0.13.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "phf_codegen-0.13.1",
+  "title": "phf_codegen",
+  "version": "0.13.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/phf_codegen-0.13.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "phf_generator-0.13.1",
+  "title": "phf_generator",
+  "version": "0.13.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/phf_generator-0.13.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "phf_macros-0.13.1",
+  "title": "phf_macros",
+  "version": "0.13.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/phf_macros-0.13.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "phf_shared-0.13.1",
+  "title": "phf_shared",
+  "version": "0.13.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/phf_shared-0.13.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "pin-project-lite-0.2.17",
+  "title": "pin-project-lite",
+  "version": "0.2.17",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/pin-project-lite-0.2.17.txt"
+ },
+ {
+  "group": "crates",
+  "name": "plist-1.10.1",
+  "title": "plist",
+  "version": "1.10.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/plist-1.10.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "png-0.17.16",
+  "title": "png",
+  "version": "0.17.16",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/png-0.17.16.txt"
+ },
+ {
+  "group": "crates",
+  "name": "png-0.18.1",
+  "title": "png",
+  "version": "0.18.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/png-0.18.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "potential_utf-0.1.6",
+  "title": "potential_utf",
+  "version": "0.1.6",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/potential_utf-0.1.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "powerfmt-0.2.0",
+  "title": "powerfmt",
+  "version": "0.2.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/powerfmt-0.2.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "precomputed-hash-0.1.1",
+  "title": "precomputed-hash",
+  "version": "0.1.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/precomputed-hash-0.1.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "proc-macro2-1.0.107",
+  "title": "proc-macro2",
+  "version": "1.0.107",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/proc-macro2-1.0.107.txt"
+ },
+ {
+  "group": "crates",
+  "name": "pxfm-0.1.30",
+  "title": "pxfm",
+  "version": "0.1.30",
+  "licence": "BSD-3-Clause OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/pxfm-0.1.30.txt"
+ },
+ {
+  "group": "crates",
+  "name": "quick-error-2.0.1",
+  "title": "quick-error",
+  "version": "2.0.1",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/quick-error-2.0.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "quick-xml-0.41.0",
+  "title": "quick-xml",
+  "version": "0.41.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/quick-xml-0.41.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "quick-xml-0.42.0",
+  "title": "quick-xml",
+  "version": "0.42.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/quick-xml-0.42.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "quote-1.0.47",
+  "title": "quote",
+  "version": "1.0.47",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/quote-1.0.47.txt"
+ },
+ {
+  "group": "crates",
+  "name": "raw-window-handle-0.6.2",
+  "title": "raw-window-handle",
+  "version": "0.6.2",
+  "licence": "MIT OR Apache-2.0 OR Zlib",
+  "usedBy": "the builder",
+  "file": "crates/raw-window-handle-0.6.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "ref-cast-1.0.27",
+  "title": "ref-cast",
+  "version": "1.0.27",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/ref-cast-1.0.27.txt"
+ },
+ {
+  "group": "crates",
+  "name": "ref-cast-impl-1.0.27",
+  "title": "ref-cast-impl",
+  "version": "1.0.27",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/ref-cast-impl-1.0.27.txt"
+ },
+ {
+  "group": "crates",
+  "name": "regex-1.13.1",
+  "title": "regex",
+  "version": "1.13.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/regex-1.13.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "regex-automata-0.4.18",
+  "title": "regex-automata",
+  "version": "0.4.18",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/regex-automata-0.4.18.txt"
+ },
+ {
+  "group": "crates",
+  "name": "regex-syntax-0.8.11",
+  "title": "regex-syntax",
+  "version": "0.8.11",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/regex-syntax-0.8.11.txt"
+ },
+ {
+  "group": "crates",
+  "name": "rfd-0.16.0",
+  "title": "rfd",
+  "version": "0.16.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/rfd-0.16.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "ring-0.17.14",
+  "title": "ring",
+  "version": "0.17.14",
+  "licence": "Apache-2.0 AND ISC",
+  "usedBy": "the builder",
+  "file": "crates/ring-0.17.14.txt"
+ },
+ {
+  "group": "crates",
+  "name": "rustc-hash-2.1.3",
+  "title": "rustc-hash",
+  "version": "2.1.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/rustc-hash-2.1.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "rustc_version-0.4.1",
+  "title": "rustc_version",
+  "version": "0.4.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/rustc_version-0.4.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "rustls-0.23.45",
+  "title": "rustls",
+  "version": "0.23.45",
+  "licence": "Apache-2.0 OR ISC OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/rustls-0.23.45.txt"
+ },
+ {
+  "group": "crates",
+  "name": "rustls-pki-types-1.15.1",
+  "title": "rustls-pki-types",
+  "version": "1.15.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/rustls-pki-types-1.15.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "rustls-webpki-0.103.15",
+  "title": "rustls-webpki",
+  "version": "0.103.15",
+  "licence": "ISC",
+  "usedBy": "the builder",
+  "file": "crates/rustls-webpki-0.103.15.txt"
+ },
+ {
+  "group": "crates",
+  "name": "ruzstd-0.8.3",
+  "title": "ruzstd",
+  "version": "0.8.3",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/ruzstd-0.8.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "same-file-1.0.6",
+  "title": "same-file",
+  "version": "1.0.6",
+  "licence": "Unlicense/MIT",
+  "usedBy": "the builder",
+  "file": "crates/same-file-1.0.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "schemars-0.8.22",
+  "title": "schemars",
+  "version": "0.8.22",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/schemars-0.8.22.txt"
+ },
+ {
+  "group": "crates",
+  "name": "schemars-0.9.0",
+  "title": "schemars",
+  "version": "0.9.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/schemars-0.9.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "schemars-1.2.2",
+  "title": "schemars",
+  "version": "1.2.2",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/schemars-1.2.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "schemars_derive-0.8.22",
+  "title": "schemars_derive",
+  "version": "0.8.22",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/schemars_derive-0.8.22.txt"
+ },
+ {
+  "group": "crates",
+  "name": "scopeguard-1.2.0",
+  "title": "scopeguard",
+  "version": "1.2.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/scopeguard-1.2.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "selectors-0.36.1",
+  "title": "selectors",
+  "version": "0.36.1",
+  "licence": "MPL-2.0",
+  "usedBy": "the builder",
+  "file": "crates/selectors-0.36.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "semver-1.0.28",
+  "title": "semver",
+  "version": "1.0.28",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/semver-1.0.28.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serde-1.0.229",
+  "title": "serde",
+  "version": "1.0.229",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/serde-1.0.229.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serde-untagged-0.1.9",
+  "title": "serde-untagged",
+  "version": "0.1.9",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/serde-untagged-0.1.9.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serde_core-1.0.229",
+  "title": "serde_core",
+  "version": "1.0.229",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/serde_core-1.0.229.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serde_derive-1.0.229",
+  "title": "serde_derive",
+  "version": "1.0.229",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/serde_derive-1.0.229.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serde_derive_internals-0.29.1",
+  "title": "serde_derive_internals",
+  "version": "0.29.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/serde_derive_internals-0.29.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serde_json-1.0.151",
+  "title": "serde_json",
+  "version": "1.0.151",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/serde_json-1.0.151.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serde_repr-0.1.21",
+  "title": "serde_repr",
+  "version": "0.1.21",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/serde_repr-0.1.21.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serde_spanned-1.1.1",
+  "title": "serde_spanned",
+  "version": "1.1.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/serde_spanned-1.1.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serde_with-3.23.0",
+  "title": "serde_with",
+  "version": "3.23.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/serde_with-3.23.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serde_with_macros-3.23.0",
+  "title": "serde_with_macros",
+  "version": "3.23.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/serde_with_macros-3.23.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serialize-to-javascript-0.1.2",
+  "title": "serialize-to-javascript",
+  "version": "0.1.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/serialize-to-javascript-0.1.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "serialize-to-javascript-impl-0.1.2",
+  "title": "serialize-to-javascript-impl",
+  "version": "0.1.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/serialize-to-javascript-impl-0.1.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "servo_arc-0.4.3",
+  "title": "servo_arc",
+  "version": "0.4.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/servo_arc-0.4.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "sha1-0.11.0",
+  "title": "sha1",
+  "version": "0.11.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/sha1-0.11.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "sha2-0.10.9",
+  "title": "sha2",
+  "version": "0.10.9",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/sha2-0.10.9.txt"
+ },
+ {
+  "group": "crates",
+  "name": "sha2-0.11.0",
+  "title": "sha2",
+  "version": "0.11.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/sha2-0.11.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "shlex-2.0.1",
+  "title": "shlex",
+  "version": "2.0.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/shlex-2.0.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "simd-adler32-0.3.10",
+  "title": "simd-adler32",
+  "version": "0.3.10",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/simd-adler32-0.3.10.txt"
+ },
+ {
+  "group": "crates",
+  "name": "siphasher-1.0.3",
+  "title": "siphasher",
+  "version": "1.0.3",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/siphasher-1.0.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "smallvec-1.16.1",
+  "title": "smallvec",
+  "version": "1.16.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/smallvec-1.16.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "socket2-0.6.5",
+  "title": "socket2",
+  "version": "0.6.5",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/socket2-0.6.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "softbuffer-0.4.8",
+  "title": "softbuffer",
+  "version": "0.4.8",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/softbuffer-0.4.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "stable_deref_trait-1.2.1",
+  "title": "stable_deref_trait",
+  "version": "1.2.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/stable_deref_trait-1.2.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "string_cache-0.9.0",
+  "title": "string_cache",
+  "version": "0.9.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/string_cache-0.9.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "string_cache_codegen-0.6.1",
+  "title": "string_cache_codegen",
+  "version": "0.6.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/string_cache_codegen-0.6.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "strsim-0.11.1",
+  "title": "strsim",
+  "version": "0.11.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/strsim-0.11.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "subtle-2.6.1",
+  "title": "subtle",
+  "version": "2.6.1",
+  "licence": "BSD-3-Clause",
+  "usedBy": "the builder",
+  "file": "crates/subtle-2.6.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "swift-rs-1.0.8",
+  "title": "swift-rs",
+  "version": "1.0.8",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/swift-rs-1.0.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "syn-2.0.119",
+  "title": "syn",
+  "version": "2.0.119",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/syn-2.0.119.txt"
+ },
+ {
+  "group": "crates",
+  "name": "syn-3.0.6",
+  "title": "syn",
+  "version": "3.0.6",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/syn-3.0.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "synstructure-0.14.0",
+  "title": "synstructure",
+  "version": "0.14.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/synstructure-0.14.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tao-0.35.3",
+  "title": "tao",
+  "version": "0.35.3",
+  "licence": "Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/tao-0.35.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-2.11.6",
+  "title": "tauri",
+  "version": "2.11.6",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-2.11.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-build-2.6.3",
+  "title": "tauri-build",
+  "version": "2.6.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-build-2.6.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-codegen-2.6.3",
+  "title": "tauri-codegen",
+  "version": "2.6.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-codegen-2.6.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-macros-2.6.3",
+  "title": "tauri-macros",
+  "version": "2.6.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-macros-2.6.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-plugin-2.6.3",
+  "title": "tauri-plugin",
+  "version": "2.6.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-plugin-2.6.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-plugin-dialog-2.7.3",
+  "title": "tauri-plugin-dialog",
+  "version": "2.7.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-plugin-dialog-2.7.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-plugin-fs-2.5.2",
+  "title": "tauri-plugin-fs",
+  "version": "2.5.2",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-plugin-fs-2.5.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-plugin-opener-2.5.5",
+  "title": "tauri-plugin-opener",
+  "version": "2.5.5",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-plugin-opener-2.5.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-runtime-2.11.3",
+  "title": "tauri-runtime",
+  "version": "2.11.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-runtime-2.11.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-runtime-wry-2.11.4",
+  "title": "tauri-runtime-wry",
+  "version": "2.11.4",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-runtime-wry-2.11.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-utils-2.9.3",
+  "title": "tauri-utils",
+  "version": "2.9.3",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-utils-2.9.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tauri-winres-0.3.6",
+  "title": "tauri-winres",
+  "version": "0.3.6",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-winres-0.3.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tendril-0.5.1",
+  "title": "tendril",
+  "version": "0.5.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/tendril-0.5.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "text_io-0.1.13",
+  "title": "text_io",
+  "version": "0.1.13",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/text_io-0.1.13.txt"
+ },
+ {
+  "group": "crates",
+  "name": "thiserror-1.0.69",
+  "title": "thiserror",
+  "version": "1.0.69",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/thiserror-1.0.69.txt"
+ },
+ {
+  "group": "crates",
+  "name": "thiserror-2.0.20",
+  "title": "thiserror",
+  "version": "2.0.20",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/thiserror-2.0.20.txt"
+ },
+ {
+  "group": "crates",
+  "name": "thiserror-impl-1.0.69",
+  "title": "thiserror-impl",
+  "version": "1.0.69",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/thiserror-impl-1.0.69.txt"
+ },
+ {
+  "group": "crates",
+  "name": "thiserror-impl-2.0.20",
+  "title": "thiserror-impl",
+  "version": "2.0.20",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/thiserror-impl-2.0.20.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tiff-0.11.3",
+  "title": "tiff",
+  "version": "0.11.3",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tiff-0.11.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "time-0.3.55",
+  "title": "time",
+  "version": "0.3.55",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/time-0.3.55.txt"
+ },
+ {
+  "group": "crates",
+  "name": "time-core-0.1.9",
+  "title": "time-core",
+  "version": "0.1.9",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/time-core-0.1.9.txt"
+ },
+ {
+  "group": "crates",
+  "name": "time-macros-0.2.32",
+  "title": "time-macros",
+  "version": "0.2.32",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/time-macros-0.2.32.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tinystr-0.8.4",
+  "title": "tinystr",
+  "version": "0.8.4",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/tinystr-0.8.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tinyvec-1.13.3",
+  "title": "tinyvec",
+  "version": "1.13.3",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tinyvec-1.13.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tokio-1.53.1",
+  "title": "tokio",
+  "version": "1.53.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tokio-1.53.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "toml-0.9.12+spec-1.1.0",
+  "title": "toml",
+  "version": "0.9.12+spec-1.1.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/toml-0.9.12+spec-1.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "toml-1.1.6+spec-1.1.0",
+  "title": "toml",
+  "version": "1.1.6+spec-1.1.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/toml-1.1.6+spec-1.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "toml_datetime-0.7.5+spec-1.1.0",
+  "title": "toml_datetime",
+  "version": "0.7.5+spec-1.1.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/toml_datetime-0.7.5+spec-1.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "toml_datetime-1.1.1+spec-1.1.0",
+  "title": "toml_datetime",
+  "version": "1.1.1+spec-1.1.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/toml_datetime-1.1.1+spec-1.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "toml_parser-1.1.3+spec-1.1.0",
+  "title": "toml_parser",
+  "version": "1.1.3+spec-1.1.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/toml_parser-1.1.3+spec-1.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "toml_writer-1.1.2+spec-1.1.0",
+  "title": "toml_writer",
+  "version": "1.1.2+spec-1.1.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/toml_writer-1.1.2+spec-1.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tracing-0.1.44",
+  "title": "tracing",
+  "version": "0.1.44",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tracing-0.1.44.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tracing-attributes-0.1.31",
+  "title": "tracing-attributes",
+  "version": "0.1.31",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tracing-attributes-0.1.31.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tracing-core-0.1.36",
+  "title": "tracing-core",
+  "version": "0.1.36",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tracing-core-0.1.36.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tray-icon-0.24.2",
+  "title": "tray-icon",
+  "version": "0.24.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/tray-icon-0.24.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "twox-hash-2.1.4",
+  "title": "twox-hash",
+  "version": "2.1.4",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/twox-hash-2.1.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "typeid-1.0.3",
+  "title": "typeid",
+  "version": "1.0.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/typeid-1.0.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "typenum-1.20.1",
+  "title": "typenum",
+  "version": "1.20.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/typenum-1.20.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "unic-char-property-0.9.0",
+  "title": "unic-char-property",
+  "version": "0.9.0",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/unic-char-property-0.9.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "unic-char-range-0.9.0",
+  "title": "unic-char-range",
+  "version": "0.9.0",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/unic-char-range-0.9.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "unic-common-0.9.0",
+  "title": "unic-common",
+  "version": "0.9.0",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/unic-common-0.9.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "unic-ucd-ident-0.9.0",
+  "title": "unic-ucd-ident",
+  "version": "0.9.0",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/unic-ucd-ident-0.9.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "unic-ucd-version-0.9.0",
+  "title": "unic-ucd-version",
+  "version": "0.9.0",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/unic-ucd-version-0.9.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "unicode-ident-1.0.26",
+  "title": "unicode-ident",
+  "version": "1.0.26",
+  "licence": "(MIT OR Apache-2.0) AND Unicode-3.0",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/unicode-ident-1.0.26.txt"
+ },
+ {
+  "group": "crates",
+  "name": "unicode-segmentation-1.13.3",
+  "title": "unicode-segmentation",
+  "version": "1.13.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/unicode-segmentation-1.13.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "untrusted-0.9.0",
+  "title": "untrusted",
+  "version": "0.9.0",
+  "licence": "ISC",
+  "usedBy": "the builder",
+  "file": "crates/untrusted-0.9.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "ureq-2.12.1",
+  "title": "ureq",
+  "version": "2.12.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/ureq-2.12.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "url-2.5.8",
+  "title": "url",
+  "version": "2.5.8",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/url-2.5.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "urlpattern-0.3.0",
+  "title": "urlpattern",
+  "version": "0.3.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/urlpattern-0.3.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "utf8_iter-1.0.4",
+  "title": "utf8_iter",
+  "version": "1.0.4",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/utf8_iter-1.0.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "uuid-1.26.1",
+  "title": "uuid",
+  "version": "1.26.1",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/uuid-1.26.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "vec_map-0.8.2",
+  "title": "vec_map",
+  "version": "0.8.2",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/vec_map-0.8.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "version_check-0.9.5",
+  "title": "version_check",
+  "version": "0.9.5",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/version_check-0.9.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "vswhom-0.1.0",
+  "title": "vswhom",
+  "version": "0.1.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/vswhom-0.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "vswhom-sys-0.1.3",
+  "title": "vswhom-sys",
+  "version": "0.1.3",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/vswhom-sys-0.1.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "walkdir-2.5.0",
+  "title": "walkdir",
+  "version": "2.5.0",
+  "licence": "Unlicense/MIT",
+  "usedBy": "the builder",
+  "file": "crates/walkdir-2.5.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "web_atoms-0.2.6",
+  "title": "web_atoms",
+  "version": "0.2.6",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/web_atoms-0.2.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "webpki-roots-0.26.11",
+  "title": "webpki-roots",
+  "version": "0.26.11",
+  "licence": "CDLA-Permissive-2.0",
+  "usedBy": "the builder",
+  "file": "crates/webpki-roots-0.26.11.txt"
+ },
+ {
+  "group": "crates",
+  "name": "webpki-roots-1.0.9",
+  "title": "webpki-roots",
+  "version": "1.0.9",
+  "licence": "CDLA-Permissive-2.0",
+  "usedBy": "the builder",
+  "file": "crates/webpki-roots-1.0.9.txt"
+ },
+ {
+  "group": "crates",
+  "name": "webview2-com-0.38.2",
+  "title": "webview2-com",
+  "version": "0.38.2",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/webview2-com-0.38.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "webview2-com-macros-0.8.1",
+  "title": "webview2-com-macros",
+  "version": "0.8.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/webview2-com-macros-0.8.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "webview2-com-sys-0.38.2",
+  "title": "webview2-com-sys",
+  "version": "0.38.2",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/webview2-com-sys-0.38.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "weezl-0.1.12",
+  "title": "weezl",
+  "version": "0.1.12",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/weezl-0.1.12.txt"
+ },
+ {
+  "group": "crates",
+  "name": "winapi-util-0.1.11",
+  "title": "winapi-util",
+  "version": "0.1.11",
+  "licence": "Unlicense OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/winapi-util-0.1.11.txt"
+ },
+ {
+  "group": "crates",
+  "name": "window-vibrancy-0.6.0",
+  "title": "window-vibrancy",
+  "version": "0.6.0",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/window-vibrancy-0.6.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-0.61.3",
+  "title": "windows",
+  "version": "0.61.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-0.61.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-collections-0.2.0",
+  "title": "windows-collections",
+  "version": "0.2.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-collections-0.2.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-core-0.61.2",
+  "title": "windows-core",
+  "version": "0.61.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-core-0.61.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-core-0.62.2",
+  "title": "windows-core",
+  "version": "0.62.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-core-0.62.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-future-0.2.1",
+  "title": "windows-future",
+  "version": "0.2.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-future-0.2.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-implement-0.60.2",
+  "title": "windows-implement",
+  "version": "0.60.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-implement-0.60.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-interface-0.59.3",
+  "title": "windows-interface",
+  "version": "0.59.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-interface-0.59.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-link-0.1.3",
+  "title": "windows-link",
+  "version": "0.1.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-link-0.1.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-link-0.2.1",
+  "title": "windows-link",
+  "version": "0.2.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-link-0.2.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-numerics-0.2.0",
+  "title": "windows-numerics",
+  "version": "0.2.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-numerics-0.2.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-result-0.3.4",
+  "title": "windows-result",
+  "version": "0.3.4",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-result-0.3.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-result-0.4.1",
+  "title": "windows-result",
+  "version": "0.4.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-result-0.4.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-strings-0.4.2",
+  "title": "windows-strings",
+  "version": "0.4.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-strings-0.4.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-strings-0.5.1",
+  "title": "windows-strings",
+  "version": "0.5.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-strings-0.5.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-sys-0.59.0",
+  "title": "windows-sys",
+  "version": "0.59.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-sys-0.59.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-sys-0.60.2",
+  "title": "windows-sys",
+  "version": "0.60.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-sys-0.60.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-sys-0.61.2",
+  "title": "windows-sys",
+  "version": "0.61.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-sys-0.61.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-targets-0.52.6",
+  "title": "windows-targets",
+  "version": "0.52.6",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-targets-0.52.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-targets-0.53.5",
+  "title": "windows-targets",
+  "version": "0.53.5",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-targets-0.53.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-threading-0.1.0",
+  "title": "windows-threading",
+  "version": "0.1.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-threading-0.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-version-0.1.7",
+  "title": "windows-version",
+  "version": "0.1.7",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-version-0.1.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows_x86_64_msvc-0.52.6",
+  "title": "windows_x86_64_msvc",
+  "version": "0.52.6",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows_x86_64_msvc-0.52.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows_x86_64_msvc-0.53.1",
+  "title": "windows_x86_64_msvc",
+  "version": "0.53.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows_x86_64_msvc-0.53.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "winnow-0.7.15",
+  "title": "winnow",
+  "version": "0.7.15",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/winnow-0.7.15.txt"
+ },
+ {
+  "group": "crates",
+  "name": "winnow-1.0.4",
+  "title": "winnow",
+  "version": "1.0.4",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/winnow-1.0.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "winreg-0.55.0",
+  "title": "winreg",
+  "version": "0.55.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/winreg-0.55.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "writeable-0.6.4",
+  "title": "writeable",
+  "version": "0.6.4",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/writeable-0.6.4.txt"
+ },
+ {
+  "group": "crates",
+  "name": "wry-0.55.1",
+  "title": "wry",
+  "version": "0.55.1",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/wry-0.55.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "yoke-0.8.3",
+  "title": "yoke",
+  "version": "0.8.3",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/yoke-0.8.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "yoke-derive-0.8.3",
+  "title": "yoke-derive",
+  "version": "0.8.3",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/yoke-derive-0.8.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zerocopy-0.8.57",
+  "title": "zerocopy",
+  "version": "0.8.57",
+  "licence": "BSD-2-Clause OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/zerocopy-0.8.57.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zerocopy-derive-0.8.57",
+  "title": "zerocopy-derive",
+  "version": "0.8.57",
+  "licence": "BSD-2-Clause OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/zerocopy-derive-0.8.57.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zerofrom-0.1.8",
+  "title": "zerofrom",
+  "version": "0.1.8",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/zerofrom-0.1.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zerofrom-derive-0.1.8",
+  "title": "zerofrom-derive",
+  "version": "0.1.8",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/zerofrom-derive-0.1.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zeroize-1.9.0",
+  "title": "zeroize",
+  "version": "1.9.0",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/zeroize-1.9.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zerotrie-0.2.5",
+  "title": "zerotrie",
+  "version": "0.2.5",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/zerotrie-0.2.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zerovec-0.11.8",
+  "title": "zerovec",
+  "version": "0.11.8",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/zerovec-0.11.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zerovec-derive-0.11.6",
+  "title": "zerovec-derive",
+  "version": "0.11.6",
+  "licence": "Unicode-3.0",
+  "usedBy": "the builder",
+  "file": "crates/zerovec-derive-0.11.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zip-2.4.2",
+  "title": "zip",
+  "version": "2.4.2",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/zip-2.4.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zlib-rs-0.6.8",
+  "title": "zlib-rs",
+  "version": "0.6.8",
+  "licence": "Zlib",
+  "usedBy": "the builder",
+  "file": "crates/zlib-rs-0.6.8.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zmij-1.0.23",
+  "title": "zmij",
+  "version": "1.0.23",
+  "licence": "MIT",
+  "usedBy": "rominabox-catalog, the builder",
+  "file": "crates/zmij-1.0.23.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zopfli-0.8.3",
+  "title": "zopfli",
+  "version": "0.8.3",
+  "licence": "Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/zopfli-0.8.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zune-core-0.5.3",
+  "title": "zune-core",
+  "version": "0.5.3",
+  "licence": "MIT OR Apache-2.0 OR Zlib",
+  "usedBy": "the builder",
+  "file": "crates/zune-core-0.5.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "zune-jpeg-0.5.15",
+  "title": "zune-jpeg",
+  "version": "0.5.15",
+  "licence": "MIT OR Apache-2.0 OR Zlib",
+  "usedBy": "the builder",
+  "file": "crates/zune-jpeg-0.5.15.txt"
+ },
+ {
+  "group": "data",
+  "name": "es-de-controller-artwork",
+  "title": "ES-DE controller artwork",
+  "version": "d300418f374a4a35a80eb6964214c7e151fe172e",
+  "licence": "MIT",
+  "usedBy": "the controller pictures adapted in desktop/assets/controllers, in every exported game's menu",
+  "file": "data/es-de-controller-artwork.txt"
+ },
+ {
+  "group": "data",
+  "name": "libretro-database",
+  "title": "libretro-database",
+  "version": "the master branch, which is what the builder reads",
+  "licence": "CC-BY-SA-4.0",
+  "usedBy": "the builder's game identification, which downloads its catalogues",
+  "file": "data/libretro-database.txt"
+ },
+ {
+  "group": "data",
+  "name": "retroarch-joypad-autoconfig",
+  "title": "retroarch-joypad-autoconfig",
+  "version": "1c6d74cef79b56a3a5dc283b1b0b2e4af73376ff",
+  "licence": "MIT",
+  "usedBy": "the controller profiles in every exported game",
+  "file": "data/retroarch-joypad-autoconfig.txt"
+ },
+ {
+  "group": "fonts",
+  "name": "science-gothic",
+  "title": "Science Gothic",
+  "version": "Version 1.035",
+  "licence": "OFL-1.1",
+  "usedBy": "the builder's interface; the native menu design, in every game exported with it",
+  "file": "fonts/science-gothic.txt"
+ },
+ {
+  "group": "fonts",
+  "name": "silkscreen",
+  "title": "Silkscreen",
+  "version": "Version 1.001; ttfautohint (v1.8.4.7-5d5b)",
+  "licence": "OFL-1.1",
+  "usedBy": "the disc menu design, in every game exported with it; the native menu design, in every game exported with it",
+  "file": "fonts/silkscreen.txt"
+ },
+ {
+  "group": "native",
+  "name": "freetype",
+  "title": "FreeType",
+  "version": "2.14.3",
+  "licence": "FTL OR GPL-2.0-or-later",
+  "usedBy": "the player's menu, in every exported game, and the builder's menu preview",
+  "file": "native/freetype.txt"
+ },
+ {
+  "group": "native",
+  "name": "gcc-runtime",
+  "title": "GCC runtime libraries",
+  "version": "releases/gcc-16.2.0",
+  "licence": "GPL-3.0-or-later WITH GCC-exception-3.1",
+  "usedBy": "the Windows player and launcher, in every Windows game",
+  "file": "native/gcc-runtime.txt"
+ },
+ {
+  "group": "native",
+  "name": "glslang",
+  "title": "glslang",
+  "version": "as vendored in the RetroArch fork",
+  "licence": "BSD-3-Clause AND others",
+  "usedBy": "the player's slang shader compiler, in every exported game",
+  "file": "native/glslang.txt"
+ },
+ {
+  "group": "native",
+  "name": "libretro-common",
+  "title": "libretro-common",
+  "version": "as vendored in the RetroArch fork",
+  "licence": "MIT",
+  "usedBy": "the player, in every exported game",
+  "file": "native/libretro-common.txt"
+ },
+ {
+  "group": "native",
+  "name": "mingw-w64-runtime",
+  "title": "MinGW-w64 runtime",
+  "version": "v14.0.0",
+  "licence": "ZPL-2.1 AND others",
+  "usedBy": "the Windows player and launcher, in every Windows game",
+  "file": "native/mingw-w64-runtime.txt"
+ },
+ {
+  "group": "native",
+  "name": "rcheevos",
+  "title": "rcheevos",
+  "version": "as vendored in the RetroArch fork",
+  "licence": "MIT",
+  "usedBy": "the player's achievements, in every exported game",
+  "file": "native/rcheevos.txt"
+ },
+ {
+  "group": "native",
+  "name": "retroarch",
+  "title": "RetroArch",
+  "version": "1.22.2",
+  "licence": "GPL-3.0-or-later",
+  "usedBy": "the player, in every exported game",
+  "file": "native/retroarch.txt"
+ },
+ {
+  "group": "native",
+  "name": "rmlui",
+  "title": "RmlUi",
+  "version": "ba95ffe8bfb6370efb2cdcca927eaad4710c5413",
+  "licence": "MIT",
+  "usedBy": "the player's menu, in every exported game, and the builder's menu preview",
+  "file": "native/rmlui.txt"
+ },
+ {
+  "group": "native",
+  "name": "spirv-cross",
+  "title": "SPIRV-Cross",
+  "version": "as vendored in the RetroArch fork",
+  "licence": "Apache-2.0",
+  "usedBy": "the player's slang shader compiler, in every exported game",
+  "file": "native/spirv-cross.txt"
+ },
+ {
+  "group": "native",
+  "name": "winpthreads",
+  "title": "winpthreads",
+  "version": "v14.0.0",
+  "licence": "MIT AND BSD-3-Clause",
+  "usedBy": "the Windows player and launcher, in every Windows game",
+  "file": "native/winpthreads.txt"
+ },
+ {
+  "group": "native",
+  "name": "xxhash",
+  "title": "xxHash",
+  "version": "as vendored in the RetroArch fork",
+  "licence": "BSD-2-Clause",
+  "usedBy": "the player, in every exported game",
+  "file": "native/xxhash.txt"
+ },
+ {
+  "group": "native",
+  "name": "zstd",
+  "title": "Zstandard",
+  "version": "1.5.5",
+  "licence": "BSD-3-Clause OR GPL-2.0-only",
+  "usedBy": "the launcher, in every exported Windows game",
+  "file": "native/zstd.txt"
+ },
+ {
+  "group": "npm",
+  "name": "@tauri-apps__api-2.11.1",
+  "title": "@tauri-apps/api",
+  "version": "2.11.1",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder's interface",
+  "file": "npm/@tauri-apps__api-2.11.1.txt"
+ },
+ {
+  "group": "npm",
+  "name": "@tauri-apps__plugin-dialog-2.7.3",
+  "title": "@tauri-apps/plugin-dialog",
+  "version": "2.7.3",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder's interface",
+  "file": "npm/@tauri-apps__plugin-dialog-2.7.3.txt"
+ },
+ {
+  "group": "npm",
+  "name": "@tauri-apps__plugin-opener-2.5.5",
+  "title": "@tauri-apps/plugin-opener",
+  "version": "2.5.5",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder's interface",
+  "file": "npm/@tauri-apps__plugin-opener-2.5.5.txt"
+ },
+ {
+  "group": "npm",
+  "name": "lucide-react-1.47.0",
+  "title": "lucide-react",
+  "version": "1.47.0",
+  "licence": "ISC",
+  "usedBy": "the builder's interface",
+  "file": "npm/lucide-react-1.47.0.txt"
+ },
+ {
+  "group": "npm",
+  "name": "react-19.3.0",
+  "title": "react",
+  "version": "19.3.0",
+  "licence": "MIT",
+  "usedBy": "the builder's interface",
+  "file": "npm/react-19.3.0.txt"
+ },
+ {
+  "group": "npm",
+  "name": "react-dom-19.3.0",
+  "title": "react-dom",
+  "version": "19.3.0",
+  "licence": "MIT",
+  "usedBy": "the builder's interface",
+  "file": "npm/react-dom-19.3.0.txt"
+ },
+ {
+  "group": "npm",
+  "name": "scheduler-0.28.0",
+  "title": "scheduler",
+  "version": "0.28.0",
+  "licence": "MIT",
+  "usedBy": "the builder's interface",
+  "file": "npm/scheduler-0.28.0.txt"
+ },
+ {
+  "group": "toolchains",
+  "name": "rust-std",
+  "title": "The Rust standard library",
+  "version": "the Rust toolchain the builder is compiled with",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder and its command line",
+  "file": "toolchains/rust-std.txt"
+ }
+]

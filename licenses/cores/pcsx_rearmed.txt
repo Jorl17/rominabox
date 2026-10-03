@@ -1,10 +1,11 @@
-pcsx_rearmed
+PCSX-ReARMed
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/libretro/pcsx_rearmed
+Licence:  GPL-2.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
-==> https://raw.githubusercontent.com/libretro/pcsx_rearmed/ff81ed17a15241d2f3730cdd7585b38e172532ca/COPYING <==
+==> https://raw.githubusercontent.com/libretro/pcsx_rearmed/c8816799b50388e61cfe237fe2cdbb7d8175f20a/COPYING <==
 
 		    GNU GENERAL PUBLIC LICENSE
 		       Version 2, June 1991

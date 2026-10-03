@@ -1,7 +1,8 @@
-beetle_neopop
+Beetle NeoPop
 
 Version:  the buildbot's nightly build; licence from master
 Source:   https://github.com/libretro/beetle-ngp-libretro
+Licence:  GPL-2.0
 Used by:  games exported with this core: the builder downloads it, with this licence, when an export needs it
 
 ==> https://raw.githubusercontent.com/libretro/beetle-ngp-libretro/a50d5ac288a81f2104ddf43195a4efdd15c72227/COPYING <==

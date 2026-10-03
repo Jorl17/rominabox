@@ -2,6 +2,8 @@ The licence text of every third-party component ROM-in-a-Box uses or ships,
 one file per component. scripts/licences.py writes this folder from each
 component's own source; do not edit it by hand.
 
+  index.json   one row per component (title, version, licence, file), which the
+               About views of the builder and of every game list
   native/      the player and what it links; a game carries those its player uses
   cores/       the libretro cores the builder downloads for an export
   crates/      the Rust crates the builder and its tools build with
