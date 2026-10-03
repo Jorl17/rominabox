@@ -212,6 +212,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_last_pad.py")],
     ),
     Scope(
+        "sdlrumble",
+        "what RetroArch's SDL2 joypad driver in the fork, the Mac player's, tells SDL when a core sets a pad's two motors one after the other: both strengths as they now are, each call, and that it answers a rumble SDL made as made",
+        "that a physical pad rumbles (SDL stands in, with one pad that rumbles through SDL_JoystickRumble and no haptic device), or SDL's haptic path",
+        [PYTHON, str(ROOT / "scripts/test_sdl2_rumble.py")],
+    ),
+    Scope(
         "staging",
         "that the runtime-kit staging script names paths that exist, after any rename, and that this checkout's kit carries a launch library built from the launcher's sources as they are",
         "that the script runs or produces a correct kit; it builds a whole application",
