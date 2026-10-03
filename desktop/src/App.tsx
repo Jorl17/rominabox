@@ -27,7 +27,7 @@ import { ControlsSection } from "./ControlsSection";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
-import { GameFilesList } from "./GameFilesList";
+import { AddGameFiles, GameFilesList } from "./GameFilesList";
 import { StartupOptions } from "./StartupOptions";
 import { filesThatTravel } from "./travelingFiles";
 import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
@@ -809,6 +809,17 @@ export function App() {
   const progressPercent = Math.round(
     Math.max(0, Math.min(1, progress?.fraction || 0)) * 100,
   );
+  // What we do with the files of the game on the details step.
+  const filesProps = {
+    entry: selection?.path ?? "",
+    system: draft.system,
+    files: draft.files,
+    onChange: (files: bridge.GameFiles, names: string[]) => {
+      update("files", files);
+      setTraveling(names);
+    },
+    onError: fail,
+  };
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -1008,17 +1019,7 @@ export function App() {
                     </div>
                     <div className="fields">
                       {traveling.length > 0 && (
-                        <GameFilesList
-                          entry={selection?.path ?? ""}
-                          system={draft.system}
-                          names={traveling}
-                          files={draft.files}
-                          onChange={(files, names) => {
-                            update("files", files);
-                            setTraveling(names);
-                          }}
-                          onError={fail}
-                        />
+                        <GameFilesList names={traveling} {...filesProps} />
                       )}
                       <label>
                         Game name
@@ -1111,6 +1112,7 @@ export function App() {
                       {info.filename}
                       {info.size > 0 ? ` · ${formatBytes(info.size)}` : ""}
                     </p>
+                    <AddGameFiles {...filesProps} />
                   </details>
                 </>
               ) : (

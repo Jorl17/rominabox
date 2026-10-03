@@ -17,26 +17,52 @@ function kind(role: bridge.FileRole): string {
   }
 }
 
-/**
- * The files we copy with the game, on the details step. A line under the
- * game's file lists the others, and clicking it opens the list, where the
- * author can leave out or add a file, but nothing here must change to go on.
- */
-export function GameFilesList({
-  entry,
-  system,
-  names,
-  files,
-  onChange,
-  onError,
-}: {
+/** What we do with the files of the game on the details step. */
+type FilesProps = {
   entry: string;
   system: string;
-  names: string[];
   files: bridge.GameFiles;
   onChange: (files: bridge.GameFiles, names: string[]) => void;
   onError: (error: unknown) => void;
-}) {
+};
+
+/** The game's files with `next` chosen, as returned by the exporter. */
+async function choose(props: FilesProps, next: bridge.GameFiles) {
+  try {
+    const listed = await bridge.travelingFiles(props.entry, props.system, next);
+    props.onChange(next, bridge.travelingNames(listed));
+    return listed;
+  } catch (error) {
+    props.onError(error);
+    return null;
+  }
+}
+
+/** How to add files to the game in More details: the file picker of the app. */
+export function AddGameFiles(props: FilesProps) {
+  if (!bridge.native || !props.entry) return null;
+  async function add() {
+    const picked = await bridge.pickGameFiles();
+    if (picked.length)
+      await choose(props, {
+        ...props.files,
+        added: [...props.files.added, ...picked],
+      });
+  }
+  return (
+    <button type="button" className="secondary game-file-add" onClick={add}>
+      Add files…
+    </button>
+  );
+}
+
+/**
+ * The game's file, on the details step. When we copy other files with it, a
+ * line under it lists them, and clicking it opens a list where the author can
+ * leave a file out and put it back. For a one-file game we show only the name.
+ */
+export function GameFilesList(props: FilesProps & { names: string[] }) {
+  const { entry, system, names, files, onError } = props;
   const [open, setOpen] = useState(false);
   const [listing, setListing] = useState<bridge.Traveling | null>(null);
   useEffect(() => {
@@ -52,13 +78,8 @@ export function GameFilesList({
   }, [open, entry, system, files]);
 
   async function change(next: bridge.GameFiles) {
-    try {
-      const listed = await bridge.travelingFiles(entry, system, next);
-      setListing(listed);
-      onChange(next, bridge.travelingNames(listed));
-    } catch (error) {
-      onError(error);
-    }
+    const listed = await choose(props, next);
+    if (listed) setListing(listed);
   }
   // We remove an added file from the added ones, and leave out any other.
   function leaveOut(name: string) {
@@ -72,10 +93,12 @@ export function GameFilesList({
       leftOut: files.leftOut.filter((left) => left !== name),
     });
   }
-  async function add() {
-    const picked = await bridge.pickGameFiles();
-    if (picked.length) change({ ...files, added: [...files.added, ...picked] });
-  }
+  const leftOut = files.leftOut.length;
+  const line =
+    alsoImporting(names) ??
+    (leftOut
+      ? `${leftOut} ${leftOut === 1 ? "file" : "files"} left out`
+      : null);
 
   const remove = (name: string) => (
     <button
@@ -90,15 +113,17 @@ export function GameFilesList({
   return (
     <div className="traveling" data-traveling>
       <p>{names[0]}</p>
-      <button
-        type="button"
-        className="traveling-also"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        {alsoImporting(names) ?? "Files"}
-      </button>
-      {open && listing && (
+      {line && (
+        <button
+          type="button"
+          className="traveling-also"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          {line}
+        </button>
+      )}
+      {open && line && listing && (
         <div className="game-files" data-game-files>
           <ul>
             {listing.files.map((file) => {
@@ -140,11 +165,6 @@ export function GameFilesList({
               </li>
             ))}
           </ul>
-          {bridge.native && (
-            <button type="button" className="game-file-add" onClick={add}>
-              Add file…
-            </button>
-          )}
         </div>
       )}
     </div>
