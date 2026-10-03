@@ -214,6 +214,26 @@
     "shaders-guest": {
       "script": ["options", "shaders"],
       "shaders": { "bundled": ["crt-guest-advanced", "crt-easymode"], "initial": "crt-guest-advanced" }
+    },
+    "about": {
+      "script": ["options", "about"],
+      "includeAchievements": true,
+      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
+    },
+    "about-down": {
+      "script": ["options", "about", "key:down", "key:down"],
+      "includeAchievements": true,
+      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
+    },
+    "about-next-page": {
+      "script": ["options", "about", "about-next"],
+      "includeAchievements": true,
+      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
+    },
+    "about-back": {
+      "script": ["options", "about", "about-back"],
+      "includeAchievements": true,
+      "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" }
     }
   }
 }
