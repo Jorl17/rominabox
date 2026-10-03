@@ -6,7 +6,7 @@ name = "rominabox"
 version = "0.1.0"
 description = "ROM-in-a-Box's developer scripts and tests."
 requires-python = ">=3.13,<3.14"
-dependencies = ["Pillow>=12,<13", "fonttools>=4.61,<5"]
+dependencies = ["Pillow>=12,<13", "fonttools>=4.61,<5", "zstandard>=0.23,<1"]
 
 [tool.uv]
 package = false

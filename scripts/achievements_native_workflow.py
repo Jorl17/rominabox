@@ -25,6 +25,8 @@ import time
 import zlib
 from urllib.parse import parse_qs
 
+import zstandard
+
 import exported_game
 import menu_shots as shots
 from achievements_native_rom import make_achievement_rom
@@ -282,15 +284,21 @@ def run_case(app: Path, output: Path, name: str, script: list[str]) -> dict[str,
 
 
 def state_blocks(path: Path) -> dict[bytes, bytes]:
-    """Read blocks from our generated RetroArch state, including RZIP compression."""
+    """Read blocks from our generated RetroArch state, including RZIP
+    compression: each chunk deflated (version 1) or Zstandard (version 2),
+    as in libretro-common/streams/rzip_stream.c."""
     data = path.read_bytes()
-    if data.startswith(b"#RZIPv\x01#"):
+    if data.startswith(b"#RZIPv") and data[7:8] == b"#":
+        decompress = {
+            1: zlib.decompress,
+            2: lambda chunk: zstandard.ZstdDecompressor().decompressobj().decompress(chunk),
+        }[data[6]]
         size = int.from_bytes(data[12:20], "little")
         offset, chunks = 20, []
         while offset < len(data):
             length = int.from_bytes(data[offset:offset + 4], "little")
             offset += 4
-            chunks.append(zlib.decompress(data[offset:offset + length]))
+            chunks.append(decompress(data[offset:offset + length]))
             offset += length
         data = b"".join(chunks)
         assert len(data) == size, "incomplete compressed state"
