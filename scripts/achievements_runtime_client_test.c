@@ -31,6 +31,12 @@ int64_t cpu_features_get_time_usec(void)
 {
    return now_usec;
 }
+
+/* No CPU extensions, so we use the plain CRC-32 code in the file layer. */
+uint64_t cpu_features_get(void)
+{
+   return 0;
+}
 static bool defer_login;
 static bool fail_login;
 static bool defer_award;

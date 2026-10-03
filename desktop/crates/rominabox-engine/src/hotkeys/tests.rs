@@ -295,31 +295,20 @@ fn home_on_pad(profile: &str, button: u32, pad: u32, every_pad_is_player_one: bo
 }
 
 /// The remap loader is the one in the player, which we build with
-/// `HAVE_CONFIGFILE`.
+/// `HAVE_CONFIGFILE`, along with the input layer and the menu's pad input.
 fn pad_home() -> crate::retroarch_probe::Probe {
-    crate::retroarch_probe::Probe::build_defining(
-        "pad_home",
-        crate::retroarch_probe::CONFIGURED,
+    use crate::retroarch_probe::{Probe, CONFIGURED, INPUT_LAYER};
+    let sources = [
+        INPUT_LAYER,
         &[
-            "configuration.c",
-            "input/input_driver.c",
-            "input/input_keymaps.c",
             "menu/drivers/rmlui/pad_inputs.c",
-            "libretro-common/file/config_file.c",
-            "libretro-common/file/config_file_io.c",
             "libretro-common/file/config_file_userdata.c",
             "libretro-common/lists/string_list.c",
-            "libretro-common/compat/compat_strl.c",
-            "libretro-common/compat/fopen_utf8.c",
-            "libretro-common/string/stdstring.c",
-            "libretro-common/encodings/encoding_utf.c",
-            "libretro-common/file/file_path.c",
-            "libretro-common/file/file_path_io.c",
-            "libretro-common/streams/file_stream.c",
-            "libretro-common/vfs/vfs_implementation.c",
             "libretro-common/time/rtime.c",
         ],
-    )
+    ]
+    .concat();
+    Probe::build_defining("pad_home", CONFIGURED, &sources)
 }
 
 /// Home is the menu button on each pad, as named in its RetroArch profile:
