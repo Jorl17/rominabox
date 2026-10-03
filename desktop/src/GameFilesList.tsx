@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import * as bridge from "./bridge";
 import { alsoImporting } from "./AlsoImporting";
 
@@ -120,7 +121,8 @@ export function GameFilesList(props: FilesProps & { names: string[] }) {
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          {line}
+          <ChevronRight size={12} aria-hidden />
+          <span>{line}</span>
         </button>
       )}
       {open && line && listing && (

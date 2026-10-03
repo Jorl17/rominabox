@@ -508,9 +508,9 @@ main {
   font-weight: 400;
   line-height: 1.4;
   color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   background: none;
   border: 0;
   padding: 0;
@@ -519,9 +519,23 @@ main {
   align-self: flex-start;
   max-width: 100%;
 }
+.traveling-also span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.traveling-also svg {
+  flex: none;
+  transition: transform 120ms ease;
+}
+.traveling-also[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
 .traveling-also:hover,
 .traveling-also[aria-expanded="true"] {
   color: var(--ink);
+}
+.traveling-also:hover span {
   text-decoration: underline;
 }
 .game-files {
