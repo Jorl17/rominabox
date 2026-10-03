@@ -511,6 +511,8 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  white-space: nowrap;
+  overflow: hidden;
   background: none;
   border: 0;
   padding: 0;
