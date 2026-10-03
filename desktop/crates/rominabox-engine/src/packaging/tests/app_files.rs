@@ -2,6 +2,7 @@ use super::*;
 use crate::packaging::app_files::{
     stage_controller_remap, stage_legal_materials, stage_pixel_options,
 };
+use crate::packaging::legal;
 
 /// A unique empty directory, matching the pattern the other tests use.
 fn scratch_dir() -> rominabox_scratch::Scratch {
@@ -254,20 +255,39 @@ fn a_declared_device_with_no_library_name_is_refused() {
     );
 }
 
-/// A game contains the licences of every part of its player, as in the kit,
-/// one file per component in `licenses/native`, RetroArch included (we copy
-/// them from licenses/ with scripts/build_kit.py).
+/// A game contains the licence of every component in the kit's index for it:
+/// the player's libraries, the controller data and the fonts of its design,
+/// then its core. We list them in the game's index for the About views, and
+/// show them in the About panel of a Mac game.
 #[test]
 fn a_game_carries_every_licence_the_kit_holds_for_its_player() {
     let root = scratch_dir();
     let kit = root.join("kit");
-    fs::create_dir_all(kit.join("licenses/native")).unwrap();
+    for folder in ["native", "data", "fonts"] {
+        fs::create_dir_all(kit.join("licenses").join(folder)).unwrap();
+    }
     fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
     fs::write(kit.join("licenses/NATIVE-DEPENDENCIES.txt"), "list").unwrap();
-    let native = ["retroarch.txt", "rmlui.txt", "glslang.txt"];
-    for name in native {
-        fs::write(kit.join("licenses/native").join(name), name).unwrap();
+    let shipped = ["native/retroarch.txt", "native/rmlui.txt", "data/retroarch-joypad-autoconfig.txt", "fonts/silkscreen.txt"];
+    for name in shipped.iter().chain(&["fonts/science-gothic.txt"]) {
+        fs::write(kit.join("licenses").join(name), name).unwrap();
     }
+    let row = |group: &str, title: &str, file: &str| legal::Row {
+        group: group.into(),
+        title: title.into(),
+        version: "1".into(),
+        licence: "MIT & <Zlib>".into(),
+        file: file.into(),
+    };
+    let kit_rows = vec![
+        row("native", "RetroArch", "native/retroarch.txt"),
+        row("native", "RmlUi", "native/rmlui.txt"),
+        row("native", "glslang", "native/glslang.txt"),
+        row("data", "Joypad profiles", "data/retroarch-joypad-autoconfig.txt"),
+        row("fonts", "Silkscreen", "fonts/silkscreen.txt"),
+        row("fonts", "Science Gothic", "fonts/science-gothic.txt"),
+    ];
+    fs::write(kit.join("licenses/index.json"), serde_json::to_vec(&kit_rows).unwrap()).unwrap();
     fs::write(kit.join("licenses/genesis_plus_gx.txt"), "core").unwrap();
     fs::write(
         kit.join("manifest.json"),
@@ -277,29 +297,65 @@ fn a_game_carries_every_licence_the_kit_holds_for_its_player() {
     let core = crate::systems::Core {
         artifacts: Default::default(),
         component: "genesis_plus_gx".into(),
-        license: "MAME".into(),
+        license: "GPL-3.0".into(),
         license_file: "genesis_plus_gx.txt".into(),
         capabilities: Vec::new(),
-        library_name: None,
+        library_name: Some("Genesis Plus GX".into()),
         pixels: Vec::new(),
     };
     let legal = root.join("Legal");
+    let rows = legal::game_rows(&kit, &core, &["Silkscreen".into()]).unwrap();
     stage_legal_materials(
         &kit,
         None,
         &legal,
         &core,
         Path::new("licenses/genesis_plus_gx.txt"),
+        &rows,
     )
     .expect("the legal materials are staged");
-    for name in native {
-        assert_eq!(
-            fs::read_to_string(legal.join("Licenses/native").join(name)).unwrap(),
-            name
-        );
+    let licenses = legal.join("Licenses");
+    for name in shipped {
+        assert_eq!(fs::read_to_string(licenses.join(name)).unwrap(), name);
     }
+    assert!(!licenses.join("fonts/science-gothic.txt").exists(), "a font the design does not use was shipped");
+    assert_eq!(fs::read_to_string(licenses.join("genesis_plus_gx.txt")).unwrap(), "core");
+
+    let index: Vec<legal::Row> = serde_json::from_slice(&fs::read(licenses.join("index.json")).unwrap()).unwrap();
+    let listed: Vec<(&str, &str)> = index.iter().map(|row| (row.title.as_str(), row.file.as_str())).collect();
     assert_eq!(
-        fs::read_to_string(legal.join("Licenses/genesis_plus_gx.txt")).unwrap(),
-        "core"
+        listed,
+        [
+            ("Genesis Plus GX", "genesis_plus_gx.txt"),
+            ("RetroArch", "native/retroarch.txt"),
+            ("RmlUi", "native/rmlui.txt"),
+            // The kit has the row but no text, so we keep the row with no file.
+            ("glslang", ""),
+            ("Joypad profiles", "data/retroarch-joypad-autoconfig.txt"),
+            ("Silkscreen", "fonts/silkscreen.txt"),
+        ]
     );
+    assert!(fs::read_to_string(licenses.join("README.txt")).unwrap().contains("index.json"));
+
+    let credits = legal::credits_html(&licenses).unwrap();
+    assert!(credits.contains("<td>Genesis Plus GX</td><td>GPL-3.0</td>"), "{credits}");
+    assert!(credits.contains("MIT &amp; &lt;Zlib&gt;"), "a licence name is escaped: {credits}");
+    assert!(credits.contains(">native/rmlui.txt</pre>"), "the texts follow the table: {credits}");
+}
+
+/// We refuse an old kit without an index, and tell the author what to do.
+#[test]
+fn a_kit_with_no_licence_index_is_refused() {
+    let root = scratch_dir();
+    let core = crate::systems::Core {
+        artifacts: Default::default(),
+        component: "genesis_plus_gx".into(),
+        license: "GPL-3.0".into(),
+        license_file: "genesis_plus_gx.txt".into(),
+        capabilities: Vec::new(),
+        library_name: None,
+        pixels: Vec::new(),
+    };
+    let message = legal::game_rows(&root, &core, &[]).unwrap_err().to_string();
+    assert!(message.contains("index.json") && message.contains("build_kit.py"), "{message}");
 }

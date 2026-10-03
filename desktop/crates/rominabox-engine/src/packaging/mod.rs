@@ -14,6 +14,7 @@ pub mod archive;
 mod both;
 mod export_core;
 mod launch_plan;
+mod legal;
 mod macos;
 mod macos_minimum;
 mod slices;
@@ -540,12 +541,24 @@ where
     let licence = resolved
         .map(ExportCore::licence_relative)
         .unwrap_or_else(|| Path::new("licenses").join(&selected_core.license_file));
+    // We ship the design's fonts in the menu stage, with the menu or the splash.
+    let fonts = if request.game.show_menu || request.game.splash {
+        crate::menu::Manifest::load(&crate::themes::staged_design(&request.runtime_kit, &request.game.theme))
+            .map_err(|message| ExportError::new(ErrorStage::Stage, message))?
+            .fonts
+            .into_iter()
+            .map(|font| font.family)
+            .collect()
+    } else {
+        Vec::new()
+    };
     stage_legal_materials(
         &request.runtime_kit,
         request.core_cache.as_deref(),
         &resources.join("Legal"),
         selected_core,
         &licence,
+        &legal::game_rows(&request.runtime_kit, selected_core, &fonts)?,
     )?;
     check_cancelled(cancelled)?;
 

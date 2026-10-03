@@ -174,6 +174,10 @@ impl Packager for MacosPackager {
         if let Some(icon) = request.game.icon.as_deref().or(default_icon.as_deref()) {
             icons::create_macos_icon(icon, &self.resources.join("GameIcon.icns"), staging)?;
         }
+        // The standard About panel contains Credits.html from Resources.
+        let credits = self.resources.join("Credits.html");
+        fs::write(&credits, super::legal::credits_html(&self.resources.join("Legal/Licenses"))?)
+            .map_err(|error| ExportError::io(ErrorStage::Stage, &credits, error))?;
         Ok(())
     }
 

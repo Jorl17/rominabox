@@ -441,6 +441,7 @@ fn export_ships_the_profiles_and_the_launcher_seeds_them() {
     ] {
         fs::write(kit.join("licenses").join(name), name).unwrap();
     }
+    fs::write(kit.join("licenses/index.json"), export_fixture::LICENCE_INDEX).unwrap();
     fs::write(
         kit.join("runtime-dependencies.json"),
         r#"{"formatVersion":1,"files":[]}"#,

@@ -86,6 +86,10 @@ pub fn fixture_kit(root: &Path) -> PathBuf {
     kit
 }
 
+/// A kit's licence index, with one native row whose text is not in the kit.
+pub const LICENCE_INDEX: &str =
+    r#"[{"group":"native","title":"RetroArch","version":"1","licence":"GPL-3.0-or-later","file":"native/retroarch.txt"}]"#;
+
 /// What the kit for every platform contains besides its player and its core.
 pub fn kit_base(root: &Path) -> PathBuf {
     let kit = root.join("runtime-kit");
@@ -100,6 +104,7 @@ pub fn kit_base(root: &Path) -> PathBuf {
     ] {
         fs::write(kit.join("licenses").join(name), name).unwrap();
     }
+    fs::write(kit.join("licenses/index.json"), LICENCE_INDEX).unwrap();
     fs::write(
         kit.join("manifest.json"),
         r#"{"schema_version":1,"components":[{"name":"RetroArch"},{"name":"RmlUi"},{"name":"genesis_plus_gx"}]}"#,

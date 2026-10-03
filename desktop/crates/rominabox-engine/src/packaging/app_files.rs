@@ -80,6 +80,7 @@ pub(super) fn stage_legal_materials(
     destination: &Path,
     core: &crate::systems::Core,
     licence: &Path,
+    rows: &[super::legal::Row],
 ) -> Result<(), ExportError> {
     let licenses = destination.join("Licenses");
     fs::create_dir_all(&licenses)
@@ -88,34 +89,29 @@ pub(super) fn stage_legal_materials(
         &runtime_kit.join("licenses/NATIVE-DEPENDENCIES.txt"),
         &licenses.join("NATIVE-DEPENDENCIES.txt"),
     )?;
-    // The licences of every part of the player, RetroArch included. We copy
-    // them from licenses/ in the repository with scripts/build_kit.py, one
-    // file per component.
-    copy_optional_tree(
-        &runtime_kit.join("licenses/native"),
-        &licenses.join("native"),
-    )?;
     copy_optional_tree(
         &runtime_kit.join("provenance/native-rmlui"),
         &destination.join("Source-Provenance/native-rmlui"),
     )?;
 
-    // The licence text of the core, when we fetched it with the core.
+    // The entries in the kit's index for this game (we copy them from
+    // licenses/ in the repository with scripts/build_kit.py, one file per
+    // component), then the licence text of the core, when we fetched it too.
+    let mut rows = rows.to_vec();
+    super::legal::copy_entries(runtime_kit, &licenses, &mut rows)?;
     let core_licence = resolve_cached(runtime_kit, cache, licence);
     if core_licence.is_file() {
         copy_file(&core_licence, &licenses.join(&core.license_file))?;
+    } else if let Some(row) = rows.iter_mut().find(|row| row.group == "cores") {
+        row.file.clear();
     }
+    // The licence of the controller profiles, which we stage with them in
+    // scripts/prepare_runtime.py and name in components.json.
     let joypad_licence = runtime_kit.join("licenses/retroarch-joypad-autoconfig.txt");
     if joypad_licence.is_file() {
-        copy_file(
-            &joypad_licence,
-            &licenses.join("retroarch-joypad-autoconfig.txt"),
-        )?;
+        copy_file(&joypad_licence, &licenses.join("retroarch-joypad-autoconfig.txt"))?;
     }
-    fs::write(
-        licenses.join("README.txt"),
-        "Private ROM-in-a-Box solution-discovery export. The licences of the player and what it is made from (native/, listed in NATIVE-DEPENDENCIES.txt), the selected core and the joypad autoconfig profiles are included here. Component revisions and source provenance are recorded in ../components.json. The native RetroArch fork revision and build inputs are recorded in ../Source-Provenance/native-rmlui. Historical patches are retained there only as prior-checkpoint records. Public distribution requires a separate license and source-completeness review.\n",
-    ).map_err(|error| ExportError::io(ErrorStage::Stage, &licenses.join("README.txt"), error))?;
+    super::legal::write_index(&licenses, &rows)?;
 
     let manifest_path = runtime_kit.join("manifest.json");
     let mut manifest: serde_json::Value = serde_json::from_slice(

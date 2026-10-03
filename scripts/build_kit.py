@@ -11,9 +11,11 @@ the player, the launcher, and the player's controller profile folders, which
 we stage from the pinned autoconfig archive. The licence texts of what the
 player is made from are the entries in licenses/ (scripts/licences.py) of
 every library compiled in the build. When a library has no entry yet, we
-name it in a warning and make the kit all the same. We link only the
-system's libraries into the player, so the library folder in a macOS kit is
-empty and its inventory lists no file.
+name it in a warning and make the kit all the same. The kit's
+licenses/index.json lists these entries and those of the data in every game
+and of the fonts. We read it in the exporter to write each game's index. We
+link only the system's libraries into the player, so the library folder in a
+macOS kit is empty and its inventory lists no file.
 """
 
 from __future__ import annotations
@@ -79,23 +81,30 @@ def main() -> int:
     library = native_build.launch_library(target)
     if library:
         native_build.install_tree_launcher(kit, target)
-    # We write every native licence again below, so the kit contains only the
-    # licences of libraries the player links. We remove the existing files
-    # first, because on a case-insensitive file system we would otherwise
-    # write a new name into an old file.
-    native_licences = kit / "licenses" / "native"
-    native_licences.mkdir(parents=True, exist_ok=True)
-    for stale in native_licences.iterdir():
-        if stale.is_file():
-            stale.unlink()
-    for component in native:
+    # The entries for everything a game made from the kit can include, and
+    # their index: the player's libraries, the data in every game, and the
+    # fonts, of which a game keeps those of its design. We write every entry
+    # again, so no entry is left for a library the player no longer links. We
+    # remove the old entries first, because on a case-insensitive file system
+    # we would otherwise write a new name into an old file.
+    shipped = [*native,
+               *(component for component in licences.sources.declared_components(
+                   "data", licences.sources.declared()["data"]) if component.declared.get("inGames")),
+               *licences.sources.fonts()]
+    for group in ("native", "data", "fonts"):
+        folder = kit / "licenses" / group
+        folder.mkdir(parents=True, exist_ok=True)
+        for stale in folder.iterdir():
+            if stale.is_file():
+                stale.unlink()
+    for component in shipped:
         shutil.copy2(licences.OUT / licences.entry_path(component), kit / "licenses" / licences.entry_path(component))
+    licences.write_index(kit / "licenses", shipped)
 
     if "libraryInventory" in declared:
         empty_library_inventory(kit, declared["libraryInventory"])
     (kit / "licenses" / "NATIVE-DEPENDENCIES.txt").write_text(
-        f"Native dependency provenance for the {target} runtime kit.\n"
-        "Private ROM-in-a-Box solution-discovery artifact, not a publication decision.\n\n"
+        f"Native dependency provenance for the {target} runtime kit.\n\n"
         "The player is built by scripts/build_player.py from the pinned ROM-in-a-Box\n"
         f"RetroArch fork at {info['retroarchCommit']}, with RmlUi at {info['rmluiCommit']}\n"
         "and the toolchain scripts/toolchain.py declares for its target. It is made\n"
@@ -130,7 +139,7 @@ def main() -> int:
     records["retroarch"].update({
         "revision": info["retroarchCommit"],
         "capabilities": info["capabilities"],
-        "origin": "Built from the pinned ROM-in-a-Box RetroArch submodule; private development build.",
+        "origin": "Built from the pinned ROM-in-a-Box RetroArch submodule.",
         "source_url": f"https://github.com/Jorl17/rominabox-retroarch/tree/{info['retroarchCommit']}",
         "binary_sha256": sha256(player),
         "integration_provenance": "provenance/native-rmlui/source.json",
