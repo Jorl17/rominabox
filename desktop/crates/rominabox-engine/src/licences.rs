@@ -1,0 +1,137 @@
+//! The components we ship in a game, each with its licence, as we list them
+//! in its licence index (packaging/legal.rs) and on its ABOUT screen.
+
+use serde::{Deserialize, Serialize};
+
+/// The index file beside the licence entries, in a kit and in a game.
+pub const INDEX: &str = "index.json";
+
+/// One component we ship in a game.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Row {
+    /// native, data, fonts or cores.
+    #[serde(default)]
+    pub group: String,
+    pub title: String,
+    #[serde(default)]
+    pub version: String,
+    pub licence: String,
+    /// The licence text, relative to the folder with the index. Empty when
+    /// the game contains no text for the component.
+    #[serde(default)]
+    pub file: String,
+}
+
+/// The line under the ABOUT list in a game made for `target`, with the
+/// location of the licence texts. In a Mac game they are in the app, and
+/// in a Windows game they are in the folder into which we unpack the game.
+fn texts_at(target: crate::packaging::ExportTarget) -> &'static str {
+    match target {
+        crate::packaging::ExportTarget::Macos => "LICENCE TEXTS: CONTENTS/RESOURCES/LEGAL/LICENSES",
+        crate::packaging::ExportTarget::Windows => r"LICENCE TEXTS: %LOCALAPPDATA%\ROM-IN-A-BOX\RUNTIMES",
+    }
+}
+
+/// The ABOUT screen, with one row per component with its title and its
+/// licence, on the screen whose rows are the licences. None when the design
+/// has no such screen or there is no component to list.
+pub fn list(
+    manifest: &crate::menu::Manifest,
+    rows: &[Row],
+    target: crate::packaging::ExportTarget,
+) -> Option<crate::lists::List> {
+    let screen = manifest
+        .screens
+        .iter()
+        .find(|screen| screen.rows == Some(crate::menu::RowSource::Licences))?
+        .clone();
+    if rows.is_empty() {
+        return None;
+    }
+    let items = rows
+        .iter()
+        .enumerate()
+        .map(|(index, row)| crate::lists::ListItem {
+            id: format!("{}-{index}", screen.id),
+            icon: String::new(),
+            title: row.title.clone(),
+            detail: row.licence.clone(),
+            state: String::new(),
+            selected: false,
+            accent: false,
+            line: false,
+        })
+        .collect();
+    Some(crate::lists::List {
+        prompt: texts_at(target).into(),
+        screen,
+        content: crate::lists::ListContent::Static(items),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::menu::{compose_menu, MenuRequest};
+
+    fn row(title: &str, licence: &str) -> Row {
+        Row { title: title.into(), licence: licence.into(), ..Row::default() }
+    }
+
+    /// In every design we list the game's components on an ABOUT screen in
+    /// Options, one row each, in pages like any list, and say where the
+    /// licence texts are.
+    #[test]
+    fn every_design_lists_the_licences_on_its_about_screen() {
+        let designs = crate::repo::at("integrations/designs");
+        let mut names: Vec<_> = std::fs::read_dir(&designs)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.is_dir())
+            .collect();
+        names.sort();
+        assert!(names.len() >= 3, "{names:?}");
+        let rows: Vec<Row> = (0..7).map(|index| row(&format!("Part & {index}"), "MIT")).collect();
+        for design in names {
+            let request = MenuRequest {
+                licences: rows.clone(),
+                target: crate::packaging::ExportTarget::Windows,
+                ..MenuRequest::new(&design, crate::repo::at("desktop/assets/controllers"))
+            };
+            let composed = compose_menu(&request).unwrap_or_else(|error| panic!("{}: {error}", design.display()));
+            let menu = composed.text("menu.rml").unwrap();
+            let cfg = composed.text("design.cfg").unwrap();
+            let name = design.display();
+            assert!(menu.contains("id=\"about-panel\""), "{name} has no ABOUT screen");
+            assert!(menu.contains("id=\"about\""), "{name} has no ABOUT entry in Options");
+            assert!(cfg.contains("screen_panel_about = \"about-panel\""), "{name}: {cfg}");
+            for index in 0..7 {
+                assert!(menu.contains(&format!("id=\"about-{index}\"")), "{name} lacks row {index}");
+            }
+            assert!(menu.contains(">Part &amp; 6<"), "{name} does not write a title as text");
+            assert!(menu.contains(r"ROM-IN-A-BOX\RUNTIMES"), "{name} does not say where the texts are");
+            // ABOUT is the last entry of Options, after the switches too.
+            // Only UNINSTALL comes after it.
+            let at = |id: &str| menu.find(&format!("id=\"{id}\"")).unwrap_or_else(|| panic!("{name} has no {id}"));
+            let about = at("about");
+            let settings = crate::player_settings::declared(request.settings);
+            for setting in settings.iter().filter(|setting| menu.contains(&format!("id=\"{}\"", setting.control()))) {
+                assert!(at(&setting.control()) < about, "{name}: {} comes after ABOUT", setting.id);
+            }
+            for entry in ["controls", "hotkeys"] {
+                assert!(at(entry) < about, "{name}: {entry} comes after ABOUT");
+            }
+            assert!(about < at("uninstall"), "{name}: UNINSTALL comes before ABOUT");
+        }
+    }
+
+    /// With no component to list, we add no ABOUT entry that leads nowhere.
+    #[test]
+    fn a_menu_with_no_licences_has_no_about_entry() {
+        let design = crate::repo::at("integrations/designs/native");
+        let composed = compose_menu(&MenuRequest::new(&design, crate::repo::at("desktop/assets/controllers"))).unwrap();
+        let menu = composed.text("menu.rml").unwrap();
+        assert!(!menu.contains("id=\"about\"") && !menu.contains("about-panel"), "{menu}");
+    }
+}

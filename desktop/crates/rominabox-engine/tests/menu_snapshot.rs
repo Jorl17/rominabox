@@ -52,6 +52,22 @@ impl Menu {
             Menu::SplashOnly => "splash-only",
         }
     }
+
+    /// The components that we list on the game's ABOUT screen: some for the
+    /// menu with everything, none otherwise.
+    fn licences(self) -> Vec<rominabox_engine::licences::Row> {
+        match self {
+            Menu::Everything => ["Genesis Plus GX", "RetroArch"]
+                .into_iter()
+                .map(|title| rominabox_engine::licences::Row {
+                    title: title.into(),
+                    licence: "GPL-3.0-or-later".into(),
+                    ..Default::default()
+                })
+                .collect(),
+            Menu::Default | Menu::NoOptions | Menu::SplashOnly => Vec::new(),
+        }
+    }
 }
 
 /// There are three- and six-button pads for Mega Drive, and the digital pad
@@ -183,9 +199,9 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
 
 /// The menu that an export of `request` puts in its `menu-assets`, which we
 /// stage with the export step alone, without the rest of the export.
-fn compose(request: &ExportRequest, destination: &Path) -> BTreeMap<String, String> {
+fn compose(request: &ExportRequest, menu: Menu, destination: &Path) -> BTreeMap<String, String> {
     // Every case's content is one cartridge or one disc sheet.
-    rominabox_engine::packaging::stage_menu(request, 1, destination)
+    rominabox_engine::packaging::stage_menu(request, 1, &menu.licences(), destination)
         .unwrap_or_else(|error| panic!("{}: staging the menu failed: {error}", request.game.theme));
     let staged = staged_menu(destination);
     assert!(
@@ -354,7 +370,7 @@ fn the_composed_menu_matches_its_snapshot() {
     let mut failures = Vec::new();
     for case in &cases {
         let name = case.name();
-        let staged = compose(&request(&root, &kit, case), &root.join(&name));
+        let staged = compose(&request(&root, &kit, case), case.menu, &root.join(&name));
         for (file, text) in &staged {
             assert!(
                 !text.contains(root.path().to_string_lossy().as_ref()),
@@ -404,7 +420,7 @@ fn an_export_stages_exactly_the_composed_menu() {
     for case in &cases {
         let name = case.name();
         let mut request = request(&root, &kit, case);
-        let composed = compose(&request, &root.join(format!("composed-{name}")));
+        let original = request.clone();
         request.game.rom = content(&root, case.system);
         let result = rominabox_engine::packaging::export_game(
             &request,
@@ -412,6 +428,18 @@ fn an_export_stages_exactly_the_composed_menu() {
             |_| {},
         )
         .unwrap_or_else(|error| panic!("{name}: export failed: {error:?}"));
+        // In the menu we list what is in the game's licence index.
+        let index = result.app_path.join("Contents/Resources/Legal/Licenses/index.json");
+        let licences: Vec<rominabox_engine::licences::Row> =
+            serde_json::from_slice(&fs::read(&index).unwrap()).unwrap();
+        let composed = rominabox_engine::packaging::stage_menu(
+            &original,
+            1,
+            &licences,
+            &root.join(format!("composed-{name}")),
+        )
+        .map(|_| staged_menu(&root.join(format!("composed-{name}"))))
+        .unwrap_or_else(|error| panic!("{name}: staging the menu failed: {error}"));
         let exported = staged_menu(&result.app_path.join("Contents/Resources/menu-assets"));
         let label = format!("{name} (compose_menu as the snapshot, the export as staged)");
         if let Some(difference) = first_difference(&label, &composed, &exported) {

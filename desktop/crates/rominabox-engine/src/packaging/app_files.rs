@@ -18,7 +18,11 @@ pub(super) fn player_defaults(request: &ExportRequest) -> crate::player_settings
 /// The in-game menu that we ship in an export of `request`, for a game with
 /// `discs` discs. We use this one mapping in the tests too, so that we test
 /// exactly what an export would stage.
-pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuRequest {
+pub fn menu_request(
+    request: &ExportRequest,
+    discs: usize,
+    licences: &[crate::licences::Row],
+) -> crate::menu::MenuRequest {
     let kit = &request.runtime_kit;
     crate::menu::MenuRequest {
         palette: request.game.palette.clone(),
@@ -37,6 +41,7 @@ pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuR
         settings: player_defaults(request),
         sound_pack: request.game.menu_sounds != "off",
         target: request.game.target,
+        licences: licences.to_vec(),
         // Controller artwork is not part of a design. We show the same pads in
         // every design, from the shared menu-assets in the kit.
         ..crate::menu::MenuRequest::new(
@@ -52,9 +57,10 @@ pub fn menu_request(request: &ExportRequest, discs: usize) -> crate::menu::MenuR
 pub fn stage_menu(
     request: &ExportRequest,
     discs: usize,
+    licences: &[crate::licences::Row],
     menu_assets: &Path,
 ) -> Result<controls::ControlProfile, ExportError> {
-    crate::menu::compose_menu(&menu_request(request, discs))
+    crate::menu::compose_menu(&menu_request(request, discs, licences))
         .and_then(|menu| menu.write(menu_assets))
         .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     fs::create_dir_all(menu_assets)

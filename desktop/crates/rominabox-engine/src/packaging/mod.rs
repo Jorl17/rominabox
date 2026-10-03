@@ -510,9 +510,22 @@ where
     }
     stage_played_patches(&collected_content.played_patches, &request.game.rom, &resources.join(shipped!(Patches).0))?;
     let rom_relative = Path::new("content").join(&collected_content.entrypoint);
+    // We ship the design's fonts in the menu stage, with the menu or the splash.
+    let fonts = if request.game.show_menu || request.game.splash {
+        crate::menu::Manifest::load(&crate::themes::staged_design(&request.runtime_kit, &request.game.theme))
+            .map_err(|message| ExportError::new(ErrorStage::Stage, message))?
+            .fonts
+            .into_iter()
+            .map(|font| font.family)
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let licences = legal::game_rows(&request.runtime_kit, selected_core, &fonts)?;
     let controls_profile = stage_menu(
         request,
         collected_content.discs,
+        &licences,
         &resources.join(app_file!(MenuAssets)),
     )?;
     let placed = controls::placement(&request.game.system, &request.game.controls)
@@ -541,24 +554,13 @@ where
     let licence = resolved
         .map(ExportCore::licence_relative)
         .unwrap_or_else(|| Path::new("licenses").join(&selected_core.license_file));
-    // We ship the design's fonts in the menu stage, with the menu or the splash.
-    let fonts = if request.game.show_menu || request.game.splash {
-        crate::menu::Manifest::load(&crate::themes::staged_design(&request.runtime_kit, &request.game.theme))
-            .map_err(|message| ExportError::new(ErrorStage::Stage, message))?
-            .fonts
-            .into_iter()
-            .map(|font| font.family)
-            .collect()
-    } else {
-        Vec::new()
-    };
     stage_legal_materials(
         &request.runtime_kit,
         request.core_cache.as_deref(),
         &resources.join("Legal"),
         selected_core,
         &licence,
-        &legal::game_rows(&request.runtime_kit, selected_core, &fonts)?,
+        &licences,
     )?;
     check_cancelled(cancelled)?;
 

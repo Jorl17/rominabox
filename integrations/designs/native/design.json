@@ -191,6 +191,19 @@
         "label": "RESET",
         "default": true
       }
+    },
+    {
+      "id": "about",
+      "panel": "about-panel",
+      "heading": "ABOUT",
+      "footer": "[ESC]  BACK",
+      "button": "about",
+      "back": "BACK",
+      "rows": "licences",
+      "option": {
+        "label": "ABOUT",
+        "default": true
+      }
     }
   ],
   "tokens": {

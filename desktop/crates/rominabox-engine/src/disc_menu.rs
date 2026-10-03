@@ -34,6 +34,7 @@ pub fn list(manifest: &Manifest) -> Option<List> {
         })
         .collect();
     Some(List {
+        prompt: String::new(),
         screen,
         content: crate::lists::ListContent::Static(items),
     })

@@ -51,6 +51,8 @@ pub struct MenuRequest {
     pub sound_pack: bool,
     /// The platform we make the game for, and so the screens it has.
     pub target: crate::packaging::ExportTarget,
+    /// The components we ship in the game, which we list on its ABOUT screen.
+    pub licences: Vec<crate::licences::Row>,
 }
 
 impl MenuRequest {
@@ -76,6 +78,7 @@ impl MenuRequest {
             sound_pack: false,
             target: crate::packaging::ExportTarget::of_host()
                 .expect("the builder runs on a platform it makes games for"),
+            licences: Vec::new(),
         }
     }
 }
@@ -201,6 +204,11 @@ fn entries(
                 .any(|screen| screen.id == *entry && screen.is_disc_list())
         });
     }
+    // A screen we fill in the exporter is an entry when we filled it.
+    entries.retain(|entry| {
+        manifest.screens.iter().all(|screen| screen.id != *entry || screen.rows.is_none())
+            || lists.iter().any(|list| list.screen.id == *entry)
+    });
     for list in lists {
         if list.screen.option_label.is_some() && !entries.contains(&list.screen.id) {
             entries.push(list.screen.id.clone());
@@ -253,6 +261,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         lists.push(crate::achievements::screen(&manifest)?);
         lists.extend(crate::achievements::accounts_screen(&manifest));
     }
+    lists.extend(crate::licences::list(&manifest, &request.licences, request.target));
     let entries = entries(&manifest, request, &lists)?;
     let staged = document::staged_screens(&manifest.screens, Some(&entries), request.discs, request.target)?;
 

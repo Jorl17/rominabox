@@ -491,9 +491,10 @@ pub(crate) fn apply_options(
     }
 
     let mut entries = String::new();
-    // The entry for forgetting the game, UNINSTALL or RESET, is the last row,
-    // after the switches too, wherever the design declares it.
-    let mut forget = String::new();
+    // ABOUT and then the entry for forgetting the game, UNINSTALL or RESET,
+    // are the last rows, after the switches too, wherever the design
+    // declares them.
+    let mut last: Vec<(u8, String)> = Vec::new();
     for entry in &included {
         // We removed the pause-row button when we replaced the opener, so an id
         // still in the document is the design's version of the entry.
@@ -501,12 +502,13 @@ pub(crate) fn apply_options(
             continue;
         }
         let row = entry_button(manifest, entry)?;
-        if entry.role == Some(ScreenRole::Forget) {
-            forget.push_str(&row);
-        } else {
-            entries.push_str(&row);
+        match entry.options_end() {
+            Some(rank) => last.push((rank, row)),
+            None => entries.push_str(&row),
         }
     }
+    last.sort_by_key(|(rank, _)| *rank);
+    let last: String = last.into_iter().map(|(_, row)| row).collect();
 
     let panel_id = format!("id=\"{}\"", options.panel);
     if !document.contains(&panel_id) {
@@ -556,7 +558,7 @@ pub(crate) fn apply_options(
         }
         entries.push_str(&switch_entry(manifest, setting)?);
     }
-    entries.push_str(&forget);
+    entries.push_str(&last);
     // One list, as on every screen of rows. In the player we split the
     // entries into pages of the size the design sets for Options, and show
     // the pager when there is more than one page.

@@ -9,29 +9,9 @@
 //! the in-game ABOUT screen and in the About panel of a Mac game.
 
 use super::{ErrorStage, ExportError};
-use serde::{Deserialize, Serialize};
+pub use crate::licences::{Row, INDEX};
 use std::fs;
 use std::path::Path;
-
-/// The index file beside the entries, in a kit and in a game.
-pub const INDEX: &str = "index.json";
-
-/// One component that we ship in a game, as we list it in the About views.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Row {
-    /// native, data, fonts or cores.
-    #[serde(default)]
-    pub group: String,
-    pub title: String,
-    #[serde(default)]
-    pub version: String,
-    pub licence: String,
-    /// The licence text, relative to the folder with the index. Empty when
-    /// the game contains no text for the component.
-    #[serde(default)]
-    pub file: String,
-}
 
 /// The kit's rows.
 fn kit_rows(runtime_kit: &Path) -> Result<Vec<Row>, ExportError> {

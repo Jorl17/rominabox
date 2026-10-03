@@ -459,6 +459,9 @@ fn run() -> Result<(), String> {
                 /// The hotkeys. For one left out, we use the builder's.
                 #[serde(default = "rominabox_engine::builder::unstated::hotkeys")]
                 hotkeys: rominabox_engine::hotkeys::Hotkeys,
+                /// The components we list on the ABOUT screen, as in an export for the game.
+                #[serde(default)]
+                licences: Vec<rominabox_engine::licences::Row>,
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid {command} request: {error}"))?;
@@ -497,6 +500,7 @@ fn run() -> Result<(), String> {
                 settings: rominabox_engine::player_settings::Defaults {
                     keep_playing_in_background: request.keep_playing_in_background,
                 },
+                licences: request.licences,
                 ..defaults
             })?
             .write(&request.destination)?;

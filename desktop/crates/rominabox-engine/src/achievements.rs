@@ -92,6 +92,7 @@ pub fn screen(manifest: &menu::Manifest) -> Result<List, String> {
         .cloned()
         .ok_or_else(|| "The base design has no achievements screen".to_string())?;
     Ok(List {
+        prompt: String::new(),
         screen,
         content: crate::lists::ListContent::Live,
     })
@@ -105,6 +106,7 @@ pub fn accounts_screen(manifest: &menu::Manifest) -> Option<List> {
         .screen(menu::ScreenRole::Accounts)
         .cloned()
         .map(|screen| List {
+            prompt: String::new(),
             screen,
             content: crate::lists::ListContent::Live,
         })

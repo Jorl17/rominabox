@@ -159,12 +159,22 @@ struct ScreenFile {
     dialogs: Option<Vec<String>>,
     from: Option<String>,
     platforms: Option<Vec<ExportTarget>>,
+    rows: Option<RowSource>,
 }
 
 #[derive(Clone, Copy, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum PlaceFile {
     Options,
+}
+
+/// Where we take the rows of a list screen from, when we fill them in the
+/// exporter. Like a role, only a screen in Native has one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RowSource {
+    /// The components we ship in the game, each with its licence.
+    Licences,
 }
 
 #[derive(Clone, Deserialize)]
@@ -286,6 +296,8 @@ pub struct Screen {
     /// The platforms on which a game has this screen, or every one if empty.
     /// UNINSTALL is on Windows, RESET on a Mac.
     pub platforms: Vec<ExportTarget>,
+    /// Rows we put on this screen in the exporter.
+    pub rows: Option<RowSource>,
 }
 
 impl Screen {
@@ -303,6 +315,19 @@ impl Screen {
     /// Whether a game made for `target` has this screen.
     pub fn ships_for(&self, target: ExportTarget) -> bool {
         self.platforms.is_empty() || self.platforms.contains(&target)
+    }
+
+    /// Where this entry goes among the last rows of Options, after the
+    /// switches: ABOUT, then UNINSTALL or RESET. None for an entry that goes
+    /// in its declared place.
+    pub fn options_end(&self) -> Option<u8> {
+        if self.rows == Some(RowSource::Licences) {
+            Some(0)
+        } else if self.role == Some(ScreenRole::Forget) {
+            Some(1)
+        } else {
+            None
+        }
     }
 
     /// Whether some game could have both this screen and `other`.
@@ -679,6 +704,13 @@ fn screens(
                 design.join("design.json").display()
             ));
         }
+        if entry.rows.is_some() {
+            return Err(format!(
+                "screen '{id}' in {} declares rows; only Native assigns them, and a design \
+                 takes them by replacing that screen's id",
+                design.join("design.json").display()
+            ));
+        }
         overrides.push((id, entry));
     }
     let mut listed: Vec<ScreenFile> = Vec::new();
@@ -769,6 +801,7 @@ fn screens(
             dialogs: entry.dialogs.unwrap_or_default(),
             opener: entry.from,
             platforms: entry.platforms.unwrap_or_default(),
+            rows: entry.rows,
         };
         if let Some(role) = screen.role {
             // Two screens may have one role on different platforms, and a game
@@ -833,6 +866,19 @@ mod tests {
         let error = Manifest::load(&design).unwrap_err();
         assert!(error.contains("screnes"), "{error}");
         assert!(error.contains("typo"), "{error}");
+    }
+
+    #[test]
+    fn a_design_cannot_assign_rows() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-manifest-rows");
+        with_native(&root);
+        let design = package(
+            &root,
+            "own",
+            r#"{"screens": [{"id": "credits", "panel": "credits-panel", "heading": "C", "footer": "F", "rows": "licences"}]}"#,
+        );
+        let error = Manifest::load(&design).err().expect("a design assigned rows");
+        assert!(error.contains("declares rows"), "{error}");
     }
 
     #[test]

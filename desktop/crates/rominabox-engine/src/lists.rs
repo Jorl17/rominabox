@@ -67,6 +67,8 @@ pub struct ListItem {
 pub struct List {
     pub screen: Screen,
     pub content: ListContent,
+    /// The text on the list's status line while no status message replaces it.
+    pub prompt: String,
 }
 
 #[derive(Clone, Debug)]
@@ -446,9 +448,10 @@ pub fn install(
             back = rml_text(&back),
         );
         let status = format!(
-            "<div id=\"{}{}\" class=\"list-status\"{up}></div>",
+            "<div id=\"{}{}\" class=\"list-status\"{up}>{}</div>",
             list.screen.id,
-            contract!(StatusSuffix)
+            contract!(StatusSuffix),
+            rml_text(&list.prompt)
         );
         let panel = if let Some(template) = wrapper {
             template

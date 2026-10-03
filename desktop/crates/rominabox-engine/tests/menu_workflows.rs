@@ -193,7 +193,7 @@ fn compose(kit: &Path, table: &Value, export: &Value, to: &Path) -> packaging::E
     let request: packaging::ExportRequest = serde_json::from_value(request)
         .unwrap_or_else(|error| panic!("{export}: not an export request: {error}"));
     let discs = table["game"]["discs"].as_u64().expect("game.discs") as usize;
-    packaging::stage_menu(&request, discs, to)
+    packaging::stage_menu(&request, discs, &[], to)
         .unwrap_or_else(|error| panic!("{export}: staging the menu failed: {error}"));
     request
 }

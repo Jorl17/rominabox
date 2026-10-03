@@ -300,6 +300,8 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 /* An account is one name to pick, in a large row with the name centred. */
 #accounts-list .list-row.line { height: 56dp; margin-bottom: 6dp; }
 #accounts-list .list-row.line .list-row-title { left: 0; right: 0; height: 56dp; line-height: 56dp; font-size: 20dp; text-align: center; }
+/* The rows on ABOUT have no picture: a name and its licence start at the edge. */
+#about-list .list-row-title, #about-list .list-row-detail { left: 12dp; }
 
 /* HOTKEYS, drawn like Options in the index. Each hotkey is on a line above
  * a rule, with its name, then its bindings as flat tags and + at the end. A

@@ -20,6 +20,7 @@ pub mod icons;
 pub mod installation;
 pub mod kits;
 pub(crate) mod launch_contract;
+pub mod licences;
 pub mod lists;
 pub mod mach_o;
 pub mod menu;

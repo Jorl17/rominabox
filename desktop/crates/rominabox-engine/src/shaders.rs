@@ -792,6 +792,7 @@ pub fn stage(
         });
     Ok(StagedShaders {
         list: Some(crate::lists::List {
+            prompt: String::new(),
             screen,
             content: crate::lists::ListContent::Static(items),
         }),

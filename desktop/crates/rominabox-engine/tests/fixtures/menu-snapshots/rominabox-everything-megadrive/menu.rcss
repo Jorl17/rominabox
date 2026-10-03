@@ -351,6 +351,10 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 /* An account is one name to pick, in a large row with the name centred. */
 #accounts-list .list-row.line { height: 64dp; margin-bottom: 8dp; }
 #accounts-list .list-row.line .list-row-title { left: 0; right: 0; height: 64dp; line-height: 64dp; font-size: 24dp; text-align: center; }
+/* The rows on ABOUT have no picture: a name and its licence start at the edge. */
+#about-list .list-row-title, #about-list .list-row-detail { left: 16dp; }
+/* Where the licence texts are: a small line beside BACK, clear of the footer. */
+#about-status { top: 528dp; font-size: 10dp; }
 
 /* HOTKEYS: one panel for each hotkey, with its name on the left and its
  * bindings as keycaps, followed by +. A key is a raised cap and a pad input
