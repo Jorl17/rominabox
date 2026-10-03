@@ -564,17 +564,6 @@ main {
   color: var(--muted);
   text-decoration: line-through;
 }
-.game-file-warning {
-  display: inline-grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--highlight);
-  color: var(--ink);
-  font-weight: 700;
-  cursor: help;
-}
 .game-file-remove {
   background: none;
   border: 0;

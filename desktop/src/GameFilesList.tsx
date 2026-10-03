@@ -10,16 +10,12 @@ function kind(role: bridge.FileRole): string {
     case "game":
       return "";
     case "named":
-      return "part of the game";
     case "companion":
-      return "goes with the game";
+      return "required";
     case "added":
       return "added";
   }
 }
-
-const COMPANION_WARNING =
-  "The console's rules bring this file with the game. Some games need it to run correctly.";
 
 /**
  * The files we copy with the game, on the details step. A line under the
@@ -106,7 +102,6 @@ export function GameFilesList({
         <div className="game-files" data-game-files>
           <ul>
             {listing.files.map((file) => {
-              const companion = file.role.kind === "companion";
               const fixed =
                 file.role.kind === "game" ||
                 file.role.kind === "named" ||
@@ -115,14 +110,6 @@ export function GameFilesList({
                 <li key={file.name}>
                   <span className="game-file-name">{file.name}</span>
                   <span className="game-file-kind">{kind(file.role)}</span>
-                  {companion && !fixed && (
-                    <span
-                      className="game-file-warning"
-                      title={COMPANION_WARNING}
-                    >
-                      !
-                    </span>
-                  )}
                   {!fixed && remove(file.name)}
                 </li>
               );
