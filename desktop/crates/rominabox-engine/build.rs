@@ -17,6 +17,10 @@ fn patch_formats() {
     let sources = [
         "tasks/patch_stream.c",
         "libretro-common/encodings/encoding_crc32.c",
+        // The CPU check for the faster CRC-32 path on an x86 processor, and
+        // the timer for the sleeps in that file.
+        "libretro-common/features/features_cpu.c",
+        "libretro-common/time/rtime.c",
         "libretro-common/encodings/encoding_vcdiff.c",
         // The LZMA2 decoder with which we read xdelta3's LZMA in VCDIFF.
         "libretro-common/formats/7z/r7z_lzma.c",
