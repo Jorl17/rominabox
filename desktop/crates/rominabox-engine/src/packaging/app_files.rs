@@ -477,11 +477,12 @@ pub(super) fn compressed_refusal(compressed: &content::CompressedPatches, game: 
     )
 }
 
-/// We ship the PPF patch of a PlayStation disc, and in the launcher we copy it
-/// into the game's data, named after the serial of the disc as required by
-/// the emulator (crate::discs::playstation_patch_name).
+/// We merge the PPF patches of a PlayStation disc into the one PPF file for
+/// the emulator and ship it. In the launcher we copy it into the game's data,
+/// named after the serial of the disc as required by the emulator
+/// (crate::discs::playstation_patch_name).
 pub(super) fn stage_played_patches(patches: &[PathBuf], game: &Path, folder: &Path) -> Result<(), ExportError> {
-    let Some(patch) = patches.first() else {
+    let Some(first) = patches.first() else {
         return Ok(());
     };
     let name = |path: &Path| path.file_name().unwrap_or_default().to_string_lossy().into_owned();
@@ -490,13 +491,22 @@ pub(super) fn stage_played_patches(patches: &[PathBuf], game: &Path, folder: &Pa
             ErrorStage::Refused,
             format!(
                 "\"{}\" is found by the disc's serial while the game runs, and the serial of \"{}\" could not be read.",
-                name(patch),
+                name(first),
                 name(game)
             ),
         )
-        .about(patch)
+        .about(first)
     })?;
+    let records = patches
+        .iter()
+        .map(|patch| {
+            let bytes = fs::read(patch).map_err(|error| ExportError::io(ErrorStage::Stage, patch, error))?;
+            crate::ppf::records(&bytes).map_err(|why| {
+                ExportError::new(ErrorStage::Refused, format!("\"{}\" is {why}.", name(patch))).about(patch)
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     fs::create_dir_all(folder).map_err(|error| ExportError::io(ErrorStage::Stage, folder, error))?;
     let destination = folder.join(serial);
-    fs::copy(patch, &destination).map(|_| ()).map_err(|error| ExportError::io(ErrorStage::Stage, &destination, error))
+    fs::write(&destination, crate::ppf::merged(&records)).map_err(|error| ExportError::io(ErrorStage::Stage, &destination, error))
 }

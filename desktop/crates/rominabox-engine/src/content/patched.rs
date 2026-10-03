@@ -75,17 +75,16 @@ pub(super) struct Staged {
     pub runtime: Vec<PathBuf>,
 }
 
-/// The PPF patch among `ppf` that we leave to the PlayStation emulator to
-/// apply while the game runs, and the ones we refuse. Only one PPF takes
-/// effect, so we take the first in name order, either beside the game with
-/// the game's name or chosen by the author. On another console we apply no
+/// The PPF patches among `ppf` that we leave to the PlayStation emulator to
+/// apply while the game runs, and the ones we refuse. These are the ones
+/// beside the game with the game's name, and the ones the author chose. We
+/// merge them into one PPF when exporting. On another console we apply no
 /// PPF, and we refuse one that the author chose.
 fn played_patch(entrypoint: &Path, playstation: bool, ppf: Vec<(PathBuf, Offered)>) -> (Vec<PathBuf>, Vec<PathBuf>) {
     let stem = entrypoint.file_stem().unwrap_or_default();
     let (mut played, mut refused) = (Vec::new(), Vec::new());
     for (path, how) in ppf {
-        let belongs = playstation && (how == Offered::Chosen || path.file_stem() == Some(stem));
-        if belongs && played.is_empty() {
+        if playstation && (how == Offered::Chosen || path.file_stem() == Some(stem)) {
             played.push(path);
         } else if how == Offered::Chosen {
             refused.push(path);

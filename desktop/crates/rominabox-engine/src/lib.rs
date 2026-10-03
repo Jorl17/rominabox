@@ -31,6 +31,7 @@ pub mod packaging;
 pub mod patches;
 pub mod patching;
 pub mod player_settings;
+pub mod ppf;
 mod portable_executable;
 pub mod projects;
 mod publish;

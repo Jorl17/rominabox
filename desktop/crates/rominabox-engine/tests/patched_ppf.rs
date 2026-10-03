@@ -81,15 +81,20 @@ fn a_ppf_beside_the_disc_under_another_name_stays_behind_and_one_the_author_chos
 }
 
 #[test]
-fn the_emulator_reads_one_ppf_so_a_second_the_author_chose_is_refused() {
+fn several_ppfs_for_one_disc_are_shipped_merged_into_the_one_the_emulator_reads() {
     let root = workspace();
-    let (request, _) = playstation_disc(&root);
+    let (mut request, _) = playstation_disc(&root);
     fs::write(root.join("A.ppf"), ppf(100, b"FIRST")).unwrap();
     fs::write(root.join("B.ppf"), ppf(200, b"SECOND")).unwrap();
-    let chosen = GameFiles { added: vec![root.join("A.ppf"), root.join("B.ppf")], ..GameFiles::default() };
-    let set = content::collect_with(&request.game.rom, Some("ps1"), &chosen).unwrap();
-    assert_eq!(names(&set.played_patches), ["A.ppf"]);
-    assert_eq!(names(&set.refused_patches), ["B.ppf"]);
+    request.game.files = GameFiles { added: vec![root.join("A.ppf"), root.join("B.ppf")], ..GameFiles::default() };
+    let set = content::collect_with(&request.game.rom, Some("ps1"), &request.game.files).unwrap();
+    assert_eq!(names(&set.played_patches), ["A.ppf", "B.ppf"]);
+    assert!(set.refused_patches.is_empty());
+
+    let app = export_game(&request, &AtomicBool::new(false), |_| {}).unwrap().app_path;
+    let shipped = fs::read(app.join("Contents/Resources/patches/SCES_015.64")).unwrap();
+    let records = rominabox_engine::ppf::records(&shipped).unwrap();
+    assert_eq!(records, [(100, b"FIRST".to_vec()), (200, b"SECOND".to_vec())]);
 }
 
 #[test]
