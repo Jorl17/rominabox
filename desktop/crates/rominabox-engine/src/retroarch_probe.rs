@@ -15,6 +15,8 @@ pub const INPUT_LAYER: &[&str] = &[
     "input/input_driver.c",
     "input/input_keymaps.c",
     "libretro-common/file/config_file.c",
+    "libretro-common/file/config_file_io.c",
+    "libretro-common/string/rstrtod.c",
     "libretro-common/file/file_path_io.c",
     "libretro-common/streams/file_stream.c",
     "libretro-common/vfs/vfs_implementation.c",

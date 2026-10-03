@@ -59,7 +59,7 @@ static int16_t keyboard(void *data, const input_device_driver_t *joypad,
    if (device != RETRO_DEVICE_JOYPAD || id != RETRO_DEVICE_ID_JOYPAD_MASK || keyboard_mapping_blocked)
       return 0;
    for (i = 0; i < RARCH_FIRST_CUSTOM_BIND; i++)
-      if (binds[port][i].valid && binds[port][i].key == held)
+      if (RETRO_KEYBIND_VALID(&binds[port][i]) && RETRO_KEYBIND_KEY(&binds[port][i]) == held)
          buttons |= 1 << i;
    return buttons;
 }
@@ -88,6 +88,8 @@ int main(void)
    unsigned key;
    size_t i;
    input_bits_t bits;
+   /* The RetroArch default: read the pads even when the window has no focus. */
+   settings.bools.input_joypad_background = true;
    /* The fixed RetroArch keys for the menu pad, besides the arrows. */
    static const unsigned own[] = { RETROK_RETURN, RETROK_BACKSPACE, RETROK_DELETE, RETROK_SLASH,
       RETROK_SPACE, RETROK_RSHIFT, RETROK_PAGEUP, RETROK_PAGEDOWN, RETROK_HOME, RETROK_END };
@@ -96,8 +98,8 @@ int main(void)
    /* One user, a controller, whose game's Start is P. */
    settings.uints.input_max_users = 1;
    settings.uints.input_libretro_device[0] = RETRO_DEVICE_JOYPAD;
-   input_config_binds[0][RETRO_DEVICE_ID_JOYPAD_START].valid = true;
-   input_config_binds[0][RETRO_DEVICE_ID_JOYPAD_START].key = RETROK_p;
+   RETRO_KEYBIND_SET_VALID(&input_config_binds[0][RETRO_DEVICE_ID_JOYPAD_START], true);
+   RETRO_KEYBIND_SET_KEY(&input_config_binds[0][RETRO_DEVICE_ID_JOYPAD_START], RETROK_p);
 
    /* While the game plays, P is its Start. Without this the case after it
     * could pass by reading nothing. */

@@ -23,15 +23,6 @@
       "texts": [{"member": "LICENSE.TXT"}, {"member": "docs/FTL.TXT"}, {"member": "docs/GPLv2.TXT"}]
     },
     {
-      "name": "mbedtls", "title": "Mbed TLS", "licence": "Apache-2.0", "pin": "fork", "path": "deps/mbedtls",
-      "versionDefine": ["deps/mbedtls/mbedtls/version.h", "MBEDTLS_VERSION_STRING"],
-      "usedBy": "the player's TLS for achievements, in every exported game",
-      "texts": [
-        {"url": "https://raw.githubusercontent.com/Mbed-TLS/mbedtls/mbedtls-{version}/LICENSE"},
-        {"url": "https://raw.githubusercontent.com/Mbed-TLS/mbedtls/mbedtls-{version}/apache-2.0.txt"}
-      ]
-    },
-    {
       "name": "glslang", "title": "glslang", "licence": "BSD-3-Clause AND others", "pin": "fork", "path": "deps/glslang",
       "usedBy": "the player's slang shader compiler, in every exported game",
       "note": "The fork's glslang is from June 2018 and carries its licences in file headers only. Upstream wrote LICENSE.txt, collecting them, in December 2018; this is its first version.",
@@ -49,72 +40,9 @@
       "texts": [{"fork": "deps/rcheevos/LICENSE"}]
     },
     {
-      "name": "zstd", "title": "Zstandard", "licence": "BSD-3-Clause OR GPL-2.0-only", "pin": "fork", "path": "deps/zstd",
-      "usedBy": "the player, in every exported game",
-      "texts": [{"fork": "deps/zstd/LICENSE"}, {"fork": "deps/zstd/COPYING"}]
-    },
-    {
-      "name": "lzma-sdk", "title": "LZMA SDK (7-Zip)", "licence": "public domain", "pin": "fork", "path": "deps/7zip",
-      "usedBy": "the player, in every exported game",
-      "texts": [{"forkComment": "deps/7zip/7zDec.c"}]
-    },
-    {
-      "name": "libflac", "title": "libFLAC", "licence": "BSD-3-Clause", "pin": "fork", "path": "deps/libFLAC",
-      "usedBy": "the player, in every exported game",
-      "texts": [{"fork": "deps/libFLAC/COPYING.Xiph"}]
-    },
-    {
-      "name": "ibxm", "title": "IBXM", "licence": "BSD-3-Clause", "pin": "fork", "path": "deps/ibxm",
-      "usedBy": "the player, in every exported game",
-      "texts": [{"fork": "deps/ibxm/licence.txt"}]
-    },
-    {
-      "name": "yxml", "title": "yxml", "licence": "MIT", "pin": "fork", "path": "deps/yxml",
-      "usedBy": "the player, in every exported game",
-      "texts": [{"forkComment": "deps/yxml/yxml.h"}]
-    },
-    {
-      "name": "dr-libs", "title": "dr_libs (dr_flac, dr_mp3)", "licence": "Unlicense OR MIT-0", "pin": "fork", "path": "deps/dr",
-      "usedBy": "the player, in every exported game",
-      "note": "dr_mp3 carries minimp3's dedication as well as its own.",
-      "texts": [{"forkLastComment": "deps/dr/dr_flac.h"}, {"forkLastComment": "deps/dr/dr_mp3.h", "count": 2}]
-    },
-    {
-      "name": "stb", "title": "stb", "licence": "MIT OR Unlicense", "pin": "fork", "path": "deps/stb",
-      "usedBy": "the player, in every exported game",
-      "note": "The fork's stb headers are old versions: stb_truetype.h and stb_rect_pack.h say public domain in their first comment, and stb_vorbis.h says nothing. The text is the stb repository's.",
-      "texts": [{"url": "https://raw.githubusercontent.com/nothings/stb/2c980bb59875b0d32144a71867fbdebb2f77cd20/LICENSE"}]
-    },
-    {
       "name": "xxhash", "title": "xxHash", "licence": "BSD-2-Clause", "pin": "fork", "path": "deps/xxHash",
       "usedBy": "the player, in every exported game",
       "texts": [{"fork": "deps/xxHash/LICENSE"}]
-    },
-    {
-      "name": "zlib", "title": "zlib", "licence": "Zlib", "pin": "fork", "path": "deps/libz",
-      "versionDefine": ["libretro-common/include/compat/zlib/zlib.h", "ZLIB_VERSION"],
-      "usedBy": "the Windows player, which has no system zlib, in every Windows game",
-      "texts": [{"forkComment": "libretro-common/include/compat/zlib/zlib.h"}]
-    },
-    {
-      "name": "switchres", "title": "Switchres", "licence": "GPL-2.0-or-later", "pin": "fork", "path": "deps/switchres",
-      "versionDefine": ["deps/switchres/switchres.h", "SWITCHRES_VERSION"],
-      "usedBy": "the Windows player's CRT mode switching, in every Windows game",
-      "note": "Switchres names its licence in each file's header and carries no text of it, upstream included; the text is the Free Software Foundation's.",
-      "texts": [{"forkComment": "deps/switchres/switchres.cpp"}, {"url": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt"}]
-    },
-    {
-      "name": "xdelta3", "title": "Xdelta 3", "licence": "Apache-2.0", "pin": "fork", "path": "deps/xdelta3",
-      "usedBy": "the Windows player's patches, in every Windows game",
-      "texts": [{"fork": "deps/xdelta3/LICENSE"}]
-    },
-    {
-      "name": "liblzma", "title": "liblzma (XZ Utils)", "licence": "0BSD", "pin": "xz", "platforms": ["windows"],
-      "usedBy": "the Windows player, which links it for Xdelta 3, in every Windows game",
-      "texts": [
-        {"url": "https://raw.githubusercontent.com/tukaani-project/xz/{revision}/COPYING"},
-        {"url": "https://raw.githubusercontent.com/tukaani-project/xz/{revision}/COPYING.0BSD", "toolchain": "share/licenses/xz/COPYING.0BSD"}
-      ]
     },
     {
       "name": "mingw-w64-runtime", "title": "MinGW-w64 runtime", "licence": "ZPL-2.1 AND others", "pin": "mingw-w64", "platforms": ["windows"],
@@ -138,7 +66,7 @@
   "pins": {
     "comment": "Pins nothing else in the repository records: the toolchain Windows players are built with (GCC 16.2.0 from MSYS2 UCRT64).",
     "mingw-w64": {"revision": "v14.0.0", "source": "https://github.com/mingw-w64/mingw-w64"},
-    "gcc": {"revision": "releases/gcc-16.2.0", "source": "https://github.com/gcc-mirror/gcc"}, "xz": {"revision": "v5.8.4", "source": "https://github.com/tukaani-project/xz"}
+    "gcc": {"revision": "releases/gcc-16.2.0", "source": "https://github.com/gcc-mirror/gcc"}
   },
   "data": [
     {

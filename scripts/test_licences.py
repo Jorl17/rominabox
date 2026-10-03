@@ -93,9 +93,9 @@ def main() -> int:
         check(status == 0, "a check that finds them fails nothing", f"exit status {status}")
 
         # We warn about a library with no entry and still keep it in the kit.
-        unheard = fake_build(Path(temporary) / "unheard", ["deps/mbedtls/aes.c", "deps/unheard-of/lib.c"])
+        unheard = fake_build(Path(temporary) / "unheard", ["deps/glslang/glslang/lib.cpp", "deps/unheard-of/lib.c"])
         used, missing = licences.player_components(unheard, "macos")
-        check("mbedtls" in [component.name for component in used],
+        check("glslang" in [component.name for component in used],
               "a kit is made from a player build compiling a fork library with no entry", str(used))
         check(names(missing, "deps/unheard-of", "no native component") and len(missing) == 1,
               "and the fork library with no entry is named in its warning", "\n".join(missing))
@@ -103,10 +103,10 @@ def main() -> int:
         check("deps/unheard-of" in warning and "Nothing was left out or refused" in warning,
               "the warning says nothing was left out", warning)
 
-        build = fake_build(Path(temporary) / "known", ["deps/mbedtls/aes.c", "gfx/../deps/yxml/yxml.h", "retroarch.c"])
+        build = fake_build(Path(temporary) / "known", ["deps/glslang/glslang/lib.cpp", "gfx/../deps/rcheevos/include/rc_client.h", "retroarch.c"])
         used, missing = licences.player_components(build, "macos")
         used = [component.name for component in used]
-        check("mbedtls" in used and "yxml" in used and "ibxm" not in used and "mingw-w64-runtime" not in used,
+        check("glslang" in used and "rcheevos" in used and "xxhash" not in used and "mingw-w64-runtime" not in used,
               "a player build uses the fork libraries it compiled, not the others", str(used))
         check({"retroarch", "libretro-common", "rmlui", "freetype"} <= set(used),
               "a player build uses what every player is made from", str(used))

@@ -306,6 +306,7 @@ fn pad_home() -> crate::retroarch_probe::Probe {
             "input/input_keymaps.c",
             "menu/drivers/rmlui/pad_inputs.c",
             "libretro-common/file/config_file.c",
+            "libretro-common/file/config_file_io.c",
             "libretro-common/file/config_file_userdata.c",
             "libretro-common/lists/string_list.c",
             "libretro-common/compat/compat_strl.c",

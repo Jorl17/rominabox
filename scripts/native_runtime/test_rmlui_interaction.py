@@ -376,13 +376,16 @@ def main() -> int:
     orchestration_fixtures()
     harness(ORCHESTRATION, HERE / "test_menu_orchestration.cpp", HERE / "test_menu_player_settings.cpp",
             HERE / "menu_host_fake.cpp", HERE / "text_test_host.cpp",
-            ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
+            ROOT / "vendor/retroarch/libretro-common/file/config_file.c",
+            ROOT / "vendor/retroarch/libretro-common/file/config_file_io.c")
     stage_everything()
     orchestrate()
     harness(HOTKEYS, HERE / "test_hotkeys.cpp", HERE / "menu_host_fake.cpp",
-            HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
+            HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c",
+            ROOT / "vendor/retroarch/libretro-common/file/config_file_io.c")
     harness(PLAY_HOTKEYS, HERE / "test_play_hotkeys.cpp", HERE / "menu_host_fake.cpp",
-            HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c")
+            HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c",
+            ROOT / "vendor/retroarch/libretro-common/file/config_file_io.c")
     hotkeys_ok = hotkeys()
     return 0 if row_edges_ok and hotkeys_ok and styled_ok else 1
 

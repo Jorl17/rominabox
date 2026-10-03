@@ -92,7 +92,7 @@ static input_bits_t read_with(uint16_t button)
    input->primary_joypad = &pad;
    /* As set by RetroArch when it starts (input_driver.c). */
    input->libretro_input_binds[0] = (const retro_keybind_set *)&input_config_binds[0];
-   memset(input->joypad_state_cache_valid, 0, sizeof(input->joypad_state_cache_valid));
+   memset(&input->frame_valid, 0, sizeof(input->frame_valid));
    memset(&bits, 0, sizeof(bits));
    held = button;
    input_driver_collect_system_input(input, &settings, &bits);
@@ -104,6 +104,8 @@ int main(void)
    int failures = 0;
    unsigned i;
    input_bits_t bits;
+   /* The RetroArch default: read the pads even when the window has no focus. */
+   settings.bools.input_joypad_background = true;
 
    /* One user with a controller whose profile lists only Left on the d-pad,
     * and whose game controls move Left to another button. */

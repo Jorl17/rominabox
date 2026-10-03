@@ -101,8 +101,11 @@ static int16_t keyboard_state(void *data, const input_device_driver_t *joypad,
    if (device != RETRO_DEVICE_JOYPAD || blocked)
       return 0;
    for (bind = 0; bind < RARCH_FIRST_CUSTOM_BIND; ++bind)
-      if (binds[port][bind].key && binds[port][bind].key < RETROK_LAST && keys[binds[port][bind].key])
+   {
+      const enum retro_key key = RETRO_KEYBIND_KEY(&binds[port][bind]);
+      if (key && key < RETROK_LAST && keys[key])
          pressed |= 1 << bind;
+   }
    return id == RETRO_DEVICE_ID_JOYPAD_MASK ? pressed : (pressed >> id) & 1;
 }
 
@@ -139,16 +142,18 @@ static void bind_positions(config_file_t *config)
       struct retro_keybind *bind = &input_config_binds[0][index];
       const char *name = input_config_bind_map_get_base(index);
       struct config_entry_list *entry;
-      bind->key = RETROK_UNKNOWN;
+      RETRO_KEYBIND_SET_KEY(bind, RETROK_UNKNOWN);
       bind->joykey = NO_BTN;
       bind->joyaxis = AXIS_NONE;
       bind->mbutton = NO_BTN;
       snprintf(base, sizeof(base), "input_player1_%s", name);
       entry = config_get_entry(config, base);
       if (entry && entry->value && *entry->value)
-         bind->key = input_config_translate_str_to_rk(entry->value, strlen(entry->value));
-      input_config_parse_joy_button(base, config, "input_player1", name, bind);
-      input_config_parse_joy_axis(base, config, "input_player1", name, bind);
+         RETRO_KEYBIND_SET_KEY(bind, input_config_translate_str_to_rk(entry->value, strlen(entry->value)));
+      input_config_parse_joy_button(base, config, "input_player1", name, bind,
+            &input_config_bind_labels[0][index]);
+      input_config_parse_joy_axis(base, config, "input_player1", name, bind,
+            &input_config_bind_labels[0][index]);
       input_config_parse_mouse_button(base, config, "input_player1", name, bind);
    }
 }
@@ -160,7 +165,7 @@ static void profile_pad(unsigned pad)
    for (index = 0; index < POSITIONS; ++index)
    {
       struct retro_keybind *bind = &input_autoconf_binds[pad][index];
-      bind->valid = true;
+      RETRO_KEYBIND_SET_VALID(bind, true);
       if (index < RARCH_FIRST_CUSTOM_BIND)
          bind->joykey = index;
       else
@@ -232,6 +237,8 @@ int main(int argc, char **argv)
    settings->floats.input_axis_threshold = 0.5f;
    settings->floats.input_analog_sensitivity = 1.0f;
    settings->ints.input_turbo_bind = -1;
+   /* The RetroArch default: read the pads even when the window has no focus. */
+   settings->bools.input_joypad_background = true;
    input_config_reset();
    for (player = 0; player < PADS; ++player)
    {

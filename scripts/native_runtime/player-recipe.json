@@ -87,8 +87,21 @@
       "--disable-ffmpeg",
       "--disable-cg",
       "--disable-langextra",
-      "--disable-systemmbedtls",
-      "--enable-builtinmbedtls"
+      "--disable-mbedtls",
+      "--disable-bearssl",
+      "--enable-ssl",
+      "--enable-retrossl",
+      "--disable-rwebm",
+      "--disable-rmp4",
+      "--disable-rvp9",
+      "--disable-rmpeg1",
+      "--disable-ropus",
+      "--disable-raac",
+      "--disable-rwebp",
+      "--disable-rdds",
+      "--disable-retrosmb",
+      "--disable-smbclient",
+      "--disable-retronfs"
     ],
     "macos": [
       "--enable-cocoa",
@@ -106,7 +119,7 @@
       "--disable-winmm",
       "--disable-sdl2"
     ],
-    "comment": "Two OpenGL drivers, one player for every game: gl runs GLSL shaders, glcore (opengl_core) runs slang, compiled with the fork's own glslang and SPIRV-Cross (builtinglslang). glslang and SPIRV-Cross are left for configure to settle: --enable-glslang makes it look for a system glslang and stop. A game's shader language picks the driver (shader_format.rs). TLS is RetroArch's own mbedTLS (deps/mbedtls), built into the player on every platform; configure would otherwise take a system mbedTLS it finds, which on a Mac is Homebrew's and exists for one processor only.",
+    "comment": "Two OpenGL drivers, one player for every game: gl runs GLSL shaders, glcore (opengl_core) runs slang, compiled with the fork's own glslang and SPIRV-Cross (builtinglslang). glslang and SPIRV-Cross are left for configure to settle: --enable-glslang makes it look for a system glslang and stop. A game's shader language picks the driver (shader_format.rs). TLS is RetroArch's own client (retrossl, on libretro-common/crypto), built into the player on every platform; configure would otherwise take a system mbedTLS or BearSSL it finds, which on a Mac is Homebrew's and exists for one processor only. RetroArch's own video and audio codecs for its movie player and recording (WebM, MP4, VP9, MPEG-1, Opus, AAC) and its WebP and DDS images are left out, and so are its SMB and NFS network file clients, because no game uses them and they make the player larger.",
     "environment": {
       "macos": {"PKG_CONF_PATH": "none"}
     },
@@ -235,6 +248,7 @@
       "libretro-common/streams/file_stream.c",
       "libretro-common/vfs/vfs_implementation.c",
       "libretro-common/string/stdstring.c",
+      "libretro-common/string/rstrtod.c",
       "libretro-common/encodings/encoding_utf.c",
       "libretro-common/encodings/encoding_crc32.c",
       "libretro-common/time/rtime.c",
@@ -258,6 +272,7 @@
       "menu/drivers/rmlui/render/rmlui_gl3.cpp",
       "menu/drivers/third_party/lodepng.cpp",
       "libretro-common/file/config_file.c",
+      "libretro-common/file/config_file_io.c",
       "libretro-common/file/config_file_userdata.c",
       "libretro-common/lists/string_list.c"
     ],

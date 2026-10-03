@@ -103,9 +103,12 @@ static input_driver_t keyboard = { .poll = keyboard_poll, .input_state = keyboar
 
 static int failures;
 
-/* What we sent to the pads since the last check, compared with `expected`. */
+/* What we sent to the pads since the last check, compared with `expected`,
+ * once the frame has ended. RetroArch writes the rumble that a core set during
+ * a frame after the core has run. */
 static void expect(const char *step, const char *expected)
 {
+   input_driver_flush_rumble();
    printf("%s\n%s", step, *told ? told : "(nothing)\n");
    if (strcmp(told, expected))
    {
@@ -135,6 +138,8 @@ static void start(const unsigned played_as[MAX_USERS], unsigned gain)
    settings.uints.input_max_users = 8;
    settings.uints.input_rumble_gain = gain;
    settings.bools.input_rumble_enable = true;
+   /* The RetroArch default: read the pads even when the window has no focus. */
+   settings.bools.input_joypad_background = true;
    settings.floats.input_axis_threshold = 0.5f;
    settings.ints.input_turbo_bind = -1;
    for (port = 0; port < MAX_USERS; ++port)
@@ -147,7 +152,7 @@ static void start(const unsigned played_as[MAX_USERS], unsigned gain)
       {
          struct retro_keybind *bind = &input_config_binds[port][id];
          struct retro_keybind *profile = &input_autoconf_binds[port][id];
-         bind->key = RETROK_UNKNOWN;
+         RETRO_KEYBIND_SET_KEY(bind, RETROK_UNKNOWN);
          bind->joykey = profile->joykey = NO_BTN;
          bind->joyaxis = profile->joyaxis = AXIS_NONE;
          bind->mbutton = NO_BTN;
@@ -160,7 +165,7 @@ static void start(const unsigned played_as[MAX_USERS], unsigned gain)
          }
       }
    }
-   input_config_binds[0][RETRO_DEVICE_ID_JOYPAD_B].key = RETROK_z;
+   RETRO_KEYBIND_SET_KEY(&input_config_binds[0][RETRO_DEVICE_ID_JOYPAD_B], RETROK_z);
    input_remapping_update_port_map();
    input->current_driver = &keyboard;
    input->current_data = &keyboard;
@@ -255,10 +260,12 @@ int main(void)
     * both when we pass it to the new pad and when it was set. */
    start(one_player, 50);
    input_set_rumble_state(0, RETRO_RUMBLE_STRONG, 30000);
+   expect("every pad player 1, rumble gain 50%: the core sets the strong motor",
+         "pad 0 strong 15000\n");
    buttons[1] = 1 << RETRO_DEVICE_ID_JOYPAD_B;
    frame();
    expect("every pad player 1, rumble gain 50%: the second pad presses B",
-         "pad 0 strong 15000\npad 0 strong 0\npad 0 weak 0\npad 1 strong 15000\npad 1 weak 0\n");
+         "pad 0 strong 0\npad 0 weak 0\npad 1 strong 15000\npad 1 weak 0\n");
 
    if (!failures)
       printf("last pad: a player's rumble follows the pad that last pressed a button, and with one pad per player stays where RetroArch puts it\n");

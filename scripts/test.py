@@ -69,6 +69,7 @@ HEADLESS_SUPPORT = [
     "scripts/native_runtime/text_test_host.cpp",
     "scripts/native_runtime/achievements_fake.cpp",
     "vendor/retroarch/libretro-common/file/config_file.c",
+    "vendor/retroarch/libretro-common/file/config_file_io.c",
 ]
 
 

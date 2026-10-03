@@ -264,7 +264,7 @@ fn a_game_carries_every_licence_the_kit_holds_for_its_player() {
     fs::create_dir_all(kit.join("licenses/native")).unwrap();
     fs::create_dir_all(kit.join("provenance/native-rmlui")).unwrap();
     fs::write(kit.join("licenses/NATIVE-DEPENDENCIES.txt"), "list").unwrap();
-    let native = ["retroarch.txt", "rmlui.txt", "mbedtls.txt"];
+    let native = ["retroarch.txt", "rmlui.txt", "glslang.txt"];
     for name in native {
         fs::write(kit.join("licenses/native").join(name), name).unwrap();
     }

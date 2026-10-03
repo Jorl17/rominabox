@@ -21,7 +21,7 @@ static const char *default_key(unsigned id)
    for (bind = 0; bind < sizeof(retro_keybinds_1) / sizeof(retro_keybinds_1[0]); ++bind)
       if (retro_keybinds_1[bind].id == id)
          for (key = 0; input_config_key_map[key].str; ++key)
-            if (input_config_key_map[key].key == retro_keybinds_1[bind].key)
+            if (input_config_key_map[key].key == RETRO_KEYBIND_KEY(&retro_keybinds_1[bind]))
                return input_config_key_map[key].str;
    return "nul";
 }

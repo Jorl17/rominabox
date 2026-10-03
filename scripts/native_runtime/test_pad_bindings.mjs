@@ -40,14 +40,16 @@ void input_keymaps_translate_rk_to_str(enum retro_key key, char *out, size_t len
    if (key) snprintf(out, len, "key%u", key); else strlcpy(out, "nul", len);
 }
 size_t input_config_get_bind_string_joykey(bool show, char *out,
-      const char *prefix, const struct retro_keybind *bind, size_t len) {
-   (void)show; (void)prefix;
+      const char *prefix, const struct retro_keybind *bind,
+      const struct input_bind_label *label, size_t len) {
+   (void)show; (void)prefix; (void)label;
    snprintf(out, len, "btn%u", (unsigned)bind->joykey);
    return strlen(out);
 }
 size_t input_config_get_bind_string_joyaxis(bool show, char *out,
-      const char *prefix, const struct retro_keybind *bind, size_t len) {
-   (void)show; (void)prefix;
+      const char *prefix, const struct retro_keybind *bind,
+      const struct input_bind_label *label, size_t len) {
+   (void)show; (void)prefix; (void)label;
    snprintf(out, len, "axis%u", (unsigned)bind->joyaxis);
    return strlen(out);
 }
@@ -76,7 +78,7 @@ int main(void) {
     * explicit bind, such as a DualSense. */
    memset(input_config_binds, 0, sizeof(input_config_binds));
    memset(input_autoconf_binds, 0, sizeof(input_autoconf_binds));
-   input_config_binds[0][at].key     = 42;
+   RETRO_KEYBIND_SET_KEY(&input_config_binds[0][at], 42);
    input_config_binds[0][at].joykey  = NO_BTN;
    input_config_binds[0][at].joyaxis = AXIS_NONE;
    input_config_binds[0][at].mbutton = NO_BTN;

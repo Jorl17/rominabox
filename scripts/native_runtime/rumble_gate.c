@@ -56,13 +56,15 @@ static input_device_driver_t secondary = { .set_rumble = secondary_rumble, .iden
 static input_device_driver_t scaling = { .set_rumble = scaling_rumble,
    .set_rumble_gain = scaling_gain, .ident = "scaling" };
 
-/* A core's strong rumble on the first pad, with these drivers attached. */
+/* A core's strong rumble on the first pad, with these drivers attached,
+ * written after the frame in which the core set it, as in runloop.c. */
 static void rumble_with(const input_device_driver_t *first, const input_device_driver_t *second)
 {
    input_driver_state_t *input = input_state_get_ptr();
    input->primary_joypad = first;
    input->secondary_joypad = second;
    input_set_rumble_state(0, RETRO_RUMBLE_STRONG, ASKED);
+   input_driver_flush_rumble();
 }
 
 int main(int argc, char **argv)
