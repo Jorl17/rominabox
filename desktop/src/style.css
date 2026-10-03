@@ -871,6 +871,21 @@ progress::-webkit-progress-value {
   font-size: 16px;
   margin-bottom: 6px;
 }
+/* The patch pop-ups have more text than the export ones, so they are larger. */
+.pop-up.pop-up-large {
+  max-width: 520px;
+  padding: 26px 30px;
+  font-size: 16px;
+}
+.pop-up.pop-up-large h2 {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+.pop-up-done {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .pop-up .pop-up-sizes {
   margin-top: 10px;
 }

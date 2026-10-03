@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 import * as bridge from "./bridge";
 import { formatBytes } from "./inspection";
 import { leavingOut } from "./travelingFiles";
@@ -60,7 +61,7 @@ export function CompressedPatchQuestion(props: FilesProps) {
     return (
       <div className="pop-up-layer">
         <div
-          className="pop-up"
+          className="pop-up pop-up-large"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="patch-left-out-title"
@@ -69,7 +70,10 @@ export function CompressedPatchQuestion(props: FilesProps) {
             if (event.key === "Escape") setLeftOut(null);
           }}
         >
-          <h2 id="patch-left-out-title">Patch left out</h2>
+          <h2 id="patch-left-out-title" className="pop-up-done">
+            <Check size={22} strokeWidth={3} aria-hidden />
+            Patch left out
+          </h2>
           <p id="patch-left-out-body">
             {quoted(leftOut)} was left out. You can export the game as normal.
           </p>
@@ -89,7 +93,7 @@ export function CompressedPatchQuestion(props: FilesProps) {
   return (
     <div className="pop-up-layer">
       <div
-        className="pop-up"
+        className="pop-up pop-up-large"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="compressed-patch-title"
