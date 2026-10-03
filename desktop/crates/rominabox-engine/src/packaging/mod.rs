@@ -562,7 +562,7 @@ where
     );
     let identity = stable_identity(
         &request.game.rom,
-        collected_content.patches(),
+        &collected_content.patches(),
         &request.game.system,
         &request.game.title,
         isolation_namespace().as_deref(),

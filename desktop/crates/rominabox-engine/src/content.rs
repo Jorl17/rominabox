@@ -149,11 +149,8 @@ pub fn collect_with(
         }
         _ => 1,
     };
-    // A sheet only lists the game's files, so we never patch it.
-    let belonging = match sheet_parser(&extension, &systems) {
-        None => patched::patch_game_file(&root, choices, &mut files)?,
-        Some(_) => Default::default(),
-    };
+    let belonging =
+        patched::patch_game_files(&root, &entrypoint, sheet_parser(&extension, &systems), choices, &mut files)?;
     Ok(ContentSet {
         entrypoint: entry_relative,
         files,

@@ -439,8 +439,8 @@ fn validate_save_sizes(
             return Err("project assets exceed the supported archive size limit".to_string());
         }
     }
-    for path in content.files.iter().map(|file| &file.source).chain(content.patches()) {
-        total = add_sized_asset(total, "game content", path, MAX_ASSET_BYTES)?;
+    for path in content.files.iter().map(|file| file.source.clone()).chain(content.patches()) {
+        total = add_sized_asset(total, "game content", &path, MAX_ASSET_BYTES)?;
     }
     for path in &settings.firmware {
         total = add_sized_asset(total, "firmware", path, MAX_ASSET_BYTES)?;

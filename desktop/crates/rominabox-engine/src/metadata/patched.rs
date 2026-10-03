@@ -30,9 +30,20 @@ pub(super) fn join(
     let Ok(set) = content::collect_with(&rom, Some(&original.system), files) else {
         return Ok(original);
     };
-    let Some(first_patch) = set.patches().first() else {
+    let patches = set.patches();
+    let Some(first_patch) = patches.first() else {
         return Ok(original);
     };
+    // We recognise a disc by its serial, which a patch rarely changes, so the
+    // patched disc would match the original. We do not make it to find that
+    // out, and we take its name from the patch.
+    if systems::find(&original.system).is_some_and(|system| system.category == "disc") {
+        return Ok(Inspection {
+            title: patch_title(&first_patch.file_name().unwrap_or_default().to_string_lossy()),
+            source: MetadataSource::Filename,
+            ..original
+        });
+    }
     let named = set
         .patched_name
         .clone()
@@ -46,7 +57,7 @@ pub(super) fn join(
     let stem = Path::new(&named).file_stem().map(|stem| stem.to_string_lossy().into_owned());
     let file_name = format!("{}.{extension}", stem.unwrap_or_else(|| "patched".into()));
     // We report a failing patch at export, and keep the lookup.
-    let Ok(file) = made_once(&rom, set.patches(), &file_name, cache) else {
+    let Ok(file) = made_once(&rom, &patches, &file_name, cache) else {
         return Ok(original);
     };
     // We read the patched game as we read any dropped game.
@@ -65,13 +76,19 @@ pub(super) fn join(
         }
     } else {
         Inspection {
-            title: filename_title(&named),
+            title: patch_title(&named),
             source: MetadataSource::Filename,
             matched: false,
             catalog_name: None,
             ..original
         }
     })
+}
+
+/// The title from the name of a patch, made as from a catalogue name, without
+/// the region and language tags, which describe the original.
+fn patch_title(name: &str) -> String {
+    display_title(&filename_title(name))
 }
 
 /// The patched game in the cache, at `patched/<hash>/<file_name>`, which we

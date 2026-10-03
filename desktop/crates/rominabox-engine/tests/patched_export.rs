@@ -11,7 +11,7 @@ use std::path::Path;
 use std::sync::atomic::AtomicBool;
 
 use export_fixture::{export_request, workspace};
-use patch_writers::ips;
+use patch_writers::{bps, ips};
 
 /// What `export_request` writes as the game, and the result of the patch.
 const ORIGINAL: &[u8] = b"RIBtest";
@@ -91,4 +91,41 @@ fn a_chosen_patch_that_fails_refuses_the_export_and_names_the_patch() {
     assert_eq!(refused.stage, rominabox_engine::packaging::ErrorStage::Refused);
     assert!(refused.message.contains("Director's Cut.xdelta does not apply to sonic.bin"), "{}", refused.message);
     assert!(!request.output_dir.join("Hotkey Isolation.app").exists(), "no game is left half made");
+}
+
+/// We apply a disc patch to the track it was made for: the exported data
+/// track is the patched one, and the sheet and the audio track are unchanged.
+/// The patched disc is another game, with its own saves.
+#[test]
+fn a_disc_exports_with_its_patch_on_the_track_it_was_made_for() {
+    let root = workspace();
+    let cancelled = AtomicBool::new(false);
+    let mut request = export_request(&root);
+    let core = &rominabox_engine::systems::find("ps1").unwrap().cores[0];
+    fs::write(request.runtime_kit.join("cores").join(core.artifact().unwrap()), b"core").unwrap();
+    fs::write(request.runtime_kit.join("licenses").join(&core.license_file), b"licence").unwrap();
+    let data = vec![1u8; 2048];
+    let mut data_patched = data.clone();
+    data_patched[100..108].copy_from_slice(b"PATCHED!");
+    let audio = vec![2u8; 4096];
+    let sheet = "FILE \"disc (Track 1).bin\" BINARY\n  TRACK 01 MODE1/2048\n    INDEX 01 00:00:00\n\
+                 FILE \"disc (Track 2).bin\" BINARY\n  TRACK 02 AUDIO\n    INDEX 01 00:00:00\n";
+    fs::write(root.join("disc (Track 1).bin"), &data).unwrap();
+    fs::write(root.join("disc (Track 2).bin"), &audio).unwrap();
+    fs::write(root.join("disc.cue"), sheet).unwrap();
+    request.game.rom = root.join("disc.cue");
+    request.game.system = "ps1".into();
+
+    request.output_dir = root.join("plain");
+    let plain = rominabox_engine::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
+    fs::write(root.join("Fixed.bps"), bps(&data, &data_patched)).unwrap();
+    request.output_dir = root.join("patched");
+    let patched = rominabox_engine::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
+
+    let content = |app: &Path, name: &str| fs::read(app.join("Contents/Resources/content").join(name)).unwrap();
+    assert_eq!(content(&patched.app_path, "disc (Track 1).bin"), data_patched);
+    assert_eq!(content(&patched.app_path, "disc (Track 2).bin"), audio);
+    assert_eq!(content(&patched.app_path, "disc.cue"), sheet.as_bytes());
+    assert_eq!(content(&plain.app_path, "disc (Track 1).bin"), data);
+    assert_ne!(bundle_identifier(&patched.app_path), bundle_identifier(&plain.app_path));
 }

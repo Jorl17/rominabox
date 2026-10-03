@@ -115,22 +115,10 @@ fn push_key(keys: &mut Vec<String>, key: &str) {
 fn cue_data_file(path: &Path) -> Result<PathBuf, String> {
     let text =
         std::fs::read_to_string(path).map_err(|_| "The cue sheet could not be read.".to_owned())?;
-    let mut current = None;
-    let mut data = None;
-    for line in text.lines() {
-        let trimmed = line.trim();
-        let upper = trimmed.to_ascii_uppercase();
-        if let Some(rest) = upper.strip_prefix("FILE ") {
-            let original = trimmed[trimmed.len() - rest.len()..].trim();
-            current = Some(quoted_or_token(original));
-            continue;
-        }
-        if upper.starts_with("TRACK ") && (upper.contains("MODE1") || upper.contains("MODE2")) {
-            data = current.clone();
-            break;
-        }
-    }
-    let name = data.ok_or_else(|| "The cue sheet has no data track.".to_owned())?;
+    let name = data_tracks(crate::systems::SheetParser::Cue, &text)
+        .into_iter()
+        .next()
+        .ok_or_else(|| "The cue sheet has no data track.".to_owned())?;
     let resolved = path.parent().unwrap_or_else(|| Path::new(".")).join(name);
     if resolved.is_file() {
         Ok(resolved)
@@ -154,19 +142,45 @@ fn quoted_or_token(value: &str) -> String {
 fn gdi_data_file(path: &Path) -> Result<PathBuf, String> {
     let text = std::fs::read_to_string(path)
         .map_err(|_| "The GD-ROM layout could not be read.".to_owned())?;
-    for line in text.lines().skip(1) {
-        let Some((name, track_type)) = gdi_track(line) else {
-            continue;
-        };
-        if track_type == "0" {
-            continue;
+    let folder = path.parent().unwrap_or_else(|| Path::new("."));
+    data_tracks(crate::systems::SheetParser::Gdi, &text)
+        .into_iter()
+        .map(|name| folder.join(name))
+        .find(|resolved| resolved.is_file())
+        .ok_or_else(|| "The GD-ROM layout has no data track next to it.".into())
+}
+
+/// The data files a sheet lists, in its order: the files of a cue sheet
+/// with a `MODE1` or `MODE2` track, and the tracks of a GD-ROM layout with
+/// a type other than 0. Other sheets name no tracks directly.
+pub fn data_tracks(parser: crate::systems::SheetParser, text: &str) -> Vec<PathBuf> {
+    let mut data = Vec::new();
+    match parser {
+        crate::systems::SheetParser::Cue => {
+            let mut current = None;
+            for line in text.lines() {
+                let trimmed = line.trim();
+                let upper = trimmed.to_ascii_uppercase();
+                if let Some(rest) = upper.strip_prefix("FILE ") {
+                    let original = trimmed[trimmed.len() - rest.len()..].trim();
+                    current = Some(PathBuf::from(quoted_or_token(original).replace('\\', "/")));
+                } else if upper.starts_with("TRACK ") && (upper.contains("MODE1") || upper.contains("MODE2")) {
+                    if let Some(file) = current.take() {
+                        data.push(file);
+                    }
+                }
+            }
         }
-        let resolved = path.parent().unwrap_or_else(|| Path::new(".")).join(name);
-        if resolved.is_file() {
-            return Ok(resolved);
+        crate::systems::SheetParser::Gdi => {
+            for (name, track_type) in text.lines().skip(1).filter_map(gdi_track) {
+                if track_type != "0" {
+                    data.push(PathBuf::from(name.replace('\\', "/")));
+                }
+            }
         }
+        crate::systems::SheetParser::Playlist | crate::systems::SheetParser::Toc => {}
     }
-    Err("The GD-ROM layout has no data track next to it.".into())
+    data
 }
 
 /// One track line: its filename, and the track type, which is data or audio.
