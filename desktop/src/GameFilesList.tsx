@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import * as bridge from "./bridge";
 import { alsoImporting } from "./AlsoImporting";
 import { CompressedPatchQuestion } from "./CompressedPatch";
-import { leavingOut } from "./travelingFiles";
+import { choose, leavingOut, type FilesProps } from "./travelingFiles";
 
 /** The name of each kind of file on the list. */
 function kind(role: bridge.FileRole): string {
@@ -15,27 +15,6 @@ function kind(role: bridge.FileRole): string {
       return "required";
     case "added":
       return "added";
-  }
-}
-
-/** What we do with the files of the game on the details step. */
-type FilesProps = {
-  entry: string;
-  system: string;
-  files: bridge.GameFiles;
-  onChange: (files: bridge.GameFiles, names: string[]) => void;
-  onError: (error: unknown) => void;
-};
-
-/** The game's files with `next` chosen, as returned by the exporter. */
-async function choose(props: FilesProps, next: bridge.GameFiles) {
-  try {
-    const listed = await bridge.travelingFiles(props.entry, props.system, next);
-    props.onChange(next, bridge.travelingNames(listed));
-    return listed;
-  } catch (error) {
-    props.onError(error);
-    return null;
   }
 }
 

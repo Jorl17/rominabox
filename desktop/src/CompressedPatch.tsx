@@ -2,16 +2,7 @@ import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import * as bridge from "./bridge";
 import { formatBytes } from "./inspection";
-import { leavingOut } from "./travelingFiles";
-
-/** What we do with the files of the game on the details step. */
-type FilesProps = {
-  entry: string;
-  system: string;
-  files: bridge.GameFiles;
-  onChange: (files: bridge.GameFiles, names: string[]) => void;
-  onError: (error: unknown) => void;
-};
+import { choose, leavingOut, type FilesProps } from "./travelingFiles";
 
 const quoted = (names: string[]) => names.map((name) => `“${name}”`).join(", ");
 
@@ -44,14 +35,7 @@ export function CompressedPatchQuestion(props: FilesProps) {
 
   async function answer(next: bridge.GameFiles) {
     setAsked(null);
-    try {
-      const listed = await bridge.travelingFiles(entry, system, next);
-      props.onChange(next, bridge.travelingNames(listed));
-      return true;
-    } catch (error) {
-      onError(error);
-      return false;
-    }
+    return (await choose(props, next)) !== null;
   }
   async function leaveOut(patches: string[]) {
     if (await answer(leavingOut(files, patches))) setLeftOut(patches);

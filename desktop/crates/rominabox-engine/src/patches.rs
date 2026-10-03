@@ -174,17 +174,23 @@ impl Game {
     }
 }
 
-/// The CRC-32 of a file, which we read a piece at a time.
-fn file_crc(path: &Path) -> io::Result<u32> {
+/// Pass the file at `path` to `take` a piece at a time.
+fn in_pieces(path: &Path, mut take: impl FnMut(&[u8])) -> io::Result<()> {
     let mut file = File::open(path)?;
-    let mut hasher = crc32fast::Hasher::new();
     let mut buffer = vec![0u8; 1 << 20];
     loop {
         match file.read(&mut buffer)? {
-            0 => return Ok(hasher.finalize()),
-            count => hasher.update(&buffer[..count]),
+            0 => return Ok(()),
+            count => take(&buffer[..count]),
         }
     }
+}
+
+/// The CRC-32 of a file.
+fn file_crc(path: &Path) -> io::Result<u32> {
+    let mut hasher = crc32fast::Hasher::new();
+    in_pieces(path, |piece| hasher.update(piece))?;
+    Ok(hasher.finalize())
 }
 
 /// How a patch fits the game, and the result when we apply it.
@@ -300,15 +306,19 @@ fn fit(start: &PatchStart, format: PatchFormat, named_for_game: bool, game: &mut
                 Fit::Possible(next)
             }
         }
-        PatchFormat::Ips => {
-            let next = unknown(game.name.clone());
-            if named_for_game {
-                Fit::Proved(next)
-            } else {
-                Fit::Possible(next)
-            }
-        }
+        PatchFormat::Ips => by_name(named_for_game, game),
     })
+}
+
+/// How a patch that states no game (IPS, PPF) fits `game`: proved when it has
+/// the game's name, and possible otherwise.
+fn by_name(named_for_game: bool, game: &Game) -> Fit {
+    let next = Game { size: None, crc: Crc::Unknown, name: game.name.clone() };
+    if named_for_game {
+        Fit::Proved(next)
+    } else {
+        Fit::Possible(next)
+    }
 }
 
 /// The patches in `offered` that belong to `game`, in file-name order. A
@@ -353,11 +363,7 @@ fn belonging_from(mut current: Game, source: &Path, offered: &[(PathBuf, Offered
         let fit = match PatchFormat::of(&start.head) {
             Some(format) => fit(&start, format, named_for_game, &mut current)
                 .map_err(|error| format!("read {}: {error}", source.display()))?,
-            // Like IPS, a PPF states no game.
-            None if crate::ppf::is_ppf(&start.head) => {
-                let next = Game { size: None, crc: Crc::Unknown, name: current.name.clone() };
-                if named_for_game { Fit::Proved(next) } else { Fit::Possible(next) }
-            }
+            None if crate::ppf::is_ppf(&start.head) => by_name(named_for_game, &current),
             None => Fit::Disproved,
         };
         let next = match (fit, how) {
@@ -423,16 +429,8 @@ pub fn feed_patched(
     game: &Path,
     patches: &[PathBuf],
 ) -> Result<(), (PathBuf, io::Error)> {
-    let mut buffer = vec![0u8; 1 << 20];
     for path in std::iter::once(game).chain(patches.iter().map(PathBuf::as_path)) {
-        let failed = |error| (path.to_path_buf(), error);
-        let mut file = File::open(path).map_err(failed)?;
-        loop {
-            match file.read(&mut buffer).map_err(failed)? {
-                0 => break,
-                count => hash.update(&buffer[..count]),
-            }
-        }
+        in_pieces(path, |piece| hash.update(piece)).map_err(|error| (path.to_path_buf(), error))?;
     }
     Ok(())
 }

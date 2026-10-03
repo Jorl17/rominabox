@@ -99,11 +99,15 @@ pub fn files_with(dropped: &Path, system: Option<&str>, choices: &GameFiles) -> 
         with_bytes: compressed.with_bytes,
         included: compressed.included,
     });
+    // We also list the patches for which the author has not answered yet.
+    let mut patches = names(&set.patches());
+    if let Some(waiting) = compressed.as_ref().filter(|compressed| !compressed.included) {
+        patches.extend(waiting.patches.iter().cloned());
+    }
     Ok(Traveling {
         entry,
         files,
-        // We also list the patches for which the author has not answered yet.
-        patches: compressed.as_ref().map_or_else(|| names(&set.patches()), |compressed| compressed.patches.clone()),
+        patches,
         refused: names(&set.refused_patches),
         added: choices.added,
         compressed,

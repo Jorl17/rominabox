@@ -97,7 +97,6 @@ fn patch_files(
     offered: Vec<(PathBuf, Offered)>,
     files: &mut [ContentFile],
 ) -> Result<Belonging, String> {
-
     let targets = patchable(files, sheet.is_some());
     let fallback = match sheet {
         None => targets.first().copied(),
