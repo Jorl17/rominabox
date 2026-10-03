@@ -185,6 +185,34 @@
       }
     },
     {
+      "name": "OK on a field never opens the on-screen keyboard: the physical keyboard types there",
+      "steps": [
+        "options",
+        "achievements",
+        "achievements-login",
+        "key:ok",
+        "key:down"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "achievements-login",
+          "achievement-username",
+          "achievement-username",
+          "achievement-password"
+        ]
+      },
+      "typing": {
+        "*": [
+          false,
+          false,
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
       "name": "cancelling the form returns to SIGN IN",
       "steps": [
         "options",
