@@ -476,3 +476,27 @@ pub(super) fn compressed_refusal(compressed: &content::CompressedPatches, game: 
         ),
     )
 }
+
+/// We ship the PPF patch of a PlayStation disc, and in the launcher we copy it
+/// into the game's data, named after the serial of the disc as required by
+/// the emulator (crate::discs::playstation_patch_name).
+pub(super) fn stage_played_patches(patches: &[PathBuf], game: &Path, folder: &Path) -> Result<(), ExportError> {
+    let Some(patch) = patches.first() else {
+        return Ok(());
+    };
+    let name = |path: &Path| path.file_name().unwrap_or_default().to_string_lossy().into_owned();
+    let serial = crate::discs::playstation_patch_name(game).ok_or_else(|| {
+        ExportError::new(
+            ErrorStage::Refused,
+            format!(
+                "\"{}\" is found by the disc's serial while the game runs, and the serial of \"{}\" could not be read.",
+                name(patch),
+                name(game)
+            ),
+        )
+        .about(patch)
+    })?;
+    fs::create_dir_all(folder).map_err(|error| ExportError::io(ErrorStage::Stage, folder, error))?;
+    let destination = folder.join(serial);
+    fs::copy(patch, &destination).map(|_| ()).map_err(|error| ExportError::io(ErrorStage::Stage, &destination, error))
+}

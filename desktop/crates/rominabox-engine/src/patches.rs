@@ -27,7 +27,17 @@ use serde::Serialize;
 use crate::patching::PatchFormat;
 
 /// The file extensions of patch files.
-const PATCH_EXTENSIONS: [&str; 5] = ["ips", "ups", "bps", "xdelta", "vcdiff"];
+const PATCH_EXTENSIONS: [&str; 6] = ["ips", "ups", "bps", "xdelta", "vcdiff", "ppf"];
+
+/// Whether `path` is a PPF patch, by its header: `PPF10`, `PPF20` or
+/// `PPF30`. PPF is a format for PlayStation discs, and a PPF applies in the
+/// PlayStation emulator while the game runs, so we do not apply it here.
+pub fn is_ppf(path: &Path) -> bool {
+    let mut head = [0u8; 5];
+    File::open(path).and_then(|mut file| file.read_exact(&mut head)).is_ok()
+        && &head[..3] == b"PPF"
+        && matches!(&head[3..], b"10" | b"20" | b"30")
+}
 
 /// Whether a file is a patch, by its extension: the RetroArch extensions,
 /// with the numbered forms (`.ips1` to `.ips9`).

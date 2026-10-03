@@ -80,6 +80,9 @@ pub struct ContentSet {
     pub refused_patches: Vec<PathBuf>,
     /// Patches for a compressed disc, and what including them costs.
     pub compressed: Option<patched::CompressedPatches>,
+    /// The PPF patch of a PlayStation disc, which we leave to the emulator to
+    /// apply while the game runs. We export it under the serial of the disc.
+    pub played_patches: Vec<PathBuf>,
 }
 
 /// Find every file referenced from `entrypoint`, without leaving its
@@ -158,8 +161,15 @@ pub fn collect_with(
         }
         _ => 1,
     };
-    let (belonging, compressed) =
-        patched::patch_game_files(&root, &entrypoint, sheet_parser(&extension, &systems), choices, &mut files)?;
+    let playstation = matches!(systems.as_slice(), [system] if system.id == "ps1");
+    let staged = patched::patch_game_files(
+        &root,
+        &entrypoint,
+        sheet_parser(&extension, &systems),
+        playstation,
+        choices,
+        &mut files,
+    )?;
     // We start a compressed disc written out as tracks from its sheet.
     let entrypoint = match files.first().map(|game| &game.staging) {
         Some(Staging::Unpacked(unpacked)) => entry_relative.with_file_name(&unpacked.disc.sheet_name),
@@ -169,9 +179,10 @@ pub fn collect_with(
         entrypoint,
         files,
         discs,
-        patched_name: belonging.made,
-        refused_patches: belonging.refused,
-        compressed,
+        patched_name: staged.belonging.made,
+        refused_patches: staged.belonging.refused,
+        compressed: staged.compressed,
+        played_patches: staged.runtime,
     })
 }
 

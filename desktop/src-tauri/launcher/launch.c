@@ -28,10 +28,12 @@
 #define RIB_KEYS(name, prefix) static const char menu_keys_##name[] = prefix;
 #include "../../../vendor/retroarch/menu/drivers/rmlui/declarations.inc"
 
-/* A folder that we ship in the app, and its counterpart in the game's data. */
+/* A folder that we ship in the app, its counterpart in the game's data, and
+ * the name in the declaration, which we also give its record in applied/. */
 typedef struct {
     const char *app;
     const char *data;
+    const char *name;
 } Shipped;
 
 #define PATH_CAP LAUNCH_PATH_CAP
@@ -723,11 +725,11 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
      * change from a stale value. */
     {
         static const Shipped settings[] = {
-#define RIB_SHIPPED_SETTINGS(name, app, data) {app, data},
+#define RIB_SHIPPED_SETTINGS(name, app, data) {app, data, #name},
 #include "launch_contract.inc"
         };
         static const Shipped files[] = {
-#define RIB_SHIPPED_FILES(name, app, data) {app, data},
+#define RIB_SHIPPED_FILES(name, app, data) {app, data, #name},
 #include "launch_contract.inc"
         };
         char from[PATH_CAP];
@@ -749,7 +751,7 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
         for (which = 0; which < sizeof files / sizeof files[0]; which++) {
             join_path(from, sizeof from, resources, files[which].app);
             join_path(to, sizeof to, data_dir, files[which].data);
-            if (snprintf(listed, sizeof listed, "%s.list", files[which].data) >= (int)sizeof listed)
+            if (snprintf(listed, sizeof listed, "%s.list", files[which].name) >= (int)sizeof listed)
                 die("a path does not fit");
             join_path(applied, sizeof applied, applied_root, listed);
             if (rominabox_replace_shipped_files(from, to, applied, failed, sizeof failed) != 0)

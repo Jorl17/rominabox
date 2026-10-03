@@ -262,6 +262,26 @@ def run() -> list[str]:
             failures.append("firmware: a file the earlier export shipped was left behind")
         if (system / "core-made.dat").read_bytes() != b"core":
             failures.append("firmware: a file the core wrote was touched")
+
+        # We put the PPF patch of a PlayStation disc at the top of the game's
+        # data, the folder where the player starts, because PCSX ReARMed looks
+        # for it there under the disc's serial. We remove it when a later export
+        # has none, and keep the game's files beside it.
+        (bios / "core-written.dat").write_bytes(b"the game's own")
+        patches = resources / "patches"
+        patches.mkdir()
+        (patches / "SCES_015.64").write_bytes(b"PPF30 patch")
+        launch(binary, home, root)
+        if not (bios / "SCES_015.64").is_file() or (bios / "SCES_015.64").read_bytes() != b"PPF30 patch":
+            failures.append("patch: the shipped PPF did not reach the top of the game's data")
+        (patches / "SCES_015.64").unlink()
+        launch(binary, home, root)
+        if (bios / "SCES_015.64").exists():
+            failures.append("patch: a PPF the earlier export shipped was left behind")
+        if (bios / "core-written.dat").read_bytes() != b"the game's own":
+            failures.append("patch: a file of the game's own beside it was touched")
+        if not (system / "scph5501.bin").is_file():
+            failures.append("patch: shipping patches removed the firmware")
     return failures
 
 

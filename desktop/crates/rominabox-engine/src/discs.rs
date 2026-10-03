@@ -98,6 +98,20 @@ pub fn keys_for_catalog_serial(system_id: &str, serial: &str) -> Vec<String> {
     keys
 }
 
+/// The file name of a PlayStation disc's PPF patch in PCSX ReARMed: the
+/// serial, such as `SCES01564`, as `SCES_015.64`, made from the disc's ID as
+/// in `BuildPPFCache`. None when we cannot read the serial.
+pub fn playstation_patch_name(path: &Path) -> Option<String> {
+    let extension = path.extension()?.to_string_lossy().to_ascii_lowercase();
+    match read_disc(path, &extension) {
+        DiscRead::Found { keys, system_id: Some("ps1"), .. } => keys
+            .first()
+            .filter(|key| key.len() == 9 && key.is_ascii())
+            .map(|key| format!("{}_{}.{}", &key[..4], &key[4..7], &key[7..])),
+        _ => None,
+    }
+}
+
 pub fn normalize_serial(value: &str) -> String {
     value
         .chars()

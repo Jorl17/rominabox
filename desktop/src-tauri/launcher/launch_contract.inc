@@ -113,6 +113,9 @@ RIB_SHIPPED_SETTINGS(CoreOptions, "core-options", "config")
 RIB_SHIPPED_SETTINGS(Remaps, "remaps", "remaps")
 RIB_SHIPPED_SETTINGS(Autoconfig, "autoconfig", "autoconfig")
 RIB_SHIPPED_FILES(Firmware, "firmware", "system")
+/* A PlayStation disc's PPF patch: PCSX ReARMed reads it, named after the
+ * disc's serial, from the folder the player starts in, the game's data. */
+RIB_SHIPPED_FILES(Patches, "patches", ".")
 
 #undef RIB_APP_FILE
 #undef RIB_CORE_FILE

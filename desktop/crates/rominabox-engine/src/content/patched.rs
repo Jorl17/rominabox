@@ -46,16 +46,63 @@ pub(super) fn patch_game_files(
     root: &Path,
     entrypoint: &Path,
     sheet: Option<SheetParser>,
+    playstation: bool,
     choices: &GameFiles,
     files: &mut [ContentFile],
-) -> Result<(Belonging, Option<CompressedPatches>), String> {
+) -> Result<Staged, String> {
     let offered = offered(root, choices);
     if offered.is_empty() || files.is_empty() {
-        return Ok((Belonging::default(), None));
+        return Ok(Staged::default());
     }
-    if sheet.is_none() && extension_of(&files[0].source) == "chd" {
-        return patch_compressed(&offered, choices.decompress, &mut files[0]);
+    let (ppf, offered): (Vec<_>, Vec<_>) = offered.into_iter().partition(|(path, _)| patches::is_ppf(path));
+    let (runtime, refused) = played_patch(entrypoint, playstation, ppf);
+    let mut staged = if sheet.is_none() && extension_of(&files[0].source) == "chd" {
+        patch_compressed(&offered, choices.decompress, &mut files[0])?
+    } else {
+        Staged { belonging: patch_files(root, entrypoint, sheet, offered, files)?, ..Staged::default() }
+    };
+    staged.belonging.refused.extend(refused);
+    staged.runtime = runtime;
+    Ok(staged)
+}
+
+/// The game's patches: those we apply to its files, the choice offered for
+/// a compressed disc, and the one we leave to the emulator.
+#[derive(Default)]
+pub(super) struct Staged {
+    pub belonging: Belonging,
+    pub compressed: Option<CompressedPatches>,
+    pub runtime: Vec<PathBuf>,
+}
+
+/// The PPF patch among `ppf` that we leave to the PlayStation emulator to
+/// apply while the game runs, and the ones we refuse. Only one PPF takes
+/// effect, so we take the first in name order, either beside the game with
+/// the game's name or chosen by the author. On another console we apply no
+/// PPF, and we refuse one that the author chose.
+fn played_patch(entrypoint: &Path, playstation: bool, ppf: Vec<(PathBuf, Offered)>) -> (Vec<PathBuf>, Vec<PathBuf>) {
+    let stem = entrypoint.file_stem().unwrap_or_default();
+    let (mut played, mut refused) = (Vec::new(), Vec::new());
+    for (path, how) in ppf {
+        let belongs = playstation && (how == Offered::Chosen || path.file_stem() == Some(stem));
+        if belongs && played.is_empty() {
+            played.push(path);
+        } else if how == Offered::Chosen {
+            refused.push(path);
+        }
     }
+    (played, refused)
+}
+
+/// The patches we apply to the game's files, either to the game file or to
+/// each track of a disc.
+fn patch_files(
+    root: &Path,
+    entrypoint: &Path,
+    sheet: Option<SheetParser>,
+    offered: Vec<(PathBuf, Offered)>,
+    files: &mut [ContentFile],
+) -> Result<Belonging, String> {
 
     let targets = patchable(files, sheet.is_some());
     let fallback = match sheet {
@@ -78,7 +125,7 @@ pub(super) fn patch_game_files(
             found.made = belonging.made;
         }
     }
-    Ok((found, None))
+    Ok(found)
 }
 
 /// The patches we offer, in file-name order: the ones beside the game that the
@@ -136,12 +183,12 @@ fn patch_compressed(
     offered: &[(PathBuf, Offered)],
     decompress: bool,
     game: &mut ContentFile,
-) -> Result<(Belonging, Option<CompressedPatches>), String> {
+) -> Result<Staged, String> {
     let chosen = || offered.iter().filter(|(_, how)| *how == Offered::Chosen).map(|(path, _)| path.clone()).collect();
     let stem = game.source.file_stem().unwrap_or_default().to_string_lossy().into_owned();
     // We apply no patch to a disc that we cannot read as tracks.
     let Ok(disc) = chd_disc::read(&game.source, &stem) else {
-        return Ok((Belonging { refused: chosen(), ..Belonging::default() }, None));
+        return Ok(Staged { belonging: Belonging { refused: chosen(), ..Belonging::default() }, ..Staged::default() });
     };
     let fallback = (0..disc.tracks.len())
         .filter(|&at| disc.tracks[at].kind != TrackKind::Audio)
@@ -156,7 +203,7 @@ fn patch_compressed(
         patches.push(belonging.patches);
     }
     if found.patches.is_empty() {
-        return Ok((found, None));
+        return Ok(Staged { belonging: found, ..Staged::default() });
     }
     let compressed = CompressedPatches {
         patches: found.patches.clone(),
@@ -167,7 +214,7 @@ fn patch_compressed(
     if decompress {
         game.staging = Staging::Unpacked(Box::new(Unpacked { disc, patches }));
     }
-    Ok((found, Some(compressed)))
+    Ok(Staged { belonging: found, compressed: Some(compressed), runtime: Vec::new() })
 }
 
 /// The files a patch can be for. That is the game file when the game is one
@@ -210,7 +257,8 @@ impl ContentFile {
 }
 
 impl ContentSet {
-    /// The patches we apply when exporting, in the order of their target files.
+    /// The game's patches: those we apply when exporting, in the order of
+    /// their target files, then the one we leave to the emulator.
     pub fn patches(&self) -> Vec<PathBuf> {
         self.files
             .iter()
@@ -219,6 +267,7 @@ impl ContentSet {
                 Staging::Unpacked(unpacked) => unpacked.patches.concat(),
                 Staging::Copy | Staging::Bytes(_) => Vec::new(),
             })
+            .chain(self.played_patches.iter().cloned())
             .collect()
     }
 }

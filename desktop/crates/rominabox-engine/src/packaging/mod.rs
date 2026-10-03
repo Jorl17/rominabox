@@ -37,7 +37,7 @@ use crate::controls;
 pub use crate::export_error::{ErrorStage, ExportError};
 
 use app_files::{
-    compressed_refusal, copy_content_file, firmware_destination_name, stage_bundled_autoconfig,
+    compressed_refusal, copy_content_file, firmware_destination_name, stage_bundled_autoconfig, stage_played_patches,
     stage_controller_remap, stage_firmware, stage_legal_materials, stage_pixel_options, tree_size,
 };
 pub use app_files::{menu_request, stage_menu};
@@ -507,6 +507,7 @@ where
     for file in &collected_content.files {
         copy_content_file(file, &content_directory)?;
     }
+    stage_played_patches(&collected_content.played_patches, &request.game.rom, &resources.join(shipped!(Patches).0))?;
     let rom_relative = Path::new("content").join(&collected_content.entrypoint);
     let controls_profile = stage_menu(
         request,
