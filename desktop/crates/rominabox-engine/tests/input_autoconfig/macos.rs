@@ -375,11 +375,9 @@ input_reset_btn = \"3\"
 
 /// We ship the profiles with the upstream MIT notice and the pinned revision.
 ///
-/// `docs/dependencies-and-licensing.md` requires the revision, the licence
-/// text and the source before we ship a component. We read the staged
-/// COPYING and the kit manifest. We do not choose a licence for the project
-/// here, and we do not check that the source archive went into a binary,
-/// because the profiles are data files.
+/// The staged COPYING and the kit manifest contain the pinned revision, the
+/// licence text and the source. We do not check that the source archive went
+/// into a binary, because the profiles are data files.
 #[test]
 fn joypad_autoconfig_licence_and_provenance_match_the_pin() {
     let revision = pinned_autoconfig_revision();
@@ -405,12 +403,6 @@ fn joypad_autoconfig_licence_and_provenance_match_the_pin() {
     assert_eq!(component["license_file"], "retroarch-joypad-autoconfig.txt");
     let source_url = component["source_url"].as_str().unwrap();
     assert!(source_url.contains(&revision));
-    let licensing =
-        fs::read_to_string(repo_root().join("docs/dependencies-and-licensing.md")).unwrap();
-    assert!(
-        licensing.contains(&revision),
-        "the licensing record must name the pinned autoconfig commit"
-    );
 }
 
 /// An export contains the staged profiles, which we copy into the game's

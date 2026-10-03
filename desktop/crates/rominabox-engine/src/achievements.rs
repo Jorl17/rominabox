@@ -21,7 +21,7 @@ pub const SHARED_ACCOUNTS: &str = "ROM-in-a-Box Accounts";
 /// missing parent of the folder in its entitlement.
 ///
 /// We never give a namespaced export (from a worktree or a test) a player's
-/// accounts. It gets the folder named in its environment (we set one in
+/// accounts. It gets the folder named in its environment (we name one in
 /// `scripts/worktree.py`), or else its own folder, named after the namespace.
 pub fn accounts_folder(namespace: Option<&str>, named: Option<&str>) -> Result<String, String> {
     fn present(value: Option<&str>) -> Option<&str> {

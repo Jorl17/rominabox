@@ -69,7 +69,7 @@
     }
   ],
   "pins": {
-    "comment": "Pins nothing else in the repository records: the toolchain Windows players are built with (GCC 16.2.0 from MSYS2 UCRT64).",
+    "comment": "Pins nothing else in the repository records: the toolchain Windows players are built with, GCC 16.2.0 from MSYS2 UCRT64.",
     "mingw-w64": {"revision": "v14.0.0", "source": "https://github.com/mingw-w64/mingw-w64"},
     "gcc": {"revision": "releases/gcc-16.2.0", "source": "https://github.com/gcc-mirror/gcc"}
   },
