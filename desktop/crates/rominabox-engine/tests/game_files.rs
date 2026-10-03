@@ -113,3 +113,18 @@ fn an_added_file_travels_and_an_added_patch_that_does_not_apply_is_named() {
     assert_eq!(traveling.refused, vec!["Wrong game.bps".to_string()]);
     assert!(traveling.patches.is_empty());
 }
+
+/// A sheet lists the game's files, and a patch does not change it. An IPS with
+/// a playlist's name stays beside it, and the playlist goes unchanged.
+#[test]
+fn a_patch_under_a_sheets_name_does_not_change_the_sheet() {
+    let root = Scratch::dir("rominabox-files-sheet-patch");
+    fs::write(root.join("Disc.cue"), "FILE \"Disc.bin\" BINARY\n  TRACK 01 MODE2/2352\n").unwrap();
+    fs::write(root.join("Disc.bin"), b"track").unwrap();
+    let playlist = root.join("Game.m3u");
+    fs::write(&playlist, "Disc.cue\n").unwrap();
+    fs::write(root.join("Game.ips"), ips(b"Disc.cue\n", b"Patched.cue\n")).unwrap();
+
+    let traveling = files_with(&playlist, Some("ps1"), &none()).unwrap();
+    assert!(traveling.patches.is_empty(), "{:?}", traveling.patches);
+}
