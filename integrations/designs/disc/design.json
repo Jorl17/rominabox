@@ -128,6 +128,10 @@
     {
       "id": "achievements",
       "pageSize": 7
+    },
+    {
+      "id": "about",
+      "pageSize": 8
     }
   ],
   "screenOrder": ["pause", "disc", "discs", "options", "controls", "hotkeys", "shaders"],
