@@ -15,6 +15,7 @@ use crate::systems::{self, System};
 
 const CATALOG_LIMIT: u64 = 32 * 1024 * 1024;
 const ARTWORK_LIMIT: u64 = 8 * 1024 * 1024;
+const NO_COVER: &str = "No cover is published for this game.";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -66,8 +67,20 @@ pub fn inspect_game(rom: &Path, cache: &Path, online: bool) -> Result<Inspection
 }
 
 /// Inspect one game file. `system_override` is the console for container
-/// extensions that several consoles use, such as CUE, CHD and ISO.
+/// extensions that several consoles use, such as CUE, CHD and ISO. For a
+/// game with patches, we inspect the patched game (metadata/patched.rs).
 pub fn inspect_game_with_system(
+    rom: &Path,
+    cache: &Path,
+    online: bool,
+    system_override: Option<&str>,
+) -> Result<Inspection, InspectionError> {
+    let original = inspect_file(rom, cache, online, system_override)?;
+    patched::join(original, rom, cache, online)
+}
+
+/// The lookup of one game file as it is on disk.
+fn inspect_file(
     rom: &Path,
     cache: &Path,
     online: bool,
@@ -399,7 +412,7 @@ fn remember_match(
     *catalog_name = Some(entry.name.clone());
     match lookup_boxart(cache, catalog, &entry.name, online) {
         Ok(Some(path)) => *icon_path = Some(path),
-        Ok(None) => warnings.push("No cover is published for this game.".into()),
+        Ok(None) => warnings.push(NO_COVER.into()),
         Err(error) => warnings.push(format!("Box art was not available: {error}")),
     }
     Ok(())
@@ -940,6 +953,7 @@ fn complement_matches(bytes: &[u8], at: usize) -> bool {
     checksum.wrapping_add(complement) == 0xFFFF
 }
 
+mod patched;
 mod titles;
 use titles::*;
 
