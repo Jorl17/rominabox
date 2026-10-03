@@ -36,12 +36,12 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #slot-3, #slot-6 { left: 582dp; }
 #slot-1, #slot-2, #slot-3 { top: 0; }
 #slot-4, #slot-5, #slot-6 { top: 208dp; }
-/* Focus is a yellow border; the slot SAVE and LOAD use has a yellow label. */
+/* Focus is a yellow border; the slot SAVE and LOAD use has its words in the pale colour. */
 .slot.focused { border-color: design(highlight); }
 .slot:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
-.slot.focused .slot-label { color: design(highlight); }
 .slot-label { height: 24dp; font-size: 17dp; padding-top: 2dp; background-color: design(slot-label); color: design(ink); }
-.slot.selected .slot-label, .slot.selected:active .slot-label { background-color: design(highlight); color: design(slot-label); }
+.slot.selected .slot-label { color: design(muted); }
+.slot.focused .slot-label { color: design(highlight); }
 /* The picture has the aspect ratio of the game, as large as its max-width and
  * max-height allow. Its width and height are those of a 4:3 game, as in a
  * preview. Its frame has room for the largest picture inside its bevel, and

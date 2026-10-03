@@ -1424,8 +1424,8 @@ int main(int argc, char **argv)
    view.pointer_move(1, 1);
    view.follow_pointer();
    const std::string plain_border = inspect.property("slot-2", "border-top-color");
-   CHECK(inspect.property("slot-label-4", "background-color")
-            != inspect.property("slot-label-2", "background-color"),
+   CHECK(inspect.property("slot-label-4", "color")
+            != inspect.property("slot-label-2", "color"),
          "the chosen slot is marked while CONTINUE has focus");
    CHECK(inspect.property("slot-4", "border-top-color") == plain_border,
          "the chosen slot's mark is not the focus border");

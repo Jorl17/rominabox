@@ -1,7 +1,8 @@
-/* Code shared by the two sources of test_menu_orchestration: the menu under
+/* Code shared by the sources of test_menu_orchestration: the menu under
  * test, its inspection and fake host, the failure count, and the steps of
  * every case. test_menu_orchestration.cpp contains main and the menu cases,
- * and test_menu_player_settings.cpp the cases for the player's settings. */
+ * test_menu_player_settings.cpp the cases for the player's settings, and
+ * test_menu_slots.cpp the cases for the chosen save slot. */
 #pragma once
 #include "rmlui/menu_api.h"
 #include "rmlui/view.hpp"
@@ -78,6 +79,8 @@ inline std::string design_assets(const char *native_assets, const char *design)
    return (std::filesystem::path(native_assets).parent_path() / (std::string("placement-") + design)).string();
 }
 
+/* The chosen save slot, in test_menu_slots.cpp. */
+void chosen_slot_shows_on_save_and_load(const char *native_assets, const char *data);
 /* The player's settings, in test_menu_player_settings.cpp. */
 void background_play_is_the_players(const char *native_assets, const char *data);
 void rumble_is_the_players_where_the_game_rumbles(const char *native_assets, const char *data);

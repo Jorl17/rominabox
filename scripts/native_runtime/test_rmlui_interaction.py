@@ -375,6 +375,7 @@ def main() -> int:
         return 1
     orchestration_fixtures()
     harness(ORCHESTRATION, HERE / "test_menu_orchestration.cpp", HERE / "test_menu_player_settings.cpp",
+            HERE / "test_menu_slots.cpp",
             HERE / "menu_host_fake.cpp", HERE / "text_test_host.cpp",
             ROOT / "vendor/retroarch/libretro-common/file/config_file.c",
             ROOT / "vendor/retroarch/libretro-common/file/config_file_io.c")
