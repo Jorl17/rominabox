@@ -40,14 +40,23 @@ def names(problems: list[str], *words: str) -> bool:
     return any(all(word in problem for word in words) for problem in problems)
 
 
-def fake_build(root: Path, compiled: list[str]) -> Path:
+def fake_build(root: Path, compiled: list[str], removed: list[str] = ()) -> Path:
     """Make a player build folder as the fork's makefile leaves it, with
-    dependency files beside the objects that list the sources of each object."""
+    dependency files beside the objects that list the sources of each object
+    in the copied tree of the fork. When we build again in the same folder,
+    the dependency files of an earlier tree stay, and list `removed` files
+    that the tree no longer has."""
     retroarch = root / "build" / "macos-arm64" / "retroarch"
     (retroarch / "obj-unix/release/deps").mkdir(parents=True)
     (retroarch / "Makefile.common").write_text("")
+    for name in compiled:
+        (retroarch / name).parent.mkdir(parents=True, exist_ok=True)
+        (retroarch / name).write_text("")
     (retroarch / "obj-unix/release/deps/player.d").write_text(
         "obj-unix/release/deps/player.o: " + " \\\n  ".join(compiled) + "\n")
+    if removed:
+        (retroarch / "obj-unix/release/deps/earlier.d").write_text(
+            "obj-unix/release/deps/earlier.o: " + " \\\n  ".join(removed) + "\n")
     # We compile RmlUi and FreeType outside the fork, so they are not part of it.
     (root / "build" / "macos-arm64" / "preview").mkdir()
     (root / "build" / "macos-arm64" / "preview" / "preview.d").write_text("preview.o: ../vendor/RmlUi/x.cpp\n")
@@ -123,6 +132,14 @@ def main() -> int:
         check(not missing, "a player build whose libraries all have entries warns of nothing", "\n".join(missing))
         windows = [component.name for component in licences.player_components(build, "windows")[0]]
         check("mingw-w64-runtime" in windows, "a Windows player build uses its runtime's licences", str(windows))
+
+        again = fake_build(Path(temporary) / "again", ["deps/glslang/glslang/lib.cpp", "retroarch.c"],
+                           removed=["deps/rcheevos/src/rc.c", "deps/unheard-of/lib.c"])
+        used, missing = licences.player_components(again, "macos")
+        used = [component.name for component in used]
+        check("rcheevos" not in used and not missing,
+              "a build made again does not use the libraries its earlier tree compiled",
+              f"{used}\n" + "\n".join(missing))
 
     guarded = "#ifndef LIB_H\n#define LIB_H\n\n/* Copyright the authors. Permission is granted. */\n#endif\n"
     comment = licences.sources.first_comment(guarded)
