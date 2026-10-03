@@ -17,11 +17,19 @@ use crate::systems::{self, Companion, SheetParser, System};
 pub struct ContentFile {
     pub source: PathBuf,
     pub relative: PathBuf,
-    /// Normalized manifest bytes when the staged file must use portable path
-    /// separators, or the patched game in place of the game file. Otherwise
-    /// we copy the file directly from `source`.
-    pub staged_bytes: Option<Vec<u8>>,
+    pub staging: Staging,
     pub role: FileRole,
+}
+
+/// How we write a file into an exported game or a project.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Staging {
+    /// `source`, copied.
+    Copy,
+    /// These bytes, for a sheet that we stage with portable path separators.
+    Bytes(Vec<u8>),
+    /// `source` with these patches applied, in order (crate::patches).
+    Patched(Vec<PathBuf>),
 }
 
 /// Why a file goes with the game, and so whether the author may leave it out.
@@ -59,9 +67,6 @@ pub struct ContentSet {
     pub files: Vec<ContentFile>,
     /// How many discs the game has: the entries of a playlist, or else one.
     pub discs: usize,
-    /// The patches we apply to the game file, in order (crate::patches). The
-    /// staged bytes of the game file are then the patched game.
-    pub patches: Vec<PathBuf>,
     /// The file name of the patched game, when a patch gives one.
     pub patched_name: Option<String>,
     /// Patches the author added that do not apply to this game.
@@ -144,14 +149,17 @@ pub fn collect_with(
         }
         _ => 1,
     };
-    let patched = patch_game_file(&entrypoint, &root, choices, &mut files)?;
+    // A sheet only lists the game's files, so we never patch it.
+    let belonging = match sheet_parser(&extension, &systems) {
+        None => patched::patch_game_file(&root, choices, &mut files)?,
+        Some(_) => Default::default(),
+    };
     Ok(ContentSet {
         entrypoint: entry_relative,
         files,
         discs,
-        patches: patched.as_ref().map(|patched| patched.patches.clone()).unwrap_or_default(),
-        patched_name: patched.as_ref().and_then(|patched| patched.made.clone()),
-        refused_patches: patched.map(|patched| patched.refused).unwrap_or_default(),
+        patched_name: belonging.made,
+        refused_patches: belonging.refused,
     })
 }
 
@@ -178,47 +186,11 @@ fn add_chosen_files(added: &[PathBuf], files: &mut Vec<ContentFile>) -> Result<(
         files.push(ContentFile {
             source: path.clone(),
             relative: PathBuf::from(name),
-            staged_bytes: None,
+            staging: Staging::Copy,
             role: FileRole::Added,
         });
     }
     Ok(())
-}
-
-/// A game that is one file, with the patches that belong to it: those beside
-/// it that the author did not leave out, and those the author added. We apply
-/// them and put the patched game in the export in place of the file. We never
-/// apply a patch to a sheet, which only lists the tracks.
-fn patch_game_file(
-    entrypoint: &Path,
-    root: &Path,
-    choices: &GameFiles,
-    files: &mut [ContentFile],
-) -> Result<Option<crate::patches::Patched>, String> {
-    let Some(game) = files.first_mut().filter(|file| file.staged_bytes.is_none()) else {
-        return Ok(None);
-    };
-    let left_out = |path: &Path| {
-        path.file_name()
-            .is_some_and(|name| choices.left_out.iter().any(|left| left.as_str() == name.to_string_lossy()))
-    };
-    let chosen: Vec<PathBuf> = choices
-        .added
-        .iter()
-        .filter(|path| crate::patches::is_patch_file(path))
-        .cloned()
-        .collect();
-    let mut offered: Vec<_> = crate::patches::in_folder(root)
-        .into_iter()
-        .filter(|path| !left_out(path) && !chosen.iter().any(|added| same_file(added, path)))
-        .map(|path| (path, crate::patches::Offered::Beside))
-        .collect();
-    offered.extend(chosen.into_iter().map(|path| (path, crate::patches::Offered::Chosen)));
-    let patched = crate::patches::apply_belonging(entrypoint, &offered)?;
-    if !patched.patches.is_empty() {
-        game.staged_bytes = Some(patched.bytes.clone());
-    }
-    Ok(Some(patched))
 }
 
 /// The path that `path` resolves to, after following any symbolic link.
@@ -265,7 +237,7 @@ impl Walk<'_> {
         }
         let extension = extension_of(absolute);
         let parser = sheet_parser(&extension, systems);
-        let (staged_bytes, references) = match parser {
+        let (staging, references) = match parser {
             Some(parser) => {
                 let text = fs::read_to_string(absolute).map_err(|error| {
                     format!("read {} sheet {}: {error}", extension, absolute.display())
@@ -274,14 +246,14 @@ impl Walk<'_> {
                 if references.is_empty() {
                     return Err(empty_sheet(parser, absolute));
                 }
-                (staged_sheet(parser, &text), references)
+                (staged_sheet(parser, &text).map_or(Staging::Copy, Staging::Bytes), references)
             }
-            None => (None, Vec::new()),
+            None => (Staging::Copy, Vec::new()),
         };
         self.files.push(ContentFile {
             source: absolute.to_path_buf(),
             relative: relative.to_path_buf(),
-            staged_bytes,
+            staging,
             role,
         });
         for companion in companions_for(&extension, systems) {
@@ -981,5 +953,6 @@ fn validate_relative_content_path(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+mod patched;
 #[cfg(test)]
 mod tests;

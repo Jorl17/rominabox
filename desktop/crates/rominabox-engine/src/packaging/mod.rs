@@ -560,14 +560,9 @@ where
         0.55,
         "Writing isolated game configuration",
     );
-    let patched_game = collected_content
-        .files
-        .first()
-        .filter(|_| !collected_content.patches.is_empty())
-        .and_then(|game| game.staged_bytes.as_deref());
     let identity = stable_identity(
         &request.game.rom,
-        patched_game,
+        collected_content.patches(),
         &request.game.system,
         &request.game.title,
         isolation_namespace().as_deref(),

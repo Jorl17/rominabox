@@ -5,6 +5,9 @@
 //! does not, we take the name from the patch, either the name of the output
 //! file in the xdelta header or the file name of the patch, and we use the
 //! picture of the original game, because the patched game is still that game.
+//!
+//! We make the patched game once, in the metadata cache, under the hash of
+//! the bytes of the original and the patches, and look it up there each time.
 
 use super::*;
 
@@ -27,10 +30,7 @@ pub(super) fn join(
     let Ok(set) = content::collect_with(&rom, Some(&original.system), files) else {
         return Ok(original);
     };
-    let Some(bytes) = set.files.first().and_then(|game| game.staged_bytes.as_deref()) else {
-        return Ok(original);
-    };
-    let Some(first_patch) = set.patches.first() else {
+    let Some(first_patch) = set.patches().first() else {
         return Ok(original);
     };
     let named = set
@@ -38,7 +38,19 @@ pub(super) fn join(
         .clone()
         .or_else(|| first_patch.file_name().map(|name| name.to_string_lossy().into_owned()))
         .unwrap_or_else(|| original.filename.clone());
-    let patched = inspect_patched(bytes, &named, &original, cache, online)?;
+    // With the extension of the original, because we find the console by it.
+    let extension = Path::new(&original.filename)
+        .extension()
+        .map(|extension| extension.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let stem = Path::new(&named).file_stem().map(|stem| stem.to_string_lossy().into_owned());
+    let file_name = format!("{}.{extension}", stem.unwrap_or_else(|| "patched".into()));
+    // We report a failing patch at export, and keep the lookup.
+    let Ok(file) = made_once(&rom, set.patches(), &file_name, cache) else {
+        return Ok(original);
+    };
+    // We read the patched game as we read any dropped game.
+    let patched = inspect_file(&file, cache, online, Some(&original.system))?;
     Ok(if patched.matched {
         // With no picture of the patched game, we use the original's picture.
         let warnings = match (&patched.icon_path, &original.icon_path) {
@@ -62,38 +74,35 @@ pub(super) fn join(
     })
 }
 
-/// The lookup of the patched game, from a file of its bytes under its given
-/// name, which we read as we read any dropped game.
-fn inspect_patched(
-    bytes: &[u8],
-    named: &str,
-    original: &Inspection,
-    cache: &Path,
-    online: bool,
-) -> Result<Inspection, InspectionError> {
-    // With the extension of the original, because we find the console by it.
-    let extension = Path::new(&original.filename)
-        .extension()
-        .map(|extension| extension.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let stem = Path::new(named).file_stem().map(|stem| stem.to_string_lossy().into_owned());
-    let file_name = format!("{}.{extension}", stem.unwrap_or_else(|| "patched".into()));
-    let folder = std::env::temp_dir().join(format!(
-        "rominabox-patched-{}-{}",
+/// The patched game in the cache, at `patched/<hash>/<file_name>`, which we
+/// make when it is not there yet. We hash the bytes of the original and the
+/// patches, and the name.
+fn made_once(rom: &Path, patches: &[PathBuf], file_name: &str, cache: &Path) -> io::Result<PathBuf> {
+    use sha2::Digest;
+    let mut hash = sha2::Sha256::new();
+    crate::patches::feed_patched(&mut hash, rom, patches).map_err(|(_, error)| error)?;
+    hash.update(file_name.as_bytes());
+    let folder = cache.join("patched").join(format!("{:x}", hash.finalize()));
+    let file = folder.join(file_name);
+    if file.is_file() {
+        return Ok(file);
+    }
+    fs::create_dir_all(&folder)?;
+    // We write it under another name and then rename it, so if a lookup
+    // stops part way, there is no file that looks finished.
+    let making = folder.join(format!(
+        "making-{}-{}",
         std::process::id(),
         PATCHED_LOOKUPS.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     ));
-    fs::create_dir_all(&folder)?;
-    let file = folder.join(&file_name);
-    let looked_up = fs::write(&file, bytes)
-        .map_err(InspectionError::from)
-        .and_then(|()| inspect_file(&file, cache, online, Some(&original.system)));
-    // We remove the one file we wrote and then the folder we made for it,
-    // because nothing else is in that folder.
-    let _ = fs::remove_file(&file);
-    let _ = fs::remove_dir(&folder);
-    looked_up
+    let paths: Vec<&Path> = patches.iter().map(PathBuf::as_path).collect();
+    crate::patching::apply_files(rom, &paths, &making).map_err(|(_, failure)| match failure {
+        crate::patching::FileFailure::Patch(error) => io::Error::other(format!("{error:?}")),
+        crate::patching::FileFailure::Io(error) => error,
+    })?;
+    fs::rename(&making, &file)?;
+    Ok(file)
 }
 
-/// We write a separate folder for each lookup of a patched game.
+/// We write a separate temporary file first for each patched game we make.
 static PATCHED_LOOKUPS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);

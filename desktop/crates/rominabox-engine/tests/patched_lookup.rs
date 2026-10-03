@@ -98,3 +98,27 @@ fn a_patched_game_the_catalogue_does_not_know_takes_the_patchs_name_and_the_orig
     assert!(!inspection.matched);
     assert_eq!(inspection.icon_path.as_deref(), Some(pictures[0].as_path()));
 }
+
+/// We make the patched game once, into the lookup cache, and read it from
+/// there in the next lookup.
+#[test]
+fn the_patched_game_is_made_once_into_the_cache() {
+    let root = Scratch::dir("rominabox-patched-lookup-cached");
+    let rom = game_with_patch(&root, "Director's Cut.bps");
+    let cache = root.join("cache");
+    stage_catalog(&cache, &[("Tiny Blast - Director's Cut (World)", PATCHED)], &[]);
+
+    let made = |cache: &Path| -> Vec<PathBuf> {
+        let Ok(folders) = fs::read_dir(cache.join("patched")) else { return Vec::new() };
+        folders.flat_map(|folder| fs::read_dir(folder.unwrap().path()).unwrap()).map(|file| file.unwrap().path()).collect()
+    };
+    assert_eq!(inspect_game(&rom, &cache, false).unwrap().title, "Tiny Blast - Director's Cut");
+    let files = made(&cache);
+    assert_eq!(files.len(), 1, "{files:?}");
+    assert_eq!(fs::read(&files[0]).unwrap(), PATCHED);
+    let first = fs::metadata(&files[0]).unwrap().modified().unwrap();
+
+    assert_eq!(inspect_game(&rom, &cache, false).unwrap().title, "Tiny Blast - Director's Cut");
+    assert_eq!(made(&cache), files);
+    assert_eq!(fs::metadata(&files[0]).unwrap().modified().unwrap(), first, "read, not made again");
+}

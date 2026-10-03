@@ -1,11 +1,13 @@
 //! Which patches we export with a game: the ones beside it that clearly
 //! belong to it, and the ones its author chose, applied in name order.
+//! We decide from what each patch states whether it belongs, and the result
+//! is the game that we export from the patches that belong.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use rominabox_engine::patches::{apply_belonging, is_patch_file, xdelta_names, Offered};
-use rominabox_engine::repo;
+use rominabox_engine::patches::{belonging, is_patch_file, xdelta_names, Offered};
+use rominabox_engine::{patching, repo};
 use rominabox_scratch::Scratch;
 
 mod patch_writers;
@@ -40,6 +42,16 @@ fn beside(paths: &[&Path]) -> Vec<(PathBuf, Offered)> {
     paths.iter().map(|path| (path.to_path_buf(), Offered::Beside)).collect()
 }
 
+/// The game that we export from `game` with `patches`, made as in an export.
+fn made(game: &Path, patches: &[PathBuf]) -> Vec<u8> {
+    let made = game.with_file_name(format!("made-{}", patches.len()));
+    let paths: Vec<&Path> = patches.iter().map(PathBuf::as_path).collect();
+    patching::apply_files(game, &paths, &made).unwrap_or_else(|(index, failure)| panic!("patch {index}: {failure:?}"));
+    let bytes = fs::read(&made).unwrap();
+    fs::remove_file(&made).unwrap();
+    bytes
+}
+
 #[test]
 fn patch_files_are_known_by_retroarchs_names() {
     for name in ["a.ips", "a.IPS", "a.ips1", "a.bps9", "a.ups", "a.xdelta", "a.vcdiff"] {
@@ -60,9 +72,9 @@ fn a_bps_beside_the_game_travels_when_it_was_made_for_it() {
     let theirs = root.join("Another game's patch.bps");
     fs::write(&theirs, bps(&other_game, &patched())).unwrap();
 
-    let result = apply_belonging(&game, &beside(&[&mine, &theirs])).unwrap();
+    let result = belonging(&game, &beside(&[&mine, &theirs])).unwrap();
     assert_eq!(result.patches, vec![mine]);
-    assert!(result.bytes == patched());
+    assert!(made(&game, &result.patches) == patched());
 }
 
 #[test]
@@ -73,37 +85,37 @@ fn an_ips_beside_the_game_travels_only_under_the_games_name() {
     fs::write(&named, ips(&original(), &patched())).unwrap();
     fs::write(&unnamed, ips(&original(), &patched())).unwrap();
 
-    assert!(apply_belonging(&game, &beside(&[&unnamed])).unwrap().patches.is_empty());
-    let result = apply_belonging(&game, &beside(&[&named])).unwrap();
+    assert!(belonging(&game, &beside(&[&unnamed])).unwrap().patches.is_empty());
+    let result = belonging(&game, &beside(&[&named])).unwrap();
     assert_eq!(result.patches, vec![named]);
-    assert!(result.bytes == patched());
+    assert!(made(&game, &result.patches) == patched());
 }
 
 #[test]
-fn a_patch_the_author_chose_travels_when_it_applies() {
+fn a_patch_the_author_chose_travels_when_nothing_it_states_rules_the_game_out() {
     let (root, game) = folder("chosen");
     let chosen = root.join("Some patch.ips");
     fs::write(&chosen, ips(&original(), &patched())).unwrap();
-    let result = apply_belonging(&game, &[(chosen.clone(), Offered::Chosen)]).unwrap();
+    let result = belonging(&game, &[(chosen.clone(), Offered::Chosen)]).unwrap();
     assert_eq!(result.patches, vec![chosen]);
 }
 
 #[test]
-fn an_xdelta_patch_beside_the_game_travels_when_it_names_or_checks_the_game() {
+fn an_xdelta_patch_beside_the_game_travels_when_its_header_names_the_game() {
     let (root, game) = folder("xdelta");
     // Made by the xdelta command with its defaults, so with names and checksums.
-    let checked = root.join("Director's Cut.xdelta");
-    fs::write(&checked, fixture("test-game-lzma.xdelta")).unwrap();
-    let result = apply_belonging(&game, &beside(&[&checked])).unwrap();
-    assert!(result.bytes == patched());
+    let named = root.join("Director's Cut.xdelta");
+    fs::write(&named, fixture("test-game-lzma.xdelta")).unwrap();
+    let result = belonging(&game, &beside(&[&named])).unwrap();
+    assert!(made(&game, &result.patches) == patched());
     assert_eq!(result.made.as_deref(), Some("test-game-patched.gbc"), "the header names the game it makes");
 
     // -n -A: no checksums and no names, so nothing ties it to this game.
     let bare = root.join("Unnamed.xdelta");
     fs::write(&bare, fixture("test-game-bare.xdelta")).unwrap();
-    assert!(apply_belonging(&game, &beside(&[&bare])).unwrap().patches.is_empty());
-    let chosen = apply_belonging(&game, &[(bare.clone(), Offered::Chosen)]).unwrap();
-    assert!(chosen.bytes == patched(), "chosen, it applies");
+    assert!(belonging(&game, &beside(&[&bare])).unwrap().patches.is_empty());
+    let chosen = belonging(&game, &[(bare.clone(), Offered::Chosen)]).unwrap();
+    assert!(made(&game, &chosen.patches) == patched(), "chosen, it applies");
 }
 
 #[test]
@@ -129,7 +141,7 @@ fn several_patches_are_applied_in_name_order_each_to_the_last_ones_game() {
     fs::write(&first, bps(&original(), &middle)).unwrap();
     fs::write(&second, bps(&middle, &last)).unwrap();
 
-    let result = apply_belonging(&game, &beside(&[&second, &first])).unwrap();
+    let result = belonging(&game, &beside(&[&second, &first])).unwrap();
     assert_eq!(result.patches, vec![first, second]);
-    assert!(result.bytes == last);
+    assert!(made(&game, &result.patches) == last);
 }
