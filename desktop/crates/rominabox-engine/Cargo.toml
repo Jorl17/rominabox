@@ -49,6 +49,8 @@ libc = "0.2"
 
 [build-dependencies]
 serde_json.workspace = true
+# For the RetroArch patch formats in the engine (build.rs). MIT or Apache-2.0.
+cc = "1.2"
 # For giving the command line the builder's icon and version on Windows
 # (build.rs), the same crate as in Tauri's build step for the builder. MIT.
 tauri-winres = "0.3"

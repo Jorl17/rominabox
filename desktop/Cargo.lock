@@ -3281,6 +3281,7 @@ dependencies = [
 name = "rominabox-engine"
 version = "0.1.0"
 dependencies = [
+ "cc",
  "chd",
  "crc32fast",
  "datary",

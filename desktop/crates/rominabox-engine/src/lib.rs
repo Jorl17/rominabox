@@ -27,6 +27,7 @@ pub mod metadata;
 pub mod pad_positions;
 pub mod pads;
 pub mod packaging;
+pub mod patching;
 pub mod player_settings;
 mod portable_executable;
 pub mod projects;

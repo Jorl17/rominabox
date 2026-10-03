@@ -131,7 +131,7 @@ SCOPES = [
     ),
     Scope(
         "exporter",
-        "the Rust exporter and player-facing declarations: staging, isolation, controls, capabilities, and that a command with no request does not read stdin",
+        "the Rust exporter and player-facing declarations: staging, isolation, controls, capabilities, patches applied by RetroArch's own code, and that a command with no request does not read stdin",
         "that an exported game runs; every fixture core is a stand-in that is never loaded",
         ["cargo", "test", "--quiet", "--no-fail-fast", *CARGO_ENGINE],
         # In disc_layout and the other layout tests we measure and hover over a

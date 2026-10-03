@@ -3,9 +3,31 @@ use std::path::Path;
 
 fn main() {
     shader_previews();
+    patch_formats();
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         command_line_resource();
     }
+}
+
+/// The RetroArch patch formats (IPS, UPS, BPS and xdelta), which we compile
+/// from the fork we build the player from, so we apply a patch in the builder
+/// exactly as in the player (src/patching.rs).
+fn patch_formats() {
+    let retroarch = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../vendor/retroarch");
+    let sources = [
+        "tasks/patch_stream.c",
+        "libretro-common/encodings/encoding_crc32.c",
+        "libretro-common/encodings/encoding_vcdiff.c",
+    ];
+    for source in sources.iter().chain(&["tasks/patch_stream.h"]) {
+        println!("cargo:rerun-if-changed={}", retroarch.join(source).display());
+    }
+    cc::Build::new()
+        .files(sources.iter().map(|source| retroarch.join(source)))
+        .include(retroarch.join("libretro-common/include"))
+        .define("HAVE_XDELTA", None)
+        .warnings(false)
+        .compile("retroarch_patch_formats");
 }
 
 /// The shader previews we include in the exporter, one for each picture in
