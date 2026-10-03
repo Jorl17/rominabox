@@ -13,6 +13,7 @@ same recipe and functions, in this checkout's folder for that build
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -43,6 +44,13 @@ def install_in_kit(kit_folder: Path) -> int:
     if not native_build.launch_library(kit):
         raise SystemExit(f"a {kit} kit's launcher is built with its player, not into a kit")
     native_build.install_tree_launcher(kit_folder.resolve(), kit)
+    # In the kit we record the sources we built its launch library from
+    # (scripts/build_kit.py), and this build is now that library.
+    recorded = kit_folder / "provenance" / "native-rmlui" / "source.json"
+    if recorded.is_file():
+        source = json.loads(recorded.read_text(encoding="utf-8"))
+        source["launchLibrarySources"] = native_build.launch_library_sources(kit)
+        recorded.write_text(json.dumps(source, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(kit_folder / native_build.kit_file(host_target(), "launcher"))
     return 0
 
