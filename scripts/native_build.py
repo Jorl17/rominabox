@@ -419,14 +419,20 @@ def sdl2_prefix(destination: Path) -> Path:
     return destination / recipe()["sdl2"]["prefix"]
 
 
-def sdl2_source(destination: Path) -> Path:
-    """The recipe's SDL2 release, unpacked in `destination` once."""
-    sdl2 = recipe()["sdl2"]
-    source = destination / sdl2["directory"]
+def release_source(destination: Path, name: str) -> Path:
+    """The recipe's pinned release of the library `name`, unpacked in
+    `destination` once."""
+    release = recipe()[name]
+    source = destination / release["directory"]
     if not source.is_dir():
-        with tarfile.open(download(sdl2["url"], sdl2["sha256"])) as tar:
+        with tarfile.open(download(release["url"], release["sha256"])) as tar:
             tar.extractall(destination, filter="data")
     return source
+
+
+def sdl2_source(destination: Path) -> Path:
+    """The recipe's SDL2 release, unpacked in `destination` once."""
+    return release_source(destination, "sdl2")
 
 
 def build_sdl2(destination: Path, target: str, jobs: int) -> None:
@@ -564,21 +570,25 @@ def copy_accounts(destination: Path, target: str) -> Path:
     return accounts
 
 
-def build_launcher(destination: Path, target: str, environment: dict[str, str], fork: Path) -> Path | None:
+def build_launcher(destination: Path, target: str, environment: dict[str, str]) -> Path | None:
     """The game's launcher, for a target where we build it next to the player,
-    built into `destination`, with the parts from the RetroArch fork read
-    from `fork`: the fork checked out for a player build, or the checkout's."""
+    built into `destination`, with the libraries listed for it in the recipe
+    built next to it."""
     launcher = recipe()["launcher"].get(require_target(target))
     if launcher is None:
         return None
     folder = destination / "launcher"
     output = folder / launcher["output"]
-    forked = launcher.get("fork", {"includes": [], "flags": [], "sources": []})
-    includes = [f"-I{fork / path}" for path in forked["includes"]]
+    includes = []
+    theirs = []
+    if launcher.get("zstd"):
+        zstd = recipe()["zstd"]
+        source = release_source(destination, "zstd")
+        includes = [f"-I{source / path}" for path in zstd["includes"]]
+        theirs = [(source / name, ["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w", *zstd["flags"], *includes])
+                  for name in zstd["sources"]]
     own = [(source, ["cc", *compiler_flags(target), *launcher["flags"], *includes])
            for source in launcher_sources(platform_of(target))]
-    theirs = [(fork / source, ["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w", *forked["flags"], *includes])
-              for source in forked["sources"]]
     sdl2 = []
     if launcher.get("sdl2"):
         build_sdl2(destination, target, os.cpu_count() or 1)
@@ -666,7 +676,7 @@ def kept_launcher(folder: Path, kit: str) -> Path:
     launch library before we attach it to a player."""
     library = launch_library(kit)
     if library is None:
-        built = build_launcher(folder, kit, build_environment(kit), FORK)
+        built = build_launcher(folder, kit, build_environment(kit))
         if built is None:
             raise SystemExit(f"the player recipe builds no launcher for {kit}")
         return built

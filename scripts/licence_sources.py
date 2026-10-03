@@ -277,11 +277,12 @@ def pin(name: str, spec: dict) -> Pin:
     if name == "rmlui":
         rmlui = native_build.recipe()["rmlui"]
         return Pin(rmlui["commit"], rmlui["repository"], {"commit": rmlui["commit"]})
-    if name == "freetype":
-        freetype = native_build.recipe()["freetype"]
-        archive = native_build.DOWNLOADS / freetype["url"].rsplit("/", 1)[1]
-        return Pin(freetype["directory"].removeprefix("freetype-"), freetype["url"], {}, archive,
-                   lambda: native_build.download(freetype["url"], freetype["sha256"]), freetype["directory"])
+    release = native_build.recipe().get(name)
+    if isinstance(release, dict) and "url" in release:
+        # A library we build in the player recipe from its pinned release.
+        archive = native_build.DOWNLOADS / release["url"].rsplit("/", 1)[1]
+        return Pin(release["directory"].removeprefix(f"{name}-"), release["url"], {}, archive,
+                   lambda: native_build.download(release["url"], release["sha256"]), release["directory"])
     if name == "joypad":
         revision = prepare_runtime.JOYPAD_AUTOCONFIG_REVISION
         repository = prepare_runtime.JOYPAD_AUTOCONFIG_REPO

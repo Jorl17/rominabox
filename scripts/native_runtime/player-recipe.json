@@ -184,7 +184,7 @@
     ]
   },
   "launcher": {
-    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher, and those in the folders platformFolders names for the target's platform: its entry, in the folder named for the platform, and its file layer, portable_fs, and the way a launch plan's paths read, paths.c, in posix/ (what macOS and Linux share) or windows/. A macOS kit carries its launcher as a library the player loads (launchLibrary). sdl2: whether the launcher links the recipe's SDL2, built for the target beside it.",
+    "comment": "The game's launcher, for a target that runs it as its own program: its shared sources at the top of desktop/src-tauri/launcher, and those in the folders platformFolders names for the target's platform: its entry, in the folder named for the platform, and its file layer, portable_fs, and the way a launch plan's paths read, paths.c, in posix/ (what macOS and Linux share) or windows/. A macOS kit carries its launcher as a library the player loads (launchLibrary). sdl2: whether the launcher links the recipe's SDL2, built for the target beside it; zstd, whether it links the recipe's Zstandard decoder.",
     "windows-x86_64": {
       "output": "launcher.exe",
       "sdl2": true,
@@ -213,23 +213,27 @@
         "-lshlwapi",
         "-lshcore"
       ],
-      "fork": {
-        "comment": "The fork's code the launcher links, compiled as the fork's own, without the launcher's warnings: the zstd decoder a game made into one program unpacks itself with (launcher/windows/unpack.c), without its assembly.",
-        "includes": ["deps/zstd/lib"],
-        "flags": ["-DZSTD_DISABLE_ASM", "-DZSTD_LEGACY_SUPPORT=0"],
-        "sources": [
-          "deps/zstd/lib/common/entropy_common.c",
-          "deps/zstd/lib/common/error_private.c",
-          "deps/zstd/lib/common/fse_decompress.c",
-          "deps/zstd/lib/common/xxhash.c",
-          "deps/zstd/lib/common/zstd_common.c",
-          "deps/zstd/lib/decompress/huf_decompress.c",
-          "deps/zstd/lib/decompress/zstd_ddict.c",
-          "deps/zstd/lib/decompress/zstd_decompress.c",
-          "deps/zstd/lib/decompress/zstd_decompress_block.c"
-        ]
-      }
+      "zstd": true
     }
+  },
+  "zstd": {
+    "comment": "Zstandard's decoder, which a Windows game made into one program unpacks itself with (launcher/windows/unpack.c), a piece of each file at a time; the launcher links it when its recipe says zstd. libretro-common's rzstd is not used because it decodes only a whole frame at once. Built from its pinned release beside the launcher, as the library's own code, compiled without the launcher's warnings and without its assembly.",
+    "url": "https://github.com/facebook/zstd/releases/download/v1.5.5/zstd-1.5.5.tar.gz",
+    "sha256": "9c4396cc829cfae319a6e2615202e82aad41372073482fce286fac78646d3ee4",
+    "directory": "zstd-1.5.5",
+    "includes": ["lib"],
+    "flags": ["-DZSTD_DISABLE_ASM", "-DZSTD_LEGACY_SUPPORT=0"],
+    "sources": [
+      "lib/common/entropy_common.c",
+      "lib/common/error_private.c",
+      "lib/common/fse_decompress.c",
+      "lib/common/xxhash.c",
+      "lib/common/zstd_common.c",
+      "lib/decompress/huf_decompress.c",
+      "lib/decompress/zstd_ddict.c",
+      "lib/decompress/zstd_decompress.c",
+      "lib/decompress/zstd_decompress_block.c"
+    ]
   },
   "launchLibrary": {
     "comment": "On macOS the launcher is a library the player loads before its main: it prepares the launch and hands main the arguments (launcher/macos/arguments.c), from the launcher's sources for the platform (platformFolders). It is built when the macOS kit is made (scripts/build_kit.py), for every slice of the kit's player and the platform's deployment target, and attached to each slice of the kit's player then (scripts/native_runtime/inject_dylib.c): nothing about it depends on a game. The kit carries it as its launcher; an export copies the two, thinned for a game that runs on Apple silicon alone, and signs them. 'libraries' are the system's it links, for the library and for the plan tool built from the same sources (scripts/launcher_plan.py): CoreFoundation puts up the alert that tells a person why a game cannot start.",
@@ -241,7 +245,7 @@
     }
   },
   "fileLayer": {
-    "comment": "libretro's file layer, which the menu reads and writes its files through with UTF-8 paths on every platform, named from the fork's root. Every program built from the menu's sources links it. The config reader, file/config_file.c, is not part of it, so a test program can stand in for that boundary.",
+    "comment": "libretro's file layer, which the menu reads and writes its files through with UTF-8 paths on every platform, named from the fork's root. Every program built from the menu's sources links it. The CRC-32 asks features/features_cpu.c, on an x86 processor, whether it may use its faster path. The config reader, file/config_file.c, is not part of it, so a test program can stand in for that boundary.",
     "sources": [
       "libretro-common/file/file_path.c",
       "libretro-common/file/file_path_io.c",
@@ -251,6 +255,7 @@
       "libretro-common/string/rstrtod.c",
       "libretro-common/encodings/encoding_utf.c",
       "libretro-common/encodings/encoding_crc32.c",
+      "libretro-common/features/features_cpu.c",
       "libretro-common/time/rtime.c",
       "libretro-common/compat/compat_strl.c",
       "libretro-common/compat/fopen_utf8.c"
