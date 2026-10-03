@@ -28,3 +28,7 @@ worktree.local.json
 # C object files from ad-hoc compiles; build steps write theirs under work/.
 *.o
 *.obj
+
+# Local tool settings and private notes, kept out of the repository.
+/.claude/
+/private/

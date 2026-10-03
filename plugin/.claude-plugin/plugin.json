@@ -1,0 +1,10 @@
+{
+  "name": "rominabox",
+  "displayName": "ROM-in-a-Box",
+  "description": "Turn a retro game file into a standalone Mac or Windows game with ROM-in-a-Box's command line, rominabox-cli.",
+  "author": {
+    "name": "João Ricardo Lourenço"
+  },
+  "homepage": "https://www.rominabox.app",
+  "repository": "https://github.com/Jorl17/rominabox"
+}

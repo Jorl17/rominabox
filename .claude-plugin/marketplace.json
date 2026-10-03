@@ -1,0 +1,13 @@
+{
+  "name": "rominabox",
+  "owner": {
+    "name": "João Ricardo Lourenço"
+  },
+  "plugins": [
+    {
+      "name": "rominabox",
+      "source": "./plugin",
+      "description": "Make standalone games from retro game files with rominabox-cli, which ROM-in-a-Box installs."
+    }
+  ]
+}
