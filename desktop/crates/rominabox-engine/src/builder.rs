@@ -275,9 +275,15 @@ fn fill_game(
         _ => return Err("a request names its game as rom".into()),
     };
     // The file that someone means by a drop: the sheet that lists a dropped
-    // track, or the game in a dropped folder.
-    let rom = crate::content::resolve_dropped(&rom)?;
+    // track, the game in a dropped folder, or the game a dropped patch is
+    // for, which we then include with the patch.
+    let stated_files: crate::content::GameFiles = match request.get("files") {
+        Some(files) => serde_json::from_value(files.clone()).map_err(|error| format!("files: {error}"))?,
+        None => Default::default(),
+    };
+    let (rom, files) = crate::content::dropped_game(&rom, &stated_files)?;
     request.insert("rom".into(), json!(rom));
+    request.insert("files".into(), json!(files));
     let online = match request.remove("online") {
         None => defaults().online,
         Some(Value::Bool(online)) => online,
@@ -293,7 +299,7 @@ fn fill_game(
             None => places.metadata_cache()?,
         };
         let stated = request.get("system").and_then(Value::as_str);
-        let found = crate::metadata::inspect_game_with_system(&rom, &cache, online, stated)
+        let found = crate::metadata::inspect_game_with_files(&rom, &cache, online, stated, &files)
             .map_err(|error| error.to_string())?;
         if found.system.is_empty() && stated.is_none() {
             return Err(format!(

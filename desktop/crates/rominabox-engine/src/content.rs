@@ -9,6 +9,8 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
+use serde::{Deserialize, Serialize};
+
 use crate::systems::{self, Companion, SheetParser, System};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -16,8 +18,39 @@ pub struct ContentFile {
     pub source: PathBuf,
     pub relative: PathBuf,
     /// Normalized manifest bytes when the staged file must use portable path
-    /// separators. Otherwise we copy the file directly from `source`.
+    /// separators, or the patched game in place of the game file. Otherwise
+    /// we copy the file directly from `source`.
     pub staged_bytes: Option<Vec<u8>>,
+    pub role: FileRole,
+}
+
+/// Why a file goes with the game, and so whether the author may leave it out.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+pub enum FileRole {
+    /// The file dropped, or the sheet or playlist that names it.
+    Game,
+    /// A track or other file that a sheet lists. We always include it.
+    Named,
+    /// A file of the same name that goes with the game by the console's
+    /// rules, such as a `.sbi`. We always include one the console requires.
+    Companion { required: bool },
+    /// A file the author added.
+    Added,
+}
+
+/// What the author changed in the set of files that go with a game.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct GameFiles {
+    /// Files that we would include by default, which the author left out by
+    /// name: companions that the console does not require, and patches.
+    #[serde(default)]
+    pub left_out: Vec<String>,
+    /// Files the author added. We apply a patch among them when it fits the
+    /// game (crate::patches), and copy any other file beside the game.
+    #[serde(default)]
+    pub added: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -31,6 +64,8 @@ pub struct ContentSet {
     pub patches: Vec<PathBuf>,
     /// The file name of the patched game, when a patch gives one.
     pub patched_name: Option<String>,
+    /// Patches the author added that do not apply to this game.
+    pub refused_patches: Vec<PathBuf>,
 }
 
 /// Find every file referenced from `entrypoint`, without leaving its
@@ -48,6 +83,15 @@ pub fn collect(entrypoint: &Path) -> Result<ContentSet, String> {
 /// the `.sub` beside a CloneCD sheet to run it in Beetle PCE Fast. With no
 /// console chosen, we require a companion only when every console does.
 pub fn collect_for(entrypoint: &Path, system_id: Option<&str>) -> Result<ContentSet, String> {
+    collect_with(entrypoint, system_id, &GameFiles::default())
+}
+
+/// Same as [`collect_for`], with what the author left out and added.
+pub fn collect_with(
+    entrypoint: &Path,
+    system_id: Option<&str>,
+    choices: &GameFiles,
+) -> Result<ContentSet, String> {
     if !entrypoint.is_file() {
         return Err(format!(
             "game content does not exist or is not a regular file: {}",
@@ -81,16 +125,16 @@ pub fn collect_for(entrypoint: &Path, system_id: Option<&str>) -> Result<Content
             extension.to_ascii_uppercase()
         ));
     }
-    let mut files = Vec::new();
-    let mut seen = HashSet::new();
-    gather(
-        &entrypoint,
-        &entry_relative,
-        &root,
-        &systems,
-        &mut files,
-        &mut seen,
-    )?;
+    let mut walk = Walk {
+        root: &root,
+        systems: &systems,
+        left_out: &choices.left_out,
+        files: Vec::new(),
+        seen: HashSet::new(),
+    };
+    walk.gather(&entrypoint, &entry_relative, FileRole::Game)?;
+    let mut files = walk.files;
+    add_chosen_files(&choices.added, &mut files)?;
     // A playlist lists the discs of the game. Any other game is one disc.
     let discs = match sheet_parser(&extension, &systems) {
         Some(SheetParser::Playlist) => {
@@ -100,36 +144,81 @@ pub fn collect_for(entrypoint: &Path, system_id: Option<&str>) -> Result<Content
         }
         _ => 1,
     };
-    let patched = patch_game_file(&entrypoint, &root, &mut files)?;
+    let patched = patch_game_file(&entrypoint, &root, choices, &mut files)?;
     Ok(ContentSet {
         entrypoint: entry_relative,
         files,
         discs,
         patches: patched.as_ref().map(|patched| patched.patches.clone()).unwrap_or_default(),
-        patched_name: patched.and_then(|patched| patched.made),
+        patched_name: patched.as_ref().and_then(|patched| patched.made.clone()),
+        refused_patches: patched.map(|patched| patched.refused).unwrap_or_default(),
     })
 }
 
-/// A game that is one file, with the patches beside it that belong to it. We
-/// apply them and put the patched game in the export in place of the file.
-/// We never apply a patch to a sheet, which only lists the tracks.
+/// The files the author added that are not patches, which we put beside the
+/// game under their file names.
+fn add_chosen_files(added: &[PathBuf], files: &mut Vec<ContentFile>) -> Result<(), String> {
+    for path in added.iter().filter(|path| !crate::patches::is_patch_file(path)) {
+        let name = path
+            .file_name()
+            .ok_or_else(|| format!("an added file has no name: {}", path.display()))?;
+        if !path.is_file() {
+            return Err(format!("an added file is missing: {}", path.display()));
+        }
+        if let Some(already) = files.iter().find(|file| file.relative == Path::new(name)) {
+            // A file the author added and the rules include is still one file.
+            if same_file(&already.source, path) {
+                continue;
+            }
+            return Err(format!(
+                "{} is already one of the game's files",
+                name.to_string_lossy()
+            ));
+        }
+        files.push(ContentFile {
+            source: path.clone(),
+            relative: PathBuf::from(name),
+            staged_bytes: None,
+            role: FileRole::Added,
+        });
+    }
+    Ok(())
+}
+
+/// A game that is one file, with the patches that belong to it: those beside
+/// it that the author did not leave out, and those the author added. We apply
+/// them and put the patched game in the export in place of the file. We never
+/// apply a patch to a sheet, which only lists the tracks.
 fn patch_game_file(
     entrypoint: &Path,
     root: &Path,
+    choices: &GameFiles,
     files: &mut [ContentFile],
 ) -> Result<Option<crate::patches::Patched>, String> {
     let Some(game) = files.first_mut().filter(|file| file.staged_bytes.is_none()) else {
         return Ok(None);
     };
-    let beside: Vec<_> = crate::patches::in_folder(root)
+    let left_out = |path: &Path| {
+        path.file_name()
+            .is_some_and(|name| choices.left_out.iter().any(|left| left.as_str() == name.to_string_lossy()))
+    };
+    let chosen: Vec<PathBuf> = choices
+        .added
+        .iter()
+        .filter(|path| crate::patches::is_patch_file(path))
+        .cloned()
+        .collect();
+    let mut offered: Vec<_> = crate::patches::in_folder(root)
         .into_iter()
+        .filter(|path| !left_out(path) && !chosen.iter().any(|added| same_file(added, path)))
         .map(|path| (path, crate::patches::Offered::Beside))
         .collect();
-    let patched = crate::patches::apply_belonging(entrypoint, &beside)?;
-    if let Some(patched) = &patched {
+    offered.extend(chosen.into_iter().map(|path| (path, crate::patches::Offered::Chosen)));
+    let patched = crate::patches::apply_belonging(entrypoint, &offered)?;
+    if !patched.patches.is_empty() {
         game.staged_bytes = Some(patched.bytes.clone());
     }
-    Ok(patched)
+    Ok(Some(patched))
 }
 
 /// The path that `path` resolves to, after following any symbolic link.
@@ -158,124 +247,144 @@ fn folder_path(root: &Path, path: &Path) -> FolderPath {
     }
 }
 
-fn gather(
-    absolute: &Path,
-    relative: &Path,
-    root: &Path,
-    systems: &[&System],
-    files: &mut Vec<ContentFile>,
-    seen: &mut HashSet<PathBuf>,
-) -> Result<(), String> {
-    if !seen.insert(relative.to_path_buf()) {
-        return Ok(());
-    }
-    let extension = extension_of(absolute);
-    let parser = sheet_parser(&extension, systems);
-    let (staged_bytes, references) = match parser {
-        Some(parser) => {
-            let text = fs::read_to_string(absolute).map_err(|error| {
-                format!("read {} sheet {}: {error}", extension, absolute.display())
-            })?;
-            let references = crate::discs::sheet_references(parser, &text)?;
-            if references.is_empty() {
-                return Err(empty_sheet(parser, absolute));
-            }
-            (staged_sheet(parser, &text), references)
+/// The state of one collection: the game's folder, the consoles we ask,
+/// the names the author left out, and the files we have found so far.
+struct Walk<'a> {
+    root: &'a Path,
+    systems: &'a [&'a System],
+    left_out: &'a [String],
+    files: Vec<ContentFile>,
+    seen: HashSet<PathBuf>,
+}
+
+impl Walk<'_> {
+    fn gather(&mut self, absolute: &Path, relative: &Path, role: FileRole) -> Result<(), String> {
+        let (root, systems) = (self.root, self.systems);
+        if !self.seen.insert(relative.to_path_buf()) {
+            return Ok(());
         }
-        None => (None, Vec::new()),
-    };
-    files.push(ContentFile {
-        source: absolute.to_path_buf(),
-        relative: relative.to_path_buf(),
-        staged_bytes,
-    });
-    for companion in companions_for(&extension, systems) {
-        let Some(stem) = absolute.file_stem() else {
-            continue;
+        let extension = extension_of(absolute);
+        let parser = sheet_parser(&extension, systems);
+        let (staged_bytes, references) = match parser {
+            Some(parser) => {
+                let text = fs::read_to_string(absolute).map_err(|error| {
+                    format!("read {} sheet {}: {error}", extension, absolute.display())
+                })?;
+                let references = crate::discs::sheet_references(parser, &text)?;
+                if references.is_empty() {
+                    return Err(empty_sheet(parser, absolute));
+                }
+                (staged_sheet(parser, &text), references)
+            }
+            None => (None, Vec::new()),
         };
-        let directory = absolute.parent().unwrap_or(root);
-        let sibling = directory.join(stem).with_extension(&companion.extension);
-        if sibling == absolute {
-            continue;
+        self.files.push(ContentFile {
+            source: absolute.to_path_buf(),
+            relative: relative.to_path_buf(),
+            staged_bytes,
+            role,
+        });
+        for companion in companions_for(&extension, systems) {
+            let Some(stem) = absolute.file_stem() else {
+                continue;
+            };
+            let directory = absolute.parent().unwrap_or(root);
+            let sibling = directory.join(stem).with_extension(&companion.extension);
+            if sibling == absolute {
+                continue;
+            }
+            if !sibling.is_file() {
+                if companion.required {
+                    let name = sibling
+                        .file_name()
+                        .map(|name| name.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| companion.extension.clone());
+                    return Err(format!(
+                        "missing {} file {name} (from {})",
+                        companion.extension,
+                        absolute.display()
+                    ));
+                }
+                continue;
+            }
+            let sibling_name = sibling
+                .file_name()
+                .ok_or_else(|| format!("support file has no name: {}", sibling.display()))?;
+            let sibling_relative = relative.with_file_name(sibling_name);
+            if self.left_out.iter().any(|left| left.as_str() == sibling_name.to_string_lossy()) {
+                if companion.required {
+                    return Err(format!(
+                        "{} cannot be left out: the game needs it",
+                        sibling_name.to_string_lossy()
+                    ));
+                }
+                continue;
+            }
+            let resolved = match folder_path(root, &sibling) {
+                FolderPath::Inside(resolved) => resolved,
+                FolderPath::Unreadable(error) => {
+                    return Err(format!(
+                        "resolve {} {}: {error}",
+                        companion.extension,
+                        sibling.display()
+                    ));
+                }
+                FolderPath::Outside => {
+                    return Err(format!(
+                        "{} file escapes the game content folder: {}",
+                        companion.extension,
+                        sibling_relative.display()
+                    ));
+                }
+            };
+            self.gather(
+                &resolved,
+                &sibling_relative,
+                FileRole::Companion { required: companion.required },
+            )?;
         }
-        if !sibling.is_file() {
-            if companion.required {
-                let name = sibling
-                    .file_name()
-                    .map(|name| name.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| companion.extension.clone());
-                return Err(format!(
-                    "missing {} file {name} (from {})",
-                    companion.extension,
-                    absolute.display()
-                ));
+        let mut followed = false;
+        for reference in references {
+            validate_relative_content_path(&reference)?;
+            let candidate = absolute.parent().unwrap_or(root).join(&reference);
+            if !candidate.is_file() {
+                return Err(missing_reference(parser, &reference, absolute));
             }
-            continue;
+            let resolved = match folder_path(root, &candidate) {
+                FolderPath::Inside(resolved) => resolved,
+                FolderPath::Unreadable(error) => {
+                    return Err(format!(
+                        "resolve {} reference {}: {error}",
+                        extension,
+                        candidate.display()
+                    ));
+                }
+                FolderPath::Outside => {
+                    return Err(format!(
+                        "referenced file escapes the game content folder: {}",
+                        reference.display()
+                    ));
+                }
+            };
+            let child_relative = match relative.parent() {
+                Some(parent) if !parent.as_os_str().is_empty() => parent.join(&reference),
+                _ => reference.clone(),
+            };
+            let before = self.files.len();
+            self.gather(&resolved, &child_relative, FileRole::Named)?;
+            if self.files.len() > before {
+                followed = true;
+            }
         }
-        let sibling_name = sibling
-            .file_name()
-            .ok_or_else(|| format!("support file has no name: {}", sibling.display()))?;
-        let sibling_relative = relative.with_file_name(sibling_name);
-        let resolved = match folder_path(root, &sibling) {
-            FolderPath::Inside(resolved) => resolved,
-            FolderPath::Unreadable(error) => {
-                return Err(format!(
-                    "resolve {} {}: {error}",
-                    companion.extension,
-                    sibling.display()
-                ));
-            }
-            FolderPath::Outside => {
-                return Err(format!(
-                    "{} file escapes the game content folder: {}",
-                    companion.extension,
-                    sibling_relative.display()
-                ));
-            }
-        };
-        gather(&resolved, &sibling_relative, root, systems, files, seen)?;
+        if parser.is_some() && !followed {
+            return Err(format!(
+                "{} sheet names no file besides itself: {}",
+                extension.to_ascii_uppercase(),
+                absolute.display()
+            ));
+        }
+        Ok(())
     }
-    let mut followed = false;
-    for reference in references {
-        validate_relative_content_path(&reference)?;
-        let candidate = absolute.parent().unwrap_or(root).join(&reference);
-        if !candidate.is_file() {
-            return Err(missing_reference(parser, &reference, absolute));
-        }
-        let resolved = match folder_path(root, &candidate) {
-            FolderPath::Inside(resolved) => resolved,
-            FolderPath::Unreadable(error) => {
-                return Err(format!(
-                    "resolve {} reference {}: {error}",
-                    extension,
-                    candidate.display()
-                ));
-            }
-            FolderPath::Outside => {
-                return Err(format!(
-                    "referenced file escapes the game content folder: {}",
-                    reference.display()
-                ));
-            }
-        };
-        let child_relative = match relative.parent() {
-            Some(parent) if !parent.as_os_str().is_empty() => parent.join(&reference),
-            _ => reference.clone(),
-        };
-        let before = files.len();
-        gather(&resolved, &child_relative, root, systems, files, seen)?;
-        if files.len() > before {
-            followed = true;
-        }
-    }
-    if parser.is_some() && !followed {
-        return Err(format!(
-            "{} sheet names no file besides itself: {}",
-            extension.to_ascii_uppercase(),
-            absolute.display()
-        ));
-    }
-    Ok(())
 }
 
 fn empty_sheet(parser: SheetParser, path: &Path) -> String {
@@ -405,7 +514,48 @@ const SHEET_BYTE_LIMIT: u64 = 1024 * 1024;
 /// that lists the track. We do the same for a companion that the console
 /// package declares, such as the `.sbi` beside a CHD. When a playlist in
 /// that folder lists the sheet, we use the playlist, so that a player who
-/// starts from one disc of a set can change to the next.
+/// starts from one disc of a set can change to the next. A drop is the game
+/// and the files the author chose with it. For a patch dropped alone, we
+/// take the game in its folder that the patch is for
+/// (crate::patches::game_for). The game is never one of the added files.
+pub fn dropped_game(dropped: &Path, choices: &GameFiles) -> Result<(PathBuf, GameFiles), String> {
+    let mut choices = choices.clone();
+    let game = if dropped.is_file() && crate::patches::is_patch_file(dropped) {
+        if !choices.added.iter().any(|added| same_file(added, dropped)) {
+            choices.added.push(dropped.to_path_buf());
+        }
+        let games = games_beside(dropped);
+        resolve_dropped(&crate::patches::game_for(dropped, &games)?)?
+    } else {
+        resolve_dropped(dropped)?
+    };
+    choices.added.retain(|added| !same_file(added, &game));
+    Ok((game, choices))
+}
+
+/// Files in `path`'s folder with an extension that some console declares.
+fn games_beside(path: &Path) -> Vec<PathBuf> {
+    let Some(folder) = path.parent() else {
+        return Vec::new();
+    };
+    let Ok(entries) = fs::read_dir(folder) else {
+        return Vec::new();
+    };
+    let mut games: Vec<PathBuf> = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file() && !crate::patches::is_patch_file(path))
+        .filter(|path| {
+            let extension = extension_of(path);
+            systems::registry()
+                .iter()
+                .any(|system| system.extensions.iter().any(|known| known.eq_ignore_ascii_case(&extension)))
+        })
+        .collect();
+    games.sort();
+    games
+}
+
 pub fn resolve_dropped(path: &Path) -> Result<PathBuf, String> {
     if path.is_dir() {
         return sole_game_in(path);

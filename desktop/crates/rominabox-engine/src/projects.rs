@@ -85,7 +85,11 @@ struct ProjectAssets {
 
 pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult, String> {
     validate_settings(&request.settings)?;
-    let content = content::collect_for(&request.settings.rom, Some(&request.settings.system))?;
+    let content = content::collect_with(
+        &request.settings.rom,
+        Some(&request.settings.system),
+        &request.settings.files,
+    )?;
     refuse_existing(&request.archive_path, "project archive")?;
     let parent = request
         .archive_path
@@ -129,6 +133,18 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             background: background_asset.clone().map(PathBuf::from),
             firmware: firmware_assets.iter().map(PathBuf::from).collect(),
             shaders: stored_shaders,
+            // We store the content as we export it: without what the author
+            // left out, with the patches applied, and with each added file as
+            // one of its files, under its name in the archive.
+            files: content::GameFiles {
+                left_out: Vec::new(),
+                added: content
+                    .files
+                    .iter()
+                    .filter(|file| file.role == content::FileRole::Added)
+                    .map(|file| archive_content_name(&file.relative).map(PathBuf::from))
+                    .collect::<Result<_, _>>()?,
+            },
             ..request.settings.clone()
         },
         assets: ProjectAssets {
@@ -238,6 +254,10 @@ pub fn open_project(request: &ProjectOpenRequest) -> Result<OpenProject, String>
         background,
         firmware,
         shaders: crate::shaders::unpack_selection(stored.shaders.clone(), root),
+        files: content::GameFiles {
+            left_out: Vec::new(),
+            added: stored.files.added.iter().map(|name| root.join(name)).collect(),
+        },
         ..stored
     };
     Ok(OpenProject {

@@ -245,8 +245,12 @@ fn export_target() -> Option<packaging::ExportTarget> {
 }
 
 #[tauri::command]
-fn traveling_files(path: PathBuf, system: Option<String>) -> Result<traveling::Traveling, String> {
-    traveling::files_for(&path, system.as_deref())
+fn traveling_files(
+    path: PathBuf,
+    system: Option<String>,
+    files: Option<rominabox_engine::content::GameFiles>,
+) -> Result<traveling::Traveling, String> {
+    traveling::files_with(&path, system.as_deref(), &files.unwrap_or_default())
 }
 
 /// The author's filters that a Windows game cannot load, as in `shaders-check`.

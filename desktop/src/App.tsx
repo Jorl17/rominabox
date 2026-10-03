@@ -250,7 +250,7 @@ export function App() {
         system,
       );
       if (request !== generation.current) return;
-      setTraveling(bridge.travelingNames(traveled));
+      setTraveling(traveled.files);
     } catch (e) {
       if (request !== generation.current) return;
       // We rejected the set in the exporter. A one-file line would describe a
@@ -307,8 +307,8 @@ export function App() {
     if (!filePath)
       return { files: fallbackName ? [fallbackName] : [], entry: "" };
     const listed = await bridge.travelingFiles(filePath, system);
-    if (listed.files.length > 0)
-      return { files: listed.files, entry: listed.entry || filePath };
+    const files = bridge.travelingNames(listed);
+    if (files.length > 0) return { files, entry: listed.entry || filePath };
     return { files: fallbackName ? [fallbackName] : [], entry: filePath };
   }
   async function chooseGame() {
@@ -407,7 +407,7 @@ export function App() {
       }
       if (request !== generation.current) return;
       if (traveled) {
-        setTraveling(bridge.travelingNames(traveled));
+        setTraveling(traveled.files);
         const entryName = traveled.entry.split(/[\\/]/).pop();
         if (traveled.entry && entryName && entryName !== selection.name) {
           const entry = traveled.entry;
@@ -532,7 +532,7 @@ export function App() {
           filename,
           settings.system,
         );
-        setTraveling(bridge.travelingNames(traveled));
+        setTraveling(traveled.files);
       } catch (e) {
         setTraveling([]);
         fail(e);

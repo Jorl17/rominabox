@@ -15,6 +15,7 @@ pub(super) fn join(
     rom: &Path,
     cache: &Path,
     online: bool,
+    files: &content::GameFiles,
 ) -> Result<Inspection, InspectionError> {
     if original.system.is_empty() {
         return Ok(original);
@@ -23,7 +24,7 @@ pub(super) fn join(
         return Ok(original);
     };
     // We report at export that a game cannot be exported, and keep the lookup.
-    let Ok(set) = content::collect_for(&rom, Some(&original.system)) else {
+    let Ok(set) = content::collect_with(&rom, Some(&original.system), files) else {
         return Ok(original);
     };
     let Some(bytes) = set.files.first().and_then(|game| game.staged_bytes.as_deref()) else {

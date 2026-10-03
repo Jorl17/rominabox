@@ -652,7 +652,7 @@ fn a_subchannel_file_is_identified_as_the_disc_beside_it() {
 
     let traveling = crate::traveling::files_for(&subchannel, Some("ps1")).unwrap();
     assert!(
-        traveling.files.iter().any(|name| name == "Tiny Disc.sbi"),
+        traveling.names().iter().any(|name| name == "Tiny Disc.sbi"),
         "the details step would not name the subchannel file: {:?}",
         traveling.files
     );

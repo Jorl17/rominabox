@@ -10,7 +10,15 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::content;
+use crate::content::{self, FileRole, GameFiles};
+
+/// One file that goes with the game, and its role for the game.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TravelingFile {
+    pub name: String,
+    pub role: FileRole,
+}
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,33 +28,60 @@ pub struct Traveling {
     /// refuse a folder in `collect_for`, and the Also importing line would
     /// then name something we do not copy.
     pub entry: PathBuf,
-    pub files: Vec<String>,
+    /// The game file first, then the files we copy with it.
+    pub files: Vec<TravelingFile>,
     /// The patches that go with the game, by file name, which we apply to it
     /// at export.
     pub patches: Vec<String>,
+    /// Patches the author added that do not apply to this game.
+    pub refused: Vec<String>,
+    /// The files the author added, including a patch dropped on its own. This
+    /// is the game's `files.added`.
+    pub added: Vec<PathBuf>,
+}
+
+impl Traveling {
+    /// The files' names, the game file first.
+    pub fn names(&self) -> Vec<String> {
+        self.files.iter().map(|file| file.name.clone()).collect()
+    }
 }
 
 pub fn files_for(dropped: &Path, system: Option<&str>) -> Result<Traveling, String> {
-    let entry = content::resolve_dropped(dropped)?;
-    let set = content::collect_for(&entry, system.filter(|id| !id.is_empty()))?;
+    files_with(dropped, system, &GameFiles::default())
+}
+
+/// The same, with what the author left out and added.
+pub fn files_with(dropped: &Path, system: Option<&str>, choices: &GameFiles) -> Result<Traveling, String> {
+    let (entry, choices) = content::dropped_game(dropped, choices)?;
+    let set = content::collect_with(&entry, system.filter(|id| !id.is_empty()), &choices)?;
     let files = set
         .files
         .iter()
-        .map(|file| {
-            file.relative
+        .map(|file| TravelingFile {
+            name: file
+                .relative
                 .components()
                 .map(|component| component.as_os_str().to_string_lossy())
                 .collect::<Vec<_>>()
-                .join("/")
+                .join("/"),
+            role: file.role,
         })
         .collect();
-    let patches = set
-        .patches
-        .iter()
-        .filter_map(|patch| patch.file_name())
-        .map(|name| name.to_string_lossy().into_owned())
-        .collect();
-    Ok(Traveling { entry, files, patches })
+    let names = |paths: &[PathBuf]| -> Vec<String> {
+        paths
+            .iter()
+            .filter_map(|path| path.file_name())
+            .map(|name| name.to_string_lossy().into_owned())
+            .collect()
+    };
+    Ok(Traveling {
+        entry,
+        files,
+        patches: names(&set.patches),
+        refused: names(&set.refused_patches),
+        added: choices.added,
+    })
 }
 
 #[cfg(test)]
@@ -78,7 +113,7 @@ mod tests {
         let ccd = root.join("game.ccd");
 
         for system in ["ps1", "pcecd"] {
-            let named = files_for(&ccd, Some(system)).unwrap().files;
+            let named = files_for(&ccd, Some(system)).unwrap().names();
             assert_eq!(
                 named,
                 export_copies(&ccd, system),

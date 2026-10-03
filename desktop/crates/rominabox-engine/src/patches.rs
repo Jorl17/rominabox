@@ -129,21 +129,27 @@ pub struct Patched {
     /// The file name of the patched game, when a patch states it. An xdelta
     /// header contains the name of the file it produces.
     pub made: Option<String>,
+    /// Patches the author chose that do not apply to this game.
+    pub refused: Vec<PathBuf>,
 }
 
 /// `game` with every patch in `offered` that belongs to it applied, in
-/// file-name order, or None when no patch belongs.
-pub fn apply_belonging(game: &Path, offered: &[(PathBuf, Offered)]) -> Result<Option<Patched>, String> {
+/// file-name order. With none, `patches` is empty and `bytes` the game.
+pub fn apply_belonging(game: &Path, offered: &[(PathBuf, Offered)]) -> Result<Patched, String> {
     let mut ordered: Vec<&(PathBuf, Offered)> = offered.iter().collect();
     ordered.sort_by_key(|(path, _)| path.file_name().map(|name| name.to_string_lossy().to_lowercase()));
     let mut bytes = fs::read(game).map_err(|error| format!("read {}: {error}", game.display()))?;
     let game_name = game.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
     let game_stem = game.file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or_default();
     let mut applied = Vec::new();
+    let mut refused = Vec::new();
     let mut made = None;
     for (path, how) in ordered {
         let patch = fs::read(path).map_err(|error| format!("read {}: {error}", path.display()))?;
         let Some(format) = PatchFormat::of(&patch) else {
+            if *how == Offered::Chosen {
+                refused.push(path.clone());
+            }
             continue;
         };
         let named_for_game = path.file_stem().is_some_and(|stem| stem.to_string_lossy() == game_stem);
@@ -159,16 +165,75 @@ pub fn apply_belonging(game: &Path, offered: &[(PathBuf, Offered)]) -> Result<Op
         if !may_try {
             continue;
         }
-        if let Ok(result) = patching::apply(&patch, &bytes) {
-            bytes = result;
-            applied.push(path.clone());
-            if names.made.is_some() {
-                made = names.made;
+        match patching::apply(&patch, &bytes) {
+            Ok(result) => {
+                bytes = result;
+                applied.push(path.clone());
+                if names.made.is_some() {
+                    made = names.made;
+                }
             }
+            Err(_) if *how == Offered::Chosen => refused.push(path.clone()),
+            Err(_) => {}
         }
     }
-    if applied.is_empty() {
-        return Ok(None);
+    Ok(Patched { patches: applied, bytes, made, refused })
+}
+
+/// The size of the original game, as stated in a BPS or UPS patch header.
+pub fn source_size(patch: &[u8]) -> Option<u64> {
+    let rest = match PatchFormat::of(patch)? {
+        PatchFormat::Bps | PatchFormat::Ups => &patch[4..],
+        _ => return None,
+    };
+    // byuu's number format: little-endian base-128, plus one per continuation.
+    let (mut value, mut shift) = (0u64, 0u32);
+    for &byte in rest.iter().take(10) {
+        value = value.checked_add(u64::from(byte & 0x7F).checked_shl(shift)?)?;
+        if byte & 0x80 != 0 {
+            return Some(value);
+        }
+        shift += 7;
+        value = value.checked_add(1u64.checked_shl(shift)?)?;
     }
-    Ok(Some(Patched { patches: applied, bytes, made }))
+    None
+}
+
+/// When someone drops a patch on its own, the game in `patch`'s folder that
+/// it is for: the one with the patch's name, the one in an xdelta header,
+/// or one that has the original size stated in a BPS or UPS patch and to
+/// which the patch applies. `games` are the game files in the folder.
+pub fn game_for(patch: &Path, games: &[PathBuf]) -> Result<PathBuf, String> {
+    let bytes = fs::read(patch).map_err(|error| format!("read {}: {error}", patch.display()))?;
+    let named = |wanted: &str| {
+        games.iter().find(|game| game.file_stem().is_some_and(|stem| stem.to_string_lossy() == wanted))
+    };
+    if let Some(game) = patch.file_stem().and_then(|stem| named(&stem.to_string_lossy())) {
+        return Ok(game.clone());
+    }
+    if let Some(from) = xdelta_names(&bytes).and_then(|names| names.from) {
+        if let Some(game) = games.iter().find(|game| game.file_name().is_some_and(|name| name.to_string_lossy() == from)) {
+            return Ok(game.clone());
+        }
+    }
+    let size = source_size(&bytes);
+    let fits: Vec<&PathBuf> = games
+        .iter()
+        .filter(|game| size.is_none_or(|size| fs::metadata(game).is_ok_and(|meta| meta.len() == size)))
+        .filter(|game| {
+            apply_belonging(game, &[(patch.to_path_buf(), Offered::Chosen)])
+                .is_ok_and(|patched| !patched.patches.is_empty())
+        })
+        .collect();
+    match fits.as_slice() {
+        [game] => Ok((*game).clone()),
+        [] => Err(format!(
+            "{} is for none of the games in its folder. Drop the game with it.",
+            patch.file_name().unwrap_or_default().to_string_lossy()
+        )),
+        _ => Err(format!(
+            "{} applies to more than one game in its folder. Drop the game with it.",
+            patch.file_name().unwrap_or_default().to_string_lossy()
+        )),
+    }
 }

@@ -75,8 +75,20 @@ pub fn inspect_game_with_system(
     online: bool,
     system_override: Option<&str>,
 ) -> Result<Inspection, InspectionError> {
-    let original = inspect_file(rom, cache, online, system_override)?;
-    patched::join(original, rom, cache, online)
+    inspect_game_with_files(rom, cache, online, system_override, &content::GameFiles::default())
+}
+
+/// The same, with the files the author left out and added, a patch among them.
+pub fn inspect_game_with_files(
+    rom: &Path,
+    cache: &Path,
+    online: bool,
+    system_override: Option<&str>,
+    files: &content::GameFiles,
+) -> Result<Inspection, InspectionError> {
+    let (game, files) = content::dropped_game(rom, files).map_err(InspectionError::new)?;
+    let original = inspect_file(&game, cache, online, system_override)?;
+    patched::join(original, &game, cache, online, &files)
 }
 
 /// The lookup of one game file as it is on disk.

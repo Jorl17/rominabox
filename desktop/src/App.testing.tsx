@@ -72,10 +72,22 @@ vi.mock("./bridge", async (importOriginal) => {
       if (!assess) return actual.assessFirmware(system, files);
       return assess(system, files);
     },
-    travelingFiles: (path: string, system: string) => {
+    // A test lists the files, and in the answer from the exporter each has a
+    // role, with the game file first.
+    travelingFiles: async (path: string, system: string) => {
       const list = travelingHandlers.list;
       if (!list) return actual.travelingFiles(path, system);
-      return list(path, system);
+      const listed = await list(path, system);
+      return {
+        entry: listed.entry,
+        files: listed.files.map((name, index) => ({
+          name,
+          role: { kind: index === 0 ? "game" : "named" } as const,
+        })),
+        patches: [],
+        refused: [],
+        added: [],
+      };
     },
   };
 });

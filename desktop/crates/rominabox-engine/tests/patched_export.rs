@@ -62,6 +62,6 @@ fn the_details_step_names_the_patch_that_travels() {
     fs::write(&rom, ORIGINAL).unwrap();
     fs::write(root.join("sonic.ips"), ips(ORIGINAL, PATCHED)).unwrap();
     let traveling = rominabox_engine::traveling::files_for(&rom, Some("megadrive")).unwrap();
-    assert_eq!(traveling.files, vec!["sonic.bin".to_string()]);
+    assert_eq!(traveling.names(), vec!["sonic.bin".to_string()]);
     assert_eq!(traveling.patches, vec!["sonic.ips".to_string()]);
 }

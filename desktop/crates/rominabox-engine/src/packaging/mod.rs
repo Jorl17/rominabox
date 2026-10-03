@@ -498,7 +498,7 @@ where
     let core_name = OsStr::new(packager.core_file());
     let core = resources.join(core_name);
     packager.place_core(&shipped_cores(request, resolved, targets), &core, &system.name)?;
-    let collected_content = content::collect_for(&request.game.rom, Some(&system.id))
+    let collected_content = content::collect_with(&request.game.rom, Some(&system.id), &request.game.files)
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     let content_directory = resources.join("content");
     for file in &collected_content.files {
@@ -749,7 +749,7 @@ fn validate_request(
             .about(path));
         }
     }
-    content::collect_for(&request.game.rom, Some(&system.id))
+    content::collect_with(&request.game.rom, Some(&system.id), &request.game.files)
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     // We reject a container format by the core that would have to read it,
     // not by the console name, because CHD support in an upstream project

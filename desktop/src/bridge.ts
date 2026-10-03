@@ -163,10 +163,25 @@ export function shaderWarnings(selection: {
   if (!native) return Promise.resolve([]);
   return invoke("shader_warnings", { selection });
 }
-export type Traveling = { entry: string; files: string[]; patches?: string[] };
+/** What a file is to the game (content::FileRole). */
+export type FileRole =
+  | { kind: "game" }
+  | { kind: "named" }
+  | { kind: "companion"; required: boolean }
+  | { kind: "added" };
+export type TravelingFile = { name: string; role: FileRole };
+/** What the author left out of, and added to, the files of a game. */
+export type GameFiles = { leftOut: string[]; added: string[] };
+export type Traveling = {
+  entry: string;
+  files: TravelingFile[];
+  patches: string[];
+  refused: string[];
+  added: string[];
+};
 /** The game file, the files copied with it, then the patches applied to it. */
 export function travelingNames(traveling: Traveling): string[] {
-  return [...traveling.files, ...(traveling.patches ?? [])];
+  return [...traveling.files.map((file) => file.name), ...traveling.patches];
 }
 /**
  * The browser walkthrough has no desktop shell. In its server we answer

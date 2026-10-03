@@ -86,6 +86,10 @@ pub struct Game {
     /// A Mac game also runs on Intel Macs. Ignored for a Windows game.
     #[serde(default = "crate::builder::unstated::intel_macs")]
     pub intel_macs: bool,
+    /// What the author left out of, and added to, the files that go with
+    /// the game: companions, patches and anything else.
+    #[serde(default)]
+    pub files: crate::content::GameFiles,
 }
 
 impl Game {

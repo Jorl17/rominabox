@@ -230,7 +230,7 @@ fn a_game_alone_is_exported_as_the_builder_makes_it() {
     assert!(identified["iconPath"].is_string(), "{identified}");
     assert!(identified["warnings"].is_array(), "{identified}");
     let content = event(&printed, "content");
-    assert_eq!(content["files"], json!(["cartridge.md"]), "{content}");
+    assert_eq!(content["files"], json!([{ "name": "cartridge.md", "role": { "kind": "game" } }]), "{content}");
     assert!(events(&printed, "firmware").is_empty(), "{printed}");
 }
 
@@ -287,7 +287,14 @@ fn the_bios_assessment_is_printed() {
     assert_eq!(firmware["files"][0]["counted"], false, "{firmware}");
     assert!(firmware["files"][0]["reason"].is_string(), "{firmware}");
     let content = event(&printed, "content");
-    assert_eq!(content["files"], json!(["disc.cue", "disc.bin"]), "{content}");
+    assert_eq!(
+        content["files"],
+        json!([
+            { "name": "disc.cue", "role": { "kind": "game" } },
+            { "name": "disc.bin", "role": { "kind": "named" } },
+        ]),
+        "{content}"
+    );
     // The request contains the title and console, so we do not look it up.
     assert!(events(&printed, "identified").is_empty(), "{printed}");
 }

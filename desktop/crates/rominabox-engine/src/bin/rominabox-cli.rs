@@ -21,6 +21,9 @@ struct InspectRequest {
     online: bool,
     #[serde(default)]
     system: Option<String>,
+    /// The files the author left out and added, a patch among them.
+    #[serde(default)]
+    files: rominabox_engine::content::GameFiles,
 }
 
 #[derive(Deserialize)]
@@ -53,7 +56,7 @@ fn print_details(game: &Game, identified: Option<&metadata::Inspection>) {
     if let Some(found) = identified {
         println!("{}", json!({ "type": "identified", "identified": found }));
     }
-    if let Ok(content) = traveling::files_for(&game.rom, Some(&game.system)) {
+    if let Ok(content) = traveling::files_with(&game.rom, Some(&game.system), &game.files) {
         println!("{}", json!({ "type": "content", "content": content }));
     }
     if let Some(system) = systems::find(&game.system).filter(|system| !system.firmware.is_empty()) {
@@ -199,14 +202,20 @@ fn run() -> Result<(), String> {
         "content" => {
             let input = read_request()?;
             #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
             struct Request {
                 rom: PathBuf,
                 system: Option<String>,
+                #[serde(default)]
+                files: rominabox_engine::content::GameFiles,
             }
             let request: Request = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid content request: {error}"))?;
-            let result =
-                rominabox_engine::traveling::files_for(&request.rom, request.system.as_deref())?;
+            let result = rominabox_engine::traveling::files_with(
+                &request.rom,
+                request.system.as_deref(),
+                &request.files,
+            )?;
             println!("{}", json!({ "type": "result", "result": result }));
             Ok(())
         }
@@ -218,11 +227,12 @@ fn run() -> Result<(), String> {
                 Some(cache) => cache,
                 None => builder::Places::of(builder::identifier()).metadata_cache()?,
             };
-            let result = metadata::inspect_game_with_system(
+            let result = metadata::inspect_game_with_files(
                 &request.rom,
                 &cache,
                 request.online,
                 request.system.as_deref(),
+                &request.files,
             )
             .map_err(|error| error.to_string())?;
             println!("{}", json!({ "type": "result", "result": result }));
