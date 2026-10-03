@@ -326,6 +326,15 @@ JOYPAD_AUTOCONFIG_REPO = "libretro/retroarch-joypad-autoconfig"
 JOYPAD_AUTOCONFIG_REVISION = "1c6d74cef79b56a3a5dc283b1b0b2e4af73376ff"
 JOYPAD_AUTOCONFIG_LICENSE_FILE = "retroarch-joypad-autoconfig.txt"
 JOYPAD_AUTOCONFIG_COMPONENT = "retroarch-joypad-autoconfig"
+# Our own profiles, in the same driver folders, for a pad with no upstream
+# profile, or whose ids an upstream profile uses for another pad.
+OWN_JOYPAD_PROFILES = Path(__file__).resolve().parent.parent / "integrations/joypad-profiles"
+
+
+def own_joypad_profiles(driver: str) -> list[Path]:
+    """Return our own profiles for `driver`."""
+    return sorted((OWN_JOYPAD_PROFILES / driver).glob("*.cfg"))
+
 
 # We test with a DualSense (1356/3302), so under each driver where a pad is
 # identified by its ids, this profile must be the only one that matches it. In
@@ -577,6 +586,12 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
             elif Path(member.name).name == "COPYING" and len(Path(member.name).parts) == 2:
                 licence_member = member.name
                 upstream_licence = licences.clean(licences.sources.decode(source.read()))
+    # We add our own profiles to the upstream ones and stage them the same way.
+    for driver in drivers:
+        for path in own_joypad_profiles(driver):
+            if any(staged == driver and filename == path.name for staged, filename, _raw in profiles):
+                raise RuntimeError(f"{path.name} is both upstream's {driver} profile and ROM-in-a-Box's")
+            profiles.append((driver, path.name, path.read_bytes()))
     entry = licences.entry("data", JOYPAD_AUTOCONFIG_COMPONENT)
     if not entry.is_file():
         licence_warning(f"{entry.name}: licenses/data has no entry for the controller profiles")
@@ -651,7 +666,8 @@ def stage_joypad_autoconfig(root: Path, drivers: list[str]) -> dict[str, object]
         "license_file": JOYPAD_AUTOCONFIG_LICENSE_FILE,
         "license_source_member": licence_member,
         "origin": (
-            f"Pinned {', '.join(drivers)} profiles from libretro/retroarch-joypad-autoconfig. "
+            f"Pinned {', '.join(drivers)} profiles from libretro/retroarch-joypad-autoconfig, "
+            "and ROM-in-a-Box's own from integrations/joypad-profiles, for pads upstream has none for. "
             f"Only {', '.join(f'{driver}/*.cfg' for driver in drivers)} is staged: the folders "
             "the exported player's controller driver reads. Profiles upstream disabled, which "
             "name no device and no complete pair of ids, are not staged. "
