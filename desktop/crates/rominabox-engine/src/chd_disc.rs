@@ -9,9 +9,12 @@
 //! little-endian, named as Redump names a disc's tracks. We do not read
 //! GD-ROM CHDs (`CHGD`) here.
 
-use std::fs::File;
+use std::collections::HashMap;
+use std::fs::{self, File};
 use std::io::{self, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
+use std::time::SystemTime;
 
 /// The bytes in a CHD for one CD frame: the sector, then its subcode.
 const FRAME_BYTES: u64 = 2352 + 96;
@@ -217,8 +220,26 @@ pub fn write_track(path: &Path, track: &Track, out: &mut impl Write) -> io::Resu
     Ok(())
 }
 
-/// The CRC-32 of `track` as we write it out.
+/// The CRC-32 of `track` as we write it out. To compute it we decompress the
+/// track, so we compute it once for each CHD and track, and do not decompress
+/// the same file (by its size and modification time) again.
 pub fn track_crc(path: &Path, track: &Track) -> io::Result<u32> {
+    type Key = (PathBuf, u64, Option<SystemTime>, u64, u64);
+    static KNOWN: OnceLock<Mutex<HashMap<Key, u32>>> = OnceLock::new();
+    let metadata = fs::metadata(path)?;
+    let key = (path.to_path_buf(), metadata.len(), metadata.modified().ok(), track.first_frame, track.frames);
+    let known = KNOWN.get_or_init(Default::default);
+    if let Some(crc) = known.lock().ok().and_then(|known| known.get(&key).copied()) {
+        return Ok(crc);
+    }
+    let crc = decompressed_crc(path, track)?;
+    if let Ok(mut known) = known.lock() {
+        known.insert(key, crc);
+    }
+    Ok(crc)
+}
+
+fn decompressed_crc(path: &Path, track: &Track) -> io::Result<u32> {
     struct Hashing(crc32fast::Hasher);
     impl Write for Hashing {
         fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
