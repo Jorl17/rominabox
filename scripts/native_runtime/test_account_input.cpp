@@ -96,11 +96,9 @@ int main(int argc, char **argv) {
    check(password->GetValue() == "p\xc3\xa9\xc4\x85-paste", "Command-V pastes through the clipboard boundary");
    username->Focus();
    entry.controller(RIB_KEY_OK);
-   check(keyboard_active && entry.keyboard_open(), "Controller opens RetroArch keyboard");
-   rib_host_keyboard_choose(0); entry.update();
-   check(username->GetValue() == "ax", "Controller keyboard updates the field");
-   entry.cancel_keyboard();
-   check(username->GetValue() == "a" && !keyboard_active, "Cancel restores original field and closes keyboard");
+   check(!keyboard_active && !entry.keyboard_open(), "A controller's OK never opens the on-screen keyboard");
+   check(username->IsPseudoClassSet("focus") && username->GetValue() == "a",
+         "and leaves the field focused for the physical keyboard, unchanged");
    Clicks cancel, submit;
    auto *cancel_button = document.root()->GetElementById("achievements-cancel");
    auto *submit_button = document.root()->GetElementById("achievements-submit");
