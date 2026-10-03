@@ -503,6 +503,7 @@ main {
   margin: 0;
 }
 .traveling-also {
+  font: inherit;
   font-size: 12px;
   font-weight: 400;
   line-height: 1.4;
@@ -510,6 +511,87 @@ main {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  align-self: flex-start;
+  max-width: 100%;
+}
+.traveling-also:hover,
+.traveling-also[aria-expanded="true"] {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.game-files {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 400;
+}
+.game-files ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.game-files li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+}
+.game-files li + li {
+  border-top: 1px solid var(--line);
+}
+.game-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.game-file-kind {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.game-file-refused .game-file-kind {
+  color: var(--danger, #b3261e);
+}
+.game-file-left-out .game-file-name {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.game-file-warning {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--highlight);
+  color: var(--ink);
+  font-weight: 700;
+  cursor: help;
+}
+.game-file-remove {
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+}
+.game-file-remove:hover {
+  color: var(--ink);
+}
+.game-files li > button:not(.game-file-remove),
+.game-file-add {
+  font: inherit;
+  font-size: 12px;
+  align-self: flex-start;
 }
 .advanced {
   border-top: 1px solid var(--line);

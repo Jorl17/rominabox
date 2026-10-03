@@ -78,7 +78,7 @@ function ask(command, request) {
  */
 const ANSWERS = {
   "/__rominabox/traveling": (query) =>
-    ask("content", { rom: query.get("path") || "", system: query.get("system") || null }),
+    ask("content", { rom: query.get("path") || "", system: query.get("system") || null, files: JSON.parse(query.get("files") || "null") || undefined }),
   "/__rominabox/firmware": (query) =>
     ask("firmware", { system: query.get("system") || "", files: query.getAll("file") }),
 };

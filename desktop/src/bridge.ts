@@ -223,7 +223,7 @@ export function travelingFiles(
   if (native) return invoke("traveling_files", { path, system, files });
   return askWalkthrough(
     "traveling",
-    new URLSearchParams({ path, system }),
+    new URLSearchParams({ path, system, files: JSON.stringify(files ?? null) }),
     "The files that travel with this game could not be read.",
   );
 }
@@ -280,6 +280,15 @@ export function capturePadPosition(seconds: number): Promise<string | null> {
 }
 export function cancelPadCapture(): Promise<void> {
   return native ? invoke("cancel_pad_capture") : Promise.resolve();
+}
+/** Files the author adds to a game: companions, patches, anything else. */
+export async function pickGameFiles(): Promise<string[]> {
+  const files = await open({
+    multiple: true,
+    directory: false,
+    title: "Add files to the game",
+  });
+  return Array.isArray(files) ? files : files ? [files] : [];
 }
 export async function pickFirmware(): Promise<string[]> {
   const files = await open({

@@ -4,7 +4,7 @@
 // We name three tracks. Six is more than a handful, so we show a count.
 const NAMED_COMPANIONS = 5;
 
-function alsoImporting(files: string[]): string | null {
+export function alsoImporting(files: string[]): string | null {
   if (files.length < 2) return null;
   const extras = files.slice(1);
   if (extras.length > NAMED_COMPANIONS) {
