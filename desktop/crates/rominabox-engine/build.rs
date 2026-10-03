@@ -18,6 +18,10 @@ fn patch_formats() {
         "tasks/patch_stream.c",
         "libretro-common/encodings/encoding_crc32.c",
         "libretro-common/encodings/encoding_vcdiff.c",
+        // The LZMA2 decoder with which we read xdelta3's LZMA in VCDIFF.
+        "libretro-common/formats/7z/r7z_lzma.c",
+        "libretro-common/formats/7z/r7z_lzma_stream.c",
+        "libretro-common/formats/7z/r7z_lzma2.c",
     ];
     for source in sources.iter().chain(&["tasks/patch_stream.h"]) {
         println!("cargo:rerun-if-changed={}", retroarch.join(source).display());
