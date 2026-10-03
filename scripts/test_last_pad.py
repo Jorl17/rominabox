@@ -26,6 +26,8 @@ FORK = [
     "libretro-common/string/stdstring.c",
     "libretro-common/encodings/encoding_utf.c",
     "libretro-common/file/file_path.c",
+    "libretro-common/features/features_cpu.c",
+    "libretro-common/time/rtime.c",
 ]
 
 
