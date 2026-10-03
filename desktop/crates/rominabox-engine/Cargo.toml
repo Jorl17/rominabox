@@ -15,6 +15,9 @@ dirs = "6"
 # is the same path, so the paths we show read as the author wrote them.
 dunce = "1.0"
 md-5 = "0.11"
+# For mapping a game and the patched game from disk, so that when we patch a
+# disc, only the patched parts are in memory (src/patching.rs). MIT or Apache-2.0.
+memmap2 = "0.9"
 image.workspace = true
 percent-encoding = "2.3"
 serde = { version = "1", features = ["derive"] }

@@ -8,8 +8,8 @@ use crate::meta_binds::isolated_meta_bind_config;
 use sha2::{Digest, Sha256};
 use std::ffi::OsStr;
 use std::fs;
-use std::io::{self, Read};
-use std::path::Path;
+use std::io;
+use std::path::{Path, PathBuf};
 
 /// An optional namespace for everything that belongs to an export.
 ///
@@ -29,8 +29,8 @@ pub(super) fn isolation_namespace() -> Option<String> {
 }
 
 /// The identity of a game, from which we name its data folder, its sandbox
-/// and its app ID: the console, the title and the ROM's bytes, or those of
-/// the patched game when the game comes with patches. When the author
+/// and its app ID: the console, the title and the ROM's bytes, followed by
+/// those of the patches when the game comes with patches. When the author
 /// exports the same game again with the same title, the player keeps the
 /// saves, and the same ROM under another title is a separate game.
 ///
@@ -39,13 +39,13 @@ pub(super) fn isolation_namespace() -> Option<String> {
 /// other test in this binary shares.
 pub(super) fn stable_identity(
     rom: &Path,
-    patched: Option<&[u8]>,
+    patches: &[PathBuf],
     system: &str,
     title: &str,
     namespace: Option<&str>,
 ) -> Result<String, ExportError> {
     // The author's game file. When it is gone, we tell the author that.
-    let mut file = fs::File::open(rom).map_err(|error| {
+    fs::File::open(rom).map_err(|error| {
         let stage = if error.kind() == io::ErrorKind::NotFound {
             ErrorStage::Missing
         } else {
@@ -65,21 +65,10 @@ pub(super) fn stable_identity(
     hash.update(b"\0");
     hash.update(title.trim().as_bytes());
     hash.update(b"\0");
-    // A patched game is a separate game, with separate saves and storage.
-    if let Some(patched) = patched {
-        hash.update(patched);
-        return Ok(format!("{:x}", hash.finalize())[..IDENTITY_CHARS].to_string());
-    }
-    let mut buffer = [0u8; 1024 * 128];
-    loop {
-        let count = file
-            .read(&mut buffer)
-            .map_err(|error| ExportError::io(ErrorStage::Configure, rom, error))?;
-        if count == 0 {
-            break;
-        }
-        hash.update(&buffer[..count]);
-    }
+    // A patched game is a separate game, with separate saves and storage, so
+    // we hash the bytes of the original followed by those of the patches.
+    crate::patches::feed_patched(&mut hash, rom, patches)
+        .map_err(|(path, error)| ExportError::io(ErrorStage::Configure, &path, error))?;
     Ok(format!("{:x}", hash.finalize())[..IDENTITY_CHARS].to_string())
 }
 

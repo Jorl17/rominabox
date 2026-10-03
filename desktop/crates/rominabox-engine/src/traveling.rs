@@ -78,7 +78,7 @@ pub fn files_with(dropped: &Path, system: Option<&str>, choices: &GameFiles) -> 
     Ok(Traveling {
         entry,
         files,
-        patches: names(&set.patches),
+        patches: names(set.patches()),
         refused: names(&set.refused_patches),
         added: choices.added,
     })

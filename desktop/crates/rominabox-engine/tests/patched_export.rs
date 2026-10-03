@@ -65,3 +65,30 @@ fn the_details_step_names_the_patch_that_travels() {
     assert_eq!(traveling.names(), vec!["sonic.bin".to_string()]);
     assert_eq!(traveling.patches, vec!["sonic.ips".to_string()]);
 }
+
+/// We apply a patch that the author chose when we export the game. When it
+/// fails, we refuse the export and name the patch, here an xdelta patch for
+/// another game, whose header contains the name of a file other than this game.
+#[test]
+fn a_chosen_patch_that_fails_refuses_the_export_and_names_the_patch() {
+    let root = workspace();
+    let cancelled = AtomicBool::new(false);
+    let elsewhere = root.join("elsewhere");
+    fs::create_dir_all(&elsewhere).unwrap();
+    let patch = elsewhere.join("Director's Cut.xdelta");
+    fs::write(
+        &patch,
+        fs::read(rominabox_engine::repo::at("desktop/crates/rominabox-engine/tests/fixtures/patches/test-game-lzma.xdelta"))
+            .unwrap(),
+    )
+    .unwrap();
+    let mut request = export_request(&root);
+    request.game.files.added = vec![patch];
+
+    let traveling = rominabox_engine::traveling::files_with(&request.game.rom, Some("megadrive"), &request.game.files).unwrap();
+    assert_eq!(traveling.patches, vec!["Director's Cut.xdelta".to_string()], "nothing it states rules the game out");
+    let refused = rominabox_engine::packaging::export_game(&request, &cancelled, |_| {}).unwrap_err();
+    assert_eq!(refused.stage, rominabox_engine::packaging::ErrorStage::Refused);
+    assert!(refused.message.contains("Director's Cut.xdelta does not apply to sonic.bin"), "{}", refused.message);
+    assert!(!request.output_dir.join("Hotkey Isolation.app").exists(), "no game is left half made");
+}

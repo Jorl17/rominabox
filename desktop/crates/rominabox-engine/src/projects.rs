@@ -103,6 +103,13 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
         .iter()
         .map(|file| archive_content_name(&file.relative))
         .collect::<Result<Vec<_>, _>>()?;
+    // We put the game's patches beside it, under their own names.
+    let patch_assets = content
+        .patches()
+        .iter()
+        .map(|patch| archive_named_asset(CONTENT_PREFIX, patch))
+        .collect::<Result<Vec<_>, _>>()?;
+    ensure_unique_names(&[content_assets.as_slice(), &patch_assets].concat(), "content")?;
     let firmware_assets = request
         .settings
         .firmware
@@ -134,21 +141,24 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
             firmware: firmware_assets.iter().map(PathBuf::from).collect(),
             shaders: stored_shaders,
             // We store the content as we export it: without what the author
-            // left out, with the patches applied, and with each added file as
-            // one of its files, under its name in the archive.
+            // left out, and with each added file as one of its files, under
+            // its name in the archive. We store the original game, and its
+            // patches as added files, which we apply at export.
             files: content::GameFiles {
                 left_out: Vec::new(),
                 added: content
                     .files
                     .iter()
                     .filter(|file| file.role == content::FileRole::Added)
-                    .map(|file| archive_content_name(&file.relative).map(PathBuf::from))
+                    .map(|file| archive_content_name(&file.relative))
+                    .chain(patch_assets.iter().cloned().map(Ok))
+                    .map(|name| name.map(PathBuf::from))
                     .collect::<Result<_, _>>()?,
             },
             ..request.settings.clone()
         },
         assets: ProjectAssets {
-            content: content_assets,
+            content: [content_assets, patch_assets.clone()].concat(),
             shaders: shader_assets,
         },
     };
@@ -167,11 +177,15 @@ pub fn save_project(request: &ProjectSaveRequest) -> Result<ProjectArchiveResult
         .large_file(true);
     write_bytes(&mut writer, MANIFEST_PATH, &manifest_bytes, options)?;
     for (file, name) in content.files.iter().zip(&manifest.assets.content) {
-        if let Some(bytes) = &file.staged_bytes {
-            write_bytes(&mut writer, name, bytes, options)?;
-        } else {
-            write_path(&mut writer, name, &file.source, MAX_ASSET_BYTES, options)?;
+        match &file.staging {
+            content::Staging::Bytes(bytes) => write_bytes(&mut writer, name, bytes, options)?,
+            content::Staging::Copy | content::Staging::Patched(_) => {
+                write_path(&mut writer, name, &file.source, MAX_ASSET_BYTES, options)?
+            }
         }
+    }
+    for (patch, name) in content.patches().iter().zip(&patch_assets) {
+        write_path(&mut writer, name, patch, MAX_ASSET_BYTES, options)?;
     }
     for (path, name) in request.settings.firmware.iter().zip(&firmware_assets) {
         write_path(&mut writer, name, path, MAX_ASSET_BYTES, options)?;
@@ -425,8 +439,8 @@ fn validate_save_sizes(
             return Err("project assets exceed the supported archive size limit".to_string());
         }
     }
-    for file in &content.files {
-        total = add_sized_asset(total, "game content", &file.source, MAX_ASSET_BYTES)?;
+    for path in content.files.iter().map(|file| &file.source).chain(content.patches()) {
+        total = add_sized_asset(total, "game content", path, MAX_ASSET_BYTES)?;
     }
     for path in &settings.firmware {
         total = add_sized_asset(total, "firmware", path, MAX_ASSET_BYTES)?;

@@ -1,27 +1,30 @@
-//! Which patches belong to a game, and the patched game.
+//! Which patches belong to a game, decided without applying them.
 //!
 //! We include a patch found beside a dropped game when it clearly belongs,
 //! as we do with a `.sbi`, and export the patched game instead of the
-//! original. What "clearly" means depends on what the format can prove.
+//! original. What "clearly" means depends on what the patch format states.
 //!
-//! - BPS and UPS contain a checksum of the original game, which we check
-//!   when we apply the patch with RetroArch's code, so a patch that applies
-//!   was made for this game.
+//! - BPS and UPS state the size and CRC-32 of the original game, and we
+//!   compare them with the game's.
 //! - An xdelta patch belongs when its header contains this game's file name,
-//!   or when it contains xdelta3's window checksums and applies (with the
-//!   wrong game, a window's checksum does not match and the patch fails).
-//! - IPS proves nothing, so it belongs only when it has the game's name, as
+//!   or when it has the game's name.
+//! - IPS states nothing, so it belongs only when it has the game's name, as
 //!   in RetroArch's own convention (`Game.sfc`, `Game.ips`).
 //!
-//! A patch the author chose (dropped with the game, or added) belongs when it
-//! applies. We apply several in file-name order, each to the previous result.
+//! A patch the author chose (dropped with the game, or added) belongs unless
+//! what it states contradicts the game. We apply several in file-name order,
+//! each to the previous result, and a BPS or UPS patch also states the game
+//! it produces, so we check the next patch against that. We apply nothing
+//! here. At export we apply them once (crate::patching::apply_files), and
+//! refuse the export when a patch fails.
 
-use std::fs;
+use std::fs::{self, File};
+use std::io::{self, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::patching::{self, PatchFormat};
+use crate::patching::PatchFormat;
 
 /// The file extensions of patch files.
 const PATCH_EXTENSIONS: [&str; 5] = ["ips", "ups", "bps", "xdelta", "vcdiff"];
@@ -119,76 +122,121 @@ pub enum Offered {
     Chosen,
 }
 
-/// The patched game, and the patches we applied to make it.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+/// The patches that belong to a game, and what they state about the result.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Patched {
+pub struct Belonging {
+    /// The patches we apply at export, in the order we apply them.
     pub patches: Vec<PathBuf>,
-    #[serde(skip)]
-    pub bytes: Vec<u8>,
     /// The file name of the patched game, when a patch states it. An xdelta
     /// header contains the name of the file it produces.
     pub made: Option<String>,
-    /// Patches the author chose that do not apply to this game.
+    /// Patches the author chose that, by what they state, are for another game.
     pub refused: Vec<PathBuf>,
 }
 
-/// `game` with every patch in `offered` that belongs to it applied, in
-/// file-name order. With none, `patches` is empty and `bytes` the game.
-pub fn apply_belonging(game: &Path, offered: &[(PathBuf, Offered)]) -> Result<Patched, String> {
-    let mut ordered: Vec<&(PathBuf, Offered)> = offered.iter().collect();
-    ordered.sort_by_key(|(path, _)| path.file_name().map(|name| name.to_string_lossy().to_lowercase()));
-    let mut bytes = fs::read(game).map_err(|error| format!("read {}: {error}", game.display()))?;
-    let game_name = game.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
-    let game_stem = game.file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or_default();
-    let mut applied = Vec::new();
-    let mut refused = Vec::new();
-    let mut made = None;
-    for (path, how) in ordered {
-        let patch = fs::read(path).map_err(|error| format!("read {}: {error}", path.display()))?;
-        let Some(format) = PatchFormat::of(&patch) else {
-            if *how == Offered::Chosen {
-                refused.push(path.clone());
-            }
-            continue;
-        };
-        let named_for_game = path.file_stem().is_some_and(|stem| stem.to_string_lossy() == game_stem);
-        let names = xdelta_names(&patch).unwrap_or_default();
-        let may_try = match (how, format) {
-            (Offered::Chosen, _) => true,
-            (Offered::Beside, PatchFormat::Bps | PatchFormat::Ups) => true,
-            (Offered::Beside, PatchFormat::Xdelta) => {
-                named_for_game || names.checked || names.from.as_deref() == Some(game_name.as_str())
-            }
-            (Offered::Beside, PatchFormat::Ips) => named_for_game,
-        };
-        if !may_try {
-            continue;
-        }
-        match patching::apply(&patch, &bytes) {
-            Ok(result) => {
-                bytes = result;
-                applied.push(path.clone());
-                if names.made.is_some() {
-                    made = names.made;
-                }
-            }
-            Err(_) if *how == Offered::Chosen => refused.push(path.clone()),
-            Err(_) => {}
-        }
-    }
-    Ok(Patched { patches: applied, bytes, made, refused })
+/// What we know of the game we would apply a patch to: the original, or the
+/// result of the patches before it.
+struct Game {
+    size: Option<u64>,
+    crc: Crc,
+    /// Its file name, which an xdelta header can contain.
+    name: String,
 }
 
-/// The size of the original game, as stated in a BPS or UPS patch header.
-pub fn source_size(patch: &[u8]) -> Option<u64> {
-    let rest = match PatchFormat::of(patch)? {
-        PatchFormat::Bps | PatchFormat::Ups => &patch[4..],
+enum Crc {
+    /// The original's, which we read from its file when we apply a patch.
+    OfFile(PathBuf),
+    Known(u32),
+    Unknown,
+}
+
+impl Game {
+    fn crc(&mut self) -> io::Result<Option<u32>> {
+        if let Crc::OfFile(path) = &self.crc {
+            self.crc = Crc::Known(file_crc(path)?);
+        }
+        Ok(match self.crc {
+            Crc::Known(crc) => Some(crc),
+            _ => None,
+        })
+    }
+}
+
+/// The CRC-32 of a file, which we read a piece at a time.
+fn file_crc(path: &Path) -> io::Result<u32> {
+    let mut file = File::open(path)?;
+    let mut hasher = crc32fast::Hasher::new();
+    let mut buffer = vec![0u8; 1 << 20];
+    loop {
+        match file.read(&mut buffer)? {
+            0 => return Ok(hasher.finalize()),
+            count => hasher.update(&buffer[..count]),
+        }
+    }
+}
+
+/// How a patch fits the game, and the result when we apply it.
+enum Fit {
+    /// What it states matches this game.
+    Proved(Game),
+    /// It states nothing that rules this game out.
+    Possible(Game),
+    /// What it states matches another game.
+    Disproved,
+}
+
+/// The parts of a patch file that we read for the checks: its start, with
+/// the header of every format, and its last twelve bytes, with the BPS and
+/// UPS checksums. A patch for a disc can be large, and we need nothing else.
+struct PatchStart {
+    head: Vec<u8>,
+    tail: Vec<u8>,
+}
+
+const HEAD_BYTES: u64 = 64 * 1024;
+
+fn read_start(path: &Path) -> io::Result<PatchStart> {
+    let mut file = File::open(path)?;
+    let length = file.metadata()?.len();
+    let mut head = Vec::new();
+    (&mut file).take(HEAD_BYTES).read_to_end(&mut head)?;
+    let mut tail = Vec::new();
+    file.seek(SeekFrom::Start(length.saturating_sub(12)))?;
+    file.read_to_end(&mut tail)?;
+    Ok(PatchStart { head, tail })
+}
+
+/// What a BPS or UPS patch states: the size and CRC-32 of the original game
+/// and of the patched game.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Declared {
+    source: (u64, u32),
+    target: (u64, u32),
+}
+
+/// What `head`, the start of a BPS or UPS patch, and `tail`, its last twelve
+/// bytes, state about the original and the patched game.
+fn declared(head: &[u8], tail: &[u8]) -> Option<Declared> {
+    match PatchFormat::of(head)? {
+        PatchFormat::Bps | PatchFormat::Ups => {}
         _ => return None,
-    };
-    // byuu's number format: little-endian base-128, plus one per continuation.
+    }
+    let checksums: &[u8; 12] = tail.try_into().ok()?;
+    let word = |at: usize| u32::from_le_bytes([checksums[at], checksums[at + 1], checksums[at + 2], checksums[at + 3]]);
+    let mut at = 4;
+    let source = byuu_number(head, &mut at)?;
+    let target = byuu_number(head, &mut at)?;
+    Some(Declared { source: (source, word(0)), target: (target, word(4)) })
+}
+
+/// byuu's number format, which BPS and UPS use for sizes: little-endian
+/// base-128, plus one per continuation.
+fn byuu_number(bytes: &[u8], at: &mut usize) -> Option<u64> {
     let (mut value, mut shift) = (0u64, 0u32);
-    for &byte in rest.iter().take(10) {
+    for _ in 0..10 {
+        let byte = *bytes.get(*at)?;
+        *at += 1;
         value = value.checked_add(u64::from(byte & 0x7F).checked_shl(shift)?)?;
         if byte & 0x80 != 0 {
             return Some(value);
@@ -199,30 +247,121 @@ pub fn source_size(patch: &[u8]) -> Option<u64> {
     None
 }
 
+/// How `patch`, read as `start`, fits `game`. `named_for_game` is whether the
+/// patch has the game's name.
+fn fit(start: &PatchStart, format: PatchFormat, named_for_game: bool, game: &mut Game) -> io::Result<Fit> {
+    let unknown = |name: String| Game { size: None, crc: Crc::Unknown, name };
+    Ok(match format {
+        PatchFormat::Bps | PatchFormat::Ups => {
+            let Some(declared) = declared(&start.head, &start.tail) else {
+                return Ok(Fit::Disproved);
+            };
+            // A UPS patch applies in either direction, as in RetroArch.
+            let ways: &[((u64, u32), (u64, u32))] = match format {
+                PatchFormat::Ups => &[(declared.source, declared.target), (declared.target, declared.source)],
+                _ => &[(declared.source, declared.target)],
+            };
+            let makes = |(size, crc): (u64, u32), name: &str| Game {
+                size: Some(size),
+                crc: Crc::Known(crc),
+                name: name.to_string(),
+            };
+            let sized: Vec<_> =
+                ways.iter().filter(|(from, _)| game.size.is_none_or(|size| size == from.0)).collect();
+            if sized.is_empty() {
+                Fit::Disproved
+            } else {
+                match game.crc()? {
+                    Some(crc) => match sized.iter().find(|(from, _)| from.1 == crc) {
+                        Some((_, to)) => Fit::Proved(makes(*to, &game.name)),
+                        None => Fit::Disproved,
+                    },
+                    None => Fit::Possible(makes(sized[0].1, &game.name)),
+                }
+            }
+        }
+        PatchFormat::Xdelta => {
+            let names = xdelta_names(&start.head).unwrap_or_default();
+            let next = unknown(names.made.clone().unwrap_or_else(|| game.name.clone()));
+            if named_for_game || names.from.as_deref() == Some(game.name.as_str()) {
+                Fit::Proved(next)
+            } else {
+                Fit::Possible(next)
+            }
+        }
+        PatchFormat::Ips => {
+            let next = unknown(game.name.clone());
+            if named_for_game {
+                Fit::Proved(next)
+            } else {
+                Fit::Possible(next)
+            }
+        }
+    })
+}
+
+/// The patches in `offered` that belong to `game`, in file-name order. A
+/// patch found beside the game belongs when what it states proves that it is
+/// for this game. A patch the author chose belongs unless it states otherwise.
+pub fn belonging(game: &Path, offered: &[(PathBuf, Offered)]) -> Result<Belonging, String> {
+    let mut ordered: Vec<&(PathBuf, Offered)> = offered.iter().collect();
+    ordered.sort_by_key(|(path, _)| path.file_name().map(|name| name.to_string_lossy().to_lowercase()));
+    let size = fs::metadata(game).map_err(|error| format!("read {}: {error}", game.display()))?.len();
+    let game_stem = game.file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or_default();
+    let mut current = Game {
+        size: Some(size),
+        crc: Crc::OfFile(game.to_path_buf()),
+        name: game.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default(),
+    };
+    let mut found = Belonging::default();
+    for (path, how) in ordered {
+        let start = read_start(path).map_err(|error| format!("read {}: {error}", path.display()))?;
+        let named_for_game = path.file_stem().is_some_and(|stem| stem.to_string_lossy() == game_stem);
+        let fit = match PatchFormat::of(&start.head) {
+            Some(format) => fit(&start, format, named_for_game, &mut current)
+                .map_err(|error| format!("read {}: {error}", game.display()))?,
+            None => Fit::Disproved,
+        };
+        let next = match (fit, how) {
+            (Fit::Proved(next), _) | (Fit::Possible(next), Offered::Chosen) => next,
+            (_, Offered::Chosen) => {
+                found.refused.push(path.clone());
+                continue;
+            }
+            (_, Offered::Beside) => continue,
+        };
+        if PatchFormat::of(&start.head) == Some(PatchFormat::Xdelta) {
+            found.made = xdelta_names(&start.head).and_then(|names| names.made).or(found.made);
+        }
+        found.patches.push(path.clone());
+        current = next;
+    }
+    Ok(found)
+}
+
 /// When someone drops a patch on its own, the game in `patch`'s folder that
-/// it is for: the one with the patch's name, the one in an xdelta header,
-/// or one that has the original size stated in a BPS or UPS patch and to
-/// which the patch applies. `games` are the game files in the folder.
+/// it is for: the one with the patch's name, the one in an xdelta header, or
+/// the one with the size and CRC-32 that a BPS or UPS patch states. A patch
+/// that states neither is for the only game in the folder. `games` are the
+/// game files in the folder.
 pub fn game_for(patch: &Path, games: &[PathBuf]) -> Result<PathBuf, String> {
-    let bytes = fs::read(patch).map_err(|error| format!("read {}: {error}", patch.display()))?;
+    let start = read_start(patch).map_err(|error| format!("read {}: {error}", patch.display()))?;
     let named = |wanted: &str| {
         games.iter().find(|game| game.file_stem().is_some_and(|stem| stem.to_string_lossy() == wanted))
     };
     if let Some(game) = patch.file_stem().and_then(|stem| named(&stem.to_string_lossy())) {
         return Ok(game.clone());
     }
-    if let Some(from) = xdelta_names(&bytes).and_then(|names| names.from) {
+    if let Some(from) = xdelta_names(&start.head).and_then(|names| names.from) {
         if let Some(game) = games.iter().find(|game| game.file_name().is_some_and(|name| name.to_string_lossy() == from)) {
             return Ok(game.clone());
         }
     }
-    let size = source_size(&bytes);
     let fits: Vec<&PathBuf> = games
         .iter()
-        .filter(|game| size.is_none_or(|size| fs::metadata(game).is_ok_and(|meta| meta.len() == size)))
         .filter(|game| {
-            apply_belonging(game, &[(patch.to_path_buf(), Offered::Chosen)])
-                .is_ok_and(|patched| !patched.patches.is_empty())
+            belonging(game, &[(patch.to_path_buf(), Offered::Chosen)])
+                .is_ok_and(|belonging| !belonging.patches.is_empty())
         })
         .collect();
     match fits.as_slice() {
@@ -232,8 +371,30 @@ pub fn game_for(patch: &Path, games: &[PathBuf]) -> Result<PathBuf, String> {
             patch.file_name().unwrap_or_default().to_string_lossy()
         )),
         _ => Err(format!(
-            "{} applies to more than one game in its folder. Drop the game with it.",
+            "{} could be for more than one game in its folder. Drop the game with it.",
             patch.file_name().unwrap_or_default().to_string_lossy()
         )),
     }
+}
+
+/// Feed `hash` the game's bytes followed by each patch's bytes, in order,
+/// which identifies the patched game without making it. When we cannot read
+/// a file, we return it with its error.
+pub fn feed_patched(
+    hash: &mut impl sha2::Digest,
+    game: &Path,
+    patches: &[PathBuf],
+) -> Result<(), (PathBuf, io::Error)> {
+    let mut buffer = vec![0u8; 1 << 20];
+    for path in std::iter::once(game).chain(patches.iter().map(PathBuf::as_path)) {
+        let failed = |error| (path.to_path_buf(), error);
+        let mut file = File::open(path).map_err(failed)?;
+        loop {
+            match file.read(&mut buffer).map_err(failed)? {
+                0 => break,
+                count => hash.update(&buffer[..count]),
+            }
+        }
+    }
+    Ok(())
 }

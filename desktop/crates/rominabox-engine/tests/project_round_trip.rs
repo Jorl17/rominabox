@@ -10,6 +10,8 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::Path;
 
+mod patch_writers;
+
 fn picture(path: &Path, shade: u8) {
     image::RgbaImage::from_pixel(4, 3, image::Rgba([shade, 40, 200, 255]))
         .save(path)
@@ -190,4 +192,29 @@ fn a_project_saved_with_menu_controls_opens_with_them_as_hotkeys() {
     );
     assert_eq!(opened["menuEntries"], json!(["controls", "hotkeys"]));
     assert!(opened.get("menuControls").is_none(), "{opened}");
+}
+
+/// We save a game with a patch beside it as the original and the patch. When
+/// it opens, we list the patch again, to apply it on export.
+#[test]
+fn a_project_keeps_the_original_game_and_its_patch() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-project-patched");
+    let settings: Game = serde_json::from_value(everything(&root)).unwrap();
+    let original = fs::read(root.join("Game.md")).unwrap();
+    let mut patched = original.clone();
+    patched.extend(b", director's cut");
+    let patch = patch_writers::bps(&original, &patched);
+    fs::write(root.join("Director's Cut.bps"), &patch).unwrap();
+    let archive = root.join("Patched.rominabox");
+    save_project(&ProjectSaveRequest { archive_path: archive.clone(), settings }).unwrap();
+
+    let opened = open_project(&ProjectOpenRequest { archive_path: archive, extraction_dir: root.join("opened") })
+        .unwrap()
+        .settings;
+    assert_eq!(fs::read(&opened.rom).unwrap(), original, "the original is stored");
+    let added: Vec<_> = opened.files.added.iter().map(|path| path.file_name().unwrap().to_owned()).collect();
+    assert_eq!(added, ["Director's Cut.bps"]);
+    assert_eq!(fs::read(&opened.files.added[0]).unwrap(), patch);
+    let traveling = rominabox_engine::traveling::files_with(&opened.rom, Some("megadrive"), &opened.files).unwrap();
+    assert_eq!(traveling.patches, ["Director's Cut.bps"]);
 }

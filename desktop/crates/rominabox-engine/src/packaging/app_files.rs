@@ -6,7 +6,7 @@ use super::{resolve_cached, ErrorStage, ExportError, ExportRequest};
 use crate::content;
 use crate::controls;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// The defaults of the player's settings that the author chose in `request`.
 pub(super) fn player_defaults(request: &ExportRequest) -> crate::player_settings::Defaults {
@@ -175,12 +175,28 @@ pub(super) fn copy_content_file(
     })?;
     fs::create_dir_all(parent)
         .map_err(|error| ExportError::io(ErrorStage::Stage, parent, error))?;
-    if let Some(bytes) = &file.staged_bytes {
-        fs::write(&destination, bytes)
-            .map_err(|error| ExportError::io(ErrorStage::Stage, &destination, error))
-    } else {
-        copy_file(&file.source, &destination)
+    match &file.staging {
+        content::Staging::Copy => copy_file(&file.source, &destination),
+        content::Staging::Bytes(bytes) => fs::write(&destination, bytes)
+            .map_err(|error| ExportError::io(ErrorStage::Stage, &destination, error)),
+        content::Staging::Patched(patches) => stage_patched(&file.source, patches, &destination),
     }
+}
+
+/// Make the game with its patches applied, at its place in the exported game.
+/// When a patch fails, we refuse the export and name the patch.
+fn stage_patched(game: &Path, patches: &[PathBuf], destination: &Path) -> Result<(), ExportError> {
+    let paths: Vec<&Path> = patches.iter().map(PathBuf::as_path).collect();
+    crate::patching::apply_files(game, &paths, destination).map_err(|(index, failure)| {
+        let patch = &patches[index];
+        match failure {
+            crate::patching::FileFailure::Patch(error) => {
+                let name = |path: &Path| path.file_name().unwrap_or_default().to_string_lossy().into_owned();
+                ExportError::new(ErrorStage::Refused, error.explain(&name(patch), &name(game))).about(patch)
+            }
+            crate::patching::FileFailure::Io(error) => ExportError::io(ErrorStage::Stage, destination, error),
+        }
+    })
 }
 
 /// Copy the kit's controller profiles, one folder per driver, into the app.
