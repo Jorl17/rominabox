@@ -223,7 +223,9 @@ def native_components() -> list[Component]:
 
 def compiled_fork_files(build: Path) -> set[str]:
     """The fork's files compiled or included in a player build, read from the
-    dependency files written beside every object (-MMD)."""
+    dependency files written beside every object (-MMD). When we build again
+    in the same folder, the dependency files of objects from the earlier tree
+    remain, so we do not count a file that is no longer in the tree."""
     files: set[str] = set()
     roots: dict[Path, Path | None] = {}
     for dependencies in build.rglob("*.d"):
@@ -240,7 +242,7 @@ def compiled_fork_files(build: Path) -> set[str]:
             if token.endswith(":") or token.startswith("/") or os.path.isabs(token):
                 continue
             normal = os.path.normpath(token).replace("\\", "/")
-            if not normal.startswith("../"):
+            if not normal.startswith("../") and (root / normal).is_file():
                 files.add(normal)
     return files
 
