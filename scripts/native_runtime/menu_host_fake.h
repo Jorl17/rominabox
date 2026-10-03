@@ -54,6 +54,11 @@ struct FakeHost
    unsigned disc_index = 0;
    /* The last shader applied from the menu, and its preset. */
    std::string applied_shader, applied_preset;
+   /* Set during the menu's frame in the video driver. Applying a shader then
+    * switches to the GL context of a hardware core in the middle of that
+    * frame, and the window has the game without the menu. */
+   bool drawing = false;
+   int applied_while_drawing = 0;
    /* The last controller passed to the core: the pad's id and its libretro
     * device. */
    std::string applied_device;

@@ -261,6 +261,7 @@ void a_filter_row_applies_its_filter(const char *native_assets, const char *data
    test_setenv("ROMINABOX_RML_ASSETS", assets.c_str());
    host.applied_shader.clear();
    host.applied_preset.clear();
+   host.applied_while_drawing = 0;
    void *menu = open_menu();
    if (menu)
    {
@@ -269,6 +270,8 @@ void a_filter_row_applies_its_filter(const char *native_assets, const char *data
       check(std::string(inspect.text("heading")) == "SHADERS", "SHADERS opens the filter list");
       click_and_frame(menu, "scanlines");
       check(host.applied_shader == "scanlines", "choosing a filter row applies that filter");
+      check(host.applied_while_drawing == 0,
+            "a filter is applied between frames, never while the video driver draws the menu");
       const std::string preset = "/shaders/scanlines/scanlines.glslp";
       check(host.applied_preset.size() > preset.size() &&
             host.applied_preset.compare(host.applied_preset.size() - preset.size(), preset.size(), preset) == 0,

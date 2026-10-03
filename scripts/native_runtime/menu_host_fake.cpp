@@ -224,6 +224,8 @@ extern "C" void rib_host_cancel_sound(void) { host.sounds.push_back(Sound::Cance
 extern "C" const char *rib_host_current_shader(void) { return host.current_shader.c_str(); }
 extern "C" void rib_host_apply_shader(const char *id, const char *preset)
 {
+   if (host.drawing)
+      ++host.applied_while_drawing;
    host.applied_shader = id ? id : "";
    host.applied_preset = preset ? preset : "";
    host.current_shader = host.applied_preset;
