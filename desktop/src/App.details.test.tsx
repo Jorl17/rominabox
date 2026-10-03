@@ -152,6 +152,79 @@ describe("App workflow", () => {
     ).toBe("My Test Quest");
   });
 
+  /** A dropped game that becomes another game with the Director's Cut patch
+   * beside it. We look up a name for each, with and without the patch. */
+  async function dropPatchedGame() {
+    const patch = "Director's Cut.xdelta";
+    travelingHandlers.list = async (path, _system, files) => ({
+      entry: path,
+      files: ["Sonic 3D Blast.md"],
+      patches: files?.leftOut.includes(patch) ? [] : [patch],
+    });
+    inspectHandlers.inspect = async () => ({
+      title: "Sonic 3D Blast - Director's Cut",
+      system: "megadrive",
+      source: "filename",
+      filename: "Sonic 3D Blast.md",
+      size: 32,
+    });
+    await dropNamed("Sonic 3D Blast.md");
+    await waitForText("Also importing");
+    // We look it up again in the app, through the engine.
+    nativeBridge.on = true;
+    nativeBridge.inspectGame = async (_path, _online, _system, files) => ({
+      title: files?.leftOut.includes(patch)
+        ? "Sonic 3D Blast"
+        : "Sonic 3D Blast - Director's Cut",
+      system: "megadrive",
+      filename: "Sonic 3D Blast.md",
+      size: 32,
+      source: "catalog",
+      matched: true,
+      warnings: [],
+    });
+    return patch;
+  }
+  async function leaveOut(name: string) {
+    const selector = `[aria-label="Leave out ${name}"]`;
+    for (
+      let attempt = 0;
+      attempt < 50 && !container.querySelector(selector);
+      attempt += 1
+    )
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+    act(() => click(container.querySelector(selector) as HTMLElement));
+  }
+  const gameName = () =>
+    container.querySelector(
+      '.fields input:not([type="file"])',
+    ) as HTMLInputElement;
+
+  it("names the game again when its patch is left out", async () => {
+    const patch = await dropPatchedGame();
+    expect(gameName().value).toBe("Sonic 3D Blast - Director's Cut");
+    act(() => click(container.querySelector(".traveling-also")!));
+    await leaveOut(patch);
+    await waitForText("1 file left out");
+    for (
+      let attempt = 0;
+      attempt < 50 && gameName().value !== "Sonic 3D Blast";
+      attempt += 1
+    )
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+    expect(gameName().value).toBe("Sonic 3D Blast");
+  });
+
+  it("keeps a name the author typed when the patch is left out", async () => {
+    const patch = await dropPatchedGame();
+    act(() => enterText(gameName(), "My Sonic"));
+    act(() => click(container.querySelector(".traveling-also")!));
+    await leaveOut(patch);
+    await waitForText("1 file left out");
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 200)));
+    expect(gameName().value).toBe("My Sonic");
+  });
+
   async function dropWithCompanions(name: string, files: string[]) {
     const path = `/games/${name}`;
     travelingHandlers.list = async () => ({ entry: path, files });

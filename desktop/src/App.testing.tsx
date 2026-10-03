@@ -36,9 +36,11 @@ const { firmwareHandlers, inspectHandlers, travelingHandlers, nativeBridge } =
         | ((
             path: string,
             system: string,
+            files?: import("./bridge").GameFiles,
           ) => Promise<{
             entry: string;
             files: string[];
+            patches?: string[];
           }>)
         | null,
     },
@@ -49,6 +51,7 @@ const { firmwareHandlers, inspectHandlers, travelingHandlers, nativeBridge } =
             path: string,
             online: boolean,
             system?: string,
+            files?: import("./bridge").GameFiles,
           ) => Promise<import("./bridge").GameInfo>)
         | null,
     },
@@ -62,10 +65,15 @@ vi.mock("./bridge", async (importOriginal) => {
     get native() {
       return nativeBridge.on;
     },
-    inspectGame: (path: string, online: boolean, systemOverride?: string) => {
+    inspectGame: (
+      path: string,
+      online: boolean,
+      systemOverride?: string,
+      files?: import("./bridge").GameFiles,
+    ) => {
       if (nativeBridge.inspectGame)
-        return nativeBridge.inspectGame(path, online, systemOverride);
-      return actual.inspectGame(path, online, systemOverride);
+        return nativeBridge.inspectGame(path, online, systemOverride, files);
+      return actual.inspectGame(path, online, systemOverride, files);
     },
     assessFirmware: (system: string, files: string[]) => {
       const assess = firmwareHandlers.assess;
@@ -74,19 +82,23 @@ vi.mock("./bridge", async (importOriginal) => {
     },
     // A test lists the files, and in the answer from the exporter each has a
     // role, with the game file first.
-    travelingFiles: async (path: string, system: string) => {
+    travelingFiles: async (
+      path: string,
+      system: string,
+      files?: import("./bridge").GameFiles,
+    ) => {
       const list = travelingHandlers.list;
-      if (!list) return actual.travelingFiles(path, system);
-      const listed = await list(path, system);
+      if (!list) return actual.travelingFiles(path, system, files);
+      const listed = await list(path, system, files);
       return {
         entry: listed.entry,
         files: listed.files.map((name, index) => ({
           name,
           role: { kind: index === 0 ? "game" : "named" } as const,
         })),
-        patches: [],
+        patches: listed.patches ?? [],
         refused: [],
-        added: [],
+        added: files?.added ?? [],
       };
     },
   };

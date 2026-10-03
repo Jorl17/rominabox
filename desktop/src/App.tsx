@@ -265,6 +265,30 @@ export function App() {
       fail(e);
     }
   }
+  // Leaving out or adding a patch makes another game. We look it up again and
+  // replace the name and picture from the last lookup, but we keep a name the
+  // author typed and a picture they chose.
+  async function lookUpAgain(files: bridge.GameFiles) {
+    if (!bridge.native || !selection?.path || !info) return;
+    const request = ++generation.current;
+    try {
+      const found = await bridge.inspectGame(
+        selection.path,
+        online,
+        draft.system,
+        files,
+      );
+      if (request !== generation.current) return;
+      if (draft.title === info.title) update("title", found.title);
+      if (!icon || icon.path === info.iconPath) {
+        if (found.iconPath) await loadPicture("icon", found.iconPath);
+        else setIcon(null);
+      }
+      setInfo(found);
+    } catch (e) {
+      if (request === generation.current) fail(e);
+    }
+  }
   async function loadPicture(target: "icon" | "background", path: string) {
     const request = ++imageGeneration.current[target];
     const picture = await bridge.readImage(path);
@@ -817,6 +841,7 @@ export function App() {
     onChange: (files: bridge.GameFiles, names: string[]) => {
       update("files", files);
       setTraveling(names);
+      void lookUpAgain(files);
     },
     onError: fail,
   };
