@@ -41,6 +41,7 @@ import { App } from "./App";
 /** Every setting a project keeps, none of them the builder's default. */
 const everySetting = {
   rom: "/opened/content/Game.md",
+  files: { leftOut: [], added: ["/opened/content/Manual.txt"] },
   title: "Every Setting",
   system: "megadrive",
   icon: "/opened/assets/icon.png",

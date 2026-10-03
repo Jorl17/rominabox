@@ -49,10 +49,12 @@ async fn inspect_game(
     path: PathBuf,
     online: bool,
     system_override: Option<String>,
+    files: Option<rominabox_engine::content::GameFiles>,
 ) -> Result<metadata::Inspection, String> {
     let cache = places(&app).metadata_cache()?;
     tauri::async_runtime::spawn_blocking(move || {
-        metadata::inspect_game_with_system(&path, &cache, online, system_override.as_deref())
+        let files = files.unwrap_or_default();
+        metadata::inspect_game_with_files(&path, &cache, online, system_override.as_deref(), &files)
             .map_err(|e| e.to_string())
     })
     .await

@@ -28,6 +28,7 @@ import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import { AlsoImporting } from "./AlsoImporting";
+import { filesThatTravel } from "./travelingFiles";
 import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import { BackgroundPicker } from "./BackgroundPicker";
@@ -67,6 +68,7 @@ const steps = ["Game", "Details", "Menu", "Export"];
 type Selection = {
   path: string;
   name: string;
+  added?: string[];
   size?: number;
   browserFile?: File;
 };
@@ -86,6 +88,7 @@ const defaults = {
   title: "",
   system: "",
   menuEntries: null as string[] | null,
+  files: { leftOut: [], added: [] } as bridge.GameFiles,
   ...declaredDraft,
 };
 type Draft = typeof defaults;
@@ -223,7 +226,7 @@ export function App() {
     try {
       if (bridge.native && selection.path) {
         setBusy("inspect");
-        await bridge.inspectGame(selection.path, online, system);
+        await bridge.inspectGame(selection.path, online, system, draft.files);
       } else if (selection.browserFile) {
         await inspectRom(selection.browserFile, undefined, system);
       }
@@ -248,6 +251,7 @@ export function App() {
         selection.path,
         selection.name,
         system,
+        draft.files,
       );
       if (request !== generation.current) return;
       setTraveling(traveled.files);
@@ -298,18 +302,6 @@ export function App() {
       size: file.size,
       browserFile: file,
     });
-  }
-  async function filesThatTravel(
-    filePath: string,
-    fallbackName: string,
-    system: string,
-  ) {
-    if (!filePath)
-      return { files: fallbackName ? [fallbackName] : [], entry: "" };
-    const listed = await bridge.travelingFiles(filePath, system);
-    const files = bridge.travelingNames(listed);
-    if (files.length > 0) return { files, entry: listed.entry || filePath };
-    return { files: fallbackName ? [fallbackName] : [], entry: filePath };
   }
   async function chooseGame() {
     setError("");
@@ -373,6 +365,7 @@ export function App() {
       return;
     }
     const request = ++generation.current;
+    const chosen = { leftOut: [], added: selection.added ?? [] };
     setBusy("inspect");
     setError("");
     setStep(1);
@@ -384,7 +377,7 @@ export function App() {
     }
     try {
       const data: bridge.GameInfo = bridge.native
-        ? await bridge.inspectGame(selection.path, online)
+        ? await bridge.inspectGame(selection.path, online, undefined, chosen)
         : {
             ...(await inspectRom(selection.browserFile!)),
             matched: false,
@@ -398,6 +391,7 @@ export function App() {
           selection.path,
           selection.name,
           data.system,
+          chosen,
         );
       } catch (e) {
         if (request !== generation.current) return;
@@ -423,6 +417,7 @@ export function App() {
         ...defaults,
         title: data.title,
         system: data.system,
+        files: { leftOut: [], added: traveled?.added ?? [] },
       });
       if (data.iconPath && bridge.native)
         loadPicture("icon", data.iconPath).catch(() => {});
@@ -531,6 +526,7 @@ export function App() {
           settings.rom,
           filename,
           settings.system,
+          settings.files,
         );
         setTraveling(traveled.files);
       } catch (e) {
@@ -634,7 +630,8 @@ export function App() {
       .elementFromPoint(pos.x, pos.y)
       ?.closest("[data-drop]")
       ?.getAttribute("data-drop");
-    if (paths.length !== 1) {
+    // A dropped game comes with its patches, and anything else is one file.
+    if (paths.length !== 1 && (target || step !== 0)) {
       setError("Drop one file at a time.");
       return;
     }
@@ -645,6 +642,7 @@ export function App() {
       choose({
         path: paths[0],
         name: paths[0].split(/[\\/]/).pop() || paths[0],
+        added: paths.slice(1),
       });
   };
   useEffect(() => {

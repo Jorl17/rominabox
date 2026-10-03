@@ -41,6 +41,8 @@ export type ExportRequest = {
   advancedEmulatorAccess: boolean;
   /** A Mac app also runs on Intel Macs. */
   intelMacs: boolean;
+  /** What the author left out of, and added to, the files of the game. */
+  files: GameFiles;
   shaders?: {
     bundled: string[];
     custom: { name: string; path: string }[];
@@ -143,8 +145,9 @@ export function inspectGame(
   path: string,
   online: boolean,
   systemOverride?: string,
+  files?: GameFiles,
 ): Promise<GameInfo> {
-  return invoke("inspect_game", { path, online, systemOverride });
+  return invoke("inspect_game", { path, online, systemOverride, files });
 }
 // The name of an added shader file, from the engine, as for one without a
 // name in a command-line request. The browser walkthrough has no engine, so
@@ -215,8 +218,9 @@ function askWalkthrough<T>(
 export function travelingFiles(
   path: string,
   system: string,
+  files?: GameFiles,
 ): Promise<Traveling> {
-  if (native) return invoke("traveling_files", { path, system });
+  if (native) return invoke("traveling_files", { path, system, files });
   return askWalkthrough(
     "traveling",
     new URLSearchParams({ path, system }),
