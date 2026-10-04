@@ -12,8 +12,8 @@ From each checkout we collect two things and nothing else:
 
     A report starts at `work/<NAME>.md`, beside pictures in a scratch
     directory listed in .gitignore. When we merge the branch, we move both to
-    `docs/reports/`, so the claim and its proof remain after we remove the
-    worktree and anyone with the repository can check them.
+    the git-ignored `private/docs/reports/`, so the claim and its proof
+    remain after we remove the worktree.
   * The screens that differ. We draw every declared menu state, and the
     controls screen with each pad a player can pick, in every checkout, and
     compare each with the same picture drawn in the canonical tree. We drop
@@ -69,7 +69,7 @@ def gallery_name(track: str, kind: str, picture: Path) -> str:
 
 # In a report we give the path of each picture from the checkout root, in
 # the scratch directory or, after the merge, beside the report.
-NAMED = re.compile(r"(?:work|docs/reports)/[A-Za-z0-9._/-]+\.png")
+NAMED = re.compile(r"(?:work|private/docs/reports)/[A-Za-z0-9._/-]+\.png")
 
 
 def track_of(tree: Path) -> str:
@@ -79,7 +79,7 @@ def track_of(tree: Path) -> str:
 def claimed(tree: Path) -> list[str]:
     """Pictures whose paths are in a checkout's own report."""
     reports = sorted((tree / "work").glob("*.md")) if (tree / "work").is_dir() else []
-    if (merged := tree / "docs/reports").is_dir():
+    if (merged := tree / "private/docs/reports").is_dir():
         reports += sorted(merged.glob("*.md"))
     seen: list[str] = []
     for report in reports:
@@ -92,7 +92,7 @@ def claimed(tree: Path) -> list[str]:
 def photographs(tree: Path) -> list[Path]:
     """Every picture we took in a checkout: its shots directory and the pictures in its report."""
     found: list[Path] = sorted((tree / SHOTS).glob("*.png")) if (tree / SHOTS).is_dir() else []
-    for merged in sorted((tree / "docs/reports").glob("*/*.png")):
+    for merged in sorted((tree / "private/docs/reports").glob("*/*.png")):
         if merged not in found:
             found.append(merged)
     for path in claimed(tree):

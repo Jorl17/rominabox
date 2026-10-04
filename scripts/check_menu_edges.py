@@ -205,7 +205,7 @@ def check_image(path: Path) -> list[str]:
 
 
 def main() -> int:
-    directory = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs/reports/i1"
+    directory = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "scripts/fixtures/menu-edges"
     names = sys.argv[2:] or PICTURES
     problems: list[str] = []
     for name in names:

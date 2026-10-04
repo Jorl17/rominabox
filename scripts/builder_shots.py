@@ -7,7 +7,7 @@ second wait for the same compiler. In this script we serve the built files,
 drive the flow in the Chrome already installed on the machine, and stop the
 server. We download nothing and leave nothing open.
 
-    uv run python scripts/builder_shots.py --out docs/reports/builder
+    uv run python scripts/builder_shots.py --out work/builder-shots
     uv run python scripts/builder_shots.py --check
 
 We run --check in the builder tests. With it we walk as far as the shader

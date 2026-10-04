@@ -67,12 +67,12 @@ def look(path: Path, merged: set[str], busy: str) -> dict:
     dirty = bool(run("git", "status", "--porcelain", "--untracked-files=no", cwd=path))
     # The command line of a worktree's process contains its directory.
     working = path.name in busy
-    reports = sorted((path / "docs/reports").glob("*.md")) if (path / "docs/reports").is_dir() else []
+    reports = sorted((path / "private/docs/reports").glob("*.md")) if (path / "private/docs/reports").is_dir() else []
     # A report in work/ is lost when we remove the checkout, because git
     # ignores that directory. We count only the reports of this branch. Every
     # worktree has leftovers from branches merged earlier, and if we flagged
     # those, they would hide the important ones.
-    already = {q.stem.lower() for q in (ROOT / "docs/reports").glob("*.md")}
+    already = {q.stem.lower() for q in (ROOT / "private/docs/reports").glob("*.md")}
     stranded = [
         q
         for q in sorted((path / "work").glob("*.md"))
