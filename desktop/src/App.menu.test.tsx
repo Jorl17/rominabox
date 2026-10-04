@@ -188,7 +188,8 @@ describe("App workflow", () => {
     const playing = checkbox("Keep playing in the background");
     const saving = checkbox("Autosave on quit");
     expect(playing.checked).toBe(false);
-    expect(saving.checked).toBe(false);
+    // Autosave is on unless the author turns it off.
+    expect(saving.checked).toBe(true);
     expect(playing.closest("details")).toBeNull();
     expect(saving.closest("details")).toBeNull();
     expect(logo.closest(".menu-settings")).toBe(
@@ -216,12 +217,12 @@ describe("App workflow", () => {
     act(() => click(button("Next")));
     act(() => click(button("Back")));
     expect(checkbox("Keep playing in the background").checked).toBe(true);
-    expect(checkbox("Autosave on quit").checked).toBe(true);
+    expect(checkbox("Autosave on quit").checked).toBe(false);
 
     act(() => click(checkbox("Include game menu")));
     expect(container.textContent).toContain("No in-game menu");
     expect(checkbox("Keep playing in the background").checked).toBe(true);
-    expect(checkbox("Autosave on quit").checked).toBe(true);
+    expect(checkbox("Autosave on quit").checked).toBe(false);
     expect(checkbox("Startup logo").closest(".play-options")).not.toBeNull();
   });
 

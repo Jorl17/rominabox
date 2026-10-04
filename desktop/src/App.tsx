@@ -30,6 +30,7 @@ import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import { AppHeader } from "./AppHeader";
 import { AddGameFiles, GameFilesList } from "./GameFilesList";
 import { StartupOptions } from "./StartupOptions";
+import { MoreBelow } from "./MoreBelow";
 import { filesThatTravel } from "./travelingFiles";
 import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
@@ -146,6 +147,7 @@ export function App() {
   const imageInput = useRef<HTMLInputElement>(null);
   const imageTarget = useRef<"icon" | "background">("icon");
   const heading = useRef<HTMLHeadingElement>(null);
+  const stepArea = useRef<HTMLElement>(null);
   const generation = useRef(0);
   // Changing step clears the error, and we set a refusal found on entering
   // the details step in that same turn. Here we put the message back once
@@ -873,7 +875,7 @@ export function App() {
             </React.Fragment>
           ))}
         </nav>
-        <section key={step} className={`screen screen-${step}`}>
+        <section key={step} ref={stepArea} className={`screen screen-${step}`}>
           {step === 0 ? (
             <>
               <h1 ref={heading} tabIndex={-1}>
@@ -1473,6 +1475,7 @@ export function App() {
           </p>
         )}
         <footer className="navigation">
+          <MoreBelow area={stepArea} step={step} />
           <div>
             {step > 0 && !result && (
               <button

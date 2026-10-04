@@ -6,6 +6,7 @@ selected option is clearly selected. Only a picture shows these, and
 without this script we would have to launch a game to see one.
 
     uv run python scripts/menu_states.py work/menu-states
+    uv run python scripts/menu_states.py --scale 2 work/menu-states-2x
 
 The states are in `scripts/fixtures/menu-states.json`, where we declare them
 once. We draw every design in `desktop/designs.json` for the console we
@@ -56,6 +57,13 @@ PREVIEW = native_build.preview_resource(host_target())
 # The window size of an exported game, because at any other size a rendered
 # state is not what a player sees.
 SIZE = (960, 600)
+# Picture pixels per pixel of that window, from --scale. At 2 we draw the
+# menu with the same layout, sharp enough for high-density screens.
+SCALE = 1
+
+
+def picture_size() -> list[str]:
+    return [str(SIZE[0] * SCALE), str(SIZE[1] * SCALE)]
 
 # The area that the open picker covers on each console. We record it instead
 # of asserting zero, because on PlayStation the stick strips are in the area
@@ -225,7 +233,7 @@ def render(staging: Path, target: Path, screen: str, overrides: dict[str, dict])
         flags += set_flags(found, properties)
     result = subprocess.run(
         [str(PREVIEW), str(staging / "menu.rml"), str(target),
-         str(SIZE[0]), str(SIZE[1]), "--screen", screen, *flags],
+         *picture_size(), "--screen", screen, *flags],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -436,7 +444,7 @@ def every_variant(output: Path) -> int:
         target_png = output / f"{console}-{variant}.png"
         result = subprocess.run(
             [str(PREVIEW), str(staging / "menu.rml"), str(target_png),
-             str(SIZE[0]), str(SIZE[1]), "--screen", state["screen"], *overrides],
+             *picture_size(), "--screen", state["screen"], *overrides],
             capture_output=True, text=True,
         )
         if result.returncode != 0:
@@ -502,7 +510,17 @@ def main() -> int:
         action="store_true",
         help="check the picker lands in the same place on every console that has one",
     )
+    parser.add_argument(
+        "--scale",
+        type=int,
+        default=1,
+        help="picture pixels per pixel of the game's window; 2 for high-density screens",
+    )
     arguments = parser.parse_args()
+    if arguments.scale != 1 and (arguments.every_variant or arguments.fixed_place):
+        parser.error("--scale is for pictures: the checks measure the window at its own size")
+    global SCALE
+    SCALE = arguments.scale
 
     if not PREVIEW.exists():
         raise SystemExit(f"the offscreen preview helper is not built at {PREVIEW}")
@@ -603,8 +621,7 @@ def draw_state(design: str, system: str, palette: str, name: str, state: dict, s
             str(PREVIEW),
             str(staging / "menu.rml"),
             str(target),
-            str(SIZE[0]),
-            str(SIZE[1]),
+            *picture_size(),
             "--screen",
             state["screen"],
             *overrides,

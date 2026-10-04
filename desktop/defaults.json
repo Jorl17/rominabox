@@ -5,7 +5,7 @@
   "includeAchievements": true,
   "splash": true,
   "keepPlayingInBackground": false,
-  "autosaveOnQuit": false,
+  "autosaveOnQuit": true,
   "everyPadIsPlayerOne": true,
   "advancedEmulatorAccess": false,
   "intelMacs": false,

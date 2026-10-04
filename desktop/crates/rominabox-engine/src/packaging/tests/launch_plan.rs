@@ -20,6 +20,7 @@ fn launcher_quotes_hostile_content_filename_as_data() {
 #[test]
 fn export_records_background_play_and_quit_autosave() {
     let mut settings = request(false);
+    settings.game.autosave_on_quit = false;
     let plan = write_test_launcher(settings.clone());
     let off = embedded_runtime_config(&plan);
     assert_eq!(

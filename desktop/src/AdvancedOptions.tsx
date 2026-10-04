@@ -30,7 +30,7 @@ export function AdvancedOptions({
         label="Advanced emulator access"
         checked={settings.advancedEmulatorAccess}
         onChange={(value) => update("advancedEmulatorAccess", value)}
-        help="Restore RetroArch's native menus. Ordinary exports keep About, Hide, Quit and standard window actions."
+        help="Restore RetroArch's native menus."
       />
     </details>
   );

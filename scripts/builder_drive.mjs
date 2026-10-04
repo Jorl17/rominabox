@@ -20,6 +20,8 @@ const require = createRequire(
 const { chromium } = require("playwright-core");
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// The size of the page, from builder_shots.py --size. The builder window is 1140x820.
+const SIZE = { width: Number(process.env.ROMINABOX_SHOT_WIDTH || 1440), height: Number(process.env.ROMINABOX_SHOT_HEIGHT || 900) };
 /** The folder for the game files we drop during the walk. */
 const SHOTS = path.join(ROOT, "work/test-output/builder-shots");
 const MIME = {
@@ -984,7 +986,7 @@ async function shootEditor(page, file) {
   const box = await editor.boundingBox();
   if (!box) throw new Error("the controls editor has no box to photograph");
   await page.setViewportSize({
-    width: 1440,
+    width: SIZE.width,
     height: Math.min(4800, Math.ceil(box.y + box.height + 24)),
   });
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -996,7 +998,7 @@ async function shootEditor(page, file) {
       element.style.overflow = element.dataset.shotOverflow;
     }
   });
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize(SIZE);
   console.log(`shot ${path.relative(ROOT, file)}`);
 }
 
@@ -1040,7 +1042,8 @@ async function main() {
   let code = 0;
   try {
     const page = await browser.newPage({
-      viewport: { width: 1440, height: 900 },
+      viewport: SIZE,
+      deviceScaleFactor: Number(process.env.ROMINABOX_SHOT_SCALE || 1), // builder_shots.py --scale
     });
     page.setDefaultTimeout(20000);
     // On every machine we photograph a builder that exports for macOS, so the
@@ -1439,7 +1442,7 @@ async function main() {
         const gridBox = await page.locator(".shader-grid").boundingBox();
         if (!gridBox) throw new Error("the shader grid has no box to photograph");
         await page.setViewportSize({
-          width: 1440,
+          width: SIZE.width,
           height: Math.min(4800, Math.ceil(gridBox.y + gridBox.height + 24)),
         });
         await page.locator(".shader-grid").screenshot({
@@ -1460,7 +1463,7 @@ async function main() {
             element.style.overflow = element.dataset.shotOverflow;
           }
         });
-        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.setViewportSize(SIZE);
       }
       await quoteHelp(page);
       await page

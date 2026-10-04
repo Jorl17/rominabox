@@ -619,6 +619,12 @@ main {
 .advanced[open] > summary {
   margin-bottom: 18px;
 }
+/* The checkboxes of a disclosure are one to a line, each a separate block.
+   Side by side they would be aligned on their baselines, and a tick would
+   move the baseline of its box. */
+.advanced > .option-toggle {
+  display: flex;
+}
 .advanced[open] > summary svg {
   transform: rotate(90deg);
 }
@@ -1174,6 +1180,37 @@ main {
   flex-shrink: 0;
   margin-top: 16px;
   padding: 17px 0 22px;
+  position: relative;
+}
+/* The arrow on the top rule of the navigation while part of the step is below
+   the visible area (MoreBelow.tsx), centred on the 2px rule, in the colours
+   of the Next button, moving gently down and back. */
+.more-below {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 26px;
+  height: 22px;
+  margin-left: -13px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  animation: more-below 1.4s ease-in-out infinite;
+}
+.more-below[hidden] {
+  display: none;
+}
+.more-below:hover {
+  background: var(--panel);
+  animation-play-state: paused;
+}
+@keyframes more-below {
+  50% {
+    transform: translateY(3px);
+  }
 }
 .menu-frame {
   width: min(100%, max(400px, calc((100svh - 430px) * 1.6)));

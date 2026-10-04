@@ -35,7 +35,7 @@
     {
       "id": "crt-royale-pal",
       "name": "CRT Royale PAL",
-      "detail": "A detailed tube fed a European TV signal",
+      "detail": "A detailed tube with a European signal",
       "files": {
         "glsl": "crt/crt-royale-pal-r57shell.glslp",
         "slang": "presets/crt-plus-signal/crt-royale-pal-r57shell.slangp"

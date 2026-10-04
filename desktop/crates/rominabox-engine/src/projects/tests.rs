@@ -140,6 +140,6 @@ fn current_project_defaults_omitted_capability_on() {
     .unwrap();
     assert!(!opened.settings.advanced_emulator_access);
     assert!(!opened.settings.keep_playing_in_background);
-    assert!(!opened.settings.autosave_on_quit);
+    assert!(opened.settings.autosave_on_quit);
     assert!(opened.settings.include_achievements);
 }
