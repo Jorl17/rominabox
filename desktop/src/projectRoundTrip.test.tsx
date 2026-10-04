@@ -16,6 +16,7 @@ vi.mock("./bridge", async (importOriginal) => {
     native: true,
     onNativeDrop: () => Promise.resolve(() => {}),
     onExportProgress: () => Promise.resolve(() => {}),
+    onAboutRequested: () => Promise.resolve(() => {}),
     defaultDestination: () => Promise.resolve("/Games"),
     exportTarget: () => Promise.resolve("macos"),
     assessFirmware: () =>

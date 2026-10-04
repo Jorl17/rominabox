@@ -299,6 +299,8 @@ def pin(name: str, spec: dict) -> Pin:
 
 
 def spec_text(spec: dict, pinned: Pin) -> Text:
+    if "repo" in spec:
+        return Text(f"{spec['repo']} in the ROM-in-a-Box repository", (ROOT / spec["repo"]).read_text(encoding="utf-8"))
     if "fork" in spec:
         return Text(f"{spec['fork']} in the RetroArch fork", fork_file(spec["fork"]))
     if "forkComment" in spec:
@@ -320,7 +322,7 @@ def spec_text(spec: dict, pinned: Pin) -> Text:
 
 
 def spec_is_local(spec: dict, pinned: Pin) -> bool:
-    if any(key in spec for key in ("fork", "forkComment", "forkLastComment")):
+    if any(key in spec for key in ("repo", "fork", "forkComment", "forkLastComment")):
         return True
     return "member" in spec and pinned.archive is not None and pinned.archive.is_file()
 

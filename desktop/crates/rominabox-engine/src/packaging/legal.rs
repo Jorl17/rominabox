@@ -36,6 +36,7 @@ pub fn game_rows(runtime_kit: &Path, core: &crate::systems::Core, fonts: &[Strin
         version: String::new(),
         licence: core.license.clone(),
         file: core.license_file.clone(),
+        copyright: String::new(),
     }];
     rows.extend(kit_rows(runtime_kit)?.into_iter().filter(|row| match row.group {
         Group::Native | Group::Data => true,

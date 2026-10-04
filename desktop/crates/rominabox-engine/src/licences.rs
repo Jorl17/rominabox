@@ -39,6 +39,9 @@ pub struct Row {
     /// the game contains no text for the component.
     #[serde(default)]
     pub file: String,
+    /// A copyright notice to show under the title, for ROM-in-a-Box itself.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub copyright: String,
 }
 
 /// The rows of the index in `folder`.
@@ -117,7 +120,7 @@ mod tests {
     use crate::menu::{compose_menu, MenuRequest};
 
     fn row(title: &str, licence: &str) -> Row {
-        Row { group: Group::Native, title: title.into(), version: String::new(), licence: licence.into(), file: String::new() }
+        Row { group: Group::Native, title: title.into(), version: String::new(), licence: licence.into(), file: String::new(), copyright: String::new() }
     }
 
     /// In every design we list the game's components on an ABOUT screen in

@@ -278,6 +278,7 @@ fn a_game_carries_every_licence_the_kit_holds_for_its_player() {
         version: "1".into(),
         licence: "MIT & <Zlib>".into(),
         file: file.into(),
+        copyright: String::new(),
     };
     let kit_rows = vec![
         row(legal::Group::Native, "RetroArch", "native/retroarch.txt"),

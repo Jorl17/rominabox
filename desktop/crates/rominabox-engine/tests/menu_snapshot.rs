@@ -65,6 +65,7 @@ impl Menu {
                     version: String::new(),
                     licence: "GPL-3.0-or-later".into(),
                     file: String::new(),
+                    copyright: String::new(),
                 })
                 .collect(),
             Menu::Default | Menu::NoOptions | Menu::SplashOnly => Vec::new(),

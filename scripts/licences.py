@@ -73,7 +73,8 @@ def index_rows(components: list[Component]) -> list[dict]:
     builder, a kit and every exported game carry beside the entries."""
     return [{"group": component.group, "name": component.name, "title": component.title,
              "version": component.version, "licence": component.licence, "usedBy": component.used_by,
-             "file": entry_path(component).as_posix()}
+             "file": entry_path(component).as_posix(),
+             **({"copyright": component.declared["copyright"]} if component.declared.get("copyright") else {})}
             for component in sorted(components, key=lambda c: (c.group, c.title.lower(), c.name))]
 
 
@@ -102,7 +103,8 @@ def clean(body: str) -> str:
 def header(component: Component) -> str:
     fields = [("Version", component.version), ("Source", component.source), ("Licence", component.licence),
               ("Used by", component.used_by), ("Note", component.note)]
-    return "\n".join([component.title, "", *(f"{label + ':':<9} {value}" for label, value in fields if value)]) + "\n"
+    notice = [component.declared["copyright"]] if component.declared.get("copyright") else []
+    return "\n".join([component.title, *notice, "", *(f"{label + ':':<9} {value}" for label, value in fields if value)]) + "\n"
 
 
 def render(component: Component, texts: list[Text]) -> str:

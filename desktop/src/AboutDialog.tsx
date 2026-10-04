@@ -64,6 +64,13 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
         }}
       >
         <h2 id="about-heading">ROM-in-a-Box {version}</h2>
+        {(components ?? [])
+          .filter((component) => component.copyright)
+          .map((component) => (
+            <p className="about-copyright" key={component.file}>
+              {component.copyright}, {component.licence}
+            </p>
+          ))}
         <button
           className="text-button about-website"
           onClick={() => openWebsite()}

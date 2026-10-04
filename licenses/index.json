@@ -3475,6 +3475,16 @@
  },
  {
   "group": "native",
+  "name": "rominabox",
+  "title": "ROM-in-a-Box",
+  "version": "",
+  "licence": "GPL-3.0-or-later",
+  "usedBy": "the builder, and the player and launcher in every exported game",
+  "file": "native/rominabox.txt",
+  "copyright": "Copyright (C) 2026 João Ricardo Lourenço"
+ },
+ {
+  "group": "native",
   "name": "spirv-cross",
   "title": "SPIRV-Cross",
   "version": "as vendored in the RetroArch fork",

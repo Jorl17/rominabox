@@ -390,6 +390,10 @@ export function defaultDestination(): Promise<string> {
 export function reveal(path: string): Promise<void> {
   return revealItemInDir(path);
 }
+/** Call `callback` when someone chooses About in the macOS menu bar. */
+export function onAboutRequested(callback: () => void) {
+  return listen("about-requested", () => callback());
+}
 export function onExportProgress(callback: (value: ExportProgress) => void) {
   return listen<ExportProgress>("export-progress", (e) => callback(e.payload));
 }
@@ -456,6 +460,8 @@ export type Component = {
   version: string;
   licence: string;
   file: string;
+  /** A copyright notice to show under the title, for ROM-in-a-Box itself. */
+  copyright?: string;
 };
 /** Every component, for the About dialog: the bundled index in the app, the
  * repository's in the browser preview. */

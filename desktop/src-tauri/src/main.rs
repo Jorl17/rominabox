@@ -308,6 +308,37 @@ fn cancel_pad_capture() {
 /// The window at its size in tauri.conf.json, made smaller when the screen
 /// has less room, and centred there. We create it hidden and show it once it
 /// has its size, so it never appears at a size it will not keep.
+/// The id of the About item in the macOS menu bar, and the event that opens
+/// the About dialog of the builder.
+#[cfg(target_os = "macos")]
+const ABOUT_REQUESTED: &str = "about-requested";
+
+/// The standard macOS menu, with its About item replaced by one that opens
+/// the About dialog of the builder instead of the standard About panel.
+#[cfg(target_os = "macos")]
+fn macos_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    use tauri::menu::{Menu, MenuItem, MenuItemKind};
+    let menu = Menu::default(app)?;
+    if let Some(MenuItemKind::Submenu(application)) = menu.items()?.into_iter().next() {
+        application.remove_at(0)?;
+        let title = format!("About {}", app.package_info().name);
+        application.insert(&MenuItem::with_id(app, ABOUT_REQUESTED, title, true, None::<&str>)?, 0)?;
+    }
+    Ok(menu)
+}
+
+/// `builder` with the macOS menu; unchanged on other platforms, which show
+/// no menu bar.
+fn with_menu(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(macos_menu).on_menu_event(|app, event| {
+        if event.id().as_ref() == ABOUT_REQUESTED {
+            let _ = app.emit(ABOUT_REQUESTED, ());
+        }
+    });
+    builder
+}
+
 fn fit_to_screen(window: &tauri::WebviewWindow) -> tauri::Result<()> {
     if let Some(monitor) = window.current_monitor()? {
         let area = monitor.work_area().size;
@@ -400,7 +431,7 @@ fn main() {
     if let Some(code) = installer_request(&context.config().identifier) {
         std::process::exit(code);
     }
-    tauri::Builder::default()
+    with_menu(tauri::Builder::default())
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 // Shown whatever the result of the fitting. When we cannot

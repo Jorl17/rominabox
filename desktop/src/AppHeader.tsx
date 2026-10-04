@@ -1,12 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import appIcon from "../src-tauri/icons/icon.png";
 import { AboutDialog } from "./AboutDialog";
-import { native } from "./bridge";
+import { native, onAboutRequested } from "./bridge";
 
 /** The band across the top: the wordmark, the edition, and About. The About
  * dialog is outside the band so it does not have the colours of the band. */
 export function AppHeader() {
   const [about, setAbout] = useState(false);
+  // About in the macOS menu bar opens the same dialog.
+  useEffect(() => {
+    if (!native) return;
+    const stop = onAboutRequested(() => setAbout(true));
+    return () => {
+      stop.then((unlisten) => unlisten());
+    };
+  }, []);
   return (
     <>
       <header className="app-header">
