@@ -156,8 +156,7 @@ def main() -> int:
     prepare_runtime.stage_joypad_autoconfig(kit, native_build.joypad_profile_drivers(platform))
     print(f"Made the {target} runtime kit in {kit} from {build}")
 
-    for part in native_build.slices(target):
-        install_preview(build if part == target else build / part, part)
+    install_preview(build, target)
     if missing:
         print(licences.warning(missing), file=sys.stderr)
     return 0
@@ -178,18 +177,26 @@ def empty_library_inventory(kit: Path, declared: dict) -> None:
 
 def install_preview(build: Path, target: str) -> None:
     """The builder's menu preview renderer, which we build beside the player
-    for each target that has one in the recipe, in the folder we load it from
-    in the builder and the picture tests. We link only the system's libraries
-    into it, so we remove any library an earlier renderer left beside it."""
-    declared = native_build.recipe()["preview"].get(target)
-    if not declared:
+    for each slice that has one in the recipe, in the folder we load it from
+    in the builder and the picture tests. For a universal target we join the
+    renderers of the slices into one file, as we join the players. We link
+    only the system's libraries into it, so we remove any library an earlier
+    renderer left beside it."""
+    parts = [part for part in native_build.slices(target) if native_build.recipe()["preview"].get(part)]
+    if not parts:
         return
-    built = build / "preview" / declared["output"]
-    if not built.is_file():
-        raise SystemExit(f"{build} has no menu preview renderer at {built}")
-    installed = native_build.preview_resource(target)
+    built = [(build if part == target else build / part) / "preview" / native_build.recipe()["preview"][part]["output"]
+             for part in parts]
+    for path in built:
+        if not path.is_file():
+            raise SystemExit(f"{path.parent.parent} has no menu preview renderer at {path}")
+    installed = native_build.preview_resource(parts[0])
     installed.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(built, installed)
+    if len(built) == 1:
+        shutil.copy2(built[0], installed)
+    else:
+        native_build.run(["lipo", "-create", "-output", str(installed), *map(str, built)], build,
+                         native_build.build_environment(parts[0]))
     carried = installed.parent / "Frameworks"
     if carried.is_dir():
         for library in carried.iterdir():
