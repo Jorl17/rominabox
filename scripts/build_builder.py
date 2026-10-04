@@ -45,18 +45,24 @@ def mach_o(path: Path) -> bool:
 
 
 def macos_finish(built: Path) -> Path:
-    """The .app, signed ad hoc for development after Tauri copied the
-    resources in: each actual Mach-O leaf first, including libraries without
-    the execute bit, then the bundle. --deep signing is no substitute."""
+    """The .app, signed after Tauri copied the resources in: each actual Mach-O
+    leaf first, including libraries without the execute bit, then the bundle.
+    --deep signing is no substitute. With ROMINABOX_SIGN_IDENTITY set to a
+    Developer ID certificate in the keychain, we sign with it, the hardened
+    runtime and a timestamp, for notarization. Unset, we sign ad hoc."""
     app = built / "release/bundle/macos" / f"{PRODUCT}.app"
     if not app.is_dir():
         raise SystemExit(f"missing builder bundle: {app}")
+    identity = os.environ.get("ROMINABOX_SIGN_IDENTITY", "")
+    sign = ["/usr/bin/codesign", "--force", "--sign", identity or "-"]
+    if identity:
+        sign += ["--options", "runtime", "--timestamp"]
     for path in sorted(app.rglob("*")):
         if path.is_symlink() or not path.is_file():
             continue
         if mach_o(path):
-            subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", "--", str(path)], check=True)
-    subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", "--", str(app)], check=True)
+            subprocess.run([*sign, "--", str(path)], check=True)
+    subprocess.run([*sign, "--", str(app)], check=True)
     subprocess.run(["/usr/bin/codesign", "--verify", "--deep", "--strict", "--", str(app)], check=True)
     return app
 

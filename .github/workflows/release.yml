@@ -1,0 +1,168 @@
+# We make a release only from a version tag, v<version>. For each platform
+# we build the player, its runtime kit and the builder on that platform. In
+# the release job we publish the installers as the version's release and the
+# kits as the player's release (scripts/publish_kit.py), where builders
+# download them. When someone runs it by hand (workflow_dispatch), we build,
+# keep the results as workflow artifacts and publish nothing.
+#
+# Secrets: with FORK_DEPLOY_KEY we read the private RetroArch fork. For the
+# Mac builder's Developer ID signature and notarization: MACOS_CERTIFICATE (the
+# certificate and key as a base64 .p12), MACOS_CERTIFICATE_PASSWORD, and an App
+# Store Connect API key, NOTARY_KEY (the .p8 file's text), NOTARY_KEY_ID and
+# NOTARY_ISSUER. Without them we sign the Mac builder ad hoc.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            platform: windows
+          - runner: macos-latest
+            platform: macos
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The tag is the builder's version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
+          test "${GITHUB_REF_NAME}" = "v${version}" || { echo "tag ${GITHUB_REF_NAME} is not v${version}"; exit 1; }
+
+      - name: The RetroArch fork
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.FORK_DEPLOY_KEY }}
+      - run: |
+          git config --global url."git@github.com:Jorl17/rominabox-retroarch.git".insteadOf "https://github.com/Jorl17/rominabox-retroarch.git"
+          git submodule update --init --depth 1 vendor/retroarch
+
+      - name: MSYS2's UCRT64 toolchain
+        if: matrix.platform == 'windows'
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-make
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-librsvg
+            mingw-w64-ucrt-x86_64-tools
+      - if: matrix.platform == 'windows'
+        run: echo "ROMINABOX_MSYS2=$(cygpath -w '${{ steps.msys2.outputs.msys2-location }}')" >> "$GITHUB_ENV"
+
+      - name: CMake and Ninja
+        if: matrix.platform == 'macos'
+        run: brew install cmake ninja
+
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: The player and its runtime kit
+        run: |
+          uv run python scripts/build_player.py "$GITHUB_WORKSPACE/work/player"
+          uv run python scripts/build_kit.py "$GITHUB_WORKSPACE/work/player"
+          uv run python scripts/publish_kit.py pack
+
+      - name: The Developer ID certificate
+        if: matrix.platform == 'macos' && env.MACOS_CERTIFICATE != ''
+        env:
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/release.keychain-db"
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p release "$keychain"
+          security set-keychain-settings "$keychain"
+          security unlock-keychain -p release "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k release "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          identity=$(security find-identity -v -p codesigning "$keychain" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')
+          test -n "$identity" || { echo "the certificate is not a Developer ID Application certificate"; exit 1; }
+          echo "ROMINABOX_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+
+      - name: The builder
+        run: |
+          (cd desktop && npm ci)
+          uv run python scripts/build_builder.py
+
+      - name: Notarized
+        if: matrix.platform == 'macos' && env.MACOS_CERTIFICATE != '' && env.NOTARY_KEY != ''
+        env:
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
+        run: |
+          app="desktop/target/release/bundle/macos/ROM-in-a-Box.app"
+          echo "$NOTARY_KEY" > "$RUNNER_TEMP/notary.p8"
+          ditto -c -k --keepParent "$app" "$RUNNER_TEMP/notarize.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --key "$RUNNER_TEMP/notary.p8" \
+            --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" --wait
+          xcrun stapler staple "$app"
+
+      - name: What the release carries
+        run: |
+          version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
+          mkdir -p release/installers release/kits
+          cp work/kits/*.zip release/kits/
+          if [ "${{ matrix.platform }}" = macos ]; then
+            ditto -c -k --keepParent desktop/target/release/bundle/macos/ROM-in-a-Box.app \
+              "release/installers/ROM-in-a-Box-${version}-macos.zip"
+          else
+            cp desktop/target/release/bundle/nsis/*-setup.exe release/installers/
+          fi
+          ls -la release/installers release/kits
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: release/
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release
+          merge-multiple: true
+      - name: The version's release, with the installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/installers/* --verify-tag \
+            --title "ROM-in-a-Box ${GITHUB_REF_NAME#v}" \
+            --notes "The builder for macOS and Windows. The runtime kits it downloads to make games for the other platform are published in the release of its player."
+      - name: The player's release, with the kits
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run python scripts/publish_kit.py upload release/kits/*.zip
