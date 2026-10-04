@@ -208,6 +208,7 @@
     "hotkeys-second-page": ["options", "hotkeys", "hotkeys-next"],
     "fast-forward-hotkeys": { "script": ["options", "hotkeys", "hotkeys-next"], "fastForward": true },
     "fast-forward-toggle": { "script": ["options", "hotkeys", "hotkeys-next", "hotkey-fast-forward-mode"], "fastForward": true },
+    "fast-forward-capturing": { "script": ["options", "hotkeys", "hotkeys-next", "hotkey-fast-forward-add"], "fastForward": true },
     "fast-forward-options": { "script": ["options"], "fastForward": true },
     "fast-forward-speed-pressed": { "script": ["options", "fast-forward-speed"], "fastForward": true },
     "notice-slot": { "script": ["wait-ms:5500", "press:f7", "wait:30"], "startAtMenu": false },
