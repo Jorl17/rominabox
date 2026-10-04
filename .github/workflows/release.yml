@@ -79,9 +79,9 @@ jobs:
         if: matrix.platform == 'windows'
         run: echo "ROMINABOX_MSYS2=$(cygpath -w '${{ steps.msys2.outputs.msys2-location }}')" >> "$GITHUB_ENV"
 
-      - name: Install CMake and Ninja
+      - name: Install CMake, Ninja and pkg-config
         if: matrix.platform == 'macos'
-        run: brew install cmake ninja
+        run: brew install cmake ninja pkgconf
 
       - uses: astral-sh/setup-uv@v5
       - uses: actions/setup-node@v4
