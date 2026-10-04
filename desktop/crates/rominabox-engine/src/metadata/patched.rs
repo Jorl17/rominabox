@@ -117,7 +117,7 @@ fn made_once(rom: &Path, patches: &[PathBuf], file_name: &str, cache: &Path) -> 
         crate::patching::FileFailure::Patch(error) => io::Error::other(format!("{error:?}")),
         crate::patching::FileFailure::Io(error) => error,
     })?;
-    fs::rename(&making, &file)?;
+    crate::files::rename(&making, &file)?;
     Ok(file)
 }
 

@@ -94,18 +94,16 @@ fn the_other_platform_uses_the_stores_kit_for_this_player() {
     assert_eq!(transport.asked.get(), 0);
 }
 
-/// We refuse a kit for another player, or no kit and nothing published,
-/// with a sentence about where to put a kit and where we looked for it.
+/// We refuse a kit for another player, and, when no kit is there and the
+/// download fails, we ask the author to try again later.
 #[test]
-fn a_kit_for_another_player_or_none_is_refused_saying_where_one_goes() {
+fn a_kit_for_another_player_or_none_is_refused() {
     let root = rominabox_scratch::Scratch::dir("rominabox-kits-refused");
     let bundled = kit(&root.join("bundled"), "macos", PLAYER);
     let store = root.join("store");
     let place = folder(&store, &ExportTarget::Windows, PLAYER);
     let missing = for_export(&ExportTarget::Windows, &bundled, &store, &nothing()).unwrap_err();
-    assert!(missing.contains("Games for Windows"), "{missing}");
-    assert!(missing.contains(&place.display().to_string()), "{missing}");
-    assert!(missing.contains(&release_url(&ExportTarget::Windows, PLAYER)), "{missing}");
+    assert_eq!(missing, "The Windows runtime kit could not be downloaded. Try again later.");
     kit(&place, "windows", "0000000000000000000000000000000000000000");
     let other = for_export(&ExportTarget::Windows, &bundled, &store, &nothing()).unwrap_err();
     assert!(other.contains("contains player 0000") && other.contains(PLAYER), "{other}");

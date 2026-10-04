@@ -116,15 +116,8 @@ pub fn for_export(
         None => {}
     }
     let url = release_url(platform, &own.player);
-    fetch(&url, &place, transport).map_err(|reason| {
-        format!(
-            "Games for {} are made with ROM-in-a-Box's {} player, which is downloaded on first use from {url}. {reason} To make one now, copy the {} runtime kit from this version of ROM-in-a-Box into {}.",
-            called(platform),
-            called(platform),
-            called(platform),
-            place.display()
-        )
-    })?;
+    fetch(&url, &place, transport)
+        .map_err(|_| format!("The {} runtime kit could not be downloaded. Try again later.", called(platform)))?;
     match identity(&place) {
         Some(found) if found == wanted => Ok(place),
         _ => Err(format!(
@@ -153,7 +146,7 @@ fn fetch(url: &str, place: &Path, transport: &dyn Transport) -> Result<(), Strin
         std::process::id()
     ));
     unpack(&body, &unpacking)?;
-    fs::rename(&unpacking, place).map_err(|error| format!("Could not place the kit in {}: {error}", place.display()))
+    crate::files::rename(&unpacking, place).map_err(|error| format!("Could not place the kit in {}: {error}", place.display()))
 }
 
 /// Write every entry of the zip `archive` under `destination`. An entry whose

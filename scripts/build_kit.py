@@ -40,6 +40,9 @@ import toolchain  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 # The pictures of the builder's Menu step, in the builder's resources.
 PICTURES = ROOT / "desktop/src-tauri/resources/menu-previews"
+# A picture takes under a second with a graphics card and with Mesa's
+# software OpenGL, so a render that takes this long has stopped.
+PICTURE_SECONDS = 120
 # The environment variable with the path of a folder with a software OpenGL
 # for Windows.
 OPENGL_LIBRARIES = "ROMINABOX_OPENGL_LIBRARIES"
@@ -233,6 +236,7 @@ def render_menu_previews(kit: Path, renderer: Path, target: str) -> None:
     declared = json.loads((ROOT / "desktop/designs.json").read_text(encoding="utf-8"))
     PICTURES.mkdir(parents=True, exist_ok=True)
     names = set()
+    print("Building rominabox-cli to render the Menu step pictures", flush=True)
     cli = built.cli()
     with tempfile.TemporaryDirectory() as scratch:
         libraries = os.environ.get(OPENGL_LIBRARIES)
@@ -248,8 +252,13 @@ def render_menu_previews(kit: Path, renderer: Path, target: str) -> None:
                            "theme": design["id"], "palette": palette["id"],
                            "design": str(kit / "designs" / design["id"]), "assets": str(kit / "menu-assets"),
                            "renderer": str(renderer)}
-                run = subprocess.run([str(cli), "preview"], input=json.dumps(request),
-                                     capture_output=True, text=True, encoding="utf-8")
+                print(f"Rendering {design['id']} in {palette['id']}", flush=True)
+                try:
+                    run = subprocess.run([str(cli), "preview"], input=json.dumps(request), capture_output=True,
+                                         text=True, encoding="utf-8", timeout=PICTURE_SECONDS)
+                except subprocess.TimeoutExpired:
+                    raise SystemExit(f"rendering {design['id']} in {palette['id']} took more than "
+                                     f"{PICTURE_SECONDS} seconds") from None
                 events = [json.loads(line) for line in run.stdout.splitlines() if line.startswith("{")]
                 result = next((event["result"] for event in events if event.get("type") == "result"), None)
                 if run.returncode != 0 or result is None:

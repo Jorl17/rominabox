@@ -10,6 +10,7 @@ pub mod discs;
 pub mod dumps;
 pub mod export_cores;
 pub mod export_error;
+mod files;
 pub mod game;
 mod helper;
 pub mod meta_binds;

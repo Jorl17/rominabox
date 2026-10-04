@@ -200,6 +200,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           kit=$(ls release/kits | head -1 | sed -E 's/^[a-z]+-([0-9a-f]+)\.zip$/kit-\1/')
+          setup=$(cd release/installers && ls *-setup.exe)
           version=${GITHUB_REF_NAME#v}
           {
             echo "ROM-in-a-Box $version for macOS and Windows."
@@ -207,11 +208,23 @@ jobs:
             echo "- \`ROM-in-a-Box-$version-macos.zip\`: for Macs with Apple silicon."
             echo "- \`ROM-in-a-Box-$version-macos-intel.zip\`: for Intel Macs."
             echo "- \`ROM-in-a-Box-$version-macos-universal.zip\`: for both kinds of Mac."
-            echo "- The \`-setup.exe\` file: the installer for Windows."
+            echo "- \`$setup\`: the installer for Windows."
+            echo
+            echo "The Windows installer is not signed with a code-signing certificate, so Microsoft Defender SmartScreen may warn that it comes from an unknown publisher and call it dangerous. It is safe to run: choose **More info**, then **Run anyway**."
             echo
             echo "Games for the other platform are made from the runtime kit of that platform in the release \`$kit\`, which is downloaded on first use."
+            echo
+            echo "Each file is also attached under a name without the version, so that a link to releases/latest/download/ always reaches the newest one."
           } > "$RUNNER_TEMP/notes.md"
-          gh release create "$GITHUB_REF_NAME" release/installers/* --verify-tag \
+          # The same files without the version in their names, for links to the
+          # latest release.
+          latest="$RUNNER_TEMP/latest"
+          mkdir -p "$latest"
+          for variant in macos macos-intel macos-universal; do
+            cp "release/installers/ROM-in-a-Box-$version-$variant.zip" "$latest/ROM-in-a-Box-$variant.zip"
+          done
+          cp "release/installers/$setup" "$latest/ROM-in-a-Box-windows-setup.exe"
+          gh release create "$GITHUB_REF_NAME" release/installers/* "$latest"/* --verify-tag \
             --title "ROM-in-a-Box $version" --notes-file "$RUNNER_TEMP/notes.md"
       - name: Publish the kits in the player commit's release
         env:

@@ -749,7 +749,7 @@ fn write_cached(path: &Path, bytes: &[u8]) -> Result<(), InspectionError> {
     fs::create_dir_all(parent)?;
     let temporary = path.with_extension(format!("tmp-{}", std::process::id()));
     fs::write(&temporary, bytes)?;
-    fs::rename(temporary, path)?;
+    crate::files::rename(&temporary, path)?;
     Ok(())
 }
 
