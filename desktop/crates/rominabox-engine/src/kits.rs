@@ -2,10 +2,10 @@
 //!
 //! We bundle the kit for the builder's own platform with the builder. For a
 //! game for the other platform we use that platform's kit in the kit store.
-//! Someone placed it there by hand, or we downloaded it on first use from the
-//! release with the kits of the builder's player (`release_url`). Its player
-//! must be the one in the bundled kit, because we build both kits from one
-//! source and the game's menu is part of the player.
+//! Someone copied it there by hand, or we downloaded it on first use from the
+//! release of the builder's player commit (`release_url`). Its player must
+//! be the one in the bundled kit, because we build both kits from one source
+//! and the game's menu is part of the player.
 
 use crate::cores::Transport;
 use crate::packaging::ExportTarget;
@@ -72,9 +72,9 @@ fn folder(store: &Path, platform: &ExportTarget, player: &str) -> PathBuf {
     store.join(format!("{}-{}", word(platform), short(player)))
 }
 
-/// Where we publish `platform`'s kit for `player`: the asset
-/// `<platform>-<player>.zip` of the release `kit-<player>` in the
-/// repository. We upload it there with scripts/publish_kit.py.
+/// The URL of `platform`'s kit for `player`: the asset
+/// `<platform>-<player>.zip` of the release `kit-<player>` in the repository,
+/// where we upload it with scripts/publish_kit.py.
 pub fn release_url(platform: &ExportTarget, player: &str) -> String {
     let short = short(player);
     format!(
@@ -106,7 +106,7 @@ pub fn for_export(
         Some(found) if found == wanted => return Ok(place),
         Some(found) => {
             return Err(format!(
-                "The {} runtime kit in {} carries player {}, and this builder's is {}. Put the kit made with this version of ROM-in-a-Box there instead.",
+                "The {} runtime kit in {} contains player {}, and this builder's player is {}. Copy the kit made with this version of ROM-in-a-Box there instead.",
                 called(platform),
                 place.display(),
                 found.player,
@@ -118,7 +118,7 @@ pub fn for_export(
     let url = release_url(platform, &own.player);
     fetch(&url, &place, transport).map_err(|reason| {
         format!(
-            "Games for {} are made with ROM-in-a-Box's {} player, which this builder downloads the first time it is needed, from {url}. {reason} To make one now, put the {} runtime kit from this version of ROM-in-a-Box in {}.",
+            "Games for {} are made with ROM-in-a-Box's {} player, which is downloaded on first use from {url}. {reason} To make one now, copy the {} runtime kit from this version of ROM-in-a-Box into {}.",
             called(platform),
             called(platform),
             called(platform),

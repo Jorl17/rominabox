@@ -1,5 +1,5 @@
-"""Pack a runtime kit and publish it, so that a builder on the other platform
-can download it.
+"""Pack a runtime kit and publish it on GitHub, so that a builder on the other
+platform can download it.
 
     uv run python scripts/publish_kit.py pack [KIT] [FOLDER]    # default KIT: desktop/src-tauri/resources/runtime
     uv run python scripts/publish_kit.py upload ARCHIVE...
@@ -12,11 +12,12 @@ files are at the root of the archive, each with its Unix permissions, so the
 programs of a Mac kit stay executable when someone unpacks it on a Mac.
 
 With `upload`, we publish archives made with `pack` as assets of the release
-`kit-<player>` in the repository named in the engine package. We create the
-release when it does not exist yet and replace an asset with the same name.
-We publish with `gh`, which must be signed in to an account with write access
-to the repository. In the builder we find the archive by its platform and
-player (kits.rs, release_url), and HTTPS is our only check of the download.
+`kit-<player>` in the repository named in the engine package's Cargo.toml.
+We create the release when it does not exist and replace an asset with the
+same name. We publish with `gh`, which must be signed in to an account with
+write access to the repository. In the builder we form the download URL from
+the platform and the player (kits.rs, release_url), and HTTPS is our only
+check of a downloaded archive.
 """
 
 from __future__ import annotations
@@ -36,10 +37,10 @@ NAME = re.compile(r"^(macos|windows)-([0-9a-f]{12})\.zip$")
 
 
 def repository() -> str:
-    """The repository named in the engine package, as owner/name."""
+    """The GitHub repository named in the engine package's Cargo.toml, as owner/name."""
     found = re.search(r'^repository = "https://github\.com/([^"]+)"', ENGINE.read_text(encoding="utf-8"), re.M)
     if not found:
-        raise SystemExit(f"{ENGINE} names no GitHub repository")
+        raise SystemExit(f"{ENGINE} contains no GitHub repository URL")
     return found.group(1)
 
 
@@ -57,7 +58,7 @@ def pack(kit: Path, folder: Path) -> Path:
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as packed:
         for path in sorted(kit.rglob("*")):
             if path.is_symlink():
-                raise SystemExit(f"{path} is a link; a kit holds files only")
+                raise SystemExit(f"{path} is a link, and a kit may contain only regular files")
             if not path.is_file():
                 continue
             info = zipfile.ZipInfo.from_file(path, path.relative_to(kit).as_posix())
@@ -71,11 +72,11 @@ def checked(archive: Path) -> tuple[str, str]:
     the manifest inside it."""
     named = NAME.match(archive.name)
     if not named:
-        raise SystemExit(f"{archive.name} is not named <platform>-<player>.zip; make it with `pack`")
+        raise SystemExit(f"{archive.name} is not named <platform>-<player>.zip. Archives are made with `pack`.")
     with zipfile.ZipFile(archive) as packed:
         inside = identity(json.loads(packed.read("manifest.json")))
     if inside != named.groups():
-        raise SystemExit(f"{archive.name} holds the {inside[0]} kit of player {inside[1]}")
+        raise SystemExit(f"{archive.name} contains the {inside[0]} kit of player {inside[1]}")
     return inside
 
 

@@ -1,6 +1,5 @@
-"""Check that a packed kit has the name that we look for in the builder, and
-that we refuse an archive whose name and contents disagree before any
-upload.
+"""Check that a packed kit has the name used in download URLs, and that we
+reject an archive whose name does not match its contents before upload.
 
     uv run python scripts/test_publish_kit.py
 
@@ -47,7 +46,7 @@ def main() -> int:
             publish_kit.checked(renamed)
             failures.append("an archive named for the Mac holding the Windows kit was accepted")
         except SystemExit as refusal:
-            if "holds the windows kit" not in str(refusal):
+            if "contains the windows kit" not in str(refusal):
                 failures.append(f"refused for another reason: {refusal}")
         if publish_kit.repository() != "Jorl17/rominabox":
             failures.append(f"publishes to {publish_kit.repository()}")

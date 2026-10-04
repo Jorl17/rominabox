@@ -108,7 +108,7 @@ fn a_kit_for_another_player_or_none_is_refused_saying_where_one_goes() {
     assert!(missing.contains(&release_url(&ExportTarget::Windows, PLAYER)), "{missing}");
     kit(&place, "windows", "0000000000000000000000000000000000000000");
     let other = for_export(&ExportTarget::Windows, &bundled, &store, &nothing()).unwrap_err();
-    assert!(other.contains("carries player 0000") && other.contains(PLAYER), "{other}");
+    assert!(other.contains("contains player 0000") && other.contains(PLAYER), "{other}");
 }
 
 /// We unpack a downloaded kit into the store. We refuse one that lists a

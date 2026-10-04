@@ -306,8 +306,8 @@ SCOPES = [
     ),
     Scope(
         "publishkit",
-        "that a kit packed for publishing is named <platform>-<player>.zip with the kit's files at its root, that an archive whose name and manifest disagree is refused before upload, and that it is published to the repository the engine package names",
-        "that an upload reaches GitHub or that a builder downloads the archive (kits.rs tests the download with a stand-in transport)",
+        "that a kit packed for publishing is named <platform>-<player>.zip with the kit's files at its root, that an archive whose name and manifest disagree is rejected before upload, and that the target repository is the one in the engine package's Cargo.toml",
+        "that an upload reaches GitHub, or the download itself, which is tested in kits.rs with a stand-in transport",
         [PYTHON, str(ROOT / "scripts/test_publish_kit.py")],
     ),
     Scope(

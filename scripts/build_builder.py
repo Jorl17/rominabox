@@ -47,9 +47,10 @@ def mach_o(path: Path) -> bool:
 def macos_finish(built: Path) -> Path:
     """The .app, signed after Tauri copied the resources in: each actual Mach-O
     leaf first, including libraries without the execute bit, then the bundle.
-    --deep signing is no substitute. With ROMINABOX_SIGN_IDENTITY set to a
-    Developer ID certificate in the keychain, we sign with it, the hardened
-    runtime and a timestamp, for notarization. Unset, we sign ad hoc."""
+    --deep signing is no substitute. When ROMINABOX_SIGN_IDENTITY is set to a
+    Developer ID certificate in the keychain, we sign with that certificate,
+    the hardened runtime and a timestamp, as required for notarization. When
+    it is unset, we sign ad hoc."""
     app = built / "release/bundle/macos" / f"{PRODUCT}.app"
     if not app.is_dir():
         raise SystemExit(f"missing builder bundle: {app}")

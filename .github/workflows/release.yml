@@ -1,15 +1,18 @@
-# We make a release only from a version tag, v<version>. For each platform
-# we build the player, its runtime kit and the builder on that platform. In
-# the release job we publish the installers as the version's release and the
-# kits as the player's release (scripts/publish_kit.py), where builders
-# download them. When someone runs it by hand (workflow_dispatch), we build,
-# keep the results as workflow artifacts and publish nothing.
+# We make releases only from version tags, v<version>.
 #
-# Secrets: with FORK_DEPLOY_KEY we read the private RetroArch fork. For the
-# Mac builder's Developer ID signature and notarization: MACOS_CERTIFICATE (the
-# certificate and key as a base64 .p12), MACOS_CERTIFICATE_PASSWORD, and an App
-# Store Connect API key, NOTARY_KEY (the .p8 file's text), NOTARY_KEY_ID and
-# NOTARY_ISSUER. Without them we sign the Mac builder ad hoc.
+# For each platform, we build the player, its runtime kit and the builder on
+# that platform. We then publish the installers as the version's release, and
+# the kits as the release of their player commit (scripts/publish_kit.py),
+# from which builders download them. When someone starts the workflow by hand
+# (workflow_dispatch), we keep the results as workflow artifacts and publish
+# nothing.
+#
+# Secrets: FORK_DEPLOY_KEY is a read-only key for the private RetroArch fork.
+# For the Mac builder's Developer ID signature and notarization, the secrets
+# are MACOS_CERTIFICATE (the certificate and key as a base64 .p12),
+# MACOS_CERTIFICATE_PASSWORD, and an App Store Connect API key: NOTARY_KEY (the
+# .p8 file's text), NOTARY_KEY_ID and NOTARY_ISSUER. Without them, we sign the
+# Mac builder ad hoc.
 
 name: Release
 
@@ -41,21 +44,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: The tag is the builder's version
+      - name: Check that the tag matches the builder's version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
-          test "${GITHUB_REF_NAME}" = "v${version}" || { echo "tag ${GITHUB_REF_NAME} is not v${version}"; exit 1; }
+          test "${GITHUB_REF_NAME}" = "v${version}" || { echo "tag ${GITHUB_REF_NAME} does not match version v${version}"; exit 1; }
 
-      - name: The RetroArch fork
+      - name: Load the fork's deploy key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.FORK_DEPLOY_KEY }}
-      - run: |
+      - name: Check out the RetroArch fork
+        run: |
           git config --global url."git@github.com:Jorl17/rominabox-retroarch.git".insteadOf "https://github.com/Jorl17/rominabox-retroarch.git"
           git submodule update --init --depth 1 vendor/retroarch
 
-      - name: MSYS2's UCRT64 toolchain
+      - name: Install MSYS2's UCRT64 toolchain
         if: matrix.platform == 'windows'
         id: msys2
         uses: msys2/setup-msys2@v2
@@ -71,10 +75,11 @@ jobs:
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-librsvg
             mingw-w64-ucrt-x86_64-tools
-      - if: matrix.platform == 'windows'
+      - name: Point the build at the MSYS2 installation
+        if: matrix.platform == 'windows'
         run: echo "ROMINABOX_MSYS2=$(cygpath -w '${{ steps.msys2.outputs.msys2-location }}')" >> "$GITHUB_ENV"
 
-      - name: CMake and Ninja
+      - name: Install CMake and Ninja
         if: matrix.platform == 'macos'
         run: brew install cmake ninja
 
@@ -84,13 +89,14 @@ jobs:
           node-version: 24
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: The player and its runtime kit
+      - name: Build the player and its runtime kit
         run: |
-          uv run python scripts/build_player.py "$GITHUB_WORKSPACE/work/player"
+          target=$(uv run python -c 'import sys; sys.path.insert(0, "scripts"); import core_source, native_build; print(native_build.kit_target(core_source.host_target()))')
+          uv run python scripts/build_player.py --target "$target" "$GITHUB_WORKSPACE/work/player"
           uv run python scripts/build_kit.py "$GITHUB_WORKSPACE/work/player"
           uv run python scripts/publish_kit.py pack
 
-      - name: The Developer ID certificate
+      - name: Import the Developer ID certificate
         if: matrix.platform == 'macos' && env.MACOS_CERTIFICATE != ''
         env:
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -104,15 +110,15 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k release "$keychain" > /dev/null
           security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
           identity=$(security find-identity -v -p codesigning "$keychain" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')
-          test -n "$identity" || { echo "the certificate is not a Developer ID Application certificate"; exit 1; }
+          test -n "$identity" || { echo "MACOS_CERTIFICATE contains no Developer ID Application certificate"; exit 1; }
           echo "ROMINABOX_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
 
-      - name: The builder
+      - name: Build the builder
         run: |
           (cd desktop && npm ci)
           uv run python scripts/build_builder.py
 
-      - name: Notarized
+      - name: Notarize the Mac builder
         if: matrix.platform == 'macos' && env.MACOS_CERTIFICATE != '' && env.NOTARY_KEY != ''
         env:
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
@@ -125,7 +131,7 @@ jobs:
             --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" --wait
           xcrun stapler staple "$app"
 
-      - name: What the release carries
+      - name: Collect the release files
         run: |
           version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
           mkdir -p release/installers release/kits
@@ -155,14 +161,14 @@ jobs:
           pattern: release-*
           path: release
           merge-multiple: true
-      - name: The version's release, with the installers
+      - name: Publish the version's release with the installers
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" release/installers/* --verify-tag \
             --title "ROM-in-a-Box ${GITHUB_REF_NAME#v}" \
-            --notes "The builder for macOS and Windows. The runtime kits it downloads to make games for the other platform are published in the release of its player."
-      - name: The player's release, with the kits
+            --notes "ROM-in-a-Box for macOS and Windows. The runtime kits for making games for the other platform are in the release named after the player commit, kit-<commit>."
+      - name: Publish the kits in the player commit's release
         env:
           GH_TOKEN: ${{ github.token }}
         run: uv run python scripts/publish_kit.py upload release/kits/*.zip
