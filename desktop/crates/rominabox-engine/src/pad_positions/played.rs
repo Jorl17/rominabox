@@ -36,8 +36,9 @@ impl Game {
         let controls = folder.path().join("controls-defaults.cfg");
         let profile = controls::write_defaults_config(system, chosen, &controls).unwrap();
         let placed = controls::placement(system, chosen).unwrap();
-        let positions = controls::pad_positions().unwrap();
-        let file = super::remap_file(&profile, &placed, &positions, every_pad_is_player_one).unwrap();
+        let unused = controls::unused_positions(system, chosen).unwrap();
+        let unused_unmoved = controls::unused_positions(system, &Controls::default()).unwrap();
+        let file = super::remap_file(&profile, &placed, &unused, &unused_unmoved, every_pad_is_player_one).unwrap();
         let remap = match file {
             text if text.is_empty() => "none".to_string(),
             text => {
@@ -70,9 +71,14 @@ impl Game {
                     .map_or(control.id.clone(), |(_, slot)| slot.to_string()),
             })
             .collect();
-        let positions = controls::pad_positions().unwrap();
+        let unused: Vec<_> = controls::pad_positions()
+            .unwrap()
+            .into_iter()
+            .filter(|position| !placed.iter().any(|entry| entry.slot == position.id))
+            .collect();
         let path = game._folder.path().join("unchecked.rmp");
-        fs::write(&path, super::remap_file(&profile, &placed, &positions, false).unwrap()).unwrap();
+        let unused_unmoved = controls::unused_positions(system, &Controls::default()).unwrap();
+        fs::write(&path, super::remap_file(&profile, &placed, &unused, &unused_unmoved, false).unwrap()).unwrap();
         Self {
             remap: path.display().to_string(),
             ..game

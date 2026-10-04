@@ -287,14 +287,13 @@ pub(super) fn firmware_destination_name(source: &Path, system: &crate::systems::
 pub(super) fn stage_controller_remap(
     profile: &controls::ControlProfile,
     placed: &[crate::pad_positions::Placed],
+    unused: &[controls::PadPosition],
+    unused_unmoved: &[controls::PadPosition],
     every_pad_is_player_one: bool,
     core: &crate::systems::Core,
     remaps: &Path,
 ) -> Result<(), ExportError> {
-    let contents = controls::pad_positions()
-        .and_then(|positions| {
-            crate::pad_positions::remap_file(profile, placed, &positions, every_pad_is_player_one)
-        })
+    let contents = crate::pad_positions::remap_file(profile, placed, unused, unused_unmoved, every_pad_is_player_one)
         .map_err(|error| ExportError::new(ErrorStage::Stage, error))?;
     if contents.is_empty() {
         // A pad that is the core's default device, with nothing moved and

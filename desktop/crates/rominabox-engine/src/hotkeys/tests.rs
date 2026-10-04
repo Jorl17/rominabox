@@ -281,7 +281,8 @@ fn home_on_pad(profile: &str, button: u32, pad: u32, every_pad_is_player_one: bo
     let written = crate::pad_positions::remap_file(
         &crate::controls::profile_for_system("megadrive").unwrap(),
         &[],
-        &crate::controls::pad_positions().unwrap(),
+        &crate::controls::unused_positions("megadrive", &crate::controls::Controls::default()).unwrap(),
+        &crate::controls::unused_positions("megadrive", &crate::controls::Controls::default()).unwrap(),
         every_pad_is_player_one,
     )
     .unwrap();

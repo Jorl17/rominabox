@@ -309,6 +309,9 @@ pub fn write_defaults_config(
             config.push_str(&format!("input_player1_{slot}_mbtn = \"{mouse}\"\n"));
         }
     }
+    for position in unused_positions(system, controls)? {
+        config.push_str(&format!("input_player1_{} = \"nul\"\n", position.id));
+    }
     fs::write(destination, config)
         .map_err(|error| format!("write controls defaults {}: {error}", destination.display()))?;
     Ok(profile)
@@ -350,6 +353,15 @@ pub struct GameInput {
     pub label: String,
     pub key: String,
     pub position: String,
+}
+
+/// The pad positions that no control of the game for `system` uses, on any
+/// pad in its picker. We send nothing from them to the game, because
+/// RetroArch binds some keys to them by default (S to X, A to Y, Q to L, W
+/// to R), and the positions of a pad reach the core unchanged without a remap.
+pub fn unused_positions(system: &str, controls: &Controls) -> Result<Vec<PadPosition>, String> {
+    let used: Vec<String> = game_inputs(system, controls)?.into_iter().map(|input| input.position).collect();
+    Ok(pad_positions()?.into_iter().filter(|position| !used.contains(&position.id)).collect())
 }
 
 /// Every input for a control of the game `system` with `controls`, on every

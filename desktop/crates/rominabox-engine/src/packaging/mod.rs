@@ -530,9 +530,15 @@ where
     )?;
     let placed = controls::placement(&request.game.system, &request.game.controls)
         .map_err(|error| ExportError::new(ErrorStage::Stage, error))?;
+    let unused = controls::unused_positions(&request.game.system, &request.game.controls)
+        .map_err(|error| ExportError::new(ErrorStage::Stage, error))?;
+    let unused_unmoved = controls::unused_positions(&request.game.system, &controls::Controls::default())
+        .map_err(|error| ExportError::new(ErrorStage::Stage, error))?;
     stage_controller_remap(
         &controls_profile,
         &placed,
+        &unused,
+        &unused_unmoved,
         request.game.every_pad_is_player_one,
         selected_core,
         &resources.join(shipped!(Remaps).0),

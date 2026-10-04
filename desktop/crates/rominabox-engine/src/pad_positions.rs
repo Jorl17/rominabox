@@ -102,12 +102,10 @@ pub fn place(
 /// numbers start at 1, as in `input_playerN_` and `input_remap_port_pN`.
 pub const PADS: u32 = 8;
 
-/// The remap lines that give the core each moved control from pad `pad`,
-/// one for each position that changed. We unmap a position that one control
-/// left and no other control took, so we read the control only from its new
-/// position. Empty when the author moved nothing.
-pub fn remap_lines(placed: &[Placed], positions: &[PadPosition], pad: u32) -> Result<String, String> {
-    let is_position = |id: &str| positions.iter().any(|position| position.id == id);
+/// The remap lines for pad `pad`: each moved control, sent to the core from
+/// its new position, and each position that no control uses (`unused`),
+/// unmapped, so nothing reaches the game from it.
+pub fn remap_lines(placed: &[Placed], unused: &[PadPosition], pad: u32) -> Result<String, String> {
     let mut lines = String::new();
     for entry in placed.iter().filter(|entry| entry.slot != entry.control) {
         lines.push_str(&format!(
@@ -116,37 +114,42 @@ pub fn remap_lines(placed: &[Placed], positions: &[PadPosition], pad: u32) -> Re
             bind_number(&entry.control)?
         ));
     }
-    for entry in placed.iter().filter(|entry| entry.slot != entry.control) {
-        let left = &entry.control;
-        if is_position(left) && !placed.iter().any(|other| &other.slot == left) {
-            lines.push_str(&format!("{} = \"-1\"\n", remap_key(left, pad)?));
-        }
+    for position in unused {
+        lines.push_str(&format!("{} = \"-1\"\n", remap_key(&position.id, pad)?));
     }
     Ok(lines)
 }
 
-/// The remap file we put in an export. It contains the emulated device, when
-/// the pad profile has one. With `every_pad_is_player_one`, we map every pad
-/// after the first to player 1 (RetroArch's port map, `input_remap_port_pN`,
-/// where 0 is player 1). It also contains the moved controls, `remap_lines`,
-/// for each pad used by player 1, because in RetroArch each pad has its own
-/// remap lines. Empty when there is none of these.
+/// The remap file in an export. It contains the emulated device, where the
+/// declaration of the pad has one. With `every_pad_is_player_one`, every pad
+/// after the first plays as player 1 (the RetroArch port map,
+/// `input_remap_port_pN`, where 0 is player 1). It contains `remap_lines`
+/// for each pad, because RetroArch moves and unmaps a position on each pad
+/// by that pad's lines. On a pad that plays as player 1 we read the controls
+/// where the author moved them and unmap `unused`. On a pad that is its own
+/// player we read each control from its own position and unmap `unused_unmoved`.
 pub fn remap_file(
     profile: &ControlProfile,
     placed: &[Placed],
-    positions: &[PadPosition],
+    unused: &[PadPosition],
+    unused_unmoved: &[PadPosition],
     every_pad_is_player_one: bool,
 ) -> Result<String, String> {
-    let pads = if every_pad_is_player_one { PADS } else { 1 };
     let mut file = profile
         .core_device
         .map(|device| format!("input_libretro_device_p1 = \"{device}\"\n"))
         .unwrap_or_default();
-    for pad in 2..=pads {
-        file.push_str(&format!("input_remap_port_p{pad} = \"0\"\n"));
+    if every_pad_is_player_one {
+        for pad in 2..=PADS {
+            file.push_str(&format!("input_remap_port_p{pad} = \"0\"\n"));
+        }
     }
-    for pad in 1..=pads {
-        file.push_str(&remap_lines(placed, positions, pad)?);
+    for pad in 1..=PADS {
+        file.push_str(&if pad == 1 || every_pad_is_player_one {
+            remap_lines(placed, unused, pad)?
+        } else {
+            remap_lines(&[], unused_unmoved, pad)?
+        });
     }
     Ok(file)
 }
@@ -260,6 +263,11 @@ mod tests {
             .collect()
     }
 
+    /// The positions that none of `placed` uses, which we unmap in an export.
+    fn unused(placed: &[Placed]) -> Vec<PadPosition> {
+        pad_positions().unwrap().into_iter().filter(|position| !placed.iter().any(|entry| entry.slot == position.id)).collect()
+    }
+
     fn placed(system: &str, pairs: &[(&str, &str)]) -> Result<Vec<Placed>, String> {
         place(
             &profile_for_system(system).unwrap().controls,
@@ -289,7 +297,6 @@ mod tests {
     /// stays with its control and the core gets C from the bottom button.
     #[test]
     fn swapped_controls_hand_the_core_what_it_expects() {
-        let positions = pad_positions().unwrap();
         let placed = placed("megadrive", &[("a", "b"), ("b", "a")]).unwrap();
         let slot = |control: &str| {
             placed
@@ -303,28 +310,30 @@ mod tests {
             (slot("a"), slot("b"), slot("y")),
             ("b".into(), "a".into(), "y".into())
         );
-        assert_eq!(
-            remap_lines(&placed, &positions, 1).unwrap(),
-            "input_player1_btn_a = \"0\"\ninput_player1_btn_b = \"8\"\n"
-        );
+        let lines = remap_lines(&placed, &unused(&placed), 1).unwrap();
+        assert!(lines.starts_with("input_player1_btn_a = \"0\"\ninput_player1_btn_b = \"8\"\n"), "{lines}");
+        assert!(!lines.contains("btn_a = \"-1\"") && !lines.contains("btn_b = \"-1\""), "{lines}");
     }
 
     #[test]
     fn a_position_left_empty_is_unmapped() {
-        let positions = pad_positions().unwrap();
         let placed = placed("megadrive", &[("a", "x")]).unwrap();
-        assert_eq!(
-            remap_lines(&placed, &positions, 1).unwrap(),
-            "input_player1_btn_x = \"8\"\ninput_player1_btn_a = \"-1\"\n"
-        );
+        let lines = remap_lines(&placed, &unused(&placed), 1).unwrap();
+        for line in ["input_player1_btn_x = \"8\"", "input_player1_btn_a = \"-1\""] {
+            assert!(lines.lines().any(|written| written == line), "no {line} in\n{lines}");
+        }
     }
 
     #[test]
-    fn nothing_moved_writes_no_remap() {
-        let positions = pad_positions().unwrap();
+    fn nothing_moved_unmaps_only_the_positions_no_control_reads() {
         let placed = placed("megadrive", &[]).unwrap();
         assert!(placed.iter().all(|entry| entry.slot == entry.control));
-        assert_eq!(remap_lines(&placed, &positions, 1).unwrap(), "");
+        let lines = remap_lines(&placed, &unused(&placed), 1).unwrap();
+        assert!(lines.lines().all(|line| line.ends_with(" = \"-1\"")), "{lines}");
+        for entry in &placed {
+            let own = format!("{} = ", remap_key(&entry.slot, 1).unwrap());
+            assert!(!lines.contains(&own), "{} is unmapped:\n{lines}", entry.slot);
+        }
     }
 
     #[test]
@@ -341,7 +350,6 @@ mod tests {
     /// from the stick.
     #[test]
     fn a_stick_moves_onto_the_d_pad_whole() {
-        let positions = pad_positions().unwrap();
         let placed = placed(
             "ps1",
             &[
@@ -356,7 +364,7 @@ mod tests {
             ],
         )
         .unwrap();
-        let lines = remap_lines(&placed, &positions, 1).unwrap();
+        let lines = remap_lines(&placed, &unused(&placed), 1).unwrap();
         for line in [
             "input_player1_btn_up = \"19\"",
             "input_player1_stk_l_y- = \"4\"",
@@ -369,7 +377,7 @@ mod tests {
         ] {
             assert!(lines.lines().any(|written| written == line), "no {line} in\n{lines}");
         }
-        assert_eq!(lines.lines().count(), 8, "{lines}");
+        assert_eq!(lines.lines().filter(|line| !line.ends_with(" = \"-1\"")).count(), 8, "{lines}");
     }
 
     /// In RetroArch an axis is one input, so if the author moved one direction
@@ -395,7 +403,6 @@ mod tests {
     /// The author may swap a whole axis with the other stick's axis.
     #[test]
     fn a_whole_axis_may_move_to_the_other_stick() {
-        let positions = pad_positions().unwrap();
         let placed = placed(
             "ps1",
             &[
@@ -406,7 +413,7 @@ mod tests {
             ],
         )
         .unwrap();
-        let lines = remap_lines(&placed, &positions, 1).unwrap();
+        let lines = remap_lines(&placed, &unused(&placed), 1).unwrap();
         for line in [
             "input_player1_stk_r_x- = \"17\"",
             "input_player1_stk_l_x- = \"21\"",

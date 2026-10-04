@@ -36,7 +36,7 @@ fn the_emulated_device_is_written_as_a_remap_not_a_config_line() {
         pixels: Vec::new(),
     };
     let remaps = root.join("remaps");
-    stage_controller_remap(&profile, &[], false, &core, &remaps).expect("a remap is written");
+    stage_controller_remap(&profile, &[], &[], &[], false, &core, &remaps).expect("a remap is written");
 
     // The directory name is the library name of the core, not its component
     // id, because in config_load_remap the path comes from the artifact.
@@ -72,7 +72,7 @@ fn a_profile_with_no_declared_device_writes_nothing() {
         pixels: Vec::new(),
     };
     let remaps = root.join("remaps");
-    stage_controller_remap(&profile, &[], false, &core, &remaps)
+    stage_controller_remap(&profile, &[], &[], &[], false, &core, &remaps)
         .expect("nothing to do is not an error");
     assert!(!remaps.exists(), "no remap directory should be created");
 }
@@ -102,7 +102,7 @@ fn a_moved_control_is_written_into_the_remap() {
         pixels: Vec::new(),
     };
     let remaps = root.join("remaps");
-    stage_controller_remap(&default_device, &swapped_c_and_b(), false, &core, &remaps)
+    stage_controller_remap(&default_device, &swapped_c_and_b(), &[], &[], false, &core, &remaps)
         .expect("a remap is written");
     let text = fs::read_to_string(remaps.join("Genesis Plus GX/Genesis Plus GX.rmp")).unwrap();
     assert_eq!(text, "input_player1_btn_a = \"0\"\ninput_player1_btn_b = \"8\"\n");
@@ -141,12 +141,12 @@ fn every_pad_is_player_one_in_the_remap_and_moves_its_controls_on_each() {
         .map(|pad| format!("input_remap_port_p{pad} = \"0\"\n"))
         .collect();
     let remaps = root.join("nothing-moved");
-    stage_controller_remap(&profile, &[], true, &core, &remaps).expect("a remap is written");
+    stage_controller_remap(&profile, &[], &[], &[], true, &core, &remaps).expect("a remap is written");
     let text = fs::read_to_string(remaps.join("Genesis Plus GX/Genesis Plus GX.rmp")).unwrap();
     assert_eq!(text, ports);
 
     let remaps = root.join("moved");
-    stage_controller_remap(&profile, &swapped_c_and_b(), true, &core, &remaps)
+    stage_controller_remap(&profile, &swapped_c_and_b(), &[], &[], true, &core, &remaps)
         .expect("a remap is written");
     let text = fs::read_to_string(remaps.join("Genesis Plus GX/Genesis Plus GX.rmp")).unwrap();
     let moved: String = (1..=8)
@@ -246,7 +246,7 @@ fn a_declared_device_with_no_library_name_is_refused() {
         library_name: None,
         pixels: Vec::new(),
     };
-    let error = stage_controller_remap(&profile, &[], false, &core, &root.join("remaps"))
+    let error = stage_controller_remap(&profile, &[], &[], &[], false, &core, &root.join("remaps"))
         .expect_err("silently shipping the wrong pad is the defect being prevented");
     let message = error.to_string();
     assert!(

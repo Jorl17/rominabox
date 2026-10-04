@@ -235,7 +235,7 @@ fn default_controls_config_carries_the_emulated_device_and_bindings() {
         );
     }
     assert_eq!(
-        text.matches("input_player1_").count(),
+        text.lines().filter(|line| line.starts_with("input_player1_") && !line.ends_with("= \"nul\"")).count(),
         7,
         "Master System declares seven bindings"
     );
