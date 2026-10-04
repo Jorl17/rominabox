@@ -1,80 +1,108 @@
+<p align="center">
+  <a href="https://www.rominabox.app"><img src=".github/readme/hero.gif" alt="ROM-in-a-Box: turn any ROM into a standalone app" width="840"></a>
+</p>
+
 # ROM-in-a-Box
 
-Turn a game you own into a standalone game app. Drop the game into the builder, review the details we detect, choose the look of its menu, and export an app that runs on its own. Save an authoring project to keep the game, artwork and settings together for later edits.
+ROM-in-a-Box is an app that bundles a ROM with a custom version of RetroArch into a standalone app for macOS or Windows. In other words, turn any ROM into a standalone app.
 
-Website: <https://www.rominabox.app>
+**[Website](https://www.rominabox.app)** · **[Download](https://github.com/Jorl17/rominabox/releases/latest)**
 
-The builder runs on macOS and Windows and makes games for macOS (Apple silicon, and Intel when asked), for Windows, or for both at once in one zip. A game for the other platform needs the runtime kit of that platform ([below](#games-for-the-other-platform)). We can identify more systems than we can export. Linux is planned.
+## Features
 
-## Builder
+- Drop a ROM, check its name, console and box art, choose a menu design, and export an app for Mac, Windows or both.
+- Double-click the app to play. Press Esc for a menu with save slots, controls, shaders and settings.
+- RetroAchievements, with the possibility of sharing one sign-in across every ROM-in-a-Box game.
+- Any RetroArch-compatible shader, and controller remapping on a picture of each console's pad.
+- ROM hacks in IPS, UPS, BPS, xdelta and PPF, applied when you export.
+- Every game has its own settings and saves, and runs in a sandbox.
 
-The builder is made with Tauri, React and a shared Rust engine. Neither the builder nor an exported game needs Python.
+For the full list of features, see [rominabox.app](https://www.rominabox.app).
 
-The authoring flow is **Game → Details → Menu → Export**. For the metadata lookup we check established game catalogs and fetch matching artwork when there is any. A supported game with no match is still usable. For artwork we send the matched title to GitHub, and the bytes of the game stay on the computer. You can turn the lookup off under Advanced.
+## Getting the source
 
-With **Save project** you write a `.rominabox` archive with the game and the chosen pictures, without emulator binaries, player saves or credentials. With **Open project** on the first screen you restore the settings and pictures, wherever the original files are. Before replacing an existing app, we ask at export.
-
-The in-game menu has six save slots and Continue, Save, Load and Quit, and Options with controls, hotkeys, shader filters, achievements, a disc list for multi-disc games and the player's settings. There are three menu designs (ROM-in-a-Box, Pixel and Disc) and five colour palettes. Menu sounds are optional, from original procedural packs. In the builder's preview and in the game we draw the menu with the same RmlUi renderer.
-
-Under **About** in the builder is every component of the builder and its games, with each licence text. The components of a game are under Options, ABOUT, in the game.
-
-### Games for the other platform
-
-A game is made from a runtime kit: the player and the files that ship with it, for one platform. The builder contains the kit of its own platform. A kit can be built only on its own platform: the Windows player with MSYS2 on Windows, and the Mac player with Xcode's tools on a Mac. The export itself runs anywhere.
-
-The first time an export needs the kit of the other platform, we download it from this repository's releases: the asset `<platform>-<player>.zip` of the release `kit-<player>`, where the player is the first 12 characters of the fork commit of its RetroArch. We put the download into the builder's kit store, `~/Library/Application Support/<builder id>/kits` on macOS and `%LOCALAPPDATA%\<builder id>\kits` on Windows, where the builder id is `com.rominabox.desktop`, as the folder `<platform>-<player>`. When the download is not available, the export error says so and gives that folder: you can copy a kit made by `scripts/build_kit.py` from the same fork commit there by hand. We accept no kit from any other commit.
-
-To publish a kit, build it on its own platform, then run `uv run python scripts/publish_kit.py pack`, which writes `work/kits/<platform>-<player>.zip`, and `uv run python scripts/publish_kit.py upload` with that archive, which creates the release when needed and uploads the archive with `gh`.
-
-## Run and build
-
-To work in a browser, install Node.js and run this from `desktop/`:
+RetroArch is in our fork, [rominabox-retroarch](https://github.com/Jorl17/rominabox-retroarch), included as a submodule:
 
 ```sh
+git clone --recurse-submodules https://github.com/Jorl17/rominabox.git
+```
+
+## Building
+
+You need [Node.js](https://nodejs.org), [Rust](https://www.rust-lang.org) with [Tauri's prerequisites](https://tauri.app/start/prerequisites/), and [uv](https://docs.astral.sh/uv/) for the scripts. To build the player (our RetroArch), you also need Git, CMake, Ninja, pkg-config and Xcode's command line tools on macOS, or MSYS2's UCRT64 toolchain on Windows.
+
+To work on the builder's interface in a browser, without building RetroArch:
+
+```sh
+cd desktop
 npm ci
 npm run dev
 ```
 
-Open `http://127.0.0.1:1420/`. In the preview you can open a local file and go through the flow. Metadata lookup, project archives and export run in the desktop app. Changes to the web interface update without rebuilding RetroArch.
+Then open <http://127.0.0.1:1420/>.
 
-Native builds need Rust and Tauri's build prerequisites, plus a prepared runtime kit in `desktop/src-tauri/resources/runtime` and the offscreen menu renderer in `desktop/src-tauri/resources/preview`. These are generated and not tracked: see [the native runtime](docs/native-runtime.md). The player of the macOS kit is universal (arm64 and x86_64) and links only system libraries. At export we create icons and zips in Rust and sign with the system's codesign, without Homebrew, Xcode or administrator rights.
+To build the whole builder (the player, its runtime kit, the menu renderer and the builder itself), from the repository root:
 
 ```sh
-cd desktop
-npm run build
-cargo check --workspace
-cd ..
-uv run python scripts/built.py --build
+cd desktop && npm ci && cd ..
+uv run python scripts/build_builder.py
 ```
 
-The Rust code is one Cargo workspace, `desktop/Cargo.toml`: the engine and `rominabox-cli` in `desktop/crates/rominabox-engine`, and the builder's window in `desktop/src-tauri`. With `scripts/built.py --build` we build `rominabox-cli` in the same way as in the builder build, so both share one compile of the engine.
+The result is a signed `.app` on macOS and an installer on Windows.
 
-With `uv run python scripts/build_builder.py` you build the builder with its kit and menu renderer (`scripts/build_player.py`, then `scripts/build_kit.py`): a signed `.app` on macOS and an installer on Windows. No builder or game is started.
+## Tests
 
-Developer scripts and tests run with one Python on every platform, through [uv](https://docs.astral.sh/uv/): the version in `.python-version`, with the packages pinned in `uv.lock`. They are fetched at the first `uv run python scripts/<script>.py`. Run `uv run python scripts/test.py <scope>` for one scope of the tests, with `--list` for what each scope covers and leaves out, and with `--all` for everything, as in the pre-push hook once you install the hooks with `git config core.hooksPath .githooks`. For the tests that run the player, we build a test player from the fork.
+```sh
+uv run python scripts/test.py              # the fast scopes
+uv run python scripts/test.py menu frontend # one or more scopes
+uv run python scripts/test.py --all        # everything, including the slow scopes that start games
+uv run python scripts/test.py --list       # what each scope covers, and what it leaves out
+```
 
-## Command line and agent interface
+The slow scopes need a built player and runtime kit, so run `scripts/build_builder.py` once first. The games they start run with a hidden window.
 
-The builder and `rominabox-cli` share identification, pictures, the menu preview, project archives and export: everything in the builder is also in the command line, through the same Rust functions. Commands take JSON on stdin, with JSON Lines on stdout as output, and the interface is described by `--help` and `schemas`. In a built builder, the command line is at `ROM-in-a-Box.app/Contents/Resources/bin/rominabox-cli` on macOS, and on the PATH after installing on Windows.
+**SLOW next to a scope.** Its run took more than twice as long as its last recorded time (`scripts/fixtures/scope-budgets.json`). It is a note about speed, not a failure.
 
-In the [agent skill](plugin/skills/rominabox/SKILL.md) we describe how an agent can use `rominabox-cli`: requests, defaults, outputs and limits. To install it in Claude Code from this repository, run `/plugin marketplace add Jorl17/rominabox`, then `/plugin install rominabox@rominabox`.
+**STALE files in the staging scope.** The kit's copies of the menu designs are older than the designs. Run `uv run python scripts/kit_assets.py` to copy them again.
 
-## Games
+**Skipped tests.** Some tests need a game or disc that the repository does not contain, and `scripts/fetch_test_content.py` downloads it. When the download is not possible, those tests are skipped, with the reason in the output.
 
-A game keeps its saves, states, caches, logs and configuration in its own folder: `~/Library/Application Support/ROM-in-a-Box/Games/<identity>` on macOS and `%LOCALAPPDATA%\ROM-in-a-Box\Games\<identity>` on Windows. The identity comes from the game's content and console, so renaming or moving an app keeps its saves. A game never reads the settings of another RetroArch installation. On Windows, a game runs in an AppContainer sandbox, unpacked into `%LOCALAPPDATA%\ROM-in-a-Box\Runtimes`.
+## Menu designs
 
-Press **Esc** during play for the menu. The menu is a RetroArch and RmlUi integration in our fork of RetroArch, not an upstream RetroArch feature.
+A menu design is a folder of RmlUi markup and stylesheets in `integrations/designs/`. To make one, follow [Writing a menu design](docs/design-authoring.md), and see [the screen contract](docs/screen-contract.md) for the elements every screen must have.
 
-## Licences
+You can look at a design without starting a game:
 
-The licence text of every third-party component is in `licenses/`, written with `scripts/licences.py`, with an index in `licenses/index.json`. A runtime kit contains the entries for what its games can ship, and every exported game contains its own, listed on its ABOUT screen. Under its licence, Genesis Plus GX may not be used commercially. The licence of ROM-in-a-Box itself is not chosen yet.
+- The Menu step of the builder shows a preview of the chosen design and palette.
+- `rominabox-cli preview` draws a design's pause screen into a PNG, as described in [Checking a design](docs/design-authoring.md#checking-a-design).
+- `uv run python scripts/menu_states.py work/menu-states` draws every state of every design in every palette.
 
-Keep games, firmware, saves, downloaded artwork and saved projects out of Git.
+## Command line
 
-An exported cartridge game is meant to stay below 26 MB on disk, and we check this in the `size` test scope. We download cores when an export needs them and do not bundle them with the builder.
+`rominabox-cli` does everything the builder does, through the same Rust code: identification, previews, projects and export. Commands read JSON on stdin and write JSON Lines on stdout. Run it with `--help`, or `schemas` for the full interface. In a built builder it is at `ROM-in-a-Box.app/Contents/Resources/bin/rominabox-cli` on macOS, and on the PATH after installing on Windows.
 
-See also [engineering](docs/engineering.md) and [product principles](docs/product-notes.md).
+There is also a [skill for AI agents](plugin/skills/rominabox/SKILL.md) that describes how to use `rominabox-cli`. It is an idea from the early days of the project, and we have not kept it up to date.
 
-## Native source checkout
+## Things to know
 
-RetroArch is maintained in our fork, [rominabox-retroarch](https://github.com/Jorl17/rominabox-retroarch), pinned here as `vendor/retroarch`. Clone with `git clone --recurse-submodules`, or run `git submodule update --init --recursive` after cloning. Native changes go into the fork: commit there first, then commit the updated pointer here. See [the native runtime](docs/native-runtime.md).
+- A runtime kit (the player and its files for one platform) can be built only on its own platform. For games for the other platform, that platform's kit is downloaded from this repository's releases when an export needs it.
+- Changes to RetroArch go into the fork first. Commit there, then commit the new submodule pointer here.
+- Run every script with `uv run python`, so every machine uses the same Python and packages.
+- Run `git config core.hooksPath .githooks` to use our hooks. With them, the whole test suite runs before every push.
+
+## Project structure
+
+- `desktop/`: the builder (Tauri and React) and, in `desktop/crates/rominabox-engine`, the Rust engine and the `rominabox-cli` command line.
+- `vendor/retroarch/`: our RetroArch fork, with the in-game menu.
+- `integrations/`: consoles, menu designs, shaders and controller profiles.
+- `scripts/`: building, packaging and tests.
+- `docs/`: guides to [menu designs](docs/design-authoring.md), [console packages](docs/console-packages.md), [menu sounds](docs/menu-sounds.md) and [the native runtime](docs/native-runtime.md).
+
+## License
+
+ROM-in-a-Box is licensed under the [GNU General Public License v3.0](LICENSE) or later.
+Copyright (C) 2026 João Ricardo Lourenço.
+
+The licences of third-party components are in [`licenses/`](licenses/).
+
+ROM-in-a-Box does not include any games. Use it with games you own.
