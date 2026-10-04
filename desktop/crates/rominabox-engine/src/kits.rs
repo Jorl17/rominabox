@@ -2,15 +2,13 @@
 //!
 //! We bundle the kit for the builder's own platform with the builder. For a
 //! game for the other platform we use that platform's kit in the kit store.
-//! Someone placed it there by hand, or we fetched it on first use from the
-//! archive listed in `desktop/kits.json` for the builder's player and checked
-//! its SHA-256. Its player must be the one in the bundled kit, because we
-//! build both kits from one source and the game's menu is part of the player.
+//! Someone placed it there by hand, or we downloaded it on first use from the
+//! release with the kits of the builder's player (`release_url`). Its player
+//! must be the one in the bundled kit, because we build both kits from one
+//! source and the game's menu is part of the player.
 
 use crate::cores::Transport;
 use crate::packaging::ExportTarget;
-use serde::Deserialize;
-use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -63,50 +61,35 @@ fn called(platform: &ExportTarget) -> &'static str {
     }
 }
 
-/// A kit published for download: the archive of one platform's kit for one
-/// player.
-#[derive(Deserialize)]
-struct Pin {
-    platform: String,
-    player: String,
-    url: String,
-    sha256: String,
-}
-
-#[derive(Deserialize)]
-struct Pins {
-    kits: Vec<Pin>,
-}
-
-fn pins() -> Vec<Pin> {
-    serde_json::from_str::<Pins>(include_str!("../../../kits.json"))
-        .expect("desktop/kits.json lists kits")
-        .kits
+/// The first 12 characters of a player's commit, as in the names of its kits.
+fn short(player: &str) -> String {
+    player.chars().take(12).collect()
 }
 
 /// Where we keep `platform`'s kit for `player` in the store. We keep each
 /// player's kit in a separate folder, so we never replace an older one.
 fn folder(store: &Path, platform: &ExportTarget, player: &str) -> PathBuf {
-    let short: String = player.chars().take(12).collect();
-    store.join(format!("{}-{short}", word(platform)))
+    store.join(format!("{}-{}", word(platform), short(player)))
+}
+
+/// Where we publish `platform`'s kit for `player`: the asset
+/// `<platform>-<player>.zip` of the release `kit-<player>` in the
+/// repository. We upload it there with scripts/publish_kit.py.
+pub fn release_url(platform: &ExportTarget, player: &str) -> String {
+    let short = short(player);
+    format!(
+        "{}/releases/download/kit-{short}/{}-{short}.zip",
+        env!("CARGO_PKG_REPOSITORY"),
+        word(platform)
+    )
 }
 
 /// The kit we make a game for `platform` from: `bundled` for the builder's
-/// own platform, otherwise the kit in the store, which we fetch when missing.
+/// own platform, otherwise the kit in the store, which we download if missing.
 pub fn for_export(
     platform: &ExportTarget,
     bundled: &Path,
     store: &Path,
-    transport: &dyn Transport,
-) -> Result<PathBuf, String> {
-    resolve(platform, bundled, store, &pins(), transport)
-}
-
-fn resolve(
-    platform: &ExportTarget,
-    bundled: &Path,
-    store: &Path,
-    pins: &[Pin],
     transport: &dyn Transport,
 ) -> Result<PathBuf, String> {
     if platform_of_kit(bundled).as_deref() == Some(word(platform)) {
@@ -132,44 +115,32 @@ fn resolve(
         }
         None => {}
     }
-    let Some(pin) = pins
-        .iter()
-        .find(|pin| pin.platform == wanted.platform && pin.player == wanted.player)
-    else {
-        return Err(format!(
-            "Games for {} are made with ROM-in-a-Box's {} player, which this builder downloads the first time it is needed, and it is not available to download yet. To make one now, put the {} runtime kit from this version of ROM-in-a-Box in {}.",
+    let url = release_url(platform, &own.player);
+    fetch(&url, &place, transport).map_err(|reason| {
+        format!(
+            "Games for {} are made with ROM-in-a-Box's {} player, which this builder downloads the first time it is needed, from {url}. {reason} To make one now, put the {} runtime kit from this version of ROM-in-a-Box in {}.",
             called(platform),
             called(platform),
             called(platform),
             place.display()
-        ));
-    };
-    fetch(pin, &place, transport)?;
+        )
+    })?;
     match identity(&place) {
         Some(found) if found == wanted => Ok(place),
         _ => Err(format!(
-            "The {} runtime kit downloaded from {} is not the one this builder needs.",
-            called(platform),
-            pin.url
+            "The {} runtime kit downloaded from {url} is not the one this builder needs.",
+            called(platform)
         )),
     }
 }
 
-/// Download the archive in `pin`, check that it is the pinned one, and unpack
-/// it into `place` through a folder beside it, so that after a failed download
-/// no partial kit is in `place`.
-fn fetch(pin: &Pin, place: &Path, transport: &dyn Transport) -> Result<(), String> {
+/// Download the archive at `url` and unpack it into `place` through a folder
+/// beside it, so that after a failed download no partial kit is in `place`.
+fn fetch(url: &str, place: &Path, transport: &dyn Transport) -> Result<(), String> {
     let body = transport
-        .get(&pin.url)
-        .map_err(|()| format!("Could not download the runtime kit from {}.", pin.url))?
+        .get(url)
+        .map_err(|()| "It could not be downloaded.".to_string())?
         .body;
-    let digest = format!("{:x}", Sha256::digest(&body));
-    if digest != pin.sha256 {
-        return Err(format!(
-            "The runtime kit downloaded from {} is not the one pinned for this builder.",
-            pin.url
-        ));
-    }
     let parent = place.parent().ok_or("the kit store has no folder")?;
     fs::create_dir_all(parent).map_err(|error| format!("Could not make {}: {error}", parent.display()))?;
     // A name unique to this download, never that of an interrupted one.

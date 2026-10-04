@@ -3,6 +3,7 @@ name = "rominabox-engine"
 version = "0.1.0"
 description = "ROM-in-a-Box's authoring engine, shared by the builder and its command line"
 homepage = "https://www.rominabox.app"
+repository = "https://github.com/Jorl17/rominabox"
 edition = "2021"
 
 [dependencies]

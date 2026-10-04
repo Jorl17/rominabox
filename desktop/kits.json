@@ -1,4 +1,0 @@
-{
-  "comment": "Runtime kits a builder downloads to make a game for the other platform, one per platform and player (the fork commit its RetroArch was built from, as the kit's manifest names it). A builder accepts only a kit made from its own player. Until a kit is published, a builder uses a kit placed in its kit store (the export reports where).",
-  "kits": []
-}

@@ -22,9 +22,9 @@ Under **About** in the builder is every component of the builder and its games, 
 
 A game is made from a runtime kit: the player and the files that ship with it, for one platform. The builder contains the kit of its own platform. A kit can be built only on its own platform: the Windows player with MSYS2 on Windows, and the Mac player with Xcode's tools on a Mac. The export itself runs anywhere.
 
-The first time an export needs the kit of the other platform, we download it from the archive pinned in `desktop/kits.json` for its player (the fork commit of its RetroArch). No kit archive is published yet. Until then, an export for the other platform stops with an error that gives the folder for the kit: `<platform>-<first 12 characters of the fork commit>` in the builder's kit store, `~/Library/Application Support/<builder id>/kits` on macOS and `%LOCALAPPDATA%\<builder id>\kits` on Windows, where the builder id is `com.rominabox.desktop`. Copy the `desktop/src-tauri/resources/runtime` of the other machine there, made with `scripts/build_kit.py` from the same fork commit as the player of this builder. We accept no kit from any other commit.
+The first time an export needs the kit of the other platform, we download it from this repository's releases: the asset `<platform>-<player>.zip` of the release `kit-<player>`, where the player is the first 12 characters of the fork commit of its RetroArch. We put the download into the builder's kit store, `~/Library/Application Support/<builder id>/kits` on macOS and `%LOCALAPPDATA%\<builder id>\kits` on Windows, where the builder id is `com.rominabox.desktop`, as the folder `<platform>-<player>`. When the download is not available, the export error says so and gives that folder: you can copy a kit made by `scripts/build_kit.py` from the same fork commit there by hand. We accept no kit from any other commit.
 
-To publish a kit, pack it with `uv run python scripts/pack_kit.py KIT ARCHIVE.zip`, which also prints the entry for `desktop/kits.json`, to fill in once the archive has a URL.
+To publish a kit, build it on its own platform, then run `uv run python scripts/publish_kit.py pack`, which writes `work/kits/<platform>-<player>.zip`, and `uv run python scripts/publish_kit.py upload` with that archive, which creates the release when needed and uploads the archive with `gh`.
 
 ## Run and build
 
