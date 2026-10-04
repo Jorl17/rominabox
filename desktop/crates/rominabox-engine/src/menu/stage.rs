@@ -331,11 +331,10 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     super::contract::validate(&manifest, &menu, &staged.iter().collect::<Vec<_>>())?;
     // The hotkeys, whether or not the game has HOTKEYS to change them. Where
     // it has, each row must show every default binding for its hotkey.
-    crate::hotkeys::fit(&request.hotkeys, &menu, &manifest.id)?;
-    composition.put(
-        crate::hotkeys::DEFAULTS_FILE,
-        Content::Text(request.hotkeys.defaults_config(&crate::hotkeys::GameHotkeys::of(&request.settings))?),
-    );
+    let game_hotkeys = crate::hotkeys::GameHotkeys::of(&request.settings);
+    let hotkeys = game_hotkeys.offered(&request.hotkeys);
+    crate::hotkeys::fit(&hotkeys, &menu, &manifest.id)?;
+    composition.put(crate::hotkeys::DEFAULTS_FILE, Content::Text(hotkeys.defaults_config(&game_hotkeys)?));
     let cfg = declarations::write(&manifest, &staged, &installed, &settings, &menu)?;
     // We play a sound for a change of volume in every game with a volume
     // control: the movement cue of the pack, or in a game without a pack the

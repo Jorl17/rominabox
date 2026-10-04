@@ -118,10 +118,7 @@ impl Game {
     /// The hotkeys of the game. Fast forward is one only when fast forward is
     /// on, so we neither check nor write a binding kept for it while it is off.
     pub fn offered_hotkeys(&self) -> crate::hotkeys::Hotkeys {
-        match crate::hotkeys::Hotkey::named(crate::hotkeys::FAST_FORWARD) {
-            Some(fast_forward) if !self.fast_forward => self.hotkeys.without(fast_forward),
-            _ => self.hotkeys.clone(),
-        }
+        crate::hotkeys::GameHotkeys::of(&self.player_defaults()).offered(&self.hotkeys)
     }
 
     /// The game of `rom`, with the builder's default for every setting,

@@ -17,33 +17,13 @@
   "fastForwardSpeed": 2.0,
   "fastForwardHold": true,
   "hotkeys": {
-    "menu": [
-      "key:escape",
-      "pad:home",
-      "pad:l3+r3"
-    ],
-    "confirm": [
-      "key:enter",
-      "pad:b"
-    ],
-    "back": [
-      "key:escape",
-      "pad:a"
-    ],
-    "quick-save": [
-      "key:f2"
-    ],
-    "quick-load": [
-      "key:f4"
-    ],
-    "previous-slot": [
-      "key:f6"
-    ],
-    "next-slot": [
-      "key:f7"
-    ],
-    "fast-forward": [
-      "key:space"
-    ]
+    "menu": ["key:escape", "pad:home", "pad:l3+r3"],
+    "confirm": ["key:enter", "pad:b"],
+    "back": ["key:escape", "pad:a"],
+    "quick-save": ["key:f2"],
+    "quick-load": ["key:f4"],
+    "previous-slot": ["key:f6"],
+    "next-slot": ["key:f7"],
+    "fast-forward": ["key:space"]
   }
 }

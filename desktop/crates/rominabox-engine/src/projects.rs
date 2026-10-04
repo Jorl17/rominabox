@@ -494,7 +494,7 @@ fn validate_choices(settings: &Game) -> Result<(), String> {
     )?;
     controls::validate_for_system(&settings.system, &settings.controls)?;
     settings
-        .hotkeys
+        .offered_hotkeys()
         .check_for(&settings.system, &settings.controls)
         .map_err(|refusal| refusal.to_string())?;
     Ok(())

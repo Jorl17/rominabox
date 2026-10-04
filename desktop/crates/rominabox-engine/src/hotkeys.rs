@@ -132,6 +132,12 @@ impl GameHotkeys {
                 .unwrap_or_default(),
         }
     }
+
+    /// `hotkeys` with every hotkey the game does not have bound to nothing,
+    /// so we neither check nor write a binding kept for it.
+    pub fn offered(&self, hotkeys: &Hotkeys) -> Hotkeys {
+        self.absent.iter().fold(hotkeys.clone(), |kept, hotkey| kept.without(*hotkey))
+    }
 }
 
 /// One hotkey, a `RIB_HOTKEY` declaration in `hotkeys.inc`, by its position
