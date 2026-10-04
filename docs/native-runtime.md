@@ -98,9 +98,9 @@ uv run python scripts/build_builder.py
 A kit can be built only on its own platform: `build_player.py` and
 `build_kit.py` on this machine make only this platform's kit. To make games for
 this platform, a builder on the other platform needs a copy of it, made from
-the same fork commit as its own player. The README's [Games for the other
-platform](../README.md#games-for-the-other-platform) explains where a builder
-looks for it, and how to pack a kit for download.
+the same fork commit as its own player. We publish kits in this repository's
+releases, with `scripts/publish_kit.py`, and the kit of the other platform is
+downloaded from there the first time an export needs it.
 
 The kit records the fork commit and the hash of the player. The macOS kit is
 made from a `macos-universal` build: its player contains an arm64 and an
