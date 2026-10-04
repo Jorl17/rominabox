@@ -1,6 +1,9 @@
 /* The off-screen menu context on macOS: NSOpenGL on a borderless window
  * that is never ordered front. With GL3 we composite onto the default
- * framebuffer, and a context with no drawable has none to read. */
+ * framebuffer, and a context with no drawable has none to read. We do not
+ * ask for an accelerated renderer: macOS takes the graphics card when there
+ * is one, and Apple's software renderer on a Mac without one, such as a CI
+ * runner. */
 
 #include "gl_context.h"
 
@@ -33,7 +36,6 @@ OffscreenGl *offscreen_gl_create(bool core)
          NSOpenGLPFAColorSize, 24,
          NSOpenGLPFAAlphaSize, 8,
          NSOpenGLPFAStencilSize, 8,
-         NSOpenGLPFAAccelerated,
          0
       };
       NSOpenGLPixelFormat *format = [[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];

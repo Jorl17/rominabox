@@ -65,21 +65,26 @@ pub fn palette(id: &str) -> Result<Palette, String> {
         .ok_or_else(|| format!("Unknown colour palette: {id}"))
 }
 
-/// The directory that contains a design's documents and fonts.
+/// Return the declared design `design`, or an error with its name when there
+/// is none.
+pub fn declared(design: &str) -> Result<Design, String> {
+    registry()?
+        .designs
+        .into_iter()
+        .find(|entry| entry.id == design)
+        .ok_or_else(|| format!("Unknown menu design: {design}"))
+}
+
+/// The directory that contains a declared design's documents and fonts, in
+/// the `designs` folder of `folder`: a runtime kit, or `integrations` in a
+/// checkout. We check the path on disk, so we fail here for a design with no
+/// directory.
 ///
 /// A design defines its screens as well as its colours, and another design may
 /// lay out the menu in a different way (three save slots instead of six), so
 /// each design is a directory and not only a name.
-pub fn design_root(design: &str) -> Result<PathBuf, String> {
-    let declared = registry()?
-        .designs
-        .into_iter()
-        .find(|entry| entry.id == design)
-        .ok_or_else(|| format!("Unknown menu design: {design}"))?;
-    // We resolve the path against this crate and not the working directory,
-    // because the builder does not run from the repository root. We check the
-    // path on disk, so we fail here for a design with no directory.
-    let root = crate::repo::at("integrations/designs").join(&declared.id);
+pub fn design_in(folder: &Path, design: &str) -> Result<PathBuf, String> {
+    let root = staged_design(folder, &declared(design)?.id);
     if !root.is_dir() {
         return Err(format!(
             "Menu design '{design}' is declared but its package is missing at {}",

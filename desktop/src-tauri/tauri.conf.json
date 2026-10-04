@@ -36,6 +36,7 @@
     "resources": {
       "resources/runtime/": "runtime/",
       "resources/preview/": "preview/",
+      "resources/menu-previews/": "menu-previews/",
       "resources/bin/": "bin/",
       "../../licenses/": "licenses/"
     },

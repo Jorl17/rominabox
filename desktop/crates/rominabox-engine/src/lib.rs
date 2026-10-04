@@ -58,6 +58,9 @@ mod measure;
 /// The ROM-in-a-Box web address, which is the engine package's homepage.
 pub const WEBSITE: &str = env!("CARGO_PKG_HOMEPAGE");
 
+/// Where a person reports a bug: a new issue in the engine package's repository.
+pub const BUG_REPORTS: &str = concat!(env!("CARGO_PKG_REPOSITORY"), "/issues/new");
+
 /// The web address without its scheme, `www.rominabox.app`.
 pub fn website_name() -> &'static str {
     WEBSITE.trim_start_matches("https://")

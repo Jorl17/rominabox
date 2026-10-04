@@ -106,10 +106,14 @@ async fn menu_preview(
     if let Some(tint) = tint_background {
         stated.insert("tintBackground".into(), json!(tint));
     }
+    // The pictures we render with the kit, for every design and palette.
+    if let Ok(rendered) = resource(&app, "menu-previews") {
+        stated.insert("rendered".into(), json!(rendered));
+    }
     let request = builder::complete_preview(stated, &|relative| resource(&app, relative))?;
     tauri::async_runtime::spawn_blocking(move || {
-        let output = menu::render_preview(&request)?;
-        fs::read(output).map_err(|e| e.to_string())
+        let preview = menu::render_preview(&request)?;
+        fs::read(preview.path).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -246,6 +250,12 @@ fn export_target() -> Option<packaging::ExportTarget> {
     packaging::ExportTarget::of_host()
 }
 
+/// Whether a new game also runs on Intel Macs until its author changes it.
+#[tauri::command]
+fn intel_macs_default() -> bool {
+    rominabox_engine::builder::unstated::intel_macs()
+}
+
 /// Every component the builder and its games are made from, with its
 /// licence, for the About dialog.
 #[tauri::command]
@@ -264,6 +274,12 @@ fn licence_text(app: tauri::AppHandle, file: String) -> Result<String, String> {
 fn open_website(app: tauri::AppHandle) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
     app.opener().open_url(rominabox_engine::WEBSITE, None::<&str>).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn open_bug_report(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener().open_url(rominabox_engine::BUG_REPORTS, None::<&str>).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -463,6 +479,8 @@ fn main() {
             about_components,
             licence_text,
             open_website,
+            open_bug_report,
+            intel_macs_default,
             assess_firmware,
             check_hotkeys,
             export_game,

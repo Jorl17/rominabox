@@ -689,24 +689,26 @@ fn validate_request(
     if request.game.title.trim().is_empty() {
         return Err(ExportError::new(ErrorStage::Validate, "title is required"));
     }
-    // A design is a directory, so we catch an unknown one when we resolve it.
-    if let Err(message) = crate::themes::design_root(&request.game.theme) {
-        return Err(ExportError::new(ErrorStage::Validate, message));
-    }
+    crate::themes::declared(&request.game.theme)
+        .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     if request.game.start_at_menu && !request.game.show_menu {
         return Err(ExportError::new(
             ErrorStage::Validate,
             "startAtMenu requires showMenu",
         ));
     }
-    crate::achievements::entries(
-        &crate::themes::design_root(&request.game.theme)
-            .map_err(|message| ExportError::new(ErrorStage::Validate, message))?,
-        request.game.include_achievements,
-        request.game.show_menu,
-        request.game.menu_entries.as_deref(),
-    )
-    .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
+    // The menu and the splash come from the design in the kit the game is made
+    // from.
+    if request.game.show_menu || request.game.splash {
+        crate::achievements::entries(
+            &crate::themes::design_in(&request.runtime_kit, &request.game.theme)
+                .map_err(|message| ExportError::new(ErrorStage::Validate, message))?,
+            request.game.include_achievements,
+            request.game.show_menu,
+            request.game.menu_entries.as_deref(),
+        )
+        .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
+    }
     controls::validate_for_system(&request.game.system, &request.game.controls)
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     request

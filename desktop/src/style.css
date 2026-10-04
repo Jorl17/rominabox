@@ -655,6 +655,33 @@ main {
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
+.error .link {
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.error .link:hover {
+  text-decoration-thickness: 2px;
+}
+.bug-details {
+  margin-top: 6px;
+  color: var(--muted);
+}
+.bug-details summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.bug-details code {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  user-select: text;
+}
 .lookup {
   min-height: 300px;
   display: flex;
@@ -696,12 +723,13 @@ progress::-webkit-progress-value {
   border: 2px solid var(--ink);
   width: min(100%, calc((100svh - 355px) * 1.6));
   min-width: 430px;
+  aspect-ratio: 1.6;
   margin: auto;
   overflow: hidden;
 }
 .menu-frame img {
   width: 100%;
-  aspect-ratio: 1.6;
+  height: 100%;
   display: block;
   object-fit: contain;
 }

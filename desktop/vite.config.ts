@@ -27,14 +27,19 @@ function licences(): Plugin {
   };
 }
 
+const engine = readFileSync("crates/rominabox-engine/Cargo.toml", "utf-8");
 /** ROM-in-a-Box's web address, the engine package's homepage. */
-const website = /^homepage = "([^"]+)"/m.exec(
-  readFileSync("crates/rominabox-engine/Cargo.toml", "utf-8"),
-)![1];
+const website = /^homepage = "([^"]+)"/m.exec(engine)![1];
+/** Where a person reports a bug: a new issue in the engine package's
+ * repository, as `BUG_REPORTS` in the engine. */
+const bugReports = `${/^repository = "([^"]+)"/m.exec(engine)![1]}/issues/new`;
 
 export default defineConfig({
   plugins: [react(), licences()],
-  define: { __WEBSITE__: JSON.stringify(website) },
+  define: {
+    __WEBSITE__: JSON.stringify(website),
+    __BUG_REPORTS__: JSON.stringify(bugReports),
+  },
   clearScreen: false,
   server: {
     fs: {

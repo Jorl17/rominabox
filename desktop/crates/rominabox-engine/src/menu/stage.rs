@@ -404,12 +404,23 @@ pub struct PreviewRequest {
     pub tint_background: bool,
     pub width: u32,
     pub height: u32,
+    /// A folder of pictures rendered before, each under its `Preview::name`.
+    /// We take the picture from there when the folder holds it.
+    #[serde(default)]
+    pub rendered: Option<PathBuf>,
+}
+
+/// A picture of the menu, and its name among pictures rendered before.
+pub struct Preview {
+    pub path: PathBuf,
+    pub name: String,
 }
 
 /// Render the menu for an export of this design with the same windowless
-/// RmlUi helper as in an export. We keep the intermediate files in the given
-/// output directory for inspection.
-pub fn render_preview(request: &PreviewRequest) -> Result<PathBuf, String> {
+/// RmlUi helper as in an export, or take the picture from `request.rendered`.
+/// We keep the intermediate files in the given output directory for
+/// inspection.
+pub fn render_preview(request: &PreviewRequest) -> Result<Preview, String> {
     if !(320..=3840).contains(&request.width) || !(200..=2400).contains(&request.height) {
         return Err("Preview dimensions are outside the supported range.".into());
     }
@@ -428,6 +439,10 @@ pub fn render_preview(request: &PreviewRequest) -> Result<PathBuf, String> {
         ..MenuRequest::new(design, &request.assets)
     })?
     .write(&request.output_dir)?;
+    let name = picture_name(&request.output_dir, request.width, request.height)?;
+    if let Some(found) = request.rendered.as_ref().map(|folder| folder.join(&name)).filter(|path| path.is_file()) {
+        return Ok(Preview { path: found, name });
+    }
     let output = request.output_dir.join("preview.png");
     let run = crate::helper::command(&request.renderer)
         .arg(request.output_dir.join(DOCUMENT))
@@ -442,7 +457,46 @@ pub fn render_preview(request: &PreviewRequest) -> Result<PathBuf, String> {
             String::from_utf8_lossy(&run.stderr)
         ));
     }
-    Ok(output)
+    Ok(Preview { path: output, name })
+}
+
+/// The name of the picture of the menu composed in `composed`: a digest of
+/// every composed file, by its path inside the folder, and of the size. The
+/// composed files contain the design, the palette, the artwork, the
+/// background and the version. The renderer is not in the digest, because we
+/// render the pictures we bundle with the renderer of the same kit.
+fn picture_name(composed: &Path, width: u32, height: u32) -> Result<String, String> {
+    use sha2::{Digest, Sha256};
+    fn files(folder: &Path, found: &mut Vec<PathBuf>) -> Result<(), String> {
+        for entry in fs::read_dir(folder).map_err(|e| format!("{}: {e}", folder.display()))? {
+            let path = entry.map_err(|e| e.to_string())?.path();
+            if path.is_dir() {
+                files(&path, found)?;
+            } else {
+                found.push(path);
+            }
+        }
+        Ok(())
+    }
+    let mut found = Vec::new();
+    files(composed, &mut found)?;
+    let mut named: Vec<(String, PathBuf)> = found
+        .into_iter()
+        .map(|path| {
+            let relative = path.strip_prefix(composed).unwrap_or(&path);
+            let parts: Vec<_> = relative.components().map(|part| part.as_os_str().to_string_lossy().into_owned()).collect();
+            (parts.join("/"), path)
+        })
+        .collect();
+    named.sort();
+    let mut hash = Sha256::new();
+    hash.update(format!("{width}x{height}\n"));
+    for (relative, path) in named {
+        let bytes = fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+        hash.update(format!("{relative}\n{}\n", bytes.len()));
+        hash.update(&bytes);
+    }
+    Ok(format!("{:x}.png", hash.finalize()))
 }
 
 #[cfg(test)]

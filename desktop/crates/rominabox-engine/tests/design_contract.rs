@@ -5,6 +5,7 @@
 //! design cannot omit a built-in element and leave the C++ lookup returning
 //! null. We check presence, and not visibility, styling or event behaviour.
 
+mod export_fixture;
 mod support;
 
 use rominabox_engine::menu;
@@ -270,8 +271,8 @@ fn the_menu_document_draws_the_controller_scene() {
 /// reachable.
 #[test]
 fn a_design_resolves_to_its_own_directory() {
-    let native =
-        rominabox_engine::themes::design_root("native").expect("the shipped design resolves");
+    let sources = rominabox_engine::repo::at("integrations");
+    let native = rominabox_engine::themes::design_in(&sources, "native").expect("the shipped design resolves");
     assert!(
         native.ends_with("integrations/designs/native"),
         "a design lives in its own package directory, got {native:?}"
@@ -282,17 +283,30 @@ fn a_design_resolves_to_its_own_directory() {
         native.is_dir(),
         "resolving must confirm the package exists: {native:?}"
     );
-    assert!(
-        native.is_absolute(),
-        "the builder does not run from the repository root, so a relative \
-         answer is one nobody can act on: {native:?}"
-    );
-    let refusal = rominabox_engine::themes::design_root("no-such-design")
+    let refusal = rominabox_engine::themes::design_in(&sources, "no-such-design")
         .expect_err("an undeclared design must be refused");
     assert!(
         refusal.contains("no-such-design"),
         "the refusal should name what was asked for: {refusal}"
     );
+}
+
+/// A game's menu comes from the design in the kit the game is made from, never
+/// from the checkout the builder was compiled in, which a person's computer
+/// does not have. An export from a kit without the chosen design is refused
+/// before anything is made, and the refusal message contains the path of the
+/// folder in the kit.
+#[test]
+fn an_export_takes_its_design_from_the_kit() {
+    let root = export_fixture::workspace();
+    let kit = export_fixture::kit_base(&root);
+    let mut request = export_fixture::export_request_from(&root, kit.clone());
+    request.game.show_menu = true;
+    let cancelled = std::sync::atomic::AtomicBool::new(false);
+    let refused = rominabox_engine::packaging::export_game(&request, &cancelled, |_| {}).unwrap_err();
+    assert_eq!(refused.stage, rominabox_engine::packaging::ErrorStage::Validate, "{}", refused.message);
+    let missing = rominabox_engine::themes::staged_design(&kit, "native");
+    assert!(refused.message.contains(&missing.display().to_string()), "{}", refused.message);
 }
 
 /// Every document and font the design declares is actually there.

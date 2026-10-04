@@ -85,6 +85,18 @@ jobs:
         if: matrix.platform == 'windows'
         run: echo "ROMINABOX_MSYS2=$(cygpath -w '${{ steps.msys2.outputs.msys2-location }}')" >> "$GITHUB_ENV"
 
+      # The runner has no graphics card, and Windows alone offers OpenGL 1.1, so
+      # we draw the pictures of the builder's Menu step with Mesa's software
+      # OpenGL (scripts/build_kit.py).
+      - name: Install Mesa's software OpenGL
+        if: matrix.platform == 'windows'
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/mesa.7z" https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z
+          echo "351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695  $RUNNER_TEMP/mesa.7z" | sha256sum --check
+          7z e "$RUNNER_TEMP/mesa.7z" -o"$RUNNER_TEMP/mesa" x64/opengl32.dll x64/libgallium_wgl.dll
+          echo "ROMINABOX_OPENGL_LIBRARIES=$(cygpath -w "$RUNNER_TEMP/mesa")" >> "$GITHUB_ENV"
+          echo "GALLIUM_DRIVER=llvmpipe" >> "$GITHUB_ENV"
+
       - name: Install CMake, Ninja and pkg-config
         if: matrix.platform == 'macos'
         run: brew install cmake ninja pkgconf
@@ -197,7 +209,7 @@ jobs:
             echo "- \`ROM-in-a-Box-$version-macos-universal.zip\`: for both kinds of Mac."
             echo "- The \`-setup.exe\` file: the installer for Windows."
             echo
-            echo "To make games for the other platform, the builder downloads the runtime kit of that platform from the release \`$kit\`."
+            echo "Games for the other platform are made from the runtime kit of that platform in the release \`$kit\`, which is downloaded on first use."
           } > "$RUNNER_TEMP/notes.md"
           gh release create "$GITHUB_REF_NAME" release/installers/* --verify-tag \
             --title "ROM-in-a-Box $version" --notes-file "$RUNNER_TEMP/notes.md"

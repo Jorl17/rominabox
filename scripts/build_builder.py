@@ -5,8 +5,8 @@ and never start the builder or an emulator.
     uv run python scripts/build_builder.py
     uv run python scripts/build_builder.py --mac x86_64      # or arm64, or universal
 
-On macOS, --mac chooses the processors of the builder: arm64, x86_64, or
-universal for both. Without it, we build for this Mac's own processor. The
+On macOS, you choose the processors of the builder with --mac: arm64,
+x86_64, or universal for both. Without it, we build for this Mac's own processor. The
 builder program, its command line and its menu preview renderer are then
 built for those processors, and the runtime kit inside stays universal,
 because games made with any builder can run on Intel Macs.

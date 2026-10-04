@@ -143,6 +143,32 @@ def launch_library_is_current() -> list[str]:
     return []
 
 
+def menu_pictures_are_found() -> list[str]:
+    """In the builder we show a Menu step picture from the builder's resources
+    when one has the name of the composed menu (scripts/build_kit.py). Each
+    design in each palette, composed as in the builder, has its picture
+    there."""
+    import json
+    import subprocess
+
+    import built
+
+    declared = json.loads((ROOT / "desktop/designs.json").read_text(encoding="utf-8"))
+    missing = []
+    with tempfile.TemporaryDirectory() as scratch:
+        for design in declared["designs"]:
+            for palette in declared["palettes"]:
+                request = {"outputDir": str(Path(scratch) / f"{design['id']}-{palette['id']}"),
+                           "theme": design["id"], "palette": palette["id"], "rendered": str(PICTURES)}
+                run = subprocess.run([str(built.cli()), "preview"], input=json.dumps(request),
+                                     capture_output=True, text=True, encoding="utf-8")
+                events = [json.loads(line) for line in run.stdout.splitlines() if line.startswith("{")]
+                result = next((event["result"] for event in events if event.get("type") == "result"), None)
+                if result is None or Path(result["imagePath"]).resolve().parent != PICTURES.resolve():
+                    missing.append(f"{design['id']} in {palette['id']} has no picture in {PICTURES.name}")
+    return missing
+
+
 def main() -> int:
     failures: list[str] = []
 
@@ -178,6 +204,10 @@ def main() -> int:
     for entry in launcher:
         print(f"  STALE {entry}")
 
+    pictures = menu_pictures_are_found()
+    for entry in pictures:
+        print(f"  STALE {entry}")
+
     if failures:
         print(f"\n{len(failures)} staging problem(s)")
         return 1
@@ -195,7 +225,13 @@ def main() -> int:
             "  uv run python scripts/build_kit.py <the player build it was made from>",
         )
         return 1
-    print("\nthe kit's assets stage as their sources, and this checkout's kit, its launch library too, is current")
+    if pictures:
+        print(
+            "\nOn the Menu step the builder would render these pictures. Make the kit again:\n"
+            "  uv run python scripts/build_kit.py <the player build it was made from>",
+        )
+        return 1
+    print("\nthe kit's assets stage as their sources, and this checkout's kit, its launch library and its Menu step pictures too, are current")
     return 0
 
 
@@ -203,6 +239,7 @@ def main() -> int:
 DESIGNS = ROOT / "integrations/designs"
 PARTS = ROOT / "integrations/parts"
 KIT = ROOT / "desktop/src-tauri/resources/runtime"
+PICTURES = ROOT / "desktop/src-tauri/resources/menu-previews"
 
 
 def staged_copy_is_current(source: Path, staged: Path, name: str) -> list[str]:

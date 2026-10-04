@@ -55,7 +55,7 @@ JSON
 - With `online:false`, only earlier lookups are used, and nothing goes to the network. A lookup downloads catalogues and covers and matches the game on this computer, and nothing from the game is sent.
 - A game already at the destination stays as it is, unless the request has `replace:true`.
 - The saves of a game belong to its console, title and game file together. An export with those unchanged keeps the player's saves, and a new title or a changed file makes a new game with none. A new cover or new settings keep them.
-- With `target` (`macos` or `windows`) you make the game for the other platform, and with `bothPlatforms:true` both, in one `<title>.zip` with `Mac/` and `Windows/`. A game for the other platform needs the runtime kit of that platform, which is downloaded the first time. When the download is not possible, the export stops with the reason. On a Mac, `intelMacs:true` makes a game that also runs on Intel Macs, about twice the size.
+- With `target` (`macos` or `windows`) you make the game for the other platform, and with `bothPlatforms:true` both, in one `<title>.zip` with `Mac/` and `Windows/`. A game for the other platform needs the runtime kit of that platform, which is downloaded the first time. When the download is not possible, the export stops with the reason. On a Mac, `intelMacs:true` makes a game that also runs on Intel Macs, about twice the size. On an Intel Mac that is the default.
 
 ## Look before exporting
 

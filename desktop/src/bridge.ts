@@ -83,6 +83,16 @@ export class CoreDownloadFailed extends Error {}
 /** The stage of that failure in the exporter (`ErrorStage::Cores`). */
 const CORES_STAGE = "cores";
 /** An app is already where this one would go. We did nothing. */
+/** A failure that comes from a bug in ROM-in-a-Box, with the technical
+ * details for a bug report. */
+export class ExportBug extends Error {
+  constructor(
+    sentence: string,
+    readonly details: string,
+  ) {
+    super(sentence);
+  }
+}
 export class AppExists extends Error {
   constructor(
     sentence: string,
@@ -367,14 +377,16 @@ export function exportFailure(reason: unknown): unknown {
     !("sentence" in reason)
   )
     return reason;
-  const { stage, sentence, existing } = reason as {
+  const { stage, sentence, existing, bug } = reason as {
     stage: string;
     sentence: string;
     existing?: { name: string; folder: string };
+    bug?: string;
   };
   if (stage === CORES_STAGE) return new CoreDownloadFailed(sentence);
   if (stage === EXISTS_STAGE && existing)
     return new AppExists(sentence, existing.name, existing.folder);
+  if (bug) return new ExportBug(sentence, bug);
   return new Error(sentence);
 }
 export function cancelExport(): Promise<void> {
@@ -383,6 +395,13 @@ export function cancelExport(): Promise<void> {
 /** The platform we export for on this machine, or null where we cannot. */
 export function exportTarget(): Promise<ExportTarget | null> {
   return invoke("export_target");
+}
+/** Whether a new game also runs on Intel Macs: true for a builder on an
+ * Intel Mac. In the browser preview it is null, and the declared default
+ * applies. */
+export function intelMacsDefault(): Promise<boolean | null> {
+  if (!native) return Promise.resolve(null);
+  return invoke("intel_macs_default");
 }
 export function defaultDestination(): Promise<string> {
   return invoke("default_destination");
@@ -480,6 +499,11 @@ export function appVersion(): Promise<string> {
   return native ? getVersion() : Promise.resolve("");
 }
 /** ROM-in-a-Box's web address, in the browser. */
+export function openBugReport(): Promise<void> {
+  if (native) return invoke("open_bug_report");
+  window.open(__BUG_REPORTS__, "_blank", "noopener");
+  return Promise.resolve();
+}
 export function openWebsite(): Promise<void> {
   if (native) return invoke("open_website");
   window.open(__WEBSITE__, "_blank", "noopener");

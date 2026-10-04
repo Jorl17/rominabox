@@ -12,6 +12,7 @@ __pycache__/
 *.rominabox
 /desktop/src-tauri/resources/runtime
 /desktop/src-tauri/resources/preview
+/desktop/src-tauri/resources/menu-previews
 /desktop/src-tauri/resources/bin
 /desktop/src-tauri/resources/skills
 
