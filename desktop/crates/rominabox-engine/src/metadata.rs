@@ -714,7 +714,7 @@ fn artwork_path(cache: &Path, catalog: &str, filename: &str) -> PathBuf {
 }
 
 /// The longest time we allow for a lookup download, from start to end.
-const WAIT: Duration = Duration::from_secs(5);
+const WAIT: Duration = Duration::from_secs(30);
 /// On GitHub, building the list of pictures for a console takes several
 /// seconds when nobody has asked for that list recently, and about a second
 /// otherwise.
