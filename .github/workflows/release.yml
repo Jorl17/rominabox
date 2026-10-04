@@ -224,7 +224,9 @@ jobs:
             cp "release/installers/ROM-in-a-Box-$version-$variant.zip" "$latest/ROM-in-a-Box-$variant.zip"
           done
           cp "release/installers/$setup" "$latest/ROM-in-a-Box-windows-setup.exe"
-          gh release create "$GITHUB_REF_NAME" release/installers/* "$latest"/* --verify-tag \
+          # The version's release is the latest, which releases/latest/download/
+          # links reach. Kit releases are never the latest (publish_kit.py).
+          gh release create "$GITHUB_REF_NAME" release/installers/* "$latest"/* --verify-tag --latest \
             --title "ROM-in-a-Box $version" --notes-file "$RUNNER_TEMP/notes.md"
       - name: Publish the kits in the player commit's release
         env:
