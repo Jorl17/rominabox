@@ -137,7 +137,9 @@ def main() -> int:
         pictures = [name for name in files if name.endswith(".state1.png")]
         check(len(states) == 1 and len(pictures) == 1,
               f"slot 1's state and its picture are in the game's data: {files}")
-        check(not [name for name in files if ".state1" not in name],
+        # Autosave on quit is on by default and writes `.state.auto` when the
+        # game quits, which is not a slot.
+        check(not [name for name in files if ".state1" not in name and ".state.auto" not in name],
               f"no other slot's state was written: {files}")
         for name in pictures:
             picture = next(data.rglob(name))

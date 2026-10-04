@@ -32,7 +32,8 @@ def main() -> int:
     if cartridge is None:
         print(f"skipped: test-game not available ({reason})")
         return 0
-    settings = {"title": "Launch Time", "startAtMenu": False}
+    # A one-frame run ends without the autosave on quit, which is on by default.
+    settings = {"title": "Launch Time", "startAtMenu": False, "autosaveOnQuit": False}
     with menu_shots.build_a_game(cartridge, ROOT / "work/launch-time", "gbc", settings) as app:
         launcher = exported_game.launcher_of(app)
         log = exported_game.log_of(app)
