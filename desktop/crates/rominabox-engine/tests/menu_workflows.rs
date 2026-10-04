@@ -203,10 +203,7 @@ fn compose(kit: &Path, table: &Value, export: &Value, to: &Path) -> packaging::E
 /// export default, and the shader that the game starts with.
 fn launch_state(request: &packaging::ExportRequest, assets: &Path, data: &Path) -> String {
     let mut lines = String::new();
-    let defaults = player_settings::Defaults {
-        keep_playing_in_background: request.game.keep_playing_in_background,
-    };
-    for setting in player_settings::declared(defaults) {
+    for setting in player_settings::declared(request.game.player_defaults()) {
         let value = setting.chosen(data).unwrap_or(setting.default);
         lines.push_str(&format!("setting {} {value}\n", setting.key.name()));
     }

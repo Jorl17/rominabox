@@ -8,13 +8,6 @@ use crate::controls;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// The defaults of the player's settings that the author chose in `request`.
-pub(super) fn player_defaults(request: &ExportRequest) -> crate::player_settings::Defaults {
-    crate::player_settings::Defaults {
-        keep_playing_in_background: request.game.keep_playing_in_background,
-    }
-}
-
 /// The in-game menu that we ship in an export of `request`, for a game with
 /// `discs` discs. We use this one mapping in the tests too, so that we test
 /// exactly what an export would stage.
@@ -38,7 +31,7 @@ pub fn menu_request(
         shaders: request.game.shaders.clone(),
         shader_library: crate::shaders::kit_library(kit),
         discs,
-        settings: player_defaults(request),
+        settings: request.game.player_defaults(),
         sound_pack: request.game.menu_sounds != "off",
         target: request.game.target,
         licences: licences.to_vec(),

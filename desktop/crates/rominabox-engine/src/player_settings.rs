@@ -36,6 +36,7 @@ pub enum Key {
     AudioVolume,
     PauseNonactive,
     InputRumbleEnable,
+    FastforwardRatio,
 }
 
 impl Key {
@@ -55,6 +56,10 @@ pub enum Kind {
     /// On or off, which we show with the words `switch-on` and `switch-off`.
     /// `inverted` when on is the key's `false`.
     Switch { inverted: bool },
+    /// One of `values`, an Options entry like a switch, where each press moves
+    /// to the next value, and from the last back to the first. We show each
+    /// position as the word `<id>-<n>`, counted from 1.
+    Choice { values: &'static [f32] },
 }
 
 impl Kind {
@@ -65,6 +70,7 @@ impl Kind {
             match self {
                 Kind::Level { .. } => "Level",
                 Kind::Switch { .. } => "Switch",
+                Kind::Choice { .. } => "Choice",
             },
         )
     }
@@ -92,14 +98,14 @@ impl PlayerSetting {
     pub fn control(&self) -> String {
         match self.kind {
             Kind::Level { .. } => format!("{}-level", self.id),
-            Kind::Switch { .. } => self.id.to_string(),
+            Kind::Switch { .. } | Kind::Choice { .. } => self.id.to_string(),
         }
     }
 
     /// A value in RetroArch's text form for this key.
     pub fn text(&self, value: f32) -> String {
         match self.kind {
-            Kind::Level { .. } => format!("{value:.1}"),
+            Kind::Level { .. } | Kind::Choice { .. } => format!("{value:.1}"),
             Kind::Switch { .. } => (value != 0.0).to_string(),
         }
     }
@@ -108,7 +114,7 @@ impl PlayerSetting {
     /// this setting's values.
     pub fn parse(&self, text: &str) -> Option<f32> {
         match self.kind {
-            Kind::Level { values } => {
+            Kind::Level { values } | Kind::Choice { values } => {
                 let lowest = values.iter().copied().fold(f32::INFINITY, f32::min);
                 let highest = values.iter().copied().fold(f32::NEG_INFINITY, f32::max);
                 text.parse::<f32>()
@@ -152,11 +158,40 @@ impl PlayerSetting {
 }
 
 /// The author's choices for the player's settings, which are only defaults.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Defaults {
     /// The author's choice for keeping the game running while its window is
     /// in the background. RetroArch's `pause_nonactive` is its opposite.
     pub keep_playing_in_background: bool,
+    /// The game has fast forward: its speed in Options, its hotkey on
+    /// HOTKEYS, starting at this speed and working while held or not.
+    pub fast_forward: bool,
+    pub fast_forward_speed: f32,
+    pub fast_forward_hold: bool,
+}
+
+/// The values at the positions of a level, as declared in `settings.inc`
+/// for `key` (`RIB_SETTING_POSITIONS`), low end first.
+fn positions(key: Key) -> &'static [f32] {
+    static READ: std::sync::OnceLock<std::collections::BTreeMap<String, Vec<f32>>> = std::sync::OnceLock::new();
+    READ.get_or_init(|| {
+        crate::menu::inc::declarations(SOURCE)
+            .filter(|declaration| declaration.macro_name() == "RIB_SETTING_POSITIONS")
+            .map(|declaration| match declaration.fields()[..] {
+                [name, values] => (
+                    name.to_string(),
+                    values
+                        .split_whitespace()
+                        .map(|value| value.parse().unwrap_or_else(|_| panic!("settings.inc: {name} has a position '{value}' that is no number")))
+                        .collect(),
+                ),
+                ref fields => panic!("settings.inc: RIB_SETTING_POSITIONS({}) is not (name, \"values\")", fields.join(", ")),
+            })
+            .collect()
+    })
+    .get(&format!("{key:?}"))
+    .map(Vec::as_slice)
+    .unwrap_or_else(|| panic!("settings.inc declares no positions for {key:?}"))
 }
 
 /// Every setting the player of a game can change, in the order of the
@@ -193,6 +228,18 @@ pub fn declared(defaults: Defaults) -> Vec<PlayerSetting> {
             default: 1.0,
         },
     ]
+    .into_iter()
+    // Only a game with fast forward has a speed setting.
+    .chain(defaults.fast_forward.then(|| PlayerSetting {
+        id: "fast-forward-speed",
+        label: "fast-forward-speed",
+        key: Key::FastforwardRatio,
+        kind: Kind::Choice {
+            values: positions(Key::FastforwardRatio),
+        },
+        default: defaults.fast_forward_speed,
+    }))
+    .collect()
 }
 
 /// The volume setting, whatever defaults the author chose.
@@ -210,6 +257,7 @@ mod tests {
     fn background(keep_playing: bool) -> PlayerSetting {
         declared(Defaults {
             keep_playing_in_background: keep_playing,
+            ..Defaults::default()
         })
         .into_iter()
         .find(|setting| setting.key == Key::PauseNonactive)

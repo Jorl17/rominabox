@@ -107,6 +107,33 @@ fn declarations() -> &'static [Declaration] {
 /// The hotkey that a game has only with fast forward on.
 pub const FAST_FORWARD: &str = "fast-forward";
 
+/// The hotkey settings of an export beyond the bindings: the hotkeys the
+/// game does not have, and the starting way of each hotkey with ways.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct GameHotkeys {
+    pub absent: Vec<Hotkey>,
+    pub modes: Vec<(Hotkey, &'static str)>,
+}
+
+impl GameHotkeys {
+    /// The settings of a game, from the defaults of its player settings. Fast
+    /// forward is absent when off, and works while held (its first way) or
+    /// from one press to the next (its second).
+    pub fn of(defaults: &crate::player_settings::Defaults) -> GameHotkeys {
+        let Some(fast_forward) = Hotkey::named(FAST_FORWARD) else {
+            return GameHotkeys::default();
+        };
+        let ways = fast_forward.modes();
+        GameHotkeys {
+            absent: if defaults.fast_forward { Vec::new() } else { vec![fast_forward] },
+            modes: ways
+                .get(if defaults.fast_forward_hold { 0 } else { 1 })
+                .map(|way| vec![(fast_forward, *way)])
+                .unwrap_or_default(),
+        }
+    }
+}
+
 /// One hotkey, a `RIB_HOTKEY` declaration in `hotkeys.inc`, by its position
 /// there. There are no other hotkeys. Get one from `Hotkey::all` or
 /// `Hotkey::named`.
@@ -131,6 +158,15 @@ impl Hotkey {
 
     pub fn id(self) -> &'static str {
         self.declaration().id
+    }
+
+    /// The ways it can work, which the player chooses on its row, as declared
+    /// in `hotkeys.inc` (`RIB_HOTKEY_MODES`). Most hotkeys have none.
+    pub fn modes(self) -> Vec<&'static str> {
+        declared("RIB_HOTKEY_MODES")
+            .find(|fields| fields.first() == Some(&self.declaration().name))
+            .map(|fields| fields[1..].to_vec())
+            .unwrap_or_default()
     }
 
     pub fn keeps(self) -> Keeps {
@@ -414,12 +450,19 @@ impl Hotkeys {
 
     /// `hotkeys-defaults.cfg`: each hotkey's list, then the words the menu
     /// shows for every pad input.
-    pub fn defaults_config(&self) -> Result<String, String> {
+    pub fn defaults_config(&self, game: &GameHotkeys) -> Result<String, String> {
         self.check().map_err(|refusal| refusal.to_string())?;
         let mut text = String::new();
         for hotkey in Hotkey::all() {
             let list: Vec<String> = self.of(hotkey).iter().map(Binding::text).collect();
             text.push_str(&format!("{} = \"{}\"\n", key!(HotkeyList, hotkey.id()), list.join(" ")));
+        }
+        if !game.absent.is_empty() {
+            let ids: Vec<&str> = game.absent.iter().map(|hotkey| hotkey.id()).collect();
+            text.push_str(&format!("{} = \"{}\"\n", key!(HotkeysAbsent), ids.join(" ")));
+        }
+        for (hotkey, mode) in &game.modes {
+            text.push_str(&format!("{} = \"{mode}\"\n", key!(HotkeyMode, hotkey.id())));
         }
         for position in button_positions()? {
             text.push_str(&format!("{} = \"{}\"\n", key!(PadWord, position.id), position.name));

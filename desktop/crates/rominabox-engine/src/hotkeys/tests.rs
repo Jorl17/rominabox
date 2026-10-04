@@ -241,7 +241,7 @@ fn a_refusal_names_the_rule_and_the_hotkeys_for_the_builder() {
 
 #[test]
 fn the_defaults_file_holds_each_list_and_every_pad_inputs_words() {
-    let text = crate::builder::unstated::hotkeys().defaults_config().unwrap();
+    let text = crate::builder::unstated::hotkeys().defaults_config(&crate::hotkeys::GameHotkeys::default()).unwrap();
     for line in [
         "hotkey_menu = \"key:escape pad:home pad:l3+r3\"\n",
         "hotkey_confirm = \"key:enter pad:b\"\n",
@@ -256,7 +256,7 @@ fn the_defaults_file_holds_each_list_and_every_pad_inputs_words() {
     ] {
         assert!(text.contains(line), "{line}in {text}");
     }
-    let unbound = hotkeys(serde_json::json!({ "quick-save": [] })).unwrap().defaults_config().unwrap();
+    let unbound = hotkeys(serde_json::json!({ "quick-save": [] })).unwrap().defaults_config(&crate::hotkeys::GameHotkeys::default()).unwrap();
     assert!(unbound.contains("hotkey_quick-save = \"\"\n"), "{unbound}");
 }
 

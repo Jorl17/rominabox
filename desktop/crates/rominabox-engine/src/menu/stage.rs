@@ -334,7 +334,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     crate::hotkeys::fit(&request.hotkeys, &menu, &manifest.id)?;
     composition.put(
         crate::hotkeys::DEFAULTS_FILE,
-        Content::Text(request.hotkeys.defaults_config()?),
+        Content::Text(request.hotkeys.defaults_config(&crate::hotkeys::GameHotkeys::of(&request.settings))?),
     );
     let cfg = declarations::write(&manifest, &staged, &installed, &settings, &menu)?;
     // We play a sound for a change of volume in every game with a volume

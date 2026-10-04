@@ -1,7 +1,6 @@
 //! What we tell the launcher of an exported game: the launch plan, its
 //! isolated runtime config, and the game identity, for its data folder.
 
-use super::app_files::player_defaults;
 use super::{Drivers, ErrorStage, ExportError, ExportRequest};
 use crate::launch_contract::{plan_field, plan_mark, shipped, token, user_folder};
 use crate::meta_binds::isolated_meta_bind_config;
@@ -317,7 +316,7 @@ pub(super) fn write_launch_plan(
     );
     plan += &line(plan_field!(Achievements), flag(achievements));
     plan += &line(plan_field!(Sandbox), flag(true));
-    for setting in crate::player_settings::declared(player_defaults(request)).iter() {
+    for setting in crate::player_settings::declared(request.game.player_defaults()).iter() {
         plan += &setting.launch_line();
     }
     plan += &line(plan_field!(ShaderInitial), &shader_initial);

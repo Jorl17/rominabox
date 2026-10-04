@@ -372,6 +372,10 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 .hotkey-chip.pad { background-color: #193e88; border-top-color: #020b27; border-left-color: #020b27; border-right-color: #9edaff; border-bottom-color: #9edaff; }
 .hotkey-chip:hover, .hotkey-chip.focused { background-color: #fff13d; color: #061a48; border-color: #ffffff; }
 .hotkey-add { width: 35dp; padding: 0; font-size: 22dp; border-width: 3dp; }
+/* A hotkey with ways (FAST FORWARD): its current way, with the height of a
+ * chip, at the end of the row. We do not show a hotkey the game does not have. */
+.hotkey-mode { box-sizing: border-box; height: 35dp; line-height: 29dp; padding: 0 14dp; margin-left: auto; font-family: Silkscreen; font-size: 15dp; text-align: center; white-space: nowrap; border-width: 3dp; }
+.hotkey.disabled { display: none; }
 .hotkey-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
 /* The mark for "choosing this binding removes it". */
 .hotkey-mark { margin-left: 10dp; }

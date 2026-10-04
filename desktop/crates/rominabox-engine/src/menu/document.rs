@@ -391,10 +391,11 @@ fn entry_button(manifest: &Manifest, screen: &Screen) -> Result<String, String> 
     })
 }
 
-/// A switch that the design does not place is one more Options entry, drawn
-/// like the others: its name, then an empty state that we fill in the player,
-/// with the control's id and the contract's state suffix. We mark it with the
-/// contract's switch class, which is how we recognise a press in the player.
+/// A switch or a choice that the design does not place itself becomes one
+/// more Options entry, drawn like the others: its name, then an empty state
+/// that we fill in the player, under the control's id with the contract's
+/// state suffix. It has the contract's switch class, and in the player we
+/// handle a press on an element with that class.
 fn switch_entry(manifest: &Manifest, setting: &PlayerSetting) -> Result<String, String> {
     let control = setting.control();
     let label = format!(
@@ -550,7 +551,7 @@ pub(crate) fn apply_options(
     // After the screens, in the same column, the switches that the design
     // does not place with a marker in the panel.
     for setting in settings {
-        if !matches!(setting.kind, Kind::Switch { .. })
+        if !matches!(setting.kind, Kind::Switch { .. } | Kind::Choice { .. })
             || document.contains(&setting_slot(setting))
             || document.contains(&format!("id=\"{}\"", setting.control()))
         {
@@ -742,7 +743,7 @@ pub fn install_settings(
         let slot = setting_slot(setting);
         let placed = match setting.kind {
             Kind::Level { .. } => format!("id=\"{}\"", level_holder(setting)),
-            Kind::Switch { .. } => format!("id=\"{}\"", setting.control()),
+            Kind::Switch { .. } | Kind::Choice { .. } => format!("id=\"{}\"", setting.control()),
         };
         if document.contains(&placed) {
             document = document.replace(&slot, "");
@@ -751,7 +752,7 @@ pub fn install_settings(
         if document.contains(&slot) {
             let markup = match setting.kind {
                 Kind::Level { .. } => level_markup(design, words, setting)?,
-                Kind::Switch { .. } => switch_markup(design, words, setting)?,
+                Kind::Switch { .. } | Kind::Choice { .. } => switch_markup(design, words, setting)?,
             };
             document = document.replacen(&slot, &markup, 1);
             continue;

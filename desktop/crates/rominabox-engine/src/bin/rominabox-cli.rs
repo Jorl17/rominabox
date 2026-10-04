@@ -456,6 +456,14 @@ fn run() -> Result<(), String> {
                 /// the player can change in Options.
                 #[serde(default)]
                 keep_playing_in_background: bool,
+                /// Fast forward, its speed and whether it works while held,
+                /// as set in the request for a game.
+                #[serde(default = "rominabox_engine::builder::unstated::fast_forward")]
+                fast_forward: bool,
+                #[serde(default = "rominabox_engine::builder::unstated::fast_forward_speed")]
+                fast_forward_speed: f32,
+                #[serde(default = "rominabox_engine::builder::unstated::fast_forward_hold")]
+                fast_forward_hold: bool,
                 /// The hotkeys. For one left out, we use the builder's.
                 #[serde(default = "rominabox_engine::builder::unstated::hotkeys")]
                 hotkeys: rominabox_engine::hotkeys::Hotkeys,
@@ -499,6 +507,9 @@ fn run() -> Result<(), String> {
                 discs: request.discs.unwrap_or(defaults.discs),
                 settings: rominabox_engine::player_settings::Defaults {
                     keep_playing_in_background: request.keep_playing_in_background,
+                    fast_forward: request.fast_forward,
+                    fast_forward_speed: request.fast_forward_speed,
+                    fast_forward_hold: request.fast_forward_hold,
                 },
                 licences: request.licences,
                 ..defaults

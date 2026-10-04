@@ -321,6 +321,10 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 .hotkey-chip.pad:hover { background-color: design(highlight); color: design(slot-label); border-color: design(highlight); }
 .hotkey-chip.pad.focused { background-color: design(focus); color: design(ink); border-color: design(highlight); }
 .hotkey-add { width: 34dp; padding: 0; text-align: center; font-size: 16dp; }
+/* The way of FAST FORWARD, with the height of a chip, at the end of the row.
+ * We do not show a hotkey that the game does not have. */
+.hotkey-mode { box-sizing: border-box; height: 34dp; line-height: 32dp; padding: 0 12dp; margin-left: auto; font-family: Silkscreen; font-size: 13dp; white-space: nowrap; }
+.hotkey.disabled { display: none; }
 /* Right at the end of a line stays there, because BACK, far down the right
  * edge, is not the next binding. */
 .hotkey-add { nav-right: none; }

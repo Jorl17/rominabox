@@ -105,6 +105,16 @@ pub struct Game {
 }
 
 impl Game {
+    /// The defaults of the player's settings in the game.
+    pub fn player_defaults(&self) -> crate::player_settings::Defaults {
+        crate::player_settings::Defaults {
+            keep_playing_in_background: self.keep_playing_in_background,
+            fast_forward: self.fast_forward,
+            fast_forward_speed: self.fast_forward_speed,
+            fast_forward_hold: self.fast_forward_hold,
+        }
+    }
+
     /// The hotkeys of the game. Fast forward is one only when fast forward is
     /// on, so we neither check nor write a binding kept for it while it is off.
     pub fn offered_hotkeys(&self) -> crate::hotkeys::Hotkeys {

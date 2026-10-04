@@ -140,7 +140,7 @@ fn setting_lines(text: &mut String, setting: &PlayerSetting) -> Result<(), Strin
     line(text, &key!(SettingFile, id), &setting.file())?;
     line(text, &key!(SettingKind, id), setting.kind.word())?;
     match setting.kind {
-        Kind::Level { values } => {
+        Kind::Level { values } | Kind::Choice { values } => {
             let values: Vec<String> = values.iter().map(|value| setting.text(*value)).collect();
             line(text, &key!(SettingValues, id), &values.join(" "))?;
         }
