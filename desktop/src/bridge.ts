@@ -36,6 +36,9 @@ export type ExportRequest = {
   startAtMenu: boolean;
   splash: boolean;
   keepPlayingInBackground: boolean;
+  fastForward: boolean;
+  fastForwardSpeed: number;
+  fastForwardHold: boolean;
   autosaveOnQuit: boolean;
   /** Every connected pad plays as player 1. */
   everyPadIsPlayerOne: boolean;

@@ -1230,7 +1230,7 @@ export function App() {
                         <ChevronRight size={16} />
                         Customize
                       </summary>
-                      <div className="sound-choice">
+                      <div className="labeled-choice">
                         <label htmlFor="menu-sounds">Menu sounds</label>
                         <select
                           id="menu-sounds"
@@ -1277,12 +1277,10 @@ export function App() {
               )}
 
               <ControlsSection
-                system={draft.system}
+                settings={draft}
+                update={update}
                 controls={controls}
                 onControls={setControls}
-                hotkeys={draft.hotkeys}
-                onHotkeys={(value) => update("hotkeys", value)}
-                withHotkeys={draft.showMenu}
                 busy={!!busy}
               />
               <details className="advanced picture-filters">

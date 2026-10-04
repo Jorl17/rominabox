@@ -711,7 +711,7 @@ fn validate_request(
         .map_err(|message| ExportError::new(ErrorStage::Validate, message))?;
     request
         .game
-        .hotkeys
+        .offered_hotkeys()
         .check_for(&request.game.system, &request.game.controls)
         .map_err(|refusal| ExportError::new(ErrorStage::Validate, refusal.to_string()))?;
     if !request.game.shaders.is_empty() && !request.game.show_menu {

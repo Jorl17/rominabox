@@ -104,6 +104,9 @@ fn declarations() -> &'static [Declaration] {
     })
 }
 
+/// The hotkey that a game has only with fast forward on.
+pub const FAST_FORWARD: &str = "fast-forward";
+
 /// One hotkey, a `RIB_HOTKEY` declaration in `hotkeys.inc`, by its position
 /// there. There are no other hotkeys. Get one from `Hotkey::all` or
 /// `Hotkey::named`.
@@ -336,6 +339,13 @@ pub struct Hotkeys {
 impl Hotkeys {
     pub fn of(&self, hotkey: Hotkey) -> &[Binding] {
         self.lists.get(&hotkey).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// The same hotkeys, with `hotkey` bound to nothing.
+    pub fn without(&self, hotkey: Hotkey) -> Hotkeys {
+        let mut lists = self.lists.clone();
+        lists.insert(hotkey, Vec::new());
+        Hotkeys { lists }
     }
 
     /// The rules we apply in the menu to every change: each hotkey keeps

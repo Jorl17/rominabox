@@ -50,6 +50,15 @@ pub struct Defaults {
     /// the menu text is readable on any picture. Off, we show it as it is.
     pub tint_background: bool,
     pub menu_sounds: String,
+    /// Whether the game has fast forward, with its hotkey on HOTKEYS and its
+    /// speed in Options.
+    pub fast_forward: bool,
+    /// The fast forward speed until the player changes it, as the RetroArch
+    /// `fastforward_ratio`, one of the positions declared in `settings.inc`.
+    pub fast_forward_speed: f32,
+    /// Whether fast forward runs only while its hotkey is held, or from one
+    /// press to the next. The player can change it.
+    pub fast_forward_hold: bool,
     /// The hotkeys, until the player changes them on HOTKEYS.
     #[serde(deserialize_with = "crate::hotkeys::read_defaults")]
     pub hotkeys: crate::hotkeys::Hotkeys,
@@ -88,6 +97,15 @@ pub mod unstated {
     }
     pub fn autosave_on_quit() -> bool {
         defaults().autosave_on_quit
+    }
+    pub fn fast_forward() -> bool {
+        defaults().fast_forward
+    }
+    pub fn fast_forward_speed() -> f32 {
+        defaults().fast_forward_speed
+    }
+    pub fn fast_forward_hold() -> bool {
+        defaults().fast_forward_hold
     }
     pub fn every_pad_is_player_one() -> bool {
         defaults().every_pad_is_player_one

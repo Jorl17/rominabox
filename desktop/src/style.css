@@ -625,6 +625,10 @@ main {
 .advanced > .option-toggle {
   display: flex;
 }
+/* A choice that belongs to the checkbox above it starts under its words. */
+.advanced > .fast-forward-speed {
+  margin: 2px 0 14px 32px;
+}
 .advanced[open] > summary svg {
   transform: rotate(90deg);
 }
@@ -1230,7 +1234,7 @@ main {
 
 /* One line: in the 280px settings column the picker shrinks, so the preview
  * stays on the same line. */
-.sound-choice {
+.labeled-choice {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
@@ -1241,11 +1245,11 @@ main {
   font-size: 14px;
   font-weight: 650;
 }
-.sound-choice label,
-.sound-choice .menu-sound-preview {
+.labeled-choice label,
+.labeled-choice .menu-sound-preview {
   flex: 0 0 auto;
 }
-.sound-choice select {
+.labeled-choice select {
   flex: 1 1 auto;
   min-width: 0;
   width: auto;
@@ -1303,15 +1307,15 @@ select {
   width: 16px;
   height: 16px;
 }
-.sound-choice {
+.labeled-choice {
   justify-content: flex-start;
   flex-direction: row;
   margin: 0;
 }
-.sound-choice label {
+.labeled-choice label {
   font-size: 13px;
 }
-.sound-choice select {
+.labeled-choice select {
   max-width: 240px;
 }
 .customize-row {
@@ -1362,10 +1366,10 @@ select {
   display: flex;
   margin: 0 0 12px;
 }
-.menu-settings .sound-choice {
+.menu-settings .labeled-choice {
   gap: 8px;
 }
-.menu-settings .sound-choice select {
+.menu-settings .labeled-choice select {
   max-width: 132px;
   font-size: 12px;
 }

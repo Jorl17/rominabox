@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Plus, X } from "lucide-react";
 import * as bridge from "./bridge";
 import { CAPTURE_SECONDS, listen } from "./bindingCapture";
@@ -26,11 +26,17 @@ export function HotkeysEditor({
   onChange,
   busy,
   game,
+  rows = hotkeyIds,
+  extra,
 }: {
   value: Hotkeys;
   onChange: (next: Hotkeys) => void;
   busy: boolean;
   game: { system: string; controls: Controls };
+  /** The hotkeys the game has, in the order the game declares them. */
+  rows?: Hotkey[];
+  /** A control at the end of a row, after its bindings. */
+  extra?: (hotkey: Hotkey) => ReactNode;
 }) {
   const [waiting, setWaiting] = useState<{
     hotkey: Hotkey;
@@ -46,7 +52,19 @@ export function HotkeysEditor({
     setWaiting(null);
   }
   async function propose(next: Hotkeys, changed: Hotkey) {
-    const refusal = await bridge.checkHotkeys(next, game.system, game.controls);
+    // We check a hotkey that the game does not have as bound to nothing, and
+    // keep its bindings for when the game has it again.
+    const offered = Object.fromEntries(
+      hotkeyIds.map((hotkey) => [
+        hotkey,
+        rows.includes(hotkey) ? next[hotkey] : [],
+      ]),
+    ) as Hotkeys;
+    const refusal = await bridge.checkHotkeys(
+      offered,
+      game.system,
+      game.controls,
+    );
     setSaid(refusal ? refusalWords(refusal, changed) : "");
     if (!refusal) onChange(next);
   }
@@ -90,7 +108,7 @@ export function HotkeysEditor({
           Reset to defaults
         </button>
       </div>
-      {hotkeyIds.map((hotkey) => (
+      {rows.map((hotkey) => (
         <div className="hotkey-row" key={hotkey}>
           <span className="hotkey-name">{hotkeyName(hotkey)}</span>
           {value[hotkey].map((binding) => (
@@ -135,6 +153,7 @@ export function HotkeysEditor({
               <Plus size={14} aria-hidden="true" />
             </button>
           )}
+          {extra?.(hotkey)}
         </div>
       ))}
       <span className="control-message" role="status">

@@ -155,7 +155,7 @@ describe("App workflow", () => {
   it("offers menu sounds as a picker and a preview, with nothing to read", async () => {
     await openMenu();
     const picker = container.querySelector("#menu-sounds") as HTMLSelectElement;
-    const field = picker.closest(".sound-choice") as HTMLElement;
+    const field = picker.closest(".labeled-choice") as HTMLElement;
     expect(field.querySelector("label")?.textContent).toBe("Menu sounds");
     expect(field.querySelector(".menu-sound-preview button")).not.toBeNull();
     expect(field.querySelector(".help-button")).toBeNull();

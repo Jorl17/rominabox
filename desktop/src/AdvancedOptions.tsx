@@ -1,10 +1,15 @@
+import type { Draft } from "./App";
 import { ChevronRight } from "lucide-react";
 import { Checkbox } from "./Help";
+import { fastForwardSpeeds, speedWords } from "./fastForward";
 
-type Settings = {
-  everyPadIsPlayerOne: boolean;
-  advancedEmulatorAccess: boolean;
-};
+type Settings = Pick<
+  Draft,
+  | "everyPadIsPlayerOne"
+  | "advancedEmulatorAccess"
+  | "fastForward"
+  | "fastForwardSpeed"
+>;
 
 /** The Advanced section of the Menu step: choices most authors leave alone. */
 export function AdvancedOptions({
@@ -12,7 +17,7 @@ export function AdvancedOptions({
   update,
 }: {
   settings: Settings;
-  update: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
+  update: <K extends keyof Draft>(key: K, value: Draft[K]) => void;
 }) {
   return (
     <details className="advanced">
@@ -32,6 +37,28 @@ export function AdvancedOptions({
         onChange={(value) => update("advancedEmulatorAccess", value)}
         help="Restore RetroArch's native menus."
       />
+      <Checkbox
+        label="Fast forward"
+        checked={settings.fastForward}
+        onChange={(value) => update("fastForward", value)}
+        help="A hotkey runs the game faster."
+      />
+      {settings.fastForward && (
+        <div className="labeled-choice fast-forward-speed">
+          <label htmlFor="fast-forward-speed">Speed</label>
+          <select
+            id="fast-forward-speed"
+            value={String(settings.fastForwardSpeed)}
+            onChange={(e) => update("fastForwardSpeed", Number(e.target.value))}
+          >
+            {fastForwardSpeeds.map((speed) => (
+              <option value={String(speed)} key={speed}>
+                {speedWords(speed)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </details>
   );
 }

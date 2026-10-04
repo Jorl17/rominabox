@@ -30,7 +30,7 @@ pub fn menu_request(
         tint_background: request.game.tint_background,
         system: request.game.system.clone(),
         controls: request.game.controls.clone(),
-        hotkeys: request.game.hotkeys.clone(),
+        hotkeys: request.game.offered_hotkeys(),
         show_menu: request.game.show_menu,
         splash: request.game.splash,
         include_achievements: request.game.include_achievements,

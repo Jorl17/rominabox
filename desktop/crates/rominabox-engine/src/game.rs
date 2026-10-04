@@ -57,6 +57,18 @@ pub struct Game {
     /// it and a per-game `controls.cfg` would otherwise replace it.
     #[serde(default = "crate::builder::unstated::keep_playing_in_background")]
     pub keep_playing_in_background: bool,
+    /// Whether the game has fast forward, with its hotkey on HOTKEYS and its
+    /// speed in Options. When it is off, the game has neither.
+    #[serde(default = "crate::builder::unstated::fast_forward")]
+    pub fast_forward: bool,
+    /// The fast forward speed, as the RetroArch `fastforward_ratio`, until the
+    /// player changes it.
+    #[serde(default = "crate::builder::unstated::fast_forward_speed")]
+    pub fast_forward_speed: f32,
+    /// Whether fast forward runs only while its hotkey is held, or from one
+    /// press to the next, until the player changes it.
+    #[serde(default = "crate::builder::unstated::fast_forward_hold")]
+    pub fast_forward_hold: bool,
     /// Save on quit and load that save the next time the player opens the
     /// game. The author makes one choice for both.
     #[serde(default = "crate::builder::unstated::autosave_on_quit")]
@@ -93,6 +105,15 @@ pub struct Game {
 }
 
 impl Game {
+    /// The hotkeys of the game. Fast forward is one only when fast forward is
+    /// on, so we neither check nor write a binding kept for it while it is off.
+    pub fn offered_hotkeys(&self) -> crate::hotkeys::Hotkeys {
+        match crate::hotkeys::Hotkey::named(crate::hotkeys::FAST_FORWARD) {
+            Some(fast_forward) if !self.fast_forward => self.hotkeys.without(fast_forward),
+            _ => self.hotkeys.clone(),
+        }
+    }
+
     /// The game of `rom`, with the builder's default for every setting,
     /// as for a request with only these, from the same declaration.
     pub fn new(rom: impl Into<PathBuf>, title: &str, system: &str, target: ExportTarget) -> Game {

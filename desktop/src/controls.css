@@ -309,3 +309,12 @@
   background: var(--ink);
   color: var(--paper);
 }
+/* The Hold or Toggle choice of Fast forward, after its bindings, the size of
+   the row's add button. */
+.hotkey-mode {
+  padding: 11px 28px 11px 12px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  font-size: 13px;
+  font-weight: 700;
+}

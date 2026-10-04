@@ -19,7 +19,7 @@ fn texts(hotkeys: &Hotkeys, id: &str) -> Vec<String> {
 fn the_hotkeys_are_the_players_own() {
     assert_eq!(
         Hotkey::all().map(Hotkey::id).collect::<Vec<_>>(),
-        ["menu", "confirm", "back", "quick-save", "quick-load", "previous-slot", "next-slot"]
+        ["menu", "confirm", "back", "quick-save", "quick-load", "previous-slot", "next-slot", "fast-forward"]
     );
     assert_eq!(named("menu").keeps(), Keeps::Key);
     assert_eq!(named("confirm").keeps(), Keeps::Binding);
@@ -52,12 +52,12 @@ fn the_builders_defaults_are_todays_menu_keys_and_retroarchs_state_keys() {
 #[test]
 fn a_request_changes_the_hotkeys_it_names_and_keeps_the_rest() {
     let chosen = hotkeys(serde_json::json!({
-        "confirm": ["key:space", "pad:b"], "back": ["key:backspace", "pad:a"], "quick-save": ["key:f5", "pad:select"]
+        "confirm": ["key:k", "pad:b"], "back": ["key:backspace", "pad:a"], "quick-save": ["key:f5", "pad:select"]
     }))
     .unwrap();
     assert_eq!(
         chosen.of(named("confirm")),
-        [Binding::Key("space".into()), Binding::Pad(vec![PadInput::Position("b".into())])]
+        [Binding::Key("k".into()), Binding::Pad(vec![PadInput::Position("b".into())])]
     );
     assert_eq!(texts(&chosen, "quick-save"), ["key:f5", "pad:select"]);
     let defaults = crate::builder::unstated::hotkeys();
@@ -146,7 +146,7 @@ fn a_hotkey_that_acts_while_the_game_plays_holds_none_of_the_games_keys() {
     let escape = refused(&defaults, &keyed("b", "escape")).to_string();
     assert!(escape.contains("menu, which acts while the game plays") && escape.contains("key for b (B)"), "{escape}");
     // A hotkey with a default key of the game.
-    let start = hotkeys(serde_json::json!({ "quick-load": ["key:enter"], "confirm": ["key:space"] })).unwrap();
+    let start = hotkeys(serde_json::json!({ "quick-load": ["key:enter"], "confirm": ["key:k"] })).unwrap();
     assert_eq!(
         refused(&start, &Controls::default()),
         Refusal::GameInput {
