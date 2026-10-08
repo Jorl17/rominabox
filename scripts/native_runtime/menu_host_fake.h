@@ -88,6 +88,8 @@ struct FakeHost
    /* How many times we restarted the game, and closed the menu to resume it. */
    int restarts = 0;
    int resumes = 0;
+   /* How many times we switched between fullscreen and a window. */
+   int fullscreen_toggles = 0;
    bool script_finished = false;
    std::string error_log;
 

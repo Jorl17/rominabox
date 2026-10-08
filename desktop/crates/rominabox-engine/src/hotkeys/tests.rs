@@ -19,7 +19,17 @@ fn texts(hotkeys: &Hotkeys, id: &str) -> Vec<String> {
 fn the_hotkeys_are_the_players_own() {
     assert_eq!(
         Hotkey::all().map(Hotkey::id).collect::<Vec<_>>(),
-        ["menu", "confirm", "back", "quick-save", "quick-load", "previous-slot", "next-slot", "fast-forward"]
+        [
+            "menu",
+            "confirm",
+            "back",
+            "quick-save",
+            "quick-load",
+            "previous-slot",
+            "next-slot",
+            "fast-forward",
+            "fullscreen"
+        ]
     );
     assert_eq!(named("menu").keeps(), Keeps::Key);
     assert_eq!(named("confirm").keeps(), Keeps::Binding);
@@ -27,6 +37,7 @@ fn the_hotkeys_are_the_players_own() {
     assert_eq!(named("menu").acts(), Acts::Both);
     assert_eq!(named("back").acts(), Acts::InMenu);
     assert_eq!(named("next-slot").acts(), Acts::InGame);
+    assert_eq!(named("fullscreen").acts(), Acts::Both);
     assert!(named("menu").shares_with(named("back")) && named("back").shares_with(named("menu")));
     assert!(!named("confirm").shares_with(named("back")));
     assert!(!named("quick-save").shares_with(named("confirm")));

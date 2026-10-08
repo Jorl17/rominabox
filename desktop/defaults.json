@@ -24,6 +24,7 @@
     "quick-load": ["key:f4"],
     "previous-slot": ["key:f6"],
     "next-slot": ["key:f7"],
-    "fast-forward": ["key:space"]
+    "fast-forward": ["key:space"],
+    "fullscreen": []
   }
 }

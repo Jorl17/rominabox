@@ -317,6 +317,9 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 .hotkey-chips { position: absolute; left: 180dp; right: 0; top: 10dp; height: 76dp; display: flex; flex-wrap: wrap; align-content: center; align-items: center; column-gap: 8dp; row-gap: 8dp; }
 .hotkey-chip, .hotkey-add { box-sizing: border-box; height: 34dp; line-height: 32dp; font-family: Silkscreen; font-size: 13dp; white-space: nowrap; }
 .hotkey-chip { padding: 0 12dp; text-align: left; text-transform: uppercase; }
+/* The player cannot choose or remove the fullscreen chord on the row of
+ * FULLSCREEN, so we let the pointer pass through it. */
+.hotkey-chord { pointer-events: none; }
 .hotkey-chip.pad { background-color: transparent; border-color: design(edge); }
 .hotkey-chip.pad:hover { background-color: design(highlight); color: design(slot-label); border-color: design(highlight); }
 .hotkey-chip.pad.focused { background-color: design(focus); color: design(ink); border-color: design(highlight); }

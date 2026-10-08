@@ -6,6 +6,8 @@ import type { Controls } from "./controls";
 import {
   bindingOf,
   bindingWords,
+  chordHotkeys,
+  chordWords,
   defaultHotkeys,
   hotkeyIds,
   hotkeyName,
@@ -111,6 +113,9 @@ export function HotkeysEditor({
       {rows.map((hotkey) => (
         <div className="hotkey-row" key={hotkey}>
           <span className="hotkey-name">{hotkeyName(hotkey)}</span>
+          {chordHotkeys.includes(hotkey) && (
+            <span className="hotkey-chip hotkey-chord">{chordWords}</span>
+          )}
           {value[hotkey].map((binding) => (
             <span className="hotkey-chip" key={binding}>
               {bindingWords(binding)}

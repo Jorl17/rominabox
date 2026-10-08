@@ -379,6 +379,9 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 .hotkey-add.capturing { animation: 0.55s capture-pulse infinite alternate; }
 /* The mark for "choosing this binding removes it". */
 .hotkey-mark { margin-left: 10dp; }
+/* The player cannot choose or remove the fullscreen chord on the row of
+ * FULLSCREEN, so we let the pointer pass through it. */
+.hotkey-chord { pointer-events: none; }
 #hotkeys-actions { position: absolute; left: 56dp; top: 480dp; width: 840dp; height: 42dp; }
 #hotkeys-actions button { position: absolute; top: 0; font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
 #hotkeys-back { left: 0; width: 124dp; }

@@ -298,6 +298,10 @@
   font-size: 12px;
   font-weight: 700;
 }
+/* The fullscreen chord, which the player cannot remove, so we draw it without the ×. */
+.hotkey-chord {
+  padding-right: 9px;
+}
 .hotkey-remove {
   display: grid;
   place-items: center;

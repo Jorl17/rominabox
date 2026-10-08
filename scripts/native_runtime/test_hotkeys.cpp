@@ -565,6 +565,36 @@ void the_games_inputs_are_not_the_hotkeys_of_play(void *menu)
    click(menu, "hotkey-confirm-3");
 }
 
+/* The row of FULLSCREEN starts with the fullscreen chord of the platform,
+ * which the player cannot remove, and FULLSCREEN has no other binding until
+ * the player adds one. */
+void the_fullscreen_chord(void *menu)
+{
+#if defined(__APPLE__)
+   const std::string chord = "OPTION+RETURN";
+#else
+   const std::string chord = "ALT+ENTER";
+#endif
+   const auto shown = [] {
+      Rml::Element *chip = view.document.root()->GetElementById("hotkey-fullscreen-chord");
+      Rml::Element *words = chip ? rib::find_class(chip, "hotkey-words") : nullptr;
+      return words ? words->GetInnerRML() : std::string("<no chord>");
+   };
+   check(shown() == chord, "FULLSCREEN's row starts with " + chord + ", not " + shown());
+   expect_row("fullscreen", {}, "the defaults");
+   const std::string before = status();
+   click(menu, "hotkey-fullscreen-chord");
+   check(shown() == chord && status() == before, "clicking the chord changes nothing, and the status says "
+         + status());
+   capture(menu, "fullscreen", "key:f11");
+   expect_row("fullscreen", {"f11"}, "F11 captured for FULLSCREEN");
+   check(player_file().find("hotkey_fullscreen = \"key:f11\"") != std::string::npos,
+         "the player's file has FULLSCREEN's F11: " + player_file());
+   click(menu, "hotkey-fullscreen-1");
+   expect_row("fullscreen", {}, "F11 removed from FULLSCREEN");
+   check(shown() == chord, "the chord stays after the last binding goes");
+}
+
 /* Pressing RESET restores the defaults of the latest export of the game:
  * CONFIRM from the later one, and MENU and BACK, unchanged from the first. */
 void reset(void *menu)
@@ -609,6 +639,7 @@ int main(int argc, char **argv)
    pages(menu);
    the_hotkeys_of_play_keep_nothing(menu);
    the_games_inputs_are_not_the_hotkeys_of_play(menu);
+   the_fullscreen_chord(menu);
    close(menu);
 
    /* At the next launch we read the player's file. The swap is still there

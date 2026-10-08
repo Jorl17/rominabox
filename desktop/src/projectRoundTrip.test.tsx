@@ -63,6 +63,7 @@ const everySetting = {
     "previous-slot": [],
     "next-slot": ["key:f12"],
     "fast-forward": ["key:tab"],
+    fullscreen: ["key:f11"],
   },
   firmware: ["/opened/firmware/bios.bin"],
   splash: false,

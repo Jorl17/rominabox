@@ -2,8 +2,10 @@
  * its document and save slots, on a menu composed by an export: QUICK SAVE
  * and QUICK LOAD on the slot selected in the menu, PREVIOUS SLOT and NEXT
  * SLOT around the six slots, each once for each press and never while the
- * menu is open, and the notice for each in the notice row. The fake host
- * stands in for RetroArch: the keys held, and the state task it reports.
+ * menu is open, and the notice for each in the notice row, and FULLSCREEN,
+ * which the player also uses in the menu. In the fake host we stand in for
+ * RetroArch. We set the keys held, report the state task and count each
+ * switch to and from fullscreen.
  *
  *   test_play_hotkeys ASSETS DATA
  *
@@ -18,6 +20,7 @@
 #include "menu_host_fake.h"
 #include "test_arguments.h"
 #include "test_environment.h"
+#include <streams/file_stream.h>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -214,6 +217,37 @@ void the_menu_shows_the_chosen_slot(void *menu)
    open_menu(menu, false);
 }
 
+/* With FULLSCREEN, which the player bound to F11, the player switches between
+ * fullscreen and a window once for each press, during play and in the menu.
+ * While the player chooses a binding, we give the press to the capture. */
+void fullscreen_acts_in_play_and_in_the_menu(void *menu)
+{
+   const int before = host.fullscreen_toggles;
+   press(menu, "f11");
+   check(host.fullscreen_toggles == before + 1, "F11 during play switches to fullscreen");
+   for (int held = 0; held < 10; ++held)
+      play(menu, {"f11"});
+   play(menu);
+   check(host.fullscreen_toggles == before + 2, "F11 held for ten frames switches once");
+   open_menu(menu, true);
+   press(menu, "f11");
+   check(host.fullscreen_toggles == before + 3, "F11 in the menu switches too");
+
+   const int captures = host.input_captures_started;
+   for (const char *id : {"options", "hotkeys", "hotkey-quick-save-add"})
+   {
+      check(view.document.click_element(id), std::string("click ") + id);
+      frame(menu);
+   }
+   check(host.input_captures_started == captures + 1, "+ on QUICK SAVE starts a capture");
+   press(menu, "f11");
+   check(host.fullscreen_toggles == before + 3,
+         "F11 pressed while the player chooses a binding does not switch");
+   check(view.document.click_element("hotkeys-cancel"), "click CANCEL");
+   frame(menu);
+   open_menu(menu, false);
+}
+
 /* The next launch starts on the slot chosen last, and QUICK SAVE saves to
  * it, as before the game was closed. */
 void the_next_launch_keeps_the_chosen_slot(void *menu)
@@ -244,6 +278,10 @@ int main(int argc, char **argv)
    test_unsetenv("ROMINABOX_MENU_SCRIPT");
    host.clock_us = 1000000;
    host.menu_open = false;
+   /* FULLSCREEN has no binding by default. This player bound F11 to it. */
+   const std::string bound = "hotkey_fullscreen = \"key:f11\"\n";
+   filestream_write_file((std::string(argv[2]) + "/hotkeys.cfg").c_str(), bound.data(),
+         (int64_t)bound.size());
    void *menu = rib_menu_create();
    check(menu != nullptr, "the menu is made");
    if (!menu)
@@ -260,6 +298,7 @@ int main(int argc, char **argv)
    the_menus_own_save_has_no_notice(menu);
    nothing_acts_while_the_menu_is_open(menu);
    the_menu_shows_the_chosen_slot(menu);
+   fullscreen_acts_in_play_and_in_the_menu(menu);
    rib_menu_destroy(menu);
 
    /* The game closed and opened again, on the same data. */

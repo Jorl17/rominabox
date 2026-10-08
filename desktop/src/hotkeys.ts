@@ -1,11 +1,12 @@
 import declared from "../defaults.json";
 import inc from "../../vendor/retroarch/menu/drivers/rmlui/hotkeys.inc?raw";
+import wordsInc from "../../vendor/retroarch/menu/drivers/rmlui/words.inc?raw";
 import type { Pressed } from "./bindingCapture";
 import { keyName } from "./keys";
 import { padPositions, positionName } from "./padPositions";
 
 /** Each hotkey's bindings, by the hotkey's id. */
-export type Hotkeys = typeof declared.hotkeys;
+export type Hotkeys = Record<keyof typeof declared.hotkeys, string[]>;
 export type Hotkey = keyof Hotkeys;
 /** The builder's defaults. */
 export const defaultHotkeys: Hotkeys = declared.hotkeys;
@@ -33,6 +34,30 @@ const keyPrefix = prefix("Key");
 const padPrefix = prefix("Pad");
 const [chord] = declaration("RIB_HOTKEY_PAD_CHORD");
 const [homeId, , homeWord] = declaration("RIB_HOTKEY_PAD_HOME");
+
+/** The hotkeys that the player can also use with the fullscreen chord of the
+ * platform, which they cannot remove (RIB_HOTKEY_CHORD in hotkeys.inc). */
+export const chordHotkeys: Hotkey[] = declarations("RIB_HOTKEY_CHORD").map(
+  ([name]) =>
+    declarations("RIB_HOTKEY").find(
+      ([declared]) => declared === name,
+    )?.[1] as Hotkey,
+);
+function word(id: string): string {
+  const found = wordsInc.match(
+    new RegExp(`RIB_WORD\\(\\w+, "${id}", "([^"]*)"\\)`),
+  );
+  if (!found) throw new Error(`words.inc declares no ${id}`);
+  return found[1];
+}
+/** The fullscreen chord in the words of the game, for the platform of this
+ * computer. In a game for the other platform, the player sees the chord of
+ * that platform. */
+export const chordWords = word(
+  /Mac/.test(globalThis.navigator?.platform ?? "")
+    ? "fullscreen-chord-mac"
+    : "fullscreen-chord",
+);
 
 /** A hotkey as the author reads it: its id in words, "Quick save". */
 export function hotkeyName(id: string): string {

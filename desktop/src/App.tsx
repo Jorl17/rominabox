@@ -21,7 +21,7 @@ import {
   type CoreNotice,
 } from "./CoreFetchNotice";
 import designs from "../designs.json";
-import declared from "../defaults.json";
+import { builderDefaults as declared } from "./defaults";
 import { emptyControls, type Controls } from "./controls";
 import { ControlsSection } from "./ControlsSection";
 import { Help, Checkbox } from "./Help";

@@ -224,13 +224,18 @@ replacement needs the following:
 
 **HOTKEYS** (`screen-hotkeys.rml`) has a row for each hotkey declared in
 [`hotkeys.inc`](../vendor/retroarch/menu/drivers/rmlui/hotkeys.inc): `menu`,
-`confirm`, `back`, `quick-save`, `quick-load`, `previous-slot` and
-`next-slot`. Each row has `#hotkey-<hotkey>-add`, the + that captures
+`confirm`, `back`, `quick-save`, `quick-load`, `previous-slot`, `next-slot`,
+`fast-forward` and `fullscreen`. Each row has `#hotkey-<hotkey>-add`, the + that captures
 one more binding, and the chips `#hotkey-<hotkey>-1`, `-2` and on, each with
 class `hotkey-chip`. A row holds as many bindings as you draw chips, and we
 refuse an export whose defaults give a row more. In the player we hide an
 unused chip, mark a chip with a key `key` and one with pad inputs `pad`,
 disable the + of a full row, and mark the + of a running capture `capturing`.
+The row of `fast-forward` has `#hotkey-fast-forward-mode`, the button with
+which the player switches between HOLD and TOGGLE. The row of `fullscreen`
+has `#hotkey-fullscreen-chord`, where we write the fullscreen chord of the
+platform, ALT+ENTER or OPTION+RETURN, into its `.hotkey-words`. The player
+cannot choose or remove it, and in Native we let the pointer pass through it.
 `#hotkey-<hotkey>-label` is the
 name of the hotkey wherever the menu reports a change to it. The screen also
 needs `#hotkeys-back`, `#hotkeys-reset`, `#hotkeys-cancel` and
