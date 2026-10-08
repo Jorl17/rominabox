@@ -788,3 +788,19 @@ fn a_packed_project_keeps_the_name_its_file_gave() {
     assert_eq!(stored.custom[0].name.as_deref(), Some("CRT Royale"));
     assert_ne!(named_after_file(&stored.custom[0].path), "CRT Royale", "{files:?}");
 }
+
+/// For a bundled preset with a brightness parameter, we give the game that
+/// parameter, the light we measured at each of its values and our pass for
+/// brightness and contrast. For a preset without one, we give no parameter.
+#[test]
+fn a_preset_that_adds_light_tells_the_game_how_much() {
+    let composed = composed_from_library(&["crt-lottes", "zfast-crt"]);
+    let config = composed.text("shaders.cfg").unwrap();
+    let line = config
+        .lines()
+        .find(|line| line.starts_with("shader_brightness_crt-lottes = \"brightBoost 1:1 "))
+        .unwrap_or_else(|| panic!("{config}"));
+    assert!(line.split(' ').count() >= 4, "{line}");
+    assert!(!config.contains("shader_brightness_zfast-crt"), "{config}");
+    assert!(config.contains("video_pass = \"shaders/video/video.glslp\""), "{config}");
+}

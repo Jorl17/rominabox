@@ -189,7 +189,7 @@ SCOPES = [
     ),
     Scope(
         "heldkey",
-        "that Escape still toggles the menu while another key is held, including a press that starts and ends between two samples",
+        "that Escape still toggles the menu while another key is held, including a press that starts and ends between two samples, that Alt+Enter toggles fullscreen, and how we split the brightness the player chose between a shader's brightness parameter and our pass",
         "that a physical keyboard delivers the events; the decision is the function the runloop calls",
         [PYTHON, str(ROOT / "scripts/test_held_key.py")],
     ),

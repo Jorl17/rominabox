@@ -201,6 +201,10 @@ extern "C" void rib_host_video_pass(const char *pass, const char *written)
    host.video_pass = pass ? pass : "";
    host.video_written = written ? written : "";
 }
+extern "C" void rib_host_shader_brightness(const char *preset, const char *control)
+{
+   host.shader_brightness[preset ? preset : ""] = control ? control : "";
+}
 extern "C" void rib_host_show_pointer(bool) {}
 extern "C" void rib_host_quit(void) { host.quit = true; }
 extern "C" void rib_host_forget(void) { host.forgotten = true; }

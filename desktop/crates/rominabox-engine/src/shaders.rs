@@ -65,6 +65,32 @@ struct CatalogPreset {
     /// Who wrote a libretro preset, as its files credit them.
     #[serde(default)]
     authors: Option<String>,
+    /// The brightness parameter of the preset, if there is one.
+    #[serde(default)]
+    brightness: Option<BrightnessControl>,
+}
+
+/// The brightness parameter of a shader, with the light at each value in
+/// `table`, as a multiple of the light at the value in the shader, from 1.0
+/// up. We measure the tables with scripts/measure_shader_brightness.py. In
+/// the game, for a brightness above 100 %, we raise this parameter first and
+/// add the rest of the light with our pass (`crate::video`).
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct BrightnessControl {
+    pub parameter: String,
+    #[serde(default)]
+    pub table: Vec<(f32, f32)>,
+}
+
+impl BrightnessControl {
+    /// The text we write in `shaders.cfg`, which is the parameter, then each
+    /// light and its value as `light:value`.
+    fn text(&self) -> String {
+        std::iter::once(self.parameter.clone())
+            .chain(self.table.iter().map(|(light, value)| format!("{light}:{value}")))
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
 }
 
 /// How a catalog preset is made.
@@ -195,6 +221,8 @@ pub struct ResolvedShader {
     /// Files to copy into that directory, as (source, path within it). The
     /// file the author added comes first.
     files: Vec<(PathBuf, String)>,
+    /// The brightness parameter, for a catalogue preset with one.
+    brightness: Option<BrightnessControl>,
     /// Files we write into it, as (path within it, text), which are the pass
     /// of a catalog preset and the one-pass preset we make for a single pass.
     written: Vec<(String, String)>,
@@ -390,6 +418,7 @@ fn unfiltered() -> ResolvedShader {
         relative_preset: String::new(),
         library: None,
         files: Vec::new(),
+        brightness: None,
         written: Vec::new(),
     }
 }
@@ -578,6 +607,7 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
             relative_preset,
             library,
             files: Vec::new(),
+            brightness: preset.brightness.clone().filter(|control| !control.table.is_empty()),
             written,
         });
     }
@@ -633,6 +663,7 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
             // We show a shader that the author added by its name alone.
             detail: String::new(),
             files,
+            brightness: None,
             written,
         });
     }
@@ -793,6 +824,13 @@ pub fn stage(
             key = crate::menu::key!(ShaderPreset, item.id),
             preset = item.relative_preset,
         ));
+        if let Some(control) = &item.brightness {
+            config.push_str(&format!(
+                "{} = \"{}\"\n",
+                crate::menu::key!(ShaderBrightness, item.id),
+                control.text()
+            ));
+        }
     }
     let initial_relative = resolved
         .iter()

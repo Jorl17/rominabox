@@ -49,7 +49,40 @@
       "files": {
         "slang": "crt/crt-guest-advanced.slangp"
       },
-      "authors": "guest(r), with ideas from Dr. Venom"
+      "authors": "guest(r), with ideas from Dr. Venom",
+      "brightness": {
+        "parameter": "post_br",
+        "table": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.975,
+            1.6667
+          ],
+          [
+            2.258,
+            2.3333
+          ],
+          [
+            2.412,
+            3.0
+          ],
+          [
+            2.532,
+            3.6667
+          ],
+          [
+            2.639,
+            4.3333
+          ],
+          [
+            2.742,
+            5.0
+          ]
+        ]
+      }
     },
     {
       "id": "crt-easymode",
@@ -59,7 +92,40 @@
         "glsl": "crt/crt-easymode.glslp",
         "slang": "crt/crt-easymode.slangp"
       },
-      "authors": "EasyMode; GLSL conversion by hunterk"
+      "authors": "EasyMode; GLSL conversion by hunterk",
+      "brightness": {
+        "parameter": "BRIGHT_BOOST",
+        "table": [
+          [
+            1.0,
+            1.2
+          ],
+          [
+            1.206,
+            1.3333
+          ],
+          [
+            1.376,
+            1.4667
+          ],
+          [
+            1.496,
+            1.6
+          ],
+          [
+            1.587,
+            1.7333
+          ],
+          [
+            1.654,
+            1.8667
+          ],
+          [
+            1.707,
+            2.0
+          ]
+        ]
+      }
     },
     {
       "id": "crt-lottes",
@@ -69,7 +135,40 @@
         "glsl": "crt/crt-lottes.glslp",
         "slang": "crt/crt-lottes.slangp"
       },
-      "authors": "Timothy Lottes"
+      "authors": "Timothy Lottes",
+      "brightness": {
+        "parameter": "brightBoost",
+        "table": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.266,
+            1.1667
+          ],
+          [
+            1.536,
+            1.3333
+          ],
+          [
+            1.781,
+            1.5
+          ],
+          [
+            1.966,
+            1.6667
+          ],
+          [
+            2.094,
+            1.8333
+          ],
+          [
+            2.193,
+            2.0
+          ]
+        ]
+      }
     },
     {
       "id": "crt-geom",
@@ -89,7 +188,40 @@
         "glsl": "crt/crt-aperture.glslp",
         "slang": "crt/crt-aperture.slangp"
       },
-      "authors": "EasyMode"
+      "authors": "EasyMode",
+      "brightness": {
+        "parameter": "BRIGHTNESS",
+        "table": [
+          [
+            1.0,
+            1.5
+          ],
+          [
+            1.041,
+            1.5833
+          ],
+          [
+            1.08,
+            1.6667
+          ],
+          [
+            1.117,
+            1.75
+          ],
+          [
+            1.153,
+            1.8333
+          ],
+          [
+            1.188,
+            1.9167
+          ],
+          [
+            1.223,
+            2.0
+          ]
+        ]
+      }
     },
     {
       "id": "zfast-crt",
@@ -109,7 +241,40 @@
         "glsl": "ntsc/ntsc-adaptive.glslp",
         "slang": "ntsc/ntsc-adaptive.slangp"
       },
-      "authors": "hunterk and guest(r), after Themaister"
+      "authors": "hunterk and guest(r), after Themaister",
+      "brightness": {
+        "parameter": "ntsc_bright",
+        "table": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.115,
+            1.0833
+          ],
+          [
+            1.203,
+            1.1667
+          ],
+          [
+            1.279,
+            1.25
+          ],
+          [
+            1.345,
+            1.3333
+          ],
+          [
+            1.408,
+            1.4167
+          ],
+          [
+            1.467,
+            1.5
+          ]
+        ]
+      }
     },
     {
       "id": "blargg",
@@ -139,7 +304,40 @@
         "glsl": "handheld/lcd-grid-v2.glslp",
         "slang": "handheld/lcd-grid-v2.slangp"
       },
-      "authors": "cgwg; conversion by hunterk"
+      "authors": "cgwg; conversion by hunterk",
+      "brightness": {
+        "parameter": "gain",
+        "table": [
+          [
+            1.0,
+            1.5
+          ],
+          [
+            1.105,
+            1.5833
+          ],
+          [
+            1.195,
+            1.6667
+          ],
+          [
+            1.284,
+            1.75
+          ],
+          [
+            1.372,
+            1.8333
+          ],
+          [
+            1.462,
+            1.9167
+          ],
+          [
+            1.553,
+            2.0
+          ]
+        ]
+      }
     },
     {
       "id": "zfast-lcd",

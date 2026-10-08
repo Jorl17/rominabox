@@ -93,6 +93,9 @@ struct FakeHost
    /* The preset of the brightness and contrast pass in the game, and the file
     * where we write the game's shader with the pass after it. */
    std::string video_pass, video_written;
+   /* The brightness parameter of each bundled shader with one, by its
+    * preset, as we give it in shaders.cfg. */
+   std::map<std::string, std::string> shader_brightness;
    bool script_finished = false;
    std::string error_log;
 
