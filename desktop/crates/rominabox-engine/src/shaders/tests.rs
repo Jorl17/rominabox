@@ -858,6 +858,42 @@ fn the_first_parameter_for_light_that_can_rise_is_the_one() {
     let _ = fs::remove_dir_all(&source);
 }
 
+/// We stage a preset that we arranged from the pack's files with the files
+/// from the pack that we name in it, say in its credits that we arranged it,
+/// and give the game the light at each value of its brightness parameter. In
+/// the credits of a preset from the pack, we name its path there.
+#[test]
+fn an_arranged_preset_is_staged_with_the_packs_files_and_its_credits() {
+    let composed = composed_from_library(&["gba-lcd-original-colours", "crt-royale"]);
+    let root = rominabox_scratch::Scratch::dir("rominabox-shader-arranged");
+    composed.write(&root).unwrap();
+    let game = root.join("shaders/slang");
+    for file in [
+        "rominabox/gba-lcd-original-colours.slangp",
+        "rominabox/shaders/authentic_gba_fast.slang",
+        "handheld/shaders/authentic_gbc/to_lin_fast.slang",
+        "handheld/shaders/authentic_gbc/parameters.inc",
+        "handheld/shaders/authentic_gbc/shared.inc",
+        "handheld/shaders/color/gba-color.slang",
+    ] {
+        assert!(game.join(file).is_file(), "{file} is not in the game");
+    }
+    let arranged = fs::read_to_string(root.join("shaders/gba-lcd-original-colours/CREDITS.txt")).unwrap();
+    assert!(
+        arranged.contains("fishku")
+            && arranged.contains("Arranged for ROM-in-a-Box from files in https://github.com/libretro/slang-shaders"),
+        "{arranged}"
+    );
+    let royale = fs::read_to_string(root.join("shaders/crt-royale/CREDITS.txt")).unwrap();
+    assert!(royale.contains("libretro/slang-shaders at commit") && royale.contains(": crt/crt-royale.slangp"), "{royale}");
+    let config = composed.text("shaders.cfg").unwrap();
+    assert!(
+        config.contains("shader_brightness_gba-lcd-original-colours = \"AUTH_GBC_BRIG 1:0.08 "),
+        "{config}"
+    );
+    let _ = fs::remove_dir_all(&root);
+}
+
 /// Each language version of a preset contains a `#pragma parameter` line for
 /// the brightness parameter that we give the preset in the catalogue, so that
 /// we can raise it in a game in either language.

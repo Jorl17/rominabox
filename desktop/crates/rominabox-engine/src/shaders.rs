@@ -102,6 +102,17 @@ impl LibraryPreset {
 /// `shaders`. No other shader folder may use their names.
 const LIBRARY_FOLDERS: [&str; 2] = ["glsl", "slang"];
 
+/// The folder in a language's library with the presets we arranged from the
+/// files of libretro's pack, such as GBA LCD. In them we name the pack's files
+/// by paths from there. Everything else in the library is from the pack,
+/// unchanged.
+pub const ARRANGED_FOLDER: &str = "rominabox";
+
+/// Whether `path`, from a language's library folder, is in [`ARRANGED_FOLDER`].
+pub fn arranged(path: &str) -> bool {
+    path.split('/').next() == Some(ARRANGED_FOLDER)
+}
+
 /// Where the shader library is in a runtime kit, from which we take the
 /// files of a catalog preset.
 pub fn kit_library(kit: &Path) -> PathBuf {
@@ -564,12 +575,15 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
                     ));
                 };
                 let source = catalog.libraries.of(language);
+                let origin = if arranged(path) {
+                    format!("Arranged for ROM-in-a-Box from files in {} at commit {}", source.repository, source.commit)
+                } else {
+                    format!("From {} at commit {}: {path}", source.repository, source.commit)
+                };
                 let credits = format!(
-                    "{name}, by {authors}.\nFrom {repository} at commit {commit}: {path}\nEach file keeps its own notice.\n",
+                    "{name}, by {authors}.\n{origin}\nEach file keeps its own notice.\n",
                     name = preset.name,
                     authors = preset.authors.as_deref().unwrap_or("its authors"),
-                    repository = source.repository,
-                    commit = source.commit,
                 );
                 (
                     format!("shaders/{}/{path}", library_folder(language)),

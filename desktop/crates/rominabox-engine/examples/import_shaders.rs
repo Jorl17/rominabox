@@ -9,8 +9,12 @@
 //! unchanged except that we write text with LF line endings. To find the
 //! files we use the same code as an export, so the library contains what
 //! games need. We list anything else in the library, for removal by hand.
+//!
+//! We arranged the presets in the `rominabox` folders of the library from the
+//! files of the packs. We keep them as they are, and copy the files from the
+//! packs that we name in them.
 
-use rominabox_engine::shaders::{library_files, library_presets};
+use rominabox_engine::shaders::{arranged, library_files, library_presets};
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
@@ -56,8 +60,15 @@ fn run() -> Result<(), String> {
     for preset in library_presets()? {
         let (folder, path) = preset.split_once('/').expect("a library path starts with its folder");
         let (_, pack) = packs.iter().find(|(name, _)| *name == folder).expect("a known folder");
-        for (source, name) in library_files(pack, path)? {
+        // We find the files of an arranged preset in the library, where it is.
+        let root = if arranged(path) { library.join(folder) } else { pack.to_path_buf() };
+        for (_, name) in library_files(&root, path)? {
             let destination = library.join(folder).join(&name);
+            if arranged(&name) {
+                named.insert(destination);
+                continue;
+            }
+            let source = pack.join(&name);
             fs::create_dir_all(destination.parent().expect("a file has a folder"))
                 .map_err(|error| format!("could not create a folder for {name}: {error}"))?;
             let mut bytes = fs::read(&source)

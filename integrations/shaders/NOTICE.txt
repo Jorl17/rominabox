@@ -3,13 +3,22 @@ body, written out at export in the language of the game's other shaders:
 GLSL for RetroArch's OpenGL driver, or slang for its core-profile OpenGL
 driver.
 
-library/ holds presets from libretro's shader packs, unchanged but for line
+library/ contains presets from libretro's shader packs, unchanged but for line
 endings, which are LF, each file at its path in its pack:
 
 - glsl/: https://github.com/libretro/glsl-shaders
   commit f8e23ff880668f0f0e837a05a316534d82a7f31b
 - slang/: https://github.com/libretro/slang-shaders
   commit 84bcd19a854348c0e6a1d3db814a76f11fb6f011
+
+slang/rominabox/ contains the presets we arranged from the files of the
+slang pack, which are GBC LCD and GBA LCD, from Authentic GBC by fishku
+(public domain, CC0), each with and without the GBC or GBA colour pass of
+the pack (public domain, by hunterk, with colour matrices by Pokefan531, and
+the GBA pass optimised by crashGG). In GBA LCD we run
+shaders/authentic_gba_fast.slang, a copy of authentic_gbc_fast.slang from
+the pack with the subpixels in the blue, green and red order of the GBA
+screen.
 
 catalog.json names each preset and credits its authors, and a game that
 bundles one carries those credits beside it. Each file keeps its own notice.
