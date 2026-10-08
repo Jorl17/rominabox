@@ -669,7 +669,7 @@
           "libraryName": "Stella"
         }
       ],
-      "controllerProfile": "retropad",
+      "controllerProfile": "atari2600",
       "category": "cartridge"
     },
     {
@@ -802,7 +802,7 @@
           "libraryName": "Beetle PCE Fast"
         }
       ],
-      "controllerProfile": "retropad",
+      "controllerProfile": "pce",
       "category": "cartridge"
     },
     {
@@ -881,7 +881,7 @@
           "help": "Select a Super CD-ROM2 System Card 3 BIOS that you are entitled to use."
         }
       ],
-      "controllerProfile": "retropad",
+      "controllerProfile": "pce",
       "category": "disc"
     },
     {

@@ -59,9 +59,9 @@
     }
   ],
   "controllers": {
-    "default": "retropad",
+    "default": "pce",
     "variants": [
-      "retropad"
+      "pce"
     ]
   },
   "support": {

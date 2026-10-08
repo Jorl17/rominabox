@@ -337,6 +337,15 @@ static bool environment(unsigned command, void *data)
         }
         return true;
     }
+    case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: {
+        /* The meaning of each RetroPad input in the core, from which we
+         * declare a console's pad. */
+        const struct retro_input_descriptor *input = data;
+        for (; input && input->description; input++)
+            fprintf(stderr, "input port %u: device=%u index=%u id=%u  \"%s\"\n",
+                    input->port, input->device, input->index, input->id, input->description);
+        return true;
+    }
     case RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
         ((struct retro_log_callback *)data)->log = log_printf;
         return true;

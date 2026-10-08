@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "atari2600",
+  "name": "Atari 2600",
+  "presentation": {
+    "kind": "generic"
+  },
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up"
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down"
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left"
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right"
+    },
+    {
+      "id": "b",
+      "label": "Fire",
+      "key": "z"
+    },
+    {
+      "id": "a",
+      "label": "Trigger",
+      "key": "x"
+    },
+    {
+      "id": "y",
+      "label": "Booster",
+      "key": "a"
+    },
+    {
+      "id": "select",
+      "label": "Select",
+      "key": "rshift"
+    },
+    {
+      "id": "start",
+      "label": "Reset",
+      "key": "enter"
+    },
+    {
+      "id": "l",
+      "label": "Left Diff. A",
+      "key": "d"
+    },
+    {
+      "id": "r",
+      "label": "Right Diff. A",
+      "key": "c"
+    },
+    {
+      "id": "l2",
+      "label": "Left Diff. B",
+      "key": "w"
+    },
+    {
+      "id": "r2",
+      "label": "Right Diff. B",
+      "key": "e"
+    },
+    {
+      "id": "l3",
+      "label": "Color",
+      "key": "num1"
+    },
+    {
+      "id": "r3",
+      "label": "Black/White",
+      "key": "num2"
+    }
+  ],
+  "presentationOrder": 15
+}

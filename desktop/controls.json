@@ -1911,6 +1911,279 @@
       "coreDevice": 261
     },
     {
+      "id": "atari2600",
+      "name": "Atari 2600",
+      "systems": [
+        "atari2600"
+      ],
+      "image": "",
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 20
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 20
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 20
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 20
+        },
+        {
+          "id": "b",
+          "label": "Fire",
+          "key": "z",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 104
+        },
+        {
+          "id": "a",
+          "label": "Trigger",
+          "key": "x",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 104
+        },
+        {
+          "id": "y",
+          "label": "Booster",
+          "key": "a",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 104
+        },
+        {
+          "id": "select",
+          "label": "Select",
+          "key": "rshift",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 104
+        },
+        {
+          "id": "start",
+          "label": "Reset",
+          "key": "enter",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 188
+        },
+        {
+          "id": "l",
+          "label": "Left Diff. A",
+          "key": "d",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 188
+        },
+        {
+          "id": "r",
+          "label": "Right Diff. A",
+          "key": "c",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 188
+        },
+        {
+          "id": "l2",
+          "label": "Left Diff. B",
+          "key": "w",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 188
+        },
+        {
+          "id": "r2",
+          "label": "Right Diff. B",
+          "key": "e",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 272
+        },
+        {
+          "id": "l3",
+          "label": "Color",
+          "key": "num1",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 272
+        },
+        {
+          "id": "r3",
+          "label": "Black/White",
+          "key": "num2",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 272
+        }
+      ]
+    },
+    {
+      "id": "pce",
+      "name": "PC Engine",
+      "systems": [
+        "pce",
+        "pcecd"
+      ],
+      "image": "",
+      "controls": [
+        {
+          "id": "up",
+          "label": "Up",
+          "key": "up",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 20
+        },
+        {
+          "id": "down",
+          "label": "Down",
+          "key": "down",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 20
+        },
+        {
+          "id": "left",
+          "label": "Left",
+          "key": "left",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 20
+        },
+        {
+          "id": "right",
+          "label": "Right",
+          "key": "right",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 20
+        },
+        {
+          "id": "a",
+          "label": "I",
+          "key": "x",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 104
+        },
+        {
+          "id": "b",
+          "label": "II",
+          "key": "z",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 104
+        },
+        {
+          "id": "y",
+          "label": "III",
+          "key": "a",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 104
+        },
+        {
+          "id": "x",
+          "label": "IV",
+          "key": "s",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 104
+        },
+        {
+          "id": "l",
+          "label": "V",
+          "key": "d",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 188
+        },
+        {
+          "id": "r",
+          "label": "VI",
+          "key": "c",
+          "x": 0,
+          "y": 0,
+          "calloutX": 264,
+          "calloutY": 188
+        },
+        {
+          "id": "select",
+          "label": "Select",
+          "key": "rshift",
+          "x": 0,
+          "y": 0,
+          "calloutX": 496,
+          "calloutY": 188
+        },
+        {
+          "id": "start",
+          "label": "Run",
+          "key": "enter",
+          "x": 0,
+          "y": 0,
+          "calloutX": 728,
+          "calloutY": 188
+        },
+        {
+          "id": "l2",
+          "label": "Mode Switch",
+          "key": "w",
+          "x": 0,
+          "y": 0,
+          "calloutX": 32,
+          "calloutY": 272
+        }
+      ]
+    },
+    {
       "id": "retropad",
       "name": "RetroPad",
       "systems": [],

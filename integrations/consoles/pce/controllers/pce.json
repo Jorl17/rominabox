@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "id": "pce",
+  "name": "PC Engine",
+  "presentation": {
+    "kind": "generic"
+  },
+  "controls": [
+    {
+      "id": "up",
+      "label": "Up",
+      "key": "up"
+    },
+    {
+      "id": "down",
+      "label": "Down",
+      "key": "down"
+    },
+    {
+      "id": "left",
+      "label": "Left",
+      "key": "left"
+    },
+    {
+      "id": "right",
+      "label": "Right",
+      "key": "right"
+    },
+    {
+      "id": "a",
+      "label": "I",
+      "key": "x"
+    },
+    {
+      "id": "b",
+      "label": "II",
+      "key": "z"
+    },
+    {
+      "id": "y",
+      "label": "III",
+      "key": "a"
+    },
+    {
+      "id": "x",
+      "label": "IV",
+      "key": "s"
+    },
+    {
+      "id": "l",
+      "label": "V",
+      "key": "d"
+    },
+    {
+      "id": "r",
+      "label": "VI",
+      "key": "c"
+    },
+    {
+      "id": "select",
+      "label": "Select",
+      "key": "rshift"
+    },
+    {
+      "id": "start",
+      "label": "Run",
+      "key": "enter"
+    },
+    {
+      "id": "l2",
+      "label": "Mode Switch",
+      "key": "w"
+    }
+  ],
+  "presentationOrder": 16
+}

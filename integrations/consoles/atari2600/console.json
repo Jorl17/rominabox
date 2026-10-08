@@ -25,9 +25,9 @@
     }
   ],
   "controllers": {
-    "default": "retropad",
+    "default": "atari2600",
     "variants": [
-      "retropad"
+      "atari2600"
     ]
   },
   "support": {

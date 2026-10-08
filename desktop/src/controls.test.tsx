@@ -36,7 +36,7 @@ afterEach(() => {
 
 // A console that uses the 16-control retropad fallback. ps1 has a separate
 // illustrated profile.
-function renderEditor(system = "atari2600") {
+function renderEditor(system = "atari7800") {
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
