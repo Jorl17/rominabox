@@ -90,9 +90,10 @@ namespace {
 struct Sliders : rib::SliderPainter
 {
    std::map<std::string, rib::SliderPainted> painted;
-   void paint_slider(Rml::Element *slider, float fraction) override
+   void paint_slider(Rml::Element *slider, float fraction, const std::string& readout) override
    {
       rib::draw_slider(slider, fraction, painted[slider->GetId()]);
+      rib::write_text(rib::find_class(slider, rib::document_contract::SliderReadout), readout);
    }
 };
 

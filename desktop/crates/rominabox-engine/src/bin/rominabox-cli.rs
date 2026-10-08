@@ -478,6 +478,14 @@ fn run() -> Result<(), String> {
                 fast_forward_speed: f32,
                 #[serde(default = "rominabox_engine::builder::unstated::fast_forward_hold")]
                 fast_forward_hold: bool,
+                /// VIDEO in the menu, unless the request lists its entries.
+                #[serde(default = "rominabox_engine::builder::unstated::video")]
+                video: bool,
+                /// The light and contrast at the start of a game with VIDEO.
+                #[serde(default = "rominabox_engine::builder::unstated::brightness")]
+                brightness: f32,
+                #[serde(default = "rominabox_engine::builder::unstated::contrast")]
+                contrast: f32,
                 /// The hotkeys. For one left out, we use the builder's.
                 #[serde(default = "rominabox_engine::builder::unstated::hotkeys")]
                 hotkeys: rominabox_engine::hotkeys::Hotkeys,
@@ -503,6 +511,7 @@ fn run() -> Result<(), String> {
             let defaults = menu::MenuRequest::new(design, artwork);
             let system = request.system.clone().unwrap_or(defaults.system.clone());
             let game_controls = request.controls.clone();
+            let menu_entries = request.menu_entries.clone();
             menu::compose_menu(&menu::MenuRequest {
                 palette: request.palette.unwrap_or(defaults.palette.clone()),
                 background: request.background,
@@ -510,7 +519,7 @@ fn run() -> Result<(), String> {
                 system: system.clone(),
                 controls: request.controls,
                 hotkeys: request.hotkeys,
-                menu_entries: request.menu_entries,
+                menu_entries: menu_entries.clone(),
                 include_achievements: request.include_achievements,
                 shaders: request.shaders,
                 // We take a catalog preset's files from the kit of this command,
@@ -524,6 +533,13 @@ fn run() -> Result<(), String> {
                     fast_forward: request.fast_forward,
                     fast_forward_speed: request.fast_forward_speed,
                     fast_forward_hold: request.fast_forward_hold,
+                    video: request
+                        .video
+                        .then_some(rominabox_engine::player_settings::Video {
+                            brightness: request.brightness,
+                            contrast: request.contrast,
+                        })
+                        .and_then(|video| video.in_menu(menu_entries.as_deref())),
                 },
                 licences: request.licences,
                 ..defaults

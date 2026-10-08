@@ -245,6 +245,15 @@ the screen's `pageSize`, with the same page and pager as every list, and in
 the player we page it as we page Options. Any screen may mark its rows this
 way, once.
 
+**VIDEO** (`screen-video.rml`) has `<!--SETTING:brightness-->` and
+`<!--SETTING:contrast-->`, where we put a slider for each, and the button
+`#shaders`, which opens SHADERS. A screen whose declaration has `from` and
+`option`, as SHADERS has, is an entry that the author can leave out, with
+its button on the screen it names. We remove the button from a game without
+the entry, and refuse a game with the entry and without that screen. In the
+readout of a slider we write a percentage, and the design decides whether to
+show it.
+
 Native's own files are the working example for every screen. Copy the ids,
 not the layout.
 

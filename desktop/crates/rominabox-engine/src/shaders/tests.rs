@@ -6,7 +6,7 @@ fn composed(selection: ShaderSelection) -> crate::menu::Composition {
     let entries = if selection.bundled.is_empty() && selection.custom.is_empty() {
         vec!["controls".to_string()]
     } else {
-        vec!["controls".to_string(), "shaders".to_string()]
+        vec!["controls".to_string(), "video".to_string(), "shaders".to_string()]
     };
     crate::menu::compose_menu(&crate::menu::MenuRequest {
         shaders: selection,
@@ -177,11 +177,11 @@ fn bundling_a_preset_uses_the_row_and_writes_glsl() {
     assert!(source.contains("#elif defined(FRAGMENT)"));
     assert!(root.join("shaders/phosphor/icon.png").is_file());
     let declarations = composed.text("design.cfg").unwrap();
-    assert!(declarations.contains("screens = \"pause options controls shaders\""));
-    // Pressing BACK on the shader screen leads to Options, which contains
-    // it, and not to the pause row.
+    assert!(declarations.contains("screens = \"pause options controls video shaders\""));
+    // Pressing BACK on the shader screen leads to VIDEO, which contains its
+    // button, and not to the pause row.
     assert!(
-        declarations.contains("screen_button_options = \"options shaders-back\""),
+        declarations.contains("screen_button_video = \"video shaders-back\""),
         "{declarations}"
     );
     assert!(declarations.contains("screen_button_pause = \"options-back\""));
@@ -572,7 +572,7 @@ fn composed_from_library(bundled: &[&str]) -> crate::menu::Composition {
             ..Default::default()
         },
         shader_library: library(),
-        menu_entries: Some(vec!["controls".into(), "shaders".into()]),
+        menu_entries: Some(vec!["controls".into(), "video".into(), "shaders".into()]),
         ..crate::menu::MenuRequest::new(
             crate::repo::at("integrations/designs/native"),
             crate::repo::at("desktop/assets/controllers"),

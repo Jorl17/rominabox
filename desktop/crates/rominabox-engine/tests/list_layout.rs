@@ -80,7 +80,7 @@ fn with_full_page(menu: &str) -> (String, usize) {
 fn a_full_page_of_achievements_uses_the_screen() {
     let scratch = rominabox_scratch::Scratch::dir("rominabox-list-layout");
     let kit = kit(&scratch);
-    let entries: Vec<String> = ["controls", "shaders", "achievements"]
+    let entries: Vec<String> = ["controls", "video", "shaders", "achievements"]
         .map(String::from)
         .to_vec();
     let mut problems = Vec::new();

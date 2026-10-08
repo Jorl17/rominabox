@@ -95,32 +95,38 @@
       }
     },
     {
-      "name": "shaders: Back returns to Options, on SHADERS",
+      "name": "shaders: Back returns to VIDEO, on SHADERS",
       "steps": [
         "options",
+        "video",
         "shaders",
         "key:cancel"
       ],
       "focused": {
         "*": [
           "volume-level",
+          "brightness-level",
           "none",
           "shaders"
         ]
       },
       "screen": {
-        "*": "options-panel"
+        "*": "video-panel"
       }
     },
     {
       "name": "shaders: Back sounds like Back",
       "steps": [
         "options",
+        "video",
         "shaders",
         "key:cancel"
       ],
       "sounds": {
         "*": [
+          [
+            "confirm"
+          ],
           [
             "confirm"
           ],
@@ -379,7 +385,7 @@
           "volume-level",
           "controls",
           "hotkeys",
-          "shaders",
+          "video",
           "achievements",
           "options-next"
         ],
@@ -394,7 +400,7 @@
           "volume-level",
           "controls",
           "hotkeys",
-          "shaders",
+          "video",
           "achievements",
           "options-next"
         ]

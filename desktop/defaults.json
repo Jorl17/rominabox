@@ -15,6 +15,9 @@
   "menuSounds": "off",
   "fastForward": false,
   "fastForwardSpeed": 2.0,
+  "video": true,
+  "brightness": 1.0,
+  "contrast": 1.0,
   "fastForwardHold": true,
   "hotkeys": {
     "menu": ["key:escape", "pad:home", "pad:l3+r3"],

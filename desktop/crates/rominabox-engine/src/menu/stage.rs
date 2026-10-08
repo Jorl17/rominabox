@@ -5,6 +5,7 @@ use super::{
     ScreenPlace,
 };
 use crate::controls::Controls;
+use crate::menu::EntryPlace;
 use crate::shaders::ShaderSelection;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -74,7 +75,13 @@ impl MenuRequest {
             shaders: ShaderSelection::default(),
             shader_library: PathBuf::new(),
             discs: 1,
-            settings: crate::player_settings::Defaults::default(),
+            settings: crate::player_settings::Defaults {
+                video: Some(crate::player_settings::Video {
+                    brightness: crate::builder::unstated::brightness(),
+                    contrast: crate::builder::unstated::contrast(),
+                }),
+                ..crate::player_settings::Defaults::default()
+            },
             sound_pack: false,
             target: crate::packaging::ExportTarget::of_host()
                 .expect("the builder runs on a platform it makes games for"),
@@ -196,6 +203,11 @@ fn entries(
         request.show_menu,
         request.menu_entries.as_deref(),
     )?;
+    // Without a list of the entries, we give a game VIDEO when the author left
+    // it on.
+    if request.menu_entries.is_none() && request.settings.video.is_none() {
+        entries.retain(|entry| entry != crate::player_settings::VIDEO_ENTRY);
+    }
     if request.discs <= 1 {
         entries.retain(|entry| {
             !manifest
@@ -212,6 +224,26 @@ fn entries(
     for list in lists {
         if list.screen.option_label.is_some() && !entries.contains(&list.screen.id) {
             entries.push(list.screen.id.clone());
+        }
+    }
+    for entry in &entries {
+        let Some(screen) = manifest.screens.iter().find(|screen| screen.id == *entry) else {
+            continue;
+        };
+        let Some(opener) = screen.opener.as_ref().filter(|_| screen.entry_place == EntryPlace::Opener) else {
+            continue;
+        };
+        if !entries.contains(opener) {
+            let heading = |id: &str| {
+                manifest.screens.iter().find(|screen| screen.id == id).map_or(id.to_string(), |screen| screen.heading.clone())
+            };
+            return Err(format!(
+                "{} opens from {}, so a game with {} needs {} in its Options too",
+                screen.heading,
+                heading(opener),
+                screen.heading,
+                heading(opener)
+            ));
         }
     }
     Ok(entries)
@@ -243,12 +275,22 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     }
 
     pictures(&mut composition, &manifest);
+    // The settings of VIDEO only in a menu with VIDEO among its entries.
+    let settings = crate::player_settings::Defaults {
+        video: request.settings.video.and_then(|video| video.in_menu(request.menu_entries.as_deref())),
+        ..request.settings
+    };
     // We compose data lists and the live account screen with the same code.
     let mut lists: Vec<crate::lists::List> = Vec::new();
     if request.discs > 1 {
         lists.extend(crate::disc_menu::list(&manifest));
     }
-    let shaders = crate::shaders::stage(&manifest, &request.shaders, &request.shader_library)?;
+    let shaders = crate::shaders::stage(
+        &manifest,
+        &request.shaders,
+        &request.shader_library,
+        settings.video.is_some(),
+    )?;
     for (name, content) in shaders.files {
         composition.put(name, content);
     }
@@ -304,7 +346,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         .replace(scene::CONTROLS_SLOT, &scene.markup)
         .replace(scene::PICKER_SLOT, &scene.picker)
         .replace(scene::BINDS_SLOT, &scene.binds);
-    let settings = crate::player_settings::declared(request.settings);
+    let settings = crate::player_settings::declared(settings);
     let menu = document::apply_options(&manifest, &menu, &staged, &settings)?;
     // The rest of the player's settings are parts of the Options screen that
     // we just built.
@@ -534,7 +576,7 @@ mod tests {
         assert!(staged.contains(">OPTIONS<") && staged.contains(">CONTROLS<"));
         let cfg = composed.text("design.cfg").unwrap();
         assert!(
-            cfg.contains("screens = \"pause options controls hotkeys restart uninstall\""),
+            cfg.contains("screens = \"pause options controls hotkeys video restart uninstall\""),
             "{cfg}"
         );
         let mac = compose(MenuRequest {
@@ -542,8 +584,8 @@ mod tests {
             ..request("native")
         });
         let mac = mac.text("design.cfg").unwrap();
-        assert!(mac.contains("screens = \"pause options controls hotkeys restart reset\""), "{mac}");
-        assert!(cfg.contains("screen_button_options = \"options\""));
+        assert!(mac.contains("screens = \"pause options controls hotkeys video restart reset\""), "{mac}");
+        assert!(cfg.contains("screen_button_options = \"options video-back\""));
         assert!(cfg.contains("screen_button_controls = \"controls\""));
 
         let empty = compose(MenuRequest {
@@ -575,17 +617,24 @@ mod tests {
         assert!(!defaults.text("menu.rml").unwrap().contains(">SHADERS<"));
 
         let both = compose(MenuRequest {
-            menu_entries: entries(&["controls", "shaders"]),
+            menu_entries: entries(&["controls", "video", "shaders"]),
             shaders: one_shader(),
             ..request("native")
         });
         let both = both.text("menu.rml").unwrap();
-        let shaders_at = both.find("id=\"shaders\"").unwrap();
+        let video_at = both.find("id=\"video\"").unwrap();
         let controls_at = both.find("id=\"controls\"").unwrap();
         assert!(
-            controls_at < shaders_at,
+            controls_at < video_at,
             "entries follow the design's order"
         );
+        // SHADERS is on VIDEO, where it is in the design, and not a row in
+        // Options.
+        let shaders_at = both.find("id=\"shaders\"").unwrap();
+        let video_panel = both.find("id=\"video-panel\"").unwrap();
+        let options_panel = both.find("id=\"options-panel\"").unwrap();
+        assert!(video_panel < shaders_at && (shaders_at < options_panel || options_panel < video_panel));
+        assert_eq!(both.matches("id=\"shaders\"").count(), 1, "one SHADERS button");
 
         let refused = compose_menu(&MenuRequest {
             menu_entries: entries(&["nope"]),
@@ -606,7 +655,7 @@ mod tests {
         )
         .unwrap();
         let templated = compose(MenuRequest {
-            menu_entries: entries(&["shaders"]),
+            menu_entries: entries(&["video", "shaders"]),
             shaders: one_shader(),
             ..MenuRequest::new(
                 designs.join("disc"),
@@ -615,7 +664,7 @@ mod tests {
         });
         let templated = templated.text("menu.rml").unwrap();
         assert!(
-            templated.contains("<button id=\"shaders\" class=\"menu-action option-entry list-row\">FILTERS</button>"),
+            templated.contains("<button id=\"video\" class=\"menu-action option-entry list-row\">VIDEO</button>"),
             "the design's entry template is what gets filled"
         );
     }
@@ -690,7 +739,7 @@ mod tests {
     #[test]
     fn an_entry_whose_screen_is_not_drawn_is_refused() {
         let error = compose_menu(&MenuRequest {
-            menu_entries: entries(&["controls", "shaders"]),
+            menu_entries: entries(&["controls", "video", "shaders"]),
             ..request("native")
         })
         .unwrap_err();

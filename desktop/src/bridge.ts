@@ -37,6 +37,9 @@ export type ExportRequest = {
   splash: boolean;
   keepPlayingInBackground: boolean;
   fastForward: boolean;
+  video: boolean;
+  brightness: number;
+  contrast: number;
   fastForwardSpeed: number;
   fastForwardHold: boolean;
   autosaveOnQuit: boolean;

@@ -9,11 +9,59 @@
 
 use crate::shader_format::Language;
 
+/// A value of a pass that the player can change while the game runs, as we
+/// declare it in a `#pragma parameter` line. In the fragment body we read it
+/// by its id.
+pub struct Parameter<'a> {
+    pub id: &'a str,
+    pub label: &'a str,
+    pub initial: f32,
+    pub minimum: f32,
+    pub maximum: f32,
+    pub step: f32,
+}
+
 /// A pass with `fragment_body` in `language`.
 pub fn pass(language: Language, fragment_body: &str) -> String {
+    pass_with(language, fragment_body, &[])
+}
+
+/// A pass with `fragment_body` in `language`, with `parameters`.
+pub fn pass_with(language: Language, fragment_body: &str, parameters: &[Parameter]) -> String {
+    let pragmas: String = parameters
+        .iter()
+        .map(|p| {
+            format!(
+                "#pragma parameter {} \"{}\" {} {} {} {}\n",
+                p.id, p.label, p.initial, p.minimum, p.maximum, p.step
+            )
+        })
+        .collect();
     match language {
-        Language::Glsl => glsl(fragment_body),
-        Language::Slang => slang(fragment_body),
+        Language::Glsl => {
+            let uniforms = if parameters.is_empty() {
+                String::new()
+            } else {
+                let declared: String = parameters
+                    .iter()
+                    .map(|p| format!("uniform COMPAT_PRECISION float {};\n", p.id))
+                    .collect();
+                let fixed: String = parameters
+                    .iter()
+                    .map(|p| format!("#define {} {:?}\n", p.id, p.initial))
+                    .collect();
+                format!("#ifdef PARAMETER_UNIFORM\n{declared}#else\n{fixed}#endif\n")
+            };
+            format!("{pragmas}{}", glsl(fragment_body, &uniforms))
+        }
+        Language::Slang => {
+            let members: String = parameters.iter().map(|p| format!("    float {};\n", p.id)).collect();
+            let locals: String = parameters
+                .iter()
+                .map(|p| format!("    float {id} = params.{id};\n", id = p.id))
+                .collect();
+            slang(fragment_body, &pragmas, &members, &locals)
+        }
     }
 }
 
@@ -22,7 +70,7 @@ pub fn preset(pass_file: &str) -> String {
     format!("shaders = 1\nshader0 = {pass_file}\nfilter_linear0 = false\n")
 }
 
-fn glsl(fragment_body: &str) -> String {
+fn glsl(fragment_body: &str, uniforms: &str) -> String {
     format!(
         r#"/* Original ROM-in-a-Box preset. RetroArch's OpenGL driver compiles this
  * twice, once with VERTEX defined and once with FRAGMENT defined. */
@@ -83,7 +131,7 @@ uniform COMPAT_PRECISION int FrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
-uniform sampler2D Texture;
+{uniforms}uniform sampler2D Texture;
 COMPAT_VARYING vec4 TEX0;
 void main()
 {{
@@ -98,10 +146,10 @@ void main()
 /// and `SourceSize` is the frame's size. In GLSL, `TextureSize` is the size
 /// of the texture, which can be larger, with `TEX0` scaled to match. A
 /// coordinate times the size is the same pixel in both.
-fn slang(fragment_body: &str) -> String {
+fn slang(fragment_body: &str, pragmas: &str, members: &str, locals: &str) -> String {
     format!(
         r#"#version 450
-/* Original ROM-in-a-Box preset. RetroArch compiles slang through SPIR-V, and
+{pragmas}/* Original ROM-in-a-Box preset. RetroArch compiles slang through SPIR-V, and
  * this is the fragment body of the GLSL form, with its names defined below. */
 layout(push_constant) uniform Push
 {{
@@ -109,7 +157,7 @@ layout(push_constant) uniform Push
     vec4 OutputSize;
     uint FrameCount;
     int FrameDirection;
-}} params;
+{members}}} params;
 
 layout(std140, set = 0, binding = 0) uniform UBO
 {{
@@ -143,7 +191,7 @@ void main()
     vec2 OutputSize = params.OutputSize.xy;
     int FrameCount = int(params.FrameCount);
     int FrameDirection = params.FrameDirection;
-    {fragment_body}
+{locals}    {fragment_body}
 }}
 "#
     )

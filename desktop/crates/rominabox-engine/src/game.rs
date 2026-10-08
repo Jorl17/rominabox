@@ -69,6 +69,16 @@ pub struct Game {
     /// press to the next, until the player changes it.
     #[serde(default = "crate::builder::unstated::fast_forward_hold")]
     pub fast_forward_hold: bool,
+    /// VIDEO in the game's Options, for a game without a list of its entries.
+    #[serde(default = "crate::builder::unstated::video")]
+    pub video: bool,
+    /// The light of the picture as a multiplier, and its contrast, at the
+    /// start of the game, until the player changes them on VIDEO. We give a
+    /// game without VIDEO neither.
+    #[serde(default = "crate::builder::unstated::brightness")]
+    pub brightness: f32,
+    #[serde(default = "crate::builder::unstated::contrast")]
+    pub contrast: f32,
     /// Save on quit and load that save the next time the player opens the
     /// game. The author makes one choice for both.
     #[serde(default = "crate::builder::unstated::autosave_on_quit")]
@@ -112,6 +122,12 @@ impl Game {
             fast_forward: self.fast_forward,
             fast_forward_speed: self.fast_forward_speed,
             fast_forward_hold: self.fast_forward_hold,
+            video: (self.show_menu && self.video)
+                .then_some(crate::player_settings::Video {
+                    brightness: self.brightness,
+                    contrast: self.contrast,
+                })
+                .and_then(|video| video.in_menu(self.menu_entries.as_deref())),
         }
     }
 

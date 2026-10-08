@@ -216,7 +216,7 @@ int counting_rename(const char *from, const char *to)
 }
 
 /* Loading the menu is not a change. We write nothing for a level at a
- * position, as applied at launch from the one decimal in the file, and we
+ * position, as applied at launch from the two decimals in the file, and we
  * move a level between two positions, from a hotkey or a file written with
  * other steps, to the nearest one and store that. */
 void a_menu_load_writes_the_volume_only_off_a_position()

@@ -23,7 +23,7 @@ const GAP: f64 = 24.0;
 fn back_is_in_one_place_on_every_disc_screen_and_the_volume_keeps_clear_of_it() {
     let scratch = rominabox_scratch::Scratch::dir("rominabox-disc-layout");
     let kit = kit(&scratch);
-    let entries: Vec<String> = ["controls", "shaders", "achievements"]
+    let entries: Vec<String> = ["controls", "video", "shaders", "achievements"]
         .map(String::from)
         .to_vec();
     let composed = compose_with(

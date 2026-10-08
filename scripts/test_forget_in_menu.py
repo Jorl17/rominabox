@@ -44,7 +44,7 @@ def button(role: str) -> str:
     platform, as declared in the design that the game is exported with."""
     for screen in json.loads(DESIGN.read_text(encoding="utf-8"))["screens"]:
         platforms = screen.get("platforms")
-        if screen["role"] == role and (not platforms or exported_game.PLATFORM in platforms):
+        if screen.get("role") == role and (not platforms or exported_game.PLATFORM in platforms):
             return screen["button"]
     raise SystemExit(f"{DESIGN} declares no {role} screen for {exported_game.PLATFORM}")
 

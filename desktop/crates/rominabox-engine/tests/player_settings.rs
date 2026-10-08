@@ -62,7 +62,12 @@ fn opening_tag<'a>(menu: &'a str, id: &str) -> &'a str {
 fn every_design_offers_every_player_setting() {
     let root = rominabox_scratch::Scratch::dir("rominabox-player-settings-every-design");
     let kit = support::kit_with_hypothetical(&root);
+    // The settings of VIDEO are on VIDEO, and every other one is in Options.
     let settings = player_settings::declared(Defaults::default());
+    let video = player_settings::declared(Defaults {
+        video: Some(player_settings::Video { brightness: 1.0, contrast: 1.0 }),
+        ..Defaults::default()
+    });
     for design in every_design() {
         let destination = root.join(&design);
         let composed = compose(&kit, &design, |_| {}, &destination);
@@ -84,7 +89,20 @@ fn every_design_offers_every_player_setting() {
                 "{design}: {control} is not on screen in Options: {x},{y} {width}x{height}"
             );
         }
-        let declared: Vec<&str> = settings.iter().map(|setting| setting.id).collect();
+        let document = destination.join("video.rml");
+        fs::write(&document, showing(&composed.menu, "video-panel")).unwrap();
+        let on_video: Vec<String> =
+            video.iter().filter(|setting| !settings.contains(setting)).map(PlayerSetting::control).collect();
+        let ids: Vec<&str> = on_video.iter().map(String::as_str).collect();
+        for (control, laid_out) in ids.iter().zip(boxes(&document, (960, 600), &ids)) {
+            let [x, y, width, height] =
+                laid_out.unwrap_or_else(|| panic!("{design}: VIDEO does not draw {control}"));
+            assert!(
+                width > 0.0 && height > 0.0 && x >= 0.0 && y >= 0.0 && x + width <= 960.0 && y + height <= 600.0,
+                "{design}: {control} is not on screen in VIDEO: {x},{y} {width}x{height}"
+            );
+        }
+        let declared: Vec<&str> = video.iter().map(|setting| setting.id).collect();
         assert!(
             composed
                 .cfg
@@ -92,7 +110,7 @@ fn every_design_offers_every_player_setting() {
             "{design}: the player is not told about every setting:\n{}",
             composed.cfg
         );
-        for setting in &settings {
+        for setting in &video {
             assert!(
                 composed.cfg.contains(&format!(
                     "setting_key_{} = \"{}\"",

@@ -117,7 +117,7 @@
         {"name": "capture-cancel", "script": ["options", "controls", "control-a", "report:capturing", "key:cancel", "report:cancelled"]},
         {"name": "capture-timeout", "script": ["options", "controls", "control-a", "report:capturing", "wait-ms:10500", "report:timed-out"]},
         {"name": "volume-inputs", "script": ["options", "report:before", "key:left", "report:key", "volume-up", "report:arrow", "volume-level@0.375", "report:fraction"]},
-        {"name": "shader-keys", "script": ["options", "shaders", "report:opened", "key:down", "report:row", "key:ok", "report:chosen", "key:cancel", "report:back"]},
+        {"name": "shader-keys", "script": ["options", "video", "shaders", "report:opened", "key:down", "report:row", "key:ok", "report:chosen", "key:cancel", "report:back"]},
         {"name": "save-load", "script": ["report:empty", "key:start", "wait-ms:500", "report:saved", "load", "wait-ms:500", "report:loaded"]},
         {"name": "persist", "script": ["options", "volume-level@0.25", "controls", "controls-device-current", "controls-device-option-megadrive6", "report:chosen", "controls-back"]},
         {"name": "reopen", "continues": "persist", "script": ["options", "report:volume", "controls", "report:controller", "controls-back"]}

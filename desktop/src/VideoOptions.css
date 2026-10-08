@@ -1,0 +1,18 @@
+/* Under the VIDEO tick, one small slider each for the brightness and the
+ * contrast at the start of the game, then the shaders, all indented under it. */
+.video-settings {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0 28px;
+}
+.video-level {
+  display: grid;
+  grid-template-columns: 96px 180px 48px;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.video-level output {
+  font-variant-numeric: tabular-nums;
+}

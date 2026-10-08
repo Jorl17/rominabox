@@ -87,7 +87,7 @@ fn a_game_of_several_discs_gets_the_disc_list() {
 fn options_entries_do_not_overlap() {
     let root = rominabox_scratch::Scratch::dir("rominabox-options-overlap");
     let kit = kit(&root);
-    let entries: Vec<String> = ["controls", "shaders", "achievements"]
+    let entries: Vec<String> = ["controls", "video", "shaders", "achievements"]
         .into_iter()
         .map(str::to_string)
         .collect();
@@ -97,18 +97,20 @@ fn options_entries_do_not_overlap() {
         let document = destination.join("options.rml");
         fs::write(&document, showing(&composed.menu, "options-panel")).unwrap();
         let column: Vec<(i32, i32)> = (0..600).map(|y| (480, y)).collect();
+        // SHADERS is on VIDEO, and the others are rows of Options.
+        let in_options: Vec<&String> = entries.iter().filter(|entry| *entry != "shaders").collect();
         let mut rows: BTreeMap<String, usize> = BTreeMap::new();
         for hover in hovered(&document, &column) {
-            if entries.contains(&hover) {
+            if in_options.contains(&&hover) {
                 *rows.entry(hover).or_default() += 1;
             }
         }
         assert_eq!(
             rows.len(),
-            entries.len(),
+            in_options.len(),
             "{design}: entries under the pointer: {rows:?}"
         );
-        let heights: Vec<usize> = entries.iter().map(|entry| rows[entry]).collect();
+        let heights: Vec<usize> = in_options.iter().map(|entry| rows[*entry]).collect();
         assert!(
             heights.iter().all(|height| *height == heights[0]),
             "{design}: each entry is under the pointer for a different height, so one \

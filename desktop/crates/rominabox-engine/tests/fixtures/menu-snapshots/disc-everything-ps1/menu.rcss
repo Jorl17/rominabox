@@ -246,6 +246,26 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #volume-level:hover #volume-level-thumb { background-color: #75b2e4; border-color: #fff13d; }
 #volume-level.focused #volume-level-thumb { background-color: #193e88; border-color: #fff13d; border-left-width: 3dp; }
 #volume-level.dragging #volume-level-thumb { background-color: #fff13d; border-color: #ffffff; }
+/* On VIDEO, BRIGHTNESS and CONTRAST in rows like the row of the volume, at
+ * the top of the screen, with the percentage at the right end in place of the
+ * ends, then SHADERS as an entry like those in Options. */
+#brightness-control, #contrast-control { position: absolute; left: 24dp; width: 712dp; height: 32dp; }
+#brightness-control { top: 72dp; }
+#contrast-control { top: 120dp; }
+#brightness-control .volume-name, #contrast-control .volume-name { width: 120dp; }
+#brightness-low, #brightness-high, #contrast-low, #contrast-high { display: none; }
+#brightness-down, #contrast-down { left: 128dp; }
+#brightness-up, #contrast-up { left: 632dp; }
+#brightness-level, #contrast-level { position: absolute; left: 164dp; top: 0; width: 456dp; height: 28dp; }
+#brightness-level-readout, #contrast-level-readout { position: absolute; left: 504dp; top: 0; width: 48dp; height: 32dp; line-height: 32dp; font-size: 12dp; color: #ffffff; text-align: right; }
+#brightness-level > div:last-child, #contrast-level > div:last-child { margin-top: 12dp; height: 4dp; background-color: #020b27; border-width: 0 0 1dp 0; border-color: #476eab; }
+#brightness-level-fill, #contrast-level-fill { background-color: #fff13d; }
+#brightness-level-thumb, #contrast-level-thumb { top: -6dp; width: 8dp; height: 16dp; background-color: #ffffff; border-width: 1dp; border-color: #75b2e4; }
+#brightness-level:hover #brightness-level-thumb, #contrast-level:hover #contrast-level-thumb { background-color: #75b2e4; border-color: #fff13d; }
+#brightness-level.focused #brightness-level-thumb, #contrast-level.focused #contrast-level-thumb { background-color: #193e88; border-color: #fff13d; border-left-width: 3dp; }
+#brightness-level.dragging #brightness-level-thumb, #contrast-level.dragging #contrast-level-thumb { background-color: #fff13d; border-color: #ffffff; }
+.video-shaders { position: absolute; left: 24dp; top: 168dp; }
+#video-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
 
 #disc-face { position: absolute; left: 250dp; top: 100dp; width: 280dp; height: 280dp; border-radius: 140dp; background-color: #75b2e4; border: 14dp #fff13d; }
 #disc-hole { position: absolute; left: 116dp; top: 116dp; width: 48dp; height: 48dp; border-radius: 24dp; background-color: #041738; }

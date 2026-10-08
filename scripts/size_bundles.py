@@ -241,7 +241,7 @@ def main() -> int:
     command = cli()
     bundles = {
         "featured": ({}, "installed_bytes"),
-        "no-options": ({"menuEntries": [], "includeAchievements": False}, "installed_bytes"),
+        "no-options": ({"menuEntries": [], "includeAchievements": False, "shaders": {}}, "installed_bytes"),
         "bare": ({"showMenu": False, "splash": False, "startAtMenu": False, "shaders": {}}, "installed_bytes"),
     }
     for name, (extra, budget, target) in platform["more"].items():

@@ -344,8 +344,11 @@ std::string stage_disc_list(const char *native_assets, const char *data)
    staged = staged && screens_end != std::string::npos;
    if (staged)
       config.insert(screens_end, " discs");
-   staged = staged && replace_once(config, "screen_button_options = \"options fixture-back\"",
-               "screen_button_options = \"options fixture-back discs-back\"");
+   const size_t options = config.find("screen_button_options = \"");
+   const size_t options_end = options == std::string::npos ? options : config.find('"', options + 25);
+   staged = staged && options_end != std::string::npos;
+   if (staged)
+      config.insert(options_end, " discs-back");
    config += "\nscreen_panel_discs = \"discs-panel\"\nscreen_heading_discs = \"DISC\""
              "\nscreen_footer_discs = \"ESC  BACK\"\nscreen_button_discs = \"discs\""
              "\nscreen_role_discs = \"discs\"\n";

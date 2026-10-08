@@ -479,9 +479,10 @@ pub(crate) fn apply_options(
             continue;
         }
         let entry_included = included.iter().any(|screen| screen.id == entry.id);
-        // We keep a button for an entry on the pause screen where it is in the
-        // design, and remove it from a game without the entry.
-        if entry.entry_place == EntryPlace::Pause {
+        // We keep a button for an entry where it is in the design, on the
+        // pause screen or on the screen of its opener, and remove it from a
+        // game without the entry.
+        if entry.entry_place != EntryPlace::Options {
             if !entry_included {
                 document.replace_range(start..end, "");
             }

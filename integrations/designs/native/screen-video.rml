@@ -1,0 +1,1 @@
+<div id="video-panel" class="screen-panel" style="display:none;"><!--SETTING:brightness--><!--SETTING:contrast--><button class="menu-action option-entry video-shaders" id="shaders"><span class="option-label">SHADERS</span></button><button class="menu-action" id="video-back">BACK</button></div>

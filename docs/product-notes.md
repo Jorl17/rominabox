@@ -37,7 +37,8 @@ What the builder and the games made with it are, and what they are not.
 
 ## Shader filters
 
-- The author picks a small set of shader filters to bundle, and the one to start with. The player switches between them, or to no filter, under Options.
+- Options has VIDEO, with BRIGHTNESS and CONTRAST, each shown as a percentage, and SHADERS when the author bundles shader filters. The author can leave VIDEO out, and chooses the brightness and contrast the game starts with.
+- The author picks a small set of shader filters to bundle, and the one to start with. The player switches between them, or to no filter, on VIDEO.
 - The detailed configuration of shaders stays behind the advanced emulator access.
 
 ## Achievements

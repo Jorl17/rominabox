@@ -214,10 +214,10 @@ def orchestration_fixtures() -> None:
     # declares, which end with this platform's screen (UNINSTALL or RESET).
     declared = re.search(r'^screens = "pause options controls hotkeys[^"]*"$', config, re.M)
     assert declared, config
-    assert 'screen_button_options = "options"' in config
+    options = re.search(r'^screen_button_options = "options[^"]*"$', config, re.M)
+    assert options, config
     config = config.replace(declared.group(0), declared.group(0)[:-1] + ' fixture"', 1)
-    config = config.replace('screen_button_options = "options"',
-                            'screen_button_options = "options fixture-back"', 1)
+    config = config.replace(options.group(0), options.group(0)[:-1] + ' fixture-back"', 1)
     config += ('\nscreen_panel_fixture = "fixture-panel"'
                '\nscreen_heading_fixture = "TEST LIST"'
                '\nscreen_footer_fixture = "ESC BACK"'

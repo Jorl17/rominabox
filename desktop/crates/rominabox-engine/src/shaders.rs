@@ -711,19 +711,32 @@ fn icon_png(id: &str) -> Result<Vec<u8>, String> {
 ///
 /// `library` is the shader library of the runtime kit, from which we take the
 /// files of a libretro preset.
+///
+/// In a game with VIDEO (`video`) we add our pass for the light and contrast
+/// of the picture, in the game's shader language (`crate::video`).
 pub fn stage(
     manifest: &crate::menu::Manifest,
     selection: &ShaderSelection,
     library: &Path,
+    video: bool,
 ) -> Result<StagedShaders, String> {
     use crate::menu::Content;
-    let resolved = resolve(selection)?;
+    let (language, resolved) = resolved(selection)?;
+    let (video_files, video_config) = if video {
+        let (files, preset) = crate::video::files(language);
+        (
+            files.into_iter().map(|(path, text)| (path, Content::Text(text))).collect(),
+            format!("{} = \"{preset}\"\n", crate::menu::key!(VideoPass)),
+        )
+    } else {
+        (Vec::new(), String::new())
+    };
     if resolved.is_empty() {
         return Ok(StagedShaders {
             list: None,
-            config: String::new(),
+            config: video_config,
             initial_relative: None,
-            files: Vec::new(),
+            files: video_files,
         });
     }
 
@@ -733,14 +746,15 @@ pub fn stage(
         .ok_or_else(|| "the design declares no shaders screen".to_string())?;
     let initial = starting(selection, &resolved)?.id.clone();
     let mut items = Vec::new();
-    let mut files: Vec<(PathBuf, Content)> = Vec::new();
-    let mut config = format!("{} = \"{}\"\n", crate::menu::key!(ShaderIds), {
+    let mut files: Vec<(PathBuf, Content)> = video_files;
+    let mut config = video_config;
+    config.push_str(&format!("{} = \"{}\"\n", crate::menu::key!(ShaderIds), {
         resolved
             .iter()
             .map(|item| item.id.as_str())
             .collect::<Vec<_>>()
             .join(" ")
-    });
+    }));
     for item in &resolved {
         let directory = item.folder();
         for (source, name) in &item.files {

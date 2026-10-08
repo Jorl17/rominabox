@@ -31,6 +31,7 @@ import { ReplaceAppDialog } from "./ReplaceAppDialog";
 import { AppHeader } from "./AppHeader";
 import { AddGameFiles, GameFilesList } from "./GameFilesList";
 import { StartupOptions } from "./StartupOptions";
+import { VideoOptions } from "./VideoOptions";
 import { MoreBelow } from "./MoreBelow";
 import { filesThatTravel } from "./travelingFiles";
 import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
@@ -435,11 +436,15 @@ export function App() {
       title: draft.title.trim(),
       icon: icon?.path || null,
       background: background?.path || null,
-      shaders: {
-        bundled: bundledShaders,
-        custom: customShaders,
-        initial: shaderInitial,
-      },
+      // We bundle no shaders in a game without VIDEO, because the player chooses them there.
+      shaders:
+        draft.showMenu && draft.video
+          ? {
+              bundled: bundledShaders,
+              custom: customShaders,
+              initial: shaderInitial,
+            }
+          : { bundled: [], custom: [], initial: null },
       startAtMenu: draft.showMenu && draft.startAtMenu,
       theme: design,
       palette,
@@ -1290,110 +1295,120 @@ export function App() {
                 onControls={setControls}
                 busy={!!busy}
               />
-              <details className="advanced picture-filters">
-                <summary>
-                  <ChevronRight size={16} />
-                  {bundledShaders.length + customShaders.length === 0
-                    ? "Picture filters (shaders) · none selected"
-                    : `Picture filters (shaders) · ${bundledShaders.length + customShaders.length} selected`}
-                </summary>
-                <div className="shader-choices">
-                  <p className="shader-lede">
-                    Pick the shaders players can choose in the game. Click one
-                    to select it.
-                  </p>
-                  <div className="shader-grid">
-                    {shaderCatalog.presets.map((preset) => {
-                      const chosen = bundledShaders.includes(preset.id);
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          className={`shader-card${chosen ? " chosen" : ""}`}
-                          aria-pressed={chosen}
-                          onClick={() => togglePreset(preset.id)}
-                        >
-                          <img
-                            className="shader-preview"
-                            src={shaderPreviews[preset.id]}
-                            alt=""
-                          />
-                          <span className="shader-name">{preset.name}</span>
-                          <span className="shader-detail">{preset.detail}</span>
-                        </button>
-                      );
-                    })}
-                    <CustomShaderCards
-                      selection={[bundledShaders, customShaders, shaderInitial]}
-                      onRemove={removeCustomShader}
-                    />
-                    <button
-                      type="button"
-                      className="shader-card shader-add"
-                      data-drop="shader"
-                      onClick={() => {
-                        void chooseShaderFile();
-                      }}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        const file = event.dataTransfer.files[0];
-                        if (!file) return;
-                        const dropped = file as File & { path?: string };
-                        addCustomShader(dropped.path || file.name).catch(fail);
-                      }}
-                    >
-                      <span>
-                        <Plus size={22} aria-hidden="true" />
-                        Add your own
-                        <small className="shader-formats">
-                          {SHADER_FORMATS.join(" ")}
-                        </small>
-                      </span>
-                    </button>
-                  </div>
-                  <input
-                    ref={shaderInput}
-                    type="file"
-                    hidden
-                    accept={SHADER_ACCEPT}
-                    data-shader
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) addCustomShader(file.name).catch(fail);
-                      event.target.value = "";
-                    }}
-                  />
-                  {bundledShaders.length + customShaders.length > 0 && (
-                    <label className="shader-initial">
-                      Starts on
-                      <select
-                        aria-label="Starts on"
-                        value={shaderInitial ?? ""}
-                        onChange={(event) =>
-                          setShaderInitial(event.target.value || null)
-                        }
+              <VideoOptions draft={draft} update={update}>
+                <details className="advanced picture-filters">
+                  <summary>
+                    <ChevronRight size={16} />
+                    {bundledShaders.length + customShaders.length === 0
+                      ? "Picture filters (shaders) · none selected"
+                      : `Picture filters (shaders) · ${bundledShaders.length + customShaders.length} selected`}
+                  </summary>
+                  <div className="shader-choices">
+                    <p className="shader-lede">
+                      Pick the shaders players can choose in the game. Click one
+                      to select it.
+                    </p>
+                    <div className="shader-grid">
+                      {shaderCatalog.presets.map((preset) => {
+                        const chosen = bundledShaders.includes(preset.id);
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            className={`shader-card${chosen ? " chosen" : ""}`}
+                            aria-pressed={chosen}
+                            onClick={() => togglePreset(preset.id)}
+                          >
+                            <img
+                              className="shader-preview"
+                              src={shaderPreviews[preset.id]}
+                              alt=""
+                            />
+                            <span className="shader-name">{preset.name}</span>
+                            <span className="shader-detail">
+                              {preset.detail}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      <CustomShaderCards
+                        selection={[
+                          bundledShaders,
+                          customShaders,
+                          shaderInitial,
+                        ]}
+                        onRemove={removeCustomShader}
+                      />
+                      <button
+                        type="button"
+                        className="shader-card shader-add"
+                        data-drop="shader"
+                        onClick={() => {
+                          void chooseShaderFile();
+                        }}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          const file = event.dataTransfer.files[0];
+                          if (!file) return;
+                          const dropped = file as File & { path?: string };
+                          addCustomShader(dropped.path || file.name).catch(
+                            fail,
+                          );
+                        }}
                       >
-                        <option value="">Unfiltered</option>
-                        {shaderCatalog.presets
-                          .filter((preset) =>
-                            bundledShaders.includes(preset.id),
-                          )
-                          .map((preset) => (
-                            <option key={preset.id} value={preset.id}>
-                              {preset.name}
+                        <span>
+                          <Plus size={22} aria-hidden="true" />
+                          Add your own
+                          <small className="shader-formats">
+                            {SHADER_FORMATS.join(" ")}
+                          </small>
+                        </span>
+                      </button>
+                    </div>
+                    <input
+                      ref={shaderInput}
+                      type="file"
+                      hidden
+                      accept={SHADER_ACCEPT}
+                      data-shader
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) addCustomShader(file.name).catch(fail);
+                        event.target.value = "";
+                      }}
+                    />
+                    {bundledShaders.length + customShaders.length > 0 && (
+                      <label className="shader-initial">
+                        Starts on
+                        <select
+                          aria-label="Starts on"
+                          value={shaderInitial ?? ""}
+                          onChange={(event) =>
+                            setShaderInitial(event.target.value || null)
+                          }
+                        >
+                          <option value="">Unfiltered</option>
+                          {shaderCatalog.presets
+                            .filter((preset) =>
+                              bundledShaders.includes(preset.id),
+                            )
+                            .map((preset) => (
+                              <option key={preset.id} value={preset.id}>
+                                {preset.name}
+                              </option>
+                            ))}
+                          {customShaders.map((shader) => (
+                            <option key={shader.path} value={shader.name}>
+                              {shader.name}
                             </option>
                           ))}
-                        {customShaders.map((shader) => (
-                          <option key={shader.path} value={shader.name}>
-                            {shader.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                </div>
-              </details>
+                        </select>
+                      </label>
+                    )}
+                  </div>
+                </details>
+              </VideoOptions>
               <AdvancedOptions settings={draft} update={update} />
             </>
           ) : (

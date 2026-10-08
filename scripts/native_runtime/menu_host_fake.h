@@ -90,6 +90,9 @@ struct FakeHost
    int resumes = 0;
    /* How many times we switched between fullscreen and a window. */
    int fullscreen_toggles = 0;
+   /* The preset of the brightness and contrast pass in the game, and the file
+    * where we write the game's shader with the pass after it. */
+   std::string video_pass, video_written;
    bool script_finished = false;
    std::string error_log;
 

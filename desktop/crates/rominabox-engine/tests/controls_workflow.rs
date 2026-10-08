@@ -103,6 +103,8 @@ fn a_missing_controller_illustration_uses_a_working_asset_free_grid() {
                 || name.ends_with(".rcss")
                 || name == "parts"
                 || name == rominabox_engine::volume::tick_file()
+                // Our pass for the light and contrast of the picture on VIDEO.
+                || name == "shaders"
         }),
         "an asset-free console staged something that is not the menu: {written:?}"
     );
@@ -279,7 +281,7 @@ fn a_document_is_only_told_about_what_it_draws() {
         None => panic!("no platform the builder exports for"),
     };
     assert!(
-        declared.contains(&format!("screens = \"pause options controls hotkeys restart {forget}\"")),
+        declared.contains(&format!("screens = \"pause options controls hotkeys video restart {forget}\"")),
         "{declared}"
     );
     assert!(

@@ -18,6 +18,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -82,6 +84,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -146,6 +150,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -206,6 +212,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -271,6 +279,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -327,6 +337,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -395,6 +407,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -451,6 +465,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -519,6 +535,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -575,6 +593,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -641,6 +661,8 @@
           "splash"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -695,6 +717,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -751,6 +775,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -805,6 +831,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -861,6 +889,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -917,6 +947,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -970,6 +1002,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1039,6 +1073,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1092,6 +1128,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1145,6 +1183,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1215,6 +1255,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1279,6 +1321,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1332,6 +1376,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1385,6 +1431,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1438,6 +1486,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1491,6 +1541,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1565,6 +1617,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1621,6 +1675,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1677,6 +1733,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1743,6 +1801,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1808,6 +1868,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1875,6 +1937,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -1938,6 +2002,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2000,6 +2066,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2061,6 +2129,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2114,6 +2184,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2167,6 +2239,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2220,6 +2294,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2343,6 +2419,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2399,6 +2477,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2455,6 +2535,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2497,7 +2579,7 @@
   },
   "disc/blue/options-keys": {
     "files": {
-      "volume.cfg": "audio_volume = \"-2.0\"\n"
+      "volume.cfg": "audio_volume = \"-2.00\"\n"
     },
     "reports": {
       "entry": {
@@ -2516,6 +2598,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -2571,6 +2655,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -2627,6 +2713,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -2679,6 +2767,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2730,6 +2820,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -2801,6 +2893,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2857,6 +2951,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2913,6 +3009,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -2969,6 +3067,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3025,6 +3125,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3081,6 +3183,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3153,6 +3257,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3195,7 +3301,7 @@
   "disc/blue/persist": {
     "files": {
       "controls.cfg": "controls_profile = \"megadrive6\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n",
-      "volume.cfg": "audio_volume = \"-26.1\"\n"
+      "volume.cfg": "audio_volume = \"-26.10\"\n"
     },
     "reports": {
       "chosen": {
@@ -3214,6 +3320,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -3267,6 +3375,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -3334,6 +3444,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3400,6 +3512,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3451,6 +3565,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3506,6 +3622,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3559,6 +3677,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3612,6 +3732,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3684,6 +3806,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3731,7 +3855,7 @@
   "disc/blue/reopen": {
     "files": {
       "controls.cfg": "controls_profile = \"megadrive6\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n",
-      "volume.cfg": "audio_volume = \"-26.1\"\n"
+      "volume.cfg": "audio_volume = \"-26.10\"\n"
     },
     "reports": {
       "controller": {
@@ -3750,6 +3874,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -3803,6 +3929,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -3854,6 +3982,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -3921,6 +4051,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -3977,6 +4109,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4033,6 +4167,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4089,6 +4225,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4153,10 +4291,12 @@
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "options",
+        "screen": "video",
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4187,7 +4327,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "OPTIONS"
+          "heading": "VIDEO"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -4210,6 +4350,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4257,10 +4399,12 @@
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "options",
+        "screen": "video",
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4291,7 +4435,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "OPTIONS"
+          "heading": "VIDEO"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -4314,6 +4458,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4367,6 +4513,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4405,6 +4553,7 @@
     },
     "script": [
       "options",
+      "video",
       "shaders",
       "report:opened",
       "key:down",
@@ -4436,6 +4585,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4500,6 +4651,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4565,6 +4718,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4609,7 +4764,7 @@
   },
   "disc/blue/volume-arrow": {
     "files": {
-      "volume.cfg": "audio_volume = \"-38.2\"\n"
+      "volume.cfg": "audio_volume = \"-38.20\"\n"
     },
     "reports": {
       "final": {
@@ -4628,6 +4783,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.111111
         },
         "slots": [
@@ -4672,7 +4829,7 @@
   },
   "disc/blue/volume-inputs": {
     "files": {
-      "volume.cfg": "audio_volume = \"-19.1\"\n"
+      "volume.cfg": "audio_volume = \"-19.10\"\n"
     },
     "reports": {
       "arrow": {
@@ -4691,6 +4848,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4742,6 +4901,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -4793,6 +4954,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.333333
         },
         "slots": [
@@ -4844,6 +5007,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.333333
         },
         "slots": [
@@ -4895,6 +5060,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -4944,7 +5111,7 @@
   },
   "disc/blue/volume-low": {
     "files": {
-      "volume.cfg": "audio_volume = \"-80.0\"\n"
+      "volume.cfg": "audio_volume = \"-80.00\"\n"
     },
     "reports": {
       "final": {
@@ -4963,6 +5130,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.0
         },
         "slots": [
@@ -5006,7 +5175,7 @@
   },
   "disc/blue/volume-step": {
     "files": {
-      "volume.cfg": "audio_volume = \"-2.0\"\n"
+      "volume.cfg": "audio_volume = \"-2.00\"\n"
     },
     "reports": {
       "final": {
@@ -5025,6 +5194,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -5085,6 +5256,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5149,6 +5322,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5213,6 +5388,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5273,6 +5450,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5336,6 +5515,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5400,6 +5581,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5464,6 +5647,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5524,6 +5709,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5587,6 +5774,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5651,6 +5840,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5715,6 +5906,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5775,6 +5968,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5838,6 +6033,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5902,6 +6099,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -5966,6 +6165,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6026,6 +6227,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6091,6 +6294,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6147,6 +6352,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6192,10 +6399,6 @@
       "hover:control-a",
       "wait-ms:1400",
       "report:popup"
-    ],
-    "size": [
-      1920,
-      1200
     ]
   },
   "native/blue/binds-start": {
@@ -6219,6 +6422,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6275,6 +6480,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6343,6 +6550,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6399,6 +6608,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6465,6 +6676,8 @@
           "splash"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6519,6 +6732,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6575,6 +6790,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6629,6 +6846,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6685,6 +6904,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6741,6 +6962,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6794,6 +7017,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6863,6 +7088,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6916,6 +7143,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -6969,6 +7198,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7035,6 +7266,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7099,6 +7332,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7152,6 +7387,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7205,6 +7442,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7258,6 +7497,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7311,6 +7552,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7389,6 +7632,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7445,6 +7690,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7501,6 +7748,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7567,6 +7816,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7632,6 +7883,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7699,6 +7952,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7762,6 +8017,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7824,6 +8081,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7885,6 +8144,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7938,6 +8199,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -7991,6 +8254,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8044,6 +8309,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8167,6 +8434,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8223,6 +8492,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8281,6 +8552,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8323,7 +8596,7 @@
   },
   "native/blue/options-keys": {
     "files": {
-      "volume.cfg": "audio_volume = \"-2.0\"\n"
+      "volume.cfg": "audio_volume = \"-2.00\"\n"
     },
     "reports": {
       "entry": {
@@ -8344,6 +8617,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -8397,6 +8672,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -8448,6 +8725,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -8503,6 +8782,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8556,6 +8837,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -8627,6 +8910,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8683,6 +8968,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8739,6 +9026,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8795,6 +9084,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8851,6 +9142,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8907,6 +9200,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -8979,6 +9274,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9021,7 +9318,7 @@
   "native/blue/persist": {
     "files": {
       "controls.cfg": "controls_profile = \"megadrive6\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n",
-      "volume.cfg": "audio_volume = \"-26.1\"\n"
+      "volume.cfg": "audio_volume = \"-26.10\"\n"
     },
     "reports": {
       "chosen": {
@@ -9040,6 +9337,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -9095,6 +9394,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -9162,6 +9463,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9230,6 +9533,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9281,6 +9586,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9336,6 +9643,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9391,6 +9700,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9444,6 +9755,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9516,6 +9829,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9563,7 +9878,7 @@
   "native/blue/reopen": {
     "files": {
       "controls.cfg": "controls_profile = \"megadrive6\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n",
-      "volume.cfg": "audio_volume = \"-26.1\"\n"
+      "volume.cfg": "audio_volume = \"-26.10\"\n"
     },
     "reports": {
       "controller": {
@@ -9582,6 +9897,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -9637,6 +9954,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -9690,6 +10009,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -9757,6 +10078,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9813,6 +10136,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9869,6 +10194,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9923,6 +10250,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -9983,9 +10312,7 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [
-          "options-prev"
-        ],
+        "disabled": [],
         "focused": [
           "shaders"
         ],
@@ -9993,10 +10320,12 @@
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "options",
+        "screen": "video",
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -10027,7 +10356,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "OPTIONS"
+          "heading": "VIDEO"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -10050,6 +10379,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -10089,9 +10420,7 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [
-          "options-prev"
-        ],
+        "disabled": [],
         "focused": [
           "shaders"
         ],
@@ -10099,10 +10428,12 @@
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "options",
+        "screen": "video",
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -10133,7 +10464,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "OPTIONS"
+          "heading": "VIDEO"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -10156,6 +10487,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -10209,6 +10542,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -10247,6 +10582,7 @@
     },
     "script": [
       "options",
+      "video",
       "shaders",
       "report:opened",
       "key:down",
@@ -10278,6 +10614,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -10342,6 +10680,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -10407,6 +10747,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -10451,7 +10793,7 @@
   },
   "native/blue/volume-arrow": {
     "files": {
-      "volume.cfg": "audio_volume = \"-38.2\"\n"
+      "volume.cfg": "audio_volume = \"-38.20\"\n"
     },
     "reports": {
       "final": {
@@ -10472,6 +10814,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.111111
         },
         "slots": [
@@ -10516,7 +10860,7 @@
   },
   "native/blue/volume-inputs": {
     "files": {
-      "volume.cfg": "audio_volume = \"-19.1\"\n"
+      "volume.cfg": "audio_volume = \"-19.10\"\n"
     },
     "reports": {
       "arrow": {
@@ -10537,6 +10881,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -10590,6 +10936,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -10643,6 +10991,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.333333
         },
         "slots": [
@@ -10696,6 +11046,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.333333
         },
         "slots": [
@@ -10749,6 +11101,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -10798,7 +11152,7 @@
   },
   "native/blue/volume-low": {
     "files": {
-      "volume.cfg": "audio_volume = \"-80.0\"\n"
+      "volume.cfg": "audio_volume = \"-80.00\"\n"
     },
     "reports": {
       "final": {
@@ -10819,6 +11173,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.0
         },
         "slots": [
@@ -10862,7 +11218,7 @@
   },
   "native/blue/volume-step": {
     "files": {
-      "volume.cfg": "audio_volume = \"-2.0\"\n"
+      "volume.cfg": "audio_volume = \"-2.00\"\n"
     },
     "reports": {
       "final": {
@@ -10883,6 +11239,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -10943,6 +11301,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11007,6 +11367,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11071,6 +11433,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11131,6 +11495,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11194,6 +11560,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11258,6 +11626,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11322,6 +11692,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11382,6 +11754,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11445,6 +11819,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11509,6 +11885,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11573,6 +11951,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11633,6 +12013,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11696,6 +12078,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11760,6 +12144,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11824,6 +12210,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11884,6 +12272,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -11949,6 +12339,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12005,6 +12397,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12073,6 +12467,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12129,6 +12525,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12197,6 +12595,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12253,6 +12653,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12319,6 +12721,8 @@
           "splash"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12373,6 +12777,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12429,6 +12835,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12483,6 +12891,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12539,6 +12949,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12595,6 +13007,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12648,6 +13062,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12717,6 +13133,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12770,6 +13188,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12823,6 +13243,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12889,6 +13311,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -12953,6 +13377,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13006,6 +13432,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13059,6 +13487,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13112,6 +13542,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13165,6 +13597,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13239,6 +13673,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13295,6 +13731,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13351,6 +13789,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13417,6 +13857,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13482,6 +13924,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13549,6 +13993,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13612,6 +14058,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13674,6 +14122,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13735,6 +14185,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13788,6 +14240,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13841,6 +14295,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -13894,6 +14350,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14017,6 +14475,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14073,6 +14533,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14131,6 +14593,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14173,7 +14637,7 @@
   },
   "rominabox/blue/options-keys": {
     "files": {
-      "volume.cfg": "audio_volume = \"-2.0\"\n"
+      "volume.cfg": "audio_volume = \"-2.00\"\n"
     },
     "reports": {
       "entry": {
@@ -14194,6 +14658,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -14247,6 +14713,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -14298,6 +14766,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -14353,6 +14823,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14406,6 +14878,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -14477,6 +14951,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14533,6 +15009,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14589,6 +15067,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14645,6 +15125,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14701,6 +15183,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14757,6 +15241,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14829,6 +15315,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -14871,7 +15359,7 @@
   "rominabox/blue/persist": {
     "files": {
       "controls.cfg": "controls_profile = \"megadrive6\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n",
-      "volume.cfg": "audio_volume = \"-26.1\"\n"
+      "volume.cfg": "audio_volume = \"-26.10\"\n"
     },
     "reports": {
       "chosen": {
@@ -14890,6 +15378,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -14945,6 +15435,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -15012,6 +15504,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15080,6 +15574,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15131,6 +15627,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15186,6 +15684,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15241,6 +15741,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15294,6 +15796,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15366,6 +15870,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15413,7 +15919,7 @@
   "rominabox/blue/reopen": {
     "files": {
       "controls.cfg": "controls_profile = \"megadrive6\"\nrib_label_a = \"C\"\nrib_label_b = \"B\"\nrib_label_down = \"Down\"\nrib_label_left = \"Left\"\nrib_label_right = \"Right\"\nrib_label_start = \"Start\"\nrib_label_up = \"Up\"\nrib_label_y = \"A\"\n",
-      "volume.cfg": "audio_volume = \"-26.1\"\n"
+      "volume.cfg": "audio_volume = \"-26.10\"\n"
     },
     "reports": {
       "controller": {
@@ -15432,6 +15938,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -15487,6 +15995,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -15540,6 +16050,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.222222
         },
         "slots": [
@@ -15607,6 +16119,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15663,6 +16177,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15719,6 +16235,8 @@
           "notice"
         ],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15773,6 +16291,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15829,9 +16349,7 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [
-          "options-prev"
-        ],
+        "disabled": [],
         "focused": [
           "shaders"
         ],
@@ -15839,10 +16357,12 @@
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "options",
+        "screen": "video",
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15873,7 +16393,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "OPTIONS"
+          "heading": "VIDEO"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -15896,6 +16416,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15935,9 +16457,7 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [
-          "options-prev"
-        ],
+        "disabled": [],
         "focused": [
           "shaders"
         ],
@@ -15945,10 +16465,12 @@
         "menuOpen": true,
         "on": [],
         "profile": "megadrive",
-        "screen": "options",
+        "screen": "video",
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -15979,7 +16501,7 @@
         ],
         "text": {
           "footer-hint": "ESC  BACK",
-          "heading": "OPTIONS"
+          "heading": "VIDEO"
         },
         "transferPending": false,
         "volumeDb": 0.0
@@ -16002,6 +16524,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -16055,6 +16579,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -16093,6 +16619,7 @@
     },
     "script": [
       "options",
+      "video",
       "shaders",
       "report:opened",
       "key:down",
@@ -16124,6 +16651,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -16188,6 +16717,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -16253,6 +16784,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -16297,7 +16830,7 @@
   },
   "rominabox/blue/volume-arrow": {
     "files": {
-      "volume.cfg": "audio_volume = \"-38.2\"\n"
+      "volume.cfg": "audio_volume = \"-38.20\"\n"
     },
     "reports": {
       "final": {
@@ -16318,6 +16851,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.111111
         },
         "slots": [
@@ -16362,7 +16897,7 @@
   },
   "rominabox/blue/volume-inputs": {
     "files": {
-      "volume.cfg": "audio_volume = \"-19.1\"\n"
+      "volume.cfg": "audio_volume = \"-19.10\"\n"
     },
     "reports": {
       "arrow": {
@@ -16383,6 +16918,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -16436,6 +16973,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -16489,6 +17028,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.333333
         },
         "slots": [
@@ -16542,6 +17083,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.333333
         },
         "slots": [
@@ -16595,6 +17138,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -16644,7 +17189,7 @@
   },
   "rominabox/blue/volume-low": {
     "files": {
-      "volume.cfg": "audio_volume = \"-80.0\"\n"
+      "volume.cfg": "audio_volume = \"-80.00\"\n"
     },
     "reports": {
       "final": {
@@ -16665,6 +17210,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.0
         },
         "slots": [
@@ -16708,7 +17255,7 @@
   },
   "rominabox/blue/volume-step": {
     "files": {
-      "volume.cfg": "audio_volume = \"-2.0\"\n"
+      "volume.cfg": "audio_volume = \"-2.00\"\n"
     },
     "reports": {
       "final": {
@@ -16729,6 +17276,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 0.888889
         },
         "slots": [
@@ -16789,6 +17338,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -16853,6 +17404,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -16917,6 +17470,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -16977,6 +17532,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -17040,6 +17597,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -17104,6 +17663,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -17168,6 +17729,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -17228,6 +17791,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -17291,6 +17856,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -17355,6 +17922,8 @@
         "selected": [],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -17419,6 +17988,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [
@@ -17479,6 +18050,8 @@
         ],
         "showing": [],
         "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
           "volume-level": 1.0
         },
         "slots": [

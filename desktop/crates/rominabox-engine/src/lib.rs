@@ -49,6 +49,7 @@ pub mod target;
 pub mod traveling;
 
 pub mod themes;
+pub mod video;
 pub mod volume;
 mod windows_program;
 

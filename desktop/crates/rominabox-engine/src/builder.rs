@@ -56,6 +56,13 @@ pub struct Defaults {
     /// The fast forward speed until the player changes it, as the RetroArch
     /// `fastforward_ratio`, one of the positions declared in `settings.inc`.
     pub fast_forward_speed: f32,
+    /// VIDEO in the game's Options, with the light and contrast of the
+    /// picture and the shaders.
+    pub video: bool,
+    /// The light and the contrast of the picture when a game with VIDEO
+    /// starts, until the player changes them there.
+    pub brightness: f32,
+    pub contrast: f32,
     /// Whether fast forward runs only while its hotkey is held, or from one
     /// press to the next. The player can change it.
     pub fast_forward_hold: bool,
@@ -127,6 +134,15 @@ pub mod unstated {
     }
     pub fn menu_sounds() -> String {
         defaults().menu_sounds.clone()
+    }
+    pub fn video() -> bool {
+        defaults().video
+    }
+    pub fn brightness() -> f32 {
+        defaults().brightness
+    }
+    pub fn contrast() -> f32 {
+        defaults().contrast
     }
     pub fn hotkeys() -> crate::hotkeys::Hotkeys {
         defaults().hotkeys.clone()

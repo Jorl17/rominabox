@@ -364,6 +364,11 @@ pub enum EntryPlace {
     /// On the pause screen, where it is in the design. In a design without
     /// such a button, the entry is a row near the end of Options.
     Pause,
+    /// On the screen of its opener (`Screen::opener`), where it is in the
+    /// design, as SHADERS on VIDEO. We refuse a game with the entry and
+    /// without the entry of that screen. In a design without such a button,
+    /// the entry is a row in Options.
+    Opener,
 }
 
 /// Where a declared screen is.
@@ -825,9 +830,10 @@ fn screens(
             },
             option_label: option.as_ref().map(|option| option.label.clone()),
             option_default: option.as_ref().is_some_and(|option| option.default),
-            entry_place: match option.as_ref().and_then(|option| option.at) {
-                None => EntryPlace::Options,
-                Some(EntryAtFile::Pause) => EntryPlace::Pause,
+            entry_place: match option.as_ref().map(|option| option.at) {
+                Some(Some(EntryAtFile::Pause)) => EntryPlace::Pause,
+                Some(None) if entry.from.is_some() => EntryPlace::Opener,
+                _ => EntryPlace::Options,
             },
             images: entry.images,
             dialogs: entry.dialogs.unwrap_or_default(),

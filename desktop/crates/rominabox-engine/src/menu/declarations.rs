@@ -92,6 +92,21 @@ fn shown_by(screen: &Screen, screens: &[&Screen], markup: &str) -> Vec<String> {
         .split_whitespace()
         .map(str::to_string)
         .collect();
+    // From BACK on a screen of the design that is an Options entry, such as
+    // VIDEO, we return to Options. We declare the BACK of a screen with a role
+    // in the player, and the BACK of a generated list with the list.
+    if screen.place == ScreenPlace::Options {
+        for other in screens {
+            if other.option_label.is_none() || other.role.is_some() || other.opener.is_some() || other.rows.is_some() {
+                continue;
+            }
+            let back = other.back_button();
+            if markup.contains(&format!("id=\"{back}\"")) && !buttons.contains(&back) {
+                buttons.push(back);
+            }
+        }
+        return buttons;
+    }
     let host = screens
         .iter()
         .find(|entry| entry.place == ScreenPlace::Plain && entry.option_label.is_none());

@@ -190,13 +190,29 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 
 #volume-control .slider { position: absolute; left: 252dp; top: 14dp; width: 432dp; height: 36dp; }
 #volume-control .slider-readout { display: none; }
-#volume-control .slider-track { margin-top: 0; height: 28dp; background-color: #020b27; border-top: 4dp #020b27; border-left: 4dp #020b27; border-right: 4dp #9edaff; border-bottom: 4dp #9edaff; }
-#volume-control .slider-fill { top: 0; height: 100%; width: 100%; }
+#volume-control .slider-track, #brightness-control .slider-track, #contrast-control .slider-track { margin-top: 0; height: 28dp; background-color: #020b27; border-top: 4dp #020b27; border-left: 4dp #020b27; border-right: 4dp #9edaff; border-bottom: 4dp #9edaff; }
+#volume-control .slider-fill, #brightness-control .slider-fill, #contrast-control .slider-fill { top: 0; height: 100%; width: 100%; }
 /* The shared thumb is sized for the taller track of a slider on a separate
  * screen: 56dp plus borders is 64dp, which would hang 2dp past the bottom of
  * a 64dp row and draw bright yellow over its border. Inside this row the
  * thumb is the height of the row minus a margin at each end. */
-#volume-control .slider-thumb { top: -6dp; height: 40dp; }
+#volume-control .slider-thumb, #brightness-control .slider-thumb, #contrast-control .slider-thumb { top: -6dp; height: 40dp; }
+
+/* On VIDEO, BRIGHTNESS and CONTRAST in rows like the row of VOLUME, with a
+ * wider name and the percentage at the right end in place of LOW and HIGH,
+ * then SHADERS as an entry like those in Options, and BACK where it is in
+ * Options. */
+#brightness-control, #contrast-control { position: absolute; left: 56dp; width: 840dp; height: 64dp; background-color: #061a48; border-width: 3dp; border-color: #75b2e4; }
+#brightness-control { top: 104dp; }
+#contrast-control { top: 186dp; }
+#brightness-control .volume-name, #contrast-control .volume-name { width: 176dp; }
+#brightness-low, #brightness-high, #contrast-low, #contrast-high { display: none; }
+#brightness-down, #contrast-down { left: 200dp; }
+#brightness-up, #contrast-up { left: 668dp; }
+#brightness-control .slider, #contrast-control .slider { position: absolute; left: 256dp; top: 14dp; width: 400dp; height: 36dp; }
+#brightness-control .slider-readout, #contrast-control .slider-readout { position: absolute; left: 468dp; top: -14dp; width: 96dp; height: 64dp; line-height: 64dp; font-size: 18dp; color: #ffffff; }
+.video-shaders { position: absolute; left: 56dp; top: 268dp; }
+#video-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
 
 /* The slider is a shared part. We draw hover, keyboard focus and a held
  * drag differently. */

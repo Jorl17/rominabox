@@ -101,6 +101,7 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
             "options",
             "controls",
             "hotkeys",
+            "video",
             "shaders",
             "achievements",
             "accounts",
@@ -249,7 +250,7 @@ fn a_list_screen_override_uses_the_selected_wrapper_and_inherited_parts() {
         &staged,
         "megadrive",
         &Controls::default(),
-        Some(&["shaders".into()]),
+        Some(&["video".into(), "shaders".into()]),
     )
     .unwrap();
     let menu = fs::read_to_string(staged.join("menu.rml")).unwrap();
@@ -507,7 +508,7 @@ fn a_designs_words_reach_the_player_and_an_unknown_one_is_refused() {
 fn a_designs_words_name_the_settings_and_mark_the_lists() {
     let root = rominabox_scratch::Scratch::dir("rominabox-design-setting-words");
     let kit = support::kit_with_hypothetical(&root);
-    let entries = vec!["controls".to_string(), "shaders".to_string()];
+    let entries = vec!["controls".to_string(), "video".to_string(), "shaders".to_string()];
     let worded = support::compose(&kit, "wording", Some(&entries), 2, &root.join("wording"));
     let native = support::compose(&kit, "native", Some(&entries), 2, &root.join("native"));
     for (menu, words) in [

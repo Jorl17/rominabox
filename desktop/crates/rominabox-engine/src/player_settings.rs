@@ -37,6 +37,8 @@ pub enum Key {
     PauseNonactive,
     InputRumbleEnable,
     FastforwardRatio,
+    VideoBrightness,
+    VideoContrast,
 }
 
 impl Key {
@@ -44,6 +46,12 @@ impl Key {
     pub fn name(self) -> &'static str {
         player_word("RIB_SETTING_KEY", &format!("{self:?}"))
     }
+}
+
+/// The parameter for `key` in our pass after the game's shader, as we declare
+/// it in the player (`RIB_SETTING_PARAMETER`).
+pub fn parameter(key: Key) -> &'static str {
+    player_word("RIB_SETTING_PARAMETER", &format!("{key:?}"))
 }
 
 /// How we show a setting, and its values.
@@ -105,7 +113,7 @@ impl PlayerSetting {
     /// A value in RetroArch's text form for this key.
     pub fn text(&self, value: f32) -> String {
         match self.kind {
-            Kind::Level { .. } | Kind::Choice { .. } => format!("{value:.1}"),
+            Kind::Level { .. } | Kind::Choice { .. } => format!("{value:.2}"),
             Kind::Switch { .. } => (value != 0.0).to_string(),
         }
     }
@@ -168,11 +176,34 @@ pub struct Defaults {
     pub fast_forward: bool,
     pub fast_forward_speed: f32,
     pub fast_forward_hold: bool,
+    /// VIDEO in the game, with the light and contrast at the start.
+    pub video: Option<Video>,
+}
+
+/// The id of VIDEO among the Options entries, as we declare it in Native.
+pub const VIDEO_ENTRY: &str = "video";
+
+/// The light, as a multiplier, and the contrast of the picture at the start of
+/// a game with VIDEO, each one of the positions in `settings.inc`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Video {
+    pub brightness: f32,
+    pub contrast: f32,
+}
+
+impl Video {
+    /// This start in a menu with the Options entries `entries`, or none when
+    /// the author chose entries without VIDEO.
+    pub fn in_menu(self, entries: Option<&[String]>) -> Option<Video> {
+        entries
+            .map_or(true, |entries| entries.iter().any(|entry| entry == VIDEO_ENTRY))
+            .then_some(self)
+    }
 }
 
 /// The values at the positions of a level, as declared in `settings.inc`
 /// for `key` (`RIB_SETTING_POSITIONS`), low end first.
-fn positions(key: Key) -> &'static [f32] {
+pub fn positions(key: Key) -> &'static [f32] {
     static READ: std::sync::OnceLock<std::collections::BTreeMap<String, Vec<f32>>> = std::sync::OnceLock::new();
     READ.get_or_init(|| {
         crate::menu::inc::declarations(SOURCE)
@@ -238,6 +269,21 @@ pub fn declared(defaults: Defaults) -> Vec<PlayerSetting> {
             values: positions(Key::FastforwardRatio),
         },
         default: defaults.fast_forward_speed,
+    }))
+    // We give the light and contrast of the picture only to a game with VIDEO,
+    // because they are on VIDEO in the design.
+    .chain(defaults.video.into_iter().flat_map(|video| {
+        [
+            ("brightness", Key::VideoBrightness, video.brightness),
+            ("contrast", Key::VideoContrast, video.contrast),
+        ]
+        .map(|(id, key, default)| PlayerSetting {
+            id,
+            label: id,
+            key,
+            kind: Kind::Level { values: positions(key) },
+            default,
+        })
     }))
     .collect()
 }

@@ -188,6 +188,10 @@ fn an_author_can_pick_the_generic_retropad_and_get_an_asset_free_grid() {
             "hotkeys-defaults.cfg".to_string(),
             // The design's own mark beside its name in the footer.
             "brand-mark.png".to_string(),
+            // Our pass for the light and contrast of the picture on VIDEO,
+            // and the list in which we name it.
+            "shaders".to_string(),
+            "shaders.cfg".to_string(),
         ])
     );
     controls::write_defaults_config("mastersystem", &options, &root.join("controls.cfg")).unwrap();
@@ -305,6 +309,10 @@ fn export_stages_only_the_mastersystem_illustration() {
             "hotkeys-defaults.cfg".to_string(),
             // The design's own mark beside its name in the footer.
             "brand-mark.png".to_string(),
+            // Our pass for the light and contrast of the picture on VIDEO,
+            // and the list in which we name it.
+            "shaders".to_string(),
+            "shaders.cfg".to_string(),
             // The scene we read in the player when someone picks another pad.
             // There is one pad for Master System, so there is exactly one.
             format!("scene-{}.rml", profile.id),

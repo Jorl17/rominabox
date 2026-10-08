@@ -246,6 +246,26 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #volume-level:hover #volume-level-thumb { background-color: design(edge); border-color: design(highlight); }
 #volume-level.focused #volume-level-thumb { background-color: design(focus); border-color: design(highlight); border-left-width: 3dp; }
 #volume-level.dragging #volume-level-thumb { background-color: design(highlight); border-color: design(ink); }
+/* On VIDEO, BRIGHTNESS and CONTRAST in rows like the row of the volume, at
+ * the top of the screen, with the percentage at the right end in place of the
+ * ends, then SHADERS as an entry like those in Options. */
+#brightness-control, #contrast-control { position: absolute; left: 24dp; width: 712dp; height: 32dp; }
+#brightness-control { top: 72dp; }
+#contrast-control { top: 120dp; }
+#brightness-control .volume-name, #contrast-control .volume-name { width: 120dp; }
+#brightness-low, #brightness-high, #contrast-low, #contrast-high { display: none; }
+#brightness-down, #contrast-down { left: 128dp; }
+#brightness-up, #contrast-up { left: 632dp; }
+#brightness-level, #contrast-level { position: absolute; left: 164dp; top: 0; width: 456dp; height: 28dp; }
+#brightness-level-readout, #contrast-level-readout { position: absolute; left: 504dp; top: 0; width: 48dp; height: 32dp; line-height: 32dp; font-size: 12dp; color: design(ink); text-align: right; }
+#brightness-level > div:last-child, #contrast-level > div:last-child { margin-top: 12dp; height: 4dp; background-color: design(bevel-dark); border-width: 0 0 1dp 0; border-color: design(rule); }
+#brightness-level-fill, #contrast-level-fill { background-color: design(highlight); }
+#brightness-level-thumb, #contrast-level-thumb { top: -6dp; width: 8dp; height: 16dp; background-color: design(ink); border-width: 1dp; border-color: design(edge); }
+#brightness-level:hover #brightness-level-thumb, #contrast-level:hover #contrast-level-thumb { background-color: design(edge); border-color: design(highlight); }
+#brightness-level.focused #brightness-level-thumb, #contrast-level.focused #contrast-level-thumb { background-color: design(focus); border-color: design(highlight); border-left-width: 3dp; }
+#brightness-level.dragging #brightness-level-thumb, #contrast-level.dragging #contrast-level-thumb { background-color: design(highlight); border-color: design(ink); }
+.video-shaders { position: absolute; left: 24dp; top: 168dp; }
+#video-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
 
 #disc-face { position: absolute; left: 250dp; top: 100dp; width: 280dp; height: 280dp; border-radius: 140dp; background-color: design(edge); border: 14dp design(highlight); }
 #disc-hole { position: absolute; left: 116dp; top: 116dp; width: 48dp; height: 48dp; border-radius: 24dp; background-color: design(background); }
