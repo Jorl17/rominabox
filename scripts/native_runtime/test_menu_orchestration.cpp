@@ -612,6 +612,57 @@ void a_save_over_a_picture_shows_the_new_one(const char *data)
    host.thumbnail.clear();
    test_setenv("ROMINABOX_DATA_DIR", data);
 }
+
+/* While the menu is open we run no frame of the game. Right after a load
+ * from the menu, we have no frame of the loaded state to take a picture of,
+ * and on the Mega Drive the picture is black. So for a save at that moment
+ * we copy the picture of the slot we loaded. Once the menu has closed, we
+ * run frames of the game again, and for a save we take a picture of the
+ * last frame. */
+void a_save_right_after_a_load_gets_the_loaded_picture(const char *data)
+{
+   const std::string picture = std::string(data) + "/loaded-slot-1.png";
+   const std::string data_dir = std::string(data) + "/loaded-picture-data";
+   std::filesystem::create_directories(data_dir);
+   test_setenv("ROMINABOX_DATA_DIR", data_dir.c_str());
+   write_file(picture, "the picture of slot 1");
+   host.slot_occupied = true;
+   host.thumbnail = picture;
+   host.load_accepted = true;
+   host.save_accepted = true;
+   host.picture_copies.clear();
+   void *menu = open_menu();
+   if (!menu) return;
+   frame(menu);
+   click_and_frame(menu, "load");
+   rib_rmlui_notify_state_task(host.state_path.c_str(), 1, false, true);
+   frame(menu);
+   click_and_frame(menu, "slot-2");
+   click_and_frame(menu, "save");
+   rib_rmlui_notify_state_task("", 2, true, true);
+   frame(menu);
+   check(host.picture_copies == std::vector<std::pair<int, int>>{{1, 2}},
+         "we copy the picture of slot 1 for a save to slot 2 right after loading slot 1");
+
+   rib_menu_toggle(menu, false);
+   frame(menu);
+   rib_menu_toggle(menu, true);
+   frame(menu);
+   const size_t copied = host.picture_copies.size();
+   click_and_frame(menu, "slot-3");
+   click_and_frame(menu, "save");
+   rib_rmlui_notify_state_task("", 3, true, true);
+   frame(menu);
+   check(host.picture_copies.size() == copied,
+         "after the menu has closed and opened again, we copy no picture for a save");
+   rib_menu_destroy(menu);
+   std::remove(picture.c_str());
+   host.slot_occupied = false;
+   host.thumbnail.clear();
+   host.load_accepted = false;
+   host.save_accepted = false;
+   test_setenv("ROMINABOX_DATA_DIR", data);
+}
 }
 
 int main(int argc, char **argv)
@@ -889,6 +940,7 @@ int main(int argc, char **argv)
    fixes::pad_changes_and_reset_apply_together(argv[1], argv[2]);
    fixes::chosen_slot_shows_on_save_and_load(argv[1], argv[2]);
    fixes::a_save_over_a_picture_shows_the_new_one(argv[2]);
+   fixes::a_save_right_after_a_load_gets_the_loaded_picture(argv[2]);
    fixes::a_menu_load_writes_the_volume_only_off_a_position();
    fixes::a_drag_cut_short_by_closing_is_kept(argv[2]);
    fixes::the_middle_of_the_volume_is_clearly_audible();

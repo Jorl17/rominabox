@@ -183,6 +183,11 @@ extern "C" bool rib_host_save_state(void)
    ++host.saves_started;
    return host.save_accepted;
 }
+extern "C" bool rib_host_copy_picture(int from, int to)
+{
+   host.picture_copies.emplace_back(from, to);
+   return true;
+}
 extern "C" bool rib_host_load_state(void)
 {
    ++host.loads_started;

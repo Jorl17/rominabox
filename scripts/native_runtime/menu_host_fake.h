@@ -6,6 +6,7 @@
 #include "rmlui/host.h"
 #include "rmlui/menu_api.h"
 #include <map>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -49,6 +50,8 @@ struct FakeHost
    bool load_accepted = false;
    int saves_started = 0;
    int loads_started = 0;
+   /* Each picture we copied from one slot to another, as (from, to). */
+   std::vector<std::pair<int, int>> picture_copies;
 
    /* Discs, labelled "Disc 1".."Disc N". The chosen one becomes current. */
    unsigned disc_count = 0;
