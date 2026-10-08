@@ -5,7 +5,7 @@
 //! We work on text here, and write nothing until the composition is
 //! complete.
 
-use super::manifest::{Manifest, Screen, ScreenPlace, ScreenRole};
+use super::manifest::{EntryPlace, Manifest, Screen, ScreenPlace, ScreenRole};
 use super::{contract, words};
 use crate::player_settings::{Kind, PlayerSetting};
 use std::{
@@ -478,7 +478,16 @@ pub(crate) fn apply_options(
         if in_options(&document, start) {
             continue;
         }
-        if !placed_opener && included.iter().any(|screen| screen.id == entry.id) {
+        let entry_included = included.iter().any(|screen| screen.id == entry.id);
+        // We keep a button for an entry on the pause screen where it is in the
+        // design, and remove it from a game without the entry.
+        if entry.entry_place == EntryPlace::Pause {
+            if !entry_included {
+                document.replace_range(start..end, "");
+            }
+            continue;
+        }
+        if !placed_opener && entry_included {
             document.replace_range(start..end, &opener);
             placed_opener = true;
         } else {
@@ -486,8 +495,17 @@ pub(crate) fn apply_options(
         }
     }
     if !placed_opener {
-        if let Some(quit) = button_bounds(&document, contract!(Quit)) {
-            document.insert_str(quit.0, &opener);
+        // Before QUIT, or before the first button of an entry on the pause
+        // screen of the design, so that OPTIONS comes before it, as in a game
+        // where we replace a button with OPTIONS.
+        let at = declared_entries
+            .iter()
+            .filter(|entry| entry.entry_place == EntryPlace::Pause)
+            .filter_map(|entry| button_bounds(&document, &entry.button).map(|(start, _)| start))
+            .chain(button_bounds(&document, contract!(Quit)).map(|(start, _)| start))
+            .min();
+        if let Some(at) = at {
+            document.insert_str(at, &opener);
         }
     }
 

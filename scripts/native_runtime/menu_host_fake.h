@@ -85,6 +85,9 @@ struct FakeHost
    std::vector<Sound> sounds;
    bool quit = false;
    bool forgotten = false;
+   /* How many times we restarted the game, and closed the menu to resume it. */
+   int restarts = 0;
+   int resumes = 0;
    bool script_finished = false;
    std::string error_log;
 

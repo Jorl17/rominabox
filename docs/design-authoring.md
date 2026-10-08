@@ -110,7 +110,11 @@ file is a complete example.
   - `label`: its words when another screen links to it.
   - `back`: the words on its BACK.
   - `option: {label, default}`: makes it an Options entry that the author
-    may include. `null` removes the entry.
+    may include. `null` removes the entry. With `at: "pause"`, your design
+    places the entry's button on its pause screen, and we keep it there, or
+    take it away when the author leaves the entry out. In a design that places
+    no such button, we list the entry in Options before ABOUT. RESTART is such
+    an entry.
   - `pageSize`: rows per page of its list, or entries per page on the
     Options screen.
   - `panel`: the id of its panel.
@@ -147,17 +151,20 @@ file is a complete example.
 
 ## Screens and roles
 
-Seven screens have a **role**, which the player code handles specially:
+Ten screens have a **role**, which the player code handles specially:
 
 | Role | Screen | Contains |
 |---|---|---|
-| `pause` | Pause | the save slots and CONTINUE, SAVE, LOAD, QUIT |
+| `pause` | Pause | the save slots and CONTINUE, SAVE, LOAD, RESTART, QUIT |
 | `options` | Options | the entries, the volume and the settings |
 | `controls` | the pad screen | the controller picture |
 | `shaders` | the filter list | |
 | `achievements` | the achievements screen | its sign-in form |
 | `discs` | the disc list | |
 | `accounts` | the saved accounts of QUICK SIGN IN | |
+| `hotkeys` | HOTKEYS | a row of bindings for each hotkey |
+| `forget` | UNINSTALL on Windows, RESET on a Mac | the question, then `forget-back` and `forget-confirm` |
+| `restart` | RESTART | the question, then `restart-back` and `restart-confirm` |
 
 Native assigns the roles. Your design keeps a role by keeping the id of the
 screen: a `screen-pause.rml` is still Pause, whatever it looks like and

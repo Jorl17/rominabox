@@ -167,6 +167,19 @@
       }
     },
     {
+      "id": "restart",
+      "role": "restart",
+      "panel": "restart-panel",
+      "heading": "RESTART",
+      "footer": "[ESC]  BACK",
+      "button": "restart",
+      "option": {
+        "label": "RESTART",
+        "default": true,
+        "at": "pause"
+      }
+    },
+    {
       "id": "uninstall",
       "role": "forget",
       "platforms": ["windows"],

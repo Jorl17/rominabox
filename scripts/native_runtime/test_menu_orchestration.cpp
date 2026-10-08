@@ -671,6 +671,29 @@ void a_save_right_after_a_load_gets_the_loaded_picture(const char *data)
    host.save_accepted = false;
    test_setenv("ROMINABOX_DATA_DIR", data);
 }
+
+/* When the player clicks RESTART on the pause screen, we show the screen
+ * where we ask first. When the player then clicks KEEP PLAYING, we return to
+ * the pause screen. When the player clicks RESTART on that screen, we start
+ * the game again and close the menu. */
+void restart_asks_first()
+{
+   host.restarts = 0;
+   host.resumes = 0;
+   void *menu = open_menu();
+   if (!menu) return;
+   check(view.document.has_element("restart"), "the pause screen has RESTART");
+   click_and_frame(menu, "restart");
+   check(view.screens.current() == "restart", "clicking RESTART shows the screen where we ask first");
+   click_and_frame(menu, "restart-back");
+   check(view.screens.current() == "pause" && host.restarts == 0,
+         "clicking KEEP PLAYING returns to the pause screen, and we restart nothing");
+   click_and_frame(menu, "restart");
+   click_and_frame(menu, "restart-confirm");
+   check(host.restarts == 1 && host.resumes == 1,
+         "clicking RESTART on that screen restarts the game, and we close the menu");
+   rib_menu_destroy(menu);
+}
 }
 
 int main(int argc, char **argv)
@@ -949,6 +972,7 @@ int main(int argc, char **argv)
    fixes::chosen_slot_shows_on_save_and_load(argv[1], argv[2]);
    fixes::a_save_over_a_picture_shows_the_new_one(argv[2]);
    fixes::a_save_right_after_a_load_gets_the_loaded_picture(argv[2]);
+   fixes::restart_asks_first();
    fixes::a_menu_load_writes_the_volume_only_off_a_position();
    fixes::a_drag_cut_short_by_closing_is_kept(argv[2]);
    fixes::the_middle_of_the_volume_is_clearly_audible();

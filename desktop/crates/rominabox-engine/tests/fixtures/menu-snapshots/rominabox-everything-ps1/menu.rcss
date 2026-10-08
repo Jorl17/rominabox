@@ -391,13 +391,14 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 #hotkeys-list .list-pager-prev { left: 424dp; }
 #hotkeys-list .list-pager-count { left: 488dp; width: 100dp; }
 #hotkeys-list .list-pager-next { left: 596dp; }
-/* UNINSTALL and RESET: what happens, what stays, then keep the game or forget it. */
-.forget-copy { position: absolute; left: 56dp; top: 170dp; width: 840dp; font-size: 18dp; line-height: 32dp; }
-.forget-stays { top: 280dp; color: #fff13d; }
-.forget-actions { position: absolute; left: 56dp; top: 400dp; width: 840dp; height: 42dp; }
-.forget-actions button { position: absolute; top: 0; font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
-#forget-back { left: 0; width: 200dp; }
-#forget-confirm { left: 224dp; width: 200dp; }
+/* On the screens where we ask before UNINSTALL, RESET or RESTART, we show what
+ * happens and what stays, then a button to go back and a button to go ahead. */
+.confirm-copy { position: absolute; left: 56dp; top: 170dp; width: 840dp; font-size: 18dp; line-height: 32dp; }
+.confirm-stays { top: 280dp; color: #fff13d; }
+.confirm-actions { position: absolute; left: 56dp; top: 400dp; width: 840dp; height: 42dp; }
+.confirm-actions button { position: absolute; top: 0; font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
+#forget-back, #restart-back { left: 0; width: 200dp; }
+#forget-confirm, #restart-confirm { left: 224dp; width: 200dp; }
 
 /* ROM-in-a-Box: the screens and layout of Native, drawn more simply. We apply
  * this over the Native stylesheet (design.json "restyle"), so it contains only
@@ -413,6 +414,11 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 /* The status on the pause screen is on the line of the footer, level with its
  * words and clear of the buttons above. */
 #status { top: 563dp; }
+/* Science Gothic is wider than the pixel font, so the six buttons of the
+ * pause screen fit in their row at full size only with narrower gaps and
+ * padding. */
+#actions { column-gap: 8dp; }
+#actions button { padding: 0 4dp; }
 
 /* Buttons, pager arrows and option entries. */
 .menu-action, .list-pager-prev, .list-pager-next { background-color: #061a48; border-color: #061a48; }

@@ -53,14 +53,19 @@ holds for a design with no screen overrides at all.
 Each resolved screen has an `id`, `panel`, `heading`, `footer` and opening
 `button`. A `button` field can list several element ids separated by spaces.
 `option` gives its Options label and whether it is included by default, and
-the author still chooses which optional entries to export. For a generated
+the author still chooses which optional entries to export. With `at: "pause"`
+in `option`, the design places the button on its pause screen (RESTART), and
+we list the entry in Options before ABOUT only in a design that places no
+such button. For a generated
 list screen with rows, we generate the back button from the declaration.
 Static screens such as Pause and Controls get their markup from the composed
 fragments.
 
 **Roles.** The screens with special handling in the player have a role:
-Pause, Options, Controls, Shaders, Achievements, the disc list and the
-accounts of QUICK SIGN IN. Only Native assigns roles, and a design takes one
+Pause, Options, Controls, Shaders, Achievements, the disc list, the
+accounts of QUICK SIGN IN, HOTKEYS, the screen where we ask before we
+forget the game (UNINSTALL or RESET) and the screen where we ask before
+RESTART. Only Native assigns roles, and a design takes one
 over by replacing the screen with that id. The roles and the word for each
 are declared once, as `RIB_ROLE` in `document_contract.inc`, and we read that
 file in both the player and the exporter. In the player we find a screen by

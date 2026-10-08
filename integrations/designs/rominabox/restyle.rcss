@@ -12,6 +12,11 @@
 /* The status on the pause screen is on the line of the footer, level with its
  * words and clear of the buttons above. */
 #status { top: 563dp; }
+/* Science Gothic is wider than the pixel font, so the six buttons of the
+ * pause screen fit in their row at full size only with narrower gaps and
+ * padding. */
+#actions { column-gap: 8dp; }
+#actions button { padding: 0 4dp; }
 
 /* Buttons, pager arrows and option entries. */
 .menu-action, .list-pager-prev, .list-pager-next { background-color: design(surface); border-color: design(surface); }

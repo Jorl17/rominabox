@@ -14,12 +14,13 @@
 #actions { left: 40dp; top: 70dp; width: 260dp; display: block; height: 480dp; }
 /* This layout places each button itself, not in Native's row. */
 #actions button { position: absolute; }
-#actions #resume, #actions #save, #actions #load, #actions #options, #actions #controls, #actions #quit { left: 0; width: 254dp; }
+#actions #resume, #actions #save, #actions #load, #actions #options, #actions #controls, #actions #restart, #actions #quit { left: 0; width: 254dp; }
 #actions #resume { top: 14dp; }
 #actions #save { top: 94dp; }
 #actions #load { top: 174dp; }
 #actions #options, #actions #controls { top: 254dp; }
-#actions #quit { top: 334dp; }
+#actions #restart { top: 334dp; }
+#actions #quit { top: 414dp; }
 /* Down from the last button would lead to the last slot, down and to the
  * right. In this design the column ends there instead. */
 #actions #quit { nav-down: none; }

@@ -16,7 +16,7 @@ What the builder and the games made with it are, and what they are not.
 
 - An export is one self-contained app per platform. It contains the chosen menu design and its assets, the shared player files, the chosen core and the licence texts, and nothing of the builder, other designs, lookup catalogs or test tools.
 - A game starts straight into play, quickly. RetroArch's own startup screens and routine notifications are hidden. An optional, short ROM-in-a-Box splash may play, without adding any waiting.
-- **Esc** opens the menu during play: Continue, six save slots with pictures, Save, Load, Options and Quit. The author can make the menu open at startup instead.
+- **Esc** opens the menu during play: Continue, six save slots with pictures, Save, Load, Options, Restart and Quit. Before we restart the game, we ask the player. The author can make the menu open at startup instead, and can leave Restart out.
 - Options contains the player's settings in the same designed menu: volume, controls, hotkeys, shader filters, achievements, a disc list for multi-disc games, play in background, rumble, ABOUT and, last, UNINSTALL (Windows) or RESET (macOS).
 - Windowed and fullscreen play both work, and Alt+Enter switches between them. The menu works in fullscreen and with a controller. A window opens on an available display, with legible text and correct hit areas, whatever the size or pixel density of the display.
 - The person who bundles a game chooses its BIOS, and the game offers its player no BIOS choice. Someone who wants a different BIOS turns on the advanced emulator access, which opens RetroArch's full menus.

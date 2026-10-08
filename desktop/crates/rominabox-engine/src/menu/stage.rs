@@ -534,7 +534,7 @@ mod tests {
         assert!(staged.contains(">OPTIONS<") && staged.contains(">CONTROLS<"));
         let cfg = composed.text("design.cfg").unwrap();
         assert!(
-            cfg.contains("screens = \"pause options controls hotkeys uninstall\""),
+            cfg.contains("screens = \"pause options controls hotkeys restart uninstall\""),
             "{cfg}"
         );
         let mac = compose(MenuRequest {
@@ -542,7 +542,7 @@ mod tests {
             ..request("native")
         });
         let mac = mac.text("design.cfg").unwrap();
-        assert!(mac.contains("screens = \"pause options controls hotkeys reset\""), "{mac}");
+        assert!(mac.contains("screens = \"pause options controls hotkeys restart reset\""), "{mac}");
         assert!(cfg.contains("screen_button_options = \"options\""));
         assert!(cfg.contains("screen_button_controls = \"controls\""));
 
@@ -618,6 +618,64 @@ mod tests {
             templated.contains("<button id=\"shaders\" class=\"menu-action option-entry list-row\">FILTERS</button>"),
             "the design's entry template is what gets filled"
         );
+    }
+
+    /// In each design, RESTART is on the pause screen, after OPTIONS and
+    /// before QUIT, and we keep it there and add no row for it in Options. In
+    /// a game without RESTART we leave out its button and its screen.
+    #[test]
+    fn restart_stays_where_the_design_places_it() {
+        for name in ["native", "disc", "rominabox"] {
+            let staged = compose(request(name));
+            let menu = staged.text("menu.rml").unwrap();
+            let at = |id: &str| menu.find(&format!("id=\"{id}\"")).unwrap_or_else(|| panic!("{name}: no #{id}"));
+            assert!(
+                at("actions") < at("options") && at("options") < at("restart") && at("restart") < at("quit"),
+                "{name}: RESTART is on the pause screen, between OPTIONS and QUIT"
+            );
+            assert!(at("restart") < at("options-panel"), "{name}: RESTART is not a row of Options");
+            assert_eq!(menu.matches("id=\"restart\"").count(), 1, "{name}: one RESTART button");
+
+            let without = compose(MenuRequest {
+                menu_entries: entries(&["controls", "hotkeys"]),
+                ..request(name)
+            });
+            let menu = without.text("menu.rml").unwrap();
+            assert!(!menu.contains("id=\"restart"), "{name}: a game without RESTART has none of it");
+        }
+    }
+
+    /// In a design without a RESTART button on the pause screen, RESTART is a
+    /// row of Options, after the switches and before ABOUT.
+    #[test]
+    fn restart_is_a_row_of_options_in_a_design_that_places_none() {
+        let root = rominabox_scratch::Scratch::dir("rominabox-restart-row");
+        let designs = root.join("designs");
+        for package in ["native", "disc"] {
+            copy(&design(package), &designs.join(package));
+        }
+        copy(&crate::repo::at("integrations/parts"), &root.join("parts"));
+        let pause = designs.join("disc/screen-pause.rml");
+        let markup = std::fs::read_to_string(&pause).unwrap();
+        let button = "<button class=\"menu-action\" id=\"restart\">RESTART</button>";
+        assert!(markup.contains(button), "the Disc pause screen has RESTART to take out");
+        std::fs::write(&pause, markup.replace(button, "")).unwrap();
+        let staged = compose(MenuRequest {
+            licences: vec![crate::licences::Row {
+                group: crate::licences::Group::Native,
+                title: "RetroArch".into(),
+                version: String::new(),
+                licence: "GPL-3.0".into(),
+                file: String::new(),
+                copyright: String::new(),
+            }],
+            ..MenuRequest::new(designs.join("disc"), crate::repo::at("desktop/assets/controllers"))
+        });
+        let menu = staged.text("menu.rml").unwrap();
+        let at = |id: &str| menu.find(&format!("id=\"{id}\"")).unwrap_or_else(|| panic!("no #{id}"));
+        assert!(at("options-panel") < at("restart"), "RESTART is a row of Options");
+        assert!(at("restart") < at("about"), "RESTART comes before ABOUT");
+        assert_eq!(menu.matches("id=\"restart\"").count(), 1, "one RESTART button");
     }
 
     fn one_shader() -> ShaderSelection {

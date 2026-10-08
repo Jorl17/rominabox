@@ -193,7 +193,8 @@ extern "C" bool rib_host_load_state(void)
    ++host.loads_started;
    return host.load_accepted;
 }
-extern "C" void rib_host_resume(void) {}
+extern "C" void rib_host_resume(void) { ++host.resumes; }
+extern "C" void rib_host_restart(void) { ++host.restarts; }
 /* The window is a fake, so going fullscreen changes nothing here. */
 extern "C" void rib_host_toggle_fullscreen(void) {}
 extern "C" void rib_host_show_pointer(bool) {}

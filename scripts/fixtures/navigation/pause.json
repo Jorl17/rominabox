@@ -197,7 +197,7 @@
         "native": [
           "save",
           "options",
-          "quit",
+          "restart",
           "quit"
         ],
         "disc": [
@@ -221,7 +221,7 @@
         "rominabox": [
           "save",
           "options",
-          "quit",
+          "restart",
           "quit"
         ]
       }
@@ -247,13 +247,13 @@
           "save",
           "disc",
           "options",
-          "quit",
+          "restart",
           "quit"
         ],
         "pause-column": [
           "save",
           "options",
-          "quit",
+          "restart",
           "quit",
           "quit"
         ],

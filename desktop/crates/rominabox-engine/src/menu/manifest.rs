@@ -183,6 +183,15 @@ struct OptionFile {
     label: String,
     #[serde(default)]
     default: bool,
+    /// The screen with the button for the entry in the design, when that is
+    /// not Options.
+    at: Option<EntryAtFile>,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum EntryAtFile {
+    Pause,
 }
 
 impl ScreenFile {
@@ -219,10 +228,12 @@ pub enum ScreenRole {
     Hotkeys,
     /// UNINSTALL on Windows or RESET on a Mac, to forget the game after asking.
     Forget,
+    /// RESTART, to start the game again from the beginning after asking.
+    Restart,
 }
 
 impl ScreenRole {
-    pub const ALL: [ScreenRole; 9] = [
+    pub const ALL: [ScreenRole; 10] = [
         ScreenRole::Pause,
         ScreenRole::Options,
         ScreenRole::Controls,
@@ -232,6 +243,7 @@ impl ScreenRole {
         ScreenRole::Accounts,
         ScreenRole::Hotkeys,
         ScreenRole::Forget,
+        ScreenRole::Restart,
     ];
 
     /// The word in `design.json` and `design.cfg`, as in the contract.
@@ -283,6 +295,8 @@ pub struct Screen {
     pub option_label: Option<String>,
     /// We ship the entry in a game that does not name a set.
     pub option_default: bool,
+    /// Where the button for this entry is.
+    pub entry_place: EntryPlace,
     /// The screen to open instead of this one when the game has more than one
     /// disc, as the disc list opens instead of the disc column.
     pub images: Option<String>,
@@ -318,13 +332,16 @@ impl Screen {
     }
 
     /// Where this entry goes among the last rows of Options, after the
-    /// switches: ABOUT, then UNINSTALL or RESET. None for an entry that goes
-    /// in its declared place.
+    /// switches: an entry with its button on the pause screen (in a design
+    /// without that button), then ABOUT, then UNINSTALL or RESET. None for an
+    /// entry that goes in its declared place.
     pub fn options_end(&self) -> Option<u8> {
-        if self.rows == Some(RowSource::Licences) {
+        if self.entry_place == EntryPlace::Pause {
             Some(0)
-        } else if self.role == Some(ScreenRole::Forget) {
+        } else if self.rows == Some(RowSource::Licences) {
             Some(1)
+        } else if self.role == Some(ScreenRole::Forget) {
+            Some(2)
         } else {
             None
         }
@@ -336,6 +353,17 @@ impl Screen {
             || other.platforms.is_empty()
             || self.platforms.iter().any(|target| other.platforms.contains(target))
     }
+}
+
+/// Where the button for an optional entry is.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum EntryPlace {
+    /// A row in Options.
+    #[default]
+    Options,
+    /// On the pause screen, where it is in the design. In a design without
+    /// such a button, the entry is a row near the end of Options.
+    Pause,
 }
 
 /// Where a declared screen is.
@@ -796,7 +824,11 @@ fn screens(
                 Some(PlaceFile::Options) => ScreenPlace::Options,
             },
             option_label: option.as_ref().map(|option| option.label.clone()),
-            option_default: option.is_some_and(|option| option.default),
+            option_default: option.as_ref().is_some_and(|option| option.default),
+            entry_place: match option.as_ref().and_then(|option| option.at) {
+                None => EntryPlace::Options,
+                Some(EntryAtFile::Pause) => EntryPlace::Pause,
+            },
             images: entry.images,
             dialogs: entry.dialogs.unwrap_or_default(),
             opener: entry.from,

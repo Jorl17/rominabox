@@ -11,3 +11,5 @@
 #actions #load { left: 300dp; top: 200dp; width: 160dp; }
 #actions #options, #actions #controls { left: 300dp; top: 101dp; width: 160dp; }
 #actions #quit { left: 640dp; top: 0; width: 160dp; }
+/* RESTART is under QUIT, on the row of OPTIONS. */
+#actions #restart { left: 640dp; top: 101dp; width: 160dp; }

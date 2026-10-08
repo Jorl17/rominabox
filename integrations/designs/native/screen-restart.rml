@@ -1,0 +1,1 @@
+<div id="restart-panel" class="screen-panel" style="display:none;"><div class="confirm-copy">Are you sure? The game will start from the beginning and anything you haven't saved is lost.</div><div class="confirm-actions"><button id="restart-back" class="menu-action">KEEP PLAYING</button><button id="restart-confirm" class="menu-action">RESTART</button></div></div>

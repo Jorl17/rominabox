@@ -104,6 +104,7 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
             "shaders",
             "achievements",
             "accounts",
+            "restart",
             "uninstall",
             "reset",
             "about"
