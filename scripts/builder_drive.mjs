@@ -1267,7 +1267,7 @@ async function main() {
 
       await page.locator(".menu-settings details.advanced summary").click();
       await shot(page, path.join(out, "08-menu-customize.png"));
-      await page.locator(".menu-settings .sound-choice").screenshot({
+      await page.locator(".menu-settings .labeled-choice:has(#menu-sounds)").screenshot({
         path: path.join(out, "08-menu-sounds.png"),
         animations: "disabled",
       });
@@ -1284,7 +1284,7 @@ async function main() {
       await customize.locator("summary").click();
     }
     const sounds = await page.evaluate(() => {
-      const choice = document.querySelector(".menu-settings .sound-choice");
+      const choice = document.querySelector(".menu-settings .labeled-choice:has(#menu-sounds)");
       const preview = choice?.querySelector(".menu-sound-preview button");
       const select = choice?.querySelector("select");
       if (!choice || !preview || !select) return { found: false };
