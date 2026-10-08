@@ -335,6 +335,8 @@ fn a_game_alone_is_saved_as_the_builder_saves_it() {
     assert_eq!(game["splash"], builder.splash, "{game}");
     assert_eq!(game["theme"], builder.theme, "{game}");
     assert_eq!(game["palette"], builder.palette, "{game}");
+    let hotkeys = rominabox_engine::hotkeys::defaults_for("megadrive").unwrap();
+    assert_eq!(game["hotkeys"], serde_json::to_value(hotkeys).unwrap(), "{game}");
 }
 
 #[test]

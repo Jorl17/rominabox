@@ -288,6 +288,16 @@ export function checkHotkeys(
     (refusal: Refusal) => refusal,
   );
 }
+/** The hotkeys at the start of a game for `system`, the same as with
+ * `rominabox-cli hotkey-defaults`. */
+export function hotkeyDefaults(system: string): Promise<Hotkeys> {
+  if (native) return invoke("hotkey_defaults", { system });
+  return askWalkthrough<{ hotkeys: Hotkeys }>(
+    "hotkey-defaults",
+    new URLSearchParams({ system }),
+    "The hotkeys for this console could not be read.",
+  ).then((result) => result.hotkeys);
+}
 /**
  * Wait up to `seconds` for a press on a controller, a button or a moved stick
  * or trigger, and return its pad position. Return null on a timeout, when the

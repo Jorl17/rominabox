@@ -32,6 +32,7 @@ What the builder and the games made with it are, and what they are not.
 - Every connected pad plays as player 1, unless the author turns that off for a game with a second player.
 - Reset restores the defaults shipped with the game. The player's changes stay in the game's storage.
 - Controller variants are part of the description of the console: the Mega Drive has three- and six-button pads, and the drawing, callouts, bindings and emulated device always agree.
+- By default QUICK SAVE, QUICK LOAD, PREVIOUS SLOT and NEXT SLOT are on F2, F4, F6 and F7, and on the shoulder buttons that no pad of the console uses, with save on the left and load on the right. When the pads use none of L1, R1, L2 and R2, save and load go on L1 and R1, and the slot hotkeys on L2 and R2. When they use L1 and R1 but not L2 and R2, save and load go on L2 and R2. Otherwise these hotkeys have keys only. We count every pad in the console's picker, so a default stays free when the player switches pad. When the author changes the console in the builder, we replace only the pad bindings that came from the defaults for the console before.
 - The controller artwork is original or licensed for redistribution, and we keep its provenance.
 
 ## Shader filters

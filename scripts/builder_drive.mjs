@@ -83,6 +83,8 @@ const ANSWERS = {
     ask("content", { rom: query.get("path") || "", system: query.get("system") || null, files: JSON.parse(query.get("files") || "null") || undefined }),
   "/__rominabox/firmware": (query) =>
     ask("firmware", { system: query.get("system") || "", files: query.getAll("file") }),
+  "/__rominabox/hotkey-defaults": (query) =>
+    ask("hotkey-defaults", { system: query.get("system") || "" }),
 };
 
 function serve(root) {

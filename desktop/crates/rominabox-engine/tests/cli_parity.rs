@@ -124,6 +124,19 @@ fn hotkeys_check_prints_the_hotkeys_or_the_refusal() {
     );
     let moved = result("hotkeys-check", Some(&json!({ "hotkeys": { "quick-save": ["key:f5"] }, "system": "megadrive", "controls": game["controls"] })));
     assert_eq!(moved["hotkeys"]["quick-save"], json!(["key:f5"]), "{moved}");
+    // We give a hotkey missing from the request the default for the game's console.
+    assert_eq!(moved["hotkeys"]["quick-load"], json!(["key:f4", "pad:r2"]), "{moved}");
+}
+
+/// The hotkeys at the start of a game for a console, which we give the draft
+/// in the builder for that console, are the same in `hotkey-defaults`.
+#[test]
+fn hotkey_defaults_prints_the_hotkeys_a_game_for_a_console_starts_with() {
+    for system in ["megadrive", "gb", "n64"] {
+        let printed = result("hotkey-defaults", Some(&json!({ "system": system })));
+        let engine = rominabox_engine::hotkeys::defaults_for(system).unwrap();
+        assert_eq!(printed["hotkeys"], serde_json::to_value(engine).unwrap(), "{system}");
+    }
 }
 
 /// In `inspect_game` we look in the builder's cache, which the author

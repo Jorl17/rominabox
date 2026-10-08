@@ -23,6 +23,7 @@ import {
 import designs from "../designs.json";
 import { builderDefaults as declared } from "./defaults";
 import { emptyControls, type Controls } from "./controls";
+import { hotkeysForConsole } from "./hotkeys";
 import { ControlsSection } from "./ControlsSection";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
@@ -174,6 +175,7 @@ export function App() {
     // inspection, we keep the valid one and its Also importing line, so the
     // page and the export agree. A browser file has no path, but we still
     // check its extension.
+    let hotkeys = draft.hotkeys;
     try {
       if (bridge.native && selection.path) {
         setBusy("inspect");
@@ -181,6 +183,7 @@ export function App() {
       } else if (selection.browserFile) {
         await inspectRom(selection.browserFile, undefined, system);
       }
+      hotkeys = await hotkeysForConsole(hotkeys, draft.system, system);
     } catch (e) {
       if (request === generation.current) {
         setBusy(null);
@@ -190,6 +193,7 @@ export function App() {
     }
     if (request !== generation.current) return;
     update("system", system);
+    update("hotkeys", hotkeys);
     setError("");
     if (!selection.path) {
       if (request === generation.current) setBusy(null);
@@ -387,12 +391,15 @@ export function App() {
           );
         }
       }
+      const hotkeys = await bridge.hotkeyDefaults(data.system);
+      if (request !== generation.current) return;
       setInfo(data);
       setDraft({
         ...defaults,
         title: data.title,
         system: data.system,
         files: { leftOut: [], added: traveled?.added ?? [] },
+        hotkeys,
       });
       if (data.iconPath && bridge.native)
         loadPicture("icon", data.iconPath).catch(() => {});

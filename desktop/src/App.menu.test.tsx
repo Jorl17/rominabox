@@ -2,7 +2,15 @@ import { act } from "react";
 import { describe, expect, it } from "vitest";
 
 import designs from "../designs.json";
-import { button, checkbox, click, container, openMenu } from "./App.testing";
+import {
+  button,
+  checkbox,
+  chooseConsole,
+  click,
+  container,
+  openDetails,
+  openMenu,
+} from "./App.testing";
 
 describe("App workflow", () => {
   it("puts help outside scrolling content and outside checkbox activation", async () => {
@@ -245,5 +253,28 @@ describe("App workflow", () => {
     act(() => click(checkbox("Include game menu")));
     act(() => click(checkbox("Include game menu")));
     expect(checkbox("Achievements").checked).toBe(false);
+  });
+
+  /** The words on the chips of the hotkey `name` in the Menu step. */
+  const chips = (name: string) => {
+    const row = [...container.querySelectorAll(".hotkey-row")].find(
+      (each) => each.querySelector(".hotkey-name")?.textContent === name,
+    )!;
+    return [...row.querySelectorAll(".hotkey-chip")].map(
+      (chip) => chip.textContent,
+    );
+  };
+
+  it("starts the hotkeys from the console's defaults, and swaps them with the console", async () => {
+    await openDetails("disc.cue");
+    await chooseConsole("dreamcast");
+    act(() => click(button("Next")));
+    expect(chips("Quick save")).toEqual(["F2", "L2"]);
+    expect(chips("Quick load")).toEqual(["F4", "R2"]);
+    act(() => click(button("Back")));
+    await chooseConsole("ps1");
+    act(() => click(button("Next")));
+    expect(chips("Quick save")).toEqual(["F2"]);
+    expect(chips("Quick load")).toEqual(["F4"]);
   });
 });

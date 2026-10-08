@@ -378,3 +378,49 @@ fn a_dualsense_and_an_xbox_pad_each_have_home() {
         ["home 10", "held 1", "captured home"]
     );
 }
+
+/// We give the pad defaults by the shoulder buttons with a meaning on the
+/// pads of a console, counting every pad in its picker, and we accept them in
+/// an export.
+#[test]
+fn the_pad_defaults_follow_the_shoulder_buttons_the_pads_use() {
+    let all_four = [("quick-save", "pad:l"), ("quick-load", "pad:r"), ("previous-slot", "pad:l2"), ("next-slot", "pad:r2")];
+    let save_and_load = [("quick-save", "pad:l2"), ("quick-load", "pad:r2")];
+    let cases: [(&[&str], &[(&str, &str)]); 3] = [
+        (&["gb", "gbc", "nes", "mastersystem", "sg1000", "gamegear"], &all_four),
+        (&["snes", "gba", "dreamcast", "megadrive", "segacd"], &save_and_load),
+        (&["n64", "gamecube", "ps1", "ps2", "atari2600", "pce", "pcecd", "atari7800"], &[]),
+    ];
+    let keys = crate::builder::unstated::hotkeys();
+    for (systems, pads) in cases {
+        for system in systems {
+            let defaults = defaults_for(system).unwrap();
+            for hotkey in Hotkey::all() {
+                let mut expected = texts(&keys, hotkey.id());
+                expected.extend(pads.iter().filter(|(id, _)| *id == hotkey.id()).map(|(_, pad)| pad.to_string()));
+                assert_eq!(texts(&defaults, hotkey.id()), expected, "{system}, {}", hotkey.id());
+            }
+            defaults
+                .check_for(system, &Controls::default())
+                .unwrap_or_else(|refusal| panic!("{system}: {refusal}"));
+        }
+    }
+}
+
+/// We keep the hotkeys in a request and give it the defaults of its console
+/// for the others. Without a console we leave it as it is.
+#[test]
+fn a_request_gets_the_defaults_of_its_console_for_what_it_leaves_out() {
+    let mut request = serde_json::json!({ "system": "gb", "hotkeys": { "quick-save": ["key:f5"] } })
+        .as_object()
+        .unwrap()
+        .clone();
+    complete(&mut request).unwrap();
+    let completed: Hotkeys = serde_json::from_value(request["hotkeys"].clone()).unwrap();
+    assert_eq!(texts(&completed, "quick-save"), ["key:f5"]);
+    assert_eq!(texts(&completed, "quick-load"), ["key:f4", "pad:r"]);
+    assert_eq!(texts(&completed, "next-slot"), ["key:f7", "pad:r2"]);
+    let mut without = serde_json::json!({ "title": "No console" }).as_object().unwrap().clone();
+    complete(&mut without).unwrap();
+    assert!(!without.contains_key("hotkeys"), "{without:?}");
+}

@@ -234,6 +234,14 @@ fn check_hotkeys(
     hotkeys.check_for(&system, &controls)
 }
 
+/// The hotkeys at the start of a game for `system`, which we give the draft
+/// when the author chooses its console. On the command line we print them
+/// with `hotkey-defaults`.
+#[tauri::command]
+fn hotkey_defaults(system: String) -> Result<hotkeys::Hotkeys, String> {
+    hotkeys::defaults_for(&system)
+}
+
 /// The folder for this builder's downloads, which we find in the same way for
 /// the command line.
 fn places(app: &tauri::AppHandle) -> builder::Places {
@@ -465,6 +473,7 @@ fn main() {
             open_website,
             assess_firmware,
             check_hotkeys,
+            hotkey_defaults,
             export_game,
             cancel_export,
             save_project,

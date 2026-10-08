@@ -12,6 +12,7 @@ import { afterEach, beforeAll, beforeEach, expect, vi } from "vitest";
 
 import { App } from "./App";
 import { type FirmwareAssessment } from "./bridge";
+import type { Hotkeys } from "./hotkeys";
 
 const { firmwareHandlers, inspectHandlers, travelingHandlers, nativeBridge } =
   vi.hoisted(() => ({
@@ -75,6 +76,7 @@ vi.mock("./bridge", async (importOriginal) => {
         return nativeBridge.inspectGame(path, online, systemOverride, files);
       return actual.inspectGame(path, online, systemOverride, files);
     },
+    hotkeyDefaults: (system: string) => hotkeyDefaultsWithCli(system),
     assessFirmware: (system: string, files: string[]) => {
       const assess = firmwareHandlers.assess;
       if (!assess) return actual.assessFirmware(system, files);
@@ -167,12 +169,10 @@ function cliBinary(): string {
   );
 }
 
-export function assessWithCli(
-  system: string,
-  files: string[],
-): Promise<FirmwareAssessment> {
-  const stdout = execFileSync(cliBinary(), ["firmware"], {
-    input: JSON.stringify({ system, files }),
+/** The result of `rominabox-cli command` for `request`. */
+function cliResult<T>(command: string, request: object): T {
+  const stdout = execFileSync(cliBinary(), [command], {
+    input: JSON.stringify(request),
     encoding: "utf8",
   });
   const line = stdout
@@ -182,13 +182,28 @@ export function assessWithCli(
   if (!line) throw new Error(stdout);
   const parsed = JSON.parse(line) as {
     type: string;
-    result?: FirmwareAssessment;
+    result?: T;
     message?: string;
   };
   if (parsed.type !== "result" || !parsed.result) {
     throw new Error(parsed.message || stdout);
   }
-  return Promise.resolve(parsed.result);
+  return parsed.result;
+}
+
+export function assessWithCli(
+  system: string,
+  files: string[],
+): Promise<FirmwareAssessment> {
+  return Promise.resolve(cliResult("firmware", { system, files }));
+}
+
+/** The hotkeys at the start of a game for `system`, from the command line,
+ * which we run here in place of the command in the builder. */
+export function hotkeyDefaultsWithCli(system: string): Promise<Hotkeys> {
+  return Promise.resolve(
+    cliResult<{ hotkeys: Hotkeys }>("hotkey-defaults", { system }).hotkeys,
+  );
 }
 
 export async function waitForText(text: string): Promise<void> {

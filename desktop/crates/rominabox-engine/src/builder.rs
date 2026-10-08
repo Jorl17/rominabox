@@ -334,6 +334,9 @@ fn fill_game(
         }
         identified = Some(found);
     }
+    // We give each hotkey missing from the request the default in the builder
+    // for its console.
+    crate::hotkeys::complete(request)?;
 
     let target: ExportTarget = match request.get("target") {
         Some(stated) => serde_json::from_value(stated.clone())

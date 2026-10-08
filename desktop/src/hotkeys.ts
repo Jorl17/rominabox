@@ -2,6 +2,7 @@ import declared from "../defaults.json";
 import inc from "../../vendor/retroarch/menu/drivers/rmlui/hotkeys.inc?raw";
 import wordsInc from "../../vendor/retroarch/menu/drivers/rmlui/words.inc?raw";
 import type { Pressed } from "./bindingCapture";
+import { hotkeyDefaults } from "./bridge";
 import { keyName } from "./keys";
 import { padPositions, positionName } from "./padPositions";
 
@@ -128,4 +129,48 @@ export function refusalWords(refusal: Refusal, changed?: string): string {
     case "controls":
       return refusal.message;
   }
+}
+
+/** `current` for a game on another console. We take out the pad bindings
+ * that came from the defaults for the console before, `before`, and add
+ * those of the defaults for the new one, `after`, that no hotkey has yet.
+ * We keep the keys and every pad binding the author chose. */
+export function swapPadDefaults(
+  current: Hotkeys,
+  before: Hotkeys,
+  after: Hotkeys,
+): Hotkeys {
+  const isPad = (binding: string) => binding.startsWith(padPrefix);
+  const kept = Object.fromEntries(
+    hotkeyIds.map((id) => [
+      id,
+      current[id].filter(
+        (binding) => !(isPad(binding) && before[id].includes(binding)),
+      ),
+    ]),
+  ) as Hotkeys;
+  const taken = new Set(Object.values(kept).flat());
+  return Object.fromEntries(
+    hotkeyIds.map((id) => [
+      id,
+      [
+        ...kept[id],
+        ...after[id].filter((binding) => isPad(binding) && !taken.has(binding)),
+      ],
+    ]),
+  ) as Hotkeys;
+}
+
+/** The hotkeys of a draft when the author changes its console from `from`,
+ * which is empty before we know one, to `to`. */
+export async function hotkeysForConsole(
+  current: Hotkeys,
+  from: string,
+  to: string,
+): Promise<Hotkeys> {
+  const [before, after] = await Promise.all([
+    from ? hotkeyDefaults(from) : defaultHotkeys,
+    hotkeyDefaults(to),
+  ]);
+  return swapPadDefaults(current, before, after);
 }

@@ -546,6 +546,78 @@ pub(crate) fn read_defaults<'de, D: Deserializer<'de>>(deserializer: D) -> Resul
     deserializer.deserialize_map(Whole)
 }
 
+/// The pad bindings we add to the default keys in the builder for saving,
+/// loading and changing the slot, by the shoulder buttons with a meaning on
+/// the pads of a console. Save is on the left and load on the right. In each
+/// case we name the positions that must be in use and the ones that must be
+/// free, and we take the first case that fits. When none of L1, R1, L2 and R2
+/// has a meaning on the pads, we put save and load on L1 and R1, and the
+/// previous and the next slot on L2 and R2. When L1 and R1 have a meaning and
+/// L2 and R2 do not, we put save and load on L2 and R2. Otherwise we add no
+/// pad binding. We read every pad in the console's picker, because the player
+/// can switch pad in the game and a default must be free on each.
+const SHOULDER_DEFAULTS: [ShoulderCase; 2] = [
+    ShoulderCase {
+        in_use: &[],
+        free: &["l", "r", "l2", "r2"],
+        placed: &[("quick-save", "l"), ("quick-load", "r"), ("previous-slot", "l2"), ("next-slot", "r2")],
+    },
+    ShoulderCase { in_use: &["l", "r"], free: &["l2", "r2"], placed: &[("quick-save", "l2"), ("quick-load", "r2")] },
+];
+
+/// One case of `SHOULDER_DEFAULTS`. We name positions by their ids in
+/// `desktop/controls.json` and hotkeys by their ids in `hotkeys.inc`.
+struct ShoulderCase {
+    in_use: &'static [&'static str],
+    free: &'static [&'static str],
+    placed: &'static [(&'static str, &'static str)],
+}
+
+/// The hotkeys at the start of a game for `system`, which are the keys in
+/// `desktop/defaults.json` and the pad bindings of `SHOULDER_DEFAULTS` for
+/// the positions of the console's pads as we declare them.
+pub fn defaults_for(system: &str) -> Result<Hotkeys, String> {
+    let used: Vec<String> = crate::controls::game_inputs(system, &Default::default())?
+        .into_iter()
+        .map(|input| input.position)
+        .collect();
+    let in_use = |position: &&str| used.iter().any(|seen| seen == position);
+    let mut hotkeys = crate::builder::defaults().hotkeys.clone();
+    let case = SHOULDER_DEFAULTS
+        .iter()
+        .find(|case| case.in_use.iter().all(in_use) && !case.free.iter().any(in_use));
+    for (id, position) in case.map(|case| case.placed).unwrap_or_default() {
+        let hotkey = Hotkey::named(id).ok_or_else(|| format!("hotkeys.inc declares no hotkey {id}"))?;
+        hotkeys
+            .lists
+            .entry(hotkey)
+            .or_default()
+            .push(Binding::Pad(vec![PadInput::read(position)?]));
+    }
+    Ok(hotkeys)
+}
+
+/// Give each hotkey missing from `request` the default for the console in
+/// `request` (`defaults_for`). For a request without a console we change
+/// nothing, and when we read it we fill in the default keys of the builder.
+pub fn complete(request: &mut serde_json::Map<String, serde_json::Value>) -> Result<(), String> {
+    let Some(system) = request.get("system").and_then(serde_json::Value::as_str) else {
+        return Ok(());
+    };
+    let defaults = serde_json::to_value(defaults_for(system)?).map_err(|error| error.to_string())?;
+    let stated = request
+        .entry("hotkeys")
+        .or_insert_with(|| serde_json::Value::Object(Default::default()));
+    // We leave hotkeys that are no map as they are, and report them when we
+    // read the request.
+    if let (serde_json::Value::Object(stated), serde_json::Value::Object(defaults)) = (stated, defaults) {
+        for (id, list) in defaults {
+            stated.entry(id).or_insert(list);
+        }
+    }
+    Ok(())
+}
+
 /// The one meta line we keep in a shipped controller profile. It contains the name
 /// of the button that is the menu button on the pad, which is Home in the menu.
 pub fn home_button_key() -> String {
