@@ -15,6 +15,7 @@
 //! game with no author's shader uses GLSL, unless a preset is only in slang.
 
 use crate::shader_format::{Language, VideoDriver};
+use brightness::BrightnessControl;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -68,29 +69,6 @@ struct CatalogPreset {
     /// The brightness parameter of the preset, if there is one.
     #[serde(default)]
     brightness: Option<BrightnessControl>,
-}
-
-/// The brightness parameter of a shader, with the light at each value in
-/// `table`, as a multiple of the light at the value in the shader, from 1.0
-/// up. We measure the tables with scripts/measure_shader_brightness.py. In
-/// the game, for a brightness above 100 %, we raise this parameter first and
-/// add the rest of the light with our pass (`crate::video`).
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct BrightnessControl {
-    pub parameter: String,
-    #[serde(default)]
-    pub table: Vec<(f32, f32)>,
-}
-
-impl BrightnessControl {
-    /// The text we write in `shaders.cfg`, which is the parameter, then each
-    /// light and its value as `light:value`.
-    fn text(&self) -> String {
-        std::iter::once(self.parameter.clone())
-            .chain(self.table.iter().map(|(light, value)| format!("{light}:{value}")))
-            .collect::<Vec<_>>()
-            .join(" ")
-    }
 }
 
 /// How a catalog preset is made.
@@ -221,7 +199,7 @@ pub struct ResolvedShader {
     /// Files to copy into that directory, as (source, path within it). The
     /// file the author added comes first.
     files: Vec<(PathBuf, String)>,
-    /// The brightness parameter, for a catalogue preset with one.
+    /// The brightness parameter, when there is one in the shader.
     brightness: Option<BrightnessControl>,
     /// Files we write into it, as (path within it, text), which are the pass
     /// of a catalog preset and the one-pass preset we make for a single pass.
@@ -655,6 +633,7 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
                 (preset_file, files, Vec::new())
             }
         };
+        let control = brightness::declared(&files);
         resolved.push(ResolvedShader {
             relative_preset: format!("shaders/{id}/{preset_file}"),
             library: None,
@@ -663,7 +642,7 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
             // We show a shader that the author added by its name alone.
             detail: String::new(),
             files,
-            brightness: None,
+            brightness: control,
             written,
         });
     }
@@ -918,5 +897,6 @@ pub fn unpack_selection(mut selection: ShaderSelection, root: &Path) -> ShaderSe
     selection
 }
 
+mod brightness;
 #[cfg(test)]
 mod tests;

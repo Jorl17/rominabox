@@ -794,13 +794,90 @@ fn a_packed_project_keeps_the_name_its_file_gave() {
 /// brightness and contrast. For a preset without one, we give no parameter.
 #[test]
 fn a_preset_that_adds_light_tells_the_game_how_much() {
-    let composed = composed_from_library(&["crt-lottes", "zfast-crt"]);
+    let composed = composed_from_library(&["crt-lottes", "sharp-bilinear-simple"]);
     let config = composed.text("shaders.cfg").unwrap();
     let line = config
         .lines()
         .find(|line| line.starts_with("shader_brightness_crt-lottes = \"brightBoost 1:1 "))
         .unwrap_or_else(|| panic!("{config}"));
     assert!(line.split(' ').count() >= 4, "{line}");
-    assert!(!config.contains("shader_brightness_zfast-crt"), "{config}");
+    assert!(!config.contains("shader_brightness_sharp-bilinear-simple"), "{config}");
     assert!(config.contains("video_pass = \"shaders/video/video.glslp\""), "{config}");
+}
+
+/// For an author's shader, we give the game the brightness parameter from its
+/// passes, a plain "brightness" first, at its value in the author's preset,
+/// with the light rising in proportion to the value up to the maximum.
+#[test]
+fn an_authors_shader_brightens_through_the_parameter_it_declares() {
+    let source = rominabox_scratch::Scratch::dir("rominabox-shader-light");
+    let glow = format!("#pragma parameter GLOW_GAIN \"Glow gain\" 1.0 0.0 3.0 0.1\n{PASS}");
+    let light = format!("#pragma parameter BRIGHTNESS \"Brightness\" 1.0 0.0 2.5 0.05\n{PASS}");
+    let selection = custom_preset(
+        &source,
+        "pal.glslp",
+        &[
+            ("pal.glslp", "shaders = 2\nshader0 = a.glsl\nshader1 = b.glsl\nBRIGHTNESS = \"1.25\"\n"),
+            ("a.glsl", &glow),
+            ("b.glsl", &light),
+        ],
+    );
+    let composed = composed(selection);
+    let config = composed.text("shaders.cfg").unwrap();
+    assert!(config.contains("shader_brightness_pal = \"BRIGHTNESS 1:1.25 2:2.5\"\n"), "{config}");
+    let _ = fs::remove_dir_all(&source);
+}
+
+/// Without a plain "brightness", we take the first parameter named or
+/// described for light that can rise above its value in the shader. We pass
+/// over a parameter at 0, one at its maximum and one named for something
+/// else.
+#[test]
+fn the_first_parameter_for_light_that_can_rise_is_the_one() {
+    let source = rominabox_scratch::Scratch::dir("rominabox-shader-light-first");
+    let pass = source.join("crt.glsl");
+    let declared = |lines: &str| {
+        fs::write(&pass, format!("{lines}{PASS}")).unwrap();
+        super::brightness::declared(&[(pass.clone(), "crt.glsl".to_string())])
+    };
+    let control = declared(concat!(
+        "#pragma parameter lum \"Luminance\" 0.0 0.0 1.0 0.01\n",
+        "#pragma parameter post_br \"Post-Brightness\" 1.0 0.25 1.0 0.01\n",
+        "#pragma parameter SCANLINE \"Scanline weight\" 0.5 0.0 1.0 0.1\n",
+        "#pragma parameter BRIGHT_BOOST \"Bright boost\" 1.2 1.0 2.0 0.05\n",
+        "#pragma parameter gain \"Gain\" 1.0 0.0 2.0 0.1\n",
+    ));
+    assert_eq!(
+        control,
+        Some(BrightnessControl {
+            parameter: "BRIGHT_BOOST".into(),
+            table: vec![(1.0, 1.2), (1.667, 2.0)],
+        })
+    );
+    assert_eq!(declared("#pragma parameter SCANLINE \"Scanline weight\" 0.5 0.0 1.0 0.1\n"), None);
+    let _ = fs::remove_dir_all(&source);
+}
+
+/// Each language version of a preset contains a `#pragma parameter` line for
+/// the brightness parameter that we give the preset in the catalogue, so that
+/// we can raise it in a game in either language.
+#[test]
+fn each_language_of_a_preset_declares_its_parameter_that_adds_light() {
+    for preset in catalog_file().unwrap().presets {
+        let (Some(control), Made::Files(files)) = (&preset.brightness, &preset.made) else {
+            continue;
+        };
+        for language in Language::ALL {
+            let Some(path) = files.in_language(language) else {
+                continue;
+            };
+            let folder = library_folder(language);
+            let listed = library_files(&library().join(folder), path).unwrap();
+            assert!(
+                super::brightness::declares(&listed, &control.parameter),
+                "{folder}/{path} declares no {}",
+                control.parameter
+            );
+        }
+    }
 }

@@ -39,7 +39,7 @@ What the builder and the games made with it are, and what they are not.
 
 - Options has VIDEO, with BRIGHTNESS and CONTRAST, each shown as a percentage, and SHADERS when the author bundles shader filters. The author can leave VIDEO out, and chooses the brightness and contrast the game starts with.
 - The author picks a small set of shader filters to bundle, and the one to start with. The player switches between them, or to no filter, on VIDEO.
-- Above 100 %, a bundled filter with a brightness setting of its own brightens through it first, as far as it goes, so its picture keeps its look. We measure how much light each value gives with `scripts/measure_shader_brightness.py`.
+- Above 100 %, a bundled filter with a brightness setting of its own brightens through it first, as far as it goes, so its picture keeps its look. We measure how much light each value gives with `scripts/measure_shader_brightness.py`. A filter the author adds brightens the same way through a parameter it declares whose name or description says brightness, bright boost, luminance or gain (a plain "brightness" first), and we take its light to rise in proportion to its value. The builder only reads the filter's files and runs nothing.
 - The detailed configuration of shaders stays behind the advanced emulator access.
 
 ## Achievements
