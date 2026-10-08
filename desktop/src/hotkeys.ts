@@ -51,17 +51,17 @@ function word(id: string): string {
   if (!found) throw new Error(`words.inc declares no ${id}`);
   return found[1];
 }
-/** The fullscreen chord for the platform of this computer, from the words of
- * the game, written as we write a chord here, for example "Alt + Enter". In a
- * game for the other platform, the player sees the chord of that platform. */
-export const chordWords = word(
-  /Mac/.test(globalThis.navigator?.platform ?? "")
-    ? "fullscreen-chord-mac"
-    : "fullscreen-chord",
-)
-  .split(chord)
-  .map((part) => part[0] + part.slice(1).toLowerCase())
-  .join(` ${chord} `);
+/** The fullscreen chord as we show it in the builder, before the author
+ * chooses the platform of the game. We write the modifier of a Mac and of
+ * Windows side by side and the key once, as we write a chord here, for
+ * example "Option/Alt + Enter". In the game the player sees only the chord
+ * of its platform. */
+export const chordWords = (() => {
+  const named = (part: string) => part[0] + part.slice(1).toLowerCase();
+  const [macModifier] = word("fullscreen-chord-mac").split(chord);
+  const [modifier, key] = word("fullscreen-chord").split(chord);
+  return `${named(macModifier)}/${named(modifier)} ${chord} ${named(key)}`;
+})();
 
 /** A hotkey as the author reads it: its id in words, "Quick save". */
 export function hotkeyName(id: string): string {

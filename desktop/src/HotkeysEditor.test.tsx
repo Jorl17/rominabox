@@ -105,7 +105,7 @@ describe("the builder's hotkeys", () => {
 
   it("starts Fullscreen with the fullscreen chord, which has no ×", () => {
     const { chips, row } = show();
-    expect(chips("Fullscreen")).toEqual(["Alt + Enter"]);
+    expect(chips("Fullscreen")).toEqual(["Option/Alt + Enter"]);
     expect(row("Fullscreen").querySelector(".hotkey-chip button")).toBeNull();
   });
 
