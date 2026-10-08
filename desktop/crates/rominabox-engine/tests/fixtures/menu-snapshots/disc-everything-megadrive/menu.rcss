@@ -318,8 +318,9 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 .hotkey-chip, .hotkey-add { box-sizing: border-box; height: 34dp; line-height: 32dp; font-family: Silkscreen; font-size: 13dp; white-space: nowrap; }
 .hotkey-chip { padding: 0 12dp; text-align: left; text-transform: uppercase; }
 /* The player cannot choose or remove the fullscreen chord on the row of
- * FULLSCREEN, so we let the pointer pass through it. */
-.hotkey-chord { pointer-events: none; }
+ * FULLSCREEN, so we let the pointer pass through it. We do not give it the
+ * menu-action class, so we give it the frame of a key chip here. */
+.hotkey-chord { pointer-events: none; color: #ffffff; background-color: #061a48; border-width: 1dp; border-color: #476eab; }
 .hotkey-chip.pad { background-color: transparent; border-color: #75b2e4; }
 .hotkey-chip.pad:hover { background-color: #fff13d; color: #081433; border-color: #fff13d; }
 .hotkey-chip.pad.focused { background-color: #193e88; color: #ffffff; border-color: #fff13d; }

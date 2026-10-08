@@ -57,8 +57,10 @@
 .list-row.focused, .list-row:active { border-color: design(highlight); }
 .list-row-icon, .list-row-wait { border-color: design(bevel-dark); }
 
-/* Hotkeys. */
+/* At the size in Native, the word FULLSCREEN on HOTKEYS is wider in this font
+ * than the column of the labels. */
 .hotkey { border-color: design(surface); }
+.hotkey-label { font-size: 20dp; }
 .hotkey-chip { background-color: design(picture); border-color: design(picture); }
 .hotkey-chip.pad { background-color: design(focus); border-color: design(focus); }
 .hotkey-chip:hover, .hotkey-chip.focused { background-color: design(highlight); color: design(surface); border-color: design(highlight); }

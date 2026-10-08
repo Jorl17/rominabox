@@ -462,8 +462,10 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 .list-row.focused, .list-row:active { border-color: #fff13d; }
 .list-row-icon, .list-row-wait { border-color: #020b27; }
 
-/* Hotkeys. */
+/* At the size in Native, the word FULLSCREEN on HOTKEYS is wider in this font
+ * than the column of the labels. */
 .hotkey { border-color: #061a48; }
+.hotkey-label { font-size: 20dp; }
 .hotkey-chip { background-color: #0865bf; border-color: #0865bf; }
 .hotkey-chip.pad { background-color: #193e88; border-color: #193e88; }
 .hotkey-chip:hover, .hotkey-chip.focused { background-color: #fff13d; color: #061a48; border-color: #fff13d; }
