@@ -351,6 +351,46 @@ void the_input_that_binds_acts_once_let_go(void *menu)
    expect_row("back", {"Escape", "Right button"}, "after the held inputs");
 }
 
+/* The same for a capture on the CONTROLS screen. The bottom button and Enter
+ * are CONFIRM in the menu, and the player can bind a control with either.
+ * When the player is still pressing that button after the capture ends, we
+ * must not press the focused control and start its capture again. */
+void the_input_that_binds_a_control_acts_once_let_go(void *menu)
+{
+   rib_menu_key(menu, RIB_KEY_CANCEL);
+   frame(menu);
+   click(menu, "controls");
+   check(view.screens.current() == "controls", "CONTROLS is open");
+   struct Held { std::vector<std::string> keys, pads; const char *name; };
+   for (const Held& held : {Held{{}, {"b"}, "the bottom button"}, Held{{"enter"}, {}, "Enter"}})
+   {
+      const int before = host.captures_started;
+      click(menu, "control-up");
+      check(host.captures_started == before + 1,
+            std::string("clicking the callout of up starts a capture, before binding ") + held.name);
+      host.keys_down = held.keys;
+      host.pads_down = held.pads;
+      host.capture_result = RIB_CAPTURE_CAPTURED;
+      frame(menu);
+      host.capture_result = RIB_CAPTURE_PENDING;
+      act(menu, press(held.keys, held.pads));
+      check(host.captures_started == before + 1,
+            std::string("we start no second capture while the player is still pressing ")
+                  + held.name + " after binding up");
+      press({}, {});
+      act(menu, press(held.keys, held.pads));
+      check(host.captures_started == before + 2,
+            std::string("when the player releases ") + held.name
+                  + " and presses it again, we start a capture of up");
+      rib_menu_key(menu, RIB_KEY_CANCEL);
+      frame(menu);
+   }
+   rib_menu_key(menu, RIB_KEY_CANCEL);
+   frame(menu);
+   click(menu, "hotkeys");
+   check(view.screens.current() == "hotkeys", "HOTKEYS is open again after CONTROLS");
+}
+
 void one_capture_swaps_confirm_and_back(void *menu)
 {
    capture(menu, "confirm", "pad:a");
@@ -561,6 +601,7 @@ int main(int argc, char **argv)
    nobody_is_locked_out(menu);
    a_clicked_plus_takes_the_next_press(menu);
    the_input_that_binds_acts_once_let_go(menu);
+   the_input_that_binds_a_control_acts_once_let_go(menu);
    one_capture_swaps_confirm_and_back(menu);
    swapped_buttons_drive_the_menu(menu);
    what_retroarch_reads(menu);
