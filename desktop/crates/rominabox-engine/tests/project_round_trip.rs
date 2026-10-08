@@ -188,7 +188,8 @@ fn a_project_saved_with_menu_controls_opens_with_them_as_hotkeys() {
             "quick-load": defaults["quick-load"],
             "previous-slot": defaults["previous-slot"],
             "next-slot": defaults["next-slot"],
-            "fast-forward": defaults["fast-forward"]
+            "fast-forward": defaults["fast-forward"],
+            "fullscreen": defaults["fullscreen"]
         })
     );
     assert_eq!(opened["menuEntries"], json!(["controls", "hotkeys"]));
