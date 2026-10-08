@@ -732,7 +732,7 @@ export function App() {
   useEffect(() => {
     if (step !== 2 || !draft.showMenu) return;
     if (!bridge.native) {
-      setPreview(`/native-menu-${palette}.png`);
+      setPreview(`/menu-${design}-${palette}.png`);
       return;
     }
     let cancelled = false;
