@@ -14,8 +14,10 @@ the machine. We download nothing, and an exported game does not include
 build tools.
 
 The libretro presets in the shader library have several passes with textures,
-and only RetroArch can run them. We draw their previews with the runtime kit's
-own player, with its window hidden. In it we show the same test card through
+and only RetroArch can run them. We draw their previews with the test player
+(scripts/player_build.py), with its window hidden, because we can start the
+player we ship only from the launch plan of an exported game. In it we show the
+same test card through
 the preset with RetroArch's built-in image viewer, and the run ends on its
 own. The picture depends on the GPU, so we do not redraw these with
 `--check`, only with `--library` when the library changes.
@@ -34,13 +36,12 @@ ROOT = Path(__file__).resolve().parent.parent
 PREVIEWS = ROOT / "integrations/shaders/previews"
 DRIVER = Path(__file__).resolve().parent / "shader_previews.mjs"
 CATALOG = ROOT / "integrations/shaders/catalog.json"
-KIT = ROOT / "desktop/src-tauri/resources/runtime"
+LIBRARY = ROOT / "integrations/shaders/library"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scratch  # noqa: E402
 from built import cli as _cli  # noqa: E402
-from core_source import host_target  # noqa: E402
-from native_build import binary_name  # noqa: E402
+import player_build  # noqa: E402
 from programs import windowless  # noqa: E402
 
 # How many times larger we draw the test card in the unfiltered preview.
@@ -143,12 +144,10 @@ PLAYER_FOLDERS = {
 
 
 def draw_library(destination: Path) -> None:
-    """Draw the preview of each libretro preset with the runtime kit's player."""
+    """Draw the preview of each libretro preset with the test player."""
     from PIL import Image
 
-    player = KIT / "bin" / binary_name(host_target())
-    if not player.is_file():
-        raise SystemExit(f"no player in the runtime kit: {player}")
+    player = player_build.player_in(player_build.selected_build())
     size = Image.open(PREVIEWS / "none.png").size
     with scratch.scratch() as temporary:
         work = Path(temporary)
@@ -187,7 +186,7 @@ def draw_library(destination: Path) -> None:
             ran = subprocess.run(
                 [
                     str(player), "--config", str(config), "-L", "imageviewer", str(test_card),
-                    "--set-shader", str(KIT / "shaders" / language / path),
+                    "--set-shader", str(LIBRARY / language / path),
                     "--max-frames=30", "--max-frames-ss", f"--max-frames-ss-path={shot}",
                 ],
                 env=dict(os.environ, ROMINABOX_QUIET="1", ROMINABOX_DATA_DIR=str(data)),
