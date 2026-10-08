@@ -639,10 +639,17 @@ void a_save_right_after_a_load_gets_the_loaded_picture(const char *data)
    frame(menu);
    click_and_frame(menu, "slot-2");
    click_and_frame(menu, "save");
-   rib_rmlui_notify_state_task("", 2, true, true);
+   const bool copied_picture = rib_rmlui_notify_state_task("", 2, true, true);
    frame(menu);
    check(host.picture_copies == std::vector<std::pair<int, int>>{{1, 2}},
          "we copy the picture of slot 1 for a save to slot 2 right after loading slot 1");
+   check(copied_picture, "we take no picture of the game for that save");
+   click_and_frame(menu, "slot-1");
+   click_and_frame(menu, "save");
+   const bool kept_picture = rib_rmlui_notify_state_task(host.state_path.c_str(), 1, true, true);
+   frame(menu);
+   check(kept_picture && host.picture_copies.size() == 1,
+         "a save over the slot we loaded keeps its picture, and we copy nothing");
 
    rib_menu_toggle(menu, false);
    frame(menu);
@@ -651,10 +658,11 @@ void a_save_right_after_a_load_gets_the_loaded_picture(const char *data)
    const size_t copied = host.picture_copies.size();
    click_and_frame(menu, "slot-3");
    click_and_frame(menu, "save");
-   rib_rmlui_notify_state_task("", 3, true, true);
+   const bool copied_again = rib_rmlui_notify_state_task("", 3, true, true);
    frame(menu);
-   check(host.picture_copies.size() == copied,
-         "after the menu has closed and opened again, we copy no picture for a save");
+   check(host.picture_copies.size() == copied && !copied_again,
+         "after the menu has closed and opened again, we copy no picture for a save "
+         "and take a picture of the game");
    rib_menu_destroy(menu);
    std::remove(picture.c_str());
    host.slot_occupied = false;
