@@ -50,14 +50,17 @@ function word(id: string): string {
   if (!found) throw new Error(`words.inc declares no ${id}`);
   return found[1];
 }
-/** The fullscreen chord in the words of the game, for the platform of this
- * computer. In a game for the other platform, the player sees the chord of
- * that platform. */
+/** The fullscreen chord for the platform of this computer, from the words of
+ * the game, written as we write a chord here, for example "Alt + Enter". In a
+ * game for the other platform, the player sees the chord of that platform. */
 export const chordWords = word(
   /Mac/.test(globalThis.navigator?.platform ?? "")
     ? "fullscreen-chord-mac"
     : "fullscreen-chord",
-);
+)
+  .split(chord)
+  .map((part) => part[0] + part.slice(1).toLowerCase())
+  .join(` ${chord} `);
 
 /** A hotkey as the author reads it: its id in words, "Quick save". */
 export function hotkeyName(id: string): string {

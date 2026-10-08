@@ -103,6 +103,12 @@ describe("the builder's hotkeys", () => {
     expect(chips("Next slot")).toEqual(["F7"]);
   });
 
+  it("starts Fullscreen with the fullscreen chord, which has no ×", () => {
+    const { chips, row } = show();
+    expect(chips("Fullscreen")).toEqual(["Alt + Enter"]);
+    expect(row("Fullscreen").querySelector(".hotkey-chip button")).toBeNull();
+  });
+
   it("adds a key or a pad button pressed after +, and says no to a stick", async () => {
     const view = show();
     act(() =>
