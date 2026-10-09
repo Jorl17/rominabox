@@ -491,18 +491,15 @@ int rib_game_data_export(const char *const *data_dirs, size_t count, const char 
       char *error, size_t error_size) {
    mz_zip_archive zip;
    Output output;
-   char temporary[RIB_GAME_DATA_PATH_SIZE];
    size_t which;
    int failed = 0;
    if (!count || count > RIB_GAME_DATA_GAMES) {
       say(error, error_size, "Choose between 1 and %d games.", RIB_GAME_DATA_GAMES);
       return -1;
    }
-   if ((size_t)snprintf(temporary, sizeof temporary, "%s.partial", zip_path) >= sizeof temporary) {
-      say(error, error_size, "The path of the zip is too long.");
-      return -1;
-   }
-   output.file = fs_open(temporary, "wb");
+   /* We write the zip where the person chose, and nowhere beside it: a game
+    * in its sandbox may write only the file chosen in the save panel. */
+   output.file = fs_open(zip_path, "wb");
    if (!output.file) {
       say(error, error_size, "We could not write “%s”: %s.", zip_path, strerror(errno));
       return -1;
@@ -512,7 +509,7 @@ int rib_game_data_export(const char *const *data_dirs, size_t count, const char 
    zip.m_pIO_opaque = &output;
    if (!mz_zip_writer_init(&zip, 0)) {
       fclose(output.file);
-      fs_remove(temporary);
+      fs_remove(zip_path);
       say(error, error_size, "We could not start the zip.");
       return -1;
    }
@@ -539,12 +536,8 @@ int rib_game_data_export(const char *const *data_dirs, size_t count, const char 
       say(error, error_size, "We could not write “%s”: %s.", zip_path, strerror(errno));
       failed = 1;
    }
-   if (!failed && fs_replace(temporary, zip_path) != 0) {
-      say(error, error_size, "We could not write “%s”: %s.", zip_path, strerror(errno));
-      failed = 1;
-   }
    if (failed)
-      fs_remove(temporary);
+      fs_remove(zip_path);
    return failed ? -1 : 0;
 }
 
