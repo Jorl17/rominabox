@@ -526,10 +526,14 @@ def export_game(content: Path, design: str) -> Iterator[Path]:
     same content in any other design, so that we can run them all at once."""
     require_disk()
     print(f"export {design} {content.name}", flush=True)
+    # On launch we resume a game from the autosave of its last run, with the
+    # disc chosen then, so choosing disc 2 again would change nothing. We
+    # export these games with autosave on quit off, which is on by default.
     with menu_shots.build_a_game(
         content,
         PLAYER,
         system=system_for(content),
+        settings={"autosaveOnQuit": False},
         design=design,
         palette=palette_id(),
         namespace=f".{design}",
