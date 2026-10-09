@@ -237,3 +237,30 @@ pub(super) fn pack(
     output.flush().map_err(failed(destination))?;
     Ok(())
 }
+
+/// The runtime folder in the index of `program`, a game made into one
+/// program, or None when `program` is not one.
+pub(crate) fn packed_runtime(program: &Path) -> Option<String> {
+    let mut file = File::open(program).ok()?;
+    let length = file.metadata().ok()?.len();
+    let trailer_at = length.checked_sub(24)?;
+    file.seek(SeekFrom::Start(trailer_at)).ok()?;
+    let mut trailer = [0u8; 24];
+    file.read_exact(&mut trailer).ok()?;
+    if &trailer[16..] != TRAILER_MAGIC {
+        return None;
+    }
+    let index_at = u64::from_le_bytes(trailer[..8].try_into().ok()?);
+    if index_at >= trailer_at {
+        return None;
+    }
+    file.seek(SeekFrom::Start(index_at)).ok()?;
+    let mut head = [0u8; 10];
+    file.read_exact(&mut head).ok()?;
+    if &head[..8] != INDEX_MAGIC {
+        return None;
+    }
+    let mut runtime = vec![0u8; u16::from_le_bytes([head[8], head[9]]) as usize];
+    file.read_exact(&mut runtime).ok()?;
+    String::from_utf8(runtime).ok()
+}

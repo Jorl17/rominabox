@@ -229,6 +229,18 @@
         "label": "ABOUT",
         "default": true
       }
+    },
+    {
+      "id": "data",
+      "role": "data",
+      "panel": "data-panel",
+      "heading": "DATA",
+      "footer": "[ESC]  BACK",
+      "button": "data",
+      "option": {
+        "label": "DATA",
+        "default": true
+      }
     }
   ],
   "tokens": {

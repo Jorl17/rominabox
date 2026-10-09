@@ -1,0 +1,143 @@
+/* We hide the builder's steps below the header while the Game data section
+   is open, without losing what the author entered. */
+body.game-data-open .app-shell > main {
+  display: none;
+}
+.game-data {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 34px 6px 22px;
+}
+.game-data h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.game-data-actions {
+  display: flex;
+  gap: 12px;
+}
+.game-data-said {
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-line;
+  margin-bottom: 17px;
+}
+.game-data .error {
+  margin: 0 0 17px;
+}
+.game-data-empty {
+  color: var(--muted);
+}
+.game-data-loading {
+  display: flex;
+  justify-content: center;
+  padding: 64px 0;
+  color: var(--muted);
+}
+.game-data-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* A table with a heavy rule under its heading and a light one between
+   games. */
+.game-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.game-data-table th {
+  text-align: left;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 10px 8px;
+  border-bottom: 3px solid var(--ink);
+}
+.game-data-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--muted);
+}
+/* A row chooses its game wherever the person clicks it. */
+.game-data-table tbody tr {
+  cursor: pointer;
+}
+.game-data-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.game-data-table tbody tr.chosen td {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.game-data-table th:first-child,
+.game-data-table td:first-child {
+  width: 36px;
+  padding-left: 0;
+}
+.game-data-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+}
+.game-data-title img,
+.game-data-no-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+.game-data-no-icon {
+  background: color-mix(in srgb, var(--muted) 18%, var(--paper));
+}
+.game-data-gone {
+  color: var(--muted);
+}
+.pop-up.game-data-pop-up {
+  max-width: 600px;
+  width: 100%;
+}
+.pop-up.game-data-pop-up > p,
+.pop-up.game-data-pop-up .pop-up-section,
+.pop-up.game-data-pop-up .error {
+  margin-top: 12px;
+}
+.game-data-target {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.game-data-target select {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+.game-data-warning {
+  color: inherit;
+}
+.game-data-names {
+  margin: 0;
+  padding-left: 18px;
+  font-weight: 500;
+}
+/* The header link to the section and back, which we draw quieter than
+   About. */
+.header-link {
+  color: var(--paper);
+  font-weight: 500;
+  opacity: 0.8;
+}
+.header-link:hover {
+  opacity: 1;
+}
+.game-data-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

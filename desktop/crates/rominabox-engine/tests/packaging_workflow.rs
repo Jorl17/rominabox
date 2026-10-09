@@ -639,5 +639,8 @@ fn included_achievements_export_an_account_screen_and_network_permission() {
         entitlements.contains(&format!("/Library/Application Support/{folder}/")),
         "{entitlements}"
     );
-    assert_eq!(entitlements.matches("read-write").count(), 1, "{entitlements}");
+    // Besides that folder, the one file the player chooses in a system panel
+    // on DATA, in the game's menu.
+    assert_eq!(entitlements.matches("read-write").count(), 2, "{entitlements}");
+    assert!(entitlements.contains("com.apple.security.files.user-selected.read-write"), "{entitlements}");
 }

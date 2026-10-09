@@ -212,7 +212,7 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #brightness-control .slider, #contrast-control .slider { position: absolute; left: 256dp; top: 14dp; width: 400dp; height: 36dp; }
 #brightness-control .slider-readout, #contrast-control .slider-readout { position: absolute; left: 468dp; top: -14dp; width: 96dp; height: 64dp; line-height: 64dp; font-size: 18dp; color: #ffffff; }
 .video-shaders { position: absolute; left: 56dp; top: 268dp; }
-#video-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
+#video-back, #data-back { position: absolute; left: 56dp; top: 480dp; width: 160dp; height: 42dp; line-height: 38dp; font-family: Silkscreen; font-size: 18dp; border-width: 2dp; text-align: center; }
 
 /* The slider is a shared part. We draw hover, keyboard focus and a held
  * drag differently. */
@@ -416,5 +416,18 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 .confirm-stays { top: 280dp; color: #fff13d; }
 .confirm-actions { position: absolute; left: 56dp; top: 400dp; width: 840dp; height: 42dp; }
 .confirm-actions button { position: absolute; top: 0; font-family: Silkscreen; font-size: 18dp; height: 38dp; line-height: 38dp; border-width: 2dp; text-align: center; }
-#forget-back, #restart-back { left: 0; width: 200dp; }
-#forget-confirm, #restart-confirm { left: 224dp; width: 200dp; }
+#forget-back, #restart-back { left: 0; width: 300dp; }
+#forget-confirm, #restart-confirm { left: 324dp; width: 260dp; }
+/* DATA: what the zip keeps, EXPORT DATA and IMPORT DATA where the confirm
+ * screens have their buttons, the line where we say how it went, BACK where
+ * VIDEO has it, and the dialog where we ask before an import, over the whole
+ * screen. */
+#data-export { left: 0; width: 240dp; }
+#data-import { left: 264dp; width: 240dp; }
+.data-status { position: absolute; left: 56dp; top: 452dp; width: 840dp; font-size: 16dp; color: #fff13d; }
+.data-dialog { position: absolute; box-sizing: border-box; left: 0; top: 0; width: 100%; height: 100%; padding: 130dp 56dp; z-index: 120; background-color: #1049c3; }
+.data-dialog-title { font-size: 24dp; color: #fff13d; margin-bottom: 24dp; }
+.data-dialog-copy { font-size: 16dp; line-height: 28dp; max-width: 760dp; }
+.data-dialog-actions { margin-top: 40dp; }
+.data-dialog-actions button { display: inline-block; box-sizing: border-box; height: 48dp; padding: 0 18dp; margin-right: 20dp; border-width: 2dp; font-family: Silkscreen; font-size: 16dp; line-height: 44dp; text-align: center; }
+.data-dialog-actions button.disabled { opacity: 0.4; }

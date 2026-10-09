@@ -3448,6 +3448,15 @@
  },
  {
   "group": "native",
+  "name": "miniz",
+  "title": "miniz",
+  "version": "3.0.2",
+  "licence": "MIT",
+  "usedBy": "the zips of a game's data, in the player and launcher of every exported game, and the builder",
+  "file": "native/miniz.txt"
+ },
+ {
+  "group": "native",
   "name": "rcheevos",
   "title": "rcheevos",
   "version": "as vendored in the RetroArch fork",

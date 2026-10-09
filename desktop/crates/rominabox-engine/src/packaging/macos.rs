@@ -209,7 +209,8 @@ impl Packager for MacosPackager {
                 nested.push(object.clone());
             }
         }
-        let entitlements = sandbox_entitlements(identity, accounts_folder(request)?.as_deref());
+        let entitlements =
+            sandbox_entitlements(identity, accounts_folder(request)?.as_deref(), request.game.show_menu);
         bundle::sign_app(
             &bundle::AppSeal {
                 app: &self.app,
@@ -238,14 +239,30 @@ impl Packager for MacosPackager {
     }
 }
 
+/// The start of every game's bundle identifier, which ends with the game's
+/// identity. A game's container folder on a Mac has the same name.
+pub(crate) const BUNDLE_PREFIX: &str = "app.rominabox.game.";
+
 /// The identifier in the bundle and the signature of a game.
-fn bundle_identifier(identity: &str) -> String {
-    format!("app.rominabox.game.{identity}")
+pub(crate) fn bundle_identifier(identity: &str) -> String {
+    format!("{BUNDLE_PREFIX}{identity}")
+}
+
+/// The CFBundleIdentifier in the Info.plist of the app `app`, as we write it
+/// in a game, or None when there is none.
+pub(crate) fn bundle_identifier_of(app: &Path) -> Option<String> {
+    let plist = std::fs::read_to_string(app.join("Contents/Info.plist")).ok()?;
+    let after = &plist[plist.find("<key>CFBundleIdentifier</key>")? + "<key>CFBundleIdentifier</key>".len()..];
+    let value = after.trim_start().strip_prefix("<string>")?;
+    Some(value[..value.find("</string>")?].to_string())
 }
 
 /// `accounts` is the QUICK SIGN IN folder, present exactly when the game has
-/// achievements. We grant the network and that folder together.
-fn sandbox_entitlements(identity: &str, accounts: Option<&str>) -> Entitlements {
+/// achievements. We grant the network and that folder together. With `menu`,
+/// the game has a menu, where DATA may be, and we grant the one file the
+/// player chooses in a system panel there, to export the game's data to or
+/// import it from.
+fn sandbox_entitlements(identity: &str, accounts: Option<&str>, menu: bool) -> Entitlements {
     let mut entitlements = Entitlements::default().with("com.apple.security.app-sandbox", Value::Bool(true));
     if accounts.is_some() {
         entitlements = entitlements.with("com.apple.security.network.client", Value::Bool(true));
@@ -257,6 +274,9 @@ fn sandbox_entitlements(identity: &str, accounts: Option<&str>) -> Entitlements 
             "com.apple.security.temporary-exception.files.home-relative-path.read-only",
             Value::Strings(vec![format!("/Library/Application Support/{}/", game_data_folder(identity))]),
         );
+    if menu {
+        entitlements = entitlements.with("com.apple.security.files.user-selected.read-write", Value::Bool(true));
+    }
     if let Some(folder) = accounts {
         entitlements = entitlements.with(
             "com.apple.security.temporary-exception.files.home-relative-path.read-write",

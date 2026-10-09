@@ -19,6 +19,11 @@
  *                                           folder ($user_data)
  * RIB_GAME_DATA(name, "path")               a folder the launcher keeps in a
  *                                           game's data for itself
+ * RIB_GAME_FILE(name, "path")               a file the launcher keeps in a
+ *                                           game's data for itself
+ * RIB_PLAYER_FOLDER(name, "path")           a folder of the player's own in
+ *                                           a game's data, which a backup of
+ *                                           the data contains
  * RIB_SHIPPED_SETTINGS(name, "app", "data") a folder the app ships, which the
  *                                           launcher applies to that folder in
  *                                           the game's data on every launch
@@ -49,6 +54,12 @@
 #ifndef RIB_GAME_DATA
 #define RIB_GAME_DATA(name, path)
 #endif
+#ifndef RIB_GAME_FILE
+#define RIB_GAME_FILE(name, path)
+#endif
+#ifndef RIB_PLAYER_FOLDER
+#define RIB_PLAYER_FOLDER(name, path)
+#endif
 #ifndef RIB_SHIPPED_SETTINGS
 #define RIB_SHIPPED_SETTINGS(name, app, data)
 #endif
@@ -57,6 +68,9 @@
 #endif
 
 RIB_APP_FILE(Plan, "launch.plan")
+/* The game's icon as a picture, which the launcher copies beside the game's
+ * manifest for the builder's list of games. */
+RIB_APP_FILE(Icon, "game-icon.png")
 RIB_CORE_FILE(Macos, "game-core.dylib")
 RIB_CORE_FILE(Windows, "game-core.dll")
 /* The composed menu: menu.rml and the files declarations.inc names. */
@@ -71,6 +85,12 @@ RIB_WINDOWS_PART(Player, "Runtime/retroarch.exe")
 RIB_PLAN_FIELD(Identity, "identity")
 RIB_PLAN_FIELD(Content, "content")
 RIB_PLAN_FIELD(Title, "title")
+/* The console's id, as in desktop/systems.json, and its name, for the
+ * game's manifest. */
+RIB_PLAN_FIELD(System, "system")
+RIB_PLAN_FIELD(Console, "console")
+/* The version of ROM-in-a-Box that made the game. */
+RIB_PLAN_FIELD(MadeWith, "made_with")
 RIB_PLAN_FIELD(StartAtMenu, "start_at_menu")
 RIB_PLAN_FIELD(Advanced, "advanced")
 RIB_PLAN_FIELD(Achievements, "achievements")
@@ -107,6 +127,20 @@ RIB_USER_FOLDER(Runtimes, "ROM-in-a-Box/Runtimes")
 /* What each launch applied from the export, at the path it applied it to:
  * a later launch tells the player's changes from the export's by it. */
 RIB_GAME_DATA(Applied, "applied")
+/* What the game is, which we write on every launch for a backup of its data
+ * and for the builder's list of games (desktop/src-tauri/gamedata), and the
+ * game's icon beside it. */
+RIB_GAME_FILE(Manifest, "game.json")
+RIB_GAME_FILE(Icon, "game-icon.png")
+/* A backup the player chose to import in the game, which we import before
+ * the next launch. */
+RIB_GAME_FILE(PendingImport, "import.zip")
+
+/* The player's saves (cartridge saves and memory cards), states and
+ * screenshots. */
+RIB_PLAYER_FOLDER(Saves, "saves")
+RIB_PLAYER_FOLDER(States, "states")
+RIB_PLAYER_FOLDER(Screenshots, "screenshots")
 
 /* The core's options, where RetroArch looks for them per game. */
 RIB_SHIPPED_SETTINGS(CoreOptions, "core-options", "config")
@@ -125,5 +159,7 @@ RIB_SHIPPED_FILES(Patches, "patches", ".")
 #undef RIB_TOKEN
 #undef RIB_USER_FOLDER
 #undef RIB_GAME_DATA
+#undef RIB_GAME_FILE
+#undef RIB_PLAYER_FOLDER
 #undef RIB_SHIPPED_SETTINGS
 #undef RIB_SHIPPED_FILES

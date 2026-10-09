@@ -8,16 +8,12 @@ import {
 import { createPortal } from "react-dom";
 import { Info } from "lucide-react";
 
-/** Viewport-level help remains readable inside scrolling panels. */
-export function Help({
-  children,
-  label = "More information",
-}: {
-  children: ReactNode;
-  label?: string;
-}) {
+/** A tooltip for the element in `anchor`, above it where there is room and
+ * below it otherwise, placed in the viewport so that it stays readable inside
+ * scrolling panels. Escape closes it. */
+function useTip<T extends HTMLElement>() {
   const id = useId();
-  const anchor = useRef<HTMLButtonElement>(null);
+  const anchor = useRef<T>(null);
   const tip = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   useLayoutEffect(() => {
@@ -50,6 +46,26 @@ export function Help({
       window.removeEventListener("keydown", dismiss);
     };
   }, [open]);
+  const popup = (children: ReactNode) =>
+    open &&
+    createPortal(
+      <div ref={tip} className="help-tooltip" role="tooltip" id={id}>
+        {children}
+      </div>,
+      document.body,
+    );
+  return { id, anchor, open, setOpen, popup };
+}
+
+/** Viewport-level help remains readable inside scrolling panels. */
+export function Help({
+  children,
+  label = "More information",
+}: {
+  children: ReactNode;
+  label?: string;
+}) {
+  const { id, anchor, open, setOpen, popup } = useTip<HTMLButtonElement>();
   return (
     <span
       className="help"
@@ -68,13 +84,53 @@ export function Help({
       >
         <Info size={16} />
       </button>
-      {open &&
-        createPortal(
-          <div ref={tip} className="help-tooltip" role="tooltip" id={id}>
-            {children}
-          </div>,
-          document.body,
-        )}
+      {popup(children)}
+    </span>
+  );
+}
+
+/** A button that shows only its icon, with its words in a tooltip, as Help
+ * shows its text. The tooltip also shows while the button is off, to say
+ * why. */
+export function IconButton({
+  label,
+  tip,
+  className = "",
+  disabled = false,
+  onClick,
+  children,
+}: {
+  label: string;
+  tip: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  const { id, anchor, open, setOpen, popup } = useTip<HTMLSpanElement>();
+  return (
+    <span
+      ref={anchor}
+      className="icon-button-anchor"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        className={`icon-button ${className}`}
+        aria-label={label}
+        aria-describedby={open ? id : undefined}
+        disabled={disabled}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onClick();
+        }}
+      >
+        {children}
+      </button>
+      {popup(tip)}
     </span>
   );
 }

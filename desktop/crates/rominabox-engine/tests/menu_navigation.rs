@@ -50,18 +50,21 @@ use std::{
 /// that we export the composition with.
 /// Each menu that a case can name: the console, its pad, and the Options
 /// entries that we leave out of the game, by the roles of their screens, for
-/// a case whose entries must fill a page exactly.
-const MENUS: [(&str, &str, Option<&str>, &[ScreenRole]); 5] = [
-    ("md3", "megadrive", None, &[]),
-    ("md6", "megadrive", Some("megadrive6"), &[]),
-    ("gb", "gbc", None, &[]),
-    ("ps1-analog", "ps1", Some("ps1-analog"), &[]),
+/// a case whose entries must fill a page exactly. We leave DATA, the last
+/// entry, out of every menu but `md3-with-data`, because the cases of the
+/// others count the entries before it.
+const MENUS: [(&str, &str, Option<&str>, &[ScreenRole]); 6] = [
+    ("md3", "megadrive", None, &[ScreenRole::Data]),
+    ("md6", "megadrive", Some("megadrive6"), &[ScreenRole::Data]),
+    ("gb", "gbc", None, &[ScreenRole::Data]),
+    ("ps1-analog", "ps1", Some("ps1-analog"), &[ScreenRole::Data]),
     (
         "md3-without-hotkeys-or-forget",
         "megadrive",
         None,
-        &[ScreenRole::Hotkeys, ScreenRole::Forget],
+        &[ScreenRole::Hotkeys, ScreenRole::Forget, ScreenRole::Data],
     ),
+    ("md3-with-data", "megadrive", None, &[]),
 ];
 
 /// The filters we bundle in every composed menu: the rows that the filter

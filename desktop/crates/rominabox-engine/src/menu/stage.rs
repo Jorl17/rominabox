@@ -50,6 +50,9 @@ pub struct MenuRequest {
     /// The game has a menu sound pack, and we play its movement cue when the
     /// volume changes. Without a pack we ship a tick for the volume.
     pub sound_pack: bool,
+    /// DATA, for a game without a list of its entries: the author left it
+    /// on.
+    pub game_data: bool,
     /// The platform we make the game for, and so the screens it has.
     pub target: crate::packaging::ExportTarget,
     /// The components we ship in the game, which we list on its ABOUT screen.
@@ -83,6 +86,7 @@ impl MenuRequest {
                 ..crate::player_settings::Defaults::default()
             },
             sound_pack: false,
+            game_data: crate::builder::unstated::game_data(),
             target: crate::packaging::ExportTarget::of_host()
                 .expect("the builder runs on a platform it makes games for"),
             licences: Vec::new(),
@@ -207,6 +211,12 @@ fn entries(
     // it on.
     if request.menu_entries.is_none() && request.settings.video.is_none() {
         entries.retain(|entry| entry != crate::player_settings::VIDEO_ENTRY);
+    }
+    // And DATA when the author left it on.
+    if request.menu_entries.is_none() && !request.game_data {
+        entries.retain(|entry| {
+            !manifest.screens.iter().any(|screen| screen.id == *entry && screen.role == Some(crate::menu::ScreenRole::Data))
+        });
     }
     if request.discs <= 1 {
         entries.retain(|entry| {
@@ -629,7 +639,7 @@ mod tests {
         assert!(staged.contains(">OPTIONS<") && staged.contains(">CONTROLS<"));
         let cfg = composed.text("design.cfg").unwrap();
         assert!(
-            cfg.contains("screens = \"pause options controls hotkeys video restart uninstall\""),
+            cfg.contains("screens = \"pause options controls hotkeys video restart uninstall data\""),
             "{cfg}"
         );
         let mac = compose(MenuRequest {
@@ -637,7 +647,7 @@ mod tests {
             ..request("native")
         });
         let mac = mac.text("design.cfg").unwrap();
-        assert!(mac.contains("screens = \"pause options controls hotkeys video restart reset\""), "{mac}");
+        assert!(mac.contains("screens = \"pause options controls hotkeys video restart reset data\""), "{mac}");
         assert!(cfg.contains("screen_button_options = \"options video-back\""));
         assert!(cfg.contains("screen_button_controls = \"controls\""));
 

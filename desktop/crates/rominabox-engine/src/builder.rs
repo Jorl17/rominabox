@@ -59,6 +59,9 @@ pub struct Defaults {
     /// VIDEO in the game's Options, with the light and contrast of the
     /// picture and the shaders.
     pub video: bool,
+    /// DATA in the game's Options, where the player exports and imports the
+    /// game's data.
+    pub game_data: bool,
     /// The light and the contrast of the picture when a game with VIDEO
     /// starts, until the player changes them there.
     pub brightness: f32,
@@ -139,6 +142,9 @@ pub mod unstated {
     }
     pub fn video() -> bool {
         defaults().video
+    }
+    pub fn game_data() -> bool {
+        defaults().game_data
     }
     pub fn brightness() -> f32 {
         defaults().brightness

@@ -23,9 +23,11 @@ plan entry, and on Windows the game's launcher, stopped by ROMINABOX_PLAN_ONLY.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
+import zipfile
 import sys
 from pathlib import Path
 
@@ -75,14 +77,18 @@ def in_user_data(user_data: Path, folder: Path) -> str:
 
 
 def ship_plan(resources: Path, data: str, pause_nonactive: str = "true",
-              managed: tuple[str, ...] = ("logs",), shader_initial: str | None = None) -> None:
+              managed: tuple[str, ...] = ("logs",), shader_initial: str | None = None,
+              system: str = "megadrive") -> None:
     """Return the export's launch plan, with `data` as its data folder."""
     resources.mkdir(parents=True, exist_ok=True)
     write(
         resources / "launch.plan",
         "identity\tplan\n"
-        "content\tcontent\n"
+        "content\tcontent/Plan Game.md\n"
         "title\tPlan\n"
+        f"system\t{system}\n"
+        "console\tMega Drive / Genesis\n"
+        "made_with\t0.3.0\n"
         + PLAYER_SETTINGS.format(pause=pause_nonactive)
         + (f"shader_initial\t{shader_initial}\n" if shader_initial else "")
         + f"data_dir\t{data}\n"
@@ -341,6 +347,64 @@ def run_player_settings() -> list[str]:
     return failures
 
 
+def run_game_manifest() -> list[str]:
+    """On every launch we write the game's manifest and copy its icon into
+    its data, and before anything reads the data, we import a backup that the
+    player chose in the menu."""
+    failures = []
+    with scratch.scratch("rominabox-game-manifest-") as made:
+        root = Path(made)
+        binary, resources = compile_plan(root)
+        home = root / "home"
+        home.mkdir()
+        data = root / "data"
+        ship_plan(resources, in_user_data(root, data), managed=("logs", "saves"))
+        (resources / "game-icon.png").write_bytes(b"\x89PNG icon")
+        launch(binary, home, root)
+        written = (data / "game.json").read_text(encoding="utf-8") if (data / "game.json").exists() else "{}"
+        manifest = json.loads(written)
+        expected = {"format": 1, "identity": "plan", "title": "Plan", "system": "megadrive",
+                    "console": "Mega Drive / Genesis", "content": "Plan Game", "made_with": "0.3.0",
+                    "player_files": ["volume.cfg", "background-play.cfg", "rumble.cfg"]}
+        for member, value in expected.items():
+            if manifest.get(member) != value:
+                failures.append(f"the manifest's {member} is not {value!r}: {written!r}")
+        # On macOS, the app, by the path the launcher resolves.
+        if sys.platform == "darwin" and manifest.get("app") != str(binary.parents[2].resolve()):
+            failures.append(f"the manifest does not name the app {binary.parents[2].resolve()}: {written!r}")
+        if not (data / "game-icon.png").is_file() or (data / "game-icon.png").read_bytes() != b"\x89PNG icon":
+            failures.append("the game's icon is not beside its manifest")
+
+        # A backup the player chose in the menu, with a state named after
+        # another game's file: we import it, renamed, and remove the zip.
+        backup = {**manifest, "identity": "other", "content": "Other"}
+        with zipfile.ZipFile(data / "import.zip", "w") as archive:
+            archive.writestr("game.json", json.dumps(backup))
+            archive.writestr("saves/Other.srm", "imported save")
+        write(data / "saves" / "Plan Game.srm", "old save")
+        # And the request to start the game again, left by a player that
+        # ended before it could act on it.
+        write(data / "restart-after-import", "")
+        launch(binary, home, root)
+        if (data / "restart-after-import").exists():
+            failures.append("a request to start the game again stayed from before the launch")
+        if (data / "saves" / "Plan Game.srm").read_text() != "imported save":
+            failures.append("the backup set aside was not imported, renamed to this game's file")
+        if (data / "import.zip").exists():
+            failures.append("the backup set aside stayed after the launch")
+
+        # One for another console: the game still starts, with its own data.
+        with zipfile.ZipFile(data / "import.zip", "w") as archive:
+            archive.writestr("game.json", json.dumps({**backup, "system": "gbc"}))
+            archive.writestr("saves/Other.srm", "wrong console")
+        ran = plan_tool(binary, home, root)
+        if ran.returncode != 0 or (data / "saves" / "Plan Game.srm").read_text() != "imported save":
+            failures.append(f"a backup for another console stopped the launch or changed the data: {ran.stderr[-300:]}")
+        if (data / "import.zip").exists():
+            failures.append("the refused backup stayed after the launch")
+    return failures
+
+
 def run_shader_choice() -> list[str]:
     """We store the filter that a player chose by its id, as in the menu, and on
     the next launch we look for that filter's file wherever the game's files
@@ -576,9 +640,10 @@ def windows_build(directory: Path) -> list[str]:
         return []
     failures = []
     for source in native_build.launch_sources("windows"):
-        name = source.relative_to(LAUNCHER).as_posix()
+        name = source.relative_to(LAUNCHER.parent).as_posix()
         built = subprocess.run(
             [zig, "cc", "-target", "x86_64-windows-gnu", "-Wall", "-Wextra", "-Werror",
+             *native_build.launcher_includes("windows"),
              "-c", str(source), "-o", str(directory / f"{name.replace('/', '-')}.obj")],
             capture_output=True, text=True,
         )
@@ -588,7 +653,7 @@ def windows_build(directory: Path) -> list[str]:
 
 
 def main() -> int:
-    failures = (run() + run_player_settings() + run_shader_choice() + run_plan_places() + run_forget_places()
+    failures = (run() + run_player_settings() + run_game_manifest() + run_shader_choice() + run_plan_places() + run_forget_places()
                 + run_menu_sounds())
     with scratch.scratch("rominabox-core-options-windows-") as made:
         failures += windows_build(Path(made))

@@ -1,8 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use rominabox_engine::export_error::{AuthorError, ErrorStage};
+use rominabox_engine::game_library::{self, Library};
 use rominabox_engine::{
-    builder, controls, hotkeys, icons, menu, metadata, packaging, pads, projects, systems, traveling,
+    builder, controls, game_data, hotkeys, icons, menu, metadata, packaging, pads, projects, systems,
+    traveling,
 };
 use serde_json::json;
 use std::{
@@ -327,6 +329,61 @@ fn custom_shader_name(path: PathBuf) -> String {
     rominabox_engine::shaders::named_after_file(&path)
 }
 
+/// Run `work` on the games on this computer, away from the window's thread.
+/// We call the same functions in the game-data commands of the command line.
+async fn with_library<T: Send + 'static>(
+    work: impl FnOnce(Library) -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(move || work(Library::here()?))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+async fn games() -> Result<Vec<game_library::InstalledGame>, String> {
+    with_library(|library| Ok(library.games())).await
+}
+
+#[tauri::command]
+async fn game_data_export(identities: Option<Vec<String>>, zip: PathBuf) -> Result<Vec<game_data::Game>, String> {
+    with_library(move |library| library.export(identities.as_deref(), &zip)).await
+}
+
+#[tauri::command]
+async fn game_data_open(zip: PathBuf) -> Result<Vec<game_library::BackupGame>, String> {
+    with_library(move |library| library.open(&zip)).await
+}
+
+#[tauri::command]
+async fn game_data_check(zip: PathBuf, which: usize, identity: String) -> Result<game_data::Check, String> {
+    with_library(move |library| Ok(library.check(&zip, which, &identity))).await
+}
+
+#[tauri::command]
+async fn game_data_import(zip: PathBuf, which: usize, identity: String) -> Result<(), String> {
+    with_library(move |library| library.import(&zip, which, &identity)).await
+}
+
+#[tauri::command]
+async fn game_data_import_all(zip: PathBuf) -> Result<game_library::BulkImport, String> {
+    with_library(move |library| library.import_all(&zip)).await
+}
+
+#[tauri::command]
+async fn game_data_remove(identity: String) -> Result<(), String> {
+    with_library(move |library| library.remove(&identity)).await
+}
+
+#[tauri::command]
+async fn game_data_reset(identity: String) -> Result<(), String> {
+    with_library(move |library| library.reset(&identity)).await
+}
+
+#[tauri::command]
+async fn game_uninstall(identity: String) -> Result<(), String> {
+    with_library(move |library| library.uninstall(&identity)).await
+}
+
 /// Wait for a press on a controller and return its pad position.
 #[tauri::command]
 async fn capture_pad_position(seconds: u64) -> Result<Option<String>, String> {
@@ -431,9 +488,9 @@ fn sharp_window_icon(window: &tauri::WebviewWindow) {
 /// The tasks of the Windows installer in the builder (installation.rs), done
 /// before a window opens. Returns the exit code once done, or None for an
 /// ordinary start. `--add-to-path FOLDER` adds the command line's folder to
-/// the person's Path. `--uninstall-cleanup LOCAL ROAMING FOLDER` removes the
-/// builder's and the games' files in the per-user folders LOCAL and ROAMING,
-/// and removes FOLDER from the Path.
+/// the person's Path, and `--remove-from-path FOLDER` takes it off again.
+/// `--remove-data LOCAL ROAMING` removes the builder's and the games' files in
+/// the per-user folders LOCAL and ROAMING.
 #[cfg(windows)]
 fn installer_request(identifier: &str) -> Option<i32> {
     use rominabox_engine::installation::{announce_environment, Installation, ENVIRONMENT};
@@ -450,7 +507,13 @@ fn installer_request(identifier: &str) -> Option<i32> {
             Ok(changed) => (changed, Vec::new()),
             Err(error) => (false, vec![format!("the Path: {error}")]),
         },
-        ("--uninstall-cleanup", [local, roaming, folder]) => installation(local, roaming, folder).uninstalled(),
+        ("--remove-from-path", [folder]) => match installation(&PathBuf::new(), &PathBuf::new(), folder)
+            .removed_from_path()
+        {
+            Ok(changed) => (changed, Vec::new()),
+            Err(error) => (false, vec![format!("the Path: {error}")]),
+        },
+        ("--remove-data", [local, roaming]) => (false, installation(local, roaming, &PathBuf::new()).data_removed()),
         _ => return None,
     };
     if changed {
@@ -514,7 +577,16 @@ fn main() {
             before_export,
             custom_shader_name,
             capture_pad_position,
-            cancel_pad_capture
+            cancel_pad_capture,
+            games,
+            game_data_export,
+            game_data_open,
+            game_data_check,
+            game_data_import,
+            game_data_import_all,
+            game_data_remove,
+            game_data_reset,
+            game_uninstall
         ])
         .run(context)
         .expect("failed to run ROM-in-a-Box desktop shell");

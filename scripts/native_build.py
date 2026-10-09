@@ -502,6 +502,16 @@ def build_rmlui(destination: Path, target: str, jobs: int) -> Path:
 
 DESKTOP = ROOT / "desktop/src-tauri"
 LAUNCHER = DESKTOP / "launcher"
+# The zips of a game's data, which the launcher, the player and the builder
+# compile, and miniz, which we compile without our warnings.
+GAMEDATA = DESKTOP / "gamedata"
+ZIP_LIBRARY = GAMEDATA / "zip_library.c"
+MINIZ = ROOT / "vendor/miniz"
+# The libraries the game-data code is built on, which a program that compiles
+# it compiles without our warnings: miniz, and libretro-common's JSON reader
+# and writer for the manifest. The player has rjson of its own already.
+LIBRETRO_COMMON = ROOT / "vendor/retroarch/libretro-common"
+LIBRARIES = [ZIP_LIBRARY, LIBRETRO_COMMON / "formats/json/rjson.c", LIBRETRO_COMMON / "string/rstrtod.c"]
 
 
 def platform_of(target: str) -> str:
@@ -525,8 +535,18 @@ def platform_sources(directory: Path, platform: str) -> list[Path]:
 
 
 def launcher_sources(platform: str) -> list[Path]:
-    """The launcher's C sources on `platform`."""
-    return platform_sources(LAUNCHER, platform)
+    """The launcher's C sources on `platform`, with the zips of a game's data,
+    without the LIBRARIES, which we compile without our warnings."""
+    return [*platform_sources(LAUNCHER, platform), GAMEDATA / "game_data.c"]
+
+
+def launcher_includes(platform: str) -> list[str]:
+    """The folders the launcher's sources include from: its own, the
+    platform's, the game data's, miniz's, the player's, for the menu's
+    declarations, and libretro-common's, for rjson."""
+    folders = [LAUNCHER, *(LAUNCHER / folder for folder in recipe()["platformFolders"][platform]), GAMEDATA, MINIZ,
+               ROOT / "vendor/retroarch", LIBRETRO_COMMON / "include"]
+    return [f"-I{folder}" for folder in folders]
 
 
 def accounts_folder() -> Path:
@@ -542,9 +562,10 @@ def accounts_sources(platform: str) -> list[Path]:
 
 def launch_sources(platform: str) -> list[Path]:
     """The launcher's C sources for preparing a launch on `platform`, without
-    its entry: the shared ones, and the platform's file layer and path rules."""
+    its entry: the shared ones, the zips of a game's data, and the platform's
+    file layer and path rules."""
     return [source for source in launcher_sources(platform)
-            if source.parent == LAUNCHER or source.name in ("portable_fs.c", "paths.c")]
+            if source.parent in (LAUNCHER, GAMEDATA) or source.name in ("portable_fs.c", "paths.c")]
 
 
 def file_layer(platform: str) -> list[Path]:
@@ -560,21 +581,25 @@ def file_layer_headers(platform: str) -> list[Path]:
     return sorted(header for folder in folders for header in folder.glob("portable_fs*.h"))
 
 
-def copy_accounts(destination: Path, target: str) -> Path:
+def copy_sources(destination: Path, target: str) -> Path:
     """The ROM-in-a-Box sources we compile into the player (the QUICK SIGN IN
-    store) and the file layer below it, in their folders under
-    desktop/src-tauri."""
-    accounts = destination / "rominabox-accounts"
-    sources = [*accounts_sources(platform_of(target)), *sorted(accounts_folder().glob("*.h"))]
-    copies = set()
-    for source in [*sources, *file_layer_headers(platform_of(target)), *file_layer(platform_of(target))]:
-        copy = accounts / source.relative_to(DESKTOP)
+    store and the zips of a game's data) and the file layer below them, in
+    their folders under desktop/src-tauri, with the launcher's declarations
+    they read, and miniz at the top of the folder, where the fork compiles it
+    only through gamedata/zip_library.c."""
+    handed = destination / "rominabox-sources"
+    platform = platform_of(target)
+    ours = [*accounts_sources(platform), *sorted(accounts_folder().glob("*.h")), GAMEDATA / "game_data.c",
+            ZIP_LIBRARY, *sorted(GAMEDATA.glob("*.h")), LAUNCHER / "launch_contract.inc",
+            *file_layer_headers(platform), *file_layer(platform)]
+    copies = {handed / source.relative_to(DESKTOP): source for source in ours}
+    copies.update({handed / source.name: source for source in (MINIZ / "miniz.c", MINIZ / "miniz.h")})
+    for copy, source in copies.items():
         write_if_changed(copy, source.read_bytes())
-        copies.add(copy)
-    # In the fork's makefile we compile every source in the folder.
-    for left in [path for path in accounts.rglob("*") if path.is_file() and path not in copies]:
+    # In the fork's makefile we compile every source in the folders.
+    for left in [path for path in handed.rglob("*") if path.is_file() and path not in copies]:
         left.unlink()
-    return accounts
+    return handed
 
 
 def build_launcher(destination: Path, target: str, environment: dict[str, str]) -> Path | None:
@@ -594,7 +619,9 @@ def build_launcher(destination: Path, target: str, environment: dict[str, str]) 
         includes = [f"-I{source / path}" for path in zstd["includes"]]
         theirs = [(source / name, ["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w", *zstd["flags"], *includes])
                   for name in zstd["sources"]]
-    own = [(source, ["cc", *compiler_flags(target), *launcher["flags"], *includes])
+    theirs += [(library, ["cc", "-std=gnu99", *compiler_flags(target), "-O2", "-w",
+                          *launcher_includes(platform_of(target))]) for library in LIBRARIES]
+    own = [(source, ["cc", *compiler_flags(target), *launcher["flags"], *includes, *launcher_includes(platform_of(target))])
            for source in launcher_sources(platform_of(target))]
     sdl2 = []
     if launcher.get("sdl2"):
@@ -631,8 +658,8 @@ def build_launch_library(destination: Path, kit: str) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     processors = [flag for part in slices(kit) for flag in ("-arch", architecture_of(part).value)]
     run(["cc", *processors, f"-mmacosx-version-min={deployment_target(kit)}", *declared["flags"],
-         f"-Wl,-install_name,{declared['loadedFrom']}/{declared['output']}",
-         "-o", str(output), *map(str, launcher_sources(platform_of(kit))), *declared["libraries"]],
+         f"-Wl,-install_name,{declared['loadedFrom']}/{declared['output']}", *launcher_includes(platform_of(kit)),
+         "-o", str(output), *map(str, launcher_sources(platform_of(kit))), *map(str, LIBRARIES), *declared["libraries"]],
         destination, build_environment(kit))
     return output
 
@@ -643,9 +670,9 @@ def launch_library_sources(kit: str) -> str:
     found by the compiler, with the player's headers among them. We record it
     in a kit and compare it with the tree's in the staging check."""
     declared = launch_library(kit)
-    sources = launcher_sources(platform_of(kit))
-    listed = subprocess.run(["cc", "-MM", *map(str, sources)], capture_output=True, text=True, check=True,
-                            cwd=ROOT).stdout
+    sources = [*launcher_sources(platform_of(kit)), *LIBRARIES]
+    listed = subprocess.run(["cc", "-MM", *launcher_includes(platform_of(kit)), *map(str, sources)],
+                            capture_output=True, text=True, check=True, cwd=ROOT).stdout
     # Make rules, `object: source header ...`. A trailing backslash continues
     # a rule on the next line, and a backslash before a space escapes it.
     words = listed.replace("\\\n", " ").replace("\\ ", "\0").split()

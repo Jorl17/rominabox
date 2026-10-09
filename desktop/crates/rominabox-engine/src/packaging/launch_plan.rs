@@ -2,7 +2,7 @@
 //! isolated runtime config, and the game identity, for its data folder.
 
 use super::{Drivers, ErrorStage, ExportError, ExportRequest};
-use crate::launch_contract::{plan_field, plan_mark, shipped, token, user_folder};
+use crate::launch_contract::{plan_field, plan_mark, player_folder, shipped, token, user_folder};
 use crate::meta_binds::isolated_meta_bind_config;
 use sha2::{Digest, Sha256};
 use std::ffi::OsStr;
@@ -76,14 +76,14 @@ pub(super) const IDENTITY_CHARS: usize = 24;
 
 /// The writable directories we create and manage under each game's data root.
 pub const MANAGED_DATA_DIRECTORIES: &[&str] = &[
-    "saves",
-    "states",
+    player_folder!(Saves),
+    player_folder!(States),
     shipped!(Firmware).1,
     "cache",
     "logs",
     "info",
     "playlists",
-    "screenshots",
+    player_folder!(Screenshots),
     shipped!(Remaps).1,
     shipped!(CoreOptions).1,
     "shaders",
@@ -243,13 +243,13 @@ fn game_data_template(identity: &str) -> String {
 }
 
 /// The game's data folder, below the per-user data folder.
-pub(super) fn game_data_folder(identity: &str) -> String {
+pub(crate) fn game_data_folder(identity: &str) -> String {
     format!("{}/{identity}", user_folder!(Games))
 }
 
 /// Where we unpack a game made into one program (a Windows game,
 /// `windows_pack`), under the per-user data folder.
-pub(super) fn runtime_folder(identity: &str) -> String {
+pub(crate) fn runtime_folder(identity: &str) -> String {
     format!("{}/{identity}", user_folder!(Runtimes))
 }
 
@@ -317,6 +317,12 @@ pub(super) fn write_launch_plan(
     plan += &line(plan_field!(Identity), identity);
     plan += &line(plan_field!(Content), &content);
     plan += &line(plan_field!(Title), &request.game.title);
+    // For the game's manifest, which a backup of its data and the builder's
+    // list of games read.
+    let console = crate::systems::find(&request.game.system).map_or(request.game.system.as_str(), |system| &system.name);
+    plan += &line(plan_field!(System), &request.game.system);
+    plan += &line(plan_field!(Console), console);
+    plan += &line(plan_field!(MadeWith), env!("CARGO_PKG_VERSION"));
     plan += &line(plan_field!(StartAtMenu), flag(request.game.start_at_menu));
     plan += &line(
         plan_field!(Advanced),

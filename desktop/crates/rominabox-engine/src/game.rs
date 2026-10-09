@@ -72,6 +72,9 @@ pub struct Game {
     /// VIDEO in the game's Options, for a game without a list of its entries.
     #[serde(default = "crate::builder::unstated::video")]
     pub video: bool,
+    /// DATA in the game's Options, for a game without a list of its entries.
+    #[serde(default = "crate::builder::unstated::game_data")]
+    pub game_data: bool,
     /// The light of the picture as a multiplier, and its contrast, at the
     /// start of the game, until the player changes them on VIDEO. We give a
     /// game without VIDEO neither.

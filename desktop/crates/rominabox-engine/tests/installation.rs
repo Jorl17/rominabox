@@ -127,9 +127,7 @@ fn a_path_longer_than_the_installer_could_read_keeps_every_entry_through_install
     assert!(!installation.installed().unwrap(), "installed again, the folder is not added twice");
     assert_eq!(key.get().unwrap(), format!("{path};{folder}"));
 
-    let (changed, failures) = installation.uninstalled();
-    assert!(changed);
-    assert_eq!(failures, Vec::<String>::new());
+    assert!(installation.removed_from_path().unwrap());
     assert_eq!(key.get().unwrap(), path);
 }
 
@@ -154,9 +152,12 @@ fn the_path_entry_is_matched_as_windows_matches_paths_and_nothing_else_moves() {
     assert_eq!(path_without(r"C:\a;C:\ROM-in-a-Box\bin\more", folder), None);
 }
 
-/// When someone uninstalls the builder, we remove every game's sandbox with
-/// its registration and folder, the games' data and unpacked copies, the
-/// QUICK SIGN IN accounts and the builder's folders, and nothing else.
+/// When someone uninstalls the builder, we take the command line's folder off
+/// the Path and leave every game's data, as for an uninstall without "Delete
+/// the application data" ticked. With it ticked, we also remove every game's
+/// sandbox with its registration and folder, the games' data and unpacked
+/// copies, the QUICK SIGN IN accounts and the builder's folders, and nothing
+/// else.
 #[test]
 fn uninstalling_removes_every_games_sandbox_data_and_copies_the_accounts_and_the_builders_folders() {
     let root = rominabox_scratch::Scratch::dir("rominabox-installation");
@@ -195,10 +196,14 @@ fn uninstalling_removes_every_games_sandbox_data_and_copies_the_accounts_and_the
     key.set(&format!(r"C:\a;{};C:\b", installation.command_line.display()));
     assert!(sandboxes::registered(&identity));
 
-    let (changed, failures) = installation.uninstalled();
-    assert_eq!(failures, Vec::<String>::new());
-    assert!(changed);
+    assert!(installation.removed_from_path().unwrap());
     assert_eq!(key.get().unwrap(), r"C:\a;C:\b");
+    for path in removed.iter().chain(&kept) {
+        assert!(path.is_file(), "{} is gone without the box ticked", path.display());
+    }
+    assert!(sandboxes::registered(&identity), "the game's sandbox is gone without the box ticked");
+
+    assert_eq!(installation.data_removed(), Vec::<String>::new());
     assert!(!sandboxes::registered(&identity), "the game's sandbox is still registered");
     for path in [
         sandbox,
@@ -217,8 +222,7 @@ fn uninstalling_removes_every_games_sandbox_data_and_copies_the_accounts_and_the
     // We also remove the folder with the games' data, once nothing else is
     // in it.
     fs::remove_file(local.join(r"ROM-in-a-Box\rominabox-desktop.exe")).unwrap();
-    let (_, failures) = installation.uninstalled();
-    assert_eq!(failures, Vec::<String>::new());
+    assert_eq!(installation.data_removed(), Vec::<String>::new());
     assert!(!local.join("ROM-in-a-Box").exists());
 }
 
@@ -238,14 +242,14 @@ fn an_uninstall_given_a_folder_that_is_not_absolute_or_an_identifier_that_is_not
         canaries.iter().for_each(|canary| file(canary));
         let mut refused = installation(&root, &key);
         refused.identifier = identifier.into();
-        let (changed, failures) = refused.uninstalled();
+        let failures = refused.data_removed();
         for canary in &canaries {
             assert!(canary.is_file(), "{identifier:?} removed {}", canary.display());
         }
-        assert!(!changed && failures.len() == 1, "{identifier:?}: {failures:?}");
+        assert!(failures.len() == 1, "{identifier:?}: {failures:?}");
     }
     let mut relative = installation(&root, &key);
     relative.local = PathBuf::from("Local");
-    let (_, failures) = relative.uninstalled();
+    let failures = relative.data_removed();
     assert_eq!(failures.len(), 1, "{failures:?}");
 }

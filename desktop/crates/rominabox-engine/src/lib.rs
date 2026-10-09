@@ -12,6 +12,8 @@ pub mod export_cores;
 pub mod export_error;
 mod files;
 pub mod game;
+pub mod game_data;
+pub mod game_library;
 mod helper;
 pub mod meta_binds;
 pub mod icons;

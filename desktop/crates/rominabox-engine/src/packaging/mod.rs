@@ -23,6 +23,12 @@ mod windows_pack;
 #[cfg(test)]
 mod tests;
 
+/// The names of a game's data folder, its Mac container and its unpacked
+/// Windows copy, for the list of games on this computer (`game_library`).
+pub(crate) use launch_plan::{game_data_folder, runtime_folder};
+pub(crate) use macos::{bundle_identifier, bundle_identifier_of, BUNDLE_PREFIX};
+pub(crate) use windows_pack::packed_runtime;
+
 use crate::target::Target;
 use crate::launch_contract::{app_file, shipped};
 use serde::{Deserialize, Serialize};
@@ -555,6 +561,10 @@ where
         .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     }
     stage_firmware(request, &resources.join(shipped!(Firmware).0))?;
+    let default_icon = crate::icons::default_icon_path(&request.runtime_kit);
+    if let Some(icon) = request.game.icon.as_deref().or(default_icon.as_deref()) {
+        crate::icons::write_game_icon(icon, &resources.join(app_file!(Icon)))?;
+    }
     stage_bundled_autoconfig(
         &request.runtime_kit,
         &resources.join(shipped!(Autoconfig).0),

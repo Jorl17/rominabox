@@ -40,6 +40,9 @@ typedef struct {
     const char *previous_user_data;
     /* The person started this game (not a test, a script or a harness). */
     int opened_by_person;
+    /* What the person opens to play: the app on macOS and the program on
+     * Windows, which the game's manifest names. NULL when we do not know. */
+    const char *app;
     /* Called with the data folder before we create it, or NULL for none. */
     void (*before_data_folder)(const char *data_dir);
 } LaunchPlaces;

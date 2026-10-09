@@ -23,6 +23,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -35,11 +36,15 @@ PLAYER = ROOT / "vendor/retroarch"
 LAUNCHER = ROOT / "desktop/src-tauri/launcher/windows"
 OUTPUT = ROOT / "work/test-output"
 RELAY = [LAUNCHER / "pad_relay.c", PLAYER / "input/drivers/rominabox_dinput.c"]
+# In the launcher we answer the game's requests about its data on the relay's
+# thread, with the zips of a game's data on the launcher's file layer.
+GAME_DATA = [LAUNCHER / "game_data_requests.c", native_build.GAMEDATA / "game_data.c",
+             native_build.LAUNCHER / "portable_fs.c", LAUNCHER / "portable_fs.c"]
 # In the stand-in we read the relay's name as we read the environment in the
 # player, through libretro's UTF-8 conversion.
-SOURCES = [ROOT / "scripts/pad_relay_test.c", *RELAY, PLAYER / "libretro-common/encodings/encoding_utf.c",
+SOURCES = [ROOT / "scripts/pad_relay_test.c", *RELAY, *GAME_DATA, PLAYER / "libretro-common/encodings/encoding_utf.c",
            PLAYER / "libretro-common/compat/compat_strl.c"]
-INCLUDES = [f"-I{LAUNCHER}", f"-I{PLAYER}", f"-I{PLAYER / 'libretro-common/include'}"]
+INCLUDES = native_build.launcher_includes("windows")
 WARNINGS = ["-Wall", "-Wextra", "-Werror"]
 WINDOWS = "windows-x86_64"
 
@@ -49,15 +54,22 @@ def main() -> int:
     if core_source.host_target().startswith("windows-"):
         toolchain.activate()
         binary = toolchain.executable(OUTPUT / "pad-relay-test")
+        cc = toolchain.describe()["cc"]
+        # The libraries of the game data, which we compile without our warnings.
+        libraries = [OUTPUT / f"pad-relay-{library.stem}.o" for library in native_build.LIBRARIES]
+        for library, compiled in zip(native_build.LIBRARIES, libraries):
+            subprocess.run([cc, "-std=gnu99", "-w", *INCLUDES, "-c", str(library), "-o", str(compiled)], check=True)
         with native_build.tree_build(native_build.kit_target(WINDOWS)) as folder:
             native_build.build_sdl2(folder, WINDOWS, os.cpu_count() or 1)
             subprocess.run(
-                [toolchain.describe()["cc"], "-std=gnu99", "-O1", "-g", *WARNINGS, *INCLUDES,
-                 native_build.sdl2_include(folder), *map(str, SOURCES), "-o", str(binary),
-                 "-lSDL2", *native_build.sdl2_libraries(folder), "-ldinput8", "-ldxguid", "-lole32", "-luser32"],
+                [cc, "-std=gnu99", "-O1", "-g", *WARNINGS, *INCLUDES,
+                 native_build.sdl2_include(folder), *map(str, SOURCES), *map(str, libraries), "-o", str(binary),
+                 "-lSDL2", *native_build.sdl2_libraries(folder), "-ldinput8", "-ldxguid", "-lole32", "-luser32",
+                 "-lcomdlg32"],
                 check=True,
             )
-        subprocess.run([str(binary)], check=True)
+        with tempfile.TemporaryDirectory(prefix="rominabox-pad-relay-") as data_dir:
+            subprocess.run([str(binary), data_dir], check=True)
         return 0
     zig = shutil.which("zig")
     if not zig:

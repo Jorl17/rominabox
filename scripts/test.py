@@ -194,6 +194,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_held_key.py")],
     ),
     Scope(
+        "gamedata",
+        "the zips of a game's data, from the C sources the player and the launcher compile: a game's data exported, set aside as the menu does for an import, and imported as the launcher does before the next launch, with saves renamed to another game's file, the game's own states replaced, its settings kept and its login left out, and that it builds for Windows",
+        "the menu's EXPORT DATA and IMPORT DATA, the file panels or the restart; the builder's checks of untrusted zips are in the exporter scope, through the engine",
+        [PYTHON, str(ROOT / "scripts/test_game_data.py")],
+    ),
+    Scope(
         "typing",
         "that in the menu the keyboard presses only the arrows of the menu's pad: no key the game's controls hold, none of RetroArch's other menu keys, no key typed into the text entry and no key a hotkey of the menu is bound to, while the game's keys are its buttons as it plays; RetroArch's own function that reads the keyboard for the menu, handed a held key",
         "whether the menu says it is typing or which keys its hotkeys hold (the navigation and bridge scopes ask the real menu), or that a physical keyboard delivers the key; the rest of RetroArch is stand-ins that stop the program if reached",

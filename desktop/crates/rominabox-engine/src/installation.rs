@@ -1,14 +1,16 @@
 //! The tasks of the builder's Windows installer. We run each one in the
 //! builder program and exit before we open a window (`main.rs`). Installing
 //! adds the command line's folder to the user's Path. Uninstalling, except
-//! for an update, removes everything that the builder and its games store on
-//! the computer, and takes that folder off the Path again. We call both from
+//! for an update, takes that folder off the Path again, and removes
+//! everything that the builder and its games store on the computer only when
+//! the person asks for it in the uninstaller. We call each from
 //! `windows/installer-hooks.nsh`.
 //!
 //! We edit the Path through the registry, whatever its length. NSIS, which
 //! we build the installer with, has a string limit of 1,023 characters, so
 //! a longer Path would come back truncated.
 
+use crate::game_library::{forget_sandbox, sandbox_identity};
 use crate::launch_contract::user_folder;
 use std::{
     fs, io,
@@ -16,7 +18,6 @@ use std::{
 };
 use windows_sys::Win32::{
     Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SUCCESS},
-    Security::Isolation::DeleteAppContainerProfile,
     System::Registry::{
         RegCloseKey, RegCreateKeyExW, RegOpenKeyExW, RegQueryValueExW, RegSetValueExW, HKEY, HKEY_CURRENT_USER,
         KEY_QUERY_VALUE, KEY_SET_VALUE, REG_EXPAND_SZ, REG_OPTION_NON_VOLATILE,
@@ -44,16 +45,6 @@ pub struct Installation {
 
 fn wide(text: &str) -> Vec<u16> {
     text.encode_utf16().chain(std::iter::once(0)).collect()
-}
-
-/// We name a game's sandbox with this and the game's identity
-/// (vendor/retroarch/rominabox_launch.h). Its folder in Packages has the
-/// same name, in lower case.
-fn sandbox_prefix() -> &'static str {
-    include_str!("../../../../vendor/retroarch/rominabox_launch.h")
-        .lines()
-        .find_map(|line| line.strip_prefix("#define RIB_GAME_APP_ID_PREFIX \"")?.strip_suffix('"'))
-        .expect("rominabox_launch.h declares RIB_GAME_APP_ID_PREFIX")
 }
 
 /// `path` with `folder` as one more entry, or None when it is already there.
@@ -189,39 +180,39 @@ impl Installation {
         edit_path(&self.environment, |path| path_with(path, &folder))
     }
 
+    /// Take the command line's folder off the Path. Return whether it
+    /// changed.
+    pub fn removed_from_path(&self) -> io::Result<bool> {
+        let folder = self.command_line.to_string_lossy();
+        edit_path(&self.environment, |path| path_without(path, &folder))
+    }
+
     /// Remove every game's sandbox, with its registration and folder, every
     /// game's data and unpacked copies, the accounts shared by QUICK SIGN IN,
-    /// and the builder's folders, and take the command line's folder off the
-    /// Path. Name everything we could not remove, and continue past it. Remove
-    /// nothing when a per-user folder is not absolute, or when the identifier
-    /// is not the name of one folder.
-    pub fn uninstalled(&self) -> (bool, Vec<String>) {
+    /// and the builder's folders. Return everything we could not remove, and
+    /// continue past it. Remove nothing when a per-user folder is not
+    /// absolute, or when the identifier is not the name of one folder.
+    pub fn data_removed(&self) -> Vec<String> {
         let one_folder = matches!(
             Path::new(&self.identifier).components().collect::<Vec<_>>()[..],
             [std::path::Component::Normal(_)]
         );
         if !self.local.is_absolute() || !self.roaming.is_absolute() || !one_folder {
-            return (false, vec![format!(
+            return vec![format!(
                 "anything: {} and {} must be absolute, and {:?} one folder's name",
                 self.local.display(),
                 self.roaming.display(),
                 self.identifier
-            )]);
+            )];
         }
         let mut failures = Vec::new();
-        let prefix = sandbox_prefix();
         let packages = self.local.join("Packages");
         for entry in fs::read_dir(&packages).into_iter().flatten().flatten() {
             let name = entry.file_name().to_string_lossy().into_owned();
-            let Some(identity) = name
-                .get(..prefix.len())
-                .filter(|start| start.eq_ignore_ascii_case(prefix))
-                .map(|_| &name[prefix.len()..])
-            else {
+            let Some(identity) = sandbox_identity(&name) else {
                 continue;
             };
-            let sandbox = wide(&format!("{prefix}{identity}"));
-            unsafe { DeleteAppContainerProfile(sandbox.as_ptr()) };
+            forget_sandbox(identity);
             remove_tree(&entry.path(), &mut failures);
         }
         for folder in [user_folder!(Games), user_folder!(Runtimes)] {
@@ -235,14 +226,6 @@ impl Installation {
         remove_tree(&self.local.join(crate::achievements::SHARED_ACCOUNTS), &mut failures);
         remove_tree(&self.local.join(&self.identifier), &mut failures);
         remove_tree(&self.roaming.join(&self.identifier), &mut failures);
-        let folder = self.command_line.to_string_lossy();
-        let changed = match edit_path(&self.environment, |path| path_without(path, &folder)) {
-            Ok(changed) => changed,
-            Err(error) => {
-                failures.push(format!("the Path in {}: {error}", self.environment));
-                false
-            }
-        };
-        (changed, failures)
+        failures
     }
 }
