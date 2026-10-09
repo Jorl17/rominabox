@@ -1,3 +1,4 @@
+import { LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as bridge from "./bridge";
 import { ImportAll, ImportOne, quoted, RemoveGame } from "./GameDataDialogs";
@@ -45,6 +46,12 @@ export function GameData() {
   const [asking, setAsking] = useState<Asking | null>(null);
   const [said, setSaid] = useState<Said | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // While the section is open we hide the builder's steps beneath it.
+  useEffect(() => {
+    document.body.classList.add("game-data-open");
+    return () => document.body.classList.remove("game-data-open");
+  }, []);
 
   const refresh = useCallback(async () => {
     const found = await bridge.games();
@@ -166,6 +173,15 @@ export function GameData() {
           {said.text}
         </p>
       )}
+      {!games && !said && (
+        <div
+          className="game-data-loading"
+          role="status"
+          aria-label="Finding your games"
+        >
+          <LoaderCircle size={32} className="spin" />
+        </div>
+      )}
       {games && listed.length === 0 && (
         <p className="game-data-empty">No games on this computer yet.</p>
       )}
@@ -192,19 +208,46 @@ export function GameData() {
               </th>
               <th>Game</th>
               <th>Console</th>
-              <th>App</th>
+              <th>
+                <span className="game-data-heading">
+                  App
+                  <Help label="About the App column">
+                    <p>
+                      Found: the game's app is where it was the last time the
+                      game started.
+                    </p>
+                    <p>
+                      Running: the game is open now. Quit it before importing or
+                      removing its data.
+                    </p>
+                    <p>
+                      Not found: the app is no longer where the game last
+                      started. It may have been deleted, moved or renamed, or be
+                      on a drive that is not connected. If you moved it, open it
+                      once and it will show as Found again.
+                    </p>
+                  </Help>
+                </span>
+              </th>
               <th />
             </tr>
           </thead>
           <tbody>
             {listed.map((game) => (
-              <tr key={game.identity}>
+              <tr
+                key={game.identity}
+                className={chosen.has(game.identity) ? "chosen" : undefined}
+                onClick={() =>
+                  toggle(game.identity, !chosen.has(game.identity))
+                }
+              >
                 <td>
                   <input
                     type="checkbox"
                     className="checkbox-box"
                     aria-label={`Choose ${game.title}`}
                     checked={chosen.has(game.identity)}
+                    onClick={(event) => event.stopPropagation()}
                     onChange={(event) =>
                       toggle(game.identity, event.target.checked)
                     }
@@ -229,7 +272,10 @@ export function GameData() {
                     <button
                       className="text-button"
                       disabled={busy}
-                      onClick={() => setAsking({ kind: "remove", game })}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setAsking({ kind: "remove", game });
+                      }}
                     >
                       Remove
                     </button>

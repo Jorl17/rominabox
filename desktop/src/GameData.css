@@ -1,6 +1,6 @@
 /* We hide the builder's steps below the header while the Game data section
    is open, without losing what the author entered. */
-.app-shell:has(> .game-data) > main {
+body.game-data-open .app-shell > main {
   display: none;
 }
 .game-data {
@@ -33,6 +33,17 @@
 .game-data-empty {
   color: var(--muted);
 }
+.game-data-loading {
+  display: flex;
+  justify-content: center;
+  padding: 64px 0;
+  color: var(--muted);
+}
+.game-data-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 /* A table with a heavy rule under its heading and a light one between
    games. */
 .game-data-table {
@@ -51,6 +62,16 @@
 .game-data-table td {
   padding: 8px 10px;
   border-bottom: 1px solid var(--muted);
+}
+/* A row chooses its game wherever the person clicks it. */
+.game-data-table tbody tr {
+  cursor: pointer;
+}
+.game-data-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.game-data-table tbody tr.chosen td {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 .game-data-table th:first-child,
 .game-data-table td:first-child {
