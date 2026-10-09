@@ -69,6 +69,23 @@ macro_rules! user_folder {
 }
 pub(crate) use user_folder;
 
+/// `game_file!(Name)`: a file the launcher keeps in a game's data.
+macro_rules! game_file {
+    ($name:ident) => {
+        const { $crate::launch_contract::declared(&["RIB_GAME_FILE"], stringify!($name), 1) }
+    };
+}
+pub(crate) use game_file;
+
+/// `player_folder!(Name)`: a folder of the player's own in a game's data,
+/// which a backup of the data contains.
+macro_rules! player_folder {
+    ($name:ident) => {
+        const { $crate::launch_contract::declared(&["RIB_PLAYER_FOLDER"], stringify!($name), 1) }
+    };
+}
+pub(crate) use player_folder;
+
 /// `shipped!(Name)`: a folder we ship in the app, and the folder in the
 /// game's data to which we apply it in the launcher.
 macro_rules! shipped {

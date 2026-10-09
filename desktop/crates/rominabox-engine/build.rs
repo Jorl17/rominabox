@@ -4,6 +4,7 @@ use std::path::Path;
 fn main() {
     shader_previews();
     patch_formats();
+    game_data();
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         command_line_resource();
     }
@@ -36,6 +37,43 @@ fn patch_formats() {
         .define("HAVE_XDELTA", None)
         .warnings(false)
         .compile("retroarch_patch_formats");
+}
+
+/// The zips of a game's data (src/game_data.rs): the same C code as in the
+/// player and the launcher (desktop/src-tauri/gamedata), on miniz and the
+/// launcher's file layer, so the builder writes and reads exactly the zips a
+/// game does.
+fn game_data() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let launcher = root.join("desktop/src-tauri/launcher");
+    let gamedata = root.join("desktop/src-tauri/gamedata");
+    let platform = if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") { "windows" } else { "posix" };
+    let ours = [
+        gamedata.join("game_data.c"),
+        launcher.join("portable_fs.c"),
+        launcher.join(platform).join("portable_fs.c"),
+    ];
+    let includes = [
+        launcher.clone(),
+        launcher.join(platform),
+        gamedata.clone(),
+        root.join("vendor/miniz"),
+        root.join("vendor/retroarch"),
+    ];
+    for watched in [&gamedata, &launcher, &root.join("vendor/miniz"), &root.join("vendor/retroarch/menu/drivers/rmlui/declarations.inc")] {
+        println!("cargo:rerun-if-changed={}", watched.display());
+    }
+    cc::Build::new()
+        .files(&ours)
+        .includes(&includes)
+        .flag_if_supported("-std=gnu99")
+        .compile("rominabox_game_data");
+    // miniz is the library's own code, which we compile without our warnings.
+    cc::Build::new()
+        .file(gamedata.join("zip_library.c"))
+        .includes(&includes)
+        .warnings(false)
+        .compile("rominabox_zip_library");
 }
 
 /// The shader previews we include in the exporter, one for each picture in

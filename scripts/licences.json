@@ -30,6 +30,12 @@
       "texts": [{"member": "LICENSE.TXT"}, {"member": "docs/FTL.TXT"}, {"member": "docs/GPLv2.TXT"}]
     },
     {
+      "name": "miniz", "title": "miniz", "licence": "MIT", "always": true,
+      "version": "3.0.2", "source": "https://github.com/richgel999/miniz",
+      "usedBy": "the zips of a game's data, in the player and launcher of every exported game, and the builder",
+      "texts": [{"repo": "vendor/miniz/LICENSE"}]
+    },
+    {
       "name": "zstd", "title": "Zstandard", "licence": "BSD-3-Clause OR GPL-2.0-only", "pin": "zstd", "platforms": ["windows"],
       "usedBy": "the launcher, in every exported Windows game",
       "texts": [{"member": "LICENSE"}, {"member": "COPYING"}]
