@@ -92,21 +92,40 @@ fn hand_made_zip(path: &Path, entries: &[(&str, &str)]) {
 fn manifest_text(game: &Game) -> String {
     let root = Scratch::dir("rominabox-game-data-manifest-text");
     write_manifest(&root, game).unwrap();
-    fs::read_to_string(root.join("game.manifest")).unwrap()
+    fs::read_to_string(root.join("game.json")).unwrap()
 }
 
-/// We read every field and player file of a manifest back as we wrote it,
-/// and a tab or line break in a title cannot add a field.
+/// We read every field and player file of a manifest back as we wrote it.
+/// Quotes in a title cannot add a member, and a line break in it becomes a
+/// space.
 #[test]
 fn a_manifest_reads_back_as_written() {
     let root = Scratch::dir("rominabox-game-data-manifest");
     let mut written = game("03f5379ee2aa7a47a3449acd", "Sonic 3", "megadrive", SONIC);
     write_manifest(&root, &written).unwrap();
     assert_eq!(read_manifest(&root), Some(written.clone()));
-    written.title = "Sonic\tidentity\tx\n3".into();
+    written.title = "Sonic\", \"system\": \"gbc\\\n3".into();
     write_manifest(&root, &written).unwrap();
-    assert_eq!(read_manifest(&root).unwrap().title, "Sonic identity x 3");
+    let read = read_manifest(&root).unwrap();
+    assert_eq!((read.title.as_str(), read.system.as_str()), ("Sonic\", \"system\": \"gbc\\ 3", "megadrive"));
     assert_eq!(read_manifest(&root.join("absent")), None);
+}
+
+/// A member we do not know, even an object or a list, is left out, and a
+/// manifest that is not JSON, or has no identity, is no manifest.
+#[test]
+fn a_manifest_skips_what_it_does_not_know() {
+    let root = Scratch::dir("rominabox-game-data-manifest-unknown");
+    let manifest = root.join("game.json");
+    fs::write(&manifest, r#"{"format": 1, "later": {"a": [1, {"b": 2}]}, "identity": "abc", "title": 7,
+        "system": "megadrive", "player_files": ["volume.cfg", 3, ["x"]], "extra": [true, null]}"#).unwrap();
+    let read = read_manifest(&root).unwrap();
+    assert_eq!((read.identity.as_str(), read.title.as_str(), read.player_files.clone()), ("abc", "", vec!["volume.cfg".to_string()]));
+    for broken in [r#"{"format": 1, "identity": "abc", "system": "megadrive""#, r#"{"format": 1, "system": "megadrive"}"#,
+                   r#"{"format": 2, "identity": "abc", "system": "megadrive"}"#, "format\t1\nidentity\tabc\nsystem\tmegadrive\n"] {
+        fs::write(&manifest, broken).unwrap();
+        assert_eq!(read_manifest(&root), None, "{broken}");
+    }
 }
 
 /// A backup contains the manifest and the player's own files, and none of
@@ -199,7 +218,7 @@ fn another_consoles_data_is_refused() {
     let refusal = "This is the data of \u{201c}Sonic 3\u{201d}, a Mega Drive / Genesis game, and this game is for the Game Boy Color.";
     assert_eq!(check(&zip, 0, &target), Check::Refused(refusal.into()));
     assert_eq!(import(&zip, 0, &target), Err(refusal.into()));
-    assert_eq!(files(&target), ["game.manifest"]);
+    assert_eq!(files(&target), ["game.json"]);
 }
 
 /// A zip is untrusted. We refuse the whole of one that climbs out of a
@@ -213,10 +232,10 @@ fn a_zip_with_anything_but_a_games_data_is_refused_whole() {
     let before = files(&target);
     let manifest = manifest_text(&sonic);
     for (name, entries, refusal) in [
-        ("climbs.zip", vec![("game.manifest", manifest.as_str()), ("saves/../../escape.txt", "x")], "saves/../../escape.txt"),
-        ("bios.zip", vec![("game.manifest", manifest.as_str()), ("system/bios.bin", "x")], "system/bios.bin"),
-        ("absolute.zip", vec![("game.manifest", manifest.as_str()), ("/etc/hosts", "x")], "/etc/hosts"),
-        ("login.zip", vec![("game.manifest", manifest.as_str()), ("achievements.session", "x")], "achievements.session"),
+        ("climbs.zip", vec![("game.json", manifest.as_str()), ("saves/../../escape.txt", "x")], "saves/../../escape.txt"),
+        ("bios.zip", vec![("game.json", manifest.as_str()), ("system/bios.bin", "x")], "system/bios.bin"),
+        ("absolute.zip", vec![("game.json", manifest.as_str()), ("/etc/hosts", "x")], "/etc/hosts"),
+        ("login.zip", vec![("game.json", manifest.as_str()), ("achievements.session", "x")], "achievements.session"),
         ("bare.zip", vec![("saves/x.srm", "x")], "is not the data of a ROM-in-a-Box game"),
     ] {
         let zip = root.join(name);
@@ -245,8 +264,8 @@ fn a_bulk_backup_holds_each_game_in_its_own_folder() {
         let mut archive = zip::ZipArchive::new(fs::File::open(&zip).unwrap()).unwrap();
         (0..archive.len()).map(|index| archive.by_index(index).unwrap().name().to_string()).collect()
     };
-    assert!(names.contains(&"Sonic 3 [03f5379e]/game.manifest".to_string()), "{names:?}");
-    assert!(names.contains(&"Pok\u{e9}mon- Gold [dddddddd]/game.manifest".to_string()), "{names:?}");
+    assert!(names.contains(&"Sonic 3 [03f5379e]/game.json".to_string()), "{names:?}");
+    assert!(names.contains(&"Pok\u{e9}mon- Gold [dddddddd]/game.json".to_string()), "{names:?}");
     let target = root.join("gold-again");
     fs::create_dir_all(&target).unwrap();
     write_manifest(&target, &gold).unwrap();

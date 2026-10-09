@@ -130,7 +130,7 @@ RIB_GAME_DATA(Applied, "applied")
 /* What the game is, which we write on every launch for a backup of its data
  * and for the builder's list of games (desktop/src-tauri/gamedata), and the
  * game's icon beside it. */
-RIB_GAME_FILE(Manifest, "game.manifest")
+RIB_GAME_FILE(Manifest, "game.json")
 RIB_GAME_FILE(Icon, "game-icon.png")
 /* A backup the player chose to import in the game, which we import before
  * the next launch. */

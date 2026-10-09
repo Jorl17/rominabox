@@ -3,7 +3,7 @@
  * game or the builder and import into the same game or another game for the
  * same console.
  *
- * Each game's data folder contains its manifest (`game.manifest`), which the
+ * Each game's data folder contains its manifest (`game.json`), which the
  * launcher writes on every launch: what the game is, what its saves are named
  * after, and which files hold the player's settings. A backup contains the
  * manifest and the files we declare as the player's own, and nothing else:
@@ -22,8 +22,9 @@
  * allow, or its game is for another console. When we import a backup into a
  * game whose saves are named after another file, we rename them to match.
  *
- * This is ROM-in-a-Box's own code, on top of miniz. The player, the launcher
- * and the builder compile this one file. */
+ * This is ROM-in-a-Box's own code, on top of miniz and of libretro-common's
+ * rjson for the manifest. The player, the launcher and the builder compile
+ * this one file. */
 #ifndef ROMINABOX_GAME_DATA_H
 #define ROMINABOX_GAME_DATA_H
 
@@ -45,7 +46,7 @@ extern "C" {
 /* A sentence for a person about why something failed. */
 #define RIB_GAME_DATA_ERROR_SIZE 1024
 
-/* What a manifest says about a game. Text contains no tab or line break. */
+/* What a manifest says about a game. Text contains no control character. */
 typedef struct rib_game {
    char identity[RIB_GAME_DATA_ID_SIZE];
    char title[RIB_GAME_DATA_TEXT_SIZE];

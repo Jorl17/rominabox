@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <formats/rjson.h>
+
 #include "portable_fs.h"
 #include "zip_library.h"
 
@@ -51,16 +53,17 @@ static void say(char *error, size_t size, const char *format, ...) {
    va_end(arguments);
 }
 
-/* `text` without tabs and line breaks, which separate a manifest's fields. */
+/* `text` with each control character made a space, so a title or a path
+ * stays on one line wherever we show it. */
 static void plain_copy(char *out, size_t size, const char *text) {
    size_t at = 0;
    for (; text && *text && at + 1 < size; text++)
-      out[at++] = (*text == '\t' || *text == '\n' || *text == '\r') ? ' ' : *text;
+      out[at++] = (unsigned char)*text < 0x20 ? ' ' : *text;
    out[at] = '\0';
 }
 
-/* The manifest: one field per line, its name, a tab and its value, and one
- * `player_file` line for each player-setting file. */
+/* The manifest, in JSON: an object with `format`, each field by its name,
+ * and `player_files`, the list of player-setting files. */
 
 typedef struct {
    const char *name;
@@ -74,6 +77,8 @@ static const Field fields[] = {
 };
 #define FIELD_COUNT (sizeof fields / sizeof fields[0])
 static const char player_file_field[] = "player_file";
+static const char player_files_member[] = "player_files";
+static const char format_member[] = "format";
 
 static const Field *field_named(const char *name) {
    size_t which;
@@ -103,53 +108,93 @@ int rib_game_set(rib_game_t *game, const char *name, const char *value) {
 
 int rib_game_manifest_write(const char *data_dir, const rib_game_t *game) {
    char path[RIB_GAME_DATA_PATH_SIZE];
-   char text[RIB_GAME_DATA_PATH_SIZE * 4];
-   size_t used;
+   rjsonwriter_t *writer;
+   const char *text;
+   int length = 0;
+   int written = -1;
    size_t which;
    if (fs_join(path, sizeof path, data_dir, game_file_Manifest) != 0)
       return -1;
-   used = (size_t)snprintf(text, sizeof text, "format\t%d\n", RIB_GAME_DATA_FORMAT);
-   for (which = 0; which < FIELD_COUNT && used < sizeof text; which++)
-      used += (size_t)snprintf(text + used, sizeof text - used, "%s\t%s\n", fields[which].name,
-            (const char *)game + fields[which].offset);
-   for (which = 0; which < game->player_file_count && used < sizeof text; which++)
-      used += (size_t)snprintf(text + used, sizeof text - used, "%s\t%s\n", player_file_field,
-            game->player_files[which]);
-   if (used >= sizeof text) {
-      errno = ENAMETOOLONG;
+   writer = rjsonwriter_open_memory();
+   if (!writer)
       return -1;
+   rjsonwriter_rawf(writer, "{\n  \"%s\": %d", format_member, RIB_GAME_DATA_FORMAT);
+   for (which = 0; which < FIELD_COUNT; which++) {
+      rjsonwriter_rawf(writer, ",\n  \"%s\": ", fields[which].name);
+      rjsonwriter_add_string(writer, (const char *)game + fields[which].offset);
    }
-   return fs_write_file(path, text, used);
+   rjsonwriter_rawf(writer, ",\n  \"%s\": [", player_files_member);
+   for (which = 0; which < game->player_file_count; which++) {
+      if (which)
+         rjsonwriter_raw(writer, ", ", 2);
+      rjsonwriter_add_string(writer, game->player_files[which]);
+   }
+   rjsonwriter_raw(writer, "]\n}\n", 4);
+   text = rjsonwriter_get_memory_buffer(writer, &length);
+   if (text && !*rjsonwriter_get_error(writer))
+      written = fs_write_file(path, text, (size_t)length);
+   rjsonwriter_free(writer);
+   return written;
+}
+
+/* Skip the value `json` has just begun, an object or an array with all it
+ * contains. */
+static int skip_value(rjson_t *json, enum rjson_type type) {
+   unsigned int depth;
+   if (type != RJSON_OBJECT && type != RJSON_ARRAY)
+      return type == RJSON_ERROR ? -1 : 0;
+   depth = rjson_get_context_depth(json);
+   while (rjson_get_context_depth(json) >= depth)
+      if (rjson_next(json) == RJSON_ERROR)
+         return -1;
+   return 0;
+}
+
+/* Read the members of the manifest object in `json` into `game`. A member we
+ * do not know, or a field that is not text, we skip. */
+static int manifest_members(rjson_t *json, rib_game_t *game, int *format) {
+   for (;;) {
+      char name[64];
+      size_t length = 0;
+      const char *text;
+      enum rjson_type type = rjson_next(json);
+      if (type == RJSON_OBJECT_END)
+         return 0;
+      if (type != RJSON_STRING)
+         return -1;
+      text = rjson_get_string(json, &length);
+      /* A name we cannot hold, or with a NUL in it, is no name we know. */
+      snprintf(name, sizeof name, "%s", length < sizeof name && strlen(text) == length ? text : "");
+      type = rjson_next(json);
+      if (!strcmp(name, format_member) && type == RJSON_NUMBER)
+         *format = rjson_get_int(json);
+      else if (!strcmp(name, player_files_member) && type == RJSON_ARRAY) {
+         while ((type = rjson_next(json)) != RJSON_ARRAY_END) {
+            if (type == RJSON_STRING)
+               rib_game_set(game, player_file_field, rjson_get_string(json, NULL));
+            else if (skip_value(json, type) != 0)
+               return -1;
+         }
+      } else if (type == RJSON_STRING && strcmp(name, player_file_field))
+         rib_game_set(game, name, rjson_get_string(json, NULL));
+      else if (skip_value(json, type) != 0)
+         return -1;
+   }
 }
 
 /* Read a manifest from `text`, of `size` bytes. */
 static int manifest_parse(const char *text, size_t size, rib_game_t *game) {
-   size_t at = 0;
+   rjson_t *json = rjson_open_buffer(text, size);
    int format = 0;
+   int read;
    memset(game, 0, sizeof *game);
-   while (at < size) {
-      char line[LINE_SIZE];
-      size_t end = at;
-      char *value;
-      while (end < size && text[end] != '\n')
-         end++;
-      if (end - at < sizeof line) {
-         memcpy(line, text + at, end - at);
-         line[end - at] = '\0';
-         if (end > at && line[end - at - 1] == '\r')
-            line[end - at - 1] = '\0';
-         value = strchr(line, '\t');
-         if (value) {
-            *value++ = '\0';
-            if (!strcmp(line, "format"))
-               format = atoi(value);
-            else
-               rib_game_set(game, line, value);
-         }
-      }
-      at = end + 1;
-   }
-   if (format < 1 || format > RIB_GAME_DATA_FORMAT || !game->identity[0] || !game->system[0])
+   if (!json)
+      return -1;
+   rjson_set_max_depth(json, 8);
+   read = rjson_next(json) == RJSON_OBJECT && manifest_members(json, game, &format) == 0
+         && rjson_next(json) == RJSON_DONE;
+   rjson_free(json);
+   if (!read || format < 1 || format > RIB_GAME_DATA_FORMAT || !game->identity[0] || !game->system[0])
       return -1;
    return 0;
 }

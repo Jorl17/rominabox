@@ -54,7 +54,7 @@ def compile_macos(directory: Path) -> tuple[Path, Path]:
         if folder not in _built:
             native_build.run(["cc", "-DROMINABOX_PLAN_MAIN", "-O2", "-o", str(tool),
                               *native_build.launcher_includes("macos"),
-                              *map(str, native_build.launcher_sources("macos")), str(native_build.ZIP_LIBRARY),
+                              *map(str, native_build.launcher_sources("macos")), *map(str, native_build.LIBRARIES),
                               *library["libraries"]],
                              folder, dict(os.environ))
             _built.add(folder)

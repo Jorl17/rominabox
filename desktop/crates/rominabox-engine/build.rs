@@ -40,9 +40,9 @@ fn patch_formats() {
 }
 
 /// The zips of a game's data (src/game_data.rs): the same C code as in the
-/// player and the launcher (desktop/src-tauri/gamedata), on miniz and the
-/// launcher's file layer, so the builder writes and reads exactly the zips a
-/// game does.
+/// player and the launcher (desktop/src-tauri/gamedata), on miniz, rjson from
+/// libretro-common and the launcher's file layer, so the builder writes and
+/// reads exactly the zips a game does.
 fn game_data() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
     let launcher = root.join("desktop/src-tauri/launcher");
@@ -59,7 +59,10 @@ fn game_data() {
         gamedata.clone(),
         root.join("vendor/miniz"),
         root.join("vendor/retroarch"),
+        root.join("vendor/retroarch/libretro-common/include"),
     ];
+    let libretro = root.join("vendor/retroarch/libretro-common");
+    let libraries = [gamedata.join("zip_library.c"), libretro.join("formats/json/rjson.c"), libretro.join("string/rstrtod.c")];
     for watched in [&gamedata, &launcher, &root.join("vendor/miniz"), &root.join("vendor/retroarch/menu/drivers/rmlui/declarations.inc")] {
         println!("cargo:rerun-if-changed={}", watched.display());
     }
@@ -68,12 +71,13 @@ fn game_data() {
         .includes(&includes)
         .flag_if_supported("-std=gnu99")
         .compile("rominabox_game_data");
-    // miniz is the library's own code, which we compile without our warnings.
+    // miniz and rjson are their libraries' own code, which we compile without
+    // our warnings.
     cc::Build::new()
-        .file(gamedata.join("zip_library.c"))
+        .files(&libraries)
         .includes(&includes)
         .warnings(false)
-        .compile("rominabox_zip_library");
+        .compile("rominabox_game_data_libraries");
 }
 
 /// The shader previews we include in the exporter, one for each picture in

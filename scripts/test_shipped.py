@@ -23,6 +23,7 @@ plan entry, and on Windows the game's launcher, stopped by ROMINABOX_PLAN_ONLY.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -360,23 +361,25 @@ def run_game_manifest() -> list[str]:
         ship_plan(resources, in_user_data(root, data), managed=("logs", "saves"))
         (resources / "game-icon.png").write_bytes(b"\x89PNG icon")
         launch(binary, home, root)
-        manifest = (data / "game.manifest").read_text(encoding="utf-8") if (data / "game.manifest").exists() else ""
-        for line in ["format\t1", "identity\tplan", "title\tPlan", "system\tmegadrive",
-                     "console\tMega Drive / Genesis", "content\tPlan Game", "made_with\t0.3.0",
-                     "player_file\tvolume.cfg", "player_file\tbackground-play.cfg", "player_file\trumble.cfg"]:
-            if line not in manifest.splitlines():
-                failures.append(f"the manifest has no line {line!r}: {manifest!r}")
+        written = (data / "game.json").read_text(encoding="utf-8") if (data / "game.json").exists() else "{}"
+        manifest = json.loads(written)
+        expected = {"format": 1, "identity": "plan", "title": "Plan", "system": "megadrive",
+                    "console": "Mega Drive / Genesis", "content": "Plan Game", "made_with": "0.3.0",
+                    "player_files": ["volume.cfg", "background-play.cfg", "rumble.cfg"]}
+        for member, value in expected.items():
+            if manifest.get(member) != value:
+                failures.append(f"the manifest's {member} is not {value!r}: {written!r}")
         # On macOS, the app, by the path the launcher resolves.
-        if sys.platform == "darwin" and "app\t" + str(binary.parents[2].resolve()) not in manifest.splitlines():
-            failures.append(f"the manifest does not name the app {binary.parents[2].resolve()}: {manifest!r}")
+        if sys.platform == "darwin" and manifest.get("app") != str(binary.parents[2].resolve()):
+            failures.append(f"the manifest does not name the app {binary.parents[2].resolve()}: {written!r}")
         if not (data / "game-icon.png").is_file() or (data / "game-icon.png").read_bytes() != b"\x89PNG icon":
             failures.append("the game's icon is not beside its manifest")
 
         # A backup the player chose in the menu, with a state named after
         # another game's file: we import it, renamed, and remove the zip.
-        backup = manifest.replace("identity\tplan", "identity\tother").replace("content\tPlan Game", "content\tOther")
+        backup = {**manifest, "identity": "other", "content": "Other"}
         with zipfile.ZipFile(data / "import.zip", "w") as archive:
-            archive.writestr("game.manifest", backup)
+            archive.writestr("game.json", json.dumps(backup))
             archive.writestr("saves/Other.srm", "imported save")
         write(data / "saves" / "Plan Game.srm", "old save")
         # And the request to start the game again, left by a player that
@@ -392,7 +395,7 @@ def run_game_manifest() -> list[str]:
 
         # One for another console: the game still starts, with its own data.
         with zipfile.ZipFile(data / "import.zip", "w") as archive:
-            archive.writestr("game.manifest", backup.replace("system\tmegadrive", "system\tgbc"))
+            archive.writestr("game.json", json.dumps({**backup, "system": "gbc"}))
             archive.writestr("saves/Other.srm", "wrong console")
         ran = plan_tool(binary, home, root)
         if ran.returncode != 0 or (data / "saves" / "Plan Game.srm").read_text() != "imported save":
