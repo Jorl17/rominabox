@@ -196,6 +196,8 @@ extern "C" bool rib_host_load_state(void)
 extern "C" void rib_host_resume(void) { ++host.resumes; }
 extern "C" void rib_host_restart(void) { ++host.restarts; }
 extern "C" void rib_host_toggle_fullscreen(void) { ++host.fullscreen_toggles; }
+/* No pad rumbles here. */
+extern "C" void rib_host_rumble_frame(void) {}
 extern "C" void rib_host_video_pass(const char *pass, const char *written)
 {
    host.video_pass = pass ? pass : "";
