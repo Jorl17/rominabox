@@ -1,7 +1,7 @@
 {
   "name": "rominabox-desktop",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "npm run catalog && npm run scene && vite",

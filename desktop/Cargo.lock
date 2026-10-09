@@ -3274,7 +3274,7 @@ dependencies = [
 
 [[package]]
 name = "rominabox-desktop"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "image",
  "rominabox-engine",
@@ -3288,7 +3288,7 @@ dependencies = [
 
 [[package]]
 name = "rominabox-engine"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cc",
  "chd",
