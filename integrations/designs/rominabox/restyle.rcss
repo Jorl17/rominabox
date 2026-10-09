@@ -22,13 +22,15 @@
 .menu-action, .list-pager-prev, .list-pager-next { background-color: design(surface); border-color: design(surface); }
 .menu-action:hover, .menu-action.focused,
 .list-pager-prev:hover, .list-pager-next:hover, .list-pager-prev.focused, .list-pager-next.focused { background-color: design(highlight); color: design(surface); border-color: design(highlight); }
-/* A button held down sinks: a hard shadow along its top and left. */
-.menu-action:active { background-color: design(highlight); color: design(surface); border-color: design(highlight); box-shadow: design(bevel-dark) 4dp 4dp 0dp 0dp inset; }
+/* Held down, a button, a slot or a row is pushed in, as in Pixel: dark
+ * along its top and left, light along its bottom and right. */
+.menu-action:active { background-color: design(highlight); color: design(surface); border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 .menu-action.disabled, .menu-action:disabled, .list-pager-prev.disabled, .list-pager-next.disabled { background-color: design(well-edge); border-color: design(well-edge); }
 
 /* Save slots. */
 .slot { border-color: design(surface); }
-.slot.focused, .slot:active { border-color: design(highlight); }
+.slot.focused { border-color: design(highlight); }
+.slot:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 .slot-label { background-color: design(surface); }
 .slot-picture { border-color: design(picture); }
 .slot.disabled, .slot.disabled:hover { border-color: design(well-edge); }
@@ -55,7 +57,8 @@
 
 /* Lists: shaders, discs, accounts, achievements. */
 .list-row { border-color: design(surface); }
-.list-row.focused, .list-row:active { border-color: design(highlight); }
+.list-row.focused { border-color: design(highlight); }
+.list-row:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 .list-row-icon, .list-row-wait { border-color: design(bevel-dark); }
 
 /* At the size in Native, the word FULLSCREEN on HOTKEYS is wider in this font
