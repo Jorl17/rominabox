@@ -251,7 +251,7 @@ static void check_hostile_game(void) {
    UnmapViewOfFile(view);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
    IDirectInput8A *alone = direct_input();
    IDirectInput8A *real = direct_input();
    IDirectInput8A *through;
@@ -266,7 +266,8 @@ int main(void) {
          RIB_ENV_PAD_RELAY);
    CHECK(rib_dinput_for_game(alone) == alone, "DirectInput was wrapped with no relay named");
 
-   relay = pad_relay_start();
+   /* The game's data folder, for the requests about its data. */
+   relay = pad_relay_start(argc > 1 ? argv[1] : ".");
    CHECK(relay != NULL, "the launcher's relay did not start");
    if (!relay)
       return 1;
