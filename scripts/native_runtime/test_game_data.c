@@ -125,5 +125,23 @@ int main(int argc, char **argv) {
    expect(!exists(target, "states/Sonic Patched.state9"), "in place of the game's own states");
    expect(exists(target, "volume.cfg") && !exists(target, "achievements.session"), "with the settings, without the login");
    expect(rib_game_data_apply_pending(target, error, sizeof error) == 0, "with nothing set aside, nothing happens");
+
+   /* A game's data folder deep enough that the path of a save, with the
+    * name we write it under first, is longer than Windows' 260 characters,
+    * as for a long user name and a long game file name. */
+   {
+      char deep[1024];
+      char error_deep[RIB_GAME_DATA_ERROR_SIZE] = "";
+      snprintf(deep, sizeof deep, "%s/%0120d", root, 0);
+      fs_make_directory(deep);
+      snprintf(deep + strlen(deep), sizeof deep - strlen(deep), "/%0100d", 0);
+      manifest(deep, "cccccccccccccccccccccccc", "Sonic Patched");
+      expect(strlen(deep) + strlen("/saves/Sonic Patched.srm") > 260, "the deep folder's save path is over 260");
+      expect(rib_game_data_import(zip, 0, deep, error_deep, sizeof error_deep) == 0,
+             "we import into a game whose save path is longer than 260 characters");
+      if (error_deep[0])
+         fprintf(stderr, "     %s\n", error_deep);
+      expect(exists(deep, "saves/Sonic Patched.srm"), "and its save is there");
+   }
    return failures ? 1 : 0;
 }
