@@ -1056,6 +1056,16 @@
       "screen": "data",
       "set": {}
     },
+    "slot-focused": {
+      "describes": "a save slot with the focus, under the pointer, as a click leaves it",
+      "screen": "pause",
+      "set": {"slot-2": {"class": "focused", "pseudo": "hover"}}
+    },
+    "slot-pressed": {
+      "describes": "the same slot held down, which must not look like it only has the focus",
+      "screen": "pause",
+      "set": {"slot-2": {"class": "focused", "pseudo": ["hover", "active"]}}
+    },
     "button-hover": {
       "describes": "EXPORT DATA under the pointer",
       "screen": "data",
