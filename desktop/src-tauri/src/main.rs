@@ -478,9 +478,9 @@ fn sharp_window_icon(window: &tauri::WebviewWindow) {
 /// The tasks of the Windows installer in the builder (installation.rs), done
 /// before a window opens. Returns the exit code once done, or None for an
 /// ordinary start. `--add-to-path FOLDER` adds the command line's folder to
-/// the person's Path. `--uninstall-cleanup LOCAL ROAMING FOLDER` removes the
-/// builder's and the games' files in the per-user folders LOCAL and ROAMING,
-/// and removes FOLDER from the Path.
+/// the person's Path, and `--remove-from-path FOLDER` takes it off again.
+/// `--remove-data LOCAL ROAMING` removes the builder's and the games' files in
+/// the per-user folders LOCAL and ROAMING.
 #[cfg(windows)]
 fn installer_request(identifier: &str) -> Option<i32> {
     use rominabox_engine::installation::{announce_environment, Installation, ENVIRONMENT};
@@ -497,7 +497,13 @@ fn installer_request(identifier: &str) -> Option<i32> {
             Ok(changed) => (changed, Vec::new()),
             Err(error) => (false, vec![format!("the Path: {error}")]),
         },
-        ("--uninstall-cleanup", [local, roaming, folder]) => installation(local, roaming, folder).uninstalled(),
+        ("--remove-from-path", [folder]) => match installation(&PathBuf::new(), &PathBuf::new(), folder)
+            .removed_from_path()
+        {
+            Ok(changed) => (changed, Vec::new()),
+            Err(error) => (false, vec![format!("the Path: {error}")]),
+        },
+        ("--remove-data", [local, roaming]) => (false, installation(local, roaming, &PathBuf::new()).data_removed()),
         _ => return None,
     };
     if changed {

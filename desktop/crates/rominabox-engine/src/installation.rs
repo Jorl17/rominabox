@@ -1,8 +1,9 @@
 //! The tasks of the builder's Windows installer. We run each one in the
 //! builder program and exit before we open a window (`main.rs`). Installing
 //! adds the command line's folder to the user's Path. Uninstalling, except
-//! for an update, removes everything that the builder and its games store on
-//! the computer, and takes that folder off the Path again. We call both from
+//! for an update, takes that folder off the Path again, and removes
+//! everything that the builder and its games store on the computer only when
+//! the person asks for it in the uninstaller. We call each from
 //! `windows/installer-hooks.nsh`.
 //!
 //! We edit the Path through the registry, whatever its length. NSIS, which
@@ -179,24 +180,30 @@ impl Installation {
         edit_path(&self.environment, |path| path_with(path, &folder))
     }
 
+    /// Take the command line's folder off the Path. Return whether it
+    /// changed.
+    pub fn removed_from_path(&self) -> io::Result<bool> {
+        let folder = self.command_line.to_string_lossy();
+        edit_path(&self.environment, |path| path_without(path, &folder))
+    }
+
     /// Remove every game's sandbox, with its registration and folder, every
     /// game's data and unpacked copies, the accounts shared by QUICK SIGN IN,
-    /// and the builder's folders, and take the command line's folder off the
-    /// Path. Name everything we could not remove, and continue past it. Remove
-    /// nothing when a per-user folder is not absolute, or when the identifier
-    /// is not the name of one folder.
-    pub fn uninstalled(&self) -> (bool, Vec<String>) {
+    /// and the builder's folders. Return everything we could not remove, and
+    /// continue past it. Remove nothing when a per-user folder is not
+    /// absolute, or when the identifier is not the name of one folder.
+    pub fn data_removed(&self) -> Vec<String> {
         let one_folder = matches!(
             Path::new(&self.identifier).components().collect::<Vec<_>>()[..],
             [std::path::Component::Normal(_)]
         );
         if !self.local.is_absolute() || !self.roaming.is_absolute() || !one_folder {
-            return (false, vec![format!(
+            return vec![format!(
                 "anything: {} and {} must be absolute, and {:?} one folder's name",
                 self.local.display(),
                 self.roaming.display(),
                 self.identifier
-            )]);
+            )];
         }
         let mut failures = Vec::new();
         let packages = self.local.join("Packages");
@@ -219,14 +226,6 @@ impl Installation {
         remove_tree(&self.local.join(crate::achievements::SHARED_ACCOUNTS), &mut failures);
         remove_tree(&self.local.join(&self.identifier), &mut failures);
         remove_tree(&self.roaming.join(&self.identifier), &mut failures);
-        let folder = self.command_line.to_string_lossy();
-        let changed = match edit_path(&self.environment, |path| path_without(path, &folder)) {
-            Ok(changed) => changed,
-            Err(error) => {
-                failures.push(format!("the Path in {}: {error}", self.environment));
-                false
-            }
-        };
-        (changed, failures)
+        failures
     }
 }
