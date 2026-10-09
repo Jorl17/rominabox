@@ -505,10 +505,27 @@ fn an_export_under_test_cannot_reach_the_network() {
     assert!(!root.join("core-cache/cores").exists());
 }
 
+/// Copy the folder `from` and everything in it to `to`.
+fn copy_tree(from: &Path, to: &Path) {
+    fs::create_dir_all(to).unwrap();
+    for entry in fs::read_dir(from).unwrap() {
+        let entry = entry.unwrap();
+        let dest = to.join(entry.file_name());
+        if entry.file_type().unwrap().is_dir() {
+            copy_tree(&entry.path(), &dest);
+        } else {
+            fs::copy(entry.path(), dest).unwrap();
+        }
+    }
+}
+
 #[test]
 fn achievements_require_a_capable_artifact_before_export_staging() {
     let root = workspace();
     let mut request = export_request(&root);
+    // We check the design in the kit before we check achievements, so the kit
+    // needs one.
+    copy_tree(&rominabox_engine::repo::at("integrations/designs"), &request.runtime_kit.join("designs"));
     request.game.show_menu = true;
     request.game.include_achievements = true;
     let error =
@@ -544,18 +561,6 @@ fn achievements_require_a_capable_artifact_before_export_staging() {
 
 #[test]
 fn included_achievements_export_an_account_screen_and_network_permission() {
-    fn copy_tree(from: &Path, to: &Path) {
-        fs::create_dir_all(to).unwrap();
-        for entry in fs::read_dir(from).unwrap() {
-            let entry = entry.unwrap();
-            let dest = to.join(entry.file_name());
-            if entry.file_type().unwrap().is_dir() {
-                copy_tree(&entry.path(), &dest);
-            } else {
-                fs::copy(entry.path(), dest).unwrap();
-            }
-        }
-    }
     let root = workspace();
     let mut request = export_request(&root);
     request.game.show_menu = true;
