@@ -1056,6 +1056,16 @@
       "screen": "data",
       "set": {}
     },
+    "button-hover": {
+      "describes": "EXPORT DATA under the pointer",
+      "screen": "data",
+      "set": {"data-export": {"pseudo": "hover"}}
+    },
+    "button-pressed": {
+      "describes": "EXPORT DATA held down under the pointer, which must not look like it is only under the pointer",
+      "screen": "data",
+      "set": {"data-export": {"pseudo": ["hover", "active"]}}
+    },
     "data-exported": {
       "describes": "DATA after an export, with the status line saying so",
       "screen": "data",
