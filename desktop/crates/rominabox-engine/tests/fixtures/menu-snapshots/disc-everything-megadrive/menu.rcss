@@ -45,12 +45,12 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #slot-5, #slot-6 { top: 328dp; }
 .slot:hover { border-color: #75b2e4; }
 .slot.focused { background-color: #193e88; border-color: #fff13d; border-left-width: 6dp; }
-.slot:active { background-color: #fff13d; color: #081433; }
+.slot:active, .slot.pressed { background-color: #fff13d; color: #081433; }
 .slot-label { position: absolute; left: 248dp; top: 36dp; height: 24dp; font-size: 16dp; color: #ffffff; }
 /* The slot SAVE and LOAD use has its words in the pale colour. */
 .slot.selected .slot-label { color: #b4e6ff; }
 .slot.focused .slot-label { color: #fff13d; }
-.slot:active .slot-label { color: #081433; }
+.slot:active .slot-label, .slot.pressed .slot-label { color: #081433; }
 /* The picture has the aspect of the game, as large as its max-width and
  * max-height allow. Its width and height are those of a 4:3 game, as in a
  * preview. Its frame has room for the largest picture in its bevel, and the
@@ -61,7 +61,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .slot.empty .slot-image { display: none; }
 .slot-state { position: absolute; left: 248dp; top: 78dp; height: 20dp; font-size: 13dp; color: #b4e6ff; }
 .slot.disabled .slot-state { right: 12dp; height: auto; font-size: 11dp; white-space: normal; }
-.slot:active .slot-state { color: #081433; }
+.slot:active .slot-state, .slot.pressed .slot-state { color: #081433; }
 
 #actions { position: absolute; right: 24dp; top: 46dp; width: 176dp; height: 300dp; }
 /* One column with the buttons of the game, 44dp apart, so in a game with
@@ -109,16 +109,16 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .control-picker-current { position: absolute; left: 0; right: 0; top: 0; height: 32dp; font-family: Silkscreen; font-size: 13dp; line-height: 32dp; white-space: nowrap; text-align: left; padding-left: 10dp; border-width: 1dp; border-color: #476eab; background-color: #061a48; color: #ffffff; }
 .control-picker-current:hover { border-color: #75b2e4; color: #fff13d; }
 .control-picker-current.focused { border-left-width: 4dp; border-left-color: #fff13d; }
-.control-picker-current:active { background-color: #fff13d; color: #081433; border-color: #fff13d; }
+.control-picker-current:active, .control-picker-current.pressed { background-color: #fff13d; color: #081433; border-color: #fff13d; }
 .control-picker-list { position: absolute; left: 0; right: 0; bottom: 100%; border-width: 1dp; border-color: #fff13d; background-color: #061a48; z-index: 50; display: block; }
 .control-picker-option { display: block; position: relative; height: 26dp; font-family: Silkscreen; font-size: 13dp; line-height: 26dp; white-space: nowrap; text-align: left; padding-left: 12dp; border-left: 4dp #061a48; background-color: #061a48; color: #b4e6ff; }
 .control-picker-option + .control-picker-option { border-top: 1dp #476eab; }
 .control-picker-option:hover { color: #ffffff; border-bottom: 2dp #75b2e4; }
 .control-picker-option.focused { color: #ffffff; background-color: #193e88; border-left-color: #fff13d; }
-.control-picker-option:active { background-color: #fff13d; color: #081433; border-left-color: #ffffff; }
+.control-picker-option:active, .control-picker-option.pressed { background-color: #fff13d; color: #081433; border-left-color: #ffffff; }
 .control-picker-option.selected { color: #fff13d; }
 .control-picker-option.selected:hover, .control-picker-option.selected.focused { color: #fff13d; }
-.control-picker-option.selected:active { color: #081433; }
+.control-picker-option.selected:active, .control-picker-option.selected.pressed { color: #081433; }
 
 .control-group { position: absolute; width: 210dp; height: 44dp; padding: 0; border-width: 1dp; border-color: #476eab; color: #ffffff; background-color: #061a48; font-family: Silkscreen; text-align: left; }
 .control-group:hover { border-color: #75b2e4; z-index: 2; }
@@ -139,7 +139,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 /* The focus is on the control being captured. CANCEL also has the capturing
  * class while we wait for a capture, but stays an ordinary button next to it. */
 .menu-action.focused { background-color: #193e88; color: #ffffff; border-color: #fff13d; border-left-width: 4dp; }
-.menu-action:active { background-color: #193e88; color: #fff13d; border-color: #ffffff; }
+.menu-action:active, .menu-action.pressed { background-color: #193e88; color: #fff13d; border-color: #ffffff; }
 .menu-action.disabled, .menu-action:disabled { color: #647cad; border-color: #476eab; background-color: #092754; }
 
 @keyframes capture-pulse { from { border-color: #fff13d; } to { border-color: #476eab; } }
@@ -172,7 +172,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
  * moves the row back. */
 .list-row:hover { }
 .list-row.focused { background-color: #193e88; border-left-width: 4dp; border-left-color: #fff13d; border-bottom-color: #fff13d; margin-left: -4dp; }
-.list-row:active { background-color: #fff13d; color: #081433; }
+.list-row:active, .list-row.pressed { background-color: #fff13d; color: #081433; }
 .list-row-icon, .list-row-wait { position: absolute; left: 8dp; top: 8dp; width: 32dp; height: 32dp; }
 .list-row-wait { width: 24dp; height: 24dp; padding: 4dp; }
 .list-row-title { position: absolute; left: 52dp; top: 6dp; font-size: 14dp; color: #ffffff; }
@@ -221,7 +221,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 .option-entry { position: relative; display: block; margin-bottom: 8dp; width: 680dp; height: 26dp; padding-top: 13dp; padding-bottom: 13dp; line-height: 26dp; font-family: Silkscreen; font-size: 18dp; border-width: 0 0 1dp 0; border-color: #476eab; text-align: left; padding-left: 16dp; background-color: transparent; white-space: nowrap; overflow: hidden; }
 .option-entry:hover { background-color: #193e88; color: #ffffff; border-color: #75b2e4; }
 .option-entry.focused { border-color: #476eab; border-left-width: 6dp; border-left-color: #fff13d; background-color: transparent; color: #ffffff; }
-.option-entry:active { background-color: #fff13d; color: #081433; }
+.option-entry:active, .option-entry.pressed { background-color: #fff13d; color: #081433; }
 .options-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
 
 /* We insert volume at the start of Options, in the band under the index,
@@ -283,9 +283,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #control-binds .list-row-detail { left: auto; right: 52dp; top: 0; width: 96dp; height: 30dp; line-height: 30dp; font-size: 12dp; text-align: right; color: #b4e6ff; }
 #control-binds .list-row-state { right: 10dp; top: 0; width: 38dp; height: 30dp; line-height: 30dp; font-size: 11dp; text-align: right; color: #fff13d; }
 #control-binds .list-row:hover { background-color: #193e88; border-color: #75b2e4; }
-#control-binds .list-row:active { background-color: #fff13d; color: #081433; }
+#control-binds .list-row:active, #control-binds .list-row.pressed { background-color: #fff13d; color: #081433; }
 #control-binds .list-row:active .list-row-title, #control-binds .list-row:active .list-row-detail,
-#control-binds .list-row:active .list-row-state { color: #081433; }
+#control-binds .list-row:active .list-row-state, #control-binds .list-row.pressed .list-row-title, #control-binds .list-row.pressed .list-row-detail, #control-binds .list-row.pressed .list-row-state { color: #081433; }
 #control-binds .list-pager { box-sizing: border-box; position: relative; left: 0; top: 0; width: 100%; height: 28dp; }
 #control-binds .list-pager-prev, #control-binds .list-pager-next, #control-binds .list-pager-count { box-sizing: border-box; height: 28dp; line-height: 26dp; font-size: 12dp; top: 0; }
 #control-binds .list-pager-prev { left: 0; width: 72dp; }

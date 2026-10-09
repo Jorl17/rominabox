@@ -45,12 +45,12 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #slot-5, #slot-6 { top: 328dp; }
 .slot:hover { border-color: design(edge); }
 .slot.focused { background-color: design(focus); border-color: design(highlight); border-left-width: 6dp; }
-.slot:active { background-color: design(highlight); color: design(slot-label); }
+.slot:active, .slot.pressed { background-color: design(highlight); color: design(slot-label); }
 .slot-label { position: absolute; left: 248dp; top: 36dp; height: 24dp; font-size: 16dp; color: design(ink); }
 /* The slot SAVE and LOAD use has its words in the pale colour. */
 .slot.selected .slot-label { color: design(muted); }
 .slot.focused .slot-label { color: design(highlight); }
-.slot:active .slot-label { color: design(slot-label); }
+.slot:active .slot-label, .slot.pressed .slot-label { color: design(slot-label); }
 /* The picture has the aspect of the game, as large as its max-width and
  * max-height allow. Its width and height are those of a 4:3 game, as in a
  * preview. Its frame has room for the largest picture in its bevel, and the
@@ -61,7 +61,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .slot.empty .slot-image { display: none; }
 .slot-state { position: absolute; left: 248dp; top: 78dp; height: 20dp; font-size: 13dp; color: design(muted); }
 .slot.disabled .slot-state { right: 12dp; height: auto; font-size: 11dp; white-space: normal; }
-.slot:active .slot-state { color: design(slot-label); }
+.slot:active .slot-state, .slot.pressed .slot-state { color: design(slot-label); }
 
 #actions { position: absolute; right: 24dp; top: 46dp; width: 176dp; height: 300dp; }
 /* One column with the buttons of the game, 44dp apart, so in a game with
@@ -109,16 +109,16 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .control-picker-current { position: absolute; left: 0; right: 0; top: 0; height: 32dp; font-family: Silkscreen; font-size: 13dp; line-height: 32dp; white-space: nowrap; text-align: left; padding-left: 10dp; border-width: 1dp; border-color: design(rule); background-color: design(surface); color: design(ink); }
 .control-picker-current:hover { border-color: design(edge); color: design(highlight); }
 .control-picker-current.focused { border-left-width: 4dp; border-left-color: design(highlight); }
-.control-picker-current:active { background-color: design(highlight); color: design(slot-label); border-color: design(highlight); }
+.control-picker-current:active, .control-picker-current.pressed { background-color: design(highlight); color: design(slot-label); border-color: design(highlight); }
 .control-picker-list { position: absolute; left: 0; right: 0; bottom: 100%; border-width: 1dp; border-color: design(highlight); background-color: design(surface); z-index: 50; display: block; }
 .control-picker-option { display: block; position: relative; height: 26dp; font-family: Silkscreen; font-size: 13dp; line-height: 26dp; white-space: nowrap; text-align: left; padding-left: 12dp; border-left: 4dp design(surface); background-color: design(surface); color: design(muted); }
 .control-picker-option + .control-picker-option { border-top: 1dp design(rule); }
 .control-picker-option:hover { color: design(ink); border-bottom: 2dp design(edge); }
 .control-picker-option.focused { color: design(ink); background-color: design(focus); border-left-color: design(highlight); }
-.control-picker-option:active { background-color: design(highlight); color: design(slot-label); border-left-color: design(ink); }
+.control-picker-option:active, .control-picker-option.pressed { background-color: design(highlight); color: design(slot-label); border-left-color: design(ink); }
 .control-picker-option.selected { color: design(highlight); }
 .control-picker-option.selected:hover, .control-picker-option.selected.focused { color: design(highlight); }
-.control-picker-option.selected:active { color: design(slot-label); }
+.control-picker-option.selected:active, .control-picker-option.selected.pressed { color: design(slot-label); }
 
 .control-group { position: absolute; width: design(group-width)dp; height: design(group-height)dp; padding: 0; border-width: 1dp; border-color: design(rule); color: design(ink); background-color: design(surface); font-family: Silkscreen; text-align: left; }
 .control-group:hover { border-color: design(edge); z-index: 2; }
@@ -139,7 +139,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 /* The focus is on the control being captured. CANCEL also has the capturing
  * class while we wait for a capture, but stays an ordinary button next to it. */
 .menu-action.focused { background-color: design(focus); color: design(ink); border-color: design(highlight); border-left-width: 4dp; }
-.menu-action:active { background-color: design(focus); color: design(highlight); border-color: design(ink); }
+.menu-action:active, .menu-action.pressed { background-color: design(focus); color: design(highlight); border-color: design(ink); }
 .menu-action.disabled, .menu-action:disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
 
 @keyframes capture-pulse { from { border-color: design(highlight); } to { border-color: design(rule); } }
@@ -172,7 +172,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
  * moves the row back. */
 .list-row:hover { }
 .list-row.focused { background-color: design(focus); border-left-width: 4dp; border-left-color: design(highlight); border-bottom-color: design(highlight); margin-left: -4dp; }
-.list-row:active { background-color: design(highlight); color: design(slot-label); }
+.list-row:active, .list-row.pressed { background-color: design(highlight); color: design(slot-label); }
 .list-row-icon, .list-row-wait { position: absolute; left: 8dp; top: 8dp; width: 32dp; height: 32dp; }
 .list-row-wait { width: 24dp; height: 24dp; padding: 4dp; }
 .list-row-title { position: absolute; left: 52dp; top: 6dp; font-size: 14dp; color: design(ink); }
@@ -221,7 +221,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 .option-entry { position: relative; display: block; margin-bottom: 8dp; width: 680dp; height: 26dp; padding-top: 13dp; padding-bottom: 13dp; line-height: 26dp; font-family: Silkscreen; font-size: 18dp; border-width: 0 0 1dp 0; border-color: design(rule); text-align: left; padding-left: 16dp; background-color: transparent; white-space: nowrap; overflow: hidden; }
 .option-entry:hover { background-color: design(focus); color: design(ink); border-color: design(edge); }
 .option-entry.focused { border-color: design(rule); border-left-width: 6dp; border-left-color: design(highlight); background-color: transparent; color: design(ink); }
-.option-entry:active { background-color: design(highlight); color: design(slot-label); }
+.option-entry:active, .option-entry.pressed { background-color: design(highlight); color: design(slot-label); }
 .options-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
 
 /* We insert volume at the start of Options, in the band under the index,
@@ -283,9 +283,9 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #control-binds .list-row-detail { left: auto; right: 52dp; top: 0; width: 96dp; height: 30dp; line-height: 30dp; font-size: 12dp; text-align: right; color: design(muted); }
 #control-binds .list-row-state { right: 10dp; top: 0; width: 38dp; height: 30dp; line-height: 30dp; font-size: 11dp; text-align: right; color: design(highlight); }
 #control-binds .list-row:hover { background-color: design(focus); border-color: design(edge); }
-#control-binds .list-row:active { background-color: design(highlight); color: design(slot-label); }
+#control-binds .list-row:active, #control-binds .list-row.pressed { background-color: design(highlight); color: design(slot-label); }
 #control-binds .list-row:active .list-row-title, #control-binds .list-row:active .list-row-detail,
-#control-binds .list-row:active .list-row-state { color: design(slot-label); }
+#control-binds .list-row:active .list-row-state, #control-binds .list-row.pressed .list-row-title, #control-binds .list-row.pressed .list-row-detail, #control-binds .list-row.pressed .list-row-state { color: design(slot-label); }
 #control-binds .list-pager { box-sizing: border-box; position: relative; left: 0; top: 0; width: 100%; height: 28dp; }
 #control-binds .list-pager-prev, #control-binds .list-pager-next, #control-binds .list-pager-count { box-sizing: border-box; height: 28dp; line-height: 26dp; font-size: 12dp; top: 0; }
 #control-binds .list-pager-prev { left: 0; width: 72dp; }

@@ -38,7 +38,7 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #slot-4, #slot-5, #slot-6 { top: 208dp; }
 /* Focus is a yellow border; the slot SAVE and LOAD use has its words in the pale colour. */
 .slot.focused { border-color: design(highlight); }
-.slot:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
+.slot:active, .slot.pressed { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 .slot-label { height: 24dp; font-size: 17dp; padding-top: 2dp; background-color: design(slot-label); color: design(ink); }
 .slot.selected .slot-label { color: design(muted); }
 .slot.focused .slot-label { color: design(highlight); }
@@ -103,7 +103,7 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .control-picker-current { position: absolute; left: 0; right: 0; top: 0; height: 38dp; font-family: Silkscreen; font-size: 13dp; line-height: 38dp; white-space: nowrap; text-align: left; padding-left: 8dp; border: 2dp design(edge); background-color: design(surface); color: design(ink); }
 .control-picker-current:hover { border-color: design(ink); }
 .control-picker-current.focused { border-color: design(highlight); }
-.control-picker-current:active { background-color: design(focus); border-color: design(ink); }
+.control-picker-current:active, .control-picker-current.pressed { background-color: design(focus); border-color: design(ink); }
 /* We lay out the options through the list, because block elements inside
  * an absolutely positioned parent would draw on top of one another. */
 .control-picker-list { position: absolute; left: 0; right: 0; bottom: 100%; border: 2dp design(highlight); background-color: design(surface); z-index: 50; display: block; }
@@ -116,14 +116,14 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
  * press would choose. */
 .control-picker-option:hover { background-color: design(focus); color: design(ink); }
 .control-picker-option.focused { background-color: design(focus); color: design(ink); border-left-color: design(highlight); }
-.control-picker-option:active { background-color: design(highlight); color: design(surface); border-left-color: design(ink); }
+.control-picker-option:active, .control-picker-option.pressed { background-color: design(highlight); color: design(surface); border-left-color: design(ink); }
 .control-picker-option.selected { color: design(highlight); }
 /* The controller in use keeps yellow text under the pointer and under the
  * arrow keys, so it still looks in use. During a press the row itself turns
  * yellow and yellow text on it would disappear, so the text is not yellow
  * then. */
 .control-picker-option.selected:hover, .control-picker-option.selected.focused { color: design(highlight); }
-.control-picker-option.selected:active { color: design(surface); }
+.control-picker-option.selected:active, .control-picker-option.selected.pressed { color: design(surface); }
 
 /* A stick is one object on the pad but several binds, so we draw it once,
  * under the illustration and not in a gutter. Each gutter is full with seven
@@ -144,14 +144,14 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #controls-back { width: 124dp; }
 #controls-reset { left: 148dp; width: 256dp; }
 #controls-cancel { width: 160dp; }
-.slot:active .slot-label { color: design(highlight); }
+.slot:active .slot-label, .slot.pressed .slot-label { color: design(highlight); }
 
 .menu-action { color: design(ink); background-color: design(surface); border-color: design(edge); }
 /* The control being captured has the focus and is the only yellow element.
  * CANCEL also has the capturing class while we wait for an input, but it
  * stays an ordinary button. */
 .menu-action:hover, .menu-action.focused { background-color: design(highlight); color: design(surface); border-color: design(ink); }
-.menu-action:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
+.menu-action:active, .menu-action.pressed { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 .menu-action.disabled, .menu-action:disabled { color: design(disabled); border-color: design(rule); background-color: design(well-edge); }
 
 /* Volume and the entries under it are one column, so the bar and the
@@ -226,14 +226,14 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .slider-thumb { position: absolute; top: -12dp; width: 26dp; height: 56dp; background-color: design(highlight); border: 4dp design(highlight); }
 .slider:hover .slider-thumb { border-color: design(ink); }
 .slider.focused .slider-thumb, .slider.focused:hover .slider-thumb { background-color: design(ink); border-top-color: design(ink); border-left-color: design(ink); border-right-color: design(background); border-bottom-color: design(background); }
-.slider.dragging .slider-thumb, .slider:active .slider-thumb { background-color: design(ink); border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
+.slider.dragging .slider-thumb, .slider:active .slider-thumb, .slider.pressed .slider-thumb { background-color: design(ink); border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 .toggle { display: block; position: relative; width: 260dp; height: 52dp; margin-top: 56dp; margin-left: 230dp; padding-left: 64dp; font-family: Silkscreen; font-size: 18dp; line-height: 46dp; text-align: left; color: design(ink); background-color: design(surface); border: 3dp design(edge); }
 .toggle-knob { position: absolute; left: 8dp; top: 6dp; width: 32dp; height: 32dp; background-color: design(edge); border-top: 3dp design(ink); border-left: 3dp design(ink); border-right: 3dp design(background); border-bottom: 3dp design(background); }
 .toggle:hover { border-color: design(ink); }
 .toggle.focused, .toggle.focused:hover { border-color: design(highlight); }
 .toggle.on { background-color: design(highlight); color: design(surface); border-color: design(ink); }
 .toggle.on .toggle-knob { left: 212dp; background-color: design(surface); }
-.toggle:active .toggle-knob { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
+.toggle:active .toggle-knob, .toggle.pressed .toggle-knob { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 .toggle-label { font-family: Silkscreen; }
 
 @keyframes capture-pulse { from { border-color: design(highlight); } to { border-color: transparent; } }
@@ -276,7 +276,7 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 .list-row.line .list-row-title { left: 12dp; right: 72dp; top: 0; height: 32dp; line-height: 32dp; }
 .list-row.line .list-row-detail { display: none; }
 .list-row.line .list-row-state { top: 0; width: 56dp; height: 32dp; line-height: 32dp; }
-.list-row:active { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
+.list-row:active, .list-row.pressed { border-top-color: design(background); border-left-color: design(background); border-bottom-color: design(ink); border-right-color: design(ink); }
 /* Four units above, below and to the left, so the picture is in the middle
  * of the row and not on its frame. The bevel is the same as on the save
  * slots, so a badge looks set into the row. */
@@ -326,11 +326,11 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #control-binds .list-row-detail { left: auto; right: 44dp; top: 0; width: 84dp; height: 22dp; line-height: 22dp; font-size: 13dp; text-align: right; color: design(muted); }
 #control-binds .list-row-state { right: 6dp; top: 0; width: 36dp; height: 22dp; line-height: 22dp; font-size: 11dp; text-align: right; color: design(muted); }
 #control-binds .list-row:hover { background-color: design(focus); color: design(ink); border-left-color: design(surface); }
-#control-binds .list-row:active { background-color: design(highlight); color: design(surface); border-color: design(highlight); border-left-color: design(ink); }
+#control-binds .list-row:active, #control-binds .list-row.pressed { background-color: design(highlight); color: design(surface); border-color: design(highlight); border-left-color: design(ink); }
 #control-binds .list-row:hover .list-row-detail,
 #control-binds .list-row:hover .list-row-state { color: design(ink); }
 #control-binds .list-row:active .list-row-title, #control-binds .list-row:active .list-row-detail,
-#control-binds .list-row:active .list-row-state { color: design(surface); }
+#control-binds .list-row:active .list-row-state, #control-binds .list-row.pressed .list-row-title, #control-binds .list-row.pressed .list-row-detail, #control-binds .list-row.pressed .list-row-state { color: design(surface); }
 #control-binds .list-pager { box-sizing: border-box; position: relative; left: 0; top: 0; width: 100%; height: 22dp; }
 #control-binds .list-pager-prev, #control-binds .list-pager-next, #control-binds .list-pager-count { box-sizing: border-box; height: 20dp; line-height: 18dp; font-size: 13dp; top: 0; }
 #control-binds .list-pager-prev { left: 4dp; width: 56dp; }
