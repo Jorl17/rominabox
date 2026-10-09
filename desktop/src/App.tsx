@@ -621,11 +621,10 @@ export function App() {
     }
   }
   nativeDropHandler.current = (paths, pos) => {
-    if (busy) return;
-    const target = document
-      .elementFromPoint(pos.x, pos.y)
-      ?.closest("[data-drop]")
-      ?.getAttribute("data-drop");
+    const under = document.elementFromPoint(pos.x, pos.y);
+    // The Game data section covers the steps and takes no files.
+    if (busy || under?.closest(".game-data")) return;
+    const target = under?.closest("[data-drop]")?.getAttribute("data-drop");
     // A dropped game comes with its patches, and anything else is one file.
     if (paths.length !== 1 && (target || step !== 0)) {
       setError("Drop one file at a time.");
