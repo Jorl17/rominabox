@@ -241,7 +241,7 @@
     "macos-universal": {
       "output": "librominabox-launch.dylib",
       "loadedFrom": "@executable_path",
-      "flags": ["-Oz", "-dynamiclib", "-Wl,-dead_strip"],
+      "flags": ["-Oz", "-dynamiclib", "-fvisibility=hidden", "-Wl,-dead_strip", "-Wl,-x"],
       "libraries": ["-framework", "CoreFoundation", "-framework", "CoreServices"]
     }
   },

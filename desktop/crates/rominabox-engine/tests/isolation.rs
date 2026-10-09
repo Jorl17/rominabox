@@ -190,8 +190,11 @@ fn every_export_keeps_its_sandbox() {
         println!("signed launcher bytes: {bytes}");
         // We build for macOS 11 so that games open on older and Intel Macs.
         // The signed file is then larger than a build of the same sources for
-        // a newer macOS, because of the layout for the older target.
-        assert!(bytes < 100_000, "the launcher is {bytes} bytes");
+        // a newer macOS, because of the layout for the older target. It also
+        // reads a game's data from a zip and writes its manifest in JSON, with
+        // miniz and rjson, which the linker trims to what it calls only
+        // because the library exports nothing.
+        assert!(bytes < 128_000, "the launcher is {bytes} bytes");
     }
 }
 
