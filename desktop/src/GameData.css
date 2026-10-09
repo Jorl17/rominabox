@@ -96,8 +96,8 @@ body.game-data-open .app-shell > main {
 .game-data-gone {
   color: var(--muted);
 }
-.game-data-pop-up {
-  max-width: 420px;
+.pop-up.game-data-pop-up {
+  max-width: 600px;
   width: 100%;
 }
 .pop-up.game-data-pop-up > p,

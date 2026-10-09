@@ -348,6 +348,10 @@ main {
   box-shadow: 3px 3px 0 var(--highlight);
   pointer-events: none;
 }
+/* Each paragraph of a longer help text on its own. */
+.help-tooltip p + p {
+  margin-top: 8px;
+}
 .option-toggle,
 .project-action {
   display: inline-flex;
