@@ -1072,7 +1072,7 @@
       "screen": "data",
       "set": {"data-import-dialog": {"display": "block"}, "data-import-cancel": {"class": "focused"},
               "data-import-confirm": {"class": "disabled"},
-              "data-import-message": {"text": "THIS IS THE DATA OF \u201cPOKEMON GOLD\u201d, A GAME BOY COLOR GAME, AND THIS GAME IS FOR THE MEGA DRIVE / GENESIS."}}
+              "data-import-message": {"text": "THIS IS THE DATA OF \"POKEMON GOLD\", A GAME BOY COLOR GAME, AND THIS GAME IS FOR THE MEGA DRIVE / GENESIS."}}
     },
     "hotkeys-refused": {
       "describes": "a removal refused, the status saying why, the chip still focused",
