@@ -68,6 +68,9 @@
 #endif
 
 RIB_APP_FILE(Plan, "launch.plan")
+/* The game's icon as a picture, which the launcher copies beside the game's
+ * manifest for the builder's list of games. */
+RIB_APP_FILE(Icon, "game-icon.png")
 RIB_CORE_FILE(Macos, "game-core.dylib")
 RIB_CORE_FILE(Windows, "game-core.dll")
 /* The composed menu: menu.rml and the files declarations.inc names. */

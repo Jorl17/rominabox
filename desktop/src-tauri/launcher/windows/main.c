@@ -536,6 +536,8 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     wchar_t *data_wide;
     DWORD code = 1;
     size_t index;
+    static wchar_t opened[WIDE_PATH_CAP];
+    char *opened_utf8 = NULL;
 
     game_folder(folder, sizeof folder);
     rominabox_launch_join(resources, sizeof resources, folder, part_Resources);
@@ -547,6 +549,16 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     places.previous_user_data = previous_user_data;
     places.opened_by_person = opened_by_person;
     places.before_data_folder = places.opened_by_person ? one_game_per_data_folder : NULL;
+    /* The program the person opened, which the game's manifest names and a
+     * pin from the game's window starts. */
+    {
+        DWORD length = GetEnvironmentVariableW(outside_program, opened, sizeof opened / sizeof opened[0]);
+        SetEnvironmentVariableW(outside_program, NULL);
+        if (length == 0 || length >= sizeof opened / sizeof opened[0])
+            own_path(opened, sizeof opened / sizeof opened[0]);
+        opened_utf8 = utf8(opened);
+        places.app = opened_utf8;
+    }
     rominabox_prepare_launch(&places, &launch);
 
     for (index = 0; index < launch.variable_count; index++) {
@@ -559,13 +571,8 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     /* The game's window is in the player process, so a pin from it would
      * start the player alone. We give the window this program instead. */
     {
-        static wchar_t path[WIDE_PATH_CAP];
         wchar_t *name = wide(RIB_ENV_RELAUNCH);
-        DWORD length = GetEnvironmentVariableW(outside_program, path, sizeof path / sizeof path[0]);
-        SetEnvironmentVariableW(outside_program, NULL);
-        if (length == 0 || length >= sizeof path / sizeof path[0])
-            own_path(path, sizeof path / sizeof path[0]);
-        SetEnvironmentVariableW(name, path);
+        SetEnvironmentVariableW(name, opened);
         free(name);
     }
 

@@ -155,8 +155,9 @@ def decision_check() -> list[str]:
         binary = toolchain.executable(Path(made) / "decision")
         compiled = subprocess.run(
             [
-                declared["cc"], "-O2", "-o", str(binary),
+                declared["cc"], "-O2", "-o", str(binary), *native_build.launcher_includes(host_target().split("-", 1)[0]),
                 str(ROOT / "scripts/native_runtime/quiet_decision.c"), *shared_launcher_sources(),
+                str(native_build.ZIP_LIBRARY),
             ],
             capture_output=True, text=True,
         )

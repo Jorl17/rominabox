@@ -149,6 +149,18 @@ pub fn windows_icon(source: &Path) -> Result<Vec<u8>, ExportError> {
     Ok(bytes)
 }
 
+/// The side of the game's icon as a picture, which the launcher copies beside
+/// the game's manifest for the builder's list of games.
+const GAME_ICON_SIDE: u32 = 128;
+
+/// Write the game's icon as a square PNG at `destination`, from `source`.
+pub(crate) fn write_game_icon(source: &Path, destination: &Path) -> Result<(), ExportError> {
+    let picture = square_icon(&read_image(source)?, GAME_ICON_SIDE);
+    picture
+        .save_with_format(destination, image::ImageFormat::Png)
+        .map_err(|error| ExportError::new(ErrorStage::Stage, format!("could not write {}: {error}", destination.display())))
+}
+
 pub(crate) fn default_icon_path(runtime_kit: &Path) -> Option<PathBuf> {
     let path = runtime_kit.join("default-icon.png");
     path.is_file().then_some(path)

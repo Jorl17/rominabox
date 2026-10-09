@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "accounts_folder.h"
+#include "game_data.h"
 #include "paths.h"
 #include "player_settings.h"
 #include "portable_fs.h"
@@ -22,6 +23,7 @@
 #define RIB_TOKEN(name, token) static const char token_##name[] = token;
 #define RIB_USER_FOLDER(name, path) static const char user_folder_##name[] = path;
 #define RIB_GAME_DATA(name, path) static const char game_data_##name[] = path;
+#define RIB_GAME_FILE(name, path) static const char game_file_##name[] = path;
 #include "launch_contract.inc"
 #define RIB_FILE(name, file) static const char menu_##name[] = file;
 #define RIB_DATA_FILE(name, file) static const char menu_data_##name[] = file;
@@ -438,6 +440,92 @@ static void apply_player_settings(ConfigLine **lines, size_t *count, size_t *cap
     }
 }
 
+/* The name of the file at `path` without its folders and extension, after
+ * which RetroArch names the game's saves, states and screenshots. */
+static void stem_of(const char *path, char *out, size_t out_cap) {
+    const char *name = path;
+    const char *dot;
+    const char *cursor;
+    for (cursor = path; *cursor; cursor++)
+        if (*cursor == '/' || *cursor == '\\')
+            name = cursor + 1;
+    dot = strrchr(name, '.');
+    snprintf(out, out_cap, "%.*s", (int)(dot && dot != name ? (size_t)(dot - name) : strlen(name)), name);
+}
+
+/* The game's manifest, which we write on every launch, so that it names where
+ * the app is now: what the game is, what its saves are named after, and which
+ * files hold the player's settings, for a backup of its data and the
+ * builder's list of games. Beside it, the game's icon. Neither stops a
+ * launch when we cannot write it. */
+static void write_manifest(const char *plan, const LaunchGame *game, const char *content,
+                           const LaunchPlaces *places, const char *data_dir) {
+    rib_game_t *manifest = rib_games_new(1);
+    const struct { const char *field; const char *plan_field; } from_plan[] = {
+        {"system", plan_System}, {"console", plan_Console}, {"made_with", plan_MadeWith},
+    };
+    const char *cursor = plan;
+    char value[PATH_CAP];
+    char icon[PATH_CAP];
+    char copy[PATH_CAP];
+    size_t which;
+    if (!manifest)
+        return;
+    rib_game_set(manifest, "identity", game->identity);
+    rib_game_set(manifest, "title", game->title);
+    for (which = 0; which < sizeof from_plan / sizeof from_plan[0]; which++)
+        if (field(plan, from_plan[which].plan_field, value, sizeof value))
+            rib_game_set(manifest, from_plan[which].field, value);
+    stem_of(content, value, sizeof value);
+    rib_game_set(manifest, "content", value);
+    if (places->app)
+        rib_game_set(manifest, "app", places->app);
+    /* Each player setting's line: its field, then its file, key and default. */
+    while (*cursor && !at_config(cursor)) {
+        const char *end = strchr(cursor, '\n');
+        size_t length = end ? (size_t)(end - cursor) : strlen(cursor);
+        size_t field_length = strlen(plan_PlayerSetting);
+        if (length > field_length && !strncmp(cursor, plan_PlayerSetting, field_length) && cursor[field_length] == '\t') {
+            const char *file = cursor + field_length + 1;
+            const char *tab = memchr(file, '\t', length - field_length - 1);
+            if (tab && (size_t)(tab - file) < sizeof value) {
+                snprintf(value, sizeof value, "%.*s", (int)(tab - file), file);
+                rib_game_set(manifest, "player_file", value);
+            }
+        }
+        if (!end)
+            break;
+        cursor = end + 1;
+    }
+    if (rib_game_manifest_write(data_dir, manifest) != 0)
+        fprintf(stderr, ROMINABOX_NAME ": could not write the game's manifest: %s\n", strerror(errno));
+    rib_games_free(manifest);
+    join_path(icon, sizeof icon, places->resources, app_Icon);
+    join_path(copy, sizeof copy, data_dir, game_file_Icon);
+    if (fs_is_file(icon)) {
+        size_t size = 0;
+        char *bytes = read_file(icon, &size);
+        if (bytes && fs_write_file(copy, bytes, size) != 0)
+            fprintf(stderr, ROMINABOX_NAME ": could not copy the game's icon: %s\n", strerror(errno));
+        free(bytes);
+    }
+}
+
+/* A backup the player chose in the game's menu, which we import before
+ * anything reads the game's data. We checked it there, so this fails only
+ * when the zip changed since, and then we say why and start the game with
+ * its own data. */
+static void import_set_aside(const char *data_dir, const LaunchPlaces *places) {
+    char error[RIB_GAME_DATA_ERROR_SIZE];
+    char said[RIB_GAME_DATA_ERROR_SIZE + 64];
+    if (rib_game_data_apply_pending(data_dir, error, sizeof error) >= 0)
+        return;
+    fprintf(stderr, ROMINABOX_NAME ": %s\n", error);
+    snprintf(said, sizeof said, "We could not import the data you chose.\n\n%s", error);
+    if (rominabox_launch_tells_person(places->opened_by_person))
+        rominabox_launch_tell(said);
+}
+
 static void first_line(const char *path, char *out, size_t out_cap) {
     FILE *file = fs_open(path, "r");
     if (!file) {
@@ -721,6 +809,10 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     if (places->previous_user_data)
         bring_previous_saves(&game, places->previous_user_data, data_dir);
     mkdir_p(data_dir);
+    /* This export's manifest first, because the import reads what it says
+     * about this game. */
+    write_manifest(plan, &game, content, places, data_dir);
+    import_set_aside(data_dir, places);
     for (index = 0; index < managed_count; index++) {
         char directory[PATH_CAP];
         join_path(directory, sizeof directory, data_dir, managed[index]);

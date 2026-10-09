@@ -126,6 +126,7 @@ static void prepare(void) {
     rominabox_launch_join(resources, sizeof resources, bundle, BUNDLE_RESOURCES);
 
     places.resources = resources;
+    places.app = bundle;
     places.core = core_Macos;
     places.user_data = user_data;
     if (test_user_data && test_user_data[0]) {

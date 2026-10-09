@@ -555,6 +555,10 @@ where
         .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     }
     stage_firmware(request, &resources.join(shipped!(Firmware).0))?;
+    let default_icon = crate::icons::default_icon_path(&request.runtime_kit);
+    if let Some(icon) = request.game.icon.as_deref().or(default_icon.as_deref()) {
+        crate::icons::write_game_icon(icon, &resources.join(app_file!(Icon)))?;
+    }
     stage_bundled_autoconfig(
         &request.runtime_kit,
         &resources.join(shipped!(Autoconfig).0),
