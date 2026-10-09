@@ -1052,7 +1052,7 @@
       }
     },
     "data": {
-      "describes": "DATA, with EXPORT DATA and IMPORT DATA, as the player opens it",
+      "describes": "DATA, with EXPORT DATA, IMPORT DATA and BACK, as the player opens it",
       "screen": "data",
       "set": {}
     },
@@ -1066,6 +1066,16 @@
       "screen": "data",
       "set": {"data-import-dialog": {"display": "block"}, "data-import-cancel": {"class": "focused"},
               "data-import-message": {"text": "THIS DATA IS FROM SONIC 3. IMPORTING IT WILL PERMANENTLY REPLACE YOUR SAVES, STATES AND SETTINGS. THE GAME WILL THEN IMMEDIATELY RESTART."}}
+    },
+    "restart": {
+      "describes": "RESTART, asking before it starts the game over",
+      "screen": "restart",
+      "set": {}
+    },
+    "reset": {
+      "describes": "RESET, asking before it removes the game's saves and settings",
+      "screen": "reset",
+      "set": {}
     },
     "data-import-refused": {
       "describes": "the dialog for a zip we cannot import, with IMPORT disabled",
